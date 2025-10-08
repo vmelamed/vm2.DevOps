@@ -1,0 +1,128 @@
+name: Benchmarks (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      os:
+        description: "Runner OS-s"
+        type: string
+        required: true
+        default: "ubuntu-latest"
+
+      dotnet-version:
+        description: "Version of .NET SDK to use"
+        type: string
+        required: true
+        default: "9.0.x"
+
+      benchmark-project:
+        description: "Path to the benchmark project"
+        type: string
+        required: false
+        default: "./benchmarks/UlidType.Benchmarks/UlidType.Benchmarks.csproj"
+
+      configuration:
+        description: "The type of build to produce, e.g. Release vs Debug"
+        type: string
+        required: false
+        default: "Release"
+
+      defined-symbols:
+        description: "Define constants to pass to the compiler"
+        type: string
+        required: false
+        default: ""
+
+      max-regression-pct:
+        description: "Maximum acceptable performance regression percentage"
+        type: number
+        required: true
+        default: 10 # percent
+
+      force-new-baseline:
+        description: "Ignore the existing baseline and force a new baseline"
+        type: boolean
+        required: false
+        default: false
+
+      verbose:
+        description: "Whether to enable verbose logging for debugging scripts"
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  # these must be the same across all jobs and steps below.
+  # We must know where to find the artifacts and where to download/upload to/from across all jobs and steps here.
+  ARTIFACTS_DIR: ${{ github.workspace }}/BmArtifacts
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  benchmarks:
+    name: Benchmarks (${{ inputs.os }})
+    runs-on: ${{ inputs.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Make Scripts Executable
+        run: chmod u+x ./scripts/bash/*.sh
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+          cache: true
+          cache-dependency-path: |
+            **/packages.lock.json
+            **/*.csproj
+
+      - name: Download baseline benchmark summaries artifact
+        if: ${{ !inputs.force-new-baseline }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERBOSE: ${{ fromJSON(inputs.verbose) || false }}
+        run: >-
+          ./scripts/bash/download-artifact.sh
+          --repository ${{ github.repository }}
+          --wf-path '.github/workflows/CI.yaml'
+          --artifact benchmark-summaries-${{ inputs.os }}
+          --directory ${{ env.ARTIFACTS_DIR }}/baseline
+
+      - name: Run the benchmarks
+        if: ${{ success() || fromJSON(inputs.force-new-baseline) }}
+        shell: bash
+        env:
+          CONFIGURATION: ${{ inputs.configuration || 'vars.CONFIGURATION' || 'Release' }}
+          DEFINED_SYMBOLS: ${{ inputs.defined-symbols || 'vars.DEFINED_SYMBOLS' }}
+          VERBOSE: ${{ fromJSON(inputs.verbose) || false }}
+          FORCE_NEW_BASELINE: ${{ fromJSON(inputs.force-new-baseline) || false }}
+        run: >-
+          ./scripts/bash/run-benchmarks.sh ${{ inputs.benchmark-project }}
+          --configuration "${{ inputs.configuration }}"
+          --artifacts "${{ env.ARTIFACTS_DIR }}"
+          --max-regression-pct "${{ inputs.max-regression-pct }}"
+
+      - name: Upload benchmark summaries artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-summaries-${{ inputs.os }}
+          path: ${{ env.ARTIFACTS_DIR }}
+          if-no-files-found: error
+          overwrite: true
+
+      - name: Upload benchmark results artifact as a new baseline
+        if: ${{ inputs.force-new-baseline || false }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-baseline-${{ inputs.os }}
+          path: ${{ env.ARTIFACTS_DIR }}
+          if-no-files-found: error
+          overwrite: true

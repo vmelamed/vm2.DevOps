@@ -1,0 +1,101 @@
+name: Test .NET projects (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      os:
+        description: "Runner OS-s"
+        type: string
+        required: true
+        default: "ubuntu-latest"
+
+      dotnet-version:
+        description: "Version of .NET SDK to use"
+        type: string
+        required: true
+        default: "9.0.x"
+
+      test-project:
+        description: "Path to the test project"
+        type: string
+        required: false
+        default: "./test/UlidType.Tests/UlidType.Tests.csproj"
+
+      configuration:
+        description: "The type of build to produce, e.g. Release vs Debug"
+        type: string
+        required: false
+        default: "Release"
+
+      defined-symbols:
+        description: "Define constants to pass to the compiler"
+        type: string
+        required: false
+        default: ""
+
+      min-coverage-pct:
+        description: "Minimum acceptable code coverage percentage"
+        type: number
+        required: true
+        default: 80 # percent
+
+      verbose:
+        description: "Whether to enable verbose logging"
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read # to checkout the code
+
+env:
+  # this must be the same across all jobs and steps below.
+  # We must know where to find the artifacts and where to download/upload to/from across all jobs and steps here.
+  ARTIFACTS_DIR: "TestArtifacts"
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  test:
+    name: Test on ${{ inputs.os }}
+    runs-on: ${{ inputs.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Make Scripts Executable
+        run: chmod u+x ./scripts/bash/*.sh
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+          cache: true
+          cache-dependency-path: |
+            **/packages.lock.json
+            **/*.csproj
+
+      - name: Make Scripts Executable
+        run: chmod u+x ./scripts/bash/*.sh
+
+      - name: Run script for unit test with coverage
+        env:
+          CONFIGURATION: ${{ inputs.configuration || 'vars.CONFIGURATION' || 'Release' }}
+          DEFINED_SYMBOLS: ${{ inputs.defined-symbols || 'vars.DEFINED_SYMBOLS' }}
+          VERBOSE: ${{ fromJSON(inputs.verbose) || false }}
+        shell: bash
+        run: >-
+          ./scripts/bash/run-tests.sh ${{ inputs.test-project }}
+          --min-coverage-pct "${{ inputs.min-coverage-pct }}"
+          --configuration "${{ inputs.configuration }}"
+          --artifacts "${{ env.ARTIFACTS_DIR }}"
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ inputs.os }}
+          path: ${{ env.ARTIFACTS_DIR }}
+          if-no-files-found: error
+          overwrite: true

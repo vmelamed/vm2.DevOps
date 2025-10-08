@@ -1,0 +1,115 @@
+name: Release (Stable)
+
+on:
+  workflow_call:
+    inputs:
+      os:
+        description: "JSON array of runners"
+        type: string
+        default: '["ubuntu-latest"]'
+        required: true
+
+      dotnet-version:
+        description: "Version of .NET SDK to use"
+        type: string
+        default: "9.0.x"
+        required: true
+
+      force-publish:
+        description: "Force publish even if already tagged"
+        type: boolean
+        default: false
+
+      save_package_artifacts:
+        description: "Upload package(s) as workflow artifact"
+        type: boolean
+        default: false
+        required: true
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  FORCE_PUBLISH: ${{ inputs.force-publish || 'false' }}
+  SAVE_PACKAGE_ARTIFACTS: ${{  inputs.save_package_artifacts || 'false' }}
+
+jobs:
+  release:
+    name: Release Stable
+    if: ${{ github.event_name == 'workflow_dispatch' || (startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name,'-')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Make Scripts Executable
+        run: chmod u+x ./scripts/bash/*.sh
+
+      - name: Validate the current tag
+        run: |
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+(\.[0-9]+)(\.[0-9]+)(\.[0-9]+)$ ]]; then
+            echo "The current tag $GITHUB_REF_NAME is not a valid semantic version for a stable release (e.g. v1.2.3 or v2.0.0)"
+            exit 1
+          fi
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ inputs.dotnet-version || '9.0.x' }}
+          cache: true
+          cache-dependency-path: |
+            **/packages.lock.json
+            **/*.csproj
+
+      - name: Pack (stable)
+        run: |
+          mkdir -p artifacts/pack
+          dotnet pack \
+            --configuration Release \
+            --output artifacts/pack \
+            "/p:PackageReleaseNotes=Stable: ${REASON:-tag push}"
+          ls -1 artifacts/pack
+
+      - name: Publish stable to NuGet
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          if [ -z "${NUGET_API_KEY}" ]; then
+            echo "NUGET_API_KEY not configured"; exit 1
+          fi
+
+          dotnet nuget push artifacts/pack/*.nupkg \
+            --api-key  "${NUGET_API_KEY}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+          printf '## Packages %s pushed to NuGet:\n%s\n' "$PRERELEASE_TAG" "$(ls -1 artifacts/pack/*.nupkg | sed 's/^/  - /')" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload package artifact
+        if: env.SAVE_PACKAGE_ARTIFACTS == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages-${{ github.ref_name }}
+          path: artifacts/pack/*.nupkg
+          if-no-files-found: error
+          overwrite: true
+
+      - name: Summary
+        env:
+          ARTIFACTS_SAVED: ${{ env.SAVE_PACKAGE_ARTIFACTS == 'true' }}
+        run: |
+          {
+              echo "## Release Summary"
+              echo
+              echo "- Tag: ${GITHUB_REF_NAME}"
+              echo "- Stable release reason: ${REASON:-tag push}"
+              if [ "$ARTIFACTS_SAVED" = "true" ]; then
+                echo "- Artifacts:"
+                ls -1 artifacts/pack | sed 's/^/  - /'
+              fi
+          } >> "$GITHUB_STEP_SUMMARY"

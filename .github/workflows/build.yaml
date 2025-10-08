@@ -1,0 +1,80 @@
+name: Build .NET projects (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      os:
+        description: "JSON array of runners"
+        type: string
+        required: false
+        default: "ubuntu-latest"
+
+      dotnet-version:
+        description: "Version of .NET SDK to use"
+        type: string
+        required: false
+        default: "9.0.x"
+
+      configuration:
+        description: "The type of build to produce, e.g. Release vs Debug"
+        type: string
+        required: false
+        default: "Release"
+
+      defined-symbols:
+        description: "Define constants to pass to the compiler"
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  build:
+    name: Build on ${{ inputs.os }}
+    runs-on: ${{ inputs.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Make Scripts Executable
+        run: chmod u+x ./scripts/bash/*.sh
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+          cache: true
+          cache-dependency-path: |
+            **/packages.lock.json
+            **/*.csproj
+
+      - name: Build (${{ inputs.configuration }})
+        run: |
+          dotnet build \
+            /p:DefineConstants="${{ inputs.defined-symbols }}" \
+            --configuration ${{ inputs.configuration }}
+          {
+            echo "✅ Successful build!"
+            echo "Build configuration: ${{ inputs.configuration }}"
+            echo "Defined symbols: ${{ inputs.defined-symbols || 'None' }}"
+            echo "Runner: ${{ inputs.os }}"
+          } >> $GITHUB_STEP_SUMMARY
+
+      - name: ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        env:
+          SHELLCHECK_OPTS: --external-sources --check-sourced
+        with:
+          scandir: ./scripts/bash
+          check_together: true
+          severity: warning
+          format: tty
+          ignore_names: self-test.sh
