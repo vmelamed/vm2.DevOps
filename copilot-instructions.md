@@ -35,3 +35,15 @@ dotnet run --project benchmarks/UlidType.Benchmarks -c Release
 - Versioning powered by MinVer: prereleases auto-tag on merges to `main` (`vX.Y.(Z+1)-preview.YYYYMMDD.<run>`); stable releases require manual `git tag -a vX.Y.Z`.
 - CI workflows reuse `build.yaml`, `test.yaml`, `benchmarks.yaml`; `[skip ci]` only honored on push events.
 - Publishing needs `NUGET_API_KEY`; artifacts and summaries are produced via scripts (`run-tests.sh`, `run-benchmarks.sh`).
+
+## Documentation, README.md, and Comments
+- Keep README.md up to date with architecture, conventions, and workflows.
+- Comment public APIs with XML docs; use `<summary>`, `<param>`, `<returns>`, and `<remarks>` as needed.
+- Document any non-obvious implementation details or design decisions in code comments.
+- When writing documentation, aim for clarity and conciseness
+- Avoid jargon where possible
+- Use US English spelling
+- Ensure consistency in terminology throughout the docs
+- Do not avoid abbreviations, especially industry-wide accepted ones, but define them on first use, e.g. "*API* (Application Programming Interface)".
+- Use active voice for instructions and descriptions
+- Do not follow the three pointer rule - if you can explain it in two pointers or seven, do so. Do not cram points together. Again, clarity and clear enumeration over brevity and fictitious psychological rules.

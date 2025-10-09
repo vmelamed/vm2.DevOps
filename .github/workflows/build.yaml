@@ -21,7 +21,7 @@ on:
         required: false
         default: "Release"
 
-      defined-symbols:
+      define-symbols:
         description: "Define constants to pass to the compiler"
         type: string
         required: false
@@ -59,12 +59,12 @@ jobs:
       - name: Build (${{ inputs.configuration }})
         run: |
           dotnet build \
-            /p:DefineConstants="${{ inputs.defined-symbols }}" \
+            /p:DefineConstants="${{ inputs.define-symbols }}" \
             --configuration ${{ inputs.configuration }}
           {
             echo "✅ Successful build!"
             echo "Build configuration: ${{ inputs.configuration }}"
-            echo "Defined symbols: ${{ inputs.defined-symbols || 'None' }}"
+            echo "Defined symbols: ${{ inputs.define-symbols || 'None' }}"
             echo "Runner: ${{ inputs.os }}"
           } >> $GITHUB_STEP_SUMMARY
 

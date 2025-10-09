@@ -27,7 +27,7 @@ on:
         required: false
         default: "Release"
 
-      defined-symbols:
+      define-symbols:
         description: "Define constants to pass to the compiler"
         type: string
         required: false
@@ -83,7 +83,7 @@ jobs:
       - name: Run script for unit test with coverage
         env:
           CONFIGURATION: ${{ inputs.configuration || 'vars.CONFIGURATION' || 'Release' }}
-          DEFINED_SYMBOLS: ${{ inputs.defined-symbols || 'vars.DEFINED_SYMBOLS' }}
+          DEFINED_SYMBOLS: ${{ inputs.define-symbols || 'vars.DEFINED_SYMBOLS' }}
           VERBOSE: ${{ fromJSON(inputs.verbose) || false }}
         shell: bash
         run: >-

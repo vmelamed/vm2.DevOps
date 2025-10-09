@@ -21,7 +21,7 @@ Parameters: All parameters are optional if the corresponding environment
 Switches:$common_switches
 
 Options:
-    --matrix-os | -o
+    --target-os | -o
         JSON array of OS runners for the build matrix.
         Initial value from \$MATRIX_OS or '["ubuntu-latest"]'
 
@@ -33,7 +33,7 @@ Options:
         Build configuration ('Release' or 'Debug').
         Initial value from \$CONFIGURATION or 'Release'
 
-    --defined-symbols | -d
+    --define-symbols | -d
         Pre-processor symbols for compilation.
         Initial value from \$DEFINED_SYMBOLS or ''
 

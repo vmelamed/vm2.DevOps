@@ -54,9 +54,9 @@ function warning()
     return 1
 }
 
-# Validate and set matrix-os
+# Validate and set target-os
 if ! echo "$matrix_os" | jq . >/dev/null 2>&1; then
-    warning matrix_os '["ubuntu-latest"]' "Invalid JSON for matrix-os."
+    warning matrix_os '["ubuntu-latest"]' "Invalid JSON for target-os."
 fi
 
 # Validate and set dotnet-version
@@ -110,10 +110,10 @@ fi
     echo ""
     echo "| Variable           | Value               |"
     echo "|:-------------------|:--------------------|"
-    echo "| matrix-os          | $matrix_os          |"
+    echo "| target-os          | $matrix_os          |"
     echo "| dotnet-version     | $dotnet_version     |"
     echo "| configuration      | $configuration      |"
-    echo "| defined-symbols    | $defined_symbols    |"
+    echo "| define-symbols    | $defined_symbols    |"
     echo "| build-project      | $build_project      |"
     echo "| test-project       | $test_project       |"
     echo "| min-coverage-pct   | $min_coverage_pct   |"
@@ -127,10 +127,10 @@ fi
 # shellcheck disable=SC2154
 {
     # Output all variables to GITHUB_OUTPUT for use in subsequent jobs
-    echo "matrix-os=$matrix_os"
+    echo "target-os=$matrix_os"
     echo "dotnet-version=$dotnet_version"
     echo "configuration=$configuration"
-    echo "defined-symbols=$defined_symbols"
+    echo "define-symbols=$defined_symbols"
     echo "build-project=$build_project"
     echo "test-project=$test_project"
     echo "min-coverage-pct=$min_coverage_pct"

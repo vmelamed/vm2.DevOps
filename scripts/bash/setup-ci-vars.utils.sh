@@ -31,7 +31,7 @@ function get_arguments()
         case "${flag,,}" in
             --debugger     ) ;;  # already processed above
             --help|-h      ) usage; exit 0 ;;
-            --matrix-os|-o )
+            --target-os|-o )
                 value="$1"; shift
                 matrix_os="$value"
                 ;;
@@ -43,7 +43,7 @@ function get_arguments()
                 value="$1"; shift
                 configuration="$value"
                 ;;
-            --defined-symbols|-d )
+            --define-symbols|-d )
                 value="$1"; shift
                 defined_symbols="$value"
                 ;;
@@ -87,7 +87,6 @@ dump_all_variables()
         dry_run \
         verbose \
         quiet \
-        trace_enabled \
         --blank \
         matrix_os \
         dotnet_version \

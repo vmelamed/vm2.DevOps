@@ -21,7 +21,7 @@ on:
         required: false
         default: "Release"
 
-      defined-symbols:
+      define-symbols:
         description: "Define preprocessor symbols to pass to the compiler"
         type: string
         required: false
@@ -81,10 +81,10 @@ jobs:
     name: Parameters validation
     runs-on: ${{ inputs.os }}
     outputs:
-      matrix-os: ${{ steps.setup-vars.outputs.matrix-os }}
+      target-os: ${{ steps.setup-vars.outputs.target-os }}
       dotnet-version: ${{ steps.setup-vars.outputs.dotnet-version }}
       configuration: ${{ steps.setup-vars.outputs.configuration }}
-      defined-symbols: ${{ steps.setup-vars.outputs.defined-symbols }}
+      define-symbols: ${{ steps.setup-vars.outputs.define-symbols }}
       test-project: ${{ steps.setup-vars.outputs.test-project }}
       min-coverage-pct: ${{ steps.setup-vars.outputs.min-coverage-pct }}
       run-benchmarks: ${{ steps.setup-vars.outputs.run-benchmarks }}
@@ -105,7 +105,7 @@ jobs:
           MATRIX_OS: ${{ inputs.os || '["ubuntu-latest"]' }}
           DOTNET_VERSION: ${{ inputs.dotnet-version || '9.0.x' }}
           CONFIGURATION: ${{ inputs.configuration || 'Release' }}
-          DEFINED_SYMBOLS: ${{ inputs.defined-symbols || '_' }}
+          DEFINED_SYMBOLS: ${{ inputs.define-symbols || '_' }}
           TEST_PROJECT: ${{ inputs.test-project || './test/UlidType.Tests/UlidType.Tests.csproj' }}
           MIN_COVERAGE_PCT: ${{ inputs.min-coverage-pct || '80' }}
           RUN_BENCHMARKS: ${{ inputs.run-benchmarks || 'true' }}
@@ -121,9 +121,9 @@ jobs:
       - setup
     uses: ./.github/workflows/build.yaml
     with:
-      os: ${{ needs.setup.outputs.matrix-os }}
+      os: ${{ needs.setup.outputs.target-os }}
       configuration: ${{ needs.setup.outputs.configuration }}
-      defined-symbols: ${{ needs.setup.outputs.defined-symbols }}
+      define-symbols: ${{ needs.setup.outputs.define-symbols }}
       dotnet-version: ${{ needs.setup.outputs.dotnet-version }}
 
   test_job:
@@ -133,11 +133,11 @@ jobs:
       - build_job
     uses: ./.github/workflows/test.yaml
     with:
-      os: ${{ needs.setup.outputs.matrix-os }}
+      os: ${{ needs.setup.outputs.target-os }}
       dotnet-version: ${{ needs.setup.outputs.dotnet-version }}
       test-project: ${{ needs.setup.outputs.test-project }}
       configuration: ${{ needs.setup.outputs.configuration }}
-      defined-symbols: ${{ needs.setup.outputs.defined-symbols }}
+      define-symbols: ${{ needs.setup.outputs.define-symbols }}
       min-coverage-pct: ${{ fromJSON(needs.setup.outputs.min-coverage-pct) }}
       verbose: ${{ fromJSON(needs.setup.outputs.verbose) }}
 
@@ -148,11 +148,11 @@ jobs:
       - build_job
     uses: ./.github/workflows/benchmarks.yaml
     with:
-      os: ${{ needs.setup.outputs.matrix-os }}
+      os: ${{ needs.setup.outputs.target-os }}
       dotnet-version: ${{ needs.setup.outputs.dotnet-version }}
       benchmark-project: ${{ needs.setup.outputs.benchmark-project }}
       configuration: ${{ needs.setup.outputs.configuration }}
-      defined-symbols: ${{ needs.setup.outputs.defined-symbols }}
+      define-symbols: ${{ needs.setup.outputs.define-symbols }}
       max-regression-pct: ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}
       force-new-baseline: ${{ fromJSON(needs.setup.outputs.force-new-baseline) }}
       verbose: ${{ fromJSON(needs.setup.outputs.verbose) }}

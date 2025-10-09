@@ -4,24 +4,64 @@
 # For the functions to be invocable by other scripts, this script needs to be sourced.
 # When fatal parameter errors are detected, the script invokes exit, which leads to exiting the current shell.
 
-# commonly used variables
-initial_dir=$(pwd)
-declare -xr initial_dir
+#-------------------------------------------------------------------------------
+# Common scripts variables and environment initialization
+#-------------------------------------------------------------------------------
 
+
+# commonly used variables
+declare -xr initial_dir
+initial_dir=$(pwd)
 declare -x debugger=${DEBUGGER:-false}
-declare -x trace_enabled=${TRACE_ENABLED:-false}
 declare -x verbose=${VERBOSE:-false}
 declare -x dry_run=${DRY_RUN:-false}
 declare -x quiet=${QUIET:-false}
 declare -xr ci=${CI:-false}
 declare -x _ignore=/dev/null  # the file to redirect unwanted output to
 
+declare last_command
+declare current_command="$BASH_COMMAND"
+
+# on_debug when specified as a handler of the DEBUG trap, remembers the last invoked bash command in $last_command.
+# on_debug and on_exit are trying to cooperatively do error handling when exit is invoked. To be effective, after
+# sourcing this script, set these signal traps:
+#   trap on_debug DEBUG
+#   trap on_exit EXIT
+function on_debug() {
+    # keep track of the last executed command
+    last_command="$current_command"
+    current_command="$BASH_COMMAND"
+}
+
+# on_exit when specified as a handler of the EXIT trap
+#   * if on_debug handles the DEBUG trap, displays the failed command
+#   * if $initial_dir is defined, changes the current working directory to it
+#   * does `set +x`.
+# on_debug and on_exit are trying to cooperatively do error handling when exit is invoked. To be effective, after
+# sourcing this script, set these signal traps:
+#   trap on_debug DEBUG
+#   trap on_exit EXIT
+function on_exit() {
+    # echo an error message before exiting
+    local x=$?
+    if (( x != 0)); then
+        echo "'$last_command' command failed with exit code $x" >&2
+    fi
+    if [[ -n "$initial_dir" ]]; then
+        cd "$initial_dir" || exit
+    fi
+    set +x
+}
+
+trap on_debug DEBUG
+trap on_exit EXIT
+
 function set_ci()
 {
     if [[ $ci == true ]]; then
         quiet=true
         dry_run=false
-        trace_enabled=false
+        verbose=false
         debugger=false
         _ignore=/dev/null
         set +x
@@ -43,11 +83,11 @@ function set_trace_enabled()
 {
     if [[ $ci == true ]]; then
         # do not allow in CI mode
-        trace_enabled=false
+        verbose=false
         _ignore=/dev/null
         set +x
     else
-        trace_enabled=true
+        verbose=true
         _ignore=/dev/stdout
         set -x
     fi
@@ -61,7 +101,6 @@ function set_dry_run()
     else
         dry_run=true
     fi
-    dry_run=true
 }
 
 function set_quiet()
@@ -77,7 +116,6 @@ function set_quiet()
 function set_verbose()
 {
     verbose=true
-    trace_enabled=true
 }
 
 if [[ $ci == true ]]; then
@@ -85,9 +123,6 @@ if [[ $ci == true ]]; then
 fi
 if [[ $debugger == true ]]; then
     set_debugger
-fi
-if [[ $trace_enabled == true ]]; then
-    set_trace_enabled
 fi
 if [[ $dry_run == true ]]; then
     set_dry_run
@@ -106,20 +141,20 @@ fi
 # -b or --blank will display an empty line in the table
 # -l or --line will display a dividing line
 # -q or --quiet will not ask the user to press any key to continue after dumping the variables
-# -f or --force will dump the variables even if $trace_enabled is not true
+# -f or --force will dump the variables even if $verbose is not true
 function dump_vars() {
     if (( $# == 0 )); then
         return;
     fi
-    local force_trace_enabled=false
+    local force_verbose=false
     for v in "$@"; do
         if [[ "$v" == "-f" || "$v" == "--force" ]]; then
-            force_trace_enabled=true
+            force_verbose=true
             break
         fi
     done
     sync
-    if [[ $trace_enabled == false && $force_trace_enabled == false ]]; then
+    if [[ $verbose == false && $force_verbose == false ]]; then
         return;
     fi
 
@@ -244,41 +279,8 @@ function display_usage_msg()
     fi
 }
 
-declare last_command
-declare current_command="$BASH_COMMAND"
-# on_debug when specified as a handler of the DEBUG trap, remembers the last invoked bash command in $last_command.
-# on_debug and on_exit are trying to cooperatively do error handling when exit is invoked. To be effective, after
-# sourcing this script, set these signal traps:
-#   trap on_debug DEBUG
-#   trap on_exit EXIT
-function on_debug() {
-    # keep track of the last executed command
-    last_command="$current_command"
-    current_command="$BASH_COMMAND"
-}
-
-# on_exit when specified as a handler of the EXIT trap
-#   * if on_debug handles the DEBUG trap, displays the failed command
-#   * if $initial_dir is defined, changes the current working directory to it
-#   * does `set +x`.
-# on_debug and on_exit are trying to cooperatively do error handling when exit is invoked. To be effective, after
-# sourcing this script, set these signal traps:
-#   trap on_debug DEBUG
-#   trap on_exit EXIT
-function on_exit() {
-    # echo an error message before exiting
-    local x=$?
-    if (( x != 0)); then
-        echo "'$last_command' command failed with exit code $x" >&2
-    fi
-    if [[ -n "$initial_dir" ]]; then
-        cd "$initial_dir" || exit
-    fi
-    set +x
-}
-
 function trace() {
-    if [[ $trace_enabled == true ]]; then
+    if [[ $verbose == true ]]; then
         echo "Trace: $*" >&2
     fi
 }
@@ -304,6 +306,14 @@ function to_lower() {
 # Usage example: local a="$(to_upper "$1")"
 function to_upper() {
     printf "%s" "${1^^}"
+}
+
+# capitalize converts the first character in the passed in value to upper case and the rest to lowercase and prints the to stdout.
+# Usage example: local a="$(capitalize "$1")"
+function capitalize() {
+    a=to_lower "$1"
+    # shellcheck disable=SC2154
+    printf "%s" "${a^}"
 }
 
 # is_positive tests if its parameter represents a valid positive, integer number (aka natural number): {1, 2, 3, ...}
@@ -369,6 +379,16 @@ function list_of_files() {
     shopt -u globstar || true
     printf "%s" "${list[*]}"
     return 0
+}
+
+# press_any_key displays a prompt, followed by "Press any key to continue..." and returns only after the script user
+# presses a key. If there is defined variable $quiet with value "true", the function will not display prompt and will
+# not wait for response.
+function press_any_key() {
+    if [[ "$quiet" != true ]]; then
+        read -n 1 -rsp 'Press any key to continue...' >&2
+        echo
+    fi
 }
 
 # confirm asks the script user to respond yes or no to some prompt. If there is a defined variable $quiet with
@@ -464,33 +484,6 @@ function choose() {
     return 0
 }
 
-declare return_userid
-declare return_passwd
-# get_credentials gets a user ID and a password from the script user. In the end the script will ask the user to
-# confirm their entries.
-# Parameter 1 - the prompt for getting the user ID. Default "Enter the user ID: "
-# Parameter 2 - the prompt for getting the password. Default "Enter the user password: "
-# Parameter 3 - the prompt to confirm that the input is correct. If empty the function will not ask the user to confirm
-# their input.
-# The user ID and the password will be held in $return_userid and $return_passwd until the next invocation of the
-# function.
-function get_credentials() {
-    local promptUserID=${1:-"Enter the user ID: "}
-    local promptPassword=${2:-"Enter the password: "}
-    local promptConfirm=$3
-    return_userid=""
-    return_passwd=""
-    until [[ -n $return_userid  &&  -n $return_passwd ]]; do
-        read -rp "$promptUserID" return_userid >&2
-        read -rsp "$promptPassword" return_passwd >&2
-        echo >&2
-        if [[ -n "$promptConfirm" && $(confirm "$promptConfirm") != "y" ]]; then
-            return_userid=""
-            return_passwd=""
-        fi
-    done
-}
-
 # get_from_yaml gets the result of executing JSON query expression on YAML file.
 # Requires "yq".
 # Param 1 - the JSON query expression to execute
@@ -517,14 +510,33 @@ function get_from_yaml()
     return 0
 }
 
-# press_any_key displays a prompt, followed by "Press any key to continue..." and returns only after the script user
-# presses a key. If there is defined variable $quiet with value "true", the function will not display prompt and will
-# not wait for response.
-function press_any_key() {
-    if [[ "$quiet" != true ]]; then
-        read -n 1 -rsp 'Press any key to continue...' >&2
-        echo
-    fi
+# get_credentials gets a user ID and a password from the script user. In the end the script will ask the user to
+# confirm their entries.
+# Parameter 1 - the prompt for getting the user ID. Default "User ID: "
+# Parameter 2 - the prompt for getting the password. Default "Password: "
+# Parameter 3 - the prompt to confirm that the input is correct. If empty the function will not ask the user to confirm
+# their input.
+# The user ID and the password will be held in $return_userid and $return_passwd until the next invocation of the
+# function.
+function get_credentials() {
+    local promptUserID=${1:-"User ID: "}
+    local promptPassword=${2:-"Password: "}
+    local promptConfirm=$3
+    userid=""
+    passwd=""
+    [[ "$quiet" == true ]] && printf "%s:%s" "$userid" "$passwd" && return 0
+    while [[ -z $userid  &&  -z $passwd ]]; do
+        read -rp "$promptUserID" userid >&2
+        read -rsp "$promptPassword" passwd >&2
+        echo >&2
+        if [[ -n "$promptConfirm" ]] && confirm "$promptConfirm"; then
+            printf "%s:%s" "$userid" "$passwd"
+            exit 0
+        else
+            userid=""
+            passwd=""
+        fi
+    done
 }
 
 # scp_retry tries the SSH copy command up to three times with timeout of 10sec timeout between retries.

@@ -107,17 +107,13 @@ fi
 dump_all_variables
 
 # get the IDs of the last 1000 successful runs of the specified workflow
-mapfile -t runs < <(execute gh run list \
-                                --repo "$repository" \
-                                --workflow "$workflow_id" \
-                                --status success \
-                                --limit 100 \
-                                --json databaseId \
-                                --jq '.[].databaseId')
-
-if [[ "$dry_run" == true ]]; then
-    runs=(1234567890 1234567889 1234567888)
-fi
+mapfile -t runs < <(gh run list \
+                        --repo "$repository" \
+                        --workflow "$workflow_id" \
+                        --status success \
+                        --limit 100 \
+                        --json databaseId \
+                        --jq '.[].databaseId')
 
 if [[ ${#runs[@]} == 0 ]]; then
     # shellcheck disable=SC2154
@@ -132,7 +128,7 @@ for run in "${runs[@]}"; do
     i=$((i + 1))
     trace "Checking run $run for the artifact '$artifact_name'..."
     query="any(.artifacts[]; .name==\"$artifact_name\")"
-    if [[ ! $(execute gh api "repos/$repository/actions/runs/$run/artifacts" --jq "$query") == "true" ]]; then
+    if [[ ! $(gh api "repos/$repository/actions/runs/$run/artifacts" --jq "$query") == "true" ]]; then
         # shellcheck disable=SC2154
         echo "The artifact '$artifact_name' not found in run $run." >> "$GITHUB_STEP_SUMMARY"
         continue

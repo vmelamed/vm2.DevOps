@@ -83,7 +83,6 @@ dump_all_variables()
         dry_run \
         verbose \
         quiet \
-        trace_enabled \
         --blank \
         repository \
         workflow_name \
