@@ -4,17 +4,17 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Microsoft.Extensions.FileSystemGlobbing" Version="9.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.FileSystemGlobbing" Version="10.0.0-rc.2.25502.107" />
     <PackageVersion Include="System.Memory" Version="4.6.3" />
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="9.0.8" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="MinVer" Version="6.0.0" />
-    <PackageVersion Include="System.CommandLine" Version="2.0.0-rc.1.25451.107" />
+    <PackageVersion Include="System.CommandLine" Version="2.0.0-rc.2.25502.107" />
     <PackageVersion Include="Markdig" Version="0.42.0" />
     <!-- The test stack: -->
     <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.0.4" />
     <PackageVersion Include="FluentAssertions" Version="8.7.1" />
-    <PackageVersion Include="System.Text.Json" Version="9.0.9" />
+    <PackageVersion Include="System.Text.Json" Version="10.0.0-rc.2.25502.107" />
     <PackageVersion Include="xunit.v3" Version="3.1.0" />
     <PackageVersion Include="xunit.v3.extensibility.core" Version="3.1.0" />
     <!-- Microsoft Testing Platform makes the following assemblies redundant:
