@@ -176,7 +176,7 @@ if [[ $dry_run != "true" ]]; then
         sync
         exit 2
     else
-        echo "✅ Coverage $pct% meets the threshold of $min_coverage_pct%" >> "$GITHUB_STEP_SUMMARY"
+        echo "✔️ Coverage $pct% meets the threshold of $min_coverage_pct%" >> "$GITHUB_STEP_SUMMARY"
     fi
 fi
 sync

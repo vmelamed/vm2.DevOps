@@ -177,17 +177,17 @@ if (( pct > max_regression_pct )); then
     sync
     exit 2
 elif (( pct >= 0 )); then
-    echo "✅ Performance regression within acceptable threshold." | tee >> "$GITHUB_STEP_SUMMARY"
+    echo "✔️ Performance regression within acceptable threshold." | tee >> "$GITHUB_STEP_SUMMARY"
 elif (( pct < 0 )); then
     pct=$(( -pct ))
     if (( pct >= max_regression_pct )); then
         if is_defined "GITHUB_ENV"; then
-            echo "✅ Significant improvement of $pct% below the baseline. Updating the baseline." | tee >> "$GITHUB_STEP_SUMMARY"
+            echo "✔️ Significant improvement of $pct% below the baseline. Updating the baseline." | tee >> "$GITHUB_STEP_SUMMARY"
             # shellcheck disable=SC2154
             echo "FORCE_NEW_BASELINE=true" | tee >> "$GITHUB_ENV"
         fi
     else
-        echo "✅ Improvement of $pct% below the baseline." | tee >> "$GITHUB_STEP_SUMMARY"
+        echo "✔️ Improvement of $pct% below the baseline." | tee >> "$GITHUB_STEP_SUMMARY"
     fi
 fi
 sync

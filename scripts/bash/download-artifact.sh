@@ -147,7 +147,7 @@ E.g. run the benchmarks with --force-new-baseline or vars.FORCE_NEW_BASELINE" >&
         echo "Error while downloading '$artifact_name': $http_error" | tee >> "$GITHUB_STEP_SUMMARY" >&2
         exit 2
     fi
-    echo "✅ The artifact '$artifact_name' successfully downloaded to directory '$artifacts_dir'." >> "$GITHUB_STEP_SUMMARY"
+    echo "✔️ The artifact '$artifact_name' successfully downloaded to directory '$artifacts_dir'." >> "$GITHUB_STEP_SUMMARY"
     exit 0
 done
 

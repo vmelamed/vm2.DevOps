@@ -106,7 +106,7 @@ fi
 
 {
     # Log all computed values for debugging
-    echo "✅ All variables validated successfully"
+    echo "✔️ All variables validated successfully"
     echo ""
     echo "| Variable           | Value               |"
     echo "|:-------------------|:--------------------|"

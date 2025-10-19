@@ -1,0 +1,161 @@
+﻿namespace vm2.DevOps.Globs.Tests.FakeFileSystem;
+
+/// <summary>
+/// Represents a folder in the file system: container for subfolders and files.
+/// </summary>
+/// <param name="name"></param>
+/// <remarks>
+/// We use the term "folder" instead of "directory" in classes and method names to avoid confusion with the .NET class
+/// <see cref="Directory"/>.
+/// </remarks>
+public class Folder(string name = "") : IEquatable<Folder>, IComparable<Folder>
+{
+    private SortedSet<Folder> _folders = [];
+    private SortedSet<string> _files   = new(StringComparer.Ordinal);
+
+    [JsonRequired]
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = name;
+
+    [JsonPropertyName("folders")]
+    public ISet<Folder> Folders { get => _folders; set => _folders = [.. value]; }
+
+    [JsonPropertyName("files")]
+    public ISet<string> Files { get => _files; set => _files = [.. value]; }
+
+    [JsonIgnore]
+    public string Path { get; private set; } = "";
+
+    [JsonIgnore]
+    public Folder? Parent
+    {
+        get;
+        private set
+        {
+            if (field == value) // the same parent? - do nothing
+                return;
+
+            field = value;
+
+            if (value is not null)
+                Comparer = value.Comparer;
+            SetPath();
+        }
+    }
+
+    [JsonIgnore]
+    public StringComparer Comparer
+    {
+        get;
+        private set
+        {
+            if (field == value) // the same comparer? - do nothing
+                return;
+
+            field       = value;
+
+            // Recreate the sets with the new comparer:
+            _files      = new SortedSet<string>(Files, value);
+            _folders    = [.. Folders]; // rebuild to ensure correct new ordering of children
+            foreach (var folder in _folders)
+                folder.Comparer = value; // propagate to children
+        }
+    } = StringComparer.Ordinal;
+
+    public string? HasFile(string fileName)
+        => Files.FirstOrDefault(f => Comparer.Compare(f, fileName) == 0);
+
+    public Folder? HasFolder(string subDirName)
+        => Folders.FirstOrDefault(d => Comparer.Compare(d.Name, subDirName) == 0);
+
+    public bool Equals(Folder? other) => CompareTo(other) == 0;
+
+    public int CompareTo(Folder? other)
+    {
+        if (other is null)
+            return 1;
+        if (ReferenceEquals(this, other))
+            return 0;
+        return Parent == other.Parent
+               || string.IsNullOrWhiteSpace(Path)
+               || string.IsNullOrWhiteSpace(other.Path)
+                    ? Comparer.Compare(Name, other.Name)
+                    : Comparer.Compare(Path, other.Path);   // so that we can compare unlinked nodes
+    }
+
+    public override bool Equals(object? other) => Equals(other as Folder);
+
+    public override int GetHashCode() => Name.GetHashCode();
+
+    public override string ToString() => Name;
+
+    public Folder Add(Folder node)
+    {
+        if (Folders.Contains(node))
+            throw new ArgumentException($"Folder '{node.Name}' already exists in '{Name}'.", nameof(node));
+        node.Parent = this;
+        _folders.Add(node);
+        return this;
+    }
+
+    public Folder Add(string file)
+    {
+        if (Files.Contains(file))
+            throw new ArgumentException($"HasFile '{file}' already exists in '{Name}'.", nameof(file));
+        _files.Add(file);
+        return this;
+    }
+
+    public static Folder LinkChildren(Folder root, StringComparer comparer)
+    {
+        if (root.Parent is not null)
+            throw new ArgumentException("Root node cannot have a folder.", nameof(root));
+
+        if (!root.Name.EndsWith(FakeFS.SepChar))
+            throw new InvalidDataException($"Root node name must end with '{FakeFS.SepChar}'.");
+
+        root.SetPath();
+
+        // Set the parents and the comparer recursively from the root node through the entire tree
+        root.Comparer = comparer;
+        SetAsParent(root);
+        return root;
+    }
+
+    void SetPath()
+    {
+        var segment = Name.EndsWith(FakeFS.SepString) ? Name : Name + FakeFS.SepString;
+        Path = Parent is not null
+                    ? $"{Parent?.Path}{segment}"
+                    : $"{segment}";
+    }
+
+    static void SetAsParent(Folder folder)
+    {
+        foreach (var child in folder.Folders)
+        {
+            child.Parent = folder;
+            SetAsParent(child);
+        }
+    }
+
+    public static readonly JsonSerializerOptions JsonSerializerOptions = new()
+    {
+        AllowTrailingCommas = true,
+        IndentSize = 4,
+        PropertyNameCaseInsensitive = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        ReadCommentHandling = JsonCommentHandling.Skip,
+        WriteIndented = true
+    };
+}
+
+[JsonSourceGenerationOptions(
+    AllowTrailingCommas = true,
+    IndentSize = 4,
+    PropertyNameCaseInsensitive = true,
+    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+    ReadCommentHandling = JsonCommentHandling.Skip,
+    WriteIndented = true)]
+[JsonSerializable(typeof(Folder))]
+internal partial class FolderSourceGenerationContext : JsonSerializerContext { }

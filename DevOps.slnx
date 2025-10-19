@@ -1,0 +1,47 @@
+<Solution>
+  <Folder Name="/.github/" />
+  <Folder Name="/.github/workflows/">
+    <File Path=".github/workflows/benchmarks.yaml" />
+    <File Path=".github/workflows/build.yaml" />
+    <File Path=".github/workflows/ci.yaml" />
+    <File Path=".github/workflows/Prerelease.yaml" />
+    <File Path=".github/workflows/Release.yaml" />
+    <File Path=".github/workflows/test.yaml" />
+  </Folder>
+  <Folder Name="/scripts/" />
+  <Folder Name="/scripts/bash/">
+    <File Path="scripts/bash/.shellcheckrc" />
+    <File Path="scripts/bash/download-artifact.sh" />
+    <File Path="scripts/bash/download-artifact.usage.sh" />
+    <File Path="scripts/bash/download-artifact.utils.sh" />
+    <File Path="scripts/bash/run-benchmarks.sh" />
+    <File Path="scripts/bash/run-benchmarks.usage.sh" />
+    <File Path="scripts/bash/run-benchmarks.utils.sh" />
+    <File Path="scripts/bash/run-tests.sh" />
+    <File Path="scripts/bash/run-tests.usage.sh" />
+    <File Path="scripts/bash/run-tests.utils.sh" />
+    <File Path="scripts/bash/setup-ci-vars.sh" />
+    <File Path="scripts/bash/setup-ci-vars.usage.sh" />
+    <File Path="scripts/bash/setup-ci-vars.utils.sh" />
+    <File Path="scripts/bash/summary.jq" />
+    <File Path="scripts/bash/_common.sh" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitignore" />
+    <File Path="copilot-instructions.md" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="LICENSE" />
+    <File Path="README.md" />
+    <File Path="ReleaseProcess.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/BmCompare/BmCompare.csproj" />
+    <Project Path="src/Globs/Globs.csproj" Id="904df4eb-5547-4d56-8586-e3a25d2ececd" />
+    <Project Path="src/Scratch/Scratch.csproj" Id="1f1b085c-62e3-4ca5-8805-f67bec8c15e1" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/Globs.Tests/Globs.Tests.csproj" />
+  </Folder>
+</Solution>

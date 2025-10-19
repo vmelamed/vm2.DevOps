@@ -1,0 +1,77 @@
+﻿{
+    "name": "C:/",
+    "folders": [
+        {
+            "name": "Users",
+            "folders": [
+                {
+                    "name": "valme",
+                    "folders": [
+                        {
+                            "name": "Downloads",
+                            "folders": [
+                                {
+                                    "name": "benchmark-summaries-ubuntu-latest",
+                                    "folders": [
+                                        {
+                                            "name": "results",
+                                            "folders": [],
+                                            "files": [
+                                                "vm2.UlidType.Benchmarks.NewUlid-report-full-compressed.json",
+                                                "vm2.UlidType.Benchmarks.NewUlid-report-github.md",
+                                                "vm2.UlidType.Benchmarks.NewUlid-report.csv",
+                                                "vm2.UlidType.Benchmarks.NewUlid-report.html",
+                                                "vm2.UlidType.Benchmarks.NewUlid-report.json",
+                                                "vm2.UlidType.Benchmarks.ParseUlid-report-full-compressed.json",
+                                                "vm2.UlidType.Benchmarks.ParseUlid-report-github.md",
+                                                "vm2.UlidType.Benchmarks.ParseUlid-report.csv",
+                                                "vm2.UlidType.Benchmarks.ParseUlid-report.html",
+                                                "vm2.UlidType.Benchmarks.ParseUlid-report.json",
+                                                "vm2.UlidType.Benchmarks.UlidToString-report-full-compressed.json",
+                                                "vm2.UlidType.Benchmarks.UlidToString-report-github.md",
+                                                "vm2.UlidType.Benchmarks.UlidToString-report.csv",
+                                                "vm2.UlidType.Benchmarks.UlidToString-report.html",
+                                                "vm2.UlidType.Benchmarks.UlidToString-report.json"
+                                            ]
+                                        },
+                                        {
+                                            "name": "summaries",
+                                            "folders": [],
+                                            "files": [
+                                                "vm2.UlidType.Benchmarks.NewUlid-summary.json",
+                                                "vm2.UlidType.Benchmarks.ParseUlid-summary.json",
+                                                "vm2.UlidType.Benchmarks.UlidToString-summary.json"
+                                            ]
+                                        }
+                                    ],
+                                    "files": [
+                                        "BenchmarkRun-20251008-151653.log"
+                                    ]
+                                }
+                            ],
+                            "files": [
+                                "2025-09-30T01_44_59-FedEx-Transaction-Record.pdf",
+                                "Amazon Order.pdf",
+                                "benchmark-summaries-ubuntu-latest (1).zip",
+                                "Resume.pdf.crdownload",
+                                "Shiping record1.pdf",
+                                "Shiping record2.pdf",
+                                "Unconfirmed 365032.crdownload",
+                                "vm2.Ulid.0.0.0-alpha.0.42.nupkg",
+                                "vm2.UlidType.Benchmarks.NewUlid-report-full-compressed.json",
+                                "vm2.UlidType.Benchmarks.NewUlid-report.json",
+                                "vm2.UlidType.Benchmarks.ParseUlid-report-full-compressed.json",
+                                "vm2.UlidType.Benchmarks.ParseUlid-report.json",
+                                "vm2.UlidType.Benchmarks.UlidToString-report-full-compressed.json",
+                                "vm2.UlidType.Benchmarks.UlidToString-report.json"
+                            ]
+                        }
+                    ],
+                    "files": []
+                }
+            ],
+            "files": []
+        }
+    ],
+    "files": []
+}

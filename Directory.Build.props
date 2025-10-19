@@ -1,0 +1,123 @@
+<Project>
+    <PropertyGroup Label="Packages">
+        <TargetFramework>net9.0</TargetFramework>
+        <LangVersion>preview<!--latest--></LangVersion>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks><!-- for stackalloc mostly -->
+        <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+        <AnalysisLevel>preview<!--latest--></AnalysisLevel>
+        <WarningLevel>9999</WarningLevel>
+        <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+        <WarningsAsErrors />
+        <NoWarn>$(NoWarn);IDE0058;IDE0290;IDE0130;NU1109;NU1507</NoWarn>
+        <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+        <IsTrimmable>true</IsTrimmable>
+        <TieredPGO>true</TieredPGO>
+        <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    </PropertyGroup>
+
+    <PropertyGroup Label="NuGetGlobal">
+        <IsPackable>true</IsPackable>
+        <Company>vm</Company>
+        <Product>vm2</Product>
+        <ProductName>vm2 packages</ProductName>
+        <Authors>Val Melamed</Authors>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <RepositoryUrl>https://github.com/vmelamed/vm2.Ulid</RepositoryUrl>
+        <Copyright>Copyright © 2025 vm</Copyright>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+        <RepositoryType>git</RepositoryType>
+        <IncludeSymbols>True</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+        <EnablePackageValidation>true</EnablePackageValidation>
+        <MinVerTagPrefix>v</MinVerTagPrefix>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.SourceLink.GitHub">
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="MinVer">
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+    </ItemGroup>
+
+    <PropertyGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]test[/\\]'))">
+        <!-- Test projects settings -->
+        <IsTestProject>true</IsTestProject>
+        <IsPackable>false</IsPackable>
+        <GenerateDocumentationFile>false</GenerateDocumentationFile>
+        <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+        <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+        <NoWarn>
+            $(NoWarn);CA1031;CA1701;CA1702;CA1707;CA1806;CA2211;CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290
+        </NoWarn>
+    </PropertyGroup>
+    <ItemGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]test[/\\]')) and $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '^*.Tests$'))">
+        <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
+        <PackageReference Include="FluentAssertions" />
+        <PackageReference Include="xunit.v3" />
+        <!-- Microsoft Testing Platform makes the following references redundant:
+        <PackageReference Include="Microsoft.NET.Test.Sdk" /> <!- - required for VSTest but not for MS Test Platform - ->
+        <PackageReference Update="xunit.runner.visualstudio"> <!- - required for VSTest but not for MS Test Platform - ->
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Update="coverlet.msbuild">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        -->
+    </ItemGroup>
+    <ItemGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]test[/\\]')) and !$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '^*.Tests$'))">
+        <!-- for test libraries in the test folder: -->
+        <PackageReference Include="xunit.v3.extensibility.core" />
+    </ItemGroup>
+    <ItemGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]test[/\\]'))">
+        <Using Include="Xunit" />
+        <Using Include="FluentAssertions" />
+        <Using Include="FluentAssertions.Formatting" />
+        <Using Include="FluentAssertions.Extensibility" />
+    </ItemGroup>
+
+    <PropertyGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]benchmarks[/\\]'))">
+        <!-- Test projects settings -->
+        <OutputType>Exe</OutputType>
+        <IsPackable>false</IsPackable>
+        <GenerateDocumentationFile>false</GenerateDocumentationFile>
+        <NoWarn>
+            $(NoWarn);CA1031;CA1701;CA1702;CA1707;CA1806;CA2211;CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290
+        </NoWarn>
+    </PropertyGroup>
+    <ItemGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]benchmarks[/\\]'))">
+        <PackageReference Include="BenchmarkDotNet" />
+        <PackageReference Include="BenchmarkDotNet.Annotations" />
+        <!-- To show up in the test explorer (with some perf. penalty)
+        <PackageReference Include="BenchmarkDotNet.TestAdapter" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        -->
+        <!-- for running with Visual Studio profiler:
+        <PackageReference Include="Microsoft.VisualStudio.DiagnosticsHub.BenchmarkDotNetDiagnosers" />
+        -->
+    </ItemGroup>
+    <ItemGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]benchmarks[/\\]'))">
+        <Using Include="BenchmarkDotNet" />
+        <Using Include="BenchmarkDotNet.Attributes" />
+        <Using Include="BenchmarkDotNet.Configs" />
+        <Using Include="BenchmarkDotNet.Jobs" />
+        <Using Include="BenchmarkDotNet.Order" />
+        <Using Include="BenchmarkDotNet.Running" />
+    </ItemGroup>
+
+    <PropertyGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]examples[/\\]'))">
+        <!-- Example projects settings -->
+        <IsPackable>false</IsPackable>
+        <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    </PropertyGroup>
+
+</Project>

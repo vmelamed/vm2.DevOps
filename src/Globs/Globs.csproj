@@ -1,0 +1,11 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+      <RootNamespace>vm2.DevOps.Globs</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="PathRegex.cs" />
+  </ItemGroup>
+
+</Project>
