@@ -421,5 +421,5 @@ report.txt
 *[Ss]cratch*
 *[Ss]cratch*/
 _ignore
-copilot[-_]instructions.md
-COPILOT[-_]INSTRUCTIONS.md
+copilot[-_]instructions*.md
+COPILOT[-_]INSTRUCTIONS*.md
