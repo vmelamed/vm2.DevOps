@@ -26,9 +26,9 @@ public sealed partial class FakeFS : IFileSystem
 
     public bool FolderExists(string path)
     {
-        var (folder, file) = GetPathFromRoot(path);
+        var (folder, fileComp, file) = GetPathFromRoot(path);
 
-        return folder is not null && file is "";
+        return folder is not null && !fileComp && file is "";
     }
 
     public bool FileExists(string path)
@@ -36,20 +36,20 @@ public sealed partial class FakeFS : IFileSystem
         if (path.EndsWith(SepChar))
             return false;   // A path to a file cannot end with a separator
 
-        var (_, file) = GetPathFromRoot(path);
+        var (folder, _, file) = GetPathFromRoot(path);
 
-        return file is not null;
+        return folder is not null && file is not "";
     }
 
     public string GetFullPath(string path)
     {
         ValidatePath(path);
 
-        var (folder, fileName) = GetPathFromRoot(path);
+        var (folder, _, fileName) = GetPathFromRoot(path);
 
         if (folder is null)
             throw new ArgumentException("Path not found in the Fake file system.", nameof(path));
-        if (fileName is not null)
+        if (fileName is not "")
             return folder.Path + fileName;
 
         return folder.Path;
@@ -75,7 +75,7 @@ public sealed partial class FakeFS : IFileSystem
             pattern = pattern[(i + 1)..];                               // pattern is the last segment
         }
 
-        var (folder, _) = GetPathFromRoot(path);
+        var (folder, _, _) = GetPathFromRoot(path);
 
         if (folder is null)
             // path - no such folder
@@ -121,7 +121,7 @@ public sealed partial class FakeFS : IFileSystem
             pattern = pattern[(i + 1)..];                               // pattern is the last segment
         }
 
-        var (folder, _) = GetPathFromRoot(path);
+        var (folder, _, _) = GetPathFromRoot(path);
 
         if (folder is null)
             // path - no such folder

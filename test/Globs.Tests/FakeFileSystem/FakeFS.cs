@@ -109,17 +109,19 @@ public sealed partial class FakeFS : IFileSystem
 
     public Folder SetCurrentFolder(string pathName)
     {
-        var (folder, fileName) = GetPathFromRoot(pathName);
+        var (folder, fileComp, _) = GetPathFromRoot(pathName);
 
         if (folder is null)
             throw new ArgumentException($"Path '{pathName}' not found in the JSON file system.", nameof(pathName));
-        if (fileName is not "")
+        if (fileComp)
             throw new ArgumentException($"The current folder '{pathName}' path points to a file name, not a folder.", nameof(pathName));
 
         return CurrentFolder = folder;
     }
 
-    public (Folder? folder, string? fileName) GetPathFromRoot(string path)
+    public record struct PathAndFile(Folder? Folder = null, bool HasFileComponent = false, string FileName = "");
+
+    public PathAndFile GetPathFromRoot(string path)
     {
         ValidatePath(path);
 
@@ -128,18 +130,18 @@ public sealed partial class FakeFS : IFileSystem
         var folder     = CurrentFolder;
 
         if (!enumerator.MoveNext())
-            return (folder, "");
+            return new PathAndFile(folder);
 
         var range = enumerator.Current;
         var seg = nPath[range];
         if (IsDrive(seg))
         {
             if (seg[0] != RootFolder.Name[0])
-                return (null, "");    // different drive letter
+                return new PathAndFile(null);    // different drive letter
 
             // consume it
             if (!enumerator.MoveNext())
-                return (CurrentFolder, "");
+                return new PathAndFile(CurrentFolder);
             range = enumerator.Current;
             seg = nPath[range];
         }
@@ -151,7 +153,7 @@ public sealed partial class FakeFS : IFileSystem
 
             // consume it
             if (!enumerator.MoveNext())
-                return (folder, "");
+                return new PathAndFile(folder);
             range = enumerator.Current;
             seg = nPath[range];
         }
@@ -167,11 +169,11 @@ public sealed partial class FakeFS : IFileSystem
                 {
                     if (enumerator.MoveNext())
                         // there are more segments in the path that are not matched, i.e. it is not found
-                        return (null, "");
+                        return new PathAndFile();
 
                     // if it is the last segment, test if it is a fileName in this folder
                     name = folder.HasFile(name) ?? "";
-                    return (folder, name);
+                    return new PathAndFile(folder, true, name);
                 }
                 folder = nextFolder;
             }
@@ -184,7 +186,8 @@ public sealed partial class FakeFS : IFileSystem
         }
         while (true);
 
-        return (folder, "");
+        return new PathAndFile(folder);
+
     }
 
     public void ToJsonFile(string fileName, bool pretty = false)

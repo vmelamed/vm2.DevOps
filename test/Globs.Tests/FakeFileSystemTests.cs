@@ -149,7 +149,7 @@ public partial class FakeFileSystemTests
         }
         else
         {
-            var (folder, file) = fromPath.Should().NotThrow().Which;
+            var (folder, _, file) = fromPath.Should().NotThrow().Which;
             (folder?.Path ?? "").Should().Be(data.ResultPath);
             file.Should().Be(data.ResultFile);
         }
@@ -162,6 +162,25 @@ public partial class FakeFileSystemTests
         var fs = new FakeFS(data.JsonFile, DataFileType.Json);
         fs.SetCurrentFolder(data.CurrentFolder);
         var exists = () => fs.FolderExists(data.Path);
+
+        if (data.Throws)
+        {
+            exists.Should().Throw<ArgumentException>();
+        }
+        else
+        {
+            var existsResult = exists.Should().NotThrow().Which;
+            existsResult.Should().Be(data.Result);
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(FileExists_TestDataSet))]
+    public void FileExists_Test(FolderExists_TestData data)
+    {
+        var fs = new FakeFS(data.JsonFile, DataFileType.Json);
+        fs.SetCurrentFolder(data.CurrentFolder);
+        var exists = () => fs.FileExists(data.Path);
 
         if (data.Throws)
         {

@@ -289,18 +289,18 @@ public partial class FakeFileSystemTests
         new GetPathFromRoot_TestData(TestFileLine(), "FakeFS2.Win.json", "C:/folder1/folder2/", "./file2.txt",          "C:/folder1/folder2/",  "file2.txt", false),
         new GetPathFromRoot_TestData(TestFileLine(), "FakeFS2.Win.json", "C:/folder1/folder2/", "C:/folder3/file3.txt", "C:/folder3/",          "file3.txt", false),
 
-        new GetPathFromRoot_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/",          "",                     "/folder1/",          "",          false),
-        new GetPathFromRoot_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/",          "/",                    "/",                  "",          false),
-        new GetPathFromRoot_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/",          "/folder1",             "/folder1/",          "",          false),
-        new GetPathFromRoot_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/",          "file1.txt",            "/folder1/",          "file1.txt", false),
-        new GetPathFromRoot_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/",          "/folder1/file1.txt",   "/folder1/",          "file1.txt", false),
-        new GetPathFromRoot_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/",          ".",                    "/folder1/",          "",          false),
-        new GetPathFromRoot_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/folder2/",  "..",                   "/folder1/",          "",          false),
-        new GetPathFromRoot_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/folder2/",  "/folder1",             "/folder1/",          "",          false),
-        new GetPathFromRoot_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/folder2/",  "../file1.txt",         "/folder1/",          "file1.txt", false),
-        new GetPathFromRoot_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/folder2/",  "file2.txt",            "/folder1/folder2/",  "file2.txt", false),
-        new GetPathFromRoot_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/folder2/",  "./file2.txt",          "/folder1/folder2/",  "file2.txt", false),
-        new GetPathFromRoot_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/folder2/",  "/folder3/file3.txt",   "/folder3/",          "file3.txt", false),
+        new GetPathFromRoot_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/",          "",                     "/folder1/",            "",          false),
+        new GetPathFromRoot_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/",          "/",                    "/",                    "",          false),
+        new GetPathFromRoot_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/",          "/folder1",             "/folder1/",            "",          false),
+        new GetPathFromRoot_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/",          "file1.txt",            "/folder1/",            "file1.txt", false),
+        new GetPathFromRoot_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/",          "/folder1/file1.txt",   "/folder1/",            "file1.txt", false),
+        new GetPathFromRoot_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/",          ".",                    "/folder1/",            "",          false),
+        new GetPathFromRoot_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/folder2/",  "..",                   "/folder1/",            "",          false),
+        new GetPathFromRoot_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/folder2/",  "/folder1",             "/folder1/",            "",          false),
+        new GetPathFromRoot_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/folder2/",  "../file1.txt",         "/folder1/",            "file1.txt", false),
+        new GetPathFromRoot_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/folder2/",  "file2.txt",            "/folder1/folder2/",    "file2.txt", false),
+        new GetPathFromRoot_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/folder2/",  "./file2.txt",          "/folder1/folder2/",    "file2.txt", false),
+        new GetPathFromRoot_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/folder2/",  "/folder3/file3.txt",   "/folder3/",            "file3.txt", false),
     ];
 
     public class FolderExists_TestData(
@@ -366,6 +366,10 @@ public partial class FakeFileSystemTests
         new FolderExists_TestData(TestFileLine(), "FakeFS2.Win.json",  "/folder1/folder2/",   "..",                   true,  false),
         new FolderExists_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/folder1/folder2/", ".",                    true,  false),
         new FolderExists_TestData(TestFileLine(), "FakeFS2.Win.json",  "/folder1/folder2/",   ".",                    true,  false),
+        new FolderExists_TestData(TestFileLine(), "FakeFS2.Win.json",  "/folder1/folder2/",   "../file2.txt",         false, false),    // TODO: is this right?
+        new FolderExists_TestData(TestFileLine(), "FakeFS2.Win.json",  "/folder1/folder2/",   "../file1.txt",         false, false),
+        new FolderExists_TestData(TestFileLine(), "FakeFS2.Win.json",  "/folder1/folder2/",   "./file2.txt",          false, false),
+        new FolderExists_TestData(TestFileLine(), "FakeFS2.Win.json",  "/folder1/folder2/",   "./file1.txt",          false, false),    // TODO: is this right?
 
         new FolderExists_TestData(TestFileLine(), "FakeFS2.Win.json",  "",                    "D:",                   false, false),
         new FolderExists_TestData(TestFileLine(), "FakeFS2.Win.json",  "",                    "D:/",                  false, false),
@@ -377,6 +381,31 @@ public partial class FakeFileSystemTests
         new FolderExists_TestData(TestFileLine(), "FakeFS2.Win.json",  "",                    "C:/folder1/file1.txt", false, false),
         new FolderExists_TestData(TestFileLine(), "FakeFS2.Win.json",  "",                    "/folder1/file1.txt",   false, false),
         new FolderExists_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/folder1/folder2/", "../file1.txt",         false, false),
-        new FolderExists_TestData(TestFileLine(), "FakeFS2.Win.json",  "/folder1/folder2/",   "../file2.txt",         false, false),
+        new FolderExists_TestData(TestFileLine(), "FakeFS2.Win.json",  "/folder1/folder2/",   "../file2.txt",         false, false),    // TODO: is this right?
+        new FolderExists_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/folder1/folder2/", "./file1.txt",          false, false),    // TODO: is this right?
+        new FolderExists_TestData(TestFileLine(), "FakeFS2.Win.json",  "/folder1/folder2/",   "./file2.txt",          false, false),
+    ];
+
+    public static TheoryData<FolderExists_TestData> FileExists_TestDataSet =
+    [
+        new FolderExists_TestData(TestFileLine(), "FakeFS2.Win.json",  "",                    "C:/folder1",           false, false),
+        new FolderExists_TestData(TestFileLine(), "FakeFS2.Win.json",  "",                    "C:/folder1/file1.txt", true,  false),
+        new FolderExists_TestData(TestFileLine(), "FakeFS2.Win.json",  "",                    "C:/folder1/file2.txt", false, false),
+        new FolderExists_TestData(TestFileLine(), "FakeFS2.Win.json",  "",                    "/folder1",             false, false),
+        new FolderExists_TestData(TestFileLine(), "FakeFS2.Win.json",  "",                    "/folder1/file1.txt",   true,  false),
+        new FolderExists_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/folder1/",         "../file1.txt",         false, false),
+        new FolderExists_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/folder1/",         "../root.txt",          true,  false),
+        new FolderExists_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/folder1/",         "./file1.txt",          true,  false),
+        new FolderExists_TestData(TestFileLine(), "FakeFS2.Win.json",  "/folder1/",           "./root.txt",           false, false),
+
+        new FolderExists_TestData(TestFileLine(), "FakeFS2.Unix.json", "",                    "/folder1",             false, false),
+        new FolderExists_TestData(TestFileLine(), "FakeFS2.Unix.json", "",                    "/folder1/file1.txt",   true,  false),
+        new FolderExists_TestData(TestFileLine(), "FakeFS2.Unix.json", "",                    "/folder1/file2.txt",   false, false),
+        new FolderExists_TestData(TestFileLine(), "FakeFS2.Unix.json", "",                    "/folder1",             false, false),
+        new FolderExists_TestData(TestFileLine(), "FakeFS2.Unix.json", "",                    "/folder1/file1.txt",   true,  false),
+        new FolderExists_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/",           "../file1.txt",         false, false),
+        new FolderExists_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/",           "../root.txt",          true,  false),
+        new FolderExists_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/",           "./file1.txt",          true,  false),
+        new FolderExists_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/",           "./root.txt",           false, false),
     ];
 }
