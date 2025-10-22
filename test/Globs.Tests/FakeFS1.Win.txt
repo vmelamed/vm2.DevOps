@@ -5,6 +5,13 @@
 #     WriteLine(f.Replace('\\', '/'));
 # foreach (var f in Directory.EnumerateFiles("C:\\Users\\valme\\Downloads", "*", new EnumerationOptions { RecurseSubdirectories = true }))
 #     WriteLine(f.Replace('\\', '/'));
+#
+# Conventions:
+#   - the first line should not contain any special Unix characters like '~' or '$'.
+#   - the first line after expansion of the env. vars must have a root: an ASCII letter [A-Za-z], ':', and '/' or '\'.
+#
+
+DOWNLOADS=C:/Users/valo/Downloads
 
 %DOWNLOADS%/benchmark-summaries-ubuntu-latest/
 %DOWNLOADS%/benchmark-summaries-ubuntu-latest/results/

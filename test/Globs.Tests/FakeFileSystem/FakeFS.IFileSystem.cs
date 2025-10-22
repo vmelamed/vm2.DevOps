@@ -26,9 +26,9 @@ public sealed partial class FakeFS : IFileSystem
 
     public bool FolderExists(string path)
     {
-        var (folder, file) = FromPath(path);
+        var (folder, file) = GetPathFromRoot(path);
 
-        return folder is not null && file is null;
+        return folder is not null && file is "";
     }
 
     public bool FileExists(string path)
@@ -36,7 +36,7 @@ public sealed partial class FakeFS : IFileSystem
         if (path.EndsWith(SepChar))
             return false;   // A path to a file cannot end with a separator
 
-        var (_, file) = FromPath(path);
+        var (_, file) = GetPathFromRoot(path);
 
         return file is not null;
     }
@@ -45,16 +45,10 @@ public sealed partial class FakeFS : IFileSystem
     {
         ValidatePath(path);
 
-        var nPath = NormalizePath(path);
-
-        if (IsRoot(nPath))
-            return RootFolder.Name;
-
-        var (folder, fileName) = FromPath(path);
+        var (folder, fileName) = GetPathFromRoot(path);
 
         if (folder is null)
-            throw new ArgumentException("Path not found in the JSON file system.", nameof(path));
-
+            throw new ArgumentException("Path not found in the Fake file system.", nameof(path));
         if (fileName is not null)
             return folder.Path + fileName;
 
@@ -77,11 +71,11 @@ public sealed partial class FakeFS : IFileSystem
         if (i >= 0)
         {
             // append the pattern path to the given path
-            path = path + (path is "" ? "" : SepChar) + pattern[..i];   // it is possible to get more than 1 separators in path but FromPath(path) will normalize it
+            path = path + (path is "" ? "" : SepChar) + pattern[..i];   // it is possible to get more than 1 separators in path but GetPathFromRoot(path) will normalize it
             pattern = pattern[(i + 1)..];                               // pattern is the last segment
         }
 
-        var (folder, _) = FromPath(path);
+        var (folder, _) = GetPathFromRoot(path);
 
         if (folder is null)
             // path - no such folder
@@ -95,15 +89,15 @@ public sealed partial class FakeFS : IFileSystem
         {
             // remove the next unprocessed folder from the queue
             folder = unprocessedNodes.Dequeue();
-            foreach (var dir in folder.Folders)
+            foreach (var sub in folder.Folders)
             {
                 if (options.RecurseSubdirectories)
                     // add its sub-folders to the queue of unprocessed unprocessedNodes
-                    foreach (var d in dir.Folders)
+                    foreach (var d in sub.Folders)
                         unprocessedNodes.Enqueue(d);
 
-                if (matchesPattern(dir.Name))
-                    yield return dir.Path;
+                if (matchesPattern(sub.Name))
+                    yield return sub.Path;
             }
         }
     }
@@ -123,11 +117,11 @@ public sealed partial class FakeFS : IFileSystem
 
         if (i >= 0)
         {
-            path = path + (path is "" ? "" : SepChar) + pattern[..i];   // it is possible to get more than 1 separators in path but FromPath(path) will normalize it
+            path = path + (path is "" ? "" : SepChar) + pattern[..i];   // it is possible to get more than 1 separators in path but GetPathFromRoot(path) will normalize it
             pattern = pattern[(i + 1)..];                               // pattern is the last segment
         }
 
-        var (folder, _) = FromPath(path);
+        var (folder, _) = GetPathFromRoot(path);
 
         if (folder is null)
             // path - no such folder
@@ -139,15 +133,15 @@ public sealed partial class FakeFS : IFileSystem
         while (unprocessedNodes.Count > 0)
         {
             folder = unprocessedNodes.Dequeue();
-            foreach (var dir in folder.Folders)
+            foreach (var sub in folder.Folders)
             {
                 if (options.RecurseSubdirectories)
-                    foreach (var d in dir.Folders)
+                    foreach (var d in sub.Folders)
                         unprocessedNodes.Enqueue(d);
 
-                foreach (var f in dir.Files)
+                foreach (var f in sub.Files)
                     if (matchesPattern(f))
-                        yield return dir.Path;
+                        yield return sub.Path;
             }
         }
     }

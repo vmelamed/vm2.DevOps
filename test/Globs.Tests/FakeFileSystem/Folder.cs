@@ -66,7 +66,14 @@ public class Folder(string name = "") : IEquatable<Folder>, IComparable<Folder>
         => Files.FirstOrDefault(f => Comparer.Compare(f, fileName) == 0);
 
     public Folder? HasFolder(string subDirName)
-        => Folders.FirstOrDefault(d => Comparer.Compare(d.Name, subDirName) == 0);
+    {
+        if (subDirName is FakeFS.CurrentDir)
+            return this;
+        if (subDirName is FakeFS.ParentDir)
+            return Parent;
+
+        return Folders.FirstOrDefault(d => Comparer.Compare(d.Name, subDirName) == 0);
+    }
 
     public bool Equals(Folder? other) => CompareTo(other) == 0;
 
@@ -93,6 +100,7 @@ public class Folder(string name = "") : IEquatable<Folder>, IComparable<Folder>
     {
         if (Folders.Contains(node))
             throw new ArgumentException($"Folder '{node.Name}' already exists in '{Name}'.", nameof(node));
+
         node.Parent = this;
         _folders.Add(node);
         return this;
@@ -102,6 +110,7 @@ public class Folder(string name = "") : IEquatable<Folder>, IComparable<Folder>
     {
         if (Files.Contains(file))
             throw new ArgumentException($"HasFile '{file}' already exists in '{Name}'.", nameof(file));
+
         _files.Add(file);
         return this;
     }
@@ -110,7 +119,6 @@ public class Folder(string name = "") : IEquatable<Folder>, IComparable<Folder>
     {
         if (root.Parent is not null)
             throw new ArgumentException("Root node cannot have a folder.", nameof(root));
-
         if (!root.Name.EndsWith(FakeFS.SepChar))
             throw new InvalidDataException($"Root node name must end with '{FakeFS.SepChar}'.");
 
@@ -134,28 +142,21 @@ public class Folder(string name = "") : IEquatable<Folder>, IComparable<Folder>
     {
         foreach (var child in folder.Folders)
         {
-            child.Parent = folder;
+            child.Parent   = folder;
+            child.Comparer = folder.Comparer;
             SetAsParent(child);
         }
     }
-
-    public static readonly JsonSerializerOptions JsonSerializerOptions = new()
-    {
-        AllowTrailingCommas = true,
-        IndentSize = 4,
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        ReadCommentHandling = JsonCommentHandling.Skip,
-        WriteIndented = true
-    };
 }
 
+[JsonSerializable(typeof(Folder))]
 [JsonSourceGenerationOptions(
     AllowTrailingCommas = true,
-    IndentSize = 4,
     PropertyNameCaseInsensitive = true,
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
     ReadCommentHandling = JsonCommentHandling.Skip,
-    WriteIndented = true)]
-[JsonSerializable(typeof(Folder))]
+    WriteIndented = true,
+    IndentSize = 4,
+    IndentCharacter = ' ',
+    NewLine = "\r\n")]
 internal partial class FolderSourceGenerationContext : JsonSerializerContext { }

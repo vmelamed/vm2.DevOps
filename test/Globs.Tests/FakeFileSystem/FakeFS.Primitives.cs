@@ -1,5 +1,4 @@
 namespace vm2.DevOps.Globs.Tests.FakeFileSystem;
-
 /// <summary>
 /// Fake file system loaded from a JSON representation.
 /// </summary>
@@ -39,10 +38,16 @@ public sealed partial class FakeFS : IFileSystem
     /// </summary>
     /// <param name="path"></param>
     /// <returns>Span of bytes with normalized segment</returns>
-    Span<char> NormalizePath(string path)
+    ReadOnlySpan<char> NormalizePath(string path)
     {
         if (path.Length == 0)
             return [];
+
+        if (path is CurrentDir)
+            return CurrentFolder.Path;
+        if (path is ParentDir)
+            return CurrentFolder.Parent?.Path
+                        ?? throw new ArgumentException("Path does not exist.", nameof(path));
 
         Span<char> buffer = new Memory<char>(new char[path.Length+WinDriveLength]).Span;
         int start = 2;  // leave space for drive letter and colon if needed
@@ -72,7 +77,7 @@ public sealed partial class FakeFS : IFileSystem
 
         // "/abc/def" => "C:/abc/def"
         // "abc/def"  => "C:abc/def"
-        buffer[0] = (CurrentFolder ?? RootFolder).Name[0];
+        buffer[0] = (CurrentFolder ?? RootFolder).Path[0];
         buffer[1] = DriveSep;
         return buffer[..i];
     }

@@ -10,7 +10,7 @@
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="MinVer" Version="6.0.0" />
     <PackageVersion Include="System.CommandLine" Version="2.0.0-rc.2.25502.107" />
-    <PackageVersion Include="Markdig" Version="0.42.0" />
+    <PackageVersion Include="Markdig" Version="0.43.0" />
     <!-- The test stack: -->
     <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.0.4" />
     <PackageVersion Include="FluentAssertions" Version="8.7.1" />

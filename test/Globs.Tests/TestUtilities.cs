@@ -11,7 +11,7 @@ public static partial class Utilities
     /// <param name="pathTestFile">Name of the file.</param>
     /// <param name="lineNumber">The line.</param>
     /// <returns>System.String.</returns>
-    public static string TestPathLine(
+    public static string PathLine(
         string testDescription = "",
         [CallerFilePath] string pathTestFile = "",
         [CallerLineNumber] int lineNumber = 0)
@@ -29,7 +29,7 @@ public static partial class Utilities
     /// <param name="pathTestFile">Name of the file.</param>
     /// <param name="lineNumber">The line.</param>
     /// <returns>System.String.</returns>
-    public static string TestRelativePathLine(
+    public static string RelativePathLine(
         string testDescription = "",
         [CallerFilePath] string pathTestFile = "",
         [CallerLineNumber] int lineNumber = 0)

@@ -16,6 +16,9 @@ public sealed partial class FakeFS : IFileSystem
     public const char WinSepChar = '\\';    // always converted to '/' - Windows takes both '/' and '\'
     public const char SepChar = '/';
     public const string SepString = "/";
+    public const string CurrentDir = ".";
+    public const string ParentDir = "..";
+
     const string Wildcards = "*?"; // TODO: add [], {}, etc. advanced
     const string RecursiveWildcard = "**";
     const int WinDriveLength = 2; // e.g. "C:"
@@ -26,8 +29,14 @@ public sealed partial class FakeFS : IFileSystem
     /// </summary>
     public bool JsonUtf8Bom { get; set; } = false;
 
-    [GeneratedRegex(@"^([A-Z]:/|[A-Z]:\\|/|\\)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^[A-Z]:[/\\]", RegexOptions.IgnoreCase|RegexOptions.IgnorePatternWhitespace)]
     public static partial Regex StartsWithWinRootRegex();
+
+    const string EnvVarNameGr = "envVar";
+    const string EnvVarValueGr = "envVarValue";
+
+    [GeneratedRegex($@"^(?<{EnvVarNameGr}>[A-Za-z_][A-Za-z_]*)=(?<{EnvVarValueGr}>.*)$", RegexOptions.IgnorePatternWhitespace)]
+    public static partial Regex EnvVarDefinitionRegex();
 
     public Folder RootFolder { get; private set; }
 
@@ -92,6 +101,7 @@ public sealed partial class FakeFS : IFileSystem
             _ => throw new ArgumentOutOfRangeException(nameof(fileType), "Unsupported data file type."),
         };
 
+        Debug.Assert(RootFolder is not null);
         Debug.Assert(Comparer is not null);
 
         CurrentFolder = RootFolder;
@@ -99,40 +109,41 @@ public sealed partial class FakeFS : IFileSystem
 
     public Folder SetCurrentFolder(string pathName)
     {
-        var (folder, fileName) = FromPath(pathName);
+        var (folder, fileName) = GetPathFromRoot(pathName);
 
         if (folder is null)
             throw new ArgumentException($"Path '{pathName}' not found in the JSON file system.", nameof(pathName));
-        if (fileName is not null)
+        if (fileName is not "")
             throw new ArgumentException($"The current folder '{pathName}' path points to a file name, not a folder.", nameof(pathName));
 
         return CurrentFolder = folder;
     }
 
-    public (Folder? folder, string? fileName) FromPath(string path)
+    public (Folder? folder, string? fileName) GetPathFromRoot(string path)
     {
         ValidatePath(path);
 
         var nPath      = NormalizePath(path).ToString();
-        var folder     = CurrentFolder;
         var enumerator = EnumeratePathRanges(nPath).GetEnumerator();
+        var folder     = CurrentFolder;
 
         if (!enumerator.MoveNext())
-            return (folder, null);
+            return (folder, "");
 
         var range = enumerator.Current;
         var seg = nPath[range];
         if (IsDrive(seg))
         {
             if (seg[0] != RootFolder.Name[0])
-                return (null, null);    // different drive letter
+                return (null, "");    // different drive letter
 
             // consume it
             if (!enumerator.MoveNext())
-                return (null, null);
+                return (CurrentFolder, "");
             range = enumerator.Current;
             seg = nPath[range];
         }
+
 
         if (IsRootSegment(seg))
         {
@@ -140,7 +151,7 @@ public sealed partial class FakeFS : IFileSystem
 
             // consume it
             if (!enumerator.MoveNext())
-                return (folder, null);
+                return (folder, "");
             range = enumerator.Current;
             seg = nPath[range];
         }
@@ -156,12 +167,11 @@ public sealed partial class FakeFS : IFileSystem
                 {
                     if (enumerator.MoveNext())
                         // there are more segments in the path that are not matched, i.e. it is not found
-                        return (null, null);
+                        return (null, "");
 
                     // if it is the last segment, test if it is a fileName in this folder
-                    name = folder.HasFile(name);
+                    name = folder.HasFile(name) ?? "";
                     return (folder, name);
-
                 }
                 folder = nextFolder;
             }
@@ -174,19 +184,19 @@ public sealed partial class FakeFS : IFileSystem
         }
         while (true);
 
-        return (folder, null);
+        return (folder, "");
     }
 
-    public void ToJsonFile(string fileName, JsonSerializerOptions? options = null)
+    public void ToJsonFile(string fileName, bool pretty = false)
     {
         ValidateOSPath(fileName);
-        File.WriteAllBytes(fileName, ToJson(options));
+        File.WriteAllBytes(fileName, ToJson(pretty));
     }
 
-    public string ToJsonString(JsonSerializerOptions? options = null)
-        => Encoding.UTF8.GetString(ToJson(options, false));
+    public string ToJsonString()
+        => Encoding.UTF8.GetString(ToJson(false));
 
-    public ReadOnlySpan<byte> ToJson(JsonSerializerOptions? options = null, bool? writeBom = null)
+    public ReadOnlySpan<byte> ToJson(bool? writeBom = null)
     {
         var buffer = new byte[64 * 1024];   // should be enough for most cases
         using var stream = new MemoryStream(buffer, true);
@@ -196,10 +206,7 @@ public sealed partial class FakeFS : IFileSystem
         if (writeBom.Value)
             stream.Write(Encoding.UTF8.Preamble);
 
-        if (options is null)
-            JsonSerializer.Serialize(stream, RootFolder, new FolderSourceGenerationContext().Folder);
-        else
-            JsonSerializer.Serialize(stream, RootFolder, new FolderSourceGenerationContext(options).Folder);
+        JsonSerializer.Serialize(stream, RootFolder, new FolderSourceGenerationContext().Folder);
 
         return buffer.AsSpan(0, (int)stream.Position);
     }
@@ -221,8 +228,7 @@ public sealed partial class FakeFS : IFileSystem
             json = json[Encoding.UTF8.Preamble.Length..];
 
         // Use source-generated metadata to avoid IL2026 (trim warning).
-        var context = new FolderSourceGenerationContext();
-        var root    = JsonSerializer.Deserialize(json, context.Folder)
+        var root    = JsonSerializer.Deserialize(json, new FolderSourceGenerationContext().Folder)
                             ?? throw new ArgumentException("JSON is null, empty, or invalid.", nameof(json));
 
         Debug.Assert(root.Name is not null, "Root DTO name is null.");
@@ -245,13 +251,30 @@ public sealed partial class FakeFS : IFileSystem
             if (string.IsNullOrWhiteSpace(line) || line.StartsWith('#') || line.StartsWith("//")) // skip empty lines or comments
                 continue;
 
+            if (EnvVarDefinitionRegex().Match(line) is Match m && m.Success)
+            {
+                Environment.SetEnvironmentVariable(m.Groups[EnvVarNameGr].Value, m.Groups[EnvVarValueGr].Value);
+                continue;
+            }
+
+            // this is a little risky since we may not know the OS yet,
+            // but we have to do it here to support Unix env vars in paths,
+            // so we're establishing a convention that the first non-comment line should not have syntax ambiguities,
+            // e.g. a Windows path that contains '$' or '~' characters; or a Unix path that contains ':' or '%'.
+            if (!IsWindows)
+            {
+                line = line.Replace("~", "${HOME}");
+                line = PathRegex.UnixEnvVar().Replace(line, PathRegex.UnixEnvVarReplacement);
+            }
+
             line = Environment.ExpandEnvironmentVariables(line);
 
             if (root is null)
             {
                 root = new Folder(DetectOS(line));
                 Folder.LinkChildren(root, Comparer);
-                RootFolder ??= root;
+                RootFolder    ??= root;
+                CurrentFolder ??= root;
             }
 
             AddPath(root, line);
@@ -330,23 +353,24 @@ public sealed partial class FakeFS : IFileSystem
             seg = nPath[range];
         }
 
-        if (!IsRootSegment(seg))
-            throw new ArgumentException($"The path '{path}' must start at the root.", nameof(path));
+        var folder = CurrentFolder ?? RootFolder;
 
-        // consume it
-        if (!enumerator.MoveNext())
-            return root;
+        if (IsRootSegment(seg))
+        {
+            folder = RootFolder;
 
-        range = enumerator.Current;
-        seg = nPath[range];
-
-        var folder = root;
+            // consume it
+            if (!enumerator.MoveNext())
+                return folder;
+            range = enumerator.Current;
+            seg = nPath[range];
+        }
 
         do
         {
             var name = seg.ToString();
 
-            // peek what's next:
+            // peek at what's next:
 
             if (!enumerator.MoveNext())
             {

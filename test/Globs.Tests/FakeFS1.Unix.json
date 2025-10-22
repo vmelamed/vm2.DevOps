@@ -1,11 +1,11 @@
 ﻿{
-    "name": "C:/",
+    "name": "/",
     "folders": [
         {
-            "name": "Users",
+            "name": "home",
             "folders": [
                 {
-                    "name": "valme",
+                    "name": "valo",
                     "folders": [
                         {
                             "name": "Downloads",
