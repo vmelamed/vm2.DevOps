@@ -21,7 +21,6 @@ public sealed partial class FakeFS : IFileSystem
         return regex.IsMatch;
     }
 
-    #region IFileSystem Members
     public bool IsWindows { get; private set; }
 
     public bool FolderExists(string path)
@@ -39,20 +38,6 @@ public sealed partial class FakeFS : IFileSystem
         var (folder, _, file) = GetPathFromRoot(path);
 
         return folder is not null && file is not "";
-    }
-
-    public string GetFullPath(string path)
-    {
-        ValidatePath(path);
-
-        var (folder, _, fileName) = GetPathFromRoot(path);
-
-        if (folder is null)
-            throw new ArgumentException("Path not found in the Fake file system.", nameof(path));
-        if (fileName is not "")
-            return folder.Path + fileName;
-
-        return folder.Path;
     }
 
     public IEnumerable<string> EnumerateFolders(
@@ -145,5 +130,4 @@ public sealed partial class FakeFS : IFileSystem
             }
         }
     }
-    #endregion
 }

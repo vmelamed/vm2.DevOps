@@ -31,16 +31,6 @@ public interface IFileSystem
     bool FileExists(string path);
 
     /// <summary>
-    /// Converts a relative or absolute path to a fully qualified path.
-    /// </summary>
-    /// <remarks>
-    /// The method resolves the specified path against the current working folder if it is relative.
-    /// </remarks>
-    /// <param name="path">The path to convert. This can be a relative or absolute path.</param>
-    /// <returns>The fully qualified path that represents the specified <paramref name="path"/>.</returns>
-    string GetFullPath(string path);
-
-    /// <summary>
     /// Retrieves the names of subfolders (subfolder) within the specified folder (folder).
     /// </summary>
     /// <param name="path">
