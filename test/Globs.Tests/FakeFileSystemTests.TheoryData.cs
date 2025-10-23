@@ -431,7 +431,7 @@ public partial class FakeFileSystemTests
         public string Path { get; private set; } = path;
         public string Pattern { get; private set; } = pattern;
         public bool Recursive { get; set; } = recursive;
-        public string[] Results { get; private set; } = results.ToArray();
+        public string[] Results { get; private set; } = [.. results];
         public bool Throws { get; private set; } = throws;
         #endregion
 

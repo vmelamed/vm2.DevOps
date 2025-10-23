@@ -1,5 +1,6 @@
 ﻿namespace vm2.DevOps.Globs.Tests.TestUtilities;
 
+[ExcludeFromCodeCoverage]
 public static partial class Utilities
 {
     /// <summary>
