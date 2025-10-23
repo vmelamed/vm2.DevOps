@@ -192,4 +192,48 @@ public partial class FakeFileSystemTests
             existsResult.Should().Be(data.Result);
         }
     }
+
+    [Theory]
+    [MemberData(nameof(EnumerateFolders_TestDataSet))]
+    public void EnumerateFolders_Test(Enumerate_TestData data)
+    {
+        var fs = new FakeFS(data.JsonFile, DataFileType.Json);
+        fs.SetCurrentFolder(data.CurrentFolder);
+        var options = data.Recursive
+                        ? new EnumerationOptions { RecurseSubdirectories = true }
+                        : new EnumerationOptions { RecurseSubdirectories = false };
+        var enumFolders = () => fs.EnumerateFolders(data.Path, data.Pattern, options).ToList();
+
+        if (data.Throws)
+        {
+            enumFolders.Should().Throw<ArgumentException>();
+        }
+        else
+        {
+            var results = new HashSet<string>(enumFolders.Should().NotThrow().Which);
+            results.Should().BeEquivalentTo(data.Results);
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(EnumerateFiles_TestDataSet))]
+    public void EnumerateFiles_Test(Enumerate_TestData data)
+    {
+        var fs = new FakeFS(data.JsonFile, DataFileType.Json);
+        fs.SetCurrentFolder(data.CurrentFolder);
+        var options = data.Recursive
+                        ? new EnumerationOptions { RecurseSubdirectories = true }
+                        : new EnumerationOptions { RecurseSubdirectories = false };
+        var enumFolders = () => fs.EnumerateFiles(data.Path, data.Pattern, options).ToList();
+
+        if (data.Throws)
+        {
+            enumFolders.Should().Throw<ArgumentException>();
+        }
+        else
+        {
+            var results = new HashSet<string>(enumFolders.Should().NotThrow().Which);
+            results.Should().BeEquivalentTo(data.Results);
+        }
+    }
 }

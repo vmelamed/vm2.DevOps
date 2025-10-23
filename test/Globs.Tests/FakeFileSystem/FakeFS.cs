@@ -112,7 +112,7 @@ public sealed partial class FakeFS : IFileSystem
         var (folder, fileComp, _) = GetPathFromRoot(pathName);
 
         if (folder is null)
-            throw new ArgumentException($"Path '{pathName}' not found in the JSON file system.", nameof(pathName));
+            throw new ArgumentException($"Pattern '{pathName}' not found in the JSON file system.", nameof(pathName));
         if (fileComp)
             throw new ArgumentException($"The current folder '{pathName}' path points to a file name, not a folder.", nameof(pathName));
 

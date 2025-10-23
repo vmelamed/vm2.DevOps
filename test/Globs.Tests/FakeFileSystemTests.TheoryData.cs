@@ -408,4 +408,112 @@ public partial class FakeFileSystemTests
         new FolderExists_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/",           "./file1.txt",          true,  false),
         new FolderExists_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/",           "./root.txt",           false, false),
     ];
+
+    public class Enumerate_TestData(
+        string testFileLine,
+        string jsonFile,
+        string currentFolder,
+        string path,
+        string pattern,
+        bool recursive,
+        string[] results,
+        bool throws) : IXunitSerializable
+    {
+        #region boilerplate
+        public Enumerate_TestData()
+            : this("", "", "", "", "", false, [], false)
+        {
+        }
+        #region Properties
+        public string AFileLine { get; private set; } = testFileLine;
+        public string JsonFile { get; private set; } = jsonFile;
+        public string CurrentFolder { get; private set; } = currentFolder;
+        public string Path { get; private set; } = path;
+        public string Pattern { get; private set; } = pattern;
+        public bool Recursive { get; set; } = recursive;
+        public string[] Results { get; private set; } = results.ToArray();
+        public bool Throws { get; private set; } = throws;
+        #endregion
+
+        public HashSet<string> ResultsSet => [.. Results];
+
+        public void Deserialize(IXunitSerializationInfo info)
+        {
+            AFileLine      = info.GetValue<string>(nameof(AFileLine)) ?? "";
+            JsonFile       = info.GetValue<string>(nameof(JsonFile)) ?? "";
+            CurrentFolder  = info.GetValue<string>(nameof(CurrentFolder)) ?? "";
+            Path           = info.GetValue<string>(nameof(Path)) ?? "";
+            Pattern        = info.GetValue<string>(nameof(Pattern)) ?? "";
+            Recursive      = info.GetValue<bool>(nameof(Recursive));
+            Results        = info.GetValue<string[]>(nameof(Results)) ?? [];
+            Throws         = info.GetValue<bool>(nameof(Throws));
+        }
+
+        public void Serialize(IXunitSerializationInfo info)
+        {
+            info.AddValue(nameof(AFileLine), AFileLine);
+            info.AddValue(nameof(JsonFile), JsonFile);
+            info.AddValue(nameof(CurrentFolder), CurrentFolder);
+            info.AddValue(nameof(Path), Path);
+            info.AddValue(nameof(Pattern), Pattern);
+            info.AddValue(nameof(Recursive), Recursive);
+            info.AddValue(nameof(Results), Results);
+            info.AddValue(nameof(Throws), Throws);
+        }
+        #endregion
+    }
+
+    public static TheoryData<Enumerate_TestData> EnumerateFolders_TestDataSet =
+    [
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Win.json", "", "C:/", ""                , false, [], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Win.json", "", "C:/", "*"               , false, ["C:/folder1/", "C:/folder3/"], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Win.json", "", "C:/", "*"               , true,  ["C:/folder1/", "C:/folder3/", "C:/folder1/folder2/", ], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Win.json", "", "C:/", "fold*"           , false, ["C:/folder1/", "C:/folder3/"], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Win.json", "", "C:/", "fold*"           , true,  ["C:/folder1/", "C:/folder3/", "C:/folder1/folder2/", ], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Win.json", "", "C:/", "*er?"            , false, ["C:/folder1/", "C:/folder3/"], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Win.json", "", "C:/", "*er?"            , true,  ["C:/folder1/", "C:/folder3/", "C:/folder1/folder2/", ], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Win.json", "", "C:/folder1", "*er?"     , false, ["C:/folder1/folder2/", ], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Win.json", "", "C:/folder1", "*er?"     , true,  ["C:/folder1/folder2/", ], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Win.json", "C:/folder1", ".", "*er?"    , false, ["C:/folder1/folder2/", ], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Win.json", "C:/folder1", ".", "*er?"    , true,  ["C:/folder1/folder2/", ], false),
+
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "", "/", ""                , false, [], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "", "/", "*"               , false, ["/folder1/", "/folder3/"], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "", "/", "*"               , true,  ["/folder1/", "/folder3/", "/folder1/folder2/", ], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "", "/", "fold*"           , false, ["/folder1/", "/folder3/"], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "", "/", "fold*"           , true,  ["/folder1/", "/folder3/", "/folder1/folder2/", ], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "", "/", "*er?"            , false, ["/folder1/", "/folder3/"], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "", "/", "*er?"            , true,  ["/folder1/", "/folder3/", "/folder1/folder2/", ], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "", "/folder1", "*er?"     , false, ["/folder1/folder2/", ], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "", "/folder1", "*er?"     , true,  ["/folder1/folder2/", ], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1", ".", "*er?"    , false, ["/folder1/folder2/", ], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1", ".", "*er?"    , true,  ["/folder1/folder2/", ], false),
+    ];
+
+    public static TheoryData<Enumerate_TestData> EnumerateFiles_TestDataSet =
+    [
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Win.json", "", "C:/", ""                , false, [], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Win.json", "", "C:/", "*"               , false, ["C:/root.txt"], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Win.json", "", "C:/", "*"               , true,  ["C:/root.txt", "C:/folder1/file1.txt", "C:/folder3/file3.txt", "C:/folder1/folder2/file2.txt", ], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Win.json", "", "C:/", "file*"           , false, [], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Win.json", "", "C:/", "file*"           , true,  ["C:/folder1/file1.txt", "C:/folder3/file3.txt", "C:/folder1/folder2/file2.txt", ], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Win.json", "", "C:/", "file?"           , false, [], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Win.json", "", "C:/", "file?"           , true,  ["C:/folder1/file1.txt", "C:/folder3/file3.txt", "C:/folder1/folder2/file2.txt", ], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Win.json", "", "C:/", "root*.*"         , true,  ["C:/root.txt", ], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Win.json", "", "C:/", "root*.*"         , true,  ["C:/root.txt", ], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Win.json", "C:/folder1", ".", "file?"   , false, ["C:/folder1/file1.txt", ], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Win.json", "C:/folder1", ".", "file?"   , true,  ["C:/folder1/file1.txt", "C:/folder1/folder2/file2.txt"], false),
+
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "", "/", ""                , false, [], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "", "/", "*"               , false, ["/root.txt"], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "", "/", "*"               , true,  ["/root.txt", "/folder1/file1.txt", "/folder3/file3.txt", "/folder1/folder2/file2.txt", ], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "", "/", "file*"           , false, [], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "", "/", "file*"           , true,  ["/folder1/file1.txt", "/folder3/file3.txt", "/folder1/folder2/file2.txt", ], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "", "/", "file?"           , false, [], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "", "/", "file?"           , true,  ["/folder1/file1.txt", "/folder3/file3.txt", "/folder1/folder2/file2.txt", ], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "", "/", "root*.*"         , true,  ["/root.txt", ], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "", "/", "root*.*"         , true,  ["/root.txt", ], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1", ".", "file?"   , false, ["/folder1/file1.txt", ], false),
+        new Enumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1", ".", "file?"   , true,  ["/folder1/file1.txt", "/folder1/folder2/file2.txt"], false),
+    ];
 }

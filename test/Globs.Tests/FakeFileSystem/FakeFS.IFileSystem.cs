@@ -45,46 +45,37 @@ public sealed partial class FakeFS : IFileSystem
         string pattern,
         EnumerationOptions options)
     {
-        if (string.IsNullOrEmpty(pattern))
-            // the name of no folder matches empty pattern
+        var (matchesPattern, folder) = PrepareToEnumerate(path, pattern);
+
+        if (matchesPattern is null || folder is null)
             yield break;
 
-        // normalize the pattern and split into path and pattern
-        pattern = (IsWindows ? pattern.Replace(WinSepChar, SepChar) : pattern);
-        var i = pattern.LastIndexOf(SepChar);
+        Queue<Folder>? unprocessedNodes = options.RecurseSubdirectories ? new() : null;
 
-        if (i >= 0)
+        do
         {
-            // append the pattern path to the given path
-            path = path + (path is "" ? "" : SepChar) + pattern[..i];   // it is possible to get more than 1 separators in path but GetPathFromRoot(path) will normalize it
-            pattern = pattern[(i + 1)..];                               // pattern is the last segment
-        }
-
-        var (folder, _, _) = GetPathFromRoot(path);
-
-        if (folder is null)
-            // path - no such folder
-            yield break;
-
-        // enumerate the folders from this folder's sub-tree
-        Queue<Folder> unprocessedNodes = new([folder]);
-        var matchesPattern = GetSegmentMatcher(pattern);
-
-        while (unprocessedNodes.Count > 0)
-        {
-            // remove the next unprocessed folder from the queue
-            folder = unprocessedNodes.Dequeue();
             foreach (var sub in folder.Folders)
             {
                 if (options.RecurseSubdirectories)
                     // add its sub-folders to the queue of unprocessed unprocessedNodes
                     foreach (var d in sub.Folders)
-                        unprocessedNodes.Enqueue(d);
+                        unprocessedNodes!.Enqueue(d);
 
                 if (matchesPattern(sub.Name))
                     yield return sub.Path;
             }
+
+            if ((unprocessedNodes?.Count ?? 0) > 0)
+            {
+                folder = unprocessedNodes!.Dequeue();
+                if (matchesPattern(folder.Name))
+                    yield return folder.Path;
+            }
+            else
+                break;
         }
+        // try to remove the next unprocessed folder from the queue, if any
+        while (true);
     }
 
     public IEnumerable<string> EnumerateFiles(
@@ -92,42 +83,58 @@ public sealed partial class FakeFS : IFileSystem
         string pattern,
         EnumerationOptions options)
     {
-        if (string.IsNullOrEmpty(pattern))
-            // the name of no file matches empty pattern
+        var (matchesPattern, folder) = PrepareToEnumerate(path, pattern);
+
+        if (matchesPattern is null || folder is null)
             yield break;
 
+        Queue<Folder>? unprocessedNodes = options.RecurseSubdirectories ? new() : null;
+
+        do
+        {
+            foreach (var f in folder.Files)
+                if (matchesPattern(f))
+                    yield return folder.Path+f;
+
+            if (options.RecurseSubdirectories)
+                foreach (var sub in folder.Folders)
+                    // add its sub-folders to the queue of unprocessed unprocessedNodes
+                    unprocessedNodes!.Enqueue(sub);
+
+            if ((unprocessedNodes?.Count ?? 0) > 0)
+                folder = unprocessedNodes!.Dequeue();
+            else
+                break;
+        }
+        // try to remove the next unprocessed folder from the queue, if any
+        while (true);
+    }
+
+    (Func<string, bool>? matches, Folder? folder) PrepareToEnumerate(
+        string path,
+        string pattern)
+    {
+        if (string.IsNullOrEmpty(pattern))
+            // the name of no folder matches empty pattern
+            return (null, null);
+
         // normalize the pattern and split into path and pattern
-        pattern = (IsWindows ? pattern.Replace(WinSepChar, SepChar) : pattern);
         var i = pattern.LastIndexOf(SepChar);
 
         if (i >= 0)
         {
-            path = path + (path is "" ? "" : SepChar) + pattern[..i];   // it is possible to get more than 1 separators in path but GetPathFromRoot(path) will normalize it
-            pattern = pattern[(i + 1)..];                               // pattern is the last segment
-        }
+            // append the pattern path to the given path
+            path = path + (path is "" ? "" : SepChar) + pattern[..i];   // it is possible to get more than 1 separators in path
+            pattern = pattern[(i + 1)..];                               // but GetPathFromRoot(path) will normalize it
+        }                                                               // pattern is the last segment
 
         var (folder, _, _) = GetPathFromRoot(path);
 
         if (folder is null)
             // path - no such folder
-            yield break;
+            return (null, null);
 
-        Queue<Folder> unprocessedNodes = new([folder]);
-        var matchesPattern = GetSegmentMatcher(pattern);
-
-        while (unprocessedNodes.Count > 0)
-        {
-            folder = unprocessedNodes.Dequeue();
-            foreach (var sub in folder.Folders)
-            {
-                if (options.RecurseSubdirectories)
-                    foreach (var d in sub.Folders)
-                        unprocessedNodes.Enqueue(d);
-
-                foreach (var f in sub.Files)
-                    if (matchesPattern(f))
-                        yield return sub.Path;
-            }
-        }
+        // enumerate the folders from this folder's sub-tree
+        return (GetSegmentMatcher(pattern), folder);
     }
 }

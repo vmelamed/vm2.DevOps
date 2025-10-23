@@ -47,7 +47,7 @@ public sealed partial class FakeFS : IFileSystem
             return CurrentFolder.Path;
         if (path is ParentDir)
             return CurrentFolder.Parent?.Path
-                        ?? throw new ArgumentException("Path does not exist.", nameof(path));
+                        ?? throw new ArgumentException("Pattern does not exist.", nameof(path));
 
         Span<char> buffer = new Memory<char>(new char[path.Length+WinDriveLength]).Span;
         int start = 2;  // leave space for drive letter and colon if needed
