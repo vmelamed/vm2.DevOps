@@ -11,7 +11,9 @@ public sealed partial class FakeFS : IFileSystem
 {
     Func<string, bool> GetSegmentMatcher(string segment)
     {
-        if (segment is RecursiveWildcard || !segment.AsSpan().ContainsAny(Wildcards))
+        if (segment is RecursiveWildcard)
+            throw new ArgumentException($"The segment '{RecursiveWildcard}' is not allowed here.", nameof(segment));
+        if (!segment.AsSpan().ContainsAny(Wildcards))
             return a => Comparer.Compare(a, segment) == 0;
 
         var regex = new Regex(
