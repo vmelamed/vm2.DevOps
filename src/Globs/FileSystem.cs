@@ -1,5 +1,7 @@
 ﻿namespace vm2.DevOps.Globs;
 
+#pragma warning disable CA1822 // Mark members as static
+
 /// <summary>
 /// Provides methods for interacting with the file system, including operations to check for the existence  of
 /// folders and files, retrieve folder and file listings, and resolve full paths. Implements the <see cref="IFileSystem"/>.
@@ -18,6 +20,14 @@ public class FileSystem : IFileSystem
     public bool IsWindows => OperatingSystem.IsWindows();
 
     /// <summary>
+    /// Converts a relative or absolute path into a fully qualified path. The returned path is normalized and is not guaranteed
+    /// to exist.
+    /// </summary>
+    /// <param name="path">The relative or absolute path to convert. Cannot be null or empty.</param>
+    /// <returns>The fully qualified path that corresponds to the specified <paramref name="path"/>.</returns>
+    public string GetFullPath(string path) => Path.GetFullPath(path);
+
+    /// <summary>
     /// Determines whether the specified folder exists.
     /// </summary>
     /// <param name="path">The full path of the folder to check. This can be an absolute or relative path.</param>
@@ -32,15 +42,6 @@ public class FileSystem : IFileSystem
     /// <param name="path">The path of the file to check. This can be an absolute or relative path.</param>
     /// <returns><see langword="true"/> if the file exists at the specified path; otherwise, <see langword="false"/>.</returns>
     public bool FileExists(string path) => File.Exists(path);
-
-    /// <summary>
-    /// Converts a relative or absolute path to a fully qualified path.
-    /// </summary>
-    /// <remarks>The method resolves the specified path against the current working folder if it is
-    /// relative.</remarks>
-    /// <param name="path">The path to convert. This can be a relative or absolute path.</param>
-    /// <returns>The fully qualified path that represents the specified <paramref name="path"/>.</returns>
-    public string GetFullPath(string path) => Path.GetFullPath(path);
 
     /// <summary>
     /// Retrieves the names of subfolders within the specified folder.

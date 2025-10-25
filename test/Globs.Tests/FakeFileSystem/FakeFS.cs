@@ -1,7 +1,4 @@
 namespace vm2.DevOps.Globs.Tests.FakeFileSystem;
-using System.Globalization;
-
-using System.Text;
 
 /// <summary>
 /// Fake fileName system loaded from a JSON representation.
@@ -10,32 +7,25 @@ using System.Text;
 /// We use the term "folder" instead of "directory" in classes and method names to avoid confusion with the .NET class
 /// <see cref="Directory"/>.
 /// </remarks>
-public sealed partial class FakeFS : IFileSystem
+public sealed partial class FakeFS
 {
-    public const char DriveSep = ':';
-    public const char WinSepChar = '\\';    // always converted to '/' - Windows takes both '/' and '\'
-    public const char SepChar = '/';
-    public const string SepString = "/";
-    public const string CurrentDir = ".";
-    public const string ParentDir = "..";
-
-    const string Wildcards = "*?"; // TODO: add [], {}, etc. advanced
+    const string Wildcards         = "*?"; // TODO: add [], {}, etc. advanced
     const string RecursiveWildcard = "**";
-    const int WinDriveLength = 2; // e.g. "C:"
-    const int WinRootLength = 3; // e.g. "C:/"
+    const int WinDriveLength       = 2; // e.g. "C:"
+    const int WinRootLength        = 3; // e.g. "C:/"
 
     /// <summary>
     /// Indicates whether the file system was read from JSON with UTF-8 BOM, also used when writing back to file.
     /// </summary>
     public bool JsonUtf8Bom { get; set; } = false;
 
-    [GeneratedRegex(@"^[A-Z]:[/\\]", RegexOptions.IgnoreCase|RegexOptions.IgnorePatternWhitespace)]
+    [GeneratedRegex(@"^[A-Za-z]:[/\\]")]
     public static partial Regex StartsWithWinRootRegex();
 
     const string EnvVarNameGr = "envVar";
     const string EnvVarValueGr = "envVarValue";
 
-    [GeneratedRegex($@"^(?<{EnvVarNameGr}>[A-Za-z_][A-Za-z_]*)=(?<{EnvVarValueGr}>.*)$", RegexOptions.IgnorePatternWhitespace)]
+    [GeneratedRegex($"^(?<{EnvVarNameGr}>[A-Za-z_][A-Za-z_]*)=(?<{EnvVarValueGr}>.*)$")]
     public static partial Regex EnvVarDefinitionRegex();
 
     public Folder RootFolder { get; private set; }
@@ -308,7 +298,7 @@ public sealed partial class FakeFS : IFileSystem
                 throw new ArgumentException($"The Unix path format '{line}' is invalid.", nameof(line));
             IsWindows = false;
             Comparer  = StringComparer.Ordinal;
-            return SepString;
+            return SepChar.ToString();
         }
 
         throw new ArgumentException(@"Root must be either ""/"" for Unix-like fileName system, or ""<drive ASCII letter>:\"" (e.g. ""C:\"" or ""C:/"") for Windows.");

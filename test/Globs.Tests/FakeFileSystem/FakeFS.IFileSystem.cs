@@ -25,6 +25,100 @@ public sealed partial class FakeFS : IFileSystem
 
     public bool IsWindows { get; private set; }
 
+    public string GetFullPath(string path)
+    {
+        if (string.IsNullOrEmpty(path))
+            throw new ArgumentException("Path cannot be null or empty.", nameof(path));
+
+        var nPath = NormalizePath(path).ToString();
+        var enumerator = EnumeratePathRanges(nPath).GetEnumerator();
+
+        var moved = enumerator.MoveNext();
+        Debug.Assert(moved, "Normalized path is not empty.");
+
+        // the current range and segment
+        var range = enumerator.Current;
+        ReadOnlySpan<char> seg = nPath[range];
+
+        // this buffer will hold the resulting full path
+        Span<char> buffer = stackalloc char[CurrentFolder.Path.Length + path.Length + 1];
+        int bufPos = 0;
+
+        if (IsDrive(seg))
+        {
+            if (seg[0] != CurrentFolder.Path[0])
+                throw new ArgumentException("Cannot change the drive of the Fake FS.", nameof(path));
+
+            seg.CopyTo(buffer);
+            bufPos += seg.Length;
+
+            moved = enumerator.MoveNext();
+            Debug.Assert(moved, "Normalized Windows path has drive and path.");
+
+            range = enumerator.Current;
+            seg = nPath[range];
+        }
+
+        Stack<int> separatorIndices = new();    // used to go back when we see ParentDir segments
+
+        if (IsRootSegment(seg))
+        {
+            // root path - just copy it
+            seg.CopyTo(buffer[bufPos..]);
+            bufPos += seg.Length;
+            moved = enumerator.MoveNext();
+
+            if (!moved)
+                // done
+                return new string(buffer[..bufPos]);
+        }
+        else
+        {
+            // prepend with current directory path
+            CurrentFolder.Path.AsSpan().CopyTo(buffer);
+
+            // initialize the separator indices stack from the current path, skipping the terminating path separator
+            for (bufPos = 0; bufPos < CurrentFolder.Path.Length-1; bufPos++)
+                if (buffer[bufPos] is SepChar)
+                    separatorIndices.Push(bufPos);
+
+            bufPos++;   // move past the terminating separator
+        }
+
+        do
+        {
+            range = enumerator.Current;
+            seg = nPath[range];
+
+            if (seg is CurrentDir)
+                continue;
+
+            if (seg is ParentDir)
+            {
+                // go back to the previous folder
+                if (!separatorIndices.TryPop(out bufPos))
+                    throw new ArgumentException("Path goes above the root folder.", nameof(path));
+
+                bufPos++;   // move past the separator
+                continue;
+            }
+
+            // append the segment
+            seg.CopyTo(buffer[bufPos..]);
+            bufPos += seg.Length;
+
+            // append separator if not the last segment
+            if (range.End.Value < nPath.Length)
+            {
+                buffer[bufPos++] = SepChar;
+                separatorIndices.Push(bufPos);
+            }
+        }
+        while (enumerator.MoveNext());
+
+        return new string(buffer[..bufPos]);
+    }
+
     public bool FolderExists(string path)
     {
         var (folder, fileComp, file) = GetPathFromRoot(path);

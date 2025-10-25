@@ -120,4 +120,48 @@ public static partial class PathRegex
     /// <returns>A <see cref="Regex"/> object configured to identify Windows environment variable patterns.</returns>
     [GeneratedRegex($@"(?<percent> % ) {envVarName} (?<close-percent> % )", RegexOptions.IgnorePatternWhitespace)]
     public static partial Regex WinEnvVar();
+
+    /// <summary>
+    /// Gets a <see cref="Regex"/> object for validating recursive wildcard patterns.
+    /// </summary>
+    /// <remarks>
+    /// Recursive wildcard '**' cannot be preceded by anything other than a '/' or be at the beginning of the pattern string;
+    /// and also cannot be followed by anything other than a '/' or be at the end of the pattern.
+    /// Examples of invalid patterns: "a**", "**a", "a/**b", "a**/b", "a/**b".
+    /// Examples of valid patterns: "**", "**/", "/**", "/**/", "a/**", "**/a", "a/**/", "/**/a", "a/**/b", "/**/a/b", "a/**/b/**/c".
+    /// </remarks>
+    /// <returns>
+    /// A <see cref="Regex"/> object configured to identify invalid recursive wildcard patterns.
+    /// </returns>
+    [GeneratedRegex(@"(?<!^|/)\*\*|\*\*(?!$|/)")]
+    public static partial Regex InvalidRecursive();
+
+    /// <summary>
+    /// Gets a <see cref="Regex"/> object for matching recursive wildcards '**' at the end of a pattern.
+    /// </summary>
+    /// <returns>
+    /// A <see cref="Regex"/> object configured to identify matching recursive wildcards '**' at the end of a pattern.
+    /// </returns>
+    [GeneratedRegex(@"\*\*$")]
+    public static partial Regex RecursiveAtEnd();
+
+    /// <summary>
+    /// Gets a regular expression that matches Windows-style root paths.
+    /// </summary>
+    /// <remarks>
+    /// The generated regular expression matches strings that represent root paths in Windows, such as "/", "\", or drive
+    /// letters followed by a colon and a slash or backslash (e.g., "C:/", "D:\").
+    /// </remarks>
+    /// <returns>A <see cref="Regex"/> instance configured to match Windows-style root paths.</returns>
+    [GeneratedRegex(@"^(?:/|\\|[a-zA-Z]:[/\\]?)")]
+    public static partial Regex WinFromRoot();
+
+    /// <summary>
+    /// Gets a regular expression that matches strings starting with a forward slash ('/'), typically used to identify
+    /// Unix-style root paths.
+    /// </summary>
+    /// <returns>A <see cref="Regex"/> instance configured to match strings beginning with a forward slash ('/').</returns>
+    [GeneratedRegex(@"^/")]
+    public static partial Regex UnixFromRoot();
+
 }

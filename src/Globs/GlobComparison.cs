@@ -9,18 +9,22 @@ public enum GlobComparison
     /// The comparison rules are based on the current platform.
     /// </summary>
     Default,
+
     /// <summary>
     /// Equivalent to <see cref="StringComparison.Ordinal"/>.
     /// </summary>
     Ordinal,
+
     /// <summary>
     /// Equivalent to <see cref="StringComparison.OrdinalIgnoreCase"/>.
     /// </summary>
     OrdinalIgnoreCase,
+
     /// <summary>
     /// Equivalent to <see cref="StringComparison.Ordinal"/>.
     /// </summary>
     Unix = Ordinal,
+
     /// <summary>
     /// Equivalent to <see cref="StringComparison.OrdinalIgnoreCase"/>.
     /// </summary>

@@ -17,6 +17,14 @@ public interface IFileSystem
     bool IsWindows => OperatingSystem.IsWindows();
 
     /// <summary>
+    /// Converts a relative or absolute path into a fully qualified path. The returned path is normalized and is not guaranteed
+    /// to exist.
+    /// </summary>
+    /// <param name="path">The relative or absolute path to convert. Cannot be null or empty.</param>
+    /// <returns>The fully qualified path that corresponds to the specified <paramref name="path"/>.</returns>
+    string GetFullPath(string path);
+
+    /// <summary>
     /// Determines whether the specified folder exists.
     /// </summary>
     /// <param name="path">The full path of the folder to check. This can be an absolute or relative path.</param>

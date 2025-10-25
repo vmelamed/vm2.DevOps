@@ -67,9 +67,9 @@ public class Folder(string name = "") : IEquatable<Folder>, IComparable<Folder>
 
     public Folder? HasFolder(string subDirName)
     {
-        if (subDirName is FakeFS.CurrentDir)
+        if (subDirName is CurrentDir)
             return this;
-        if (subDirName is FakeFS.ParentDir)
+        if (subDirName is ParentDir)
             return Parent;
 
         return Folders.FirstOrDefault(d => Comparer.Compare(d.Name, subDirName) == 0);
@@ -119,8 +119,8 @@ public class Folder(string name = "") : IEquatable<Folder>, IComparable<Folder>
     {
         if (root.Parent is not null)
             throw new ArgumentException("Root node cannot have a folder.", nameof(root));
-        if (!root.Name.EndsWith(FakeFS.SepChar))
-            throw new InvalidDataException($"Root node name must end with '{FakeFS.SepChar}'.");
+        if (!root.Name.EndsWith(SepChar))
+            throw new InvalidDataException($"Root node name must end with '{SepChar}'.");
 
         root.SetPath();
 
@@ -132,7 +132,7 @@ public class Folder(string name = "") : IEquatable<Folder>, IComparable<Folder>
 
     void SetPath()
     {
-        var segment = Name.EndsWith(FakeFS.SepString) ? Name : Name + FakeFS.SepString;
+        var segment = Name.EndsWith(SepChar) ? Name : Name + SepChar;
         Path = Parent is not null
                     ? $"{Parent?.Path}{segment}"
                     : $"{segment}";

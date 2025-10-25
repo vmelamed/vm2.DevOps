@@ -157,7 +157,7 @@ public partial class FakeFileSystemTests
 
     [Theory]
     [MemberData(nameof(FolderExists_TestDataSet))]
-    public void FolderExists_Test(FolderExists_TestData data)
+    public void FolderExists_Test(Folder_TestData data)
     {
         var fs = new FakeFS(data.JsonFile, DataFileType.Json);
         fs.SetCurrentFolder(data.CurrentFolder);
@@ -176,7 +176,7 @@ public partial class FakeFileSystemTests
 
     [Theory]
     [MemberData(nameof(FileExists_TestDataSet))]
-    public void FileExists_Test(FolderExists_TestData data)
+    public void FileExists_Test(Folder_TestData data)
     {
         var fs = new FakeFS(data.JsonFile, DataFileType.Json);
         fs.SetCurrentFolder(data.CurrentFolder);
@@ -234,6 +234,24 @@ public partial class FakeFileSystemTests
         {
             var results = new HashSet<string>(enumFolders.Should().NotThrow().Which);
             results.Should().BeEquivalentTo(data.Results);
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(GetPath_TestDataSet))]
+    public void GetPath_Test(GetPath_TestData data)
+    {
+        var fs = new FakeFS(data.JsonFile, DataFileType.Json);
+        fs.SetCurrentFolder(data.CurrentFolder);
+        var getPath = () => fs.GetFullPath(data.Path);
+        if (data.Throws)
+        {
+            getPath.Should().Throw<ArgumentException>();
+        }
+        else
+        {
+            var result = getPath.Should().NotThrow().Which;
+            result.Should().Be(data.Result);
         }
     }
 }

@@ -6,7 +6,7 @@ namespace vm2.DevOps.Globs.Tests.FakeFileSystem;
 /// We use the term "folder" instead of "directory" in classes and method names to avoid confusion with the .NET class
 /// <see cref="Directory"/>.
 /// </remarks>
-public sealed partial class FakeFS : IFileSystem
+public sealed partial class FakeFS
 {
     bool IsDrive(ReadOnlySpan<char> segment)
         => IsWindows && segment.Length == WinDriveLength && char.IsAsciiLetter(segment[0]) && segment[1] == DriveSep;
@@ -33,11 +33,11 @@ public sealed partial class FakeFS : IFileSystem
     ///     <item>converts backslashes to slashes</item>
     ///     <item>removes duplicate separators</item>
     ///     <item>for Windows, converts drive letter to uppercase</item>
-    ///     <item>for Windows, prepends segment with current drive letter and colon if missing</item>
+    ///     <item>for Windows, prepends segment with current drive letter from the current path and colon if missing</item>
     /// </list>
     /// </summary>
     /// <param name="path"></param>
-    /// <returns>Span of bytes with normalized segment</returns>
+    /// <returns>Span of bytes with normalized segment separators</returns>
     ReadOnlySpan<char> NormalizePath(string path)
     {
         if (path.Length == 0)
@@ -94,7 +94,7 @@ public sealed partial class FakeFS : IFileSystem
         if (StartsWithDrive(path))
         {
             i = 2;
-            yield return new Range(0, i);               // "C:"
+            yield return new Range(0, i);               // "C:" if Windows
         }
 
         if (path.Length > i && path[i] is SepChar)
