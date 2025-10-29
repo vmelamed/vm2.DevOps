@@ -2,6 +2,7 @@
 
 public partial class FakeFileSystemTests
 {
+    [ExcludeFromCodeCoverage]
     public class FakeFS_TestData(
         string testFileLine,
         string textOrFile,
@@ -79,6 +80,7 @@ public partial class FakeFileSystemTests
         new FakeFS_TestData(TestFileLine(), @"FakeFS1.Unix.txt", false, "", false),
     ];
 
+    [ExcludeFromCodeCoverage]
     public class Json_To_Add_TestData(
         string testFileLine,
         string json,
@@ -142,6 +144,7 @@ public partial class FakeFileSystemTests
         new Json_To_Add_TestData(TestFileLine(), @"FakeFS1.Unix.json", false, true, @""),
     ];
 
+    [ExcludeFromCodeCoverage]
     public class SetCurrentFolder_TestData(
         string testFileLine,
         string fsJsonFile,
@@ -225,6 +228,7 @@ public partial class FakeFileSystemTests
         new SetCurrentFolder_TestData(TestFileLine(), "FakeFS2.Unix.json", "",                     "/folder3/file3.txt",  "",                    true),
     ];
 
+    [ExcludeFromCodeCoverage]
     public class GetPathFromRoot_TestData(
         string testFileLine,
         string jsonFile,
@@ -303,6 +307,7 @@ public partial class FakeFileSystemTests
         new GetPathFromRoot_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/folder2/",  "/folder3/file3.txt",   "/folder3/",            "file3.txt", false),
     ];
 
+    [ExcludeFromCodeCoverage]
     public class Folder_TestData(
         string testFileLine,
         string jsonFile,
@@ -409,6 +414,7 @@ public partial class FakeFileSystemTests
         new Folder_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/",           "./root.txt",           false, false),
     ];
 
+    [ExcludeFromCodeCoverage]
     public class GetPath_TestData(
         string testFileLine,
         string jsonFile,
@@ -484,6 +490,7 @@ public partial class FakeFileSystemTests
         new GetPath_TestData(TestFileLine(), "FakeFS2.Unix.json", "/folder1/",   "./root.txt",           "/folder1/root.txt",    false),
     ];
 
+    [ExcludeFromCodeCoverage]
     public class Enumerate_TestData(
         string testFileLine,
         string jsonFile,

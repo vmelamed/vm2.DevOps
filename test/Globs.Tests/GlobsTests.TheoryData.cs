@@ -3,6 +3,7 @@
 public partial class GlobsTests
 {
 
+    [ExcludeFromCodeCoverage]
     public class GlobEnumerate_TestData(
         string testFileLine,
         string jsonFile,
@@ -10,13 +11,12 @@ public partial class GlobsTests
         string path,
         string pattern,
         Enumerated enumerated,
-        GlobComparison comparison,
         bool throws,
         params string[] results) : IXunitSerializable
     {
         #region boilerplate
         public GlobEnumerate_TestData()
-            : this("", "", "", "", "", Enumerated.Both, GlobComparison.Default, false, [])
+            : this("", "", "", "", "", Enumerated.Both, false, [])
         {
         }
         #region Properties
@@ -26,7 +26,6 @@ public partial class GlobsTests
         public string Path { get; private set; } = path;
         public string Pattern { get; private set; } = pattern;
         public Enumerated Enumerated { get; private set; } = enumerated;
-        public GlobComparison Comparison { get; private set; } = comparison;
         public string[] Results { get; private set; } = [.. results];
         public bool Throws { get; private set; } = throws;
         #endregion
@@ -41,7 +40,6 @@ public partial class GlobsTests
             Path          = info.GetValue<string>(nameof(Path)) ?? "";
             Pattern       = info.GetValue<string>(nameof(Pattern)) ?? "";
             Enumerated    = info.GetValue<Enumerated>(nameof(Enumerated));
-            Comparison    = info.GetValue<GlobComparison>(nameof(Comparison));
             Results       = info.GetValue<string[]>(nameof(Results)) ?? [];
             Throws        = info.GetValue<bool>(nameof(Throws));
         }
@@ -54,7 +52,6 @@ public partial class GlobsTests
             info.AddValue(nameof(Path), Path);
             info.AddValue(nameof(Pattern), Pattern);
             info.AddValue(nameof(Enumerated), Enumerated);
-            info.AddValue(nameof(Comparison), Comparison);
             info.AddValue(nameof(Results), Results);
             info.AddValue(nameof(Throws), Throws);
         }
@@ -63,43 +60,54 @@ public partial class GlobsTests
 
     public static TheoryData<GlobEnumerate_TestData> Enumerate_TestDataSet =
     [
-        //                                         fileSys              currentFolder  path   pattern                enumerated              comparison              throws  results...
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "*",                   Enumerated.Both,        GlobComparison.Default, false,  "C:/folder1/", "C:/folder3/", "C:/root.txt"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "*",                   Enumerated.Files,       GlobComparison.Default, false,  "C:/root.txt"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "*",                   Enumerated.Directories, GlobComparison.Default, false,  "C:/folder1/", "C:/folder3/"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/folder1",            Enumerated.Both,        GlobComparison.Default, false,  "C:/folder1/"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/folder1",            Enumerated.Files,       GlobComparison.Default, false,  []),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/folder1",            Enumerated.Directories, GlobComparison.Default, false,  "C:/folder1/"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/folder1/*",          Enumerated.Both,        GlobComparison.Default, false,  "C:/folder1/folder2/",  "C:/folder1/file1.txt"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/folder1/*",          Enumerated.Files,       GlobComparison.Default, false,  "C:/folder1/file1.txt"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/folder1/*",          Enumerated.Directories, GlobComparison.Default, false,  "C:/folder1/folder2/"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/folder1/folder2/*",  Enumerated.Both,        GlobComparison.Default, false,  "C:/folder1/folder2/file2.txt"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/folder1/folder2/*",  Enumerated.Files,       GlobComparison.Default, false,  "C:/folder1/folder2/file2.txt"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/folder1/folder2/*",  Enumerated.Directories, GlobComparison.Default, false,  []),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/*/*",                Enumerated.Both,        GlobComparison.Default, false,  "C:/folder1/folder2/", "C:/folder1/file1.txt", "C:/folder3/file3.txt"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/*/*",                Enumerated.Files,       GlobComparison.Default, false,  "C:/folder1/file1.txt", "C:/folder3/file3.txt"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/*/*",                Enumerated.Directories, GlobComparison.Default, false,  "C:/folder1/folder2/"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/**/*",               Enumerated.Both,        GlobComparison.Default, false,  "C:/folder1/folder2/", "C:/folder1/folder2/file2.txt", "C:/folder3/", "C:/folder1/folder2/", "C:/folder1/", "C:/root.txt", "C:/folder1/file1.txt", "C:/folder3/file3.txt"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/**/*",               Enumerated.Files,       GlobComparison.Default, false,  "C:/folder1/folder2/file2.txt", "C:/root.txt", "C:/folder1/file1.txt", "C:/folder3/file3.txt"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/**/*",               Enumerated.Directories, GlobComparison.Default, false,  "C:/folder1/folder2/", "C:/folder3/", "C:/folder1/folder2/", "C:/folder1/"),
-        //                                         fileSys              currentFolder  path   pattern                enumerated              comparison              throws  results...
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "*",                   Enumerated.Both,        GlobComparison.Default, false,  "/folder1/", "/folder3/", "/root.txt"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "*",                   Enumerated.Files,       GlobComparison.Default, false,  "/root.txt"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "*",                   Enumerated.Directories, GlobComparison.Default, false,  "/folder1/", "/folder3/"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/folder1",            Enumerated.Both,        GlobComparison.Default, false,  "/folder1/"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/folder1",            Enumerated.Files,       GlobComparison.Default, false,  []),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/folder1",            Enumerated.Directories, GlobComparison.Default, false,  "/folder1/"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/folder1/*",          Enumerated.Both,        GlobComparison.Default, false,  "/folder1/folder2/",  "/folder1/file1.txt"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/folder1/*",          Enumerated.Files,       GlobComparison.Default, false,  "/folder1/file1.txt"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/folder1/*",          Enumerated.Directories, GlobComparison.Default, false,  "/folder1/folder2/"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/folder1/folder2/*",  Enumerated.Both,        GlobComparison.Default, false,  "/folder1/folder2/file2.txt"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/folder1/folder2/*",  Enumerated.Files,       GlobComparison.Default, false,  "/folder1/folder2/file2.txt"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/folder1/folder2/*",  Enumerated.Directories, GlobComparison.Default, false,  []),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/*/*",                Enumerated.Both,        GlobComparison.Default, false,  "/folder1/folder2/", "/folder1/file1.txt", "/folder3/file3.txt"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/*/*",                Enumerated.Files,       GlobComparison.Default, false,  "/folder1/file1.txt", "/folder3/file3.txt"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/*/*",                Enumerated.Directories, GlobComparison.Default, false,  "/folder1/folder2/"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/**/*",               Enumerated.Both,        GlobComparison.Default, false,  "/folder1/folder2/", "/folder1/folder2/file2.txt", "/folder3/", "/folder1/folder2/", "/folder1/", "/root.txt", "/folder1/file1.txt", "/folder3/file3.txt"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/**/*",               Enumerated.Files,       GlobComparison.Default, false,  "/folder1/folder2/file2.txt", "/root.txt", "/folder1/file1.txt", "/folder3/file3.txt"),
-        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/**/*",               Enumerated.Directories, GlobComparison.Default, false,  "/folder1/folder2/", "/folder3/", "/folder1/folder2/", "/folder1/"),
+        //                                         fileSys              currentFolder  path   pattern                enumerated              throws  results...
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "",                    Enumerated.Both,        true,   []),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "a**/*.txt",           Enumerated.Both,        true,   []),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",  "C:/folder1/f**/*.txt", Enumerated.Both,        true,   []),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "C:/folder1/",         Enumerated.Files,       true,   []),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "C:/folder1/**",       Enumerated.Files,       true,   []),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "*",                   Enumerated.Both,        false,  "C:/folder1/", "C:/folder3/", "C:/root.txt"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "*",                   Enumerated.Files,       false,  "C:/root.txt"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "*",                   Enumerated.Directories, false,  "C:/folder1/", "C:/folder3/"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/folder1",            Enumerated.Both,        false,  "C:/folder1/"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/FOLDER1",            Enumerated.Both,        false,  "C:/folder1/"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/folder1",            Enumerated.Files,       false,  []),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/folder1",            Enumerated.Directories, false,  "C:/folder1/"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/folder1/*",          Enumerated.Both,        false,  "C:/folder1/folder2/",  "C:/folder1/file1.txt"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/folder1/*",          Enumerated.Files,       false,  "C:/folder1/file1.txt"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/folder1/*",          Enumerated.Directories, false,  "C:/folder1/folder2/"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/folder1/folder2/*",  Enumerated.Both,        false,  "C:/folder1/folder2/file2.txt"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/folder1/folder2/*",  Enumerated.Files,       false,  "C:/folder1/folder2/file2.txt"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/folder1", "folder2/*",      Enumerated.Files,       false,  "C:/folder1/folder2/file2.txt"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/folder1/folder2/*",  Enumerated.Directories, false,  []),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/folder1", "folder2/*",      Enumerated.Directories, false,  []),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/*/*",                Enumerated.Both,        false,  "C:/folder1/folder2/", "C:/folder1/file1.txt", "C:/folder3/file3.txt"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/*/*",                Enumerated.Files,       false,  "C:/folder1/file1.txt", "C:/folder3/file3.txt"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/*/*",                Enumerated.Directories, false,  "C:/folder1/folder2/"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/**/*",               Enumerated.Both,        false,  "C:/folder1/folder2/", "C:/folder1/folder2/file2.txt", "C:/folder3/", "C:/folder1/folder2/", "C:/folder1/", "C:/root.txt", "C:/folder1/file1.txt", "C:/folder3/file3.txt"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/**/*",               Enumerated.Files,       false,  "C:/folder1/folder2/file2.txt", "C:/root.txt", "C:/folder1/file1.txt", "C:/folder3/file3.txt"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Win.json",  "C:/",         "/",   "/**/*",               Enumerated.Directories, false,  "C:/folder1/folder2/", "C:/folder3/", "C:/folder1/folder2/", "C:/folder1/"),
+        //                                         fileSys              currentFolder  path   pattern                enumerated              throws  results...
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "*",                   Enumerated.Both,        false,  "/folder1/", "/folder3/", "/root.txt"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "*",                   Enumerated.Files,       false,  "/root.txt"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "*",                   Enumerated.Directories, false,  "/folder1/", "/folder3/"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/folder1",            Enumerated.Both,        false,  "/folder1/"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/folder1",            Enumerated.Files,       false,  []),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/folder1",            Enumerated.Directories, false,  "/folder1/"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/folder1/*",          Enumerated.Both,        false,  "/folder1/folder2/",  "/folder1/file1.txt"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/folder1/*",          Enumerated.Files,       false,  "/folder1/file1.txt"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/folder1/*",          Enumerated.Directories, false,  "/folder1/folder2/"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/folder1/folder2/*",  Enumerated.Both,        false,  "/folder1/folder2/file2.txt"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/FOLDER1/FOLDER2/*",  Enumerated.Both,        false,  []),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/FOLDER1/FOLDER2/*",  Enumerated.Both,        false,  []),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/folder1/folder2/*",  Enumerated.Files,       false,  "/folder1/folder2/file2.txt"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/folder1/FOLDER2/*",  Enumerated.Files,       false,  []),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/folder1/folder2/*",  Enumerated.Directories, false,  []),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/*/*",                Enumerated.Both,        false,  "/folder1/folder2/", "/folder1/file1.txt", "/folder3/file3.txt"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/*/*",                Enumerated.Files,       false,  "/folder1/file1.txt", "/folder3/file3.txt"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/*/*",                Enumerated.Directories, false,  "/folder1/folder2/"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/**/*",               Enumerated.Both,        false,  "/folder1/folder2/", "/folder1/folder2/file2.txt", "/folder3/", "/folder1/folder2/", "/folder1/", "/root.txt", "/folder1/file1.txt", "/folder3/file3.txt"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/**/*",               Enumerated.Files,       false,  "/folder1/folder2/file2.txt", "/root.txt", "/folder1/file1.txt", "/folder3/file3.txt"),
+        new GlobEnumerate_TestData(TestFileLine(), "FakeFS2.Unix.json", "/",           "/",   "/**/*",               Enumerated.Directories, false,  "/folder1/folder2/", "/folder3/", "/folder1/folder2/", "/folder1/"),
     ];
 }

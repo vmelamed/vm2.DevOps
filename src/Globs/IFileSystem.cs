@@ -39,7 +39,7 @@ public interface IFileSystem
     bool FileExists(string path);
 
     /// <summary>
-    /// Retrieves the names of subfolders (subfolder) within the specified folder (folder).
+    /// Retrieves the names of subfolders within the specified folder.
     /// </summary>
     /// <param name="path">
     /// The path of the folder to search. This must be a valid, existing folder path.

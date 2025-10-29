@@ -35,11 +35,11 @@
     <File Path="LICENSE" />
     <File Path="README.md" />
     <File Path="ReleaseProcess.md" />
+    <File Path="test.runsettings" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/BmCompare/BmCompare.csproj" />
     <Project Path="src/Globs/Globs.csproj" Id="904df4eb-5547-4d56-8586-e3a25d2ececd" />
-    <Project Path="src/Scratch/Scratch.csproj" Id="1f1b085c-62e3-4ca5-8805-f67bec8c15e1" />
   </Folder>
   <Folder Name="/test/">
     <Project Path="test/Globs.Tests/Globs.Tests.csproj" />

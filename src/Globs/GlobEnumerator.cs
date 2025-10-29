@@ -50,9 +50,7 @@ public sealed partial class GlobEnumerator
     /// Gets a regex that matches if a pattern starts from the root of the file system.
     /// </summary>
     /// <returns>Regex</returns>
-    static Regex StartFromRoot() => OperatingSystem.IsWindows()
-                                        ? PathRegex.WinFromRoot()
-                                        : PathRegex.UnixFromRoot();
+    public Regex StartFromRoot { get; init; }
 
     IFileSystem _fileSystem;
     string _pattern             = "";
@@ -89,36 +87,23 @@ public sealed partial class GlobEnumerator
     } = ".";
 
     /// <summary>
-    /// Gets or sets how the items to search for (files, directories, or both) are compared.
-    /// </summary>
-    public GlobComparison Comparison
-    {
-        get => field;
-        set
-        {
-            field = value switch {
-                GlobComparison.Windows => GlobComparison.Windows,
-                GlobComparison.Unix => GlobComparison.Unix,
-                _ => OperatingSystem.IsWindows()
-                            ? GlobComparison.Windows
-                            : GlobComparison.Unix,
-            };
-            _regexOptions = field is GlobComparison.Windows or GlobComparison.OrdinalIgnoreCase
-                                        ? _regexOptions | RegexOptions.IgnoreCase
-                                        : _regexOptions & ~RegexOptions.IgnoreCase;
-            _options.MatchCasing = field is GlobComparison.Windows or GlobComparison.OrdinalIgnoreCase
-                                        ? MatchCasing.CaseInsensitive
-                                        : MatchCasing.CaseSensitive;
-        }
-    } = GlobComparison.Default;
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="GlobEnumerator"/> class with <see cref="FileSystem"/> as the file system.
     /// </summary>
     public GlobEnumerator(IFileSystem fileSystem)
     {
         _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
-        Comparison  = fileSystem.IsWindows ? GlobComparison.Windows : GlobComparison.Unix;
+        if (_fileSystem.IsWindows)
+        {
+            _regexOptions |= RegexOptions.IgnoreCase;
+            _options.MatchCasing = MatchCasing.CaseInsensitive;
+            StartFromRoot = PathRegex.WinFromRoot();
+        }
+        else
+        {
+            _regexOptions &= ~RegexOptions.IgnoreCase;
+            _options.MatchCasing = MatchCasing.CaseSensitive;
+            StartFromRoot = PathRegex.UnixFromRoot();
+        }
     }
 
     /// <summary>
@@ -138,7 +123,7 @@ public sealed partial class GlobEnumerator
         if (Enumerated == Enumerated.Files && PathRegex.RecursiveAtEnd().IsMatch(pattern))
             throw new ArgumentException("Pattern cannot end with a recursive wildcard '**' when searching for files.", nameof(pattern));
 
-        var m = StartFromRoot().Match(pattern);  // if it starts with a root or drive like `D:\`, `C:/` or just `/` or `\` then ignore EnumerateFromFolder and start from the root
+        var m = StartFromRoot.Match(pattern);  // if it starts with a root or drive like `D:\`, `C:/` or just `/` or `\` then ignore EnumerateFromFolder and start from the root
         if (m.Success)
         {
             _pattern = pattern[m.Length..]; // start from root

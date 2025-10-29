@@ -3,6 +3,7 @@
 /// <summary>
 /// Validation regular expressions for pathnames.
 /// </summary>
+[ExcludeFromCodeCoverage]
 public static partial class PathRegex
 {
     /// <summary>
