@@ -1,8 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-        <OutputType>Exe</OutputType>
-      <RootNamespace>vm2.DevOps.Globs.Tests</RootNamespace>
+    <RootNamespace>vm2.DevOps.Globs.Tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

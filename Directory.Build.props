@@ -29,7 +29,7 @@
         <Authors>Val Melamed</Authors>
         <PublishRepositoryUrl>true</PublishRepositoryUrl>
         <RepositoryUrl>https://github.com/vmelamed/vm2.Ulid</RepositoryUrl>
-        <Copyright>Copyright © 2025 vm</Copyright>
+        <Copyright>Copyright ©2025 vm</Copyright>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
         <RepositoryType>git</RepositoryType>
@@ -53,8 +53,10 @@
         <IsTestProject>true</IsTestProject>
         <IsPackable>false</IsPackable>
         <GenerateDocumentationFile>false</GenerateDocumentationFile>
+        <!-- Use VSTest runner (xunit.runner.visualstudio). If you want Microsoft Testing Platform, set to true and add Microsoft.Testing.Extensions.Xunit. -->
         <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
         <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+        <RunSettingsFilePath>$(MSBuildProjectDirectory)\..\..\test.runsettings</RunSettingsFilePath>
         <NoWarn>
             $(NoWarn);CA1031;CA1701;CA1702;CA1707;CA1806;CA2211;CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290
         </NoWarn>
@@ -63,18 +65,20 @@
         <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
         <PackageReference Include="FluentAssertions" />
         <PackageReference Include="xunit.v3" />
-        <!-- required for VSTest but not for MS Test Platform -->
-        <!-- Microsoft Testing Platform makes the following references redundant:
-        <PackageReference Include="Microsoft.NET.Test.Sdk" /> <!- - required for VSTest but not for MS Test Platform - ->
-        <PackageReference Update="xunit.runner.visualstudio"> <!- - required for VSTest but not for MS Test Platform - ->
-            <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
+        <!--<PackageReference Include="xunit.v3.extensibility.core" />-->
+
         <PackageReference Update="coverlet.msbuild">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        -->
+        <!-- required for VSTest but not for MS Test Platform. Microsoft Testing Platform makes the following references redundant: - ->
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Update="xunit.runner.visualstudio">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <!- - required for VSTest but not for MS Test Platform -->
+
     </ItemGroup>
 
     <ItemGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]test[/\\]')) and !$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '^*.Tests$'))">
