@@ -31,12 +31,12 @@ For more information on using a .runsettings file, see https://aka.ms/vstest-run
         0 - no parallelization
         1 - no parallelization
         2 and up - number of threads to use
-        0.5x, 1.5x, 2x, etc - factor of the number of processors on the machine
+        0.5x, 1.5x, 2x, etc - factor of the number of processors on t``he machine
         -->
         <AssertEquivalentMaxDepth>50</AssertEquivalentMaxDepth>
         <MethodDisplay>classAndMethod</MethodDisplay>
         <!-- method, classAndMethod -->
-        <MethodDisplayOptions></MethodDisplayOptions>
+        <MethodDisplayOptions>none</MethodDisplayOptions>
         <!-- "all", or comma separated: "replaceUnderscoreWithSpace", "useOperatorMonikers"..., "useParameterTypes", "useEscapeSequences" Xnn or Unnnn, "replacePeriodWithComma" -->
         <NoAutoReporters>false</NoAutoReporters>
         <ParallelAlgorithm>conservative</ParallelAlgorithm>
