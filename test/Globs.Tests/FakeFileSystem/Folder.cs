@@ -1,4 +1,4 @@
-﻿namespace vm2.DevOps.Globs.Tests.FakeFileSystem;
+﻿namespace vm2.DevOps.Glob.Api.Tests.FakeFileSystem;
 
 /// <summary>
 /// Represents a folder in the file system: container for subfolders and files.

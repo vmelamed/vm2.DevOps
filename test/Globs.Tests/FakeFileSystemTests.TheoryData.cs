@@ -1,4 +1,4 @@
-﻿namespace vm2.DevOps.Globs.Tests;
+﻿namespace vm2.DevOps.Glob.Api.Tests;
 
 public partial class FakeFileSystemTests
 {

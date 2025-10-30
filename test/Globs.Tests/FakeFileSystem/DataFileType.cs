@@ -1,4 +1,4 @@
-﻿namespace vm2.DevOps.Globs.Tests.FakeFileSystem;
+﻿namespace vm2.DevOps.Glob.Api.Tests.FakeFileSystem;
 
 public enum DataFileType
 {

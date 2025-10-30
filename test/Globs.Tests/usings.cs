@@ -7,10 +7,10 @@ global using System.Text.Json;
 global using System.Text.Json.Serialization;
 global using System.Text.RegularExpressions;
 
-global using vm2.DevOps.Globs.Tests.FakeFileSystem;
+global using vm2.DevOps.Glob.Api.Tests.FakeFileSystem;
 
 global using Xunit.Sdk;
 
-global using static vm2.DevOps.Globs.GlobEnumerator;
-global using static vm2.DevOps.Globs.Tests.TestUtilities.Utilities;
+global using static vm2.DevOps.Glob.Api.GlobEnumerator;
+global using static vm2.DevOps.Glob.Api.Tests.TestUtilities.Utilities;
 

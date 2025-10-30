@@ -1,11 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>vm2.DevOps.Globs.Tests</RootNamespace>
+    <RootNamespace>vm2.DevOps.Glob.Api.Tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Globs\Globs.csproj" />
+    <ProjectReference Include="..\..\src\Glob.Api\Glob.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup>

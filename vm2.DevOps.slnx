@@ -39,7 +39,7 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/BmCompare/BmCompare.csproj" />
-    <Project Path="src/Globs/Globs.csproj" Id="904df4eb-5547-4d56-8586-e3a25d2ececd" />
+    <Project Path="src/Glob.Api/Glob.Api.csproj" />
   </Folder>
   <Folder Name="/test/">
     <Project Path="test/Globs.Tests/Globs.Tests.csproj" />

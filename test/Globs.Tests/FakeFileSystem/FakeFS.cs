@@ -1,4 +1,4 @@
-namespace vm2.DevOps.Globs.Tests.FakeFileSystem;
+namespace vm2.DevOps.Glob.Api.Tests.FakeFileSystem;
 
 /// <summary>
 /// Fake fileName system loaded from a JSON representation.

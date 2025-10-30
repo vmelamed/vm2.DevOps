@@ -1,4 +1,4 @@
-﻿namespace vm2.DevOps.Globs;
+﻿namespace vm2.DevOps.Glob.Api;
 
 /// <summary>
 /// Validation regular expressions for pathnames.

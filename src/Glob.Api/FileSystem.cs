@@ -1,12 +1,16 @@
-﻿namespace vm2.DevOps.Globs;
+﻿namespace vm2.DevOps.Glob.Api;
+
+#pragma warning disable CA1822 // Mark members as static
 
 /// <summary>
-/// Represents a file system abstraction used by the glob pattern searching.
+/// Provides methods for interacting with the file system, including operations to check for the existence  of
+/// folders and files, retrieve folder and file listings, and resolve full paths. Implements the <see cref="IFileSystem"/>.
 /// </summary>
 /// <remarks>
-/// We use the term "folder" instead of "directory" in method names to avoid confusion with the .NET class <see cref="Directory"/>.
+/// We use the term "folder" instead of "directory" in classes and method names to avoid confusion with the .NET class <see cref="Directory"/>.
 /// </remarks>
-public interface IFileSystem
+[ExcludeFromCodeCoverage]
+public class FileSystem : IFileSystem
 {
     /// <summary>
     /// Gets a value indicating whether the current operating system is Windows.
@@ -14,7 +18,7 @@ public interface IFileSystem
     /// <returns>
     /// <see langword="true"/> if the current operating system is Windows; otherwise, <see langword="false"/> - it is Unix-like.
     /// </returns>
-    bool IsWindows => OperatingSystem.IsWindows();
+    public bool IsWindows => OperatingSystem.IsWindows();
 
     /// <summary>
     /// Converts a relative or absolute path into a fully qualified path. The returned path is normalized and is not guaranteed
@@ -22,21 +26,23 @@ public interface IFileSystem
     /// </summary>
     /// <param name="path">The relative or absolute path to convert. Cannot be null or empty.</param>
     /// <returns>The fully qualified path that corresponds to the specified <paramref name="path"/>.</returns>
-    string GetFullPath(string path);
+    public string GetFullPath(string path) => Path.GetFullPath(path);
 
     /// <summary>
     /// Determines whether the specified folder exists.
     /// </summary>
     /// <param name="path">The full path of the folder to check. This can be an absolute or relative path.</param>
     /// <returns><see langword="true"/> if the folder exists; otherwise, <see langword="false"/>.</returns>
-    bool FolderExists(string path);
+    public bool FolderExists(string path) => Directory.Exists(path);
 
     /// <summary>
-    /// Determines whether the specified file exists at the given path.
+    /// Determines whether the specified file exists.
     /// </summary>
-    /// <param name="path">The full path of the file to check. This can be an absolute or relative path.</param>
+    /// <remarks>This method checks the existence of the file at the specified path. It does not validate
+    /// whether the caller has permission to access the file.</remarks>
+    /// <param name="path">The path of the file to check. This can be an absolute or relative path.</param>
     /// <returns><see langword="true"/> if the file exists at the specified path; otherwise, <see langword="false"/>.</returns>
-    bool FileExists(string path);
+    public bool FileExists(string path) => File.Exists(path);
 
     /// <summary>
     /// Retrieves the names of subfolders within the specified folder.
@@ -55,7 +61,22 @@ public interface IFileSystem
     /// An enumerable collection of strings, where each string represents the name of a subfolder within the
     /// specified folder. If the folder contains no subfolders, the collection will be empty.
     /// </returns>
-    IEnumerable<string> EnumerateFolders(string path, string pattern, EnumerationOptions options);
+    public IEnumerable<string> EnumerateFolders(string path, string pattern, EnumerationOptions options)
+    {
+        try
+        {
+            return Directory.EnumerateDirectories(path, pattern, options);
+        }
+        catch (Exception x) when (x is
+            DirectoryNotFoundException or
+            IOException or
+            PathTooLongException or
+            SecurityException or
+            UnauthorizedAccessException)
+        {
+            return [];
+        }
+    }
 
     /// <summary>
     /// Retrieves the names of files within the specified folder.
@@ -72,5 +93,20 @@ public interface IFileSystem
     /// An enumerable collection of strings, where each string represents the name of a file within the
     /// specified folder. If the folder contains no files, the collection will be empty.
     /// </returns>
-    IEnumerable<string> EnumerateFiles(string path, string pattern, EnumerationOptions options);
+    public IEnumerable<string> EnumerateFiles(string path, string pattern, EnumerationOptions options)
+    {
+        try
+        {
+            return Directory.EnumerateFiles(path, pattern, options);
+        }
+        catch (Exception x) when (x is
+            DirectoryNotFoundException or
+            IOException or
+            PathTooLongException or
+            SecurityException or
+            UnauthorizedAccessException)
+        {
+            return [];
+        }
+    }
 }

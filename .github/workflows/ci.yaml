@@ -1,4 +1,4 @@
-name: Build, Test, Benchmarks
+name: Build, Test, Run Benchmark Tests
 
 on:
   workflow_call:
