@@ -256,7 +256,7 @@ public sealed partial class FakeFS
             // e.g. a Windows path that contains '$' or '~' characters; or a Unix path that contains ':' or '%'.
             if (!IsWindows)
             {
-                line = line.Replace("~", "${HOME}");
+                line = line.Replace(PathRegex.UnixShellSpecificHome, PathRegex.UnixHomeEnvironmentVar);
                 line = PathRegex.UnixEnvVar().Replace(line, PathRegex.UnixEnvVarReplacement);
             }
 

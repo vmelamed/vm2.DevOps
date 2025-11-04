@@ -29,8 +29,9 @@ public static partial class PathRegex
     /// <summary>
     /// The regular expression pattern for validating Windows pathnames.
     /// </summary>
-    public const string WindowsPathname = """
-        ^(?=^.{0,260}$)
+    internal const string WindowsPathname = """
+        ^
+        (?=^.{0,260}$)
         (?:(?<drive>[A-Za-z]):)?
         (?<path>
             (?: [/\\]?
@@ -46,21 +47,56 @@ public static partial class PathRegex
                       (?: [^\x00-\x1F"*/:<>?\\|]*[^\x00-\x1F "*./:<>?\\|] ) ) ) )*
               ) [/\\] )
           | (?: [/\\] )
-          | (?: \.|\.\. )
+          | (?: \. | \.\. )
         )?
         (?<file>
           (?! (?:CON|PRN|AUX|NUL|COM\d?|LPT\d?)(?:\.[^\x00-\x1F"*./:<>?\\|]*[^\x00-\x1F "*./:<>?\\|])? )
           (?: (?: (?<name> [^\x00-\x1F"*/:<>?\\|]+ )\.(?<suffix> [^\x00-\x1F"*./:<>?\\|]*[^\x00-\x1F "*./:<>?\\|] ) )
-                | (?<name> [^\x00-\x1F"*/:<>?\\|]*[^\x00-\x1F "*./:<>?\\|] ) ) )?$
+                | (?<name> [^\x00-\x1F"*/:<>?\\|]*[^\x00-\x1F "*./:<>?\\|] ) ) )?
+        $
+        """;
+
+    /// <summary>
+    /// The regular expression pattern for validating Windows glob-patterns.
+    /// </summary>
+    internal const string WindowsGlobPattern = """
+        ^
+        (?:(?: [A-Za-z]):)?
+        (?:
+          (?:
+            (?: [/\\]?
+              (?:
+                          (?: \. | \.\. | \*\* | (?: (?! [^\x00-\x1F"/:<>\\|]*\*\* )(?: [^\x00-\x1F"/:<>\\|]*[^\x00-\x1F "./:<>\\|] ) ) )
+                (?: [/\\] (?: \. | \.\. | \*\* | (?: (?! [^\x00-\x1F"/:<>\\|]*\*\* )(?: [^\x00-\x1F"/:<>\\|]*[^\x00-\x1F "./:<>\\|] ) ) ) )*
+              )
+            ) | (?: \. | \.\. | \*\* )
+          )
+          (?: [/\\] | $ )
+        )?
+        (?: (?! [^\x00-\x1F"/:<>\\|]*\*\* )(?: [^\x00-\x1F"/:<>\\|]*[^\x00-\x1F "./:<>\\|] ) )?
+        $
         """;
 
     /// <summary>
     /// The regular expression pattern for validating Unix pathnames.
     /// </summary>
-    public const string UnixPathname = """
+    internal const string UnixPathname = """
         ^
-        (?: (?: (?<path> /? (?: [^\x00/]{1,255} (?: / [^\x00/]{1,255} )* ) ) / ) | (?<path> /? ) )?
+        (?: (?: (?<path> /? (?: [^\x00/]{1,255} (?: / [^\x00/]{1,255} )* ) ) / )
+              | (?<path> /? ) )?
         (?<file> [^\x00/]{1,255} )?
+        $
+        """;
+
+    /// <summary>
+    /// The regular expression pattern for validating Unix pathnames.
+    /// </summary>
+    internal const string UnixGlobPattern = """
+        ^
+        (?: /? |
+            (?: /?      (?: (?:\*\*) | (?: (?![^\x00/]*\*\*) [^\x00/]{1,255} ) )
+                  (?: / (?: (?:\*\*) | (?: (?![^\x00/]*\*\*) [^\x00/]{1,255} ) ) )* / ) )?
+                        (?: (?:\*\*) | (?: (?![^\x00/]*\*\*) [^\x00/]{1,255} ) )?
         $
         """;
 
@@ -73,6 +109,13 @@ public static partial class PathRegex
     [GeneratedRegex(WindowsPathname, winOptions)]
     public static partial Regex WindowsPath();
 
+    /// <summary>
+    /// Gets a <see cref="Regex"/> object for validating Windows pathnames.
+    /// </summary>
+    /// <returns></returns>
+    [GeneratedRegex(WindowsGlobPattern, winOptions)]
+    internal static partial Regex WindowsGlob();
+
     const RegexOptions unixOptions = RegexOptions.Singleline | RegexOptions.IgnorePatternWhitespace;
 
     /// <summary>
@@ -83,11 +126,18 @@ public static partial class PathRegex
     public static partial Regex UnixPath();
 
     /// <summary>
+    /// Gets a <see cref="Regex"/> object for validating Unix pathnames.
+    /// </summary>
+    /// <returns></returns>
+    [GeneratedRegex(UnixGlobPattern, unixOptions)]
+    internal static partial Regex UnixGlob();
+
+    /// <summary>
     /// The name of a capturing group that represents a Unix environment variable
     /// </summary>
-    public const string EnvVarGr = "envVar";
+    internal const string EnvVarNameGr = "envVar";
 
-    const string envVarName = $@"(?<{EnvVarGr}> [A-Za-z_][0-9A-Za-z_]* )";
+    const string envVarName = "[A-Za-z_][0-9A-Za-z_]*";
 
     /// <summary>
     /// Gets a regular expression object that matches Unix-style environment variable patterns.
@@ -97,7 +147,7 @@ public static partial class PathRegex
     /// environment variable name consisting of letters, digits, or underscores, and an optional closing brace ('}').
     /// </remarks>
     /// <returns>A <see cref="Regex"/> object configured to identify Unix-style environment variable patterns.</returns>
-    [GeneratedRegex($@"\$(?<brace> \{{? ) {envVarName} (?<close-brace> \}}? )", RegexOptions.IgnorePatternWhitespace)]
+    [GeneratedRegex($@"\$ (?: (?<brace>\{{) {envVarName} (?<{EnvVarNameGr}-brace>\}}) | (?<{EnvVarNameGr}> {envVarName} ) )", RegexOptions.IgnorePatternWhitespace)]
     public static partial Regex UnixEnvVar();
 
     /// <summary>
@@ -109,7 +159,22 @@ public static partial class PathRegex
     /// the format "%${variable_name}%". It is intended for use in scenarios where environment variables need to be
     /// identified and replaced within strings and then expanded with <see cref="Environment.ExpandEnvironmentVariables(string)"/>.
     /// </remarks>
-    public const string UnixEnvVarReplacement = $"%${{{PathRegex.EnvVarGr}}}%";
+    public const string UnixEnvVarReplacement = $"%${{{PathRegex.EnvVarNameGr}}}%";
+
+    /// <summary>
+    /// Represents the environment variable used to retrieve the home directory path on Unix-based systems.
+    /// </summary>
+    public const string UnixHomeEnvironmentVar = "%HOME%";
+
+    /// <summary>
+    /// Represents the Unix shell-specific shorthand for the user's home directory.
+    /// </summary>
+    public const string UnixShellSpecificHome = "~";
+
+    /// <summary>
+    /// Represents the environment variable placeholder for the user's home directory on Windows systems.
+    /// </summary>
+    internal const string WinHomeEnvironmentVar = "%USERPROFILE%";
 
     /// <summary>
     /// Creates a regular expression to match Windows environment variable patterns.
@@ -119,8 +184,8 @@ public static partial class PathRegex
     /// consist of alphanumeric characters and underscores, starting with a letter or underscore.
     /// </remarks>
     /// <returns>A <see cref="Regex"/> object configured to identify Windows environment variable patterns.</returns>
-    [GeneratedRegex($@"(?<percent> % ) {envVarName} (?<close-percent> % )", RegexOptions.IgnorePatternWhitespace)]
-    public static partial Regex WinEnvVar();
+    [GeneratedRegex($@"(?<percent> % ) {envVarName} (?<{EnvVarNameGr}-percent> % )", RegexOptions.IgnorePatternWhitespace)]
+    internal static partial Regex WindowsEnvVar();
 
     /// <summary>
     /// Gets a <see cref="Regex"/> object for validating recursive wildcard patterns.
@@ -135,7 +200,7 @@ public static partial class PathRegex
     /// A <see cref="Regex"/> object configured to identify invalid recursive wildcard patterns.
     /// </returns>
     [GeneratedRegex(@"(?<!^|/)\*\*|\*\*(?!$|/)")]
-    public static partial Regex InvalidRecursive();
+    internal static partial Regex InvalidRecursive();
 
     /// <summary>
     /// Gets a <see cref="Regex"/> object for matching recursive wildcards '**' at the end of a pattern.
@@ -144,7 +209,7 @@ public static partial class PathRegex
     /// A <see cref="Regex"/> object configured to identify matching recursive wildcards '**' at the end of a pattern.
     /// </returns>
     [GeneratedRegex(@"\*\*$")]
-    public static partial Regex RecursiveAtEnd();
+    internal static partial Regex RecursiveAtEnd();
 
     /// <summary>
     /// Gets a regular expression that matches Windows-style root paths.
@@ -155,7 +220,7 @@ public static partial class PathRegex
     /// </remarks>
     /// <returns>A <see cref="Regex"/> instance configured to match Windows-style root paths.</returns>
     [GeneratedRegex(@"^(?:/|\\|[a-zA-Z]:[/\\]?)")]
-    public static partial Regex WinFromRoot();
+    internal static partial Regex WinFromRoot();
 
     /// <summary>
     /// Gets a regular expression that matches strings starting with a forward slash ('/'), typically used to identify
@@ -163,6 +228,20 @@ public static partial class PathRegex
     /// </summary>
     /// <returns>A <see cref="Regex"/> instance configured to match strings beginning with a forward slash ('/').</returns>
     [GeneratedRegex(@"^/")]
-    public static partial Regex UnixFromRoot();
+    internal static partial Regex UnixFromRoot();
 
+    internal const string SeqWildcardGr = "seqwc";
+    internal const string CharWildcardGr = "charwc";
+    internal const string ClassNameGr = "classNm";
+    internal const string ClassGr = "class";
+
+    const string GlobRegex = """
+          (?<seqwc>\*)
+        | (?<charwc>\?)
+        | (?<dblBracket>\[\[:) (?: alnum | alpha | blank | cntrl | digit | graph | lower | print | punct | space | upper | xdigit ) (?<classNm-dblBracket>:\]\])
+        | (?: (?<bracket>\[) !? \]? .* (?<class-bracket>\]) )
+        """;
+
+    [GeneratedRegex(GlobRegex, RegexOptions.IgnorePatternWhitespace)]
+    internal static partial Regex ReplaceableWildcard();
 }

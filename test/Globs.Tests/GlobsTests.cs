@@ -18,7 +18,8 @@ public partial class GlobsTests
     {
         var ge = new GlobEnumerator(new FakeFS(data.JsonFile, DataFileType.Json)) {
             Enumerated          = data.Enumerated,
-            EnumerateFromFolder = data.Path
+            EnumerateFromFolder = data.Path,
+            DebugOutput         = true,
         };
 
         var enumerate = () => ge.Enumerate(data.Pattern);
