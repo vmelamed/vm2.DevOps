@@ -31,9 +31,9 @@ public partial class GlobsTests
         }
         else
         {
-            var result = enumerate.Should().NotThrow().Which;
+            var result = enumerate.Should().NotThrow().Which.OrderBy(s => s, StringComparer.Ordinal).ToList();
 
-            result.Should().BeEquivalentTo(data.ResultsSet);
+            result.Should().BeEquivalentTo(data.Results);
         }
     }
 }
