@@ -9,22 +9,25 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="FakeFS2.Unix.json">
+    <None Update="FakeFSFiles\FakeFS.UnixGlob.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="FakeFS2.Win.json">
+    <None Update="FakeFSFiles\FakeFS2.Unix.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="FakeFS1.Unix.json">
+    <None Update="FakeFSFiles\FakeFS2.Win.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="FakeFS1.Unix.txt">
+    <None Update="FakeFSFiles\FakeFS1.Unix.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="FakeFS1.Win.json">
+    <None Update="FakeFSFiles\FakeFS1.Unix.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="FakeFS1.Win.txt">
+    <None Update="FakeFSFiles\FakeFS1.Win.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="FakeFSFiles\FakeFS1.Win.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

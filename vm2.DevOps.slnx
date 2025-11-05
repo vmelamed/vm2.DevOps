@@ -27,9 +27,9 @@
     <File Path="scripts/bash/_common.sh" />
   </Folder>
   <Folder Name="/Solution Items/">
+    <File Path="../COPILOT_INSTRUCTIONS.md" />
     <File Path=".editorconfig" />
     <File Path=".gitignore" />
-    <File Path="copilot-instructions.md" />
     <File Path="Directory.Build.props" />
     <File Path="Directory.Packages.props" />
     <File Path="LICENSE" />

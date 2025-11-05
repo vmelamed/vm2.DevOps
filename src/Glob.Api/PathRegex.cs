@@ -235,13 +235,13 @@ public static partial class PathRegex
     internal const string ClassNameGr = "classNm";
     internal const string ClassGr = "class";
 
-    const string GlobRegex = """
-          (?<seqwc>\*)
-        | (?<charwc>\?)
-        | (?<dblBracket>\[\[:) (?: alnum | alpha | blank | cntrl | digit | graph | lower | print | punct | space | upper | xdigit ) (?<classNm-dblBracket>:\]\])
-        | (?: (?<bracket>\[) !? \]? .* (?<class-bracket>\]) )
+    const string GlobRegex = $"""
+          (?<{SeqWildcardGr}>\*)
+        | (?<{CharWildcardGr}>\?)
+        | (?<dblBracket> \[ !? \[: ) (?: alnum | alpha | blank | cntrl | digit | graph | lower | print | punct | space | upper | xdigit ) (?<{ClassNameGr}-dblBracket> :\] \] )
+        | (?: (?<bracket>\[) !? \]? .* (?<{ClassGr}-bracket>\]) )
         """;
 
-    [GeneratedRegex(GlobRegex, RegexOptions.IgnorePatternWhitespace)]
+    [GeneratedRegex(GlobRegex, RegexOptions.IgnorePatternWhitespace|RegexOptions.ExplicitCapture)]
     internal static partial Regex ReplaceableWildcard();
 }
