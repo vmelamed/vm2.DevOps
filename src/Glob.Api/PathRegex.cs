@@ -4,7 +4,7 @@
 /// Validation regular expressions for pathnames.
 /// </summary>
 [ExcludeFromCodeCoverage]
-public static partial class PathRegex
+public static partial class GlobConstants
 {
     /// <summary>
     /// The the name of a matching group representing the drive letter in a path name.
@@ -159,7 +159,7 @@ public static partial class PathRegex
     /// the format "%${variable_name}%". It is intended for use in scenarios where environment variables need to be
     /// identified and replaced within strings and then expanded with <see cref="Environment.ExpandEnvironmentVariables(string)"/>.
     /// </remarks>
-    public const string UnixEnvVarReplacement = $"%${{{PathRegex.EnvVarNameGr}}}%";
+    public const string UnixEnvVarReplacement = $"%${{{GlobConstants.EnvVarNameGr}}}%";
 
     /// <summary>
     /// Represents the environment variable used to retrieve the home directory path on Unix-based systems.

@@ -2,4 +2,4 @@
 
 global using vm2.DevOps.Glob.Api;
 
-global using static vm2.DevOps.Glob.Api.PathRegex;
+global using static vm2.DevOps.Glob.Api.GlobConstants;

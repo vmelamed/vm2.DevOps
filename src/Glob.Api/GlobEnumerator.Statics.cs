@@ -72,7 +72,7 @@ public sealed partial class GlobEnumerator
             return (glob, ".?");
 
         // find all wildcard matches in the glob
-        var matches = PathRegex.ReplaceableWildcard().Matches(glob);
+        var matches = GlobConstants.ReplaceableWildcard().Matches(glob);
 
         if (matches.Count == 0)
         {
@@ -139,10 +139,10 @@ public sealed partial class GlobEnumerator
             g => !string.IsNullOrWhiteSpace(g.Name)
             && char.IsLetter(g.Name[0])
             && !string.IsNullOrWhiteSpace(g.Value)) switch {
-                { Name: PathRegex.SeqWildcardGr } asterisk => (SequenceWildcard, ".*"),
-                { Name: PathRegex.CharWildcardGr } question => (CharacterWildcard, "."),
-                { Name: PathRegex.ClassNameGr } className => (CharacterWildcard, $"[{(match.Value[1] is '!' ? "^" : "")}{_globClassTranslations[className.Value]}]"),
-                { Name: PathRegex.ClassGr } @class => (CharacterWildcard, $"[{TransformClass(@class.Value)}]"),
+                { Name: GlobConstants.SeqWildcardGr } asterisk => (SequenceWildcard, ".*"),
+                { Name: GlobConstants.CharWildcardGr } question => (CharacterWildcard, "."),
+                { Name: GlobConstants.ClassNameGr } className => (CharacterWildcard, $"[{(match.Value[1] is '!' ? "^" : "")}{_globClassTranslations[className.Value]}]"),
+                { Name: GlobConstants.ClassGr } @class => (CharacterWildcard, $"[{TransformClass(@class.Value)}]"),
                 _ => throw new ArgumentException("Invalid glob pattern match.", nameof(match)),
             };
 

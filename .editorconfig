@@ -1,5 +1,6 @@
+# All files
 [*]
-guidelines = 128
+guidelines = 128 dashed #, 80 dotted, 160 solid
 
 # C# project files
 [*.{csproj}]
@@ -12,7 +13,6 @@ insert_final_newline = true
 [*.cs]
 
 #### Core EditorConfig Options ####
-
 # Indentation and spacing
 indent_size = 4
 indent_style = space

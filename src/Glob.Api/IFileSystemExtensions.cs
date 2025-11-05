@@ -18,19 +18,19 @@ public static class IFileSystemExtensions
     /// </summary>
     /// <param name="fs">The file system instance.</param>
     /// <returns>A Regex for path validation.</returns>
-    public static Regex Path(this IFileSystem fs) => fs.IsWindows ? PathRegex.WindowsPath() : PathRegex.UnixPath();
+    public static Regex Path(this IFileSystem fs) => fs.IsWindows ? GlobConstants.WindowsPath() : GlobConstants.UnixPath();
 
     /// <summary>
     /// Gets a <see cref="Regex"/> object for validating glob patterns based on the current operating system.
     /// </summary>
     /// <param name="fs">The file system instance.</param>
     /// <returns>A Regex for glob pattern validation.</returns>
-    public static Regex Glob(this IFileSystem fs) => fs.IsWindows ? PathRegex.WindowsGlob() : PathRegex.UnixGlob();
+    public static Regex Glob(this IFileSystem fs) => fs.IsWindows ? GlobConstants.WindowsGlob() : GlobConstants.UnixGlob();
 
     /// <summary>
     /// Gets a <see cref="Regex"/> object for validating glob patterns based on the current operating system.
     /// </summary>
     /// <param name="fs">The file system instance.</param>
     /// <returns>A Regex for glob pattern validation.</returns>
-    public static Regex EnvVar(this IFileSystem fs) => fs.IsWindows ? PathRegex.WindowsEnvVar() : PathRegex.UnixEnvVar();
+    public static Regex EnvVar(this IFileSystem fs) => fs.IsWindows ? GlobConstants.WindowsEnvVar() : GlobConstants.UnixEnvVar();
 }

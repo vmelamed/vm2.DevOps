@@ -58,8 +58,8 @@ public sealed partial class FakeFS
     public FakeFS(string fileName, DataFileType fileType)
     {
         var m = OperatingSystem.IsWindows()
-                    ? PathRegex.WindowsPath().Match(fileName)
-                    : PathRegex.UnixPath().Match(fileName);
+                    ? GlobConstants.WindowsPath().Match(fileName)
+                    : GlobConstants.UnixPath().Match(fileName);
 
         if (!m.Success)
             throw new ArgumentException($"The path name '{fileName}' format is invalid.", nameof(fileName));
@@ -68,7 +68,7 @@ public sealed partial class FakeFS
 
         if (fileType is DataFileType.Default)
         {
-            var file = m.Groups[PathRegex.FileGr].ValueSpan;
+            var file = m.Groups[GlobConstants.FileGr].ValueSpan;
             var si = file.LastIndexOf('.');
 
             if (si is <0)
@@ -256,8 +256,8 @@ public sealed partial class FakeFS
             // e.g. a Windows path that contains '$' or '~' characters; or a Unix path that contains ':' or '%'.
             if (!IsWindows)
             {
-                line = line.Replace(PathRegex.UnixShellSpecificHome, PathRegex.UnixHomeEnvironmentVar);
-                line = PathRegex.UnixEnvVar().Replace(line, PathRegex.UnixEnvVarReplacement);
+                line = line.Replace(GlobConstants.UnixShellSpecificHome, GlobConstants.UnixHomeEnvironmentVar);
+                line = GlobConstants.UnixEnvVar().Replace(line, GlobConstants.UnixEnvVarReplacement);
             }
 
             line = Environment.ExpandEnvironmentVariables(line);
@@ -285,7 +285,7 @@ public sealed partial class FakeFS
 
         if (m.Success)
         {
-            if (!PathRegex.WindowsPath().IsMatch(line))
+            if (!GlobConstants.WindowsPath().IsMatch(line))
                 throw new ArgumentException($"The Windows path format '{line}' is invalid.", nameof(line));
             IsWindows = true;
             Comparer  = StringComparer.OrdinalIgnoreCase;
@@ -294,7 +294,7 @@ public sealed partial class FakeFS
 
         if (line.StartsWith(SepChar))
         {
-            if (!PathRegex.UnixPath().IsMatch(line))
+            if (!GlobConstants.UnixPath().IsMatch(line))
                 throw new ArgumentException($"The Unix path format '{line}' is invalid.", nameof(line));
             IsWindows = false;
             Comparer  = StringComparer.Ordinal;
@@ -307,16 +307,16 @@ public sealed partial class FakeFS
     void ValidatePath(string path)
     {
         if (!(IsWindows
-                ? PathRegex.WindowsPath().IsMatch(path)
-                : PathRegex.UnixPath().IsMatch(path)))
+                ? GlobConstants.WindowsPath().IsMatch(path)
+                : GlobConstants.UnixPath().IsMatch(path)))
             throw new ArgumentException($"The '{path}' is invalid path.", nameof(path));
     }
 
     static void ValidateOSPath(string path)
     {
         if (!(OperatingSystem.IsWindows()
-                ? PathRegex.WindowsPath().IsMatch(path)
-                : PathRegex.UnixPath().IsMatch(path)))
+                ? GlobConstants.WindowsPath().IsMatch(path)
+                : GlobConstants.UnixPath().IsMatch(path)))
             throw new ArgumentException($"The '{path}' is invalid path.", nameof(path));
     }
 
