@@ -84,10 +84,8 @@ public sealed partial class GlobEnumerator
 
         if (!_fileSystem.Glob().IsMatch(pattern))
             throw new ArgumentException("Invalid glob-pattern.", nameof(pattern));
-
         if (Enumerated.HasFlag(Enumerated.Files) && pattern.Last() is '/' or '\\')
             throw new ArgumentException("Pattern cannot end with a '/' or '\\' when searching for files.", nameof(pattern));
-
         if (Enumerated == Enumerated.Files && PathRegex.RecursiveAtEnd().IsMatch(pattern))
             throw new ArgumentException("Pattern cannot end with a recursive wildcard '**' when searching for files.", nameof(pattern));
 
@@ -203,7 +201,7 @@ public sealed partial class GlobEnumerator
         }
     }
 
-    IEnumerable<string> EnumerateFiles(string dir, string pattern, bool recursively)
+    IReadOnlyList<string> EnumerateFiles(string dir, string pattern, bool recursively)
     {
         if (string.IsNullOrEmpty(pattern))
             throw new ArgumentException("Pattern cannot be null or empty.", nameof(pattern));
@@ -221,10 +219,15 @@ public sealed partial class GlobEnumerator
         {
             var regex = new Regex($"(?:^|/){rex}$", _regexOptions | RegexOptions.Compiled);
 
-            result = result.Where(f => regex.IsMatch(f));
+            result = result
+                        .Where(f => regex.IsMatch(f))
+                        ;
         }
 
-        var list = result.Select(OsNormalizeFilePath).ToList();
+        var list = result
+                        .Select(OsNormalizeFilePath)
+                        .ToList()
+                        ;
 
         if (DebugOutput)
         {
@@ -240,10 +243,10 @@ public sealed partial class GlobEnumerator
             list.ForEach(f => Console.WriteLine($"  file: {f}"));
         }
 
-        return result;
+        return list;
     }
 
-    IEnumerable<string> EnumerateDirectories(string dir, string pattern, bool recursively)
+    IReadOnlyList<string> EnumerateDirectories(string dir, string pattern, bool recursively)
     {
         if (string.IsNullOrEmpty(pattern))
             throw new ArgumentException("Pattern cannot be null or empty.", nameof(pattern));
@@ -261,12 +264,15 @@ public sealed partial class GlobEnumerator
         if (!string.IsNullOrWhiteSpace(rex))
         {
             var regex = new Regex($"(?:^|/){rex}(?:/|$)", _regexOptions | RegexOptions.Compiled);
-            result = result.Where(d => regex.IsMatch(d));
+            result = result
+                        .Where(d => regex.IsMatch(d))
+                        ;
         }
 
         var list = result
-                    .Select(OsNormalizeDirPath)
-                    .ToList();
+                        .Select(OsNormalizeDirPath)
+                        .ToList()
+                        ;
 
         if (DebugOutput)
         {

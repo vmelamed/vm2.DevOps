@@ -88,10 +88,10 @@ public sealed partial class GlobEnumerator
         var globCur = 0;   // current index in globSpan
 
         // escape the non-spans and translate the matches to regex equivalents
-        Span<char> rexSpan = stackalloc char[4*glob.Length];
+        Span<char> rexSpan = stackalloc char[10*glob.Length];
         int rexCur = 0;   // current index in rexSpan
 
-        Span<char> patSpan = stackalloc char[2*glob.Length];
+        Span<char> patSpan = stackalloc char[10*glob.Length];
         int patCur = 0;   // current index in patSpan
 
         // replace all wildcards with '*'
@@ -100,7 +100,7 @@ public sealed partial class GlobEnumerator
             // escape and copy the next non-match
             if (match.Index > globCur)
             {
-                var nonMatch = globSpan.Slice(globCur, match.Index - globCur);
+                var nonMatch = globSpan[globCur..match.Index];
                 globCur = match.Index;
 
                 Concatenate(rexSpan, Regex.Escape(nonMatch.ToString()), ref rexCur);

@@ -176,11 +176,11 @@ public partial class GlobsTests
 
         new GlobEnumerate_TestData(TestFileLine("Find all .py files recursively"),
                                                    "FakeFSFiles/FakeFS.UnixGlob.json",
-                                                                             "/",           "/",           "/home/**/*.py",                   Enumerated.Files,       false,  "/home/user/projects/beta/app.py", "/home/user/projects/beta/test.py"),
+                                                                             "/",           "/",           "/home/**/*.py",                   Enumerated.Files,       false,  "/home/projects/alpha.py", "/home/projects/alpha/alpha.py", "/home/projects/beta/beta.py", "/home/user/projects/beta/app.py", "/home/user/projects/beta/test.py"),
 
         new GlobEnumerate_TestData(TestFileLine("Find all .log files recursively from root"),
                                                    "FakeFSFiles/FakeFS.UnixGlob.json",
-                                                                             "/",           "/",           "/**/*.log",                       Enumerated.Files,       false,  "/var/log/auth.log", "/var/log/error.log", "/var/log/access.log", "/var/log/debug.log", "/var/log/app1.log", "/var/log/app2.log", "/var/log/app10.log"),
+                                                                             "/",           "/",           "/**/*.log",                       Enumerated.Files,       false,  "/var/log/access.log", "/var/log/app1.log", "/var/log/app10.log", "/var/log/app2.log", "/var/log/auth.log", "/var/log/debug.log", "/var/log/error.log", "/home/projects/alpha/alpha.log", "/home/projects/beta/beta.log"),
 
         new GlobEnumerate_TestData(TestFileLine("Find all directories recursively under /home/user"),
                                                    "FakeFSFiles/FakeFS.UnixGlob.json",
@@ -314,10 +314,6 @@ public partial class GlobsTests
                                                    "FakeFSFiles/FakeFS.UnixGlob.json",
                                                                              "/",           "/",           "/home/user/projects/**/*.[ch]",   Enumerated.Files,       false,  "/home/user/projects/alpha/main.c", "/home/user/projects/alpha/test.c", "/home/user/projects/alpha/helper.h"),
 
-        new GlobEnumerate_TestData(TestFileLine("Find all Python files in projects"),
-                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
-                                                                             "/",           "/",           "/home/**/projects/**/*.py",       Enumerated.Files,       false,  "/home/user/projects/beta/app.py", "/home/user/projects/beta/test.py"),
-
         new GlobEnumerate_TestData(TestFileLine("Find all configuration files"),
                                                    "FakeFSFiles/FakeFS.UnixGlob.json",
                                                                              "/",           "/",           "/**/*.conf",                      Enumerated.Files,       false,  "/etc/config/app.conf", "/etc/config/system.conf", "/etc/config/network.conf"),
@@ -349,5 +345,10 @@ public partial class GlobsTests
         new GlobEnumerate_TestData(TestFileLine("Find all log files with numeric suffixes"),
                                                    "FakeFSFiles/FakeFS.UnixGlob.json",
                                                                              "/",           "/",           "/var/log/*[0-9].log",             Enumerated.Files,       false,  "/var/log/app1.log", "/var/log/app2.log", "/var/log/app10.log"),
+
+        new GlobEnumerate_TestData(TestFileLine("Find all Python files in all projects"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/home/**/projects/**/*.py",       Enumerated.Files,       false,  "/home/user/projects/beta/app.py", "/home/user/projects/beta/test.py", "/home/projects/alpha.py", "/home/projects/alpha/alpha.py", "/home/projects/beta/beta.py"),
+
     ];
 }
