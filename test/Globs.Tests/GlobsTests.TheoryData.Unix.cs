@@ -1,4 +1,3 @@
-
 namespace vm2.DevOps.Glob.Api.Tests;
 
 public partial class GlobsTests
@@ -8,7 +7,6 @@ public partial class GlobsTests
         // ==========================================================================================================
         // BASIC WILDCARDS: * (asterisk) - matches any string, including empty string
         // ==========================================================================================================
-
         //                                         fileSys                  currentFolder  path           pattern                            enumerated              throws  results...
         new GlobEnumerate_TestData(TestFileLine("Match all files in root"),
                                                    "FakeFSFiles/FakeFS.UnixGlob.json",
@@ -41,7 +39,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // BASIC WILDCARDS: ? (question mark) - matches exactly one character
         // ==========================================================================================================
-
+        //                                         fileSys                  currentFolder  path           pattern                            enumerated              throws  results...
         new GlobEnumerate_TestData(TestFileLine("Match log files with single character difference"),
                                                    "FakeFSFiles/FakeFS.UnixGlob.json",
                                                                              "/",           "/",           "/var/log/app?.log",               Enumerated.Files,       false,  "/var/log/app1.log", "/var/log/app2.log"),
@@ -73,7 +71,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // BRACKET EXPRESSIONS: [abc] - matches one character from the set
         // ==========================================================================================================
-
+        //                                         fileSys                  currentFolder  path           pattern                            enumerated              throws  results...
         new GlobEnumerate_TestData(TestFileLine("Match single lowercase letters a, b, or c"),
                                                    "FakeFSFiles/FakeFS.UnixGlob.json",
                                                                              "/",           "/",           "/test/bracket-tests/[abc]",       Enumerated.Files,       false,  "/test/bracket-tests/a", "/test/bracket-tests/b", "/test/bracket-tests/c"),
@@ -97,7 +95,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // BRACKET EXPRESSIONS: [a-z] - matches one character from the range
         // ==========================================================================================================
-
+        //                                         fileSys                  currentFolder  path           pattern                            enumerated              throws  results...
         new GlobEnumerate_TestData(TestFileLine("Match single lowercase letters from a to z"),
                                                    "FakeFSFiles/FakeFS.UnixGlob.json",
                                                                              "/",           "/",           "/test/bracket-tests/[a-z]",       Enumerated.Files,       false,  "/test/bracket-tests/a", "/test/bracket-tests/b", "/test/bracket-tests/c", "/test/bracket-tests/x", "/test/bracket-tests/y", "/test/bracket-tests/z"),
@@ -125,7 +123,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // BRACKET EXPRESSIONS: [!abc] or [^abc] - matches one character NOT in the set (negation)
         // ==========================================================================================================
-
+        //                                         fileSys                  currentFolder  path           pattern                            enumerated              throws  results...
         new GlobEnumerate_TestData(TestFileLine("Match single characters that are NOT a, b, or c"),
                                                    "FakeFSFiles/FakeFS.UnixGlob.json",
                                                                              "/",           "/",           "/test/bracket-tests/[!abc]",      Enumerated.Files,       false,  "/test/bracket-tests/x", "/test/bracket-tests/y", "/test/bracket-tests/z", "/test/bracket-tests/A", "/test/bracket-tests/B", "/test/bracket-tests/C", "/test/bracket-tests/1", "/test/bracket-tests/2", "/test/bracket-tests/3", "/test/bracket-tests/9"),
@@ -145,7 +143,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // CHARACTER CLASSES: [[:alnum:]], [[:alpha:]], [[:digit:]], [[:lower:]], [[:upper:]]
         // ==========================================================================================================
-
+        //                                         fileSys                  currentFolder  path           pattern                            enumerated              throws  results...
         new GlobEnumerate_TestData(TestFileLine("Match single alphanumeric characters [[:alnum:]]"),
                                                    "FakeFSFiles/FakeFS.UnixGlob.json",
                                                                              "/",           "/",           "/test/bracket-tests/[[:alnum:]]", Enumerated.Files,       false,  "/test/bracket-tests/a", "/test/bracket-tests/b", "/test/bracket-tests/c", "/test/bracket-tests/x", "/test/bracket-tests/y", "/test/bracket-tests/z", "/test/bracket-tests/A", "/test/bracket-tests/B", "/test/bracket-tests/C", "/test/bracket-tests/1", "/test/bracket-tests/2", "/test/bracket-tests/3", "/test/bracket-tests/9"),
@@ -169,7 +167,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // RECURSIVE WILDCARDS: ** - matches zero or more directories
         // ==========================================================================================================
-
+        //                                         fileSys                  currentFolder  path           pattern                            enumerated              throws  results...
         new GlobEnumerate_TestData(TestFileLine("Find all .txt files recursively from /home"),
                                                    "FakeFSFiles/FakeFS.UnixGlob.json",
                                                                              "/",           "/",           "/home/**/*.txt",                  Enumerated.Files,       false,  "/home/user/docs/readme.txt", "/home/user/docs/notes.txt", "/home/user/docs/file1.txt", "/home/user/data.txt", "/home/user/projects/project-list.txt"),
@@ -197,7 +195,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // CASE SENSITIVITY (Unix is case-sensitive)
         // ==========================================================================================================
-
+        //                                         fileSys                  currentFolder  path           pattern                            enumerated              throws  results...
         new GlobEnumerate_TestData(TestFileLine("Should NOT match uppercase when looking for lowercase"),
                                                    "FakeFSFiles/FakeFS.UnixGlob.json",
                                                                              "/",           "/",           "/home/user/docs/readme*",         Enumerated.Files,       false,  "/home/user/docs/readme.txt"),
@@ -215,9 +213,9 @@ public partial class GlobsTests
                                                                              "/",           "/",           "/test/bracket-tests/TEST",        Enumerated.Files,       false,  "/test/bracket-tests/TEST"),
 
         // ==========================================================================================================
-        // HIDDEN FILES (starting with dot)
+        // HIDDEN FILES (starting with dot) are returned by GlobEnumerator
         // ==========================================================================================================
-
+        //                                         fileSys                  currentFolder  path           pattern                            enumerated              throws  results...
         new GlobEnumerate_TestData(TestFileLine("Match hidden files explicitly"),
                                                    "FakeFSFiles/FakeFS.UnixGlob.json",
                                                                              "/",           "/",           "/home/user/.*",                   Enumerated.Files,       false,  "/home/user/.bashrc", "/home/user/.profile", "/home/user/.vimrc"),
@@ -237,7 +235,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // COMPLEX COMBINATIONS
         // ==========================================================================================================
-
+        //                                         fileSys                  currentFolder  path           pattern                            enumerated              throws  results...
         new GlobEnumerate_TestData(TestFileLine("Combine ** with character classes"),
                                                    "FakeFSFiles/FakeFS.UnixGlob.json",
                                                                              "/",           "/",           "/home/**/[a-z]*.txt",             Enumerated.Files,       false,  "/home/user/docs/readme.txt", "/home/user/docs/notes.txt", "/home/user/docs/file1.txt", "/home/user/data.txt", "/home/user/projects/project-list.txt"),
@@ -265,7 +263,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // EDGE CASES AND SPECIAL SCENARIOS
         // ==========================================================================================================
-
+        //                                         fileSys                  currentFolder  path           pattern                            enumerated              throws  results...
         new GlobEnumerate_TestData(TestFileLine("Empty pattern should throw"),
                                                    "FakeFSFiles/FakeFS.UnixGlob.json",
                                                                              "/",           "/",           "",                                Enumerated.Both,        true,   []),
@@ -309,7 +307,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // PRACTICAL REAL-WORLD SCENARIOS
         // ==========================================================================================================
-
+        //                                         fileSys                  currentFolder  path           pattern                            enumerated              throws  results...
         new GlobEnumerate_TestData(TestFileLine("Find all C source and header files"),
                                                    "FakeFSFiles/FakeFS.UnixGlob.json",
                                                                              "/",           "/",           "/home/user/projects/**/*.[ch]",   Enumerated.Files,       false,  "/home/user/projects/alpha/main.c", "/home/user/projects/alpha/test.c", "/home/user/projects/alpha/helper.h"),
@@ -350,5 +348,229 @@ public partial class GlobsTests
                                                    "FakeFSFiles/FakeFS.UnixGlob.json",
                                                                              "/",           "/",           "/home/**/projects/**/*.py",       Enumerated.Files,       false,  "/home/user/projects/beta/app.py", "/home/user/projects/beta/test.py", "/home/projects/alpha.py", "/home/projects/alpha/alpha.py", "/home/projects/beta/beta.py"),
 
+        // ==========================================================================================================
+        // CATEGORY A: MULTIPLE RECURSIVE WILDCARDS (Pattern Normalization - Future Feature)
+        // ==========================================================================================================
+        // NOTE: These tests verify current behavior - no duplicates. When de-normalization is implemented, these should produce duplicates.
+        //                                         fileSys                  currentFolder  path           pattern                            enumerated              throws  results...
+        new GlobEnumerate_TestData(TestFileLine("Double ** should be semantically equivalent to single **"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/home/**/user/**/*.txt",          Enumerated.Files,       false,  "/home/user/data.txt", "/home/user/docs/readme.txt", "/home/user/docs/notes.txt", "/home/user/docs/file1.txt", "/home/user/projects/project-list.txt"),
+
+        new GlobEnumerate_TestData(TestFileLine("Triple ** in path"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/**/user/**/docs/**/*.txt",       Enumerated.Files,       false,  "/home/user/docs/readme.txt", "/home/user/docs/notes.txt", "/home/user/docs/file1.txt"),
+
+        new GlobEnumerate_TestData(TestFileLine("Adjacent ** wildcards"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/home/**/**/data.txt",            Enumerated.Files,       false,  "/home/user/data.txt"),
+
+        // ==========================================================================================================
+        // CATEGORY B: EMPTY/MISSING PATH COMPONENTS AND BOUNDARY CONDITIONS
+        // ==========================================================================================================
+        //                                         fileSys                  currentFolder  path           pattern                            enumerated              throws  results...
+        new GlobEnumerate_TestData(TestFileLine("Match empty folder (folder with no files)"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/home/user/media/*",              Enumerated.Files,       false,  []),
+
+        new GlobEnumerate_TestData(TestFileLine("Match empty folder as directory"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/home/user/media",                Enumerated.Directories, false,  "/home/user/media/"),
+
+        new GlobEnumerate_TestData(TestFileLine("Non-existent path should return empty"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/nonexistent/**/*.txt",           Enumerated.Files,       false,  []),
+
+        new GlobEnumerate_TestData(TestFileLine("Non-existent deep path should return empty"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/home/user/missing/folder/*.txt", Enumerated.Files,       false,  []),
+
+        new GlobEnumerate_TestData(TestFileLine("Pattern with multiple consecutive slashes"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/home///user///docs/*.txt",       Enumerated.Files,       false,  "/home/user/docs/readme.txt", "/home/user/docs/notes.txt", "/home/user/docs/file1.txt"),
+
+        new GlobEnumerate_TestData(TestFileLine("Root pattern with trailing slash"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/",                               Enumerated.Directories, false,  "/home/", "/var/", "/etc/", "/opt/", "/test/"),
+
+        // ==========================================================================================================
+        // CATEGORY C: SPECIAL CHARACTERS (using FakeFS1.Unix.json)
+        // ==========================================================================================================/
+        //                                         fileSys                  currentFolder  path           pattern                            enumerated              throws  results...
+        new GlobEnumerate_TestData(TestFileLine("Match files with spaces in names"),
+                                                   "FakeFSFiles/FakeFS1.Unix.json",
+                                                                             "/",           "/",           "/home/valo/Downloads/*Order*.pdf", Enumerated.Files,      false,  "/home/valo/Downloads/Amazon Order.pdf"),
+
+        new GlobEnumerate_TestData(TestFileLine("Match files with parentheses in names"),
+                                                   "FakeFSFiles/FakeFS1.Unix.json",
+                                                                             "/",           "/",           "/home/valo/Downloads/*(*).zip",   Enumerated.Files,       false,  "/home/valo/Downloads/benchmark-summaries-ubuntu-latest (1).zip"),
+
+        new GlobEnumerate_TestData(TestFileLine("Match files with dates and timestamps"),
+                                                   "FakeFSFiles/FakeFS1.Unix.json",
+                                                                             "/",           "/",           "/home/valo/Downloads/2025-??-??T*", Enumerated.Files,     false,  "/home/valo/Downloads/2025-09-30T01_44_59-FedEx-Transaction-Record.pdf"),
+
+        new GlobEnumerate_TestData(TestFileLine("Match partial download files (crdownload)"),
+                                                   "FakeFSFiles/FakeFS1.Unix.json",
+                                                                             "/",           "/",           "/home/valo/Downloads/*.crdownload", Enumerated.Files,     false,  "/home/valo/Downloads/Resume.pdf.crdownload", "/home/valo/Downloads/Unconfirmed 365032.crdownload"),
+
+        new GlobEnumerate_TestData(TestFileLine("Match files with multiple dots in name"),
+                                                   "FakeFSFiles/FakeFS1.Unix.json",
+                                                                             "/",           "/",           "/home/valo/Downloads/vm2.*.json",  Enumerated.Files,      false,  "/home/valo/Downloads/vm2.UlidType.Benchmarks.NewUlid-report-full-compressed.json", "/home/valo/Downloads/vm2.UlidType.Benchmarks.NewUlid-report.json", "/home/valo/Downloads/vm2.UlidType.Benchmarks.ParseUlid-report-full-compressed.json", "/home/valo/Downloads/vm2.UlidType.Benchmarks.ParseUlid-report.json", "/home/valo/Downloads/vm2.UlidType.Benchmarks.UlidToString-report-full-compressed.json", "/home/valo/Downloads/vm2.UlidType.Benchmarks.UlidToString-report.json"),
+
+        new GlobEnumerate_TestData(TestFileLine("Match files with hyphens and underscores"),
+                                                   "FakeFSFiles/FakeFS1.Unix.json",
+                                                                             "/",           "/",           "/home/valo/Downloads/**/*-report-*.md", Enumerated.Files, false,  "/home/valo/Downloads/benchmark-summaries-ubuntu-latest/results/vm2.UlidType.Benchmarks.NewUlid-report-github.md", "/home/valo/Downloads/benchmark-summaries-ubuntu-latest/results/vm2.UlidType.Benchmarks.ParseUlid-report-github.md", "/home/valo/Downloads/benchmark-summaries-ubuntu-latest/results/vm2.UlidType.Benchmarks.UlidToString-report-github.md"),
+
+        new GlobEnumerate_TestData(TestFileLine("Recursive search with complex nested names"),
+                                                   "FakeFSFiles/FakeFS1.Unix.json",
+                                                                             "/",           "/",           "/**/*summary.json",               Enumerated.Files,       false,  "/home/valo/Downloads/benchmark-summaries-ubuntu-latest/summaries/vm2.UlidType.Benchmarks.NewUlid-summary.json", "/home/valo/Downloads/benchmark-summaries-ubuntu-latest/summaries/vm2.UlidType.Benchmarks.ParseUlid-summary.json", "/home/valo/Downloads/benchmark-summaries-ubuntu-latest/summaries/vm2.UlidType.Benchmarks.UlidToString-summary.json"),
+
+        // ==========================================================================================================
+        // CATEGORY D: COMPLEX BRACKET EXPRESSIONS
+        // ==========================================================================================================/
+        //                                         fileSys                  currentFolder  path           pattern                            enumerated              throws  results...
+        new GlobEnumerate_TestData(TestFileLine("Multiple ranges in single bracket [a-zA-Z0-9]"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/test/bracket-tests/[a-zA-Z0-9]", Enumerated.Files,       false,  "/test/bracket-tests/a", "/test/bracket-tests/b", "/test/bracket-tests/c", "/test/bracket-tests/x", "/test/bracket-tests/y", "/test/bracket-tests/z", "/test/bracket-tests/A", "/test/bracket-tests/B", "/test/bracket-tests/C", "/test/bracket-tests/1", "/test/bracket-tests/2", "/test/bracket-tests/3", "/test/bracket-tests/9"),
+
+        new GlobEnumerate_TestData(TestFileLine("Single character in brackets [a]"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/test/bracket-tests/[a]",         Enumerated.Files,       false,  "/test/bracket-tests/a"),
+
+        new GlobEnumerate_TestData(TestFileLine("Negation of character class [![:lower:]]"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/test/bracket-tests/[![:lower:]]", Enumerated.Files,      false,  "/test/bracket-tests/A", "/test/bracket-tests/B", "/test/bracket-tests/C", "/test/bracket-tests/1", "/test/bracket-tests/2", "/test/bracket-tests/3", "/test/bracket-tests/9"),
+
+        new GlobEnumerate_TestData(TestFileLine("Negation of character class with range [![:digit:]]"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/test/bracket-tests/[![:digit:]]", Enumerated.Files,      false,  "/test/bracket-tests/a", "/test/bracket-tests/b", "/test/bracket-tests/c", "/test/bracket-tests/x", "/test/bracket-tests/y", "/test/bracket-tests/z", "/test/bracket-tests/A", "/test/bracket-tests/B", "/test/bracket-tests/C"),
+
+        new GlobEnumerate_TestData(TestFileLine("Complex bracket with multiple character classes [[:alpha:][:digit:]]"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/test/bracket-tests/[[:alpha:][:digit:]]", Enumerated.Files, false,  "/test/bracket-tests/a", "/test/bracket-tests/b", "/test/bracket-tests/c", "/test/bracket-tests/x", "/test/bracket-tests/y", "/test/bracket-tests/z", "/test/bracket-tests/A", "/test/bracket-tests/B", "/test/bracket-tests/C", "/test/bracket-tests/1", "/test/bracket-tests/2", "/test/bracket-tests/3", "/test/bracket-tests/9"),
+
+        new GlobEnumerate_TestData(TestFileLine("Bracket with range and explicit chars [a-c5-7xyz]"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/test/bracket-tests/[a-c5-7xyz]", Enumerated.Files,       false,  "/test/bracket-tests/a", "/test/bracket-tests/b", "/test/bracket-tests/c", "/test/bracket-tests/x", "/test/bracket-tests/y", "/test/bracket-tests/z"),
+
+        // ==========================================================================================================
+        // CATEGORY E: EXTREME PATTERNS AND CONSECUTIVE WILDCARDS
+        // ==========================================================================================================
+        //                                         fileSys                  currentFolder  path           pattern                            enumerated              throws  results...
+        new GlobEnumerate_TestData(TestFileLine("Many consecutive asterisks *** should work like *"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/etc/***",                        Enumerated.Files,       false,  "/etc/hosts", "/etc/passwd", "/etc/group", "/etc/fstab"),
+
+        new GlobEnumerate_TestData(TestFileLine("Four asterisks **** should work like *"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/var/log/app****.log",            Enumerated.Files,       false,  "/var/log/app1.log", "/var/log/app2.log", "/var/log/app10.log"),
+
+        new GlobEnumerate_TestData(TestFileLine("Many question marks (16 chars)"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/var/log/????????????????",      Enumerated.Files,       false,  []),
+
+        new GlobEnumerate_TestData(TestFileLine("Many levels of single asterisk"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/*/*/*/*",                        Enumerated.Files,       false,  "/home/user/docs/readme.txt", "/home/user/docs/README.md", "/home/user/docs/notes.txt", "/home/user/docs/file1.txt", "/home/user/docs/file2.dat", "/home/user/docs/archive.tar.gz", "/home/user/docs/backup.tar.bz2", "/home/user/media/images/photo1.jpg", "/home/user/media/images/photo2.png", "/home/user/media/images/icon.svg", "/home/user/media/videos/clip1.mp4", "/home/user/media/videos/clip2.avi", "/home/user/projects/alpha/main.c", "/home/user/projects/alpha/test.c", "/home/user/projects/alpha/helper.h", "/home/user/projects/alpha/Makefile", "/home/user/projects/beta/app.py", "/home/user/projects/beta/test.py", "/home/user/projects/beta/config.json", "/home/user/projects/gamma/script.sh", "/home/user/projects/gamma/data.csv", "/home/projects/alpha/alpha.log", "/home/projects/alpha/alpha.py", "/home/projects/alpha/alpha.data", "/home/projects/beta/beta.log", "/home/projects/beta/beta.py", "/home/projects/beta/beta.data", "/test/bracket-tests/file-a.txt", "/test/bracket-tests/file-b.txt", "/test/bracket-tests/file-1.txt", "/test/bracket-tests/file-2.txt"),
+
+        new GlobEnumerate_TestData(TestFileLine("Very specific pattern with many components"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/home/*/projects/*/test.*",       Enumerated.Files,       false,  "/home/user/projects/alpha/test.c", "/home/user/projects/beta/test.py"),
+
+        new GlobEnumerate_TestData(TestFileLine("Pattern with all wildcard types combined"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/home/**/p?ojects/[ab]*/test.*",  Enumerated.Files,       false,  "/home/user/projects/alpha/test.c", "/home/user/projects/beta/test.py"),
+
+        // ==========================================================================================================
+        // CATEGORY F: RELATIVE PATH EDGE CASES
+        // ==========================================================================================================
+        //                                         fileSys                  currentFolder  path           pattern                            enumerated              throws  results...
+        new GlobEnumerate_TestData(TestFileLine("Current directory notation ./docs/*.txt"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/home/user",  "./docs/*.txt",                    Enumerated.Files,       false,  "/home/user/docs/readme.txt", "/home/user/docs/notes.txt", "/home/user/docs/file1.txt"),
+
+        new GlobEnumerate_TestData(TestFileLine("Relative path with subdirectory"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/home",       "user/docs/*.txt",                 Enumerated.Files,       false,  "/home/user/docs/readme.txt", "/home/user/docs/notes.txt", "/home/user/docs/file1.txt"),
+
+        new GlobEnumerate_TestData(TestFileLine("Relative path from nested directory"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/home/user/projects", "alpha/*.c",              Enumerated.Files,       false,  "/home/user/projects/alpha/main.c", "/home/user/projects/alpha/test.c"),
+
+        new GlobEnumerate_TestData(TestFileLine("Relative path with wildcard subdirectory"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/home/user",  "projects/*/test.*",               Enumerated.Files,       false,  "/home/user/projects/alpha/test.c", "/home/user/projects/beta/test.py"),
+
+        // ==========================================================================================================
+        // CATEGORY G: BOUNDARY CONDITIONS WITH SIMPLE FILESYSTEM (FakeFS2.Unix.json)
+        // ==========================================================================================================
+        //                                         fileSys                  currentFolder  path           pattern                            enumerated              throws  results...
+        new GlobEnumerate_TestData(TestFileLine("Simple FS: Match all files from root"),
+                                                   "FakeFSFiles/FakeFS2.Unix.json",
+                                                                             "/",           "/",           "/**/*.txt",                       Enumerated.Files,       false,  "/root.txt", "/folder1/file1.txt", "/folder1/folder2/file2.txt", "/folder3/file3.txt"),
+
+        new GlobEnumerate_TestData(TestFileLine("Simple FS: Single level wildcard"),
+                                                   "FakeFSFiles/FakeFS2.Unix.json",
+                                                                             "/",           "/",           "/*",                              Enumerated.Both,        false,  "/folder1/", "/folder3/", "/root.txt"),
+
+        new GlobEnumerate_TestData(TestFileLine("Simple FS: Two level path"),
+                                                   "FakeFSFiles/FakeFS2.Unix.json",
+                                                                             "/",           "/",           "/*/*",                            Enumerated.Files,       false,  "/folder1/file1.txt", "/folder3/file3.txt"),
+
+        new GlobEnumerate_TestData(TestFileLine("Simple FS: Exact path to nested file"),
+                                                   "FakeFSFiles/FakeFS2.Unix.json",
+                                                                             "/",           "/",           "/folder1/folder2/file2.txt",      Enumerated.Files,       false,  "/folder1/folder2/file2.txt"),
+
+        new GlobEnumerate_TestData(TestFileLine("Simple FS: All directories recursively"),
+                                                   "FakeFSFiles/FakeFS2.Unix.json",
+                                                                             "/",           "/",           "/**/*",                           Enumerated.Directories, false,  "/folder1/", "/folder3/", "/folder1/folder2/"),
+
+        new GlobEnumerate_TestData(TestFileLine("Simple FS: Everything recursively"),
+                                                   "FakeFSFiles/FakeFS2.Unix.json",
+                                                                             "/",           "/",           "/**/*",                           Enumerated.Both,        false,  "/folder1/", "/folder3/", "/root.txt", "/folder1/folder2/", "/folder1/file1.txt", "/folder1/folder2/file2.txt", "/folder3/file3.txt"),
+
+        // ==========================================================================================================
+        // CATEGORY H: ERROR CASES (throws = true)
+        // ==========================================================================================================
+        //                                         fileSys                  currentFolder  path           pattern                            enumerated              throws  results...
+        new GlobEnumerate_TestData(TestFileLine("Invalid Enumerated.None should throw"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/home/user/*",                    Enumerated.None,        true,   []),
+
+        new GlobEnumerate_TestData(TestFileLine("Pattern with unmatched opening bracket [abc"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/test/bracket-tests/[abc",        Enumerated.Files,       true,   []),
+
+        new GlobEnumerate_TestData(TestFileLine("Pattern with unmatched closing bracket abc]"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/test/bracket-tests/abc]",        Enumerated.Files,       true,   []),
+
+        new GlobEnumerate_TestData(TestFileLine("Pattern with empty brackets []"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/test/bracket-tests/file[]",      Enumerated.Files,       true,   []),
+
+        new GlobEnumerate_TestData(TestFileLine("Pattern with only negation [!]"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/test/bracket-tests/[!]",         Enumerated.Files,       true,   []),
+
+        new GlobEnumerate_TestData(TestFileLine("Pattern with invalid character class [[:invalid:]]"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/test/bracket-tests/[[:invalid:]]", Enumerated.Files,     true,   []),
+
+        new GlobEnumerate_TestData(TestFileLine("Pattern with backslash (invalid on Unix) \\home\\user"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "\\home\\user\\*.txt",             Enumerated.Files,       true,   []),
+
+        new GlobEnumerate_TestData(TestFileLine("Pattern starting with ** without separator **docs"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "**docs/*.txt",                    Enumerated.Files,       true,   []),
+
+        new GlobEnumerate_TestData(TestFileLine("Pattern with ** in middle without separators home**user"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/",           "/home**user/*.txt",               Enumerated.Files,       true,   []),
+
+        new GlobEnumerate_TestData(TestFileLine("Invalid path that doesn't exist as EnumerateFromFolder"),
+                                                   "FakeFSFiles/FakeFS.UnixGlob.json",
+                                                                             "/",           "/nonexistent", "*",                              Enumerated.Files,       true,   []),
     ];
 }

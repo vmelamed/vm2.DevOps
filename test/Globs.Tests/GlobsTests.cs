@@ -6,7 +6,7 @@ public partial class GlobsTests
     [Fact]
     public void Invalid_Path_In_GlobEnumerator_ShouldThrow()
     {
-        var ge = new GlobEnumerator(new FakeFS("FakeFSFiles/FakeFS2.Win.json", DataFileType.Json));
+        var ge = new GlobEnumerator(new FakeFS("FakeFSFiles/FakeFS2.Win.json", DataFileType.Default));
         var assignInvalidPath = () => ge.EnumerateFromFolder = "C:/fldr1";
 
         assignInvalidPath.Should().Throw<ArgumentException>();
@@ -17,7 +17,7 @@ public partial class GlobsTests
     [MemberData(nameof(GlobEnumerate_Unix_Exhaustive_TestDataSet))]
     public void Should_Enumerate_GlobEnumerator(GlobEnumerate_TestData data)
     {
-        var ge = new GlobEnumerator(new FakeFS(data.JsonFile, DataFileType.Json)) {
+        var ge = new GlobEnumerator(new FakeFS(data.JsonFile, DataFileType.Default)) {
             Enumerated          = data.Enumerated,
             EnumerateFromFolder = data.Path,
             DebugOutput         = true,

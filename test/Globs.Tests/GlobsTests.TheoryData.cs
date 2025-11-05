@@ -26,7 +26,7 @@ public partial class GlobsTests
         public string Path { get; private set; } = path;
         public string Pattern { get; private set; } = pattern;
         public Enumerated Enumerated { get; private set; } = enumerated;
-        public string[] Results { get; private set; } = results.AsEnumerable().OrderBy(s => s, StringComparer.Ordinal).ToArray();
+        public string[] Results { get; private set; } = [.. results.AsEnumerable().OrderBy(s => s, StringComparer.Ordinal)];
         public bool Throws { get; private set; } = throws;
         #endregion
 

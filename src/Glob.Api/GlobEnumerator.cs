@@ -89,34 +89,55 @@ public sealed partial class GlobEnumerator
         if (Enumerated == Enumerated.Files && PathRegex.RecursiveAtEnd().IsMatch(pattern))
             throw new ArgumentException("Pattern cannot end with a recursive wildcard '**' when searching for files.", nameof(pattern));
 
+        _pattern = NormalizePattern(pattern);
+
         if (DebugOutput)
             Console.WriteLine($"""
                 Current directory:          {Directory.GetCurrentDirectory()}
                 Enumerate from folder:      {EnumerateFromFolder}
                 Searching for:              {Enumerated}
                 Matching the pattern:       {pattern}
+                    Normalized:             {_pattern}
                 """);
-
-        var m = StartFromRoot.Match(pattern);  // if it starts with a root or drive like `D:\`, `C:/` or just `/` or `\` then ignore EnumerateFromFolder and start from the root
-        if (m.Success)
-        {
-            _pattern = pattern[m.Length..]; // start from root
-            _fromDir = m.Value;
-        }
-        else
-        {
-            _pattern = pattern;
-            _fromDir = EnumerateFromFolder;
-        }
-
-        if (_fileSystem.IsWindows)
-        {
-            _pattern = _pattern.Replace(WinSepChar, SepChar);
-            _fromDir = _fromDir.Replace(WinSepChar, SepChar);
-        }
 
         // call the actual search
         return EnumerateImpl(_fromDir, GetFirstComponentRange());
+    }
+
+    string NormalizePattern(string pattern)
+    {
+        var start = 0;
+        var end = pattern.Length;
+        Span<char> patternSpan = stackalloc char[end];
+
+        pattern.AsSpan().CopyTo(patternSpan);
+
+        var m = StartFromRoot.Match(pattern);   // if it starts with a root or drive like `C:/` or just `/`
+        if (m.Success)
+        {
+            // then ignore EnumerateFromFolder and start from the root
+            _fromDir = m.Value;
+            start = m.Length;  // skip the root part in the pattern
+        }
+        else
+            _fromDir = EnumerateFromFolder;
+
+        int i = start;
+        char prev = '\0';
+
+        for (var j = start; j < end; j++)
+        {
+            var ch = patternSpan[j];
+            var c = ch is WinSepChar ? SepChar : ch;    // convert Windows separators to Unix-style
+
+            if (c is SepChar && prev is SepChar)        // Skip duplicate separators
+                continue;
+
+            patternSpan[i++] = c;
+            prev = ch;
+        }
+
+        return patternSpan[start..i].ToString();
     }
 
     Range GetFirstComponentRange()
