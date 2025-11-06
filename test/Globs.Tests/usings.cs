@@ -11,6 +11,5 @@ global using vm2.DevOps.Glob.Api.Tests.FakeFileSystem;
 
 global using Xunit.Sdk;
 
-global using static vm2.DevOps.Glob.Api.GlobEnumerator;
+global using static vm2.DevOps.Glob.Api.GlobConstants;
 global using static vm2.DevOps.Glob.Api.Tests.TestUtilities.Utilities;
-

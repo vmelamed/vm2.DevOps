@@ -9,52 +9,6 @@ using System.Diagnostics;
 public sealed partial class GlobEnumerator
 {
     /// <summary>
-    /// Represents the character used to separate the drive letter fromIndex the dirPath in f system paths.
-    /// </summary>
-    /// <remarks>Typically used in Windows.</remarks>
-    public const char DriveSep = ':';
-
-    /// <summary>
-    /// Represents the more popular character used to separate the folders or directories in a dirPath for Windows.
-    /// </summary>
-    public const char WinSepChar = '\\';    // always converted to '/' - Windows takes both '/' and '\'
-
-    /// <summary>
-    /// Represents the character used to separate the folders or directories in a dirPath for both Unix and Windows.
-    /// </summary>
-    public const char SepChar = '/';
-
-    /// <summary>
-    /// Represents the dirPath of the current working directory as a dirPath segment.
-    /// </summary>
-    public const string CurrentDir = ".";
-
-    /// <summary>
-    /// Represents the dirPath of the parent directory of the current working directory as a dirPath segment.
-    /// </summary>
-    public const string ParentDir = "..";
-
-    /// <summary>
-    /// Represents a recursive wildcard pattern that matches all levels of a directory hierarchy fromIndex "here" - down.
-    /// </summary>
-    public const string RecursiveWildcard = "**";
-
-    /// <summary>
-    /// Represents the character used to denote an arbitrary sequence in a glob.
-    /// </summary>
-    public const char SequenceChar        = '*';
-
-    /// <summary>
-    /// Represents a string used to denote an arbitrary sequence in a glob.
-    /// </summary>
-    public const string SequenceWildcard  = "*";
-
-    /// <summary>
-    /// Represents a wildcard for any single character in a dirPath.
-    /// </summary>
-    public const string CharacterWildcard = "?";
-
-    /// <summary>
     /// Translates a glob pattern to .NET pattern used in EnumerateDirectories and to a regex pattern for final filtering.
     /// </summary>
     /// <param name="glob">The glob to translate.</param>
@@ -72,7 +26,7 @@ public sealed partial class GlobEnumerator
             return (glob, ".?");
 
         // find all wildcard matches in the glob
-        var matches = GlobConstants.ReplaceableWildcard().Matches(glob);
+        var matches = ReplaceableWildcard().Matches(glob);
 
         if (matches.Count == 0)
         {
@@ -139,10 +93,10 @@ public sealed partial class GlobEnumerator
             g => !string.IsNullOrWhiteSpace(g.Name)
             && char.IsLetter(g.Name[0])
             && !string.IsNullOrWhiteSpace(g.Value)) switch {
-                { Name: GlobConstants.SeqWildcardGr } asterisk => (SequenceWildcard, ".*"),
-                { Name: GlobConstants.CharWildcardGr } question => (CharacterWildcard, "."),
-                { Name: GlobConstants.ClassNameGr } className => (CharacterWildcard, $"[{(match.Value[1] is '!' ? "^" : "")}{_globClassTranslations[className.Value]}]"),
-                { Name: GlobConstants.ClassGr } @class => (CharacterWildcard, $"[{TransformClass(@class.Value)}]"),
+                { Name: SeqWildcardGr } asterisk => (SequenceWildcard, ".*"),
+                { Name: CharWildcardGr } question => (CharacterWildcard, "."),
+                { Name: ClassNameGr } className => (CharacterWildcard, $"[{(match.Value[1] is '!' ? "^" : "")}{_globClassTranslations[className.Value]}]"),
+                { Name: ClassGr } @class => (CharacterWildcard, $"[{TransformClass(@class.Value)}]"),
                 _ => throw new ArgumentException("Invalid glob pattern match.", nameof(match)),
             };
 

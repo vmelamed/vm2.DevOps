@@ -65,13 +65,13 @@ public sealed partial class GlobEnumerator
         {
             _regexOptions |= RegexOptions.IgnoreCase;
             _options.MatchCasing = MatchCasing.CaseInsensitive;
-            StartFromRoot = GlobConstants.WinFromRoot();
+            StartFromRoot = WinFromRoot();
         }
         else
         {
             _regexOptions &= ~RegexOptions.IgnoreCase;
             _options.MatchCasing = MatchCasing.CaseSensitive;
-            StartFromRoot = GlobConstants.UnixFromRoot();
+            StartFromRoot = UnixFromRoot();
         }
     }
 
@@ -86,7 +86,7 @@ public sealed partial class GlobEnumerator
             throw new ArgumentException("Invalid glob-pattern.", nameof(pattern));
         if (Enumerated.HasFlag(Enumerated.Files) && pattern.Last() is '/' or '\\')
             throw new ArgumentException("Pattern cannot end with a '/' or '\\' when searching for files.", nameof(pattern));
-        if (Enumerated == Enumerated.Files && GlobConstants.RecursiveAtEnd().IsMatch(pattern))
+        if (Enumerated == Enumerated.Files && RecursiveAtEnd().IsMatch(pattern))
             throw new ArgumentException("Pattern cannot end with a recursive wildcard '**' when searching for files.", nameof(pattern));
 
         _pattern = NormalizePattern(pattern);

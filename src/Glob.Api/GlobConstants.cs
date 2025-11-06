@@ -159,7 +159,7 @@ public static partial class GlobConstants
     /// the format "%${variable_name}%". It is intended for use in scenarios where environment variables need to be
     /// identified and replaced within strings and then expanded with <see cref="Environment.ExpandEnvironmentVariables(string)"/>.
     /// </remarks>
-    public const string UnixEnvVarReplacement = $"%${{{GlobConstants.EnvVarNameGr}}}%";
+    public const string UnixEnvVarReplacement = $"%${{{EnvVarNameGr}}}%";
 
     /// <summary>
     /// Represents the environment variable used to retrieve the home directory path on Unix-based systems.
@@ -232,16 +232,76 @@ public static partial class GlobConstants
 
     internal const string SeqWildcardGr = "seqwc";
     internal const string CharWildcardGr = "charwc";
+    internal const string NamedClassGr = "namedClass";
     internal const string ClassNameGr = "classNm";
     internal const string ClassGr = "class";
 
-    const string GlobRegex = $"""
-          (?<{SeqWildcardGr}>\*)
-        | (?<{CharWildcardGr}>\?)
-        | (?<dblBracket> \[ !? \[: ) (?: alnum | alpha | blank | cntrl | digit | graph | lower | print | punct | space | upper | xdigit ) (?<{ClassNameGr}-dblBracket> :\] \] )
-        | (?: (?<bracket>\[) !? \]? .* (?<{ClassGr}-bracket>\]) )
+    const string NamedClassRegex = $"""
+        (?<brcol> \[: ) alnum | alpha | blank | cntrl | digit | graph | lower | print | punct | space | upper | xdigit (?<{ClassNameGr}-brcol> :\] )
         """;
 
+    const string GlobRegex = $"""
+          (?<{SeqWildcardGr}> \* )
+        | (?<{CharWildcardGr}> \? )
+        | (?<br> \[ ) !?\]? (?: [^\[\]] | \[(?!:) | {NamedClassRegex} )*
+          (?<{ClassGr}-br> \] )
+        """;
+
+    /// <summary>
+    /// Creates a regular expression that matches replaceable wildcard patterns.
+    /// </summary>
     [GeneratedRegex(GlobRegex, RegexOptions.IgnorePatternWhitespace|RegexOptions.ExplicitCapture)]
     internal static partial Regex ReplaceableWildcard();
+
+    /// <summary>
+    /// Creates a <see cref="Regex"/> instance using the specified named class pattern.
+    /// </summary>
+    [GeneratedRegex(NamedClassRegex, RegexOptions.IgnorePatternWhitespace|RegexOptions.ExplicitCapture)]
+    internal static partial Regex NamedClass();
+
+    /// <summary>
+    /// Represents the character used to separate the drive letter fromIndex the dirPath in f system paths.
+    /// </summary>
+    /// <remarks>Typically used in Windows.</remarks>
+    public const char DriveSep = ':';
+
+    /// <summary>
+    /// Represents the more popular character used to separate the folders or directories in a dirPath for Windows.
+    /// </summary>
+    public const char WinSepChar = '\\';    // always converted to '/' - Windows takes both '/' and '\'
+
+    /// <summary>
+    /// Represents the character used to separate the folders or directories in a dirPath for both Unix and Windows.
+    /// </summary>
+    public const char SepChar = '/';
+
+    /// <summary>
+    /// Represents the dirPath of the current working directory as a dirPath segment.
+    /// </summary>
+    public const string CurrentDir = ".";
+
+    /// <summary>
+    /// Represents the dirPath of the parent directory of the current working directory as a dirPath segment.
+    /// </summary>
+    public const string ParentDir = "..";
+
+    /// <summary>
+    /// Represents a recursive wildcard pattern that matches all levels of a directory hierarchy fromIndex "here" - down.
+    /// </summary>
+    public const string RecursiveWildcard = "**";
+
+    /// <summary>
+    /// Represents the character used to denote an arbitrary sequence in a glob.
+    /// </summary>
+    public const char SequenceChar        = '*';
+
+    /// <summary>
+    /// Represents a string used to denote an arbitrary sequence in a glob.
+    /// </summary>
+    public const string SequenceWildcard  = "*";
+
+    /// <summary>
+    /// Represents a wildcard for any single character in a dirPath.
+    /// </summary>
+    public const string CharacterWildcard = "?";
 }

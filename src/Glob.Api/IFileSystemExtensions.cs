@@ -9,28 +9,28 @@ public static class IFileSystemExtensions
     /// Returns the directory separator character based on the file system's platform.
     /// </summary>
     /// <param name="fs">The file system instance used to determine the platform.</param>
-    /// <returns>The directory separator character. Returns <see cref="GlobEnumerator.WinSepChar"/> for Windows platforms and
-    /// <see cref="GlobEnumerator.SepChar"/> for non-Windows platforms.</returns>
-    public static char SepChar(this IFileSystem fs) => fs.IsWindows ? GlobEnumerator.WinSepChar : GlobEnumerator.SepChar;
+    /// <returns>The directory separator character. Returns <see cref="WinSepChar"/> for Windows platforms and
+    /// <see cref="SepChar"/> for non-Windows platforms.</returns>
+    public static char SepChar(this IFileSystem fs) => fs.IsWindows ? WinSepChar : GlobConstants.SepChar;
 
     /// <summary>
     /// Gets a <see cref="Regex"/> object for validating pathnames based on the current operating system.
     /// </summary>
     /// <param name="fs">The file system instance.</param>
     /// <returns>A Regex for path validation.</returns>
-    public static Regex Path(this IFileSystem fs) => fs.IsWindows ? GlobConstants.WindowsPath() : GlobConstants.UnixPath();
+    public static Regex Path(this IFileSystem fs) => fs.IsWindows ? WindowsPath() : UnixPath();
 
     /// <summary>
     /// Gets a <see cref="Regex"/> object for validating glob patterns based on the current operating system.
     /// </summary>
     /// <param name="fs">The file system instance.</param>
     /// <returns>A Regex for glob pattern validation.</returns>
-    public static Regex Glob(this IFileSystem fs) => fs.IsWindows ? GlobConstants.WindowsGlob() : GlobConstants.UnixGlob();
+    public static Regex Glob(this IFileSystem fs) => fs.IsWindows ? WindowsGlob() : UnixGlob();
 
     /// <summary>
     /// Gets a <see cref="Regex"/> object for validating glob patterns based on the current operating system.
     /// </summary>
     /// <param name="fs">The file system instance.</param>
     /// <returns>A Regex for glob pattern validation.</returns>
-    public static Regex EnvVar(this IFileSystem fs) => fs.IsWindows ? GlobConstants.WindowsEnvVar() : GlobConstants.UnixEnvVar();
+    public static Regex EnvVar(this IFileSystem fs) => fs.IsWindows ? WindowsEnvVar() : UnixEnvVar();
 }

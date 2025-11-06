@@ -53,10 +53,8 @@ public class Folder(string name = "") : IEquatable<Folder>, IComparable<Folder>
                 return;
 
             field       = value;
-
-            // Recreate the sets with the new comparer:
-            _files      = new SortedSet<string>(Files, value);
-            _folders    = [.. Folders]; // rebuild to ensure correct new ordering of children
+            _files      = new SortedSet<string>(Files, value);  // Recreate the sets with the new comparer
+            _folders    = [.. Folders];                         // rebuild to ensure correct new ordering of children
             foreach (var folder in _folders)
                 folder.Comparer = value; // propagate to children
         }
