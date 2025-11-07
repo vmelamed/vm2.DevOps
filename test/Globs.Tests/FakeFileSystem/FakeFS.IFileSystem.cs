@@ -9,10 +9,14 @@ namespace vm2.DevOps.Glob.Api.Tests.FakeFileSystem;
 /// </remarks>
 public sealed partial class FakeFS : IFileSystem
 {
-    Func<string, bool> GetSegmentMatcher(string segment)
+    Func<string, bool> GetSegmentMatcher(string segment, Folder folder)
     {
         if (segment is RecursiveWildcard)
             throw new ArgumentException($"The segment '{RecursiveWildcard}' is not allowed here.", nameof(segment));
+        if (segment is "" or CurrentDir)
+            return _ => true;
+        if (segment is ParentDir)
+            return _ => folder.Parent is not null;
         if (!segment.AsSpan().ContainsAny(Wildcards))
             return a => Comparer.Compare(a, segment) == 0;
 
@@ -148,6 +152,13 @@ public sealed partial class FakeFS : IFileSystem
 
         Queue<Folder>? unprocessedNodes = options.RecurseSubdirectories ? new() : null;
 
+        // return current and parent directories if they match the pattern
+        if (matchesPattern(CurrentDir))
+            yield return CurrentDir;
+        if (folder.Parent is not null &&
+            matchesPattern(ParentDir))
+            yield return ParentDir;
+
         do
         {
             foreach (var sub in folder.Folders)
@@ -210,10 +221,6 @@ public sealed partial class FakeFS : IFileSystem
         string path,
         string pattern)
     {
-        if (string.IsNullOrEmpty(pattern))
-            // the name of no folder matches empty pattern
-            return (null, null);
-
         // normalize the pattern and split into path and pattern
         var i = pattern.LastIndexOf(SepChar);
 
@@ -231,6 +238,6 @@ public sealed partial class FakeFS : IFileSystem
             return (null, null);
 
         // enumerate the folders from this folder's sub-tree
-        return (GetSegmentMatcher(pattern), folder);
+        return (GetSegmentMatcher(pattern, folder), folder);
     }
 }

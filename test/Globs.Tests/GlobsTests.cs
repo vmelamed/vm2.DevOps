@@ -12,6 +12,53 @@ public partial class GlobsTests
         assignInvalidPath.Should().Throw<ArgumentException>();
     }
 
+    [Fact]
+    public void Invalid_EnumerateFromFolder_ShouldThrow()
+    {
+        var ge = new GlobEnumerator(new FakeFS("FakeFSFiles/FakeFS2.Win.json", DataFileType.Default));
+        var assignInvalidPath = () => ge.EnumerateFromFolder = "C:/nonexistent";
+
+        assignInvalidPath.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void Invalid_MatchCasing_ShouldThrow()
+    {
+        var ge = new GlobEnumerator(new FakeFS("FakeFSFiles/FakeFS2.Win.json", DataFileType.Default));
+        var assignInvalidPath = () => ge.MatchCasing = (MatchCasing)3;
+
+        assignInvalidPath.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void Invalid_Pattern_ShouldThrow()
+    {
+        var ge = new GlobEnumerator(new FakeFS("FakeFSFiles/FakeFS2.Win.json", DataFileType.Default));
+        var enumerate = () => ge.Enumerate("***");
+
+        enumerate.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void Invalid_FilePattern_ShouldThrow()
+    {
+        var ge = new GlobEnumerator(new FakeFS("FakeFSFiles/FakeFS2.Win.json", DataFileType.Default));
+        ge.Enumerated = Enumerated.Files;
+        var enumerate = () => ge.Enumerate("*/");
+
+        enumerate.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void RecursiveInTheEnd_FilePattern_ShouldThrow()
+    {
+        var ge = new GlobEnumerator(new FakeFS("FakeFSFiles/FakeFS2.Win.json", DataFileType.Default));
+        ge.Enumerated = Enumerated.Files;
+        var enumerate = () => ge.Enumerate("*/**");
+
+        enumerate.Should().Throw<ArgumentException>();
+    }
+
     [Theory]
     [MemberData(nameof(Enumerate_TestDataSet))]
     [MemberData(nameof(GlobEnumerate_Unix_Exhaustive_TestDataSet))]
@@ -27,7 +74,7 @@ public partial class GlobsTests
 
         if (data.Throws)
         {
-            enumerate.Should().Throw<ArgumentException>();
+            enumerate.Enumerating().Should().Throw<ArgumentException>();
         }
         else
         {
