@@ -1,7 +1,7 @@
-﻿namespace vm2.DevOps.Glob.Api.Tests.TestUtilities;
+﻿namespace vm2.DevOps.Glob.Api.Tests.Utilities;
 
 [ExcludeFromCodeCoverage]
-public static partial class Utilities
+public static partial class TestUtilities
 {
     /// <summary>
     /// Returns a string describing where this method was called from and an optional description.

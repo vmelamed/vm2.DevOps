@@ -29,6 +29,12 @@ public class FileSystem : IFileSystem
     public string GetFullPath(string path) => Path.GetFullPath(path);
 
     /// <summary>
+    /// Retrieves the absolute path of the current working directory.
+    /// </summary>
+    /// <returns>A string representing the full path of the current working directory.</returns>
+    public string GetCurrentDirectory() => Directory.GetCurrentDirectory();
+
+    /// <summary>
     /// Determines whether the specified folder exists.
     /// </summary>
     /// <param name="path">The full path of the folder to check. This can be an absolute or relative path.</param>

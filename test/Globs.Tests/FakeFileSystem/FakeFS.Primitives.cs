@@ -31,7 +31,7 @@ public sealed partial class FakeFS
     /// Normalizes the given segment:
     /// <list type="bullet">
     ///     <item>converts backslashes to slashes</item>
-    ///     <item>removes duplicate separators</item>
+    ///     <item>removes duplicate separators (slashes)</item>
     ///     <item>for Windows, converts drive letter to uppercase</item>
     ///     <item>for Windows, prepends segment with current drive letter from the current path and colon if missing</item>
     /// </list>
@@ -47,9 +47,9 @@ public sealed partial class FakeFS
             return CurrentFolder.Path;
         if (path is ParentDir)
             return CurrentFolder.Parent?.Path
-                        ?? throw new ArgumentException("Pattern does not exist.", nameof(path));
+                        ?? throw new ArgumentException("Roots do not have parents.", nameof(path));
 
-        Span<char> buffer = new Memory<char>(new char[path.Length+WinDriveLength]).Span;
+        Span<char> buffer = new Memory<char>(new char[WinDriveLength + path.Length]).Span;
         int start = 2;  // leave space for drive letter and colon if needed
         int i = start;
         char prev = '\0';
@@ -66,11 +66,13 @@ public sealed partial class FakeFS
         var pathBuf = buffer[start..i];
 
         if (!IsWindows)
-            return pathBuf; // Unix segment: abc/def or /abc/def
+            // Unix segment: abc/def or /abc/def
+            return pathBuf;
 
         if (StartsWithDrive(pathBuf))
         {
-            // "c:/abc/def" or "c:abc/def" => "C:/abc/def" or "C:abc/def"
+            // "c:/abc/def" => "C:/abc/def"
+            // "c:abc/def"  => "C:abc/def"
             pathBuf[0] = char.ToUpperInvariant(pathBuf[0]);
             return pathBuf;
         }

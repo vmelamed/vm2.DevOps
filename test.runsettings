@@ -58,7 +58,7 @@ For more information on using a .runsettings file, see https://aka.ms/vstest-run
         command line, you can pass <dash dash>logger "console;verbosity=normal" on the dotnet test command line.
         -->
         <ShadowCopy>true</ShadowCopy>
-        <ShowLiveOutput>false</ShowLiveOutput>
+        <ShowLiveOutput>true</ShowLiveOutput> <!-- see output from ITestOutputHelper live as it occurs -->
         <Explicit>off</Explicit>
         <!-- on, off, only -->
         <FailSkips>false</FailSkips>

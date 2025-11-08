@@ -7,11 +7,6 @@
 public enum Enumerated
 {
     /// <summary>
-    /// No items to search for. Used only to indicate an invalid state.
-    /// </summary>
-    None        = 0,
-
-    /// <summary>
     /// EnumerateImpl for files only.
     /// </summary>
     Files       = 1 << 0,

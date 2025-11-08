@@ -4,4 +4,7 @@
       <RootNamespace>vm2.DevOps.Glob.Api</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+  </ItemGroup>
+
 </Project>

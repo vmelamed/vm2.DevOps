@@ -32,26 +32,26 @@ public static partial class GlobConstants
     internal const string WindowsPathname = """
         ^
         (?=^.{0,260}$)
-        (?:(?<drive>[A-Za-z]):)?
+        ((?<drive>[A-Z]):)?
         (?<path>
-            (?: [/\\]?
-              (?:
-                (?: \. | \.\.|
-                    (?:
-                      (?! (?:CON|PRN|AUX|NUL|COM\d?|LPT\d?)(?:\.[^\x00-\x1F"*./:<>?\\|]*[^\x00-\x1F "*./:<>?\\|])? )
-                      (?: [^\x00-\x1F"*/:<>?\\|]*[^\x00-\x1F "*./:<>?\\|] ) ) )
-                (?:[/\\]
-                  (?: \. | \.\.|
-                    (?:
-                      (?! (?:CON|PRN|AUX|NUL|COM\d?|LPT\d?)(?:\.[^\x00-\x1F"*./:<>?\\|]*[^\x00-\x1F "*./:<>?\\|])? )
-                      (?: [^\x00-\x1F"*/:<>?\\|]*[^\x00-\x1F "*./:<>?\\|] ) ) ) )*
+            ( [/\\]?
+              (
+                ( \. | \.\.|
+                    (
+                      (?! (CON|PRN|AUX|NUL|COM\d?|LPT\d?)(\.[^\x00-\x1F"*./:<>?\\|]*[^\x00-\x1F "*./:<>?\\|])? )
+                      ( [^\x00-\x1F"*/:<>?\\|]*[^\x00-\x1F "*./:<>?\\|] ) ) )
+                ([/\\]
+                  ( \. | \.\.|
+                    (
+                      (?! (CON|PRN|AUX|NUL|COM\d?|LPT\d?)(\.[^\x00-\x1F"*./:<>?\\|]*[^\x00-\x1F "*./:<>?\\|])? )
+                      ( [^\x00-\x1F"*/:<>?\\|]*[^\x00-\x1F "*./:<>?\\|] ) ) ) )*
               ) [/\\] )
-          | (?: [/\\] )
-          | (?: \. | \.\. )
+          | ( [/\\] )
+          | ( \. | \.\. )
         )?
         (?<file>
-          (?! (?:CON|PRN|AUX|NUL|COM\d?|LPT\d?)(?:\.[^\x00-\x1F"*./:<>?\\|]*[^\x00-\x1F "*./:<>?\\|])? )
-          (?: (?: (?<name> [^\x00-\x1F"*/:<>?\\|]+ )\.(?<suffix> [^\x00-\x1F"*./:<>?\\|]*[^\x00-\x1F "*./:<>?\\|] ) )
+          (?! (CON|PRN|AUX|NUL|COM\d?|LPT\d?)(\.[^\x00-\x1F"*./:<>?\\|]*[^\x00-\x1F "*./:<>?\\|])? )
+          ( ( (?<name> [^\x00-\x1F"*/:<>?\\|]+ )\.(?<suffix> [^\x00-\x1F"*./:<>?\\|]*[^\x00-\x1F "*./:<>?\\|] ) )
                 | (?<name> [^\x00-\x1F"*/:<>?\\|]*[^\x00-\x1F "*./:<>?\\|] ) ) )?
         $
         """;
@@ -61,19 +61,19 @@ public static partial class GlobConstants
     /// </summary>
     internal const string WindowsGlobPattern = """
         ^
-        (?:(?: [A-Za-z]):)?
-        (?:
-          (?:
-            (?: [/\\]?
-              (?:
-                          (?: \. | \.\. | \*\* | (?: (?! [^\x00-\x1F"/:<>\\|]*\*\* )(?: [^\x00-\x1F"/:<>\\|]*[^\x00-\x1F "./:<>\\|] ) ) )
-                (?: [/\\] (?: \. | \.\. | \*\* | (?: (?! [^\x00-\x1F"/:<>\\|]*\*\* )(?: [^\x00-\x1F"/:<>\\|]*[^\x00-\x1F "./:<>\\|] ) ) ) )*
+        (( [A-Z]):)?
+        (
+          (
+            ( [/\\]?
+              (
+                        ( \. | \.\. | \*\* | ( (?! [^\x00-\x1F"/:<>\\|]*\*\* )( [^\x00-\x1F"/:<>\\|]*[^\x00-\x1F "./:<>\\|] ) ) )
+                ( [/\\] ( \. | \.\. | \*\* | ( (?! [^\x00-\x1F"/:<>\\|]*\*\* )( [^\x00-\x1F"/:<>\\|]*[^\x00-\x1F "./:<>\\|] ) ) ) )*
               )
-            ) | (?: \. | \.\. | \*\* )
+            ) | ( \. | \.\. | \*\* )
           )
-          (?: [/\\] | $ )
+          ( [/\\] | $ )
         )?
-        (?: (?! [^\x00-\x1F"/:<>\\|]*\*\* )(?: [^\x00-\x1F"/:<>\\|]*[^\x00-\x1F "./:<>\\|] ) )?
+        ( (?! [^\x00-\x1F"/:<>\\|]*\*\* )( [^\x00-\x1F"/:<>\\|]*[^\x00-\x1F "./:<>\\|] ) )?
         $
         """;
 
@@ -82,7 +82,7 @@ public static partial class GlobConstants
     /// </summary>
     internal const string UnixPathname = """
         ^
-        (?: (?: (?<path> /? (?: [^\x00/]{1,255} (?: / [^\x00/]{1,255} )* ) ) / )
+        ( ( (?<path> /? ( [^\x00/]{1,255} ( / [^\x00/]{1,255} )* ) ) / )
               | (?<path> /? ) )?
         (?<file> [^\x00/]{1,255} )?
         $
@@ -93,14 +93,15 @@ public static partial class GlobConstants
     /// </summary>
     internal const string UnixGlobPattern = """
         ^
-        (?: /? |
-            (?: /?      (?: (?:\*\*) | (?: (?![^\x00/]*\*\*) [^\x00/]{1,255} ) )
-                  (?: / (?: (?:\*\*) | (?: (?![^\x00/]*\*\*) [^\x00/]{1,255} ) ) )* / ) )?
-                        (?: (?:\*\*) | (?: (?![^\x00/]*\*\*) [^\x00/]{1,255} ) )?
+        ( /? |
+            ( /?      ( (\*\*) | ( (?![^\x00/]*\*\*) [^\x00/]{1,255} ) )
+                  ( / ( (\*\*) | ( (?![^\x00/]*\*\*) [^\x00/]{1,255} ) ) )* / ) )?
+                      ( (\*\*) | ( (?![^\x00/]*\*\*) [^\x00/]{1,255} ) )?
         $
         """;
 
-    const RegexOptions winOptions  = RegexOptions.Singleline | RegexOptions.IgnorePatternWhitespace | RegexOptions.IgnoreCase;
+    const RegexOptions unixOptions = RegexOptions.IgnorePatternWhitespace | RegexOptions.ExplicitCapture;
+    const RegexOptions winOptions  = unixOptions | RegexOptions.IgnoreCase;
 
     /// <summary>
     /// Gets a <see cref="Regex"/> object for validating Windows pathnames.
@@ -114,9 +115,7 @@ public static partial class GlobConstants
     /// </summary>
     /// <returns></returns>
     [GeneratedRegex(WindowsGlobPattern, winOptions)]
-    internal static partial Regex WindowsGlob();
-
-    const RegexOptions unixOptions = RegexOptions.Singleline | RegexOptions.IgnorePatternWhitespace;
+    public static partial Regex WindowsGlob();
 
     /// <summary>
     /// Gets a <see cref="Regex"/> object for validating Unix pathnames.
@@ -130,7 +129,7 @@ public static partial class GlobConstants
     /// </summary>
     /// <returns></returns>
     [GeneratedRegex(UnixGlobPattern, unixOptions)]
-    internal static partial Regex UnixGlob();
+    public static partial Regex UnixGlob();
 
     /// <summary>
     /// The name of a capturing group that represents a Unix environment variable
@@ -147,7 +146,7 @@ public static partial class GlobConstants
     /// environment variable name consisting of letters, digits, or underscores, and an optional closing brace ('}').
     /// </remarks>
     /// <returns>A <see cref="Regex"/> object configured to identify Unix-style environment variable patterns.</returns>
-    [GeneratedRegex($@"\$ (?: (?<brace>\{{) {envVarName} (?<{EnvVarNameGr}-brace>\}}) | (?<{EnvVarNameGr}> {envVarName} ) )", RegexOptions.IgnorePatternWhitespace)]
+    [GeneratedRegex($@"\$ ( (?<brace>\{{) {envVarName} (?<{EnvVarNameGr}-brace>\}}) | (?<{EnvVarNameGr}> {envVarName} ) )", unixOptions)]
     public static partial Regex UnixEnvVar();
 
     /// <summary>
@@ -184,7 +183,7 @@ public static partial class GlobConstants
     /// consist of alphanumeric characters and underscores, starting with a letter or underscore.
     /// </remarks>
     /// <returns>A <see cref="Regex"/> object configured to identify Windows environment variable patterns.</returns>
-    [GeneratedRegex($@"(?<percent> % ) {envVarName} (?<{EnvVarNameGr}-percent> % )", RegexOptions.IgnorePatternWhitespace)]
+    [GeneratedRegex($@"(?<percent> % ) {envVarName} (?<{EnvVarNameGr}-percent> % )", winOptions)]
     internal static partial Regex WindowsEnvVar();
 
     /// <summary>
@@ -199,7 +198,7 @@ public static partial class GlobConstants
     /// <returns>
     /// A <see cref="Regex"/> object configured to identify invalid recursive wildcard patterns.
     /// </returns>
-    [GeneratedRegex(@"(?<!^|/)\*\*|\*\*(?!$|/)")]
+    [GeneratedRegex(@"(?<! ^ | /) \*\* | \*\* (?! $ | /)", unixOptions)]
     internal static partial Regex InvalidRecursive();
 
     /// <summary>
@@ -219,7 +218,7 @@ public static partial class GlobConstants
     /// letters followed by a colon and a slash or backslash (e.g., "C:/", "D:\").
     /// </remarks>
     /// <returns>A <see cref="Regex"/> instance configured to match Windows-style root paths.</returns>
-    [GeneratedRegex(@"^(?:/|\\|[a-zA-Z]:[/\\]?)")]
+    [GeneratedRegex(@"^(/ | \\ | [A-Z]:[/\\]? )", winOptions)]
     internal static partial Regex WinFromRoot();
 
     /// <summary>
@@ -237,26 +236,25 @@ public static partial class GlobConstants
     internal const string ClassGr = "class";
 
     const string NamedClassRegex = $"""
-        (?<brcol> \[: ) alnum | alpha | blank | cntrl | digit | graph | lower | print | punct | space | upper | xdigit (?<{ClassNameGr}-brcol> :\] )
+        (?<brcol> \[: ) (alnum | alpha | blank | cntrl | digit | graph | lower | print | punct | space | upper | xdigit) (?<{ClassNameGr}-brcol> :\] )
         """;
 
     const string GlobRegex = $"""
           (?<{SeqWildcardGr}> \* )
         | (?<{CharWildcardGr}> \? )
-        | (?<br> \[ ) !?\]? (?: [^\[\]] | \[(?!:) | {NamedClassRegex} )*
-          (?<{ClassGr}-br> \] )
+        | (?<br> \[ ) !?\]? ( [^\[\]] | \[(?!:) | {NamedClassRegex} )* (?<{ClassGr}-br> \] )
         """;
 
     /// <summary>
     /// Creates a regular expression that matches replaceable wildcard patterns.
     /// </summary>
-    [GeneratedRegex(GlobRegex, RegexOptions.IgnorePatternWhitespace|RegexOptions.ExplicitCapture)]
+    [GeneratedRegex(GlobRegex, unixOptions)]
     internal static partial Regex ReplaceableWildcard();
 
     /// <summary>
     /// Creates a <see cref="Regex"/> instance using the specified named class pattern.
     /// </summary>
-    [GeneratedRegex(NamedClassRegex, RegexOptions.IgnorePatternWhitespace|RegexOptions.ExplicitCapture)]
+    [GeneratedRegex(NamedClassRegex, unixOptions)]
     internal static partial Regex NamedClass();
 
     /// <summary>
@@ -291,11 +289,6 @@ public static partial class GlobConstants
     public const string RecursiveWildcard = "**";
 
     /// <summary>
-    /// Represents the character used to denote an arbitrary sequence in a glob.
-    /// </summary>
-    public const char SequenceChar        = '*';
-
-    /// <summary>
     /// Represents a string used to denote an arbitrary sequence in a glob.
     /// </summary>
     public const string SequenceWildcard  = "*";
@@ -304,4 +297,14 @@ public static partial class GlobConstants
     /// Represents a wildcard for any single character in a dirPath.
     /// </summary>
     public const string CharacterWildcard = "?";
+
+    /// <summary>
+    /// Represents a regex used to match any sequence in a string.
+    /// </summary>
+    public const string SequenceRegex  = ".*";
+
+    /// <summary>
+    /// Represents a regex used to match any single character in a string.
+    /// </summary>
+    public const string CharacterRegex = ".";
 }

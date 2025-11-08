@@ -123,6 +123,8 @@ public sealed partial class FakeFS : IFileSystem
         return new string(buffer[..bufPos]);
     }
 
+    public string GetCurrentDirectory() => CurrentFolder.Path;
+
     public bool FolderExists(string path)
     {
         var (folder, fileComp, file) = GetPathFromRoot(path);
@@ -161,7 +163,9 @@ public sealed partial class FakeFS : IFileSystem
 
         do
         {
-            foreach (var sub in folder.Folders)
+            var folders = folder.Folders; // snapshot of the current folders
+
+            foreach (var sub in folders)
             {
                 if (options.RecurseSubdirectories)
                     // add its sub-folders to the queue of unprocessed unprocessedNodes
@@ -199,7 +203,9 @@ public sealed partial class FakeFS : IFileSystem
 
         do
         {
-            foreach (var f in folder.Files)
+            var files = folder.Files.ToList(); // snapshot of the current files
+
+            foreach (var f in files)
                 if (matchesPattern(f))
                     yield return folder.Path+f;
 

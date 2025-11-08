@@ -1,12 +1,19 @@
 ﻿namespace vm2.DevOps.Glob.Api.Tests;
 
 [ExcludeFromCodeCoverage]
-public partial class GlobsTests
+public partial class GlobsTests : IClassFixture<GlobTestsFixture>
 {
+    GlobTestsFixture _fixture;
+
+    public GlobsTests(GlobTestsFixture fixture)
+    {
+        _fixture = fixture;
+    }
+
     [Fact]
     public void Invalid_Path_In_GlobEnumerator_ShouldThrow()
     {
-        var ge = new GlobEnumerator(new FakeFS("FakeFSFiles/FakeFS2.Win.json", DataFileType.Default));
+        var ge = _fixture.GetGlobEnumerator("FakeFSFiles/FakeFS2.Win.json");
         var assignInvalidPath = () => ge.EnumerateFromFolder = "C:/fldr1";
 
         assignInvalidPath.Should().Throw<ArgumentException>();
@@ -15,7 +22,7 @@ public partial class GlobsTests
     [Fact]
     public void Invalid_EnumerateFromFolder_ShouldThrow()
     {
-        var ge = new GlobEnumerator(new FakeFS("FakeFSFiles/FakeFS2.Win.json", DataFileType.Default));
+        var ge = _fixture.GetGlobEnumerator("FakeFSFiles/FakeFS2.Win.json");
         var assignInvalidPath = () => ge.EnumerateFromFolder = "C:/nonexistent";
 
         assignInvalidPath.Should().Throw<ArgumentException>();
@@ -24,7 +31,7 @@ public partial class GlobsTests
     [Fact]
     public void Invalid_MatchCasing_ShouldThrow()
     {
-        var ge = new GlobEnumerator(new FakeFS("FakeFSFiles/FakeFS2.Win.json", DataFileType.Default));
+        var ge = _fixture.GetGlobEnumerator("FakeFSFiles/FakeFS2.Win.json");
         var assignInvalidPath = () => ge.MatchCasing = (MatchCasing)3;
 
         assignInvalidPath.Should().Throw<ArgumentException>();
@@ -33,7 +40,7 @@ public partial class GlobsTests
     [Fact]
     public void Invalid_Pattern_ShouldThrow()
     {
-        var ge = new GlobEnumerator(new FakeFS("FakeFSFiles/FakeFS2.Win.json", DataFileType.Default));
+        var ge = _fixture.GetGlobEnumerator("FakeFSFiles/FakeFS2.Win.json");
         var enumerate = () => ge.Enumerate("***");
 
         enumerate.Should().Throw<ArgumentException>();
@@ -42,7 +49,7 @@ public partial class GlobsTests
     [Fact]
     public void Invalid_FilePattern_ShouldThrow()
     {
-        var ge = new GlobEnumerator(new FakeFS("FakeFSFiles/FakeFS2.Win.json", DataFileType.Default));
+        var ge = _fixture.GetGlobEnumerator("FakeFSFiles/FakeFS2.Win.json");
         ge.Enumerated = Enumerated.Files;
         var enumerate = () => ge.Enumerate("*/");
 
@@ -52,7 +59,7 @@ public partial class GlobsTests
     [Fact]
     public void RecursiveInTheEnd_FilePattern_ShouldThrow()
     {
-        var ge = new GlobEnumerator(new FakeFS("FakeFSFiles/FakeFS2.Win.json", DataFileType.Default));
+        var ge = _fixture.GetGlobEnumerator("FakeFSFiles/FakeFS2.Win.json");
         ge.Enumerated = Enumerated.Files;
         var enumerate = () => ge.Enumerate("*/**");
 
@@ -61,14 +68,12 @@ public partial class GlobsTests
 
     [Theory]
     [MemberData(nameof(Enumerate_TestDataSet))]
-    [MemberData(nameof(GlobEnumerate_Unix_Exhaustive_TestDataSet))]
+    [MemberData(nameof(GlobEnumerate_Unix_TestDataLargeSet))]
     public void Should_Enumerate_GlobEnumerator(GlobEnumerate_TestData data)
     {
-        var ge = new GlobEnumerator(new FakeFS(data.JsonFile, DataFileType.Default)) {
-            Enumerated          = data.Enumerated,
-            EnumerateFromFolder = data.Path,
-            DebugOutput         = true,
-        };
+        var ge = _fixture.GetGlobEnumerator(data.JsonFile);
+        ge.Enumerated          = data.Enumerated;
+        ge.EnumerateFromFolder = data.Path;
 
         var enumerate = () => ge.Enumerate(data.Pattern);
 

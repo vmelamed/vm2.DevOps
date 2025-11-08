@@ -4,8 +4,8 @@
 public partial class FakeFileSystemTests
 {
     [Theory]
-    [MemberData(nameof(Text_To_Add))]
-    public void Should_Create_Windows_FS_From_Text(FakeFS_TestData data)
+    [MemberData(nameof(Text_Files_To_Add))]
+    public void Should_Create_FS_From_Text_File(FakeFS_TestData data)
     {
         TestContext.Current.TestOutputHelper?.WriteLine(data.ATestFileLine);
         var fsf = () => new FakeFS(data.TextOrFile);
@@ -21,63 +21,10 @@ public partial class FakeFileSystemTests
                 TestContext.Current.TestOutputHelper?.WriteLine($"Result JSON: {js}");
                 js.Should().Be(data.Json);
             }
-            // TODO: why pretty print doesn't work???
             //if (data.PrintJson)
             //{
             //    TestContext.Current.TestOutputHelper?.WriteLine("Pretty JSON:");
             //    TestContext.Current.TestOutputHelper?.WriteLine(fs.ToJsonString());
-            //}
-        }
-    }
-
-    [Theory]
-    [MemberData(nameof(Text_Files_To_Add))]
-    public void Should_Create_FS_From_Text_File(FakeFS_TestData data)
-    {
-        TestContext.Current.TestOutputHelper?.WriteLine(data.ATestFileLine);
-        var fsf = () => new FakeFS(data.TextOrFile, DataFileType.Text);
-
-        if (data.Throws)
-            fsf.Should().Throw();
-        else
-        {
-            var fs = fsf.Should().NotThrow().Which;
-            var js = fs.ToJsonString();
-            if (!string.IsNullOrWhiteSpace(data.Json))
-            {
-                TestContext.Current.TestOutputHelper?.WriteLine($"Result JSON: {js}");
-                js.Should().Be(data.Json);
-            }
-            //if (data.PrintJson)
-            //{
-            //    TestContext.Current.TestOutputHelper?.WriteLine("Pretty JSON:");
-            //    TestContext.Current.TestOutputHelper?.WriteLine(fs.ToJsonString());
-            //}
-        }
-    }
-
-    [Theory]
-    [MemberData(nameof(Json_To_Add))]
-    public void Should_Create_Windows_FS_From_Json(Json_To_Add_TestData data)
-    {
-        TestContext.Current.TestOutputHelper?.WriteLine(data.ATestFileLine);
-        var fsf = () => new FakeFS(Encoding.UTF8.GetBytes(data.Json));
-
-        if (data.Throws)
-            fsf.Should().Throw();
-        else
-        {
-            var fs = fsf.Should().NotThrow().Which;
-            var js = fs.ToJsonString();
-            if (!string.IsNullOrWhiteSpace(data.Json))
-            {
-                //TestContext.Current.TestOutputHelper?.WriteLine($"Result JSON: {js}");
-                js.Should().Be(data.Json);
-            }
-            //if (data.PrintJson)
-            //{
-            //    TestContext.Current.TestOutputHelper?.WriteLine("Pretty JSON:");
-            //    TestContext.Current.TestOutputHelper?.WriteLine(fs.ToJsonString(Folder.JsonSerializerOptions));
             //}
         }
     }
@@ -87,7 +34,7 @@ public partial class FakeFileSystemTests
     public void Should_Create_FS_From_Json_File(Json_To_Add_TestData data)
     {
         TestContext.Current.TestOutputHelper?.WriteLine(data.ATestFileLine);
-        var fsf = () => new FakeFS(data.Json, DataFileType.Json);
+        var fsf = () => new FakeFS(data.Json);
 
         if (data.Throws)
             fsf.Should().Throw();
@@ -102,8 +49,8 @@ public partial class FakeFileSystemTests
             //string dataJsonStr = Encoding.UTF8.GetString(dataJson);
             //string jsBytesStr = Encoding.UTF8.GetString(js);
             //Enumerable.SequenceEqual(jsBytes, dataJson).Should().BeTrue();
-            //jsBytes.Length.Should().Be(dataJson.Length);
-            //for (int i = 0; i < jsBytes.Length; i++)
+            //jsBytes._length.Should().Be(dataJson._length);
+            //for (int i = 0; i < jsBytes._length; i++)
             //{
             //    jsBytes[i].Should().Be(dataJson[i], $"byte at position {i} should be equal");
             //}
@@ -119,7 +66,7 @@ public partial class FakeFileSystemTests
     [MemberData(nameof(Set_Current_Folder_TestData))]
     public void Set_Current_Folder_Test(SetCurrentFolder_TestData data)
     {
-        var fs = new FakeFS(data.FsJsonFile, DataFileType.Json);
+        var fs = new FakeFS(data.FsJsonFile);
         var curFolder = data.Cwf is not "" ? fs.SetCurrentFolder(data.Cwf) : fs.CurrentFolder;
         var chgCurrent = () => fs.SetCurrentFolder(data.Chf);
 
@@ -139,7 +86,7 @@ public partial class FakeFileSystemTests
     [MemberData(nameof(FromPath_TestDataSet))]
     public void GetPathFromRoot_Test(GetPathFromRoot_TestData data)
     {
-        var fs = new FakeFS(data.JsonFile, DataFileType.Json);
+        var fs = new FakeFS(data.JsonFile);
         fs.SetCurrentFolder(data.CurrentFolder);
         var fromPath = () => fs.GetPathFromRoot(data.Path);
 
@@ -159,7 +106,7 @@ public partial class FakeFileSystemTests
     [MemberData(nameof(FolderExists_TestDataSet))]
     public void FolderExists_Test(Folder_TestData data)
     {
-        var fs = new FakeFS(data.JsonFile, DataFileType.Json);
+        var fs = new FakeFS(data.JsonFile);
         fs.SetCurrentFolder(data.CurrentFolder);
         var exists = () => fs.FolderExists(data.Path);
 
@@ -178,7 +125,7 @@ public partial class FakeFileSystemTests
     [MemberData(nameof(FileExists_TestDataSet))]
     public void FileExists_Test(Folder_TestData data)
     {
-        var fs = new FakeFS(data.JsonFile, DataFileType.Json);
+        var fs = new FakeFS(data.JsonFile);
         fs.SetCurrentFolder(data.CurrentFolder);
         var exists = () => fs.FileExists(data.Path);
 
@@ -197,7 +144,7 @@ public partial class FakeFileSystemTests
     [MemberData(nameof(EnumerateFolders_TestDataSet))]
     public void EnumerateFolders_Test(Enumerate_TestData data)
     {
-        var fs = new FakeFS(data.JsonFile, DataFileType.Json);
+        var fs = new FakeFS(data.JsonFile);
         fs.SetCurrentFolder(data.CurrentFolder);
         var options = data.Recursive
                         ? new EnumerationOptions { RecurseSubdirectories = true }
@@ -219,7 +166,7 @@ public partial class FakeFileSystemTests
     [MemberData(nameof(EnumerateFiles_TestDataSet))]
     public void EnumerateFiles_Test(Enumerate_TestData data)
     {
-        var fs = new FakeFS(data.JsonFile, DataFileType.Json);
+        var fs = new FakeFS(data.JsonFile);
         fs.SetCurrentFolder(data.CurrentFolder);
         var options = data.Recursive
                         ? new EnumerationOptions { RecurseSubdirectories = true }
@@ -241,7 +188,7 @@ public partial class FakeFileSystemTests
     [MemberData(nameof(GetPath_TestDataSet))]
     public void GetPath_Test(GetPath_TestData data)
     {
-        var fs = new FakeFS(data.JsonFile, DataFileType.Json);
+        var fs = new FakeFS(data.JsonFile);
         fs.SetCurrentFolder(data.CurrentFolder);
         var getPath = () => fs.GetFullPath(data.Path);
         if (data.Throws)

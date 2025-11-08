@@ -1,4 +1,14 @@
-﻿IFileSystem fileSystem = new FileSystem();
+﻿var services = new ServiceCollection()
+    .AddSingleton<IFileSystem, FileSystem>()
+    .AddTransient<GlobEnumerator>()
+    .AddLogging(
+        builder =>
+        {
+            builder.AddConsole();
+            builder.SetMinimumLevel(LogLevel.Warning);
+        })
+    .BuildServiceProvider()
+    ;
 
 Option<bool> debug = new(name: "--debug")
 {
@@ -29,7 +39,9 @@ Option<string> startDirectory = new(name: "--start-from", "-d")
             if (string.IsNullOrWhiteSpace(directoryPath))
                 return;
 
-            if (!fileSystem.Path().IsMatch(directoryPath))
+            var regex = OperatingSystem.IsWindows() ? WindowsPath() : UnixPath();
+
+            if (!regex.IsMatch(directoryPath))
                 result.AddError($"The specified start directory is not a valid path: `{directoryPath}`.");
             else
             if (!Directory.Exists(directoryPath))
@@ -37,7 +49,6 @@ Option<string> startDirectory = new(name: "--start-from", "-d")
         }
     }
 };
-startDirectory.AcceptLegalFilePathsOnly();
 
 Option<Enumerated> searchFor = new(name: "--search-for", "-s")
 {
@@ -102,22 +113,27 @@ Argument<string> globExpression = new("glob-pattern")
                 result.AddError("The glob pattern cannot be empty.");
                 return;
             }
-            if (!fileSystem.Glob().IsMatch(pattern))
+
+            var regex = OperatingSystem.IsWindows() ? WindowsGlob() : UnixGlob();
+
+            if (!regex.IsMatch(pattern))
                 result.AddError($"The specified glob pattern is not valid: `{pattern}`.");
         }
     }
 };
 
-var rootCommand = new RootCommand("A tool to search for file system objects using glob patterns.")
+RootCommand rootCommand = new RootCommand("A tool to search for file system objects using glob patterns.")
 {
     debug,
     startDirectory,
     searchFor,
     globExpression,
 };
+
+startDirectory.AcceptLegalFilePathsOnly();
 rootCommand.SetAction(Enumerate);
 
-var parseResult = rootCommand.Parse(args);
+ParseResult parseResult = rootCommand.Parse(args);
 
 if (parseResult.Errors.Count > 0)
 {
@@ -139,12 +155,11 @@ void Enumerate(ParseResult parseResult)
                             .GetRequiredValue(globExpression)
                             .Replace('\\', '/'));
 
-        var enumerator = new GlobEnumerator(fileSystem)
-        {
-            EnumerateFromFolder = parseResult.GetRequiredValue(startDirectory),
-            Enumerated          = parseResult.GetRequiredValue(searchFor),
-            DebugOutput         = parseResult.GetValue(debug),
-        };
+        var enumerator = services.GetRequiredService<GlobEnumerator>();
+
+        enumerator.EnumerateFromFolder = parseResult.GetRequiredValue(startDirectory);
+        enumerator.Enumerated = parseResult.GetRequiredValue(searchFor);
+
         foreach (var entry in enumerator.Enumerate(pattern))
             Console.WriteLine(entry);
     }

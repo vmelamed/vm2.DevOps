@@ -9,24 +9,24 @@ namespace vm2.DevOps.Glob.Api.Tests.FakeFileSystem;
 /// </remarks>
 public sealed partial class FakeFS
 {
-    const string Wildcards         = "*?"; // TODO: add [], {}, etc. advanced
+    const string Wildcards         = "*?";  // TODO: add [], {}, etc. advanced features
     const string RecursiveWildcard = "**";
-    const int WinDriveLength       = 2; // e.g. "C:"
-    const int WinRootLength        = 3; // e.g. "C:/"
+    const int WinDriveLength       = 2;     // e.g. "C:"
+    const int WinRootLength        = 3;     // e.g. "C:/"
+
+    const string EnvVarNameGr      = "envVar";
+    const string EnvVarValueGr     = "envVarValue";
+
+    [GeneratedRegex(@"^[A-Za-z]:[/\\]")]
+    public static partial Regex StartsWithWinRoot();
+
+    [GeneratedRegex($"^(?<{EnvVarNameGr}> [A-Za-z_][0-9A-Za-z_]* ) = (?<{EnvVarValueGr}> .* )$", RegexOptions.IgnorePatternWhitespace | RegexOptions.ExplicitCapture)]
+    public static partial Regex EnvVarDefinition();
 
     /// <summary>
     /// Indicates whether the file system was read from JSON with UTF-8 BOM, also used when writing back to file.
     /// </summary>
     public bool JsonUtf8Bom { get; set; } = false;
-
-    [GeneratedRegex(@"^[A-Za-z]:[/\\]")]
-    public static partial Regex StartsWithWinRootRegex();
-
-    const string EnvVarNameGr = "envVar";
-    const string EnvVarValueGr = "envVarValue";
-
-    [GeneratedRegex($"^(?<{EnvVarNameGr}>[A-Za-z_][A-Za-z_]*)=(?<{EnvVarValueGr}>.*)$")]
-    public static partial Regex EnvVarDefinitionRegex();
 
     public Folder RootFolder { get; private set; }
 
@@ -34,28 +34,7 @@ public sealed partial class FakeFS
 
     public StringComparer Comparer { get; private set; }
 
-    public FakeFS(byte[] json)
-    {
-        FromJson(json);
-
-        Debug.Assert(RootFolder is not null);
-        Debug.Assert(Comparer is not null);
-
-        CurrentFolder = RootFolder;
-    }
-
-    public FakeFS(string text)
-    {
-        using var reader = new StringReader(text);
-        FromText(reader);
-
-        Debug.Assert(RootFolder is not null);
-        Debug.Assert(Comparer is not null);
-
-        CurrentFolder = RootFolder;
-    }
-
-    public FakeFS(string fileName, DataFileType fileType)
+    public FakeFS(string fileName, DataFileType fileType = DataFileType.Default)
     {
         var m = OperatingSystem.IsWindows()
                     ? WindowsPath().Match(fileName)
@@ -244,7 +223,7 @@ public sealed partial class FakeFS
             if (string.IsNullOrWhiteSpace(line) || line.StartsWith('#') || line.StartsWith("//")) // skip empty lines or comments
                 continue;
 
-            if (EnvVarDefinitionRegex().Match(line) is Match m && m.Success)
+            if (EnvVarDefinition().Match(line) is Match m && m.Success)
             {
                 Environment.SetEnvironmentVariable(m.Groups[EnvVarNameGr].Value, m.Groups[EnvVarValueGr].Value);
                 continue;
@@ -281,7 +260,7 @@ public sealed partial class FakeFS
 
     string DetectOS(string line)
     {
-        var m = StartsWithWinRootRegex().Match(line);
+        var m = StartsWithWinRoot().Match(line);
 
         if (m.Success)
         {

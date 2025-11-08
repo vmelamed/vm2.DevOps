@@ -10,18 +10,41 @@
 /// </remarks>
 public class Folder(string name = "") : IEquatable<Folder>, IComparable<Folder>
 {
-    private SortedSet<Folder> _folders = [];
-    private SortedSet<string> _files   = new(StringComparer.Ordinal);
-
-    [JsonRequired]
     [JsonPropertyName("name")]
-    public string Name { get; set; } = name;
+    public string Name { get; private set; } = name;
+
+    ISet<Folder> _folders = new SortedSet<Folder>();
+    ISet<string> _files = new SortedSet<string>(StringComparer.Ordinal);
 
     [JsonPropertyName("folders")]
-    public ISet<Folder> Folders { get => _folders; set => _folders = [.. value]; }
+    public IEnumerable<Folder> Folders
+    {
+        get => _folders;
+        private set => _folders = new SortedSet<Folder>(value);
+    }
 
     [JsonPropertyName("files")]
-    public ISet<string> Files { get => _files; set => _files = [.. value]; }
+    public IEnumerable<string> Files
+    {
+        get => _files;
+        private set => _files = new SortedSet<string>(value, StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Folder"/> class. Used for deserialization from JSON.
+    /// </summary>
+    /// <param name="name"></param>
+    /// <param name="folders"></param>
+    /// <param name="files"></param>
+    [JsonConstructor]
+    public Folder(
+        string name,
+        IEnumerable<Folder>? folders,
+        IEnumerable<string>? files) : this(name)
+    {
+        Folders = folders is null ? [] : [.. folders];
+        Files   = files is null ? [] : [.. files];
+    }
 
     [JsonIgnore]
     public string Path { get; private set; } = "";
@@ -53,9 +76,9 @@ public class Folder(string name = "") : IEquatable<Folder>, IComparable<Folder>
                 return;
 
             field       = value;
-            _files      = new SortedSet<string>(Files, value);  // Recreate the sets with the new comparer
-            _folders    = [.. Folders];                         // rebuild to ensure correct new ordering of children
-            foreach (var folder in _folders)
+            Files       = new SortedSet<string>(Files, value);  // Recreate the sets with the new comparer
+            Folders     = new SortedSet<Folder>(Folders);       // rebuild to ensure correct new ordering of children
+            foreach (var folder in Folders)
                 folder.Comparer = value; // propagate to children
         }
     } = StringComparer.Ordinal;
@@ -82,8 +105,8 @@ public class Folder(string name = "") : IEquatable<Folder>, IComparable<Folder>
         if (ReferenceEquals(this, other))
             return 0;
         return Parent == other.Parent
-               || string.IsNullOrWhiteSpace(Path)
-               || string.IsNullOrWhiteSpace(other.Path)
+            || string.IsNullOrWhiteSpace(Path)
+            || string.IsNullOrWhiteSpace(other.Path)
                     ? Comparer.Compare(Name, other.Name)
                     : Comparer.Compare(Path, other.Path);   // so that we can compare unlinked nodes
     }
