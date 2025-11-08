@@ -1,67 +1,10 @@
 ﻿namespace vm2.DevOps.Glob.Api;
 
-using System.Collections.Frozen;
-
 /// <summary>
 /// Represents a glob pattern searcher.
 /// </summary>
 public sealed partial class GlobEnumerator
 {
-    ref struct SpanLen
-    {
-        readonly Span<char> _chars;
-
-        public readonly ReadOnlySpan<char> Chars => _chars[..Length];
-        public int Length { get; private set; } = 0;
-
-        public SpanLen(Span<char> chars) => _chars = chars;
-
-        public void Append(ReadOnlySpan<char> text)
-        {
-            if (text.Length + Length > _chars.Length)
-                throw new ArgumentOutOfRangeException(nameof(text), "Not enough space in span");
-
-            text.CopyTo(_chars[Length..]);
-            Length += text.Length;
-        }
-
-        public void Append(char text) => _chars[Length++] = text;
-    }
-
-    ref struct ReadOnlySpanLen
-    {
-        readonly ReadOnlySpan<char> _chars;
-
-        public readonly ReadOnlySpan<char> Chars => _chars[Length..];
-        public int Length { get; private set; } = 0;
-
-        public readonly bool IsEmpty => Length >= _chars.Length;
-
-        public ReadOnlySpanLen(ReadOnlySpan<char> chars) => _chars = chars;
-
-        public ReadOnlySpan<char> Slice(int size)
-        {
-            if (Length + size > _chars.Length)
-                throw new ArgumentOutOfRangeException(nameof(size), "Not enough characters in span");
-
-            var s = _chars[Length..size];
-
-            Length += size;
-            return s;
-        }
-
-        public ReadOnlySpan<char> Slice()
-        {
-            if (IsEmpty)
-                throw new ArgumentOutOfRangeException(nameof(Length), "No more characters in span");
-
-            var s = _chars[Length..];
-
-            Length = _chars.Length;
-            return s;
-        }
-    }
-
     /// <summary>
     /// Translates a glob pattern to .NET pattern used in EnumerateDirectories and to a regex pattern for final filtering.
     /// </summary>
@@ -73,9 +16,9 @@ public sealed partial class GlobEnumerator
         if (glob is "")
             return (glob, "");
         if (glob is SequenceWildcard)
-            return (glob, ".*");
+            return (glob, SequenceRegex);
         if (glob is CharacterWildcard)
-            return (glob, ".?");
+            return (glob, CharacterRegex);
         if (glob is RecursiveWildcard)
             return ("", "");
 
@@ -92,42 +35,43 @@ public sealed partial class GlobEnumerator
         // (<non-match><match>)*<non-match>
         // where each non-match element can be empty
 
-        var globSpan = glob.AsSpan();
-        var globCur = 0;   // current index in globSpan
+        //var globSpan = glob.AsSpan();
+        //var globCur = 0;   // current index in globSpan
+        var roGlobSpan = new SpanReader(glob.AsSpan());
 
         // escape the non-matches and translate the matches to regex equivalents
-        var rexSpan = new SpanLen(stackalloc char[10*glob.Length]);
+        var rexSpan = new SpanWriter(stackalloc char[10*glob.Length]);
         // copy the non-matches and translate the matches to file system pattern equivalents - * and ?
-        var patSpan = new SpanLen(stackalloc char[10*glob.Length]);
+        var patSpan = new SpanWriter(stackalloc char[10*glob.Length]);
 
         // replace all wildcards with '*'
         foreach (Match match in matches)
         {
             // escape and copy the next non-match
-            if (match.Index > globCur)
+            if (match.Index > roGlobSpan.Length)
             {
-                var nonMatch = globSpan[globCur..match.Index];
-                globCur = match.Index;
+                var nonMatch = roGlobSpan.Read(match.Index-roGlobSpan.Length);
 
-                rexSpan.Append(Regex.Escape(nonMatch.ToString()));
-                patSpan.Append(nonMatch);
+                rexSpan.Write(Regex.Escape(nonMatch.ToString()));
+                patSpan.Write(nonMatch);
             }
 
             // translate the following match in globSpan
             var (pat, rex) = TranslateGlob(match);
-            globCur += match.Length;
 
-            rexSpan.Append(rex.AsSpan());
-            patSpan.Append(pat.AsSpan());
+            roGlobSpan.Read(match.Value.Length);
+
+            rexSpan.Write(rex.AsSpan());
+            patSpan.Write(pat.AsSpan());
         }
 
         // escape and copy the final non-match
-        if (globCur < globSpan.Length)
+        if (!roGlobSpan.IsEmpty)
         {
-            var nonMatch = globSpan[globCur..];
+            var finalNonMatch = roGlobSpan.ReadAll();
 
-            rexSpan.Append(Regex.Escape(nonMatch.ToString()));
-            patSpan.Append(nonMatch);
+            rexSpan.Write(Regex.Escape(finalNonMatch.ToString()));
+            patSpan.Write(finalNonMatch);
         }
 
         return (patSpan.Chars.ToString(), rexSpan.Chars.ToString());
@@ -168,23 +112,23 @@ public sealed partial class GlobEnumerator
         if (glClass[0] is not ('!' or ']'))
             return glClass;
 
-        var clSpan = new SpanLen(new Memory<char>(new char[glClass.Length + 1]).Span);
+        var clSpan = new SpanWriter(new Memory<char>(new char[glClass.Length + 1]).Span);
         var nG = 0;
 
         if (glClass[nG] is '!')
         {
             nG++;
-            clSpan.Append('^');
+            clSpan.Write('^');
         }
 
         if (glClass[nG] is ']')
         {
             nG++;
-            clSpan.Append('\\');
-            clSpan.Append(']');
+            clSpan.Write('\\');
+            clSpan.Write(']');
         }
 
-        clSpan.Append(glClass.AsSpan(nG));
+        clSpan.Write(glClass.AsSpan(nG));
         return clSpan.Chars;
     }
 }

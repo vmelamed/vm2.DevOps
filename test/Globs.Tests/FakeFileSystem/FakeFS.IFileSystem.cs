@@ -163,9 +163,7 @@ public sealed partial class FakeFS : IFileSystem
 
         do
         {
-            var folders = folder.Folders; // snapshot of the current folders
-
-            foreach (var sub in folders)
+            foreach (var sub in folder.Folders)
             {
                 if (options.RecurseSubdirectories)
                     // add its sub-folders to the queue of unprocessed unprocessedNodes
@@ -203,9 +201,7 @@ public sealed partial class FakeFS : IFileSystem
 
         do
         {
-            var files = folder.Files.ToList(); // snapshot of the current files
-
-            foreach (var f in files)
+            foreach (var f in folder.Files)
                 if (matchesPattern(f))
                     yield return folder.Path+f;
 
