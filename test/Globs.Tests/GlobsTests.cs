@@ -75,6 +75,7 @@ public partial class GlobsTests : IClassFixture<GlobTestsFixture>
         var ge = _fixture.GetGlobEnumerator(data.File);
         ge.Enumerated          = data.Objects;
         ge.EnumerateFromFolder = data.StartDir;
+        ge.MatchCasing         = data.MatchCasing;
 
         var enumerate = () => ge.Enumerate(data.Glob);
 
