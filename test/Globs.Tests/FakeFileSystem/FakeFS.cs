@@ -34,7 +34,7 @@ public sealed partial class FakeFS
 
     public StringComparer Comparer { get; private set; }
 
-    public FakeFS(string fileName, DataFileType fileType = DataFileType.Default)
+    public FakeFS(string fileName, DataType fileType = DataType.Default)
     {
         var m = OperatingSystem.IsWindows()
                     ? WindowsPath().Match(fileName)
@@ -45,7 +45,7 @@ public sealed partial class FakeFS
         if (!File.Exists(fileName))
             throw new FileNotFoundException($"HasFile '{fileName}' not found.", fileName);
 
-        if (fileType is DataFileType.Default)
+        if (fileType is DataType.Default)
         {
             var file = m.Groups[FileGr].ValueSpan;
             var si = file.LastIndexOf('.');
@@ -58,16 +58,30 @@ public sealed partial class FakeFS
 
             suffix.ToLower(lowerSuffix, CultureInfo.InvariantCulture);
             fileType = lowerSuffix switch {
-                ".json" => DataFileType.Json,
-                ".txt" => DataFileType.Text,
+                ".json" => DataType.Json,
+                ".txt" => DataType.Text,
                 _ => throw new ArgumentException($"Cannot determine the file type from the file extension of '{fileName}'. Please specify the file type explicitly or change the file suffix to .txt or .json.", nameof(fileType)),
             };
         }
 
         RootFolder = fileType switch {
-            DataFileType.Json => FromJsonFile(fileName),
-            DataFileType.Text => FromTextFile(fileName),
+            DataType.Json => FromJsonFile(fileName),
+            DataType.Text => FromTextFile(fileName),
             _ => throw new ArgumentOutOfRangeException(nameof(fileType), "Unsupported data file type."),
+        };
+
+        Debug.Assert(RootFolder is not null);
+        Debug.Assert(Comparer is not null);
+
+        CurrentFolder = RootFolder;
+    }
+
+    public FakeFS(byte[] data, DataType dataType)
+    {
+        RootFolder = dataType switch {
+            DataType.Json => FromJson(data),
+            DataType.Text => FromText(new StringReader(Encoding.UTF8.GetString(data))),
+            _ => throw new ArgumentOutOfRangeException(nameof(dataType), "The data type must be either Json or Text."),
         };
 
         Debug.Assert(RootFolder is not null);

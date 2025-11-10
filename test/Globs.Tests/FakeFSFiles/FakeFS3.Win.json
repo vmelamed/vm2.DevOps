@@ -1,0 +1,126 @@
+{
+  "name": "C:/",
+  "folders": [
+    {
+      "name": "home",
+        "folders": [
+            {
+                "name": "user",
+                "folders": [
+                    {
+                        "name": "docs",
+                        "files": [ "README.md", "readme.txt", "notes.txt", "file1.txt", "file2.dat", "archive.tar.gz", "backup.tar.bz2" ]
+                    },
+                    {
+                        "name": "projects",
+                        "folders": [
+                            {
+                                "name": "alpha",
+                                "files": [ "main.c", "test.c", "helper.h", "Makefile" ]
+                            },
+                            {
+                                "name": "beta",
+                                "files": [ "app.py", "test.py", "config.json" ]
+                            },
+                            {
+                                "name": "gamma",
+                                "files": [ "script.sh", "data.csv" ]
+                            }
+                        ],
+                        "files": [ "project-list.txt" ]
+                    },
+                    {
+                        "name": "media",
+                        "folders": [
+                            {
+                                "name": "images",
+                                "files": [ "photo1.jpg", "photo2.png", "icon.svg" ]
+                            },
+                            {
+                                "name": "videos",
+                                "files": [ "clip1.mp4", "clip2.avi" ]
+                            }
+                        ],
+                        "files": []
+                    }
+                ],
+                "files": [ ".bashrc", ".profile", ".vimrc", "data.txt" ]
+            },
+            {
+                "name": "projects",
+                "folders": [
+                    {
+                        "name": "alpha",
+                        "files": [ "alpha.log", "alpha.py", "alpha.data" ]
+                    },
+                    {
+                        "name": "beta",
+                        "files": [ "beta.log", "beta.py", "beta.data" ]
+                    }
+                ],
+                "files": [ "alpha.py" ]
+            }
+        ],
+      "files": []
+    },
+    {
+      "name": "var",
+      "folders": [
+        {
+          "name": "log",
+          "files": ["syslog", "auth.log", "error.log", "access.log", "debug.log", "app1.log", "app2.log", "app10.log"]
+        },
+        {
+            "name": "tmp",
+            "files": [ "temp1.tmp", "temp2.tmp", "cache.dat" ]
+        }
+      ],
+      "files": []
+    },
+    {
+      "name": "etc",
+      "folders": [
+        {
+          "name": "config",
+          "files": ["app.conf", "system.conf", "network.conf"]
+        }
+      ],
+      "files": ["hosts", "passwd", "group", "fstab"]
+    },
+    {
+      "name": "opt",
+      "folders": [
+        {
+          "name": "app",
+          "folders": [
+            {
+              "name": "bin",
+              "files": ["app", "tool1", "tool2"]
+            },
+            {
+              "name": "lib",
+              "files": ["libcore.so", "libutil.so", "libhelper.so.1"]
+            }
+          ],
+          "files": ["README"]
+        }
+      ],
+      "files": []
+    },
+    {
+      "name": "test",
+      "folders": [
+        {
+          "name": "bracket-tests",
+          "files": ["A", "B", "C", "x", "y", "z", "1", "2", "3", "9", "file-a.txt", "file-b.txt", "file-1.txt", "file-2.txt", "TEST"]
+        },
+        {
+          "name": "special",
+          "files": ["file.bak", "file.old", "test-file.txt", "data_file.csv", "my-document.pdf", "archive-2024.zip"]
+        }
+      ],
+      "files": ["root-test.txt"]
+    }
+  ],
+  "files": ["boot.img", "vmlinuz"]
+}

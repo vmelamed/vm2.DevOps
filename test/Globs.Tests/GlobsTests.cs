@@ -69,6 +69,7 @@ public partial class GlobsTests : IClassFixture<GlobTestsFixture>
     [Theory]
     [MemberData(nameof(Enumerate_TestDataSet))]
     [MemberData(nameof(GlobEnumerate_Unix_TestDataLargeSet))]
+    [MemberData(nameof(GlobEnumerate_Win_TestDataLargeSet))]
     public void Should_Enumerate_GlobEnumerator(GlobEnumerate_TestData data)
     {
         var ge = _fixture.GetGlobEnumerator(data.File);
