@@ -21,7 +21,7 @@ public sealed partial class FakeFS : IFileSystem
             return a => Comparer.Compare(a, segment) == 0;
 
         var regex = new Regex(
-                            Regex.Escape(segment.ToString()).Replace(@"\*", ".*").Replace(@"\?", "."),  // TODO: add [], {}, etc. advanced patterns
+                            Regex.Escape(segment).Replace(@"\*", ".*").Replace(@"\?", "."),  // TODO: add [], {}, etc. advanced patterns
                             RegexOptions.Compiled | (IsWindows ? RegexOptions.IgnoreCase : RegexOptions.None));
 
         return regex.IsMatch;
@@ -32,7 +32,7 @@ public sealed partial class FakeFS : IFileSystem
     public string GetFullPath(string path)
     {
         if (string.IsNullOrEmpty(path))
-            throw new ArgumentException("Path cannot be null or empty.", nameof(path));
+            throw new ArgumentException("StartDir cannot be null or empty.", nameof(path));
 
         var nPath = NormalizePath(path).ToString();
         var enumerator = EnumeratePathRanges(nPath).GetEnumerator();
@@ -101,7 +101,7 @@ public sealed partial class FakeFS : IFileSystem
             {
                 // go back to the previous folder
                 if (!separatorIndices.TryPop(out bufPos))
-                    throw new ArgumentException("Path goes above the root folder.", nameof(path));
+                    throw new ArgumentException("StartDir goes above the root folder.", nameof(path));
 
                 bufPos++;   // move past the separator
                 continue;

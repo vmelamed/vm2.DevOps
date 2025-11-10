@@ -50,7 +50,7 @@ Option<string> startDirectory = new(name: "--start-from", "-d")
     }
 };
 
-Option<Enumerated> searchFor = new(name: "--search-for", "-s")
+Option<Objects> searchFor = new(name: "--search-for", "-s")
 {
     HelpName = "search-for",
     Description = """
@@ -63,26 +63,26 @@ Option<Enumerated> searchFor = new(name: "--search-for", "-s")
     """,
     Required = false,
     Arity = ArgumentArity.ExactlyOne,
-    DefaultValueFactory = _ => Enumerated.Both,
+    DefaultValueFactory = _ => Objects.Both,
     Validators =
     {
         result =>
         {
             var value = result.Tokens[0].Value;
 
-            if (!Enumerated.Files.ToString().StartsWith(value, StringComparison.OrdinalIgnoreCase) &&
-                !Enumerated.Directories.ToString().StartsWith(value, StringComparison.OrdinalIgnoreCase) &&
-                !Enumerated.Both.ToString().StartsWith(value, StringComparison.OrdinalIgnoreCase))
-                result.AddError($"None of the expected values `{Enumerated.Files}`, `{Enumerated.Directories}`, or `{Enumerated.Both}` starts with `{value}`.");
+            if (!Objects.Files.ToString().StartsWith(value, StringComparison.OrdinalIgnoreCase) &&
+                !Objects.Directories.ToString().StartsWith(value, StringComparison.OrdinalIgnoreCase) &&
+                !Objects.Both.ToString().StartsWith(value, StringComparison.OrdinalIgnoreCase))
+                result.AddError($"None of the expected values `{Objects.Files}`, `{Objects.Directories}`, or `{Objects.Both}` starts with `{value}`.");
         }
     },
     CustomParser = result =>
     {
         var value = result.Tokens[0].Value;
 
-        return Enumerated.Files.ToString().StartsWith(value, StringComparison.OrdinalIgnoreCase) ? Enumerated.Files :
-               Enumerated.Directories.ToString().StartsWith(value, StringComparison.OrdinalIgnoreCase) ? Enumerated.Directories :
-               Enumerated.Both;
+        return Objects.Files.ToString().StartsWith(value, StringComparison.OrdinalIgnoreCase) ? Objects.Files :
+               Objects.Directories.ToString().StartsWith(value, StringComparison.OrdinalIgnoreCase) ? Objects.Directories :
+               Objects.Both;
     }
 };
 

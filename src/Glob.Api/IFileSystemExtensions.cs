@@ -14,6 +14,13 @@ public static class IFileSystemExtensions
     public static char SepChar(this IFileSystem fs) => fs.IsWindows ? WinSepChar : GlobConstants.SepChar;
 
     /// <summary>
+    /// Gets a Regex that matches the root of the file system, e.g. "C:\" for Windows and "/" for Unix-like.
+    /// </summary>
+    /// <param name="fs"></param>
+    /// <returns></returns>
+    public static Regex FileSystemRoot(this IFileSystem fs) => fs.IsWindows ? WindowsFileSystemRoot() : UnixFileSystemRoot();
+
+    /// <summary>
     /// Gets a <see cref="Regex"/> object for validating pathnames based on the current operating system.
     /// </summary>
     /// <param name="fs">The file system instance.</param>

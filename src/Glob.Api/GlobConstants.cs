@@ -219,7 +219,7 @@ public static partial class GlobConstants
     /// </remarks>
     /// <returns>A <see cref="Regex"/> instance configured to match Windows-style root paths.</returns>
     [GeneratedRegex(@"^(/ | \\ | [A-Z]:[/\\]? )", winOptions)]
-    internal static partial Regex WinFromRoot();
+    internal static partial Regex WindowsFileSystemRoot();
 
     /// <summary>
     /// Gets a regular expression that matches strings starting with a forward slash ('/'), typically used to identify
@@ -227,7 +227,7 @@ public static partial class GlobConstants
     /// </summary>
     /// <returns>A <see cref="Regex"/> instance configured to match strings beginning with a forward slash ('/').</returns>
     [GeneratedRegex(@"^/")]
-    internal static partial Regex UnixFromRoot();
+    internal static partial Regex UnixFileSystemRoot();
 
     internal const string SeqWildcardGr = "seqwc";
     internal const string CharWildcardGr = "charwc";
@@ -235,27 +235,40 @@ public static partial class GlobConstants
     internal const string ClassNameGr = "classNm";
     internal const string ClassGr = "class";
 
-    const string NamedClassRegex = $"""
-        (?<brcol> \[: ) (alnum | alpha | blank | cntrl | digit | graph | lower | print | punct | space | upper | xdigit) (?<{ClassNameGr}-brcol> :\] )
+    const string NmClassRegex = $"""
+        (?<brcol> \[: ) (alnum | alpha | blank | cntrl | digit | graph | lower | print | punct | space | upper | xdigit) (?<-brcol> :\] )
         """;
 
-    const string GlobRegex = $"""
+    const string GlobExpressionRegex = $"""
           (?<{SeqWildcardGr}> \* )
         | (?<{CharWildcardGr}> \? )
-        | (?<br> \[ ) !?\]? ( [^\[\]] | \[(?!:) | {NamedClassRegex} )* (?<{ClassGr}-br> \] )
+        | (?<br> \[ ) !?\]? ( [^\[\]] | \[(?!:) | {NmClassRegex} )* (?<{ClassGr}-br> \] )
+        """;
+
+    /// <summary>
+    /// Represents a regular expression pattern used to match named character classes and capture the name of the class in
+    /// <see cref="ClassNameGr"/>.
+    /// </summary>
+    const string NamedClassRegex = $"""
+        (?<brcol> \[: ) (alnum | alpha | blank | cntrl | digit | graph | lower | print | punct | space | upper | xdigit) (?<{ClassNameGr}-brcol> :\] )
         """;
 
     /// <summary>
     /// Creates a regular expression that matches replaceable wildcard patterns.
     /// </summary>
-    [GeneratedRegex(GlobRegex, unixOptions)]
-    internal static partial Regex ReplaceableWildcard();
+    [GeneratedRegex(GlobExpressionRegex, unixOptions)]
+    internal static partial Regex GlobExpression();
 
     /// <summary>
     /// Creates a <see cref="Regex"/> instance using the specified named class pattern.
     /// </summary>
     [GeneratedRegex(NamedClassRegex, unixOptions)]
     internal static partial Regex NamedClass();
+
+    /// <summary>
+    /// A string containing characters that should be escaped in a regular expression.
+    /// </summary>
+    public const string RegexEscapable = "\t\v #$()*+.?[\\^{|";
 
     /// <summary>
     /// Represents the character used to separate the drive letter fromIndex the dirPath in f system paths.

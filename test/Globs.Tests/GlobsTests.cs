@@ -50,7 +50,7 @@ public partial class GlobsTests : IClassFixture<GlobTestsFixture>
     public void Invalid_FilePattern_ShouldThrow()
     {
         var ge = _fixture.GetGlobEnumerator("FakeFSFiles/FakeFS2.Win.json");
-        ge.Enumerated = Enumerated.Files;
+        ge.Enumerated = Objects.Files;
         var enumerate = () => ge.Enumerate("*/");
 
         enumerate.Should().Throw<ArgumentException>();
@@ -60,7 +60,7 @@ public partial class GlobsTests : IClassFixture<GlobTestsFixture>
     public void RecursiveInTheEnd_FilePattern_ShouldThrow()
     {
         var ge = _fixture.GetGlobEnumerator("FakeFSFiles/FakeFS2.Win.json");
-        ge.Enumerated = Enumerated.Files;
+        ge.Enumerated = Objects.Files;
         var enumerate = () => ge.Enumerate("*/**");
 
         enumerate.Should().Throw<ArgumentException>();
@@ -71,11 +71,11 @@ public partial class GlobsTests : IClassFixture<GlobTestsFixture>
     [MemberData(nameof(GlobEnumerate_Unix_TestDataLargeSet))]
     public void Should_Enumerate_GlobEnumerator(GlobEnumerate_TestData data)
     {
-        var ge = _fixture.GetGlobEnumerator(data.JsonFile);
-        ge.Enumerated          = data.Enumerated;
-        ge.EnumerateFromFolder = data.Path;
+        var ge = _fixture.GetGlobEnumerator(data.File);
+        ge.Enumerated          = data.Objects;
+        ge.EnumerateFromFolder = data.StartDir;
 
-        var enumerate = () => ge.Enumerate(data.Pattern);
+        var enumerate = () => ge.Enumerate(data.Glob);
 
         if (data.Throws)
         {

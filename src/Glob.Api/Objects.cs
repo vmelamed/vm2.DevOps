@@ -4,7 +4,7 @@
 /// Specifies the type of items to search for in searcher.
 /// </summary>
 [Flags]
-public enum Enumerated
+public enum Objects
 {
     /// <summary>
     /// EnumerateImpl for files only.
