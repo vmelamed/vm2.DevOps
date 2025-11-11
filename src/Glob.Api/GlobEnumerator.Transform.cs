@@ -32,17 +32,26 @@ public sealed partial class GlobEnumerator
     /// </summary>
     /// <param name="glob">The glob to translate.</param>
     /// <returns>A .NET path segment pattern and the corresponding <see cref="Regex"/></returns>
-    static (string pattern, string regex) GlobToRegex(string glob)
+    (string pattern, string regex) GlobToRegex(string glob)
     {
         // shortcut the easy cases
-        if (glob is "")
-            return (glob, "");
-        if (glob is SequenceWildcard)
-            return (glob, SequenceRegex);
-        if (glob is CharacterWildcard)
-            return (glob, CharacterRegex);
-        if (glob is RecursiveWildcard)
-            return ("", "");
+        switch (glob)
+        {
+            case null:
+                throw new ArgumentNullException(nameof(glob));
+            case "":
+                return (glob, "");
+            case SequenceWildcard:  // "*"
+                return (glob, _fileSystem.SequenceRegex());
+            case CharacterWildcard: // "?"
+                return (glob, _fileSystem.CharacterRegex());
+            case RecursiveWildcard: // "**"
+                return ("", "");
+            case CurrentDir or ParentDir:   // "." or ".."
+                return (glob, "");
+            default:
+                break;
+        }
 
         // find all wildcard matches in the glob
         var matches = GlobExpression().Matches(glob);
@@ -60,9 +69,9 @@ public sealed partial class GlobEnumerator
         // span to go through the glob
         var globReader = new SpanReader(glob.AsSpan());
         // escape the non-matches and translate the matches to regex equivalents
-        var rexWriter = new SpanWriter(stackalloc char[10*glob.Length]);
+        var rexWriter = new SpanWriter(stackalloc char[32*glob.Length]);
         // copy the non-matches and translate the matches to file system pattern equivalents - * and ?
-        var patWriter = new SpanWriter(stackalloc char[10*glob.Length]);
+        var patWriter = new SpanWriter(stackalloc char[32*glob.Length]);
 
         // replace all wildcards with '*'
         foreach (Match match in matches)
@@ -98,7 +107,7 @@ public sealed partial class GlobEnumerator
         return (patWriter.Chars.ToString(), rexWriter.Chars.ToString());
     }
 
-    static (string pattern, string regex) TranslateGlobExpression(Match match)
+    (string pattern, string regex) TranslateGlobExpression(Match match)
         // At this point, we know that match is one of the glob expression elements: *, ?, [class], [!class], where a class is a
         // sequence of letters (e.g. 'abc..'), letter ranges (e.g. '0-9'), and named classes (e.g. [:alnum:]. We need to
         // identify and replace the match its respective regex equivalents:
@@ -111,8 +120,8 @@ public sealed partial class GlobEnumerator
             g => !string.IsNullOrWhiteSpace(g.Name)
               && !char.IsDigit(g.Name[0])
               && !string.IsNullOrWhiteSpace(g.Value)) switch {
-                { Name: SeqWildcardGr } asterisk => (SequenceWildcard, SequenceRegex),     // no need to filter the results
-                { Name: CharWildcardGr } question => (CharacterWildcard, CharacterRegex),
+                { Name: SeqWildcardGr } asterisk => (SequenceWildcard, _fileSystem.SequenceRegex()),     // no need to filter the results
+                { Name: CharWildcardGr } question => (CharacterWildcard, _fileSystem.CharacterRegex()),
                 { Name: ClassGr } chrClass => (CharacterWildcard, $"[{TransformClass(chrClass.Value)}]"),
                   _ => throw new ArgumentException("Invalid glob pattern match.", nameof(match)),
               };

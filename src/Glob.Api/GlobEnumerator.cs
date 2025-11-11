@@ -4,6 +4,7 @@
 /// </summary>
 public sealed partial class GlobEnumerator
 {
+    #region fields
     IFileSystem _fileSystem;
     string _pattern             = "";
     RegexOptions _regexOptions  = RegexOptions.IgnorePatternWhitespace
@@ -17,7 +18,9 @@ public sealed partial class GlobEnumerator
         RecurseSubdirectories    = false,
         ReturnSpecialDirectories = true,
     };
+    #endregion
 
+    #region Properties
     /// <summary>
     /// Gets a rex that matches if a pattern starts from the root of the file system.
     /// </summary>
@@ -70,7 +73,9 @@ public sealed partial class GlobEnumerator
     /// Gets or sets the logger instance used to log messages for the <see cref="GlobEnumerator"/> class.
     /// </summary>
     public ILogger<GlobEnumerator> Logger { get; init; }
+    #endregion
 
+    #region Constructors
     /// <summary>
     /// Initializes a new instance of the <see cref="GlobEnumerator"/> class with <see cref="FileSystem"/> as the f system.
     /// </summary>
@@ -81,7 +86,9 @@ public sealed partial class GlobEnumerator
         FileSystemRoot = _fileSystem.IsWindows ? WindowsFileSystemRoot() : UnixFileSystemRoot();
         Logger         = logger ?? throw new ArgumentNullException(nameof(logger));
     }
+    #endregion
 
+    #region Public methods
     /// <summary>
     /// Searches for files or directories that match the specified pattern within the configured folder.
     /// </summary>
@@ -95,7 +102,7 @@ public sealed partial class GlobEnumerator
             throw new ArgumentException("Pattern cannot end with a recursive wildcard '**' when searching for files.", nameof(pattern));
 
         string fromDir;
-        (_pattern, fromDir) = NormalizePattern(pattern);
+        (_pattern, fromDir) = NormalizePatternAndDir(pattern);
 
         if (!_fileSystem.Glob().IsMatch(_pattern))
             throw new ArgumentException("Invalid glob-pattern.", nameof(pattern));
@@ -112,18 +119,20 @@ public sealed partial class GlobEnumerator
         // call the actual search
         return EnumerateImpl(fromDir, FirstComponentRange());
     }
+    #endregion
 
+    #region Private methods
     /// <summary>
     /// Normalizes the specified pattern by converting separators, removing duplicates, and determining the starting directory.
     /// Also sets the _fromDir field.
     /// </summary>
     /// <param name="pattern"></param>
     /// <returns></returns>
-    (string normPattern, string fromDir) NormalizePattern(string pattern)
+    (string normPattern, string fromDir) NormalizePatternAndDir(string pattern)
     {
-        var start = 0;
-        var end = pattern.Length;
         Span<char> patternSpan = stackalloc char[pattern.Length];
+        int start;
+        var end = pattern.EndsWith(SepChar) ? pattern.Length - 1 : pattern.Length;  // trim a trailing separator
         string fromDir = "";
 
         pattern.AsSpan().CopyTo(patternSpan);
@@ -131,16 +140,19 @@ public sealed partial class GlobEnumerator
         var m = FileSystemRoot.Match(pattern);   // if it starts with a root or drive like `C:/` or just `/`
         if (m.Success)
         {
-            // then ignore EnumerateFromFolder and the current folder and
-            // start from where the pattern starts from (the root)
+            // then ignore EnumerateFromFolder and the current folder and start from the root of the file system
             fromDir = m.Value;
-            start = m.Length;  // skip the root part in the pattern
+            start   = m.Length; // skip the root part in the pattern - it is reflected in fromDir
         }
         else
-            fromDir = _fileSystem.GetFullPath(EnumerateFromFolder);  // get the full path of EnumerateFromFolder with current dir in mind
+        {
+            // get the full path of EnumerateFromFolder relative to the current dir
+            fromDir = _fileSystem.GetFullPath(EnumerateFromFolder);
+            start   = 0;        // start from the beginning
+        }
 
-        int i = start;
         char prev = '\0';
+        int i = start;
 
         for (var j = start; j < end; j++)
         {
@@ -172,13 +184,13 @@ public sealed partial class GlobEnumerator
     // the nextEnd is at the next SepChar after this, or at the end of the pattern
 
     bool IsLastComponentRange(Range range)
-        => range.End.Value == _pattern.Length;
+        => range.End.Value >= _pattern.Length;
 
     IEnumerable<string> EnumerateImpl(string dir, Range componentRange, bool recursive = false)
     {
-        var component = _pattern[componentRange];
+        var isLastComponent  = IsLastComponentRange(componentRange);
+        var component        = _pattern[componentRange];
         var (pattern, regex) = GlobToRegex(component);
-        var isLastComponent = IsLastComponentRange(componentRange);
 
         Logger.LogDebug("""
                 --------------------------------
@@ -204,6 +216,9 @@ public sealed partial class GlobEnumerator
                 goto case CurrentDir;
 
             case CurrentDir:
+                if (isLastComponent)
+                    break;  // nothing more to do - just list the requested objects in the current dir
+                // because there are more components after this one, we need to continue searching in the current dir
                 foreach (var e in EnumerateImpl(dir, nextRange, recursive))
                     yield return e;
                 yield break;
@@ -257,17 +272,17 @@ public sealed partial class GlobEnumerator
                         .EnumerateFiles(dir, pattern, _options)
                         ;
 
-        if (regex is not ("" or SequenceRegex))
+        if (regex != "" && regex != _fileSystem.SequenceRegex())
         {
+            // add filtering on top of the pattern matching in EnumerateFiles
             var rex = new Regex($"(^|/){regex}$", _regexOptions);
 
             result = result
-                        .Where(f => rex.IsMatch(f))
+                        .Where(f => { var m = rex.Match(f); return m.Success; })
                         ;
         }
 
         var list = result
-                        .Select(OsNormalizeFilePath)
                         .ToList()
                         ;
 
@@ -278,7 +293,7 @@ public sealed partial class GlobEnumerator
                 files:
                   file: {Files}
                 """,
-                dir, recursively, string.Join("\n  file: ", list));
+                dir, recursively, string.Join("\n        file: ", list));
 
         return list;
     }
@@ -296,16 +311,18 @@ public sealed partial class GlobEnumerator
                         .Where(d => !(d.EndsWith(CurrentDir) || d.EndsWith(ParentDir)))
                         ;
 
-        if (regex is not ("" or SequenceRegex))
+        if (regex != "" && regex != _fileSystem.SequenceRegex())
         {
+            // add filtering on top of the pattern matching in EnumerateFiles
             var rex = new Regex($"(^|/){regex}(/|$)", _regexOptions);
+
             result = result
                         .Where(d => rex.IsMatch(d))
                         ;
         }
 
         var list = result
-                        .Select(OsNormalizeDirPath)
+                        .Select(p => p.EndsWith(SepChar) ? p : p + SepChar)
                         .ToList()
                         ;
 
@@ -316,37 +333,9 @@ public sealed partial class GlobEnumerator
             directories:
               dir:  {Dirs}
             """,
-            dir, recursively, string.Join("\n  dir:  ", list));
+            dir, recursively, string.Join("\n        dir:  ", list));
 
         return list;
     }
-
-    string OsNormalizeDirPath(string dirPath)
-    {
-        var endsWithSep = dirPath.EndsWith(SepChar);
-        var length = dirPath.Length + (endsWithSep ? 0 : 1);
-        Span<char> span = stackalloc char[length];
-
-        dirPath.CopyTo(span);
-
-        if (_fileSystem.IsWindows)
-            span.Replace(WinSepChar, SepChar);
-
-        if (!endsWithSep)
-            span[dirPath.Length] = SepChar;
-
-        return span.ToString();
-    }
-
-    string OsNormalizeFilePath(string filePath)
-    {
-        Span<char> span = stackalloc char[filePath.Length];
-
-        filePath.CopyTo(span);
-
-        if (_fileSystem.IsWindows)
-            span.Replace(WinSepChar, SepChar);
-
-        return span.ToString();
-    }
+    #endregion
 }

@@ -5,7 +5,7 @@ public partial class FakeFileSystemTests
 {
     [Theory]
     [MemberData(nameof(Text_Files_To_Add))]
-    public void Should_Create_FS_From_Text_File(FakeFS_TestData data)
+    public void Should_Create_FS_From_Text_File(FakeFSTheoryElement data)
     {
         TestContext.Current.TestOutputHelper?.WriteLine(data.ATestFileLine);
         var fsf = () => new FakeFS(data.TextOrFile);

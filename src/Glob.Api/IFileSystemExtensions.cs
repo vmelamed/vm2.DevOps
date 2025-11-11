@@ -40,4 +40,14 @@ public static class IFileSystemExtensions
     /// <param name="fs">The file system instance.</param>
     /// <returns>A Regex for glob pattern validation.</returns>
     public static Regex EnvVar(this IFileSystem fs) => fs.IsWindows ? WindowsEnvVar() : UnixEnvVar();
+
+    /// <summary>
+    /// Retrieves the set of valid characters for file and directory names based on the file system type.
+    /// </summary>
+    public static string CharacterRegex(this IFileSystem fs) => fs.IsWindows ? WinNameChars : UnixNameChars;
+
+    /// <summary>
+    /// A regular expression pattern that matches a sequence of valid file system name characters.
+    /// </summary>
+    public static string SequenceRegex(this IFileSystem fs) => fs.CharacterRegex()+"*";
 }

@@ -27,6 +27,21 @@ public static partial class GlobConstants
     public const string SuffixGr = "suffix";
 
     /// <summary>
+    /// Represents a regular expression pattern that matches valid characters for a Windows file or directory name.
+    /// </summary>
+    public const string WinNameChars = @"[^\x00-\x1F""/<>\\|]";
+
+    /// <summary>
+    /// Represents a regular expression pattern that matches valid characters for the last character in a Windows file or directory name.
+    /// </summary>
+    public const string WinNameLastChars = @"[^\x00-\x1F""./<>\\|]";
+
+    /// <summary>
+    /// Represents a regular expression pattern that matches valid characters for a Unix file or directory name.
+    /// </summary>
+    public const string UnixNameChars = @"[^\x00/]";
+
+    /// <summary>
     /// The regular expression pattern for validating Windows pathnames.
     /// </summary>
     internal const string WindowsPathname = """
@@ -310,14 +325,4 @@ public static partial class GlobConstants
     /// Represents a wildcard for any single character in a dirPath.
     /// </summary>
     public const string CharacterWildcard = "?";
-
-    /// <summary>
-    /// Represents a regex used to match any sequence in a string.
-    /// </summary>
-    public const string SequenceRegex  = ".*";
-
-    /// <summary>
-    /// Represents a regex used to match any single character in a string.
-    /// </summary>
-    public const string CharacterRegex = ".";
 }

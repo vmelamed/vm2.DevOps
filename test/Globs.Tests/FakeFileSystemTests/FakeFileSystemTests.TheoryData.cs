@@ -3,7 +3,7 @@
 public partial class FakeFileSystemTests
 {
     [ExcludeFromCodeCoverage]
-    public class FakeFS_TestData(
+    public class FakeFSTheoryElement(
         string testFileLine,
         string textOrFile,
         bool throws,
@@ -11,7 +11,7 @@ public partial class FakeFileSystemTests
         bool printJson = false) : IXunitSerializable
     {
         #region boilerplate
-        public FakeFS_TestData()
+        public FakeFSTheoryElement()
             : this("", "", false, "", false)
         {
         }
@@ -42,42 +42,42 @@ public partial class FakeFileSystemTests
         #endregion
     }
 
-    public static TheoryData<FakeFS_TestData> Text_To_Add =
+    public static TheoryData<FakeFSTheoryElement> Text_To_Add =
     [
         // Windows paths
-        new FakeFS_TestData(TestFileLine(), @"C:/", false, @"{""name"":""C:/"",""folders"":[],""files"":[]}", true),
-        new FakeFS_TestData(TestFileLine(), @"C:/f0", false, @"{""name"":""C:/"",""folders"":[],""files"":[""f0""]}", true),
-        new FakeFS_TestData(TestFileLine(), @"C:/d0/", false, @"{""name"":""C:/"",""folders"":[{""name"":""d0"",""folders"":[],""files"":[]}],""files"":[]}", true),
-        new FakeFS_TestData(TestFileLine(), @"C:/d0/f1", false, @"{""name"":""C:/"",""folders"":[{""name"":""d0"",""folders"":[],""files"":[""f1""]}],""files"":[]}", true),
-        new FakeFS_TestData(TestFileLine(), """
+        new FakeFSTheoryElement(TestFileLine(), @"C:/", false, @"{""name"":""C:/"",""folders"":[],""files"":[]}", true),
+        new FakeFSTheoryElement(TestFileLine(), @"C:/f0", false, @"{""name"":""C:/"",""folders"":[],""files"":[""f0""]}", true),
+        new FakeFSTheoryElement(TestFileLine(), @"C:/d0/", false, @"{""name"":""C:/"",""folders"":[{""name"":""d0"",""folders"":[],""files"":[]}],""files"":[]}", true),
+        new FakeFSTheoryElement(TestFileLine(), @"C:/d0/f1", false, @"{""name"":""C:/"",""folders"":[{""name"":""d0"",""folders"":[],""files"":[""f1""]}],""files"":[]}", true),
+        new FakeFSTheoryElement(TestFileLine(), """
             C:/f0
             C:/d0/f1
             """, false, @"{""name"":""C:/"",""folders"":[{""name"":""d0"",""folders"":[],""files"":[""f1""]}],""files"":[""f0""]}", true),
-        new FakeFS_TestData(TestFileLine(), """
+        new FakeFSTheoryElement(TestFileLine(), """
             C:/f0
             C:/d0/f1
             /dd/ff
             """, false, @"{""name"":""C:/"",""folders"":[{""name"":""d0"",""folders"":[],""files"":[""f1""]},{""name"":""dd"",""folders"":[],""files"":[""ff""]}],""files"":[""f0""]}", true),
         // Unix paths
-        new FakeFS_TestData(TestFileLine(), @"/", false, @"{""name"":""/"",""folders"":[],""files"":[]}", true),
-        new FakeFS_TestData(TestFileLine(), @"/f0", false, @"{""name"":""/"",""folders"":[],""files"":[""f0""]}", true),
-        new FakeFS_TestData(TestFileLine(), @"/d0/", false, @"{""name"":""/"",""folders"":[{""name"":""d0"",""folders"":[],""files"":[]}],""files"":[]}", true),
-        new FakeFS_TestData(TestFileLine(), @"/d0/f1", false, @"{""name"":""/"",""folders"":[{""name"":""d0"",""folders"":[],""files"":[""f1""]}],""files"":[]}", true),
-        new FakeFS_TestData(TestFileLine(), """
+        new FakeFSTheoryElement(TestFileLine(), @"/", false, @"{""name"":""/"",""folders"":[],""files"":[]}", true),
+        new FakeFSTheoryElement(TestFileLine(), @"/f0", false, @"{""name"":""/"",""folders"":[],""files"":[""f0""]}", true),
+        new FakeFSTheoryElement(TestFileLine(), @"/d0/", false, @"{""name"":""/"",""folders"":[{""name"":""d0"",""folders"":[],""files"":[]}],""files"":[]}", true),
+        new FakeFSTheoryElement(TestFileLine(), @"/d0/f1", false, @"{""name"":""/"",""folders"":[{""name"":""d0"",""folders"":[],""files"":[""f1""]}],""files"":[]}", true),
+        new FakeFSTheoryElement(TestFileLine(), """
             /f0
             /d0/f1
             """, false, @"{""name"":""/"",""folders"":[{""name"":""d0"",""folders"":[],""files"":[""f1""]}],""files"":[""f0""]}", true),
-        new FakeFS_TestData(TestFileLine(), """
+        new FakeFSTheoryElement(TestFileLine(), """
             /f0
             /d0/f1
             /dd/ff
             """, false, @"{""name"":""/"",""folders"":[{""name"":""d0"",""folders"":[],""files"":[""f1""]},{""name"":""dd"",""folders"":[],""files"":[""ff""]}],""files"":[""f0""]}", true),
     ];
 
-    public static TheoryData<FakeFS_TestData> Text_Files_To_Add =
+    public static TheoryData<FakeFSTheoryElement> Text_Files_To_Add =
     [
-        new FakeFS_TestData(TestFileLine(), @"FakeFSFiles/FakeFS1.Win.txt",  false, "", false),
-        new FakeFS_TestData(TestFileLine(), @"FakeFSFiles/FakeFS1.Unix.txt", false, "", false),
+        new FakeFSTheoryElement(TestFileLine(), @"FakeFSFiles/FakeFS1.Win.txt",  false, "", false),
+        new FakeFSTheoryElement(TestFileLine(), @"FakeFSFiles/FakeFS1.Unix.txt", false, "", false),
     ];
 
     [ExcludeFromCodeCoverage]
@@ -464,7 +464,7 @@ public partial class FakeFileSystemTests
     [
         new GetPath_TestData(TestFileLine(), "FakeFSFiles/FakeFS2.Win.json",  "",            "D:/folder1",           true,  ""),
         new GetPath_TestData(TestFileLine(), "FakeFSFiles/FakeFS2.Win.json",  "",            "..",                   true,  ""),
-        new GetPath_TestData(TestFileLine(), "FakeFSFiles/FakeFS2.Win.json",  "",            "../abc",               true,  ""),
+        new GetPath_TestData(TestFileLine(), "FakeFSFiles/FakeFS2.Win.json",  "",            "../root.txt",          false, "C:/root.txt"),
 
         new GetPath_TestData(TestFileLine(), "FakeFSFiles/FakeFS2.Win.json",  "",            "C:/folder1",           false, "C:/folder1"),
         new GetPath_TestData(TestFileLine(), "FakeFSFiles/FakeFS2.Win.json",  "",            "C:/folder1/file1.txt", false, "C:/folder1/file1.txt"),
@@ -477,7 +477,7 @@ public partial class FakeFileSystemTests
         new GetPath_TestData(TestFileLine(), "FakeFSFiles/FakeFS2.Win.json",  "/folder1/",   "./root.txt",           false,  "C:/folder1/root.txt"),
 
         new GetPath_TestData(TestFileLine(), "FakeFSFiles/FakeFS2.Win.json",  "",            "..",                   true,  ""),
-        new GetPath_TestData(TestFileLine(), "FakeFSFiles/FakeFS2.Win.json",  "",            "../abc",               true,  ""),
+        new GetPath_TestData(TestFileLine(), "FakeFSFiles/FakeFS2.Win.json",  "",            "../root.txt",          false,  "C:/root.txt"),
 
         new GetPath_TestData(TestFileLine(), "FakeFSFiles/FakeFS2.Unix.json", "",            "/folder1",             false, "/folder1"),
         new GetPath_TestData(TestFileLine(), "FakeFSFiles/FakeFS2.Unix.json", "",            "/folder1/file1.txt",   false, "/folder1/file1.txt"),

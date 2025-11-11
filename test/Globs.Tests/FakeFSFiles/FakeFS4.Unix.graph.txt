@@ -1,0 +1,42 @@
+﻿/
+├── projects/
+│   ├── app1/
+│   │   ├── src/
+│   │   │   ├── main.c
+│   │   │   ├── util.c
+│   │   │   └── app.h
+│   │   ├── tests/
+│   │   │   ├── test_main.c
+│   │   │   └── test_util.c
+│   │   ├── build/
+│   │   │   ├── app1.bin
+│   │   │   └── app1.o
+│   │   ├── README.md
+│   │   └── Makefile
+│   ├── app2/
+│   │   ├── src/
+│   │   │   ├── app.py
+│   │   │   └── config.py
+│   │   ├── tests/
+│   │   │   └── test_app.py
+│   │   ├── README.txt
+│   │   └── requirements.txt
+│   ├── shared/
+│   │   ├── lib/
+│   │   │   ├── common.c
+│   │   │   └── common.h
+│   │   ├── include/
+│   │   │   ├── types.h
+│   │   │   └── constants.h
+│   │   └── LICENSE
+│   └── OVERVIEW.md
+├── docs/
+│   ├── api/
+│   │   ├── reference.md
+│   │   └── guide.md
+│   ├── tutorials/
+│   │   ├── getting-started.md
+│   │   └── advanced.md
+│   └── index.md
+├── README.md
+└── LICENSE

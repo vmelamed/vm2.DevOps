@@ -1,5 +1,4 @@
-﻿Globs.Tests\FakeFSFiles\FakeFS2.Unix.graph.txt
-/
+﻿/
 ├── root.txt
 │
 ├── folder1/

@@ -9,7 +9,10 @@ namespace vm2.DevOps.Glob.Api.Tests.FakeFileSystem;
 /// </remarks>
 public sealed partial class FakeFS : IFileSystem
 {
-    Func<string, bool> GetSegmentMatcher(string segment, Folder folder)
+    Func<string, bool> GetSegmentMatcher(
+        string segment,
+        Folder folder,
+        EnumerationOptions options)
     {
         if (segment is RecursiveWildcard)
             throw new ArgumentException($"The segment '{RecursiveWildcard}' is not allowed here.", nameof(segment));
@@ -17,14 +20,31 @@ public sealed partial class FakeFS : IFileSystem
             return _ => true;
         if (segment is ParentDir)
             return _ => folder.Parent is not null;
-        if (!segment.AsSpan().ContainsAny(Wildcards))
-            return a => Comparer.Compare(a, segment) == 0;
 
-        var regex = new Regex(
-                            Regex.Escape(segment).Replace(@"\*", ".*").Replace(@"\?", "."),  // TODO: add [], {}, etc. advanced patterns
-                            RegexOptions.Compiled | (IsWindows ? RegexOptions.IgnoreCase : RegexOptions.None));
+        if (segment.AsSpan().ContainsAny(Wildcards))
+        {
+            var regex = new Regex(
+                            Regex.Escape(segment).Replace(@"\*", ".*").Replace(@"\?", "."),  // TODO: add [], {}, etc. Windows advanced patterns?
+                            RegexOptions.ExplicitCapture | RegexOptions.IgnorePatternWhitespace | options.MatchCasing switch
+                            {
+                                MatchCasing.CaseSensitive => RegexOptions.None,
+                                MatchCasing.CaseInsensitive => RegexOptions.IgnoreCase,
+                                MatchCasing.PlatformDefault => IsWindows ? RegexOptions.IgnoreCase : RegexOptions.None,
+                                _ => throw new ArgumentOutOfRangeException(nameof(options), "Invalid MatchCasing value."),
+                            });
 
-        return regex.IsMatch;
+            return regex.IsMatch;
+        }
+
+        var comparer = options.MatchCasing switch
+                        {
+                            MatchCasing.CaseSensitive => StringComparer.Ordinal,
+                            MatchCasing.CaseInsensitive => StringComparer.OrdinalIgnoreCase,
+                            MatchCasing.PlatformDefault => Comparer,
+                            _ => throw new ArgumentOutOfRangeException(nameof(options), "Invalid MatchCasing value."),
+                        };
+
+        return a => comparer.Compare(a, segment) == 0;
     }
 
     public bool IsWindows { get; private set; }
@@ -45,7 +65,7 @@ public sealed partial class FakeFS : IFileSystem
         ReadOnlySpan<char> seg = nPath[range];
 
         // this buffer will hold the resulting full path
-        Span<char> buffer = stackalloc char[CurrentFolder.Path.Length + path.Length + 1];
+        Span<char> buffer = stackalloc char[2 * (CurrentFolder.Path.Length + path.Length)];
         int bufPos = 0;
 
         if (IsDrive(seg))
@@ -63,30 +83,34 @@ public sealed partial class FakeFS : IFileSystem
             seg = nPath[range];
         }
 
-        Stack<int> separatorIndices = new();    // used to go back when we see ParentDir segments
+        // used to memorise the separator indeces, so we can go back when we see ParentDir segments
+        Stack<int> separatorIndices = new();
 
         if (IsRootSegment(seg))
         {
             // root path - just copy it
             seg.CopyTo(buffer[bufPos..]);
             bufPos += seg.Length;
+
             moved = enumerator.MoveNext();
 
             if (!moved)
                 // done
-                return new string(buffer[..bufPos]);
+                return buffer[..bufPos].ToString();
+
+            separatorIndices.Push(bufPos - 1); // remember the position of the root separator
         }
         else
         {
             // prepend with current directory path
             CurrentFolder.Path.AsSpan().CopyTo(buffer);
 
-            // initialize the separator indices stack from the current path, skipping the terminating path separator
+            // initialize the separator indices stack from the current path, without the terminating path separator
             for (bufPos = 0; bufPos < CurrentFolder.Path.Length-1; bufPos++)
                 if (buffer[bufPos] is SepChar)
                     separatorIndices.Push(bufPos);
 
-            bufPos++;   // move past the terminating separator
+            bufPos++;   // move past the terminating path separator
         }
 
         do
@@ -99,11 +123,14 @@ public sealed partial class FakeFS : IFileSystem
 
             if (seg is ParentDir)
             {
-                // go back to the previous folder
-                if (!separatorIndices.TryPop(out bufPos))
-                    throw new ArgumentException("StartDir goes above the root folder.", nameof(path));
+                // go back to the parent folder
+                if (separatorIndices.TryPop(out bufPos) &&      // pop the last separator
+                    separatorIndices.TryPop(out bufPos))        // pop the previous separator to get to the parent folder
+                    bufPos++;                                       // move past the separator
+                else
+                    bufPos = RootFolder.Path.Length;                // we are at the root - Unix and Windows root behavior is
+                                                                    // the same here: do not throw exception but stay at root
 
-                bufPos++;   // move past the separator
                 continue;
             }
 
@@ -111,11 +138,11 @@ public sealed partial class FakeFS : IFileSystem
             seg.CopyTo(buffer[bufPos..]);
             bufPos += seg.Length;
 
-            // append separator if not the last segment
+            // append separator if it is not the last segment
             if (range.End.Value < nPath.Length)
             {
-                buffer[bufPos++] = SepChar;
-                separatorIndices.Push(bufPos);
+                buffer[bufPos] = SepChar;
+                separatorIndices.Push(bufPos++);  // remember the position of the separator in case we need to go back
             }
         }
         while (enumerator.MoveNext());
@@ -147,7 +174,7 @@ public sealed partial class FakeFS : IFileSystem
         string pattern,
         EnumerationOptions options)
     {
-        var (matchesPattern, folder) = PrepareToEnumerate(path, pattern);
+        var (matchesPattern, folder) = PrepareToEnumerate(path, pattern, options);
 
         if (matchesPattern is null || folder is null)
             yield break;
@@ -162,29 +189,16 @@ public sealed partial class FakeFS : IFileSystem
             yield return ParentDir;
 
         do
-        {
             foreach (var sub in folder.Folders)
             {
-                if (options.RecurseSubdirectories)
-                    // add its sub-folders to the queue of unprocessed unprocessedNodes
-                    foreach (var d in sub.Folders)
-                        unprocessedNodes!.Enqueue(d);
-
                 if (matchesPattern(sub.Name))
                     yield return sub.Path;
-            }
 
-            if ((unprocessedNodes?.Count ?? 0) > 0)
-            {
-                folder = unprocessedNodes!.Dequeue();
-                if (matchesPattern(folder.Name))
-                    yield return folder.Path;
+                if (options.RecurseSubdirectories)
+                    unprocessedNodes?.Enqueue(sub);
             }
-            else
-                break;
-        }
         // try to remove the next unprocessed folder from the queue, if any
-        while (true);
+        while (unprocessedNodes?.TryDequeue(out folder) is true);
     }
 
     public IEnumerable<string> EnumerateFiles(
@@ -192,7 +206,7 @@ public sealed partial class FakeFS : IFileSystem
         string pattern,
         EnumerationOptions options)
     {
-        var (matchesPattern, folder) = PrepareToEnumerate(path, pattern);
+        var (matchesPattern, folder) = PrepareToEnumerate(path, pattern, options);
 
         if (matchesPattern is null || folder is null)
             yield break;
@@ -201,27 +215,22 @@ public sealed partial class FakeFS : IFileSystem
 
         do
         {
-            foreach (var f in folder.Files)
-                if (matchesPattern(f))
-                    yield return folder.Path+f;
+            foreach (var file in folder.Files.Where(matchesPattern))
+                yield return folder.Path+file;
 
             if (options.RecurseSubdirectories)
                 foreach (var sub in folder.Folders)
                     // add its sub-folders to the queue of unprocessed unprocessedNodes
                     unprocessedNodes!.Enqueue(sub);
-
-            if ((unprocessedNodes?.Count ?? 0) > 0)
-                folder = unprocessedNodes!.Dequeue();
-            else
-                break;
         }
         // try to remove the next unprocessed folder from the queue, if any
-        while (true);
+        while (unprocessedNodes?.TryDequeue(out folder) is true);
     }
 
     (Func<string, bool>? matches, Folder? folder) PrepareToEnumerate(
         string path,
-        string pattern)
+        string pattern,
+        EnumerationOptions options)
     {
         // normalize the pattern and split into path and pattern
         var i = pattern.LastIndexOf(SepChar);
@@ -240,6 +249,6 @@ public sealed partial class FakeFS : IFileSystem
             return (null, null);
 
         // enumerate the folders from this folder's sub-tree
-        return (GetSegmentMatcher(pattern, folder), folder);
+        return (GetSegmentMatcher(pattern, folder, options), folder);
     }
 }

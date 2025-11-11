@@ -67,10 +67,12 @@ public partial class GlobsTests : IClassFixture<GlobTestsFixture>
     }
 
     [Theory]
+    [MemberData(nameof(Enumerate_CaseSensitivity_TestDataSet))]
+    [MemberData(nameof(Enumerate_RelativePaths_TestDataSet))]
     [MemberData(nameof(Enumerate_TestDataSet))]
-    [MemberData(nameof(GlobEnumerate_Unix_TestDataLargeSet))]
-    [MemberData(nameof(GlobEnumerate_Win_TestDataLargeSet))]
-    public void Should_Enumerate_GlobEnumerator(GlobEnumerate_TestData data)
+    [MemberData(nameof(Enumerate_Unix_TestDataLargeSet))]
+    [MemberData(nameof(Enumerate_Win_TestDataLargeSet))]
+    public void Should_Enumerate_GlobEnumerator(GlobEnumerateTheoryElement data)
     {
         var ge = _fixture.GetGlobEnumerator(data.File);
         ge.Enumerated          = data.Objects;
