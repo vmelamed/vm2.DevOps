@@ -218,16 +218,15 @@ public sealed partial class GlobEnumerator
             }
             else
             {
-                var subDirs = EnumerateDirectories(dir, pattern, regex, recursively);
                 // enqueue sub-directories for further searching
-                foreach (var subDir in subDirs)
+                foreach (var subDir in EnumerateDirectories(dir, pattern, regex, recursively))
                     // recursively go into the sub-tree and enumerate both files and directories recursively as well if the next component is the last
                     _enumerationQueue.Enqueue((subDir, nextPatternComponentRange, false));
             }
         }
     }
 
-    IReadOnlyList<string> EnumerateFiles(
+    IEnumerable<string> EnumerateFiles(
         string dir,
         string pattern,
         string regex,
@@ -248,7 +247,9 @@ public sealed partial class GlobEnumerator
                         .Where(file => rex.IsMatch(LastComponent(file)))
                         ;
         }
+        return result;
 
+#if false
         var list = result
                         .ToList()
                         ;
@@ -263,9 +264,10 @@ public sealed partial class GlobEnumerator
                 dir, recursively ? "(recursively)" : "", string.Join("\n          file: ", list));
 
         return list;
+#endif
     }
 
-    IReadOnlyList<string> EnumerateDirectories(
+    IEnumerable<string> EnumerateDirectories(
         string dir,
         string pattern,
         string regex,
@@ -287,6 +289,8 @@ public sealed partial class GlobEnumerator
                         ;
         }
 
+        return result.Select(p => p.EndsWith(SepChar) ? p : p + SepChar);
+#if false
         var list = result
                         .Select(p => p.EndsWith(SepChar) ? p : p + SepChar)
                         .ToList()
@@ -302,6 +306,7 @@ public sealed partial class GlobEnumerator
             dir, recursively, string.Join("\n          dir:  ", list));
 
         return list;
+#endif
     }
 
     /// <summary>

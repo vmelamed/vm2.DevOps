@@ -12,7 +12,6 @@ public sealed class GlobTestsFixture : IDisposable
                         builder =>
                             builder
                                 .ClearProviders()
-                                //.AddProvider(new XunitLoggerProvider())
                                 .AddConsole()
                                 .SetMinimumLevel(LogLevel.Trace)
                         )
