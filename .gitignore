@@ -418,7 +418,7 @@ report.txt
 *.bak
 *.backup
 *.BLOB
-*[Ss]cratch*
-*[Ss]cratch*/
+*[Ss][Cc][Rr][Aa][Tt][Cc][Hh]*
+*[Ss][Cc][Rr][Aa][Tt][Cc][Hh]*/
 _ignore
 *[Ii][Nn][Ss][Tt][Rr][Uu][Cc][Tt][Ii][Oo][Nn][Ss]*.[Mm][Dd]

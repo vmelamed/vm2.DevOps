@@ -174,24 +174,33 @@ public sealed partial class FakeFS : IFileSystem
         string pattern,
         EnumerationOptions options)
     {
-        var (matchesPattern, folder) = PrepareToEnumerate(path, pattern, options);
+        var (patternMatches, folder) = PrepareToEnumerate(path, pattern, options);
 
-        if (matchesPattern is null || folder is null)
+        if (patternMatches is null || folder is null)
             yield break;
 
         Queue<Folder>? unprocessedNodes = options.RecurseSubdirectories ? new() : null;
 
-        // return current and parent directories if they match the pattern
-        if (matchesPattern(CurrentDir))
-            yield return CurrentDir;
-        if (folder.Parent is not null &&
-            matchesPattern(ParentDir))
-            yield return ParentDir;
+        if (options.ReturnSpecialDirectories)
+        {
+            // return current directory "." if it matches the pattern
+            if (patternMatches(CurrentDir))
+                yield return CurrentDir;
+
+            // return parent directory if it exists and matches the pattern
+            // if recursive, start recursion from the parent directory
+            if (folder.Parent is not null && patternMatches(ParentDir))
+            {
+                // return parent directory ".." if it matches the pattern
+                if (patternMatches(ParentDir))
+                    yield return ParentDir;
+            }
+        }
 
         do
             foreach (var sub in folder.Folders)
             {
-                if (matchesPattern(sub.Name))
+                if (patternMatches(sub.Name))
                     yield return sub.Path;
 
                 if (options.RecurseSubdirectories)

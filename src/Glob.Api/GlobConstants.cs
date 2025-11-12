@@ -202,7 +202,7 @@ public static partial class GlobConstants
     internal static partial Regex WindowsEnvVar();
 
     /// <summary>
-    /// Gets a <see cref="Regex"/> object for validating recursive wildcard patterns.
+    /// Gets a <see cref="Regex"/> object for detecting invalid recursive wildcard patterns.
     /// </summary>
     /// <remarks>
     /// Recursive wildcard '**' cannot be preceded by anything other than a '/' or be at the beginning of the pattern string;
@@ -215,6 +215,15 @@ public static partial class GlobConstants
     /// </returns>
     [GeneratedRegex(@"(?<! ^ | /) \*\* | \*\* (?! $ | /)", unixOptions)]
     internal static partial Regex InvalidRecursive();
+
+    /// <summary>
+    /// Gets a <see cref="Regex"/> object for matching recursive wildcards '**'.
+    /// </summary>
+    /// <returns>
+    /// A <see cref="Regex"/> object configured to identify matching recursive wildcards '**'.
+    /// </returns>
+    [GeneratedRegex(@"\*\*")]
+    internal static partial Regex Recursive();
 
     /// <summary>
     /// Gets a <see cref="Regex"/> object for matching recursive wildcards '**' at the end of a pattern.
@@ -253,6 +262,12 @@ public static partial class GlobConstants
     const string NmClassRegex = $"""
         (?<brcol> \[: ) (alnum | alpha | blank | cntrl | digit | graph | lower | print | punct | space | upper | xdigit) (?<-brcol> :\] )
         """;
+
+    // Idea: "\*(?<! (([^\\]\\)|(^\\))\*)" might implement the escaping rules for the special characters *, ?, and [:
+    // - <non-backslash>*              - is a wildcard
+    // - <non-backslash><backslash>*   - is a literal *
+    // - <start of string><backslash>* - is a literal *
+    // - <backslash><backslash>*       - is a literal <backslash> followed by a wildcard
 
     const string GlobExpressionRegex = $"""
           (?<{SeqWildcardGr}> \* )
@@ -310,6 +325,11 @@ public static partial class GlobConstants
     /// Represents the dirPath of the parent directory of the current working directory as a dirPath segment.
     /// </summary>
     public const string ParentDir = "..";
+
+    /// <summary>
+    /// Represents the asterisk character used in <see cref="SequenceWildcard"/> and <see cref="RecursiveWildcard"/>
+    /// </summary>
+    public const char Asterisk = '*';
 
     /// <summary>
     /// Represents a recursive wildcard pattern that matches all levels of a directory hierarchy fromIndex "here" - down.

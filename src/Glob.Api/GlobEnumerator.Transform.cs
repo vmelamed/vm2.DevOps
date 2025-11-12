@@ -28,6 +28,59 @@ public sealed partial class GlobEnumerator
     }
 
     /// <summary>
+    /// Normalizes the specified pattern by converting separators, removing duplicates, and determining the starting directory.
+    /// Also sets the _fromDir field.
+    /// </summary>
+    /// <param name="pattern"></param>
+    /// <returns></returns>
+    (string normPattern, string fromDir) NormalizePatternStartFromDir(string pattern)
+    {
+        Span<char> patternSpan = stackalloc char[pattern.Length];
+        int start;
+        var end = pattern.EndsWith(SepChar) ? pattern.Length - 1 : pattern.Length;  // trim a trailing separator
+        string fromDir = "";
+
+        pattern.AsSpan().CopyTo(patternSpan);
+
+        var m = FileSystemRoot.Match(pattern);   // if it starts with a root or drive like `C:/` or just `/`
+        if (m.Success)
+        {
+            // then ignore EnumerateFromFolder and the current folder and start from the root of the file system
+            fromDir = m.Value;
+            start   = m.Length; // skip the root part in the pattern - it is reflected in fromDir
+        }
+        else
+        {
+            // get the full path of EnumerateFromFolder relative to the current dir
+            fromDir = _fileSystem.GetFullPath(EnumerateFromFolder);
+            start   = 0;        // start from the beginning
+        }
+
+        char prev1 = '\0';  // the char previous to the current char
+        char prev2 = '\0';  // the char before the previous char
+        int i = start;
+
+        for (var j = start; j < end; j++)
+        {
+            var ch = patternSpan[j];
+            var c = ch is WinSepChar ? SepChar : ch;    // convert Windows separators to Unix-style
+
+            if (c is SepChar && prev1 is SepChar)        // Skip duplicate separators
+                continue;
+
+            if (c is Asterisk && prev1 is Asterisk && prev2 is Asterisk)    // Skip asterisks after the recursive wildcard
+                continue;
+
+            // slide by one
+            prev2 = prev1;
+            prev1 = c;
+            patternSpan[i++] = c;
+        }
+
+        return (patternSpan[start..i].ToString(), fromDir);
+    }
+
+    /// <summary>
     /// Translates a glob pattern to .NET pattern used in EnumerateDirectories and to a regex pattern for final filtering.
     /// </summary>
     /// <param name="glob">The glob to translate.</param>
@@ -129,7 +182,7 @@ public sealed partial class GlobEnumerator
     static ReadOnlySpan<char> TransformClass(string globClass)
     {
         var globReader = new SpanReader(globClass);
-        var globWriter = new SpanWriter(new Memory<char>(new char[10*globClass.Length]).Span);
+        var globWriter = new SpanWriter(new Memory<char>(new char[32*globClass.Length]).Span);
 
         // the first char(s) can be '!' or ']' or '!]' that need special handling
         if (globReader.Peek() is '!')
