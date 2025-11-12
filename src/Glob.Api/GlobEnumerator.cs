@@ -79,7 +79,7 @@ public sealed partial class GlobEnumerator
     /// When set to <c>true</c>, duplicate results will be removed from the final output. This is useful when patterns may lead
     /// to overlapping matches, e.g., /**/docs/**/*.txt.
     /// </remarks>
-    public bool DistinctResults { get; set; } = true;
+    public bool DistinctResults { get; set; } = false;
 
     /// <summary>
     /// Gets or sets the logger instance used to log messages for the <see cref="GlobEnumerator"/> class.
