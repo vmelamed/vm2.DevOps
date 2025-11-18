@@ -7,7 +7,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // SPACES IN FILENAMES AND DIRECTORY NAMES - Unix
         // ==========================================================================================================
-        //                                         fsFile  glob                                           cwd    start                         objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                           cwd    start                         objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Unix: Files with spaces - exact match"),
                                                    "FakeFSFiles/FakeFS6.Unix.json",
                                                            "/special-chars/spaces in names/file with spaces.txt", "/", "/",              Objects.Files,   MatchCasing.PlatformDefault, false,  "/special-chars/spaces in names/file with spaces.txt"),
@@ -35,7 +35,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // SYMBOL CHARACTERS (@, $, #, ~, _, -) - Unix
         // ==========================================================================================================
-        //                                         fsFile  glob                                           cwd    start                         objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                           cwd    start                         objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Unix: Files with @ symbol"),
                                                    "FakeFSFiles/FakeFS6.Unix.json",
                                                            "/special-chars/symbols/*@*.txt",              "/",   "/",                          Objects.Files,   MatchCasing.PlatformDefault, false,  "/special-chars/symbols/file@home.txt"),
@@ -75,7 +75,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // UNICODE CHARACTERS - Unix
         // ==========================================================================================================
-        //                                         fsFile  glob                                           cwd    start                         objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                           cwd    start                         objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Unix: Cyrillic filename exact match"),
                                                    "FakeFSFiles/FakeFS6.Unix.json",
                                                            "/special-chars/unicode/файл.txt",             "/",   "/",                          Objects.Files,   MatchCasing.PlatformDefault, false,  "/special-chars/unicode/файл.txt"),
@@ -123,7 +123,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // MIXED SPECIAL CHARACTERS - Unix
         // ==========================================================================================================
-        //                                         fsFile  glob                                           cwd    start                         objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                           cwd    start                         objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Unix: Mixed special - space and @"),
                                                    "FakeFSFiles/FakeFS6.Unix.json",
                                                            "/special-chars/mixed/*@*.txt",                "/",   "/",                          Objects.Files,   MatchCasing.PlatformDefault, false,  "/special-chars/mixed/my file@2024.txt"),
@@ -147,7 +147,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // DOTS AND DASHES - Unix
         // ==========================================================================================================
-        //                                         fsFile  glob                                           cwd    start                         objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                           cwd    start                         objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Unix: Single dot hidden file"),
                                                    "FakeFSFiles/FakeFS6.Unix.json",
                                                            "/special-chars/dots-and-dashes/.hidden",      "/",   "/",                          Objects.Files,   MatchCasing.PlatformDefault, false,  "/special-chars/dots-and-dashes/.hidden"),
@@ -183,7 +183,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // PARENTHESES IN FILENAMES - Unix
         // ==========================================================================================================
-        //                                         fsFile  glob                                           cwd    start                         objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                           cwd    start                         objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Unix: File with (1) suffix"),
                                                    "FakeFSFiles/FakeFS6.Unix.json",
                                                            "/special-chars/parentheses/file(1).txt",      "/",   "/",                          Objects.Files,   MatchCasing.PlatformDefault, false,  "/special-chars/parentheses/file(1).txt"),
@@ -215,7 +215,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // BRACKETS IN FILENAMES (literal brackets, not glob patterns) - Unix
         // ==========================================================================================================
-        //                                         fsFile  glob                                           cwd    start                         objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                           cwd    start                         objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Unix: Literal bracket in filename - array[0].txt"),
                                                    "FakeFSFiles/FakeFS6.Unix.json",
                                                            "/special-chars/brackets/array[[]0[]].txt",    "/",   "/",                          Objects.Files,   MatchCasing.PlatformDefault, false,  "/special-chars/brackets/array[0].txt"),
@@ -243,27 +243,27 @@ public partial class GlobsTests
         // ==========================================================================================================
         // RECURSIVE SEARCH WITH SPECIAL CHARACTERS - Unix
         // ==========================================================================================================
-        //                                         fsFile  glob                                           cwd    start                         objects          MatchCasing                  throws  results...
-        new GlobEnumerateTheoryElement(TestFileLine("Unix: Recursive search for files with @"),
+        //                                         fsFile  glob                                           cwd    start                         objects          _matchCasing                  throws  results...
+        new GlobEnumerateTheoryElement(TestFileLine("Unix: RecursiveRegex search for files with @"),
                                                    "FakeFSFiles/FakeFS6.Unix.json",
                                                            "/special-chars/**/*@*",                       "/",   "/",                          Objects.Files,   MatchCasing.PlatformDefault, false,  "/special-chars/mixed/my file@2024.txt", "/special-chars/root-special@file.txt", "/special-chars/symbols/file@home.txt"),
 
-        new GlobEnumerateTheoryElement(TestFileLine("Unix: Recursive search for files with spaces"),
+        new GlobEnumerateTheoryElement(TestFileLine("Unix: RecursiveRegex search for files with spaces"),
                                                    "FakeFSFiles/FakeFS6.Unix.json",
                                                            "/special-chars/**/* *",                       "/",   "/",                          Objects.Files,   MatchCasing.PlatformDefault, false,  "/special-chars/mixed/backup~file (copy).bak", "/special-chars/mixed/my file@2024.txt", "/special-chars/mixed/test_file #1.dat", "/special-chars/spaces in names/another file.dat", "/special-chars/spaces in names/file with spaces.txt", "/special-chars/spaces in names/test file 123.log"),
 
-        new GlobEnumerateTheoryElement(TestFileLine("Unix: Recursive search for .txt files"),
+        new GlobEnumerateTheoryElement(TestFileLine("Unix: RecursiveRegex search for .txt files"),
                                                    "FakeFSFiles/FakeFS6.Unix.json",
                                                            "/special-chars/**/*.txt",                     "/",   "/",                          Objects.Files,   MatchCasing.PlatformDefault, false,  "/special-chars/brackets/[prefix]file.txt", "/special-chars/brackets/array[0].txt", "/special-chars/dots-and-dashes/file.name.with.dots.txt", "/special-chars/mixed/my file@2024.txt", "/special-chars/parentheses/(start)file.txt", "/special-chars/parentheses/file(1).txt", "/special-chars/root-special@file.txt", "/special-chars/spaces in names/file with spaces.txt", "/special-chars/symbols/file@home.txt", "/special-chars/unicode/naïve.txt", "/special-chars/unicode/файл.txt", "/special-chars/unicode/Ὀδυσσεύς.txt"),
 
-        new GlobEnumerateTheoryElement(TestFileLine("Unix: Recursive search all special-chars"),
+        new GlobEnumerateTheoryElement(TestFileLine("Unix: RecursiveRegex search all special-chars"),
                                                    "FakeFSFiles/FakeFS6.Unix.json",
                                                            "/special-chars/**/*",                         "/",   "/",                          Objects.Files,   MatchCasing.PlatformDefault, false,  "/special-chars/another~file.dat", "/special-chars/brackets/[prefix]file.txt", "/special-chars/brackets/array[0].txt", "/special-chars/brackets/data[index].dat", "/special-chars/brackets/test[1][2].log", "/special-chars/dots-and-dashes/..double", "/special-chars/dots-and-dashes/...triple", "/special-chars/dots-and-dashes/.hidden", "/special-chars/dots-and-dashes/file.name.with.dots.txt", "/special-chars/dots-and-dashes/hyphen-file-name.dat", "/special-chars/dots-and-dashes/under_score_file.log", "/special-chars/mixed/backup~file (copy).bak", "/special-chars/mixed/data-2024_v1.csv", "/special-chars/mixed/my file@2024.txt", "/special-chars/mixed/test_file #1.dat", "/special-chars/parentheses/(start)file.txt", "/special-chars/parentheses/data(copy).dat", "/special-chars/parentheses/file(1).txt", "/special-chars/parentheses/file(end)", "/special-chars/parentheses/test(final)(2).log", "/special-chars/root-special@file.txt", "/special-chars/spaces in names/another file.dat", "/special-chars/spaces in names/file with spaces.txt", "/special-chars/spaces in names/test file 123.log", "/special-chars/symbols/backup~old.bak", "/special-chars/symbols/config#main.ini", "/special-chars/symbols/data$1.csv", "/special-chars/symbols/file@home.txt", "/special-chars/symbols/report_2024.pdf", "/special-chars/symbols/script-v1.sh", "/special-chars/unicode/café.md", "/special-chars/unicode/naïve.txt", "/special-chars/unicode/résumé.pdf", "/special-chars/unicode/Ὀδυσσεύς.txt", "/special-chars/unicode/файл.txt", "/special-chars/unicode/文档.doc"),
 
         // ==========================================================================================================
         // WINDOWS TESTS - Same patterns but with Windows paths
         // ==========================================================================================================
-        //                                         fsFile  glob                                           cwd    start                         objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                           cwd    start                         objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Win: Files with spaces - *.txt"),
                                                    "FakeFSFiles/FakeFS6.Win.json",
                                                            "C:/special-chars/spaces in names/*.txt",      "C:/", "C:/",                        Objects.Files,   MatchCasing.PlatformDefault, false,  "C:/special-chars/spaces in names/file with spaces.txt"),
@@ -284,11 +284,11 @@ public partial class GlobsTests
                                                    "FakeFSFiles/FakeFS6.Win.json",
                                                            "C:/special-chars/brackets/array[[]0[]].txt",  "C:/", "C:/",                        Objects.Files,   MatchCasing.PlatformDefault, false,  "C:/special-chars/brackets/array[0].txt"),
 
-        new GlobEnumerateTheoryElement(TestFileLine("Win: Recursive search for files with @"),
+        new GlobEnumerateTheoryElement(TestFileLine("Win: RecursiveRegex search for files with @"),
                                                    "FakeFSFiles/FakeFS6.Win.json",
                                                            "C:/special-chars/**/*@*",                     "C:/", "C:/",                        Objects.Files,   MatchCasing.PlatformDefault, false,  "C:/special-chars/mixed/my file@2024.txt", "C:/special-chars/root-special@file.txt", "C:/special-chars/symbols/file@home.txt"),
 
-        new GlobEnumerateTheoryElement(TestFileLine("Win: Recursive .txt with special chars"),
+        new GlobEnumerateTheoryElement(TestFileLine("Win: RecursiveRegex .txt with special chars"),
                                                    "FakeFSFiles/FakeFS6.Win.json",
                                                            "C:/special-chars/**/*.txt",                   "C:/", "C:/",                        Objects.Files,   MatchCasing.PlatformDefault, false,  "C:/special-chars/brackets/[prefix]file.txt", "C:/special-chars/brackets/array[0].txt", "C:/special-chars/dots-and-dashes/file.name.with.dots.txt", "C:/special-chars/mixed/my file@2024.txt", "C:/special-chars/parentheses/(start)file.txt", "C:/special-chars/parentheses/file(1).txt", "C:/special-chars/root-special@file.txt", "C:/special-chars/spaces in names/file with spaces.txt", "C:/special-chars/symbols/file@home.txt", "C:/special-chars/unicode/naïve.txt", "C:/special-chars/unicode/файл.txt", "C:/special-chars/unicode/Ὀδυσσεύς.txt"),
     ];

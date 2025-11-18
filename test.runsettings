@@ -19,9 +19,9 @@ For more information on using a .runsettings file, see https://aka.ms/vstest-run
         <AppDomain>denied</AppDomain>
         <!-- "required", "denied", "ifAvailable" -->
         <Culture>en-US</Culture>
-        <DiagnosticMessages>false</DiagnosticMessages>
+        <DiagnosticMessages>true</DiagnosticMessages>
         <!-- true to enable, false to disable -->
-        <InternalDiagnostics>false</InternalDiagnostics>
+        <InternalDiagnostics>true</InternalDiagnostics>
         <!-- true to enable, false to disable -->
         <LongRunningTestSeconds>5</LongRunningTestSeconds>
         <!-- 0 to disable -->

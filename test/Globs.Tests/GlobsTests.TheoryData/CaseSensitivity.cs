@@ -7,7 +7,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // CASE SENSITIVITY: Unix (default: case-sensitive)
         // ==========================================================================================================
-        //                                         fsFile  glob                                  cwd    start       objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                  cwd    start       objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Unix: Match lowercase file only (default: case-sensitive)"),
                                                    "FakeFSFiles/FakeFS5.Unix.json",
                                                            "/mixed/*/file.txt",                  "/",   "/",        Objects.Files,   MatchCasing.PlatformDefault, false,  "/mixed/CaseSensitive/file.txt"),
@@ -53,9 +53,9 @@ public partial class GlobsTests
                                                            "/mixed/Index.html",                  "/",   "/",        Objects.Files,   MatchCasing.PlatformDefault, false,  "/mixed/Index.html"),
 
         // ==========================================================================================================
-        // CASE SENSITIVITY: Unix with EXPLICIT MatchCasing.CaseInsensitive override
+        // CASE SENSITIVITY: Unix with EXPLICIT _matchCasing.CaseInsensitive override
         // ==========================================================================================================
-        //                                         fsFile  glob                                  cwd    start       objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                  cwd    start       objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Unix: OVERRIDE to case-insensitive - file.txt matches all"),
                                                    "FakeFSFiles/FakeFS5.Unix.json",
                                                            "/mixed/*/file.txt",                  "/",   "/",        Objects.Files,   MatchCasing.CaseInsensitive, false,  "/mixed/CaseSensitive/FILE.TXT", "/mixed/CaseSensitive/File.txt", "/mixed/CaseSensitive/file.txt"),
@@ -89,9 +89,9 @@ public partial class GlobsTests
                                                            "/mixed/**/*.md",                     "/",   "/",        Objects.Files,   MatchCasing.CaseInsensitive, false,  "/mixed/casesensitive/README.md", "/mixed/casesensitive/ReadMe.md", "/mixed/casesensitive/readme.md"),
 
         // ==========================================================================================================
-        // CASE SENSITIVITY: Unix with EXPLICIT MatchCasing.CaseSensitive (redundant but explicit)
+        // CASE SENSITIVITY: Unix with EXPLICIT _matchCasing.CaseSensitive (redundant but explicit)
         // ==========================================================================================================
-        //                                         fsFile  glob                                  cwd    start       objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                  cwd    start       objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Unix: EXPLICIT case-sensitive - file.txt only"),
                                                    "FakeFSFiles/FakeFS5.Unix.json",
                                                            "/mixed/*/file.txt",                  "/",   "/",        Objects.Files,   MatchCasing.CaseSensitive,   false,  "/mixed/CaseSensitive/file.txt"),
@@ -103,7 +103,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // CASE SENSITIVITY: Windows (default: case-insensitive)
         // ==========================================================================================================
-        //                                         fsFile  glob                                  cwd    start       objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                  cwd    start       objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Win: Match index.html (default: case-insensitive)"),
                                                    "FakeFSFiles/FakeFS5.Win.json",
                                                            "C:/mixed/index.html",                "C:/", "C:/",      Objects.Files,   MatchCasing.PlatformDefault, false,  "C:/mixed/Index.html"),
@@ -141,9 +141,9 @@ public partial class GlobsTests
                                                            "C:/mixed/README.MD",                 "C:/", "C:/",      Objects.Files,   MatchCasing.PlatformDefault, false,  "C:/mixed/readme.md"),
 
         // ==========================================================================================================
-        // CASE SENSITIVITY: Windows with EXPLICIT MatchCasing.CaseSensitive override
+        // CASE SENSITIVITY: Windows with EXPLICIT _matchCasing.CaseSensitive override
         // ==========================================================================================================
-        //                                         fsFile  glob                                  cwd    start       objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                  cwd    start       objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Win: OVERRIDE to case-sensitive - Index.html only"),
                                                    "FakeFSFiles/FakeFS5.Win.json",
                                                            "C:/mixed/Index.html",                "C:/", "C:/",      Objects.Files,   MatchCasing.CaseSensitive,   false,  "C:/mixed/Index.html"),
@@ -173,9 +173,9 @@ public partial class GlobsTests
                                                            "C:/mixed/README.md",                 "C:/", "C:/",      Objects.Files,   MatchCasing.CaseSensitive,   false),
 
         // ==========================================================================================================
-        // CASE SENSITIVITY: Windows with EXPLICIT MatchCasing.CaseInsensitive (redundant but explicit)
+        // CASE SENSITIVITY: Windows with EXPLICIT _matchCasing.CaseInsensitive (redundant but explicit)
         // ==========================================================================================================
-        //                                         fsFile  glob                                  cwd    start       objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                  cwd    start       objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Win: EXPLICIT case-insensitive - index.html"),
                                                    "FakeFSFiles/FakeFS5.Win.json",
                                                            "C:/mixed/index.html",                "C:/", "C:/",      Objects.Files,   MatchCasing.CaseInsensitive, false,  "C:/mixed/Index.html"),
@@ -187,7 +187,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // CASE SENSITIVITY: Complex patterns with case variations
         // ==========================================================================================================
-        //                                         fsFile  glob                                  cwd    start       objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                  cwd    start       objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Unix: Bracket expression case-sensitive [Tt]est.dat"),
                                                    "FakeFSFiles/FakeFS5.Unix.json",
                                                            "/mixed/*/[Tt]est.dat",               "/",   "/",        Objects.Files,   MatchCasing.PlatformDefault, false,  "/mixed/CaseSensitive/Test.dat",  "/mixed/CaseSensitive/test.dat"),

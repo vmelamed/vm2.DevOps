@@ -108,7 +108,7 @@ public ref struct SpanReader
     /// </summary>
     /// <returns></returns>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
-    public char Peek()
+    public readonly char Peek()
     {
         if (IsEmpty)
             throw new ArgumentOutOfRangeException("", "Not enough characters in span");
@@ -124,7 +124,7 @@ public ref struct SpanReader
     /// characters in the span.</remarks>
     /// <returns>A <see cref="ReadOnlySpan{T}"/> of characters representing the remaining portion of the span.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when there are no more characters in the span, i.e., when the span is empty.</exception>
-    public ReadOnlySpan<char> PeekAll()
+    public readonly ReadOnlySpan<char> PeekAll()
     {
         if (IsEmpty)
             throw new ArgumentOutOfRangeException(nameof(Position), "No more characters in span");

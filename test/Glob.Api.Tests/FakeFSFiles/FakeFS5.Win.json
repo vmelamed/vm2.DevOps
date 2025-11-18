@@ -1,0 +1,10 @@
+{
+  "name": "C:/",
+  "folders": [
+    {
+      "name": "mixed",
+      "files": [ "Index.html", "Test.dat", "readme.md", "data.json" ]
+    }
+  ],
+  "files": []
+}

@@ -1,19 +1,19 @@
 ﻿namespace vm2.DevOps.Glob.Api;
 
 /// <summary>
-/// Represents a glob pattern searcher.
+/// Represents a glob _glob searcher.
 /// </summary>
 public sealed partial class GlobEnumerator
 {
     /// <summary>
-    /// Escapes a span of characters for use in a regular expression pattern.
+    /// Escapes a span of characters for use in a regular expression _glob.
     /// </summary>
     /// <remarks>
     /// Basically a rewrite of <see cref="Regex.Escape"/> for spans.<para/>
     /// <b>Note</b> that if no character was escaped, the method will return the original span, saving one allocation.
     /// </remarks>
     /// <param name="span">The span of characters to escape.</param>
-    public static ReadOnlySpan<char> RegexEscape(ReadOnlySpan<char> span)
+    static ReadOnlySpan<char> RegexEscape(ReadOnlySpan<char> span)
     {
         var writer = new SpanWriter(stackalloc char[2*span.Length]);
 
@@ -28,33 +28,35 @@ public sealed partial class GlobEnumerator
     }
 
     /// <summary>
-    /// Normalizes the specified pattern by converting separators, removing duplicates, and determining the starting directory.
-    /// Also sets the _fromDir field.
+    /// Normalizes the specified GlobRegex by converting separators, removing duplicate / and *, and determining the starting directory.
+    /// Copies the normalized pattern into _glob.
+    /// Also sets the _fromDir field based on the FromDirectory and the contents of the glob.
     /// </summary>
-    /// <param name="pattern"></param>
     /// <returns></returns>
-    (string normPattern, string fromDir) NormalizePatternStartFromDir(string pattern)
+    (string normPattern, string fromDir) NormalizeGlobAndStartDir()
     {
-        Span<char> patternSpan = stackalloc char[pattern.Length];
         int start;
-        var end = pattern.EndsWith(SepChar) ? pattern.Length - 1 : pattern.Length;  // trim a trailing separator
+        var end = Glob.EndsWith(SepChar) ? Glob.Length - 1 : Glob.Length;  // ignore a trailing separator
         string fromDir = "";
+        var m = FileSystemRoot.Match(Glob);
 
-        pattern.AsSpan().CopyTo(patternSpan);
-
-        var m = FileSystemRoot.Match(pattern);   // if it starts with a root or drive like `C:/` or just `/`
+        // if it starts with a root or drive like `C:/` or just `/`
         if (m.Success)
         {
-            // then ignore EnumerateFromFolder and the current folder and start from the root of the file system
+            // then ignore _enumerateFromDirectory and the current directory and start from the root of the file system
             fromDir = m.Value;
-            start   = m.Length; // skip the root part in the pattern - it is reflected in fromDir
+            start   = m.Length; // skip the root part in the GlobRegex - it is reflected in fromDir
         }
         else
         {
-            // get the full path of EnumerateFromFolder relative to the current dir
-            fromDir = _fileSystem.GetFullPath(EnumerateFromFolder);
+            // get the full path of FromDirectory relative to the current dir
+            fromDir = _fileSystem.GetFullPath(FromDirectory is "" ? CurrentDir : FromDirectory);
             start   = 0;        // start from the beginning
         }
+
+        Span<char> patternSpan = stackalloc char[Glob.Length];
+
+        Glob.AsSpan().CopyTo(patternSpan);
 
         char prev1 = '\0';  // the char previous to the current char
         char prev2 = '\0';  // the char before the previous char
@@ -65,11 +67,11 @@ public sealed partial class GlobEnumerator
             var ch = patternSpan[j];
             var c = ch is WinSepChar ? SepChar : ch;    // convert Windows separators to Unix-style
 
-            if (c is SepChar && prev1 is SepChar)        // Skip duplicate separators
-                continue;
+            if (c is SepChar && prev1 is SepChar)                           // Skip duplicate separators
+                continue;                                                   // / <=> // <=> /// ...
 
             if (c is Asterisk && prev1 is Asterisk && prev2 is Asterisk)    // Skip asterisks after the recursive wildcard
-                continue;
+                continue;                                                   // ** <=> *** <=> **** ...
 
             // slide by one
             prev2 = prev1;
@@ -81,38 +83,35 @@ public sealed partial class GlobEnumerator
     }
 
     /// <summary>
-    /// Translates a glob pattern to .NET pattern used in EnumerateDirectories and to a regex pattern for final filtering.
+    /// Translates a glob _glob to .NET _glob used in EnumerateDirectories and to a regex _glob for final filtering.
     /// </summary>
     /// <param name="glob">The glob to translate.</param>
-    /// <returns>A .NET path segment pattern and the corresponding <see cref="Regex"/></returns>
+    /// <returns>A .NET path segment _glob and the corresponding <see cref="Regex"/></returns>
     (string pattern, string regex) GlobToRegex(string glob)
     {
         // shortcut the easy cases
-        switch (glob)
+        var (pattern, regex) = glob switch {
+            "" => (SequenceWildcard, _fileSystem.NameSequence),     // "*", ".*"
+            SequenceWildcard => (glob, _fileSystem.NameSequence),   // "*", ".*"
+            CharacterWildcard => (glob, _fileSystem.NameCharacter), // "?", "."
+            RecursiveWildcard => ("", ""),                          // "", ""
+            CurrentDir or ParentDir => (glob, ""),                  // ".", "" or "..", ""
+            _ => default                                            // null, null
+        };
+
+        if (pattern is not null)
         {
-            case null:
-                throw new ArgumentNullException(nameof(glob));
-            case "":
-                return (glob, "");
-            case SequenceWildcard:  // "*"
-                return (glob, _fileSystem.SequenceRegex());
-            case CharacterWildcard: // "?"
-                return (glob, _fileSystem.CharacterRegex());
-            case RecursiveWildcard: // "**"
-                return ("", "");
-            case CurrentDir or ParentDir:   // "." or ".."
-                return (glob, "");
-            default:
-                break;
+            Debug.Assert(regex is not null);
+            return (pattern, regex);
         }
 
-        // find all wildcard matches in the glob
-        var matches = GlobExpression().Matches(glob);
+        var matches = GlobExpressionRegex().Matches(glob);
 
-        if (matches.Count == 0)
+        if (matches.Count is 0)                                     // no wildcards
         {
-            var regex = RegexEscape(glob);
-            return (glob, glob.Length!=regex.Length ? regex.ToString() : ""); // no wildcards
+            var escGlob = RegexEscape(glob);
+            return (glob,
+                    glob.Length!=escGlob.Length ? escGlob.ToString() : "");
         }
 
         // now the glob can be thought of as a sequence of non-matching and matching slices:
@@ -123,7 +122,7 @@ public sealed partial class GlobEnumerator
         var globReader = new SpanReader(glob.AsSpan());
         // escape the non-matches and translate the matches to regex equivalents
         var rexWriter = new SpanWriter(stackalloc char[32*glob.Length]);
-        // copy the non-matches and translate the matches to file system pattern equivalents - * and ?
+        // copy the non-matches and translate the matches to file system _glob equivalents - * and ?
         var patWriter = new SpanWriter(stackalloc char[32*glob.Length]);
 
         // replace all wildcards with '*'
@@ -157,11 +156,12 @@ public sealed partial class GlobEnumerator
             patWriter.Write(finalNonMatch);
         }
 
-        return (patWriter.Chars.ToString(), rexWriter.Chars.ToString());
+        return (patWriter.Chars.ToString(),
+                rexWriter.Chars.ToString());
     }
 
     (string pattern, string regex) TranslateGlobExpression(Match match)
-        // At this point, we know that match is one of the glob expression elements: *, ?, [class], [!class], where a class is a
+        // Match is one of the glob expression wildcards: *, ?, [class], [!class], where a class is a
         // sequence of letters (e.g. 'abc..'), letter ranges (e.g. '0-9'), and named classes (e.g. [:alnum:]. We need to
         // identify and replace the match its respective regex equivalents:
         // * => .*
@@ -173,10 +173,10 @@ public sealed partial class GlobEnumerator
             g => !string.IsNullOrWhiteSpace(g.Name)
               && !char.IsDigit(g.Name[0])
               && !string.IsNullOrWhiteSpace(g.Value)) switch {
-                { Name: SeqWildcardGr } asterisk => (SequenceWildcard, _fileSystem.SequenceRegex()),     // no need to filter the results
-                { Name: CharWildcardGr } question => (CharacterWildcard, _fileSystem.CharacterRegex()),
-                { Name: ClassGr } chrClass => (CharacterWildcard, $"[{TransformClass(chrClass.Value)}]"),
-                  _ => throw new ArgumentException("Invalid glob pattern match.", nameof(match)),
+                  { Name: CharWildcardGr } question => (CharacterWildcard, _fileSystem.NameCharacter),
+                  { Name: SeqWildcardGr } asterisk => (SequenceWildcard, _fileSystem.NameSequence),     // no need to filter the results
+                  { Name: ClassGr } chrClass => (CharacterWildcard, $"[{TransformClass(chrClass.Value)}]"),
+                  _ => throw new ArgumentException("Invalid glob _glob match.", nameof(match)),
               };
 
     static ReadOnlySpan<char> TransformClass(string globClass)
@@ -203,7 +203,7 @@ public sealed partial class GlobEnumerator
         if (globReader.IsEmpty)
             return globWriter.Chars;
 
-        var matches = NamedClass().Matches(globClass);
+        var matches = NamedClassRegex().Matches(globClass);
 
         // replace all wildcards with '*'
         foreach (Match match in matches)

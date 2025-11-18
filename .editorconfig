@@ -1,6 +1,6 @@
 # All files
 [*]
-guidelines = 128 dashed #, 80 dotted, 160 solid
+guidelines = 128 dashed , 80 dotted, #160 solid
 
 # C# project files
 [*.{csproj}]

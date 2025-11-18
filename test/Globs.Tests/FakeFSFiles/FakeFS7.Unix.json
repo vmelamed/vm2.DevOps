@@ -1,0 +1,54 @@
+{
+    "name": "/",
+    "folders": [
+        {
+            "name": "a",
+            "folders": [
+                {
+                    "name": "b",
+                    "folders": [
+                        {
+                            "name": "c",
+                            "folders": [],
+                            "files": [
+                                "cc.txt"
+                            ]
+                        }
+                    ],
+                    "files": [
+                        "bb.txt"
+                    ]
+                }
+            ],
+            "files": [
+                "aa.txt"
+            ]
+        },
+        {
+            "name": "x",
+            "folders": [
+                {
+                    "name": "y",
+                    "folders": [
+                        {
+                            "name": "z",
+                            "folders": [],
+                            "files": [
+                                "zz.txt"
+                            ]
+                        }
+                    ],
+                    "files": [
+                        "yy.txt"
+                    ]
+                }
+            ],
+            "files": [
+                "xx.txt"
+            ]
+        }
+    ],
+    "files": [
+        "aaa.txt"
+    ]
+}

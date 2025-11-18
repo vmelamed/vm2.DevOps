@@ -7,17 +7,17 @@
 public enum Objects
 {
     /// <summary>
-    /// EnumerateImpl for files only.
+    /// Enumerate files only.
     /// </summary>
-    Files       = 1 << 0,
+    Files                 = 1 << 0,
 
     /// <summary>
-    /// EnumerateImpl for directories only.
+    /// Enumerate directories only.
     /// </summary>
-    Directories = 1 << 1,
+    Directories           = 1 << 1,
 
     /// <summary>
-    /// EnumerateImpl for both files and directories.
+    /// Enumerate both files and directories.
     /// </summary>
-    Both        = Files | Directories,
+    FilesAndDirefctories  = Files | Directories,
 }

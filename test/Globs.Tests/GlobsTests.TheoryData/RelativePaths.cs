@@ -7,7 +7,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // CURRENT DIRECTORY (.) PATTERNS - Unix
         // ==========================================================================================================
-        //                                         fsFile  glob                                  cwd    start                    objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                  cwd    start                    objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Unix: Current dir ./*.md from /projects/app1"),
                                                    "FakeFSFiles/FakeFS4.Unix.json",
                                                            "./*.md",                             "/",   "/projects/app1",        Objects.Files,   MatchCasing.PlatformDefault, false,  "/projects/app1/README.md"),
@@ -47,7 +47,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // PARENT DIRECTORY (..) PATTERNS - Unix
         // ==========================================================================================================
-        //                                         fsFile  glob                                  cwd    start                    objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                  cwd    start                    objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Unix: Parent dir ../*.md from /projects/app1"),
                                                    "FakeFSFiles/FakeFS4.Unix.json",
                                                            "../*.md",                            "/",   "/projects/app1",        Objects.Files,   MatchCasing.PlatformDefault, false,  "/projects/OVERVIEW.md"),
@@ -99,7 +99,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // MIXED . AND .. PATTERNS - Unix
         // ==========================================================================================================
-        //                                         fsFile  glob                                  cwd    start                    objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                  cwd    start                    objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Unix: Mixed ./../app2/*.txt from /projects/app1"),
                                                    "FakeFSFiles/FakeFS4.Unix.json",
                                                            "./../app2/*.txt",                    "/",   "/projects/app1",        Objects.Files,   MatchCasing.PlatformDefault, false,  "/projects/app2/README.txt", "/projects/app2/requirements.txt"),
@@ -120,14 +120,14 @@ public partial class GlobsTests
                                                    "FakeFSFiles/FakeFS4.Unix.json",
                                                            "../app1/src/*.c",                    "/",   "/projects/app2",        Objects.Files,   MatchCasing.PlatformDefault, false,  "/projects/app1/src/main.c", "/projects/app1/src/util.c"),
 
-        new GlobEnumerateTheoryElement(TestFileLine("Unix: Recursive from parent ../app1/**/*.c from /projects/app2"),
+        new GlobEnumerateTheoryElement(TestFileLine("Unix: RecursiveRegex from parent ../app1/**/*.c from /projects/app2"),
                                                    "FakeFSFiles/FakeFS4.Unix.json",
                                                            "../app1/**/*.c",                     "/",   "/projects/app2",        Objects.Files,   MatchCasing.PlatformDefault, false,  "/projects/app1/src/main.c", "/projects/app1/src/util.c", "/projects/app1/tests/test_main.c", "/projects/app1/tests/test_util.c"),
 
         // ==========================================================================================================
         // CURRENT DIRECTORY (.) PATTERNS - Windows
         // ==========================================================================================================
-        //                                         fsFile  glob                                  cwd    start                    objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                  cwd    start                    objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Win: Current dir ./*.md from C:/projects/app1"),
                                                    "FakeFSFiles/FakeFS4.Win.json",
                                                            "./*.md",                             "C:/", "C:/projects/app1",      Objects.Files,   MatchCasing.PlatformDefault, false,  "C:/projects/app1/README.md"),
@@ -159,7 +159,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // PARENT DIRECTORY (..) PATTERNS - Windows
         // ==========================================================================================================
-        //                                         fsFile  glob                                  cwd    start                    objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                  cwd    start                    objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Win: Parent dir ../*.md from C:/projects/app1"),
                                                    "FakeFSFiles/FakeFS4.Win.json",
                                                            "../*.md",                            "C:/", "C:/projects/app1",      Objects.Files,   MatchCasing.PlatformDefault, false,  "C:/projects/OVERVIEW.md"),
@@ -207,7 +207,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // MIXED . AND .. PATTERNS - Windows
         // ==========================================================================================================
-        //                                         fsFile  glob                                  cwd    start                    objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                  cwd    start                    objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Win: Mixed ./../app2/*.txt from C:/projects/app1"),
                                                    "FakeFSFiles/FakeFS4.Win.json",
                                                            "./../app2/*.txt",                    "C:/", "C:/projects/app1",      Objects.Files,   MatchCasing.PlatformDefault, false,  "C:/projects/app2/README.txt", "C:/projects/app2/requirements.txt"),
@@ -228,14 +228,14 @@ public partial class GlobsTests
                                                    "FakeFSFiles/FakeFS4.Win.json",
                                                            "../app1/src/*.c",                    "C:/", "C:/projects/app2",      Objects.Files,   MatchCasing.PlatformDefault, false,  "C:/projects/app1/src/main.c", "C:/projects/app1/src/util.c"),
 
-        new GlobEnumerateTheoryElement(TestFileLine("Win: Recursive from parent ../app1/**/*.c from C:/projects/app2"),
+        new GlobEnumerateTheoryElement(TestFileLine("Win: RecursiveRegex from parent ../app1/**/*.c from C:/projects/app2"),
                                                    "FakeFSFiles/FakeFS4.Win.json",
                                                            "../app1/**/*.c",                     "C:/", "C:/projects/app2",      Objects.Files,   MatchCasing.PlatformDefault, false,  "C:/projects/app1/src/main.c", "C:/projects/app1/src/util.c", "C:/projects/app1/tests/test_main.c", "C:/projects/app1/tests/test_util.c"),
 
         // ==========================================================================================================
-        // EDGE CASES WITH . AND .. - Both Unix and Windows
+        // EDGE CASES WITH . AND .. - FilesAndDirefctories Unix and Windows
         // ==========================================================================================================
-        //                                         fsFile  glob                                  cwd    start                    objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                  cwd    start                    objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Unix: Many consecutive dots ././././*.md"),
                                                    "FakeFSFiles/FakeFS4.Unix.json",
                                                            "././././*.md",                       "/",   "/projects/app1",        Objects.Files,   MatchCasing.PlatformDefault, false,  "/projects/app1/README.md"),

@@ -28,8 +28,10 @@ public sealed class GlobTestsFixture : IDisposable
 
     public ITestOutputHelper? Output { get; set; }
 
-    public GlobEnumerator GetGlobEnumerator(string fileSystemFile)
-        => Services.GetRequiredService<Func<string, GlobEnumerator>>()(fileSystemFile);
+    public GlobEnumerator GetGlobEnumerator(string fileSystemFile, Func<GlobEnumeratorBuilder, GlobEnumerator>? configure = null)
+        => configure is null
+            ? GetGlobEnumerator(fileSystemFile)
+            : configure(new GlobEnumeratorBuilder(GetGlobEnumerator(fileSystemFile)));
 
     static Dictionary<string, (DataType DataType, byte[] Bytes)> _fileSystems = [];
 
@@ -45,8 +47,8 @@ public sealed class GlobTestsFixture : IDisposable
             return new FakeFS(entry.Bytes, entry.DataType);
 
         var m = OperatingSystem.IsWindows()
-                    ? WindowsPath().Match(fileName)
-                    : UnixPath().Match(fileName);
+                    ? WindowsPathRegex().Match(fileName)
+                    : UnixPathRgex().Match(fileName);
 
         if (!m.Success)
             throw new ArgumentException($"The path name '{fileName}' format is invalid.", nameof(fileName));

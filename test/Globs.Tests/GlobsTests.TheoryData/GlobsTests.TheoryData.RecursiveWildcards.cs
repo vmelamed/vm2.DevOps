@@ -4,13 +4,13 @@ public partial class GlobsTests
 {
     public static TheoryData<GlobEnumerateTheoryElement> Enumerate_RecursiveWildcards_TestDataSet =
     [
-        // For recursive wildcards tests, we change the meaning of data.Throws to indicate DistinctResults
+        // For recursive wildcards tests, we change the meaning of data.Throws to indicate _distinctResults
         // Dirty hack for reusing the same test data
 
         // ==========================================================================================================
         // SINGLE ** AT DIFFERENT POSITIONS - Unix
         // ==========================================================================================================
-        //                                         fsFile  glob                                           cwd    start                         objects          MatchCasing                  dist    results...
+        //                                         fsFile  glob                                           cwd    start                         objects          _matchCasing                  dist    results...
         new GlobEnumerateTheoryElement(TestFileLine("Unix: ** at start - **/*.txt"),
                                                    "FakeFSFiles/FakeFS6.Unix.json",
                                                            "**/*.txt",                                    "/",   "/deep-recursive",            Objects.Files,   MatchCasing.PlatformDefault, false,  "/deep-recursive/branch1/branch.txt",
@@ -49,7 +49,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // MULTIPLE ** IN SINGLE PATTERN - Unix
         // ==========================================================================================================
-        //                                         fsFile  glob                                           cwd    start                         objects          MatchCasing                  dist    results...
+        //                                         fsFile  glob                                           cwd    start                         objects          _matchCasing                  dist    results...
         new GlobEnumerateTheoryElement(TestFileLine("Unix: Two ** - /**/branch1/**/*.txt"),
                                                    "FakeFSFiles/FakeFS6.Unix.json",
                                                            "/**/branch1/**/*.txt",                        "/",   "/",                          Objects.Files,   MatchCasing.PlatformDefault, false,  "/deep-recursive/branch1/branch.txt",
@@ -81,7 +81,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // ** WITH SPECIFIC PATTERNS - Unix
         // ==========================================================================================================
-        //                                         fsFile  glob                                           cwd    start                         objects          MatchCasing                  dist    results...
+        //                                         fsFile  glob                                           cwd    start                         objects          _matchCasing                  dist    results...
         new GlobEnumerateTheoryElement(TestFileLine("Unix: ** with bracket expression - /**/[lb]*/*.txt"),
                                                    "FakeFSFiles/FakeFS6.Unix.json",
                                                            "/**/[lb]*/*.txt",                             "/",   "/",                          Objects.Files,   MatchCasing.PlatformDefault, false,  "/deep-recursive/branch1/branch.txt",
@@ -116,7 +116,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // ** AT DIFFERENT DEPTHS - Unix
         // ==========================================================================================================
-        //                                         fsFile  glob                                           cwd    start                         objects          MatchCasing                  dist    results...
+        //                                         fsFile  glob                                           cwd    start                         objects          _matchCasing                  dist    results...
         new GlobEnumerateTheoryElement(TestFileLine("Unix: Deep ** - /deep-recursive/level1/level2/**/*.txt"),
                                                    "FakeFSFiles/FakeFS6.Unix.json",
                                                            "/deep-recursive/level1/level2/**/*.txt",      "/",   "/",                          Objects.Files,   MatchCasing.PlatformDefault, false,  "/deep-recursive/level1/level2/level3/deep1.txt",
@@ -140,10 +140,10 @@ public partial class GlobsTests
         // ==========================================================================================================
         // ** WITH BOTH FILES AND DIRECTORIES - Unix
         // ==========================================================================================================
-        //                                         fsFile  glob                                           cwd    start                         objects          MatchCasing                  dist    results...
+        //                                         fsFile  glob                                           cwd    start                         objects          _matchCasing                  dist    results...
         new GlobEnumerateTheoryElement(TestFileLine("Unix: ** all objects under branch1"),
                                                    "FakeFSFiles/FakeFS6.Unix.json",
-                                                           "/deep-recursive/branch1/**/*",                "/",   "/",                          Objects.Both,    MatchCasing.PlatformDefault, false,  "/deep-recursive/branch1/branch.txt",
+                                                           "/deep-recursive/branch1/**/*",                "/",   "/",                          Objects.FilesAndDirefctories,    MatchCasing.PlatformDefault, false,  "/deep-recursive/branch1/branch.txt",
                                                                                                                                                                                                      "/deep-recursive/branch1/subbranch1/",
                                                                                                                                                                                                      "/deep-recursive/branch1/subbranch1/leaf1.txt",
                                                                                                                                                                                                      "/deep-recursive/branch1/subbranch2/",
@@ -176,9 +176,9 @@ public partial class GlobsTests
                                                                                                                                                                                                      "/deep-recursive/root.txt"),
 
         // ==========================================================================================================
-        // WINDOWS TESTS - Recursive wildcards
+        // WINDOWS TESTS - RecursiveRegex wildcards
         // ==========================================================================================================
-        //                                         fsFile  glob                                           cwd    start                         objects          MatchCasing                  dist    results...
+        //                                         fsFile  glob                                           cwd    start                         objects          _matchCasing                  dist    results...
         new GlobEnumerateTheoryElement(TestFileLine("Win: ** at start - **/*.txt"),
                                                    "FakeFSFiles/FakeFS6.Win.json",
                                                            "**/*.txt",                                    "C:/", "C:/deep-recursive",          Objects.Files,   MatchCasing.PlatformDefault, false,  "C:/deep-recursive/branch1/branch.txt",
@@ -217,7 +217,7 @@ public partial class GlobsTests
 
         new GlobEnumerateTheoryElement(TestFileLine("Win: ** all objects under branch1"),
                                                    "FakeFSFiles/FakeFS6.Win.json",
-                                                           "C:/deep-recursive/branch1/**/*",              "C:/", "C:/",                        Objects.Both,    MatchCasing.PlatformDefault, false,  "C:/deep-recursive/branch1/branch.txt",
+                                                           "C:/deep-recursive/branch1/**/*",              "C:/", "C:/",                        Objects.FilesAndDirefctories,    MatchCasing.PlatformDefault, false,  "C:/deep-recursive/branch1/branch.txt",
                                                                                                                                                                                                      "C:/deep-recursive/branch1/subbranch1/",
                                                                                                                                                                                                      "C:/deep-recursive/branch1/subbranch1/leaf1.txt",
                                                                                                                                                                                                      "C:/deep-recursive/branch1/subbranch2/",
@@ -237,7 +237,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // EDGE CASES - ** BEHAVIOR
         // ==========================================================================================================
-        //                                         fsFile  glob                                           cwd    start                         objects          MatchCasing                  dist    results...
+        //                                         fsFile  glob                                           cwd    start                         objects          _matchCasing                  dist    results...
         new GlobEnumerateTheoryElement(TestFileLine("Unix: ** matches zero directories exactly"),
                                                    "FakeFSFiles/FakeFS6.Unix.json",
                                                            "/deep-recursive/**/root.txt",                 "/",   "/",                          Objects.Files,   MatchCasing.PlatformDefault, false,  "/deep-recursive/root.txt"),
@@ -302,7 +302,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // COMPLEX PATTERNS COMBINING ** WITH OTHER FEATURES
         // ==========================================================================================================
-        //                                         fsFile  glob                                           cwd    start                         objects          MatchCasing                  dist    results...
+        //                                         fsFile  glob                                           cwd    start                         objects          _matchCasing                  dist    results...
         new GlobEnumerateTheoryElement(TestFileLine("Unix: ** with relative path from current dir"),
                                                    "FakeFSFiles/FakeFS6.Unix.json",
                                                            "./**/*.txt",                                  "/",   "/deep-recursive/branch1",    Objects.Files,   MatchCasing.PlatformDefault, false,  "/deep-recursive/branch1/branch.txt",

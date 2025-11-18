@@ -5,30 +5,30 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="System.Memory" Version="4.6.3" />
-    <PackageVersion Include="System.Text.Json" Version="9.0.10" />
-    <PackageVersion Include="System.CommandLine" Version="2.0.0-rc.2.25502.107" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.10" />
-    <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.10" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.10" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.10" />
-    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.10" />
+    <PackageVersion Include="System.CommandLine" Version="2.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.0" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.FileSystemGlobbing" Version="10.0.0-rc.2.25502.107" />
+    <PackageVersion Include="Microsoft.Extensions.FileSystemGlobbing" Version="10.0.0" />
     <PackageVersion Include="Markdig" Version="0.43.0" />
     <PackageVersion Include="MinVer" Version="6.0.0" />
     <!-- The test stack: -->
-    <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.1.0" />
+    <!--<PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.1.0" />-->
     <PackageVersion Include="FluentAssertions" Version="8.8.0" />
     <PackageVersion Include="xunit.v3" Version="3.2.0" />
+    <!-- These should be redundant for the test platform -->
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <!-- -->
     <!--<PackageVersion Include="xunit.v3.extensibility.core" Version="3.1.0" />-->
     <PackageVersion Include="coverlet.msbuild" Version="6.0.4" />
-    <!-- required for VSTest but not for MS Test Platform. Microsoft Testing Platform makes the following assemblies redundant: - ->
-        <!- - required for VSTest but not for MS Test Platform -->
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <!-- for running with Visual Studio profiler:
-        <PackageVersion Include="Microsoft.VisualStudio.DiagnosticsHub.BenchmarkDotNetDiagnosers" Version="18.0.36421.1" />
-        -->
+    <PackageVersion Include="Microsoft.VisualStudio.DiagnosticsHub.BenchmarkDotNetDiagnosers" Version="18.0.36421.1" />
+    -->
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.4" />
     <PackageVersion Include="BenchmarkDotNet.Annotations" Version="0.15.4" />
   </ItemGroup>

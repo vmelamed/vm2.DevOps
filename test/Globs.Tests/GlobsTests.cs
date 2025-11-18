@@ -1,20 +1,13 @@
 ﻿namespace vm2.DevOps.Glob.Api.Tests;
 
 [ExcludeFromCodeCoverage]
-public partial class GlobsTests : IClassFixture<GlobTestsFixture>
+public partial class GlobsTests(GlobTestsFixture fixture, ITestOutputHelper output) : IClassFixture<GlobTestsFixture>
 {
-    GlobTestsFixture _fixture;
-
-    public GlobsTests(GlobTestsFixture fixture)
-    {
-        _fixture = fixture;
-    }
-
     [Fact]
     public void Invalid_Path_In_GlobEnumerator_ShouldThrow()
     {
-        var ge = _fixture.GetGlobEnumerator("FakeFSFiles/FakeFS2.Win.json");
-        var assignInvalidPath = () => ge.EnumerateFromFolder = "C:/fldr1";
+        var ge = fixture.GetGlobEnumerator("FakeFSFiles/FakeFS2.Win.json");
+        var assignInvalidPath = () => ge.FromDirectory = "C:/fldr1";
 
         assignInvalidPath.Should().Throw<ArgumentException>();
     }
@@ -22,8 +15,8 @@ public partial class GlobsTests : IClassFixture<GlobTestsFixture>
     [Fact]
     public void Invalid_EnumerateFromFolder_ShouldThrow()
     {
-        var ge = _fixture.GetGlobEnumerator("FakeFSFiles/FakeFS2.Win.json");
-        var assignInvalidPath = () => ge.EnumerateFromFolder = "C:/nonexistent";
+        var ge = fixture.GetGlobEnumerator("FakeFSFiles/FakeFS2.Win.json");
+        var assignInvalidPath = () => ge.FromDirectory = "C:/nonexistent";
 
         assignInvalidPath.Should().Throw<ArgumentException>();
     }
@@ -31,27 +24,31 @@ public partial class GlobsTests : IClassFixture<GlobTestsFixture>
     [Fact]
     public void Invalid_MatchCasing_ShouldThrow()
     {
-        var ge = _fixture.GetGlobEnumerator("FakeFSFiles/FakeFS2.Win.json");
+        var ge = fixture.GetGlobEnumerator("FakeFSFiles/FakeFS2.Win.json");
         var assignInvalidPath = () => ge.MatchCasing = (MatchCasing)3;
 
         assignInvalidPath.Should().Throw<ArgumentException>();
     }
 
     [Fact]
-    public void Invalid_Pattern_ShouldThrow()
+    public void MoreThan2Asterisks_Pattern_ShouldNotThrow()
     {
-        var ge = _fixture.GetGlobEnumerator("FakeFSFiles/FakeFS2.Win.json");
-        var enumerate = () => ge.Enumerate("***");
+        var ge = fixture.GetGlobEnumerator("FakeFSFiles/FakeFS2.Win.json");
 
-        enumerate.Should().Throw<ArgumentException>();
+        ge.Glob = "***";
+        var enumerate = () => ge.Enumerate();
+
+        enumerate.Should().NotThrow();
     }
 
     [Fact]
     public void Invalid_FilePattern_ShouldThrow()
     {
-        var ge = _fixture.GetGlobEnumerator("FakeFSFiles/FakeFS2.Win.json");
+        var ge = fixture.GetGlobEnumerator("FakeFSFiles/FakeFS2.Win.json");
+
         ge.Enumerated = Objects.Files;
-        var enumerate = () => ge.Enumerate("*/");
+        ge.Glob       = "*/";
+        var enumerate = () => ge.Enumerate();
 
         enumerate.Should().Throw<ArgumentException>();
     }
@@ -59,9 +56,11 @@ public partial class GlobsTests : IClassFixture<GlobTestsFixture>
     [Fact]
     public void RecursiveInTheEnd_FilePattern_ShouldThrow()
     {
-        var ge = _fixture.GetGlobEnumerator("FakeFSFiles/FakeFS2.Win.json");
+        var ge = fixture.GetGlobEnumerator("FakeFSFiles/FakeFS2.Win.json");
+
+        ge.Glob = "*/**";
         ge.Enumerated = Objects.Files;
-        var enumerate = () => ge.Enumerate("*/**");
+        var enumerate = () => ge.Enumerate();
 
         enumerate.Should().Throw<ArgumentException>();
     }
@@ -94,15 +93,16 @@ public partial class GlobsTests : IClassFixture<GlobTestsFixture>
     [MemberData(nameof(Enumerate_RecursiveWildcards_TestDataSet))]
     public void Should_Enumerate_RecursiveWildcards_GlobEnumerator(GlobEnumerateTheoryElement data)
     {
-        var ge = _fixture.GetGlobEnumerator(data.File);
-        ge.Enumerated          = data.Objects;
-        ge.EnumerateFromFolder = data.StartDir;
-        ge.MatchCasing         = data.MatchCasing;
-        // For recursive wildcards tests, we change the meaning of data.Throws to indicate DistinctResults
+        var ge = fixture.GetGlobEnumerator(data.File);
+        ge.Enumerated      = data.Objects;
+        ge.FromDirectory   = data.StartDir;
+        ge.MatchCasing     = data.MatchCasing;
+        // For recursive wildcards tests, we change the meaning of data.Throws to indicate _distinctResults
         // Dirty hack for reusing the same test data, so ashamed... ;)
-        ge.DistinctResults     = data.Throws;
+        ge.DistinctResults = data.Throws;
+        ge.Glob            = data.Glob;
 
-        var enumerate = () => ge.Enumerate(data.Glob);
+        var enumerate = () => ge.Enumerate();
 
         var result = enumerate.Should().NotThrow().Which.OrderBy(s => s, StringComparer.Ordinal).ToList();
 
@@ -111,13 +111,14 @@ public partial class GlobsTests : IClassFixture<GlobTestsFixture>
 
     void Enumerate_GlobEnumerator(GlobEnumerateTheoryElement data)
     {
-        var ge = _fixture.GetGlobEnumerator(data.File);
+        var ge = fixture.GetGlobEnumerator(data.File);
 
-        ge.Enumerated          = data.Objects;
-        ge.EnumerateFromFolder = data.StartDir;
-        ge.MatchCasing         = data.MatchCasing;
+        ge.Enumerated    = data.Objects;
+        ge.FromDirectory = data.StartDir;
+        ge.MatchCasing   = data.MatchCasing;
+        ge.Glob          = data.Glob;
 
-        var enumerate = () => ge.Enumerate(data.Glob);
+        var enumerate = () => ge.Enumerate();
 
         if (data.Throws)
         {
@@ -129,5 +130,75 @@ public partial class GlobsTests : IClassFixture<GlobTestsFixture>
 
             result.Should().BeEquivalentTo(data.Results);
         }
+    }
+
+    [Fact]
+    public void WithBuilder_Should_Enumerate_DepthFirst_GlobEnumerator()
+    {
+        GlobEnumerator ge = fixture.GetGlobEnumerator(
+                                        "FakeFSFiles/FakeFS7.Unix.json",
+                                        builder => builder
+                                                    .WithGlob("**/*.txt")
+                                                    .FromDirectory("/")
+                                                    .CaseSensitive()
+                                                    .SelectFiles()
+                                                    .DepthFirst()
+                                                    .Distinct()
+                                                    .Build()
+                                        );
+
+        var enumerate = ge.Enumerate;
+
+        var result = enumerate.Should().NotThrow().Which.ToList();
+
+        Console.WriteLine("DepthFirst Results:");
+        foreach (var item in result)
+            output.WriteLine(item);
+
+        result.Should().BeEquivalentTo(
+        [
+            "/aaa.txt",
+            "/a/aa.txt",
+            "/a/b/bb.txt",
+            "/a/b/c/cc.txt",
+            "/x/xx.txt",
+            "/x/y/yy.txt",
+            "/x/y/z/zz.txt",
+        ]);
+    }
+
+    [Fact]
+    public void WithBuilder_Should_Enumerate_BreadthFirst_GlobEnumerator()
+    {
+        GlobEnumerator ge = fixture.GetGlobEnumerator(
+                                        "FakeFSFiles/FakeFS7.Unix.json",
+                                        builder => builder
+                                                    .WithGlob("**/*.txt")
+                                                    .FromDirectory("/")
+                                                    .CaseInsensitive()
+                                                    .SelectFiles()
+                                                    .BreadthFirst()
+                                                    .Distinct()
+                                                    .Build()
+                                        );
+
+        var enumerate = ge.Enumerate;
+
+        var result = enumerate.Should().NotThrow().Which.ToList();
+
+        Console.WriteLine("BreadthFirst Results:");
+        foreach (var item in result)
+            output.WriteLine(item);
+
+        result.Should().BeEquivalentTo(
+        [
+            "/aaa.txt",
+            "/a/aa.txt",
+            "/x/xx.txt",
+            "/a/b/bb.txt",
+            "/x/y/yy.txt",
+            "/a/b/c/cc.txt",
+            "/x/y/z/zz.txt",
+        ]);
     }
 }

@@ -5,49 +5,47 @@
 /// </summary>
 public static class IFileSystemExtensions
 {
-    /// <summary>
-    /// Returns the directory separator character based on the file system's platform.
-    /// </summary>
-    /// <param name="fs">The file system instance used to determine the platform.</param>
-    /// <returns>The directory separator character. Returns <see cref="WinSepChar"/> for Windows platforms and
-    /// <see cref="SepChar"/> for non-Windows platforms.</returns>
-    public static char SepChar(this IFileSystem fs) => fs.IsWindows ? WinSepChar : GlobConstants.SepChar;
+    extension(IFileSystem fs)
+    {
+        /// <summary>
+        /// Returns the directory separator character based on the file system's platform.
+        /// </summary>
+        /// <returns>The directory separator character. Returns <see cref="WinSepChar"/> for Windows platforms and
+        /// <see cref="SepChar"/> for non-Windows platforms.</returns>
+        public char SepChar => fs.IsWindows ? WinSepChar : GlobConstants.SepChar;
 
-    /// <summary>
-    /// Gets a Regex that matches the root of the file system, e.g. "C:\" for Windows and "/" for Unix-like.
-    /// </summary>
-    /// <param name="fs"></param>
-    /// <returns></returns>
-    public static Regex FileSystemRoot(this IFileSystem fs) => fs.IsWindows ? WindowsFileSystemRoot() : UnixFileSystemRoot();
+        /// <summary>
+        /// Retrieves the set of valid characters for file and directory names based on the file system type.
+        /// </summary>
+        public string NameCharacter => fs.IsWindows ? WinNameChars : UnixNameChars;
 
-    /// <summary>
-    /// Gets a <see cref="Regex"/> object for validating pathnames based on the current operating system.
-    /// </summary>
-    /// <param name="fs">The file system instance.</param>
-    /// <returns>A Regex for path validation.</returns>
-    public static Regex Path(this IFileSystem fs) => fs.IsWindows ? WindowsPath() : UnixPath();
+        /// <summary>
+        /// A regular expression pattern that matches a sequence of valid file system name characters.
+        /// </summary>
+        public string NameSequence => fs.NameCharacter+"*";
 
-    /// <summary>
-    /// Gets a <see cref="Regex"/> object for validating glob patterns based on the current operating system.
-    /// </summary>
-    /// <param name="fs">The file system instance.</param>
-    /// <returns>A Regex for glob pattern validation.</returns>
-    public static Regex Glob(this IFileSystem fs) => fs.IsWindows ? WindowsGlob() : UnixGlob();
+        /// <summary>
+        /// Gets a Regex that matches the root of the file system, e.g. "C:\" for Windows and "/" for Unix-like.
+        /// </summary>
+        /// <returns></returns>
+        public Regex FileSystemRootRegex() => fs.IsWindows ? WindowsFileSystemRootRegex() : UnixFileSystemRootRegex();
 
-    /// <summary>
-    /// Gets a <see cref="Regex"/> object for validating glob patterns based on the current operating system.
-    /// </summary>
-    /// <param name="fs">The file system instance.</param>
-    /// <returns>A Regex for glob pattern validation.</returns>
-    public static Regex EnvVar(this IFileSystem fs) => fs.IsWindows ? WindowsEnvVar() : UnixEnvVar();
+        /// <summary>
+        /// Gets a <see cref="Regex"/> object for validating pathnames based on the current operating system.
+        /// </summary>
+        /// <returns>A Regex for path validation.</returns>
+        public Regex PathRegex() => fs.IsWindows ? WindowsPathRegex() : UnixPathRgex();
 
-    /// <summary>
-    /// Retrieves the set of valid characters for file and directory names based on the file system type.
-    /// </summary>
-    public static string CharacterRegex(this IFileSystem fs) => fs.IsWindows ? WinNameChars : UnixNameChars;
+        /// <summary>
+        /// Gets a <see cref="Regex"/> object for validating glob patterns based on the current operating system.
+        /// </summary>
+        /// <returns>A Regex for glob pattern validation.</returns>
+        public Regex GlobRegex() => fs.IsWindows ? WindowsGlobRegex() : UnixGlobRgex();
 
-    /// <summary>
-    /// A regular expression pattern that matches a sequence of valid file system name characters.
-    /// </summary>
-    public static string SequenceRegex(this IFileSystem fs) => fs.CharacterRegex()+"*";
+        /// <summary>
+        /// Gets a <see cref="Regex"/> object for validating glob patterns based on the current operating system.
+        /// </summary>
+        /// <returns>A Regex for glob pattern validation.</returns>
+        public Regex EnvVarRegex() => fs.IsWindows ? WindowsEnvVarRegex() : UnixEnvVarRegex();
+    }
 }

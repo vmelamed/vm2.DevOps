@@ -7,7 +7,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // BASIC WILDCARDS: * (asterisk) - matches any string, including empty string
         // ==========================================================================================================
-        //                                         fsFile  glob                                   cwd      start          objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                   cwd      start          objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Match all files in root"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "*",                                   "C:/",   "C:/",         Objects.Files,   MatchCasing.PlatformDefault, false, "C:/boot.img", "C:/vmlinuz"),
@@ -18,7 +18,7 @@ public partial class GlobsTests
 
         new GlobEnumerateTheoryElement(TestFileLine("Match all in root (files and directories)"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
-                                                           "*",                                   "C:/",   "C:/",         Objects.Both,    MatchCasing.PlatformDefault, false, "C:/home/", "C:/var/", "C:/etc/", "C:/opt/", "C:/test/", "C:/boot.img", "C:/vmlinuz"),
+                                                           "*",                                   "C:/",   "C:/",         Objects.FilesAndDirefctories,    MatchCasing.PlatformDefault, false, "C:/home/", "C:/var/", "C:/etc/", "C:/opt/", "C:/test/", "C:/boot.img", "C:/vmlinuz"),
 
         new GlobEnumerateTheoryElement(TestFileLine("Match all .txt files in specific folder"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
@@ -39,7 +39,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // BASIC WILDCARDS: ? (question mark) - matches exactly one character
         // ==========================================================================================================
-        //                                         fsFile  glob                                   cwd      start          objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                   cwd      start          objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Match log files with single character difference"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/var/log/app?.log",                 "C:/",    "C:/",        Objects.Files,   MatchCasing.PlatformDefault, false, "C:/var/log/app1.log", "C:/var/log/app2.log"),
@@ -71,7 +71,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // BRACKET EXPRESSIONS: [abc] - matches one character from the set
         // ==========================================================================================================
-        //                                         fsFile  glob                                   cwd      start          objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                   cwd      start          objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Match single lowercase letters a, b, or c"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/test/bracket-tests/[abc]",         "C:/",    "C:/",        Objects.Files,   MatchCasing.PlatformDefault, false, "C:/test/bracket-tests/A", "C:/test/bracket-tests/B", "C:/test/bracket-tests/C"),
@@ -95,7 +95,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // BRACKET EXPRESSIONS: [a-z] - matches one character from the range
         // ==========================================================================================================
-        //                                         fsFile  glob                                   cwd      start          objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                   cwd      start          objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Match single lowercase letters from a to z"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/test/bracket-tests/[a-z]",         "C:/",    "C:/",        Objects.Files,   MatchCasing.PlatformDefault, false, "C:/test/bracket-tests/A", "C:/test/bracket-tests/B", "C:/test/bracket-tests/C", "C:/test/bracket-tests/x", "C:/test/bracket-tests/y", "C:/test/bracket-tests/z"),
@@ -123,7 +123,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // BRACKET EXPRESSIONS: [!abc] or [^abc] - matches one character NOT in the set (negation)
         // ==========================================================================================================
-        //                                         fsFile  glob                                   cwd      start          objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                   cwd      start          objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Match single characters that are NOT a, b, or c"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/test/bracket-tests/[!abc]",        "C:/",  "C:/",          Objects.Files,   MatchCasing.PlatformDefault, false, "C:/test/bracket-tests/x", "C:/test/bracket-tests/y", "C:/test/bracket-tests/z", "C:/test/bracket-tests/1", "C:/test/bracket-tests/2", "C:/test/bracket-tests/3", "C:/test/bracket-tests/9"),
@@ -143,7 +143,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // CHARACTER CLASSES: [[:alnum:]], [[:alpha:]], [[:digit:]], [[:lower:]], [[:upper:]]
         // ==========================================================================================================
-        //                                         fsFile  glob                                   cwd      start          objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                   cwd      start          objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Match single alphanumeric characters [[:alnum:]]"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/test/bracket-tests/[[:alnum:]]",    "C:/",  "C:/",         Objects.Files,   MatchCasing.PlatformDefault, false, "C:/test/bracket-tests/x", "C:/test/bracket-tests/y", "C:/test/bracket-tests/z", "C:/test/bracket-tests/A", "C:/test/bracket-tests/B", "C:/test/bracket-tests/C", "C:/test/bracket-tests/1", "C:/test/bracket-tests/2", "C:/test/bracket-tests/3", "C:/test/bracket-tests/9"),
@@ -167,7 +167,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // RECURSIVE WILDCARDS: ** - matches zero or more directories
         // ==========================================================================================================
-        //                                         fsFile  glob                                   cwd      start          objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                   cwd      start          objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Find all .txt files recursively from /home"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/home/**/*.txt",                    "C:/",    "C:/",        Objects.Files,   MatchCasing.PlatformDefault, false, "C:/home/user/docs/readme.txt", "C:/home/user/docs/notes.txt", "C:/home/user/docs/file1.txt", "C:/home/user/data.txt", "C:/home/user/projects/project-list.txt"),
@@ -186,16 +186,16 @@ public partial class GlobsTests
 
         new GlobEnumerateTheoryElement(TestFileLine("Find everything recursively under /opt"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
-                                                           "C:/opt/**/*",                         "C:/",    "C:/",        Objects.Both,    MatchCasing.PlatformDefault, false, "C:/opt/app/", "C:/opt/app/bin/", "C:/opt/app/lib/", "C:/opt/app/README", "C:/opt/app/bin/app", "C:/opt/app/bin/tool1", "C:/opt/app/bin/tool2", "C:/opt/app/lib/libcore.so", "C:/opt/app/lib/libutil.so", "C:/opt/app/lib/libhelper.so.1"),
+                                                           "C:/opt/**/*",                         "C:/",    "C:/",        Objects.FilesAndDirefctories,    MatchCasing.PlatformDefault, false, "C:/opt/app/", "C:/opt/app/bin/", "C:/opt/app/lib/", "C:/opt/app/README", "C:/opt/app/bin/app", "C:/opt/app/bin/tool1", "C:/opt/app/bin/tool2", "C:/opt/app/lib/libcore.so", "C:/opt/app/lib/libutil.so", "C:/opt/app/lib/libhelper.so.1"),
 
-        new GlobEnumerateTheoryElement(TestFileLine("Recursive with specific starting pattern"),
+        new GlobEnumerateTheoryElement(TestFileLine("RecursiveRegex with specific starting pattern"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/home/**/file*.txt",                "C:/",    "C:/",        Objects.Files,   MatchCasing.PlatformDefault, false, "C:/home/user/docs/file1.txt"),
 
         // ==========================================================================================================
         // CASE SENSITIVITY (Unix is case-sensitive)
         // ==========================================================================================================
-        //                                         fsFile  glob                                   cwd      start          objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                   cwd      start          objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Should NOT match uppercase when looking for lowercase"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/home/user/docs/readme*",           "C:/",    "C:/",        Objects.Files,  MatchCasing.PlatformDefault, false, "C:/home/user/docs/README.md", "C:/home/user/docs/readme.txt"),
@@ -215,7 +215,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // HIDDEN FILES (starting with dot) are returned by GlobEnumerator
         // ==========================================================================================================
-        //                                         fsFile  glob                                   cwd      start          objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                   cwd      start          objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Match hidden files explicitly"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/home/user/.*",                     "C:/",    "C:/",        Objects.Files,   MatchCasing.PlatformDefault, false, "C:/home/user/.bashrc", "C:/home/user/.profile", "C:/home/user/.vimrc"),
@@ -235,7 +235,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // COMPLEX COMBINATIONS
         // ==========================================================================================================
-        //                                         fsFile  glob                                   cwd      start          objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                   cwd      start          objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Combine ** with character classes"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/home/**/[a-z]*.txt",               "C:/",    "C:/",        Objects.Files,   MatchCasing.PlatformDefault, false, "C:/home/user/docs/notes.txt", "C:/home/user/docs/readme.txt", "C:/home/user/docs/file1.txt", "C:/home/user/data.txt", "C:/home/user/projects/project-list.txt"),
@@ -263,16 +263,16 @@ public partial class GlobsTests
         // ==========================================================================================================
         // EDGE CASES AND SPECIAL SCENARIOS
         // ==========================================================================================================
-        //                                         fsFile  glob                                   cwd      start          objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                   cwd      start          objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Empty pattern should throw"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
-                                                           "",                                    "C:/",    "C:/",        Objects.Both,    MatchCasing.PlatformDefault, true),
+                                                           "",                                    "C:/",    "C:/",        Objects.FilesAndDirefctories,    MatchCasing.PlatformDefault, true),
 
-        new GlobEnumerateTheoryElement(TestFileLine("Glob ending with / when searching for files should throw"),
+        new GlobEnumerateTheoryElement(TestFileLine("GlobRegex ending with / when searching for files should throw"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/home/user/docs/",                  "C:/",    "C:/",        Objects.Files,   MatchCasing.PlatformDefault, true),
 
-        new GlobEnumerateTheoryElement(TestFileLine("Glob ending with ** when searching for files only should throw"),
+        new GlobEnumerateTheoryElement(TestFileLine("GlobRegex ending with ** when searching for files only should throw"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/home/**",                          "C:/",    "C:/",        Objects.Files,   MatchCasing.PlatformDefault, true),
 
@@ -300,14 +300,14 @@ public partial class GlobsTests
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "docs/*.txt",                          "C:/",    "C:/home/user",Objects.Files,  MatchCasing.PlatformDefault, false, "C:/home/user/docs/readme.txt", "C:/home/user/docs/notes.txt", "C:/home/user/docs/file1.txt"),
 
-        new GlobEnumerateTheoryElement(TestFileLine("Glob with only bracket expression"),
+        new GlobEnumerateTheoryElement(TestFileLine("GlobRegex with only bracket expression"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/var/log/[aes]*",                   "C:/",    "C:/",        Objects.Files,   MatchCasing.PlatformDefault, false, "C:/var/log/syslog", "C:/var/log/auth.log", "C:/var/log/error.log", "C:/var/log/access.log", "C:/var/log/app1.log", "C:/var/log/app2.log", "C:/var/log/app10.log"),
 
         // ==========================================================================================================
         // PRACTICAL REAL-WORLD SCENARIOS
         // ==========================================================================================================
-        //                                         fsFile  glob                                   cwd      start          objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                   cwd      start          objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Find all C source and header files"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/home/user/projects/**/*.[ch]",     "C:/",    "C:/",        Objects.Files,  MatchCasing.PlatformDefault, false, "C:/home/user/projects/alpha/main.c", "C:/home/user/projects/alpha/test.c", "C:/home/user/projects/alpha/helper.h"),
@@ -349,10 +349,10 @@ public partial class GlobsTests
                                                            "C:/home/**/projects/**/*.py",          "C:/",    "C:/",       Objects.Files,  MatchCasing.PlatformDefault, false, "C:/home/user/projects/beta/app.py", "C:/home/user/projects/beta/test.py", "C:/home/projects/alpha.py", "C:/home/projects/alpha/alpha.py", "C:/home/projects/beta/beta.py"),
 
         // ==========================================================================================================
-        // CATEGORY A: MULTIPLE RECURSIVE WILDCARDS (Glob Normalization - Future Feature)
+        // CATEGORY A: MULTIPLE RECURSIVE WILDCARDS (GlobRegex Normalization - Future Feature)
         // ==========================================================================================================
         // NOTE: These tests verify current behavior - no duplicates. When de-normalization is implemented, these should produce duplicates.
-        //                                         fsFile  glob                                   cwd      start          objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                   cwd      start          objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Double ** should be semantically equivalent to single **"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/home/**/user/**/*.txt",             "C:/",   "C:/",        Objects.Files,  MatchCasing.PlatformDefault, false, "C:/home/user/data.txt", "C:/home/user/docs/readme.txt", "C:/home/user/docs/notes.txt", "C:/home/user/docs/file1.txt", "C:/home/user/projects/project-list.txt"),
@@ -368,7 +368,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // CATEGORY B: EMPTY/MISSING PATH COMPONENTS AND BOUNDARY CONDITIONS
         // ==========================================================================================================
-        //                                         fsFile  glob                                   cwd      start          objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                   cwd      start          objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Match empty folder (folder with no files)"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/home/user/media/*",                "C:/",    "C:/",        Objects.Files,  MatchCasing.PlatformDefault, false),
@@ -385,7 +385,7 @@ public partial class GlobsTests
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/home/user/missing/folder/*.txt",   "C:/",    "C:/",        Objects.Files,  MatchCasing.PlatformDefault, false),
 
-        new GlobEnumerateTheoryElement(TestFileLine("Glob with multiple consecutive slashes"),
+        new GlobEnumerateTheoryElement(TestFileLine("GlobRegex with multiple consecutive slashes"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/home///user///docs/*.txt",         "C:/",    "C:/",        Objects.Files,  MatchCasing.PlatformDefault, false, "C:/home/user/docs/readme.txt", "C:/home/user/docs/notes.txt", "C:/home/user/docs/file1.txt"),
 
@@ -396,7 +396,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // CATEGORY D: COMPLEX BRACKET EXPRESSIONS
         // ==========================================================================================================/
-        //                                         fsFile  glob                                   cwd      start          objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                   cwd      start          objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Multiple ranges in single bracket [a-zA-Z0-9]"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/test/bracket-tests/[a-zA-Z0-9]",   "C:/",    "C:/",        Objects.Files,  MatchCasing.PlatformDefault, false, "C:/test/bracket-tests/x", "C:/test/bracket-tests/y", "C:/test/bracket-tests/z", "C:/test/bracket-tests/A", "C:/test/bracket-tests/B", "C:/test/bracket-tests/C", "C:/test/bracket-tests/1", "C:/test/bracket-tests/2", "C:/test/bracket-tests/3", "C:/test/bracket-tests/9"),
@@ -424,7 +424,7 @@ public partial class GlobsTests
         // ==========================================================================================================
         // CATEGORY E: EXTREME PATTERNS AND CONSECUTIVE WILDCARDS
         // ==========================================================================================================
-        //                                         fsFile  glob                                   cwd      start          objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                   cwd      start          objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Many consecutive asterisks *** should work like *"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/etc/***",                          "C:/",  "C:/",          Objects.Files,  MatchCasing.PlatformDefault, true,  "C:/etc/hosts", "C:/etc/passwd", "C:/etc/group", "C:/etc/fstab"),
@@ -445,14 +445,14 @@ public partial class GlobsTests
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/home/*/projects/*/test.*",         "C:/",  "C:/",          Objects.Files,  MatchCasing.PlatformDefault, false, "C:/home/user/projects/alpha/test.c", "C:/home/user/projects/beta/test.py"),
 
-        new GlobEnumerateTheoryElement(TestFileLine("Glob with all wildcard types combined"),
+        new GlobEnumerateTheoryElement(TestFileLine("GlobRegex with all wildcard types combined"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/home/**/p?ojects/[ab]*/test.*",    "C:/",  "C:/",          Objects.Files,  MatchCasing.PlatformDefault, false, "C:/home/user/projects/alpha/test.c", "C:/home/user/projects/beta/test.py"),
 
         // ==========================================================================================================
         // CATEGORY F: RELATIVE PATH EDGE CASES
         // ==========================================================================================================
-        //                                         fsFile  glob                                   cwd      start          objects          MatchCasing                  throws  results...
+        //                                         fsFile  glob                                   cwd      start          objects          _matchCasing                  throws  results...
         new GlobEnumerateTheoryElement(TestFileLine("Current directory notation ./docs/*.txt"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "./docs/*.txt",                      "C:/",    "C:/home/user",Objects.Files,  MatchCasing.PlatformDefault, false,  "C:/home/user/docs/readme.txt", "C:/home/user/docs/notes.txt", "C:/home/user/docs/file1.txt"),
@@ -470,46 +470,46 @@ public partial class GlobsTests
                                                            "projects/*/test.*",                 "C:/",    "C:/home/user",Objects.Files,  MatchCasing.PlatformDefault, false, "C:/home/user/projects/alpha/test.c", "C:/home/user/projects/beta/test.py"),
 
         // ==========================================================================================================
-        // CATEGORY H: ERROR CASES (throws = MatchCasing.PlatformDefault, true)
+        // CATEGORY H: ERROR CASES (throws = _matchCasing.PlatformDefault, true)
         // ==========================================================================================================
         //                                         fsFile  glob                                   cwd       start       objects          throws results...
-        new GlobEnumerateTheoryElement(TestFileLine("Glob with unmatched opening bracket [abc"),
+        new GlobEnumerateTheoryElement(TestFileLine("GlobRegex with unmatched opening bracket [abc"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/test/bracket-tests/[abc",          "C:/",    "C:/",        Objects.Files,   MatchCasing.PlatformDefault, false),
 
-        new GlobEnumerateTheoryElement(TestFileLine("Glob with unmatched closing bracket abc]"),
+        new GlobEnumerateTheoryElement(TestFileLine("GlobRegex with unmatched closing bracket abc]"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/test/bracket-tests/abc]",          "C:/",    "C:/",        Objects.Files,   MatchCasing.PlatformDefault, false),
 
-        new GlobEnumerateTheoryElement(TestFileLine("Glob with empty brackets []"),
+        new GlobEnumerateTheoryElement(TestFileLine("GlobRegex with empty brackets []"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/test/bracket-tests/file[]",        "C:/",    "C:/",        Objects.Files,   MatchCasing.PlatformDefault, true),
 
-        new GlobEnumerateTheoryElement(TestFileLine("Glob with only negation [!]"),
+        new GlobEnumerateTheoryElement(TestFileLine("GlobRegex with only negation [!]"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/test/bracket-tests/[!]",           "C:/",    "C:/",        Objects.Files,   MatchCasing.PlatformDefault, false),
 
-        new GlobEnumerateTheoryElement(TestFileLine("Glob with only closing bracket []]"),
+        new GlobEnumerateTheoryElement(TestFileLine("GlobRegex with only closing bracket []]"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/test/bracket-tests/[]]",           "C:/",    "C:/",        Objects.Files,   MatchCasing.PlatformDefault, false),
 
-        new GlobEnumerateTheoryElement(TestFileLine("Glob with negated closing bracket [!]]"),
+        new GlobEnumerateTheoryElement(TestFileLine("GlobRegex with negated closing bracket [!]]"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/test/bracket-tests/[!]]",          "C:/",    "C:/",        Objects.Files,   MatchCasing.PlatformDefault, false),
 
-        new GlobEnumerateTheoryElement(TestFileLine("Glob with invalid character class [[:invalid:]]"),
+        new GlobEnumerateTheoryElement(TestFileLine("GlobRegex with invalid character class [[:invalid:]]"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/test/bracket-tests/[[:invalid:]]", "C:/",    "C:/",        Objects.Files,   MatchCasing.PlatformDefault, false),
 
-        new GlobEnumerateTheoryElement(TestFileLine("Glob with backslash \\home\\user"),
+        new GlobEnumerateTheoryElement(TestFileLine("GlobRegex with backslash \\home\\user"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "\\home\\user\\*.txt",                 "C:/",    "C:/",        Objects.Files,   MatchCasing.PlatformDefault, false, "C:/home/user/data.txt"),
 
-        new GlobEnumerateTheoryElement(TestFileLine("Glob starting with ** without separator **docs"),
+        new GlobEnumerateTheoryElement(TestFileLine("GlobRegex starting with ** without separator **docs"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "**docs/*.txt",                        "C:/",    "C:/",        Objects.Files,   MatchCasing.PlatformDefault, true),
 
-        new GlobEnumerateTheoryElement(TestFileLine("Glob with ** in middle without separators home**user"),
+        new GlobEnumerateTheoryElement(TestFileLine("GlobRegex with ** in middle without separators home**user"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/home**user/*.txt",                 "C:/",    "C:/",        Objects.Files,   MatchCasing.PlatformDefault, true),
     ];
