@@ -89,21 +89,59 @@ public partial class GlobTests(GlobTestsFixture fixture, ITestOutputHelper outpu
     [MemberData(nameof(Enumerate_SpecialCharacters_TestDataSet))]
     public void Should_Enumerate_SpecialCharacters_GlobEnumerator(GlobEnumerateTheoryElement data) => Enumerate_GlobEnumerator(data);
 
+    GlobEnumeratorBuilder Configure(
+        GlobEnumeratorBuilder builder,
+        GlobEnumerateTheoryElement data)
+    {
+        builder
+            .WithGlob(data.Glob)
+            .FromDirectory(data.StartDir)
+            ;
+        switch (data.MatchCasing)
+        {
+            case MatchCasing.CaseSensitive:
+                builder.CaseSensitive();
+                break;
+            case MatchCasing.CaseInsensitive:
+                builder.CaseInsensitive();
+                break;
+            default:
+                throw new ArgumentException("Invalid MatchCasing value.");
+        }
+        switch (data.Objects)
+        {
+            case Objects.Directories:
+                builder.SelectDirectories();
+                break;
+            case Objects.Files:
+                builder.SelectFiles();
+                break;
+            case Objects.FilesAndDirefctories:
+                builder.SelectDirectoriesAndFiles();
+                break;
+            default:
+                throw new ArgumentException("Invalid Objects value.");
+        }
+        return builder;
+    }
+
     [Theory]
     [MemberData(nameof(Enumerate_RecursiveWildcards_TestDataSet))]
     public void Should_Enumerate_RecursiveWildcards_GlobEnumerator(GlobEnumerateTheoryElement data)
     {
-        var ge = fixture.GetGlobEnumerator(data.File);
-        ge.Enumerated      = data.Objects;
-        ge.FromDirectory   = data.StartDir;
-        ge.MatchCasing     = data.MatchCasing;
+        var ge = fixture.GetGlobEnumerator(
+            data.File,
+            b =>
+            {
+                b = data.Throws
+                        ? b.Distinct()
+                        : b;
+                return Configure(b, data);
+            });
         // For recursive wildcards tests, we change the meaning of data.Throws to indicate _distinctResults
         // Dirty hack for reusing the same test data, so ashamed... ;)
-        ge.DistinctResults = data.Throws;
-        ge.Glob            = data.Glob;
 
-        var enumerate = () => ge.Enumerate();
-
+        var enumerate = ge.Enumerate;
         var result = enumerate.Should().NotThrow().Which.OrderBy(s => s, StringComparer.Ordinal).ToList();
 
         result.Should().BeEquivalentTo(data.Results);
@@ -111,14 +149,8 @@ public partial class GlobTests(GlobTestsFixture fixture, ITestOutputHelper outpu
 
     void Enumerate_GlobEnumerator(GlobEnumerateTheoryElement data)
     {
-        var ge = fixture.GetGlobEnumerator(data.File);
-
-        ge.Enumerated    = data.Objects;
-        ge.FromDirectory = data.StartDir;
-        ge.MatchCasing   = data.MatchCasing;
-        ge.Glob          = data.Glob;
-
-        var enumerate = () => ge.Enumerate();
+        var ge = fixture.GetGlobEnumerator(data.File, b => Configure(b, data));
+        var enumerate = ge.Enumerate;
 
         if (data.Throws)
         {
@@ -144,7 +176,6 @@ public partial class GlobTests(GlobTestsFixture fixture, ITestOutputHelper outpu
                                                     .SelectFiles()
                                                     .DepthFirst()
                                                     .Distinct()
-                                                    .Build()
                                         );
 
         var enumerate = ge.Enumerate;
@@ -179,7 +210,6 @@ public partial class GlobTests(GlobTestsFixture fixture, ITestOutputHelper outpu
                                                     .SelectFiles()
                                                     .BreadthFirst()
                                                     .Distinct()
-                                                    .Build()
                                         );
 
         var enumerate = ge.Enumerate;

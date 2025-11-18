@@ -188,4 +188,10 @@ public class GlobEnumeratorBuilder
 
         return globEnumerator;
     }
+
+    /// <summary>
+    /// Builds and returns the configured <see cref="GlobEnumeratorBuilder"/> instance.
+    /// </summary>
+    /// <returns>This builder</returns>
+    public GlobEnumeratorBuilder Build() => this;
 }

@@ -8,30 +8,35 @@ public sealed class GlobTestsFixture : IDisposable
     {
         var builder = Host.CreateApplicationBuilder();
 
-        builder.Logging
-                    .ClearProviders()
-                    .AddConsole()
-                    .SetMinimumLevel(LogLevel.Trace)
-                    ;
-        builder.Services
-        ;
+        builder
+            .Logging
+            .ClearProviders()
+            .AddConsole()
+            .SetMinimumLevel(LogLevel.Trace)
+            ;
+        builder
+            .Services
+            // the glob enumerator with a real FS
+            .AddGlobEnumerator()
+            // the glob enumerator with the FakeFS-es:
+            .AddGlobEnumerator("FakeFSFiles/FakeFS1.Unix.txt")
+            .AddGlobEnumerator("FakeFSFiles/FakeFS1.Win.txt")
+            .AddGlobEnumerator("FakeFSFiles/FakeFS1.Unix.json")
+            .AddGlobEnumerator("FakeFSFiles/FakeFS1.Win.json")
+            .AddGlobEnumerator("FakeFSFiles/FakeFS2.Unix.json")
+            .AddGlobEnumerator("FakeFSFiles/FakeFS2.Win.json")
 
-        //var serviceCollection = new ServiceCollection();
-        //Services = serviceCollection
-        //            .AddLogging(
-        //                builder =>
-        //                    builder
-        //                        .ClearProviders()
-        //                        .AddConsole()
-        //                        .SetMinimumLevel(LogLevel.Trace)
-        //                )
-        //            .AddSingleton(CreateFileSystem)
-        //            .AddSingleton<Func<string, GlobEnumerator>>(
-        //                sp => file => new GlobEnumerator(
-        //                                    sp.GetRequiredService<Func<string, FakeFS>>()(file),    // should return CreateFileSystem
-        //                                    sp.GetRequiredService<ILogger<GlobEnumerator>>()))      // should return the console logger
-        //            .BuildServiceProvider()
-        //            ;
+            .AddGlobEnumerator("FakeFSFiles/FakeFS3.Unix.json")
+            .AddGlobEnumerator("FakeFSFiles/FakeFS3.Win.json")
+            .AddGlobEnumerator("FakeFSFiles/FakeFS4.Unix.json")
+            .AddGlobEnumerator("FakeFSFiles/FakeFS4.Win.json")
+            .AddGlobEnumerator("FakeFSFiles/FakeFS5.Unix.json")
+            .AddGlobEnumerator("FakeFSFiles/FakeFS5.Win.json")
+            .AddGlobEnumerator("FakeFSFiles/FakeFS6.Unix.json")
+            .AddGlobEnumerator("FakeFSFiles/FakeFS6.Win.json")
+            .AddGlobEnumerator("FakeFSFiles/FakeFS7.Unix.json")
+            .AddGlobEnumerator("FakeFSFiles/FakeFS7.Win.json")
+            ;
 
         _host = builder.Build();
     }
@@ -42,19 +47,21 @@ public sealed class GlobTestsFixture : IDisposable
 
     public GlobEnumerator GetGlobEnumerator(
         string fileSystemFile,
-        Func<GlobEnumeratorBuilder, GlobEnumerator>? configure = null)
+        Func<GlobEnumeratorBuilder, GlobEnumeratorBuilder>? configure = null)
     {
-        // Set the file system for this test
-        var factory = _host.Services.GetRequiredService<IFileSystemFactory>();
-        factory.SetFileSystem(fileSystemFile);
+        // Get a glob with the file system for this test
+        var ge = _host.Services.GetRequiredKeyedService<GlobEnumerator>(fileSystemFile);
 
         if (configure is null)
-        {
-            return _host.Services.GetRequiredService<GlobEnumerator>();
-        }
+            return ge;
 
-        var builder = _host.Services.GetRequiredService<GlobEnumeratorBuilder>();
-        return configure(builder);
+        var builder = _host
+                        .Services
+                        .GetRequiredService<GlobEnumeratorBuilder>()
+                        ;
+        configure(builder);
+
+        return builder.Configure(ge);
     }
 
     static Dictionary<string, (DataType DataType, byte[] Bytes)> _fileSystems = [];

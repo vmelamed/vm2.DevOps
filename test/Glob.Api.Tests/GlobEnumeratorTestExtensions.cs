@@ -1,6 +1,6 @@
 ﻿namespace vm2.DevOps.Glob.Api.Tests;
 
-public static class GlobDIExtensions
+public static class GlobEnumeratorTestExtensions
 {
     extension(IServiceCollection serviceCollection)
     {
@@ -11,8 +11,9 @@ public static class GlobDIExtensions
                     .AddSingleton<IFileSystem, FileSystem>()
                     .AddSingleton<Func<string, IFileSystem>>(GlobTestsFixture.CreateFileSystem)
                     .AddTransient<GlobEnumeratorBuilder>()
-                    .AddTransient(
-                        sp =>
+                    .AddKeyedTransient(
+                        fakeFsFile,
+                        (sp, key) =>
                         {
                             var ge = new GlobEnumerator(
                                             string.IsNullOrWhiteSpace(fakeFsFile)
@@ -20,13 +21,9 @@ public static class GlobDIExtensions
                                                 : sp.GetRequiredService<Func<string, IFileSystem>>()(fakeFsFile),
                                             sp.GetRequiredService<ILogger<GlobEnumerator>>()
                                         );
-                            if (configure is not null)
-                            {
-                                var builder = sp.GetRequiredService<GlobEnumeratorBuilder>();
-                                return configure(builder).Configure(ge);
-                            }
-
-                            return ge;
+                            return configure is not null
+                                        ? configure(sp.GetRequiredService<GlobEnumeratorBuilder>()).Configure(ge)
+                                        : ge;
                         });
     }
 }
