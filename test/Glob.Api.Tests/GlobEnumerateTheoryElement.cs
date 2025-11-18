@@ -14,7 +14,7 @@ public class GlobEnumerateTheoryElement(
 {
     #region boilerplate
     public GlobEnumerateTheoryElement()
-        : this("", "", "", "", "", Objects.FilesAndDirefctories, MatchCasing.PlatformDefault, false, [])
+        : this("", "", "", "", "", Objects.FilesAndDirectories, MatchCasing.PlatformDefault, false, [])
     {
     }
 

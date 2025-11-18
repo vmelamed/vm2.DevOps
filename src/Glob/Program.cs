@@ -91,7 +91,7 @@ Option<Objects> searchFor = new(name: "--search-for", "-s")
     """,
     Required = false,
     Arity = ArgumentArity.ExactlyOne,
-    DefaultValueFactory = _ => Objects.FilesAndDirefctories,
+    DefaultValueFactory = _ => Objects.FilesAndDirectories,
     Validators =
     {
         result =>
@@ -100,8 +100,8 @@ Option<Objects> searchFor = new(name: "--search-for", "-s")
 
             if (!Objects.Files.ToString().StartsWith(value, StringComparison.OrdinalIgnoreCase) &&
                 !Objects.Directories.ToString().StartsWith(value, StringComparison.OrdinalIgnoreCase) &&
-                !Objects.FilesAndDirefctories.ToString().StartsWith(value, StringComparison.OrdinalIgnoreCase))
-                result.AddError($"None of the expected values `{Objects.Files}`, `{Objects.Directories}`, or `{Objects.FilesAndDirefctories}` starts with `{value}`.");
+                !Objects.FilesAndDirectories.ToString().StartsWith(value, StringComparison.OrdinalIgnoreCase))
+                result.AddError($"None of the expected values `{Objects.Files}`, `{Objects.Directories}`, or `{Objects.FilesAndDirectories}` starts with `{value}`.");
         }
     },
     CustomParser = result =>
@@ -110,7 +110,7 @@ Option<Objects> searchFor = new(name: "--search-for", "-s")
 
         return Objects.Files.ToString().StartsWith(value, StringComparison.OrdinalIgnoreCase) ? Objects.Files :
                Objects.Directories.ToString().StartsWith(value, StringComparison.OrdinalIgnoreCase) ? Objects.Directories :
-               Objects.FilesAndDirefctories;
+               Objects.FilesAndDirectories;
     }
 };
 
@@ -176,7 +176,7 @@ void Enumerate(ParseResult parseResult)
         enumerator.FromDirectory   = parseResult.GetRequiredValue(startDirectory);
         enumerator.Enumerated      = parseResult.GetRequiredValue(searchFor);
         enumerator.Glob            =  pattern;
-        enumerator.DistinctResults = parseResult.GetRequiredValue(distinct);
+        enumerator.Distinct = parseResult.GetRequiredValue(distinct);
 
         foreach (var entry in enumerator.Enumerate())
             Console.WriteLine(entry);

@@ -9,6 +9,7 @@ namespace vm2.DevOps.Glob.Api.Tests.FakeFileSystem;
 /// </remarks>
 public sealed partial class FakeFS
 {
+    #region fields
     const string Wildcards         = "*?";  // TODO: add [], {}, etc. advanced features
     const string RecursiveWildcard = "**";
     const int WinDriveLength       = 2;     // e.g. "C:"
@@ -16,16 +17,17 @@ public sealed partial class FakeFS
 
     const string EnvVarNameGr      = "envVar";
     const string EnvVarValueGr     = "envVarValue";
+    #endregion
 
+    #region Regexes
     [GeneratedRegex(@"^[A-Za-z]:[/\\]")]
     public static partial Regex StartsWithWinRoot();
 
     [GeneratedRegex($"^(?<{EnvVarNameGr}> [A-Za-z_][0-9A-Za-z_]* ) = (?<{EnvVarValueGr}> .* )$", RegexOptions.IgnorePatternWhitespace | RegexOptions.ExplicitCapture)]
     public static partial Regex EnvVarDefinition();
+    #endregion
 
-    /// <summary>
-    /// Indicates whether the file system was read from JSON with UTF-8 BOM, also used when writing back to file.
-    /// </summary>
+    #region Properties
     public bool JsonUtf8Bom { get; set; } = false;
 
     public Folder RootFolder { get; private set; }
@@ -33,7 +35,9 @@ public sealed partial class FakeFS
     public Folder CurrentFolder { get; private set; }
 
     public StringComparer Comparer { get; private set; }
+    #endregion
 
+    #region Constructors
     public FakeFS(string fileName, DataType fileType = DataType.Default)
     {
         var m = OperatingSystem.IsWindows()
@@ -89,6 +93,7 @@ public sealed partial class FakeFS
 
         CurrentFolder = RootFolder;
     }
+    #endregion
 
     public Folder SetCurrentFolder(string pathName)
     {

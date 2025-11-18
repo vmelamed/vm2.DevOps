@@ -43,7 +43,7 @@ public sealed partial class GlobEnumerator
         // if it starts with a root or drive like `C:/` or just `/`
         if (m.Success)
         {
-            // then ignore _enumerateFromDirectory and the current directory and start from the root of the file system
+            // then ignore _fromDirectory and the current directory and start from the root of the file system
             fromDir = m.Value;
             start   = m.Length; // skip the root part in the GlobRegex - it is reflected in fromDir
         }

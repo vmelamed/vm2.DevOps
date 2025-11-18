@@ -1,8 +1,8 @@
 ﻿namespace vm2.DevOps.Glob.Api.Tests;
 
-public partial class GlobTests
+public partial class GlobEnumeratorTests
 {
-    public static TheoryData<GlobEnumerateTheoryElement> Enumerate_CaseSensitivity_TestDataSet =
+    public static TheoryData<GlobEnumerateTheoryElement> Enumerate_CaseSensitivity =
     [
         // ==========================================================================================================
         // CASE SENSITIVITY: Unix (default: case-sensitive)

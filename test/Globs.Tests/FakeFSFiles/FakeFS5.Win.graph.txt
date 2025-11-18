@@ -1,6 +1,0 @@
-﻿C:/
-└── mixed/
-    ├── Index.html
-    ├── Test.dat
-    ├── readme.md
-    └── data.json

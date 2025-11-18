@@ -19,5 +19,5 @@ public enum Objects
     /// <summary>
     /// Enumerate both files and directories.
     /// </summary>
-    FilesAndDirefctories  = Files | Directories,
+    FilesAndDirectories  = Files | Directories,
 }

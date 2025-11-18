@@ -8,11 +8,10 @@ global using System.Text.Json.Serialization;
 global using System.Text.RegularExpressions;
 
 global using Microsoft.Extensions.DependencyInjection;
-global using Microsoft.Extensions.Logging;
 global using Microsoft.Extensions.Hosting;
+global using Microsoft.Extensions.Logging;
 
 global using vm2.DevOps.Glob.Api.Tests.FakeFileSystem;
-global using vm2.DevOps.Glob.Api.Tests.Utilities;
 
 global using Xunit.Sdk;
 

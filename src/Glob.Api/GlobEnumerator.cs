@@ -42,10 +42,6 @@ public sealed partial class GlobEnumerator
         set
         {
             ArgumentNullException.ThrowIfNull(value);
-            var (g, _) = NormalizeGlobAndStartDir();
-            if (!_fileSystem.GlobRegex().IsMatch(g))
-                throw new ArgumentException("Invalid pattern.", nameof(value));
-
             field = value;
         }
     } = "";
@@ -73,7 +69,8 @@ public sealed partial class GlobEnumerator
     public Objects Enumerated { get; set; } = Objects.Files;
 
     /// <summary>
-    /// Gets or sets a value indicating whether the enumeration should be performed in depth-first order vs breadth-first.
+    /// Gets or sets a value indicating whether the enumeration should be performed in depth-first order vs breadth-first. The
+    /// default is <c>false</c> - breadth-first.
     /// </summary>
     public bool DepthFirst { get; set; }
 
@@ -105,7 +102,7 @@ public sealed partial class GlobEnumerator
     /// Some globs may lead to repeating matches, e.g., /**/docs/**/*.txt, whichj may not be desireable. But also it comes with
     /// a price in memory, performance, and loss of lazy enumeration. Therefore use judiciously.
     /// </remarks>
-    public bool DistinctResults { get; set; } = false;
+    public bool Distinct { get; set; } = false;
     #endregion
 
     #region Constructors
@@ -131,12 +128,14 @@ public sealed partial class GlobEnumerator
         if (Enumerated is Objects.Files &&
             Glob is not "" &&
             (Glob.Last() is '/' or '\\' || RecursiveAtEndRegex().IsMatch(Glob)))
-            throw new InvalidOperationException("Pattern cannot end with '/', '\\', or '**' when searching for files.");
+            throw new ArgumentException("Pattern cannot end with '/', '\\', or '**' when searching for files.");
 
         Debug.Assert(_deque?.Count is 0, "The queue must be empty after the previous search!");
 
         string fromDir;
         (_glob, fromDir) = NormalizeGlobAndStartDir();
+        if (!_fileSystem.GlobRegex().IsMatch(_glob))
+            throw new ArgumentException("Invalid pattern.");
 
         if (_logger?.IsEnabled(LogLevel.Debug) is true)
             _logger.LogDebug("""
@@ -160,7 +159,7 @@ public sealed partial class GlobEnumerator
         var enumerable = EnumerateImpl();
 
         // only pattern-s with more than one directory recursive wildcards "**" can produce duplicates
-        if (DistinctResults && RecursiveRegex().Matches(_glob).Count > 1)
+        if (Distinct && RecursiveRegex().Matches(_glob).Count > 1)
             enumerable = enumerable.Distinct();
 
         return enumerable;

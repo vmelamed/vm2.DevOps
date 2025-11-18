@@ -7,16 +7,16 @@
 public class GlobEnumeratorBuilder
 {
     #region fields
-    string _glob = "";
-    string _enumerateFromDirectory = ".";
+    string _glob             = "*";
+    string _fromDirectory    = ".";
     MatchCasing _matchCasing = MatchCasing.PlatformDefault;
-    Objects _enumerated = Objects.Files;
-    bool _distinctResults;
-    bool _enumerateDepthFirst;
+    Objects _enumerated      = Objects.Files;
+    bool _distinct;
+    bool _depthFirst;
     #endregion
 
     /// <summary>
-    /// Configures the globEnumerator to use the specified glob expression for matching file or directory names. The pattern may
+    /// Configures the ge to use the specified glob expression for matching file or directory names. The pattern may
     /// include wildcards such as:
     /// <list type="bullet">
     /// <item>'*' - matches any character sequence of arbitrary length</item>
@@ -48,7 +48,7 @@ public class GlobEnumeratorBuilder
     }
 
     /// <summary>
-    /// Configures the globEnumerator to start searching from the specified directory.
+    /// Configures the ge to start searching from the specified directory.
     /// </summary>
     /// <param name="startDirectory">The directory from which to start the search.</param>
     /// <returns>
@@ -56,7 +56,7 @@ public class GlobEnumeratorBuilder
     /// </returns>
     public GlobEnumeratorBuilder FromDirectory(string startDirectory)
     {
-        _enumerateFromDirectory = startDirectory;
+        _fromDirectory = startDirectory;
         return this;
     }
 
@@ -85,6 +85,21 @@ public class GlobEnumeratorBuilder
     public GlobEnumeratorBuilder CaseInsensitive()
     {
         _matchCasing = MatchCasing.CaseInsensitive;
+        return this;
+    }
+
+    /// <summary>
+    /// Configures the builder to apply the case sensitivity that is the default for the platform when enumerating file system
+    /// entries.
+    /// </summary>
+    /// <remarks>
+    /// Use this method when you want glob patterns to distinguish between uppercase and lowercase characters during matching.
+    /// By default, matching is platform-specific: case-insensitive - on Windows, and case-sensitive - on Unix-like systems.
+    /// </remarks>
+    /// <returns>The current <see cref="GlobEnumeratorBuilder"/> instance with case-sensitive matching enabled.</returns>
+    public GlobEnumeratorBuilder PlatformSensitive()
+    {
+        _matchCasing = MatchCasing.PlatformDefault;
         return this;
     }
 
@@ -124,7 +139,7 @@ public class GlobEnumeratorBuilder
     /// </remarks>
     public GlobEnumeratorBuilder SelectDirectoriesAndFiles()
     {
-        _enumerated = Objects.FilesAndDirefctories;
+        _enumerated = Objects.FilesAndDirectories;
         return this;
     }
 
@@ -139,7 +154,7 @@ public class GlobEnumeratorBuilder
     /// <returns>The current <see cref="GlobEnumeratorBuilder"/> instance with depth-first traversal enabled.</returns>
     public GlobEnumeratorBuilder DepthFirst()
     {
-        _enumerateDepthFirst = true;
+        _depthFirst = true;
         return this;
     }
 
@@ -154,7 +169,7 @@ public class GlobEnumeratorBuilder
     /// <returns>The current <see cref="GlobEnumeratorBuilder"/> instance with breadth-first traversal enabled.</returns>
     public GlobEnumeratorBuilder BreadthFirst()
     {
-        _enumerateDepthFirst = false;
+        _depthFirst = false;
         return this;
     }
 
@@ -168,25 +183,8 @@ public class GlobEnumeratorBuilder
     /// </remarks>
     public GlobEnumeratorBuilder Distinct()
     {
-        _distinctResults = true;
+        _distinct = true;
         return this;
-    }
-
-    /// <summary>
-    /// Creates and returns a new instance of <see cref="GlobEnumerator"/> for enumerating file system entries that
-    /// match the configured glob pattern.
-    /// </summary>
-    /// <returns>A <see cref="GlobEnumerator"/> that can be used to iterate over matching file system entries.</returns>
-    public GlobEnumerator Configure(GlobEnumerator globEnumerator)
-    {
-        globEnumerator.FromDirectory   = _enumerateFromDirectory;
-        globEnumerator.Enumerated      = _enumerated;
-        globEnumerator.MatchCasing     = _matchCasing;
-        globEnumerator.DistinctResults = _distinctResults;
-        globEnumerator.DepthFirst      = _enumerateDepthFirst;
-        globEnumerator.Glob            = _glob;
-
-        return globEnumerator;
     }
 
     /// <summary>
@@ -194,4 +192,21 @@ public class GlobEnumeratorBuilder
     /// </summary>
     /// <returns>This builder</returns>
     public GlobEnumeratorBuilder Build() => this;
+
+    /// <summary>
+    /// Creates and returns a new instance of <see cref="GlobEnumerator"/> for enumerating file system entries that
+    /// match the configured glob pattern.
+    /// </summary>
+    /// <returns>A <see cref="GlobEnumerator"/> that can be used to iterate over matching file system entries.</returns>
+    public GlobEnumerator Configure(GlobEnumerator ge)
+    {
+        ge.FromDirectory   = _fromDirectory;
+        ge.Enumerated      = _enumerated;
+        ge.MatchCasing     = _matchCasing;
+        ge.Distinct = _distinct;
+        ge.DepthFirst      = _depthFirst;
+        ge.Glob            = _glob;
+
+        return ge;
+    }
 }
