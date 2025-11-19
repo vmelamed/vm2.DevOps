@@ -8,6 +8,9 @@
     <File Path=".github/workflows/Release.yaml" />
     <File Path=".github/workflows/test.yaml" />
   </Folder>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/Glob.Api.Benchmarks/Glob.Api.Benchmarks.csproj" Id="59282f2e-b8ee-45a7-9814-b69563c74e1d" />
+  </Folder>
   <Folder Name="/scripts/" />
   <Folder Name="/scripts/bash/">
     <File Path="scripts/bash/.shellcheckrc" />
@@ -44,5 +47,11 @@
   </Folder>
   <Folder Name="/test/">
     <Project Path="test/Glob.Api.Tests/Glob.Api.Tests.csproj" />
+  </Folder>
+  <Folder Name="/test/scripts/">
+    <File Path="test/scripts/cleanup-test-structure.ps1" />
+    <File Path="test/scripts/cleanup-test-structure.sh" />
+    <File Path="test/scripts/create-test-structure.ps1" />
+    <File Path="test/scripts/create-test-structure.sh" />
   </Folder>
 </Solution>

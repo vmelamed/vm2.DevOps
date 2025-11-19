@@ -5,6 +5,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="GlobEnumeratorTests.Data_EdgeCases.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="GlobEnumeratorTests.Data_EdgeCases.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Glob.Api\Glob.Api.csproj" />
   </ItemGroup>
 
