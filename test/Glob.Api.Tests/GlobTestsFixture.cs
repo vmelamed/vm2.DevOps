@@ -1,7 +1,5 @@
 ﻿namespace vm2.DevOps.Glob.Api.Tests;
 
-using vm2.DevOps.Glob.Api.Tests.FakeFileSystem;
-
 public sealed class GlobTestsFixture : IDisposable
 {
     readonly IHost _host;

@@ -13,63 +13,6 @@ For more information on using a .runsettings file, see https://aka.ms/vstest-run
     <TestSessionTimeout>600000</TestSessionTimeout>
   </RunConfiguration>
 
-  <xUnit>
-    <!--
-        See https://xunit.net/docs/config-runsettings sort of alternative to xUnit's testConfig.json: https://xunit.net/docs/config-testconfig-json
-        Instead you can use:
-        dotnet test <project> <dash dash> xUnit.AppDomain=denied xUnit.ParallelizeTestCollections=false etc
-        -->
-    <AppDomain>denied</AppDomain>
-    <!-- "required", "denied", "ifAvailable" -->
-    <Culture>en-US</Culture>
-    <DiagnosticMessages>true</DiagnosticMessages>
-    <!-- true to enable, false to disable -->
-    <InternalDiagnostics>true</InternalDiagnostics>
-    <!-- true to enable, false to disable -->
-    <LongRunningTestSeconds>10</LongRunningTestSeconds>
-    <!-- 0 to disable -->
-    <MaxParallelThreads>-1</MaxParallelThreads>
-    <!--
-        -1 - let xUnit decide, which is usually optimal
-        0 - no parallelization
-        1 - no parallelization
-        2 and up - number of threads to use
-        0.5x, 1.5x, 2x, etc - factor of the number of processors on t``he machine
-        -->
-    <AssertEquivalentMaxDepth>50</AssertEquivalentMaxDepth>
-    <MethodDisplay>classAndMethod</MethodDisplay>
-    <!-- method, classAndMethod -->
-    <MethodDisplayOptions>none</MethodDisplayOptions>
-    <!-- "all", or comma separated: "replaceUnderscoreWithSpace", "useOperatorMonikers"..., "useParameterTypes", "useEscapeSequences" Xnn or Unnnn, "replacePeriodWithComma" -->
-    <NoAutoReporters>false</NoAutoReporters>
-    <ParallelAlgorithm>conservative</ParallelAlgorithm>
-    <!-- aggressive -->
-    <ParallelizeAssembly>true</ParallelizeAssembly>
-    <ParallelizeTestCollections>true</ParallelizeTestCollections>
-    <PreEnumerateTheories>true</PreEnumerateTheories>
-    <PrintMaxEnumerableLength>5</PrintMaxEnumerableLength>
-    <PrintMaxObjectDepth>3</PrintMaxObjectDepth>
-    <PrintMaxObjectMemberCount>5</PrintMaxObjectMemberCount>
-    <PrintMaxStringLength>50</PrintMaxStringLength>
-    <!--<seed>some integer value</seed>-->
-    <ReporterSwitch>json</ReporterSwitch>
-    <!-- verbose, quiet, silent, json, teamcity -->
-    <!--
-        In order to see the reporter output, you will need to change the verbosity level of the console reporter. In Visual Studio,
-        you can do this by opening the Options settings, navigating to Test > General, and the setting the drop down under
-        "Logging Level" to "Diagnostic" (the logs in Visual Studio will appear in the Output window, under "Tests"). From the
-        command line, you can pass <dash dash>logger "console;verbosity=normal" on the dotnet test command line.
-        -->
-    <ShadowCopy>true</ShadowCopy>
-    <ShowLiveOutput>true</ShowLiveOutput>
-    <!-- see output from ITestOutputHelper live as it occurs -->
-    <Explicit>off</Explicit>
-    <!-- on, off, only -->
-    <FailSkips>false</FailSkips>
-    <FailWarns>false</FailWarns>
-    <StopOnFail>false</StopOnFail>
-  </xUnit>
-
   <!-- Configurations for data collectors -->
   <DataCollectionRunSettings>
     <DataCollectors>

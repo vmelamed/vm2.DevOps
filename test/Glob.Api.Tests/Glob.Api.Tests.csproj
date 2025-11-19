@@ -5,96 +5,44 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="GlobEnumeratorTests.Data_EdgeCases.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="GlobEnumeratorTests.Data_EdgeCases.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\src\Glob.Api\Glob.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="FakeFSFiles\FakeFS1.Unix.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="FakeFSFiles\FakeFS1.Win.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="FakeFSFiles\FakeFS1.Unix.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="FakeFSFiles\FakeFS1.Win.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="FakeFSFiles\FakeFS2.Unix.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="FakeFSFiles\FakeFS2.Win.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="FakeFSFiles\FakeFS3.Win.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="FakeFSFiles\FakeFS3.Unix.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="FakeFSFiles\FakeFS4.Unix.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="FakeFSFiles\FakeFS4.Win.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="FakeFSFiles\FakeFS5.Unix.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="FakeFSFiles\FakeFS5.Win.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="FakeFSFiles\FakeFS6.Unix.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="FakeFSFiles\FakeFS6.Win.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="FakeFSFiles\FakeFS7.Unix.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <Content Include="testconfig.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="FakeFSFiles\FakeFS1.Unix.graph.txt">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
-    <None Update="FakeFSFiles\FakeFS2.Unix.graph.txt">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
-    <None Update="FakeFSFiles\FakeFS3.Glob.graph.txt">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
-    <None Update="FakeFSFiles\FakeFS4.Win.graph.txt">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
-    <None Update="FakeFSFiles\FakeFS4.Unix.graph.txt">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
-    <None Update="FakeFSFiles\FakeFS5.Unix.graph.txt">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>    
-    <None Update="FakeFSFiles\FakeFS5.Win.graph.txt">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>    
-    <None Update="FakeFSFiles\FakeFS6.Unix.graph.txt">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>   
-    <None Update="FakeFSFiles\FakeFS6.Win.graph.txt">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>    
-    <None Update="FakeFSFiles\FakeFS7.Unix.graph.txt">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
-</ItemGroup>
+    <Content Include="FakeFSFiles\FakeFS1.Unix.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="FakeFSFiles\FakeFS1.Win.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="FakeFSFiles\FakeFS1.Unix.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="FakeFSFiles\FakeFS1.Win.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="FakeFSFiles\FakeFS2.Unix.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="FakeFSFiles\FakeFS2.Win.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="FakeFSFiles\FakeFS3.Win.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="FakeFSFiles\FakeFS3.Unix.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="FakeFSFiles\FakeFS4.Unix.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="FakeFSFiles\FakeFS4.Win.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="FakeFSFiles\FakeFS5.Unix.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="FakeFSFiles\FakeFS5.Win.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="FakeFSFiles\FakeFS6.Unix.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="FakeFSFiles\FakeFS6.Win.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="FakeFSFiles\FakeFS7.Unix.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="FakeFSFiles\FakeFS8.Unix.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="FakeFSFiles\FakeFS8.Win.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="FakeFSFiles\FakeFS1.Unix.graph.txt" CopyToOutputDirectory="Never" />
+    <Content Include="FakeFSFiles\FakeFS2.Unix.graph.txt" CopyToOutputDirectory="Never" />
+    <Content Include="FakeFSFiles\FakeFS3.Glob.graph.txt" CopyToOutputDirectory="Never" />
+    <Content Include="FakeFSFiles\FakeFS4.Win.graph.txt" CopyToOutputDirectory="Never" />
+    <Content Include="FakeFSFiles\FakeFS4.Unix.graph.txt" CopyToOutputDirectory="Never" />
+    <Content Include="FakeFSFiles\FakeFS5.Unix.graph.txt" CopyToOutputDirectory="Never" />
+    <Content Include="FakeFSFiles\FakeFS5.Win.graph.txt" CopyToOutputDirectory="Never" />
+    <Content Include="FakeFSFiles\FakeFS6.Unix.graph.txt" CopyToOutputDirectory="Never" />
+    <Content Include="FakeFSFiles\FakeFS6.Win.graph.txt" CopyToOutputDirectory="Never" />
+    <Content Include="FakeFSFiles\FakeFS7.Unix.graph.txt" CopyToOutputDirectory="Never" />
+  </ItemGroup>
 
 </Project>

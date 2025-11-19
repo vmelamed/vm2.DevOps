@@ -1,6 +1,4 @@
-﻿using vm2.DevOps.Glob.Api;
-
-namespace vm2.DevOps.Glob.Api.Tests.FakeFileSystem;
+﻿namespace vm2.DevOps.Glob.Api.Tests.FakeFileSystem;
 
 /// <summary>
 /// Thread-safe cache for FakeFS instances.
