@@ -160,7 +160,7 @@ public partial class GlobEnumeratorTests
                                                    "FakeFSFiles/FakeFS6.Unix.json",
                                                            "/special-chars/dots-and-dashes/...triple",    "/",   "/",                          Objects.Files,   MatchCasing.PlatformDefault, false,  "/special-chars/dots-and-dashes/...triple"),
 
-        new UnitTestElement(TestFileLine("Unix: Fs with multiple dots in name"),
+        new UnitTestElement(TestFileLine("Unix: File with multiple dots in name"),
                                                    "FakeFSFiles/FakeFS6.Unix.json",
                                                            "/special-chars/dots-and-dashes/*.dots.txt",   "/",   "/",                          Objects.Files,   MatchCasing.PlatformDefault, false,  "/special-chars/dots-and-dashes/file.name.with.dots.txt"),
 
@@ -184,23 +184,23 @@ public partial class GlobEnumeratorTests
         // PARENTHESES IN FILENAMES - Unix
         // ==========================================================================================================
         //                                         fsFile  glob                                           cwd    start                         objects          _matchCasing                  throws  results...
-        new UnitTestElement(TestFileLine("Unix: Fs with (1) suffix"),
+        new UnitTestElement(TestFileLine("Unix: File with (1) suffix"),
                                                    "FakeFSFiles/FakeFS6.Unix.json",
                                                            "/special-chars/parentheses/file(1).txt",      "/",   "/",                          Objects.Files,   MatchCasing.PlatformDefault, false,  "/special-chars/parentheses/file(1).txt"),
 
-        new UnitTestElement(TestFileLine("Unix: Fs with (copy) suffix"),
+        new UnitTestElement(TestFileLine("Unix: File with (copy) suffix"),
                                                    "FakeFSFiles/FakeFS6.Unix.json",
                                                            "/special-chars/parentheses/data(copy).dat",   "/",   "/",                          Objects.Files,   MatchCasing.PlatformDefault, false,  "/special-chars/parentheses/data(copy).dat"),
 
-        new UnitTestElement(TestFileLine("Unix: Fs with multiple parentheses"),
+        new UnitTestElement(TestFileLine("Unix: File with multiple parentheses"),
                                                    "FakeFSFiles/FakeFS6.Unix.json",
                                                            "/special-chars/parentheses/test(final)(2).log","/",  "/",                          Objects.Files,   MatchCasing.PlatformDefault, false,  "/special-chars/parentheses/test(final)(2).log"),
 
-        new UnitTestElement(TestFileLine("Unix: Fs starting with parenthesis"),
+        new UnitTestElement(TestFileLine("Unix: File starting with parenthesis"),
                                                    "FakeFSFiles/FakeFS6.Unix.json",
                                                            "/special-chars/parentheses/(start)file.txt",  "/",   "/",                          Objects.Files,   MatchCasing.PlatformDefault, false,  "/special-chars/parentheses/(start)file.txt"),
 
-        new UnitTestElement(TestFileLine("Unix: Fs ending with parenthesis (no extension)"),
+        new UnitTestElement(TestFileLine("Unix: File ending with parenthesis (no extension)"),
                                                    "FakeFSFiles/FakeFS6.Unix.json",
                                                            "/special-chars/parentheses/file(end)",        "/",   "/",                          Objects.Files,   MatchCasing.PlatformDefault, false,  "/special-chars/parentheses/file(end)"),
 

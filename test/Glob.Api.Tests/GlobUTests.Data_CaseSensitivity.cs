@@ -16,13 +16,13 @@ public partial class GlobEnumeratorTests
                                                    "FakeFSFiles/FakeFS5.Unix.json",
                                                            "/mixed/*/FILE.TXT",                  "/",   "/",        Objects.Files,   MatchCasing.PlatformDefault, false,  "/mixed/CaseSensitive/FILE.TXT"),
 
-        new UnitTestElement(TestFileLine("Unix: Match mixed case Fs.txt only"),
+        new UnitTestElement(TestFileLine("Unix: Match mixed case File.txt only"),
                                                    "FakeFSFiles/FakeFS5.Unix.json",
-                                                           "/mixed/*/Fs.txt",                  "/",   "/",        Objects.Files,   MatchCasing.PlatformDefault, false,  "/mixed/CaseSensitive/Fs.txt"),
+                                                           "/mixed/*/File.txt",                    "/",   "/",        Objects.Files,   MatchCasing.PlatformDefault, false,  "/mixed/CaseSensitive/File.txt"),
 
         new UnitTestElement(TestFileLine("Unix: All *.txt files (case matters)"),
                                                    "FakeFSFiles/FakeFS5.Unix.json",
-                                                           "/mixed/*/*.txt",                     "/",   "/",        Objects.Files,   MatchCasing.PlatformDefault, false,  "/mixed/CaseSensitive/Fs.txt", "/mixed/CaseSensitive/file.txt"),
+                                                           "/mixed/*/*.txt",                     "/",   "/",        Objects.Files,   MatchCasing.PlatformDefault, false,  "/mixed/CaseSensitive/File.txt", "/mixed/CaseSensitive/file.txt"),
 
         new UnitTestElement(TestFileLine("Unix: All *.TXT files (case matters)"),
                                                    "FakeFSFiles/FakeFS5.Unix.json",
@@ -30,7 +30,7 @@ public partial class GlobEnumeratorTests
 
         new UnitTestElement(TestFileLine("Unix: Directory name case matters - CaseSensitive"),
                                                    "FakeFSFiles/FakeFS5.Unix.json",
-                                                           "/mixed/CaseSensitive/*",             "/",   "/",        Objects.Files,   MatchCasing.PlatformDefault, false,  "/mixed/CaseSensitive/FILE.TXT", "/mixed/CaseSensitive/Fs.txt", "/mixed/CaseSensitive/TEST.DAT", "/mixed/CaseSensitive/Test.dat", "/mixed/CaseSensitive/file.txt", "/mixed/CaseSensitive/test.dat"),
+                                                           "/mixed/CaseSensitive/*",             "/",   "/",        Objects.Files,   MatchCasing.PlatformDefault, false,  "/mixed/CaseSensitive/FILE.TXT", "/mixed/CaseSensitive/File.txt", "/mixed/CaseSensitive/TEST.DAT", "/mixed/CaseSensitive/Test.dat", "/mixed/CaseSensitive/file.txt", "/mixed/CaseSensitive/test.dat"),
 
         new UnitTestElement(TestFileLine("Unix: Directory name case matters - casesensitive"),
                                                    "FakeFSFiles/FakeFS5.Unix.json",
@@ -58,19 +58,19 @@ public partial class GlobEnumeratorTests
         //                                         fsFile  glob                                  cwd    start       objects          _matchCasing                  throws  results...
         new UnitTestElement(TestFileLine("Unix: OVERRIDE to case-insensitive - file.txt matches all"),
                                                    "FakeFSFiles/FakeFS5.Unix.json",
-                                                           "/mixed/*/file.txt",                  "/",   "/",        Objects.Files,   MatchCasing.CaseInsensitive, false,  "/mixed/CaseSensitive/FILE.TXT", "/mixed/CaseSensitive/Fs.txt", "/mixed/CaseSensitive/file.txt"),
+                                                           "/mixed/*/file.txt",                  "/",   "/",        Objects.Files,   MatchCasing.CaseInsensitive, false,  "/mixed/CaseSensitive/FILE.TXT", "/mixed/CaseSensitive/File.txt", "/mixed/CaseSensitive/file.txt"),
 
         new UnitTestElement(TestFileLine("Unix: OVERRIDE to case-insensitive - FILE.TXT matches all"),
                                                    "FakeFSFiles/FakeFS5.Unix.json",
-                                                           "/mixed/*/FILE.TXT",                  "/",   "/",        Objects.Files,   MatchCasing.CaseInsensitive, false,  "/mixed/CaseSensitive/FILE.TXT", "/mixed/CaseSensitive/Fs.txt", "/mixed/CaseSensitive/file.txt"),
+                                                           "/mixed/*/FILE.TXT",                  "/",   "/",        Objects.Files,   MatchCasing.CaseInsensitive, false,  "/mixed/CaseSensitive/FILE.TXT", "/mixed/CaseSensitive/File.txt", "/mixed/CaseSensitive/file.txt"),
 
         new UnitTestElement(TestFileLine("Unix: OVERRIDE to case-insensitive - *.txt matches all variations"),
                                                    "FakeFSFiles/FakeFS5.Unix.json",
-                                                           "/mixed/*/*.txt",                     "/",   "/",        Objects.Files,   MatchCasing.CaseInsensitive, false,  "/mixed/CaseSensitive/FILE.TXT", "/mixed/CaseSensitive/Fs.txt", "/mixed/CaseSensitive/file.txt"),
+                                                           "/mixed/*/*.txt",                     "/",   "/",        Objects.Files,   MatchCasing.CaseInsensitive, false,  "/mixed/CaseSensitive/FILE.TXT", "/mixed/CaseSensitive/File.txt", "/mixed/CaseSensitive/file.txt"),
 
         new UnitTestElement(TestFileLine("Unix: OVERRIDE to case-insensitive - directory name casesensitive matches all"),
                                                    "FakeFSFiles/FakeFS5.Unix.json",
-                                                           "/mixed/casesensitive/*",             "/",   "/",        Objects.Files,   MatchCasing.CaseInsensitive, false,  "/mixed/CASESENSITIVE/DATA.JSON", "/mixed/CASESENSITIVE/Data.json", "/mixed/CASESENSITIVE/data.json", "/mixed/CaseSensitive/FILE.TXT", "/mixed/CaseSensitive/Fs.txt", "/mixed/CaseSensitive/TEST.DAT", "/mixed/CaseSensitive/Test.dat", "/mixed/CaseSensitive/file.txt", "/mixed/CaseSensitive/test.dat", "/mixed/casesensitive/README.md", "/mixed/casesensitive/ReadMe.md", "/mixed/casesensitive/readme.md"),
+                                                           "/mixed/casesensitive/*",             "/",   "/",        Objects.Files,   MatchCasing.CaseInsensitive, false,  "/mixed/CASESENSITIVE/DATA.JSON", "/mixed/CASESENSITIVE/Data.json", "/mixed/CASESENSITIVE/data.json", "/mixed/CaseSensitive/FILE.TXT", "/mixed/CaseSensitive/File.txt", "/mixed/CaseSensitive/TEST.DAT", "/mixed/CaseSensitive/Test.dat", "/mixed/CaseSensitive/file.txt", "/mixed/CaseSensitive/test.dat", "/mixed/casesensitive/README.md", "/mixed/casesensitive/ReadMe.md", "/mixed/casesensitive/readme.md"),
 
         new UnitTestElement(TestFileLine("Unix: OVERRIDE to case-insensitive - index.html matches all variations"),
                                                    "FakeFSFiles/FakeFS5.Unix.json",

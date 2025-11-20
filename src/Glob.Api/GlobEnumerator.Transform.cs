@@ -35,12 +35,11 @@ public sealed partial class GlobEnumerator
     /// <returns></returns>
     (string normPattern, string fromDir) NormalizeGlobAndStartDir()
     {
-        int start;
-        var end = Glob.EndsWith(SepChar) ? Glob.Length - 1 : Glob.Length;  // ignore a trailing separator
-        string fromDir = "";
         var m = FileSystemRoot.Match(Glob);
 
         // if it starts with a root or drive like `C:/` or just `/`
+        string fromDir = "";
+        int start;
         if (m.Success)
         {
             // then ignore _fromDirectory and the current directory and start from the root of the file system
@@ -53,6 +52,7 @@ public sealed partial class GlobEnumerator
             fromDir = _fileSystem.GetFullPath(FromDirectory is "" ? CurrentDir : FromDirectory);
             start   = 0;        // start from the beginning
         }
+        var end = Glob.EndsWith(SepChar) ? Glob.Length - 1 : Glob.Length;  // ignore a trailing separator
 
         Span<char> patternSpan = stackalloc char[Glob.Length];
 

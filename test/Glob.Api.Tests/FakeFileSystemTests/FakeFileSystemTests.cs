@@ -33,7 +33,7 @@ public partial class FakeFileSystemTests
     [MemberData(nameof(Json_Files_To_Add))]
     public void Should_Create_FS_From_Json_File(Json_To_Add_TestData data)
     {
-        TestContext.Current.TestOutputHelper?.WriteLine(data.ATestFileLine);
+        TestContext.Current.TestOutputHelper?.WriteLine(data.A);
         var fsf = () => new FakeFS(data.Json);
 
         if (data.Throws)

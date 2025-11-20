@@ -28,7 +28,8 @@ public abstract partial class GlobEnumeratorTests(
                         .Which
                         .ToList();
 
-        Output.WriteLine("R: \"{0}\"", string.Join("\", \"", result));
+        Output.WriteLine("Expected Results: \"{0}\"", string.Join("\", \"", data.R));
+        Output.WriteLine("  Actual Results: \"{0}\"", string.Join("\", \"", result));
 
         // Assert
         result.Should().BeEquivalentTo(data.R);

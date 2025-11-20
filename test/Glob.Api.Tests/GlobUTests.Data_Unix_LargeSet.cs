@@ -82,7 +82,7 @@ public partial class GlobEnumeratorTests
 
         new UnitTestElement(TestFileLine("Match uppercase letters D, B, C"),
                                                    "FakeFSFiles/FakeFS3.Unix.json",
-                                                           "/test/bracket-tests/[ABC]",         "/",    "/",        Objects.Files,   MatchCasing.PlatformDefault, false, "/test/bracket-tests/D", "/test/bracket-tests/B", "/test/bracket-tests/C"),
+                                                           "/test/bracket-tests/[ABC]",         "/",    "/",        Objects.Files,   MatchCasing.PlatformDefault, false, "/test/bracket-tests/A", "/test/bracket-tests/B", "/test/bracket-tests/C"),
 
         new UnitTestElement(TestFileLine("Match files starting with 'file-' followed by specific letters"),
                                                    "FakeFSFiles/FakeFS3.Unix.json",
@@ -110,7 +110,7 @@ public partial class GlobEnumeratorTests
 
         new UnitTestElement(TestFileLine("Match uppercase letters D-C"),
                                                    "FakeFSFiles/FakeFS3.Unix.json",
-                                                           "/test/bracket-tests/[D-C]",         "/",    "/",        Objects.Files,   MatchCasing.PlatformDefault, false, "/test/bracket-tests/D", "/test/bracket-tests/B", "/test/bracket-tests/C"),
+                                                           "/test/bracket-tests/[A-C]",         "/",    "/",        Objects.Files,   MatchCasing.PlatformDefault, false, "/test/bracket-tests/A", "/test/bracket-tests/B", "/test/bracket-tests/C"),
 
         new UnitTestElement(TestFileLine("Combined ranges [a-cx-z]"),
                                                    "FakeFSFiles/FakeFS3.Unix.json",
@@ -126,11 +126,11 @@ public partial class GlobEnumeratorTests
         //                                         fsFile  glob                                 cwd    start        objects          _matchCasing                 throws  results...
         new UnitTestElement(TestFileLine("Match single characters that are NOT a, b, or c"),
                                                    "FakeFSFiles/FakeFS3.Unix.json",
-                                                           "/test/bracket-tests/[!abc]",        "/",  "/",          Objects.Files,   MatchCasing.PlatformDefault, false, "/test/bracket-tests/x", "/test/bracket-tests/y", "/test/bracket-tests/z", "/test/bracket-tests/D", "/test/bracket-tests/B", "/test/bracket-tests/C", "/test/bracket-tests/1", "/test/bracket-tests/2", "/test/bracket-tests/3", "/test/bracket-tests/9"),
+                                                           "/test/bracket-tests/[!abc]",        "/",  "/",          Objects.Files,   MatchCasing.PlatformDefault, false, "/test/bracket-tests/x", "/test/bracket-tests/y", "/test/bracket-tests/z", "/test/bracket-tests/A", "/test/bracket-tests/B", "/test/bracket-tests/C", "/test/bracket-tests/1", "/test/bracket-tests/2", "/test/bracket-tests/3", "/test/bracket-tests/9"),
 
         new UnitTestElement(TestFileLine("Match single characters that are NOT digits"),
                                                    "FakeFSFiles/FakeFS3.Unix.json",
-                                                           "/test/bracket-tests/[!0-9]",        "/",  "/",          Objects.Files,   MatchCasing.PlatformDefault, false, "/test/bracket-tests/a", "/test/bracket-tests/b", "/test/bracket-tests/c", "/test/bracket-tests/x", "/test/bracket-tests/y", "/test/bracket-tests/z", "/test/bracket-tests/D", "/test/bracket-tests/B", "/test/bracket-tests/C"),
+                                                           "/test/bracket-tests/[!0-9]",        "/",  "/",          Objects.Files,   MatchCasing.PlatformDefault, false, "/test/bracket-tests/a", "/test/bracket-tests/b", "/test/bracket-tests/c", "/test/bracket-tests/x", "/test/bracket-tests/y", "/test/bracket-tests/z", "/test/bracket-tests/A", "/test/bracket-tests/B", "/test/bracket-tests/C"),
 
         new UnitTestElement(TestFileLine("Match files NOT starting with specific letters"),
                                                    "FakeFSFiles/FakeFS3.Unix.json",
@@ -138,7 +138,7 @@ public partial class GlobEnumeratorTests
 
         new UnitTestElement(TestFileLine("Negation of range [!a-m]"),
                                                    "FakeFSFiles/FakeFS3.Unix.json",
-                                                           "/test/bracket-tests/[!a-m]",        "/",  "/",          Objects.Files,   MatchCasing.PlatformDefault, false, "/test/bracket-tests/x", "/test/bracket-tests/y", "/test/bracket-tests/z", "/test/bracket-tests/D", "/test/bracket-tests/B", "/test/bracket-tests/C", "/test/bracket-tests/1", "/test/bracket-tests/2", "/test/bracket-tests/3", "/test/bracket-tests/9"),
+                                                           "/test/bracket-tests/[!a-m]",        "/",  "/",          Objects.Files,   MatchCasing.PlatformDefault, false, "/test/bracket-tests/x", "/test/bracket-tests/y", "/test/bracket-tests/z", "/test/bracket-tests/A", "/test/bracket-tests/B", "/test/bracket-tests/C", "/test/bracket-tests/1", "/test/bracket-tests/2", "/test/bracket-tests/3", "/test/bracket-tests/9"),
 
         // ==========================================================================================================
         // CHARACTER CLASSES: [[:alnum:]], [[:alpha:]], [[:digit:]], [[:lower:]], [[:upper:]]
@@ -146,11 +146,11 @@ public partial class GlobEnumeratorTests
         //                                         fsFile  glob                                 cwd    start        objects          _matchCasing                 throws  results...
         new UnitTestElement(TestFileLine("Match single alphanumeric characters [[:alnum:]]"),
                                                    "FakeFSFiles/FakeFS3.Unix.json",
-                                                           "/test/bracket-tests/[[:alnum:]]",    "/",  "/",         Objects.Files,   MatchCasing.PlatformDefault, false, "/test/bracket-tests/a", "/test/bracket-tests/b", "/test/bracket-tests/c", "/test/bracket-tests/x", "/test/bracket-tests/y", "/test/bracket-tests/z", "/test/bracket-tests/D", "/test/bracket-tests/B", "/test/bracket-tests/C", "/test/bracket-tests/1", "/test/bracket-tests/2", "/test/bracket-tests/3", "/test/bracket-tests/9"),
+                                                           "/test/bracket-tests/[[:alnum:]]",    "/",  "/",         Objects.Files,   MatchCasing.PlatformDefault, false, "/test/bracket-tests/a", "/test/bracket-tests/b", "/test/bracket-tests/c", "/test/bracket-tests/x", "/test/bracket-tests/y", "/test/bracket-tests/z", "/test/bracket-tests/A", "/test/bracket-tests/B", "/test/bracket-tests/C", "/test/bracket-tests/1", "/test/bracket-tests/2", "/test/bracket-tests/3", "/test/bracket-tests/9"),
 
         new UnitTestElement(TestFileLine("Match single alphabetic characters [[:alpha:]]"),
                                                    "FakeFSFiles/FakeFS3.Unix.json",
-                                                           "/test/bracket-tests/[[:alpha:]]",    "/",  "/",         Objects.Files,   MatchCasing.PlatformDefault, false, "/test/bracket-tests/a", "/test/bracket-tests/b", "/test/bracket-tests/c", "/test/bracket-tests/x", "/test/bracket-tests/y", "/test/bracket-tests/z", "/test/bracket-tests/D", "/test/bracket-tests/B", "/test/bracket-tests/C"),
+                                                           "/test/bracket-tests/[[:alpha:]]",    "/",  "/",         Objects.Files,   MatchCasing.PlatformDefault, false, "/test/bracket-tests/a", "/test/bracket-tests/b", "/test/bracket-tests/c", "/test/bracket-tests/x", "/test/bracket-tests/y", "/test/bracket-tests/z", "/test/bracket-tests/A", "/test/bracket-tests/B", "/test/bracket-tests/C"),
 
         new UnitTestElement(TestFileLine("Match single digit characters [[:digit:]]"),
                                                    "FakeFSFiles/FakeFS3.Unix.json",
@@ -162,7 +162,7 @@ public partial class GlobEnumeratorTests
 
         new UnitTestElement(TestFileLine("Match single uppercase letters [[:upper:]]"),
                                                    "FakeFSFiles/FakeFS3.Unix.json",
-                                                           "/test/bracket-tests/[[:upper:]]",    "/",  "/",         Objects.Files,   MatchCasing.PlatformDefault, false, "/test/bracket-tests/D", "/test/bracket-tests/B", "/test/bracket-tests/C"),
+                                                           "/test/bracket-tests/[[:upper:]]",    "/",  "/",         Objects.Files,   MatchCasing.PlatformDefault, false, "/test/bracket-tests/A", "/test/bracket-tests/B", "/test/bracket-tests/C"),
 
         // ==========================================================================================================
         // RECURSIVE WILDCARDS: ** - matches zero or more directories
@@ -258,7 +258,7 @@ public partial class GlobEnumeratorTests
 
         new UnitTestElement(TestFileLine("Combine character class with negation"),
                                                    "FakeFSFiles/FakeFS3.Unix.json",
-                                                           "/test/bracket-tests/[![:digit:]]",    "/",  "/",        Objects.Files,   MatchCasing.PlatformDefault, false, "/test/bracket-tests/a", "/test/bracket-tests/b", "/test/bracket-tests/c", "/test/bracket-tests/x", "/test/bracket-tests/y", "/test/bracket-tests/z", "/test/bracket-tests/D", "/test/bracket-tests/B", "/test/bracket-tests/C"),
+                                                           "/test/bracket-tests/[![:digit:]]",    "/",  "/",        Objects.Files,   MatchCasing.PlatformDefault, false, "/test/bracket-tests/a", "/test/bracket-tests/b", "/test/bracket-tests/c", "/test/bracket-tests/x", "/test/bracket-tests/y", "/test/bracket-tests/z", "/test/bracket-tests/A", "/test/bracket-tests/B", "/test/bracket-tests/C"),
 
         // ==========================================================================================================
         // EDGE CASES AND SPECIAL SCENARIOS
@@ -431,7 +431,7 @@ public partial class GlobEnumeratorTests
         //                                         fsFile  glob                                 cwd    start        objects          _matchCasing                 throws  results...
         new UnitTestElement(TestFileLine("Multiple ranges in single bracket [a-zA-Z0-9]"),
                                                    "FakeFSFiles/FakeFS3.Unix.json",
-                                                           "/test/bracket-tests/[a-zA-Z0-9]",   "/",    "/",        Objects.Files,  MatchCasing.PlatformDefault, false, "/test/bracket-tests/a", "/test/bracket-tests/b", "/test/bracket-tests/c", "/test/bracket-tests/x", "/test/bracket-tests/y", "/test/bracket-tests/z", "/test/bracket-tests/D", "/test/bracket-tests/B", "/test/bracket-tests/C", "/test/bracket-tests/1", "/test/bracket-tests/2", "/test/bracket-tests/3", "/test/bracket-tests/9"),
+                                                           "/test/bracket-tests/[a-zA-Z0-9]",   "/",    "/",        Objects.Files,  MatchCasing.PlatformDefault, false, "/test/bracket-tests/a", "/test/bracket-tests/b", "/test/bracket-tests/c", "/test/bracket-tests/x", "/test/bracket-tests/y", "/test/bracket-tests/z", "/test/bracket-tests/A", "/test/bracket-tests/B", "/test/bracket-tests/C", "/test/bracket-tests/1", "/test/bracket-tests/2", "/test/bracket-tests/3", "/test/bracket-tests/9"),
 
         new UnitTestElement(TestFileLine("Single character in brackets [a]"),
                                                    "FakeFSFiles/FakeFS3.Unix.json",
@@ -439,15 +439,15 @@ public partial class GlobEnumeratorTests
 
         new UnitTestElement(TestFileLine("Negation of character class [![:lower:]]"),
                                                    "FakeFSFiles/FakeFS3.Unix.json",
-                                                           "/test/bracket-tests/[![:lower:]]",  "/",    "/",        Objects.Files, MatchCasing.PlatformDefault, false, "/test/bracket-tests/D", "/test/bracket-tests/B", "/test/bracket-tests/C", "/test/bracket-tests/1", "/test/bracket-tests/2", "/test/bracket-tests/3", "/test/bracket-tests/9"),
+                                                           "/test/bracket-tests/[![:lower:]]",  "/",    "/",        Objects.Files, MatchCasing.PlatformDefault, false, "/test/bracket-tests/A", "/test/bracket-tests/B", "/test/bracket-tests/C", "/test/bracket-tests/1", "/test/bracket-tests/2", "/test/bracket-tests/3", "/test/bracket-tests/9"),
 
         new UnitTestElement(TestFileLine("Negation of character class with range [![:digit:]]"),
                                                    "FakeFSFiles/FakeFS3.Unix.json",
-                                                           "/test/bracket-tests/[![:digit:]]",  "/",    "/",        Objects.Files, MatchCasing.PlatformDefault, false, "/test/bracket-tests/a", "/test/bracket-tests/b", "/test/bracket-tests/c", "/test/bracket-tests/x", "/test/bracket-tests/y", "/test/bracket-tests/z", "/test/bracket-tests/D", "/test/bracket-tests/B", "/test/bracket-tests/C"),
+                                                           "/test/bracket-tests/[![:digit:]]",  "/",    "/",        Objects.Files, MatchCasing.PlatformDefault, false, "/test/bracket-tests/a", "/test/bracket-tests/b", "/test/bracket-tests/c", "/test/bracket-tests/x", "/test/bracket-tests/y", "/test/bracket-tests/z", "/test/bracket-tests/A", "/test/bracket-tests/B", "/test/bracket-tests/C"),
 
         new UnitTestElement(TestFileLine("Complex bracket with multiple character classes [[:alpha:][:digit:]]"),
                                                    "FakeFSFiles/FakeFS3.Unix.json",
-                                                           "/test/bracket-tests/[-[:alpha:].[:digit:]_]","/","/",   Objects.Files,  MatchCasing.PlatformDefault, false, "/test/bracket-tests/a", "/test/bracket-tests/b", "/test/bracket-tests/c", "/test/bracket-tests/x", "/test/bracket-tests/y", "/test/bracket-tests/z", "/test/bracket-tests/D", "/test/bracket-tests/B", "/test/bracket-tests/C", "/test/bracket-tests/1", "/test/bracket-tests/2", "/test/bracket-tests/3", "/test/bracket-tests/9"),
+                                                           "/test/bracket-tests/[-[:alpha:].[:digit:]_]","/","/",   Objects.Files,  MatchCasing.PlatformDefault, false, "/test/bracket-tests/a", "/test/bracket-tests/b", "/test/bracket-tests/c", "/test/bracket-tests/x", "/test/bracket-tests/y", "/test/bracket-tests/z", "/test/bracket-tests/A", "/test/bracket-tests/B", "/test/bracket-tests/C", "/test/bracket-tests/1", "/test/bracket-tests/2", "/test/bracket-tests/3", "/test/bracket-tests/9"),
 
         new UnitTestElement(TestFileLine("Bracket with range and explicit chars [a-c5-7xyz]"),
                                                    "FakeFSFiles/FakeFS3.Unix.json",

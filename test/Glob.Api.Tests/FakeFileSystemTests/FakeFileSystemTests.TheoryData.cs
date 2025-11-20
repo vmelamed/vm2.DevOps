@@ -94,7 +94,7 @@ public partial class FakeFileSystemTests
         {
         }
 
-        public string ATestFileLine { get; private set; } = testFileLine;
+        public string A { get; private set; } = testFileLine;
         public string Json { get; private set; } = json;
         public bool Throws { get; private set; } = throws;
         public bool PrintJson { get; private set; } = printJson;
@@ -102,16 +102,16 @@ public partial class FakeFileSystemTests
 
         public void Deserialize(IXunitSerializationInfo info)
         {
-            ATestFileLine = info.GetValue<string>(nameof(ATestFileLine)) ?? "";
-            Json          = info.GetValue<string>(nameof(Json)) ?? "";
-            Throws        = info.GetValue<bool>(nameof(Throws));
-            PrintJson     = info.GetValue<bool>(nameof(PrintJson));
-            Text          = info.GetValue<string>(nameof(Text)) ?? "";
+            A         = info.GetValue<string>(nameof(A)) ?? "";
+            Json      = info.GetValue<string>(nameof(Json)) ?? "";
+            Throws    = info.GetValue<bool>(nameof(Throws));
+            PrintJson = info.GetValue<bool>(nameof(PrintJson));
+            Text      = info.GetValue<string>(nameof(Text)) ?? "";
         }
 
         public void Serialize(IXunitSerializationInfo info)
         {
-            info.AddValue(nameof(ATestFileLine), ATestFileLine);
+            info.AddValue(nameof(A), A);
             info.AddValue(nameof(Json), Json);
             info.AddValue(nameof(Throws), Throws);
             info.AddValue(nameof(PrintJson), PrintJson);
@@ -159,7 +159,7 @@ public partial class FakeFileSystemTests
         {
         }
 
-        public string ATestFileLine { get; private set; } = testFileLine;
+        public string A { get; private set; } = testFileLine;
         public string FsJsonFile { get; private set; } = fsJsonFile;
         public string Cwf { get; private set; } = cwf;
         public string Chf { get; private set; } = chf;
@@ -168,16 +168,16 @@ public partial class FakeFileSystemTests
 
         public void Deserialize(IXunitSerializationInfo info)
         {
-            ATestFileLine = info.GetValue<string>(nameof(ATestFileLine)) ?? "";
-            FsJsonFile   = info.GetValue<string>(nameof(FsJsonFile)) ?? "";
-            Cwf          = info.GetValue<string>(nameof(Cwf)) ?? "";
-            Chf          = info.GetValue<string>(nameof(Chf)) ?? "";
-            Rwf          = info.GetValue<string>(nameof(Rwf)) ?? "";
-            Throws       = info.GetValue<bool>(nameof(Throws));
+            A          = info.GetValue<string>(nameof(A)) ?? "";
+            FsJsonFile = info.GetValue<string>(nameof(FsJsonFile)) ?? "";
+            Cwf        = info.GetValue<string>(nameof(Cwf)) ?? "";
+            Chf        = info.GetValue<string>(nameof(Chf)) ?? "";
+            Rwf        = info.GetValue<string>(nameof(Rwf)) ?? "";
+            Throws     = info.GetValue<bool>(nameof(Throws));
         }
         public void Serialize(IXunitSerializationInfo info)
         {
-            info.AddValue(nameof(ATestFileLine), ATestFileLine);
+            info.AddValue(nameof(A), A);
             info.AddValue(nameof(FsJsonFile), FsJsonFile);
             info.AddValue(nameof(Cwf), Cwf);
             info.AddValue(nameof(Chf), Chf);

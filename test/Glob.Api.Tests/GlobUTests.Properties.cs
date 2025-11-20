@@ -30,7 +30,7 @@ public partial class GlobPropertiesTests : GlobEnumeratorTests
     public void Invalid_MatchCasing_ShouldThrow()
     {
         var ge = Fixture.GetGlobEnumerator("FakeFSFiles/FakeFS2.Win.json");
-        var assignInvalidPath = () => ge.MatchCasing = (MatchCasing)3;
+        var assignInvalidPath = () => ge.MatchCasing = ((MatchCasing)3);
 
         assignInvalidPath.Should().Throw<ArgumentException>();
     }

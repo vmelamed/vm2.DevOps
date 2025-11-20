@@ -99,7 +99,7 @@ public sealed partial class GlobEnumerator
     /// be removed from the final output.
     /// </summary>
     /// <remarks>
-    /// Some globs may lead to repeating matches, e.g., /**/docs/**/*.txt, whichj may not be desireable. But also it comes with
+    /// Some globs may lead to repeating matches, e.g., /**/docs/**/*.txt, which may not be desirable. But also it comes with
     /// a price in memory, performance, and loss of lazy enumeration. Therefore use judiciously.
     /// </remarks>
     public bool Distinct { get; set; } = false;
