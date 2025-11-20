@@ -3,12 +3,12 @@
 [ExcludeFromCodeCoverage]
 public class GlobCaseSensitivityTests : GlobEnumeratorTests
 {
-    public GlobCaseSensitivityTests(GlobTestsFixture fixture, ITestOutputHelper output)
+    public GlobCaseSensitivityTests(GlobUnitTestsFixture fixture, ITestOutputHelper output)
         : base(fixture, output)
     {
     }
 
     [Theory]
     [MemberData(nameof(Enumerate_CaseSensitivity))]
-    public void Should_Enumerate_CaseSensitivity_GlobEnumerator(GlobEnumerateTheoryElement data) => Enumerate_GlobEnumerator(data);
+    public void Should_Enumerate_CaseSensitivity_GlobEnumerator(UnitTestElement data) => Enumerate_GlobEnumerator(data);
 }

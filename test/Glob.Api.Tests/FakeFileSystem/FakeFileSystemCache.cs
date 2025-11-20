@@ -25,7 +25,7 @@ public sealed class FakeFileSystemCache : IFakeFileSystemCache
         if (!m.Success)
             throw new ArgumentException($"The path name '{fileName}' format is invalid.", nameof(fileName));
         if (!File.Exists(fileName))
-            throw new FileNotFoundException($"File '{fileName}' not found.", fileName);
+            throw new FileNotFoundException($"Fs '{fileName}' not found.", fileName);
 
         var file = m.Groups[FileGr].ValueSpan;
         var si = file.LastIndexOf('.');

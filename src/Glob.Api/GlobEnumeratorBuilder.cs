@@ -89,6 +89,21 @@ public class GlobEnumeratorBuilder
     }
 
     /// <summary>
+    /// Configures the builder to perform pattern matching with the specified case sensitivity when enumerating file system.
+    /// </summary>
+    /// <param name="sensitivity">The desired case sensitivity for pattern matching.</param>
+    /// <remarks>
+    /// Use this method when you want glob patterns to distinguish between uppercase and lowercase characters during matching.
+    /// By default, matching is platform-specific: case-insensitive - on Windows, and case-sensitive - on Unix-like systems.
+    /// </remarks>
+    /// <returns>The current <see cref="GlobEnumeratorBuilder"/> instance with case-sensitive matching enabled.</returns>
+    public GlobEnumeratorBuilder WithCaseSensitivity(MatchCasing sensitivity)
+    {
+        _matchCasing = sensitivity;
+        return this;
+    }
+
+    /// <summary>
     /// Configures the builder to apply the case sensitivity that is the default for the platform when enumerating file system
     /// entries.
     /// </summary>
@@ -126,6 +141,22 @@ public class GlobEnumeratorBuilder
     public GlobEnumeratorBuilder SelectFiles()
     {
         _enumerated = Objects.Files;
+        return this;
+    }
+
+    /// <summary>
+    /// Specifies the types of file system objects to include in the enumeration.
+    /// </summary>
+    /// <param name="typeOfFileSystemObjects">
+    /// An <see cref="Objects"/> value that determines which file system object types will be selected for enumeration.
+    /// This parameter controls whether files, directories, or other supported object types are included.
+    /// </param>
+    /// <returns>The current <see cref="GlobEnumeratorBuilder"/> instance with the selection criteria applied. This enables
+    /// method chaining for further configuration.
+    /// </returns>
+    public GlobEnumeratorBuilder Select(Objects typeOfFileSystemObjects)
+    {
+        _enumerated = typeOfFileSystemObjects;
         return this;
     }
 
@@ -174,6 +205,24 @@ public class GlobEnumeratorBuilder
     }
 
     /// <summary>
+    /// Configures the traversal order for glob enumeration to use either depth-first or breadth-first search.
+    /// </summary>
+    /// <remarks>Use this method to control how file system entries are visited during glob enumeration.
+    /// Depth-first traversal explores directory trees before visiting sibling directories, while breadth-first
+    /// traversal visits all entries at the current level before descending.
+    /// </remarks>
+    /// <param name="depthFirst">
+    /// Specifies the traversal order. Set to <see langword="true"/> to use depth-first search; otherwise, breadth-first search
+    /// is used.
+    /// </param>
+    /// <returns>The current <see cref="GlobEnumeratorBuilder"/> instance with the updated traversal order setting.</returns>
+    public GlobEnumeratorBuilder TraverseDepthFirst(bool depthFirst)
+    {
+        _depthFirst = depthFirst;
+        return this;
+    }
+
+    /// <summary>
     /// Enables or disables filtering of duplicate results in the glob enumeration.
     /// </summary>
     /// <returns>The current <see cref="GlobEnumeratorBuilder"/> instance to allow method chaining.</returns>
@@ -184,6 +233,17 @@ public class GlobEnumeratorBuilder
     public GlobEnumeratorBuilder Distinct()
     {
         _distinct = true;
+        return this;
+    }
+
+    /// <summary>
+    /// Enables or disables filtering of duplicate results in the glob enumeration.
+    /// </summary>
+    /// <param name="distinctResults"></param>
+    /// <returns>The current <see cref="GlobEnumeratorBuilder"/> instance to allow method chaining.</returns>
+    public GlobEnumeratorBuilder WithDistinct(bool distinctResults)
+    {
+        _distinct = distinctResults;
         return this;
     }
 

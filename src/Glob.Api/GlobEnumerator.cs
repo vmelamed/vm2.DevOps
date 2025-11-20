@@ -145,18 +145,16 @@ public sealed partial class GlobEnumerator
                 Enumerate from directory:      "{FromDir}" => "{NormalizedFromDir}"
                 Objects:                    "{Enumerated}"
                 """,
-                Glob,
-                _glob,
+                Glob, _glob,
                 _fileSystem.GetCurrentDirectory(),
-                FromDirectory,
-                fromDir,
+                FromDirectory, fromDir,
                 Enumerated);
 
         _deque.Clear();                                       // just in case
         _deque.IsStack = DepthFirst;                          // honor the order of traversing
         _deque.Add((fromDir, FirstGlobComponent(), false));   // enqueue the first search and dive-into the enumeration
 
-        var enumerable = EnumerateImpl();
+        var enumerable = Traverse();
 
         // only pattern-s with more than one directory recursive wildcards "**" can produce duplicates
         if (Distinct && RecursiveRegex().Matches(_glob).Count > 1)
@@ -181,7 +179,7 @@ public sealed partial class GlobEnumerator
 
     bool IsLastGlobComponent(Range range) => range.End.Value >= _glob.Length;
 
-    IEnumerable<string> EnumerateImpl()
+    IEnumerable<string> Traverse()
     {
         while (_deque.TryGet(out var p))
         {
@@ -191,7 +189,6 @@ public sealed partial class GlobEnumerator
             var globComponent    = _glob[globComponentRange];
             var (pattern, regex) = GlobToRegex(globComponent);  // globComponent -> pattern (in .NET) and then regex to filter
                                                                 // the names of the objects in dir
-
             if (_logger?.IsEnabled(LogLevel.Debug) is true)
                 _logger.LogDebug("""
                     --------------------------------
@@ -200,12 +197,9 @@ public sealed partial class GlobEnumerator
                         pattern:                    "{Pattern}"
                         match regex:                "{Regex}"
                     """,
-                    dir,
-                    recursively ? "recursively" : "",
-                    globComponent,
-                    isLast ? "(the last)" : "",
-                    pattern,
-                    regex);
+                    dir, recursively ? "recursively" : "",
+                    globComponent, isLast ? "(the last)" : "",
+                    pattern, regex);
 
             var nextGlobComponentRange = NextGlobComponent(globComponentRange);
 

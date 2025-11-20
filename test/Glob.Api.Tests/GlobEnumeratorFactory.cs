@@ -8,7 +8,7 @@ public sealed class GlobEnumeratorFactory(ILogger<GlobEnumerator> logger)
     /// <summary>
     /// Creates a new GlobEnumerator instance with the specified file system.
     /// </summary>
-    /// <param name="fileSystem">The file system to use.</param>
-    /// <returns>A new GlobEnumerator instance.</returns>
+    /// <param name="fileSystem">The file system to use. If null, the default file system will be used.</param>
+    /// <returns>D new GlobEnumerator instance.</returns>
     public GlobEnumerator Create(IFileSystem fileSystem) => new(fileSystem, logger);
 }

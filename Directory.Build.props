@@ -71,10 +71,9 @@
 
   <!-- for *.Tests projects in the ./test folder: -->
   <ItemGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]test[/\\]')) and $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '^*.Tests$'))">
-    <!--<PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />-->
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
     <PackageReference Include="FluentAssertions" />
-    <PackageReference Include="xunit.v3.mtp-v2" />
-    <!-- xunit.v3.mtp-v2 replaces explicitly <PackageReference Include="xunit.v3" /> to use MTP -->
+    <PackageReference Include="xunit.v3.mtp-v2" /> <!-- xunit.v3.mtp-v2 replaces explicitly <PackageReference Include="xunit.v3" /> to use MTP -->
 
     <!-- These should be redundant for the test platform -->
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
@@ -84,10 +83,12 @@
     </PackageReference>
     <!-- These should be redundant for the test platform -->
 
+    <!--
     <PackageReference Include="coverlet.msbuild">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    -->
   </ItemGroup>
 
   <!-- for test utility/library projects in the ./test folder: -->

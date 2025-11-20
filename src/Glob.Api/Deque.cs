@@ -2,46 +2,43 @@
 
 class Deque<T>
 {
-    List<T> _line;
+    List<T> _sequence;
 
     public Deque(bool isStack = false, int capacity = 0)
     {
         IsStack = isStack;
-        _line = capacity is >0 ? new(capacity) : new();
+        _sequence = capacity is >0 ? new(capacity) : new();
     }
 
-    public int Count => _line.Count;
+    public int Count => _sequence.Count;
 
     public bool IsStack { get; set; }
 
-    public void Add(T element) => _line.Add(element);
+    public void Add(T element) => _sequence.Add(element);
 
     public bool TryGet(out T element)
     {
-        if (_line.Count is 0)
+        if (_sequence.Count is 0)
         {
             element = default!;
             return false;
         }
 
-        var index = IsStack ? _line.Count-1 : 0;
+        var index = IsStack ? _sequence.Count-1 : 0;
 
-        element = _line[index];
-        _line.RemoveAt(index);
+        element = _sequence[index];
+        _sequence.RemoveAt(index);
         return true;
     }
 
     public T Get()
     {
-        if (_line.Count is 0)
+        if (_sequence.Count is 0)
             throw new InvalidOperationException("The line is empty.");
 
-        var index = IsStack ? _line.Count-1 : 0;
-        T element = _line[index];
-
-        _line.RemoveAt(index);
+        TryGet(out var element);
         return element;
     }
 
-    public void Clear() => _line.Clear();
+    public void Clear() => _sequence.Clear();
 }

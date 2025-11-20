@@ -3,12 +3,12 @@
 [ExcludeFromCodeCoverage]
 public class GlobSpecialCharactersTests : GlobEnumeratorTests
 {
-    public GlobSpecialCharactersTests(GlobTestsFixture fixture, ITestOutputHelper output)
+    public GlobSpecialCharactersTests(GlobUnitTestsFixture fixture, ITestOutputHelper output)
         : base(fixture, output)
     {
     }
 
     [Theory]
     [MemberData(nameof(Enumerate_SpecialCharacters))]
-    public void Should_Enumerate_SpecialCharacters_GlobEnumerator(GlobEnumerateTheoryElement data) => Enumerate_GlobEnumerator(data);
+    public void Should_Enumerate_SpecialCharacters_GlobEnumerator(UnitTestElement data) => Enumerate_GlobEnumerator(data);
 }

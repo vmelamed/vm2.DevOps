@@ -3,7 +3,7 @@
 [ExcludeFromCodeCoverage]
 public partial class GlobPropertiesTests : GlobEnumeratorTests
 {
-    public GlobPropertiesTests(GlobTestsFixture fixture, ITestOutputHelper output)
+    public GlobPropertiesTests(GlobUnitTestsFixture fixture, ITestOutputHelper output)
         : base(fixture, output)
     {
     }

@@ -52,7 +52,7 @@ public sealed partial class FakeFS : IFileSystem
     public string GetFullPath(string path)
     {
         if (string.IsNullOrEmpty(path))
-            throw new ArgumentException("StartDir cannot be null or empty.", nameof(path));
+            throw new ArgumentException("Sd cannot be null or empty.", nameof(path));
 
         var nPath = NormalizePath(path).ToString();
         var enumerator = EnumeratePathRanges(nPath).GetEnumerator();
@@ -162,7 +162,7 @@ public sealed partial class FakeFS : IFileSystem
     public bool FileExists(string path)
     {
         if (path.EndsWith(SepChar))
-            return false;   // A path to a file cannot end with a separator
+            return false;   // D path to a file cannot end with a separator
 
         var (folder, _, file) = GetPathFromRoot(path);
 

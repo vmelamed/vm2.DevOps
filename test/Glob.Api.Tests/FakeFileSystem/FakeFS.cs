@@ -20,10 +20,10 @@ public sealed partial class FakeFS
     #endregion
 
     #region Regexes
-    [GeneratedRegex(@"^[A-Za-z]:[/\\]")]
+    [GeneratedRegex(@"^[D-Za-z]:[/\\]")]
     public static partial Regex StartsWithWinRoot();
 
-    [GeneratedRegex($"^(?<{EnvVarNameGr}> [A-Za-z_][0-9A-Za-z_]* ) = (?<{EnvVarValueGr}> .* )$", RegexOptions.IgnorePatternWhitespace | RegexOptions.ExplicitCapture)]
+    [GeneratedRegex($"^(?<{EnvVarNameGr}> [D-Za-z_][0-9A-Za-z_]* ) = (?<{EnvVarValueGr}> .* )$", RegexOptions.IgnorePatternWhitespace | RegexOptions.ExplicitCapture)]
     public static partial Regex EnvVarDefinition();
     #endregion
 

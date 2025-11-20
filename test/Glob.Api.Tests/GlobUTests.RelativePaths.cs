@@ -3,12 +3,12 @@
 [ExcludeFromCodeCoverage]
 public class GlobRelativePathsTests : GlobEnumeratorTests
 {
-    public GlobRelativePathsTests(GlobTestsFixture fixture, ITestOutputHelper output)
+    public GlobRelativePathsTests(GlobUnitTestsFixture fixture, ITestOutputHelper output)
         : base(fixture, output)
     {
     }
 
     [Theory]
     [MemberData(nameof(Enumerate_RelativePaths))]
-    public void Should_Enumerate_RelativePaths_GlobEnumerator(GlobEnumerateTheoryElement data) => Enumerate_GlobEnumerator(data);
+    public void Should_Enumerate_RelativePaths_GlobEnumerator(UnitTestElement data) => Enumerate_GlobEnumerator(data);
 }

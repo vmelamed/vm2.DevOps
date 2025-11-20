@@ -3,7 +3,7 @@
 [ExcludeFromCodeCoverage]
 public class GlobEnumerationOrderTests : GlobEnumeratorTests
 {
-    public GlobEnumerationOrderTests(GlobTestsFixture fixture, ITestOutputHelper output)
+    public GlobEnumerationOrderTests(GlobUnitTestsFixture fixture, ITestOutputHelper output)
         : base(fixture, output)
     {
     }
@@ -13,7 +13,7 @@ public class GlobEnumerationOrderTests : GlobEnumeratorTests
     {
         var ge = Fixture.GetGlobEnumerator(
                             "FakeFSFiles/FakeFS7.Unix.json",
-                            builder => builder
+                            () => new GlobEnumeratorBuilder()
                                         .WithGlob("**/*.txt")
                                         .FromDirectory("/")
                                         .CaseSensitive()
@@ -25,7 +25,7 @@ public class GlobEnumerationOrderTests : GlobEnumeratorTests
         var enumerate = ge.Enumerate;
         var result = enumerate.Should().NotThrow().Which.ToList();
 
-        Console.WriteLine("DepthFirst Results:");
+        Console.WriteLine("Tdf R:");
         foreach (var item in result)
             Output.WriteLine(item);
 
@@ -46,7 +46,7 @@ public class GlobEnumerationOrderTests : GlobEnumeratorTests
     {
         var ge = Fixture.GetGlobEnumerator(
                             "FakeFSFiles/FakeFS7.Unix.json",
-                            builder => builder
+                            () => new GlobEnumeratorBuilder()
                                         .WithGlob("**/*.txt")
                                         .FromDirectory("/")
                                         .CaseInsensitive()
@@ -58,7 +58,7 @@ public class GlobEnumerationOrderTests : GlobEnumeratorTests
         var enumerate = ge.Enumerate;
         var result = enumerate.Should().NotThrow().Which.ToList();
 
-        Console.WriteLine("BreadthFirst Results:");
+        Console.WriteLine("BreadthFirst R:");
         foreach (var item in result)
             Output.WriteLine(item);
 

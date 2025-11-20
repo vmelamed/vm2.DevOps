@@ -1,11 +1,11 @@
 ﻿namespace vm2.DevOps.Glob.Api.Tests;
 
-public sealed class GlobTestsFixture : IDisposable
+public class GlobUnitTestsFixture : IDisposable
 {
-    readonly IHost _host;
-    readonly IFakeFileSystemCache _fileSystemCache;
+    protected readonly IHost _host;
+    protected readonly IFakeFileSystemCache _fileSystemCache;
 
-    public GlobTestsFixture()
+    public GlobUnitTestsFixture()
     {
         var builder = Host.CreateApplicationBuilder();
 
@@ -19,6 +19,7 @@ public sealed class GlobTestsFixture : IDisposable
         builder
             .Services
             .AddSingleton<IFileSystem, FileSystem>()
+            .AddTransient<GlobEnumerator>()
             .AddTransient<GlobEnumeratorFactory>()
             ;
 
@@ -26,13 +27,13 @@ public sealed class GlobTestsFixture : IDisposable
         _fileSystemCache = new FakeFileSystemCache();
     }
 
-    public void Dispose() => _host.Dispose();
+    public virtual void Dispose() => _host.Dispose();
 
     public ITestOutputHelper? Output { get; set; }
 
     public GlobEnumerator GetGlobEnumerator(
         string fileSystemFile,
-        Func<GlobEnumeratorBuilder, GlobEnumeratorBuilder>? configure = null)
+        Func<GlobEnumeratorBuilder>? getBuilder = null)
     {
         // Get the file system for this test
         var fileSystem = _fileSystemCache.GetFileSystem(fileSystemFile);
@@ -42,9 +43,24 @@ public sealed class GlobTestsFixture : IDisposable
                             .Create(fileSystem)
                             ;
 
-        if (configure is null)
+        if (getBuilder is null)
             return enumerator;
 
-        return configure(new GlobEnumeratorBuilder()).Configure(enumerator);
+        return getBuilder().Configure(enumerator);
+    }
+
+    public GlobEnumerator GetGlobEnumerator(
+        Func<GlobEnumeratorBuilder>? getBuilder = null)
+    {
+        // Get the file system for this test
+        var enumerator = _host
+                            .Services
+                            .GetRequiredService<GlobEnumerator>()
+                            ;
+
+        if (getBuilder is null)
+            return enumerator;
+
+        return getBuilder().Configure(enumerator);
     }
 }

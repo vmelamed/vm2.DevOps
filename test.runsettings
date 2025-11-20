@@ -25,7 +25,14 @@ For more information on using a .runsettings file, see https://aka.ms/vstest-run
           <FileName>coverage.cobertura.xml</FileName>
           <!-- Exclude specific assemblies or namespaces -->
           <!-- Exclude>[MyNamespace.*]*,[*]GeneratedCode*</Exclude -->
-          <ExcludeByAttribute>Obsolete,GeneratedCodeAttribute,ExcludeFromCodeCoverageAttribute,CompilerGeneratedAttribute,DebuggerHiddenAttribute,DebuggerNonUserCodeAttribute</ExcludeByAttribute>
+          <ExcludeByAttribute>
+            ObsoleteAttribute,
+            GeneratedCodeAttribute,
+            ExcludeFromCodeCoverageAttribute,
+            CompilerGeneratedAttribute,
+            DebuggerHiddenAttribute,
+            DebuggerNonUserCodeAttribute
+          </ExcludeByAttribute>
           <SkipAutoProps>true</SkipAutoProps>
         </Configuration>
       </DataCollector>
