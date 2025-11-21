@@ -1,25 +1,23 @@
 ﻿namespace vm2.DevOps.Glob.Api.Tests;
 
 [ExcludeFromCodeCoverage]
-public class GlobEnumerationOrderTests : GlobEnumeratorTests
+public class GlobEnumerationDistinctTests : GlobEnumeratorTests
 {
-    public GlobEnumerationOrderTests(GlobUnitTestsFixture fixture, ITestOutputHelper output)
+    public GlobEnumerationDistinctTests(GlobUnitTestsFixture fixture, ITestOutputHelper output)
         : base(fixture, output)
     {
     }
 
     [Fact]
-    public void Should_Enumerate_DepthFirst_GlobEnumerator()
+    public void Should_Enumerate_WithDuplicates_GlobEnumerator()
     {
         var ge = Fixture.GetGlobEnumerator(
-                            "FakeFSFiles/FakeFS7.Unix.json",
+                            "FakeFSFiles/FakeFS6.Unix.json",
                             () => new GlobEnumeratorBuilder()
-                                        .WithGlob("**/*.txt")
+                                        .WithGlob("/**/[lb]*/**/[lb]*/*.txt")
                                         .FromDirectory("/")
                                         .CaseSensitive()
                                         .SelectFiles()
-                                        .DepthFirst()
-                                        .Distinct()
                                         .Build()
                             );
         var enumerate = ge.Enumerate;
@@ -31,27 +29,22 @@ public class GlobEnumerationOrderTests : GlobEnumeratorTests
 
         result.Should().BeEquivalentTo(
         [
-            "/aaa.txt",
-            "/a/aa.txt",
-            "/a/b/bb.txt",
-            "/a/b/c/cc.txt",
-            "/x/xx.txt",
-            "/x/y/yy.txt",
-            "/x/y/z/zz.txt",
+            "/deep-recursive/level1/level2/level3/deep1.txt",
+            "/deep-recursive/level1/level2/level3/deep1.txt",
+            "/deep-recursive/level1/level2/mid1.txt",
         ]);
     }
 
     [Fact]
-    public void Should_Enumerate_BreadthFirst_GlobEnumerator()
+    public void Should_Enumerate_Distinct_GlobEnumerator()
     {
         var ge = Fixture.GetGlobEnumerator(
-                            "FakeFSFiles/FakeFS7.Unix.json",
+                            "FakeFSFiles/FakeFS6.Unix.json",
                             () => new GlobEnumeratorBuilder()
-                                        .WithGlob("**/*.txt")
+                                        .WithGlob("/**/[lb]*/**/[lb]*/*.txt")
                                         .FromDirectory("/")
                                         .CaseInsensitive()
                                         .SelectFiles()
-                                        .BreadthFirst()
                                         .Distinct()
                                         .Build()
                             );
@@ -64,13 +57,8 @@ public class GlobEnumerationOrderTests : GlobEnumeratorTests
 
         result.Should().BeEquivalentTo(
         [
-            "/aaa.txt",
-            "/a/aa.txt",
-            "/x/xx.txt",
-            "/a/b/bb.txt",
-            "/x/y/yy.txt",
-            "/a/b/c/cc.txt",
-            "/x/y/z/zz.txt",
+            "/deep-recursive/level1/level2/level3/deep1.txt",
+            "/deep-recursive/level1/level2/mid1.txt",
         ]);
     }
 }

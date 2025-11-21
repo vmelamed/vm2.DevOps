@@ -2,10 +2,10 @@
 
 public partial class GlobEnumeratorTests
 {
-    public static TheoryData<UnitTestElement> Enumerate_RecursiveWildcards =
+    public static TheoryData<UnitTestElement> Enumerate_Globstars =
     [
-        // For recursive wildcards tests, we change the meaning of data.Tx to indicate _distinctResults
-        // Dirty hack for reusing the same test data
+        // For globstar tests, we change the meaning of data.Tx to indicate _distinctResults
+        // Dirty hack for reusing the same test data field
 
         // ==========================================================================================================
         // SINGLE ** AT DIFFERENT POSITIONS - Unix
@@ -176,7 +176,7 @@ public partial class GlobEnumeratorTests
                                                                                                                                                                                                      "/deep-recursive/root.txt"),
 
         // ==========================================================================================================
-        // WINDOWS TESTS - RecursiveRegex wildcards
+        // WINDOWS TESTS - GlobstarRegex wildcards
         // ==========================================================================================================
         //                                         fsFile  glob                                           cwd    start                         objects          _matchCasing                  dist    results...
         new UnitTestElement(TestFileLine("Win: ** at start - **/*.txt"),

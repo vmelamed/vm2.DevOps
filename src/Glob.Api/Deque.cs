@@ -1,6 +1,8 @@
 ﻿namespace vm2.DevOps.Glob.Api;
 
-class Deque<T>
+using System.Collections;
+
+class Deque<T> : IEnumerable<T> where T : notnull
 {
     List<T> _sequence;
 
@@ -40,5 +42,43 @@ class Deque<T>
         return element;
     }
 
+    public IEnumerable<T> GetAll()
+    {
+        while (TryGet(out var element))
+            yield return element;
+    }
+
     public void Clear() => _sequence.Clear();
+
+    public IEnumerator<T> GetEnumerator() => new DequeEnumerator(this);
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    class DequeEnumerator : IEnumerator<T>
+    {
+        readonly Deque<T> _deque;
+        int _index;
+
+        public DequeEnumerator(Deque<T> deque)
+        {
+            _deque = deque;
+            Reset();
+        }
+
+        public T Current => _deque._sequence[_index];
+
+        object IEnumerator.Current => Current;
+
+        public bool MoveNext()
+            => _deque.IsStack
+                    ? --_index >= 0
+                    : ++_index < _deque.Count;
+
+        public void Reset()
+        {
+            _index = _deque.IsStack ? _deque.Count + 1 : -1;
+        }
+
+        public void Dispose() { }
+    }
 }

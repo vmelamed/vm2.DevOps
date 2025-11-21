@@ -14,8 +14,8 @@ public sealed partial class FakeFS : IFileSystem
         Folder folder,
         EnumerationOptions options)
     {
-        if (segment is RecursiveWildcard)
-            throw new ArgumentException($"The segment '{RecursiveWildcard}' is not allowed here.", nameof(segment));
+        if (segment is Globstar)
+            throw new ArgumentException($"The segment '{Globstar}' is not allowed here.", nameof(segment));
         if (segment is "" or CurrentDir)
             return _ => true;
         if (segment is ParentDir)
@@ -30,7 +30,7 @@ public sealed partial class FakeFS : IFileSystem
                                 MatchCasing.CaseSensitive => RegexOptions.None,
                                 MatchCasing.CaseInsensitive => RegexOptions.IgnoreCase,
                                 MatchCasing.PlatformDefault => IsWindows ? RegexOptions.IgnoreCase : RegexOptions.None,
-                                _ => throw new ArgumentOutOfRangeException(nameof(options), "Invalid _matchCasing value."),
+                                _ => throw new ArgumentOutOfRangeException(nameof(options), "Invalid MatchCasing value."),
                             });
 
             return regex.IsMatch;
@@ -41,7 +41,7 @@ public sealed partial class FakeFS : IFileSystem
                             MatchCasing.CaseSensitive => StringComparer.Ordinal,
                             MatchCasing.CaseInsensitive => StringComparer.OrdinalIgnoreCase,
                             MatchCasing.PlatformDefault => Comparer,
-                            _ => throw new ArgumentOutOfRangeException(nameof(options), "Invalid _matchCasing value."),
+                            _ => throw new ArgumentOutOfRangeException(nameof(options), "Invalid MatchCasing value."),
                         };
 
         return a => comparer.Compare(a, segment) == 0;
@@ -83,7 +83,7 @@ public sealed partial class FakeFS : IFileSystem
             seg = nPath[range];
         }
 
-        // used to memorise the separator indeces, so we can go back when we see ParentDir segments
+        // used to memorize the separator indexes, so we can go back when we see ParentDir segments
         Stack<int> separatorIndices = new();
 
         if (IsRootSegment(seg))

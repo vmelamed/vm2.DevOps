@@ -23,14 +23,14 @@ public static partial class GlobConstants
     public const string ParentDir = "..";
 
     /// <summary>
-    /// Represents the asterisk character used in <see cref="SequenceWildcard"/> and <see cref="RecursiveWildcard"/>
+    /// Represents the asterisk character used in <see cref="SequenceWildcard"/> and <see cref="Globstar"/>
     /// </summary>
     public const char Asterisk = '*';
 
     /// <summary>
-    /// Represents a recursive wildcard pattern that matches all levels of a directory hierarchy fromIndex "here" - down.
+    /// Represents a recursive wildcard "**", a.k.a. globstar, that matches all levels of a directory hierarchy from "here" - down.
     /// </summary>
-    public const string RecursiveWildcard = "**";
+    public const string Globstar = "**";
 
     /// <summary>
     /// Represents a string used to denote an arbitrary sequence in a glob.
@@ -280,37 +280,37 @@ public static partial class GlobConstants
 
     #region Glob regex parsing, names of capturing groups, and other related constants
     /// <summary>
-    /// Gets a <see cref="Regex"/> object for detecting invalid recursive wildcard patterns.
+    /// Gets a <see cref="Regex"/> object for detecting invalid globstar patterns.
     /// </summary>
     /// <remarks>
-    /// RecursiveRegex wildcard '**' cannot be preceded by anything other than a '/' or be at the beginning of the pattern string;
+    /// GlobstarRegex wildcard '**' cannot be preceded by anything other than a '/' or be at the beginning of the pattern string;
     /// and also cannot be followed by anything other than a '/' or be at the end of the pattern.
     /// Examples of invalid patterns: "a**", "**a", "a/**b", "a**/b", "a/**b".
     /// Examples of valid patterns: "**", "**/", "/**", "/**/", "a/**", "**/a", "a/**/", "/**/a", "a/**/b", "/**/a/b", "a/**/b/**/c".
     /// </remarks>
     /// <returns>
-    /// A <see cref="Regex"/> object configured to identify invalid recursive wildcard patterns.
+    /// A <see cref="Regex"/> object configured to identify invalid globstar patterns.
     /// </returns>
     [GeneratedRegex(@"(?<! ^ | /) \*\*+ | \*\*+ (?! $ | /)", unixOptions)]
-    internal static partial Regex InvalidRecursiveRegex();
+    internal static partial Regex InvalidGlobstar();
 
     /// <summary>
-    /// Gets a <see cref="Regex"/> object for matching recursive wildcards '**'.
+    /// Gets a <see cref="Regex"/> object for matching globstars '**'.
     /// </summary>
     /// <returns>
-    /// A <see cref="Regex"/> object configured to identify matching recursive wildcards '**'.
+    /// A <see cref="Regex"/> object configured to identify matching globstars '**'.
     /// </returns>
     [GeneratedRegex(@"\*\*")]
-    internal static partial Regex RecursiveRegex();
+    internal static partial Regex GlobstarRegex();
 
     /// <summary>
-    /// Gets a <see cref="Regex"/> object for matching recursive wildcards '**' at the end of a pattern.
+    /// Gets a <see cref="Regex"/> object for matching globstars '**' at the end of a pattern.
     /// </summary>
     /// <returns>
-    /// A <see cref="Regex"/> object configured to identify matching recursive wildcards '**' at the end of a pattern.
+    /// A <see cref="Regex"/> object configured to identify matching globstars '**' at the end of a pattern.
     /// </returns>
     [GeneratedRegex(@"\*\*$")]
-    internal static partial Regex RecursiveAtEndRegex();
+    internal static partial Regex EndsWithGlobstarRegex();
 
     internal const string SeqWildcardGr = "seqwc";
     internal const string CharWildcardGr = "charwc";
@@ -358,5 +358,10 @@ public static partial class GlobConstants
     /// A string containing characters that should be escaped in a regular expression.
     /// </summary>
     public const string RegexEscapable = "\t\v #$()*+.?[\\^{|";
+
+    /// <summary>
+    /// An array of characters that have special meaning in regular expressions and may need to be escaped.
+    /// </summary>
+    public static readonly char[] RegexChars = [ '.', '^', '$', '+', '(', ')', '[', ']', '{', '}', '|', '\\' ];
     #endregion
 }

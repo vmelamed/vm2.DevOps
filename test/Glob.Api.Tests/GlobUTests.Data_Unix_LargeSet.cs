@@ -165,7 +165,7 @@ public partial class GlobEnumeratorTests
                                                            "/test/bracket-tests/[[:upper:]]",    "/",  "/",         Objects.Files,   MatchCasing.PlatformDefault, false, "/test/bracket-tests/A", "/test/bracket-tests/B", "/test/bracket-tests/C"),
 
         // ==========================================================================================================
-        // RECURSIVE WILDCARDS: ** - matches zero or more directories
+        // GLOBSTARS: ** - matches zero or more directories
         // ==========================================================================================================
         //                                         fsFile  glob                                 cwd    start        objects          _matchCasing                 throws  results...
         new UnitTestElement(TestFileLine("Find all .txt files recursively from /home"),
@@ -188,7 +188,7 @@ public partial class GlobEnumeratorTests
                                                    "FakeFSFiles/FakeFS3.Unix.json",
                                                            "/opt/**/*",                         "/",    "/",        Objects.FilesAndDirectories,    MatchCasing.PlatformDefault, false, "/opt/app/", "/opt/app/bin/", "/opt/app/lib/", "/opt/app/README", "/opt/app/bin/app", "/opt/app/bin/tool1", "/opt/app/bin/tool2", "/opt/app/lib/libcore.so", "/opt/app/lib/libutil.so", "/opt/app/lib/libhelper.so.1"),
 
-        new UnitTestElement(TestFileLine("RecursiveRegex with specific starting pattern"),
+        new UnitTestElement(TestFileLine("GlobstarRegex with specific starting pattern"),
                                                    "FakeFSFiles/FakeFS3.Unix.json",
                                                            "/home/**/file*.txt",                "/",    "/",        Objects.Files,   MatchCasing.PlatformDefault, false, "/home/user/docs/file1.txt"),
 
@@ -349,7 +349,7 @@ public partial class GlobEnumeratorTests
                                                            "/home/**/projects/**/*.py",          "/",    "/",       Objects.Files,  MatchCasing.PlatformDefault, false, "/home/user/projects/beta/app.py", "/home/user/projects/beta/test.py", "/home/projects/alpha.py", "/home/projects/alpha/alpha.py", "/home/projects/beta/beta.py"),
 
         // ==========================================================================================================
-        // CATEGORY D: MULTIPLE RECURSIVE WILDCARDS (GlobRegex Normalization - Future Feature)
+        // CATEGORY D: MULTIPLE GLOBSTARS (GlobRegex Normalization - Future Feature)
         // ==========================================================================================================
         // NOTE: These tests verify current behavior - no duplicates. When de-normalization is implemented, these should produce duplicates.
         //                                         fsFile  glob                                 cwd    start        objects          _matchCasing                 throws  results...
@@ -421,7 +421,7 @@ public partial class GlobEnumeratorTests
                                                    "FakeFSFiles/FakeFS1.Unix.json",
                                                            "/home/valo/Downloads/**/*-report-*.md","/", "/",        Objects.Files, MatchCasing.PlatformDefault, false, "/home/valo/Downloads/benchmark-summaries-ubuntu-latest/results/vm2.UlidType.Benchmarks.NewUlid-report-github.md", "/home/valo/Downloads/benchmark-summaries-ubuntu-latest/results/vm2.UlidType.Benchmarks.ParseUlid-report-github.md", "/home/valo/Downloads/benchmark-summaries-ubuntu-latest/results/vm2.UlidType.Benchmarks.UlidToString-report-github.md"),
 
-        new UnitTestElement(TestFileLine("RecursiveRegex search with complex nested names"),
+        new UnitTestElement(TestFileLine("GlobstarRegex search with complex nested names"),
                                                    "FakeFSFiles/FakeFS1.Unix.json",
                                                            "/**/*summary.json",                 "/",    "/",        Objects.Files, MatchCasing.PlatformDefault, false, "/home/valo/Downloads/benchmark-summaries-ubuntu-latest/summaries/vm2.UlidType.Benchmarks.NewUlid-summary.json", "/home/valo/Downloads/benchmark-summaries-ubuntu-latest/summaries/vm2.UlidType.Benchmarks.ParseUlid-summary.json", "/home/valo/Downloads/benchmark-summaries-ubuntu-latest/summaries/vm2.UlidType.Benchmarks.UlidToString-summary.json"),
 

@@ -165,7 +165,7 @@ public partial class GlobEnumeratorTests
                                                            "C:/test/bracket-tests/[[:upper:]]",    "C:/",  "C:/",         Objects.Files,   MatchCasing.PlatformDefault, false, "C:/test/bracket-tests/A", "C:/test/bracket-tests/B", "C:/test/bracket-tests/C", "C:/test/bracket-tests/x", "C:/test/bracket-tests/y", "C:/test/bracket-tests/z"),
 
         // ==========================================================================================================
-        // RECURSIVE WILDCARDS: ** - matches zero or more directories
+        // GLOBSTARS: ** - matches zero or more directories
         // ==========================================================================================================
         //                                         fsFile  glob                                   cwd      start          objects          _matchCasing                  throws  results...
         new UnitTestElement(TestFileLine("Find all .txt files recursively from /home"),
@@ -188,7 +188,7 @@ public partial class GlobEnumeratorTests
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/opt/**/*",                         "C:/",    "C:/",        Objects.FilesAndDirectories,    MatchCasing.PlatformDefault, false, "C:/opt/app/", "C:/opt/app/bin/", "C:/opt/app/lib/", "C:/opt/app/README", "C:/opt/app/bin/app", "C:/opt/app/bin/tool1", "C:/opt/app/bin/tool2", "C:/opt/app/lib/libcore.so", "C:/opt/app/lib/libutil.so", "C:/opt/app/lib/libhelper.so.1"),
 
-        new UnitTestElement(TestFileLine("RecursiveRegex with specific starting pattern"),
+        new UnitTestElement(TestFileLine("GlobstarRegex with specific starting pattern"),
                                                    "FakeFSFiles/FakeFS3.Win.json",
                                                            "C:/home/**/file*.txt",                "C:/",    "C:/",        Objects.Files,   MatchCasing.PlatformDefault, false, "C:/home/user/docs/file1.txt"),
 
@@ -349,7 +349,7 @@ public partial class GlobEnumeratorTests
                                                            "C:/home/**/projects/**/*.py",          "C:/",    "C:/",       Objects.Files,  MatchCasing.PlatformDefault, false, "C:/home/user/projects/beta/app.py", "C:/home/user/projects/beta/test.py", "C:/home/projects/alpha.py", "C:/home/projects/alpha/alpha.py", "C:/home/projects/beta/beta.py"),
 
         // ==========================================================================================================
-        // CATEGORY D: MULTIPLE RECURSIVE WILDCARDS (GlobRegex Normalization - Future Feature)
+        // CATEGORY D: MULTIPLE GLOBSTARS (GlobRegex Normalization - Future Feature)
         // ==========================================================================================================
         // NOTE: These tests verify current behavior - no duplicates. When de-normalization is implemented, these should produce duplicates.
         //                                         fsFile  glob                                   cwd      start          objects          _matchCasing                  throws  results...

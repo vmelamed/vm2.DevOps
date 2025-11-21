@@ -120,7 +120,7 @@ public partial class GlobEnumeratorTests
                                                    "FakeFSFiles/FakeFS4.Unix.json",
                                                            "../app1/src/*.c",                    "/",   "/projects/app2",        Objects.Files,   MatchCasing.PlatformDefault, false,  "/projects/app1/src/main.c", "/projects/app1/src/util.c"),
 
-        new UnitTestElement(TestFileLine("Unix: RecursiveRegex from parent ../app1/**/*.c from /projects/app2"),
+        new UnitTestElement(TestFileLine("Unix: GlobstarRegex from parent ../app1/**/*.c from /projects/app2"),
                                                    "FakeFSFiles/FakeFS4.Unix.json",
                                                            "../app1/**/*.c",                     "/",   "/projects/app2",        Objects.Files,   MatchCasing.PlatformDefault, false,  "/projects/app1/src/main.c", "/projects/app1/src/util.c", "/projects/app1/tests/test_main.c", "/projects/app1/tests/test_util.c"),
 
@@ -228,7 +228,7 @@ public partial class GlobEnumeratorTests
                                                    "FakeFSFiles/FakeFS4.Win.json",
                                                            "../app1/src/*.c",                    "C:/", "C:/projects/app2",      Objects.Files,   MatchCasing.PlatformDefault, false,  "C:/projects/app1/src/main.c", "C:/projects/app1/src/util.c"),
 
-        new UnitTestElement(TestFileLine("Win: RecursiveRegex from parent ../app1/**/*.c from C:/projects/app2"),
+        new UnitTestElement(TestFileLine("Win: GlobstarRegex from parent ../app1/**/*.c from C:/projects/app2"),
                                                    "FakeFSFiles/FakeFS4.Win.json",
                                                            "../app1/**/*.c",                     "C:/", "C:/projects/app2",      Objects.Files,   MatchCasing.PlatformDefault, false,  "C:/projects/app1/src/main.c", "C:/projects/app1/src/util.c", "C:/projects/app1/tests/test_main.c", "C:/projects/app1/tests/test_util.c"),
 

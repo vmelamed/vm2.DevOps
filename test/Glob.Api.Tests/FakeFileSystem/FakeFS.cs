@@ -11,7 +11,7 @@ public sealed partial class FakeFS
 {
     #region fields
     const string Wildcards         = "*?";  // TODO: add [], {}, etc. advanced features
-    const string RecursiveWildcard = "**";
+    const string Globstar = "**";
     const int WinDriveLength       = 2;     // e.g. "C:"
     const int WinRootLength        = 3;     // e.g. "C:/"
 

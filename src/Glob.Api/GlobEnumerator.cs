@@ -26,7 +26,12 @@ public sealed partial class GlobEnumerator
     Deque<(string dir, Range patternComponentRange, bool recursively)> _deque = new();
 
     /// <summary>
-    /// Gets a regex object that matches the root of the file system in a path.
+    /// The string comparer depends on the MatchCasing
+    /// </summary>
+    StringComparison StringComparison { get; set; } = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
+    /// <summary>
+    /// Gets a regex object that matches the root of the file system in a subDir.
     /// </summary>
     /// <returns>Regex</returns>
     Regex FileSystemRoot { get; init; }
@@ -83,14 +88,27 @@ public sealed partial class GlobEnumerator
         set
         {
             _options.MatchCasing = value;
-            _ = _options.MatchCasing switch {
-                MatchCasing.CaseSensitive => _regexOptions &= ~RegexOptions.IgnoreCase,
-                MatchCasing.CaseInsensitive => _regexOptions |= RegexOptions.IgnoreCase,
-                MatchCasing.PlatformDefault => _fileSystem.IsWindows
-                                                    ? (_regexOptions |= RegexOptions.IgnoreCase)
-                                                    : (_regexOptions &= ~RegexOptions.IgnoreCase),
-                _ => throw new ArgumentOutOfRangeException(nameof(value), "Invalid _matchCasing value."),
-            };
+            switch (value)
+            {
+                case MatchCasing.PlatformDefault:
+                    if (_fileSystem.IsWindows)
+                        goto case MatchCasing.CaseInsensitive;
+                    else
+                        goto case MatchCasing.CaseSensitive;
+
+                case MatchCasing.CaseSensitive:
+                    _regexOptions &= ~RegexOptions.IgnoreCase;
+                    StringComparison = StringComparison.Ordinal;
+                    break;
+
+                case MatchCasing.CaseInsensitive:
+                    _regexOptions |= RegexOptions.IgnoreCase;
+                    StringComparison = StringComparison.OrdinalIgnoreCase;
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(value), "Invalid MatchCasing value.");
+            }
         }
     }
 
@@ -113,7 +131,7 @@ public sealed partial class GlobEnumerator
     public GlobEnumerator(IFileSystem? fileSystem = null, ILogger<GlobEnumerator>? logger = null)
     {
         _fileSystem    = fileSystem ?? new FileSystem();
-        _logger         = logger;
+        _logger        = logger;
         MatchCasing    = MatchCasing.PlatformDefault;
         FileSystemRoot = _fileSystem.IsWindows ? WindowsFileSystemRootRegex() : UnixFileSystemRootRegex();
     }
@@ -127,7 +145,7 @@ public sealed partial class GlobEnumerator
     {
         if (Enumerated is Objects.Files &&
             Glob is not "" &&
-            (Glob.Last() is '/' or '\\' || RecursiveAtEndRegex().IsMatch(Glob)))
+            (Glob.Last() is ('/' or '\\') || EndsWithGlobstarRegex().IsMatch(Glob)))
             throw new ArgumentException("Pattern cannot end with '/', '\\', or '**' when searching for files.");
 
         Debug.Assert(_deque?.Count is 0, "The queue must be empty after the previous search!");
@@ -138,7 +156,7 @@ public sealed partial class GlobEnumerator
             throw new ArgumentException("Invalid pattern.");
 
         if (_logger?.IsEnabled(LogLevel.Debug) is true)
-            _logger.LogDebug("""
+            _logger.LogTrace("""
                 ================================
                 Matching the pattern:       "{Pattern}" => "{NormalizedPattern}"
                 Current directory:          "{CurrentDir}"
@@ -156,8 +174,8 @@ public sealed partial class GlobEnumerator
 
         var enumerable = Traverse();
 
-        // only pattern-s with more than one directory recursive wildcards "**" can produce duplicates
-        if (Distinct && RecursiveRegex().Matches(_glob).Count > 1)
+        // only pattern-s with more than one directory globstars "**" can produce duplicates
+        if (Distinct && GlobstarRegex().Matches(_glob).Count > 1)
             enumerable = enumerable.Distinct();
 
         return enumerable;
@@ -190,7 +208,7 @@ public sealed partial class GlobEnumerator
             var (pattern, regex) = GlobToRegex(globComponent);  // globComponent -> pattern (in .NET) and then regex to filter
                                                                 // the names of the objects in dir
             if (_logger?.IsEnabled(LogLevel.Debug) is true)
-                _logger.LogDebug("""
+                _logger.LogTrace("""
                     --------------------------------
                     searching in:               "{Directory}" {Recursively}
                     glob component:             "{Component}" {IsLastComponent}
@@ -208,94 +226,115 @@ public sealed partial class GlobEnumerator
             {
                 case CurrentDir:
                     // search again in the current dir
-                    _deque.Add((dir, nextGlobComponentRange, false));
+                    _deque.Add((dir, nextGlobComponentRange, recursively));
                     continue;
 
                 case ParentDir:
                     // searching in the parent dir
-                    _deque.Add((_fileSystem.GetFullPath($"{dir}/.."), nextGlobComponentRange, false));
+                    _deque.Add((_fileSystem.GetFullPath($"{dir}/.."), nextGlobComponentRange, recursively));
                     continue;
 
-                case RecursiveWildcard:
+                case Globstar:
                     // search again in the current dir but recursively!
                     _deque.Add((dir, nextGlobComponentRange, true));
                     continue;
             }
 
-            if (!isLast)
+            switch (isLast, recursively)
             {
-                // add all sub-directories and go process the next search on the deque
-                foreach (var subDir in EnumerateDirectories(dir, pattern, regex, recursively))
-                    _deque.Add((subDir, nextGlobComponentRange, false));
-                continue;
+                case (isLast: false, recursively: false):
+                    // we need to enqueue all matching sub-dirs of the current dir, and search in there for the next component
+                    var lastComponentMatches = LastComponentMatches(pattern, regex);
+                    foreach (var subDir in _fileSystem
+                                                .EnumerateDirectories(dir, pattern, _options)
+                                                .Where(subDir => lastComponentMatches(subDir)))
+                        _deque.Add((subDir, nextGlobComponentRange, false));
+                    break;
+
+                case (isLast: false, recursively: true):
+                    // we need to enqueue all sub-dirs of the current dir,
+                    foreach (var subDir in _fileSystem.EnumerateDirectories(dir, SequenceWildcard, _options))
+                    {
+                        // pass recursively to all lower components and also
+                        _deque.Add((subDir, globComponentRange, true));
+                        // if the current component matches, pass non-recursively to the next component
+                        if (LastComponentMatches(pattern, regex)(subDir))
+                            _deque.Add((subDir, nextGlobComponentRange, false));
+                    }
+                    break;
+
+                case (isLast: true, recursively: false):
+                    // we are at the last globComponent, non-recursively - just report the matches in the current dir and move on
+                    if (Enumerated.HasFlag(Objects.Directories))
+                        foreach (var subDir in _fileSystem
+                                                    .EnumerateDirectories(dir, pattern, _options)
+                                                    .Where(subDir => LastComponentMatches(pattern, regex)(subDir)))
+                        {
+                            if (_logger?.IsEnabled(LogLevel.Debug) is true)
+                                _logger.LogTrace("          dir:  {Directory}", subDir);
+                            yield return subDir;
+                        }
+                    if (Enumerated.HasFlag(Objects.Files))
+                        foreach (var file in _fileSystem
+                                                    .EnumerateFiles(dir, pattern, _options)
+                                                    .Where(file => LastComponentMatches(pattern, regex)(file)))
+                        {
+                            if (_logger?.IsEnabled(LogLevel.Debug) is true)
+                                _logger.LogTrace("          file: {File}", file);
+                            yield return file;
+                        }
+                    break;
+
+                case (isLast: true, recursively: true):
+                    foreach (var subDir in _fileSystem
+                                            .EnumerateDirectories(dir, SequenceWildcard, _options))
+                    {
+                        // we need to continue the recursive search in the sub-dirs to find matching objects deeper in the tree
+                        _deque.Add((subDir, globComponentRange, true));
+
+                        // report matching directories in the current dir
+                        if (Enumerated.HasFlag(Objects.Directories) && LastComponentMatches(pattern, regex)(subDir))
+                        {
+                            if (_logger?.IsEnabled(LogLevel.Debug) is true)
+                                _logger.LogTrace("          dir:  {Directory}", subDir);
+                            yield return subDir;
+                        }
+                    }
+
+                    // report matching files in the current dir
+                    if (Enumerated.HasFlag(Objects.Files))
+                        foreach (var file in _fileSystem
+                                                .EnumerateFiles(dir, pattern, _options)
+                                                .Where(file => LastComponentMatches(pattern, regex)(file)))
+                        {
+                            if (_logger?.IsEnabled(LogLevel.Debug) is true)
+                                _logger.LogTrace("          file: {File}", file);
+                            yield return file;
+                        }
+                    break;
             }
-
-            // if we are here, then we are at the last globComponent: search for the request objects (files and/or directories)
-            // that match the last globComponent in the current dir.
-            if (Enumerated.HasFlag(Objects.Directories))
-                foreach (var d in EnumerateDirectories(dir, pattern, regex, recursively))
-                {
-                    if (_logger?.IsEnabled(LogLevel.Debug) is true)
-                        _logger.LogDebug("          dir:  {Directory}", d);
-                    yield return d;
-                }
-
-            if (Enumerated.HasFlag(Objects.Files))
-                foreach (var f in EnumerateFiles(dir, pattern, regex, recursively))
-                {
-                    if (_logger?.IsEnabled(LogLevel.Debug) is true)
-                        _logger.LogDebug("          file: {File}", f);
-                    yield return f;
-                }
         }
     }
 
-    IEnumerable<string> EnumerateDirectories(
-        string dir,
-        string pattern,
-        string regex,
-        bool recursively)
+    Func<string, bool> LastComponentMatches(string pattern, string regex)
     {
-        _options.RecurseSubdirectories = recursively;
+        if (regex is "")
+            return path => LastComponent(path).Equals(pattern.AsSpan(), StringComparison);
 
-        // filter on pattern (hopefully it honors _options.MatchCasing)
-        var result = _fileSystem.EnumerateDirectories(dir, pattern, _options);
+        if (regex == _fileSystem.NameSequence)
+            return path => true;
 
-        if (regex is not "" && regex != _fileSystem.NameSequence)
-        {
-            // compose regex filtering after the file system pattern (we already set the RegexOptions.IgnoreCase)
-            var rex = new Regex($"(^|/){regex}(/|$)", _regexOptions);
+        // compose regex filtering after the file system pattern (we already set or cleared the RegexOptions.IgnoreCase)
+        var rex = new Regex($"(^|/){regex}$", _regexOptions);
 
-            result = result.Where(d => rex.IsMatch(LastComponent(d)));
-        }
-
-        return result;
+        return path => rex.IsMatch(LastComponent(path));
     }
 
-    IEnumerable<string> EnumerateFiles(
-        string dir,
-        string pattern,
-        string regex,
-        bool recursively)
-    {
-        _options.RecurseSubdirectories = recursively;
-
-        // filter on pattern (hopefully it honors _options.MatchCasing)
-        var result = _fileSystem.EnumerateFiles(dir, pattern, _options);
-
-        if (regex is not "" && regex != _fileSystem.NameSequence)
-        {
-            // compose regex filtering after the file system pattern (we already set the RegexOptions.IgnoreCase)
-            var rex = new Regex($"(^|/){regex}$", _regexOptions);
-
-            result = result.Where(f => rex.IsMatch(LastComponent(f)));
-        }
-
-        return result;
-    }
+    static bool IsRegex(string pattern)
+        => pattern.IndexOfAny(RegexChars) is int idx && idx >= 0;
 
     /// <summary>
-    /// Gets the last component of a path - the name of the file or directory at the end of the path as they are returned by
+    /// Gets the last component of a subDir - the name of the file or directory at the end of the subDir as they are returned by
     /// EnumerateFiles/EnumerateDirectories.
     /// </summary>
     /// <param name="path"></param>
@@ -309,13 +348,9 @@ public sealed partial class GlobEnumerator
         if (span.Length is <= 0)
             return span;
 
-        if (span.LastIndexOf(SepChar) is int lastSep && lastSep is > 0)
-        {
-            Debug.Assert(lastSep < span.Length);
-            return span[(lastSep + 1)..];
-        }
+        var lastSep = span.LastIndexOf(SepChar);
 
-        return span;
+        return lastSep is >= 0 ? span[(lastSep+1)..] : span;
     }
     #endregion
 }

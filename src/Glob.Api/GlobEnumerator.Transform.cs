@@ -70,7 +70,7 @@ public sealed partial class GlobEnumerator
             if (c is SepChar && prev1 is SepChar)                           // Skip duplicate separators
                 continue;                                                   // / <=> // <=> /// ...
 
-            if (c is Asterisk && prev1 is Asterisk && prev2 is Asterisk)    // Skip asterisks after the recursive wildcard
+            if (c is Asterisk && prev1 is Asterisk && prev2 is Asterisk)    // Skip asterisks after the globstar
                 continue;                                                   // ** <=> *** <=> **** ...
 
             // slide by one
@@ -90,28 +90,27 @@ public sealed partial class GlobEnumerator
     (string pattern, string regex) GlobToRegex(string glob)
     {
         // shortcut the easy cases
-        var (pattern, regex) = glob switch {
+        var pr = glob switch {
             "" => (SequenceWildcard, _fileSystem.NameSequence),     // "*", ".*"
             SequenceWildcard => (glob, _fileSystem.NameSequence),   // "*", ".*"
             CharacterWildcard => (glob, _fileSystem.NameCharacter), // "?", "."
-            RecursiveWildcard => ("", ""),                          // "", ""
+            Globstar => ("", ""),                                   // "", ""
             CurrentDir or ParentDir => (glob, ""),                  // ".", "" or "..", ""
-            _ => default                                            // null, null
+            _ => default                                            // (null, null) <=> "I don't know yet"
         };
 
-        if (pattern is not null)
-        {
-            Debug.Assert(regex is not null);
-            return (pattern, regex);
-        }
+        if (pr is not (null, null))
+            return pr;
 
+        var (pattern, regex) = pr;
         var matches = GlobExpressionRegex().Matches(glob);
 
         if (matches.Count is 0)                                     // no wildcards
         {
-            var escGlob = RegexEscape(glob);
-            return (glob,
-                    glob.Length!=escGlob.Length ? escGlob.ToString() : "");
+            if (!glob.AsSpan().ContainsAny(RegexChars))
+                return (glob, "");                                 // no need to escape
+
+            return (glob, RegexEscape(glob).ToString());
         }
 
         // now the glob can be thought of as a sequence of non-matching and matching slices:
@@ -161,23 +160,24 @@ public sealed partial class GlobEnumerator
     }
 
     (string pattern, string regex) TranslateGlobExpression(Match match)
-        // Match is one of the glob expression wildcards: *, ?, [class], [!class], where a class is a
-        // sequence of letters (e.g. 'abc..'), letter ranges (e.g. '0-9'), and named classes (e.g. [:alnum:]. We need to
-        // identify and replace the match its respective regex equivalents:
+        // Match is one of the glob expression terms: *, ?, [class], [!class], where a <class> is a
+        // sequence of letters (e.g. 'abc..'), letter ranges (e.g. '0-9'), and named classes (e.g. [:digit:]. We need to
+        // identify and replace the glob expression in match with its respective regex equivalents:
         // * => .*
         // * => .
         // [class] => [class] (in each class we have to find and replace the named classes with their regex equivalent)
         // [!class] => [^class]
         // Therefore, we need a function that transforms each class into a .net regex - TransformClass
-        => match.Groups.Values.FirstOrDefault(
-            g => !string.IsNullOrWhiteSpace(g.Name)
-              && !char.IsDigit(g.Name[0])
-              && !string.IsNullOrWhiteSpace(g.Value)) switch {
-                  { Name: CharWildcardGr } question => (CharacterWildcard, _fileSystem.NameCharacter),
-                  { Name: SeqWildcardGr } asterisk => (SequenceWildcard, _fileSystem.NameSequence),     // no need to filter the results
-                  { Name: ClassGr } chrClass => (CharacterWildcard, $"[{TransformClass(chrClass.Value)}]"),
-                  _ => throw new ArgumentException("Invalid glob _glob match.", nameof(match)),
-              };
+        => match
+            .Groups
+            .Values
+            .FirstOrDefault(
+                g => !string.IsNullOrWhiteSpace(g.Name) && !char.IsDigit(g.Name[0]) && !string.IsNullOrWhiteSpace(g.Value)) switch {
+                      { Name: CharWildcardGr } question => (CharacterWildcard, _fileSystem.NameCharacter),
+                      { Name: SeqWildcardGr } asterisk => (SequenceWildcard, _fileSystem.NameSequence),     // no need to filter the results
+                      { Name: ClassGr } chrClass => (CharacterWildcard, $"[{TransformClass(chrClass.Value)}]"),
+                    _ => throw new ArgumentException("Invalid glob _glob match.", nameof(match)),
+                };
 
     static ReadOnlySpan<char> TransformClass(string globClass)
     {
