@@ -18,9 +18,7 @@ public sealed class FakeFileSystemCache : IFakeFileSystemCache
         if (present)
             return new FakeFS(entry.Bytes, entry.DataType);
 
-        var m = OperatingSystem.IsWindows()
-                    ? WindowsPathRegex().Match(fileName)
-                    : UnixPathRgex().Match(fileName);
+        var m = OperatingSystem.PathRegex().Match(fileName);
 
         if (!m.Success)
             throw new ArgumentException($"The path name '{fileName}' format is invalid.", nameof(fileName));

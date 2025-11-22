@@ -30,6 +30,7 @@
     <Content Include="FakeFSFiles\FakeFS7.Unix.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="FakeFSFiles\FakeFS8.Unix.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="FakeFSFiles\FakeFS8.Win.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="FakeFSFiles\Integration.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
@@ -43,6 +44,10 @@
     <Content Include="FakeFSFiles\FakeFS6.Unix.graph.txt" CopyToOutputDirectory="Never" />
     <Content Include="FakeFSFiles\FakeFS6.Win.graph.txt" CopyToOutputDirectory="Never" />
     <Content Include="FakeFSFiles\FakeFS7.Unix.graph.txt" CopyToOutputDirectory="Never" />
+    <Content Include="FakeFSFiles\Integration.graph.txt" CopyToOutputDirectory="Never" />
+  </ItemGroup>
+
+  <ItemGroup>
   </ItemGroup>
 
 </Project>

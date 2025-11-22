@@ -2,8 +2,9 @@
 
 public class GlobUnitTestsFixture : IDisposable
 {
-    protected readonly IHost _host;
-    protected readonly IFakeFileSystemCache _fileSystemCache;
+    readonly IFakeFileSystemCache _fileSystemCache;
+
+    public IHost TestHost { get; private set; }
 
     public GlobUnitTestsFixture()
     {
@@ -23,11 +24,11 @@ public class GlobUnitTestsFixture : IDisposable
             .AddTransient<GlobEnumeratorFactory>()
             ;
 
-        _host = builder.Build();
+        TestHost = builder.Build();
         _fileSystemCache = new FakeFileSystemCache();
     }
 
-    public virtual void Dispose() => _host.Dispose();
+    public virtual void Dispose() => TestHost.Dispose();
 
     public ITestOutputHelper? Output { get; set; }
 
@@ -37,7 +38,7 @@ public class GlobUnitTestsFixture : IDisposable
     {
         // Get the file system for this test
         var fileSystem = _fileSystemCache.GetFileSystem(fileSystemFile);
-        var enumerator = _host
+        var enumerator = TestHost
                             .Services
                             .GetRequiredService<GlobEnumeratorFactory>()
                             .Create(fileSystem)
@@ -53,7 +54,7 @@ public class GlobUnitTestsFixture : IDisposable
         Func<GlobEnumeratorBuilder>? getBuilder = null)
     {
         // Get the file system for this test
-        var enumerator = _host
+        var enumerator = TestHost
                             .Services
                             .GetRequiredService<GlobEnumerator>()
                             ;

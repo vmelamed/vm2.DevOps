@@ -20,8 +20,8 @@ public partial class GlobEnumeratorIntegrationTests(
         }
 
         // Arrange
-        var builder = (GlobEnumeratorBuilder)data;
-        var ge = Fixture.GetGlobEnumerator(() => builder.FromDirectory(Path.Combine(fixture.TestRootPath, data.Sd)));
+        var builder   = (GlobEnumeratorBuilder)data;
+        var ge        = Fixture.GetGlobEnumerator(() => builder.FromDirectory(Path.Combine(fixture.TestRootPath, data.Sd)));
         var enumerate = ge.Enumerate;
 
         if (data.Tx)

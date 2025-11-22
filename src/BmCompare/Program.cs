@@ -76,9 +76,7 @@ return parseResult.Invoke();
 
 Matcher? MatcherParser(ArgumentResult result)
 {
-    var matcher = new Matcher(OperatingSystem.IsWindows()
-                                    ? StringComparison.OrdinalIgnoreCase
-                                    : StringComparison.Ordinal);
+    var matcher = new Matcher(OperatingSystem.Comparison);
 
     var pattern = result.Tokens[0].Value.Replace('\\', '/');
     matcher.AddInclude(pattern);

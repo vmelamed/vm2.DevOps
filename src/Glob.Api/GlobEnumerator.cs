@@ -8,7 +8,7 @@ public sealed partial class GlobEnumerator
     #region Fields and private properties
     RegexOptions _regexOptions  = RegexOptions.IgnorePatternWhitespace
                                 | RegexOptions.ExplicitCapture
-                                | (OperatingSystem.IsWindows() ? RegexOptions.IgnoreCase : RegexOptions.None);
+                                | (OperatingSystem.RegexOptions);
 
     EnumerationOptions _options = new() {
         MatchCasing              = MatchCasing.PlatformDefault, // see also _matchCasing property
@@ -28,7 +28,7 @@ public sealed partial class GlobEnumerator
     /// <summary>
     /// The string comparer depends on the MatchCasing
     /// </summary>
-    StringComparison StringComparison { get; set; } = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+    StringComparison StringComparison { get; set; } = OperatingSystem.Comparison;
 
     /// <summary>
     /// Gets a regex object that matches the root of the file system in a subDir.
@@ -133,7 +133,7 @@ public sealed partial class GlobEnumerator
         _fileSystem    = fileSystem ?? new FileSystem();
         _logger        = logger;
         MatchCasing    = MatchCasing.PlatformDefault;
-        FileSystemRoot = _fileSystem.IsWindows ? WindowsFileSystemRootRegex() : UnixFileSystemRootRegex();
+        FileSystemRoot = _fileSystem.FileSystemRootRegex();
     }
     #endregion
 

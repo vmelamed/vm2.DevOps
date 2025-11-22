@@ -11,4 +11,8 @@
     <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Glob.Api\Glob.Api.csproj" />
+  </ItemGroup>
+
 </Project>

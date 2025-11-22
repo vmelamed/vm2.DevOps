@@ -33,16 +33,12 @@ public sealed partial class FakeFS
     public Folder RootFolder { get; private set; }
 
     public Folder CurrentFolder { get; private set; }
-
-    public StringComparer Comparer { get; private set; }
     #endregion
 
     #region Constructors
     public FakeFS(string fileName, DataType fileType = DataType.Default)
     {
-        var m = OperatingSystem.IsWindows()
-                    ? WindowsPathRegex().Match(fileName)
-                    : UnixPathRgex().Match(fileName);
+        var m = OperatingSystem.PathRegex().Match(fileName);
 
         if (!m.Success)
             throw new ArgumentException($"The path name '{fileName}' format is invalid.", nameof(fileName));
@@ -75,7 +71,6 @@ public sealed partial class FakeFS
         };
 
         Debug.Assert(RootFolder is not null);
-        Debug.Assert(Comparer is not null);
 
         CurrentFolder = RootFolder;
     }
@@ -89,7 +84,6 @@ public sealed partial class FakeFS
         };
 
         Debug.Assert(RootFolder is not null);
-        Debug.Assert(Comparer is not null);
 
         CurrentFolder = RootFolder;
     }
@@ -225,7 +219,7 @@ public sealed partial class FakeFS
         Debug.Assert(root.Name is not null, "Root DTO name is null.");
 
         DetectOS(root.Name);
-        RootFolder ??= Folder.LinkChildren(root, Comparer);
+        RootFolder ??= Folder.LinkChildren(root, this.Comparer);
         return root;
     }
 
@@ -263,7 +257,7 @@ public sealed partial class FakeFS
             if (root is null)
             {
                 root = new Folder(DetectOS(line));
-                Folder.LinkChildren(root, Comparer);
+                Folder.LinkChildren(root, this.Comparer);
                 RootFolder    ??= root;
                 CurrentFolder ??= root;
             }
@@ -286,7 +280,6 @@ public sealed partial class FakeFS
             if (!WindowsPathRegex().IsMatch(line))
                 throw new ArgumentException($"The Windows path format '{line}' is invalid.", nameof(line));
             IsWindows = true;
-            Comparer  = StringComparer.OrdinalIgnoreCase;
             return m.Value.ToUpper().Replace(WinSepChar, SepChar);
         }
 
@@ -295,7 +288,6 @@ public sealed partial class FakeFS
             if (!UnixPathRgex().IsMatch(line))
                 throw new ArgumentException($"The Unix path format '{line}' is invalid.", nameof(line));
             IsWindows = false;
-            Comparer  = StringComparer.Ordinal;
             return SepChar.ToString();
         }
 
@@ -304,17 +296,13 @@ public sealed partial class FakeFS
 
     void ValidatePath(string path)
     {
-        if (!(IsWindows
-                ? WindowsPathRegex().IsMatch(path)
-                : UnixPathRgex().IsMatch(path)))
+        if (!this.PathRegex().IsMatch(path))
             throw new ArgumentException($"The '{path}' is invalid path.", nameof(path));
     }
 
     static void ValidateOSPath(string path)
     {
-        if (!(OperatingSystem.IsWindows()
-                ? WindowsPathRegex().IsMatch(path)
-                : UnixPathRgex().IsMatch(path)))
+        if (!(OperatingSystem.PathRegex().IsMatch(path)))
             throw new ArgumentException($"The '{path}' is invalid path.", nameof(path));
     }
 

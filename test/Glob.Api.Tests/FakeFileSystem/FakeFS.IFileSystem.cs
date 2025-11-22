@@ -40,7 +40,7 @@ public sealed partial class FakeFS : IFileSystem
                         {
                             MatchCasing.CaseSensitive => StringComparer.Ordinal,
                             MatchCasing.CaseInsensitive => StringComparer.OrdinalIgnoreCase,
-                            MatchCasing.PlatformDefault => Comparer,
+                            MatchCasing.PlatformDefault => this.Comparer,
                             _ => throw new ArgumentOutOfRangeException(nameof(options), "Invalid MatchCasing value."),
                         };
 

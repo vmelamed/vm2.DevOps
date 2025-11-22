@@ -38,9 +38,7 @@ Argument<string> globExpression = new("glob-pattern")
                 return;
             }
 
-            var regex = OperatingSystem.IsWindows() ? WindowsGlobRegex() : UnixGlobRgex();
-
-            if (!regex.IsMatch(pattern))
+            if (!OperatingSystem.GlobRegex().IsMatch(pattern))
                 result.AddError($"The specified glob pattern is not valid: `{pattern}`.");
         }
     }
@@ -66,9 +64,7 @@ Option<string> startDirectory = new(name: "--start-from", "-d")
             if (string.IsNullOrWhiteSpace(directoryPath))
                 return;
 
-            var regex = OperatingSystem.IsWindows() ? WindowsPathRegex() : UnixPathRgex();
-
-            if (!regex.IsMatch(directoryPath))
+            if (!OperatingSystem.PathRegex().IsMatch(directoryPath))
                 result.AddError($"The specified start directory is not a valid path: `{directoryPath}`.");
             else
             if (!Directory.Exists(directoryPath))

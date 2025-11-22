@@ -49,10 +49,4 @@
   <Folder Name="/test/">
     <Project Path="test/Glob.Api.Tests/Glob.Api.Tests.csproj" />
   </Folder>
-  <Folder Name="/test/scripts/">
-    <File Path="test/scripts/cleanup-test-structure.ps1" />
-    <File Path="test/scripts/cleanup-test-structure.sh" />
-    <File Path="test/scripts/create-test-structure.ps1" />
-    <File Path="test/scripts/create-test-structure.sh" />
-  </Folder>
 </Solution>
