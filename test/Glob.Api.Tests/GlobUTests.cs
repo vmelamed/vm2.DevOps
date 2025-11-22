@@ -1,7 +1,7 @@
 ﻿namespace vm2.DevOps.Glob.Api.Tests;
 
 [ExcludeFromCodeCoverage]
-public abstract partial class GlobEnumeratorTests(
+public abstract partial class GlobEnumeratorUnitTests(
     GlobUnitTestsFixture fixture,
     ITestOutputHelper output) : IClassFixture<GlobUnitTestsFixture>
 {

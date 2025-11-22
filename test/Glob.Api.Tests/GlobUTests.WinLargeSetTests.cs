@@ -1,7 +1,7 @@
 ﻿namespace vm2.DevOps.Glob.Api.Tests;
 
 [ExcludeFromCodeCoverage]
-public class GlobWinLargeSetTests : GlobEnumeratorTests
+public class GlobWinLargeSetTests : GlobEnumeratorUnitTests
 {
     public GlobWinLargeSetTests(GlobUnitTestsFixture fixture, ITestOutputHelper output)
         : base(fixture, output)

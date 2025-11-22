@@ -1,6 +1,6 @@
 ﻿namespace vm2.DevOps.Glob.Api.Tests;
 
-public partial class GlobEnumeratorTests
+public partial class GlobEnumeratorUnitTests
 {
     public static TheoryData<UnitTestElement> Enumerate_RelativePaths =
     [

@@ -1,5 +1,6 @@
 ﻿namespace vm2.DevOps.Glob.Api.Tests;
 
+[ExcludeFromCodeCoverage]
 public class GlobUnitTestsFixture : IDisposable
 {
     readonly IFakeFileSystemCache _fileSystemCache;
@@ -8,6 +9,14 @@ public class GlobUnitTestsFixture : IDisposable
 
     public GlobUnitTestsFixture()
     {
+        var configuration = new ConfigurationBuilder()
+                                    .AddJsonFile("appsettings.json", optional: true)
+                                    .AddJsonFile("appsettings.Development.json", optional: true)
+                                    .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("USERPROFILE")}.json", optional: true)
+                                    .AddEnvironmentVariables()
+                                    .Build()
+                                    ;
+
         var builder = Host.CreateApplicationBuilder();
 
         builder
@@ -19,6 +28,7 @@ public class GlobUnitTestsFixture : IDisposable
 
         builder
             .Services
+            .AddSingleton<IConfiguration>(configuration)
             .AddSingleton<IFileSystem, FileSystem>()
             .AddTransient<GlobEnumerator>()
             .AddTransient<GlobEnumeratorFactory>()
@@ -28,7 +38,11 @@ public class GlobUnitTestsFixture : IDisposable
         _fileSystemCache = new FakeFileSystemCache();
     }
 
-    public virtual void Dispose() => TestHost.Dispose();
+    public virtual void Dispose()
+    {
+        TestHost.Dispose();
+        GC.SuppressFinalize(this);
+    }
 
     public ITestOutputHelper? Output { get; set; }
 

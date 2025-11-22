@@ -1,7 +1,7 @@
 ﻿namespace vm2.DevOps.Glob.Api.Tests;
 
 [ExcludeFromCodeCoverage]
-public class GlobEnumerationDistinctTests : GlobEnumeratorTests
+public class GlobEnumerationDistinctTests : GlobEnumeratorUnitTests
 {
     public GlobEnumerationDistinctTests(GlobUnitTestsFixture fixture, ITestOutputHelper output)
         : base(fixture, output)

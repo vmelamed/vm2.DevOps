@@ -1,51 +1,49 @@
 ﻿namespace vm2.DevOps.Glob.Api.Tests;
 
+[ExcludeFromCodeCoverage]
 public sealed class GlobIntegrationTestsFixture : GlobUnitTestsFixture
 {
     public const string TestStructureJson = "./FakeFSFiles/Integration.json";
 
-    string _testRootPath;
+    public string TestRootPath { get; private set; }
     bool _tempTestRootPath;
 
     public GlobIntegrationTestsFixture() : base()
     {
         var configuration = TestHost.Services.GetRequiredService<IConfiguration>();
-        _testRootPath = configuration["GlobIntegrationTests:_testRootPath"] ?? "";
+        TestRootPath = configuration["GlobIntegrationTests:TestRootPath"] ?? "";
 
-        if (string.IsNullOrWhiteSpace(_testRootPath))
+        if (string.IsNullOrWhiteSpace(TestRootPath))
         {
-            _testRootPath = Path.Combine(Path.GetTempPath(), "glob-integration-test", Guid.NewGuid().ToString("N"));
+            TestRootPath = Path.Combine(Path.GetTempPath(), "glob-integration-test", Guid.NewGuid().ToString("N"));
             _tempTestRootPath = true;
         }
         else
-        {
-            _testRootPath = ExpandEnvironmentVariables(_testRootPath);
-            _testRootPath = Path.GetFullPath(_testRootPath);
-        }
+            TestRootPath = Path.GetFullPath(ExpandEnvironmentVariables(TestRootPath));
 
-        Debug.Assert(!string.IsNullOrWhiteSpace(_testRootPath));
-        if (!OperatingSystem.PathRegex().IsMatch(_testRootPath))
-            throw new ConfigurationErrorsException($"The configured test root path '{_testRootPath}' is not valid a valid path for the current operating system.");
+        Debug.Assert(!string.IsNullOrWhiteSpace(TestRootPath));
+        if (!OperatingSystem.PathRegex().IsMatch(TestRootPath))
+            throw new ConfigurationErrorsException($"The configured test root path '{TestRootPath}' is not valid a valid path for the current operating system.");
 
-        if (Directory.Exists(_testRootPath))
+        if (Directory.Exists(TestRootPath))
         {
-            var message = string.Join(",\n", VerifyTestStructure(_testRootPath));
+            var message = string.Join(",\n", VerifyTestStructure(TestRootPath));
 
             if (!string.IsNullOrWhiteSpace(message))
-                throw new InvalidOperationException($"The expected test file structure at '{_testRootPath}' does not match the JSON specification {TestStructureJson}:\n{message}\n");
+                throw new InvalidOperationException($"The expected test file structure at '{TestRootPath}' does not match the JSON specification {TestStructureJson}:\n{message}\n");
         }
         else
-            CreateTestStructure(_testRootPath);
+            CreateTestStructure(TestRootPath);
     }
 
     public override void Dispose()
     {
         base.Dispose();
-        if (_tempTestRootPath && Directory.Exists(_testRootPath))
+        if (_tempTestRootPath && Directory.Exists(TestRootPath))
         {
             try
             {
-                Directory.Delete(_testRootPath, recursive: true);
+                Directory.Delete(TestRootPath, recursive: true);
             }
             catch
             {
@@ -54,14 +52,15 @@ public sealed class GlobIntegrationTestsFixture : GlobUnitTestsFixture
         }
     }
 
-    void CreateTestStructure(string testRootPath)
+    static void CreateTestStructure(string testRootPath)
     {
         var fs = new FakeFS(TestStructureJson, DataType.Json);
         var folderStack = new Stack<Folder>([fs.RootFolder]);
+        var rootLength = fs.RootFolder.Name.Length;
 
         while (folderStack.TryPop(out var folder))
         {
-            var dirPath = Path.Combine(testRootPath, folder.Name);
+            var dirPath = Path.Combine(testRootPath, folder.Path[rootLength..]);
             if (!Directory.Exists(dirPath))
                 Directory.CreateDirectory(dirPath);
 
@@ -70,21 +69,22 @@ public sealed class GlobIntegrationTestsFixture : GlobUnitTestsFixture
 
             foreach (var file in folder.Files)
             {
-                var filePath = Path.Combine(dirPath, file);
+                var filePath = Path.Combine(testRootPath, folder.Path[rootLength..], file);
                 if (!File.Exists(filePath))
                     File.WriteAllText(filePath, file);
             }
         }
     }
 
-    IEnumerable<string> VerifyTestStructure(string testRootPath)
+    static IEnumerable<string> VerifyTestStructure(string testRootPath)
     {
         var fs = new FakeFS(TestStructureJson, DataType.Json);
         var folderStack = new Stack<Folder>([fs.RootFolder]);
+        var rootLength = fs.RootFolder.Name.Length;
 
         while (folderStack.TryPop(out var folder))
         {
-            var dirPath = Path.Combine(testRootPath, folder.Name);
+            var dirPath = Path.Combine(testRootPath, folder.Path[1..]);
             if (!Directory.Exists(dirPath))
                 yield return $"The directory {dirPath} does not exist.";
 
@@ -93,14 +93,14 @@ public sealed class GlobIntegrationTestsFixture : GlobUnitTestsFixture
 
             foreach (var file in folder.Files)
             {
-                var filePath = Path.Combine(dirPath, file);
+                var filePath = Path.Combine(testRootPath, folder.Path[rootLength..], file);
                 if (!File.Exists(filePath))
                     yield return $"The directory {dirPath} does not exist.";
             }
         }
     }
 
-    string ExpandEnvironmentVariables(string pattern)
+    static string ExpandEnvironmentVariables(string pattern)
     {
         if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS() || OperatingSystem.IsFreeBSD())
         {

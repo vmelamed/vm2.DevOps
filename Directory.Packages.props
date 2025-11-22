@@ -23,15 +23,14 @@
     <PackageVersion Include="Markdig" Version="0.43.0" />
     <PackageVersion Include="MinVer" Version="6.0.0" />
     <!-- The test stack: -->
-    <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.1.0" />
     <PackageVersion Include="FluentAssertions" Version="8.8.0" />
-    <PackageVersion Include="xunit.v3.mtp-v2" Version="3.2.0" />
-    <!-- xunit.v3.mtp-v2 replaces explicitly <PackageVersion Include="xunit.v3" Version="3.2.0" /> to use MTP -->
+    <PackageVersion Include="xunit.v3.mtp-v2" Version="3.2.0" /><!-- xunit.v3.mtp-v2 replaces explicitly <PackageVersion Include="xunit.v3" Version="3.2.0" /> to use MTP -->
+    <PackageVersion Include="xunit.v3.extensibility.core" Version="3.2.0" />
     <!-- These should be redundant for the test platform -->
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
     <!-- These should be redundant for the test platform -->
-    <!--<PackageVersion Include="xunit.v3.extensibility.core" Version="3.1.0" />-->
+    <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.1.0" />
+    <PackageVersion Include="coverlet.msbuild" Version="6.0.4" />
     <!-- for running with Visual Studio profiler:
     <PackageVersion Include="Microsoft.VisualStudio.DiagnosticsHub.BenchmarkDotNetDiagnosers" Version="18.0.36421.1" />
     -->

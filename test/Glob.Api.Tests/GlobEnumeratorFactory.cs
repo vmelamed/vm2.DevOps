@@ -3,6 +3,7 @@
 /// <summary>
 /// Factory for creating GlobEnumerator instances with proper dependency injection.
 /// </summary>
+[ExcludeFromCodeCoverage]
 public sealed class GlobEnumeratorFactory(ILogger<GlobEnumerator> logger)
 {
     /// <summary>

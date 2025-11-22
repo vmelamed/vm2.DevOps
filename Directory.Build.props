@@ -67,7 +67,7 @@
     <IsPackable>false</IsPackable>
     <RunSettingsFilePath>$(MSBuildProjectDirectory)\..\..\test.runsettings</RunSettingsFilePath>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
-    <!--<TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>- ->   <!- - To enable the Microsoft Testing Platform 'dotnet test' experience in .NET 9 and earlier -->
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>   <!-- To enable the Microsoft Testing Platform 'dotnet test' experience in .NET 9 and earlier -->
     <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner> <!-- To enable the Microsoft Testing Platform native command line  'dotnet run' experience -->
     <!-- For more information on Microsoft Testing Platform support in xUnit.net, please visit: https://xunit.net/docs/getting-started/v3/microsoft-testing-platform -->
     <NoWarn>
@@ -77,24 +77,17 @@
 
   <!-- for *.Tests projects in the ./test folder: -->
   <ItemGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]test[/\\]')) and $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '^*.Tests$'))">
-    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
     <PackageReference Include="FluentAssertions" />
-    <PackageReference Include="xunit.v3.mtp-v2" /> <!-- xunit.v3.mtp-v2 replaces explicitly <PackageReference Include="xunit.v3" /> to use MTP -->
+    <PackageReference Include="xunit.v3.mtp-v2" />
 
     <!-- These should be redundant for the test platform -->
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="xunit.runner.visualstudio">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <!-- These should be redundant for the test platform -->
-
-    <!--
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage"/>
     <PackageReference Include="coverlet.msbuild">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    -->
+    <!-- -->
   </ItemGroup>
 
   <!-- for test utility/library projects in the ./test folder: -->
@@ -125,13 +118,15 @@
   <ItemGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]benchmarks[/\\]'))">
     <PackageReference Include="BenchmarkDotNet" />
     <PackageReference Include="BenchmarkDotNet.Annotations" />
-    <!-- To show up in the VS test explorer (with some perf. penalty!) - ->
-        <PackageReference Include="BenchmarkDotNet.TestAdapter" />
-        <PackageReference Include="Microsoft.NET.Test.Sdk" />
-        <!- - -->
-    <!-- for running with Visual Studio profiler: - ->
-        <PackageReference Include="Microsoft.VisualStudio.DiagnosticsHub.BenchmarkDotNetDiagnosers" />
-        <!- - -->
+    <!-- To show up in the VS test explorer (with some perf. penalty!) -->
+    <!--
+    <PackageReference Include="BenchmarkDotNet.TestAdapter" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    -->
+    <!-- for running with Visual Studio profiler: -->
+    <!--
+    <PackageReference Include="Microsoft.VisualStudio.DiagnosticsHub.BenchmarkDotNetDiagnosers" />
+    -->
   </ItemGroup>
 
   <!-- common usings for benchmark projects in the ./benchmarks folder: -->

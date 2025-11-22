@@ -8,12 +8,12 @@ public partial class GlobEnumeratorIntegrationTests
         new IntegrationTestData(TestFileLine("Find all .txt files recursively"),
                                     "**/*.txt",   "",       Objects.Files,
                                         MatchCasing.PlatformDefault, false, false, false, false, false,
-                                        "case-test/file.txt", "case-test/_FILE.TXT", "hidden/visible.txt", "recursive/root.txt", "recursive/level1/one.txt", "spec-chars/parentheses/file(1).txt", "spec-chars/spaces in names/file with spaces.txt", "spec-chars/symbols/file@home.txt", "spec-chars/unicode/naïve.txt", "spec-chars/unicode/файл.txt", "recursive/branch1/subbranch1/leaf1.txt", "recursive/branch1/subbranch2/leaf2.txt", "recursive/branch2/subbranch3/leaf3.txt", "recursive/level1/level2/two.txt", "recursive/level1/level2/level3/three.txt"),
+                                        "case-test/file.txt", "case-test/_FILE.TXT", "hidden/visible.txt", "recursive/root.txt", "recursive/level1/one.txt", "spec-chars/parentheses/file(1).txt", "spec-chars/spaces in names/file with spaces.txt", "spec-chars/symbols/file@home.txt", "spec-chars/unicode/naïve.txt", "spec-chars/unicode/файл.txt", "recursive/level1/level2/two.txt", "recursive/level1/branch1/subbranch1/leaf1.txt", "recursive/level1/branch1/subbranch2/leaf2.txt", "recursive/level1/branch2/subbranch3/leaf3.txt", "recursive/level1/level2/level3/three.txt"),
 
         new IntegrationTestData(TestFileLine("Find all directories matching 'branch*'"),
                                     "**/branch*", "",       Objects.Directories,
                                         MatchCasing.PlatformDefault, false, false, false, false, false,
-                                        "recursive/branch1/", "recursive/branch2/"),
+                                        "recursive/level1/branch1/", "recursive/level1/branch2/"),
 
         new IntegrationTestData(TestFileLine("Find hidden dot files"),
                                     ".*",         "hidden", Objects.Files,
@@ -68,24 +68,12 @@ public partial class GlobEnumeratorIntegrationTests
         new IntegrationTestData(TestFileLine("Depth-first traversal order"),
                                     "**/*.txt",   "recursive", Objects.Files,
                                     MatchCasing.CaseInsensitive, true,  false, false, false, false,
-                                    "recursive/root.txt",
-                                    "recursive/level1/one.txt",
-                                    "recursive/level1/level2/two.txt",
-                                    "recursive/level1/level2/level3/three.txt",
-                                    "recursive/branch2/subbranch3/leaf3.txt",
-                                    "recursive/branch1/subbranch2/leaf2.txt",
-                                    "recursive/branch1/subbranch1/leaf1.txt"),
+                                    "recursive/root.txt", "recursive/level1/one.txt", "recursive/level1/level2/two.txt", "recursive/level1/level2/level3/three.txt", "recursive/level1/branch2/subbranch3/leaf3.txt", "recursive/level1/branch1/subbranch2/leaf2.txt", "recursive/level1/branch1/subbranch1/leaf1.txt"),
 
         new IntegrationTestData(TestFileLine("Breadth-first traversal order"),
                                     "**/*.txt",   "recursive", Objects.Files,
                                     MatchCasing.CaseInsensitive, false, false, false, false, false,
-                                    "recursive/root.txt",
-                                    "recursive/level1/one.txt",
-                                    "recursive/branch1/subbranch1/leaf1.txt",
-                                    "recursive/branch1/subbranch2/leaf2.txt",
-                                    "recursive/branch2/subbranch3/leaf3.txt",
-                                    "recursive/level1/level2/two.txt",
-                                    "recursive/level1/level2/level3/three.txt"),
+                                    "recursive/root.txt", "recursive/level1/one.txt", "recursive/level1/level2/two.txt", "recursive/level1/branch1/subbranch1/leaf1.txt", "recursive/level1/branch1/subbranch2/leaf2.txt", "recursive/level1/branch2/subbranch3/leaf3.txt", "recursive/level1/level2/level3/three.txt"),
 
     ];
 }

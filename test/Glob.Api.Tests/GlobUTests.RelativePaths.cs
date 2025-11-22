@@ -1,7 +1,7 @@
 ﻿namespace vm2.DevOps.Glob.Api.Tests;
 
 [ExcludeFromCodeCoverage]
-public class GlobRelativePathsTests : GlobEnumeratorTests
+public class GlobRelativePathsTests : GlobEnumeratorUnitTests
 {
     public GlobRelativePathsTests(GlobUnitTestsFixture fixture, ITestOutputHelper output)
         : base(fixture, output)
