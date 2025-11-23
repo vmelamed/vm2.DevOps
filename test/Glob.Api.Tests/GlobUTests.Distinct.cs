@@ -1,13 +1,8 @@
 ﻿namespace vm2.DevOps.Glob.Api.Tests;
 
 [ExcludeFromCodeCoverage]
-public class GlobEnumerationDistinctTests : GlobEnumeratorUnitTests
+public class GlobEnumerationDistinctTests(GlobUnitTestsFixture fixture, ITestOutputHelper output) : GlobEnumeratorUnitTests(fixture, output)
 {
-    public GlobEnumerationDistinctTests(GlobUnitTestsFixture fixture, ITestOutputHelper output)
-        : base(fixture, output)
-    {
-    }
-
     [Fact]
     public void Should_Enumerate_WithDuplicates_GlobEnumerator()
     {

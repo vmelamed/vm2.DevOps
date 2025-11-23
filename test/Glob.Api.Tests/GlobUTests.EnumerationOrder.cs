@@ -1,13 +1,8 @@
 ﻿namespace vm2.DevOps.Glob.Api.Tests;
 
 [ExcludeFromCodeCoverage]
-public class GlobEnumerationOrderTests : GlobEnumeratorUnitTests
+public class GlobEnumerationOrderTests(GlobUnitTestsFixture fixture, ITestOutputHelper output) : GlobEnumeratorUnitTests(fixture, output)
 {
-    public GlobEnumerationOrderTests(GlobUnitTestsFixture fixture, ITestOutputHelper output)
-        : base(fixture, output)
-    {
-    }
-
     [Fact]
     public void Should_Enumerate_DepthFirst_GlobEnumerator()
     {

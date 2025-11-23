@@ -67,7 +67,7 @@
     <IsPackable>false</IsPackable>
     <RunSettingsFilePath>$(MSBuildProjectDirectory)\..\..\test.runsettings</RunSettingsFilePath>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
-    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport> <!-- To be able to run MTP projects in VSTest and 'dotnet test' experience, available for .NET 9 SDK and earlier for backward compatibility -->
+    <!--<TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport> <!- - To be able to run MTP projects in VSTest and 'dotnet test' experience, available for .NET 9 SDK and earlier for backward compatibility - ->-->
     <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner> <!-- To opt-in xUnit in the Microsoft Testing Platform and use native command line 'dotnet run' experience -->
     <!-- For more information on Microsoft Testing Platform support in xUnit.net, please visit: https://xunit.net/docs/getting-started/v3/microsoft-testing-platform -->
     <EnableCodeCoverage>true</EnableCodeCoverage>                               <!-- Enable code coverage collection with Microsoft.Testing.Extensions.CodeCoverage -->
@@ -80,6 +80,10 @@
   <ItemGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]test[/\\]')) and $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '^*.Tests$'))">
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="xunit.v3.mtp-v2" />
+    <PackageReference Include="xunit.runner.visualstudio">  <!-- SHOULD BE HERE TEMPORARILY! -->
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
 
     <!-- These should be redundant for the test platform -->
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
