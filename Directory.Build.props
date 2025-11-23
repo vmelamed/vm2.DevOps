@@ -67,9 +67,10 @@
     <IsPackable>false</IsPackable>
     <RunSettingsFilePath>$(MSBuildProjectDirectory)\..\..\test.runsettings</RunSettingsFilePath>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
-    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>   <!-- To enable the Microsoft Testing Platform 'dotnet test' experience in .NET 9 and earlier -->
-    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner> <!-- To enable the Microsoft Testing Platform native command line  'dotnet run' experience -->
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport> <!-- To be able to run MTP projects in VSTest and 'dotnet test' experience, available for .NET 9 SDK and earlier for backward compatibility -->
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner> <!-- To opt-in xUnit in the Microsoft Testing Platform and use native command line 'dotnet run' experience -->
     <!-- For more information on Microsoft Testing Platform support in xUnit.net, please visit: https://xunit.net/docs/getting-started/v3/microsoft-testing-platform -->
+    <EnableCodeCoverage>true</EnableCodeCoverage>                               <!-- Enable code coverage collection with Microsoft.Testing.Extensions.CodeCoverage -->
     <NoWarn>
       $(NoWarn);CA1031;CA1701;CA1702;CA1707;CA1806;CA2211;CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290
     </NoWarn>
@@ -82,11 +83,13 @@
 
     <!-- These should be redundant for the test platform -->
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" />
+    <PackageReference Include="Microsoft.Testing.Extensions.TrxReport.Abstractions" />
     <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage"/>
-    <PackageReference Include="coverlet.msbuild">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
+<!--    <PackageReference Include="coverlet.msbuild">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>-->
     <!-- -->
   </ItemGroup>
 

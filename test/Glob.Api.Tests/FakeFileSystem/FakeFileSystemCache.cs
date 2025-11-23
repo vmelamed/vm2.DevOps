@@ -3,7 +3,6 @@
 /// <summary>
 /// Thread-safe cache for FakeFS instances.
 /// </summary>
-[ExcludeFromCodeCoverage]
 public sealed class FakeFileSystemCache : IFakeFileSystemCache
 {
     static readonly Dictionary<string, (DataType DataType, byte[] Bytes)> _fileSystems = [];

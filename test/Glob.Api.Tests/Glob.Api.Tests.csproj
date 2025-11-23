@@ -9,6 +9,11 @@
   </ItemGroup>
 
   <ItemGroup>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="appsettings.Development.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="testconfig.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
@@ -45,15 +50,6 @@
     <Content Include="FakeFSFiles\FakeFS6.Win.graph.txt" CopyToOutputDirectory="Never" />
     <Content Include="FakeFSFiles\FakeFS7.Unix.graph.txt" CopyToOutputDirectory="Never" />
     <Content Include="FakeFSFiles\Integration.graph.txt" CopyToOutputDirectory="Never" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="appsettings.Development.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 
 </Project>
