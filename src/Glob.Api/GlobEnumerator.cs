@@ -172,13 +172,7 @@ public sealed partial class GlobEnumerator
         _deque.IsStack = DepthFirst;                          // honor the order of traversing
         _deque.Add((fromDir, FirstGlobComponent(), false));   // enqueue the first search and dive-into the enumeration
 
-        var enumerable = Traverse();
-
-        // only pattern-s with more than one directory globstars "**" can produce duplicates
-        if (Distinct && GlobstarRegex().Matches(_glob).Count > 1)
-            enumerable = enumerable.Distinct();
-
-        return enumerable;
+        return Traverse();
     }
     #endregion
 
@@ -199,6 +193,17 @@ public sealed partial class GlobEnumerator
 
     IEnumerable<string> Traverse()
     {
+        // Track visited paths when Distinct is enabled and pattern has multiple globstars
+        HashSet<string>? visited = null;
+        if (Distinct && GlobstarRegex().Matches(_glob).Count > 1)
+        {
+            visited = new HashSet<string>(
+                StringComparison is StringComparison.OrdinalIgnoreCase
+                    ? StringComparer.OrdinalIgnoreCase
+                    : StringComparer.Ordinal
+            );
+        }
+
         while (_deque.TryGet(out var p))
         {
             var (dir, globComponentRange, recursively) = p;
@@ -270,24 +275,30 @@ public sealed partial class GlobEnumerator
                                                     .EnumerateDirectories(dir, pattern, _options)
                                                     .Where(subDir => LastComponentMatches(pattern, regex)(subDir)))
                         {
-                            if (_logger?.IsEnabled(LogLevel.Debug) is true)
-                                _logger.LogTrace("          dir:  {Directory}", subDir);
-                            yield return subDir;
+                            if (visited is null || visited.Add(subDir))
+                            {
+                                if (_logger?.IsEnabled(LogLevel.Debug) is true)
+                                    _logger.LogTrace("          dir:  {Directory}", subDir);
+                                yield return subDir;
+                            }
                         }
                     if (Enumerated.HasFlag(Objects.Files))
                         foreach (var file in _fileSystem
                                                     .EnumerateFiles(dir, pattern, _options)
                                                     .Where(file => LastComponentMatches(pattern, regex)(file)))
                         {
-                            if (_logger?.IsEnabled(LogLevel.Debug) is true)
-                                _logger.LogTrace("          file: {File}", file);
-                            yield return file;
+                            if (visited is null || visited.Add(file))
+                            {
+                                if (_logger?.IsEnabled(LogLevel.Debug) is true)
+                                    _logger.LogTrace("          file: {File}", file);
+                                yield return file;
+                            }
                         }
                     break;
 
                 case (isLast: true, recursively: true):
                     foreach (var subDir in _fileSystem
-                                            .EnumerateDirectories(dir, SequenceWildcard, _options))
+                                                .EnumerateDirectories(dir, SequenceWildcard, _options))
                     {
                         // we need to continue the recursive search in the sub-dirs to find matching objects deeper in the tree
                         _deque.Add((subDir, globComponentRange, true));
@@ -295,9 +306,12 @@ public sealed partial class GlobEnumerator
                         // report matching directories in the current dir
                         if (Enumerated.HasFlag(Objects.Directories) && LastComponentMatches(pattern, regex)(subDir))
                         {
-                            if (_logger?.IsEnabled(LogLevel.Debug) is true)
-                                _logger.LogTrace("          dir:  {Directory}", subDir);
-                            yield return subDir;
+                            if (visited is null || visited.Add(subDir))
+                            {
+                                if (_logger?.IsEnabled(LogLevel.Debug) is true)
+                                    _logger.LogTrace("          dir:  {Directory}", subDir);
+                                yield return subDir;
+                            }
                         }
                     }
 
@@ -307,9 +321,12 @@ public sealed partial class GlobEnumerator
                                                 .EnumerateFiles(dir, pattern, _options)
                                                 .Where(file => LastComponentMatches(pattern, regex)(file)))
                         {
-                            if (_logger?.IsEnabled(LogLevel.Debug) is true)
-                                _logger.LogTrace("          file: {File}", file);
-                            yield return file;
+                            if (visited is null || visited.Add(file))
+                            {
+                                if (_logger?.IsEnabled(LogLevel.Debug) is true)
+                                    _logger.LogTrace("          file: {File}", file);
+                                yield return file;
+                            }
                         }
                     break;
             }
