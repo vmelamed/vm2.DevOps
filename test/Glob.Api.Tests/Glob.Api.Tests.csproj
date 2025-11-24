@@ -9,9 +9,9 @@
   </ItemGroup>
 
   <ItemGroup>
-  </ItemGroup>
-
-  <ItemGroup>
+    <Content Include="appsettings.valme.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="appsettings.Development.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="testconfig.json" CopyToOutputDirectory="PreserveNewest" />

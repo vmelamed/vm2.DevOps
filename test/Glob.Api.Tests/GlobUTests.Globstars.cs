@@ -7,7 +7,7 @@ public class GlobstarsTests(GlobUnitTestsFixture fixture, ITestOutputHelper outp
     [MemberData(nameof(Enumerate_Globstars))]
     public void Should_Enumerate_Globstars_GlobEnumerator(UnitTestElement data)
     {
-        var ge = Fixture.GetGlobEnumerator(data.Fs, () => CreateBuilder(data, data.Throws));
+        var ge = GetGlobEnumerator(data.Fs, () => CreateBuilder(data, data.Throws));
         // For globstar tests, we change the meaning of data.Tx to indicate _distinctResults
         // Dirty hack for reusing the same test data, so ashamed... ;)
 

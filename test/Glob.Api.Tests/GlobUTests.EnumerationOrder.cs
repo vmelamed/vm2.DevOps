@@ -6,7 +6,7 @@ public class GlobEnumerationOrderTests(GlobUnitTestsFixture fixture, ITestOutput
     [Fact]
     public void Should_Enumerate_DepthFirst_GlobEnumerator()
     {
-        var ge = Fixture.GetGlobEnumerator(
+        var ge = GetGlobEnumerator(
                             "FakeFSFiles/FakeFS7.Unix.json",
                             () => new GlobEnumeratorBuilder()
                                         .WithGlob("**/*.txt")
@@ -19,13 +19,7 @@ public class GlobEnumerationOrderTests(GlobUnitTestsFixture fixture, ITestOutput
                             );
         var enumerate = ge.Enumerate;
         var result = enumerate.Should().NotThrow().Which.ToList();
-
-        Console.WriteLine("Tdf R:");
-        foreach (var item in result)
-            Output.WriteLine(item);
-
-        result.Should().BeEquivalentTo(
-        [
+        string[] expected = [
             "/aaa.txt",
             "/a/aa.txt",
             "/a/b/bb.txt",
@@ -33,13 +27,18 @@ public class GlobEnumerationOrderTests(GlobUnitTestsFixture fixture, ITestOutput
             "/x/xx.txt",
             "/x/y/yy.txt",
             "/x/y/z/zz.txt",
-        ]);
+        ];
+
+        Output.WriteLine("Expected Results:\n    \"{0}\"", string.Join("\",\n    \"", expected));
+        Output.WriteLine("Actual Results:\n    \"{0}\"", string.Join("\",\n    \"", result));
+
+        result.Should().BeEquivalentTo(expected);
     }
 
     [Fact]
     public void Should_Enumerate_BreadthFirst_GlobEnumerator()
     {
-        var ge = Fixture.GetGlobEnumerator(
+        var ge = GetGlobEnumerator(
                             "FakeFSFiles/FakeFS7.Unix.json",
                             () => new GlobEnumeratorBuilder()
                                         .WithGlob("**/*.txt")
@@ -52,13 +51,7 @@ public class GlobEnumerationOrderTests(GlobUnitTestsFixture fixture, ITestOutput
                             );
         var enumerate = ge.Enumerate;
         var result = enumerate.Should().NotThrow().Which.ToList();
-
-        Console.WriteLine("BreadthFirst R:");
-        foreach (var item in result)
-            Output.WriteLine(item);
-
-        result.Should().BeEquivalentTo(
-        [
+        string[] expected = [
             "/aaa.txt",
             "/a/aa.txt",
             "/x/xx.txt",
@@ -66,6 +59,11 @@ public class GlobEnumerationOrderTests(GlobUnitTestsFixture fixture, ITestOutput
             "/x/y/yy.txt",
             "/a/b/c/cc.txt",
             "/x/y/z/zz.txt",
-        ]);
+        ];
+
+        Output.WriteLine("Expected Results:\n    \"{0}\"", string.Join("\",\n    \"", expected));
+        Output.WriteLine("Actual Results:\n    \"{0}\"", string.Join("\",\n    \"", result));
+
+        result.Should().BeEquivalentTo(expected);
     }
 }

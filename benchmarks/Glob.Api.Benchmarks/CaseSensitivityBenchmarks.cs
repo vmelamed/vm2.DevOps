@@ -26,7 +26,7 @@ public class CaseSensitivityBenchmarks : IDisposable
             }
         }
 
-        _enumerator = new GlobEnumerator(new FileSystem(), null);
+        _enumerator = new GlobEnumerator(new FileSystem(), new NullLogger<GlobEnumerator>());
     }
 
     [GlobalCleanup]

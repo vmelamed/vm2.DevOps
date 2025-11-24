@@ -80,6 +80,7 @@
   <ItemGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]test[/\\]')) and $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '^*.Tests$'))">
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="xunit.v3.mtp-v2" />
+    <!-- <PackageReference Include="Meziantou.Extensions.Logging.Xunit.v3" /> xUnit v3 extension for Microsoft.Extensions.Logging -->
     <PackageReference Include="xunit.runner.visualstudio">  <!-- SHOULD BE HERE TEMPORARILY! -->
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

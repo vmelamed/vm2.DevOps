@@ -3,79 +3,43 @@
 [ExcludeFromCodeCoverage]
 public class GlobUnitTestsFixture : IDisposable
 {
-    readonly IFakeFileSystemCache _fileSystemCache;
-
-    public IHost TestHost { get; private set; }
-
-    public GlobUnitTestsFixture()
+    public IHost BuildHost(ITestOutputHelper testOutputHelper)
     {
-        var configuration = new ConfigurationBuilder()
-                                    .AddJsonFile("appsettings.json", optional: true)
-                                    .AddJsonFile("appsettings.Development.json", optional: true)
-                                    .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("USERPROFILE")}.json", optional: true)
-                                    .AddEnvironmentVariables()
-                                    .Build()
-                                    ;
-
         var builder = Host.CreateApplicationBuilder();
 
+        builder
+            .Configuration
+            .Sources
+            .Clear()
+            ;
+        builder
+            .Configuration
+            .AddJsonFile("appsettings.json", optional: true)
+            .AddJsonFile("appsettings.Development.json", optional: true)
+            .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("USERPROFILE")}.json", optional: true)
+            .AddEnvironmentVariables()
+            ;
         builder
             .Logging
             .ClearProviders()
             .AddConsole()
             .SetMinimumLevel(LogLevel.Trace)
-            ;
-
+        ;
         builder
             .Services
-            .AddSingleton<IConfiguration>(configuration)
-            .AddSingleton<IFileSystem, FileSystem>()
-            .AddTransient<GlobEnumerator>()
-            .AddTransient<GlobEnumeratorFactory>()
+            .AddScoped(sp => testOutputHelper)
+            .AddScoped<ILoggerProvider, XUnitLoggerProvider>()
+            .AddSingleton<IFakeFileSystemCache, FakeFileSystemCache>()  // for the unit tests
+            .AddTransient<GlobEnumeratorFactory>()                      // for the unit tests
+            .AddSingleton<IFileSystem, FileSystem>()                    // for the integration tests
+            .AddTransient<GlobEnumerator>()                             // for the integration tests
             ;
 
-        TestHost = builder.Build();
-        _fileSystemCache = new FakeFileSystemCache();
+        return builder.Build();
     }
 
     public virtual void Dispose()
     {
-        TestHost.Dispose();
         GC.SuppressFinalize(this);
-    }
-
-    public ITestOutputHelper? Output { get; set; }
-
-    public GlobEnumerator GetGlobEnumerator(
-        string fileSystemFile,
-        Func<GlobEnumeratorBuilder>? getBuilder = null)
-    {
-        // Get the file system for this test
-        var fileSystem = _fileSystemCache.GetFileSystem(fileSystemFile);
-        var enumerator = TestHost
-                            .Services
-                            .GetRequiredService<GlobEnumeratorFactory>()
-                            .Create(fileSystem)
-                            ;
-
-        if (getBuilder is null)
-            return enumerator;
-
-        return getBuilder().Configure(enumerator);
-    }
-
-    public GlobEnumerator GetGlobEnumerator(
-        Func<GlobEnumeratorBuilder>? getBuilder = null)
-    {
-        // Get the file system for this test
-        var enumerator = TestHost
-                            .Services
-                            .GetRequiredService<GlobEnumerator>()
-                            ;
-
-        if (getBuilder is null)
-            return enumerator;
-
-        return getBuilder().Configure(enumerator);
     }
 }

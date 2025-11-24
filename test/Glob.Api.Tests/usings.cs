@@ -15,6 +15,7 @@ global using Microsoft.Extensions.Logging;
 
 global using vm2.DevOps.Glob.Api;
 global using vm2.DevOps.Glob.Api.Tests.FakeFileSystem;
+global using vm2.DevOps.Glob.Api.Tests.Utilities.XUnitLogger;
 
 global using Xunit.Sdk;
 

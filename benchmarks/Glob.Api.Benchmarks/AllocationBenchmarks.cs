@@ -29,7 +29,7 @@ public class AllocationBenchmarks : IDisposable
             File.WriteAllText(Path.Combine(_testPath, $"file{i:D4}.txt"), "content");
         }
 
-        _enumerator = new GlobEnumerator(new FileSystem(), null);
+        _enumerator = new GlobEnumerator(new FileSystem(), new NullLogger<GlobEnumerator>());
     }
 
     [GlobalCleanup]

@@ -1,12 +1,80 @@
 ﻿namespace vm2.DevOps.Glob.Api.Tests;
 
 [ExcludeFromCodeCoverage]
-public partial class GlobEnumeratorIntegrationTests(
-    GlobIntegrationTestsFixture fixture,
-    ITestOutputHelper output) : IClassFixture<GlobIntegrationTestsFixture>
+public partial class GlobEnumeratorIntegrationTests : IClassFixture<GlobIntegrationTestsFixture>, IDisposable
 {
-    protected GlobIntegrationTestsFixture Fixture => fixture;
-    protected ITestOutputHelper Output => output;
+    IHost _host;
+    bool _tempTestRootPath;
+
+    public GlobEnumeratorIntegrationTests(GlobIntegrationTestsFixture fixture, ITestOutputHelper output)
+    {
+        Output  = output;
+        Fixture = fixture;
+
+        _host = Fixture.BuildHost(output);
+
+        var configuration = _host.Services.GetRequiredService<IConfiguration>();
+        TestRootPath = configuration["GlobIntegrationTests:TestRootPath"] ?? "";
+
+        if (string.IsNullOrWhiteSpace(TestRootPath))
+        {
+            TestRootPath = Path.Combine(Path.GetTempPath(), "glob-integration-test", Guid.NewGuid().ToString("N"));
+            _tempTestRootPath = true;
+        }
+        else
+            TestRootPath = Path.GetFullPath(GlobIntegrationTestsFixture.ExpandEnvironmentVariables(TestRootPath));
+
+        Debug.Assert(!string.IsNullOrWhiteSpace(TestRootPath));
+        if (!OperatingSystem.PathRegex().IsMatch(TestRootPath))
+            throw new ConfigurationErrorsException($"The configured test root path '{TestRootPath}' is not valid a valid path for the current operating system.");
+
+        if (Directory.Exists(TestRootPath))
+        {
+            var message = string.Join(",\n", GlobIntegrationTestsFixture.VerifyTestFileStructure(TestRootPath));
+
+            if (!string.IsNullOrWhiteSpace(message))
+                throw new InvalidOperationException($"The expected test file structure at '{TestRootPath}' does not match the JSON specification {GlobIntegrationTestsFixture.TestStructureJson}:\n{message}\n");
+        }
+        else
+            GlobIntegrationTestsFixture.CreateTestFileStructure(TestRootPath);
+    }
+
+    public void Dispose()
+    {
+        _host.Dispose();
+        if (_tempTestRootPath && Directory.Exists(TestRootPath))
+        {
+            try
+            {
+                Directory.Delete(TestRootPath, recursive: true);
+            }
+            catch
+            {
+                // quietly swallow it - not much we can do about it
+            }
+        }
+    }
+
+    GlobIntegrationTestsFixture Fixture { get; }
+
+    ITestOutputHelper Output { get; }
+
+    string TestRootPath { get; }
+
+    protected GlobEnumerator GetGlobEnumerator(
+        Func<GlobEnumeratorBuilder>? configureBuilder = null)
+    {
+        // Get the file system for this test
+        var enumerator = _host
+                            .Services
+                            .GetRequiredService<GlobEnumerator>()
+                            ;
+
+        if (configureBuilder is not null)
+            configureBuilder().Configure(enumerator);
+
+        return enumerator;
+    }
 
     [Theory]
     [MemberData(nameof(RecursiveEnumerationTests))]
@@ -21,7 +89,7 @@ public partial class GlobEnumeratorIntegrationTests(
 
         // Arrange
         var builder   = (GlobEnumeratorBuilder)data;
-        var ge        = Fixture.GetGlobEnumerator(() => builder.FromDirectory(Path.Combine(fixture.TestRootPath, data.Sd)));
+        var ge        = GetGlobEnumerator(() => builder.FromDirectory(Path.Combine(TestRootPath, data.Sd)));
         var enumerate = ge.Enumerate;
 
         if (data.Tx)
@@ -36,7 +104,7 @@ public partial class GlobEnumeratorIntegrationTests(
                         .Should()
                         .NotThrow()
                         .Which
-                        .Select(p => p[(fixture.TestRootPath.Length + 1)..])
+                        .Select(p => p[(TestRootPath.Length + 1)..])
                         .ToList()
                         ;
 

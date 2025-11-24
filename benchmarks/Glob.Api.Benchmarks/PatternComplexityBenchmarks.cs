@@ -13,7 +13,7 @@ public class PatternComplexityBenchmarks : IDisposable
     {
         _testPath = Path.Combine(Path.GetTempPath(), "benchmark-complexity", Guid.NewGuid().ToString("N"));
         CreateComplexStructure();
-        _enumerator = new GlobEnumerator(new FileSystem(), null);
+        _enumerator = new GlobEnumerator(new FileSystem(), new NullLogger<GlobEnumerator>());
     }
 
     [GlobalCleanup]

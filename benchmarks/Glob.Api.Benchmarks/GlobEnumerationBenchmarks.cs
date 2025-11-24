@@ -14,7 +14,7 @@ public class GlobEnumerationBenchmarks : IDisposable
     {
         _testRootPath = Path.Combine(Path.GetTempPath(), TestBaseDir, Guid.NewGuid().ToString("N"));
         CreateBenchmarkStructure();
-        _enumerator = new GlobEnumerator(new FileSystem(), null);
+        _enumerator = new GlobEnumerator(new FileSystem(), new NullLogger<GlobEnumerator>());
     }
 
     [GlobalCleanup]
