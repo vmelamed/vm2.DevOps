@@ -10,6 +10,7 @@
 /// </remarks>
 /// <param name="testOutputHelper">The ITestOutputHelper instance used to write log output to the xUnit test runner.
 /// </param>
+[ExcludeFromCodeCoverage]
 public class XUnitLoggerProvider(ITestOutputHelper? testOutputHelper = null) : ILoggerProvider
 {
     ITestOutputHelper? _testOutputHelper = testOutputHelper;

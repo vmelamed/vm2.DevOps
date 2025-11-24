@@ -10,6 +10,7 @@
 /// Thanks, Gérald Barré (aka.Meziantou), for the original implementation idea:
 /// https://www.meziantou.net/how-to-get-asp-net-core-logs-in-the-output-of-xunit-tests.htm
 /// </remarks>
+[ExcludeFromCodeCoverage]
 public class XUnitLogger(
     LoggerExternalScopeProvider scopeProvider,
     string categoryName,
@@ -85,6 +86,7 @@ public class XUnitLogger(
     #endregion
 }
 
+[ExcludeFromCodeCoverage]
 public sealed class XUnitLogger<T>(
     LoggerExternalScopeProvider scopeProvider,
     ITestOutputHelper testOutputHelper)

@@ -8,6 +8,7 @@
 /// We use the term "folder" instead of "directory" in classes and method names to avoid confusion with the .NET class
 /// <see cref="Directory"/>.
 /// </remarks>
+[ExcludeFromCodeCoverage]
 public class Folder(string name = "") : IEquatable<Folder>, IComparable<Folder>
 {
     [JsonPropertyName("name")]

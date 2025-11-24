@@ -7,6 +7,7 @@ namespace vm2.DevOps.Glob.Api.Tests.FakeFileSystem;
 /// We use the term "folder" instead of "directory" in classes and method names to avoid confusion with the .NET class
 /// <see cref="Directory"/>.
 /// </remarks>
+[ExcludeFromCodeCoverage]
 public sealed partial class FakeFS
 {
     #region fields
