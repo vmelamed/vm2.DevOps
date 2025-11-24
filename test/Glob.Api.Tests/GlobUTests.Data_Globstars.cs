@@ -332,9 +332,12 @@ public partial class GlobEnumeratorUnitTests
 
         new UnitTestElement(TestFileLine("Unix: ** with complex bracket expression and results with distinct elements"),
                                                    "FakeFSFiles/FakeFS6.Unix.json",
-                                                           "/**/[lb][er][va][en][lc]?/**/*.txt",          "/",   "/",                          Objects.Files,   MatchCasing.PlatformDefault, true,   "/deep-recursive/level1/level2/level3/deep1.txt",
-                                                                                                                                                                                                     "/deep-recursive/level1/level2/mid1.txt",
-                                                                                                                                                                                                     "/deep-recursive/level1/top1.txt"),
+                                                           "/**/[lb][er][va][en][lc]?/**/*.txt",          "/",   "/",                          Objects.Files,   MatchCasing.PlatformDefault, false,   "/deep-recursive/level1/top1.txt",
+                                                                                                                                                                                                      "/deep-recursive/level1/level2/mid1.txt",
+                                                                                                                                                                                                      "/deep-recursive/level1/level2/mid1.txt",
+                                                                                                                                                                                                      "/deep-recursive/level1/level2/level3/deep1.txt",
+                                                                                                                                                                                                      "/deep-recursive/level1/level2/level3/deep1.txt",
+                                                                                                                                                                                                      "/deep-recursive/level1/level2/level3/deep1.txt"),
 
         new UnitTestElement(TestFileLine("Win: ** with relative current dir"),
                                                    "FakeFSFiles/FakeFS6.Win.json",
