@@ -1,4 +1,4 @@
-namespace vm2.DevOps.Glob.Api.Tests.FakeFileSystem;
+namespace vm2.Test.Utilities.FakeFileSystem;
 
 /// <summary>
 /// Fake fileName system loaded from a JSON representation.
@@ -11,13 +11,13 @@ namespace vm2.DevOps.Glob.Api.Tests.FakeFileSystem;
 public sealed partial class FakeFS
 {
     #region fields
-    const string Wildcards         = "*?";  // TODO: add [], {}, etc. advanced features
-    const string Globstar = "**";
-    const int WinDriveLength       = 2;     // e.g. "C:"
-    const int WinRootLength        = 3;     // e.g. "C:/"
+    const string Wildcards     = "*?";  // TODO: add [], {}, etc. advanced features
+    const string Globstar      = "**";
+    const int WinDriveLength   = 2;     // e.g. "C:"
+    const int WinRootLength    = 3;     // e.g. "C:/"
 
-    const string EnvVarNameGr      = "envVar";
-    const string EnvVarValueGr     = "envVarValue";
+    const string EnvVarNameGr  = "envVar";
+    const string EnvVarValueGr = "envVarValue";
     #endregion
 
     #region Regexes

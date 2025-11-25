@@ -1,4 +1,10 @@
 <Project>
+  <!-- ================ Common Settings ================ -->
+  <!-- Stack:
+          MinVer
+          GitHub
+  -->
+  <!-- ================================================= -->
   <PropertyGroup Label="Packages">
     <TargetFramework>net10.0</TargetFramework>
     <LangVersion>latest</LangVersion>
@@ -60,7 +66,15 @@
     </PackageReference>
   </ItemGroup>
 
-  <PropertyGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]test[/\\]'))">
+  <!-- ================ Test Projects Settings ================ -->
+  <!-- Test stack:
+          Microsoft Testing Platform (MTP) with
+          xUnit,
+          FluentAssertions
+      For *.Tests projects in the ./test folder:
+  -->
+  <!-- ======================================================== -->
+  <PropertyGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]test[/\\]')) and $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '^*.Tests$'))">
     <!-- Test projects settings -->
     <OutputType>Exe</OutputType>
     <IsTestProject>true</IsTestProject>
@@ -68,19 +82,20 @@
     <RunSettingsFilePath>$(MSBuildProjectDirectory)\..\..\test.runsettings</RunSettingsFilePath>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <!--<TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport> <!- - To be able to run MTP projects in VSTest and 'dotnet test' experience, available for .NET 9 SDK and earlier for backward compatibility - ->-->
-    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner> <!-- To opt-in xUnit in the Microsoft Testing Platform and use native command line 'dotnet run' experience -->
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+    <!-- To opt-in xUnit in the Microsoft Testing Platform and use native command line 'dotnet run' experience -->
     <!-- For more information on Microsoft Testing Platform support in xUnit.net, please visit: https://xunit.net/docs/getting-started/v3/microsoft-testing-platform -->
-    <EnableCodeCoverage>true</EnableCodeCoverage>                               <!-- Enable code coverage collection with Microsoft.Testing.Extensions.CodeCoverage -->
+    <EnableCodeCoverage>true</EnableCodeCoverage>
+    <!-- Enable code coverage collection with Microsoft.Testing.Extensions.CodeCoverage -->
     <NoWarn>
       $(NoWarn);CA1031;CA1701;CA1702;CA1707;CA1806;CA2211;CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290
     </NoWarn>
   </PropertyGroup>
 
-  <!-- for *.Tests projects in the ./test folder: -->
   <ItemGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]test[/\\]')) and $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '^*.Tests$'))">
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="xunit.v3.mtp-v2" />
-    <!-- <PackageReference Include="Meziantou.Extensions.Logging.Xunit.v3" /> xUnit v3 extension for Microsoft.Extensions.Logging -->
+    <PackageReference Include="xunit.v3.extensibility.core" />
     <PackageReference Include="xunit.runner.visualstudio">  <!-- SHOULD BE HERE TEMPORARILY! -->
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -91,19 +106,31 @@
     <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" />
     <PackageReference Include="Microsoft.Testing.Extensions.TrxReport.Abstractions" />
     <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage"/>
-<!--    <PackageReference Include="coverlet.msbuild">
-        <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>-->
-    <!-- -->
   </ItemGroup>
 
-  <!-- for test utility/library projects in the ./test folder: -->
+  <!-- ================ Test Libraries Settings ================ -->
+  <!-- Test stack:
+          Microsoft Testing Platform (MTP) with
+          xUnit,
+          FluentAssertions
+      For *.Tests.* projects in the ./test folder:
+  -->
+  <!-- ======================================================== -->
+  <PropertyGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]test[/\\]')) and !$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '^*.Tests$'))">
+    <!-- Test libraries projects settings -->
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>
+      $(NoWarn);CA1031;CA1701;CA1702;CA1707;CA1806;CA2211;CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290
+    </NoWarn>
+  </PropertyGroup>
+
   <ItemGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]test[/\\]')) and !$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '^*.Tests$'))">
+    <PackageReference Include="FluentAssertions" />
     <PackageReference Include="xunit.v3.extensibility.core" />
   </ItemGroup>
 
-  <!-- Common usings for test projects in the ./test folder: -->
+  <!-- Common usings for tests and libraries projects in the ./test folder: -->
   <ItemGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]test[/\\]'))">
     <Using Include="Xunit" />
     <Using Include="FluentAssertions" />
@@ -111,7 +138,11 @@
     <Using Include="FluentAssertions.Extensibility" />
   </ItemGroup>
 
-  <!-- settings for benchmark projects in the ./benchmarks folder: -->
+  <!-- ================ Benchmark Projects Settings ================ -->
+  <!-- Stack:
+          BenchmarkDotNet
+  -->
+  <!-- ============================================================= -->
   <PropertyGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]benchmarks[/\\]'))">
     <!-- Test projects settings -->
     <OutputType>Exe</OutputType>

@@ -1,4 +1,4 @@
-﻿namespace vm2.DevOps.Glob.Api.Tests.FluentAssertionsExtensions;
+﻿namespace vm2.Test.Utilities.FluentAssertionsExtensions;
 
 /// <summary>
 /// Class FluentAssertionsExceptionFormatter enables the display of inner exceptions when call.Should().NotThrow() fails.

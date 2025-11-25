@@ -1,11 +1,22 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <RootNamespace>vm2.DevOps.Glob.Api.Benchmarks</RootNamespace>
-  </PropertyGroup>
+    <PropertyGroup>
+        <RootNamespace>vm2.DevOps.Glob.Api.Benchmarks</RootNamespace>
+        <DefineConstants>$(DefineConstants);$(UserDefined)</DefineConstants>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\Glob.Api\Glob.Api.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\Glob.Api\Glob.Api.csproj" />
+        <ProjectReference Include="..\..\test\vm2.Test.Utilities\vm2.Test.Utilities.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Update="appsettings.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="TestStructures\*.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
 
 </Project>

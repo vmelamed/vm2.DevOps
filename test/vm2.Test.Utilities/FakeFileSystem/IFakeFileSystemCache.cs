@@ -1,4 +1,4 @@
-﻿namespace vm2.DevOps.Glob.Api.Tests.FakeFileSystem;
+﻿namespace vm2.Test.Utilities.FakeFileSystem;
 
 /// <summary>
 /// Cache for managing FakeFS instances to avoid reloading file systems for each test.

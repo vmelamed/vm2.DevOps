@@ -1,4 +1,4 @@
-﻿namespace vm2.DevOps.Glob.Api.Tests.Utilities.XUnitLogger;
+﻿namespace vm2.Test.Utilities.XUnitLogger;
 
 /// <summary>
 /// ILogger implementation that writes log messages to an xUnit <see cref="ITestOutputHelper"/>.

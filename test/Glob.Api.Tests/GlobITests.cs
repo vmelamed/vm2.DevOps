@@ -1,8 +1,12 @@
 ﻿namespace vm2.DevOps.Glob.Api.Tests;
 
+using vm2.Test.Utilities;
+
 [ExcludeFromCodeCoverage]
 public partial class GlobEnumeratorIntegrationTests : IClassFixture<GlobIntegrationTestsFixture>, IDisposable
 {
+    public const string TestStructureJsonFile = "./FakeFSFiles/Integration.json";
+
     IHost _host;
     bool _tempTestRootPath;
 
@@ -22,7 +26,7 @@ public partial class GlobEnumeratorIntegrationTests : IClassFixture<GlobIntegrat
             _tempTestRootPath = true;
         }
         else
-            TestRootPath = Path.GetFullPath(GlobIntegrationTestsFixture.ExpandEnvironmentVariables(TestRootPath));
+            TestRootPath = Path.GetFullPath(TestFileStructure.ExpandEnvironmentVariables(TestRootPath));
 
         Debug.Assert(!string.IsNullOrWhiteSpace(TestRootPath));
         if (!OperatingSystem.PathRegex().IsMatch(TestRootPath))
@@ -30,13 +34,13 @@ public partial class GlobEnumeratorIntegrationTests : IClassFixture<GlobIntegrat
 
         if (Directory.Exists(TestRootPath))
         {
-            var message = string.Join(",\n", GlobIntegrationTestsFixture.VerifyTestFileStructure(TestRootPath));
+            var message = string.Join(",\n", TestFileStructure.VerifyTestFileStructure(TestStructureJsonFile, TestRootPath));
 
             if (!string.IsNullOrWhiteSpace(message))
-                throw new InvalidOperationException($"The expected test file structure at '{TestRootPath}' does not match the JSON specification {GlobIntegrationTestsFixture.TestStructureJson}:\n{message}\n");
+                throw new InvalidOperationException($"The expected test file structure at '{TestRootPath}' does not match the JSON specification {TestStructureJsonFile}:\n{message}\n");
         }
         else
-            GlobIntegrationTestsFixture.CreateTestFileStructure(TestRootPath);
+            TestFileStructure.CreateTestFileStructure(TestStructureJsonFile, TestRootPath);
     }
 
     public void Dispose()

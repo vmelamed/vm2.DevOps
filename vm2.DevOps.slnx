@@ -46,5 +46,6 @@
   </Folder>
   <Folder Name="/test/">
     <Project Path="test/Glob.Api.Tests/Glob.Api.Tests.csproj" />
+    <Project Path="test/vm2.Test.Utilities/vm2.Test.Utilities.csproj" />
   </Folder>
 </Solution>

@@ -1,4 +1,4 @@
-﻿namespace vm2.DevOps.Glob.Api.Tests.Utilities;
+﻿namespace vm2.Test.Utilities;
 
 [ExcludeFromCodeCoverage]
 public static partial class TestUtilities
