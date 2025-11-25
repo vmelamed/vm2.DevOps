@@ -32,8 +32,7 @@ public class GlobUnitTestsFixture : IDisposable
             .AddScoped<ILoggerProvider, XUnitLoggerProvider>()
             .AddSingleton<IFakeFileSystemCache, FakeFileSystemCache>()  // for the unit tests
             .AddTransient<GlobEnumeratorFactory>()                      // for the unit tests
-            .AddSingleton<IFileSystem, FileSystem>()                    // for the integration tests
-            .AddTransient<GlobEnumerator>()                             // for the integration tests
+            .AddGlobEnumerator()                                        // for the integration tests
             ;
 
         return builder.Build();

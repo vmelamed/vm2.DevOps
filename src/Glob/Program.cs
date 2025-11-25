@@ -1,4 +1,9 @@
-﻿Argument<string> globExpression = new("glob")
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
+
+using vm2.DevOps.Glob.Api.DI;
+
+Argument<string> globExpression = new("glob")
 {
     HelpName = "glob",
     Description = """
@@ -71,17 +76,12 @@ Option<Objects> searchFor = new(name: "--search-objects", "-o")
     Required = false,
     Arity = ArgumentArity.ExactlyOne,
     DefaultValueFactory = _ => Objects.FilesAndDirectories,
-    CustomParser = result =>
+    CustomParser = result => result.Tokens[0].Value switch
     {
-        var value = result.Tokens[0].Value;
-
-        return value switch
-        {
-            "files" or "f" => Objects.Files,
-            "directories" or "d" => Objects.Directories,
-            "both" or "b" => Objects.FilesAndDirectories,
-            _ => Objects.FilesAndDirectories
-        };
+        "files" or "f" => Objects.Files,
+        "directories" or "d" => Objects.Directories,
+        "both" or "b" => Objects.FilesAndDirectories,
+        _ => Objects.FilesAndDirectories
     }
 };
 searchFor.AcceptOnlyFromAmong("files", "f", "directories", "d", "both", "b");
@@ -100,17 +100,12 @@ Option<MatchCasing> caseSensitive = new(name: "--case", "-c")
     Required = false,
     Arity = ArgumentArity.ZeroOrOne,
     DefaultValueFactory = _ => MatchCasing.PlatformDefault,
-    CustomParser = result =>
+    CustomParser = result => result.Tokens[0].Value switch
     {
-        var value = result.Tokens[0].Value;
-
-        return value switch
-        {
-            "sensitive" or "s" => MatchCasing.CaseSensitive,
-            "insensitive" or "i" => MatchCasing.CaseInsensitive,
-            "platform" or "p" => MatchCasing.PlatformDefault,
-            _ => MatchCasing.PlatformDefault
-        };
+        "sensitive" or "s" => MatchCasing.CaseSensitive,
+        "insensitive" or "i" => MatchCasing.CaseInsensitive,
+        "platform" or "p" => MatchCasing.PlatformDefault,
+        _ => MatchCasing.PlatformDefault
     }
 };
 caseSensitive.AcceptOnlyFromAmong("sensitive", "s", "insensitive", "i", "platform", "p");
@@ -179,9 +174,7 @@ https://www.man7.org/linux/man-pages/man7/glob.7.html
     distinct,
 };
 
-rootCommand.SetAction(Enumerate);
-
-ParseResult parseResult = rootCommand.Parse(args);
+var parseResult = rootCommand.Parse(args);
 
 if (parseResult.Errors.Count > 0)
 {
@@ -191,7 +184,45 @@ if (parseResult.Errors.Count > 0)
     return 1;
 }
 
+var builder = Host.CreateApplicationBuilder();
+
+builder
+    .Configuration
+    .Sources
+    .Clear()
+    ;
+builder
+    .Configuration
+    .AddJsonFile("appsettings.json", optional: true)
+    .AddJsonFile("appsettings.Development.json", optional: true)
+    .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("USERPROFILE")}.json", optional: true)
+    .AddEnvironmentVariables()
+    ;
+builder
+    .Logging
+    .ClearProviders()
+    .AddConsole()
+    .SetMinimumLevel(LogLevel.Warning)
+    ;
+builder
+    .Services
+    .AddGlobEnumerator(
+        builder => builder
+                    .WithGlob(
+                        ExpandEnvironmentVariables(
+                            parseResult.GetRequiredValue(globExpression)))
+                    .WithCaseSensitivity(
+                        parseResult.GetRequiredValue(caseSensitive))
+                    .FromDirectory(
+                        parseResult.GetRequiredValue(startDirectory))
+                    .SelectObjects(
+                        parseResult.GetRequiredValue(searchFor))
+                    .WithDistinct(
+                        parseResult.GetRequiredValue(distinct)));
+var host = builder.Build();
+
 // Do
+rootCommand.SetAction(Enumerate);
 return parseResult.Invoke();
 
 #pragma warning disable CA1031 // Do not catch general exception types but here there is no other way to report errors from the action
@@ -199,20 +230,7 @@ void Enumerate(ParseResult parseResult)
 {
     try
     {
-        var glob = new GlobEnumeratorBuilder()
-                            .WithGlob(
-                                ExpandEnvironmentVariables(
-                                    parseResult.GetRequiredValue(globExpression)))
-                            .WithCaseSensitivity(
-                                parseResult.GetRequiredValue(caseSensitive))
-                            .FromDirectory(
-                                parseResult.GetRequiredValue(startDirectory))
-                            .SelectObjects(
-                                parseResult.GetRequiredValue(searchFor))
-                            .WithDistinct(
-                                parseResult.GetRequiredValue(distinct))
-                            .Configure(new GlobEnumerator(new FileSystem()))
-                            ;
+        var glob = host.Services.GetRequiredService<GlobEnumerator>();
 
         foreach (var entry in glob.Enumerate())
             Console.WriteLine(entry);

@@ -1,4 +1,4 @@
-﻿namespace vm2.DevOps.Glob.Api;
+﻿namespace vm2.DevOps.Glob.Api.DI;
 
 /// <summary>
 /// Provides extension methods for adding the GlobEnumerator to an IServiceCollection.
@@ -14,10 +14,7 @@ public static class GlobEnumeratorExtensions
         public IServiceCollection AddGlobEnumerator()
             => serviceCollection
                     .AddSingleton<IFileSystem, FileSystem>()
-                    .AddTransient(
-                        sp => new GlobEnumerator(
-                                    sp.GetRequiredService<IFileSystem>(),
-                                    sp.GetRequiredService<ILogger<GlobEnumerator>>()))
+                    .AddTransient<GlobEnumerator>()
                     ;
 
         /// <summary>
@@ -27,12 +24,10 @@ public static class GlobEnumeratorExtensions
         public IServiceCollection AddGlobEnumerator(Func<GlobEnumeratorBuilder, GlobEnumeratorBuilder> configure)
             => serviceCollection
                     .AddSingleton<IFileSystem, FileSystem>()
-                    .AddTransient<GlobEnumeratorBuilder>()
                     .AddTransient(
                         sp => configure(new GlobEnumeratorBuilder())
                                 .Configure(new GlobEnumerator(
-                                                    sp.GetRequiredService<IFileSystem>(),
-                                                    sp.GetRequiredService<ILogger<GlobEnumerator>>())))
-                    ;
+                                                sp.GetRequiredService<IFileSystem>(),
+                                                sp.GetService<ILogger<GlobEnumerator>>())));
     }
 }

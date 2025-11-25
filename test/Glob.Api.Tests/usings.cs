@@ -14,6 +14,7 @@ global using Microsoft.Extensions.Hosting;
 global using Microsoft.Extensions.Logging;
 
 global using vm2.DevOps.Glob.Api;
+global using vm2.DevOps.Glob.Api.DI;
 global using vm2.DevOps.Glob.Api.Tests.FakeFileSystem;
 global using vm2.DevOps.Glob.Api.Tests.Utilities.XUnitLogger;
 
