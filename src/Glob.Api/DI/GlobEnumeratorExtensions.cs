@@ -18,8 +18,10 @@ public static class GlobEnumeratorExtensions
                     ;
 
         /// <summary>
-        /// Adds the GlobEnumerator and its dependencies to the service collection.
+        /// Adds the GlobEnumerator and its dependencies to the service collection. Allows for custom configuration of the
+        /// GlobEnumerator via the GlobEnumeratorBuilder.
         /// </summary>
+        /// <param name="configure">A function to configure the GlobEnumeratorBuilder.</param>
         /// <returns>IServiceCollection for method chaining.</returns>
         public IServiceCollection AddGlobEnumerator(Func<GlobEnumeratorBuilder, GlobEnumeratorBuilder> configure)
             => serviceCollection
