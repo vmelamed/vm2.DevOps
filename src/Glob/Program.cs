@@ -2,16 +2,11 @@
 {
     HelpName = "glob",
     Description = """
-    The path-like glob pattern to use for searching file system objects. E.g.
-    'results/**/*.y?ml' to find recursively all YAML files in the 'results'
-    sub-directory of the current or start-from directory and in the
-    sub-directories of 'results'.
-    Note that the glob pattern can contain environment variables, e.g.
-    '%USERPROFILE%/documents/**/*.json' on Windows or
-    '$HOME/documents/**/*.json', or even '~/documents/**/*.y?ml' on Unix-like
-    operating systems (Linux, MacOS, etc.).
-    The segments of the path can be separated by either forward slashes ('/') or
-    backslashes ('\') regardless of the operating system.
+    Glob pattern for matching file system objects (e.g., '**/*.txt',
+    'src/**/[a-z]*.cs'). Supports wildcards (*, ?), character classes ([abc],
+    [a-z]), globstars (**), and environment variables (%VAR% on Windows, $VAR or
+    ~ on Unix-like systems). Path separators can be either '/' or '\' regardless
+    of the operating system.
     """,
     Arity = ArgumentArity.ExactlyOne,
     Validators =
@@ -29,16 +24,18 @@
             if (!OperatingSystem.GlobRegex().IsMatch(pattern))
                 result.AddError($"The specified glob pattern is not valid: `{pattern}`.");
         }
-    }
+    },
+    DefaultValueFactory = _ => "*",
 };
 
 Option<string> startDirectory = new(name: "--start-from", "-d")
 {
     HelpName = "start-from",
     Description = """
-    The directory from which to start the search. If not specified, the search
-    will start from the current working directory, i.e. defaults to the pattern
-    '.'.
+    The directory from which to start the search.
+    If not specified, the search starts from the
+    current working directory.
+
     """,
     Required = false,
     Arity = ArgumentArity.ExactlyOne,
@@ -64,12 +61,12 @@ startDirectory.AcceptLegalFilePathsOnly();
 
 Option<Objects> searchFor = new(name: "--search-objects", "-o")
 {
-    HelpName = "search-object",
+    HelpName = "search-objects",
     Description = """
-    Specifies the type of file system objects to find. The value should be one
-    of the words 'files', 'directories', 'both', or one of their first letters
-    'f', 'd', 'b'.
-    Default is 'both'.
+    Specifies the type of file system objects to
+    find: 'files' (f), 'directories' (d), or
+    'both' (b).
+
     """,
     Required = false,
     Arity = ArgumentArity.ExactlyOne,
@@ -93,11 +90,12 @@ Option<MatchCasing> caseSensitive = new(name: "--case", "-c")
 {
     HelpName = "case",
     Description = """
-    Specifies the case-sensitivity of the glob pattern matching. The value
-    should be one of the words 'sensitive', 'insensitive', 'platform', or one
-    of their first letters 's', 'i', 'p'.
-    The default is platform-specific: case insensitive on Windows, and case
-    sensitive on Linux, macOS, and other Unix-like systems.
+    Case-sensitivity for pattern matching:
+    'sensitive' (s), 'insensitive' (i), or
+    'platform' (p). Platform uses case-insensitive
+    matching on Windows and case-sensitive on
+    Unix-like systems (Linux, macOS, BSD).
+
     """,
     Required = false,
     Arity = ArgumentArity.ZeroOrOne,
@@ -121,16 +119,58 @@ Option<bool> distinct = new(name: "--distinct", "-x")
 {
     HelpName = "distinct",
     Description = """
-    Some globs may produce repeating matches, when they contain more than one
-    recursive pattern (globstars), like '/**/docs/**/*.txt'. This may not be
-    desirable. This option specifies whether to remove the duplicated results.
+    Removes duplicate results from patterns with
+    multiple globstars (**). Patterns like
+    '/**/docs/**/*.txt' may match the same file
+    through different paths. Enabling this option
+    ensures each result appears only once.
+
     """,
     Required = false,
     Arity = ArgumentArity.ExactlyOne,
     DefaultValueFactory = _ => false,
 };
 
-RootCommand rootCommand = new RootCommand("A tool to search for file system objects using glob patterns.")
+RootCommand rootCommand = new RootCommand("""
+A cross-platform glob pattern matching tool for finding files and directories.
+
+DESCRIPTION:
+    This tool implements glob pattern matching based on the POSIX.2
+    specification with cross-platform extensions for Windows and Unix-like
+    systems.
+
+GLOB PATTERN SYNTAX:
+    *           Matches any sequence of characters (excluding path separators)
+    ?           Matches any single character (excluding path separators)
+    [abc]       Matches any character in the set (a, b, or c)
+    [a-z]       Matches any character in the range (a through z)
+    [!abc]      Matches any character NOT in the set
+    **          Matches zero or more directory levels (globstar)
+    [:class:]   Named character classes (alpha, digit, lower, upper, etc.)
+
+PATH HANDLING:
+    - Path separators: Use '/' or '\' regardless of the operating system
+    - Absolute paths: Supports drive letters on Windows (e.g.,
+      'C:/docs/**/*.txt')
+    - Relative paths: Start from current or [start-from] directory
+    - Environment variables: Expanded before pattern matching
+        Windows: %USERPROFILE%\documents\**\*.pdf
+        Unix:    $HOME/documents/**/*.pdf or ~/documents/**/*.pdf
+
+OUTPUT FORMAT:
+    - All matched objects are displayed with their full absolute paths
+    - Directory paths are always terminated with a trailing '/' separator
+    - Each result is printed on a separate line
+
+EXAMPLES:
+    glob "**/*.txt"                          # Find all .txt files recursively
+    glob "src/**/[a-z]*.cs" -d ~/projects    # C# files starting with lowercase
+    glob "[!.]*.json" -c sensitive           # JSON files not starting with dot
+    glob "**" -o directories -x              # All directories, no duplicates
+
+For detailed glob specification, see:
+https://www.man7.org/linux/man-pages/man7/glob.7.html
+""")
 {
     globExpression,
     startDirectory,
