@@ -41,7 +41,6 @@
     <File Path="test.runsettings" />
   </Folder>
   <Folder Name="/src/">
-    <Project Path="src/BmCompare/BmCompare.csproj" />
     <Project Path="src/Glob.Api/Glob.Api.csproj" />
     <Project Path="src/Glob/Glob.csproj" />
   </Folder>

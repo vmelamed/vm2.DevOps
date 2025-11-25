@@ -23,6 +23,7 @@ public class GlobUnitTestsFixture : IDisposable
             .Logging
             .ClearProviders()
             .AddConsole()
+            .AddJsonConsole()
             .SetMinimumLevel(LogLevel.Trace)
         ;
         builder

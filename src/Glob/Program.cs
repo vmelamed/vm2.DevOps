@@ -1,27 +1,15 @@
-﻿var services = new ServiceCollection()
-    .AddSingleton<IFileSystem, FileSystem>()
-    .AddTransient<GlobEnumerator>()
-    .AddLogging(
-        builder =>
-        {
-            builder.AddConsole();
-            builder.SetMinimumLevel(LogLevel.Warning);
-        })
-    .BuildServiceProvider()
-    ;
-
-Argument<string> globExpression = new("glob-pattern")
+﻿Argument<string> globExpression = new("glob")
 {
-    HelpName = "glob-pattern",
+    HelpName = "glob",
     Description = """
-    The glob pattern to use for searching file system objects. E.g.
+    The path-like glob pattern to use for searching file system objects. E.g.
     'results/**/*.y?ml' to find recursively all YAML files in the 'results'
     sub-directory of the current or start-from directory and in the
     sub-directories of 'results'.
     Note that the glob pattern can contain environment variables, e.g.
     '%USERPROFILE%/documents/**/*.json' on Windows or
-    '$HOME/documents/**/*.json', or even '~/documents/**/*.y?ml' on Unix
-    operating systems.
+    '$HOME/documents/**/*.json', or even '~/documents/**/*.y?ml' on Unix-like
+    operating systems (Linux, MacOS, etc.).
     The segments of the path can be separated by either forward slashes ('/') or
     backslashes ('\') regardless of the operating system.
     """,
@@ -48,9 +36,9 @@ Option<string> startDirectory = new(name: "--start-from", "-d")
 {
     HelpName = "start-from",
     Description = """
-    The directory from which to start the glob pattern search. If not specified,
-    the search will start from the current working directory, i.e. equivalent to
-    the pattern '.'.
+    The directory from which to start the search. If not specified, the search
+    will start from the current working directory, i.e. defaults to the pattern
+    '.'.
     """,
     Required = false,
     Arity = ArgumentArity.ExactlyOne,
@@ -74,71 +62,80 @@ Option<string> startDirectory = new(name: "--start-from", "-d")
 };
 startDirectory.AcceptLegalFilePathsOnly();
 
-Option<Objects> searchFor = new(name: "--search-for", "-s")
+Option<Objects> searchFor = new(name: "--search-objects", "-o")
 {
-    HelpName = "search-for",
+    HelpName = "search-object",
     Description = """
     Specifies the type of file system objects to find. The value should be one
-    or more of the starting letters of one of the values: 'files',
-    'directories', or 'both'.
-    E.g. 'f', 'fi', 'fil', etc. for files; 'd', 'di', etc. for directories, or
-    'b', 'bo', etc. for both.
+    of the words 'files', 'directories', 'both', or one of their first letters
+    'f', 'd', 'b'.
     Default is 'both'.
     """,
     Required = false,
     Arity = ArgumentArity.ExactlyOne,
     DefaultValueFactory = _ => Objects.FilesAndDirectories,
-    Validators =
-    {
-        result =>
-        {
-            var value = result.Tokens[0].Value;
-
-            if (!Objects.Files.ToString().StartsWith(value, StringComparison.OrdinalIgnoreCase) &&
-                !Objects.Directories.ToString().StartsWith(value, StringComparison.OrdinalIgnoreCase) &&
-                !Objects.FilesAndDirectories.ToString().StartsWith(value, StringComparison.OrdinalIgnoreCase))
-                result.AddError($"None of the expected values `{Objects.Files}`, `{Objects.Directories}`, or `{Objects.FilesAndDirectories}` starts with `{value}`.");
-        }
-    },
     CustomParser = result =>
     {
         var value = result.Tokens[0].Value;
 
-        return Objects.Files.ToString().StartsWith(value, StringComparison.OrdinalIgnoreCase) ? Objects.Files :
-               Objects.Directories.ToString().StartsWith(value, StringComparison.OrdinalIgnoreCase) ? Objects.Directories :
-               Objects.FilesAndDirectories;
+        return value switch
+        {
+            "files" or "f" => Objects.Files,
+            "directories" or "d" => Objects.Directories,
+            "both" or "b" => Objects.FilesAndDirectories,
+            _ => Objects.FilesAndDirectories
+        };
     }
 };
+searchFor.AcceptOnlyFromAmong("files", "f", "directories", "d", "both", "b");
+
+Option<MatchCasing> caseSensitive = new(name: "--case", "-c")
+{
+    HelpName = "case",
+    Description = """
+    Specifies the case-sensitivity of the glob pattern matching. The value
+    should be one of the words 'sensitive', 'insensitive', 'platform', or one
+    of their first letters 's', 'i', 'p'.
+    The default is platform-specific: case insensitive on Windows, and case
+    sensitive on Linux, macOS, and other Unix-like systems.
+    """,
+    Required = false,
+    Arity = ArgumentArity.ZeroOrOne,
+    DefaultValueFactory = _ => MatchCasing.PlatformDefault,
+    CustomParser = result =>
+    {
+        var value = result.Tokens[0].Value;
+
+        return value switch
+        {
+            "sensitive" or "s" => MatchCasing.CaseSensitive,
+            "insensitive" or "i" => MatchCasing.CaseInsensitive,
+            "platform" or "p" => MatchCasing.PlatformDefault,
+            _ => MatchCasing.PlatformDefault
+        };
+    }
+};
+caseSensitive.AcceptOnlyFromAmong("sensitive", "s", "insensitive", "i", "platform", "p");
 
 Option<bool> distinct = new(name: "--distinct", "-x")
 {
     HelpName = "distinct",
     Description = """
     Some globs may produce repeating matches, when they contain more than one
-    recursive pattern, like '/**/docs/**/*.txt'. This may not be desireable.
-    This option specifies whether to remove the duplicated results.
+    recursive pattern (globstars), like '/**/docs/**/*.txt'. This may not be
+    desirable. This option specifies whether to remove the duplicated results.
     """,
     Required = false,
     Arity = ArgumentArity.ExactlyOne,
     DefaultValueFactory = _ => false,
 };
 
-Option<bool> debug = new(name: "--debug")
-{
-    Description = "If specified, enables debug output.",
-    Hidden = true,
-    Required = false,
-    Arity = ArgumentArity.Zero,
-    DefaultValueFactory = _ => false,
-    CustomParser = _ => true,
-};
-
 RootCommand rootCommand = new RootCommand("A tool to search for file system objects using glob patterns.")
 {
-    debug,
+    globExpression,
     startDirectory,
     searchFor,
-    globExpression,
+    caseSensitive,
     distinct,
 };
 
@@ -162,19 +159,22 @@ void Enumerate(ParseResult parseResult)
 {
     try
     {
-        var pattern = ExpandEnvironmentVariables(
-                        parseResult
-                            .GetRequiredValue(globExpression)
-                            .Replace('\\', '/'));
+        var glob = new GlobEnumeratorBuilder()
+                            .WithGlob(
+                                ExpandEnvironmentVariables(
+                                    parseResult.GetRequiredValue(globExpression)))
+                            .WithCaseSensitivity(
+                                parseResult.GetRequiredValue(caseSensitive))
+                            .FromDirectory(
+                                parseResult.GetRequiredValue(startDirectory))
+                            .SelectObjects(
+                                parseResult.GetRequiredValue(searchFor))
+                            .WithDistinct(
+                                parseResult.GetRequiredValue(distinct))
+                            .Configure(new GlobEnumerator(new FileSystem()))
+                            ;
 
-        var enumerator = services.GetRequiredService<GlobEnumerator>();
-
-        enumerator.FromDirectory   = parseResult.GetRequiredValue(startDirectory);
-        enumerator.Enumerated      = parseResult.GetRequiredValue(searchFor);
-        enumerator.Glob            =  pattern;
-        enumerator.Distinct = parseResult.GetRequiredValue(distinct);
-
-        foreach (var entry in enumerator.Enumerate())
+        foreach (var entry in glob.Enumerate())
             Console.WriteLine(entry);
     }
     catch (Exception ex)

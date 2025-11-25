@@ -61,6 +61,21 @@ public class GlobEnumeratorBuilder
     }
 
     /// <summary>
+    /// Configures the builder to perform pattern matching with the specified case sensitivity when enumerating file system.
+    /// </summary>
+    /// <param name="sensitivity">The desired case sensitivity for pattern matching.</param>
+    /// <remarks>
+    /// Use this method when you want glob patterns to distinguish between uppercase and lowercase characters during matching.
+    /// By default, matching is platform-specific: case-insensitive - on Windows, and case-sensitive - on Unix-like systems.
+    /// </remarks>
+    /// <returns>The current <see cref="GlobEnumeratorBuilder"/> instance with case-sensitive matching enabled.</returns>
+    public GlobEnumeratorBuilder WithCaseSensitivity(MatchCasing sensitivity)
+    {
+        _matchCasing = sensitivity;
+        return this;
+    }
+
+    /// <summary>
     /// Configures the builder to perform case-sensitive pattern matching when enumerating file system entries.
     /// </summary>
     /// <remarks>
@@ -89,21 +104,6 @@ public class GlobEnumeratorBuilder
     }
 
     /// <summary>
-    /// Configures the builder to perform pattern matching with the specified case sensitivity when enumerating file system.
-    /// </summary>
-    /// <param name="sensitivity">The desired case sensitivity for pattern matching.</param>
-    /// <remarks>
-    /// Use this method when you want glob patterns to distinguish between uppercase and lowercase characters during matching.
-    /// By default, matching is platform-specific: case-insensitive - on Windows, and case-sensitive - on Unix-like systems.
-    /// </remarks>
-    /// <returns>The current <see cref="GlobEnumeratorBuilder"/> instance with case-sensitive matching enabled.</returns>
-    public GlobEnumeratorBuilder WithCaseSensitivity(MatchCasing sensitivity)
-    {
-        _matchCasing = sensitivity;
-        return this;
-    }
-
-    /// <summary>
     /// Configures the builder to apply the case sensitivity that is the default for the platform when enumerating file system
     /// entries.
     /// </summary>
@@ -115,6 +115,16 @@ public class GlobEnumeratorBuilder
     public GlobEnumeratorBuilder PlatformSensitive()
     {
         _matchCasing = MatchCasing.PlatformDefault;
+        return this;
+    }
+
+    /// <summary>
+    /// Specifies the types of file system objects to be enumerated by the <see cref="GlobEnumerator"/>.
+    /// </summary>
+    /// <returns>The current <see cref="GlobEnumeratorBuilder"/> instance with the specified objects set.</returns>
+    public GlobEnumeratorBuilder SelectObjects(Objects objects)
+    {
+        _enumerated = objects;
         return this;
     }
 
