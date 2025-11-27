@@ -1,4 +1,7 @@
-﻿global using System.Diagnostics.CodeAnalysis;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Val Melamed
+
+global using System.Diagnostics.CodeAnalysis;
 
 global using Microsoft.Extensions.Configuration;
 

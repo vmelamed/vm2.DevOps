@@ -1,4 +1,7 @@
-﻿namespace vm2.DevOps.Glob.Api;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Val Melamed
+
+namespace vm2.DevOps.Glob.Api;
 
 /// <summary>
 /// Provides a builder for configuring and creating glob enumerators to search for files and directories using glob

@@ -1,4 +1,7 @@
-﻿namespace vm2.TestUtilities.XUnitLogger;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Val Melamed
+
+namespace vm2.TestUtilities.XUnitLogger;
 
 /// <summary>
 /// Provides an ILoggerProvider implementation that writes log messages to xUnit test output.

@@ -1,4 +1,7 @@
-﻿namespace vm2.TestUtilities.FakeFileSystem.DI;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Val Melamed
+
+namespace vm2.TestUtilities.FakeFileSystem.DI;
 
 /// <summary>
 /// Provides extension methods for adding the GlobEnumerator to an IServiceCollection.

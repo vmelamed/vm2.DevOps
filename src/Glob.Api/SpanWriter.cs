@@ -1,4 +1,7 @@
-﻿namespace vm2.DevOps.Glob.Api;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Val Melamed
+
+namespace vm2.DevOps.Glob.Api;
 
 /// <summary>
 /// Provides a utility for writing characters to a <see cref="Span{T}"/> of type <see cref="char"/>. Works like a write-only

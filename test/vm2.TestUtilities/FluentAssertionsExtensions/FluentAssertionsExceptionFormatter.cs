@@ -1,4 +1,7 @@
-﻿namespace vm2.TestUtilities.FluentAssertionsExtensions;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Val Melamed
+
+namespace vm2.TestUtilities.FluentAssertionsExtensions;
 
 /// <summary>
 /// Class FluentAssertionsExceptionFormatter enables the display of inner exceptions when call.Should().NotThrow() fails.

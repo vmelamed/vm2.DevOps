@@ -1,3 +1,6 @@
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Val Melamed
+
 // MIT License
 //
 // Copyright (c) 2025 Val Melamed

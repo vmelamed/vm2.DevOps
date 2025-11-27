@@ -1,4 +1,7 @@
-﻿namespace vm2.TestUtilities;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Val Melamed
+
+namespace vm2.TestUtilities;
 
 [ExcludeFromCodeCoverage]
 public static partial class TestUtilities

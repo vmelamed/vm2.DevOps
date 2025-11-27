@@ -1,4 +1,7 @@
-﻿Argument<string> globExpression = new("glob")
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Val Melamed
+
+Argument<string> globExpression = new("glob")
 {
     HelpName = "glob",
     Description = """

@@ -1,4 +1,7 @@
-﻿namespace vm2.TestUtilities.FakeFileSystem;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Val Melamed
+
+namespace vm2.TestUtilities.FakeFileSystem;
 
 /// <summary>
 /// This class implements the interface <see cref="IFileSystem"/> used by <see cref="GlobEnumerator"/> but instead of real

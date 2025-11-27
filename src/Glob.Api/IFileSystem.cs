@@ -1,4 +1,7 @@
-﻿namespace vm2.DevOps.Glob.Api;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Val Melamed
+
+namespace vm2.DevOps.Glob.Api;
 
 /// <summary>
 /// Represents a file system abstraction used by the glob pattern searching.

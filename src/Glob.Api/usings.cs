@@ -1,4 +1,7 @@
-﻿global using System.Collections;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Val Melamed
+
+global using System.Collections;
 global using System.Collections.Frozen;
 global using System.Diagnostics;
 global using System.Diagnostics.CodeAnalysis;

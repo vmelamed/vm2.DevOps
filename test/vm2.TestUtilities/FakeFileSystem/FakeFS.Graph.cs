@@ -1,4 +1,7 @@
-﻿namespace vm2.TestUtilities.FakeFileSystem;
+﻿// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Val Melamed
+
+namespace vm2.TestUtilities.FakeFileSystem;
 
 public sealed partial class FakeFS
 {
