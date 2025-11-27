@@ -1,12 +1,30 @@
+// MIT License
+//
+// Copyright (c) 2025 Val Melamed
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 namespace vm2.TestUtilities.FakeFileSystem;
 
 /// <summary>
-/// Fake file system loaded from a JSON representation.
+/// IFileSystem implementation for FakeFS - provides in-memory file system for benchmarking baseline.
 /// </summary>
-/// <remarks>
-/// We use the term "folder" instead of "directory" in classes and method names to avoid confusion with the .NET class
-/// <see cref="Directory"/>.
-/// </remarks>
 public sealed partial class FakeFS : IFileSystem
 {
     Func<string, bool> GetSegmentMatcher(
@@ -36,7 +54,7 @@ public sealed partial class FakeFS : IFileSystem
             return regex.IsMatch;
         }
 
-        var comparer = options.MatchCasing switch
+        var comparer =  options.MatchCasing switch
                         {
                             MatchCasing.CaseSensitive => StringComparer.Ordinal,
                             MatchCasing.CaseInsensitive => StringComparer.OrdinalIgnoreCase,
@@ -47,7 +65,7 @@ public sealed partial class FakeFS : IFileSystem
         return a => comparer.Compare(a, segment) == 0;
     }
 
-    public bool IsWindows { get; private set; }
+    public bool IsWindows => RootFolder.Name.Length >= WinDriveLength && RootFolder.Name[1] is ':';
 
     public string GetFullPath(string path)
     {

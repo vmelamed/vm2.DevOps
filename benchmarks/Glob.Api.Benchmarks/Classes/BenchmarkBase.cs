@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Val Melamed
+
 namespace vm2.DevOps.Glob.Api.Benchmarks.Classes;
 
 /// <summary>
@@ -70,9 +73,13 @@ public abstract class BenchmarkBase
 
     protected virtual void SetupFakeFileSystem(IServiceCollection services)
     {
-        // TODO: Implement FakeFS setup when we integrate with Glob.Api.Tests
-        // For now, use real filesystem
-        SetupRealFileSystem(services);
+        var jsonPath = Path.Combine("TestStructures", TestStructureFileName);
+        var fakeFS = new FakeFS(jsonPath, DataType.Json);
+
+        services.AddSingleton<IFileSystem>(fakeFS);
+        services.AddTransient<GlobEnumerator>();
+
+        TestRootPath = fakeFS.RootFolder.Path;
     }
 
     [GlobalCleanup]
