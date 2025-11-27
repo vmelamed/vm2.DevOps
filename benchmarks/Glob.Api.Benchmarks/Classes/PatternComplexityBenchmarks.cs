@@ -1,4 +1,4 @@
-namespace vm2.DevOps.Glob.Api.Benchmarks.RealFileSystem;
+namespace vm2.DevOps.Glob.Api.Benchmarks.Classes;
 
 /// <summary>
 /// Benchmarks comparing different glob pattern complexities on real file system.

@@ -1,4 +1,4 @@
-namespace vm2.DevOps.Glob.Api.Benchmarks;
+namespace vm2.DevOps.Glob.Api.Benchmarks.Classes;
 
 /// <summary>
 /// Base class for all glob benchmarks providing common setup and teardown functionality.

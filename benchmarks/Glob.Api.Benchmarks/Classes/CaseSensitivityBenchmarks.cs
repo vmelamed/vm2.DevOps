@@ -1,4 +1,4 @@
-namespace vm2.DevOps.Glob.Api.Benchmarks.BenchmarkClasses.RealFileSystem;
+namespace vm2.DevOps.Glob.Api.Benchmarks.Classes;
 
 /// <summary>
 /// Benchmarks comparing case-sensitive vs case-insensitive matching on real file system.

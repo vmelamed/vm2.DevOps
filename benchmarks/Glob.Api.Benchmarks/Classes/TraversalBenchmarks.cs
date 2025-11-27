@@ -1,4 +1,4 @@
-namespace vm2.DevOps.Glob.Api.Benchmarks.RealFileSystem;
+namespace vm2.DevOps.Glob.Api.Benchmarks.Classes;
 
 /// <summary>
 /// Benchmarks comparing depth-first vs breadth-first traversal on real file system.
