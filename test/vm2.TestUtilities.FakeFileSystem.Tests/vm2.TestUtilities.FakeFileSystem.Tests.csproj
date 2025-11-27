@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>vm2.TestUtilities.FakeFileSystem.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\vm2.TestUtilities\vm2.TestUtilities.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="FakeFSFiles\FakeFS*.*.graph.txt" CopyToOutputDirectory="Never" />
+    <Content Include="FakeFSFiles\FakeFS*.*.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="FakeFSFiles\FakeFS*.*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

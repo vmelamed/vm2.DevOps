@@ -7,7 +7,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\Glob.Api\Glob.Api.csproj" />
-        <ProjectReference Include="..\..\test\vm2.Test.Utilities\vm2.Test.Utilities.csproj" />
+        <ProjectReference Include="..\..\test\vm2.TestUtilities\vm2.TestUtilities.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -17,6 +17,10 @@
         <None Update="TestStructures\*.json">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="BenchmarkClasses\" />
     </ItemGroup>
 
 </Project>

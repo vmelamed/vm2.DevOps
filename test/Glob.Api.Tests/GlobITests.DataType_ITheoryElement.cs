@@ -101,12 +101,16 @@ public class IntegrationTestData(
     #endregion
 
     public static implicit operator GlobEnumeratorBuilder(IntegrationTestData data)
-        => new GlobEnumeratorBuilder()
-                            .WithGlob(data.G)
-                            .FromDirectory(data.Sd)
-                            .WithCaseSensitivity(data.M)
-                            .Select(data.O)
-                            .TraverseDepthFirst(data.Tdf)
-                            .WithDistinct(data.X)
-                            ;
+        => data.ConfigureBuilder(new GlobEnumeratorBuilder());
+
+    public GlobEnumeratorBuilder ConfigureBuilder(GlobEnumeratorBuilder builder)
+        => builder
+            .WithGlob(G)
+            .FromDirectory(Sd)
+            .WithCaseSensitivity(M)
+            .TraverseDepthFirst(Tdf)
+            .Select(O)
+            .WithDistinct(X)
+            .Build()
+            ;
 }

@@ -1,0 +1,51 @@
+﻿# Generated in REPL:
+#
+# using System.IO;
+# foreach (var f in Directory.EnumerateDirectories("C:\\Users\\valme\\Downloads", "*", new EnumerationOptions { RecurseSubdirectories = true }))
+#     WriteLine(f.Replace('\\', '/'));
+# foreach (var f in Directory.EnumerateFiles("C:\\Users\\valme\\Downloads", "*", new EnumerationOptions { RecurseSubdirectories = true }))
+#     WriteLine(f.Replace('\\', '/'));
+#
+# Conventions:
+#   - the first line should not contain any special Unix characters like '~' or '$'.
+#   - the first line after expansion of the env. vars must have a root: an ASCII letter [A-Za-z], ':', and '/' or '\'.
+#
+
+DOWNLOADS=C:/Users/valo/Downloads
+
+%DOWNLOADS%/benchmark-summaries-ubuntu-latest/
+%DOWNLOADS%/benchmark-summaries-ubuntu-latest/results/
+%DOWNLOADS%/benchmark-summaries-ubuntu-latest/summaries/
+%DOWNLOADS%/2025-09-30T01_44_59-FedEx-Transaction-Record.pdf
+%DOWNLOADS%/Amazon Order.pdf
+%DOWNLOADS%/benchmark-summaries-ubuntu-latest (1).zip
+%DOWNLOADS%/Resume.pdf.crdownload
+%DOWNLOADS%/Shiping record1.pdf
+%DOWNLOADS%/Shiping record2.pdf
+%DOWNLOADS%/Unconfirmed 365032.crdownload
+%DOWNLOADS%/vm2.Ulid.0.0.0-alpha.0.42.nupkg
+%DOWNLOADS%/vm2.UlidType.Benchmarks.NewUlid-report-full-compressed.json
+%DOWNLOADS%/vm2.UlidType.Benchmarks.NewUlid-report.json
+%DOWNLOADS%/vm2.UlidType.Benchmarks.ParseUlid-report-full-compressed.json
+%DOWNLOADS%/vm2.UlidType.Benchmarks.ParseUlid-report.json
+%DOWNLOADS%/vm2.UlidType.Benchmarks.UlidToString-report-full-compressed.json
+%DOWNLOADS%/vm2.UlidType.Benchmarks.UlidToString-report.json
+%DOWNLOADS%/benchmark-summaries-ubuntu-latest/BenchmarkRun-20251008-151653.log
+%DOWNLOADS%/benchmark-summaries-ubuntu-latest/results/vm2.UlidType.Benchmarks.NewUlid-report-full-compressed.json
+%DOWNLOADS%/benchmark-summaries-ubuntu-latest/results/vm2.UlidType.Benchmarks.NewUlid-report-github.md
+%DOWNLOADS%/benchmark-summaries-ubuntu-latest/results/vm2.UlidType.Benchmarks.NewUlid-report.csv
+%DOWNLOADS%/benchmark-summaries-ubuntu-latest/results/vm2.UlidType.Benchmarks.NewUlid-report.html
+%DOWNLOADS%/benchmark-summaries-ubuntu-latest/results/vm2.UlidType.Benchmarks.NewUlid-report.json
+%DOWNLOADS%/benchmark-summaries-ubuntu-latest/results/vm2.UlidType.Benchmarks.ParseUlid-report-full-compressed.json
+%DOWNLOADS%/benchmark-summaries-ubuntu-latest/results/vm2.UlidType.Benchmarks.ParseUlid-report-github.md
+%DOWNLOADS%/benchmark-summaries-ubuntu-latest/results/vm2.UlidType.Benchmarks.ParseUlid-report.csv
+%DOWNLOADS%/benchmark-summaries-ubuntu-latest/results/vm2.UlidType.Benchmarks.ParseUlid-report.html
+%DOWNLOADS%/benchmark-summaries-ubuntu-latest/results/vm2.UlidType.Benchmarks.ParseUlid-report.json
+%DOWNLOADS%/benchmark-summaries-ubuntu-latest/results/vm2.UlidType.Benchmarks.UlidToString-report-full-compressed.json
+%DOWNLOADS%/benchmark-summaries-ubuntu-latest/results/vm2.UlidType.Benchmarks.UlidToString-report-github.md
+%DOWNLOADS%/benchmark-summaries-ubuntu-latest/results/vm2.UlidType.Benchmarks.UlidToString-report.csv
+%DOWNLOADS%/benchmark-summaries-ubuntu-latest/results/vm2.UlidType.Benchmarks.UlidToString-report.html
+%DOWNLOADS%/benchmark-summaries-ubuntu-latest/results/vm2.UlidType.Benchmarks.UlidToString-report.json
+%DOWNLOADS%/benchmark-summaries-ubuntu-latest/summaries/vm2.UlidType.Benchmarks.NewUlid-summary.json
+%DOWNLOADS%/benchmark-summaries-ubuntu-latest/summaries/vm2.UlidType.Benchmarks.ParseUlid-summary.json
+%DOWNLOADS%/benchmark-summaries-ubuntu-latest/summaries/vm2.UlidType.Benchmarks.UlidToString-summary.json

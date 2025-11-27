@@ -4,6 +4,6 @@ global using Microsoft.Extensions.Hosting;
 global using Microsoft.Extensions.Logging;
 
 global using vm2.DevOps.Glob.Api;
+global using vm2.DevOps.Glob.Api.Benchmarks.BenchmarkConfigs;
 global using vm2.DevOps.Glob.Api.DI;
-global using vm2.Test.Utilities;
-
+global using vm2.TestUtilities;

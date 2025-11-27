@@ -3,7 +3,7 @@
 [ExcludeFromCodeCoverage]
 public class GlobUnitTestsFixture : IDisposable
 {
-    public IHost BuildHost(ITestOutputHelper testOutputHelper)
+    public virtual IHost BuildHost(ITestOutputHelper testOutputHelper)
     {
         var builder = Host.CreateApplicationBuilder();
 
@@ -30,9 +30,7 @@ public class GlobUnitTestsFixture : IDisposable
             .Services
             .AddScoped(sp => testOutputHelper)
             .AddScoped<ILoggerProvider, XUnitLoggerProvider>()
-            .AddSingleton<IFakeFileSystemCache, FakeFileSystemCache>()  // for the unit tests
-            .AddTransient<GlobEnumeratorFactory>()                      // for the unit tests
-            .AddGlobEnumerator()                                        // for the integration tests
+            .AddGlobEnumeratorFactory()                      // for the unit tests
             ;
 
         return builder.Build();

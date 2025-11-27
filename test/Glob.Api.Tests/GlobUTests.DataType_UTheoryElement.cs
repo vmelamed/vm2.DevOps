@@ -93,4 +93,13 @@ public class UnitTestElement(
                             .WithCaseSensitivity(data.M)
                             .Select(data.O)
                             ;
+
+    public GlobEnumeratorBuilder ConfigureBuilder(GlobEnumeratorBuilder builder)
+        => builder
+            .WithGlob(G)
+            .FromDirectory(Sd)
+            .WithCaseSensitivity(M)
+            .Select(O)
+            .Build()
+            ;
 }

@@ -1,4 +1,4 @@
-﻿namespace vm2.DevOps.Glob.Api.DI;
+﻿namespace vm2.TestUtilities.FakeFileSystem.DI;
 
 /// <summary>
 /// Provides extension methods for adding the GlobEnumerator to an IServiceCollection.
@@ -11,10 +11,10 @@ public static class GlobEnumeratorExtensions
         /// Adds the GlobEnumerator and its dependencies to the service collection.
         /// </summary>
         /// <returns>The service collection for method chaining.</returns>
-        public IServiceCollection AddGlobEnumerator()
+        public IServiceCollection AddGlobEnumeratorFactory()
             => serviceCollection
-                    .AddSingleton<IFileSystem, FileSystem>()
-                    .AddTransient<GlobEnumerator>()
+                    .AddTransient<IFileSystem, FileSystem>()
+                    .AddTransient<GlobEnumeratorFactory>()                      // for the integration tests
                     ;
 
         /// <summary>
@@ -25,27 +25,30 @@ public static class GlobEnumeratorExtensions
         /// <returns>IServiceCollection for method chaining.</returns>
         public IServiceCollection AddGlobEnumerator(Func<GlobEnumeratorBuilder, GlobEnumeratorBuilder> configure)
             => serviceCollection
-                    .AddSingleton<IFileSystem, FileSystem>()
-                    .AddTransient(
+                    .AddTransient<IFileSystem, FakeFS>()
+                    .AddTransient<GlobEnumeratorFactory>()                      // for the unit tests
+                    .AddTransient<GlobEnumerator>(
                         sp => configure(new GlobEnumeratorBuilder())
                                 .Configure(new GlobEnumerator(
                                                 sp.GetRequiredService<IFileSystem>(),
                                                 sp.GetService<ILogger<GlobEnumerator>>())));
     }
 
-    extension(IServiceProvider sp)
+    extension(IServiceProvider serviceProvider)
     {
-        /// <summary>
-        /// Gets a GlobEnumerator instance configured via the provided configure function. Use when the GlobEnumerator is
-        /// registered without configuration or with default configuration.
-        /// </summary>
-        /// <param name="configure"></param>
-        /// <returns></returns>
         public GlobEnumerator GetGlobEnumerator(
-            Func<GlobEnumeratorBuilder, GlobEnumeratorBuilder> configure)
+            string fakeFSDescriptionFile,
+            DataType dataType = DataType.Default)
+            => serviceProvider
+                    .GetRequiredService<GlobEnumeratorFactory>()
+                    .Create(new FakeFS(fakeFSDescriptionFile, dataType));
+
+        public GlobEnumerator GetGlobEnumerator(
+            Func<GlobEnumeratorBuilder, GlobEnumeratorBuilder> configure,
+            string fakeFSDescriptionFile,
+            DataType dataType = DataType.Default)
             => configure(new GlobEnumeratorBuilder())
-                .Configure(new GlobEnumerator(
-                                    sp.GetRequiredService<IFileSystem>(),
-                                    sp.GetService<ILogger<GlobEnumerator>>()));
+                .Configure(
+                    serviceProvider.GetGlobEnumerator(fakeFSDescriptionFile, dataType));
     }
 }

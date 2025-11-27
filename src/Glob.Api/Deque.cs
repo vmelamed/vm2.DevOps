@@ -1,7 +1,5 @@
 ﻿namespace vm2.DevOps.Glob.Api;
 
-using System.Collections;
-
 class Deque<T> : IEnumerable<T> where T : notnull
 {
     List<T> _sequence;

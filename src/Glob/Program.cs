@@ -1,9 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
-
-using vm2.DevOps.Glob.Api.DI;
-
-Argument<string> globExpression = new("glob")
+﻿Argument<string> globExpression = new("glob")
 {
     HelpName = "glob",
     Description = """

@@ -6,7 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Glob.Api\Glob.Api.csproj" />
-    <ProjectReference Include="..\vm2.Test.Utilities\vm2.Test.Utilities.csproj" />
+    <ProjectReference Include="..\vm2.TestUtilities\vm2.TestUtilities.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -16,6 +16,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="FakeFSFiles\Integration.graph.txt" CopyToOutputDirectory="Never" />
+    <Content Include="FakeFSFiles\FakeFS*.*.graph.txt" CopyToOutputDirectory="Never" />
     <Content Include="FakeFSFiles\FakeFS*.*.txt" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="FakeFSFiles\FakeFS*.*.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="FakeFSFiles\Integration.json" CopyToOutputDirectory="PreserveNewest" />

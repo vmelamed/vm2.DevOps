@@ -20,30 +20,18 @@ public abstract partial class GlobEnumeratorUnitTests : IClassFixture<GlobUnitTe
     protected ITestOutputHelper Output { get; }
 
     protected GlobEnumerator GetGlobEnumerator(
-        string fileSystemFile,
-        Func<GlobEnumeratorBuilder>? configureBuilder = null)
-    {
-        // Get the file system for this test
-        var fileSystem = _host
-                            .Services
-                            .GetRequiredService<IFakeFileSystemCache>()
-                            .GetFileSystem(fileSystemFile);
-        var enumerator = _host
-                            .Services
-                            .GetRequiredService<GlobEnumeratorFactory>()
-                            .Create(fileSystem)
-                            ;
+        string fileSystemDescriptionFile)
+        => _host.Services.GetGlobEnumerator(fileSystemDescriptionFile);
 
-        if (configureBuilder is not null)
-            configureBuilder().Configure(enumerator);
-
-        return enumerator;
-    }
+    protected GlobEnumerator GetGlobEnumerator(
+        string fileSystemDescriptionFile,
+        Func<GlobEnumeratorBuilder, GlobEnumeratorBuilder> configureBuilder)
+        => _host.Services.GetGlobEnumerator(configureBuilder, fileSystemDescriptionFile);
 
     protected virtual void Enumerate_GlobEnumerator(UnitTestElement data)
     {
         // Arrange
-        var ge = GetGlobEnumerator(data.Fs, () => CreateBuilder(data));
+        var ge = GetGlobEnumerator(data.Fs, data.ConfigureBuilder);
         var enumerate = ge.Enumerate;
 
         if (data.Throws)

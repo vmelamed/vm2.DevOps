@@ -1,7 +1,5 @@
 ﻿namespace vm2.DevOps.Glob.Api.Tests;
 
-using vm2.Test.Utilities;
-
 [ExcludeFromCodeCoverage]
 public partial class GlobEnumeratorIntegrationTests : IClassFixture<GlobIntegrationTestsFixture>, IDisposable
 {
@@ -10,7 +8,9 @@ public partial class GlobEnumeratorIntegrationTests : IClassFixture<GlobIntegrat
     IHost _host;
     bool _tempTestRootPath;
 
-    public GlobEnumeratorIntegrationTests(GlobIntegrationTestsFixture fixture, ITestOutputHelper output)
+    public GlobEnumeratorIntegrationTests(
+        GlobIntegrationTestsFixture fixture,
+        ITestOutputHelper output)
     {
         Output  = output;
         Fixture = fixture;
@@ -65,20 +65,12 @@ public partial class GlobEnumeratorIntegrationTests : IClassFixture<GlobIntegrat
 
     string TestRootPath { get; }
 
+    protected GlobEnumerator GetGlobEnumerator()
+        => _host.Services.GetRequiredService<GlobEnumerator>();
+
     protected GlobEnumerator GetGlobEnumerator(
-        Func<GlobEnumeratorBuilder>? configureBuilder = null)
-    {
-        // Get the file system for this test
-        var enumerator = _host
-                            .Services
-                            .GetRequiredService<GlobEnumerator>()
-                            ;
-
-        if (configureBuilder is not null)
-            configureBuilder().Configure(enumerator);
-
-        return enumerator;
-    }
+        Func<GlobEnumeratorBuilder, GlobEnumeratorBuilder> configureBuilder)
+        => _host.Services.GetGlobEnumerator(configureBuilder);
 
     [Theory]
     [MemberData(nameof(RecursiveEnumerationTests))]
@@ -92,8 +84,10 @@ public partial class GlobEnumeratorIntegrationTests : IClassFixture<GlobIntegrat
         }
 
         // Arrange
-        var builder   = (GlobEnumeratorBuilder)data;
-        var ge        = GetGlobEnumerator(() => builder.FromDirectory(Path.Combine(TestRootPath, data.Sd)));
+        var ge = GetGlobEnumerator(builder => data
+                                                .ConfigureBuilder(builder)
+                                                .FromDirectory(Path.Combine(TestRootPath, data.Sd))
+                                                .Build());
         var enumerate = ge.Enumerate;
 
         if (data.Tx)

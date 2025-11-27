@@ -8,7 +8,7 @@ public class GlobEnumerationOrderTests(GlobUnitTestsFixture fixture, ITestOutput
     {
         var ge = GetGlobEnumerator(
                             "FakeFSFiles/FakeFS7.Unix.json",
-                            () => new GlobEnumeratorBuilder()
+                            builder => builder
                                         .WithGlob("**/*.txt")
                                         .FromDirectory("/")
                                         .CaseSensitive()
@@ -40,7 +40,7 @@ public class GlobEnumerationOrderTests(GlobUnitTestsFixture fixture, ITestOutput
     {
         var ge = GetGlobEnumerator(
                             "FakeFSFiles/FakeFS7.Unix.json",
-                            () => new GlobEnumeratorBuilder()
+                            builder => builder
                                         .WithGlob("**/*.txt")
                                         .FromDirectory("/")
                                         .CaseInsensitive()

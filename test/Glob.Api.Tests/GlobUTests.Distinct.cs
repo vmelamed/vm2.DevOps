@@ -8,13 +8,12 @@ public class GlobEnumerationDistinctTests(GlobUnitTestsFixture fixture, ITestOut
     {
         var ge = GetGlobEnumerator(
                             "FakeFSFiles/FakeFS6.Unix.json",
-                            () => new GlobEnumeratorBuilder()
+                            builder => builder
                                         .WithGlob("/**/[lb]*/**/[lb]*/*.txt")
                                         .FromDirectory("/")
                                         .CaseSensitive()
                                         .SelectFiles()
-                                        .Build()
-                            );
+                                        .Build());
         var enumerate = ge.Enumerate;
         var result = enumerate.Should().NotThrow().Which.ToList();
         string[] expected = [
@@ -34,7 +33,7 @@ public class GlobEnumerationDistinctTests(GlobUnitTestsFixture fixture, ITestOut
     {
         var ge = GetGlobEnumerator(
                             "FakeFSFiles/FakeFS6.Unix.json",
-                            () => new GlobEnumeratorBuilder()
+                            builder => builder
                                         .WithGlob("/**/[lb]*/**/[lb]*/*.txt")
                                         .FromDirectory("/")
                                         .CaseInsensitive()

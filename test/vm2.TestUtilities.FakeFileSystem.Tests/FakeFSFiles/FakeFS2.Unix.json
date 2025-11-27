@@ -1,0 +1,30 @@
+﻿{
+    "name": "/",
+    "folders": [
+        {
+            "name": "folder1",
+            "folders": [
+                {
+                    "name": "folder2",
+                    "folders": [],
+                    "files": [
+                        "file2.txt"
+                    ]
+                }
+            ],
+            "files": [
+                "file1.txt"
+            ]
+        },
+        {
+            "name": "folder3",
+            "folders": [],
+            "files": [
+                "file3.txt"
+            ]
+        }
+    ],
+    "files": [
+        "root.txt"
+    ]
+}
