@@ -26,12 +26,18 @@ public sealed partial class GlobEnumerator
     ILogger<GlobEnumerator>? _logger;
     IFileSystem _fileSystem;
     string _glob = "";
+    string _fromDir = "";
     Deque<(string dir, Range patternComponentRange, bool recursively)> _deque = new();
 
     /// <summary>
     /// The string comparer depends on the MatchCasing
     /// </summary>
     StringComparison StringComparison { get; set; } = OperatingSystem.Comparison;
+
+    /// <summary>
+    /// The string comparer depends on the MatchCasing
+    /// </summary>
+    StringComparer StringComparer { get; set; } = OperatingSystem.Comparison is StringComparison.Ordinal ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase;
 
     /// <summary>
     /// Gets a regex object that matches the root of the file system in a subDir.
@@ -100,13 +106,15 @@ public sealed partial class GlobEnumerator
                         goto case MatchCasing.CaseSensitive;
 
                 case MatchCasing.CaseSensitive:
-                    _regexOptions &= ~RegexOptions.IgnoreCase;
-                    StringComparison = StringComparison.Ordinal;
+                    _regexOptions    &= ~RegexOptions.IgnoreCase;
+                    StringComparison  = StringComparison.Ordinal;
+                    StringComparer    = StringComparer.Ordinal;
                     break;
 
                 case MatchCasing.CaseInsensitive:
-                    _regexOptions |= RegexOptions.IgnoreCase;
-                    StringComparison = StringComparison.OrdinalIgnoreCase;
+                    _regexOptions    |= RegexOptions.IgnoreCase;
+                    StringComparison  = StringComparison.OrdinalIgnoreCase;
+                    StringComparer    = StringComparer.OrdinalIgnoreCase;
                     break;
 
                 default:
@@ -146,15 +154,12 @@ public sealed partial class GlobEnumerator
     /// </summary>
     public IEnumerable<string> Enumerate()
     {
-        if (Enumerated is Objects.Files &&
-            Glob is not "" &&
-            (Glob.Last() is ('/' or '\\') || EndsWithGlobstarRegex().IsMatch(Glob)))
+        if (Enumerated is Objects.Files
+            && Glob is not ""
+            && (Glob.Last() is ('/' or '\\') || EndsWithGlobstarRegex().IsMatch(Glob)))
             throw new ArgumentException("Pattern cannot end with '/', '\\', or '**' when searching for files.");
 
-        Debug.Assert(_deque?.Count is 0, "The queue must be empty after the previous search!");
-
-        string fromDir;
-        (_glob, fromDir) = NormalizeGlobAndStartDir();
+        (_glob, _fromDir) = NormalizeGlobAndStartDir();
         if (!_fileSystem.GlobRegex().IsMatch(_glob))
             throw new ArgumentException("Invalid pattern.");
 
@@ -168,49 +173,57 @@ public sealed partial class GlobEnumerator
                 """,
                 Glob, _glob,
                 _fileSystem.GetCurrentDirectory(),
-                FromDirectory, fromDir,
+                FromDirectory, _fromDir,
                 Enumerated);
-
-        _deque.Clear();                                       // just in case
-        _deque.IsStack = DepthFirst;                          // honor the order of traversing
-        _deque.Add((fromDir, FirstGlobComponent(), false));   // enqueue the first search and dive-into the enumeration
 
         return Traverse();
     }
     #endregion
 
     #region Private methods
-    Range FirstGlobComponent()
-        => 0..(_glob.IndexOf(SepChar) is int nextEnd && nextEnd is >=0 ? nextEnd : _glob.Length);
+    bool IsLastComponent(Range range) => range.End.Value >= _glob.Length;
+
+    // After the normalization, the glob pattern has this shape: <glob.comp.1st>/<glob.comp.2nd>/.../<glob.comp.last>
+    // the respective ranges are like this:                      ^--range 1-----^^--range 2-----^^...^--range last---^
+
+    int EndOfFirstComponent() => _glob.IndexOf(SepChar) is int nextEnd && nextEnd is >=0
+                                                ? nextEnd : _glob.Length;
+
+    int EndOfNextComponent(Range range) => _glob.IndexOf(SepChar, range.End.Value+1) is int nextEnd && nextEnd is >=0
+                                                ? nextEnd : _glob.Length;
+
     // first pattern globComponent always starts at 0 and ends at the first SepChar, or at the end of the pattern
+    Range FirstComponent() => 0..EndOfFirstComponent();
 
-    Range NextGlobComponent(Range range)
-        => IsLastGlobComponent(range)
-                ? _glob.Length.._glob.Length // no next globComponent
-                : (range.End.Value+1)..      // skipping the first '/' to the next '/' or the end of the pattern
-                  (_glob.IndexOf(SepChar, range.End.Value+1) is int nextEnd && nextEnd is >=0 ? nextEnd : _glob.Length);
     // the nextStart is after the separator of the current range,
-    // the nextEnd is at the next SepChar after this, or at the end of the pattern
-
-    bool IsLastGlobComponent(Range range) => range.End.Value >= _glob.Length;
+    // the nextEnd is at the next SepChar after the current range, or at the end of the pattern:
+    Range NextComponent(Range range) => IsLastComponent(range)
+                                            ? _glob.Length.._glob.Length // no next globComponent
+                                            : (range.End.Value+1)..EndOfNextComponent(range);
 
     IEnumerable<string> Traverse()
     {
-        // Track visited paths when Distinct is enabled and pattern has multiple globstars
-        HashSet<string>? visited = Distinct && GlobstarRegex().Matches(_glob).Count > 1
-                                        ? new(StringComparison is StringComparison.Ordinal
-                                                    ? StringComparer.Ordinal
-                                                    : StringComparer.OrdinalIgnoreCase)
+        // Track visited paths only when Distinct is enabled and pattern has multiple globstars
+        HashSet<string>? visited = Distinct
+                                   && GlobstarRegex().Matches(_glob).Count > 1
+                                        ? new(StringComparer)
                                         : null;
+
+        bool NotVisited(string path) => visited is null || visited.Add(path);
+
+        Debug.Assert(_deque?.Count is 0, "The queue must be empty after the previous search!");
+        _deque.Clear();                                   // just in case
+        _deque.IsStack = DepthFirst;                      // honor the order of traversing
+        _deque.Add((_fromDir, FirstComponent(), false));  // enqueue the first search and dive-into the enumeration
 
         while (_deque.TryGet(out var p))
         {
-            var (dir, globComponentRange, recursively) = p;
+            var (dir, componentRange, recursively) = p;
 
-            var isLast           = IsLastGlobComponent(globComponentRange);
-            var globComponent    = _glob[globComponentRange];
-            var (pattern, regex) = GlobToRegex(globComponent);  // globComponent -> pattern (in .NET) and then regex to filter
-                                                                // the names of the objects in dir
+            var isLast           = IsLastComponent(componentRange);
+            var component        = _glob[componentRange];
+            var (pattern, regex) = ComponentToPatternRegex(component);  // globComponent -> pattern (for .NET) and
+                                                                        // regex to filter the names of the objects in dir
             if (_logger?.IsEnabled(LogLevel.Trace) is true)
                 _logger.LogTrace("""
                     --------------------------------
@@ -220,61 +233,58 @@ public sealed partial class GlobEnumerator
                         match regex:                "{Regex}"
                     """,
                     dir, recursively ? "recursively" : "",
-                    globComponent, isLast ? "(the last)" : "",
+                    component, isLast ? "(the last)" : "",
                     pattern, regex);
 
-            var nextGlobComponentRange = NextGlobComponent(globComponentRange);
+            var nextComponentRange = NextComponent(componentRange);
 
-            // handle special globComponents: ., .., **
-            switch (globComponent)
+            // handle the special patterns and combinations
+            switch (component, isLast, recursively)
             {
-                case CurrentDir:
+                case (CurrentDir, _, _):
                     // search again in the current dir
-                    _deque.Add((dir, nextGlobComponentRange, recursively));
+                    _deque.Add((dir, nextComponentRange, recursively));
                     continue;
 
-                case ParentDir:
+                case (ParentDir, _, _):
                     // searching in the parent dir
-                    _deque.Add((_fileSystem.GetFullPath($"{dir}/.."), nextGlobComponentRange, recursively));
+                    _deque.Add((_fileSystem.GetFullPath($"{dir}/.."), nextComponentRange, recursively));
                     continue;
 
-                case Globstar:
+                case (Globstar, _, _):
                     // search again in the current dir but recursively!
-                    _deque.Add((dir, nextGlobComponentRange, true));
+                    _deque.Add((dir, nextComponentRange, true));
                     continue;
-            }
 
-            switch (isLast, recursively)
-            {
-                case (isLast: false, recursively: false):
+                case (_, isLast: false, recursively: false):
                     // we need to enqueue all matching sub-dirs of the current dir, and search in there for the next component
                     var lastComponentMatches = LastComponentMatches(pattern, regex);
                     foreach (var subDir in _fileSystem
                                                 .EnumerateDirectories(dir, pattern, _options)
                                                 .Where(subDir => lastComponentMatches(subDir)))
-                        _deque.Add((subDir, nextGlobComponentRange, false));
+                        _deque.Add((subDir, nextComponentRange, false));
                     break;
 
-                case (isLast: false, recursively: true):
+                case (_, isLast: false, recursively: true):
                     // we need to enqueue all sub-dirs of the current dir,
                     foreach (var subDir in _fileSystem.EnumerateDirectories(dir, SequenceWildcard, _options))
                     {
                         // pass recursively to all lower components and also
-                        _deque.Add((subDir, globComponentRange, true));
+                        _deque.Add((subDir, componentRange, true));
                         // if the current component matches, pass non-recursively to the next component
                         if (LastComponentMatches(pattern, regex)(subDir))
-                            _deque.Add((subDir, nextGlobComponentRange, false));
+                            _deque.Add((subDir, nextComponentRange, false));
                     }
                     break;
 
-                case (isLast: true, recursively: false):
+                case (_, isLast: true, recursively: false):
                     // we are at the last globComponent, non-recursively -
                     // just report the matches in the current dir and move on
                     if (Enumerated.HasFlag(Objects.Directories))
                         foreach (var subDir in _fileSystem
                                                     .EnumerateDirectories(dir, pattern, _options)
                                                     .Where(subDir => LastComponentMatches(pattern, regex)(subDir)))
-                            if (visited is null || visited.Add(subDir))
+                            if (NotVisited(subDir))
                             {
                                 _logger?.LogTrace("          dir:  {Directory}", subDir);
                                 yield return subDir;
@@ -284,24 +294,24 @@ public sealed partial class GlobEnumerator
                         foreach (var file in _fileSystem
                                                     .EnumerateFiles(dir, pattern, _options)
                                                     .Where(file => LastComponentMatches(pattern, regex)(file)))
-                            if (visited is null || visited.Add(file))
+                            if (NotVisited(file))
                             {
                                 _logger?.LogTrace("          file: {File}", file);
                                 yield return file;
                             }
-
                     break;
 
-                case (isLast: true, recursively: true):
+                case (_, isLast: true, recursively: true):
                     foreach (var subDir in _fileSystem
                                                 .EnumerateDirectories(dir, SequenceWildcard, _options))
                     {
                         // we need to continue the recursive search in the sub-dirs to find matching objects deeper in the tree
-                        _deque.Add((subDir, globComponentRange, true));
+                        _deque.Add((subDir, componentRange, true));
 
                         // report matching directories in the current dir
-                        if (Enumerated.HasFlag(Objects.Directories) && LastComponentMatches(pattern, regex)(subDir) &&
-                            (visited is null || visited.Add(subDir)))
+                        if (Enumerated.HasFlag(Objects.Directories)
+                            && LastComponentMatches(pattern, regex)(subDir)
+                            && NotVisited(subDir))
                         {
                             _logger?.LogTrace("          dir:  {Directory}", subDir);
                             yield return subDir;
@@ -313,7 +323,7 @@ public sealed partial class GlobEnumerator
                         foreach (var file in _fileSystem
                                                 .EnumerateFiles(dir, pattern, _options)
                                                 .Where(file => LastComponentMatches(pattern, regex)(file)))
-                            if (visited is null || visited.Add(file))
+                            if (NotVisited(file))
                             {
                                 _logger?.LogTrace("          file: {File}", file);
                                 yield return file;

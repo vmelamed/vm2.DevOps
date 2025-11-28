@@ -29,6 +29,9 @@
     <File Path="scripts/bash/summary.jq" />
     <File Path="scripts/bash/_common.sh" />
   </Folder>
+  <Folder Name="/scripts/pwsh/">
+    <File Path="scripts/pwsh/Add-SPDXHeaders.ps1" />
+  </Folder>
   <Folder Name="/Solution Items/">
     <File Path="../COPILOT_INSTRUCTIONS.md" />
     <File Path=".editorconfig" />

@@ -1,17 +1,27 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025 Val Melamed
 
-namespace vm2.DevOps.Glob.Api.Benchmarks;
+var artifactsFolder = "./BenchmarkDotNet.Artifacts/results";
 
-public class Program
-{
-    public static void Main(string[] args)
-    {
-        var config = ManualConfig
-            .Create(DefaultConfig.Instance)
-            .WithOptions(ConfigOptions.DisableOptimizationsValidator)
-            .WithSummaryStyle(SummaryStyle.Default.WithRatioStyle(RatioStyle.Trend));
+for (var i = 0; i < args.Length; i++)
+    if ((args[i] == "--artifacts" || args[i] == "i") && i+1 < args.Length)
+        artifactsFolder = args[i+1];
 
-        BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args, config);
-    }
-}
+#if DEBUG
+// for debugging the benchmarks:
+var config = new DebugInProcessConfig()
+                    .WithArtifactsPath(artifactsFolder)
+                    .WithOptions(ConfigOptions.DisableOptimizationsValidator | ConfigOptions.StopOnFirstError)
+                    .WithArtifactsPath(artifactsFolder)
+                    .WithSummaryStyle(SummaryStyle.Default.WithRatioStyle(RatioStyle.Trend))
+                    ;
+#else
+var config = ManualConfig
+                    .Create(DefaultConfig.Instance)
+                    .WithOptions(ConfigOptions.DisableOptimizationsValidator | ConfigOptions.StopOnFirstError)
+                    .WithArtifactsPath(artifactsFolder)
+                    .WithSummaryStyle(SummaryStyle.Default.WithRatioStyle(RatioStyle.Trend))
+                    ;
+#endif
+
+BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args, config);

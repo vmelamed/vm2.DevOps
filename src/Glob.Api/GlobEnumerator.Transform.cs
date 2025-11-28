@@ -90,7 +90,7 @@ public sealed partial class GlobEnumerator
     /// </summary>
     /// <param name="glob">The glob to translate.</param>
     /// <returns>A .NET path segment _glob and the corresponding <see cref="Regex"/></returns>
-    (string pattern, string regex) GlobToRegex(string glob)
+    (string pattern, string regex) ComponentToPatternRegex(string glob)
     {
         // shortcut the easy cases
         var pr = glob switch {
@@ -105,6 +105,7 @@ public sealed partial class GlobEnumerator
         if (pr is not (null, null))
             return pr;
 
+        // we don't know yet: analyze the glob
         var (pattern, regex) = pr;
         var matches = GlobExpressionRegex().Matches(glob);
 
