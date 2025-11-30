@@ -111,7 +111,7 @@ public class IntegrationTestData(
             .WithGlob(G)
             .FromDirectory(Sd)
             .WithCaseSensitivity(M)
-            .TraverseDepthFirst(Tdf)
+            .TraverseDepthFirst(Tdf ? TraverseOrder.DepthFirst : TraverseOrder.BreadthFirst)
             .Select(O)
             .WithDistinct(X)
             .Build()

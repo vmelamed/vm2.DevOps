@@ -17,7 +17,6 @@ public sealed partial class GlobEnumerator
         MatchCasing              = MatchCasing.PlatformDefault, // see also _matchCasing property
         RecurseSubdirectories    = false,                       // we control it ourselves
         MatchType                = MatchType.Simple,            // don't touch it - this is bs
-        // in future we may expose these as well:
         ReturnSpecialDirectories = false,
         IgnoreInaccessible       = true,
         AttributesToSkip         = FileAttributes.Hidden | FileAttributes.System,
@@ -40,7 +39,7 @@ public sealed partial class GlobEnumerator
     StringComparer StringComparer { get; set; } = OperatingSystem.Comparison is StringComparison.Ordinal ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase;
 
     /// <summary>
-    /// Gets a regex object that matches the root of the file system in a subDir.
+    /// Gets a regex object that matches the root of the file system in a path.
     /// </summary>
     /// <returns>Regex</returns>
     Regex FileSystemRoot { get; init; }
@@ -132,6 +131,36 @@ public sealed partial class GlobEnumerator
     /// a price in memory, performance, and loss of lazy enumeration. Therefore use judiciously.
     /// </remarks>
     public bool Distinct { get; set; } = false;
+
+    /// <summary>
+    /// Indicates whether to return the special directory entries "." and "..". Default: <c>false</c>
+    /// </summary>
+    public bool ReturnSpecialDirectories
+    {
+        get => _options.ReturnSpecialDirectories;
+        set => _options.ReturnSpecialDirectories = value;
+    }
+
+    /// <summary>
+    /// Indicates whether to skip files or directories when access is denied (for example, when accessing them would result in
+    /// <see cref="UnauthorizedAccessException"/> or <see cref="SecurityException"/>).
+    /// Default: <c>true</c>
+    /// </summary>
+    public bool IgnoreInaccessible
+    {
+        get => _options.IgnoreInaccessible;
+        set => _options.IgnoreInaccessible = value;
+    }
+
+    /// <summary>
+    /// Indicates whether to skip files or directories with the specified attributes.
+    /// Default: <c><see cref="FileAttributes.Hidden"/> | <see cref="FileAttributes.System"/></c>
+    /// </summary>
+    public FileAttributes AttributesToSkip
+    {
+        get => _options.AttributesToSkip;
+        set => _options.AttributesToSkip = value;
+    }
     #endregion
 
     #region Constructors
@@ -346,9 +375,6 @@ public sealed partial class GlobEnumerator
 
         return path => rex.IsMatch(LastComponent(path));
     }
-
-    static bool IsRegex(string pattern)
-        => pattern.IndexOfAny(RegexChars) is int idx && idx >= 0;
 
     /// <summary>
     /// Gets the last component of a subDir - the name of the file or directory at the end of the subDir as they are returned by

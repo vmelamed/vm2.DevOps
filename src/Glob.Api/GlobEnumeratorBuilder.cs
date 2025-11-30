@@ -7,15 +7,19 @@ namespace vm2.DevOps.Glob.Api;
 /// Provides a builder for configuring and creating glob enumerators to search for files and directories using glob
 /// patterns.
 /// </summary>
+[ExcludeFromCodeCoverage]
 public class GlobEnumeratorBuilder
 {
     #region fields
-    string _glob             = "*";
-    string _fromDirectory    = ".";
-    MatchCasing _matchCasing = MatchCasing.PlatformDefault;
-    Objects _enumerated      = Objects.Files;
-    bool _distinct;
-    bool _depthFirst;
+    string _glob                              = "*";
+    string _fromDirectory                     = ".";
+    MatchCasing _matchCasing                  = MatchCasing.PlatformDefault;
+    Objects _enumerated                       = Objects.Files;
+    bool _distinct                            = false;
+    bool _depthFirst                          = false;
+    bool _returnSpecialDirectories            = false;
+    bool _ignoreInaccessible                  = true;
+    FileAttributes _skipObjectsWithAttributes = FileAttributes.Hidden | FileAttributes.System;
     #endregion
 
     /// <summary>
@@ -37,8 +41,11 @@ public class GlobEnumeratorBuilder
     /// </item>
     /// </list>
     /// To "escape" any of the special glob expression characters, use brackets: [*], [?], [[], [!].<para/>
-    /// For full descrption of the globs syntax please see <see href="https://www.man7.org/linux/man-pages/man7/glob.7.html">
+    /// For full description of the globs syntax please see <see href="https://www.man7.org/linux/man-pages/man7/glob.7.html">
     /// this Linux glob man-page</see>.
+    /// <para>
+    /// If the method is not invoked the default glob is <c>"*"</c>
+    /// </para>
     /// </summary>
     /// <param name="glob">The glob pattern to use for matching files or directories.</param>
     /// <returns>
@@ -51,7 +58,8 @@ public class GlobEnumeratorBuilder
     }
 
     /// <summary>
-    /// Configures the ge to start searching from the specified directory.
+    /// Configures the <see cref="GlobEnumerator"/>-s to start searching from the specified directory. The default is the
+    /// current directory <c>"."</c>
     /// </summary>
     /// <param name="startDirectory">The directory from which to start the search.</param>
     /// <returns>
@@ -64,7 +72,8 @@ public class GlobEnumeratorBuilder
     }
 
     /// <summary>
-    /// Configures the builder to perform pattern matching with the specified case sensitivity when enumerating file system.
+    /// Configures the builder to perform pattern matching with the specified case sensitivity when enumerating file system
+    /// objects.
     /// </summary>
     /// <param name="sensitivity">The desired case sensitivity for pattern matching.</param>
     /// <remarks>
@@ -122,30 +131,7 @@ public class GlobEnumeratorBuilder
     }
 
     /// <summary>
-    /// Specifies the types of file system objects to be enumerated by the <see cref="GlobEnumerator"/>.
-    /// </summary>
-    /// <returns>The current <see cref="GlobEnumeratorBuilder"/> instance with the specified objects set.</returns>
-    public GlobEnumeratorBuilder SelectObjects(Objects objects)
-    {
-        _enumerated = objects;
-        return this;
-    }
-
-    /// <summary>
-    /// Specifies that only directories should be enumerated by the <see cref="GlobEnumerator"/>.
-    /// </summary>
-    /// <returns>The current <see cref="GlobEnumeratorBuilder"/> instance with the specified objects set.</returns>
-    /// <remarks>
-    /// Note that the path components of the returned directories are separated by "/" and will include a terminating "/".
-    /// </remarks>
-    public GlobEnumeratorBuilder SelectDirectories()
-    {
-        _enumerated = Objects.Directories;
-        return this;
-    }
-
-    /// <summary>
-    /// Specifies that only files should be enumerated by the <see cref="GlobEnumerator"/>.
+    /// Specifies that only files should be enumerated by the <see cref="GlobEnumerator"/> (the default).
     /// </summary>
     /// <returns>The current <see cref="GlobEnumeratorBuilder"/> instance with the specified objects set.</returns>
     /// <remarks>
@@ -158,7 +144,36 @@ public class GlobEnumeratorBuilder
     }
 
     /// <summary>
-    /// Specifies the types of file system objects to include in the enumeration.
+    /// Specifies that only directories should be enumerated by the <see cref="GlobEnumerator"/> (the default is to enumerate
+    /// files only).
+    /// </summary>
+    /// <returns>The current <see cref="GlobEnumeratorBuilder"/> instance with the specified objects set.</returns>
+    /// <remarks>
+    /// Note that the path components of the returned directories are separated by "/" and will include a terminating "/".
+    /// </remarks>
+    public GlobEnumeratorBuilder SelectDirectories()
+    {
+        _enumerated = Objects.Directories;
+        return this;
+    }
+
+    /// <summary>
+    /// Specifies that files and directories should be enumerated by the <see cref="GlobEnumerator"/> (the default is to
+    /// enumerate files only).
+    /// </summary>
+    /// <returns>The current <see cref="GlobEnumeratorBuilder"/> instance with the specified objects set.</returns>
+    /// <remarks>
+    /// Note that the path components of the returned files and directories are separated by "/" and that the the paths of the
+    /// directories will include a terminating "/".
+    /// </remarks>
+    public GlobEnumeratorBuilder SelectDirectoriesAndFiles()
+    {
+        _enumerated = Objects.FilesAndDirectories;
+        return this;
+    }
+
+    /// <summary>
+    /// Specifies the types of file system objects to include in the enumeration. The default is to enumerate files only.
     /// </summary>
     /// <param name="typeOfFileSystemObjects">
     /// An <see cref="Objects"/> value that determines which file system object types will be selected for enumeration.
@@ -174,26 +189,35 @@ public class GlobEnumeratorBuilder
     }
 
     /// <summary>
-    /// Specifies that only directories should be enumerated by the <see cref="GlobEnumerator"/>.
+    /// Configures the enumerator to traverse directories using a depth-first or breadth-first search strategy (the default is
+    /// breadth-first).
     /// </summary>
-    /// <returns>The current <see cref="GlobEnumeratorBuilder"/> instance with the specified objects set.</returns>
     /// <remarks>
-    /// Note that the path components of the returned files and directories are separated by "/" and that the the paths of the
-    /// directories will include a terminating "/".
+    /// Use this method to control how file system entries are visited during glob enumeration. Depth-first traversal explores
+    /// the current directory sub-trees before visiting the sibling directories, while breadth-first traversal visits all
+    /// entries at the current level before descending into their children. Traverse depth-first is useful when the expectation
+    /// is to find files located deep within directory structures.
     /// </remarks>
-    public GlobEnumeratorBuilder SelectDirectoriesAndFiles()
+    /// <param name="depthFirst">
+    /// Specifies the traversal order. Set to <see langword="true"/> to use depth-first search; otherwise, breadth-first search
+    /// is used.
+    /// </param>
+    /// <returns>The current <see cref="GlobEnumeratorBuilder"/> instance with the updated traversal order setting.</returns>
+    public GlobEnumeratorBuilder TraverseDepthFirst(TraverseOrder depthFirst)
     {
-        _enumerated = Objects.FilesAndDirectories;
+        _depthFirst = depthFirst == TraverseOrder.DepthFirst;
         return this;
     }
 
     /// <summary>
-    /// Configures the enumerator to traverse directories using a depth-first search strategy.
+    /// Configures the enumerator to traverse directories using a depth-first search strategy (the default is breadth-first).
     /// </summary>
+    /// <returns>The current <see cref="GlobEnumeratorBuilder"/> instance to allow method chaining.</returns>
     /// <remarks>
-    /// Use this method when you want directory enumeration to process all files and subdirectories within a directory before
-    /// moving to sibling directories. This can be useful for scenarios where processing order matters, such as when working
-    /// with too deeply nested directory structures or too wide directory trees. The default is breadth-first traversal.
+    /// Use this method to control how file system entries are visited during glob enumeration. Depth-first traversal explores
+    /// the current directory sub-trees before visiting the sibling directories, while breadth-first traversal visits all
+    /// entries at the current level before descending into their children. Traverse depth-first is useful when the expectation
+    /// is to find files located deep within directory structures.
     /// </remarks>
     /// <returns>The current <see cref="GlobEnumeratorBuilder"/> instance with depth-first traversal enabled.</returns>
     public GlobEnumeratorBuilder DepthFirst()
@@ -203,12 +227,13 @@ public class GlobEnumeratorBuilder
     }
 
     /// <summary>
-    /// Configures the enumerator to traverse directories using a breadth-first search strategy.
+    /// Configures the enumerator to traverse directories using a breadth-first search strategy (the default).
     /// </summary>
     /// <remarks>
-    /// Use this method when you want directory enumeration to process all files and subdirectories within a directory before
-    /// moving to sibling directories. This can be useful for scenarios where processing order matters, such as when working
-    /// with too wide directory trees or too deeply nested directory structures. The default is breadth-first traversal.
+    /// Use this method to control how file system entries are visited during glob enumeration. Depth-first traversal explores
+    /// the current directory sub-trees before visiting the sibling directories, while breadth-first traversal visits all
+    /// entries at the current level before descending into their children. Traverse breadth-first is useful when the expectation
+    /// is to find files located near the root of the directory structure.
     /// </remarks>
     /// <returns>The current <see cref="GlobEnumeratorBuilder"/> instance with breadth-first traversal enabled.</returns>
     public GlobEnumeratorBuilder BreadthFirst()
@@ -218,30 +243,12 @@ public class GlobEnumeratorBuilder
     }
 
     /// <summary>
-    /// Configures the traversal order for glob enumeration to use either depth-first or breadth-first search.
-    /// </summary>
-    /// <remarks>Use this method to control how file system entries are visited during glob enumeration.
-    /// Depth-first traversal explores directory trees before visiting sibling directories, while breadth-first
-    /// traversal visits all entries at the current level before descending.
-    /// </remarks>
-    /// <param name="depthFirst">
-    /// Specifies the traversal order. Set to <see langword="true"/> to use depth-first search; otherwise, breadth-first search
-    /// is used.
-    /// </param>
-    /// <returns>The current <see cref="GlobEnumeratorBuilder"/> instance with the updated traversal order setting.</returns>
-    public GlobEnumeratorBuilder TraverseDepthFirst(bool depthFirst)
-    {
-        _depthFirst = depthFirst;
-        return this;
-    }
-
-    /// <summary>
-    /// Enables or disables filtering of duplicate results in the glob enumeration.
+    /// Enables filtering of duplicate results in the glob enumeration.
     /// </summary>
     /// <returns>The current <see cref="GlobEnumeratorBuilder"/> instance to allow method chaining.</returns>
     /// <remarks>
     /// Some globs that include two or more of the sub-directories wildcard '**' may return duplicate path strings, by default.
-    /// Invoke this method to request distinct results, which of course, come at a price payed in memory and performance.
+    /// Invoke this method to request distinct results, which of course, come at a price paid in memory and performance.
     /// </remarks>
     public GlobEnumeratorBuilder Distinct()
     {
@@ -254,9 +261,43 @@ public class GlobEnumeratorBuilder
     /// </summary>
     /// <param name="distinctResults"></param>
     /// <returns>The current <see cref="GlobEnumeratorBuilder"/> instance to allow method chaining.</returns>
+    /// <remarks>
+    /// Some globs that include two or more of the sub-directories wildcard '**' may return duplicate path strings, by default.
+    /// Invoke this method to request distinct results, which of course, come at a price paid in memory and performance.
+    /// </remarks>
     public GlobEnumeratorBuilder WithDistinct(bool distinctResults)
     {
         _distinct = distinctResults;
+        return this;
+    }
+
+    /// <summary>
+    /// Indicates whether to return the special directory entries "." and "..". By default, they are not included.
+    /// </summary>
+    public GlobEnumeratorBuilder WithSpecialDirectories()
+    {
+        _returnSpecialDirectories = true;
+        return this;
+    }
+
+    /// <summary>
+    /// Indicates whether to skip files or directories for which the access by the current user is denied (i.e. when
+    /// access attempts to them would result in <see cref="UnauthorizedAccessException"/> or <see cref="SecurityException"/>).
+    /// By default, such files and directories are skipped.
+    /// </summary>
+    public GlobEnumeratorBuilder WithInaccessible()
+    {
+        _ignoreInaccessible = false;
+        return this;
+    }
+
+    /// <summary>
+    /// Indicates whether to skip files or directories with the specified attributes.
+    /// Default: <c><see cref="FileAttributes.Hidden"/> | <see cref="FileAttributes.System"/></c>
+    /// </summary>
+    public GlobEnumeratorBuilder SkipObjectsWithAttributes(FileAttributes attributes)
+    {
+        _skipObjectsWithAttributes = attributes;
         return this;
     }
 
@@ -267,18 +308,29 @@ public class GlobEnumeratorBuilder
     public GlobEnumeratorBuilder Build() => this;
 
     /// <summary>
-    /// Creates and returns a new instance of <see cref="GlobEnumerator"/> for enumerating file system entries that
-    /// match the configured glob pattern.
+    /// Creates and configures a new instance of the GlobEnumerator class.
+    /// </summary>
+    /// <returns>
+    /// A <see cref="GlobEnumerator"/> instance that has been configured according to the settings in this instance.
+    /// </returns>
+    public GlobEnumerator Create() => Configure(new GlobEnumerator());
+
+    /// <summary>
+    /// Configures and returns the passed instance of <see cref="GlobEnumerator"/> for enumerating file system entries that
+    /// match the glob pattern.
     /// </summary>
     /// <returns>A <see cref="GlobEnumerator"/> that can be used to iterate over matching file system entries.</returns>
     public GlobEnumerator Configure(GlobEnumerator ge)
     {
-        ge.FromDirectory   = _fromDirectory;
-        ge.Enumerated      = _enumerated;
-        ge.MatchCasing     = _matchCasing;
-        ge.Distinct = _distinct;
-        ge.DepthFirst      = _depthFirst;
-        ge.Glob            = _glob;
+        ge.FromDirectory            = _fromDirectory;
+        ge.Enumerated               = _enumerated;
+        ge.MatchCasing              = _matchCasing;
+        ge.Distinct                 = _distinct;
+        ge.DepthFirst               = _depthFirst;
+        ge.Glob                     = _glob;
+        ge.ReturnSpecialDirectories = _returnSpecialDirectories;
+        ge.IgnoreInaccessible       = _ignoreInaccessible;
+        ge.AttributesToSkip         = _skipObjectsWithAttributes;
 
         return ge;
     }

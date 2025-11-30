@@ -213,7 +213,7 @@ builder
                         parseResult.GetRequiredValue(caseSensitive))
                     .FromDirectory(
                         parseResult.GetRequiredValue(startDirectory))
-                    .SelectObjects(
+                    .Select(
                         parseResult.GetRequiredValue(searchFor))
                     .WithDistinct(
                         parseResult.GetRequiredValue(distinct)));

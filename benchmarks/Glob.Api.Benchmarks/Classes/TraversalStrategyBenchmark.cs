@@ -20,6 +20,6 @@ public class TraversalStrategyBenchmark : BenchmarkBase
             CreateGlobEnumerator(
                 new GlobEnumeratorBuilder()
                     .WithGlob(Pattern)
-                    .TraverseDepthFirst(IsDepthFirst)
+                    .TraverseDepthFirst(IsDepthFirst ? TraverseOrder.DepthFirst : TraverseOrder.BreadthFirst)
                     .FromDirectory(TestRootPath)));
 }

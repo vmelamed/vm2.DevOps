@@ -6,6 +6,7 @@ namespace vm2.DevOps.Glob.Api;
 /// <summary>
 /// Provides methods for interacting with the actual file system as implemented in .NET.
 /// </summary>
+[ExcludeFromCodeCoverage]
 public class FileSystem : IFileSystem
 {
     /// <summary>

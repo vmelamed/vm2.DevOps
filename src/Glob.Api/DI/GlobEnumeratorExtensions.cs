@@ -6,6 +6,7 @@ namespace vm2.DevOps.Glob.Api.DI;
 /// <summary>
 /// Provides extension methods for adding the GlobEnumerator to an IServiceCollection.
 /// </summary>
+[ExcludeFromCodeCoverage]
 public static class GlobEnumeratorExtensions
 {
     extension(IServiceCollection serviceCollection)
