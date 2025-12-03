@@ -22,7 +22,7 @@ public abstract class BenchmarkBase
     protected GlobEnumerator _glob = null!;
     protected string _testFSJsonPath = null!;
 
-    protected string TestFSJsonName => "standard-test-tree.json";
+    protected string TestFSJsonName = "standard-test-tree.json";
 
     [GlobalSetup]
     public virtual void GlobalSetup()

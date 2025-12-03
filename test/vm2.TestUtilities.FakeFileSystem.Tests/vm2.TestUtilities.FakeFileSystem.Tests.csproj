@@ -9,9 +9,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="FakeFSFiles\FakeFS*.*.graph.txt" CopyToOutputDirectory="Never" />
-    <Content Include="FakeFSFiles\FakeFS*.*.txt" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="FakeFSFiles\FakeFS*.*.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="FSFiles\FS*.*.graph.txt" CopyToOutputDirectory="Never" />
+    <Content Include="FSFiles\FS*.*.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="FSFiles\FS*.*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
