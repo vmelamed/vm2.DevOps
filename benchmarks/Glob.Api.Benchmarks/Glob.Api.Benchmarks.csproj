@@ -1,22 +1,23 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
+        <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
+        <IsTrimmable>false</IsTrimmable>
         <RootNamespace>vm2.DevOps.Glob.Api.Benchmarks</RootNamespace>
         <DefineConstants>$(DefineConstants);$(UserDefined)</DefineConstants>
+        <PublishTrimmed>False</PublishTrimmed>
     </PropertyGroup>
+
+    <ItemGroup>
+        <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+        <Content Include="appsettings.*.json" CopyToOutputDirectory="PreserveNewest" />
+        <Content Include="TestFSStructures\*.json" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\Glob.Api\Glob.Api.csproj" />
         <ProjectReference Include="..\..\test\vm2.TestUtilities\vm2.TestUtilities.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-        <None Update="appsettings.json">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-        <None Update="TestStructures\*.json">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-    </ItemGroup>
 
 </Project>

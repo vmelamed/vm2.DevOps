@@ -14,7 +14,7 @@ public partial class GlobPropertiesTests : GlobEnumeratorUnitTests
     [Fact]
     public void Invalid_Path_In_GlobEnumerator_ShouldThrow()
     {
-        var ge = GetGlobEnumerator("FakeFSFiles/FakeFS2.Win.json");
+        var ge = GetGlobEnumerator("FSFiles/FS2.Win.json");
         var assignInvalidPath = () => ge.FromDirectory = "C:/fldr1";
 
         assignInvalidPath.Should().Throw<ArgumentException>();
@@ -23,7 +23,7 @@ public partial class GlobPropertiesTests : GlobEnumeratorUnitTests
     [Fact]
     public void Invalid_EnumerateFromFolder_ShouldThrow()
     {
-        var ge = GetGlobEnumerator("FakeFSFiles/FakeFS2.Win.json");
+        var ge = GetGlobEnumerator("FSFiles/FS2.Win.json");
         var assignInvalidPath = () => ge.FromDirectory = "C:/nonexistent";
 
         assignInvalidPath.Should().Throw<ArgumentException>();
@@ -32,7 +32,7 @@ public partial class GlobPropertiesTests : GlobEnumeratorUnitTests
     [Fact]
     public void Invalid_MatchCasing_ShouldThrow()
     {
-        var ge = GetGlobEnumerator("FakeFSFiles/FakeFS2.Win.json");
+        var ge = GetGlobEnumerator("FSFiles/FS2.Win.json");
         var assignInvalidPath = () => ge.MatchCasing = ((MatchCasing)3);
 
         assignInvalidPath.Should().Throw<ArgumentException>();
@@ -41,7 +41,7 @@ public partial class GlobPropertiesTests : GlobEnumeratorUnitTests
     [Fact]
     public void MoreThan2Asterisks_Pattern_ShouldNotThrow()
     {
-        var ge = GetGlobEnumerator("FakeFSFiles/FakeFS2.Win.json");
+        var ge = GetGlobEnumerator("FSFiles/FS2.Win.json");
 
         ge.Glob = "***";
         ge.Enumerated = Objects.Directories;
@@ -53,7 +53,7 @@ public partial class GlobPropertiesTests : GlobEnumeratorUnitTests
     [Fact]
     public void Invalid_FilePattern_ShouldThrow()
     {
-        var ge = GetGlobEnumerator("FakeFSFiles/FakeFS2.Win.json");
+        var ge = GetGlobEnumerator("FSFiles/FS2.Win.json");
 
         ge.Enumerated = Objects.Files;
         ge.Glob       = "*/";
@@ -65,7 +65,7 @@ public partial class GlobPropertiesTests : GlobEnumeratorUnitTests
     [Fact]
     public void RecursiveInTheEnd_FilePattern_ShouldThrow()
     {
-        var ge = GetGlobEnumerator("FakeFSFiles/FakeFS2.Win.json");
+        var ge = GetGlobEnumerator("FSFiles/FS2.Win.json");
 
         ge.Glob = "*/**";
         ge.Enumerated = Objects.Files;

@@ -13,10 +13,10 @@ public static class TestFileStructure
     {
         if (string.IsNullOrWhiteSpace(jsonSpecFile))
             throw new ArgumentException("The JSON specification file cannot be null, empty, or consist only of whitespaces.", nameof(jsonSpecFile));
-        if (string.IsNullOrWhiteSpace(testRootPath))
-            throw new ArgumentException("The test root path cannot be null, empty, or consist only of whitespaces.", nameof(testRootPath));
         if (!File.Exists(jsonSpecFile))
             throw new FileNotFoundException("The JSON specification file was not found.", jsonSpecFile);
+        if (string.IsNullOrWhiteSpace(testRootPath))
+            throw new ArgumentException("The test root path cannot be null, empty, or consist only of whitespaces.", nameof(testRootPath));
     }
 
     /// <summary>

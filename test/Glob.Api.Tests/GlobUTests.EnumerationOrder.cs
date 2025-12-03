@@ -10,7 +10,7 @@ public class GlobEnumerationOrderTests(GlobUnitTestsFixture fixture, ITestOutput
     public void Should_Enumerate_DepthFirst_GlobEnumerator()
     {
         var ge = GetGlobEnumerator(
-                            "FakeFSFiles/FakeFS7.Unix.json",
+                            "FSFiles/FS7.Unix.json",
                             builder => builder
                                         .WithGlob("**/*.txt")
                                         .FromDirectory("/")
@@ -42,7 +42,7 @@ public class GlobEnumerationOrderTests(GlobUnitTestsFixture fixture, ITestOutput
     public void Should_Enumerate_BreadthFirst_GlobEnumerator()
     {
         var ge = GetGlobEnumerator(
-                            "FakeFSFiles/FakeFS7.Unix.json",
+                            "FSFiles/FS7.Unix.json",
                             builder => builder
                                         .WithGlob("**/*.txt")
                                         .FromDirectory("/")

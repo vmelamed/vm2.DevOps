@@ -11,7 +11,7 @@ public class TestStructureSizeBenchmark : BenchmarkBase
     [Params("standard-test-tree.json", "large-test-tree.json")]
     public string TestStructure { get; set; } = "standard-test-tree.json";
 
-    protected override string TestStructureFileName => TestStructure;
+    protected override string TestFSFileName => TestStructure;
 
     [Params("**/*.cs", "**/*.md")]
     public string Pattern { get; set; } = "**/*.cs";

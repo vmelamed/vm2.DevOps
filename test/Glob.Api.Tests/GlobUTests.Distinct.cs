@@ -10,7 +10,7 @@ public class GlobEnumerationDistinctTests(GlobUnitTestsFixture fixture, ITestOut
     public void Should_Enumerate_WithDuplicates_GlobEnumerator()
     {
         var ge = GetGlobEnumerator(
-                            "FakeFSFiles/FakeFS6.Unix.json",
+                            "FSFiles/FS6.Unix.json",
                             builder => builder
                                         .WithGlob("/**/[lb]*/**/[lb]*/*.txt")
                                         .FromDirectory("/")
@@ -35,7 +35,7 @@ public class GlobEnumerationDistinctTests(GlobUnitTestsFixture fixture, ITestOut
     public void Should_Enumerate_Distinct_GlobEnumerator()
     {
         var ge = GetGlobEnumerator(
-                            "FakeFSFiles/FakeFS6.Unix.json",
+                            "FSFiles/FS6.Unix.json",
                             builder => builder
                                         .WithGlob("/**/[lb]*/**/[lb]*/*.txt")
                                         .FromDirectory("/")

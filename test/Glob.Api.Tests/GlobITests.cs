@@ -6,7 +6,7 @@ namespace vm2.DevOps.Glob.Api.Tests;
 [ExcludeFromCodeCoverage]
 public partial class GlobEnumeratorIntegrationTests : IClassFixture<GlobIntegrationTestsFixture>, IDisposable
 {
-    public const string TestStructureJsonFile = "./FakeFSFiles/Integration.json";
+    public const string TestStructureJsonFile = "./FSFiles/Integration.json";
 
     IHost _host;
     bool _tempTestRootPath;
