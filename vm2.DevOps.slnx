@@ -48,8 +48,9 @@
     <Project Path="src/Glob/Glob.csproj" />
   </Folder>
   <Folder Name="/test/">
+    <Project Path="test/Glob.Api.FakeFileSystem.Tests/Glob.Api.FakeFileSystem.Tests.csproj" />
+    <Project Path="test/Glob.Api.FakeFileSystem/Glob.Api.FakeFileSystem.csproj" />
     <Project Path="test/Glob.Api.Tests/Glob.Api.Tests.csproj" />
-    <Project Path="test/vm2.TestUtilities.FakeFileSystem.Tests/vm2.TestUtilities.FakeFileSystem.Tests.csproj" Id="c17a25bf-6259-4b52-a660-77a0daed07c4" />
-    <Project Path="test/vm2.TestUtilities/vm2.TestUtilities.csproj" />
+    <Project Path="test/TestUtilities/TestUtilities.csproj" />
   </Folder>
 </Solution>

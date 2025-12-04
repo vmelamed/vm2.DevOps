@@ -6,11 +6,11 @@
 var config = new DebugInProcessConfig()
 #else
 var config = ManualConfig
-                    .Create(DefaultConfig.Instance)
+                .Create(DefaultConfig.Instance)
 #endif
-                    .WithOptions(ConfigOptions.DisableOptimizationsValidator | ConfigOptions.StopOnFirstError)
-                    .WithArtifactsPath(BmConfiguration.Options.ResultsPath)
-                    .WithSummaryStyle(SummaryStyle.Default.WithRatioStyle(RatioStyle.Trend))
+                .WithOptions(ConfigOptions.DisableOptimizationsValidator | ConfigOptions.StopOnFirstError)
+                .WithArtifactsPath(BmConfiguration.Options.ResultsPath)
+                .WithSummaryStyle(SummaryStyle.Default.WithRatioStyle(RatioStyle.Trend))
 ;
 
 BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args, config);
