@@ -16,12 +16,18 @@ public static class BmConfiguration
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json", optional: true)
             .AddJsonFile("appsettings.Development.json", optional: true)
-            .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("USERPROFILE")}.json", optional: true)
+            .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("USERNAME")}.json", optional: true)
             .AddEnvironmentVariables()
             .AddCommandLine(Environment.GetCommandLineArgs())
             .Build()
             .GetSection(nameof(BmOptions))
             .Bind(Options)
             ;
+
+        Options = new BmOptions(
+            TestFileStructure.ExpandEnvironmentVariables(Options.ResultsPath),
+            TestFileStructure.ExpandEnvironmentVariables(Options.FsJsonModelsDirectory),
+            TestFileStructure.ExpandEnvironmentVariables(Options.TestsRootPath)
+        );
     }
 }

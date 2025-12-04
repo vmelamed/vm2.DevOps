@@ -22,9 +22,9 @@ public abstract class BenchmarkBase
     protected string _realFSRootsPath = "";
     protected const string FsStandardJsonModelFileName = "standard-test-tree.json";
     protected string _fsStandardJsonModelPath = null!;
+    protected bool _createdTempDirectory = false;
 
-    [GlobalSetup]
-    public virtual void GlobalSetup()
+    public void SetupFakeStandardFileSystem()
     {
         BmConfiguration.BindOptions();
         _fsStandardJsonModelPath = Path.Combine(
@@ -51,8 +51,7 @@ public abstract class BenchmarkBase
         // all real FS will be tested under the root specified in the configuration or in a temp directory.
         // Each glob enumerator will have its own subdirectory with a name - the name of the JSON model file (without the extension).
 
-        _realFSRootsPath = TestFileStructure.ExpandEnvironmentVariables(BmConfiguration.Options.TestsRootPath);
-        string realDirectoryPath;
+        _realFSRootsPath = BmConfiguration.Options.TestsRootPath;
 
         // figure out where is the root of all the file systems in the current environment:
         if (string.IsNullOrWhiteSpace(_realFSRootsPath))
@@ -60,13 +59,14 @@ public abstract class BenchmarkBase
             // not specified - create the file system root in a temp directory:
             var info = Directory.CreateTempSubdirectory($"GlobBm_");
             _realFSRootsPath = info.FullName;
+            _createdTempDirectory = true;
         }
 
         // the directory for this specific file system:
-        realDirectoryPath = Path.Combine(_realFSRootsPath, Path.GetFileNameWithoutExtension(fsJsonModelPath));
+        var realDirectoryPath = Path.Combine(_realFSRootsPath, Path.GetFileNameWithoutExtension(fsJsonModelPath));
 
         // use the specified directory
-        if (Directory.Exists(_realFSRootsPath))
+        if (Directory.Exists(realDirectoryPath))
         {
             // it exists - verify it first:
             var errors = string.Join("\n  ", TestFileStructure.VerifyTestFileStructure(fsJsonModelPath, realDirectoryPath));
@@ -82,6 +82,22 @@ public abstract class BenchmarkBase
         }
 
         return new GlobEnumerator(new FileSystem()) { FromDirectory = realDirectoryPath };
+    }
+
+    protected virtual void CleanupRealFileSystems()
+    {
+        if (!_createdTempDirectory || !Directory.Exists(_realFSRootsPath))
+            return;
+
+        try
+        {
+            Directory.Delete(_realFSRootsPath, true);
+            _createdTempDirectory = false;
+        }
+        catch
+        {
+            // ignore any errors during cleanup of the temp directory.
+        }
     }
 
     /// <summary>

@@ -8,6 +8,9 @@ namespace vm2.DevOps.Glob.Api.Benchmarks.Classes;
 /// </summary>
 public class PatternComplexityBenchmark : BenchmarkBase
 {
+    [GlobalSetup]
+    public void GlobalSetup() => SetupFakeStandardFileSystem();
+
     [Params(
         "*.md",                      // Simple: root only
         "src/*.cs",                  // Single level
@@ -20,8 +23,8 @@ public class PatternComplexityBenchmark : BenchmarkBase
     )]
     public string Pattern { get; set; } = "*.md";
 
-    [Benchmark(Description = "Enumerate with pattern with globstars")]
-    public int EnumerateWithPattern()
+    [Benchmark(Description = "Pattern Complexity")]
+    public int PatternComplexityTest()
         => EnumerateAll(
                 new GlobEnumeratorBuilder()
                     .WithGlob(Pattern)

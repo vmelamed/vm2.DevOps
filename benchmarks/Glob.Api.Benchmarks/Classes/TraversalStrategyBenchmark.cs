@@ -8,14 +8,17 @@ namespace vm2.DevOps.Glob.Api.Benchmarks.Classes;
 /// </summary>
 public class TraversalStrategyBenchmark : BenchmarkBase
 {
+    [GlobalSetup]
+    public void GlobalSetup() => SetupFakeStandardFileSystem();
+
     [Params(true, false)]
     public bool IsDepthFirst { get; set; }
 
     [Params("**/*.cs", "**/docs/**/*.md")]
     public string Pattern { get; set; } = "**/*.cs";
 
-    [Benchmark(Description = "Enumerate with traversal strategy")]
-    public int EnumerateWithStrategy()
+    [Benchmark(Description = "Traversal Strategy")]
+    public int TraversalStrategyTest()
         => EnumerateAll(
                 new GlobEnumeratorBuilder()
                     .WithGlob(Pattern)

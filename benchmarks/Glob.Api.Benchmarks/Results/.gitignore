@@ -1,4 +1,0 @@
-# Ignore all benchmark result files except baseline
-*
-!baseline.json
-!.gitignore

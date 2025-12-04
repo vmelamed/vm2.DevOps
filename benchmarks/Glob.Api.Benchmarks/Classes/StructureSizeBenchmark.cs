@@ -6,7 +6,7 @@ namespace vm2.DevOps.Glob.Api.Benchmarks.Classes;
 /// <summary>
 /// Benchmarks performance across different test structure sizes.
 /// </summary>
-public class TestStructureSizeBenchmark : BenchmarkBase
+public class StructureSizeBenchmark : BenchmarkBase
 {
     const string FsLargeJsonModelFileName = "large-test-tree.json";
 
@@ -14,15 +14,15 @@ public class TestStructureSizeBenchmark : BenchmarkBase
     GlobEnumerator _globLarge = null!;
 
     [GlobalSetup]
-    public override void GlobalSetup()
+    public void GlobalSetup()
     {
         // create the standard glob enumerator:
-        base.GlobalSetup();
+        SetupFakeStandardFileSystem();
 
         // create the large glob enumerator:
         _fsLargeJsonModelPath = Path.Combine(
-                                        BmConfiguration.Options.FsJsonModelsDirectory,
-                                        FsLargeJsonModelFileName);
+                                            BmConfiguration.Options.FsJsonModelsDirectory,
+                                            FsLargeJsonModelFileName);
         _globLarge = SetupFakeFileSystem(_fsLargeJsonModelPath);
     }
 
@@ -32,8 +32,8 @@ public class TestStructureSizeBenchmark : BenchmarkBase
     [Params("**/*.cs", "**/*.md")]
     public string Pattern { get; set; } = "**/*.cs";
 
-    [Benchmark(Description = "Enumerate across structure sizes")]
-    public int EnumerateAcrossStructures()
+    [Benchmark(Description = "File System Size")]
+    public int StructureSizeTest()
         => EnumerateAll(
                 new GlobEnumeratorBuilder()
                         .WithGlob(Pattern)

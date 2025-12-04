@@ -8,6 +8,9 @@ namespace vm2.DevOps.Glob.Api.Benchmarks.Classes;
 /// </summary>
 public class CaseSensitivityBenchmark : BenchmarkBase
 {
+    [GlobalSetup]
+    public void GlobalSetup() => SetupFakeStandardFileSystem();
+
     [Params(
         MatchCasing.PlatformDefault,
         MatchCasing.CaseSensitive,
@@ -19,8 +22,8 @@ public class CaseSensitivityBenchmark : BenchmarkBase
         "**/*.md")]
     public string Pattern { get; set; } = "**/*.CS";
 
-    [Benchmark(Description = "Enumerate with case sensitivity")]
-    public int EnumerateWithCaseSensitivity()
+    [Benchmark(Description = "Case sensitivity")]
+    public int CaseSensitivityTest()
         => EnumerateAll(
                 new GlobEnumeratorBuilder()
                         .WithGlob(Pattern)

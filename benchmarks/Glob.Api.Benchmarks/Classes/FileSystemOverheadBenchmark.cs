@@ -7,24 +7,19 @@ namespace vm2.DevOps.Glob.Api.Benchmarks.Classes;
 /// Benchmarks to measure the overhead of real filesystem vs in-memory FakeFS.
 /// This provides baseline measurements to understand I/O impact.
 /// </summary>
-public class FileSystemOverheadBenchmark : BenchmarkBase
+public class FileSystemBenchmark : BenchmarkBase
 {
     GlobEnumerator _globRealFS = null!;
 
     [GlobalSetup]
-    public override void GlobalSetup()
+    public void GlobalSetup()
     {
-        base.GlobalSetup();
-        BmConfiguration.BindOptions();
+        SetupFakeStandardFileSystem();
         _globRealFS = SetupRealFileSystems(_fsStandardJsonModelPath);
     }
 
     [GlobalCleanup]
-    public virtual void GlobalCleanup()
-    {
-        if (_realFSRootsPath.StartsWith(Path.GetTempPath()))
-            Directory.Delete(_realFSRootsPath, true);
-    }
+    public virtual void GlobalCleanup() => CleanupRealFileSystems();
 
     [Params(UseFileSystem.Real, UseFileSystem.Fake)]
     public UseFileSystem UseFakeFS { get; set; }
@@ -32,8 +27,8 @@ public class FileSystemOverheadBenchmark : BenchmarkBase
     [Params("**/*.cs", "**/*.md", "**/test/**/*.cs")]
     public string Pattern { get; set; } = "**/*.cs";
 
-    [Benchmark(Description = "Enumerate with pattern")]
-    public int EnumeratePattern()
+    [Benchmark(Description = "Real File System Overhead")]
+    public int FileSystemTest()
         => EnumerateAll(
                 new GlobEnumeratorBuilder()
                         .WithGlob(Pattern)
