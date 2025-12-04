@@ -9,10 +9,25 @@ namespace vm2.DevOps.Glob.Api.Benchmarks.Classes;
 /// </summary>
 public class FileSystemOverheadBenchmark : BenchmarkBase
 {
-    [Params(false, true)]
-    public bool UseFakeFS { get; set; }
+    GlobEnumerator _globRealFS = null!;
 
-    protected override bool UseFakeFileSystem => UseFakeFS;
+    [GlobalSetup]
+    public override void GlobalSetup()
+    {
+        base.GlobalSetup();
+        BmConfiguration.BindOptions();
+        _globRealFS = SetupRealFileSystems(_fsStandardJsonModelPath);
+    }
+
+    [GlobalCleanup]
+    public virtual void GlobalCleanup()
+    {
+        if (_realFSRootsPath.StartsWith(Path.GetTempPath()))
+            Directory.Delete(_realFSRootsPath, true);
+    }
+
+    [Params(UseFileSystem.Real, UseFileSystem.Fake)]
+    public UseFileSystem UseFakeFS { get; set; }
 
     [Params("**/*.cs", "**/*.md", "**/test/**/*.cs")]
     public string Pattern { get; set; } = "**/*.cs";
@@ -20,8 +35,12 @@ public class FileSystemOverheadBenchmark : BenchmarkBase
     [Benchmark(Description = "Enumerate with pattern")]
     public int EnumeratePattern()
         => EnumerateAll(
-            CreateGlobEnumerator(
                 new GlobEnumeratorBuilder()
-                    .WithGlob(Pattern)
-                    .FromDirectory(TestRootPath)));
+                        .WithGlob(Pattern)
+                        .Configure(UseFakeFS switch {
+                            UseFileSystem.Fake => _glob,
+                            UseFileSystem.Real => _globRealFS,
+                            _ => throw new InvalidOperationException($"Unsupported UseFileSystem value: {UseFakeFS}")
+                        })
+            );
 }

@@ -18,9 +18,9 @@ public class DistinctResultsBenchmark : BenchmarkBase
     [Benchmark(Description = "Enumerate with distinct option")]
     public int EnumerateWithDistinct()
         => EnumerateAll(
-            CreateGlobEnumerator(
                 new GlobEnumeratorBuilder()
                     .WithGlob(Pattern)
                     .WithDistinct(UseDistinct)
-                    .FromDirectory(TestRootPath)));
+                    .Configure(_glob)
+            );
 }

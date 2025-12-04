@@ -17,9 +17,9 @@ public class EnumerationTypeBenchmark : BenchmarkBase
     [Benchmark(Description = "Enumerate by type")]
     public int EnumerateByType()
         => EnumerateAll(
-            CreateGlobEnumerator(
                 new GlobEnumeratorBuilder()
                     .WithGlob(Pattern)
                     .Select(EnumerationType)
-                    .FromDirectory(TestRootPath)));
+                    .Configure(_glob)
+            );
 }

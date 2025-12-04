@@ -8,10 +8,26 @@ namespace vm2.DevOps.Glob.Api.Benchmarks.Classes;
 /// </summary>
 public class TestStructureSizeBenchmark : BenchmarkBase
 {
-    [Params("standard-test-tree.json", "large-test-tree.json")]
-    public string TestStructure { get; set; } = "standard-test-tree.json";
+    const string FsLargeJsonModelFileName = "large-test-tree.json";
 
-    protected override string TestFSFileName => TestStructure;
+    protected string _fsLargeJsonModelPath = null!;
+    GlobEnumerator _globLarge = null!;
+
+    [GlobalSetup]
+    public override void GlobalSetup()
+    {
+        // create the standard glob enumerator:
+        base.GlobalSetup();
+
+        // create the large glob enumerator:
+        _fsLargeJsonModelPath = Path.Combine(
+                                        BmConfiguration.Options.FsJsonModelsDirectory,
+                                        FsLargeJsonModelFileName);
+        _globLarge = SetupFakeFileSystem(_fsLargeJsonModelPath);
+    }
+
+    [Params(FsStandardJsonModelFileName, FsLargeJsonModelFileName)]
+    public string TestStructure { get; set; } = FsStandardJsonModelFileName;
 
     [Params("**/*.cs", "**/*.md")]
     public string Pattern { get; set; } = "**/*.cs";
@@ -19,8 +35,13 @@ public class TestStructureSizeBenchmark : BenchmarkBase
     [Benchmark(Description = "Enumerate across structure sizes")]
     public int EnumerateAcrossStructures()
         => EnumerateAll(
-            CreateGlobEnumerator(
                 new GlobEnumeratorBuilder()
-                    .WithGlob(Pattern)
-                    .FromDirectory(TestRootPath)));
+                        .WithGlob(Pattern)
+                        .Configure(
+                            TestStructure switch {
+                                FsStandardJsonModelFileName => _glob,
+                                FsLargeJsonModelFileName => _globLarge,
+                                _ => throw new ArgumentOutOfRangeException()
+                            })
+            );
 }

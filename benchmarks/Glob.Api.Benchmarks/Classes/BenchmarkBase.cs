@@ -18,70 +18,76 @@ namespace vm2.DevOps.Glob.Api.Benchmarks.Classes;
 public abstract class BenchmarkBase
 {
     // these must be initialized in GlobalSetup(), so we use the old dirty hack - the null-forgiving operator:
-    protected IFileSystem _fileSystem = null!;
     protected GlobEnumerator _glob = null!;
-    protected string _testFSJsonPath = null!;
-
-    protected string TestFSJsonName = "standard-test-tree.json";
+    protected string _realFSRootsPath = "";
+    protected const string FsStandardJsonModelFileName = "standard-test-tree.json";
+    protected string _fsStandardJsonModelPath = null!;
 
     [GlobalSetup]
     public virtual void GlobalSetup()
     {
-        var bmo = BenchmarksConfiguration.Options;
+        BmConfiguration.BindOptions();
+        _fsStandardJsonModelPath = Path.Combine(
+                                            BmConfiguration.Options.FsJsonModelsDirectory,
+                                            FsStandardJsonModelFileName);
+        _glob = SetupFakeFileSystem(_fsStandardJsonModelPath);
+    }
 
-        // get the standard file structure JSON:
-        _testFSJsonPath = Path.Combine(bmo.TestFSFilesDirectory, TestFSJsonName);
+    protected virtual string FSJsonModelExist(string fsJsonModelPath)
+        => File.Exists(fsJsonModelPath)
+                    ? fsJsonModelPath
+                    : throw new FileNotFoundException($"Did not find the test file system structure file {fsJsonModelPath} (CWD: {Directory.GetCurrentDirectory()}).", fsJsonModelPath);
 
-        if (!File.Exists(_testFSJsonPath))
-            throw new FileNotFoundException("Test file system structure file not found", _testFSJsonPath);
+    protected virtual GlobEnumerator SetupFakeFileSystem(string fsJsonModelPath)
+        => new(
+            new FakeFS(
+                    FSJsonModelExist(fsJsonModelPath),
+                    DataType.Json));
 
-        // figure out where to create a real file system root:
-        if (string.IsNullOrWhiteSpace(bmo.TestsRootPath))
+    protected virtual GlobEnumerator SetupRealFileSystems(string fsJsonModelPath)
+    {
+        FSJsonModelExist(fsJsonModelPath);
+
+        // all real FS will be tested under the root specified in the configuration or in a temp directory.
+        // Each glob enumerator will have its own subdirectory with a name - the name of the JSON model file (without the extension).
+
+        _realFSRootsPath = TestFileStructure.ExpandEnvironmentVariables(BmConfiguration.Options.TestsRootPath);
+        string realDirectoryPath;
+
+        // figure out where is the root of all the file systems in the current environment:
+        if (string.IsNullOrWhiteSpace(_realFSRootsPath))
         {
-            // create a temp directory:
+            // not specified - create the file system root in a temp directory:
             var info = Directory.CreateTempSubdirectory($"GlobBm_");
-            TestFileStructure.CreateTestFileStructure(_testFSJsonPath, info.FullName);
-            bmo.TestsRootPath = info.FullName;
+            _realFSRootsPath = info.FullName;
+        }
+
+        // the directory for this specific file system:
+        realDirectoryPath = Path.Combine(_realFSRootsPath, Path.GetFileNameWithoutExtension(fsJsonModelPath));
+
+        // use the specified directory
+        if (Directory.Exists(_realFSRootsPath))
+        {
+            // it exists - verify it first:
+            var errors = string.Join("\n  ", TestFileStructure.VerifyTestFileStructure(fsJsonModelPath, realDirectoryPath));
+
+            if (errors.Length > 0)
+                throw new InvalidOperationException($"Test file structure verification failed:\n{errors}");
         }
         else
         {
-            // use the specified directory, but verify it first:
-            bmo.TestsRootPath = Path.GetFullPath(TestFileStructure.ExpandEnvironmentVariables(bmo.TestsRootPath));
-            if (Directory.Exists(bmo.TestsRootPath))
-            {
-                var messages = string.Join("\n    ", TestFileStructure.VerifyTestFileStructure(_testFSJsonPath, bmo.TestsRootPath));
-                if (!string.IsNullOrWhiteSpace(messages))
-                    throw new InvalidOperationException($"Test file structure verification failed:\n    {messages}");
-            }
-            else
-            {
-                // create the directory if it doesn't exist
-                Directory.CreateDirectory(bmo.TestsRootPath);
-                TestFileStructure.CreateTestFileStructure(_testFSJsonPath, bmo.TestsRootPath);
-            }
+            // it does not exist - create it:
+            Directory.CreateDirectory(realDirectoryPath);
+            TestFileStructure.CreateTestFileStructure(fsJsonModelPath, realDirectoryPath);
         }
-    }
 
-    protected virtual void SetupFileSystems(IServiceCollection services)
-    {
+        return new GlobEnumerator(new FileSystem()) { FromDirectory = realDirectoryPath };
     }
-
-    [GlobalCleanup]
-    public virtual void GlobalCleanup()
-    {
-    }
-
-    /// <summary>
-    /// Helper method to create and configure a GlobEnumerator instance.
-    /// </summary>
-    protected GlobEnumerator CreateGlobEnumerator(
-        GlobEnumeratorBuilder builder)
-        => builder.Configure(new GlobEnumerator());
 
     /// <summary>
     /// Executes the glob enumeration and consumes all results.
     /// </summary>
-    protected int EnumerateAll(GlobEnumerator enumerator)
+    protected static int EnumerateAll(GlobEnumerator enumerator)
     {
         var count = 0;
 

@@ -8,18 +8,6 @@ namespace vm2.DevOps.Glob.Api.Benchmarks.Classes;
 /// </summary>
 public class CaseSensitivityBenchmark : BenchmarkBase
 {
-    [GlobalSetup]
-    public override void GlobalSetup()
-    {
-        base.GlobalSetup();
-        _fileSystem = new FakeFS(
-                        Path.Combine(
-                            BenchmarksConfiguration.Options.TestFSFilesDirectory,
-                            TestFSJsonName),
-                        DataType.Json);
-        _glob = new GlobEnumerator(_fileSystem);
-    }
-
     [Params(
         MatchCasing.PlatformDefault,
         MatchCasing.CaseSensitive,
@@ -37,8 +25,6 @@ public class CaseSensitivityBenchmark : BenchmarkBase
                 new GlobEnumeratorBuilder()
                         .WithGlob(Pattern)
                         .WithCaseSensitivity(CaseSensitivity)
-                        .FromDirectory("/")
-                        .Build()
-                        .Configure(_glob))
-                        ;
+                        .Configure(_glob)
+            );
 }

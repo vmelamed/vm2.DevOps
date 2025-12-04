@@ -17,9 +17,9 @@ public class TraversalStrategyBenchmark : BenchmarkBase
     [Benchmark(Description = "Enumerate with traversal strategy")]
     public int EnumerateWithStrategy()
         => EnumerateAll(
-            CreateGlobEnumerator(
                 new GlobEnumeratorBuilder()
                     .WithGlob(Pattern)
                     .TraverseDepthFirst(IsDepthFirst ? TraverseOrder.DepthFirst : TraverseOrder.BreadthFirst)
-                    .FromDirectory(TestRootPath)));
+                    .Configure(_glob)
+            );
 }

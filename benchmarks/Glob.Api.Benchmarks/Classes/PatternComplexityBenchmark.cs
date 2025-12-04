@@ -20,11 +20,11 @@ public class PatternComplexityBenchmark : BenchmarkBase
     )]
     public string Pattern { get; set; } = "*.md";
 
-    [Benchmark(Description = "Enumerate with pattern")]
+    [Benchmark(Description = "Enumerate with pattern with globstars")]
     public int EnumerateWithPattern()
         => EnumerateAll(
-            CreateGlobEnumerator(
                 new GlobEnumeratorBuilder()
                     .WithGlob(Pattern)
-                    .FromDirectory(TestRootPath)));
+                    .Configure(_glob)
+            );
 }

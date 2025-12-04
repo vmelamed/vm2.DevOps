@@ -9,26 +9,26 @@ namespace vm2.TestUtilities;
 /// </summary>
 public static class TestFileStructure
 {
-    static void ValidateFiles(string jsonSpecFile, string testRootPath)
+    static void ValidateFiles(string fsJsonModelFileName, string testRootPath)
     {
-        if (string.IsNullOrWhiteSpace(jsonSpecFile))
-            throw new ArgumentException("The JSON specification file cannot be null, empty, or consist only of whitespaces.", nameof(jsonSpecFile));
-        if (!File.Exists(jsonSpecFile))
-            throw new FileNotFoundException("The JSON specification file was not found.", jsonSpecFile);
+        if (string.IsNullOrWhiteSpace(fsJsonModelFileName))
+            throw new ArgumentException("The JSON model file cannot be null, empty, or consist only of whitespaces.", nameof(fsJsonModelFileName));
+        if (!File.Exists(fsJsonModelFileName))
+            throw new FileNotFoundException("The JSON model file was not found.", fsJsonModelFileName);
         if (string.IsNullOrWhiteSpace(testRootPath))
             throw new ArgumentException("The test root path cannot be null, empty, or consist only of whitespaces.", nameof(testRootPath));
     }
 
     /// <summary>
-    /// Creates a  test file structures based on JSON specifications.
+    /// Creates a  test file structures based on a JSON model.
     /// </summary>
-    /// <param name="jsonSpecFile">The JSON specification file.</param>
+    /// <param name="fsJsonModelFileName">The JSON model file.</param>
     /// <param name="testRootPath">The root path for the test files.</param>
-    public static void CreateTestFileStructure(string jsonSpecFile, string testRootPath)
+    public static void CreateTestFileStructure(string fsJsonModelFileName, string testRootPath)
     {
-        ValidateFiles(jsonSpecFile, testRootPath);
+        ValidateFiles(fsJsonModelFileName, testRootPath);
 
-        var fs = new FakeFS(jsonSpecFile, DataType.Json);
+        var fs = new FakeFS(fsJsonModelFileName, DataType.Json);
         var folderStack = new Stack<Folder>([fs.RootFolder]);
         var rootLength = fs.RootFolder.Name.Length;
 
@@ -51,17 +51,17 @@ public static class TestFileStructure
     }
 
     /// <summary>
-    /// Verifies that the file structure at <paramref name="testRootPath"/> matches the JSON file structures specified in
-    /// <paramref name="jsonSpecFile"/>.
+    /// Verifies that the file structure at <paramref name="testRootPath"/> matches the JSON file structures specified in the
+    /// model <paramref name="fsJsonModelFileName"/>.
     /// </summary>
-    /// <param name="jsonSpecFile">The JSON specification file.</param>
+    /// <param name="fsJsonModelFileName">The JSON model file.</param>
     /// <param name="testRootPath">The root path for the test files.</param>
     /// <returns>A list of error messages, if any.</returns>
-    public static IEnumerable<string> VerifyTestFileStructure(string jsonSpecFile, string testRootPath)
+    public static IEnumerable<string> VerifyTestFileStructure(string fsJsonModelFileName, string testRootPath)
     {
-        ValidateFiles(jsonSpecFile, testRootPath);
+        ValidateFiles(fsJsonModelFileName, testRootPath);
 
-        var fs = new FakeFS(jsonSpecFile, DataType.Json);
+        var fs = new FakeFS(fsJsonModelFileName, DataType.Json);
         var folderStack = new Stack<Folder>([fs.RootFolder]);
         var rootLength = fs.RootFolder.Name.Length;
 
@@ -90,12 +90,15 @@ public static class TestFileStructure
     /// <returns>The expanded path string.</returns>
     public static string ExpandEnvironmentVariables(string path)
     {
+        if (string.IsNullOrWhiteSpace(path))
+            return path;
+
         if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS() || OperatingSystem.IsFreeBSD())
         {
-            path = path.Replace(UnixShellSpecificHome, UnixHomeEnvironmentVar);   // Support Unix shell home directory syntax: shell ~ -> Unix shell env.var. $HOME -> .NET env.var. %HOME%
-            UnixEnvVarRegex().Replace(path, UnixEnvVarReplacement);                  // Support Unix shell env.var. syntax $ENV_VAR -> .NET env.var. %ENV_VAR%
+            path = path.Replace(UnixShellSpecificHome, UnixHomeEnvironmentVar); // Support Unix shell home directory syntax: shell ~ -> Unix shell env.var. $HOME -> .NET env.var. %HOME%
+            UnixEnvVarRegex().Replace(path, UnixEnvVarReplacement);             // Support Unix shell env.var. syntax $ENV_VAR -> .NET env.var. %ENV_VAR%
         }
 
-        return Environment.ExpandEnvironmentVariables(path);                                             // Ensure environment variables are supported
+        return Environment.ExpandEnvironmentVariables(path);                    // Ensure environment variables are supported
     }
 }

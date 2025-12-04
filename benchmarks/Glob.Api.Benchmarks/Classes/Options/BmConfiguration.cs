@@ -1,10 +1,10 @@
 ﻿namespace vm2.DevOps.Glob.Api.Benchmarks.Classes.Options;
 
-public static class BenchmarksConfiguration
+public static class BmConfiguration
 {
-    public static BenchmarkOptions Options { get; private set; } = new();
+    public static BmOptions Options { get; private set; } = new();
 
-    public static void Bind()
+    public static void BindOptions()
     {
         var builder = new ConfigurationBuilder();
 
@@ -20,7 +20,7 @@ public static class BenchmarksConfiguration
             .AddEnvironmentVariables()
             .AddCommandLine(Environment.GetCommandLineArgs())
             .Build()
-            .GetSection(nameof(BenchmarkOptions))
+            .GetSection(nameof(BmOptions))
             .Bind(Options)
             ;
     }
