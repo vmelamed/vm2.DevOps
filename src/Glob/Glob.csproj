@@ -3,30 +3,35 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <RootNamespace>vm2.DevOps.Glob</RootNamespace>
+  </PropertyGroup>
 
-    <!-- .NET Tool Configuration -->
+  <!-- PropertyGroup>
+    <!- - .NET Tool Configuration - ->
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>glob</ToolCommandName>
     <PackageOutputPath>./nupkg</PackageOutputPath>
-    <!-- NuGet Package Metadata -->
+
+    <!- - NuGet Package Metadata - ->
     <PackageId>vm2.Glob</PackageId>
-    <Title>Cross-platform Glob Pattern Matching Tool</Title>
+    <Title>Cross-platform Glob Pattern Matching CLI Tool</Title>
     <Description>
-        A fast, cross-platform glob pattern matching CLI tool for finding files and directories. Implements POSIX.2 glob specification.
+        A fast, intuitive CLI tool for finding files and directories using glob patterns. 
+        Install globally with 'dotnet tool install -g vm2.DevOps.Glob' and use anywhere.
+        Perfect for shell scripts, CI/CD pipelines, and developer workflows.
     </Description>
     <PackageTags>glob;pattern;matching;cli;tool;cross-platform;file-search;directory-search</PackageTags>
     <PackageProjectUrl>https://github.com/vmelamed/vm2.DevOps</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-  </PropertyGroup>
+  </PropertyGroup -->
 
   <ItemGroup>
+    <Content Include="appsettings.valme1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="appsettings.Development.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="appsettings.valme.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

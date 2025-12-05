@@ -422,3 +422,10 @@ report.txt
 *[Ss][Cc][Rr][Aa][Tt][Cc][Hh]*/
 _ignore
 *[Ii][Nn][Ss][Tt][Rr][Uu][Cc][Tt][Ii][Oo][Nn][Ss]*.[Mm][Dd]
+
+# Ignore user-specific config e.g. "appsettings.val melamed.json"
+**/appsettings.*.json
+# But allow all environment specific configs
+!**/appsettings.Development.json
+!**/appsettings.Staging.json
+!**/appsettings.Production.json

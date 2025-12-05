@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-      <RootNamespace>vm2.DevOps.Glob.Api</RootNamespace>
+    <RootNamespace>vm2.DevOps.Glob.Api</RootNamespace>
 
     <!-- NuGet Package Metadata -->
     <PackageId>vm2.Glob.Api</PackageId>

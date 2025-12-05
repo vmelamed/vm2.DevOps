@@ -12,7 +12,7 @@ on:
       dotnet-version:
         description: "Version of .NET SDK to use"
         type: string
-        default: "9.0.x"
+        default: "10.0.x"
         required: true
 
       semver-build-prefix:

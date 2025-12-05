@@ -13,7 +13,7 @@ on:
         description: "Version of .NET SDK to use"
         type: string
         required: true
-        default: "9.0.x"
+        default: "10.0.x"
 
       benchmark-project:
         description: "Path to the benchmark project"
