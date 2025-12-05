@@ -113,7 +113,7 @@ fi
     echo "| target-os          | $matrix_os          |"
     echo "| dotnet-version     | $dotnet_version     |"
     echo "| configuration      | $configuration      |"
-    echo "| define-symbols    | $defined_symbols    |"
+    echo "| define-symbols     | $defined_symbols    |"
     echo "| build-project      | $build_project      |"
     echo "| test-project       | $test_project       |"
     echo "| min-coverage-pct   | $min_coverage_pct   |"
