@@ -3,6 +3,20 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <RootNamespace>vm2.DevOps.Glob</RootNamespace>
+
+    <!-- .NET Tool Configuration -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>glob</ToolCommandName>
+    <PackageOutputPath>./nupkg</PackageOutputPath>
+    <!-- NuGet Package Metadata -->
+    <PackageId>vm2.Glob</PackageId>
+    <Title>Cross-platform Glob Pattern Matching Tool</Title>
+    <Description>
+        A fast, cross-platform glob pattern matching CLI tool for finding files and directories. Implements POSIX.2 glob specification.
+    </Description>
+    <PackageTags>glob;pattern;matching;cli;tool;cross-platform;file-search;directory-search</PackageTags>
+    <PackageProjectUrl>https://github.com/vmelamed/vm2.DevOps</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>

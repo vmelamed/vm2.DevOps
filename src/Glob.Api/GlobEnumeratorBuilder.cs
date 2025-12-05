@@ -292,6 +292,24 @@ public class GlobEnumeratorBuilder
     }
 
     /// <summary>
+    /// Configures whether to include special directory entries "." and "..".
+    /// </summary>
+    public GlobEnumeratorBuilder IncludeSpecialDirectories(bool include = true)
+    {
+        _returnSpecialDirectories = include;
+        return this;
+    }
+
+    /// <summary>
+    /// Configures whether to skip files/directories when access is denied.
+    /// </summary>
+    public GlobEnumeratorBuilder SkipInaccessible(bool skip = true)
+    {
+        _ignoreInaccessible = skip;
+        return this;
+    }
+
+    /// <summary>
     /// Indicates whether to skip files or directories with the specified attributes.
     /// Default: <c><see cref="FileAttributes.Hidden"/> | <see cref="FileAttributes.System"/></c>
     /// </summary>

@@ -22,6 +22,7 @@
     <PackageVersion Include="Microsoft.Extensions.FileSystemGlobbing" Version="10.0.0" />
     <PackageVersion Include="Markdig" Version="0.43.0" />
     <PackageVersion Include="MinVer" Version="6.0.0" />
+
     <!-- The test stack: -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
     <PackageVersion Include="Microsoft.Testing.Extensions.TrxReport" Version="2.0.2" />
@@ -31,11 +32,9 @@
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="xunit.v3.mtp-v2" Version="3.2.1" />
     <PackageVersion Include="xunit.v3.extensibility.core" Version="3.2.1" />
-    <!--    <PackageVersion Include="Meziantou.Extensions.Logging.Xunit.v3" Version="1.1.18" />-->
-    <!--<PackageVersion Include="coverlet.msbuild" Version="6.0.4" /> Do not use with MTP -->
-    <!-- for running with Visual Studio profiler:
-    <PackageVersion Include="Microsoft.VisualStudio.DiagnosticsHub.BenchmarkDotNetDiagnosers" Version="18.0.36421.1" />
-    -->
+
+    <!-- Benchmarking packages: -->
+    <!-- for running with Visual Studio profiler:<PackageVersion Include="Microsoft.VisualStudio.DiagnosticsHub.BenchmarkDotNetDiagnosers" Version="18.0.36421.1" />-->
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageVersion Include="BenchmarkDotNet.Annotations" Version="0.15.8" />
   </ItemGroup>

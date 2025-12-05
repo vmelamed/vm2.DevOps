@@ -31,10 +31,8 @@
     <IsPackable>true</IsPackable>
     <Company>vm</Company>
     <Product>vm2</Product>
-    <ProductName>vm2 packages</ProductName>
+    <ProductName>vm2 packages and tools</ProductName>
     <Authors>Val Melamed</Authors>
-    <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <RepositoryUrl>https://github.com/vmelamed/vm2.Ulid</RepositoryUrl>
     <Copyright>Copyright ©2025 vm</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
@@ -43,6 +41,8 @@
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <EnablePackageValidation>true</EnablePackageValidation>
     <MinVerTagPrefix>v</MinVerTagPrefix>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <RepositoryUrl>https://github.com/vmelamed/vm2.DevOps</RepositoryUrl>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(OS)' == 'WINDOWS_NT'">
@@ -86,11 +86,10 @@
     <OutputType>Exe</OutputType>
     <IsTestProject>true</IsTestProject>
     <IsPackable>false</IsPackable>
-    <RunSettingsFilePath>$(MSBuildProjectDirectory)\..\..\test.runsettings</RunSettingsFilePath>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <RunSettingsFilePath>$(MSBuildProjectDirectory)\..\..\test.runsettings</RunSettingsFilePath><!-- from the test project, usually ./test.Xyz.Tests -->
     <!--<TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport> <!- - To be able to run MTP projects in VSTest and 'dotnet test' experience, available for .NET 9 SDK and earlier for backward compatibility - ->-->
-    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
-    <!-- To opt-in xUnit in the Microsoft Testing Platform and use native command line 'dotnet run' experience -->
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner><!-- To opt-in xUnit in the Microsoft Testing Platform and use native command line 'dotnet run' experience -->
     <!-- For more information on Microsoft Testing Platform support in xUnit.net, please visit: https://xunit.net/docs/getting-started/v3/microsoft-testing-platform -->
     <EnableCodeCoverage>true</EnableCodeCoverage>
     <!-- Enable code coverage collection with Microsoft.Testing.Extensions.CodeCoverage -->
