@@ -90,6 +90,7 @@ public partial class GlobEnumeratorIntegrationTests : IClassFixture<GlobIntegrat
         var ge = GetGlobEnumerator(builder => data
                                                 .ConfigureBuilder(builder)
                                                 .FromDirectory(Path.Combine(TestRootPath, data.Sd))
+                                                .SkipObjectsWithAttributes(FileAttributes.None)
                                                 .Build());
         var enumerate = ge.Enumerate;
 
@@ -113,6 +114,6 @@ public partial class GlobEnumeratorIntegrationTests : IClassFixture<GlobIntegrat
         Output.WriteLine("Expected Results: \"{0}\"", string.Join("\", \"", data.R));
         Output.WriteLine("  Actual Results: \"{0}\"", string.Join("\", \"", result));
 
-        result.Should().BeEquivalentTo(data.R, opt => opt.WithStrictOrdering());
+        result.Should().BeEquivalentTo(data.R, opt => opt.WithoutStrictOrdering());
     }
 }

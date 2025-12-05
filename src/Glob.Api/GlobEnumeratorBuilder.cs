@@ -36,7 +36,7 @@ public class GlobEnumeratorBuilder
     ///     <item>[]...] - a closing bracket as a character from the set, can be specified if it is the first character after
     ///                 the opening bracket or after the negation mark.</item>
     ///     <item>[0-9] - ranges of characters</item>
-    ///     <item>[[:alpha:]] - character classes, like alpha, digit, blank, cntrl, etc. </item>
+    ///     <item>[[:alpha:]] - character classes, like alpha, digit, blank, etc. </item>
     ///     </list>
     /// </item>
     /// </list>
