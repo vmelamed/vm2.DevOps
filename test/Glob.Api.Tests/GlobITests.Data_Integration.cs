@@ -8,11 +8,18 @@ public partial class GlobEnumeratorIntegrationTests
     // TheoryData definitions
     public static TheoryData<IntegrationTestData> RecursiveEnumerationTests =>
     [
+#if UNIX
         new IntegrationTestData(TestFileLine("Find all .txt files recursively"),
                                     "**/*.txt",   "",       Objects.Files,
                                         MatchCasing.PlatformDefault, false, false, false, false, false,
                                         "case-test/file.txt", "hidden/visible.txt", "recursive/root.txt", "recursive/level1/one.txt", "spec-chars/parentheses/file(1).txt", "spec-chars/spaces in names/file with spaces.txt", "spec-chars/symbols/file@home.txt", "spec-chars/unicode/naïve.txt", "spec-chars/unicode/файл.txt", "recursive/level1/level2/two.txt", "recursive/level1/branch1/subbranch1/leaf1.txt", "recursive/level1/branch1/subbranch2/leaf2.txt", "recursive/level1/branch2/subbranch3/leaf3.txt", "recursive/level1/level2/level3/three.txt"),
-
+#endif
+#if WINDOWS
+        new IntegrationTestData(TestFileLine("Find all .txt files recursively"),
+                                    "**/*.txt",   "",       Objects.Files,
+                                        MatchCasing.PlatformDefault, false, false, false, false, false,
+                                        "case-test/file.txt", "case-test/_FILE.TXT", "hidden/visible.txt", "recursive/root.txt", "recursive/level1/one.txt", "spec-chars/parentheses/file(1).txt", "spec-chars/spaces in names/file with spaces.txt", "spec-chars/symbols/file@home.txt", "spec-chars/unicode/naïve.txt", "spec-chars/unicode/файл.txt", "recursive/level1/level2/two.txt", "recursive/level1/branch1/subbranch1/leaf1.txt", "recursive/level1/branch1/subbranch2/leaf2.txt", "recursive/level1/branch2/subbranch3/leaf3.txt", "recursive/level1/level2/level3/three.txt"),
+#endif
         new IntegrationTestData(TestFileLine("Find all directories matching 'branch*'"),
                                     "**/branch*", "",       Objects.Directories,
                                         MatchCasing.PlatformDefault, false, false, false, false, false,

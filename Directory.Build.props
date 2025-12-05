@@ -45,6 +45,13 @@
     <MinVerTagPrefix>v</MinVerTagPrefix>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(OS)' == 'WINDOWS_NT'">
+    <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(OS)' != 'WINDOWS_NT'">
+    <DefineConstants>$(DefineConstants);UNIX</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <Packagereference Include="System.Configuration.ConfigurationManager" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />

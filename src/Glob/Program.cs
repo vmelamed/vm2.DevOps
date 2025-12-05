@@ -124,6 +124,19 @@ Option<bool> distinct = new(name: "--distinct", "-x")
     DefaultValueFactory = _ => false,
 };
 
+Option<bool> showHidden = new(name: "--show-hidden", "-a")
+{
+    HelpName = "show-hidden",
+    Description = """
+    Shows all objects, including system and hidden
+    files and/or directories in the search
+    results, which by default, are excluded.
+    """,
+    Required = false,
+    Arity = ArgumentArity.ExactlyOne,
+    DefaultValueFactory = _ => false,
+};
+
 RootCommand rootCommand = new RootCommand("""
 A cross-platform glob pattern matching tool for finding files and directories.
 
@@ -170,6 +183,7 @@ https://www.man7.org/linux/man-pages/man7/glob.7.html
     searchFor,
     caseSensitive,
     distinct,
+    showHidden,
 };
 
 var parseResult = rootCommand.Parse(args);
@@ -216,7 +230,14 @@ builder
                     .Select(
                         parseResult.GetRequiredValue(searchFor))
                     .WithDistinct(
-                        parseResult.GetRequiredValue(distinct)));
+                        parseResult.GetRequiredValue(distinct))
+                    .SkipObjectsWithAttributes(
+                        parseResult.GetRequiredValue(showHidden)
+                            ? FileAttributes.None : FileAttributes.Hidden|FileAttributes.System)
+                    .Build()
+    )
+    ;
+
 var host = builder.Build();
 
 // Do
