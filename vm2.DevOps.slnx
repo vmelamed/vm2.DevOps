@@ -1,12 +1,13 @@
 <Solution>
   <Folder Name="/.github/" />
-  <Folder Name="/.github/workflows/">
-    <File Path=".github/workflows/benchmarks.yaml" />
-    <File Path=".github/workflows/build.yaml" />
-    <File Path=".github/workflows/ci.yaml" />
-    <File Path=".github/workflows/Prerelease.yaml" />
-    <File Path=".github/workflows/Release.yaml" />
-    <File Path=".github/workflows/test.yaml" />
+  <Folder Name="/.github/workflows/" />
+  <Folder Name="/.github/workflows/shared/">
+    <File Path=".github/workflows/shared/benchmarks.yaml" />
+    <File Path=".github/workflows/shared/build.yaml" />
+    <File Path=".github/workflows/shared/ci.yaml" />
+    <File Path=".github/workflows/shared/Prerelease.yaml" />
+    <File Path=".github/workflows/shared/Release.yaml" />
+    <File Path=".github/workflows/shared/test.yaml" />
   </Folder>
   <Folder Name="/benchmarks/">
     <Project Path="benchmarks/Glob.Api.Benchmarks/Glob.Api.Benchmarks.csproj" Id="59282f2e-b8ee-45a7-9814-b69563c74e1d" />
