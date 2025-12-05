@@ -21,7 +21,7 @@ public sealed class GlobIntegrationTestsFixture : GlobUnitTestsFixture
             .Configuration
             .AddJsonFile("appsettings.json", optional: true)
             .AddJsonFile("appsettings.Development.json", optional: true)
-            .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("USERPROFILE")}.json", optional: true)
+            .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("USERNAME")}.json", optional: true)
             .AddEnvironmentVariables()
             ;
         builder
