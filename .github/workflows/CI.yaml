@@ -43,10 +43,10 @@ on:
         type: boolean
         default: false
 
-      verbose:
-        description: Enable verbose logging by the scripts for debugging purposes
-        type: boolean
-        default: false
+      # verbose:
+      #   description: Enable verbose logging by the scripts for debugging purposes
+      #   type: boolean
+      #   default: false
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -59,7 +59,7 @@ env:
 jobs:
   call_ci:
     name: Call the CI Workflow
-    uses: ./.github/workflows/_ci.yaml
+    uses: ./_ci.yaml
     with:
       test-project:         ./test/Glob.Api.Tests/Glob.Api.Tests.csproj
       benchmark-project:    ./benchmarks/Glob.Api.Benchmarks/Glob.Api.Benchmarks.csproj
@@ -71,7 +71,7 @@ jobs:
       run-benchmarks:       ${{ inputs.run-benchmarks }}
       max-regression-pct:   ${{ vars.MAX_REGRESSION_PCT || 10 }}
       force-new-baseline:   ${{ inputs.force-new-baseline }}
-      verbose:              ${{ inputs.verbose }}
+      # verbose:              ${{ inputs.verbose }}
 #   runs-on: ${{ inputs.os }}
 #   steps:
 #     - name: Print all inputs
@@ -83,7 +83,7 @@ jobs:
 #           echo "inputs.preprocessor-symbols: ${{ inputs.preprocessor-symbols }}"
 #           echo "inputs.run-benchmarks:       ${{ inputs.run-benchmarks }}"
 #           echo "inputs.force-new-baseline:   ${{ inputs.force-new-baseline }}"
-#           echo "inputs.verbose:              ${{ inputs.verbose }}"
+##          echo "inputs.verbose:              ${{ inputs.verbose }}"
 #           echo "vars.MIN_COVERAGE_PCT:       ${{ vars.MIN_COVERAGE_PCT || 75 }}"
 #           echo "vars.MAX_REGRESSION_PCT:     ${{ vars.MAX_REGRESSION_PCT || 10 }}"
 #           echo "test-project:                ./test/Glob.Api.Tests/Glob.Api.Tests.csproj"

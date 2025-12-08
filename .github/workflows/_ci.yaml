@@ -53,10 +53,10 @@ on:
         type: boolean
         default: false
 
-      verbose:
-        description: Enable verbose logging by the scripts for debugging purposes
-        type: boolean
-        default: false
+      # verbose:
+      #   description: Enable verbose logging by the scripts for debugging purposes
+      #   type: boolean
+      #   default: false
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -86,7 +86,7 @@ jobs:
     #  benchmark-project:    ${{ steps.setup-vars.outputs.benchmark-project }}
     #  max-regression-pct:   ${{ steps.setup-vars.outputs.max-regression-pct }}
     #  force-new-baseline:   ${{ steps.setup-vars.outputs.force-new-baseline }}
-    #  verbose:              ${{ steps.setup-vars.outputs.verbose }}
+    ## verbose:              ${{ steps.setup-vars.outputs.verbose }}
     #steps:
     #  - name: Checkout
     #    uses: actions/checkout@v6
@@ -123,7 +123,7 @@ jobs:
             echo "inputs.force-new-baseline:   ${{ inputs.force-new-baseline }}"
             echo "inputs.test-project:         ${{ inputs.test-project }}"
             echo "inputs.benchmark-project:    ${{ inputs.benchmark-project }}"
-            echo "inputs.verbose:              ${{ inputs.verbose }}"
+            # echo "inputs.verbose:              ${{ inputs.verbose }}"
           } >> $GITHUB_STEP_SUMMARY
 
       - name: Write to output
@@ -139,7 +139,7 @@ jobs:
               echo "benchmark-project=$benchmark_project"
               echo "force-new-baseline=$force_new_baseline"
               echo "max-regression-pct=$max_regression_pct"
-              echo "verbose=$verbose"
+              # echo "verbose=$verbose"
           } >> "$GITHUB_OUTPUT"
 
   build_job:
@@ -176,7 +176,7 @@ jobs:
     #  configuration:        ${{ needs.setup.outputs.configuration }}
     #  preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
     #  min-coverage-pct:     ${{ fromJSON(needs.setup.outputs.min-coverage-pct) }}
-    #  verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
+    ## verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
     runs-on: ${{ inputs.os }}
     steps:
       - name: Print all inputs
@@ -188,7 +188,7 @@ jobs:
             echo "inputs.configuration:        ${{ needs.setup.outputs.configuration }}
             echo "inputs.preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
             echo "inputs.min-coverage-pct:     ${{ fromJSON(needs.setup.outputs.min-coverage-pct) }}"
-            echo "inputs.verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}"
+            # echo "inputs.verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}"
           } >> $GITHUB_STEP_SUMMARY
 
   benchmarks_job:
@@ -210,7 +210,7 @@ jobs:
     #  benchmark-project:    ${{ needs.setup.outputs.benchmark-project }}
     #  max-regression-pct:   ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}
     #  force-new-baseline:   ${{ fromJSON(needs.setup.outputs.force-new-baseline) }}
-    #  verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
+    ## verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
     runs-on: ${{ inputs.os }}
     steps:
       - name: Print all inputs
@@ -224,5 +224,5 @@ jobs:
             echo "inputs.max-regression-pct:   ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}"
             echo "inputs.run-benchmarks:       ${{ fromJSON(needs.setup.outputs.run-benchmarks) }}"
             echo "inputs.force-new-baseline:   ${{ fromJSON(needs.setup.outputs.force-new-baseline) }}"
-            echo "inputs.verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}"
+            # echo "inputs.verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}"
           } >> $GITHUB_STEP_SUMMARY
