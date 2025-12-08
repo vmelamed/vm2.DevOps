@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>vm2.DevOps.Glob.Api.FakeFileSystem.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Glob.Api.FakeFileSystem\Glob.Api.FakeFileSystem.csproj" />
+    <ProjectReference Include="..\Test.Utilities\Test.Utilities.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="FSFiles\FS*.*.graph.txt" CopyToOutputDirectory="Never" />
+    <Content Include="FSFiles\FS*.*.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="FSFiles\FS*.*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

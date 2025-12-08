@@ -1,0 +1,132 @@
+﻿{
+  "name": "/",
+  "folders": [
+    {
+      "name": "numeric",
+      "folders": [],
+      "files": [
+        "file0.txt", "file1.txt", "file5.txt", "file9.txt",
+        "file10.txt", "file25.txt", "file99.txt",
+        "log-001.txt", "log-010.txt", "log-100.txt"
+      ]
+    },
+    {
+      "name": "timestamps",
+      "folders": [],
+      "files": [
+        "backup-2024-12-25.tar.gz", "backup-2025-01-01.tar.gz",
+        "log-2025-01-15T14-30-00.txt", "log-2025-01-15T14-30-15.txt",
+        "snapshot-20250115-143000.zip"
+      ]
+    },
+    {
+      "name": "years",
+      "folders": [],
+      "files": [
+        "log-2020-01.txt", "log-2021-05.txt", "log-2024-12.txt", "log-2025-01.txt"
+      ]
+    },
+    {
+      "name": "case-variants",
+      "folders": [],
+      "files": [
+        "file.txt", "FILE.TXT", "File.Txt",
+        "readme.md", "README.MD", "ReadMe.Md",
+        "café.txt", "cafÉ.txt", "CAFÉ.TXT",
+        "файл.txt", "ФАЙЛ.TXT"
+      ]
+    },
+    {
+      "name": "deep",
+      "folders": [
+        {
+          "name": "l1",
+          "folders": [
+            {
+              "name": "l2",
+              "folders": [
+                {
+                  "name": "l3",
+                  "folders": [
+                    {
+                      "name": "l4",
+                      "folders": [
+                        {
+                          "name": "l5",
+                          "folders": [
+                            {
+                              "name": "l6",
+                              "folders": [
+                                {
+                                  "name": "l7",
+                                  "folders": [
+                                    {
+                                      "name": "l8",
+                                      "folders": [
+                                        {
+                                          "name": "l9",
+                                          "folders": [
+                                            {
+                                              "name": "l10",
+                                              "folders": [],
+                                              "files": [ "deep-file.txt" ]
+                                            }
+                                          ],
+                                          "files": [ "file9.txt" ]
+                                        }
+                                      ],
+                                      "files": [ "file8.txt" ]
+                                    }
+                                  ],
+                                  "files": [ "file7.txt" ]
+                                }
+                              ],
+                              "files": [ "file6.txt" ]
+                            }
+                          ],
+                          "files": [ "file5.txt" ]
+                        }
+                      ],
+                      "files": [ "file4.txt" ]
+                    }
+                  ],
+                  "files": [ "file3.txt" ]
+                }
+              ],
+              "files": [ "file2.txt" ]
+            }
+          ],
+          "files": [ "file1.txt" ]
+        }
+      ],
+      "files": [ "file0.txt" ]
+    },
+    {
+      "name": "special-brackets",
+      "folders": [],
+      "files": [
+        "-.txt", "a.txt", "b.txt",
+        "].txt", "file-hyphen.txt"
+      ]
+    },
+    {
+      "name": "starting-with-digits",
+      "folders": [],
+      "files": [
+        "0file.txt", "1data.txt", "9test.txt",
+        "file0.txt", "data1.txt"
+      ]
+    },
+    {
+      "name": "whitespace",
+      "folders": [],
+      "files": [
+        "file with multiple   spaces.txt",
+        "file\twith\ttabs.txt",
+        "leading space.txt",
+        " leading.txt"
+      ]
+    }
+  ],
+  "files": []
+}

@@ -1,0 +1,72 @@
+{
+  "name": "C:/",
+  "folders": [
+    {
+      "name": "projects",
+      "folders": [
+        {
+          "name": "app1",
+          "folders": [
+            {
+              "name": "src",
+              "files": [ "main.c", "util.c", "app.h" ]
+            },
+            {
+              "name": "tests",
+              "files": [ "test_main.c", "test_util.c" ]
+            },
+            {
+              "name": "build",
+              "files": [ "app1.bin", "app1.o" ]
+            }
+          ],
+          "files": [ "README.md", "Makefile" ]
+        },
+        {
+          "name": "app2",
+          "folders": [
+            {
+              "name": "src",
+              "files": [ "app.py", "config.py" ]
+            },
+            {
+              "name": "tests",
+              "files": [ "test_app.py" ]
+            }
+          ],
+          "files": [ "README.txt", "requirements.txt" ]
+        },
+        {
+          "name": "shared",
+          "folders": [
+            {
+              "name": "lib",
+              "files": [ "common.c", "common.h" ]
+            },
+            {
+              "name": "include",
+              "files": [ "types.h", "constants.h" ]
+            }
+          ],
+          "files": [ "LICENSE" ]
+        }
+      ],
+      "files": [ "OVERVIEW.md" ]
+    },
+    {
+      "name": "docs",
+      "folders": [
+        {
+          "name": "api",
+          "files": [ "reference.md", "guide.md" ]
+        },
+        {
+          "name": "tutorials",
+          "files": [ "getting-started.md", "advanced.md" ]
+        }
+      ],
+      "files": [ "index.md" ]
+    }
+  ],
+  "files": [ "README.md", "LICENSE" ]
+}

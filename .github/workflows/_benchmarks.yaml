@@ -1,0 +1,123 @@
+name: Benchmarks (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      benchmark-project:
+        description: Path to the benchmark project to run benchmarks against (cannot be null or empty string)
+        type: string
+        required: true
+
+      os:
+        description: Runner OS-s (cannot be null or empty string, default ubuntu-latest)
+        type: string
+        default: ubuntu-latest
+
+      dotnet-version:
+        description: Version of .NET SDK to use (cannot be null or empty string, default 10.0.x)
+        type: string
+        default: 10.0.x
+
+      configuration:
+        description: The type of build to produce, e.g. Release vs Debug (cannot be null or empty string, default Release)
+        type: string
+        default: Release
+
+      preprocessor-symbols:
+        description: Preprocessor symbols to pass to the compiler
+        type: string
+
+      max-regression-pct:
+        description: Maximum acceptable performance regression percentage
+        type: number
+        default: 10 # percent
+
+      force-new-baseline:
+        description: Ignore the existing baseline and force a new baseline
+        type: boolean
+        default: false
+
+      verbose:
+        description: Whether to enable verbose logging for debugging scripts
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  # these must be the same across all jobs and steps below.
+  # We must know where to find the artifacts and where to download/upload to/from across all jobs and steps here.
+  ARTIFACTS_DIR: ${{ github.workspace }}/BmArtifacts
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  benchmarks:
+    name: Benchmarks (${{ inputs.os }})
+    runs-on: ${{ inputs.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+          cache: true
+          cache-dependency-path: |
+            **/packages.lock.json
+            **/*.csproj
+
+      - name: Restore
+        run: |
+          dotnet restore --locked-mode
+
+      - name: Make Scripts Executable
+        run: chmod u+x ./scripts/bash/*.sh
+
+      - name: Download baseline benchmark summaries artifact
+        if: ${{ !inputs.force-new-baseline }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERBOSE: ${{ fromJSON(inputs.verbose) || false }}
+        run: >-
+          ./scripts/bash/download-artifact.sh
+          --repository ${{ github.repository }}
+          --wf-path '.github/workflows/CI.yaml'
+          --artifact benchmark-summaries-${{ inputs.os }}
+          --directory ${{ env.ARTIFACTS_DIR }}/baseline
+
+      - name: Run the benchmarks
+        if: ${{ success() || fromJSON(inputs.force-new-baseline) }}
+        shell: bash
+        env:
+          CONFIGURATION:        ${{ inputs.configuration }}
+          PREPROCESSOR_SYMBOLS: ${{ inputs.preprocessor-symbols }}
+          VERBOSE:              ${{ fromJSON(inputs.verbose) }}
+          FORCE_NEW_BASELINE:   ${{ fromJSON(inputs.force-new-baseline) }}
+        run: >-
+          ./scripts/bash/run-benchmarks.sh ${{ inputs.benchmark-project }}
+          --configuration "${{ inputs.configuration }}"
+          --artifacts "${{ env.ARTIFACTS_DIR }}"
+          --max-regression-pct "${{ inputs.max-regression-pct }}"
+
+      - name: Upload benchmark summaries artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-summaries-${{ inputs.os }}
+          path: ${{ env.ARTIFACTS_DIR }}
+          if-no-files-found: error
+          overwrite: true
+
+      - name: Upload benchmark results artifact as a new baseline
+        if: ${{ inputs.force-new-baseline || false }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-baseline-${{ inputs.os }}
+          path: ${{ env.ARTIFACTS_DIR }}
+          if-no-files-found: error
+          overwrite: true

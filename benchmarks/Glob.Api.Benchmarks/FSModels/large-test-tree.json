@@ -1,0 +1,194 @@
+{
+  "$schema": "../../../test/Glob.Api.Tests/FakeFSFiles/fakefs-schema.json",
+  "name": "/",
+  "folders": [
+    {
+      "name": "src",
+      "folders": [
+        {
+          "name": "Models",
+          "folders": [],
+          "files": [
+            "User.cs",
+            "Product.cs",
+            "Order.cs",
+            "Customer.cs",
+            "Invoice.cs"
+          ]
+        },
+        {
+          "name": "Controllers",
+          "folders": [],
+          "files": [
+            "UserController.cs",
+            "ProductController.cs",
+            "OrderController.cs"
+          ]
+        },
+        {
+          "name": "Services",
+          "folders": [
+            {
+              "name": "Internal",
+              "folders": [
+                {
+                  "name": "Helpers",
+                  "folders": [],
+                  "files": [
+                    "StringHelper.cs",
+                    "DateHelper.cs",
+                    "MathHelper.cs"
+                  ]
+                }
+              ],
+              "files": [
+                "CacheService.cs",
+                "LoggingService.cs",
+                "ValidationService.cs"
+              ]
+            },
+            {
+              "name": "External",
+              "folders": [],
+              "files": [
+                "ApiClient.cs",
+                "EmailService.cs",
+                "SmsService.cs"
+              ]
+            }
+          ],
+          "files": [
+            "UserService.cs",
+            "ProductService.cs",
+            "OrderService.cs"
+          ]
+        },
+        {
+          "name": "Repositories",
+          "folders": [],
+          "files": [
+            "UserRepository.cs",
+            "ProductRepository.cs",
+            "OrderRepository.cs"
+          ]
+        }
+      ],
+      "files": [
+        "Program.cs",
+        "App.config"
+      ]
+    },
+    {
+      "name": "test",
+      "folders": [
+        {
+          "name": "unit",
+          "folders": [
+            {
+              "name": "Models",
+              "folders": [],
+              "files": [
+                "UserModelTests.cs",
+                "ProductModelTests.cs",
+                "OrderModelTests.cs"
+              ]
+            },
+            {
+              "name": "Services",
+              "folders": [],
+              "files": [
+                "UserServiceTests.cs",
+                "ProductServiceTests.cs",
+                "OrderServiceTests.cs"
+              ]
+            }
+          ],
+          "files": [
+            "UserTests.cs",
+            "ProductTests.cs",
+            "OrderTests.cs"
+          ]
+        },
+        {
+          "name": "integration",
+          "folders": [
+            {
+              "name": "Scenarios",
+              "folders": [],
+              "files": [
+                "OrderFlowTests.cs",
+                "UserRegistrationTests.cs",
+                "PaymentTests.cs"
+              ]
+            }
+          ],
+          "files": [
+            "ApiTests.cs",
+            "DatabaseTests.cs",
+            "E2ETests.cs"
+          ]
+        }
+      ],
+      "files": [
+        "test_helper.cs",
+        "TestBase.cs"
+      ]
+    },
+    {
+      "name": "docs",
+      "folders": [
+        {
+          "name": "api",
+          "folders": [
+            {
+              "name": "examples",
+              "folders": [],
+              "files": [
+                "create-user.md",
+                "list-products.md",
+                "place-order.md"
+              ]
+            }
+          ],
+          "files": [
+            "users.md",
+            "products.md",
+            "orders.md",
+            "authentication.md"
+          ]
+        },
+        {
+          "name": "guides",
+          "folders": [
+            {
+              "name": "advanced",
+              "folders": [],
+              "files": [
+                "performance.md",
+                "security.md",
+                "scaling.md",
+                "monitoring.md"
+              ]
+            }
+          ],
+          "files": [
+            "installation.md",
+            "configuration.md",
+            "deployment.md"
+          ]
+        }
+      ],
+      "files": [
+        "index.md",
+        "getting-started.md",
+        "FAQ.md"
+      ]
+    }
+  ],
+  "files": [
+    "README.md",
+    "LICENSE.txt",
+    ".gitignore",
+    "CHANGELOG.md"
+  ]
+}

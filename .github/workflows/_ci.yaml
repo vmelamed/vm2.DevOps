@@ -1,0 +1,145 @@
+name: Build, Test, Run Benchmark Tests
+
+on:
+  workflow_call:
+    inputs:
+      test-project:
+        description: Path to the test project to run tests against (cannot be null or empty string)
+        type: string
+        required: true
+
+      benchmark-project:
+        description: Path to the benchmark project. If not provided, null, or empty string, benchmarks will be skipped.
+        type: string
+        required: false
+
+      os:
+        description: Runner OS-s (cannot be null or empty string, default ubuntu-latest)
+        type: string
+        default: ubuntu-latest
+
+      dotnet-version:
+        description: Version of .NET SDK to use (cannot be null or empty string, default 10.0.x)
+        type: string
+        default: 10.0.x
+
+      configuration:
+        description: The type of build to produce, e.g. Release vs Debug (cannot be null or empty string, default Release)
+        type: string
+        default: Release
+
+      preprocessor-symbols:
+        description: Define preprocessor symbols to pass to the compiler
+        type: string
+        default: ""
+
+      min-coverage-pct:
+        description: Minimum acceptable code coverage percentage (cannot be 0, null or empty, default 80)
+        type: number
+        default: 80 # percent
+
+      run-benchmarks:
+        description: Enable running the benchmarks and compare against baseline
+        type: boolean
+        default: true
+
+      max-regression-pct:
+        description: Maximum acceptable performance regression percentage
+        type: number
+        default: 10 # percent
+
+      force-new-baseline:
+        description: The benchmarks outputs become the new baseline (no regression check)
+        type: boolean
+        default: false
+
+      verbose:
+        description: Enable verbose logging by the scripts for debugging purposes
+        type: boolean
+        default: false
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  setup:
+    name: Parameters validation
+    runs-on: ${{ inputs.os }}
+    outputs:
+      os:                   ${{ steps.setup-vars.outputs.os }}
+      dotnet-version:       ${{ steps.setup-vars.outputs.dotnet-version }}
+      configuration:        ${{ steps.setup-vars.outputs.configuration }}
+      preprocessor-symbols: ${{ steps.setup-vars.outputs.preprocessor-symbols }}
+      test-project:         ${{ steps.setup-vars.outputs.test-project }}
+      min-coverage-pct:     ${{ steps.setup-vars.outputs.min-coverage-pct }}
+      run-benchmarks:       ${{ steps.setup-vars.outputs.run-benchmarks }}
+      benchmark-project:    ${{ steps.setup-vars.outputs.benchmark-project }}
+      force-new-baseline:   ${{ steps.setup-vars.outputs.force-new-baseline }}
+      max-regression-pct:   ${{ steps.setup-vars.outputs.max-regression-pct }}
+      verbose:              ${{ steps.setup-vars.outputs.verbose }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Make Scripts Executable
+        run: chmod u+x ./scripts/bash/*.sh
+
+      - id: setup-vars
+        shell: bash
+        env:
+          OS:                   ${{ inputs.os }}
+          DOTNET_VERSION:       ${{ inputs.dotnet-version }}
+          CONFIGURATION:        ${{ inputs.configuration }}
+          PREPROCESSOR_SYMBOLS: ${{ inputs.preprocessor-symbols }}
+          TEST_PROJECT:         ${{ inputs.test-project }}
+          MIN_COVERAGE_PCT:     ${{ inputs.min-coverage-pct }}
+          RUN_BENCHMARKS:       ${{ inputs.run-benchmarks }}
+          BENCHMARK_PROJECT:    ${{ inputs.benchmark-project }}
+          FORCE_NEW_BASELINE:   ${{ inputs.force-new-baseline }}
+          MAX_REGRESSION_PCT:   ${{ inputs.max-regression-pct }}
+          VERBOSE:              ${{ inputs.verbose }}
+        run: ./scripts/bash/setup-ci-vars.sh
+
+  build_job:
+    name: Build
+    needs:
+      - setup
+    uses: vmelamed/vm2.DevOps/.github/workflows/reusable-build.yaml@initial-port-from-vm2.Ulid
+    with:
+      os:                   ${{ needs.setup.outputs.os }}
+      dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
+      configuration:        ${{ needs.setup.outputs.configuration }}
+      preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
+
+  test_job:
+    name: Test
+    needs:
+      - setup
+      - build_job
+    uses: vmelamed/vm2.DevOps/.github/workflows/reusable-test.yaml@initial-port-from-vm2.Ulid
+    with:
+      test-project:         ${{ needs.setup.outputs.test-project }}
+      os:                   ${{ needs.setup.outputs.os }}
+      dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
+      configuration:        ${{ needs.setup.outputs.configuration }}
+      preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
+      min-coverage-pct:     ${{ fromJSON(needs.setup.outputs.min-coverage-pct) }}
+      verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
+
+  benchmarks_job:
+    name: Benchmarks
+    needs:
+      - setup
+      - build_job
+    uses: vmelamed/vm2.DevOps/.github/workflows/reusable-benchmarks.yaml@initial-port-from-vm2.Ulid
+    if: ${{ fromJSON(needs.setup.outputs.run-benchmarks) && fromJSON(needs.setup.outputs.benchmark-project) }}
+    with:
+      benchmark-project:    ${{ needs.setup.outputs.benchmark-project }}
+      os:                   ${{ needs.setup.outputs.os }}
+      dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
+      configuration:        ${{ needs.setup.outputs.configuration }}
+      preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
+      max-regression-pct:   ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}
+      force-new-baseline:   ${{ fromJSON(needs.setup.outputs.force-new-baseline) }}
+      verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}

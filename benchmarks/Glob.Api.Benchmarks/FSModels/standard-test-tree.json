@@ -1,0 +1,146 @@
+{
+  "$schema": "../../../test/Glob.Api.Tests/FakeFSFiles/fakefs-schema.json",
+  "name": "/",
+  "folders": [
+    {
+      "name": "src",
+      "folders": [
+        {
+          "name": "Models",
+          "folders": [],
+          "files": [
+            "User.cs",
+            "Product.cs",
+            "Order.cs"
+          ]
+        },
+        {
+          "name": "Controllers",
+          "folders": [],
+          "files": [
+            "UserController.cs",
+            "ProductController.cs"
+          ]
+        },
+        {
+          "name": "Services",
+          "folders": [
+            {
+              "name": "Internal",
+              "folders": [],
+              "files": [
+                "CacheService.cs",
+                "LoggingService.cs"
+              ]
+            }
+          ],
+          "files": [
+            "UserService.cs",
+            "ProductService.cs"
+          ]
+        }
+      ],
+      "files": [
+        "Program.cs",
+        "App.config"
+      ]
+    },
+    {
+      "name": "test",
+      "folders": [
+        {
+          "name": "unit",
+          "folders": [
+            {
+              "name": "Models",
+              "folders": [],
+              "files": [
+                "UserModelTests.cs",
+                "ProductModelTests.cs"
+              ]
+            }
+          ],
+          "files": [
+            "UserTests.cs",
+            "ProductTests.cs"
+          ]
+        },
+        {
+          "name": "integration",
+          "folders": [],
+          "files": [
+            "ApiTests.cs",
+            "DatabaseTests.cs"
+          ]
+        }
+      ],
+      "files": [
+        "test_helper.cs"
+      ]
+    },
+    {
+      "name": "docs",
+      "folders": [
+        {
+          "name": "api",
+          "folders": [],
+          "files": [
+            "users.md",
+            "products.md"
+          ]
+        },
+        {
+          "name": "guides",
+          "folders": [
+            {
+              "name": "advanced",
+              "folders": [],
+              "files": [
+                "performance.md",
+                "security.md"
+              ]
+            }
+          ],
+          "files": [
+            "installation.md",
+            "configuration.md"
+          ]
+        }
+      ],
+      "files": [
+        "index.md",
+        "getting-started.md"
+      ]
+    },
+    {
+      "name": "data",
+      "folders": [
+        {
+          "name": "cache",
+          "folders": [],
+          "files": [
+            "cache_1.dat",
+            "cache_2.dat"
+          ]
+        },
+        {
+          "name": "logs",
+          "folders": [],
+          "files": [
+            "app.log",
+            "error.log"
+          ]
+        }
+      ],
+      "files": [
+        "config.json",
+        "settings.json"
+      ]
+    }
+  ],
+  "files": [
+    "README.md",
+    "LICENSE.txt",
+    ".gitignore"
+  ]
+}
