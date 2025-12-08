@@ -50,26 +50,26 @@ jobs:
         with:
           dotnet-version: ${{ inputs.dotnet-version || '9.0.x' }}
           cache: true
-          cache-dependency-path: |
+          cache-dependency-path: |+
             **/packages.lock.json
             **/*.csproj
 
       - name: Restore
-        run: |
+        run: |+
           dotnet restore --locked-mode
 
       - name: Make Scripts Executable
         run: chmod u+x ./scripts/bash/*.sh
 
       - name: Validate the current tag
-        run: |
+        run: |+
           if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+(\.[0-9]+)(\.[0-9]+)(\.[0-9]+)$ ]]; then
             echo "The current tag $GITHUB_REF_NAME is not a valid semantic version for a stable release (e.g. v1.2.3 or v2.0.0)"
             exit 1
           fi
 
       - name: Pack (stable)
-        run: |
+        run: |+
           mkdir -p artifacts/pack
           dotnet pack \
             --configuration Release \
@@ -81,7 +81,7 @@ jobs:
       - name: Publish stable to NuGet
         env:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
-        run: |
+        run: |+
           if [ -z "${NUGET_API_KEY}" ]; then
             echo "NUGET_API_KEY not configured"; exit 1
           fi
@@ -104,7 +104,7 @@ jobs:
       - name: Summary
         env:
           ARTIFACTS_SAVED: ${{ env.SAVE_PACKAGE_ARTIFACTS == 'true' }}
-        run: |
+        run: |+
           {
               echo "## Release Summary"
               echo

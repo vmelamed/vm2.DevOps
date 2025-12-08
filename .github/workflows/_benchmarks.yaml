@@ -67,12 +67,12 @@ jobs:
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
           cache: true
-          cache-dependency-path: |
+          cache-dependency-path: |+
             **/packages.lock.json
             **/*.csproj
 
       - name: Restore
-        run: |
+        run: |+
           dotnet restore --locked-mode
 
       - name: Make Scripts Executable
@@ -84,7 +84,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           VERBOSE: ${{ fromJSON(inputs.verbose) || false }}
-        run: >-
+        run: >+
           ./scripts/bash/download-artifact.sh
           --repository ${{ github.repository }}
           --wf-path '.github/workflows/CI.yaml'
@@ -99,7 +99,7 @@ jobs:
           PREPROCESSOR_SYMBOLS: ${{ inputs.preprocessor-symbols }}
           VERBOSE:              ${{ fromJSON(inputs.verbose) }}
           FORCE_NEW_BASELINE:   ${{ fromJSON(inputs.force-new-baseline) }}
-        run: >-
+        run: >+
           ./scripts/bash/run-benchmarks.sh ${{ inputs.benchmark-project }}
           --configuration "${{ inputs.configuration }}"
           --artifacts "${{ env.ARTIFACTS_DIR }}"
