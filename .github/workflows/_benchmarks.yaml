@@ -1,4 +1,4 @@
-name: Benchmarks (Reusable workflow)
+name: Run Benchmarks (Reusable workflow)
 
 on:
   workflow_call:

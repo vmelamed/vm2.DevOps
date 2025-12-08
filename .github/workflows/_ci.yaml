@@ -1,4 +1,4 @@
-name: Build, Test, Run Benchmark Tests (Reusable workflow)
+name: Build, Test, Benchmarks (Reusable workflow)
 
 on:
   workflow_call:
