@@ -103,7 +103,7 @@ jobs:
     name: Build
     needs:
       - setup
-    uses: vmelamed/vm2.DevOps/.github/workflows/reusable-build@initial-port-from-vm2.Ulid
+    uses: vmelamed/vm2.DevOps/.github/workflows/reusable-build.yaml@initial-port-from-vm2.Ulid
     with:
       os:                   ${{ needs.setup.outputs.target-os }}
       configuration:        ${{ needs.setup.outputs.configuration }}
@@ -115,7 +115,7 @@ jobs:
     needs:
       - setup
       - build_job
-    uses: vmelamed/vm2.DevOps/.github/workflows/reusable-test@initial-port-from-vm2.Ulid
+    uses: vmelamed/vm2.DevOps/.github/workflows/reusable-test.yaml@initial-port-from-vm2.Ulid
     with:
       os:                   ${{ needs.setup.outputs.target-os }}
       dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
@@ -130,7 +130,7 @@ jobs:
     needs:
       - setup
       - build_job
-    uses: vmelamed/vm2.DevOps/.github/workflows/reusable-benchmarks@initial-port-from-vm2.Ulid
+    uses: vmelamed/vm2.DevOps/.github/workflows/reusable-benchmarks.yaml@initial-port-from-vm2.Ulid
     if: ${{ fromJSON(needs.setup.outputs.run-benchmarks) && fromJSON(needs.setup.outputs.benchmark-project) }}
     with:
       os:                   ${{ needs.setup.outputs.target-os }}
