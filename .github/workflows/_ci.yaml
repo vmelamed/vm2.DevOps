@@ -144,8 +144,8 @@ jobs:
 
   build_job:
     name: Build
-    #needs:
-    #  - setup
+    needs:
+      - setup
     #uses: ./.github/workflows/_build.yaml
     #with:
     #  os:                   ${{ needs.setup.outputs.os }}
@@ -165,9 +165,9 @@ jobs:
 
   test_job:
     name: Test
-    #needs:
-    #  - setup
-    #  - build_job
+    needs:
+      - setup
+      - build_job
     #uses: ./.github/workflows/_test.yaml
     #with:
     #  test-project:         ${{ needs.setup.outputs.test-project }}
@@ -193,14 +193,14 @@ jobs:
 
   benchmarks_job:
     name: Benchmarks
-    #if: >+
-    #  ${{
-    #  fromJSON(needs.setup.outputs.run-benchmarks) &&
-    #  fromJSON(needs.setup.outputs.benchmark-project)
-    #  }}
-    #needs:
-    #  - setup
-    #  - build_job
+    if: >+
+      ${{
+      fromJSON(needs.setup.outputs.run-benchmarks) &&
+      fromJSON(needs.setup.outputs.benchmark-project)
+      }}
+    needs:
+      - setup
+      - build_job
     #uses: ./.github/workflows/_benchmarks.yaml
     #with:
     #  os:                   ${{ needs.setup.outputs.os }}
