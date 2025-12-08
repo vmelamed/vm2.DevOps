@@ -128,9 +128,9 @@ fi
     echo "| verbose              | $verbose              |"
 } | tee >> "$GITHUB_STEP_SUMMARY"
 
+# Output all variables to GITHUB_OUTPUT for use in subsequent jobs
 # shellcheck disable=SC2154
 {
-    # Output all variables to GITHUB_OUTPUT for use in subsequent jobs
     echo "os=$os"
     echo "dotnet-version=$dotnet_version"
     echo "configuration=$configuration"

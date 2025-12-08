@@ -75,84 +75,154 @@ jobs:
       github.event_name == 'pull_request' ||
       github.event_name == 'workflow_dispatch'
       }}
-    outputs:
-      os:                   ${{ steps.setup-vars.outputs.os }}
-      dotnet-version:       ${{ steps.setup-vars.outputs.dotnet-version }}
-      configuration:        ${{ steps.setup-vars.outputs.configuration }}
-      preprocessor-symbols: ${{ steps.setup-vars.outputs.preprocessor-symbols }}
-      test-project:         ${{ steps.setup-vars.outputs.test-project }}
-      min-coverage-pct:     ${{ steps.setup-vars.outputs.min-coverage-pct }}
-      run-benchmarks:       ${{ steps.setup-vars.outputs.run-benchmarks }}
-      benchmark-project:    ${{ steps.setup-vars.outputs.benchmark-project }}
-      force-new-baseline:   ${{ steps.setup-vars.outputs.force-new-baseline }}
-      max-regression-pct:   ${{ steps.setup-vars.outputs.max-regression-pct }}
-      verbose:              ${{ steps.setup-vars.outputs.verbose }}
+    #outputs:
+    #  os:                   ${{ steps.setup-vars.outputs.os }}
+    #  dotnet-version:       ${{ steps.setup-vars.outputs.dotnet-version }}
+    #  configuration:        ${{ steps.setup-vars.outputs.configuration }}
+    #  preprocessor-symbols: ${{ steps.setup-vars.outputs.preprocessor-symbols }}
+    #  test-project:         ${{ steps.setup-vars.outputs.test-project }}
+    #  min-coverage-pct:     ${{ steps.setup-vars.outputs.min-coverage-pct }}
+    #  run-benchmarks:       ${{ steps.setup-vars.outputs.run-benchmarks }}
+    #  benchmark-project:    ${{ steps.setup-vars.outputs.benchmark-project }}
+    #  max-regression-pct:   ${{ steps.setup-vars.outputs.max-regression-pct }}
+    #  force-new-baseline:   ${{ steps.setup-vars.outputs.force-new-baseline }}
+    #  verbose:              ${{ steps.setup-vars.outputs.verbose }}
+    #steps:
+    #  - name: Checkout
+    #    uses: actions/checkout@v6
+    #
+    #  - name: Make Scripts Executable
+    #    run: chmod u+x ./scripts/bash/*.sh
+    #
+    #  - id: setup-vars
+    #    shell: bash
+    #    env:
+    #      OS:                   ${{ inputs.os }}
+    #      DOTNET_VERSION:       ${{ inputs.dotnet-version }}
+    #      CONFIGURATION:        ${{ inputs.configuration }}
+    #      PREPROCESSOR_SYMBOLS: ${{ inputs.preprocessor-symbols }}
+    #      TEST_PROJECT:         ${{ inputs.test-project }}
+    #      MIN_COVERAGE_PCT:     ${{ inputs.min-coverage-pct }}
+    #      RUN_BENCHMARKS:       ${{ inputs.run-benchmarks }}
+    #      BENCHMARK_PROJECT:    ${{ inputs.benchmark-project }}
+    #      FORCE_NEW_BASELINE:   ${{ inputs.force-new-baseline }}
+    #      MAX_REGRESSION_PCT:   ${{ inputs.max-regression-pct }}
+    #      VERBOSE:              ${{ inputs.verbose }}
+    #    run: ./scripts/bash/setup-ci-vars.sh
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - name: Print all inputs
+        run: |+
+          {
+            echo "inputs.os:                   ${{ inputs.os }}"
+            echo "inputs.dotnet-version:       ${{ inputs.dotnet-version }}"
+            echo "inputs.configuration:        ${{ inputs.configuration }}"
+            echo "inputs.preprocessor-symbols: ${{ inputs.preprocessor-symbols }}"
+            echo "inputs.min-coverage-pct:     ${{ inputs.min-coverage-pct }}"
+            echo "inputs.max-regression-pct:   ${{ inputs.max-regression-pct }}"
+            echo "inputs.run-benchmarks:       ${{ inputs.run-benchmarks }}"
+            echo "inputs.force-new-baseline:   ${{ inputs.force-new-baseline }}"
+            echo "inputs.test-project:         ${{ inputs.test-project }}"
+            echo "inputs.benchmark-project:    ${{ inputs.benchmark-project }}"
+            echo "inputs.verbose:              ${{ inputs.verbose }}"
+          } >> $GITHUB_STEP_SUMMARY
 
-      - name: Make Scripts Executable
-        run: chmod u+x ./scripts/bash/*.sh
-
-      - id: setup-vars
-        shell: bash
-        env:
-          OS:                   ${{ inputs.os }}
-          DOTNET_VERSION:       ${{ inputs.dotnet-version }}
-          CONFIGURATION:        ${{ inputs.configuration }}
-          PREPROCESSOR_SYMBOLS: ${{ inputs.preprocessor-symbols }}
-          TEST_PROJECT:         ${{ inputs.test-project }}
-          MIN_COVERAGE_PCT:     ${{ inputs.min-coverage-pct }}
-          RUN_BENCHMARKS:       ${{ inputs.run-benchmarks }}
-          BENCHMARK_PROJECT:    ${{ inputs.benchmark-project }}
-          FORCE_NEW_BASELINE:   ${{ inputs.force-new-baseline }}
-          MAX_REGRESSION_PCT:   ${{ inputs.max-regression-pct }}
-          VERBOSE:              ${{ inputs.verbose }}
-        run: ./scripts/bash/setup-ci-vars.sh
+      - name: Write to output
+        run: |+
+          {
+              echo "os=$os"
+              echo "dotnet-version=$dotnet_version"
+              echo "configuration=$configuration"
+              echo "preprocessor-symbols=$preprocessor_symbols"
+              echo "test-project=$test_project"
+              echo "min-coverage-pct=$min_coverage_pct"
+              echo "run-benchmarks=$run_benchmarks"
+              echo "benchmark-project=$benchmark_project"
+              echo "force-new-baseline=$force_new_baseline"
+              echo "max-regression-pct=$max_regression_pct"
+              echo "verbose=$verbose"
+          } >> "$GITHUB_OUTPUT"
 
   build_job:
     name: Build
-    needs:
-      - setup
-    uses: ./.github/workflows/_build.yaml
-    with:
-      os:                   ${{ needs.setup.outputs.os }}
-      dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
-      configuration:        ${{ needs.setup.outputs.configuration }}
-      preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
+    #needs:
+    #  - setup
+    #uses: ./.github/workflows/_build.yaml
+    #with:
+    #  os:                   ${{ needs.setup.outputs.os }}
+    #  dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
+    #  configuration:        ${{ needs.setup.outputs.configuration }}
+    #  preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
+    runs-on: ${{ inputs.os }}
+    steps:
+      - name: Print all inputs
+        run: |+
+          {
+            echo "inputs.os:                   ${{ needs.setup.outputs.os }}
+            echo "inputs.dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
+            echo "inputs.configuration:        ${{ needs.setup.outputs.configuration }}
+            echo "inputs.preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
+          } >> $GITHUB_STEP_SUMMARY
 
   test_job:
     name: Test
-    needs:
-      - setup
-      - build_job
-    uses: ./.github/workflows/_test.yaml
-    with:
-      test-project:         ${{ needs.setup.outputs.test-project }}
-      os:                   ${{ needs.setup.outputs.os }}
-      dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
-      configuration:        ${{ needs.setup.outputs.configuration }}
-      preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
-      min-coverage-pct:     ${{ fromJSON(needs.setup.outputs.min-coverage-pct) }}
-      verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
+    #needs:
+    #  - setup
+    #  - build_job
+    #uses: ./.github/workflows/_test.yaml
+    #with:
+    #  test-project:         ${{ needs.setup.outputs.test-project }}
+    #  os:                   ${{ needs.setup.outputs.os }}
+    #  dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
+    #  configuration:        ${{ needs.setup.outputs.configuration }}
+    #  preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
+    #  min-coverage-pct:     ${{ fromJSON(needs.setup.outputs.min-coverage-pct) }}
+    #  verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
+    runs-on: ${{ inputs.os }}
+    steps:
+      - name: Print all inputs
+        run: |+
+          {
+            echo "inputs.test-project:         ${{ needs.setup.outputs.test-project }}
+            echo "inputs.os:                   ${{ needs.setup.outputs.os }}
+            echo "inputs.dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
+            echo "inputs.configuration:        ${{ needs.setup.outputs.configuration }}
+            echo "inputs.preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
+            echo "inputs.min-coverage-pct:     ${{ fromJSON(needs.setup.outputs.min-coverage-pct) }}"
+            echo "inputs.verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}"
+          } >> $GITHUB_STEP_SUMMARY
 
   benchmarks_job:
     name: Benchmarks
-    needs:
-      - setup
-      - build_job
-    uses: ./.github/workflows/_benchmarks.yaml
-    if: >+
-      ${{
-      fromJSON(needs.setup.outputs.run-benchmarks) &&
-      fromJSON(needs.setup.outputs.benchmark-project)
-      }}
-    with:
-      benchmark-project:    ${{ needs.setup.outputs.benchmark-project }}
-      os:                   ${{ needs.setup.outputs.os }}
-      dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
-      configuration:        ${{ needs.setup.outputs.configuration }}
-      preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
-      max-regression-pct:   ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}
-      force-new-baseline:   ${{ fromJSON(needs.setup.outputs.force-new-baseline) }}
-      verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
+    #if: >+
+    #  ${{
+    #  fromJSON(needs.setup.outputs.run-benchmarks) &&
+    #  fromJSON(needs.setup.outputs.benchmark-project)
+    #  }}
+    #needs:
+    #  - setup
+    #  - build_job
+    #uses: ./.github/workflows/_benchmarks.yaml
+    #with:
+    #  os:                   ${{ needs.setup.outputs.os }}
+    #  dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
+    #  configuration:        ${{ needs.setup.outputs.configuration }}
+    #  preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
+    #  benchmark-project:    ${{ needs.setup.outputs.benchmark-project }}
+    #  max-regression-pct:   ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}
+    #  force-new-baseline:   ${{ fromJSON(needs.setup.outputs.force-new-baseline) }}
+    #  verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
+    runs-on: ${{ inputs.os }}
+    steps:
+      - name: Print all inputs
+        run: |+
+          {
+            echo "inputs.os:                   ${{ needs.setup.outputs.os }}"
+            echo "inputs.dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}"
+            echo "inputs.configuration:        ${{ needs.setup.outputs.configuration }}"
+            echo "inputs.preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}"
+            echo "inputs.benchmark-project:    ${{ needs.setup.outputs.benchmark-project }}"
+            echo "inputs.max-regression-pct:   ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}"
+            echo "inputs.run-benchmarks:       ${{ fromJSON(needs.setup.outputs.run-benchmarks) }}"
+            echo "inputs.force-new-baseline:   ${{ fromJSON(needs.setup.outputs.force-new-baseline) }}"
+            echo "inputs.verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}"
+          } >> $GITHUB_STEP_SUMMARY
