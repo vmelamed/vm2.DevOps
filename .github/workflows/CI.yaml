@@ -53,15 +53,15 @@ concurrency:
 jobs:
   call_ci:
     name: Call CI Workflow
-    uses: ./.github/workflows/shared/ci.yaml
+    uses: .github/workflows/reusable-ci.yaml
     with:
-      dotnet-version:     ${{ inputs.dotnet-version }}
-      configuration:      ${{ inputs.configuration }}
-      min-coverage-pct:   ${{ vars.MIN_COVERAGE_PCT   || 75 }}
-      max-regression-pct: ${{ vars.MAX_REGRESSION_PCT || 10 }}
-      os:                 ${{ inputs.os }}
-      preprocessor-symbols:    ${{ inputs.preprocessor-symbols }}
-      test-project:       ./test/Glob.Api.Tests/Glob.Api.Tests.csproj
-      run-benchmarks:     ${{ inputs.run-benchmarks }}
-      benchmark-project:  ./benchmarks/Glob.Api.Benchmarks/Glob.Api.Benchmarks.csproj
-      force-new-baseline: ${{ inputs.force-new-baseline }}
+      dotnet-version:       ${{ inputs.dotnet-version }}
+      configuration:        ${{ inputs.configuration }}
+      min-coverage-pct:     ${{ vars.MIN_COVERAGE_PCT   || 75 }}
+      max-regression-pct:   ${{ vars.MAX_REGRESSION_PCT || 10 }}
+      os:                   ${{ inputs.os }}
+      preprocessor-symbols: ${{ inputs.preprocessor-symbols }}
+      test-project:         ./test/Glob.Api.Tests/Glob.Api.Tests.csproj
+      run-benchmarks:       ${{ inputs.run-benchmarks }}
+      benchmark-project:    ./benchmarks/Glob.Api.Benchmarks/Glob.Api.Benchmarks.csproj
+      force-new-baseline:   ${{ inputs.force-new-baseline }}
