@@ -46,7 +46,7 @@ function get_arguments()
                     exit 2
                 fi
                 if [[ ! "$defined_symbols" =~ (^|;)"$value"($|;) ]]; then
-                    defined_symbols="$value $defined_symbols"   # NOTE: space-separated!
+                    preprocessor_symbols="$value $defined_symbols"   # NOTE: space-separated!
                 fi
                 ;;
 
@@ -92,7 +92,7 @@ dump_all_variables()
         --blank \
         test_project \
         CONFIGURATION \
-        defined_symbols \
+        preprocessor_symbols \
         min_coverage_pct \
         artifacts_dir \
         --header "other:" \

@@ -27,13 +27,13 @@ Options:
 
     --dotnet-version
         Version of .NET SDK to use.
-        Initial value from \$DOTNET_VERSION or '9.0.x'
+        Initial value from \$DOTNET_VERSION or '10.0.x'
 
     --configuration | -c
         Build configuration ('Release' or 'Debug').
         Initial value from \$CONFIGURATION or 'Release'
 
-    --define-symbols | -d
+    --preprocessor-symbols | -d
         Pre-processor symbols for compilation.
         Initial value from \$DEFINED_SYMBOLS or ''
 

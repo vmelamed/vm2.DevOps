@@ -66,14 +66,14 @@ function get_arguments()
                     exit 2
                 fi
                 if [[ ! "$defined_symbols" =~ (^|;)"$value"($|;) ]]; then
-                    defined_symbols="$value $defined_symbols"  # NOTE: space-separated!
+                    preprocessor_symbols="$value $defined_symbols"  # NOTE: space-separated!
                 fi
                 ;;
 
             --short-run|-s )
-                # Shortcut for --defined_symbols SHORT_RUN
+                # Shortcut for --preprocessor_symbols SHORT_RUN
                 if [[ ! "$defined_symbols" =~ (^|;)SHORT_RUN($|;) ]]; then
-                    defined_symbols="$defined_symbols SHORT_RUN"  # NOTE: space-separated!
+                    preprocessor_symbols="$defined_symbols SHORT_RUN"  # NOTE: space-separated!
                 fi
                 ;;
 
@@ -99,7 +99,7 @@ dump_all_variables()
         --blank \
         bm_project \
         configuration \
-        defined_symbols \
+        preprocessor_symbols \
         max_regression_pct \
         force_new_baseline \
         artifacts_dir \

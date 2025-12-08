@@ -43,9 +43,9 @@ function get_arguments()
                 value="$1"; shift
                 configuration="$value"
                 ;;
-            --define-symbols|-d )
+            --preprocessor-symbols|-d )
                 value="$1"; shift
-                defined_symbols="$value"
+                preprocessor_symbols="$value"
                 ;;
             --test-project|-t )
                 value="$1"; shift
@@ -91,7 +91,7 @@ dump_all_variables()
         matrix_os \
         dotnet_version \
         configuration \
-        defined_symbols \
+        preprocessor_symbols \
         test_project \
         min_coverage_pct \
         run_benchmarks \

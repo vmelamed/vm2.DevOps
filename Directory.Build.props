@@ -10,8 +10,7 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <!-- for stackalloc mostly -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks><!-- for stackalloc mostly -->
     <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
     <AnalysisLevel>latest</AnalysisLevel>
     <WarningLevel>9999</WarningLevel>
@@ -23,6 +22,8 @@
     <TieredPGO>true</TieredPGO>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RestoreLockedMode>true</RestoreLockedMode>
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
   </PropertyGroup>
@@ -92,7 +93,9 @@
     <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner><!-- To opt-in xUnit in the Microsoft Testing Platform and use native command line 'dotnet run' experience -->
     <!-- For more information on Microsoft Testing Platform support in xUnit.net, please visit: https://xunit.net/docs/getting-started/v3/microsoft-testing-platform -->
     <EnableCodeCoverage>true</EnableCodeCoverage>
-    <!-- Enable code coverage collection with Microsoft.Testing.Extensions.CodeCoverage -->
+    <!-- Enable code coverage collection with Microsoft.Testing.Extensions.CodeCoverage ADD MTP Code Coverage settings: -->
+    <CodeCoverageExcludeByFile>**/*.g.cs;**/obj/**/*</CodeCoverageExcludeByFile>
+    <CodeCoverageExcludeByAttribute>GeneratedCode;CompilerGenerated;GeneratedRegex;ExcludeFromCodeCoverage</CodeCoverageExcludeByAttribute>
     <NoWarn>
       $(NoWarn);CA1031;CA1701;CA1702;CA1707;CA1806;CA2211;CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290
     </NoWarn>

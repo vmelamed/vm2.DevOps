@@ -1,6 +1,8 @@
 <Solution>
   <Folder Name="/.github/" />
-  <Folder Name="/.github/workflows/" />
+  <Folder Name="/.github/workflows/">
+    <File Path=".github/workflows/ci.yaml" />
+  </Folder>
   <Folder Name="/.github/workflows/shared/">
     <File Path=".github/workflows/shared/benchmarks.yaml" />
     <File Path=".github/workflows/shared/build.yaml" />
@@ -42,6 +44,7 @@
     <File Path="LICENSE" />
     <File Path="README.md" />
     <File Path="ReleaseProcess.md" />
+    <File Path="scratch-build.bat" />
     <File Path="test.runsettings" />
   </Folder>
   <Folder Name="/src/">

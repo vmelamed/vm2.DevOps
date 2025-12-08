@@ -1,0 +1,67 @@
+name: CI - Build, Test, Benchmarks
+
+on:
+  push:
+    branches: ["**"]
+      # trigger on push for all branches
+
+  pull_request:
+    branches: ["**"]
+      # trigger on PR for all branches
+
+  workflow_dispatch:
+    inputs:
+      os:
+        description: Runner OS (cannot be null or empty string, default ubuntu-latest)
+        type: string
+        default: ubuntu-latest
+
+      dotnet-version:
+        description: Version of .NET SDK to use (cannot be null or empty string, default 10.0.x)
+        type: string
+        default: 10.0.x
+
+      configuration:
+        description: The type of build to produce, e.g. Release vs Debug (cannot be null or empty string, default Release)
+        type: string
+        default: Release
+
+      preprocessor-symbols:
+        description: Define constants to pass to the compiler
+        type: string
+        default: ""
+
+      run-benchmarks:
+        description: Whether to run benchmarks and compare against baseline
+        type: boolean
+        default: true
+
+      force-new-baseline:
+        description: Whether to force new baseline (if true, no regression check is done)
+        type: boolean
+        default: false
+
+      verbose:
+        description: Enable verbose logging by the scripts for debugging purposes
+        type: boolean
+        default: false
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  call_ci:
+    name: Call CI Workflow
+    uses: ./.github/workflows/shared/ci.yaml
+    with:
+      dotnet-version:     ${{ inputs.dotnet-version }}
+      configuration:      ${{ inputs.configuration }}
+      min-coverage-pct:   ${{ vars.MIN_COVERAGE_PCT   || 75 }}
+      max-regression-pct: ${{ vars.MAX_REGRESSION_PCT || 10 }}
+      os:                 ${{ inputs.os }}
+      preprocessor-symbols:    ${{ inputs.preprocessor-symbols }}
+      test-project:       ./test/Glob.Api.Tests/Glob.Api.Tests.csproj
+      run-benchmarks:     ${{ inputs.run-benchmarks }}
+      benchmark-project:  ./benchmarks/Glob.Api.Benchmarks/Glob.Api.Benchmarks.csproj
+      force-new-baseline: ${{ inputs.force-new-baseline }}

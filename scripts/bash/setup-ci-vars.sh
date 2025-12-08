@@ -1,6 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
+# ==============================================================================
+# This script validates and sets up CI variables for GitHub Actions workflows.
+# It validates all input variables and outputs them to GITHUB_OUTPUT for use by
+# subsequent workflow jobs.
+# ==============================================================================
+
 declare -xr this_script=${BASH_SOURCE[0]}
 
 script_name="$(basename "${this_script%.*}")"
@@ -12,10 +18,10 @@ declare -xr script_dir
 source "$script_dir/_common.sh"
 
 # CI Variables that will be passed as environment variables
-declare -x matrix_os=${MATRIX_OS:-"ubuntu-latest"}
-declare -x dotnet_version=${DOTNET_VERSION:-"9.0.x"}
+declare -x os=${os:-"ubuntu-latest"}
+declare -x dotnet_version=${DOTNET_VERSION:-"10.0.x"}
 declare -x configuration=${CONFIGURATION:-"Release"}
-declare -x defined_symbols=${DEFINED_SYMBOLS:-}
+declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -x build_project=${BUILD_PROJECT:-}
 declare -x test_project=${TEST_PROJECT:-}
 declare -x benchmark_project=${BENCHMARK_PROJECT:-}
@@ -55,18 +61,18 @@ function warning()
 }
 
 # Validate and set target-os
-if ! echo "$matrix_os" | jq . >/dev/null 2>&1; then
-    warning matrix_os '["ubuntu-latest"]' "Invalid JSON for target-os."
+if ! echo "$os" | jq . >/dev/null 2>&1; then
+    warning os "ubuntu-latest" "Invalid JSON for target OS."
 fi
 
 # Validate and set dotnet-version
 if [[ -z "$dotnet_version" ]]; then
-    warning dotnet_version "9.0.x" "dotnet-version is empty."
+    warning dotnet_version "10.0.x" "dotnet-version is empty."
 fi
 
 # Set configuration with validation
-if [[ "$configuration" != "Release" && "$configuration" != "Debug" ]]; then
-    warning configuration "Release" "configuration must be 'Release' or 'Debug'."
+if [[ -z "$configuration" ]]; then
+    warning configuration "Release" "configuration must have value."
 fi
 
 if [[ -z "$test_project" ]]; then
@@ -74,7 +80,7 @@ if [[ -z "$test_project" ]]; then
 fi
 
 if [[ -z "$benchmark_project" ]]; then
-    error "benchmark-project cannot be empty"
+    warning benchmark_project "" "benchmark-project is empty"
 fi
 
 # Validate numeric inputs
@@ -108,29 +114,29 @@ fi
     # Log all computed values for debugging
     echo "✔️ All variables validated successfully"
     echo ""
-    echo "| Variable           | Value               |"
-    echo "|:-------------------|:--------------------|"
-    echo "| target-os          | $matrix_os          |"
-    echo "| dotnet-version     | $dotnet_version     |"
-    echo "| configuration      | $configuration      |"
-    echo "| define-symbols     | $defined_symbols    |"
-    echo "| build-project      | $build_project      |"
-    echo "| test-project       | $test_project       |"
-    echo "| min-coverage-pct   | $min_coverage_pct   |"
-    echo "| run-benchmarks     | $run_benchmarks     |"
-    echo "| benchmark-project  | $benchmark_project  |"
-    echo "| force-new-baseline | $force_new_baseline |"
-    echo "| max-regression-pct | $max_regression_pct |"
-    echo "| verbose            | $verbose            |"
+    echo "| Variable             | Value               |"
+    echo "|:---------------------|:--------------------|"
+    echo "| target-os            | $os          |"
+    echo "| dotnet-version       | $dotnet_version     |"
+    echo "| configuration        | $configuration      |"
+    echo "| preprocessor-symbols | $defined_symbols    |"
+    echo "| build-project        | $build_project      |"
+    echo "| test-project         | $test_project       |"
+    echo "| min-coverage-pct     | $min_coverage_pct   |"
+    echo "| run-benchmarks       | $run_benchmarks     |"
+    echo "| benchmark-project    | $benchmark_project  |"
+    echo "| force-new-baseline   | $force_new_baseline |"
+    echo "| max-regression-pct   | $max_regression_pct |"
+    echo "| verbose              | $verbose            |"
 } | tee >> "$GITHUB_STEP_SUMMARY"
 
 # shellcheck disable=SC2154
 {
     # Output all variables to GITHUB_OUTPUT for use in subsequent jobs
-    echo "target-os=$matrix_os"
+    echo "target-os=$os"
     echo "dotnet-version=$dotnet_version"
     echo "configuration=$configuration"
-    echo "define-symbols=$defined_symbols"
+    echo "preprocessor-symbols=$defined_symbols"
     echo "build-project=$build_project"
     echo "test-project=$test_project"
     echo "min-coverage-pct=$min_coverage_pct"

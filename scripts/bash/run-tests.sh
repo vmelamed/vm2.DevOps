@@ -13,7 +13,7 @@ source "$script_dir/_common.sh"
 
 declare -x test_project=${TEST_PROJECT:-}
 declare -x configuration=${CONFIGURATION:="Release"}
-declare -x defined_symbols=${DEFINED_SYMBOLS:-" "}
+declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-" "}
 declare -ix min_coverage_pct=${MIN_COVERAGE_PCT:-80}
 declare -x artifacts_dir=${ARTIFACTS_DIR:-}
 
@@ -31,7 +31,7 @@ base_name=$(basename "${test_project%.*}")                                      
 
 declare -r test_project
 declare -r configuration
-declare -r defined_symbols
+declare -r preprocessor_symbols
 declare -r min_coverage_pct
 declare -r base_name
 
@@ -107,11 +107,16 @@ execute mkdir -p "$coverage_source_dir"
 execute mkdir -p "$coverage_reports_dir"
 execute mkdir -p "$coverage_summary_dir"
 
+trace "Restore dependencies"
+execute dotnet restore --locked-mode
+
 trace "Running tests in project '$test_project' with build configuration '$configuration'..."
-execute dotnet test "$test_project" \
+execute dotnet exec "$test_project" \
     /p:DefineConstants="$defined_symbols" \
     --configuration "$configuration" -- \
     --results-directory "$test_results_dir" \
+    --no-restore \
+    --report-trx \
     --coverage \
     --coverage-output-format cobertura \
     --coverage-output "$coverage_source_path"
@@ -138,7 +143,9 @@ fi
 execute ./tools/reportgenerator \
     -reports:"$coverage_source_path" \
     -targetdir:"$coverage_reports_dir" \
-    -reporttypes:TextSummary,html
+    -reporttypes:TextSummary,html \
+	-assemblyfilters:-*.Tests;-Test.Utilities* \
+	-classfilters:-*.I*;-*.*Extensions;-System.Text.RegularExpressions.Generated*;-*Fake*;-*Mock*
 
 if [[ "$uninstall_reportgenerator" = "true" ]]; then
     echo "Uninstalling the tool 'reportgenerator'..."; sync

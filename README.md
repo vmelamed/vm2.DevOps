@@ -14,9 +14,9 @@ These top-level workflows are intended to be called directly via `workflow_call`
   - `verbose`: If `true`, scripts will emit tracing and messages from all `trace()` calls, all executed commands, and all variable dumps (default: `false`)
 - Switches and options for the CI workflows and bash scripts:
   - `target-os`: Operating systems to run the jobs on (default: `ubuntu-latest`)
-  - `dotnet-version`: .NET SDK version to install (default: `9.0.x`)
+  - `dotnet-version`: .NET SDK version to install (default: `10.0.x`)
   - `configuration`: Build configuration (default: `Release`)
-  - `define-symbols`: Optional preprocessor symbols to pass to `dotnet build` (e.g. SHORT_RUN for benchmarks) (default: empty)
+  - `preprocessor-symbols`: Optional preprocessor symbols to pass to `dotnet build` (e.g. SHORT_RUN for benchmarks) (default: empty)
   - `test-project`: Relative path to the test project to execute (default: `tests/UnitTests/UnitTests.csproj`)
   - `min-coverage-pct`: Minimum acceptable line coverage percentage (default: `80`)
   - `run-benchmarks`: Whether to run benchmarks as part of the CI (default: `true`)
@@ -230,6 +230,6 @@ They all source `_common.sh` for shared behavior and respect common flags (`--ve
 
 ## Additional notes
 
-- All workflows assume .NET 9.0.x SDKs; update the workflow inputs if you need to target a different version.
+- All workflows assume .NET 10.0.x SDKs; update the workflow inputs if you need to target a different version.
 - Scripts rely on `bash` and standard GNU utilities available on Ubuntu GitHub-hosted runners. Any additional tooling they need (e.g., `jq`, `reportgenerator`) is installed on demand.
 - When adding new scripts, follow the existing three-file pattern and keep code ShellCheck-clean so the shared lint step continues to pass.

@@ -1,0 +1,167 @@
+name: Prerelease (Tag & Publish)
+
+on:
+  workflow_call:
+    inputs:
+      os:
+        description: Runner OS-s (cannot be null or empty string, default ubuntu-latest)
+        type: string
+        default: ubuntu-latest
+
+      dotnet-version:
+        description: Version of .NET SDK to use (cannot be null or empty string, default 10.0.x)
+        type: string
+        default: 10.0.x
+
+      semver-build-prefix:
+        description: Prefix for the prerelease tag, e.g. 'preview', 'alpha', 'beta', 'rc', etc. (cannot be null or empty string, default 'preview')
+        type: string
+        default: "preview"
+
+      force-publish:
+        description: Force publish even if already tagged
+        type: boolean
+        default: false
+
+      save_package_artifacts:
+        description: Upload package(s) as workflow artifacts
+        type: boolean
+        default: false
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_VERSION:         ${{ inputs.dotnet-version         || '10.0.x' }}
+  FORCE_PUBLISH:          ${{ inputs.force-publish          || 'false' }}
+  SAVE_PACKAGE_ARTIFACTS: ${{ inputs.save_package_artifacts || 'false' }}
+  SEMVER_BUILD_PREFIX:    ${{ inputs.semver-build-prefix    || 'preview' }}
+  MINVER_TAG_PREFIX:      "v"
+
+permissions:
+  contents: write
+
+jobs:
+  prerelease:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Skip if commit already tagged (any v* tag)
+        id: tag_check
+        run: |
+          if [[ $FORCE_PUBLISH != 'true' ]] && git tag --points-at HEAD | grep -E '^v[0-9]'; then
+            printf 'already_tagged=%s\n' "true" >> "$GITHUB_OUTPUT"
+          else
+            printf 'already_tagged=%s\n' "false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Compute prerelease tag
+        if: steps.tag_check.outputs.already_tagged == 'false'
+        id: compute
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Find latest stable (no hyphen) tag like v1.2.3
+          LATEST_STABLE=$(git tag --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1 || true)
+          if [ -n "$LATEST_STABLE" ]; then
+            IFS='.' read -r MAJOR MINOR PATCH <<< "${LATEST_STABLE#v}"
+            NEXT_PATCH=$((PATCH+1))
+          else
+            # No stable tag yet
+            MAJOR=0
+            MINOR=1
+            NEXT_PATCH=0
+          fi
+
+          DATE=$(date -u +%Y%m%d)
+          RUN=$GITHUB_RUN_NUMBER
+          PRERELEASE_TAG="v$MAJOR.$MINOR.$NEXT_PATCH-$SEMVER_BUILD_PREFIX.$DATE.$RUN"
+          printf 'prerelease_tag=%s\n' "$PRERELEASE_TAG" >> "$GITHUB_OUTPUT"
+          printf '## Prerelease Tag:\n- %s\n' "$PRERELEASE_TAG" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Log the reason for workflow dispatch
+        run: |
+          {
+              echo "## Prerelease reason:"
+              echo
+              echo "- Force publish: $FORCE_PUBLISH"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create & push prerelease tag
+        if: steps.tag_check.outputs.already_tagged == 'false'
+        env:
+          TAG: ${{ steps.compute.outputs.prerelease_tag }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Prerelease $TAG" -m "Reason: $REASON" || echo "Tag exists, continuing"
+          git push origin "$TAG"
+
+      - name: Setup .NET
+        if: steps.tag_check.outputs.already_tagged == 'false'
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          cache: true
+          cache-dependency-path: |
+            **/packages.lock.json
+            **/*.csproj
+
+      - name: Restore
+        run: |
+          dotnet restore --locked-mode
+
+      - name: Pack (MinVer consumes the just-pushed prerelease tag)
+        if: steps.tag_check.outputs.already_tagged == 'false'
+        run: |
+          mkdir -p artifacts/pack
+          dotnet pack \
+            --configuration Release \
+            --output artifacts/pack \
+            --no-restore \
+            /p:MinVerTagPrefix=${MINVER_TAG_PREFIX} \
+            "/p:PackageReleaseNotes=Prerelease: ${REASON:-N/A}"
+          ls -1 artifacts/pack
+
+      - name: Publish prerelease to NuGet
+        if: steps.tag_check.outputs.already_tagged == 'false'
+        env:
+          PRERELEASE_TAG: ${{ steps.compute.outputs.prerelease_tag }}
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          if [ -z "${NUGET_API_KEY}" ]; then
+            echo "NUGET_API_KEY not configured"; exit 1
+          fi
+          dotnet nuget push artifacts/pack/*.nupkg \
+            --api-key "$NUGET_API_KEY" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+          printf '## Packages %s pushed to NuGet:\n%s\n' "$PRERELEASE_TAG" "$(ls -1 artifacts/pack/*.nupkg | sed 's/^/  - /')" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload package artifact
+        if: env.SAVE_PACKAGE_ARTIFACTS == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages-${{ steps.compute.outputs.prerelease_tag }}
+          path: artifacts/pack/*.nupkg
+          if-no-files-found: error
+          overwrite: true
+
+      - name: Summary
+        env:
+          ARTIFACTS_SAVED: ${{ env.SAVE_PACKAGE_ARTIFACTS == 'true' }}
+        run: |
+          {
+              echo "## Release Summary"
+              echo
+              echo "- Tag: ${GITHUB_REF_NAME}"
+              if [ "$ARTIFACTS_SAVED" = "true" ]; then
+                echo "- Artifacts:"
+                ls -1 artifacts/pack | sed 's/^/  - /'
+              fi
+          } >> "$GITHUB_STEP_SUMMARY"

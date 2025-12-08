@@ -4,27 +4,23 @@ on:
   workflow_call:
     inputs:
       os:
-        description: "JSON array of runners"
+        description: JSON array of runners (cannot be null or empty string, default ubuntu-latest)
         type: string
-        required: false
         default: "ubuntu-latest"
 
       dotnet-version:
-        description: "Version of .NET SDK to use"
+        description: Version of .NET SDK to use (cannot be null or empty string, default 10.0.x)
         type: string
-        required: false
-        default: "10.0.x"
+        default: 10.0.x
 
       configuration:
-        description: "The type of build to produce, e.g. Release vs Debug"
+        description: The type of build to produce, e.g. Release vs Debug (cannot be null or empty string, default Release)
         type: string
-        required: false
-        default: "Release"
+        default: Release
 
-      define-symbols:
-        description: "Define constants to pass to the compiler"
+      preprocessor-symbols:
+        description: Preprocessor symbols to pass to the compiler
         type: string
-        required: false
         default: ""
 
 permissions:
@@ -40,15 +36,12 @@ jobs:
     runs-on: ${{ inputs.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - name: Make Scripts Executable
-        run: chmod u+x ./scripts/bash/*.sh
-
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
           cache: true
@@ -56,16 +49,24 @@ jobs:
             **/packages.lock.json
             **/*.csproj
 
+      - name: Make Scripts Executable
+        run: chmod u+x ./scripts/bash/*.sh
+
+      - name: Restore
+        run: |
+          dotnet restore --locked-mode
+
       - name: Build (${{ inputs.configuration }})
         run: |
           dotnet build \
-            /p:DefineConstants="${{ inputs.define-symbols }}" \
-            --configuration ${{ inputs.configuration }}
+            /p:DefineConstants="${{ inputs.preprocessor-symbols }}" \
+            --configuration ${{ inputs.configuration }} \
+            --no-restore
           {
-            echo "✔️ Successful build!"
+            echo "Build:               ✔️ Successful"
+            echo "Runner:              ${{ inputs.os }}"
             echo "Build configuration: ${{ inputs.configuration }}"
-            echo "Defined symbols: ${{ inputs.define-symbols || 'None' }}"
-            echo "Runner: ${{ inputs.os }}"
+            echo "Defined symbols:     ${{ inputs.preprocessor-symbols || 'None' }}"
           } >> $GITHUB_STEP_SUMMARY
 
       - name: ShellCheck
