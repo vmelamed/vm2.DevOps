@@ -2,11 +2,13 @@ name: CI - Build, Test, Benchmarks
 
 on:
   push:
-    branches: ["**"]
+    branches:
+      - **
       # trigger on push for all branches
 
   pull_request:
-    branches: ["**"]
+    branches:
+      - **
       # trigger on PR for all branches
 
   workflow_dispatch:
