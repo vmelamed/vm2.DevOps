@@ -22,11 +22,10 @@ declare -x os=${os:-"ubuntu-latest"}
 declare -x dotnet_version=${DOTNET_VERSION:-"10.0.x"}
 declare -x configuration=${CONFIGURATION:-"Release"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
-declare -x build_project=${BUILD_PROJECT:-}
 declare -x test_project=${TEST_PROJECT:-}
-declare -x benchmark_project=${BENCHMARK_PROJECT:-}
 declare -x min_coverage_pct=${MIN_COVERAGE_PCT:-80}
 declare -x run_benchmarks=${RUN_BENCHMARKS:-true}
+declare -x benchmark_project=${BENCHMARK_PROJECT:-}
 declare -x force_new_baseline=${FORCE_NEW_BASELINE:-false}
 declare -x max_regression_pct=${MAX_REGRESSION_PCT:-10}
 declare -x verbose=${VERBOSE:-false}
@@ -60,7 +59,7 @@ function warning()
     return 1
 }
 
-# Validate and set target-os
+# Validate and set os
 if ! echo "$os" | jq . >/dev/null 2>&1; then
     warning os "ubuntu-latest" "Invalid JSON for target OS."
 fi
@@ -114,30 +113,28 @@ fi
     # Log all computed values for debugging
     echo "✔️ All variables validated successfully"
     echo ""
-    echo "| Variable             | Value               |"
-    echo "|:---------------------|:--------------------|"
-    echo "| target-os            | $os          |"
-    echo "| dotnet-version       | $dotnet_version     |"
-    echo "| configuration        | $configuration      |"
-    echo "| preprocessor-symbols | $defined_symbols    |"
-    echo "| build-project        | $build_project      |"
-    echo "| test-project         | $test_project       |"
-    echo "| min-coverage-pct     | $min_coverage_pct   |"
-    echo "| run-benchmarks       | $run_benchmarks     |"
-    echo "| benchmark-project    | $benchmark_project  |"
-    echo "| force-new-baseline   | $force_new_baseline |"
-    echo "| max-regression-pct   | $max_regression_pct |"
-    echo "| verbose              | $verbose            |"
+    echo "| Variable             | Value                 |"
+    echo "|:---------------------|:----------------------|"
+    echo "| os                   | $os                   |"
+    echo "| dotnet-version       | $dotnet_version       |"
+    echo "| configuration        | $configuration        |"
+    echo "| preprocessor-symbols | $preprocessor_symbols |"
+    echo "| test-project         | $test_project         |"
+    echo "| min-coverage-pct     | $min_coverage_pct     |"
+    echo "| run-benchmarks       | $run_benchmarks       |"
+    echo "| benchmark-project    | $benchmark_project    |"
+    echo "| force-new-baseline   | $force_new_baseline   |"
+    echo "| max-regression-pct   | $max_regression_pct   |"
+    echo "| verbose              | $verbose              |"
 } | tee >> "$GITHUB_STEP_SUMMARY"
 
 # shellcheck disable=SC2154
 {
     # Output all variables to GITHUB_OUTPUT for use in subsequent jobs
-    echo "target-os=$os"
+    echo "os=$os"
     echo "dotnet-version=$dotnet_version"
     echo "configuration=$configuration"
-    echo "preprocessor-symbols=$defined_symbols"
-    echo "build-project=$build_project"
+    echo "preprocessor-symbols=$preprocessor_symbols"
     echo "test-project=$test_project"
     echo "min-coverage-pct=$min_coverage_pct"
     echo "run-benchmarks=$run_benchmarks"

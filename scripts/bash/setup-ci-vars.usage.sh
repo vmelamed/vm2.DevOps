@@ -21,9 +21,9 @@ Parameters: All parameters are optional if the corresponding environment
 Switches:$common_switches
 
 Options:
-    --target-os | -o
+    --os | -o
         JSON array of OS runners for the build matrix.
-        Initial value from \$MATRIX_OS or '["ubuntu-latest"]'
+        Initial value from \$OS or 'ubuntu-latest'
 
     --dotnet-version
         Version of .NET SDK to use.
@@ -35,11 +35,11 @@ Options:
 
     --preprocessor-symbols | -d
         Pre-processor symbols for compilation.
-        Initial value from \$DEFINED_SYMBOLS or ''
+        Initial value from \$PREPROCESSOR_SYMBOLS or ''
 
     --test-project | -t
         Path to the test project file.
-        Initial value from \$TEST_PROJECT or './test/UlidType.Tests/UlidType.Tests.csproj'
+        Initial value from \$TEST_PROJECT
 
     --min-coverage-pct | -m
         Minimum acceptable code coverage percentage (50-100).
@@ -51,7 +51,7 @@ Options:
 
     --benchmark-project | -p
         Path to the benchmark project file.
-        Initial value from \$BENCHMARK_PROJECT or './benchmarks/UlidType.Benchmarks/UlidType.Benchmarks.csproj'
+        Initial value from \$BENCHMARK_PROJECT
 
     --force-new-baseline | -f
         Whether to force new baseline (true/false).

@@ -51,7 +51,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  ACTIONS_STEP_DEBUG: "true"
+  ACTIONS_RUNNER_DEBUG: true
+  ACTIONS_STEP_DEBUG: true
 
 jobs:
   call_ci:

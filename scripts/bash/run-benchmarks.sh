@@ -95,7 +95,7 @@ execute dotnet restore --locked-mode
 trace "Running benchmark tests in project '$bm_project' with build configuration '$configuration'..."
 execute mkdir -p "$artifacts_dir"
 execute dotnet run \
-    /p:DefineConstants="$defined_symbols" \
+    /p:DefineConstants="$preprocessor_symbols" \
     --project "$bm_project" \
     --configuration "$configuration" \
     --no-restore \

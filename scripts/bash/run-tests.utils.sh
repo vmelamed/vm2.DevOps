@@ -39,14 +39,15 @@ function get_arguments()
                 shift
                 artifacts_dir=$(realpath -m "$value")
                 ;;
+
             --define|-d    )
                 value="$1"; shift
                 if ! [[ "$value" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
-                    usage "The specified pre-processor symbol '$value' is not valid."
+                    usage "The specified preprocessor symbol '$value' is not valid."
                     exit 2
                 fi
-                if [[ ! "$defined_symbols" =~ (^|;)"$value"($|;) ]]; then
-                    preprocessor_symbols="$value $defined_symbols"   # NOTE: space-separated!
+                if [[ ! "$preprocessor_symbols" =~ (^|;)"$value"($|;) ]]; then
+                    preprocessor_symbols="$value $preprocessor_symbols"   # NOTE: space-separated!
                 fi
                 ;;
 
@@ -91,7 +92,6 @@ dump_all_variables()
         quiet \
         --blank \
         test_project \
-        CONFIGURATION \
         preprocessor_symbols \
         min_coverage_pct \
         artifacts_dir \

@@ -31,9 +31,9 @@ function get_arguments()
         case "${flag,,}" in
             --debugger     ) ;;  # already processed above
             --help|-h      ) usage; exit 0 ;;
-            --target-os|-o )
+            --os|-o )
                 value="$1"; shift
-                matrix_os="$value"
+                os="$value"
                 ;;
             --dotnet-version )
                 value="$1"; shift
@@ -88,7 +88,7 @@ dump_all_variables()
         verbose \
         quiet \
         --blank \
-        matrix_os \
+        os \
         dotnet_version \
         configuration \
         preprocessor_symbols \

@@ -39,7 +39,7 @@ Options:
         Defines one or more user-defined pre-processor symbols to be used when
         building the benchmark project, e.g. 'STAGING'. You can specify this
         option multiple times to define multiple symbols.
-        Initial value from \$DEFINED_SYMBOLS or ''
+        Initial value from \$PREPROCESSOR_SYMBOLS or ''
 
     --min-coverage-pct | -t
         Specifies the minimum acceptable code coverage percentage (50-100).

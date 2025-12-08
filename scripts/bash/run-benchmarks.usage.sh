@@ -24,7 +24,7 @@ Parameters:
 Switches:$common_switches
     --short-run | -s
         A shortcut for '--define SHORT_RUN'. See below.
-        The initial value from \$DEFINED_SYMBOLS or '' will be preserved and
+        The initial value from \$PREPROCESSOR_SYMBOLS or '' will be preserved and
         appended with 'SHORT_RUN' if not already present.
 
     --force-new-baseline | -f
@@ -47,7 +47,7 @@ Options:
         building the benchmark project, e.g. 'SHORT_RUN'. Which generates a
         shorter and faster, but less accurate benchmark run. You can specify
         this option multiple times to defined multiple symbols.
-        Initial value from \$DEFINED_SYMBOLS or ''
+        Initial value from \$PREPROCESSOR_SYMBOLS or ''
 
     --max-regression-pct | -r
         Specifies the maximum acceptable regression percentage (0-50) when

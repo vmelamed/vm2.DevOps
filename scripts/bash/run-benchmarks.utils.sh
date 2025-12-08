@@ -65,15 +65,15 @@ function get_arguments()
                     usage "The specified pre-processor symbol '$value' is not valid."
                     exit 2
                 fi
-                if [[ ! "$defined_symbols" =~ (^|;)"$value"($|;) ]]; then
-                    preprocessor_symbols="$value $defined_symbols"  # NOTE: space-separated!
+                if [[ ! "$preprocessor_symbols" =~ (^|;)"$value"($|;) ]]; then
+                    preprocessor_symbols="$value $preprocessor_symbols"  # NOTE: space-separated!
                 fi
                 ;;
 
             --short-run|-s )
                 # Shortcut for --preprocessor_symbols SHORT_RUN
-                if [[ ! "$defined_symbols" =~ (^|;)SHORT_RUN($|;) ]]; then
-                    preprocessor_symbols="$defined_symbols SHORT_RUN"  # NOTE: space-separated!
+                if [[ ! "$preprocessor_symbols" =~ (^|;)SHORT_RUN($|;) ]]; then
+                    preprocessor_symbols="$preprocessor_symbols SHORT_RUN"  # NOTE: space-separated!
                 fi
                 ;;
 
