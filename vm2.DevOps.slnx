@@ -2,12 +2,12 @@
   <Folder Name="/.github/" />
   <Folder Name="/.github/workflows/">
     <File Path=".github/workflows/ci.yaml" />
-    <File Path=".github/workflows/reusable-benchmarks.yaml" />
-    <File Path=".github/workflows/reusable-build.yaml" />
-    <File Path=".github/workflows/reusable-ci.yaml" />
-    <File Path=".github/workflows/reusable-prerelease.yaml" />
-    <File Path=".github/workflows/reusable-release.yaml" />
-    <File Path=".github/workflows/reusable-test.yaml" />
+    <File Path=".github/workflows/_benchmarks.yaml" />
+    <File Path=".github/workflows/_build.yaml" />
+    <File Path=".github/workflows/_ci.yaml" />
+    <File Path=".github/workflows/_prerelease.yaml" />
+    <File Path=".github/workflows/_release.yaml" />
+    <File Path=".github/workflows/_test.yaml" />
   </Folder>
   <Folder Name="/benchmarks/">
     <Project Path="benchmarks/Glob.Api.Benchmarks/Glob.Api.Benchmarks.csproj" Id="59282f2e-b8ee-45a7-9814-b69563c74e1d" />
