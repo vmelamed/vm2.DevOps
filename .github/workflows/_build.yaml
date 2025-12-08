@@ -1,4 +1,4 @@
-name: Build .NET projects (Reusable)
+name: Build .NET projects (Reusable workflow)
 
 on:
   workflow_call:
@@ -45,7 +45,7 @@ jobs:
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
           cache: true
-          cache-dependency-path: |
+          cache-dependency-path: |+
             **/packages.lock.json
             **/*.csproj
 
@@ -53,11 +53,11 @@ jobs:
         run: chmod u+x ./scripts/bash/*.sh
 
       - name: Restore
-        run: |
+        run: |+
           dotnet restore --locked-mode
 
       - name: Build (${{ inputs.configuration }})
-        run: |
+        run: |+
           dotnet build \
             /p:DefineConstants="${{ inputs.preprocessor-symbols }}" \
             --configuration ${{ inputs.configuration }} \

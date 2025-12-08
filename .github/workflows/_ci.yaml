@@ -1,4 +1,4 @@
-name: Build, Test, Run Benchmark Tests
+name: Build, Test, Benchmarks (Reusable workflow)
 
 on:
   workflow_call:
@@ -66,6 +66,15 @@ jobs:
   setup:
     name: Parameters validation
     runs-on: ${{ inputs.os }}
+    if: >+
+      ${{
+      (github.event_name == 'push' &&
+      !(contains(github.event.head_commit.message, '[skip ci]') ||
+      contains(github.event.head_commit.message, '[ci]'))
+      ) ||
+      github.event_name == 'pull_request' ||
+      github.event_name == 'workflow_dispatch'
+      }}
     outputs:
       os:                   ${{ steps.setup-vars.outputs.os }}
       dotnet-version:       ${{ steps.setup-vars.outputs.dotnet-version }}
@@ -105,7 +114,7 @@ jobs:
     name: Build
     needs:
       - setup
-    uses: vmelamed/vm2.DevOps/.github/workflows/reusable-build.yaml@initial-port-from-vm2.Ulid
+    uses: ./.github/workflows/_build.yaml
     with:
       os:                   ${{ needs.setup.outputs.os }}
       dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
@@ -117,7 +126,7 @@ jobs:
     needs:
       - setup
       - build_job
-    uses: vmelamed/vm2.DevOps/.github/workflows/reusable-test.yaml@initial-port-from-vm2.Ulid
+    uses: ./.github/workflows/_test.yaml
     with:
       test-project:         ${{ needs.setup.outputs.test-project }}
       os:                   ${{ needs.setup.outputs.os }}
@@ -132,8 +141,12 @@ jobs:
     needs:
       - setup
       - build_job
-    uses: vmelamed/vm2.DevOps/.github/workflows/reusable-benchmarks.yaml@initial-port-from-vm2.Ulid
-    if: ${{ fromJSON(needs.setup.outputs.run-benchmarks) && fromJSON(needs.setup.outputs.benchmark-project) }}
+    uses: ./.github/workflows/_benchmarks.yaml
+    if: >+
+      ${{
+      fromJSON(needs.setup.outputs.run-benchmarks) &&
+      fromJSON(needs.setup.outputs.benchmark-project)
+      }}
     with:
       benchmark-project:    ${{ needs.setup.outputs.benchmark-project }}
       os:                   ${{ needs.setup.outputs.os }}

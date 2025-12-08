@@ -1,4 +1,4 @@
-name: Prerelease (Tag & Publish)
+name: Prerelease (Reusable workflow)
 
 on:
   workflow_call:
@@ -52,7 +52,7 @@ jobs:
 
       - name: Skip if commit already tagged (any v* tag)
         id: tag_check
-        run: |
+        run: |+
           if [[ $FORCE_PUBLISH != 'true' ]] && git tag --points-at HEAD | grep -E '^v[0-9]'; then
             printf 'already_tagged=%s\n' "true" >> "$GITHUB_OUTPUT"
           else
@@ -63,7 +63,7 @@ jobs:
         if: steps.tag_check.outputs.already_tagged == 'false'
         id: compute
         shell: bash
-        run: |
+        run: |+
           set -euo pipefail
 
           # Find latest stable (no hyphen) tag like v1.2.3
@@ -85,7 +85,7 @@ jobs:
           printf '## Prerelease Tag:\n- %s\n' "$PRERELEASE_TAG" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Log the reason for workflow dispatch
-        run: |
+        run: |+
           {
               echo "## Prerelease reason:"
               echo
@@ -96,7 +96,7 @@ jobs:
         if: steps.tag_check.outputs.already_tagged == 'false'
         env:
           TAG: ${{ steps.compute.outputs.prerelease_tag }}
-        run: |
+        run: |+
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git tag -a "$TAG" -m "Prerelease $TAG" -m "Reason: $REASON" || echo "Tag exists, continuing"
@@ -108,17 +108,17 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
           cache: true
-          cache-dependency-path: |
+          cache-dependency-path: |+
             **/packages.lock.json
             **/*.csproj
 
       - name: Restore
-        run: |
+        run: |+
           dotnet restore --locked-mode
 
       - name: Pack (MinVer consumes the just-pushed prerelease tag)
         if: steps.tag_check.outputs.already_tagged == 'false'
-        run: |
+        run: |+
           mkdir -p artifacts/pack
           dotnet pack \
             --configuration Release \
@@ -133,7 +133,7 @@ jobs:
         env:
           PRERELEASE_TAG: ${{ steps.compute.outputs.prerelease_tag }}
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
-        run: |
+        run: |+
           if [ -z "${NUGET_API_KEY}" ]; then
             echo "NUGET_API_KEY not configured"; exit 1
           fi
@@ -155,7 +155,7 @@ jobs:
       - name: Summary
         env:
           ARTIFACTS_SAVED: ${{ env.SAVE_PACKAGE_ARTIFACTS == 'true' }}
-        run: |
+        run: |+
           {
               echo "## Release Summary"
               echo

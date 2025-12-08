@@ -1,4 +1,4 @@
-name: Test .NET projects (Reusable)
+name: Test .NET projects (Reusable workflow)
 
 on:
   workflow_call:
@@ -63,7 +63,7 @@ jobs:
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
           cache: true
-          cache-dependency-path: |
+          cache-dependency-path: |+
             **/packages.lock.json
             **/*.csproj
 
@@ -76,7 +76,7 @@ jobs:
           PREPROCESSOR_SYMBOLS: ${{ inputs.preprocessor-symbols }}
           VERBOSE:              ${{ fromJSON(inputs.verbose) }}
         shell: bash
-        run: >-
+        run: >+
           ./scripts/bash/run-tests.sh ${{ inputs.test-project }}
           --min-coverage-pct "${{ inputs.min-coverage-pct }}"
           --configuration "${{ inputs.configuration }}"
