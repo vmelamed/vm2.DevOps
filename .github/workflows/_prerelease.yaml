@@ -1,4 +1,4 @@
-name: Prerelease (Tag & Publish)
+name: Prerelease - Tag & Publish Preliminary (Reusable workflow)
 
 on:
   workflow_call:

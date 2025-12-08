@@ -1,4 +1,4 @@
-name: Build .NET projects (Reusable)
+name: Build .NET projects (Reusable workflow)
 
 on:
   workflow_call:

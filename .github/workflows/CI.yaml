@@ -57,7 +57,7 @@ env:
 jobs:
   call_ci:
     name: Call CI Workflow
-    uses: vmelamed/vm2.DevOps/.github/workflows/reusable-ci.yaml@initial-port-from-vm2.Ulid
+    uses: ./.github/workflows/_ci.yaml
     with:
       dotnet-version:       ${{ inputs.dotnet-version }}
       configuration:        ${{ inputs.configuration }}

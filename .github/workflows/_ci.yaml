@@ -1,4 +1,4 @@
-name: Build, Test, Run Benchmark Tests
+name: Build, Test, Run Benchmark Tests (Reusable workflow)
 
 on:
   workflow_call:
@@ -105,7 +105,7 @@ jobs:
     name: Build
     needs:
       - setup
-    uses: vmelamed/vm2.DevOps/.github/workflows/reusable-build.yaml@initial-port-from-vm2.Ulid
+    uses: ./.github/workflows/_build.yaml
     with:
       os:                   ${{ needs.setup.outputs.os }}
       dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
@@ -117,7 +117,7 @@ jobs:
     needs:
       - setup
       - build_job
-    uses: vmelamed/vm2.DevOps/.github/workflows/reusable-test.yaml@initial-port-from-vm2.Ulid
+    uses: ./.github/workflows/_test.yaml
     with:
       test-project:         ${{ needs.setup.outputs.test-project }}
       os:                   ${{ needs.setup.outputs.os }}
@@ -132,7 +132,7 @@ jobs:
     needs:
       - setup
       - build_job
-    uses: vmelamed/vm2.DevOps/.github/workflows/reusable-benchmarks.yaml@initial-port-from-vm2.Ulid
+    uses: ./.github/workflows/_benchmarks.yaml
     if: ${{ fromJSON(needs.setup.outputs.run-benchmarks) && fromJSON(needs.setup.outputs.benchmark-project) }}
     with:
       benchmark-project:    ${{ needs.setup.outputs.benchmark-project }}

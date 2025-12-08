@@ -1,4 +1,4 @@
-name: Test .NET projects (Reusable)
+name: Test .NET projects (Reusable workflow)
 
 on:
   workflow_call:
