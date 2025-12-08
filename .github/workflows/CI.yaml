@@ -59,15 +59,31 @@ env:
 jobs:
   call_ci:
     name: Call CI Workflow
-    uses: ./.github/workflows/_ci.yaml
-    with:
-      dotnet-version:       ${{ inputs.dotnet-version }}
-      configuration:        ${{ inputs.configuration }}
-      min-coverage-pct:     ${{ vars.MIN_COVERAGE_PCT   || 75 }}
-      max-regression-pct:   ${{ vars.MAX_REGRESSION_PCT || 10 }}
-      os:                   ${{ inputs.os }}
-      preprocessor-symbols: ${{ inputs.preprocessor-symbols }}
-      test-project:         ./test/Glob.Api.Tests/Glob.Api.Tests.csproj
-      run-benchmarks:       ${{ inputs.run-benchmarks }}
-      benchmark-project:    ./benchmarks/Glob.Api.Benchmarks/Glob.Api.Benchmarks.csproj
-      force-new-baseline:   ${{ inputs.force-new-baseline }}
+#    uses: ./.github/workflows/_ci.yaml
+#    with:
+#      dotnet-version:       ${{ inputs.dotnet-version }}
+#      configuration:        ${{ inputs.configuration }}
+#      min-coverage-pct:     ${{ vars.MIN_COVERAGE_PCT   || 75 }}
+#      max-regression-pct:   ${{ vars.MAX_REGRESSION_PCT || 10 }}
+#      os:                   ${{ inputs.os }}
+#      preprocessor-symbols: ${{ inputs.preprocessor-symbols }}
+#      test-project:         ./test/Glob.Api.Tests/Glob.Api.Tests.csproj
+#      run-benchmarks:       ${{ inputs.run-benchmarks }}
+#      benchmark-project:    ./benchmarks/Glob.Api.Benchmarks/Glob.Api.Benchmarks.csproj
+#      force-new-baseline:   ${{ inputs.force-new-baseline }}
+    runs-on: ${{ inputs.os }}
+    steps:
+      - name: Print all inputs
+        run: |+
+          {
+            echo "inputs.os:                   ${{ inputs.os }}"
+            echo "inputs.dotnet-version:       ${{ inputs.dotnet-version }}"
+            echo "inputs.configuration:        ${{ inputs.configuration }}"
+            echo "inputs.min-coverage-pct:     ${{ vars.MIN_COVERAGE_PCT || 75 }}"
+            echo "inputs.max-regression-pct:   ${{ inputs.MAX_REGRESSION_PCT || 10 }}"
+            echo "inputs.preprocessor-symbols: ${{ inputs.preprocessor-symbols }}"
+            echo "inputs.run-benchmarks:       ${{ inputs.run-benchmarks }}"
+            echo "inputs.force-new-baseline:   ${{ inputs.force-new-baseline }}"
+            echo "test-project:                ./test/Glob.Api.Tests/Glob.Api.Tests.csproj"
+            echo "benchmark-project:           ./benchmarks/Glob.Api.Benchmarks/Glob.Api.Benchmarks.csproj"
+          } >> $GITHUB_STEP_SUMMARY
