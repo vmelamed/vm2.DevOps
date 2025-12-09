@@ -110,7 +110,7 @@ execute mkdir -p "$coverage_summary_dir"
 trace "Restore dependencies"
 execute dotnet restore --locked-mode
 
-trace "Running tests in project '$test_project' with build configuration '$configuration'..."
+trace "Running tests in project $test_project with build configuration $configuration..."
 execute dotnet run --project "$test_project" \
     /p:DefineConstants="$preprocessor_symbols" \
     --no-restore \

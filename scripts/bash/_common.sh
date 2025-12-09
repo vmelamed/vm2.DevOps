@@ -279,7 +279,7 @@ function display_usage_msg()
 }
 
 function trace() {
-    if [[ $verbose == true ]]; then
+    if [[ "$verbose" == "true" ]]; then
         echo "Trace: $*" >&2
     fi
 }
