@@ -82,8 +82,7 @@ jobs:
       - name: Restore dependencies
         shell: bash
         run: |+
-          # dotnet restore --locked-mode
-          dotnet restore --force-evaluate
+          dotnet restore --locked-mode
 
       - name: Build (${{ inputs.configuration }})
         shell: bash

@@ -89,8 +89,7 @@ jobs:
       - name: Restore
         shell: bash
         run: |+
-          # dotnet restore --locked-mode
-          dotnet restore --force-evaluate
+          dotnet restore --locked-mode
 
       - name: Restore build artifacts from cache
         uses: actions/cache/restore@v4
