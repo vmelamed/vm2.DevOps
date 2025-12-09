@@ -65,6 +65,7 @@ function set_ci()
         _ignore=/dev/null
         set +x
     fi
+    return 0
 }
 
 function set_debugger()
@@ -76,6 +77,7 @@ function set_debugger()
         debugger=true
         quiet=true
     fi
+    return 0
 }
 
 function set_trace_enabled()
@@ -90,6 +92,7 @@ function set_trace_enabled()
         _ignore=/dev/stdout
         set -x
     fi
+    return 0
 }
 
 function set_dry_run()
@@ -100,6 +103,7 @@ function set_dry_run()
     else
         dry_run=true
     fi
+    return 0
 }
 
 function set_quiet()
@@ -110,11 +114,13 @@ function set_quiet()
     else
         quiet=false
     fi
+    return 0
 }
 
 function set_verbose()
 {
     verbose=true
+    return 0
 }
 
 if [[ $ci == true ]]; then
@@ -276,12 +282,14 @@ function display_usage_msg()
     if ((tracing_on == 1)); then
         set -x
     fi
+    return 0
 }
 
 function trace() {
     if [[ "$verbose" == "true" ]]; then
         echo "Trace: $*" >&2
     fi
+    return 0
 }
 
 # Depending on the value of $dry_run either executes or just displays what would have been executed.
@@ -299,12 +307,14 @@ function execute() {
 # Usage example: local a="$(to_lower "$1")"
 function to_lower() {
     printf "%s" "${1,,}"
+    return 0
 }
 
 # to_upper converts all characters in the passed in value to uppercase and prints the to stdout.
 # Usage example: local a="$(to_upper "$1")"
 function to_upper() {
     printf "%s" "${1^^}"
+    return 0
 }
 
 # capitalize converts the first character in the passed in value to upper case and the rest to lowercase and prints the to stdout.
@@ -313,6 +323,7 @@ function capitalize() {
     a=to_lower "$1"
     # shellcheck disable=SC2154
     printf "%s" "${a^}"
+    return 0
 }
 
 # is_positive tests if its parameter represents a valid positive, integer number (aka natural number): {1, 2, 3, ...}
@@ -388,6 +399,7 @@ function press_any_key() {
         read -n 1 -rsp 'Press any key to continue...' >&2
         echo
     fi
+    return 0
 }
 
 # confirm asks the script user to respond yes or no to some prompt. If there is a defined variable $quiet with
