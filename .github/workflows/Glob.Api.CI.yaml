@@ -48,10 +48,6 @@ on:
         type: boolean
         default: false
 
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
-
 env:
   ACTIONS_RUNNER_DEBUG: true
   ACTIONS_STEP_DEBUG: true
