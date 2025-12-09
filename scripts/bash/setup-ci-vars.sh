@@ -21,7 +21,7 @@ source "$script_dir/_common.sh"
 declare -x build_project=${BUILD_PROJECT:-}
 declare -x test_project=${TEST_PROJECT:-}
 declare -x benchmark_project=${BENCHMARK_PROJECT:-}
-declare -x os=${os:-"ubuntu-latest"}
+declare -x os=${OS:-"ubuntu-latest"}
 declare -x dotnet_version=${DOTNET_VERSION:-"10.0.x"}
 declare -x configuration=${CONFIGURATION:-"Release"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
