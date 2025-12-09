@@ -61,7 +61,7 @@ jobs:
     name: Call the CI Workflow
     strategy:
       matrix:
-        os: ${{ inputs.os }}
+        os: ${{ fromJSON(inputs.os) }}
         build-project:
           - ./src/Glob.Api/Glob.Api.csproj
           - ./test/Glob.Api.FakeFileSystem.Tests/Glob.Api.FakeFileSystem.Tests.csproj
