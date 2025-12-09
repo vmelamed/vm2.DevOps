@@ -106,7 +106,7 @@ jobs:
 
       - name: Setup .NET
         if: steps.tag_check.outputs.already_tagged == 'false'
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
           cache: true
