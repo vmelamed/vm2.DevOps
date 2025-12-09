@@ -6,12 +6,11 @@ on:
 
       reason:
         description: 'Reason for clearing cache'
-        required: true
         type: string
         default: 'Emergency cache cleanup'
 
       cache-pattern:
-        description: 'Cache key pattern to delete (default: nuget-*)'
+        description: 'Cache key pattern to delete (build-artifacts-*, nuget-*, <other-patterns>) (default: nuget-*)'
         required: false
         type: string
         default: 'nuget-'
@@ -34,35 +33,41 @@ jobs:
           CACHE_PATTERN: ${{ inputs.cache-pattern }}
           REASON: ${{ inputs.reason }}
         run: |
-          echo "Clearing caches matching pattern: $CACHE_PATTERN"
-          echo "Reason: $REASON"
+          echo "🗑️ Clearing caches matching pattern: $CACHE_PATTERN"
+          echo "📝 Reason: $REASON"
           echo ""
 
           # List all caches
-          echo "Current caches:"
-          gh cache list --repo ${{ github.repository }}
+          echo "📋 Current caches:"
+          gh cache list --limit 100 || true
           echo ""
 
           # Delete matching caches
-          DELETED=0
-          gh cache list --repo ${{ github.repository }} | \
-            grep "$CACHE_PATTERN" | \
-            awk '{print $1}' | \
-            while read cache_id; do
-              echo "Deleting cache: $cache_id"
-              gh cache delete "$cache_id" --repo ${{ github.repository }} || true
-              DELETED=$((DELETED + 1))
-            done
+          echo ""
+          echo "🗑️ Deleting caches matching '${CACHE_PATTERN}*'..."
+
+          gh cache list --limit 1000 \
+            | grep "^${CACHE_PATTERN}" \
+            | awk '{print $1}' \
+            | while read -r cache_id; do
+                echo "  Deleting cache: ${cache_id}"
+                gh cache delete "${cache_id}" --confirm 2>/dev/null || true
+              done
 
           echo ""
-          echo "✅ Cleared $DELETED cache(s) matching pattern: $CACHE_PATTERN"
+          echo "✅ Cache cleanup complete"
+          echo "📋 Remaining caches:"
+          gh cache list --limit 100 || true
 
+          # Output to step summary
           {
-            echo "## Cache Cleanup Summary"
+            echo "## 🗑️ Cache Cleanup Complete"
             echo ""
-            echo "- **Pattern:** \`$CACHE_PATTERN\`"
-            echo "- **Reason:** $REASON"
-            echo "- **Caches deleted:** $DELETED"
+            echo "**Pattern:** \`${CACHE_PATTERN}*\`"
             echo ""
-            echo "Next builds will download fresh packages."
-          } >> $GITHUB_STEP_SUMMARY
+            echo "**Reason:** ${REASON}"
+            echo ""
+            echo "### Remaining Caches"
+            echo ""
+            gh cache list --limit 20 || echo "No caches remaining"
+          } >> "$GITHUB_STEP_SUMMARY"
