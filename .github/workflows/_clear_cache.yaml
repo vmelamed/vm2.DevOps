@@ -24,9 +24,6 @@ jobs:
     name: Clear NuGet Cache
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
       - name: Delete matching caches
         shell: bash
         env:
@@ -34,31 +31,47 @@ jobs:
           CACHE_PATTERN: ${{ inputs.cache-pattern }}
           REASON: ${{ inputs.reason }}
         run: |
-          echo "🗑️ Clearing caches matching pattern: $CACHE_PATTERN"
-          echo "📝 Reason: $REASON"
+          set -euo pipefail  # Enable strict error handling
+
+          echo "🗑️ Clearing caches matching pattern: ${CACHE_PATTERN}*"
+          echo "📝 Reason: ${REASON}"
           echo ""
 
           # List all caches
-          echo "📋 Current caches:"
-          gh cache list --limit 100 || true
+          echo "📋 Current caches before cleanup:"
+          cache_list=$(gh cache list --limit 100 2>&1) || true
+          if [[ -n "$cache_list" ]]; then
+            echo "$cache_list"
+          else
+            echo "No caches found in repository"
+          fi
           echo ""
 
           # Delete matching caches
-          echo ""
-          echo "🗑️ Deleting caches matching '${CACHE_PATTERN}*'..."
+          echo "🗑️ Searching for caches matching pattern '${CACHE_PATTERN}*'..."
 
-          gh cache list --limit 1000 \
-            | grep "^${CACHE_PATTERN}" \
-            | awk '{print $1}' \
-            | while read -r cache_id; do
-                echo "  Deleting cache: ${cache_id}"
-                gh cache delete "${cache_id}" --confirm 2>/dev/null || true
-              done
+          deleted_count=0
+          matched_caches=$(gh cache list --limit 1000 2>&1 | grep "^${CACHE_PATTERN}" || true)
+
+          if [[ -z "$matched_caches" ]]; then
+            echo "ℹ️  No caches found matching pattern '${CACHE_PATTERN}*'"
+          else
+            echo ""
+            while IFS=$'\t' read -r cache_id cache_key rest; do
+              if [[ -n "$cache_id" ]]; then
+                echo "  🗑️  Deleting: ${cache_key} (ID: ${cache_id})"
+                if gh cache delete "${cache_id}" --confirm 2>/dev/null; then
+                  ((deleted_count++)) || true
+                  echo "      ✅ Deleted successfully"
+                else
+                  echo "      ⚠️  Failed to delete (may already be deleted)"
+                fi
+              fi
+            done <<< "$matched_caches"
+          fi
 
           echo ""
-          echo "✅ Cache cleanup complete"
-          echo "📋 Remaining caches:"
-          gh cache list --limit 100 || true
+          echo "✅ Cleanup complete: ${deleted_count} cache(s) deleted"
 
           # Output to step summary
           {
