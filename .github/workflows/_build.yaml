@@ -1,4 +1,4 @@
-name: Build .NET projects (Reusable workflow)
+name: _build (Reusable workflow)
 
 on:
   workflow_call:
@@ -51,6 +51,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Get cache timestamp (weekly rotation)
+        id: cache-timestamp
+        shell: bash
+        run: |
+          # Generate cache key based on calendar week
+          CACHE_WEEK=$(date +%Y-W%V)
+          echo "week=$CACHE_WEEK" >> $GITHUB_OUTPUT
+          echo "Cache rotation key: $CACHE_WEEK"
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
@@ -59,6 +68,16 @@ jobs:
           cache-dependency-path: |+
             **/packages.lock.json
             **/*.csproj
+
+      # Additional explicit cache with time-based rotation
+      - name: Cache NuGet packages (weekly rotation)
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ steps.cache-timestamp.outputs.week }}-${{ hashFiles('**/packages.lock.json') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-${{ steps.cache-timestamp.outputs.week }}-
+            nuget-${{ runner.os }}-
 
       - name: Restore dependencies
         shell: bash

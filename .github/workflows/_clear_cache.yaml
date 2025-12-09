@@ -1,0 +1,68 @@
+﻿name: _clear_cache (Reusable workflow)
+
+on:
+  workflow_call:
+    inputs:
+
+      reason:
+        description: 'Reason for clearing cache'
+        required: true
+        type: string
+        default: 'Emergency cache cleanup'
+
+      cache-pattern:
+        description: 'Cache key pattern to delete (default: nuget-*)'
+        required: false
+        type: string
+        default: 'nuget-'
+
+permissions:
+  actions: write
+
+jobs:
+  clear-cache:
+    name: Clear NuGet Cache
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Delete matching caches
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CACHE_PATTERN: ${{ inputs.cache-pattern }}
+          REASON: ${{ inputs.reason }}
+        run: |
+          echo "Clearing caches matching pattern: $CACHE_PATTERN"
+          echo "Reason: $REASON"
+          echo ""
+
+          # List all caches
+          echo "Current caches:"
+          gh cache list --repo ${{ github.repository }}
+          echo ""
+
+          # Delete matching caches
+          DELETED=0
+          gh cache list --repo ${{ github.repository }} | \
+            grep "$CACHE_PATTERN" | \
+            awk '{print $1}' | \
+            while read cache_id; do
+              echo "Deleting cache: $cache_id"
+              gh cache delete "$cache_id" --repo ${{ github.repository }} || true
+              DELETED=$((DELETED + 1))
+            done
+
+          echo ""
+          echo "✅ Cleared $DELETED cache(s) matching pattern: $CACHE_PATTERN"
+
+          {
+            echo "## Cache Cleanup Summary"
+            echo ""
+            echo "- **Pattern:** \`$CACHE_PATTERN\`"
+            echo "- **Reason:** $REASON"
+            echo "- **Caches deleted:** $DELETED"
+            echo ""
+            echo "Next builds will download fresh packages."
+          } >> $GITHUB_STEP_SUMMARY

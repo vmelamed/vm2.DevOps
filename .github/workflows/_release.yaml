@@ -1,4 +1,4 @@
-name: Release (Reusable workflow)
+name: _release (Reusable workflow)
 
 on:
   workflow_call:
