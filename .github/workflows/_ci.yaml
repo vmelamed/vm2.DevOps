@@ -64,7 +64,7 @@ on:
         default: false
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.ref }}-${{ inputs.build-project }}-${{ inputs.test-project }}
   cancel-in-progress: true
 
 jobs:

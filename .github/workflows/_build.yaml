@@ -28,6 +28,12 @@ on:
         type: string
         default: ""
 
+# concurrency:
+#   group: test-${{ github.workflow_ref }}-${{ inputs.test-project }}
+#   cancel-in-progress: true
+#   # NOTE: Only uncomment if this workflow is called directly (not via _ci.yaml)
+#   # or if _ci.yaml runs build/test/benchmarks in parallel
+
 permissions:
   contents: read
 
