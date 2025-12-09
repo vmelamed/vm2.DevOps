@@ -68,6 +68,7 @@ jobs:
             **/*.csproj
 
       - name: Make Scripts Executable
+        shell: bash
         run: chmod u+x ./scripts/bash/*.sh
 
       - name: Run script for unit test with coverage

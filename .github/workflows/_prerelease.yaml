@@ -85,6 +85,7 @@ jobs:
           printf '## Prerelease Tag:\n- %s\n' "$PRERELEASE_TAG" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Log the reason for workflow dispatch
+        shell: bash
         run: |+
           {
               echo "## Prerelease reason:"
@@ -96,6 +97,7 @@ jobs:
         if: steps.tag_check.outputs.already_tagged == 'false'
         env:
           TAG: ${{ steps.compute.outputs.prerelease_tag }}
+        shell: bash
         run: |+
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
@@ -113,11 +115,13 @@ jobs:
             **/*.csproj
 
       - name: Restore
+        shell: bash
         run: |+
           dotnet restore --locked-mode
 
       - name: Pack (MinVer consumes the just-pushed prerelease tag)
         if: steps.tag_check.outputs.already_tagged == 'false'
+        shell: bash
         run: |+
           mkdir -p artifacts/pack
           dotnet pack \
@@ -133,6 +137,7 @@ jobs:
         env:
           PRERELEASE_TAG: ${{ steps.compute.outputs.prerelease_tag }}
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        shell: bash
         run: |+
           if [ -z "${NUGET_API_KEY}" ]; then
             echo "NUGET_API_KEY not configured"; exit 1
@@ -155,6 +160,7 @@ jobs:
       - name: Summary
         env:
           ARTIFACTS_SAVED: ${{ env.SAVE_PACKAGE_ARTIFACTS == 'true' }}
+        shell: bash
         run: |+
           {
               echo "## Release Summary"

@@ -72,11 +72,14 @@ jobs:
             **/*.csproj
 
       - name: Restore
+        shell: bash
         run: |+
           dotnet restore --locked-mode
 
       - name: Make Scripts Executable
-        run: chmod u+x ./scripts/bash/*.sh
+        shell: bash
+        run: |+
+          chmod u+x ./scripts/bash/*.sh
 
       - name: Download baseline benchmark summaries artifact
         if: ${{ !inputs.force-new-baseline }}
