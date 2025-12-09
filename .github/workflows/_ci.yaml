@@ -81,18 +81,18 @@ jobs:
       github.event_name == 'workflow_dispatch'
       }}
     outputs:
-     build-project:        ${{ steps.setup-vars.outputs.build-project }}
-     test-project:         ${{ steps.setup-vars.outputs.test-project }}
-     benchmark-project:    ${{ steps.setup-vars.outputs.benchmark-project }}
-     os:                   ${{ steps.setup-vars.outputs.os }}
-     dotnet-version:       ${{ steps.setup-vars.outputs.dotnet-version }}
-     configuration:        ${{ steps.setup-vars.outputs.configuration }}
-     preprocessor-symbols: ${{ steps.setup-vars.outputs.preprocessor-symbols }}
-     min-coverage-pct:     ${{ steps.setup-vars.outputs.min-coverage-pct }}
-     run-benchmarks:       ${{ steps.setup-vars.outputs.run-benchmarks }}
-     max-regression-pct:   ${{ steps.setup-vars.outputs.max-regression-pct }}
-     force-new-baseline:   ${{ steps.setup-vars.outputs.force-new-baseline }}
-     verbose:              ${{ steps.setup-vars.outputs.verbose }}
+      build-project:        ${{ steps.setup-vars.outputs.build-project }}
+      test-project:         ${{ steps.setup-vars.outputs.test-project }}
+      benchmark-project:    ${{ steps.setup-vars.outputs.benchmark-project }}
+      os:                   ${{ steps.setup-vars.outputs.os }}
+      dotnet-version:       ${{ steps.setup-vars.outputs.dotnet-version }}
+      configuration:        ${{ steps.setup-vars.outputs.configuration }}
+      preprocessor-symbols: ${{ steps.setup-vars.outputs.preprocessor-symbols }}
+      min-coverage-pct:     ${{ steps.setup-vars.outputs.min-coverage-pct }}
+      run-benchmarks:       ${{ steps.setup-vars.outputs.run-benchmarks }}
+      max-regression-pct:   ${{ steps.setup-vars.outputs.max-regression-pct }}
+      force-new-baseline:   ${{ steps.setup-vars.outputs.force-new-baseline }}
+      verbose:              ${{ steps.setup-vars.outputs.verbose }}
     #steps:
     #  - name: Checkout
     #    uses: actions/checkout@v6
@@ -138,20 +138,33 @@ jobs:
       - id: setup-vars
         name: Write to GITHUB_OUTPUT
         shell: bash
+        env:
+          BUILD_PROJECT: ${{ inputs.build-project }}
+          TEST_PROJECT: ${{ inputs.test-project }}
+          BENCHMARK_PROJECT: ${{ inputs.benchmark-project }}
+          OS: ${{ inputs.os }}
+          DOTNET_VERSION: ${{ inputs.dotnet-version }}
+          CONFIGURATION: ${{ inputs.configuration }}
+          PREPROCESSOR_SYMBOLS: ${{ inputs.preprocessor-symbols }}
+          MIN_COVERAGE_PCT: ${{ inputs.min-coverage-pct }}
+          RUN_BENCHMARKS: ${{ inputs.run-benchmarks }}
+          FORCE_NEW_BASELINE: ${{ inputs.force-new-baseline }}
+          MAX_REGRESSION_PCT: ${{ inputs.max-regression-pct }}
+          VERBOSE: ${{ inputs.verbose }}
         run: |+
           {
-              echo "build-project=$build_project"
-              echo "test-project=$test_project"
-              echo "benchmark-project=$benchmark_project"
-              echo "os=$os"
-              echo "dotnet-version=$dotnet_version"
-              echo "configuration=$configuration"
-              echo "preprocessor-symbols=$preprocessor_symbols"
-              echo "min-coverage-pct=$min_coverage_pct"
-              echo "run-benchmarks=$run_benchmarks"
-              echo "force-new-baseline=$force_new_baseline"
-              echo "max-regression-pct=$max_regression_pct"
-              echo "verbose=$verbose"
+              echo "build-project=$BUILD_PROJECT"
+              echo "test-project=$TEST_PROJECT"
+              echo "benchmark-project=$BENCHMARK_PROJECT"
+              echo "os=$OS"
+              echo "dotnet-version=$DOTNET_VERSION"
+              echo "configuration=$CONFIGURATION"
+              echo "preprocessor-symbols=$PREPROCESSOR_SYMBOLS"
+              echo "min-coverage-pct=$MIN_COVERAGE_PCT"
+              echo "run-benchmarks=$RUN_BENCHMARKS"
+              echo "force-new-baseline=$FORCE_NEW_BASELINE"
+              echo "max-regression-pct=$MAX_REGRESSION_PCT"
+              echo "verbose=$VERBOSE"
           } >> "$GITHUB_OUTPUT"
 
   build_job:
