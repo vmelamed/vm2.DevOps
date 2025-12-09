@@ -3,11 +3,6 @@ name: Test .NET projects (Reusable workflow)
 on:
   workflow_call:
     inputs:
-      test-project:
-        description: Path to the test project to run tests against (cannot be null or empty string)
-        type: string
-        required: true
-
       os:
         description: Runner OS-s (cannot be null or empty string, default ubuntu-latest)
         type: string
@@ -27,6 +22,11 @@ on:
         description: Define constants to pass to the compiler
         type: string
         default: ""
+
+      test-project:
+        description: Path to the test project to run tests against (cannot be null or empty string)
+        type: string
+        required: true
 
       min-coverage-pct:
         description: Minimum acceptable code coverage percentage (cannot be 0, null or empty, default 80)

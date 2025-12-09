@@ -4,24 +4,29 @@ on:
   workflow_call:
     inputs:
       os:
-        description: JSON array of runners (cannot be null or empty string, default ubuntu-latest)
+        description: JSON array of runners (default ubuntu-latest)
         type: string
         default: "ubuntu-latest"
 
       dotnet-version:
-        description: Version of .NET SDK to use (cannot be null or empty string, default 10.0.x)
+        description: Version of .NET SDK to use (default 10.0.x)
         type: string
         default: 10.0.x
 
       configuration:
-        description: The type of build to produce, e.g. Release vs Debug (cannot be null or empty string, default Release)
+        description: The type of build to produce, e.g. Release vs Debug (default Release)
         type: string
         default: Release
 
       preprocessor-symbols:
-        description: Preprocessor symbols to pass to the compiler
+        description: Preprocessor symbols to pass to the compiler (default - none)
         type: string
         default: ""
+
+      build-project:
+        description: Path to the project to build (default the solution or the project in the current directory)
+        type: string
+        required: true
 
 permissions:
   contents: read
@@ -49,16 +54,13 @@ jobs:
             **/packages.lock.json
             **/*.csproj
 
-      - name: Make Scripts Executable
-        run: chmod u+x ./scripts/bash/*.sh
-
       - name: Restore
         run: |+
           dotnet restore --locked-mode
 
       - name: Build (${{ inputs.configuration }})
         run: |+
-          dotnet build \
+          dotnet build ${{ inputs.build-project }} \
             /p:DefineConstants="${{ inputs.preprocessor-symbols }}" \
             --configuration ${{ inputs.configuration }} \
             --no-restore
@@ -68,14 +70,3 @@ jobs:
             echo "Build configuration: ${{ inputs.configuration }}"
             echo "Defined symbols:     ${{ inputs.preprocessor-symbols || 'None' }}"
           } >> $GITHUB_STEP_SUMMARY
-
-      - name: ShellCheck
-        uses: ludeeus/action-shellcheck@master
-        env:
-          SHELLCHECK_OPTS: --external-sources --check-sourced
-        with:
-          scandir: ./scripts/bash
-          check_together: true
-          severity: warning
-          format: tty
-          ignore_names: self-test.sh

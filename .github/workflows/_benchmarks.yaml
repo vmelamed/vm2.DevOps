@@ -3,11 +3,6 @@ name: Run Benchmarks (Reusable workflow)
 on:
   workflow_call:
     inputs:
-      benchmark-project:
-        description: Path to the benchmark project to run benchmarks against (cannot be null or empty string)
-        type: string
-        required: true
-
       os:
         description: Runner OS-s (cannot be null or empty string, default ubuntu-latest)
         type: string
@@ -26,6 +21,11 @@ on:
       preprocessor-symbols:
         description: Preprocessor symbols to pass to the compiler
         type: string
+
+      benchmark-project:
+        description: Path to the benchmark project to run benchmarks against (cannot be null or empty string)
+        type: string
+        required: true
 
       max-regression-pct:
         description: Maximum acceptable performance regression percentage

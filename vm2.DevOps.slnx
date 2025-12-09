@@ -1,7 +1,7 @@
 <Solution>
   <Folder Name="/.github/" />
   <Folder Name="/.github/workflows/">
-    <File Path=".github/workflows/CI.yaml" />
+    <File Path=".github/workflows/Glob.Api.CI.yaml" />
     <File Path=".github/workflows/_benchmarks.yaml" />
     <File Path=".github/workflows/_build.yaml" />
     <File Path=".github/workflows/_ci.yaml" />

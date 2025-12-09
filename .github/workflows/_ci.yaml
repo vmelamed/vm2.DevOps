@@ -1,4 +1,4 @@
-name: Build, Test, Benchmarks (Reusable workflow)
+name: _ci (Reusable workflow)
 
 on:
   workflow_call:
@@ -9,7 +9,7 @@ on:
         required: true
 
       benchmark-project:
-        description: Path to the benchmark project. If not provided, null, or empty string, benchmarks will be skipped.
+        description: Path to the benchmark project. If not provided, null, or empty, benchmarks will be skipped.
         type: string
         required: false
 

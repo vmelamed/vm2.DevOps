@@ -24,8 +24,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <RestoreLockedMode>true</RestoreLockedMode>
-    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
-    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
   <PropertyGroup Label="NuGetGlobal">
@@ -41,6 +40,9 @@
     <IncludeSymbols>True</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <EnablePackageValidation>true</EnablePackageValidation>
+    <EmbedAllSources>true</EmbedAllSources>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>portable</DebugType>
     <MinVerTagPrefix>v</MinVerTagPrefix>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <RepositoryUrl>https://github.com/vmelamed/vm2.DevOps</RepositoryUrl>
@@ -87,6 +89,7 @@
     <OutputType>Exe</OutputType>
     <IsTestProject>true</IsTestProject>
     <IsPackable>false</IsPackable>
+    <IncludeSymbols>False</IncludeSymbols>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <RunSettingsFilePath>$(MSBuildProjectDirectory)\..\..\test.runsettings</RunSettingsFilePath><!-- from the test project, usually ./test.Xyz.Tests -->
     <!--<TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport> <!- - To be able to run MTP projects in VSTest and 'dotnet test' experience, available for .NET 9 SDK and earlier for backward compatibility - ->-->
@@ -128,6 +131,7 @@
   <PropertyGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]test[/\\]')) and !$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '^*.Tests$'))">
     <!-- Test libraries projects settings -->
     <IsPackable>false</IsPackable>
+    <IncludeSymbols>False</IncludeSymbols>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <NoWarn>
       $(NoWarn);CA1031;CA1701;CA1702;CA1707;CA1806;CA2211;CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290
@@ -156,6 +160,7 @@
     <!-- Test projects settings -->
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
+    <IncludeSymbols>False</IncludeSymbols>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <NoWarn>
       $(NoWarn);CA1031;CA1701;CA1702;CA1707;CA1806;CA2211;CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290
