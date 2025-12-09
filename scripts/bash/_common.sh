@@ -10,8 +10,7 @@
 
 
 # commonly used variables
-declare -xr initial_dir
-initial_dir=$(pwd)
+declare -xr initial_dir=$(pwd)
 declare -x debugger=${DEBUGGER:-false}
 declare -x verbose=${VERBOSE:-false}
 declare -x dry_run=${DRY_RUN:-false}
