@@ -73,7 +73,7 @@ if [[ -z "$benchmark_project" ]]; then
 fi
 
 # Validate and set os
-if ! echo "$os" | jq . >/dev/null 2>&1; then
+if [[ -z "$os" ]]; then
     warning os "ubuntu-latest" "Invalid JSON for target OS."
 fi
 

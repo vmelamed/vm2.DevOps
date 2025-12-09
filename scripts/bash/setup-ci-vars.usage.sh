@@ -34,7 +34,7 @@ Options:
         Initial value from \$BENCHMARK_PROJECT
 
     --os | -o
-        JSON array of OS runners for the build matrix.
+        Target OS (e.g. from a matrix).
         Initial value from \$OS or 'ubuntu-latest'
 
     --dotnet-version
