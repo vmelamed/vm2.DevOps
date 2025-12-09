@@ -90,7 +90,7 @@ jobs:
     #   max-regression-pct:   ${{ vars.MAX_REGRESSION_PCT || 10 }}
     #   force-new-baseline:   ${{ inputs.force-new-baseline }}
     #   verbose:              ${{ inputs.verbose }}
-    runs-on: ${{ inputs.os }}
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Print all inputs
         run: |+
