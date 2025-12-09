@@ -18,14 +18,15 @@ declare -xr script_dir
 source "$script_dir/_common.sh"
 
 # CI Variables that will be passed as environment variables
+declare -x build_project=${BUILD_PROJECT:-}
+declare -x test_project=${TEST_PROJECT:-}
+declare -x benchmark_project=${BENCHMARK_PROJECT:-}
 declare -x os=${os:-"ubuntu-latest"}
 declare -x dotnet_version=${DOTNET_VERSION:-"10.0.x"}
 declare -x configuration=${CONFIGURATION:-"Release"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
-declare -x test_project=${TEST_PROJECT:-}
 declare -x min_coverage_pct=${MIN_COVERAGE_PCT:-80}
 declare -x run_benchmarks=${RUN_BENCHMARKS:-true}
-declare -x benchmark_project=${BENCHMARK_PROJECT:-}
 declare -x force_new_baseline=${FORCE_NEW_BASELINE:-false}
 declare -x max_regression_pct=${MAX_REGRESSION_PCT:-10}
 declare -x verbose=${VERBOSE:-false}
@@ -59,6 +60,18 @@ function warning()
     return 1
 }
 
+if [[ -z "$build_project" ]]; then
+    warning build_project "solution" "build-project is empty"
+fi
+
+if [[ -z "$test_project" ]]; then
+    error "test-project cannot be empty"
+fi
+
+if [[ -z "$benchmark_project" ]]; then
+    warning benchmark_project "" "benchmark-project is empty"
+fi
+
 # Validate and set os
 if ! echo "$os" | jq . >/dev/null 2>&1; then
     warning os "ubuntu-latest" "Invalid JSON for target OS."
@@ -72,14 +85,6 @@ fi
 # Set configuration with validation
 if [[ -z "$configuration" ]]; then
     warning configuration "Release" "configuration must have value."
-fi
-
-if [[ -z "$test_project" ]]; then
-    error "test-project cannot be empty"
-fi
-
-if [[ -z "$benchmark_project" ]]; then
-    warning benchmark_project "" "benchmark-project is empty"
 fi
 
 # Validate numeric inputs
@@ -115,14 +120,15 @@ fi
     echo ""
     echo "| Variable             | Value                 |"
     echo "|:---------------------|:----------------------|"
+    echo "| build-project        | $build_project        |"
+    echo "| test-project         | $test_project         |"
+    echo "| benchmark-project    | $benchmark_project    |"
     echo "| os                   | $os                   |"
     echo "| dotnet-version       | $dotnet_version       |"
     echo "| configuration        | $configuration        |"
     echo "| preprocessor-symbols | $preprocessor_symbols |"
-    echo "| test-project         | $test_project         |"
     echo "| min-coverage-pct     | $min_coverage_pct     |"
     echo "| run-benchmarks       | $run_benchmarks       |"
-    echo "| benchmark-project    | $benchmark_project    |"
     echo "| force-new-baseline   | $force_new_baseline   |"
     echo "| max-regression-pct   | $max_regression_pct   |"
     echo "| verbose              | $verbose              |"
@@ -131,14 +137,15 @@ fi
 # Output all variables to GITHUB_OUTPUT for use in subsequent jobs
 # shellcheck disable=SC2154
 {
+    echo "build-project=$build_project"
+    echo "test-project=$test_project"
+    echo "benchmark-project=$benchmark_project"
     echo "os=$os"
     echo "dotnet-version=$dotnet_version"
     echo "configuration=$configuration"
     echo "preprocessor-symbols=$preprocessor_symbols"
-    echo "test-project=$test_project"
     echo "min-coverage-pct=$min_coverage_pct"
     echo "run-benchmarks=$run_benchmarks"
-    echo "benchmark-project=$benchmark_project"
     echo "force-new-baseline=$force_new_baseline"
     echo "max-regression-pct=$max_regression_pct"
     echo "verbose=$verbose"

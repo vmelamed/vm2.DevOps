@@ -3,6 +3,11 @@ name: Build .NET projects (Reusable workflow)
 on:
   workflow_call:
     inputs:
+      build-project:
+        description: Path to the project to build (default the solution or the project in the current directory)
+        type: string
+        required: true
+
       os:
         description: JSON array of runners (default ubuntu-latest)
         type: string
@@ -22,11 +27,6 @@ on:
         description: Preprocessor symbols to pass to the compiler (default - none)
         type: string
         default: ""
-
-      build-project:
-        description: Path to the project to build (default the solution or the project in the current directory)
-        type: string
-        required: true
 
 permissions:
   contents: read

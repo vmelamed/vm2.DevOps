@@ -21,6 +21,18 @@ Parameters: All parameters are optional if the corresponding environment
 Switches:$common_switches
 
 Options:
+    --build-project | -b
+        Path to the build project file.
+        Initial value from \$BUILD_PROJECT
+
+    --test-project | -t
+        Path to the test project file.
+        Initial value from \$TEST_PROJECT
+
+    --benchmark-project | -p
+        Path to the benchmark project file.
+        Initial value from \$BENCHMARK_PROJECT
+
     --os | -o
         JSON array of OS runners for the build matrix.
         Initial value from \$OS or 'ubuntu-latest'
@@ -37,27 +49,19 @@ Options:
         Pre-processor symbols for compilation.
         Initial value from \$PREPROCESSOR_SYMBOLS or ''
 
-    --test-project | -t
-        Path to the test project file.
-        Initial value from \$TEST_PROJECT
-
-    --min-coverage-pct | -m
+    --min-coverage-pct | -min
         Minimum acceptable code coverage percentage (50-100).
         Initial value from \$MIN_COVERAGE_PCT or 80
 
-    --run-benchmarks | -b
+    --run-benchmarks | -r
         Whether to run benchmarks (true/false).
         Initial value from \$RUN_BENCHMARKS or true
-
-    --benchmark-project | -p
-        Path to the benchmark project file.
-        Initial value from \$BENCHMARK_PROJECT
 
     --force-new-baseline | -f
         Whether to force new baseline (true/false).
         Initial value from \$FORCE_NEW_BASELINE or false
 
-    --max-regression-pct | -r
+    --max-regression-pct | -max
         Maximum acceptable performance regression percentage (0-50).
         Initial value from \$MAX_REGRESSION_PCT or 10
 
