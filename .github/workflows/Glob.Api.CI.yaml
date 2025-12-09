@@ -43,10 +43,10 @@ on:
         type: boolean
         default: false
 
-      # verbose:
-      #   description: Enable verbose logging by the scripts for debugging purposes
-      #   type: boolean
-      #   default: false
+      verbose:
+        description: Enable verbose logging by the scripts for debugging purposes
+        type: boolean
+        default: false
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -61,7 +61,7 @@ jobs:
     name: Call the CI Workflow
     strategy:
       matrix:
-        os: ${{ fromJSON(inputs.os) }}
+        os: ${{ fromJSON(inputs.os || '["ubuntu-latest"]') }}
         build-project:
           - ./src/Glob.Api/Glob.Api.csproj
           - ./test/Glob.Api.FakeFileSystem.Tests/Glob.Api.FakeFileSystem.Tests.csproj
@@ -79,14 +79,14 @@ jobs:
       test-project:         ${{ matrix.test-project }}
       benchmark-project:    ${{ matrix.benchmark-project }}
       os:                   ${{ matrix.os }}
-      dotnet-version:       ${{ inputs.dotnet-version }}
-      configuration:        ${{ inputs.configuration }}
-      preprocessor-symbols: ${{ inputs.preprocessor-symbols }}
-      min-coverage-pct:     ${{ vars.MIN_COVERAGE_PCT   || 75 }}
-      run-benchmarks:       ${{ inputs.run-benchmarks }}
-      max-regression-pct:   ${{ vars.MAX_REGRESSION_PCT || 10 }}
-      force-new-baseline:   ${{ inputs.force-new-baseline }}
-      verbose:              ${{ inputs.verbose }}
+      dotnet-version:       ${{ inputs.dotnet-version       || '10.0.x' }}
+      configuration:        ${{ inputs.configuration        || 'Release' }}
+      preprocessor-symbols: ${{ inputs.preprocessor-symbols || '' }}
+      min-coverage-pct:     ${{ vars.min_coverage_pct       || 75 }}
+      run-benchmarks:       ${{ inputs.run-benchmarks       != false }}
+      max-regression-pct:   ${{ vars.max_regression_pct     || 10 }}
+      force-new-baseline:   ${{ inputs.force-new-baseline   == true }}
+      verbose:              ${{ inputs.verbose              == true }}
     # runs-on: ${{ matrix.os }}
     # steps:
     #   - name: Print all inputs
