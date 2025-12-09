@@ -50,13 +50,13 @@ function error()
 }
 
 ## Shell function to log a warning and set a default value
-## Usage: warning variable_name variable_value "Warning message"
+## Usage: warning variable_default_name variable_value "Warning message"
 function warning()
 {
-    declare -n variable="$2";
-    echo "⚠️ WARNING $4, Assuming $3" | tee >> "$GITHUB_STEP_SUMMARY" >&2
+    declare -n variable="$1";
+    echo "⚠️ WARNING $3, Assuming $2" | tee >> "$GITHUB_STEP_SUMMARY" >&2
     # shellcheck disable=SC2034
-    variable="$3"
+    variable="$2"
     return 1
 }
 
