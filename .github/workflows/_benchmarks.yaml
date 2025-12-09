@@ -143,7 +143,7 @@ jobs:
           --max-regression-pct "${{ inputs.max-regression-pct }}"
 
       - name: Upload benchmark summaries artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: benchmark-summaries-${{ inputs.os }}
           path: ${{ env.ARTIFACTS_DIR }}
@@ -152,7 +152,7 @@ jobs:
 
       - name: Upload benchmark results artifact as a new baseline
         if: ${{ inputs.force-new-baseline || false }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: benchmark-baseline-${{ inputs.os }}
           path: ${{ env.ARTIFACTS_DIR }}
