@@ -11,7 +11,7 @@ on:
         default: 'Emergency cache cleanup'
 
       cache-pattern:
-        description: 'Cache key pattern to delete (default: nuget-*)'
+        description: 'Cache key pattern to delete (e.g.: nuget- or build-artifacts-)'
         required: false
         type: string
         default: 'nuget-'
