@@ -14,9 +14,9 @@ on:
   workflow_dispatch:
     inputs:
       os:
-        description: Runner OS (cannot be null, empty, or whitespace; default 'ubuntu-latest')
+        description: Runner OS (must be a JSON array of strings; default '["ubuntu-latest"]')
         type: string
-        default: ubuntu-latest
+        default: '["ubuntu-latest"]'
 
       dotnet-version:
         description: Version of .NET SDK to use (cannot be null, empty, or whitespace; default '10.0.x')
@@ -61,10 +61,7 @@ jobs:
     name: Call the CI Workflow
     strategy:
       matrix:
-        os:
-          - ubuntu-latest
-          # - windows-latest
-          # - macos-latest
+        os: ${{ inputs.os }}
         build-project:
           - ./src/Glob.Api/Glob.Api.csproj
           - ./test/Glob.Api.FakeFileSystem.Tests/Glob.Api.FakeFileSystem.Tests.csproj
