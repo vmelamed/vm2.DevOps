@@ -17,6 +17,7 @@ on:
 
 permissions:
   actions: write
+  contents: read
 
 jobs:
   clear-cache:
