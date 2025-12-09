@@ -144,20 +144,6 @@ jobs:
       preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
       min-coverage-pct:     ${{ fromJSON(needs.setup.outputs.min-coverage-pct) }}
       verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
-    # runs-on: ${{ inputs.os }}
-    # steps:
-    #   - name: Print all inputs
-    #     shell: bash
-    #     run: |+
-    #       {
-    #         echo "inputs.test-project:         ${{ needs.setup.outputs.test-project }}"
-    #         echo "inputs.os:                   ${{ needs.setup.outputs.os }}"
-    #         echo "inputs.dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}"
-    #         echo "inputs.configuration:        ${{ needs.setup.outputs.configuration }}"
-    #         echo "inputs.preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}"
-    #         echo "inputs.min-coverage-pct:     ${{ fromJSON(needs.setup.outputs.min-coverage-pct) }}"
-    #         echo "inputs.verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}"
-    #       } >> $GITHUB_STEP_SUMMARY
 
   benchmarks_job:
     name: Benchmarks

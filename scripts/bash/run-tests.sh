@@ -107,12 +107,17 @@ execute mkdir -p "$coverage_source_dir"
 execute mkdir -p "$coverage_reports_dir"
 execute mkdir -p "$coverage_summary_dir"
 
+test_dll_path="$(dirname "$test_project")/bin/${configuration}/net10.0/$(basename "${test_project%.*}")"
+if [[ ! -f "${test_dll_path}" && "$dry_run" != "true" ]]; then
+    echo "❌ Test executable not found at: ${test_dll_path}" | tee >> "$GITHUB_STEP_SUMMARY" >&2
+    exit 2
+fi
+
 trace "Running tests in project ${test_project} with build configuration ${configuration}..."
 execute dotnet run \
     --project "$test_project" \
     /p:DefineConstants="$preprocessor_symbols" \
     --no-restore \
-    --no-build \
     --configuration "$configuration" \
     -- \
     --results-directory "$test_results_dir" \
