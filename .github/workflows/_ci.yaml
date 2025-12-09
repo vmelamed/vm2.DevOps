@@ -129,47 +129,35 @@ jobs:
       dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
       configuration:        ${{ needs.setup.outputs.configuration }}
       preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
-    # runs-on: ${{ inputs.os }}
-    # steps:
-    #   - name: Print all inputs
-    #     shell: bash
-    #     run: |+
-    #       {
-    #         echo "inputs.build-project:        ${{ needs.setup.outputs.build-project }}"
-    #         echo "inputs.os:                   ${{ needs.setup.outputs.os }}"
-    #         echo "inputs.dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}"
-    #         echo "inputs.configuration:        ${{ needs.setup.outputs.configuration }}"
-    #         echo "inputs.preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}"
-    #       } >> $GITHUB_STEP_SUMMARY
 
   test_job:
     name: Test
     needs:
       - setup
       - build_job
-    #uses: ./.github/workflows/_test.yaml
-    #with:
-    #  test-project:         ${{ needs.setup.outputs.test-project }}
-    #  os:                   ${{ needs.setup.outputs.os }}
-    #  dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
-    #  configuration:        ${{ needs.setup.outputs.configuration }}
-    #  preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
-    #  min-coverage-pct:     ${{ fromJSON(needs.setup.outputs.min-coverage-pct) }}
-    #  verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
-    runs-on: ${{ inputs.os }}
-    steps:
-      - name: Print all inputs
-        shell: bash
-        run: |+
-          {
-            echo "inputs.test-project:         ${{ needs.setup.outputs.test-project }}"
-            echo "inputs.os:                   ${{ needs.setup.outputs.os }}"
-            echo "inputs.dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}"
-            echo "inputs.configuration:        ${{ needs.setup.outputs.configuration }}"
-            echo "inputs.preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}"
-            echo "inputs.min-coverage-pct:     ${{ fromJSON(needs.setup.outputs.min-coverage-pct) }}"
-            echo "inputs.verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}"
-          } >> $GITHUB_STEP_SUMMARY
+    uses: ./.github/workflows/_test.yaml
+    with:
+      test-project:         ${{ needs.setup.outputs.test-project }}
+      os:                   ${{ needs.setup.outputs.os }}
+      dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
+      configuration:        ${{ needs.setup.outputs.configuration }}
+      preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
+      min-coverage-pct:     ${{ fromJSON(needs.setup.outputs.min-coverage-pct) }}
+      verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
+    # runs-on: ${{ inputs.os }}
+    # steps:
+    #   - name: Print all inputs
+    #     shell: bash
+    #     run: |+
+    #       {
+    #         echo "inputs.test-project:         ${{ needs.setup.outputs.test-project }}"
+    #         echo "inputs.os:                   ${{ needs.setup.outputs.os }}"
+    #         echo "inputs.dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}"
+    #         echo "inputs.configuration:        ${{ needs.setup.outputs.configuration }}"
+    #         echo "inputs.preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}"
+    #         echo "inputs.min-coverage-pct:     ${{ fromJSON(needs.setup.outputs.min-coverage-pct) }}"
+    #         echo "inputs.verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}"
+    #       } >> $GITHUB_STEP_SUMMARY
 
   benchmarks_job:
     name: Benchmarks
