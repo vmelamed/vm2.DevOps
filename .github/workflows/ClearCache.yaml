@@ -16,6 +16,9 @@ on:
         type: string
         default: 'nuget-'
 
+permissions:
+  actions: write
+
 jobs:
   call_ci:
     name: Call the CI Workflow
