@@ -48,6 +48,16 @@ on:
         type: boolean
         default: false
 
+      cache-dependencies:
+        description: Enable caching of NuGet dependencies (default true)
+        type: boolean
+        default: true
+
+      cache-artifacts:
+        description: Enable caching of build artifacts (default true)
+        type: boolean
+        default: true
+
 env:
   ACTIONS_RUNNER_DEBUG: true
   ACTIONS_STEP_DEBUG: true
@@ -83,22 +93,5 @@ jobs:
       max-regression-pct:   ${{ vars.max_regression_pct     || 10 }}
       force-new-baseline:   ${{ inputs.force-new-baseline   == true }}
       verbose:              ${{ inputs.verbose              == true }}
-    # runs-on: ${{ matrix.os }}
-    # steps:
-    #   - name: Print all inputs
-    #     run: |+
-    #       {
-    #         echo "build-project:               ${{ matrix.build-project }}"
-    #         echo "test-project:                ${{ matrix.test-project }}"
-    #         echo "benchmark-project:           ${{ matrix.benchmark-project }}"
-    #         echo "inputs.os:                   ${{ inputs.os }}"
-    #         echo "inputs.dotnet-version:       ${{ inputs.dotnet-version }}"
-    #         echo "inputs.configuration:        ${{ inputs.configuration }}"
-    #         echo "inputs.preprocessor-symbols: ${{ inputs.preprocessor-symbols }}"
-    #         echo "inputs.run-benchmarks:       ${{ inputs.run-benchmarks }}"
-    #         echo "inputs.force-new-baseline:   ${{ inputs.force-new-baseline }}"
-    #         echo "inputs.verbose:              ${{ inputs.verbose }}"
-    #         echo "vars.MIN_COVERAGE_PCT:       ${{ vars.MIN_COVERAGE_PCT || 75 }}"
-    #         echo "vars.MAX_REGRESSION_PCT:     ${{ vars.MAX_REGRESSION_PCT || 10 }}"
-    #         echo "verbose:                     ${{ inputs.verbose }}"
-    #       } >> $GITHUB_STEP_SUMMARY
+      cache-dependencies:   ${{ inputs.cache-dependencies   != false }}
+      cache-artifacts:      ${{ inputs.cache-artifacts      != false }}

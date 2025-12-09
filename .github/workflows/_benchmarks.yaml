@@ -42,6 +42,16 @@ on:
         type: boolean
         default: false
 
+      cache-dependencies:
+        description: Enable caching of NuGet dependencies (default true)
+        type: boolean
+        default: true
+
+      cache-artifacts:
+        description: Enable caching of build artifacts (default true)
+        type: boolean
+        default: true
+
 # concurrency:
 #   group: test-${{ github.workflow_ref }}-${{ inputs.test-project }}
 #   cancel-in-progress: true
@@ -69,6 +79,7 @@ jobs:
           fetch-depth: 0
 
       - name: Get cache timestamp (weekly rotation)
+        if: inputs.cache-dependencies == true
         id: cache-timestamp
         shell: bash
         run: |
@@ -81,27 +92,14 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
-          cache: true
+          cache: ${{ inputs.cache-dependencies }}
           cache-dependency-path: |+
             **/packages.lock.json
             **/*.csproj
 
-      - name: Restore
-        shell: bash
-        run: |+
-          dotnet restore --locked-mode
-
-      - name: Restore build artifacts from cache
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            **/bin/${{ inputs.configuration }}
-            **/obj
-          key: build-artifacts-${{ runner.os }}-${{ github.sha }}-${{ inputs.configuration }}
-          fail-on-cache-miss: true
-
       # Additional explicit cache with time-based rotation
       - name: Cache NuGet packages (weekly rotation)
+        if: inputs.cache-dependencies == true
         uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
@@ -109,6 +107,22 @@ jobs:
           restore-keys: |
             nuget-${{ runner.os }}-${{ steps.cache-timestamp.outputs.week }}-
             nuget-${{ runner.os }}-
+
+      - name: Restore dependencies
+        if: inputs.cache-dependencies == false
+        shell: bash
+        run: |+
+          dotnet restore --locked-mode
+
+      - name: Restore build artifacts from cache
+        if: inputs.cache-artifacts == true
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            **/bin/${{ inputs.configuration }}
+            **/obj
+          key: build-artifacts-${{ runner.os }}-${{ github.sha }}-${{ inputs.configuration }}
+          fail-on-cache-miss: true
 
       - name: Make Scripts Executable
         shell: bash
@@ -141,6 +155,8 @@ jobs:
           --configuration "${{ inputs.configuration }}"
           --artifacts "${{ env.ARTIFACTS_DIR }}"
           --max-regression-pct "${{ inputs.max-regression-pct }}"
+          ${{ inputs.cache-dependencies == false && '' || '--no-restore' }}
+          ${{ inputs.cache-artifacts    == false && '' || '--no-build' }}
 
       - name: Upload benchmark summaries artifact
         uses: actions/upload-artifact@v5
