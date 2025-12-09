@@ -82,6 +82,15 @@ jobs:
         run: |+
           dotnet restore --locked-mode
 
+      - name: Restore build artifacts from cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            **/bin/${{ inputs.configuration }}
+            **/obj
+          key: build-artifacts-${{ runner.os }}-${{ github.sha }}-${{ inputs.configuration }}
+          fail-on-cache-miss: true
+
       - name: Make Scripts Executable
         shell: bash
         run: |+

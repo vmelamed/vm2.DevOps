@@ -111,7 +111,7 @@ trace "Restore dependencies"
 execute dotnet restore --locked-mode
 
 trace "Running tests in project '$test_project' with build configuration '$configuration'..."
-execute dotnet exec "$test_project" \
+execute dotnet run --project "$test_project" \
     /p:DefineConstants="$preprocessor_symbols" \
     --configuration "$configuration" -- \
     --results-directory "$test_results_dir" \

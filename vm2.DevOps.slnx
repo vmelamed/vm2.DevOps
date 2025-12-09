@@ -37,6 +37,7 @@
     <File Path="../COPILOT_INSTRUCTIONS.md" />
     <File Path=".editorconfig" />
     <File Path=".gitignore" />
+    <File Path="CACHE_MANAGEMENT.md" />
     <File Path="Directory.Build.props" />
     <File Path="Directory.Packages.props" />
     <File Path="LICENSE" />
