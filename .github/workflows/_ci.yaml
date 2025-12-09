@@ -118,6 +118,7 @@ jobs:
     #    run: ./scripts/bash/setup-ci-vars.sh
     steps:
       - name: Print all inputs
+        shell: bash
         run: |+
           {
             echo "inputs.build-project:        ${{ inputs.build-project }}"
@@ -136,6 +137,7 @@ jobs:
 
       - id: setup-vars
         name: Write to GITHUB_OUTPUT
+        shell: bash
         run: |+
           {
               echo "build-project=$build_project"
@@ -166,6 +168,7 @@ jobs:
     runs-on: ${{ inputs.os }}
     steps:
       - name: Print all inputs
+        shell: bash
         run: |+
           {
             echo "inputs.build-project:        ${{ needs.setup.outputs.build-project }}"
@@ -192,6 +195,7 @@ jobs:
     runs-on: ${{ inputs.os }}
     steps:
       - name: Print all inputs
+        shell: bash
         run: |+
           {
             echo "inputs.test-project:         ${{ needs.setup.outputs.test-project }}"
@@ -226,6 +230,7 @@ jobs:
     runs-on: ${{ inputs.os }}
     steps:
       - name: Print all inputs
+        shell: bash
         run: |+
           {
             echo "inputs.os:                   ${{ needs.setup.outputs.os }}"
