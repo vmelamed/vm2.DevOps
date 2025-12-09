@@ -73,11 +73,6 @@ jobs:
             **/packages.lock.json
             **/*.csproj
 
-      - name: Restore dependencies
-        shell: bash
-        run: |+
-          dotnet restore --locked-mode
-
       - name: Restore build artifacts from cache
         uses: actions/cache/restore@v4
         with:
@@ -89,7 +84,8 @@ jobs:
 
       - name: Make Scripts Executable
         shell: bash
-        run: chmod u+x ./scripts/bash/*.sh
+        run: |
+          chmod u+x ./scripts/bash/*.sh
 
       - name: Run script for unit test with coverage
         env:

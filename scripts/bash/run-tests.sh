@@ -113,9 +113,11 @@ execute dotnet restore --locked-mode
 trace "Running tests in project '$test_project' with build configuration '$configuration'..."
 execute dotnet run --project "$test_project" \
     /p:DefineConstants="$preprocessor_symbols" \
-    --configuration "$configuration" -- \
-    --results-directory "$test_results_dir" \
     --no-restore \
+    --no-build \
+    --configuration "$configuration" \
+    -- \
+    --results-directory "$test_results_dir" \
     --report-trx \
     --coverage \
     --coverage-output-format cobertura \
