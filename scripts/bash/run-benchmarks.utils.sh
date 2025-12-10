@@ -77,6 +77,10 @@ function get_arguments()
                 fi
                 ;;
 
+            --cached-dependencies ) cached_dependencies=true ;;
+
+            --cached-artifacts    ) cached_artifacts=true ;;
+
             *)  value="$flag"
                 if [[ ! -s "$value" ]]; then
                     usage "The specified test project file $value does not exist."
@@ -103,6 +107,8 @@ dump_all_variables()
         max_regression_pct \
         force_new_baseline \
         artifacts_dir \
+        cached_dependencies \
+        cached_artifacts \
         --header "other:" \
         ci \
         script_dir \

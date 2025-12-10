@@ -18,6 +18,8 @@ declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-" "}
 declare -ix max_regression_pct=${MAX_REGRESSION_PCT:-10}
 declare -x force_new_baseline=${FORCE_NEW_BASELINE:-false}
 declare -x artifacts_dir=${ARTIFACTS_DIR:-}
+declare -x cached_dependencies=${CACHED_DEPENDENCIES:-false}
+declare -x cached_artifacts=${CACHED_ARTIFACTS:-false}
 
 source "$script_dir/run-benchmarks.usage.sh"
 source "$script_dir/run-benchmarks.utils.sh"
@@ -33,6 +35,8 @@ declare -r configuration
 declare -r preprocessor_symbols
 declare -r max_regression_pct
 declare -r force_new_baseline
+declare -r cached_dependencies
+declare -r cached_artifacts
 
 solution_dir="$(realpath -e "$(dirname "$bm_project")/../..")" # assuming <solution-root>/benchmarks/<benchmark-project>/benchmark-project.csproj
 artifacts_dir=$(realpath -m "${artifacts_dir:-"$solution_dir/BmArtifacts"}")  # ensure it's an absolute path
@@ -89,16 +93,27 @@ fi
 trace "Creating directory(s)..."
 execute mkdir -p "$summaries_dir"
 
-trace "Restore dependencies"
-execute dotnet restore --locked-mode
+trace "Restore dependencies if specified"
+if [[ $cached_dependencies != "true" ]]; then
+    # we are not getting the dependencies from a cache - do the slow full restore
+    execute dotnet restore
+fi
+
+trace "Build is specified"
+if [[ $cached_artifacts != "true" ]]; then
+    # we are not getting the build artifacts from a cache - do the slow full build
+    execute dotnet build  \
+        --project "$bm_project" \
+        --configuration "$configuration" \
+        --no-restore \
+        /p:DefineConstants="$preprocessor_symbols"
+fi
 
 trace "Running benchmark tests in project '$bm_project' with build configuration '$configuration'..."
 execute mkdir -p "$artifacts_dir"
 execute dotnet run \
-    /p:DefineConstants="$preprocessor_symbols" \
-    --project "$bm_project" \
     --configuration "$configuration" \
-    --no-restore \
+    --no-build \
     --filter '*' \
     --memory \
     --exporters JSON \

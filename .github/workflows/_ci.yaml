@@ -58,20 +58,20 @@ on:
         type: boolean
         default: false
 
-      verbose:
-        description: Enable verbose logging by the scripts for debugging purposes
-        type: boolean
-        default: false
-
-      cache-dependencies:
+      cached-dependencies:
         description: Enable caching of NuGet dependencies (default true)
         type: boolean
         default: true
 
-      cache-artifacts:
+      cached-artifacts:
         description: Enable caching of build artifacts (default true)
         type: boolean
         default: true
+
+      verbose:
+        description: Enable verbose logging by the scripts for debugging purposes
+        type: boolean
+        default: false
 
 concurrency:
   group: ci-${{ github.ref }}-${{ inputs.build-project }}-${{ inputs.test-project }}
@@ -103,8 +103,8 @@ jobs:
       max-regression-pct:   ${{ steps.setup-vars.outputs.max-regression-pct }}
       force-new-baseline:   ${{ steps.setup-vars.outputs.force-new-baseline }}
       verbose:              ${{ steps.setup-vars.outputs.verbose }}
-      cache-dependencies:   ${{ inputs.cache-dependencies }}
-      cache-artifacts:      ${{ inputs.cache-artifacts }}
+      cached-dependencies:  ${{ inputs.cached-dependencies }}
+      cached-artifacts:     ${{ inputs.cached-artifacts }}
 
     steps:
       - name: Checkout
@@ -141,8 +141,8 @@ jobs:
       dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
       configuration:        ${{ needs.setup.outputs.configuration }}
       preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
-      cache-dependencies:   ${{ fromJSON(needs.setup.outputs.cache-dependencies) }}
-      cache-artifacts:      ${{ fromJSON(needs.setup.outputs.cache-artifacts) }}
+      cached-dependencies:  ${{ fromJSON(needs.setup.outputs.cached-dependencies) }}
+      cached-artifacts:     ${{ fromJSON(needs.setup.outputs.cached-artifacts) }}
 
   test_job:
     name: Test
@@ -158,12 +158,12 @@ jobs:
       preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
       min-coverage-pct:     ${{ fromJSON(needs.setup.outputs.min-coverage-pct) }}
       verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
-      cache-dependencies:   ${{ fromJSON(needs.setup.outputs.cache-dependencies) }}
-      cache-artifacts:      ${{ fromJSON(needs.setup.outputs.cache-artifacts) }}
+      cached-dependencies:  ${{ fromJSON(needs.setup.outputs.cached-dependencies) }}
+      cached-artifacts:     ${{ fromJSON(needs.setup.outputs.cached-artifacts) }}
 
   benchmarks_job:
     name: Benchmarks
-    if: ${{ fromJSON(needs.setup.outputs.run-benchmarks) && fromJSON(needs.setup.outputs.benchmark-project) }}
+    if: ${{ fromJSON(needs.setup.outputs.run-benchmarks) && fromJSON(needs.setup.outputs.benchmark-project) != '' }}
     needs:
       - setup
       - build_job
@@ -177,8 +177,8 @@ jobs:
     #  max-regression-pct:   ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}
     #  force-new-baseline:   ${{ fromJSON(needs.setup.outputs.force-new-baseline) }}
     #  verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
-    #  cache-dependencies:   ${{ fromJSON(needs.setup.outputs.cache-dependencies) }}
-    #  cache-artifacts:      ${{ fromJSON(needs.setup.outputs.cache-artifacts) }}
+    #  cached-dependencies:  ${{ fromJSON(needs.setup.outputs.cached-dependencies) }}
+    #  cached-artifacts:     ${{ fromJSON(needs.setup.outputs.cached-artifacts) }}
     runs-on: ${{ inputs.os }}
     steps:
       - name: Print all inputs
@@ -194,6 +194,6 @@ jobs:
             echo "inputs.run-benchmarks:       ${{ fromJSON(needs.setup.outputs.run-benchmarks) }}"
             echo "inputs.force-new-baseline:   ${{ fromJSON(needs.setup.outputs.force-new-baseline) }}"
             echo "inputs.verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}"
-            echo "inputs.cache-dependencies:   ${{ fromJSON(needs.setup.outputs.cache-dependencies) }}"
-            echo "inputs.cache-artifacts:      ${{ fromJSON(needs.setup.outputs.cache-artifacts) }}"
+            echo "inputs.cached-dependencies:  ${{ fromJSON(needs.setup.outputs.cached-dependencies) }}"
+            echo "inputs.cached-artifacts:     ${{ fromJSON(needs.setup.outputs.cached-artifacts) }}"
           } >> $GITHUB_STEP_SUMMARY

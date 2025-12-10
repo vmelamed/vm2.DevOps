@@ -37,20 +37,20 @@ on:
         type: boolean
         default: false
 
-      verbose:
-        description: Whether to enable verbose logging for debugging scripts
-        type: boolean
-        default: false
-
-      cache-dependencies:
+      cached-dependencies:
         description: Enable caching of NuGet dependencies (default true)
         type: boolean
         default: true
 
-      cache-artifacts:
+      cached-artifacts:
         description: Enable caching of build artifacts (default true)
         type: boolean
         default: true
+
+      verbose:
+        description: Whether to enable verbose logging for debugging scripts
+        type: boolean
+        default: false
 
 # concurrency:
 #   group: test-${{ github.workflow_ref }}-${{ inputs.test-project }}
@@ -79,7 +79,7 @@ jobs:
           fetch-depth: 0
 
       - name: Get cache timestamp (weekly rotation)
-        if: inputs.cache-dependencies == true
+        if: inputs.cached-dependencies == true
         id: cache-timestamp
         shell: bash
         run: |
@@ -92,14 +92,14 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
-          cache: ${{ inputs.cache-dependencies }}
+          cache: ${{ inputs.cached-dependencies }}
           cache-dependency-path: |+
             **/packages.lock.json
             **/*.csproj
 
       # Additional explicit cache with time-based rotation
       - name: Cache NuGet packages (weekly rotation)
-        if: inputs.cache-dependencies == true
+        if: inputs.cached-dependencies == true
         uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
@@ -109,13 +109,13 @@ jobs:
             nuget-${{ runner.os }}-
 
       - name: Restore dependencies
-        if: inputs.cache-dependencies == false
+        if: inputs.cached-dependencies == false
         shell: bash
         run: |+
           dotnet restore --locked-mode
 
       - name: Restore build artifacts from cache
-        if: inputs.cache-artifacts == true
+        if: inputs.cached-artifacts == true
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -150,13 +150,13 @@ jobs:
           PREPROCESSOR_SYMBOLS: ${{ inputs.preprocessor-symbols }}
           VERBOSE:              ${{ fromJSON(inputs.verbose) }}
           FORCE_NEW_BASELINE:   ${{ fromJSON(inputs.force-new-baseline) }}
-        run: >+
-          ./scripts/bash/run-benchmarks.sh ${{ inputs.benchmark-project }}
-          --configuration "${{ inputs.configuration }}"
-          --artifacts "${{ env.ARTIFACTS_DIR }}"
-          --max-regression-pct "${{ inputs.max-regression-pct }}"
-          ${{ inputs.cache-dependencies == false && '' || '--no-restore' }}
-          ${{ inputs.cache-artifacts    == false && '' || '--no-build' }}
+        run: |+
+          ./scripts/bash/run-benchmarks.sh ${{ inputs.benchmark-project }} \
+            --configuration "${{ inputs.configuration }}" \
+            --artifacts "${{ env.ARTIFACTS_DIR }}" \
+            --max-regression-pct "${{ inputs.max-regression-pct }}" \
+            ${{ inputs.cached-dependencies && '--cached-dependencies' || '' }} \
+            ${{ inputs.cached-artifacts    && '--cached-artifacts'    || '' }}
 
       - name: Upload benchmark summaries artifact
         uses: actions/upload-artifact@v5

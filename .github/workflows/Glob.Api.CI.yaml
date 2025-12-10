@@ -43,20 +43,20 @@ on:
         type: boolean
         default: false
 
+      cached-dependencies:
+        description: Enable storing and retrieving NuGet dependencies to/from cache (default true)
+        type: boolean
+        default: true
+
+      cached-artifacts:
+        description: Enable storing and retrieving build artifacts to/from cache (default true)
+        type: boolean
+        default: true
+
       verbose:
         description: Enable verbose logging by the scripts for debugging purposes
         type: boolean
         default: false
-
-      cache-dependencies:
-        description: Enable caching of NuGet dependencies (default true)
-        type: boolean
-        default: true
-
-      cache-artifacts:
-        description: Enable caching of build artifacts (default true)
-        type: boolean
-        default: true
 
 env:
   ACTIONS_RUNNER_DEBUG: true
@@ -93,5 +93,5 @@ jobs:
       max-regression-pct:   ${{ vars.max_regression_pct     || 10 }}
       force-new-baseline:   ${{ inputs.force-new-baseline   == true }}
       verbose:              ${{ inputs.verbose              == true }}
-      cache-dependencies:   ${{ inputs.cache-dependencies   != false }}
-      cache-artifacts:      ${{ inputs.cache-artifacts      != false }}
+      cached-dependencies:   ${{ inputs.cached-dependencies   != false }}
+      cached-artifacts:      ${{ inputs.cached-artifacts      != false }}

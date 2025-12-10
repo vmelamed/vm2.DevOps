@@ -16,6 +16,8 @@ declare -x configuration=${CONFIGURATION:="Release"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-" "}
 declare -ix min_coverage_pct=${MIN_COVERAGE_PCT:-80}
 declare -x artifacts_dir=${ARTIFACTS_DIR:-}
+declare -x cached_dependencies=${CACHED_DEPENDENCIES:-false}
+declare -x cached_artifacts=${CACHED_ARTIFACTS:-false}
 
 source "$script_dir/run-tests.usage.sh"
 source "$script_dir/run-tests.utils.sh"
@@ -34,6 +36,8 @@ declare -r configuration
 declare -r preprocessor_symbols
 declare -r min_coverage_pct
 declare -r base_name
+declare -r cached_dependencies
+declare -r cached_artifacts
 
 solution_dir="$(realpath -e "$(dirname "$test_project")/../..")" # assuming <solution-root>/test/<test-project>/test-project.csproj
 artifacts_dir=$(realpath -m "${artifacts_dir:-"$solution_dir/TestArtifacts"}")  # ensure it's an absolute path
@@ -113,12 +117,26 @@ if [[ ! -f "${test_dll_path}" && "$dry_run" != "true" ]]; then
     exit 2
 fi
 
+if [[ $cached_dependencies != "true" ]]; then
+    trace "Restore dependencies if not cached"
+    # we are not getting the dependencies from a cache - do the slow full restore
+    execute dotnet restore
+fi
+
+if [[ $cached_artifacts != "true" ]]; then
+    trace "Build the artifacts if not cached"
+    # we are not getting the build artifacts from a cache - do the slow full build
+    execute dotnet build  \
+        --project "$bm_project" \
+        --configuration "$configuration" \
+        --no-restore \
+        /p:DefineConstants="$preprocessor_symbols"
+fi
+
 trace "Running tests in project ${test_project} with build configuration ${configuration}..."
-execute dotnet run \
-    --project "$test_project" \
-    /p:DefineConstants="$preprocessor_symbols" \
-    --no-restore \
+execute dotnet run
     --configuration "$configuration" \
+    --no-build \
     -- \
     --results-directory "$test_results_dir" \
     --report-trx \

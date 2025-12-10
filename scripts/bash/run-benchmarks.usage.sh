@@ -32,6 +32,16 @@ Switches:$common_switches
         baseline already exists.
         Initial value from \$FORCE_NEW_BASELINE or 'false'
 
+    --cached_dependencies
+        When specified, the benchmark project dependencies are retrieved from a
+        CI cache and will not be restored before building the project.
+        Initial value from \$CACHED_DEPENDENCIES or 'false'
+
+    --cached_artifacts
+        When specified, the benchmark built artifacts are retrieved from a CI
+        cache and will not be restored before building the project.
+        Initial value from \$NO_BUILD or 'false'
+
 Options:
     --artifacts | -a
         Specifies the directory where to create the benchmark artifacts:
@@ -55,4 +65,9 @@ Options:
         Initial value from \$MAX_REGRESSION_PCT or 10
 
 EOF
+}
+
+function usage()
+{
+    display_usage_msg "$(usage_text)" "$@"
 }

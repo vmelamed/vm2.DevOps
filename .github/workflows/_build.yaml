@@ -28,12 +28,12 @@ on:
         type: string
         default: ""
 
-      cache-dependencies:
+      cached-dependencies:
         description: Enable caching of NuGet dependencies (default true)
         type: boolean
         default: true
 
-      cache-artifacts:
+      cached-artifacts:
         description: Enable caching of build artifacts (default true)
         type: boolean
         default: true
@@ -62,7 +62,7 @@ jobs:
           fetch-depth: 0
 
       - name: Get cache timestamp (weekly rotation)
-        if: inputs.cache-dependencies == true
+        if: inputs.cached-dependencies == true
         id: cache-timestamp
         shell: bash
         run: |
@@ -75,14 +75,14 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
-          cache: ${{ inputs.cache-dependencies }}
+          cache: ${{ inputs.cached-dependencies }}
           cache-dependency-path: |+
             **/packages.lock.json
             **/*.csproj
 
       # Additional explicit cache with time-based rotation
       - name: Cache NuGet packages (weekly rotation)
-        if: inputs.cache-dependencies == true
+        if: inputs.cached-dependencies == true
         uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
@@ -102,18 +102,17 @@ jobs:
           dotnet build ${{ inputs.build-project }} \
             /p:DefineConstants="${{ inputs.preprocessor-symbols }}" \
             --configuration ${{ inputs.configuration }} \
-            --no-restore
+            ${{ inputs.cached-dependencies && '--no-restore' || '' }}
           {
             echo "Build:               ✔️ Successful"
             echo "Runner:              ${{ inputs.os }}"
             echo "Build configuration: ${{ inputs.configuration }}"
             echo "Defined symbols:     ${{ inputs.preprocessor-symbols || 'None' }}"
-            echo "Cache dependencies:  ${{ inputs.cache-dependencies }}"
-            echo "Cache artifacts:     ${{ inputs.cache-artifacts }}"
+            echo "Cache dependencies:  ${{ inputs.cached-dependencies }}"
           } >> $GITHUB_STEP_SUMMARY
 
       - name: Cache build artifacts
-        if: inputs.cache-artifacts == true
+        if: inputs.cached-artifacts == true
         uses: actions/cache/save@v4
         with:
           path: |
