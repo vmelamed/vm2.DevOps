@@ -69,15 +69,18 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
+  # Execute performance benchmarks and compare results against baseline
   benchmarks:
     name: Benchmarks (${{ inputs.os }})
     runs-on: ${{ inputs.os }}
     steps:
+      # Clone the repository with full Git history
       - name: Checkout
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
+      # Generate a weekly cache key to automatically rotate NuGet cache
       - name: Get cache timestamp (weekly rotation)
         if: inputs.cached-dependencies == true
         id: cache-timestamp
@@ -88,6 +91,7 @@ jobs:
           echo "week=$CACHE_WEEK" >> $GITHUB_OUTPUT
           echo "Cache rotation key: $CACHE_WEEK"
 
+      # Install .NET SDK with built-in NuGet package caching
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
@@ -97,7 +101,7 @@ jobs:
             **/packages.lock.json
             **/*.csproj
 
-      # Additional explicit cache with time-based rotation
+      # Additional explicit cache layer with time-based rotation for NuGet packages
       - name: Cache NuGet packages (weekly rotation)
         if: inputs.cached-dependencies == true
         uses: actions/cache@v4
@@ -108,12 +112,14 @@ jobs:
             nuget-${{ runner.os }}-${{ steps.cache-timestamp.outputs.week }}-
             nuget-${{ runner.os }}-
 
+      # Restore NuGet dependencies only if not using cached dependencies
       - name: Restore dependencies
         if: inputs.cached-dependencies == false
         shell: bash
-        run: |+
+        run: |
           dotnet restore --locked-mode
 
+      # Retrieve compiled binaries from the build job to avoid recompilation
       - name: Restore build artifacts from cache
         if: inputs.cached-artifacts == true
         uses: actions/cache/restore@v4
@@ -124,23 +130,25 @@ jobs:
           key: build-artifacts-${{ runner.os }}-${{ github.sha }}-${{ inputs.configuration }}
           fail-on-cache-miss: true
 
+      # Make bash scripts executable on Unix-like systems
       - name: Make Scripts Executable
         shell: bash
-        run: |+
+        run: |
           chmod u+x ./scripts/bash/*.sh
 
+      # Download previous benchmark results to use as performance baseline (unless forcing new baseline)
       - name: Download baseline benchmark summaries artifact
         if: ${{ !inputs.force-new-baseline }}
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           VERBOSE: ${{ fromJSON(inputs.verbose) || false }}
-        run: >+
-          ./scripts/bash/download-artifact.sh
-          --repository ${{ github.repository }}
-          --wf-path '.github/workflows/CI.yaml'
-          --artifact benchmark-summaries-${{ inputs.os }}
-          --directory ${{ env.ARTIFACTS_DIR }}/baseline
+        run: |
+          ./scripts/bash/download-artifact.sh \
+              --repository ${{ github.repository }} \
+              --wf-path '.github/workflows/Glob.Api.CI.yaml' \  # TODO: try to change to something that is not bound by repo name and path of the top level workflow!!!
+              --artifact benchmark-summaries-${{ inputs.os }} \
+              --directory ${{ env.ARTIFACTS_DIR }}/baseline
 
       - name: Run the benchmarks
         if: ${{ success() || fromJSON(inputs.force-new-baseline) }}
@@ -150,14 +158,15 @@ jobs:
           PREPROCESSOR_SYMBOLS: ${{ inputs.preprocessor-symbols }}
           VERBOSE:              ${{ fromJSON(inputs.verbose) }}
           FORCE_NEW_BASELINE:   ${{ fromJSON(inputs.force-new-baseline) }}
-        run: |+
+        run: |
           ./scripts/bash/run-benchmarks.sh ${{ inputs.benchmark-project }} \
-            --configuration "${{ inputs.configuration }}" \
-            --artifacts "${{ env.ARTIFACTS_DIR }}" \
-            --max-regression-pct "${{ inputs.max-regression-pct }}" \
-            ${{ inputs.cached-dependencies && '--cached-dependencies' || '' }} \
-            ${{ inputs.cached-artifacts    && '--cached-artifacts'    || '' }}
+              --configuration "${{ inputs.configuration }}" \
+              --artifacts "${{ env.ARTIFACTS_DIR }}" \
+              --max-regression-pct "${{ inputs.max-regression-pct }}" \
+              ${{ inputs.cached-dependencies && '--cached-dependencies' || '' }} \
+              ${{ inputs.cached-artifacts    && '--cached-artifacts'    || '' }}
 
+      # Upload benchmark results as workflow artifacts for future baseline comparisons
       - name: Upload benchmark summaries artifact
         uses: actions/upload-artifact@v5
         with:
@@ -166,6 +175,7 @@ jobs:
           if-no-files-found: error
           overwrite: true
 
+      # If forcing new baseline, save these results as the new baseline
       - name: Upload benchmark results artifact as a new baseline
         if: ${{ inputs.force-new-baseline || false }}
         uses: actions/upload-artifact@v5

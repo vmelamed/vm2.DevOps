@@ -65,18 +65,21 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
+  # Execute unit tests with code coverage and enforce minimum coverage threshold
   test:
     name: Test on ${{ inputs.os }}
     runs-on: ${{ inputs.os }}
     steps:
+      # Clone the repository with full Git history
       - name: Checkout
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
+      # Generate a weekly cache key to automatically rotate NuGet cache
       - name: Get cache timestamp (weekly rotation)
-        if: inputs.cached-dependencies == true
         id: cache-timestamp
+        if: inputs.cached-dependencies == true
         shell: bash
         run: |
           # Generate cache key based on calendar week
@@ -84,16 +87,17 @@ jobs:
           echo "week=$CACHE_WEEK" >> $GITHUB_OUTPUT
           echo "Cache rotation key: $CACHE_WEEK"
 
+      # Install .NET SDK with built-in NuGet package caching
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
           cache: ${{ inputs.cached-dependencies }}
-          cache-dependency-path: |+
+          cache-dependency-path: |
             **/packages.lock.json
             **/*.csproj
 
-      # Additional explicit cache with time-based rotation
+      # Additional explicit cache layer with time-based rotation for NuGet packages
       - name: Cache NuGet packages (weekly rotation)
         if: inputs.cached-dependencies == true
         uses: actions/cache@v4
@@ -104,41 +108,46 @@ jobs:
             nuget-${{ runner.os }}-${{ steps.cache-timestamp.outputs.week }}-
             nuget-${{ runner.os }}-
 
+      # Restore NuGet dependencies only if not using cached dependencies
       - name: Restore dependencies
         if: inputs.cached-dependencies == false
         shell: bash
-        run: |+
+        run: |
           dotnet restore --locked-mode
 
+      # Retrieve compiled binaries from the build job to avoid recompilation
       - name: Restore build artifacts from cache
         if: inputs.cached-artifacts == true
         uses: actions/cache/restore@v4
         with:
+          key: build-artifacts-${{ runner.os }}-${{ github.sha }}-${{ inputs.configuration }}
+          fail-on-cache-miss: true
           path: |
             **/bin/${{ inputs.configuration }}
             **/obj
-          key: build-artifacts-${{ runner.os }}-${{ github.sha }}-${{ inputs.configuration }}
-          fail-on-cache-miss: true
 
+      # Make bash scripts executable on Unix-like systems
       - name: Make Scripts Executable
         shell: bash
         run: |
           chmod u+x ./scripts/bash/*.sh
 
+      # Execute tests with code coverage collection and validation
       - name: Run script for unit test with coverage
         env:
           CONFIGURATION:        ${{ inputs.configuration }}
           PREPROCESSOR_SYMBOLS: ${{ inputs.preprocessor-symbols }}
           VERBOSE:              ${{ fromJSON(inputs.verbose) }}
         shell: bash
-        run: |+
+        run: |
           ./scripts/bash/run-tests.sh ${{ inputs.test-project }} \
-            --min-coverage-pct "${{ inputs.min-coverage-pct }}" \
-            --configuration "${{ inputs.configuration }}" \
-            --artifacts "${{ env.ARTIFACTS_DIR }}" \
-            ${{ inputs.cached-dependencies && '--cached-dependencies' || '' }} \
-            ${{ inputs.cached-artifacts    && '--cached-artifacts'    || '' }}
+              --min-coverage-pct "${{ inputs.min-coverage-pct }}" \
+              --configuration "${{ inputs.configuration }}" \
+              --artifacts "${{ env.ARTIFACTS_DIR }}" \
+              ${{ inputs.cached-dependencies && '--cached-dependencies' || '' }} \
+              ${{ inputs.cached-artifacts    && '--cached-artifacts'    || '' }}
 
+      # Upload test results and coverage reports as workflow artifacts
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v5
         with:

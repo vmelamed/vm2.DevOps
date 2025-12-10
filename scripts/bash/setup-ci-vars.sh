@@ -26,7 +26,6 @@ declare -x dotnet_version=${DOTNET_VERSION:-"10.0.x"}
 declare -x configuration=${CONFIGURATION:-"Release"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -x min_coverage_pct=${MIN_COVERAGE_PCT:-80}
-declare -x run_benchmarks=${RUN_BENCHMARKS:-true}
 declare -x force_new_baseline=${FORCE_NEW_BASELINE:-false}
 declare -x max_regression_pct=${MAX_REGRESSION_PCT:-10}
 declare -x verbose=${VERBOSE:-false}
@@ -50,18 +49,37 @@ function error()
 }
 
 ## Shell function to log a warning and set a default value
-## Usage: warning variable_default_name variable_value "Warning message"
+## Usage: warning variable_default_name "Warning message" variable_assumed_value
 function warning()
 {
     declare -n variable="$1";
-    echo "⚠️ WARNING $3, Assuming $2" | tee >> "$GITHUB_STEP_SUMMARY" >&2
+    echo "⚠️ WARNING '$2', Assuming '$3'" | tee >> "$GITHUB_STEP_SUMMARY" >&2
     # shellcheck disable=SC2034
-    variable="$2"
+    variable="$3"
     return 1
 }
 
 if [[ -z "$build_project" ]]; then
-    warning build_project "solution" "build-project is empty"
+    # Find the first solution file (.slnx or .sln) or project file (.csproj)
+
+    declare solutionOrProject=""
+
+    # this is what `dotnet build` does if no project/solution is not specified, anyway - so comment it out
+    #
+    # if [[ -z "$solutionOrProject" ]]; then
+    #     # First try to find .slnx files
+    #     solutionOrProject=$(find . -maxdepth 3 -type f -name "*.slnx" -print -quit 2>/dev/null || true)
+    # fi
+    # if [[ -z "$solutionOrProject" ]]; then
+    #     # Then try to find .sln files
+    #     solutionOrProject=$(find . -maxdepth 3 -type f -name "*.sln" -print -quit 2>/dev/null || true)
+    # fi
+    # if [[ -z "$solutionOrProject" ]]; then
+    #     # Finally try to find .csproj files
+    #     solutionOrProject=$(find . -maxdepth 3 -type f -name "*.csproj" -print -quit 2>/dev/null || true)
+    # fi
+
+    warning build_project "build-project is empty" "$solutionOrProject"
 fi
 
 if [[ -z "$test_project" ]]; then
@@ -69,44 +87,39 @@ if [[ -z "$test_project" ]]; then
 fi
 
 if [[ -z "$benchmark_project" ]]; then
-    warning benchmark_project "" "benchmark-project is empty"
+    warning benchmark_project "benchmark-project is empty" ""
 fi
 
 # Validate and set os
 if [[ -z "$os" ]]; then
-    warning os "ubuntu-latest" "Invalid JSON for target OS."
+    warning os "Invalid JSON for target OS." "ubuntu-latest"
 fi
 
 # Validate and set dotnet-version
 if [[ -z "$dotnet_version" ]]; then
-    warning dotnet_version "10.0.x" "dotnet-version is empty."
+    warning dotnet_version "dotnet-version is empty." "10.0.x"
 fi
 
 # Set configuration with validation
 if [[ -z "$configuration" ]]; then
-    warning configuration "Release" "configuration must have value."
+    warning configuration "configuration must have value." "Release"
 fi
 
 # Validate numeric inputs
 if ! [[ "$min_coverage_pct" =~ ^[0-9]+$ ]] || (( min_coverage_pct < 50 || min_coverage_pct > 100 )); then
-    warning min_coverage_pct 80 "min-coverage-pct must be 50-100."
-fi
-
-# Boolean validations
-if [[ "$run_benchmarks" != "true" && "$run_benchmarks" != "false" ]]; then
-    warning run_benchmarks "true" "run-benchmarks must be true/false."
+    warning min_coverage_pct "min-coverage-pct must be 50-100." 80
 fi
 
 if [[ "$force_new_baseline" != "true" && "$force_new_baseline" != "false" ]]; then
-    warning force_new_baseline "false" "force-new-baseline must be true/false."
+    warning force_new_baseline "force-new-baseline must be true/false." "false"
 fi
 
 if ! [[ "$max_regression_pct" =~ ^[0-9]+$ ]] || (( max_regression_pct < 0 || max_regression_pct > 50 )); then
-    warning max_regression_pct 10 "max-regression-pct must be 0-50."
+    warning max_regression_pct "max-regression-pct must be 0-50." 10
 fi
 
 if [[ "$verbose" != "true" && "$verbose" != "false" ]]; then
-    warning verbose "false" "verbose must be true/false."
+    warning verbose "verbose must be true/false." "false"
 fi
 
 if (( errors > 0 )); then
@@ -128,7 +141,6 @@ fi
     echo "| configuration        | $configuration        |"
     echo "| preprocessor-symbols | $preprocessor_symbols |"
     echo "| min-coverage-pct     | $min_coverage_pct     |"
-    echo "| run-benchmarks       | $run_benchmarks       |"
     echo "| force-new-baseline   | $force_new_baseline   |"
     echo "| max-regression-pct   | $max_regression_pct   |"
     echo "| verbose              | $verbose              |"
@@ -145,7 +157,6 @@ fi
     echo "configuration=$configuration"
     echo "preprocessor-symbols=$preprocessor_symbols"
     echo "min-coverage-pct=$min_coverage_pct"
-    echo "run-benchmarks=$run_benchmarks"
     echo "force-new-baseline=$force_new_baseline"
     echo "max-regression-pct=$max_regression_pct"
     echo "verbose=$verbose"

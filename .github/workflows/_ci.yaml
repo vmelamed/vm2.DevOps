@@ -4,9 +4,9 @@ on:
   workflow_call:
     inputs:
       build-project:
-        description: Path to the project to build, if null or empty the solution or the project in the current directory will be built
+        description: Path to the project to build (if null, empty, ow whitespace, builds the solution or the project in the current directory).
         type: string
-        required: true
+        required: false
 
       test-project:
         description: Path to the test project to run tests against (cannot be null or empty string)
@@ -43,11 +43,6 @@ on:
         type: number
         default: 80 # percent
 
-      run-benchmarks:
-        description: Enable running the benchmarks and compare against baseline
-        type: boolean
-        default: true
-
       max-regression-pct:
         description: Maximum acceptable performance regression percentage
         type: number
@@ -78,6 +73,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Validate all input parameters and prepare them for downstream jobs
   setup:
     name: Parameters validation
     runs-on: ${{ inputs.os }}
@@ -99,7 +95,6 @@ jobs:
       configuration:        ${{ steps.setup-vars.outputs.configuration }}
       preprocessor-symbols: ${{ steps.setup-vars.outputs.preprocessor-symbols }}
       min-coverage-pct:     ${{ steps.setup-vars.outputs.min-coverage-pct }}
-      run-benchmarks:       ${{ steps.setup-vars.outputs.run-benchmarks }}
       max-regression-pct:   ${{ steps.setup-vars.outputs.max-regression-pct }}
       force-new-baseline:   ${{ steps.setup-vars.outputs.force-new-baseline }}
       verbose:              ${{ steps.setup-vars.outputs.verbose }}
@@ -107,12 +102,15 @@ jobs:
       cached-artifacts:     ${{ inputs.cached-artifacts }}
 
     steps:
+      # Clone the repository to access validation scripts
       - name: Checkout
         uses: actions/checkout@v6
 
+      # Make bash scripts executable on Unix-like systems
       - name: Make Scripts Executable
         run: chmod u+x ./scripts/bash/*.sh
 
+      # Run validation script to verify and normalize all input parameters
       - id: setup-vars
         shell: bash
         env:
@@ -124,12 +122,12 @@ jobs:
           CONFIGURATION:        ${{ inputs.configuration }}
           PREPROCESSOR_SYMBOLS: ${{ inputs.preprocessor-symbols }}
           MIN_COVERAGE_PCT:     ${{ inputs.min-coverage-pct }}
-          RUN_BENCHMARKS:       ${{ inputs.run-benchmarks }}
           FORCE_NEW_BASELINE:   ${{ inputs.force-new-baseline }}
           MAX_REGRESSION_PCT:   ${{ inputs.max-regression-pct }}
           VERBOSE:              ${{ inputs.verbose }}
         run: ./scripts/bash/setup-ci-vars.sh
 
+  # Build the project and cache artifacts for downstream test/benchmark jobs
   build_job:
     name: Build
     needs:
@@ -144,6 +142,7 @@ jobs:
       cached-dependencies:  ${{ fromJSON(needs.setup.outputs.cached-dependencies) }}
       cached-artifacts:     ${{ fromJSON(needs.setup.outputs.cached-artifacts) }}
 
+  # Run unit tests with code coverage analysis
   test_job:
     name: Test
     needs:
@@ -161,9 +160,10 @@ jobs:
       cached-dependencies:  ${{ fromJSON(needs.setup.outputs.cached-dependencies) }}
       cached-artifacts:     ${{ fromJSON(needs.setup.outputs.cached-artifacts) }}
 
+  # Run performance benchmarks and compare against baseline (if enabled and benchmark project specified)
   benchmarks_job:
     name: Benchmarks
-    if: ${{ fromJSON(needs.setup.outputs.run-benchmarks) && fromJSON(needs.setup.outputs.benchmark-project) != '' }}
+    if: ${{ fromJSON(needs.setup.outputs.benchmark-project) != '' }}
     needs:
       - setup
       - build_job
@@ -181,9 +181,10 @@ jobs:
     #  cached-artifacts:     ${{ fromJSON(needs.setup.outputs.cached-artifacts) }}
     runs-on: ${{ inputs.os }}
     steps:
+      # Display all workflow inputs for debugging and verification
       - name: Print all inputs
         shell: bash
-        run: |+
+        run: |
           {
             echo "inputs.os:                   ${{ needs.setup.outputs.os }}"
             echo "inputs.dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}"
@@ -191,7 +192,6 @@ jobs:
             echo "inputs.preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}"
             echo "inputs.benchmark-project:    ${{ needs.setup.outputs.benchmark-project }}"
             echo "inputs.max-regression-pct:   ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}"
-            echo "inputs.run-benchmarks:       ${{ fromJSON(needs.setup.outputs.run-benchmarks) }}"
             echo "inputs.force-new-baseline:   ${{ fromJSON(needs.setup.outputs.force-new-baseline) }}"
             echo "inputs.verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}"
             echo "inputs.cached-dependencies:  ${{ fromJSON(needs.setup.outputs.cached-dependencies) }}"

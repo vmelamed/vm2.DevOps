@@ -53,10 +53,6 @@ Options:
         Minimum acceptable code coverage percentage (50-100).
         Initial value from \$MIN_COVERAGE_PCT or 80
 
-    --run-benchmarks | -r
-        Whether to run benchmarks (true/false).
-        Initial value from \$RUN_BENCHMARKS or true
-
     --force-new-baseline | -f
         Whether to force new baseline (true/false).
         Initial value from \$FORCE_NEW_BASELINE or false

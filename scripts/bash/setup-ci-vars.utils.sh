@@ -33,7 +33,7 @@ function get_arguments()
             --help|-h      ) usage; exit 0 ;;
             --build-project|-b )
                 value="$1"; shift
-                test_project="$value"
+                build_project="$value"
                 ;;
             --test-project|-t )
                 value="$1"; shift
@@ -62,10 +62,6 @@ function get_arguments()
             --min-coverage-pct|-min )
                 value="$1"; shift
                 min_coverage_pct="$value"
-                ;;
-            --run-benchmarks|-r )
-                value="$1"; shift
-                run_benchmarks="$value"
                 ;;
             --force-new-baseline|-f )
                 value="$1"; shift
@@ -98,7 +94,6 @@ dump_all_variables()
         preprocessor_symbols \
         test_project \
         min_coverage_pct \
-        run_benchmarks \
         benchmark_project \
         force_new_baseline \
         max_regression_pct

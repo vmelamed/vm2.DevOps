@@ -59,7 +59,6 @@ fi
 
 declare -rx repository
 declare -rx workflow_name
-declare -rx workflow_name
 declare -rx workflow_path
 declare -x workflow_id
 declare -rx artifact_name
@@ -137,7 +136,7 @@ for run in "${runs[@]}"; do
     if ((i > 80)); then
         echo "⚠️ Warning: The artifact was found in a run $i out of 100. \
 You may want to refresh the artifact. \
-E.g. run the benchmarks with --force-new-baseline or vars.FORCE_NEW_BASELINE" >&2
+E.g. re-run the benchmarks with --force-new-baseline or vars.FORCE_NEW_BASELINE" >&2
     fi
     trace "The artifact '$artifact_name' found in run $run. Downloading..."
     if ! http_error=$(execute gh run download "$run" \

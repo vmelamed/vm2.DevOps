@@ -4,9 +4,9 @@ on:
   workflow_call:
     inputs:
       build-project:
-        description: Path to the project to build (default the solution or the project in the current directory)
+        description: Path to the project to build (if empty, null, or whitespace, builds the solution or the project in the current directory)
         type: string
-        required: true
+        required: false
 
       os:
         description: JSON array of runners (default ubuntu-latest)
@@ -52,18 +52,21 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
+  # Compile the project and optionally cache the build artifacts
   build:
     name: Build on ${{ inputs.os }}
     runs-on: ${{ inputs.os }}
     steps:
+      # Clone the repository with full Git history for version calculation
       - name: Checkout
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
+      # Generate a weekly cache key to automatically rotate NuGet cache
       - name: Get cache timestamp (weekly rotation)
-        if: inputs.cached-dependencies == true
         id: cache-timestamp
+        if: inputs.cached-dependencies == true
         shell: bash
         run: |
           # Generate cache key based on calendar week
@@ -71,16 +74,17 @@ jobs:
           echo "week=$CACHE_WEEK" >> $GITHUB_OUTPUT
           echo "Cache rotation key: $CACHE_WEEK"
 
+      # Install .NET SDK with built-in NuGet package caching
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
           cache: ${{ inputs.cached-dependencies }}
-          cache-dependency-path: |+
+          cache-dependency-path: |
             **/packages.lock.json
             **/*.csproj
 
-      # Additional explicit cache with time-based rotation
+      # Additional explicit cache layer with time-based rotation for NuGet packages
       - name: Cache NuGet packages (weekly rotation)
         if: inputs.cached-dependencies == true
         uses: actions/cache@v4
@@ -91,18 +95,20 @@ jobs:
             nuget-${{ runner.os }}-${{ steps.cache-timestamp.outputs.week }}-
             nuget-${{ runner.os }}-
 
+      # Restore NuGet dependencies using locked mode to ensure reproducible builds
       - name: Restore dependencies
         shell: bash
-        run: |+
+        run: |
           dotnet restore --locked-mode
 
+      # Compile the project with optional preprocessor symbols
       - name: Build (${{ inputs.configuration }})
         shell: bash
-        run: |+
+        run: |
           dotnet build ${{ inputs.build-project }} \
-            /p:DefineConstants="${{ inputs.preprocessor-symbols }}" \
-            --configuration ${{ inputs.configuration }} \
-            ${{ inputs.cached-dependencies && '--no-restore' || '' }}
+              /p:DefineConstants="${{ inputs.preprocessor-symbols }}" \
+              --configuration ${{ inputs.configuration }} \
+              ${{ inputs.cached-dependencies && '--no-restore' || '' }}
           {
             echo "Build:               ✔️ Successful"
             echo "Runner:              ${{ inputs.os }}"
@@ -111,11 +117,12 @@ jobs:
             echo "Cache dependencies:  ${{ inputs.cached-dependencies }}"
           } >> $GITHUB_STEP_SUMMARY
 
+      # Save compiled binaries and intermediate files to cache for downstream jobs
       - name: Cache build artifacts
         if: inputs.cached-artifacts == true
         uses: actions/cache/save@v4
         with:
+          key: build-artifacts-${{ runner.os }}-${{ github.sha }}-${{ inputs.configuration }}
           path: |
             **/bin/${{ inputs.configuration }}
             **/obj
-          key: build-artifacts-${{ runner.os }}-${{ github.sha }}-${{ inputs.configuration }}
