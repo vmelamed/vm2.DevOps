@@ -78,12 +78,6 @@ jobs:
   setup:
     name: Parameters validation
     runs-on: ${{ inputs.os }}
-    if: >
-      ${{
-      github.event_name == 'pull_request' ||
-      github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]')
-      }}
     outputs:
       build-project:        ${{ steps.setup.outputs.build-project }}
       test-project:         ${{ steps.setup.outputs.test-project }}
@@ -158,16 +152,10 @@ jobs:
   # Build the project and cache artifacts for downstream test/benchmark jobs
   build:
     name: Build
-    if: >
-      ${{
-      github.event_name == 'pull_request' ||
-      github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]')
-      }}
     needs:
       - setup
     runs-on: ${{ inputs.os }}
-    steps:                    # TO BE REMOVED WHEN USING WORKFLOW CALL
+    steps:                    # TO BE REMOVED WHEN ACTUALLY RUNNING THE BUILD WORKFLOW
       - name: Print \#2
         shell: bash
         run: |
@@ -195,17 +183,11 @@ jobs:
   # Run unit tests with code coverage analysis
   test:
     name: Tests
-    if: >
-      ${{
-      github.event_name == 'pull_request' ||
-      github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]')
-      }}
     needs:
       - setup
       - build
     runs-on: ${{ inputs.os }}
-    steps:                    # TO BE REMOVED WHEN USING WORKFLOW CALL
+    steps:                    # TO BE REMOVED WHEN ACTUALLY RUNNING THE TEST WORKFLOW
       - name: Print \#3
         shell: bash
         run: |
@@ -237,20 +219,12 @@ jobs:
   # Run performance benchmarks and compare against baseline (if enabled and benchmark project specified)
   benchmarks:
     name: Benchmarks
-    if: >
-      ${{
-      fromJSON(needs.setup.outputs.benchmark-project) != '' &&
-      (
-      github.event_name == 'pull_request' ||
-      github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]')
-      )
-      }}
+    if: ${{ fromJSON(needs.setup.outputs.benchmark-project) != '' }}
     needs:
       - setup
       - build
     runs-on: ${{ inputs.os }}
-    steps:                    # TO BE REMOVED WHEN USING WORKFLOW CALL
+    steps:                    # TO BE REMOVED WHEN ACTUALLY RUNNING THE BENCHMARK WORKFLOW
       # Display all workflow inputs for debugging and verification
       - name: Print all inputs
         shell: bash

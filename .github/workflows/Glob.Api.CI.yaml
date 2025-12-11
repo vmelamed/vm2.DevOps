@@ -42,12 +42,20 @@ on:
         default: false
 
 env:
+  # TODO: TO BE REMOVED! - this is only for debugging purposes
   ACTIONS_RUNNER_DEBUG: true
+  ACTIONS_JOB_DEBUG: true
   ACTIONS_STEP_DEBUG: true
 
 jobs:
   call_ci:
     name: Call the CI Workflow
+    if: >
+      ${{
+      github.event_name == 'pull_request' ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]')
+      }}
     strategy:
       matrix:
         os: ${{ fromJSON(inputs.os || '["ubuntu-latest"]') }}
@@ -58,19 +66,40 @@ jobs:
           - ./test/Glob.Api.Tests/Glob.Api.Tests.csproj
         benchmark-project:
           - ./benchmarks/Glob.Api.Benchmarks/Glob.Api.Benchmarks.csproj
-
-    uses: ./.github/workflows/_ci.yaml
-    with:
-      build-project:        ${{ matrix.build-project || '' }}
-      test-project:         ${{ matrix.test-project }}
-      benchmark-project:    ${{ matrix.benchmark-project }}
-      os:                   ${{ fromJSON(inputs.os)         || matrix.os            || '["ubuntu-latest"]' }}
-      dotnet-version:       ${{ vars.DOTNET_VERSION         || '10.0.x' }}
-      configuration:        ${{ vars.CONFIGURATION          || 'Release' }}
-      preprocessor-symbols: ${{ inputs.preprocessor-symbols || '' }}
-      min-coverage-pct:     ${{ vars.MIN_COVERAGE_PCT       || 80 }}
-      max-regression-pct:   ${{ vars.MAX_REGRESSION_PCT     || 10 }}
-      force-new-baseline:   ${{ vars.FORCE_NEW_BASELINE     == false }}
-      cached-dependencies:  ${{ inputs.cached-dependencies  != false }}
-      cached-artifacts:     ${{ inputs.cached-artifacts     != false }}
-      verbose:              ${{ inputs.verbose              == true }}
+    steps:                    # TO BE REMOVED WHEN ACTUALLY RUNNING THE BUILD WORKFLOW
+      - name: Print \#0
+        shell: bash
+        run: |
+          {
+            echo "uses: ./.github/workflows/_ci.yaml"
+            echo "with:"
+            echo "  build-project:        ${{ matrix.build-project || '' }}"
+            echo "  test-project:         ${{ matrix.test-project }}"
+            echo "  benchmark-project:    ${{ matrix.benchmark-project }}"
+            echo "  os:                   ${{ fromJSON(inputs.os)         || matrix.os            || '["ubuntu-latest"]' }}"
+            echo "  dotnet-version:       ${{ vars.DOTNET_VERSION         || '10.0.x' }}"
+            echo "  configuration:        ${{ vars.CONFIGURATION          || 'Release' }}"
+            echo "  preprocessor-symbols: ${{ inputs.preprocessor-symbols || '' }}"
+            echo "  min-coverage-pct:     ${{ vars.MIN_COVERAGE_PCT       || 80 }}"
+            echo "  max-regression-pct:   ${{ vars.MAX_REGRESSION_PCT     || 10 }}"
+            echo "  force-new-baseline:   ${{ vars.FORCE_NEW_BASELINE     == false }}"
+            echo "  cached-dependencies:  ${{ inputs.cached-dependencies  != false }}"
+            echo "  cached-artifacts:     ${{ inputs.cached-artifacts     != false }}"
+            echo "  verbose:              ${{ inputs.verbose              == true }}"
+          }
+          } >> $GITHUB_STEP_SUMMARY
+    # uses: ./.github/workflows/_ci.yaml
+    # with:
+    #   build-project:        ${{ matrix.build-project || '' }}
+    #   test-project:         ${{ matrix.test-project }}
+    #   benchmark-project:    ${{ matrix.benchmark-project }}
+    #   os:                   ${{ fromJSON(inputs.os)         || matrix.os            || '["ubuntu-latest"]' }}
+    #   dotnet-version:       ${{ vars.DOTNET_VERSION         || '10.0.x' }}
+    #   configuration:        ${{ vars.CONFIGURATION          || 'Release' }}
+    #   preprocessor-symbols: ${{ inputs.preprocessor-symbols || '' }}
+    #   min-coverage-pct:     ${{ vars.MIN_COVERAGE_PCT       || 80 }}
+    #   max-regression-pct:   ${{ vars.MAX_REGRESSION_PCT     || 10 }}
+    #   force-new-baseline:   ${{ vars.FORCE_NEW_BASELINE     == false }}
+    #   cached-dependencies:  ${{ inputs.cached-dependencies  != false }}
+    #   cached-artifacts:     ${{ inputs.cached-artifacts     != false }}
+    #   verbose:              ${{ inputs.verbose              == true }}
