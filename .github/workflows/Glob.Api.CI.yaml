@@ -68,7 +68,7 @@ jobs:
           - ./benchmarks/Glob.Api.Benchmarks/Glob.Api.Benchmarks.csproj
     uses: ./.github/workflows/_ci.yaml
     with:
-      build-project:        ${{ matrix.build-project        || '' }}
+      build-project:        ${{ matrix.build-project }}
       test-project:         ${{ matrix.test-project }}
       benchmark-project:    ${{ matrix.benchmark-project }}
       os:                   ${{ matrix.os }}
@@ -89,7 +89,7 @@ jobs:
     #       {
     #         echo "uses ./.github/workflows/_ci.yaml"
     #         echo "with"
-    #         echo "  build-project:        ${{ matrix.build-project        || '' }}"
+    #         echo "  build-project:        ${{ matrix.build-project }}"
     #         echo "  test-project:         ${{ matrix.test-project }}"
     #         echo "  benchmark-project:    ${{ matrix.benchmark-project }}"
     #         echo "  os:                   ${{ matrix.os }}"
