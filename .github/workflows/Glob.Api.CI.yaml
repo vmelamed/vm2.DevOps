@@ -57,6 +57,7 @@ jobs:
       github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]')
       }}
     strategy:
+      fail-fast: true
       matrix:
         os: ${{ fromJSON(inputs.os || '["ubuntu-latest"]') }}
         build-project:
