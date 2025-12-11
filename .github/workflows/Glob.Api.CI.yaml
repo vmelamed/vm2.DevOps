@@ -11,11 +11,6 @@ on:
 
   workflow_dispatch:
     inputs:
-      os:
-        description: Runner OS (the value must be a valid string representation of a JSON array of strings)
-        type: string
-        default: '["ubuntu-latest"]'
-
       dotnet-version:
         description: Version of .NET SDK to use (cannot be null, empty, or whitespace)
         type: string
@@ -59,7 +54,8 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        os: ${{ fromJSON(inputs.os || '["ubuntu-latest"]') }}
+        os:
+          - ubuntu-latest
         build-project:
           - "" # build the whole solution once
         test-project:
