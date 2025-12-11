@@ -72,8 +72,8 @@ jobs:
         shell: bash
         run: |
           {
-            echo "uses: ./.github/workflows/_ci.yaml"
-            echo "with:"
+            echo "uses ./.github/workflows/_ci.yaml"
+            echo "with"
             # echo "  build-project:        ${{ matrix.build-project || '' }}"
             # echo "  test-project:         ${{ matrix.test-project }}"
             # echo "  benchmark-project:    ${{ matrix.benchmark-project }}"
