@@ -87,7 +87,6 @@ jobs:
             echo "  cached-dependencies:  ${{ inputs.cached-dependencies  != false }}"
             echo "  cached-artifacts:     ${{ inputs.cached-artifacts     != false }}"
             echo "  verbose:              ${{ inputs.verbose              == true }}"
-          }
           } >> $GITHUB_STEP_SUMMARY
     # uses: ./.github/workflows/_ci.yaml
     # with:
