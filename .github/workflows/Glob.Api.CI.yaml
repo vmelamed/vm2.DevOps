@@ -74,26 +74,26 @@ jobs:
           {
             echo "uses ./.github/workflows/_ci.yaml"
             echo "with"
-            # echo "  build-project:        ${{ matrix.build-project        || '' }}"
-            # echo "  test-project:         ${{ matrix.test-project }}"
-            # echo "  benchmark-project:    ${{ matrix.benchmark-project }}"
-            # echo "  os:                   ${{ fromJSON(inputs.os)         || matrix.os            || '["ubuntu-latest"]' }}"
-            # echo "  dotnet-version:       ${{ vars.DOTNET_VERSION         || '10.0.x' }}"
-            # echo "  configuration:        ${{ vars.CONFIGURATION          || 'Release' }}"
-            # echo "  preprocessor-symbols: ${{ inputs.preprocessor-symbols || '' }}"
-            # echo "  min-coverage-pct:     ${{ vars.MIN_COVERAGE_PCT       || 80 }}"
-            # echo "  max-regression-pct:   ${{ vars.MAX_REGRESSION_PCT     || 10 }}"
-            # echo "  force-new-baseline:   ${{ vars.FORCE_NEW_BASELINE     == false }}"
-            # echo "  cached-dependencies:  ${{ inputs.cached-dependencies  != false }}"
-            # echo "  cached-artifacts:     ${{ inputs.cached-artifacts     != false }}"
-            # echo "  verbose:              ${{ inputs.verbose              == true }}"
+            echo "  build-project:        ${{ matrix.build-project        || '' }}"
+            echo "  test-project:         ${{ matrix.test-project }}"
+            echo "  benchmark-project:    ${{ matrix.benchmark-project }}"
+            echo "  os:                   ${{ matrix.os }}                || ubuntu-latest }}"
+            echo "  dotnet-version:       ${{ vars.DOTNET_VERSION         || '10.0.x' }}"
+            echo "  configuration:        ${{ vars.CONFIGURATION          || 'Release' }}"
+            echo "  preprocessor-symbols: ${{ inputs.preprocessor-symbols || '' }}"
+            echo "  min-coverage-pct:     ${{ vars.MIN_COVERAGE_PCT       || 80 }}"
+            echo "  max-regression-pct:   ${{ vars.MAX_REGRESSION_PCT     || 10 }}"
+            echo "  force-new-baseline:   ${{ vars.FORCE_NEW_BASELINE     == false }}"
+            echo "  cached-dependencies:  ${{ inputs.cached-dependencies  != false }}"
+            echo "  cached-artifacts:     ${{ inputs.cached-artifacts     != false }}"
+            echo "  verbose:              ${{ inputs.verbose              == true }}"
           } >> $GITHUB_STEP_SUMMARY
     # uses: ./.github/workflows/_ci.yaml
     # with:
     #   build-project:        ${{ matrix.build-project || '' }}
     #   test-project:         ${{ matrix.test-project }}
     #   benchmark-project:    ${{ matrix.benchmark-project }}
-    #   os:                   ${{ fromJSON(inputs.os)         || matrix.os            || '["ubuntu-latest"]' }}
+    #   os:                   ${{ matrix.os }}                || ubuntu-latest }}
     #   dotnet-version:       ${{ vars.DOTNET_VERSION         || '10.0.x' }}
     #   configuration:        ${{ vars.CONFIGURATION          || 'Release' }}
     #   preprocessor-symbols: ${{ inputs.preprocessor-symbols || '' }}
