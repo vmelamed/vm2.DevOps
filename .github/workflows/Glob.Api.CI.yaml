@@ -68,10 +68,10 @@ jobs:
           - ./benchmarks/Glob.Api.Benchmarks/Glob.Api.Benchmarks.csproj
     uses: ./.github/workflows/_ci.yaml
     with:
-      build-project:        ${{ matrix.build-project || '' }}
+      build-project:        ${{ matrix.build-project        || '' }}
       test-project:         ${{ matrix.test-project }}
       benchmark-project:    ${{ matrix.benchmark-project }}
-      os:                   ${{ matrix.os }}                || ubuntu-latest }}
+      os:                   ${{ matrix.os                   || 'ubuntu-latest' }}
       dotnet-version:       ${{ vars.DOTNET_VERSION         || '10.0.x' }}
       configuration:        ${{ vars.CONFIGURATION          || 'Release' }}
       preprocessor-symbols: ${{ inputs.preprocessor-symbols || '' }}
@@ -92,7 +92,7 @@ jobs:
     #         echo "  build-project:        ${{ matrix.build-project        || '' }}"
     #         echo "  test-project:         ${{ matrix.test-project }}"
     #         echo "  benchmark-project:    ${{ matrix.benchmark-project }}"
-    #         echo "  os:                   ${{ matrix.os }}                || ubuntu-latest }}"
+    #         echo "  os:                   ${{ matrix.os                   || 'ubuntu-latest' }}"
     #         echo "  dotnet-version:       ${{ vars.DOTNET_VERSION         || '10.0.x' }}"
     #         echo "  configuration:        ${{ vars.CONFIGURATION          || 'Release' }}"
     #         echo "  preprocessor-symbols: ${{ inputs.preprocessor-symbols || '' }}"
