@@ -66,6 +66,7 @@ jobs:
           - ./test/Glob.Api.Tests/Glob.Api.Tests.csproj
         benchmark-project:
           - ./benchmarks/Glob.Api.Benchmarks/Glob.Api.Benchmarks.csproj
+    runs-on: ${{ inputs.os }}
     steps:                    # TO BE REMOVED WHEN ACTUALLY RUNNING THE BUILD WORKFLOW
       - name: Print \#0
         shell: bash
