@@ -3,40 +3,28 @@ name: Glob.Api.CI - Build, Test, Benchmarks
 on:
   push:
     branches:
-      - "**"
-      # trigger on push for all branches
+      - "**" # trigger on push for all branches
 
   pull_request:
     branches:
-      - "**"
-      # trigger on PR for all branches
+      - "**" # trigger on PR for all branches
 
   workflow_dispatch:
     inputs:
       os:
-        description: Runner OS (must be a JSON array of strings; default '["ubuntu-latest"]')
+        description: Runner OS (the value must be a valid string representation of a JSON array of strings)
         type: string
         default: '["ubuntu-latest"]'
 
       dotnet-version:
-        description: Version of .NET SDK to use (cannot be null, empty, or whitespace; default '10.0.x')
+        description: Version of .NET SDK to use (cannot be null, empty, or whitespace)
         type: string
         default: 10.0.x
-
-      configuration:
-        description: The type of build to produce, e.g. Release vs Debug (cannot be null, empty, or whitespace; default 'Release')
-        type: string
-        default: Release
 
       preprocessor-symbols:
         description: Define constants to pass to the compiler
         type: string
         default: ""
-
-      force-new-baseline:
-        description: Whether to force new baseline (if true, no regression check is done)
-        type: boolean
-        default: false
 
       cached-dependencies:
         description: Enable storing and retrieving NuGet dependencies to/from cache (default true)
@@ -64,10 +52,7 @@ jobs:
       matrix:
         os: ${{ fromJSON(inputs.os || '["ubuntu-latest"]') }}
         build-project:
-          - ./src/Glob.Api/Glob.Api.csproj
-          - ./test/Glob.Api.FakeFileSystem.Tests/Glob.Api.FakeFileSystem.Tests.csproj
-          - ./test/Glob.Api.Tests/Glob.Api.Tests.csproj
-          - ./benchmarks/Glob.Api.Benchmarks/Glob.Api.Benchmarks.csproj
+          - "" # build the whole solution once
         test-project:
           - ./test/Glob.Api.FakeFileSystem.Tests/Glob.Api.FakeFileSystem.Tests.csproj
           - ./test/Glob.Api.Tests/Glob.Api.Tests.csproj
@@ -76,16 +61,16 @@ jobs:
 
     uses: ./.github/workflows/_ci.yaml
     with:
-      build-project:        ${{ matrix.build-project }}
+      build-project:        ${{ matrix.build-project || '' }}
       test-project:         ${{ matrix.test-project }}
       benchmark-project:    ${{ matrix.benchmark-project }}
-      os:                   ${{ matrix.os }}
-      dotnet-version:       ${{ inputs.dotnet-version       || '10.0.x' }}
-      configuration:        ${{ inputs.configuration        || 'Release' }}
+      os:                   ${{ fromJSON(inputs.os)         || matrix.os            || '["ubuntu-latest"]' }}
+      dotnet-version:       ${{ vars.DOTNET_VERSION         || '10.0.x' }}
+      configuration:        ${{ vars.CONFIGURATION          || 'Release' }}
       preprocessor-symbols: ${{ inputs.preprocessor-symbols || '' }}
-      min-coverage-pct:     ${{ vars.min_coverage_pct       || 75 }}
-      max-regression-pct:   ${{ vars.max_regression_pct     || 10 }}
-      force-new-baseline:   ${{ inputs.force-new-baseline   == true }}
-      verbose:              ${{ inputs.verbose              == true }}
+      min-coverage-pct:     ${{ vars.MIN_COVERAGE_PCT       || 80 }}
+      max-regression-pct:   ${{ vars.MAX_REGRESSION_PCT     || 10 }}
+      force-new-baseline:   ${{ vars.FORCE_NEW_BASELINE     == false }}
       cached-dependencies:  ${{ inputs.cached-dependencies  != false }}
       cached-artifacts:     ${{ inputs.cached-artifacts     != false }}
+      verbose:              ${{ inputs.verbose              == true }}

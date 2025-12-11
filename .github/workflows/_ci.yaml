@@ -79,12 +79,9 @@ jobs:
     runs-on: ${{ inputs.os }}
     if: >
       ${{
-      (github.event_name == 'push' &&
-      !(contains(github.event.head_commit.message, '[skip ci]') ||
-      contains(github.event.head_commit.message, '[ci]'))
-      ) ||
       github.event_name == 'pull_request' ||
-      github.event_name == 'workflow_dispatch'
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]')
       }}
     outputs:
       build-project:        ${{ steps.setup-vars.outputs.build-project }}
@@ -113,19 +110,19 @@ jobs:
       # Run validation script to verify and normalize all input parameters
       - id: setup-vars
         shell: bash
-        env:
-          BUILD_PROJECT:        ${{ inputs.build-project }}
-          TEST_PROJECT:         ${{ inputs.test-project }}
-          BENCHMARK_PROJECT:    ${{ inputs.benchmark-project }}
-          OS:                   ${{ inputs.os }}
-          DOTNET_VERSION:       ${{ inputs.dotnet-version }}
-          CONFIGURATION:        ${{ inputs.configuration }}
-          PREPROCESSOR_SYMBOLS: ${{ inputs.preprocessor-symbols }}
-          MIN_COVERAGE_PCT:     ${{ inputs.min-coverage-pct }}
-          FORCE_NEW_BASELINE:   ${{ inputs.force-new-baseline }}
-          MAX_REGRESSION_PCT:   ${{ inputs.max-regression-pct }}
-          VERBOSE:              ${{ inputs.verbose }}
-        run: ./scripts/bash/setup-ci-vars.sh
+        run: |
+          ./scripts/bash/setup-ci-vars.sh \
+              --build-project        ${{ inputs.build-project }} \
+              --test-project         ${{ inputs.test-project }} \
+              --benchmark-project    ${{ inputs.benchmark-project }} \
+              --os                   ${{ inputs.os }} \
+              --dotnet-version       ${{ inputs.dotnet-version }} \
+              --configuration        ${{ inputs.configuration }} \
+              --preprocessor-symbols ${{ inputs.preprocessor-symbols }} \
+              --min-coverage-pct     ${{ inputs.min-coverage-pct }} \
+              --force-new-baseline   ${{ inputs.force-new-baseline }} \
+              --max-regression-pct   ${{ inputs.max-regression-pct }} \
+              --verbose              ${{ inputs.verbose }}
 
   # Build the project and cache artifacts for downstream test/benchmark jobs
   build_job:

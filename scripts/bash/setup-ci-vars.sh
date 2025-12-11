@@ -3,8 +3,21 @@ set -euo pipefail
 
 # ==============================================================================
 # This script validates and sets up CI variables for GitHub Actions workflows.
-# It validates all input variables and outputs them to GITHUB_OUTPUT for use by
-# subsequent workflow jobs.
+# It validates and adjusts all input variables and outputs them to GITHUB_OUTPUT
+# for use by subsequent workflow jobs. The initial values are coming either from
+# the respective environment variables or the scrpt parameters.
+# Validated variables:
+#   build_project
+#   test_project
+#   benchmark_project
+#   os
+#   dotnet_version
+#   configuration
+#   preprocessor_symbols
+#   min_coverage_pct
+#   force_new_baseline
+#   max_regression_pct
+#   verbose
 # ==============================================================================
 
 declare -xr this_script=${BASH_SOURCE[0]}
@@ -146,18 +159,25 @@ fi
     echo "| verbose              | $verbose              |"
 } | tee >> "$GITHUB_STEP_SUMMARY"
 
+
+function github_output()
+{
+    declare -n variable="$1"
+    declare modified="${1//_/-}"
+
+    echo "${modified}=${variable}" >> "${GITHUB_OUTPUT}"
+}
+
 # Output all variables to GITHUB_OUTPUT for use in subsequent jobs
 # shellcheck disable=SC2154
-{
-    echo "build-project=$build_project"
-    echo "test-project=$test_project"
-    echo "benchmark-project=$benchmark_project"
-    echo "os=$os"
-    echo "dotnet-version=$dotnet_version"
-    echo "configuration=$configuration"
-    echo "preprocessor-symbols=$preprocessor_symbols"
-    echo "min-coverage-pct=$min_coverage_pct"
-    echo "force-new-baseline=$force_new_baseline"
-    echo "max-regression-pct=$max_regression_pct"
-    echo "verbose=$verbose"
-} >> "$GITHUB_OUTPUT"
+github_output build_project
+github_output test_project
+github_output benchmark_project
+github_output os
+github_output dotnet_version
+github_output configuration
+github_output preprocessor_symbols
+github_output min_coverage_pct
+github_output force_new_baseline
+github_output max_regression_pct
+github_output verbose
