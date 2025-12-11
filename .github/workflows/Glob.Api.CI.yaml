@@ -70,11 +70,11 @@ jobs:
     steps:                    # TO BE REMOVED WHEN ACTUALLY RUNNING THE BUILD WORKFLOW
       - name: Print \#0
         shell: bash
-        run: |
+        run: |+
           {
             echo "uses ./.github/workflows/_ci.yaml"
             echo "with"
-            # echo "  build-project:        ${{ matrix.build-project || '' }}"
+            # echo "  build-project:        ${{ matrix.build-project        || '' }}"
             # echo "  test-project:         ${{ matrix.test-project }}"
             # echo "  benchmark-project:    ${{ matrix.benchmark-project }}"
             # echo "  os:                   ${{ fromJSON(inputs.os)         || matrix.os            || '["ubuntu-latest"]' }}"
