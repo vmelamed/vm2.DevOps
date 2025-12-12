@@ -3,11 +3,6 @@ name: _build (Reusable workflow)
 on:
   workflow_call:
     inputs:
-      build-project:
-        description: Path to the project to build (if empty, null, or whitespace, builds the solution or the project in the current directory)
-        type: string
-        required: false
-
       os:
         description: JSON array of runners (default ubuntu-latest)
         type: string
@@ -22,6 +17,11 @@ on:
         description: The type of build to produce, e.g. Release vs Debug (default Release)
         type: string
         default: Release
+
+      build-project:
+        description: Path to the project to build (if empty, null, or whitespace, builds the solution or the project in the current directory)
+        type: string
+        required: false
 
       preprocessor-symbols:
         description: Preprocessor symbols to pass to the compiler (default - none)
@@ -39,7 +39,7 @@ on:
         default: true
 
 # concurrency:
-#   group: test-${{ github.workflow_ref }}-${{ inputs.test-project }}
+#   group: test-${{ github.workflow_ref }}-${{ inputs.build-project }}
 #   cancel-in-progress: true
 #   # NOTE: Only uncomment if this workflow is called directly (not via _ci.yaml)
 #   # or if _ci.yaml runs build/test/benchmarks in parallel

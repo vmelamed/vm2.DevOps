@@ -75,7 +75,7 @@ env:
   ACTIONS_STEP_DEBUG: true
 
 concurrency:
-  group: ci-${{ github.ref }}-${{ inputs.build-projects }}-${{ inputs.test-projects }}
+  group: ci-${{ github.workflow_ref }}
   cancel-in-progress: true
 
 jobs:
@@ -105,81 +105,89 @@ jobs:
       - name: Make Scripts Executable
         run: chmod u+x ./scripts/bash/*.sh
 
-      - name: Print \#1 instead of calling the script
+      - name: Run validation script to verify and normalize all input parameters
         id: setup
         shell: bash
-        ## Run validation script to verify and normalize all input parameters
-        #  run: |
-        #     ./scripts/bash/setup-ci-vars.sh \
-        #         --build-project        ${{ inputs.build-project }} \
-        #         --test-project         ${{ inputs.test-project }} \
-        #         --benchmark-project    ${{ inputs.benchmark-project }} \
-        #         --os                   ${{ inputs.os }} \
-        #         --dotnet-version       ${{ inputs.dotnet-version }} \
-        #         --configuration        ${{ inputs.configuration }} \
-        #         --preprocessor-symbols ${{ inputs.preprocessor-symbols }} \
-        #         --min-coverage-pct     ${{ inputs.min-coverage-pct }} \
-        #         --force-new-baseline   ${{ inputs.force-new-baseline }} \
-        #         --max-regression-pct   ${{ inputs.max-regression-pct }} \
-        #         --verbose              ${{ inputs.verbose }}
-        # TO BE REMOVED WHEN ACTUALLY RUNNING THE ABOVE VALIDATION SCRIPT:
         run: |
-          {
-            echo "./scripts/bash/setup-ci-vars.sh \"
-            echo "    --build-project        ${{ inputs.build-projects }} \"
-            echo "    --test-project         ${{ inputs.test-projects }} \"
-            echo "    --benchmark-project    ${{ inputs.benchmark-projects }} \"
-            echo "    --os                   ${{ matrix.os }} \"
-            echo "    --dotnet-version       ${{ inputs.dotnet-version }} \"
-            echo "    --configuration        ${{ inputs.configuration }} \"
-            echo "    --preprocessor-symbols ${{ inputs.preprocessor-symbols }} \"
-            echo "    --min-coverage-pct     ${{ inputs.min-coverage-pct }} \"
-            echo "    --max-regression-pct   ${{ inputs.max-regression-pct }} \"
-            echo "    --force-new-baseline   ${{ inputs.force-new-baseline }} \"
-            echo "    --verbose              ${{ inputs.verbose }}"
-          } >> $GITHUB_STEP_SUMMARY
-          {
-            echo "build-project=${{ inputs.build-projects }}"
-            echo "test-project=${{ inputs.test-projects }}"
-            echo "benchmark-project=${{ inputs.benchmark-projects }}"
-            echo "os=${{ matrix.os }}"
-            echo "dotnet-version=${{ inputs.dotnet-version }}"
-            echo "configuration=${{ inputs.configuration }}"
-            echo "preprocessor-symbols=${{ inputs.preprocessor-symbols }}"
-            echo "min-coverage-pct=${{ inputs.min-coverage-pct }}"
-            echo "max-regression-pct=${{ inputs.max-regression-pct }}"
-            echo "force-new-baseline=${{ inputs.force-new-baseline }}"
-            echo "verbose=${{ inputs.verbose }}"
-          }  >> "${GITHUB_OUTPUT}"
+          ./scripts/bash/setup-ci-vars.sh \
+              --build-project        ${{ inputs.build-projects }} \
+              --test-project         ${{ inputs.test-projects }} \
+              --benchmark-project    ${{ inputs.benchmark-projects }} \
+              --os                   ${{ inputs.os }} \
+              --dotnet-version       ${{ inputs.dotnet-version }} \
+              --configuration        ${{ inputs.configuration }} \
+              --preprocessor-symbols ${{ inputs.preprocessor-symbols }} \
+              --min-coverage-pct     ${{ inputs.min-coverage-pct }} \
+              --force-new-baseline   ${{ inputs.force-new-baseline }} \
+              --max-regression-pct   ${{ inputs.max-regression-pct }} \
+              --verbose              ${{ inputs.verbose }}
+      # TO BE REMOVED WHEN ACTUALLY RUNNING THE ABOVE VALIDATION SCRIPT:
+      # - name: Print \#1: Run validation script to verify and normalize all input parameters
+      #   id: setup
+      #   shell: bash
+      #   run: |
+      #     {
+      #       echo "./scripts/bash/setup-ci-vars.sh \"
+      #       echo "    --build-project        ${{ inputs.build-projects }} \"
+      #       echo "    --test-project         ${{ inputs.test-projects }} \"
+      #       echo "    --benchmark-project    ${{ inputs.benchmark-projects }} \"
+      #       echo "    --os                   ${{ matrix.os }} \"
+      #       echo "    --dotnet-version       ${{ inputs.dotnet-version }} \"
+      #       echo "    --configuration        ${{ inputs.configuration }} \"
+      #       echo "    --preprocessor-symbols ${{ inputs.preprocessor-symbols }} \"
+      #       echo "    --min-coverage-pct     ${{ inputs.min-coverage-pct }} \"
+      #       echo "    --max-regression-pct   ${{ inputs.max-regression-pct }} \"
+      #       echo "    --force-new-baseline   ${{ inputs.force-new-baseline }} \"
+      #       echo "    --verbose              ${{ inputs.verbose }}"
+      #     } >> $GITHUB_STEP_SUMMARY
+      #     {
+      #       echo "build-project=${{ inputs.build-projects }}"
+      #       echo "test-project=${{ inputs.test-projects }}"
+      #       echo "benchmark-project=${{ inputs.benchmark-projects }}"
+      #       echo "os=${{ matrix.os }}"
+      #       echo "dotnet-version=${{ inputs.dotnet-version }}"
+      #       echo "configuration=${{ inputs.configuration }}"
+      #       echo "preprocessor-symbols=${{ inputs.preprocessor-symbols }}"
+      #       echo "min-coverage-pct=${{ inputs.min-coverage-pct }}"
+      #       echo "max-regression-pct=${{ inputs.max-regression-pct }}"
+      #       echo "force-new-baseline=${{ inputs.force-new-baseline }}"
+      #       echo "verbose=${{ inputs.verbose }}"
+      #     }  >> "${GITHUB_OUTPUT}
 
   # Build the project and cache artifacts for downstream test/benchmark jobs
   build:
     name: Build
     needs:
       - setup
-    # uses: ./.github/workflows/_build.yaml
-    # with:
-    #   build-project:        ${{ needs.setup.outputs.build-project }}
-    #   os:                   ${{ needs.setup.outputs.os }}
-    #   dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
-    #   configuration:        ${{ needs.setup.outputs.configuration }}
-    #   preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
-    #   cached-dependencies:  ${{ fromJSON(needs.setup.outputs.cached-dependencies) }}
-    #   cached-artifacts:     ${{ fromJSON(needs.setup.outputs.cached-artifacts) }}
-    # TO BE REMOVED WHEN ACTUALLY RUNNING THE ABOVE BUILD WORKFLOW:
-    runs-on: ${{ inputs.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        os: ${{ fromJSON(inputs.os) }}
+        build-project: ${{ fromJSON(inputs.build-projects) }}
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Print \#2
+      # - name: Build
+      #   uses: ./.github/workflows/_build.yaml
+      #   with:
+      #     os: ${{ matrix.os }}
+      #     dotnet-version: ${{ needs.setup.outputs.dotnet-version }}
+      #     configuration: ${{ needs.setup.outputs.configuration }}
+      #     preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
+      #     build-project: ${{ matrix.build-project }}
+      #     cached-dependencies: ${{ fromJSON(inputs.cached-dependencies) }}
+      #     cached-artifacts: ${{ fromJSON(inputs.cached-artifacts) }}
+      # TO BE REMOVED WHEN ACTUALLY RUNNING THE ABOVE BUILD WORKFLOW:
+      - name: Print \#2 Build
         shell: bash
         run: |
           {
             echo "uses: ./.github/workflows/_build.yaml"
             echo "with:"
-            echo "  build-project:        ${{ needs.setup.outputs.build-projects }}"
-            echo "  os:                   ${{ needs.setup.outputs.os }}"
+            echo "  os:                   ${{ matrix.os }}"
             echo "  dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}"
             echo "  configuration:        ${{ needs.setup.outputs.configuration }}"
             echo "  preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}"
+            echo "  build-project:        ${{ matrix.build-project }}"
             echo "  cached-dependencies:  ${{ inputs.cached-dependencies }}"
             echo "  cached-artifacts:     ${{ inputs.cached-artifacts }}"
           } >> $GITHUB_STEP_SUMMARY
@@ -190,35 +198,41 @@ jobs:
     needs:
       - setup
       - build
-    # uses: ./.github/workflows/_test.yaml
-    # with:
-    #   test-project:         ${{ needs.setup.outputs.test-project }}
-    #   os:                   ${{ needs.setup.outputs.os }}
-    #   dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
-    #   configuration:        ${{ needs.setup.outputs.configuration }}
-    #   preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
-    #   min-coverage-pct:     ${{ fromJSON(needs.setup.outputs.min-coverage-pct) }}
-    #   verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
-    #   cached-dependencies:  ${{ fromJSON(inputs.cached-dependencies) }}
-    #   cached-artifacts:     ${{ fromJSON(inputs.cached-artifacts) }}
-    # TO BE REMOVED WHEN ACTUALLY RUNNING THE ABOVE TEST WORKFLOW:
-    runs-on: ${{ inputs.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        os: ${{ fromJSON(inputs.os) }}
+        test-project: ${{ fromJSON(inputs.test-projects) }}
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Print \#3
+      # - name: Test
+      #   uses: ./.github/workflows/_test.yaml
+      #   with:
+      #     os:                   ${{ matrix.os }}
+      #     dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
+      #     configuration:        ${{ needs.setup.outputs.configuration }}
+      #     preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
+      #     test-project:         ${{ matrix.test-project }}
+      #     min-coverage-pct:     ${{ fromJSON(needs.setup.outputs.min-coverage-pct) }}
+      #     cached-dependencies:  ${{ fromJSON(inputs.cached-dependencies) }}
+      #     cached-artifacts:     ${{ fromJSON(inputs.cached-artifacts) }}
+      #     verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
+      # TO BE REMOVED WHEN ACTUALLY RUNNING THE ABOVE TEST WORKFLOW:
+      - name: Print \#3 Test
         shell: bash
         run: |
           {
             echo "uses: ./.github/workflows/_test.yaml"
             echo "with:"
-            echo "  test-project:         ${{ needs.setup.outputs.test-projects }}"
-            echo "  os:                   ${{ needs.setup.outputs.os }}"
+            echo "  os:                   ${{ matrix.os }}"
             echo "  dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}"
             echo "  configuration:        ${{ needs.setup.outputs.configuration }}"
             echo "  preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}"
+            echo "  test-project:         ${{ matrix.test-project }}"
             echo "  min-coverage-pct:     ${{ fromJSON(needs.setup.outputs.min-coverage-pct) }}"
-            echo "  verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}"
             echo "  cached-dependencies:  ${{ fromJSON(inputs.cached-dependencies) }}"
             echo "  cached-artifacts:     ${{ fromJSON(inputs.cached-artifacts) }}"
+            echo "  verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}"
           } >> $GITHUB_STEP_SUMMARY
 
   # Run performance benchmarks and compare against baseline (if enabled and benchmark project specified)
@@ -228,35 +242,42 @@ jobs:
     needs:
       - setup
       - build
-    #uses: ./.github/workflows/_benchmarks.yaml
-    #with:
-    #  os:                   ${{ needs.setup.outputs.os }}
-    #  dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
-    #  configuration:        ${{ needs.setup.outputs.configuration }}
-    #  preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
-    #  benchmark-project:    ${{ needs.setup.outputs.benchmark-project }}
-    #  max-regression-pct:   ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}
-    #  force-new-baseline:   ${{ fromJSON(needs.setup.outputs.force-new-baseline) }}
-    #  verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
-    #  cached-dependencies:  ${{ fromJSON(inputs.cached-dependencies) }}
-    #  cached-artifacts:     ${{ fromJSON(inputs.cached-artifacts) }}
-    runs-on: ${{ inputs.os }}
-    steps: # TO BE REMOVED WHEN ACTUALLY RUNNING THE BENCHMARK WORKFLOW
+    strategy:
+      fail-fast: true
+      matrix:
+        os: ${{ fromJSON(inputs.os) }}
+        benchmark-project: ${{ fromJSON(inputs.benchmark-projects) }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      # - name: Benchmark
+      #   uses: ./.github/workflows/_benchmarks.yaml
+      #   with:
+      #     os:                   ${{ matrix.os }}
+      #     dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
+      #     configuration:        ${{ needs.setup.outputs.configuration }}
+      #     preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
+      #     benchmark-project:    ${{ matrix.benchmark-project }}
+      #     max-regression-pct:   ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}
+      #     force-new-baseline:   ${{ fromJSON(needs.setup.outputs.force-new-baseline) }}
+      #     cached-dependencies:  ${{ fromJSON(inputs.cached-dependencies) }}
+      #     cached-artifacts:     ${{ fromJSON(inputs.cached-artifacts) }}
+      #     verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
+      # TO BE REMOVED WHEN ACTUALLY RUNNING THE ABOVE TEST WORKFLOW:
       # Display all workflow inputs for debugging and verification
-      - name: Print all inputs
+      - name: Print \#4 Benchmark
         shell: bash
         run: |
           {
             echo "uses: ./.github/workflows/_benchmarks.yaml"
             echo "with:"
-            echo "  benchmark-project:    ${{ needs.setup.outputs.benchmark-projects }}"
-            echo "  os:                   ${{ needs.setup.outputs.os }}"
+            echo "  os:                   ${{ matrix.os }}"
             echo "  dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}"
             echo "  configuration:        ${{ needs.setup.outputs.configuration }}"
             echo "  preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}"
+            echo "  benchmark-project:    ${{ matrix.benchmark-project }}"
             echo "  max-regression-pct:   ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}"
             echo "  force-new-baseline:   ${{ fromJSON(needs.setup.outputs.force-new-baseline) }}"
-            echo "  verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}"
             echo "  cached-dependencies:  ${{ fromJSON(inputs.cached-dependencies) }}"
             echo "  cached-artifacts:     ${{ fromJSON(inputs.cached-artifacts) }}"
+            echo "  verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}"
           } >> $GITHUB_STEP_SUMMARY

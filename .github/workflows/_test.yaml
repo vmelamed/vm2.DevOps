@@ -49,9 +49,9 @@ on:
         default: false
 
 # concurrency:
-#   group: test-${{ github.workflow_ref }}-${{ inputs.test-project }}
+#   group: test-${{ github.workflow_ref }}-${{ inputs.test-projects }}
 #   cancel-in-progress: true
-#   # NOTE: Only uncomment if this workflow is called directly (not via _ci.yaml)
+#   # NOTE: Only uncomment if this workflow is called directly (not by the _ci.yaml)
 #   # or if _ci.yaml runs build/test/benchmarks in parallel
 
 permissions:
@@ -135,9 +135,9 @@ jobs:
       # Execute tests with code coverage collection and validation
       - name: Run script for unit test with coverage
         env:
-          CONFIGURATION:        ${{ inputs.configuration }}
+          CONFIGURATION: ${{ inputs.configuration }}
           PREPROCESSOR_SYMBOLS: ${{ inputs.preprocessor-symbols }}
-          VERBOSE:              ${{ fromJSON(inputs.verbose) }}
+          VERBOSE: ${{ fromJSON(inputs.verbose) }}
         shell: bash
         run: |
           ./scripts/bash/run-tests.sh ${{ inputs.test-project }} \
