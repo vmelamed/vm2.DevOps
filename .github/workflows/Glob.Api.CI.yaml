@@ -75,16 +75,19 @@ jobs:
         shell: bash
         run: |
           # the following outputs are invariant to this workflow - no matter how we trigger the workflow these stay the same:
-          build_projects="" # build the whole solution once
+          build_projects=" \
+            [ \
+              \"vm2.DevOps.slnx\" \
+            ]"  # build the whole solution at once
           test_projects=" \
-          [ \
-            \"./test/Glob.Api.FakeFileSystem.Tests/Glob.Api.FakeFileSystem.Tests.csproj\", \
-            \"./test/Glob.Api.Tests/Glob.Api.Tests.csproj\" \
-          ]"
+            [ \
+              \"./test/Glob.Api.FakeFileSystem.Tests/Glob.Api.FakeFileSystem.Tests.csproj\", \
+              \"./test/Glob.Api.Tests/Glob.Api.Tests.csproj\" \
+            ]"
           benchmark_projects=" \
-          [ \
-            \"./benchmarks/Glob.Api.Benchmarks/Glob.Api.Benchmarks.csproj\" \
-          ]"
+            [ \
+              \"./benchmarks/Glob.Api.Benchmarks/Glob.Api.Benchmarks.csproj\" \
+            ]"
 
           # the following outputs either have default values or are coming from manual dispatch:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
