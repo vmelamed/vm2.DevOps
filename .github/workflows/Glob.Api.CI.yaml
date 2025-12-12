@@ -51,7 +51,7 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]')
       }}
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-latest"  # it doesn't matter - here we're preparing the inputs to the next workload'
     outputs:
       # the following outputs are invariant to this workflow - no matter how we trigger the workflow these stay the same:
       build-projects:       ${{ steps.init-params.outputs.build-projects }}
@@ -145,10 +145,6 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]')
       }}
-    strategy:
-      fail-fast: true
-      matrix:
-        os: ${{ fromJson(jobs.get_params.outputs.os) }}
     # uses: ./.github/workflows/_ci.yaml
     # with:
     #   build-projects:       ${{ jobs.get_params.outputs.build-projects       }}
@@ -165,7 +161,7 @@ jobs:
     #   cached-artifacts:     ${{ jobs.get_params.outputs.cached-artifacts     }}
     #   verbose:              ${{ jobs.get_params.outputs.verbose              }}
     # TO BE REMOVED WHEN ACTUALLY RUNNING THE BUILD WORKFLOW:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest  # it doesn't matter here
     steps:
       - name: Print \0
         shell: bash
