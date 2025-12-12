@@ -43,7 +43,7 @@ env:
   ACTIONS_STEP_DEBUG: true
 
 jobs:
-  get_params:
+  get-params:
     name: Prepare the default and passed in parameters
     if: >
       ${{
@@ -139,6 +139,8 @@ jobs:
 
   call_ci:
     name: Call the CI Workflow
+    needs:
+      - get-params
     if: >
       ${{
       github.event_name == 'pull_request' ||
@@ -147,19 +149,19 @@ jobs:
       }}
     # uses: ./.github/workflows/_ci.yaml
     # with:
-    #   build-projects:       ${{ jobs.get_params.outputs.build-projects       }}
-    #   test-projects:        ${{ jobs.get_params.outputs.test-projects        }}
-    #   benchmark-projects:   ${{ jobs.get_params.outputs.benchmark-projects   }}
-    #   os:                   ${{ jobs.get_params.outputs.os                   }}
-    #   dotnet-version:       ${{ jobs.get_params.outputs.dotnet-version       }}
-    #   configuration:        ${{ jobs.get_params.outputs.configuration        }}
-    #   preprocessor-symbols: ${{ jobs.get_params.outputs.preprocessor-symbols }}
-    #   min-coverage-pct:     ${{ jobs.get_params.outputs.min-coverage-pct     }}
-    #   max-regression-pct:   ${{ jobs.get_params.outputs.max-regression-pct   }}
-    #   force-new-baseline:   ${{ jobs.get_params.outputs.force-new-baseline   }}
-    #   cached-dependencies:  ${{ jobs.get_params.outputs.cached-dependencies  }}
-    #   cached-artifacts:     ${{ jobs.get_params.outputs.cached-artifacts     }}
-    #   verbose:              ${{ jobs.get_params.outputs.verbose              }}
+    #   build-projects:       ${{ needs.get-params.outputs.build-projects       }}
+    #   test-projects:        ${{ needs.get-params.outputs.test-projects        }}
+    #   benchmark-projects:   ${{ needs.get-params.outputs.benchmark-projects   }}
+    #   os:                   ${{ needs.get-params.outputs.os                   }}
+    #   dotnet-version:       ${{ needs.get-params.outputs.dotnet-version       }}
+    #   configuration:        ${{ needs.get-params.outputs.configuration        }}
+    #   preprocessor-symbols: ${{ needs.get-params.outputs.preprocessor-symbols }}
+    #   min-coverage-pct:     ${{ needs.get-params.outputs.min-coverage-pct     }}
+    #   max-regression-pct:   ${{ needs.get-params.outputs.max-regression-pct   }}
+    #   force-new-baseline:   ${{ needs.get-params.outputs.force-new-baseline   }}
+    #   cached-dependencies:  ${{ needs.get-params.outputs.cached-dependencies  }}
+    #   cached-artifacts:     ${{ needs.get-params.outputs.cached-artifacts     }}
+    #   verbose:              ${{ needs.get-params.outputs.verbose              }}
     # TO BE REMOVED WHEN ACTUALLY RUNNING THE BUILD WORKFLOW:
     runs-on: ubuntu-latest  # it doesn't matter here
     steps:
@@ -169,17 +171,17 @@ jobs:
           {
             echo "uses ./.github/workflows/_ci.yaml"
             echo "with"
-            echo "  build-projects:       ${{ jobs.get_params.outputs.build-projects       }}"
-            echo "  test-projects:        ${{ jobs.get_params.outputs.test-projects        }}"
-            echo "  benchmark-projects:   ${{ jobs.get_params.outputs.benchmark-projects   }}"
-            echo "  os:                   ${{ jobs.get_params.outputs.os                   }}"
-            echo "  dotnet-version:       ${{ jobs.get_params.outputs.dotnet-version       }}"
-            echo "  configuration:        ${{ jobs.get_params.outputs.configuration        }}"
-            echo "  preprocessor-symbols: ${{ jobs.get_params.outputs.preprocessor-symbols }}"
-            echo "  min-coverage-pct:     ${{ jobs.get_params.outputs.min-coverage-pct     }}"
-            echo "  max-regression-pct:   ${{ jobs.get_params.outputs.max-regression-pct   }}"
-            echo "  force-new-baseline:   ${{ jobs.get_params.outputs.force-new-baseline   }}"
-            echo "  cached-dependencies:  ${{ jobs.get_params.outputs.cached-dependencies  }}"
-            echo "  cached-artifacts:     ${{ jobs.get_params.outputs.cached-artifacts     }}"
-            echo "  verbose:              ${{ jobs.get_params.outputs.verbose              }}"
+            echo "  build-projects:       ${{ needs.get-params.outputs.build-projects       }}"
+            echo "  test-projects:        ${{ needs.get-params.outputs.test-projects        }}"
+            echo "  benchmark-projects:   ${{ needs.get-params.outputs.benchmark-projects   }}"
+            echo "  os:                   ${{ needs.get-params.outputs.os                   }}"
+            echo "  dotnet-version:       ${{ needs.get-params.outputs.dotnet-version       }}"
+            echo "  configuration:        ${{ needs.get-params.outputs.configuration        }}"
+            echo "  preprocessor-symbols: ${{ needs.get-params.outputs.preprocessor-symbols }}"
+            echo "  min-coverage-pct:     ${{ needs.get-params.outputs.min-coverage-pct     }}"
+            echo "  max-regression-pct:   ${{ needs.get-params.outputs.max-regression-pct   }}"
+            echo "  force-new-baseline:   ${{ needs.get-params.outputs.force-new-baseline   }}"
+            echo "  cached-dependencies:  ${{ needs.get-params.outputs.cached-dependencies  }}"
+            echo "  cached-artifacts:     ${{ needs.get-params.outputs.cached-artifacts     }}"
+            echo "  verbose:              ${{ needs.get-params.outputs.verbose              }}"
           } >> $GITHUB_STEP_SUMMARY
