@@ -74,25 +74,24 @@ jobs:
         id: init-params
         shell: bash
         run: |
-          # the following outputs are invariant to this workflow - no matter how we trigger the workflow these stay the same:
+          # the following outputs are invariant - no matter how we trigger the workflow, they stay the same:
             # build the whole solution at once:
-          build_projects=" \
-            [ \
-              \"vm2.DevOps.slnx\" \
-            ]"
+          build_projects='[ "./vm2.DevOps.slnx" ]'
             # test projects to run:
-          test_projects=" \
-            [ \
+          test_projects=" [ \
               \"./test/Glob.Api.FakeFileSystem.Tests/Glob.Api.FakeFileSystem.Tests.csproj\", \
-              \"./test/Glob.Api.Tests/Glob.Api.Tests.csproj\" \
-            ]"
+              \"./test/Glob.Api.Tests/Glob.Api.Tests.csproj\" ]"
             # benchmark projects to run:
-          benchmark_projects=" \
-            [ \
-              \"./benchmarks/Glob.Api.Benchmarks/Glob.Api.Benchmarks.csproj\" \
-            ]"
+          benchmark_projects='["./benchmarks/Glob.Api.Benchmarks/Glob.Api.Benchmarks.csproj"]'
 
-          # the following outputs either have default values or are coming from manual dispatch:
+          # the following outputs are invariant - no matter how we trigger the workflow, they are externally set variables:
+          dotnet_version=${{ vars.DOTNET_VERSION }}
+          configuration=${{ vars.CONFIGURATION }}
+          min_coverage_pct=${{ vars.MIN_COVERAGE_PCT }}
+          max_regression_pct=${{ vars.MAX_REGRESSION_PCT }}
+          force_new_baseline=${{ vars.FORCE_NEW_BASELINE }}
+
+          # the following outputs either have default values for push and pull_request events or are coming from workflow_dispatch:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             # Get the inputs from workflow_dispatch event
             os="${{ inputs.os }}"
@@ -109,13 +108,6 @@ jobs:
             verbose="false"
           fi
 
-          # the following ouputs depend only on variables - policies set by the authorized:
-          dotnet_version=${{ vars.DOTNET_VERSION }}
-          configuration=${{ vars.CONFIGURATION }}
-          min_coverage_pct=${{ vars.MIN_COVERAGE_PCT }}
-          max_regression_pct=${{ vars.MAX_REGRESSION_PCT }}
-          force_new_baseline=${{ vars.FORCE_NEW_BASELINE }}
-
           {
             echo "build-projects       ${build_projects}"
             echo "test-projects        ${test_projects}"
@@ -130,17 +122,17 @@ jobs:
             echo "verbose              ${verbose}"
           } >> $GITHUB_STEP_SUMMARY
           {
-            echo "build-projects       ${build_projects}"
-            echo "test-projects        ${test_projects}"
-            echo "benchmark-projects   ${benchmark_projects}"
-            echo "os                   ${os}"
-            echo "dotnet-version       ${dotnet_version}"
-            echo "configuration        ${configuration}"
-            echo "preprocessor-symbols ${preprocessor_symbols}"
-            echo "min-coverage-pct     ${min_coverage_pct}"
-            echo "max-regression-pct   ${max_regression_pct}"
-            echo "force-new-baseline   ${force_new_baseline}"
-            echo "verbose              ${verbose}"
+            echo "build-projects=${build_projects}"
+            echo "test-projects=${test_projects}"
+            echo "benchmark-projects=${benchmark_projects}"
+            echo "os=${os}"
+            echo "dotnet-version=${dotnet_version}"
+            echo "configuration=${configuration}"
+            echo "preprocessor-symbols=${preprocessor_symbols}"
+            echo "min-coverage-pct=${min_coverage_pct}"
+            echo "max-regression-pct=${max_regression_pct}"
+            echo "force-new-baseline=${force_new_baseline}"
+            echo "verbose=${verbose}"
           }  >> "${GITHUB_OUTPUT}"
 
   call_ci:
