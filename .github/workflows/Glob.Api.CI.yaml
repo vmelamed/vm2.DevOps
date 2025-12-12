@@ -85,10 +85,10 @@ jobs:
         shell: bash
         env:
           # Pass expressions as environment variables to see runtime values
-          FORCE_NEW_BASELINE_VAL:   ${{ vars.FORCE_NEW_BASELINE == 'true' }}
-          CACHED_DEPENDENCIES_VAL:  ${{ inputs.cached-dependencies != 'false' }}
-          CACHED_ARTIFACTS_VAL:     ${{ inputs.cached-artifacts != 'false' }}
-          VERBOSE_VAL:              ${{ inputs.verbose == 'true' }}
+          FORCE_NEW_BASELINE_VAL:   ${{ vars.FORCE_NEW_BASELINE == true }}
+          CACHED_DEPENDENCIES_VAL:  ${{ inputs.cached-dependencies != false }}
+          CACHED_ARTIFACTS_VAL:     ${{ inputs.cached-artifacts != false }}
+          VERBOSE_VAL:              ${{ inputs.verbose == true }}
         run: |+
           {
             echo "uses ./.github/workflows/_ci.yaml"
