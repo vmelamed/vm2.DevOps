@@ -83,6 +83,12 @@ jobs:
     steps:
       - name: Print \0
         shell: bash
+        env:
+          # Pass expressions as environment variables to see runtime values
+          FORCE_NEW_BASELINE_VAL:   ${{ vars.FORCE_NEW_BASELINE == 'true' }}
+          CACHED_DEPENDENCIES_VAL:  ${{ inputs.cached-dependencies != 'false' }}
+          CACHED_ARTIFACTS_VAL:     ${{ inputs.cached-artifacts != 'false' }}
+          VERBOSE_VAL:              ${{ inputs.verbose == 'true' }}
         run: |+
           {
             echo "uses ./.github/workflows/_ci.yaml"
@@ -96,8 +102,8 @@ jobs:
             echo "  preprocessor-symbols: ${{ inputs.preprocessor-symbols      || '' }}"
             echo "  min-coverage-pct:     ${{ vars.MIN_COVERAGE_PCT            || 80 }}"
             echo "  max-regression-pct:   ${{ vars.MAX_REGRESSION_PCT          || 10 }}"
-            echo "  force-new-baseline:   ${{ vars.FORCE_NEW_BASELINE          == 'true'  }}"
-            echo "  cached-dependencies:  ${{ inputs.cached-dependencies       != 'false' }}"
-            echo "  cached-artifacts:     ${{ inputs.cached-artifacts          != 'false' }}"
-            echo "  verbose:              ${{ inputs.verbose                   == 'true'  }}"
+            echo "  force-new-baseline:   $FORCE_NEW_BASELINE_VAL"
+            echo "  cached-dependencies:  $CACHED_DEPENDENCIES_VAL"
+            echo "  cached-artifacts:     $CACHED_ARTIFACTS_VAL"
+            echo "  verbose:              $VERBOSE_VAL"
           } >> $GITHUB_STEP_SUMMARY
