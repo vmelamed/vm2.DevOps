@@ -96,8 +96,8 @@ jobs:
             echo "  preprocessor-symbols: ${{ inputs.preprocessor-symbols      || '' }}"
             echo "  min-coverage-pct:     ${{ vars.MIN_COVERAGE_PCT            || 80 }}"
             echo "  max-regression-pct:   ${{ vars.MAX_REGRESSION_PCT          || 10 }}"
-            echo "  force-new-baseline:   ${{ vars.FORCE_NEW_BASELINE == true  }}"
-            echo "  cached-dependencies:  ${{ inputs.cached-dependencies == '' && true || inputs.cached-dependencies }}"
-            echo "  cached-artifacts:     ${{ inputs.cached-artifacts    == '' && true || inputs.cached-artifacts }}"
-            echo "  verbose:              ${{ inputs.verbose == true           }}"
+            echo "  force-new-baseline:   ${{ vars.FORCE_NEW_BASELINE          == true  }}"
+            echo "  cached-dependencies:  ${{ inputs.cached-dependencies       != false }}"
+            echo "  cached-artifacts:     ${{ inputs.cached-artifacts          != false }}"
+            echo "  verbose:              ${{ inputs.verbose                   == true  }}"
           } >> $GITHUB_STEP_SUMMARY
