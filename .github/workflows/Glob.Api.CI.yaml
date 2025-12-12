@@ -119,6 +119,8 @@ jobs:
             echo "min-coverage-pct     ${min_coverage_pct}"
             echo "max-regression-pct   ${max_regression_pct}"
             echo "force-new-baseline   ${force_new_baseline}"
+            echo "cached-dependencies  ${cached_dependencies}"
+            echo "cached-artifacts     ${cached_artifacts}"
             echo "verbose              ${verbose}"
           } >> $GITHUB_STEP_SUMMARY
           {
@@ -132,6 +134,8 @@ jobs:
             echo "min-coverage-pct=${min_coverage_pct}"
             echo "max-regression-pct=${max_regression_pct}"
             echo "force-new-baseline=${force_new_baseline}"
+            echo "cached-dependencies=${cached_dependencies}"
+            echo "cached-artifacts=${cached_artifacts}"
             echo "verbose=${verbose}"
           }  >> "${GITHUB_OUTPUT}"
 
