@@ -9,3 +9,4 @@ enable=avoid-nullary-conditions
 enable=check-unassigned-uppercase
 enable=require-double-brackets
 enable=useless-use-of-cat
+disable=SC1017

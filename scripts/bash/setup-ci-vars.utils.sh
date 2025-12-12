@@ -31,15 +31,15 @@ function get_arguments()
         case "${flag,,}" in
             --debugger     ) ;;  # already processed above
             --help|-h      ) usage; exit 0 ;;
-            --build-project|-b )
+            --build-projects|-b )
                 value="$1"; shift
                 build_project="$value"
                 ;;
-            --test-project|-t )
+            --test-projects|-t )
                 value="$1"; shift
                 test_project="$value"
                 ;;
-            --benchmark-project|-p )
+            --benchmark-projects|-p )
                 value="$1"; shift
                 benchmark_project="$value"
                 ;;
@@ -88,13 +88,14 @@ dump_all_variables()
         verbose \
         quiet \
         --blank \
+        build_projects \
         os \
         dotnet_version \
         configuration \
         preprocessor_symbols \
-        test_project \
+        test_projects \
         min_coverage_pct \
-        benchmark_project \
+        benchmark_projects \
         force_new_baseline \
         max_regression_pct
 }

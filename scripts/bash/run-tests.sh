@@ -112,6 +112,7 @@ execute mkdir -p "$coverage_reports_dir"
 execute mkdir -p "$coverage_summary_dir"
 
 test_dll_path="$(dirname "$test_project")/bin/${configuration}/net10.0/$(basename "${test_project%.*}")"
+# shellcheck disable=SC2154
 if [[ ! -f "${test_dll_path}" && "$dry_run" != "true" ]]; then
     echo "❌ Test executable not found at: ${test_dll_path}" | tee >> "$GITHUB_STEP_SUMMARY" >&2
     exit 2
@@ -123,6 +124,7 @@ if [[ $cached_dependencies != "true" ]]; then
     execute dotnet restore
 fi
 
+# shellcheck disable=SC2154
 if [[ $cached_artifacts != "true" ]]; then
     trace "Build the artifacts if not cached"
     # we are not getting the build artifacts from a cache - do the slow full build
@@ -134,7 +136,7 @@ if [[ $cached_artifacts != "true" ]]; then
 fi
 
 trace "Running tests in project ${test_project} with build configuration ${configuration}..."
-execute dotnet run
+execute dotnet run \
     --configuration "$configuration" \
     --no-build \
     -- \
@@ -167,8 +169,8 @@ execute ./tools/reportgenerator \
     -reports:"$coverage_source_path" \
     -targetdir:"$coverage_reports_dir" \
     -reporttypes:TextSummary,html \
-	-assemblyfilters:-*.Tests;-Test.Utilities* \
-	-classfilters:-*.I*;-*.*Extensions;-System.Text.RegularExpressions.Generated*;-*Fake*;-*Mock*
+	-assemblyfilters:"-*.Tests;-Test.Utilities*" \
+	-classfilters:"-*.I*;-*.*Extensions;-System.Text.RegularExpressions.Generated*;-*Fake*;-*Mock*"
 
 if [[ "$uninstall_reportgenerator" = "true" ]]; then
     echo "Uninstalling the tool 'reportgenerator'..."; sync
