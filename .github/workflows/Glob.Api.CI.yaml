@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       os:
-        description: Select the OS(es) to run on. Must be a valid JSON array of strings.
+        description: Select the OS(es) on which to build and run. Must be a valid JSON array of strings.
         type: string
         default: '["ubuntu-latest"]'
 
@@ -51,7 +51,7 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]')
       }}
-    runs-on: "ubuntu-latest"  # it doesn't matter - here we're preparing the inputs to the next workload'
+    runs-on: "ubuntu-latest"  # here it doesn't matter - here we're preparing the inputs to the next workload'
     outputs:
       # the following outputs are invariant to this workflow - no matter how we trigger the workflow these stay the same:
       build-projects:       ${{ steps.init-params.outputs.build-projects }}
@@ -75,15 +75,18 @@ jobs:
         shell: bash
         run: |
           # the following outputs are invariant to this workflow - no matter how we trigger the workflow these stay the same:
+            # build the whole solution at once:
           build_projects=" \
             [ \
               \"vm2.DevOps.slnx\" \
-            ]"  # build the whole solution at once
+            ]"
+            # test projects to run:
           test_projects=" \
             [ \
               \"./test/Glob.Api.FakeFileSystem.Tests/Glob.Api.FakeFileSystem.Tests.csproj\", \
               \"./test/Glob.Api.Tests/Glob.Api.Tests.csproj\" \
             ]"
+            # benchmark projects to run:
           benchmark_projects=" \
             [ \
               \"./benchmarks/Glob.Api.Benchmarks/Glob.Api.Benchmarks.csproj\" \
@@ -91,12 +94,12 @@ jobs:
 
           # the following outputs either have default values or are coming from manual dispatch:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            # Parse inputs from workflow_dispatch event
-            os="${{ github.event.inputs.os }}"
-            preprocessor_symbols="${{ github.event.inputs['preprocessor-symbols'] }}"
-            cached_dependencies="${{ github.event.inputs['cached-dependencies'] }}"
-            cached_artifacts="${{ github.event.inputs['cached-artifacts'] }}"
-            verbose="${{ github.event.inputs.verbose }}"
+            # Get the inputs from workflow_dispatch event
+            os="${{ inputs.os }}"
+            preprocessor_symbols="${{ inputs.preprocessor-symbols }}"
+            cached_dependencies="${{ inputs.cached-dependencies }}"
+            cached_artifacts="${{ inputs.cached-artifacts }}"
+            verbose="${{ inputs.verbose }}"
           else
             # Set defaults for push and pull_request events
             os='["ubuntu-latest"]'
