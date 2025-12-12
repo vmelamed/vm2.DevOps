@@ -3,18 +3,18 @@ name: _ci (Reusable workflow)
 on:
   workflow_call:
     inputs:
-      build-project:
-        description: Path to the project to build (if null, empty, ow whitespace, builds the solution or the project in the current directory).
+      build-projects:
+        description: Path to the projects to build (if null, empty, ow whitespace, builds the solution or the project in the current directory).
         type: string
         required: false
 
-      test-project:
-        description: Path to the test project to run tests against (cannot be null or empty string)
+      test-projects:
+        description: Path to the test projects to run (cannot be null or empty string)
         type: string
         required: true
 
-      benchmark-project:
-        description: Path to the benchmark project. If not provided, null, or empty, benchmarks will be skipped.
+      benchmark-projects:
+        description: Path to the benchmark projects to run. If not provided, null, or empty, benchmarks will be skipped.
         type: string
         required: false
 
@@ -79,9 +79,9 @@ jobs:
     name: Parameters validation
     runs-on: ${{ inputs.os }}
     outputs:
-      build-project:        ${{ steps.setup.outputs.build-project }}
-      test-project:         ${{ steps.setup.outputs.test-project }}
-      benchmark-project:    ${{ steps.setup.outputs.benchmark-project }}
+      build-projects:       ${{ steps.setup.outputs.build-projects }}
+      test-projects:        ${{ steps.setup.outputs.test-projects }}
+      benchmark-projects:   ${{ steps.setup.outputs.benchmark-projects }}
       os:                   ${{ steps.setup.outputs.os }}
       dotnet-version:       ${{ steps.setup.outputs.dotnet-version }}
       configuration:        ${{ steps.setup.outputs.configuration }}
