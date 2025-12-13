@@ -93,7 +93,7 @@ jobs:
              [ "${{ github.event_name }}" == "pull_request" ]; then
             # Set the default values for push and pull_request events
             os='["ubuntu-latest"]'
-            preprocessor_symbols=""
+            preprocessor_symbols="_"
             cached_dependencies="true"
             cached_artifacts="true"
             verbose="false"
