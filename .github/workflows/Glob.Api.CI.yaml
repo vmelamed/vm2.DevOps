@@ -146,6 +146,7 @@ jobs:
     uses: ./.github/workflows/_ci.yaml
     needs:
       - get-params
+    secrets: inherit
     with:
       os: ${{ needs.get-params.outputs.os }}
       dotnet-version: ${{ needs.get-params.outputs.dotnet-version }}
