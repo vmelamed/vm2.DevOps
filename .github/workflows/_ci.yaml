@@ -53,20 +53,20 @@ on:
         type: boolean
         default: false
 
-      cached-dependencies:
-        description: Enable caching of NuGet dependencies.
-        type: boolean
-        default: true
+      # cached-dependencies:
+      #   description: Enable caching of NuGet dependencies.
+      #   type: boolean
+      #   default: true
 
-      cached-artifacts:
-        description: Enable caching of build artifacts.
-        type: boolean
-        default: true
+      # cached-artifacts:
+      #   description: Enable caching of build artifacts.
+      #   type: boolean
+      #   default: true
 
-      verbose:
-        description: Enable verbose output from the invoked scripts.
-        type: boolean
-        default: false
+      # verbose:
+      #   description: Enable verbose output from the invoked scripts.
+      #   type: boolean
+      #   default: false
 
 env:
   # TODO: TO BE REMOVED! - this is only for debugging purposes
@@ -94,7 +94,7 @@ jobs:
       min-coverage-pct: ${{ steps.setup.outputs.min-coverage-pct }}
       max-regression-pct: ${{ steps.setup.outputs.max-regression-pct }}
       force-new-baseline: ${{ steps.setup.outputs.force-new-baseline }}
-      verbose: ${{ steps.setup.outputs.verbose }}
+      verbose: "true" # ${{ steps.setup.outputs.verbose }}
 
     steps:
       # Clone the repository to access validation scripts
@@ -120,7 +120,8 @@ jobs:
               --min-coverage-pct     ${{ inputs.min-coverage-pct }} \
               --force-new-baseline   ${{ inputs.force-new-baseline }} \
               --max-regression-pct   ${{ inputs.max-regression-pct }} \
-              --verbose              ${{ inputs.verbose }}
+              --verbose              true
+# ${{ inputs.verbose }}
       # TO BE REMOVED WHEN ACTUALLY RUNNING THE ABOVE VALIDATION SCRIPT:
       # - name: "Print #1: Run validation script to verify and normalize all input parameters
       #   id: setup
@@ -188,9 +189,12 @@ jobs:
             echo "  configuration:        ${{ needs.setup.outputs.configuration }}"
             echo "  preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}"
             echo "  build-project:        ${{ matrix.build-project }}"
-            echo "  cached-dependencies:  ${{ inputs.cached-dependencies }}"
-            echo "  cached-artifacts:     ${{ inputs.cached-artifacts }}"
+            echo "  cached-dependencies:  true
+            echo "  cached-artifacts:     true
           } >> $GITHUB_STEP_SUMMARY
+
+# ${{ inputs.cached-dependencies }}"
+# ${{ inputs.cached-artifacts }}"
 
   # Run unit tests with code coverage analysis
   test:
@@ -230,10 +234,13 @@ jobs:
             echo "  preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}"
             echo "  test-project:         ${{ matrix.test-project }}"
             echo "  min-coverage-pct:     ${{ fromJSON(needs.setup.outputs.min-coverage-pct) }}"
-            echo "  cached-dependencies:  ${{ fromJSON(inputs.cached-dependencies) }}"
-            echo "  cached-artifacts:     ${{ fromJSON(inputs.cached-artifacts) }}"
-            echo "  verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}"
+            echo "  cached-dependencies:  true
+            echo "  cached-artifacts:     true
+            echo "  verbose:              true
           } >> $GITHUB_STEP_SUMMARY
+# ${{ fromJSON(inputs.cached-dependencies) }}"
+# ${{ fromJSON(inputs.cached-artifacts) }}"
+# ${{ fromJSON(needs.setup.outputs.verbose) }}"
 
   # Run performance benchmarks and compare against baseline (if enabled and benchmark project specified)
   benchmarks:
@@ -277,7 +284,11 @@ jobs:
             echo "  benchmark-project:    ${{ matrix.benchmark-project }}"
             echo "  max-regression-pct:   ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}"
             echo "  force-new-baseline:   ${{ fromJSON(needs.setup.outputs.force-new-baseline) }}"
-            echo "  cached-dependencies:  ${{ fromJSON(inputs.cached-dependencies) }}"
-            echo "  cached-artifacts:     ${{ fromJSON(inputs.cached-artifacts) }}"
-            echo "  verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}"
+            echo "  cached-dependencies:  true
+            echo "  cached-artifacts:     true
+            echo "  verbose:              true
           } >> $GITHUB_STEP_SUMMARY
+
+# ${{ fromJSON(inputs.cached-dependencies) }}"
+# ${{ fromJSON(inputs.cached-artifacts) }}"
+# ${{ fromJSON(needs.setup.outputs.verbose) }}"
