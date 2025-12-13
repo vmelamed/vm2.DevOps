@@ -158,9 +158,9 @@ jobs:
       min-coverage-pct: ${{ needs.get-params.outputs.min-coverage-pct }}
       max-regression-pct: ${{ needs.get-params.outputs.max-regression-pct }}
       force-new-baseline: ${{ needs.get-params.outputs.force-new-baseline }}
-      # cached-dependencies: ${{ needs.get-params.outputs.cached-dependencies }}
-      # cached-artifacts: ${{ needs.get-params.outputs.cached-artifacts }}
-      # verbose: ${{ needs.get-params.outputs.verbose }}
+      cached-dependencies: ${{ needs.get-params.outputs.cached-dependencies }}
+      cached-artifacts: ${{ needs.get-params.outputs.cached-artifacts }}
+      verbose: ${{ needs.get-params.outputs.verbose }}
     # TO BE REMOVED WHEN ACTUALLY RUNNING THE BUILD WORKFLOW ABOVE:
     # runs-on: ubuntu-latest
     # needs:
