@@ -155,12 +155,12 @@ jobs:
       build-projects: ${{ needs.get-params.outputs.build-projects }}
       test-projects: ${{ needs.get-params.outputs.test-projects }}
       benchmark-projects: ${{ needs.get-params.outputs.benchmark-projects }}
-      min-coverage-pct: ${{ needs.get-params.outputs.min-coverage-pct }}
-      max-regression-pct: ${{ needs.get-params.outputs.max-regression-pct }}
-      force-new-baseline: ${{ needs.get-params.outputs.force-new-baseline }}
-      cached-dependencies: ${{ needs.get-params.outputs.cached-dependencies }}
-      cached-artifacts: ${{ needs.get-params.outputs.cached-artifacts }}
-      verbose: ${{ needs.get-params.outputs.verbose }}
+      min-coverage-pct: ${{ fromJSON(needs.get-params.outputs.min-coverage-pct) }}
+      max-regression-pct: ${{ fromJSON(needs.get-params.outputs.max-regression-pct) }}
+      force-new-baseline: ${{ fromJSON(needs.get-params.outputs.force-new-baseline) }}
+      cached-dependencies: ${{ fromJSON(needs.get-params.outputs.cached-dependencies) }}
+      cached-artifacts: ${{ fromJSON(needs.get-params.outputs.cached-artifacts) }}
+      verbose: ${{ fromJSON(needs.get-params.outputs.verbose) }}
     # TO BE REMOVED WHEN ACTUALLY RUNNING THE BUILD WORKFLOW ABOVE:
     # runs-on: ubuntu-latest
     # needs:
