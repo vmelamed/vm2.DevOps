@@ -21,7 +21,7 @@ on:
       preprocessor-symbols:
         description: Define constants to pass to the compiler
         type: string
-        default: ""
+        default: "_"
 
       test-project:
         description: Path to the test project to run tests against (cannot be null or empty string)

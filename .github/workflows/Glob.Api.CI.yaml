@@ -19,7 +19,7 @@ on:
       preprocessor-symbols:
         description: Define constants to pass to the compiler
         type: string
-        default: ""
+        default: "_"
 
       cached-dependencies:
         description: Enable storing and retrieving NuGet dependencies to/from cache (default true)

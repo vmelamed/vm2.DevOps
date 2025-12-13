@@ -26,7 +26,7 @@ on:
       preprocessor-symbols:
         description: Preprocessor symbols to pass to the compiler (default - none)
         type: string
-        default: ""
+        default: "_"
 
       cached-dependencies:
         description: Enable caching of NuGet dependencies (default true)
@@ -106,14 +106,14 @@ jobs:
         shell: bash
         run: |
           dotnet build ${{ inputs.build-project }} \
-              /p:DefineConstants="${{ inputs.preprocessor-symbols }}" \
+              /p:DefineConstants="${{ inputs.preprocessor-symbols || '_' }}" \
               --configuration ${{ inputs.configuration }} \
               ${{ inputs.cached-dependencies && '--no-restore' || '' }}
           {
             echo "Build:               ✔️ Successful"
             echo "Runner:              ${{ inputs.os }}"
             echo "Build configuration: ${{ inputs.configuration }}"
-            echo "Defined symbols:     ${{ inputs.preprocessor-symbols || 'None' }}"
+            echo "Defined symbols:     ${{ inputs.preprocessor-symbols || '_' }}"
             echo "Cache dependencies:  ${{ inputs.cached-dependencies }}"
           } >> $GITHUB_STEP_SUMMARY
 

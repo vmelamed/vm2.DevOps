@@ -21,7 +21,7 @@ on:
       preprocessor-symbols:
         description: Define preprocessor symbols to pass to the compiler
         type: string
-        default: ""
+        default: "_"
 
       build-projects:
         description: JSON array as a string of paths to the projects or solutions to build. If not provided, null, or empty, the solution/project in the repository root will be built.

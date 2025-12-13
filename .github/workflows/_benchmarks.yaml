@@ -21,6 +21,7 @@ on:
       preprocessor-symbols:
         description: Preprocessor symbols to pass to the compiler
         type: string
+        default: "_"
 
       benchmark-project:
         description: Path to the benchmark project to run benchmarks against (cannot be null or empty string)
@@ -154,10 +155,10 @@ jobs:
         if: ${{ success() || fromJSON(inputs.force-new-baseline) }}
         shell: bash
         env:
-          CONFIGURATION:        ${{ inputs.configuration }}
+          CONFIGURATION: ${{ inputs.configuration }}
           PREPROCESSOR_SYMBOLS: ${{ inputs.preprocessor-symbols }}
-          VERBOSE:              ${{ fromJSON(inputs.verbose) }}
-          FORCE_NEW_BASELINE:   ${{ fromJSON(inputs.force-new-baseline) }}
+          VERBOSE: ${{ fromJSON(inputs.verbose) }}
+          FORCE_NEW_BASELINE: ${{ fromJSON(inputs.force-new-baseline) }}
         run: |
           ./scripts/bash/run-benchmarks.sh ${{ inputs.benchmark-project }} \
               --configuration "${{ inputs.configuration }}" \

@@ -35,6 +35,7 @@ declare -r defaultBenchmarkProjects='[]'
 declare -r defaultOses='["ubuntu-latest"]'
 declare -r defaultDotnetVersion='10.0.x'
 declare -r defaultConfiguration='Release'
+declare -r defaultPreprocessorSymbols='_'
 declare -r defaultForceNewBaseline=false
 declare -r defaultMinCoveragePct=80
 declare -r defaultMaxRegressionPct=10
@@ -47,7 +48,7 @@ declare -x benchmark_projects=${BENCHMARK_PROJECTS:-${defaultBenchmarkProjects}}
 declare -x os=${OS:-${defaultOses}}
 declare -x dotnet_version=${DOTNET_VERSION:-${defaultDotnetVersion}}
 declare -x configuration=${CONFIGURATION:-${defaultConfiguration}}
-declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
+declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-${defaultPreprocessorSymbols}}
 declare -x min_coverage_pct=${MIN_COVERAGE_PCT:-${defaultMinCoveragePct}}
 declare -x force_new_baseline=${FORCE_NEW_BASELINE:-${defaultForceNewBaseline}}
 declare -x max_regression_pct=${MAX_REGRESSION_PCT:-${defaultMaxRegressionPct}}
@@ -152,6 +153,10 @@ fi
 # Set configuration with validation
 if [[ -z "$configuration" ]]; then
     warning configuration "configuration must have value." "$defaultConfiguration"
+fi
+
+if [[ -z "$preprocessor_symbols" ]]; then
+    warning preprocessor_symbols "preprocessor-symbols needs a value." "$defaultPreprocessorSymbols"
 fi
 
 # Validate numeric inputs
