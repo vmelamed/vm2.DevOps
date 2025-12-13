@@ -110,35 +110,35 @@ jobs:
         shell: bash
         run: |
           ./scripts/bash/setup-ci-vars.sh \
-              --build-project        '${{ inputs.build-projects }}' \
-              --test-project         '${{ inputs.test-projects }}' \
-              --benchmark-project    '${{ inputs.benchmark-projects }}' \
+              --build-projects       '${{ inputs.build-projects }}' \
+              --test-projects        '${{ inputs.test-projects }}' \
+              --benchmark-projects   '${{ inputs.benchmark-projects }}' \
               --os                   '${{ inputs.os }}' \
               --dotnet-version       '${{ inputs.dotnet-version }}' \
               --configuration        '${{ inputs.configuration }}' \
               --preprocessor-symbols '${{ inputs.preprocessor-symbols }}' \
-              --min-coverage-pct     ${{ inputs.min-coverage-pct }} \
-              --force-new-baseline   ${{ inputs.force-new-baseline }} \
-              --max-regression-pct   ${{ inputs.max-regression-pct }} \
-              --verbose              ${{ inputs.verbose }}
+              --min-coverage-pct     '${{ inputs.min-coverage-pct }}' \
+              --force-new-baseline   '${{ inputs.force-new-baseline }}' \
+              --max-regression-pct   '${{ inputs.max-regression-pct }}' \
+              --verbose              '${{ inputs.verbose }}
       # TO BE REMOVED WHEN ACTUALLY RUNNING THE ABOVE VALIDATION SCRIPT:
       # - name: "Print #1: Run validation script to verify and normalize all input parameters
       #   id: setup
       #   shell: bash
       #   run: |
       #     {
-      #       echo "./scripts/bash/setup-ci-vars.sh \"
-      #       echo "    --build-project        '${{ inputs.build-projects }}'' \"
-      #       echo "    --test-project         '${{ inputs.test-projects }}' \"
-      #       echo "    --benchmark-project    '${{ inputs.benchmark-projects }}' \"
-      #       echo "    --os                   '${{ matrix.os }}' \"
-      #       echo "    --dotnet-version       '${{ inputs.dotnet-version }}' \"
-      #       echo "    --configuration        '${{ inputs.configuration }}' \"
-      #       echo "    --preprocessor-symbols '${{ inputs.preprocessor-symbols }}' \"
-      #       echo "    --min-coverage-pct     ${{ inputs.min-coverage-pct }} \"
-      #       echo "    --max-regression-pct   ${{ inputs.max-regression-pct }} \"
-      #       echo "    --force-new-baseline   ${{ inputs.force-new-baseline }} \"
-      #       echo "    --verbose              ${{ inputs.verbose }}"
+      #       echo "./scripts/bash/setup-ci-vars.sh \\"
+      #       echo "    --build-projects       '${{ inputs.build-projects }}' \\"
+      #       echo "    --test-projects        '${{ inputs.test-projects }}' \\"
+      #       echo "    --benchmark-projects   '${{ inputs.benchmark-projects }}' \\"
+      #       echo "    --os                   '${{ matrix.os }}' \\"
+      #       echo "    --dotnet-version       '${{ inputs.dotnet-version }}' \\"
+      #       echo "    --configuration        '${{ inputs.configuration }}' \\"
+      #       echo "    --preprocessor-symbols '${{ inputs.preprocessor-symbols }}' \\"
+      #       echo "    --min-coverage-pct     '${{ inputs.min-coverage-pct }}' \\"
+      #       echo "    --max-regression-pct   '${{ inputs.max-regression-pct }}' \\"
+      #       echo "    --force-new-baseline   '${{ inputs.force-new-baseline }}' \\"
+      #       echo "    --verbose              '${{ inputs.verbose }}'"
       #     } >> $GITHUB_STEP_SUMMARY
       #     {
       #       echo "build-project=${{ inputs.build-projects }}"
