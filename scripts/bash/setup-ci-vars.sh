@@ -70,6 +70,7 @@ function error()
 {
     echo "❌ ERROR $*" | tee >> "$GITHUB_STEP_SUMMARY" >&2
     errors=$((errors + 1))
+    return 0
 }
 
 ## Shell function to log a warning and set a default value
@@ -80,11 +81,11 @@ function warning()
     echo "⚠️ WARNING '$2', Assuming '$3'" | tee >> "$GITHUB_STEP_SUMMARY" >&2
     # shellcheck disable=SC2034
     variable="$3"
-    return 1
+    return 0
 }
 
 if [[ -z "$build_projects" || "$build_projects" == '[""]' || "$build_projects" == '[]' || "$build_projects" == 'null' ]]; then
-    warning build_projects "build-projects is empty: will build the solution" "$defaultBuildProjects"
+    warning build_projects "build-projects is empty: will build the entire solution" "$defaultBuildProjects"
 else
     echo "$build_projects" | jq -c
     if $? -ne 0; then
