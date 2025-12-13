@@ -122,7 +122,7 @@ jobs:
               --max-regression-pct   ${{ inputs.max-regression-pct }} \
               --verbose              ${{ inputs.verbose }}
       # TO BE REMOVED WHEN ACTUALLY RUNNING THE ABOVE VALIDATION SCRIPT:
-      # - name: Print \#1: Run validation script to verify and normalize all input parameters
+      # - name: "Print #1: Run validation script to verify and normalize all input parameters
       #   id: setup
       #   shell: bash
       #   run: |
@@ -177,7 +177,7 @@ jobs:
       #     cached-dependencies: ${{ fromJSON(inputs.cached-dependencies) }}
       #     cached-artifacts: ${{ fromJSON(inputs.cached-artifacts) }}
       # TO BE REMOVED WHEN ACTUALLY RUNNING THE ABOVE BUILD WORKFLOW:
-      - name: Print \#2 Build
+      - name: "Print #2 Build"
         shell: bash
         run: |
           {
@@ -264,7 +264,7 @@ jobs:
       #     verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
       # TO BE REMOVED WHEN ACTUALLY RUNNING THE ABOVE TEST WORKFLOW:
       # Display all workflow inputs for debugging and verification
-      - name: Print \#4 Benchmark
+      - name: "Print #4 Benchmark"
         shell: bash
         run: |
           {
