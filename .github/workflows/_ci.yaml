@@ -109,8 +109,6 @@ jobs:
         id: setup
         shell: bash
         run: |
-          verbose_option=$( [ '${{ inputs.verbose }}' == 'true' ] && echo '--verbose' || echo )
-          echo $verbose_option
           ./scripts/bash/setup-ci-vars.sh \
               --build-projects       '${{ inputs.build-projects }}' \
               --test-projects        '${{ inputs.test-projects }}' \
@@ -122,7 +120,7 @@ jobs:
               --min-coverage-pct     '${{ inputs.min-coverage-pct }}' \
               --force-new-baseline   '${{ inputs.force-new-baseline }}' \
               --max-regression-pct   '${{ inputs.max-regression-pct }}' \
-              "$verbose_option"
+              $( [ ${{ inputs.verbose }} == true ] && echo '--verbose' || echo > /dev/null )
       # TO BE REMOVED WHEN ACTUALLY RUNNING THE ABOVE VALIDATION SCRIPT:
       # - name: "Print #1: Run validation script to verify and normalize all input parameters
       #   id: setup
