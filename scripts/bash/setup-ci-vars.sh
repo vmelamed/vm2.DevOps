@@ -87,8 +87,7 @@ function warning()
 if [[ -z "$build_projects" || "$build_projects" == '[""]' || "$build_projects" == '[]' || "$build_projects" == 'null' ]]; then
     warning build_projects "build-projects is empty: will build the entire solution" "$defaultBuildProjects"
 else
-    echo "$build_projects" | jq -c
-    if $? -ne 0; then
+    if ! echo "$build_projects" | jq -c; then
         error "Invalid JSON for build-projects."
     else
         echo "$build_projects" | jq -c '.[]' | while read -r project; do
@@ -102,8 +101,7 @@ fi
 if [[ -z "$test_projects" || "$test_projects" == '[]' || "$test_projects" == 'null' ]]; then
     error "test-projects cannot be empty"
 else
-    echo "$test_projects" | jq -c
-    if $? -ne 0; then
+    if ! echo "$test_projects" | jq -c; then
         error "Invalid JSON for test-projects."
     else
         echo "$test_projects" | jq -c '.[]' | while read -r project; do
@@ -117,8 +115,7 @@ fi
 if [[ -z "$benchmark_projects" || "$benchmark_projects" == '[]' || "$benchmark_projects" == 'null' ]]; then
     warning benchmark_projects "benchmark_projects is empty" "$defaultBenchmarkProjects"
 else
-    echo "$benchmark_projects" | jq -c
-    if $? -ne 0; then
+    if ! echo "$benchmark_projects" | jq -c; then
         error "Invalid JSON for benchmark-projects."
     else
         echo "$benchmark_projects" | jq -c '.[]' | while read -r project; do
@@ -134,8 +131,7 @@ if [[ -z "$os" || "$os" == '[""]' || "$os" == '[]' || "$os" == 'null' ]]; then
     declare ubuntuOs='["ubuntu-latest"]'
     warning os "os is empty" "$ubuntuOs"
 else
-    echo "$os" | jq -c
-    if $? -ne 0; then
+    if ! echo "$os" | jq -c; then
         error "Invalid JSON for os."
     else
         echo "$os" | jq -c '.[]' | while read -r anOs; do
