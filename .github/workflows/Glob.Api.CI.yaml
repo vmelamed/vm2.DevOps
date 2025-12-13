@@ -95,7 +95,7 @@ jobs:
             verbose="${{ inputs.verbose }}"
           fi
 
-          # TO BE REMOVED
+          # TO BE REMOVED:
           {
             echo "build-projects       ${build_projects}"
             echo "test-projects        ${test_projects}"
@@ -128,41 +128,41 @@ jobs:
             echo "verbose=${verbose}"
           }  >> "${GITHUB_OUTPUT}"
 
-      # - name: Call the CI Workflow
-      #   uses: ./.github/workflows/_ci.yaml
-      #   with:
-      #     build-projects: ${{ steps.init-params.outputs.build-projects }}
-      #     test-projects: ${{ steps.init-params.outputs.test-projects }}
-      #     benchmark-projects: ${{ steps.init-params.outputs.benchmark-projects }}
-      #     os: ${{ steps.init-params.outputs.os }}
-      #     dotnet-version: ${{ steps.init-params.outputs.dotnet-version }}
-      #     configuration: ${{ steps.init-params.outputs.configuration }}
-      #     preprocessor-symbols: ${{ steps.init-params.outputs.preprocessor-symbols }}
-      #     min-coverage-pct: ${{ steps.init-params.outputs.min-coverage-pct }}
-      #     max-regression-pct: ${{ steps.init-params.outputs.max-regression-pct }}
-      #     force-new-baseline: ${{ steps.init-params.outputs.force-new-baseline }}
-      #     cached-dependencies: ${{ steps.init-params.outputs.cached-dependencies }}
-      #     cached-artifacts: ${{ steps.init-params.outputs.cached-artifacts }}
-      #     verbose: ${{ steps.init-params.outputs.verbose }}
+      - name: Call the CI Workflow
+        uses: ./.github/workflows/_ci.yaml
+        with:
+          build-projects: ${{ steps.init-params.outputs.build-projects }}
+          test-projects: ${{ steps.init-params.outputs.test-projects }}
+          benchmark-projects: ${{ steps.init-params.outputs.benchmark-projects }}
+          os: ${{ steps.init-params.outputs.os }}
+          dotnet-version: ${{ steps.init-params.outputs.dotnet-version }}
+          configuration: ${{ steps.init-params.outputs.configuration }}
+          preprocessor-symbols: ${{ steps.init-params.outputs.preprocessor-symbols }}
+          min-coverage-pct: ${{ steps.init-params.outputs.min-coverage-pct }}
+          max-regression-pct: ${{ steps.init-params.outputs.max-regression-pct }}
+          force-new-baseline: ${{ steps.init-params.outputs.force-new-baseline }}
+          cached-dependencies: ${{ steps.init-params.outputs.cached-dependencies }}
+          cached-artifacts: ${{ steps.init-params.outputs.cached-artifacts }}
+          verbose: ${{ steps.init-params.outputs.verbose }}
       # TO BE REMOVED WHEN ACTUALLY RUNNING THE BUILD WORKFLOW ABOVE:
-      - name: "Print #0: CI Workflow Call"
-        id: print-ci-workflow-call
-        shell: bash
-        run: |
-          {
-            echo "uses ./.github/workflows/_ci.yaml"
-            echo "with"
-            echo "  build-projects:       ${{ steps.init-params.outputs.build-projects       }}"
-            echo "  test-projects:        ${{ steps.init-params.outputs.test-projects        }}"
-            echo "  benchmark-projects:   ${{ steps.init-params.outputs.benchmark-projects   }}"
-            echo "  os:                   ${{ steps.init-params.outputs.os                   }}"
-            echo "  dotnet-version:       ${{ steps.init-params.outputs.dotnet-version       }}"
-            echo "  configuration:        ${{ steps.init-params.outputs.configuration        }}"
-            echo "  preprocessor-symbols: ${{ steps.init-params.outputs.preprocessor-symbols }}"
-            echo "  min-coverage-pct:     ${{ steps.init-params.outputs.min-coverage-pct     }}"
-            echo "  max-regression-pct:   ${{ steps.init-params.outputs.max-regression-pct   }}"
-            echo "  force-new-baseline:   ${{ steps.init-params.outputs.force-new-baseline   }}"
-            echo "  cached-dependencies:  ${{ steps.init-params.outputs.cached-dependencies  }}"
-            echo "  cached-artifacts:     ${{ steps.init-params.outputs.cached-artifacts     }}"
-            echo "  verbose:              ${{ steps.init-params.outputs.verbose              }}"
-          } >> $GITHUB_STEP_SUMMARY
+      # - name: "Print #0: CI Workflow Call"
+      #   id: print-ci-workflow-call
+      #   shell: bash
+      #   run: |
+      #     {
+      #       echo "uses ./.github/workflows/_ci.yaml"
+      #       echo "with"
+      #       echo "  build-projects:       ${{ steps.init-params.outputs.build-projects       }}"
+      #       echo "  test-projects:        ${{ steps.init-params.outputs.test-projects        }}"
+      #       echo "  benchmark-projects:   ${{ steps.init-params.outputs.benchmark-projects   }}"
+      #       echo "  os:                   ${{ steps.init-params.outputs.os                   }}"
+      #       echo "  dotnet-version:       ${{ steps.init-params.outputs.dotnet-version       }}"
+      #       echo "  configuration:        ${{ steps.init-params.outputs.configuration        }}"
+      #       echo "  preprocessor-symbols: ${{ steps.init-params.outputs.preprocessor-symbols }}"
+      #       echo "  min-coverage-pct:     ${{ steps.init-params.outputs.min-coverage-pct     }}"
+      #       echo "  max-regression-pct:   ${{ steps.init-params.outputs.max-regression-pct   }}"
+      #       echo "  force-new-baseline:   ${{ steps.init-params.outputs.force-new-baseline   }}"
+      #       echo "  cached-dependencies:  ${{ steps.init-params.outputs.cached-dependencies  }}"
+      #       echo "  cached-artifacts:     ${{ steps.init-params.outputs.cached-artifacts     }}"
+      #       echo "  verbose:              ${{ steps.init-params.outputs.verbose              }}"
+      #     } >> $GITHUB_STEP_SUMMARY
