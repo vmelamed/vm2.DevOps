@@ -109,7 +109,7 @@ jobs:
         id: setup
         shell: bash
         run: |
-          verbose_option=$( [ '${{ inputs.verbose }}' == 'true' ] && echo '--verbose' )
+          verbose_option=$( [ '${{ inputs.verbose }}' == 'true' ] && echo '--verbose' || echo )
           echo $verbose_option
           ./scripts/bash/setup-ci-vars.sh \
               --build-projects       '${{ inputs.build-projects }}' \
