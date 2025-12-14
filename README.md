@@ -30,7 +30,7 @@ These top-level workflows are intended to be called directly via `workflow_call`
   1. Build
   1. Test
   1. Run benchmark tests
-- Normalizes all incoming inputs (target OS, .NET SDK, configuration, defined symbols, etc.) through `validate-vars.sh.sh` (see the list of parameters above).
+- Normalizes all incoming inputs (target OS, .NET SDK, configuration, defined symbols, etc.) through `validate-vars.sh` (see the list of parameters above).
 - Fans out to the lower-level reusable workflows (`build.yaml`, `test.yaml`, `benchmarks.yaml`).
 - Uploads/Downloads artifacts from/to artifact directories (`TestArtifacts`, `BmArtifacts`) so downstream jobs and scripts stay in sync, compare with previous versions (esp. for benchmarks), track progress of non-functional changes (e.g. test coverage and performance benchmarks), etc. history.
 

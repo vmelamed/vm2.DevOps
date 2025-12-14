@@ -109,7 +109,7 @@ jobs:
         id: setup
         shell: bash
         run: |
-          ./scripts/bash/validate-vars.sh.sh \
+          ./scripts/bash/validate-vars.sh \
               --build-projects       '${{ inputs.build-projects }}' \
               --test-projects        '${{ inputs.test-projects }}' \
               --benchmark-projects   '${{ inputs.benchmark-projects }}' \
@@ -127,7 +127,7 @@ jobs:
       #   shell: bash
       #   run: |
       #     {
-      #       echo "./scripts/bash/validate-vars.sh.sh \\"
+      #       echo "./scripts/bash/validate-vars.sh \\"
       #       echo "    --build-projects       '${{ inputs.build-projects }}' \\"
       #       echo "    --test-projects        '${{ inputs.test-projects }}' \\"
       #       echo "    --benchmark-projects   '${{ inputs.benchmark-projects }}' \\"
