@@ -69,10 +69,6 @@ Options:
         Maximum acceptable performance regression percentage (0-50).
         Initial value from \$MAX_REGRESSION_PCT or 10
 
-    --verbose | -v
-        Whether to enable verbose logging (true/false).
-        Initial value from \$VERBOSE or false
-
 EOF
 }
 

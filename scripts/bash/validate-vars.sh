@@ -54,11 +54,10 @@ declare -x force_new_baseline=${FORCE_NEW_BASELINE:-${defaultForceNewBaseline}}
 declare -x max_regression_pct=${MAX_REGRESSION_PCT:-${defaultMaxRegressionPct}}
 declare -x verbose=${VERBOSE:-${defaultVerbose}}
 
-source "$script_dir/setup-ci-vars.usage.sh"
-source "$script_dir/setup-ci-vars.utils.sh"
+source "$script_dir/validate-vars.sh.usage.sh"
+source "$script_dir/validate-vars.sh.utils.sh"
 
 get_arguments "$@"
-
 dump_all_variables
 
 declare -i errors=0
@@ -78,68 +77,69 @@ function error()
 function warning()
 {
     declare -n variable="$1";
-    echo "⚠️ WARNING '$2', Assuming '$3'" | tee >> "$GITHUB_STEP_SUMMARY" >&2
+    echo "⚠️ WARNING $2 Assuming default value of '$3'." | tee >> "$GITHUB_STEP_SUMMARY" >&2
     # shellcheck disable=SC2034
     variable="$3"
     return 0
 }
 
-if [[ -z "$build_projects" || "$build_projects" == '[""]' || "$build_projects" == '[]' || "$build_projects" == 'null' ]]; then
-    warning build_projects "build-projects is empty: will build the entire solution" "$defaultBuildProjects"
+jq_empty='. == null or . == "" or . == []'
+jq_array_strings='type == "array" and all(type == "string")'
+jq_array_strings_has_empty="any(. == \"\")"
+jq_array_strings_nonempty="$jq_array_strings and length > 0 and all(length > 0)"
+
+# We can build one or more projects or one solution with all projects in it:
+if [[ -z "$build_projects" ]] || echo "$build_projects" | jq -e "$jq_empty" > /dev/null; then
+    warning build_projects "The value of the option --build-projects is empty: will build the entire solution." "$defaultBuildProjects"
+elif [[ $? == 5 ]]; then
+    error "The value of the option --build-projects is not a valid JSON."
+elif ! echo "$build_projects" | jq -e "$jq_array_strings" > /dev/null; then
+    error "The value of the option --build-projects must be a string representing a possibly empty JSON array of possibly empty strings - paths to the project(s) to be built."
+elif echo "$build_projects" | jq -e "$jq_array_strings_has_empty" > /dev/null; then
+    warning build_projects "At least one of the strings in the value of the option --build-projects is empty: will build the entire solution." "$defaultBuildProjects"
 else
-    if ! echo "$build_projects" | jq -c; then
-        error "Invalid JSON for build-projects."
-    else
-        echo "$build_projects" | jq -c '.[]' | while read -r project; do
-            if [[ ! -s "$project" ]]; then
-                error "Build project '$project' does not exist or is empty."
-            fi
-        done
-    fi
+    for p in $(echo "$build_projects" | jq -r '.[]'); do
+        if [[ ! -s "$p" ]]; then
+            error "The project or solution file '$p' does not exist or is empty."
+            pwd
+        fi
+    done
 fi
 
-if [[ -z "$test_projects" || "$test_projects" == '[]' || "$test_projects" == 'null' ]]; then
-    error "test-projects cannot be empty"
+# There must be at least one test project specified:
+if [[ -z "$test_projects" ]] || ! echo "$test_projects" | jq -e "$jq_array_strings_nonempty" > /dev/null; then
+    error "The value of the option --test-projects must be a string representing a non-empty, valid JSON array of non-empty strings - paths to the test project(s) to be run."
+elif [[ $? == 5 ]]; then
+    error "The value of the option --build-projects is not a valid JSON."
 else
-    if ! echo "$test_projects" | jq -c; then
-        error "Invalid JSON for test-projects."
-    else
-        echo "$test_projects" | jq -c '.[]' | while read -r project; do
-            if [[ ! -s "$project" ]]; then
-                error "Test project '$project' does not exist or is empty."
-            fi
-        done
-    fi
+    for p in $(echo "$test_projects" | jq -r '.[]'); do
+        if [[ ! -s "$p" ]]; then
+            error "Test project file '$p' does not exist."
+        fi
+    done
 fi
 
-if [[ -z "$benchmark_projects" || "$benchmark_projects" == '[]' || "$benchmark_projects" == 'null' ]]; then
-    warning benchmark_projects "benchmark_projects is empty" "$defaultBenchmarkProjects"
+if [[ -z "$benchmark_projects" ]] || echo "$benchmark_projects" | jq -e "$jq_empty" > /dev/null; then
+    warning benchmark_projects "The value of the option --benchmark-projects is empty: will not run benchmarks." "$defaultBenchmarkProjects"
+elif [[ $? == 5 ]]; then
+    error "The value of the option --benchmark-projects is not a valid JSON."
+elif ! echo "$benchmark_projects" | jq -e "$jq_array_strings_nonempty" > /dev/null; then
+    error "The value of the option --benchmark-projects must be a string representing a non-empty, valid JSON array of non-empty strings - paths to the benchmark project(s) to be run."
 else
-    if ! echo "$benchmark_projects" | jq -c; then
-        error "Invalid JSON for benchmark-projects."
-    else
-        echo "$benchmark_projects" | jq -c '.[]' | while read -r project; do
-            if [[ ! -s "$project" ]]; then
-                error "Benchmark project '$project' does not exist or is empty."
-            fi
-        done
-    fi
+    for p in $(echo "$benchmark_projects" | jq -r '.[]'); do
+        if [[ ! -f "$p" ]]; then
+            error "Benchmark project file '$p' does not exist."
+        fi
+    done
 fi
 
 # Validate and set os
-if [[ -z "$os" || "$os" == '[""]' || "$os" == '[]' || "$os" == 'null' ]]; then
-    declare ubuntuOs='["ubuntu-latest"]'
-    warning os "os is empty" "$ubuntuOs"
-else
-    if ! echo "$os" | jq -c; then
-        error "Invalid JSON for os."
-    else
-        echo "$os" | jq -c '.[]' | while read -r anOs; do
-            if [[ -z "$anOs" ]]; then
-                error "There is an empty OS value."
-            fi
-        done
-    fi
+if [[ -z "$os" ]] || echo "$os" | jq -e "$jq_empty" > /dev/null; then
+    warning os "The value of the option --os is empty: will use default OS." "$defaultOses"
+elif [[ $? == 5 ]]; then
+    error "The value of the option --os is not a valid JSON."
+elif ! echo "$os" | jq -e "$jq_array_strings_nonempty" > /dev/null; then
+    error "The value of the option --os must be a string representing a non-empty JSON array of non-empty strings - names of GitHub runners."
 fi
 
 # Validate and set dotnet-version
@@ -174,7 +174,23 @@ if [[ "$verbose" != "true" && "$verbose" != "false" ]]; then
 fi
 
 if (( errors > 0 )); then
-    echo "❌ Exiting with $errors error(s). Please fix the issues and try again." | tee >> "$GITHUB_STEP_SUMMARY" >&2
+    {
+        echo "❌ Exiting with $errors error(s). Please fix the issues and try again."
+        echo ""
+        echo "| Variable             | Value                 |"
+        echo "|:---------------------|:----------------------|"
+        echo "| build-projects       | $build_projects       |"
+        echo "| test-projects        | $test_projects        |"
+        echo "| benchmark-projects   | $benchmark_projects   |"
+        echo "| os                   | $os                   |"
+        echo "| dotnet-version       | $dotnet_version       |"
+        echo "| configuration        | $configuration        |"
+        echo "| preprocessor-symbols | $preprocessor_symbols |"
+        echo "| min-coverage-pct     | $min_coverage_pct     |"
+        echo "| force-new-baseline   | $force_new_baseline   |"
+        echo "| max-regression-pct   | $max_regression_pct   |"
+        echo "| verbose              | $verbose              |"
+    } | tee >> "$GITHUB_STEP_SUMMARY" >&2
     exit 1
 fi
 
@@ -184,9 +200,9 @@ fi
     echo ""
     echo "| Variable             | Value                 |"
     echo "|:---------------------|:----------------------|"
-    echo "| build-project        | $build_project        |"
-    echo "| test-project         | $test_project         |"
-    echo "| benchmark-project    | $benchmark_project    |"
+    echo "| build-projects       | $build_projects       |"
+    echo "| test-projects        | $test_projects        |"
+    echo "| benchmark-projects   | $benchmark_projects   |"
     echo "| os                   | $os                   |"
     echo "| dotnet-version       | $dotnet_version       |"
     echo "| configuration        | $configuration        |"

@@ -33,15 +33,15 @@ function get_arguments()
             --help|-h      ) usage; exit 0 ;;
             --build-projects|-b )
                 value="$1"; shift
-                build_project="$value"
+                build_projects="$value"
                 ;;
             --test-projects|-t )
                 value="$1"; shift
-                test_project="$value"
+                test_projects="$value"
                 ;;
             --benchmark-projects|-p )
                 value="$1"; shift
-                benchmark_project="$value"
+                benchmark_projects="$value"
                 ;;
             --os|-o )
                 value="$1"; shift
@@ -89,13 +89,13 @@ dump_all_variables()
         quiet \
         --blank \
         build_projects \
+        test_projects \
+        benchmark_projects \
         os \
         dotnet_version \
         configuration \
         preprocessor_symbols \
-        test_projects \
         min_coverage_pct \
-        benchmark_projects \
         force_new_baseline \
         max_regression_pct
 }

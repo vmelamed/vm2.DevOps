@@ -109,7 +109,7 @@ jobs:
         id: setup
         shell: bash
         run: |
-          ./scripts/bash/setup-ci-vars.sh \
+          ./scripts/bash/validate-vars.sh.sh \
               --build-projects       '${{ inputs.build-projects }}' \
               --test-projects        '${{ inputs.test-projects }}' \
               --benchmark-projects   '${{ inputs.benchmark-projects }}' \
@@ -127,7 +127,7 @@ jobs:
       #   shell: bash
       #   run: |
       #     {
-      #       echo "./scripts/bash/setup-ci-vars.sh \\"
+      #       echo "./scripts/bash/validate-vars.sh.sh \\"
       #       echo "    --build-projects       '${{ inputs.build-projects }}' \\"
       #       echo "    --test-projects        '${{ inputs.test-projects }}' \\"
       #       echo "    --benchmark-projects   '${{ inputs.benchmark-projects }}' \\"
@@ -138,7 +138,7 @@ jobs:
       #       echo "    --min-coverage-pct     '${{ inputs.min-coverage-pct }}' \\"
       #       echo "    --max-regression-pct   '${{ inputs.max-regression-pct }}' \\"
       #       echo "    --force-new-baseline   '${{ inputs.force-new-baseline }}' \\"
-      #       echo "    --verbose              '${{ inputs.verbose }}'"
+      #       echo $( [ ${{ inputs.verbose }} == true ] && echo '--verbose' || echo > /dev/null )"
       #     } >> $GITHUB_STEP_SUMMARY
       #     {
       #       echo "build-project=${{ inputs.build-projects }}"
