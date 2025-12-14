@@ -94,7 +94,7 @@ jobs:
       min-coverage-pct: ${{ steps.setup.outputs.min-coverage-pct }}
       max-regression-pct: ${{ steps.setup.outputs.max-regression-pct }}
       force-new-baseline: ${{ steps.setup.outputs.force-new-baseline }}
-      verbose: "true" # ${{ steps.setup.outputs.verbose }}
+      verbose: ${{ steps.setup.outputs.verbose }}
 
     steps:
       # Clone the repository to access validation scripts
@@ -164,33 +164,32 @@ jobs:
       matrix:
         os: ${{ fromJSON(inputs.os) }}
         build-project: ${{ fromJSON(inputs.build-projects) }}
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Build
-        uses: ./.github/workflows/_build.yaml
-        with:
-          os: ${{ matrix.os }}
-          dotnet-version: ${{ needs.setup.outputs.dotnet-version }}
-          configuration: ${{ needs.setup.outputs.configuration }}
-          preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
-          build-project: ${{ matrix.build-project }}
-          cached-dependencies: ${{ fromJSON(inputs.cached-dependencies) }}
-          cached-artifacts: ${{ fromJSON(inputs.cached-artifacts) }}
-      # TO BE REMOVED WHEN ACTUALLY RUNNING THE ABOVE BUILD WORKFLOW:
-      # - name: "Print #2 Build"
-      #   shell: bash
-      #   run: |
-      #     {
-      #       echo "uses: ./.github/workflows/_build.yaml"
-      #       echo "with:"
-      #       echo "  os:                   ${{ matrix.os }}"
-      #       echo "  dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}"
-      #       echo "  configuration:        ${{ needs.setup.outputs.configuration }}"
-      #       echo "  preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}"
-      #       echo "  build-project:        ${{ matrix.build-project }}"
-      #       echo "  cached-dependencies:  ${{ inputs.cached-dependencies }}"
-      #       echo "  cached-artifacts:     ${{ inputs.cached-artifacts }}"
-      #     } >> $GITHUB_STEP_SUMMARY
+    uses: ./.github/workflows/_build.yaml
+    with:
+      os: ${{ matrix.os }}
+      dotnet-version: ${{ needs.setup.outputs.dotnet-version }}
+      configuration: ${{ needs.setup.outputs.configuration }}
+      preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
+      build-project: ${{ matrix.build-project }}
+      cached-dependencies: ${{ fromJSON(inputs.cached-dependencies) }}
+      cached-artifacts: ${{ fromJSON(inputs.cached-artifacts) }}
+    # TO BE REMOVED WHEN ACTUALLY RUNNING THE ABOVE BUILD WORKFLOW:
+    # runs-on: ${{ matrix.os }}
+    # steps:
+    #   - name: "Print #2 Build"
+    #     shell: bash
+    #     run: |
+    #       {
+    #         echo "uses: ./.github/workflows/_build.yaml"
+    #         echo "with:"
+    #         echo "  os:                   ${{ matrix.os }}"
+    #         echo "  dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}"
+    #         echo "  configuration:        ${{ needs.setup.outputs.configuration }}"
+    #         echo "  preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}"
+    #         echo "  build-project:        ${{ matrix.build-project }}"
+    #         echo "  cached-dependencies:  ${{ inputs.cached-dependencies }}"
+    #         echo "  cached-artifacts:     ${{ inputs.cached-artifacts }}"
+    #       } >> $GITHUB_STEP_SUMMARY
 
   # Run unit tests with code coverage analysis
   test:
@@ -203,21 +202,20 @@ jobs:
       matrix:
         os: ${{ fromJSON(inputs.os) }}
         test-project: ${{ fromJSON(inputs.test-projects) }}
+    # uses: ./.github/workflows/_test.yaml
+    # with:
+    #   os:                   ${{ matrix.os }}
+    #   dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
+    #   configuration:        ${{ needs.setup.outputs.configuration }}
+    #   preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
+    #   test-project:         ${{ matrix.test-project }}
+    #   min-coverage-pct:     ${{ fromJSON(needs.setup.outputs.min-coverage-pct) }}
+    #   cached-dependencies:  ${{ fromJSON(inputs.cached-dependencies) }}
+    #   cached-artifacts:     ${{ fromJSON(inputs.cached-artifacts) }}
+    #   verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
+    # TO BE REMOVED WHEN ACTUALLY RUNNING THE ABOVE TEST WORKFLOW:
     runs-on: ${{ matrix.os }}
     steps:
-      # - name: Test
-      #   uses: ./.github/workflows/_test.yaml
-      #   with:
-      #     os:                   ${{ matrix.os }}
-      #     dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
-      #     configuration:        ${{ needs.setup.outputs.configuration }}
-      #     preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
-      #     test-project:         ${{ matrix.test-project }}
-      #     min-coverage-pct:     ${{ fromJSON(needs.setup.outputs.min-coverage-pct) }}
-      #     cached-dependencies:  ${{ fromJSON(inputs.cached-dependencies) }}
-      #     cached-artifacts:     ${{ fromJSON(inputs.cached-artifacts) }}
-      #     verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
-      # TO BE REMOVED WHEN ACTUALLY RUNNING THE ABOVE TEST WORKFLOW:
       - name: Print \#3 Test
         shell: bash
         run: |
@@ -247,23 +245,22 @@ jobs:
       matrix:
         os: ${{ fromJSON(inputs.os) }}
         benchmark-project: ${{ fromJSON(inputs.benchmark-projects) }}
+  #   uses: ./.github/workflows/_benchmarks.yaml
+  #   with:
+  #     os:                   ${{ matrix.os }}
+  #     dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
+  #     configuration:        ${{ needs.setup.outputs.configuration }}
+  #     preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
+  #     benchmark-project:    ${{ matrix.benchmark-project }}
+  #     max-regression-pct:   ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}
+  #     force-new-baseline:   ${{ fromJSON(needs.setup.outputs.force-new-baseline) }}
+  #     cached-dependencies:  ${{ fromJSON(inputs.cached-dependencies) }}
+  #     cached-artifacts:     ${{ fromJSON(inputs.cached-artifacts) }}
+  #     verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
+  # TO BE REMOVED WHEN ACTUALLY RUNNING THE ABOVE TEST WORKFLOW:
+  # Display all workflow inputs for debugging and verification
     runs-on: ${{ matrix.os }}
     steps:
-      # - name: Benchmark
-      #   uses: ./.github/workflows/_benchmarks.yaml
-      #   with:
-      #     os:                   ${{ matrix.os }}
-      #     dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
-      #     configuration:        ${{ needs.setup.outputs.configuration }}
-      #     preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
-      #     benchmark-project:    ${{ matrix.benchmark-project }}
-      #     max-regression-pct:   ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}
-      #     force-new-baseline:   ${{ fromJSON(needs.setup.outputs.force-new-baseline) }}
-      #     cached-dependencies:  ${{ fromJSON(inputs.cached-dependencies) }}
-      #     cached-artifacts:     ${{ fromJSON(inputs.cached-artifacts) }}
-      #     verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
-      # TO BE REMOVED WHEN ACTUALLY RUNNING THE ABOVE TEST WORKFLOW:
-      # Display all workflow inputs for debugging and verification
       - name: "Print #4 Benchmark"
         shell: bash
         run: |
