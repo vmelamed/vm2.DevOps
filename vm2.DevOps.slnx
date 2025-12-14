@@ -29,8 +29,8 @@
     <File Path="scripts/bash/run-tests.usage.sh" />
     <File Path="scripts/bash/run-tests.utils.sh" />
     <File Path="scripts/bash/validate-vars.sh" />
-    <File Path="scripts/bash/validate-vars.sh.usage.sh" />
-    <File Path="scripts/bash/validate-vars.sh.utils.sh" />
+    <File Path="scripts/bash/validate-vars.usage.sh" />
+    <File Path="scripts/bash/validate-vars.utils.sh" />
     <File Path="scripts/bash/summary.jq" />
     <File Path="scripts/bash/_common.sh" />
   </Folder>

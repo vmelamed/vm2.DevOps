@@ -94,7 +94,7 @@ All scripts live under `scripts/bash/` and follow a three-file convention:
 
 They all source `_common.sh` for shared behavior and respect common flags (`--verbose`, `--quiet`, `--trace`, `--dry-run`, `--debugger`, see above).
 
-### `validate-vars.sh.*.sh`
+### `validate-vars.*.sh`
 
 - Validates and normalizes workflow inputs, emitting derived values for downstream jobs in `$GITHUB_OUTPUT`
 - Ensures consistent environment variable defaults for the pipeline

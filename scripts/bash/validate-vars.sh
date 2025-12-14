@@ -54,8 +54,8 @@ declare -x force_new_baseline=${FORCE_NEW_BASELINE:-${defaultForceNewBaseline}}
 declare -x max_regression_pct=${MAX_REGRESSION_PCT:-${defaultMaxRegressionPct}}
 declare -x verbose=${VERBOSE:-${defaultVerbose}}
 
-source "$script_dir/validate-vars.sh.usage.sh"
-source "$script_dir/validate-vars.sh.utils.sh"
+source "$script_dir/validate-vars.usage.sh"
+source "$script_dir/validate-vars.utils.sh"
 
 get_arguments "$@"
 dump_all_variables
