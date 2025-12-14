@@ -166,31 +166,31 @@ jobs:
         build-project: ${{ fromJSON(inputs.build-projects) }}
     runs-on: ${{ matrix.os }}
     steps:
-      # - name: Build
-      #   uses: ./.github/workflows/_build.yaml
-      #   with:
-      #     os: ${{ matrix.os }}
-      #     dotnet-version: ${{ needs.setup.outputs.dotnet-version }}
-      #     configuration: ${{ needs.setup.outputs.configuration }}
-      #     preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
-      #     build-project: ${{ matrix.build-project }}
-      #     cached-dependencies: ${{ fromJSON(inputs.cached-dependencies) }}
-      #     cached-artifacts: ${{ fromJSON(inputs.cached-artifacts) }}
+      - name: Build
+        uses: ./.github/workflows/_build.yaml
+        with:
+          os: ${{ matrix.os }}
+          dotnet-version: ${{ needs.setup.outputs.dotnet-version }}
+          configuration: ${{ needs.setup.outputs.configuration }}
+          preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
+          build-project: ${{ matrix.build-project }}
+          cached-dependencies: ${{ fromJSON(inputs.cached-dependencies) }}
+          cached-artifacts: ${{ fromJSON(inputs.cached-artifacts) }}
       # TO BE REMOVED WHEN ACTUALLY RUNNING THE ABOVE BUILD WORKFLOW:
-      - name: "Print #2 Build"
-        shell: bash
-        run: |
-          {
-            echo "uses: ./.github/workflows/_build.yaml"
-            echo "with:"
-            echo "  os:                   ${{ matrix.os }}"
-            echo "  dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}"
-            echo "  configuration:        ${{ needs.setup.outputs.configuration }}"
-            echo "  preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}"
-            echo "  build-project:        ${{ matrix.build-project }}"
-            echo "  cached-dependencies:  ${{ inputs.cached-dependencies }}"
-            echo "  cached-artifacts:     ${{ inputs.cached-artifacts }}"
-          } >> $GITHUB_STEP_SUMMARY
+      # - name: "Print #2 Build"
+      #   shell: bash
+      #   run: |
+      #     {
+      #       echo "uses: ./.github/workflows/_build.yaml"
+      #       echo "with:"
+      #       echo "  os:                   ${{ matrix.os }}"
+      #       echo "  dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}"
+      #       echo "  configuration:        ${{ needs.setup.outputs.configuration }}"
+      #       echo "  preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}"
+      #       echo "  build-project:        ${{ matrix.build-project }}"
+      #       echo "  cached-dependencies:  ${{ inputs.cached-dependencies }}"
+      #       echo "  cached-artifacts:     ${{ inputs.cached-artifacts }}"
+      #     } >> $GITHUB_STEP_SUMMARY
 
   # Run unit tests with code coverage analysis
   test:
