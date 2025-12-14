@@ -9,15 +9,23 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
-        <Content Include="appsettings.*.json" CopyToOutputDirectory="PreserveNewest" />
-        <Content Include="FSModels\*.json" CopyToOutputDirectory="PreserveNewest" />
+        <Content Include="appsettings.$(USERNAME).json" Condition="Exists('appsettings.$(USERNAME).json')">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <Content Include="appsettings.Development.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <Content Include="appsettings.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <Content Include="FSModels\*.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\Glob.Api\Glob.Api.csproj" />
         <ProjectReference Include="..\..\test\Glob.Api.FakeFileSystem\Glob.Api.FakeFileSystem.csproj" />
     </ItemGroup>
-
 
 </Project>
