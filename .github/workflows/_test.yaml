@@ -126,6 +126,20 @@ jobs:
             **/bin/${{ inputs.configuration }}
             **/obj
 
+      - name: Verify the artifacts were restored
+        if: inputs.cached-artifacts == true
+        shell: bash
+        run: |
+          ARTIFACT_PATH=$(find . -type d -path "*/bin/${{ inputs.configuration }}" | head -n 1)
+          if [ -z "$ARTIFACT_PATH" ]; then
+            echo "Error: No build artifacts found in cache."
+            exit 1
+          else
+            echo "Build artifacts found at: $ARTIFACT_PATH"
+          fi
+          ls -la "$ARTIFACT_PATH"
+          ls -la ./test/**/bin/${{ inputs.configuration }}
+
       # Make bash scripts executable on Unix-like systems
       - name: Make Scripts Executable
         shell: bash
