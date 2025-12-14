@@ -137,8 +137,8 @@ jobs:
           else
             echo "Build artifacts found at: $ARTIFACT_PATH"
           fi
-          ls -la "$ARTIFACT_PATH"
-          ls -la ./test/**/bin/${{ inputs.configuration }}
+          ls -la "$ARTIFACT_PATH"/**/*.*
+          ls -la ./test/**/bin/${{ inputs.configuration }}/*.*
 
       # Make bash scripts executable on Unix-like systems
       - name: Make Scripts Executable
