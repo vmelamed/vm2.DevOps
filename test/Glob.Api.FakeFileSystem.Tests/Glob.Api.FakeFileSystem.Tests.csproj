@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="FSFiles\FS*.*.graph.txt" />
+    <Content Include="FSFiles\FS*.*.graph.txt" >
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Content>
     <Content Include="FSFiles\FS*.*.txt">
