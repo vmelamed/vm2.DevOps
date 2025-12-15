@@ -183,8 +183,9 @@ execute reportgenerator \
     -reports:"$coverage_source_path" \
     -targetdir:"$coverage_reports_dir" \
     -reporttypes:TextSummary,html \
-	-assemblyfilters:"-Test.Utilities*" \   # -*.Tests;
-	-classfilters:"-*.ExcludeFromCodeCoverage*;-*.GeneratedCode*;-*GeneratedRegex*;-*SourceGenerationContext*
+	-assemblyfilters:"-Test.Utilities*" \
+	-classfilters:"-*.ExcludeFromCodeCoverage*;-*.GeneratedCode*;-*GeneratedRegex*;-*SourceGenerationContext*"
+    # -assemblyfilters:"-Test.Utilities*" \   # -*.Tests; ???
 
 if [[ "$uninstall_reportgenerator" = "true" ]]; then
     echo "Uninstalling the tool 'reportgenerator'..."; sync
@@ -193,22 +194,22 @@ fi
 
 if [[ $dry_run != "true" ]]; then
     if [[ ! -s "$coverage_reports_path" ]]; then
-        echo "❌ Coverage summary not found." | tee >> "$GITHUB_STEP_SUMMARY" >&2
+        echo "❌ Coverage summary not found." | tee >> """$GITHUB_STEP_SUMMARY""" >&2
         exit 2
     fi
 fi
 
 # Copy the coverage report summary to the artifact directory
 trace "Copying coverage summary to '$coverage_summary_path'..."
-execute mv "$coverage_reports_path" "$coverage_summary_path"
-execute mv "$coverage_reports_dir"  "$coverage_summary_html_dir"
+execute mv """$coverage_reports_path""" """$coverage_summary_path"""
+execute mv """$coverage_reports_dir"""  """$coverage_summary_html_dir"""
 
 # Extract the coverage percentage from the summary file
 trace "Extracting coverage percentage from '$coverage_summary_path'..."
 if [[ $dry_run != "true" ]]; then
     pct=$(sed -nE 's/Method coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_path" | head -n1)
     if [[ -z "$pct" ]]; then
-        echo "❌ Could not parse coverage percent from $coverage_summary_path" | tee >> "$GITHUB_STEP_SUMMARY" >&2
+        echo "❌ Could not parse coverage percent from \"$coverage_summary_path\"" | tee >> "$GITHUB_STEP_SUMMARY" >&2
         sync
         exit 2
     fi
