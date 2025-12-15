@@ -218,15 +218,18 @@ if [[ $dry_run != "true" ]]; then
     # Compare the coverage percentage against the threshold
     if (( pct < min_coverage_pct )); then
         echo "❌ Coverage $pct% is below the threshold of $min_coverage_pct%" | tee >> "$GITHUB_STEP_SUMMARY" >&2
-        sync
-        exit 2
     else
         echo "✔️ Coverage $pct% meets the threshold of $min_coverage_pct%" >> "$GITHUB_STEP_SUMMARY"
     fi
+    sync
 
     # Output coverage percentage for use in workflow
     if [[ -n "$GITHUB_OUTPUT" ]]; then
         echo "coverage-pct=${pct}" >> "$GITHUB_OUTPUT"
+    fi
+
+    if (( pct < min_coverage_pct )); then
+        exit 2
     fi
 fi
 sync
