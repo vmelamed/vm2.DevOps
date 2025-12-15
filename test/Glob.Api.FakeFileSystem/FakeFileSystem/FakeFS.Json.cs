@@ -42,7 +42,7 @@ public sealed partial class FakeFS
         JsonSerializer.Serialize(stream, RootFolder, new FolderSourceGenerationContext().Folder);
         stream.Flush();
 
-        return buffer.AsSpan(0, (int)stream.Length);
+        return buffer.AsSpan(0, (int)stream.Position);
     }
 
     public FakeFS FromJson(string json)

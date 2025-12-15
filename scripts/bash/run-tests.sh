@@ -111,7 +111,22 @@ execute mkdir -p "$coverage_source_dir"
 execute mkdir -p "$coverage_reports_dir"
 execute mkdir -p "$coverage_summary_dir"
 
-test_dll_path="$(dirname "$test_project")/bin/${configuration}/net10.0/$(basename "${test_project%.*}")"
+declare test_base_path
+declare test_dll_path
+declare test_exe_path
+
+test_base_path="$(dirname "$test_project")/bin/${configuration}/net10.0/$(basename "${test_project%.*}")"
+test_dll_path="${test_base_path}.dll"
+os_name="$(uname -s)"
+if [[ "$os_name" == "Windows_NT" || "$os_name" == *MINGW* || "$os_name" == *MSYS* ]]; then
+    test_exe_path="${test_base_path}.exe"
+else
+    test_exe_path="${test_base_path}"
+fi
+declare -r test_base_path
+declare -r test_dll_path
+declare -r test_exe_path
+
 # shellcheck disable=SC2154
 if [[ ! -f "${test_dll_path}" && "$dry_run" != "true" ]]; then
     echo "❌ Test executable not found at: ${test_dll_path}" | tee >> "$GITHUB_STEP_SUMMARY" >&2
@@ -129,7 +144,7 @@ if [[ $cached_artifacts != "true" ]]; then
     trace "Build the artifacts if not cached"
     # we are not getting the build artifacts from a cache - do the slow full build
     execute dotnet build  \
-        --project "$bm_project" \
+        --project "$test_project" \
         --configuration "$configuration" \
         --no-restore \
         /p:DefineConstants="$preprocessor_symbols"
@@ -137,9 +152,9 @@ fi
 
 trace "Running tests in project ${test_project} with build configuration ${configuration}..."
 execute dotnet run \
+    --project "$test_project" \
     --configuration "$configuration" \
     --no-build \
-    -- \
     --results-directory "$test_results_dir" \
     --report-trx \
     --coverage \
@@ -156,16 +171,15 @@ fi
 
 trace "Generating coverage reports..."
 uninstall_reportgenerator=false
-if ! dotnet tool list dotnet-reportgenerator-globaltool --tool-path ./tools > "$_ignore"; then
+if ! dotnet tool list dotnet-reportgenerator-globaltool -g > "$_ignore"; then
     echo "Installing the tool 'reportgenerator'..."; sync
-    execute mkdir -p ./tools
-    execute dotnet tool install dotnet-reportgenerator-globaltool --tool-path ./tools --version 5.*
+    execute dotnet tool install dotnet-reportgenerator-globaltool --global --version 5.*
     uninstall_reportgenerator=true
 else
     echo "The tool 'reportgenerator' is already installed." >&2
 fi
 
-execute ./tools/reportgenerator \
+execute reportgenerator \
     -reports:"$coverage_source_path" \
     -targetdir:"$coverage_reports_dir" \
     -reporttypes:TextSummary,html \
@@ -174,8 +188,7 @@ execute ./tools/reportgenerator \
 
 if [[ "$uninstall_reportgenerator" = "true" ]]; then
     echo "Uninstalling the tool 'reportgenerator'..."; sync
-    execute dotnet tool uninstall dotnet-reportgenerator-globaltool --tool-path ./tools
-    execute rm -rf ./tools
+    execute dotnet tool uninstall dotnet-reportgenerator-globaltool --global
 fi
 
 if [[ $dry_run != "true" ]]; then
@@ -204,11 +217,11 @@ if [[ $dry_run != "true" ]]; then
 
     # Compare the coverage percentage against the threshold
     if (( pct < min_coverage_pct )); then
-        echo "❌ Coverage $pct% is below the threshold of $min_coverage_pct%" | tee >> "$GITHUB_STEP_SUMMARY" >&2
+        echo "❌ [Coverage $pct% is below the threshold of $min_coverage_pct%](${coverage_summary_html_dir}/index.html)" | tee >> "$GITHUB_STEP_SUMMARY" >&2
         sync
         exit 2
     else
-        echo "✔️ Coverage $pct% meets the threshold of $min_coverage_pct%" >> "$GITHUB_STEP_SUMMARY"
+        echo "✔️ [Coverage $pct% meets the threshold of $min_coverage_pct%](${coverage_summary_html_dir}/index.html)" >> "$GITHUB_STEP_SUMMARY"
     fi
 fi
 sync
