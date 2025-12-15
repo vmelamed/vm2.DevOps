@@ -171,7 +171,7 @@ fi
 
 trace "Generating coverage reports..."
 uninstall_reportgenerator=false
-if ! dotnet tool list dotnet-reportgenerator-globaltool -g > "$_ignore"; then
+if ! dotnet tool list dotnet-reportgenerator-globaltool --global > "$_ignore"; then
     echo "Installing the tool 'reportgenerator'..."; sync
     execute dotnet tool install dotnet-reportgenerator-globaltool --global --version 5.*
     uninstall_reportgenerator=true
@@ -183,7 +183,7 @@ execute reportgenerator \
     -reports:"$coverage_source_path" \
     -targetdir:"$coverage_reports_dir" \
     -reporttypes:TextSummary,html \
-	-assemblyfilters:"-*.Tests;-Test.Utilities*" \
+	-assemblyfilters:"-Test.Utilities*" \   # -*.Tests;
 	-classfilters:"-*.ExcludeFromCodeCoverage*;-*.GeneratedCode*;-*GeneratedRegex*;-*SourceGenerationContext*
 
 if [[ "$uninstall_reportgenerator" = "true" ]]; then
@@ -213,13 +213,13 @@ if [[ $dry_run != "true" ]]; then
         exit 2
     fi
 
-    echo "Coverage: $pct% (threshold: $min_coverage_pct%)"
+    trace "Coverage: ${pct}% (threshold: ${min_coverage_pct}%)"
 
     # Compare the coverage percentage against the threshold
     if (( pct < min_coverage_pct )); then
-        echo "❌ Coverage of $pct% is below the threshold of $min_coverage_pct%" | tee >> "$GITHUB_STEP_SUMMARY" >&2
+        echo "❌ Coverage of $pct% is below the threshold of ${min_coverage_pct}%" | tee >> "$GITHUB_STEP_SUMMARY" >&2
     else
-        echo "✔️ Coverage of $pct% meets the threshold of $min_coverage_pct%" >> "$GITHUB_STEP_SUMMARY"
+        echo "✔️ Coverage of $pct% meets the threshold of ${min_coverage_pct}%" >> "$GITHUB_STEP_SUMMARY"
     fi
     sync
 
