@@ -52,13 +52,13 @@ public static class IFileSystemExtensions
         /// Gets a <see cref="Regex"/> object for validating pathnames based on the current operating system.
         /// </summary>
         /// <returns>A Regex for path validation.</returns>
-        public Regex PathRegex() => fs.IsWindows ? WindowsPathRegex() : UnixPathRgex();
+        public Regex PathRegex() => fs.IsWindows ? WindowsPathRegex() : UnixPathRegex();
 
         /// <summary>
         /// Gets a <see cref="Regex"/> object for validating glob patterns based on the current operating system.
         /// </summary>
         /// <returns>A Regex for glob pattern validation.</returns>
-        public Regex GlobRegex() => fs.IsWindows ? WindowsGlobRegex() : UnixGlobRgex();
+        public Regex GlobRegex() => fs.IsWindows ? WindowsGlobRegex() : UnixGlobRegex();
 
         /// <summary>
         /// Gets a <see cref="Regex"/> object for validating glob patterns based on the current operating system.
@@ -79,13 +79,13 @@ public static class IFileSystemExtensions
         /// Gets a <see cref="Regex"/> object for validating pathnames based on the current operating system.
         /// </summary>
         /// <returns>A Regex for path validation.</returns>
-        public static Regex PathRegex() => OperatingSystem.IsWindows() ? WindowsPathRegex() : UnixPathRgex();
+        public static Regex PathRegex() => OperatingSystem.IsWindows() ? WindowsPathRegex() : UnixPathRegex();
 
         /// <summary>
         /// Gets a <see cref="Regex"/> object for validating glob patterns based on the current operating system.
         /// </summary>
         /// <returns>A Regex for glob pattern validation.</returns>
-        public static Regex GlobRegex() => OperatingSystem.IsWindows() ? WindowsGlobRegex() : UnixGlobRgex();
+        public static Regex GlobRegex() => OperatingSystem.IsWindows() ? WindowsGlobRegex() : UnixGlobRegex();
 
         /// <summary>
         /// Gets a <see cref="Regex"/> object for validating glob patterns based on the current operating system.

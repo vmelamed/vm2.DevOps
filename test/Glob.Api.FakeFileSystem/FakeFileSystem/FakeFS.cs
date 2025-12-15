@@ -187,7 +187,7 @@ public sealed partial class FakeFS
 
         if (line.StartsWith(SepChar))
         {
-            if (!UnixPathRgex().IsMatch(line))
+            if (!UnixPathRegex().IsMatch(line))
                 throw new ArgumentException($"The Unix path format '{line}' is invalid.", nameof(line));
             return (false, SepChar.ToString());
         }
