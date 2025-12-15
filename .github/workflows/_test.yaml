@@ -148,6 +148,7 @@ jobs:
 
       # Execute tests with code coverage collection and validation
       - name: Run script for unit test with coverage
+        id: run-tests
         env:
           CONFIGURATION: ${{ inputs.configuration }}
           PREPROCESSOR_SYMBOLS: ${{ inputs.preprocessor-symbols }}
@@ -164,8 +165,25 @@ jobs:
       # Upload test results and coverage reports as workflow artifacts
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v5
+        id: upload-coverage
         with:
           name: coverage-${{ inputs.os }}
           path: ${{ env.ARTIFACTS_DIR }}
           if-no-files-found: error
           overwrite: true
+
+      # Add coverage report link to job summary
+      - name: Add coverage report link to summary
+        if: always()
+        shell: bash
+        run: |
+          echo "### 📊 Coverage Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${{ steps.run-tests.outputs.coverage-pct }}" ]; then
+            echo "**Coverage:** ${{ steps.run-tests.outputs.coverage-pct }}%" >> $GITHUB_STEP_SUMMARY
+            echo "**Threshold:** ${{ inputs.min-coverage-pct }}%" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "📥 Download the [coverage-${{ inputs.os }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) artifact to view the full HTML report." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Open \`coverage/html/index.html\` from the downloaded artifact in your browser." >> $GITHUB_STEP_SUMMARY
