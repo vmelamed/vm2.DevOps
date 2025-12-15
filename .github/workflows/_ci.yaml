@@ -245,36 +245,36 @@ jobs:
       matrix:
         os: ${{ fromJSON(inputs.os) }}
         benchmark-project: ${{ fromJSON(inputs.benchmark-projects) }}
-    #   uses: ./.github/workflows/_benchmarks.yaml
-    #   with:
-    #     os:                   ${{ matrix.os }}
-    #     dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
-    #     configuration:        ${{ needs.setup.outputs.configuration }}
-    #     preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
-    #     benchmark-project:    ${{ matrix.benchmark-project }}
-    #     max-regression-pct:   ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}
-    #     force-new-baseline:   ${{ fromJSON(needs.setup.outputs.force-new-baseline) }}
-    #     cached-dependencies:  ${{ fromJSON(inputs.cached-dependencies) }}
-    #     cached-artifacts:     ${{ fromJSON(inputs.cached-artifacts) }}
-    #     verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
+    uses: ./.github/workflows/_benchmarks.yaml
+    with:
+      os:                   ${{ matrix.os }}
+      dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
+      configuration:        ${{ needs.setup.outputs.configuration }}
+      preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
+      benchmark-project:    ${{ matrix.benchmark-project }}
+      max-regression-pct:   ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}
+      force-new-baseline:   ${{ fromJSON(needs.setup.outputs.force-new-baseline) }}
+      cached-dependencies:  ${{ fromJSON(inputs.cached-dependencies) }}
+      cached-artifacts:     ${{ fromJSON(inputs.cached-artifacts) }}
+      verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
     # TO BE REMOVED WHEN ACTUALLY RUNNING THE ABOVE TEST WORKFLOW:
     # Display all workflow inputs for debugging and verification
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: "Print #4 Benchmark"
-        shell: bash
-        run: |
-          {
-            echo "uses: ./.github/workflows/_benchmarks.yaml"
-            echo "with:"
-            echo "  os:                   ${{ matrix.os }}"
-            echo "  dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}"
-            echo "  configuration:        ${{ needs.setup.outputs.configuration }}"
-            echo "  preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}"
-            echo "  benchmark-project:    ${{ matrix.benchmark-project }}"
-            echo "  max-regression-pct:   ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}"
-            echo "  force-new-baseline:   ${{ fromJSON(needs.setup.outputs.force-new-baseline) }}"
-            echo "  cached-dependencies:  ${{ fromJSON(inputs.cached-dependencies) }}"
-            echo "  cached-artifacts:     ${{ fromJSON(inputs.cached-artifacts) }}"
-            echo "  verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}"
-          } >> $GITHUB_STEP_SUMMARY
+    # runs-on: ${{ matrix.os }}
+    # steps:
+    #   - name: "Print #4 Benchmark"
+    #     shell: bash
+    #     run: |
+    #       {
+    #         echo "uses: ./.github/workflows/_benchmarks.yaml"
+    #         echo "with:"
+    #         echo "  os:                   ${{ matrix.os }}"
+    #         echo "  dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}"
+    #         echo "  configuration:        ${{ needs.setup.outputs.configuration }}"
+    #         echo "  preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}"
+    #         echo "  benchmark-project:    ${{ matrix.benchmark-project }}"
+    #         echo "  max-regression-pct:   ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}"
+    #         echo "  force-new-baseline:   ${{ fromJSON(needs.setup.outputs.force-new-baseline) }}"
+    #         echo "  cached-dependencies:  ${{ fromJSON(inputs.cached-dependencies) }}"
+    #         echo "  cached-artifacts:     ${{ fromJSON(inputs.cached-artifacts) }}"
+    #         echo "  verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}"
+    #       } >> $GITHUB_STEP_SUMMARY

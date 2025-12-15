@@ -4,7 +4,7 @@
 namespace vm2.DevOps.Glob.Api.FakeFileSystem;
 
 /// <summary>
-/// Represents a folder in the file system: container for subfolders and files.
+/// Represents a folder in the file system: container for sub-folders and files.
 /// </summary>
 /// <param name="name"></param>
 /// <remarks>
@@ -176,6 +176,7 @@ public class Folder(string name = "") : IEquatable<Folder>, IComparable<Folder>
     }
 }
 
+[ExcludeFromCodeCoverage]
 [JsonSerializable(typeof(Folder))]
 [JsonSourceGenerationOptions(
     AllowTrailingCommas = true,

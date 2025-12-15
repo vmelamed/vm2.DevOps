@@ -112,6 +112,7 @@ fi
 trace "Running benchmark tests in project '$bm_project' with build configuration '$configuration'..."
 execute mkdir -p "$artifacts_dir"
 execute dotnet run \
+    --project "$bm_project" \
     --configuration "$configuration" \
     --no-build \
     --filter '*' \

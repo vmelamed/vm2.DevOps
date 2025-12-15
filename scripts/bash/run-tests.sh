@@ -125,7 +125,7 @@ else
 fi
 declare -r test_base_path
 declare -r test_dll_path
-declare -r test_exe_path
+declare -rx test_exe_path
 
 # shellcheck disable=SC2154
 if [[ ! -f "${test_dll_path}" && "$dry_run" != "true" ]]; then
