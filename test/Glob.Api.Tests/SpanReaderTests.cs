@@ -6,6 +6,7 @@ namespace vm2.DevOps.Glob.Api.Tests;
 /// <summary>
 /// Unit tests for the SpanReader ref struct.
 /// </summary>
+[ExcludeFromCodeCoverage]
 public class SpanReaderTests
 {
     #region Constructor Tests
@@ -96,16 +97,16 @@ public class SpanReaderTests
         var reader = new SpanReader("ABC".AsSpan());
 
         // Act & Assert
-        try
-        {
-            reader.Read(5);
-            Assert.Fail("Expected ArgumentOutOfRangeException was not thrown");
-        }
-        catch (ArgumentOutOfRangeException ex)
-        {
-            ex.ParamName.Should().Be("size");
-            ex.Message.Should().Contain("Not enough characters in span");
-        }
+        var read = () => { new SpanReader("ABC".AsSpan()).Read(5); };
+
+        read.Should()
+            .Throw<ArgumentOutOfRangeException>()
+            .WithMessage("Not enough characters in span (Parameter 'size')")
+            .And
+            .ParamName
+            .Should()
+            .Be("size")
+            ;
     }
 
     [Fact]
@@ -158,37 +159,34 @@ public class SpanReaderTests
     public void Read_SingleChar_OnEmptyReader_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        var reader = new SpanReader(ReadOnlySpan<char>.Empty);
+        var read = () => { new SpanReader(ReadOnlySpan<char>.Empty).Read(); };
 
         // Act & Assert
-        try
-        {
-            reader.Read();
-            Assert.Fail("Expected ArgumentOutOfRangeException was not thrown");
-        }
-        catch (ArgumentOutOfRangeException ex)
-        {
-            ex.Message.Should().Contain("Not enough characters in span");
-        }
+        read.Should()
+            .Throw<ArgumentOutOfRangeException>()
+            .WithMessage("Not enough characters in span")
+            .And
+            .ParamName
+            .Should()
+            .Be("")
+            ;
     }
 
     [Fact]
     public void Read_SingleChar_AfterFullyRead_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        var reader = new SpanReader("A".AsSpan());
-        reader.Read(); // Consume the only character
-
         // Act & Assert
-        try
-        {
-            reader.Read();
-            Assert.Fail("Expected ArgumentOutOfRangeException was not thrown");
-        }
-        catch (ArgumentOutOfRangeException)
-        {
-            // Expected
-        }
+        var read = () => { var reader = new SpanReader("A".AsSpan()); reader.Read(); reader.Read(); };
+
+        read.Should()
+            .Throw<ArgumentOutOfRangeException>()
+            .WithMessage("Not enough characters in span")
+            .And
+            .ParamName
+            .Should()
+            .Be("")
+            ;
     }
 
     #endregion
@@ -229,38 +227,34 @@ public class SpanReaderTests
     public void ReadAll_OnEmptyReader_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        var reader = new SpanReader(ReadOnlySpan<char>.Empty);
+        var read = () => { new SpanReader(ReadOnlySpan<char>.Empty).ReadAll(); };
 
         // Act & Assert
-        try
-        {
-            reader.ReadAll();
-            Assert.Fail("Expected ArgumentOutOfRangeException was not thrown");
-        }
-        catch (ArgumentOutOfRangeException ex)
-        {
-            ex.ParamName.Should().Be("Position");
-            ex.Message.Should().Contain("No more characters in span");
-        }
+        read.Should()
+            .Throw<ArgumentOutOfRangeException>()
+            .WithMessage("No more characters in span")
+            .And
+            .ParamName
+            .Should()
+            .Be("")
+            ;
     }
 
     [Fact]
     public void ReadAll_CalledTwice_ThrowsOnSecondCall()
     {
         // Arrange
-        var reader = new SpanReader("Test".AsSpan());
-        reader.ReadAll(); // First call
+        var read = () => { var r = new SpanReader("Test".AsSpan()); r.ReadAll(); r.ReadAll(); };
 
         // Act & Assert
-        try
-        {
-            reader.ReadAll();
-            Assert.Fail("Expected ArgumentOutOfRangeException was not thrown");
-        }
-        catch (ArgumentOutOfRangeException)
-        {
-            // Expected
-        }
+        read.Should()
+            .Throw<ArgumentOutOfRangeException>()
+            .WithMessage("No more characters in span")
+            .And
+            .ParamName
+            .Should()
+            .Be("")
+            ;
     }
 
     #endregion
@@ -317,19 +311,17 @@ public class SpanReaderTests
     public void Peek_MoreThanRemaining_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        var reader = new SpanReader("Hi".AsSpan());
+        var peak = () => { new SpanReader("Hi".AsSpan()).Peek(5); };
 
         // Act & Assert
-        try
-        {
-            reader.Peek(5);
-            Assert.Fail("Expected ArgumentOutOfRangeException was not thrown");
-        }
-        catch (ArgumentOutOfRangeException ex)
-        {
-            ex.ParamName.Should().Be("size");
-            ex.Message.Should().Contain("Not enough characters in span");
-        }
+        peak.Should()
+            .Throw<ArgumentOutOfRangeException>()
+            .WithMessage("Not enough characters in span (Parameter 'size')")
+            .And
+            .ParamName
+            .Should()
+            .Be("size")
+            ;
     }
 
     [Fact]
@@ -401,18 +393,17 @@ public class SpanReaderTests
     public void Peek_SingleChar_OnEmptyReader_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        var reader = new SpanReader(ReadOnlySpan<char>.Empty);
+        var peak = () => { var r = new SpanReader(ReadOnlySpan<char>.Empty); r.Peek(); };
 
         // Act & Assert
-        try
-        {
-            reader.Peek();
-            Assert.Fail("Expected ArgumentOutOfRangeException was not thrown");
-        }
-        catch (ArgumentOutOfRangeException ex)
-        {
-            ex.Message.Should().Contain("Not enough characters in span");
-        }
+        peak.Should()
+            .Throw<ArgumentOutOfRangeException>()
+            .WithMessage("Not enough characters in span")
+            .And
+            .ParamName
+            .Should()
+            .Be("")
+            ;
     }
 
     #endregion
@@ -469,19 +460,17 @@ public class SpanReaderTests
     public void PeekAll_OnEmptyReader_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        var reader = new SpanReader(ReadOnlySpan<char>.Empty);
+        var peak = () => { var r = new SpanReader(ReadOnlySpan<char>.Empty); r.PeekAll(); };
 
         // Act & Assert
-        try
-        {
-            reader.PeekAll();
-            Assert.Fail("Expected ArgumentOutOfRangeException was not thrown");
-        }
-        catch (ArgumentOutOfRangeException ex)
-        {
-            ex.ParamName.Should().Be("Position");
-            ex.Message.Should().Contain("No more characters in span");
-        }
+        peak.Should()
+            .Throw<ArgumentOutOfRangeException>()
+            .WithMessage("No more characters in span (Parameter 'Position')")
+            .And
+            .ParamName
+            .Should()
+            .Be("Position")
+            ;
     }
 
     #endregion

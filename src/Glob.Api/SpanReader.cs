@@ -84,7 +84,7 @@ public ref struct SpanReader
     public ReadOnlySpan<char> ReadAll()
     {
         if (IsEmpty)
-            throw new ArgumentOutOfRangeException(nameof(Position), "No more characters in span");
+            throw new ArgumentOutOfRangeException("", "No more characters in span");
 
         var s = _chars[Position..];
 

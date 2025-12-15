@@ -6,6 +6,7 @@ namespace vm2.DevOps.Glob.Api;
 /// <summary>
 /// Provides extension methods for the <see cref="IFileSystem"/> interface.
 /// </summary>
+[ExcludeFromCodeCoverage]
 public static class IFileSystemExtensions
 {
     extension(IFileSystem fs)

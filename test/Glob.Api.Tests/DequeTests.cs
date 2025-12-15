@@ -133,11 +133,49 @@ public class DequeTests
 
         deque.Count.Should().Be(0);
     }
+    #endregion
 
+    #region Switch modes
+    [Fact]
+    public void SwitchingToStack_OnNonEmptyDeque_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var deque = new Deque<int>(isStack: false);
+        deque.Add(1);
+
+        // Act
+        var act = () => deque.IsStack = true;
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("Cannot change the mode of a non-empty deque.");
+    }
+
+    [Fact]
+    public void SwitchingToQueue_OnNonEmptyDeque_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var deque = new Deque<int>(isStack: false);
+
+        var act1 = () => deque.IsStack = true;
+
+        act1.Should().NotThrow();
+
+        deque.Add(1);
+
+        // Act
+        var act2 = () => deque.IsStack = false;
+
+        // Assert
+        act2
+            .Should()
+            .Throw<InvalidOperationException>()
+            .WithMessage("Cannot change the mode of a non-empty deque.")
+            ;
+    }
     #endregion
 
     #region TryGet Tests - Stack Mode (LIFO)
-
     [Fact]
     public void TryGet_StackMode_EmptyDeque_ReturnsFalse()
     {
@@ -374,6 +412,31 @@ public class DequeTests
         deque.Add(2);
         deque.Add(3);
 
+        var getEnumerator = () => deque.GetEnumerator();
+        var enumerator = getEnumerator.Should().NotThrow().Which;
+        var moveNext = () => enumerator.MoveNext();
+        var current = () => enumerator.Current;
+
+        // Act
+        var results = new List<int>();
+
+        while (moveNext.Should().NotThrow().Which)
+            results.Add(current.Should().NotThrow().Which);
+
+        // Assert
+        results.Should().Equal(1, 2, 3);
+        deque.Count.Should().Be(3); // Enumeration doesn't remove elements
+    }
+
+    [Fact]
+    public void Enumerating_QueueMode_EnumeratesInFIFOOrder()
+    {
+        // Arrange
+        var deque = new Deque<int>(isStack: false);
+        deque.Add(1);
+        deque.Add(2);
+        deque.Add(3);
+
         // Act
         var results = new List<int>();
         foreach (var item in deque)
@@ -387,7 +450,33 @@ public class DequeTests
     }
 
     [Fact]
-    public void GetEnumerator_StackMode_EnumeratesInLIFOOrder()
+    public void GetEnumerator_QueueMode_EnumeratesInLIFOOrder()
+    {
+        // Arrange
+        var deque = new Deque<int>(isStack: true);
+        deque.Add(1);
+        deque.Add(2);
+        deque.Add(3);
+
+        var getEnumerator = () => deque.GetEnumerator();
+        var enumerator = getEnumerator.Should().NotThrow().Which;
+        var moveNext = () => enumerator.MoveNext();
+        var current = () => enumerator.Current;
+
+        // Act
+        var results = new List<int>();
+
+        while (moveNext.Should().NotThrow().Which)
+            results.Add(current.Should().NotThrow().Which);
+
+        // Assert
+        results.Should().Equal(3, 2, 1);
+        deque.Count.Should().Be(3); // Enumeration doesn't remove elements
+    }
+
+
+    [Fact]
+    public void Enumerating_StackMode_EnumeratesInLIFOOrder()
     {
         // Arrange
         var deque = new Deque<int>(isStack: true);

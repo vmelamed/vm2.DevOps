@@ -18,6 +18,9 @@ public partial class GlobPropertiesTests : GlobEnumeratorUnitTests
         var assignInvalidPath = () => ge.FromDirectory = "C:/fldr1";
 
         assignInvalidPath.Should().Throw<ArgumentException>();
+        ge.ReturnSpecialDirectories.Should().BeFalse();
+        ge.IgnoreInaccessible.Should().BeTrue();
+        ge.AttributesToSkip.Should().Be(FileAttributes.Hidden | FileAttributes.System);
     }
 
     [Fact]
@@ -36,6 +39,7 @@ public partial class GlobPropertiesTests : GlobEnumeratorUnitTests
         var assignInvalidPath = () => ge.MatchCasing = ((MatchCasing)3);
 
         assignInvalidPath.Should().Throw<ArgumentException>();
+        ge.MatchCasing.Should().Be(MatchCasing.PlatformDefault);
     }
 
     [Fact]
