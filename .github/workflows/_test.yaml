@@ -162,6 +162,18 @@ jobs:
               ${{ inputs.cached-dependencies && '--cached-dependencies' || '' }} \
               ${{ inputs.cached-artifacts    && '--cached-artifacts'    || '' }}
 
+      # Upload coverage to Codecov for online viewing and PR integration
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: ${{ github.repository }}
+          files: ${{ env.ARTIFACTS_DIR }}/CoverageResults/coverage/coverage.cobertura.xml
+          flags: ${{ inputs.os }}
+          name: coverage-${{ inputs.os }}
+          fail_ci_if_error: false
+          verbose: true
+
       # Upload test results and coverage reports as workflow artifacts
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v5
@@ -184,6 +196,8 @@ jobs:
             echo "**Threshold:** ${{ inputs.min-coverage-pct }}%" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
-          echo "📥 Download the [coverage-${{ inputs.os }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) artifact to view the full HTML report." >> $GITHUB_STEP_SUMMARY
+          echo "🌐 View full report on [Codecov](https://codecov.io/gh/${{ github.repository }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📥 Or download the [coverage-${{ inputs.os }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) artifact to view the HTML report locally." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Open \`coverage/html/index.html\` from the downloaded artifact in your browser." >> $GITHUB_STEP_SUMMARY
