@@ -184,7 +184,7 @@ execute reportgenerator \
     -targetdir:"$coverage_reports_dir" \
     -reporttypes:TextSummary,html \
 	-assemblyfilters:"-*.Tests;-Test.Utilities*" \
-	-classfilters:"-*.I*;-*.*Extensions;-System.Text.RegularExpressions.Generated*;-*Mock*" # ;-*Fake*
+	-classfilters:"-*.I*;-*.*Extensions;-System.Text.RegularExpressions.Generated*;-*Mock*;-*Fake*"
 
 if [[ "$uninstall_reportgenerator" = "true" ]]; then
     echo "Uninstalling the tool 'reportgenerator'..."; sync
@@ -217,9 +217,9 @@ if [[ $dry_run != "true" ]]; then
 
     # Compare the coverage percentage against the threshold
     if (( pct < min_coverage_pct )); then
-        echo "❌ Coverage $pct% is below the threshold of $min_coverage_pct%" | tee >> "$GITHUB_STEP_SUMMARY" >&2
+        echo "❌ Coverage of $pct% is below the threshold of $min_coverage_pct%" | tee >> "$GITHUB_STEP_SUMMARY" >&2
     else
-        echo "✔️ Coverage $pct% meets the threshold of $min_coverage_pct%" >> "$GITHUB_STEP_SUMMARY"
+        echo "✔️ Coverage of $pct% meets the threshold of $min_coverage_pct%" >> "$GITHUB_STEP_SUMMARY"
     fi
     sync
 
