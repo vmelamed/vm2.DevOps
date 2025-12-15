@@ -160,7 +160,7 @@ jobs:
     needs:
       - setup
     strategy:
-      fail-fast: true
+      # fail-fast: true
       matrix:
         os: ${{ fromJSON(inputs.os) }}
         build-project: ${{ fromJSON(inputs.build-projects) }}
@@ -198,7 +198,7 @@ jobs:
       - setup
       - build
     strategy:
-      fail-fast: true
+      # fail-fast: true
       matrix:
         os: ${{ fromJSON(inputs.os) }}
         test-project: ${{ fromJSON(inputs.test-projects) }}
@@ -241,7 +241,7 @@ jobs:
       - setup
       - build
     strategy:
-      fail-fast: true
+      # fail-fast: true
       matrix:
         os: ${{ fromJSON(inputs.os) }}
         benchmark-project: ${{ fromJSON(inputs.benchmark-projects) }}
