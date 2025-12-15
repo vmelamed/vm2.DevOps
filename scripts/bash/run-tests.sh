@@ -184,7 +184,7 @@ execute reportgenerator \
     -targetdir:"$coverage_reports_dir" \
     -reporttypes:TextSummary,html \
 	-assemblyfilters:"-*.Tests;-Test.Utilities*" \
-	-classfilters:"-*.ExcludeFromCodeCoverage*;-*.*Extensions;-*RegexGenerated*;-*JsonSourceGenerator*;-*.I*;-*Mock*" #;-*Fake*"
+	-classfilters:"-*.ExcludeFromCodeCoverage*;-*.*Extensions;-*GeneratedRegex*;-*SourceGenerationContext*;-*.I*;-*Mock*" #;-*Fake*"
 
 if [[ "$uninstall_reportgenerator" = "true" ]]; then
     echo "Uninstalling the tool 'reportgenerator'..."; sync
