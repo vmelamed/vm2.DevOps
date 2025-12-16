@@ -6,7 +6,7 @@ on:
       os:
         description: JSON array of runner OS-s. Cannot be null or empty!
         type: string
-        default: '["ubuntu-latest"]'
+        default: "[\u0022ubuntu-latest\u0022]"
 
       dotnet-version:
         description: Version of .NET SDK to use. Cannot be null or empty!.
@@ -203,6 +203,7 @@ jobs:
         os: ${{ fromJSON(inputs.os) }}
         test-project: ${{ fromJSON(inputs.test-projects) }}
     uses: ./.github/workflows/_test.yaml
+    secrets: inherit
     with:
       os: ${{ matrix.os }}
       dotnet-version: ${{ needs.setup.outputs.dotnet-version }}
@@ -247,16 +248,16 @@ jobs:
         benchmark-project: ${{ fromJSON(inputs.benchmark-projects) }}
     uses: ./.github/workflows/_benchmarks.yaml
     with:
-      os:                   ${{ matrix.os }}
-      dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
-      configuration:        ${{ needs.setup.outputs.configuration }}
+      os: ${{ matrix.os }}
+      dotnet-version: ${{ needs.setup.outputs.dotnet-version }}
+      configuration: ${{ needs.setup.outputs.configuration }}
       preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
-      benchmark-project:    ${{ matrix.benchmark-project }}
-      max-regression-pct:   ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}
-      force-new-baseline:   ${{ fromJSON(needs.setup.outputs.force-new-baseline) }}
-      cached-dependencies:  ${{ fromJSON(inputs.cached-dependencies) }}
-      cached-artifacts:     ${{ fromJSON(inputs.cached-artifacts) }}
-      verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
+      benchmark-project: ${{ matrix.benchmark-project }}
+      max-regression-pct: ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}
+      force-new-baseline: ${{ fromJSON(needs.setup.outputs.force-new-baseline) }}
+      cached-dependencies: ${{ fromJSON(inputs.cached-dependencies) }}
+      cached-artifacts: ${{ fromJSON(inputs.cached-artifacts) }}
+      verbose: ${{ fromJSON(needs.setup.outputs.verbose) }}
     # TO BE REMOVED WHEN ACTUALLY RUNNING THE ABOVE TEST WORKFLOW:
     # Display all workflow inputs for debugging and verification
     # runs-on: ${{ matrix.os }}

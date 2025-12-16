@@ -100,7 +100,7 @@ jobs:
       # Additional explicit cache layer with time-based rotation for NuGet packages
       - name: Cache NuGet packages (weekly rotation)
         if: inputs.cached-dependencies == true
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ steps.cache-timestamp.outputs.week }}-${{ hashFiles('**/packages.lock.json') }}
@@ -118,7 +118,7 @@ jobs:
       # Retrieve compiled binaries from the build job to avoid recompilation
       - name: Restore build artifacts from cache
         if: inputs.cached-artifacts == true
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           key: build-artifacts-${{ runner.os }}-${{ github.sha }}-${{ inputs.configuration }}
           fail-on-cache-miss: true
@@ -164,7 +164,7 @@ jobs:
 
       # Upload test results and coverage reports as workflow artifacts
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         id: upload-coverage
         with:
           name: coverage-${{ inputs.os }}
@@ -172,18 +172,31 @@ jobs:
           if-no-files-found: error
           overwrite: true
 
+      # Upload coverage to Codecov for online viewing and PR integration
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: ${{ github.repository }}
+          files: ${{ env.ARTIFACTS_DIR }}/CoverageResults/coverage/coverage.cobertura.xml
+          flags: ${{ steps.run-tests.outputs.proj-name }}-${{ inputs.os }}
+          fail_ci_if_error: false
+          verbose: true
+
       # Add coverage report link to job summary
       - name: Add coverage report link to summary
         if: always()
         shell: bash
         run: |
-          echo "### 📊 Coverage Report" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Coverage Report - ${{ steps.run-tests.outputs.proj-name }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ -n "${{ steps.run-tests.outputs.coverage-pct }}" ]; then
             echo "**Coverage:** ${{ steps.run-tests.outputs.coverage-pct }}%" >> $GITHUB_STEP_SUMMARY
             echo "**Threshold:** ${{ inputs.min-coverage-pct }}%" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
-          echo "📥 Download the [coverage-${{ inputs.os }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) artifact to view the full HTML report." >> $GITHUB_STEP_SUMMARY
+          echo "🌐 View on [Codecov](https://app.codecov.io/gh/${{ github.repository }}/commit/${{ github.sha }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📥 Or download the [coverage-${{ steps.run-tests.outputs.proj-name }}-${{ inputs.os }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) artifact to view the HTML report locally." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Open \`coverage/html/index.html\` from the downloaded artifact in your browser." >> $GITHUB_STEP_SUMMARY

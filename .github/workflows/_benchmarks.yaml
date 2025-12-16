@@ -105,7 +105,7 @@ jobs:
       # Additional explicit cache layer with time-based rotation for NuGet packages
       - name: Cache NuGet packages (weekly rotation)
         if: inputs.cached-dependencies == true
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ steps.cache-timestamp.outputs.week }}-${{ hashFiles('**/packages.lock.json') }}
@@ -123,7 +123,7 @@ jobs:
       # Retrieve compiled binaries from the build job to avoid recompilation
       - name: Restore build artifacts from cache
         if: inputs.cached-artifacts == true
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: |
             **/bin/${{ inputs.configuration }}
@@ -169,7 +169,7 @@ jobs:
 
       # Upload benchmark results as workflow artifacts for future baseline comparisons
       - name: Upload benchmark summaries artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: benchmark-summaries-${{ inputs.os }}
           path: ${{ env.ARTIFACTS_DIR }}
@@ -179,7 +179,7 @@ jobs:
       # If forcing new baseline, save these results as the new baseline
       - name: Upload benchmark results artifact as a new baseline
         if: ${{ inputs.force-new-baseline || false }}
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: benchmark-baseline-${{ inputs.os }}
           path: ${{ env.ARTIFACTS_DIR }}
