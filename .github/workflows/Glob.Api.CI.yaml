@@ -12,9 +12,11 @@ on:
   workflow_dispatch:
     inputs:
       os:
-        description: Select the OS(es) on which to build and run. Must be a valid JSON array of strings.
+        description: "Runner OS (comma-separated for multiple, e.g. ubuntu-latest,windows-latest)"
         type: string
-        default: "[\u0022ubuntu-latest\u0022]"
+        default: "ubuntu-latest"
+        # This is a known GitHub Actions issue! The workflow dispatch UI doesn't properly handle JSON strings with quotes.
+        # When you have '["ubuntu-latest"]' as a default, the UI removes the inner quotes, making it invalid JSON.
 
       preprocessor-symbols:
         description: Define constants to pass to the compiler
@@ -92,7 +94,7 @@ jobs:
           if [ "${{ github.event_name }}" == "push" ] || \
              [ "${{ github.event_name }}" == "pull_request" ]; then
             # Set the default values for push and pull_request events
-            os='["ubuntu-latest"]'
+            os_input='ubuntu-latest'
             preprocessor_symbols="_"
             cached_dependencies="true"
             cached_artifacts="true"
@@ -102,12 +104,15 @@ jobs:
           # the following outputs are coming from the user by means of workflow_dispatch:
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             # Get the values from the inputs of workflow_dispatch event (the UI)
-            os="${{ inputs.os }}"
+            os_input="${{ inputs.os }}"
             preprocessor_symbols="${{ inputs.preprocessor-symbols }}"
             cached_dependencies="${{ inputs.cached-dependencies }}"
             cached_artifacts="${{ inputs.cached-artifacts }}"
             verbose="${{ inputs.verbose }}"
           fi
+
+          # Convert comma-separated OS values to JSON array
+          os=$(echo "$os_input" | jq -R 'split(",") | map(select(length > 0) | gsub("^\\s+|\\s+$";""))')
 
           # TO BE REMOVED:
           {
