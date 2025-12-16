@@ -127,12 +127,6 @@ declare -r test_base_path
 declare -r test_dll_path
 declare -rx test_exe_path
 
-# shellcheck disable=SC2154
-if [[ ! -f "${test_dll_path}" && "$dry_run" != "true" ]]; then
-    echo "❌ Test executable not found at: ${test_dll_path}" | tee >> "$GITHUB_STEP_SUMMARY" >&2
-    exit 2
-fi
-
 if [[ $cached_dependencies != "true" ]]; then
     trace "Restore dependencies if not cached"
     # we are not getting the dependencies from a cache - do the slow full restore
@@ -148,6 +142,12 @@ if [[ $cached_artifacts != "true" ]]; then
         --configuration "$configuration" \
         --no-restore \
         /p:DefineConstants="$preprocessor_symbols"
+fi
+
+# shellcheck disable=SC2154
+if [[ ! -f "${test_dll_path}" && "$dry_run" != "true" ]]; then
+    echo "❌ Test executable not found at: ${test_dll_path}" | tee >> "$GITHUB_STEP_SUMMARY" >&2
+    exit 2
 fi
 
 trace "Running tests in project ${test_project} with build configuration ${configuration}..."
