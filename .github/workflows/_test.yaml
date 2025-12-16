@@ -169,8 +169,8 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: ${{ github.repository }}
           files: ${{ env.ARTIFACTS_DIR }}/CoverageResults/coverage/coverage.cobertura.xml
-          flags: ${{ inputs.os }}
-          name: coverage-${{ inputs.os }}
+          flags: ${{ steps.run-tests.outputs.proj-name }},${{ inputs.os }}
+          name: coverage-${{ steps.run-tests.outputs.proj-name }}-${{ inputs.os }}
           fail_ci_if_error: false
           verbose: true
 

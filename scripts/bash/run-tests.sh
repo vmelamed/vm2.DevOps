@@ -214,7 +214,8 @@ if [[ $dry_run != "true" ]]; then
         exit 2
     fi
 
-    trace "Coverage: ${pct}% (threshold: ${min_coverage_pct}%)"
+    proj_name="$(basename "${test_project%.*}")"
+    echo "proj-name=$proj_name" >> "$GITHUB_OUTPUT"
 
     # Compare the coverage percentage against the threshold
     if (( pct < min_coverage_pct )); then
@@ -222,15 +223,14 @@ if [[ $dry_run != "true" ]]; then
     else
         echo "✔️ Coverage of $pct% meets the threshold of ${min_coverage_pct}%" >> "$GITHUB_STEP_SUMMARY"
     fi
-    sync
 
     # Output coverage percentage for use in workflow
     if [[ -n "$GITHUB_OUTPUT" ]]; then
         echo "coverage-pct=${pct}" >> "$GITHUB_OUTPUT"
     fi
+    sync
 
     if (( pct < min_coverage_pct )); then
         exit 2
     fi
 fi
-sync
