@@ -176,7 +176,7 @@ jobs:
 
       # Upload test results and coverage reports as workflow artifacts
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         id: upload-coverage
         with:
           name: coverage-${{ inputs.os }}

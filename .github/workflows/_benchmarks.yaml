@@ -169,7 +169,7 @@ jobs:
 
       # Upload benchmark results as workflow artifacts for future baseline comparisons
       - name: Upload benchmark summaries artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: benchmark-summaries-${{ inputs.os }}
           path: ${{ env.ARTIFACTS_DIR }}
@@ -179,7 +179,7 @@ jobs:
       # If forcing new baseline, save these results as the new baseline
       - name: Upload benchmark results artifact as a new baseline
         if: ${{ inputs.force-new-baseline || false }}
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: benchmark-baseline-${{ inputs.os }}
           path: ${{ env.ARTIFACTS_DIR }}
