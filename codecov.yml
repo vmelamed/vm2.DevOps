@@ -19,10 +19,10 @@ coverage:
 
 # Define the flags (test projects)
 flags:
-  Glob.Api.Tests:
+  Glob.Api.Tests-ubuntu-latest:
     carryforward: true # Keep previous coverage if this flag is missing
 
-  Glob.Api.FakeFileSystem.Tests:
+  Glob.Api.FakeFileSystem.Tests-ubuntu-latest:
     carryforward: true
 
 # Configure PR comments
