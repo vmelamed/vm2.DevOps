@@ -11,7 +11,6 @@ coverage:
       default:
         target: auto # Compare against parent commit
         threshold: 0.5% # Allow 0.5% drop without failing
-        # after_n_builds: 2 # Wait for both test projects to upload
 
     patch:
       default:
