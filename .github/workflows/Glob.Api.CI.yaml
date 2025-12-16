@@ -14,7 +14,7 @@ on:
       os:
         description: Select the OS(es) on which to build and run. Must be a valid JSON array of strings.
         type: string
-        default: '["ubuntu-latest"]'
+        default: "[\u0022ubuntu-latest\u0022]"
 
       preprocessor-symbols:
         description: Define constants to pass to the compiler
