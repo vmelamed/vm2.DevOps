@@ -189,15 +189,15 @@ jobs:
         if: always()
         shell: bash
         run: |
-          echo "### 📊 Coverage Report" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Coverage Report - ${{ steps.run-tests.outputs.proj-name }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ -n "${{ steps.run-tests.outputs.coverage-pct }}" ]; then
             echo "**Coverage:** ${{ steps.run-tests.outputs.coverage-pct }}%" >> $GITHUB_STEP_SUMMARY
             echo "**Threshold:** ${{ inputs.min-coverage-pct }}%" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
-          echo "🌐 View full report on [Codecov](https://codecov.io/gh/${{ github.repository }})" >> $GITHUB_STEP_SUMMARY
+          echo "🌐 View on [Codecov](https://app.codecov.io/gh/${{ github.repository }}/flags/${{ steps.run-tests.outputs.proj-name }})" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "📥 Or download the [coverage-${{ inputs.os }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) artifact to view the HTML report locally." >> $GITHUB_STEP_SUMMARY
+          echo "📥 Or download the [coverage-${{ steps.run-tests.outputs.proj-name }}-${{ inputs.os }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) artifact to view the HTML report locally." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Open \`coverage/html/index.html\` from the downloaded artifact in your browser." >> $GITHUB_STEP_SUMMARY
