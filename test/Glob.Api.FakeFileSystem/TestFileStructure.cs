@@ -7,7 +7,6 @@ namespace vm2.DevOps.Glob.Api.FakeFileSystem;
 /// Provides methods to create and verify test file structures based on JSON specifications. Also includes utility method for
 /// expanding environment variables in file paths.
 /// </summary>
-[ExcludeFromCodeCoverage]
 public static class TestFileStructure
 {
     static void ValidateFiles(string fsJsonModelFileName, string testRootPath)

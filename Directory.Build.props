@@ -93,10 +93,8 @@
         <EnableCodeCoverage>true</EnableCodeCoverage>
         <!-- Enable code coverage collection with Microsoft.Testing.Extensions.CodeCoverage ADD MTP Code Coverage settings: -->
         <CodeCoverageExcludeByFile>**/*.g.cs;**/obj/**/*</CodeCoverageExcludeByFile>
-        <CodeCoverageExcludeByAttribute>GeneratedCode;CompilerGenerated;GeneratedRegex;ExcludeFromCodeCoverage</CodeCoverageExcludeByAttribute>
-        <NoWarn>
-      $(NoWarn);CA1031;CA1701;CA1702;CA1707;CA1806;CA2211;CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290
-        </NoWarn>
+        <CodeCoverageExcludeByAttribute>ExcludeFromCodeCoverage;GeneratedRegex;GeneratedCode;CompilerGenerated</CodeCoverageExcludeByAttribute>
+        <NoWarn>$(NoWarn);CA1031;CA1701;CA1702;CA1707;CA1806;CA2211;CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290</NoWarn>
     </PropertyGroup>
 
     <ItemGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]test[/\\]')) and $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '^*.Tests$'))">
@@ -128,9 +126,7 @@
         <IsPackable>false</IsPackable>
         <IncludeSymbols>False</IncludeSymbols>
         <GenerateDocumentationFile>false</GenerateDocumentationFile>
-        <NoWarn>
-      $(NoWarn);CA1031;CA1701;CA1702;CA1707;CA1806;CA2211;CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290
-        </NoWarn>
+        <NoWarn>$(NoWarn);CA1031;CA1701;CA1702;CA1707;CA1806;CA2211;CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290</NoWarn>
     </PropertyGroup>
 
     <ItemGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]test[/\\]')) and !$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '^*.Tests$'))">
@@ -157,9 +153,7 @@
         <IsPackable>false</IsPackable>
         <IncludeSymbols>False</IncludeSymbols>
         <GenerateDocumentationFile>false</GenerateDocumentationFile>
-        <NoWarn>
-      $(NoWarn);CA1031;CA1701;CA1702;CA1707;CA1806;CA2211;CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290
-        </NoWarn>
+        <NoWarn>$(NoWarn);CA1031;CA1701;CA1702;CA1707;CA1806;CA2211;CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290</NoWarn>
     </PropertyGroup>
 
     <!-- common packages for benchmark projects in the ./benchmarks folder: -->

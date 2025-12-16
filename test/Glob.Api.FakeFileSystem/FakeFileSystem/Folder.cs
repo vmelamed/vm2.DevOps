@@ -11,7 +11,6 @@ namespace vm2.DevOps.Glob.Api.FakeFileSystem;
 /// We use the term "folder" instead of "directory" in classes and method names to avoid confusion with the .NET class
 /// <see cref="Directory"/>.
 /// </remarks>
-[ExcludeFromCodeCoverage]
 public class Folder(string name = "") : IEquatable<Folder>, IComparable<Folder>
 {
     public static readonly Folder Default = new();
@@ -187,4 +186,4 @@ public class Folder(string name = "") : IEquatable<Folder>, IComparable<Folder>
     IndentSize = 4,
     IndentCharacter = ' ',
     NewLine = "\r\n")]
-internal partial class FolderSourceGenerationContext : JsonSerializerContext { }
+public partial class FolderSourceGenerationContext : JsonSerializerContext { }
