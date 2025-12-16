@@ -145,8 +145,8 @@ if [[ $cached_artifacts != "true" ]]; then
 fi
 
 # shellcheck disable=SC2154
-if [[ ! -f "${test_dll_path}" && "$dry_run" != "true" ]]; then
-    echo "❌ Test executable not found at: ${test_dll_path}" | tee >> "$GITHUB_STEP_SUMMARY" >&2
+if [[ (! -f "${test_exe_path}" || ! -f "${test_dll_path}") && "$dry_run" != "true" ]]; then
+    echo "❌ Test executables ${test_exe_path} or ${test_dll_path} were not found." | tee >> "$GITHUB_STEP_SUMMARY" >&2
     exit 2
 fi
 

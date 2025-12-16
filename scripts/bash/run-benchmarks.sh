@@ -90,16 +90,32 @@ if [[ -d "$artifacts_dir" && -n "$(ls -A "$artifacts_dir")" ]]; then
     esac
 fi
 
+declare bm_base_path
+declare bm_dll_path
+declare bm_exe_path
+
+bm_base_path="$(dirname "$bm_project")/bin/${configuration}/net10.0/$(basename "${bm_project%.*}")"
+bm_dll_path="${bm_base_path}.dll"
+os_name="$(uname -s)"
+if [[ "$os_name" == "Windows_NT" || "$os_name" == *MINGW* || "$os_name" == *MSYS* ]]; then
+    bm_exe_path="${bm_base_path}.exe"
+else
+    bm_exe_path="${bm_base_path}"
+fi
+declare -r bm_base_path
+declare -r bm_dll_path
+declare -rx bm_exe_path
+
 trace "Creating directory(s)..."
 execute mkdir -p "$summaries_dir"
 
-trace "Restore dependencies if specified"
+trace "Restore dependencies if not cached"
 if [[ $cached_dependencies != "true" ]]; then
     # we are not getting the dependencies from a cache - do the slow full restore
     execute dotnet restore
 fi
 
-trace "Build is specified"
+trace "Build if not cached"
 if [[ $cached_artifacts != "true" ]]; then
     # we are not getting the build artifacts from a cache - do the slow full build
     execute dotnet build  \
@@ -107,6 +123,12 @@ if [[ $cached_artifacts != "true" ]]; then
         --configuration "$configuration" \
         --no-restore \
         /p:DefineConstants="$preprocessor_symbols"
+fi
+
+# shellcheck disable=SC2154
+if [[ (! -f "${bm_exe_path}" || ! -f "${bm_dll_path}") && "$dry_run" != "true" ]]; then
+    echo "❌ Benchmark executables '${bm_exe_path}' or '${bm_dll_path}' were not found." | tee >> "$GITHUB_STEP_SUMMARY" >&2
+    exit 2
 fi
 
 trace "Running benchmark tests in project '$bm_project' with build configuration '$configuration'..."
