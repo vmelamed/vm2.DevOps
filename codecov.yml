@@ -1,5 +1,6 @@
 # Codecov configuration
 # Documentation: https://docs.codecov.com/docs/codecov-yaml
+# Validation: `curl -X POST --data-binary @codecov.yml https://codecov.io/validate`
 
 coverage:
   precision: 2 # Report coverage to 2 decimal places
@@ -35,8 +36,8 @@ comment:
 
 # Ignore paths from coverage calculations
 ignore:
-  - "test/**" # Exclude test projects
+  # - "test/**" # Exclude test projects
   - "**/obj/**" # Exclude build artifacts
-  - "**/bin/**"
-  - "**/*.Tests/**"
+  # - "**/bin/**"
+  # - "**/*.Tests/**"
   - "**/Test.Utilities/**"
