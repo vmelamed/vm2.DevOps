@@ -41,3 +41,11 @@ ignore:
   # - "**/bin/**"
   # - "**/*.Tests/**"
   - "**/Test.Utilities/**"
+  - "**/Migrations/**"
+  - "**/*.g.cs" # Exclude generated code files
+  - "**/*.Designer.cs"
+  - "**/*.g.i.cs"
+  - "**/*AssemblyInfo.cs"
+  - "**/Properties/**"
+  - "**/*.config"
+  - "**/*.xml"

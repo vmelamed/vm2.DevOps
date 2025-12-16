@@ -162,6 +162,16 @@ jobs:
               ${{ inputs.cached-dependencies && '--cached-dependencies' || '' }} \
               ${{ inputs.cached-artifacts    && '--cached-artifacts'    || '' }}
 
+      # Upload test results and coverage reports as workflow artifacts
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v6
+        id: upload-coverage
+        with:
+          name: coverage-${{ inputs.os }}
+          path: ${{ env.ARTIFACTS_DIR }}
+          if-no-files-found: error
+          overwrite: true
+
       # Upload coverage to Codecov for online viewing and PR integration
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -172,16 +182,6 @@ jobs:
           flags: ${{ steps.run-tests.outputs.proj-name }}-${{ inputs.os }}
           fail_ci_if_error: false
           verbose: true
-
-      # Upload test results and coverage reports as workflow artifacts
-      - name: Upload coverage artifact
-        uses: actions/upload-artifact@v6
-        id: upload-coverage
-        with:
-          name: coverage-${{ inputs.os }}
-          path: ${{ env.ARTIFACTS_DIR }}
-          if-no-files-found: error
-          overwrite: true
 
       # Add coverage report link to job summary
       - name: Add coverage report link to summary
