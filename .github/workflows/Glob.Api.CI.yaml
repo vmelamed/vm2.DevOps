@@ -15,8 +15,8 @@ on:
         description: "Runner OS (comma-separated for multiple, e.g. ubuntu-latest,windows-latest)"
         type: string
         default: "ubuntu-latest"
-        # This is a known GitHub Actions issue! The workflow dispatch UI doesn't properly handle JSON strings with quotes.
-        # When you have '["ubuntu-latest"]' as a default, the UI removes the inner quotes, making it invalid JSON.
+        # Known GitHub Actions issue: the workflow dispatch UI doesn't properly handle JSON strings with quotes.
+        # E.g. for the input '["ubuntu-latest"]', the UI removes the inner quotes and it becomes the invalid JSON array: '[ubuntu-latest]'.
 
       preprocessor-symbols:
         description: Define constants to pass to the compiler
@@ -94,7 +94,7 @@ jobs:
           if [ "${{ github.event_name }}" == "push" ] || \
              [ "${{ github.event_name }}" == "pull_request" ]; then
             # Set the default values for push and pull_request events
-            os_input='ubuntu-latest'
+            os='["ubuntu-latest"]'
             preprocessor_symbols="_"
             cached_dependencies="true"
             cached_artifacts="true"
@@ -104,15 +104,13 @@ jobs:
           # the following outputs are coming from the user by means of workflow_dispatch:
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             # Get the values from the inputs of workflow_dispatch event (the UI)
-            os_input="${{ inputs.os }}"
+            # Convert comma-separated OS values to JSON array
+            os=$(echo "${{ inputs.os }}" | jq -R 'split(",") | map(select(length > 0) | gsub("^\\s+|\\s+$";""))')
             preprocessor_symbols="${{ inputs.preprocessor-symbols }}"
             cached_dependencies="${{ inputs.cached-dependencies }}"
             cached_artifacts="${{ inputs.cached-artifacts }}"
             verbose="${{ inputs.verbose }}"
           fi
-
-          # Convert comma-separated OS values to JSON array
-          os=$(echo "$os_input" | jq -R 'split(",") | map(select(length > 0) | gsub("^\\s+|\\s+$";""))')
 
           # TO BE REMOVED:
           {
@@ -145,7 +143,7 @@ jobs:
             echo "cached-dependencies=${cached_dependencies}"
             echo "cached-artifacts=${cached_artifacts}"
             echo "verbose=${verbose}"
-          }  >> "${GITHUB_OUTPUT}"
+          }  >> $GITHUB_OUTPUT
 
   call-ci:
     uses: ./.github/workflows/_ci.yaml
