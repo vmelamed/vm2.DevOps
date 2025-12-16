@@ -6,7 +6,7 @@ on:
       os:
         description: JSON array of runners (default ubuntu-latest)
         type: string
-        default: "ubuntu-latest"
+        default: ubuntu-latest
 
       dotnet-version:
         description: Version of .NET SDK to use (default 10.0.x)

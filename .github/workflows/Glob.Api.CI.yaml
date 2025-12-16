@@ -45,7 +45,7 @@ env:
 jobs:
   get-params:
     name: Prepare the default and passed in parameters
-    runs-on: "ubuntu-latest" # here it doesn't matter - we're preparing the inputs for the next workload'
+    runs-on: ubuntu-latest # here it doesn't matter - we're preparing the inputs for the next workload'
     if: >
       ${{
       github.event_name == 'pull_request' ||
