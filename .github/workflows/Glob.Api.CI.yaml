@@ -105,7 +105,7 @@ jobs:
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             # Get the values from the inputs of workflow_dispatch event (the UI)
             # Convert comma-separated OS values to JSON array
-            os=$(echo "${{ inputs.os }}" | jq -R 'split(",") | map(select(length > 0) | gsub("^\\s+|\\s+$";""))')
+            os=$(echo "${{ inputs.os }}" | jq -Rc 'split(",") | map(select(length > 0) | gsub("^\\s+|\\s+$";""))')
             preprocessor_symbols="${{ inputs.preprocessor-symbols }}"
             cached_dependencies="${{ inputs.cached-dependencies }}"
             cached_artifacts="${{ inputs.cached-artifacts }}"
