@@ -154,6 +154,9 @@ if [[ (! -f "${test_exec_path}" || ! -f "${test_dll_path}") && "$dry_run" != "tr
     exit 2
 fi
 
+env >> "$GITHUB_STEP_SUMMARY"
+pwd >> "$GITHUB_STEP_SUMMARY"
+
 trace "Running tests in project ${test_project} with build configuration ${configuration}..."
 execute dotnet run \
     --project "$test_project" \
