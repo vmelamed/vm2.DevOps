@@ -3,7 +3,6 @@
 
 namespace vm2.DevOps.Glob.Api.FakeFileSystem.Tests;
 
-[ExcludeFromCodeCoverage]
 public partial class FakeFileSystemTests
 {
     [Theory]
