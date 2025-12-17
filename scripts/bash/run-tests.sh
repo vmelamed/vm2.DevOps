@@ -19,6 +19,9 @@ declare -x artifacts_dir=${ARTIFACTS_DIR:-}
 declare -x cached_dependencies=${CACHED_DEPENDENCIES:-false}
 declare -x cached_artifacts=${CACHED_ARTIFACTS:-false}
 
+declare -x github_output=${GITHUB_OUTPUT:-/dev/stdout}
+declare -x github_step_summary=${GITHUB_STEP_SUMMARY:-/dev/stdout}
+
 source "$script_dir/run-tests.usage.sh"
 source "$script_dir/run-tests.utils.sh"
 
@@ -40,7 +43,7 @@ declare -r cached_dependencies
 declare -r cached_artifacts
 
 solution_dir="$(realpath -e "$(dirname "$test_project")/../..")" # assuming <solution-root>/test/<test-project>/test-project.csproj
-artifacts_dir=$(realpath -m "${artifacts_dir:-"$solution_dir/TestArtifacts"}")  # ensure it's an absolute path
+artifacts_dir=$(realpath -m "${artifacts_dir:-"$solution_dir/TestArtifacts/$base_name"}")  # ensure it's an absolute path per test project
 
 declare -r solution_dir
 declare -r artifacts_dir
@@ -72,11 +75,11 @@ if [[ -d "$artifacts_dir" && -n "$(ls -A "$artifacts_dir")" ]]; then
     esac
 fi
 
+test_results_dir="$artifacts_dir/TestResults"                                   # the directory for the log files from the test run
+
 coverage_results_dir="$artifacts_dir/CoverageResults"                           # the directory for the coverage results. We do
 declare -r coverage_results_dir                                                 # it here again in case the user changed the test
                                                                                 # results directory.
-
-test_results_dir="$artifacts_dir/Results"                                       # the directory for the log files from the test run
 
 coverage_source_dir="$coverage_results_dir/coverage"                            # the directory for the raw coverage files
 coverage_source_fileName="coverage.cobertura.xml"                               # the name of the raw coverage file
@@ -85,10 +88,10 @@ coverage_source_path="$coverage_source_dir/$coverage_source_fileName"           
 coverage_reports_dir="$coverage_results_dir/coverage_reports"                   # the directory for the coverage reports
 coverage_reports_path="$coverage_reports_dir/Summary.txt"                       # the path to the coverage summary file
 
-
-coverage_summary_dir="$artifacts_dir/coverage/text"                             # the directory for the text coverage summary artifacts
-coverage_summary_path="$coverage_summary_dir/$base_name-TextSummary.txt"        # the path to the coverage summary artifact file
+coverage_summary_dir="$artifacts_dir/coverage"                                  # the directory for the coverage html artifacts
 coverage_summary_html_dir="$artifacts_dir/coverage/html"                        # the directory for the coverage html artifacts
+coverage_summary_text_dir="$artifacts_dir/coverage/text"                        # the directory for the text coverage summary artifacts
+coverage_summary_text_path="$coverage_summary_text_dir/$base_name-Summary.txt"  # the path to the coverage summary artifact file
 
 declare -r test_results_dir
 
@@ -100,8 +103,9 @@ declare -r coverage_reports_dir
 declare -r coverage_reports_path
 
 declare -r coverage_summary_dir
-declare -r coverage_summary_path
+declare -r coverage_summary_text_dir
 declare -r coverage_summary_html_dir
+declare -r coverage_summary_text_path
 
 dump_all_variables
 
@@ -109,7 +113,7 @@ trace "Creating directories..."
 execute mkdir -p "$test_results_dir"
 execute mkdir -p "$coverage_source_dir"
 execute mkdir -p "$coverage_reports_dir"
-execute mkdir -p "$coverage_summary_dir"
+execute mkdir -p "$coverage_summary_text_dir"
 
 declare test_base_path
 declare test_dll_path
@@ -138,7 +142,7 @@ if [[ $cached_artifacts != "true" ]]; then
     trace "Build the artifacts if not cached"
     # we are not getting the build artifacts from a cache - do a full rebuild
     execute dotnet build  \
-        --project "$test_project" \
+        "$test_project" \
         --configuration "$configuration" \
         --no-restore \
         /p:DefineConstants="$preprocessor_symbols"
@@ -184,8 +188,8 @@ execute reportgenerator \
     -targetdir:"$coverage_reports_dir" \
     -reporttypes:TextSummary,html \
 	-assemblyfilters:"-Test.Utilities*" \
-	-classfilters:"-*.ExcludeFromCodeCoverage*;-*.GeneratedCode*;-*GeneratedRegex*;-*SourceGenerationContext*"
-    # -assemblyfilters:"-Test.Utilities*" \   # -*.Tests; ???
+	-classfilters:"-*.ExcludeFromCodeCoverage*;-*.GeneratedCode*;-*GeneratedRegex*;-*SourceGenerationContext*" \
+    -filefilters:"-*.g.cs;-*Migrations/*"
 
 if [[ "$uninstall_reportgenerator" = "true" ]]; then
     echo "Uninstalling the tool 'reportgenerator'..."; sync
@@ -194,41 +198,48 @@ fi
 
 if [[ $dry_run != "true" ]]; then
     if [[ ! -s "$coverage_reports_path" ]]; then
-        echo "❌ Coverage summary not found." | tee >> """$GITHUB_STEP_SUMMARY""" >&2
+        echo "❌ Coverage summary not found." | tee >> "$github_step_summary" >&2
         exit 2
     fi
 fi
 
 # Copy the coverage report summary to the artifact directory
-trace "Copying coverage summary to '$coverage_summary_path'..."
-execute mv """$coverage_reports_path""" """$coverage_summary_path"""
+trace "Copying coverage summary to '$coverage_summary_text_path'..."
+execute mv """$coverage_reports_path""" """$coverage_summary_text_path"""
 execute mv """$coverage_reports_dir"""  """$coverage_summary_html_dir"""
 
 # Extract the coverage percentage from the summary file
-trace "Extracting coverage percentage from '$coverage_summary_path'..."
+trace "Extracting coverage percentage from '$coverage_summary_text_path'..."
 if [[ $dry_run != "true" ]]; then
-    pct=$(sed -nE 's/Method coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_path" | head -n1)
+    pct=$(sed -nE 's/Method coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_text_path" | head -n1)
     if [[ -z "$pct" ]]; then
-        echo "❌ Could not parse coverage percent from \"$coverage_summary_path\"" | tee >> "$GITHUB_STEP_SUMMARY" >&2
+        echo "❌ Could not parse coverage percent from \"$coverage_summary_text_path\"" | tee >> "$github_step_summary" >&2
         sync
         exit 2
     fi
 
-    proj_name="$(basename "${test_project%.*}")"
-    echo "proj-name=$proj_name" >> "$GITHUB_OUTPUT"
-
     # Compare the coverage percentage against the threshold
     if (( pct < min_coverage_pct )); then
-        echo "❌ Coverage of $pct% is below the threshold of ${min_coverage_pct}%" | tee >> "$GITHUB_STEP_SUMMARY" >&2
+        echo "❌ Coverage of $pct% is below the threshold of ${min_coverage_pct}%" | tee >> "$github_step_summary" >&2
     else
-        echo "✔️ Coverage of $pct% meets the threshold of ${min_coverage_pct}%" >> "$GITHUB_STEP_SUMMARY"
+        echo "✔️ Coverage of $pct% meets the threshold of ${min_coverage_pct}%" >> "$github_step_summary"
     fi
 
     # Output coverage percentage for use in workflow
-    if [[ -n "$GITHUB_OUTPUT" ]]; then
-        echo "coverage-pct=${pct}" >> "$GITHUB_OUTPUT"
-    fi
+    echo "coverage-pct=${pct}" >> "$github_output"
     sync
+
+    proj_name="$(basename "${test_project%.*}")"
+    {
+        echo "proj-name=$proj_name"
+        echo "artifacts-dir=$artifacts_dir"
+        echo "coverage_results_dir=$coverage_results_dir"
+        echo "coverage_source_path=$coverage_source_path"
+        echo "coverage_summary_dir=$coverage_summary_dir"
+        echo "coverage_summary_text_dir=$coverage_summary_text_dir"
+        echo "coverage_summary_html_dir=$coverage_summary_html_dir"
+        echo "coverage_summary_text_path=$coverage_summary_text_path"
+    } >> "$github_output"
 
     if (( pct < min_coverage_pct )); then
         exit 2
