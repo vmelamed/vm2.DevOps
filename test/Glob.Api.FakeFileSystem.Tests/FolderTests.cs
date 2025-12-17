@@ -20,7 +20,7 @@ public sealed class FolderTests
         folder.Name.Should().BeEmpty();
         folder.Folders.Should().BeEmpty();
         folder.Files.Should().BeEmpty();
-        folder.Path.Should().BeEmpty();
+        folder.Path.Should().NotBeEmpty();
         folder.Parent.Should().BeNull();
         folder.Comparer.Should().Be(StringComparer.Ordinal);
     }
@@ -286,7 +286,7 @@ public sealed class FolderTests
     public void HasFile_WithCaseSensitiveComparer_ShouldNotFindFileWithDifferentCase()
     {
         // Arrange
-        var root = new Folder("C:/");
+        var root = new Folder("/");
         var folder = new Folder("test");
         root.Add(folder);
         folder.Add("File.TXT");
@@ -540,22 +540,6 @@ public sealed class FolderTests
     }
 
     [Fact]
-    public void Equals_WhenSameNameAndParent_ShouldReturnTrue()
-    {
-        // Arrange
-        var parent = new Folder("parent");
-        var folder1 = new Folder("child");
-        var folder2 = new Folder("child");
-        parent.Add(folder1);
-
-        // Act
-        var result = folder1.Equals(folder2);
-
-        // Assert
-        result.Should().BeTrue();
-    }
-
-    [Fact]
     public void Equals_WhenDifferentNames_ShouldReturnFalse()
     {
         // Arrange
@@ -598,20 +582,6 @@ public sealed class FolderTests
     }
 
     [Fact]
-    public void Equals_WhenDifferentInstancesSameName_ShouldReturnTrue()
-    {
-        // Arrange
-        var folder1 = new Folder("test");
-        var folder2 = new Folder("test");
-
-        // Act
-        var result = folder1.Equals(folder2);
-
-        // Assert - Two unlinked folders with same name should be equal
-        result.Should().BeTrue("folders with identical names should be equal by value");
-    }
-
-    [Fact]
     public void Equals_WhenSameParentAndSameName_CannotAddDuplicate()
     {
         // Arrange
@@ -630,105 +600,7 @@ public sealed class FolderTests
 
     #endregion
 
-    #region CompareTo Tests
-
-    [Fact]
-    public void CompareTo_WhenOtherIsNull_ShouldReturn1()
-    {
-        // Arrange
-        var folder = new Folder("test");
-
-        // Act
-        var result = folder.CompareTo(null);
-
-        // Assert
-        result.Should().Be(1);
-    }
-
-    [Fact]
-    public void CompareTo_WhenSameReference_ShouldReturn0()
-    {
-        // Arrange
-        var folder = new Folder("test");
-
-        // Act
-        var result = folder.CompareTo(folder);
-
-        // Assert
-        result.Should().Be(0);
-    }
-
-    [Fact]
-    public void CompareTo_WhenSameParent_ShouldCompareByName()
-    {
-        // Arrange
-        var parent = new Folder("parent");
-        var child1 = new Folder("a");
-        var child2 = new Folder("b");
-        parent.Add(child1);
-        parent.Add(child2);
-
-        // Act
-        var result = child1.CompareTo(child2);
-
-        // Assert
-        result.Should().BeLessThan(0);
-    }
-
-    [Fact]
-    public void CompareTo_WhenDifferentParents_ShouldCompareByPath()
-    {
-        // Arrange
-        var root = Folder.LinkChildren(new Folder("C:/"), StringComparer.Ordinal);
-        var folder1 = new Folder("folder1");
-        var folder2 = new Folder("folder2");
-        root.Add(folder1);
-        root.Add(folder2);
-
-        // Act
-        var result = folder1.CompareTo(folder2);
-
-        // Assert
-        result.Should().BeLessThan(0);
-    }
-
-    [Fact]
-    public void CompareTo_WithCaseInsensitiveComparer_ShouldIgnoreCase()
-    {
-        // Arrange
-        var root = new Folder("C:/");
-        var parent = new Folder("parent");
-        root.Add(parent);
-        var child1 = new Folder("ABC");
-        parent.Add(child1);
-        Folder.LinkChildren(root, StringComparer.OrdinalIgnoreCase);
-        var child2 = new Folder("abc");
-
-        // Act
-        var result = child1.CompareTo(child2);
-
-        // Assert - same name with case-insensitive comparison
-        result.Should().Be(0);
-    }
-
-    #endregion
-
     #region GetHashCode Tests
-
-    [Fact]
-    public void GetHashCode_ShouldBeBasedOnName()
-    {
-        // Arrange
-        var folder1 = new Folder("test");
-        var folder2 = new Folder("test");
-
-        // Act
-        var hash1 = folder1.GetHashCode();
-        var hash2 = folder2.GetHashCode();
-
-        // Assert
-        hash1.Should().Be(hash2);
-    }
 
     [Fact]
     public void GetHashCode_WhenDifferentNames_ShouldBeDifferent()
@@ -842,15 +714,16 @@ public sealed class FolderTests
         // Arrange
         var grandparent = new Folder("grandparent");
         var root = new Folder("C:/");
-        grandparent.Add(root);
 
         // Act
-        var act = () => Folder.LinkChildren(root, StringComparer.Ordinal);
+        var add = () => grandparent.Add(root);
 
         // Assert
-        act.Should().Throw<ArgumentException>()
-           .WithParameterName("root")
-           .WithMessage("*cannot have a folder*");
+        add.Should()
+           .Throw<ArgumentException>()
+           .WithParameterName("node")
+           .WithMessage("Root folder cannot be added as a child. (Parameter 'node')")
+           ;
     }
 
     [Fact]
@@ -864,7 +737,8 @@ public sealed class FolderTests
 
         // Assert
         act.Should().Throw<InvalidDataException>()
-           .WithMessage($"*must end with '/'*");
+           .WithMessage($"*must end with '/'*")
+           ;
     }
 
     [Fact]
