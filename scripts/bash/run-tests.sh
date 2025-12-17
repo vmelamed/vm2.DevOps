@@ -157,7 +157,6 @@ fi
 # To be removed:
 env | sort >> "$GITHUB_STEP_SUMMARY"
 pwd >> "$GITHUB_STEP_SUMMARY"
-sync
 
 trace "Running tests in project ${test_project} with build configuration ${configuration}..."
 execute dotnet run \

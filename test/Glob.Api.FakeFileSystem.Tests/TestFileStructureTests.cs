@@ -333,9 +333,15 @@ public sealed class TestFileStructureTests : IDisposable
     }
 
     [Theory]
+#if WINDOWS
+    [InlineData("C:\\Users\\%USERNAME%\\Documents", "USERNAME")]
+    [InlineData("%USERPROFILE%\\Documents", "USERPROFILE")]
+    [InlineData("%TEMP%\\test.txt", "TEMP")]
+#elif UNIX
     [InlineData("$HOME/documents", "HOME")]
     [InlineData("${USER}/data", "USER")]
     [InlineData("~/documents", "HOME")]
+#endif
     public void ExpandEnvironmentVariables_OnUnix_ShouldExpandUnixVariables_Async(string path, string varName)
     {
         // Arrange
