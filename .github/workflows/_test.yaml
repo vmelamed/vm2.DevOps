@@ -195,9 +195,9 @@ jobs:
             min_coverage_pct="${{ inputs.min-coverage-pct }}"
             if [ -n "$pct" ]; then
               if (( pct < min_coverage_pct )); then
-                  echo "❌ Coverage of $pct% is below the threshold of ${min_coverage_pct}%" | tee >> "$github_step_summary" >&2
+                  echo "❌ Coverage of $pct% is below the threshold of ${min_coverage_pct}%"
               else
-                  echo "✔️ Coverage of $pct% meets the threshold of ${min_coverage_pct}%" >> "$github_step_summary"
+                  echo "✔️ Coverage of $pct% meets the threshold of ${min_coverage_pct}%"
               fi
               echo ""
             fi
