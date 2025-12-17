@@ -167,8 +167,8 @@ jobs:
         uses: actions/upload-artifact@v6
         id: upload-coverage
         with:
-          name: coverage-${{ inputs.os }}
-          path: ${{ env.ARTIFACTS_DIR }}
+          name: coverage-${{ steps.run-tests.outputs.proj-name }}-${{ inputs.os }}
+          path: ${{ steps.run-tests.outputs.artifacts-dir }}
           if-no-files-found: error
           overwrite: true
 
@@ -176,10 +176,10 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          slug: ${{ github.repository }}
-          files: ${{ env.ARTIFACTS_DIR }}/CoverageResults/coverage/coverage.cobertura.xml
           flags: ${{ steps.run-tests.outputs.proj-name }}-${{ inputs.os }}
+          slug: ${{ github.repository }}
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ${{ steps.run-tests.outputs.coverage_source_path }}
           fail_ci_if_error: false
           verbose: true
 
@@ -188,15 +188,22 @@ jobs:
         if: always()
         shell: bash
         run: |
-          echo "### 📊 Coverage Report - ${{ steps.run-tests.outputs.proj-name }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [ -n "${{ steps.run-tests.outputs.coverage-pct }}" ]; then
-            echo "**Coverage:** ${{ steps.run-tests.outputs.coverage-pct }}%" >> $GITHUB_STEP_SUMMARY
-            echo "**Threshold:** ${{ inputs.min-coverage-pct }}%" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "🌐 View on [Codecov](https://app.codecov.io/gh/${{ github.repository }}/commit/${{ github.sha }})" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "📥 Or download the [coverage-${{ steps.run-tests.outputs.proj-name }}-${{ inputs.os }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) artifact to view the HTML report locally." >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Open \`coverage/html/index.html\` from the downloaded artifact in your browser." >> $GITHUB_STEP_SUMMARY
+          {
+            echo "### 📊 Coverage Report - ${{ steps.run-tests.outputs.proj-name }}"
+            echo ""
+            pct="${{ steps.run-tests.outputs.coverage-pct }}"
+            min_coverage_pct="${{ inputs.min-coverage-pct }}"
+            if [ -n "$pct" ]; then
+              if (( pct < min_coverage_pct )); then
+                  echo "❌ Coverage of $pct% is below the threshold of ${min_coverage_pct}%" | tee >> "$github_step_summary" >&2
+              else
+                  echo "✔️ Coverage of $pct% meets the threshold of ${min_coverage_pct}%" >> "$github_step_summary"
+              fi
+              echo ""
+            fi
+            echo "🌐 View on [Codecov](https://app.codecov.io/gh/${{ github.repository }}/commit/${{ github.sha }})"
+            echo ""
+            echo "📥 Or download the [coverage-${{ steps.run-tests.outputs.proj-name }}-${{ inputs.os }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) artifact to view the HTML report locally."
+            echo ""
+            echo "Open \`coverage/html/index.html\` from the downloaded artifact in your browser."
+          } >> $GITHUB_STEP_SUMMARY
