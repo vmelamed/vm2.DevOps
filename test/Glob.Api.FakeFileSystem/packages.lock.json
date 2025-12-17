@@ -367,6 +367,26 @@
           "Microsoft.Bcl.AsyncInterfaces": "6.0.0"
         }
       },
+      "test.utilities": {
+        "type": "Project",
+        "dependencies": {
+          "FluentAssertions": "[8.8.0, )",
+          "Microsoft.Extensions.Configuration.Binder": "[10.0.1, )",
+          "Microsoft.Extensions.Configuration.CommandLine": "[10.0.1, )",
+          "Microsoft.Extensions.Configuration.EnvironmentVariables": "[10.0.1, )",
+          "Microsoft.Extensions.Configuration.Json": "[10.0.1, )",
+          "Microsoft.Extensions.DependencyInjection": "[10.0.1, )",
+          "Microsoft.Extensions.Hosting": "[10.0.1, )",
+          "Microsoft.Extensions.Logging": "[10.0.1, )",
+          "Microsoft.Extensions.Logging.Abstractions": "[10.0.1, )",
+          "Microsoft.Extensions.Logging.Configuration": "[10.0.1, )",
+          "Microsoft.Extensions.Logging.Console": "[10.0.1, )",
+          "Microsoft.Extensions.Options.ConfigurationExtensions": "[10.0.1, )",
+          "System.Configuration.ConfigurationManager": "[10.0.1, )",
+          "vm2.Glob.Api": "[1.0.0, )",
+          "xunit.v3.extensibility.core": "[3.2.1, )"
+        }
+      },
       "vm2.Glob.Api": {
         "type": "Project",
         "dependencies": {

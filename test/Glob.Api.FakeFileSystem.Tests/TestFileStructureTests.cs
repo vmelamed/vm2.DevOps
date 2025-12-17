@@ -311,28 +311,6 @@ public sealed class TestFileStructureTests : IDisposable
     }
 
     [Theory]
-    [InlineData("C:\\Users\\%USERNAME%\\Documents", "USERNAME")]
-    [InlineData("%USERPROFILE%\\Documents", "USERPROFILE")]
-    [InlineData("%TEMP%\\test.txt", "TEMP")]
-    public void ExpandEnvironmentVariables_OnWindows_ShouldExpandWindowsVariables_Async(string path, string varName)
-    {
-        // Arrange
-        if (!OperatingSystem.IsWindows())
-            return; // Skip on non-Windows
-
-        var expectedValue = Environment.GetEnvironmentVariable(varName);
-        if (string.IsNullOrEmpty(expectedValue))
-            return; // Skip if variable not set
-
-        // Act
-        var result = TestFileStructure.ExpandEnvironmentVariables(path);
-
-        // Assert
-        result.Should().Contain(expectedValue);
-        result.Should().NotContain($"%{varName}%");
-    }
-
-    [Theory]
 #if WINDOWS
     [InlineData("C:\\Users\\%USERNAME%\\Documents", "USERNAME")]
     [InlineData("%USERPROFILE%\\Documents", "USERPROFILE")]
@@ -342,7 +320,7 @@ public sealed class TestFileStructureTests : IDisposable
     [InlineData("${USER}/data", "USER")]
     [InlineData("~/documents", "HOME")]
 #endif
-    public void ExpandEnvironmentVariables_OnUnix_ShouldExpandUnixVariables_Async(string path, string varName)
+    public void ExpandEnvironmentVariables_ShouldExpandVariables_Async(string path, string varName)
     {
 #if WINDOWS
         Console.WriteLine("WINDOWS is defined!");
@@ -358,23 +336,6 @@ public sealed class TestFileStructureTests : IDisposable
 
         // Assert
         result.Should().Contain(expectedValue);
-    }
-
-    [Fact]
-    public void ExpandEnvironmentVariables_OnUnix_ShouldConvertTildeToHomeVariable_Async()
-    {
-        // Arrange
-        if (OperatingSystem.IsWindows())
-            return; // Skip on Windows
-
-        var path = "~/documents/file.txt";
-
-        // Act
-        var result = TestFileStructure.ExpandEnvironmentVariables(path);
-
-        // Assert
-        result.Should().NotContain("~");
-        result.Should().Contain("HOME");
     }
 
     [Fact]
