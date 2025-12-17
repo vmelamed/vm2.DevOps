@@ -113,30 +113,30 @@ execute mkdir -p "$coverage_summary_dir"
 
 declare test_base_path
 declare test_dll_path
-declare test_exe_path
+declare test_exec_path
 
 test_base_path="$(dirname "$test_project")/bin/${configuration}/net10.0/$(basename "${test_project%.*}")"
 test_dll_path="${test_base_path}.dll"
 os_name="$(uname -s)"
 if [[ "$os_name" == "Windows_NT" || "$os_name" == *MINGW* || "$os_name" == *MSYS* ]]; then
-    test_exe_path="${test_base_path}.exe"
+    test_exec_path="${test_base_path}.exe"
 else
-    test_exe_path="${test_base_path}"
+    test_exec_path="${test_base_path}"
 fi
 declare -r test_base_path
 declare -r test_dll_path
-declare -rx test_exe_path
+declare -rx test_exec_path
 
 if [[ $cached_dependencies != "true" ]]; then
     trace "Restore dependencies if not cached"
-    # we are not getting the dependencies from a cache - do the slow full restore
+    # we are not getting the dependencies from a cache - do restore
     execute dotnet restore
 fi
 
 # shellcheck disable=SC2154
 if [[ $cached_artifacts != "true" ]]; then
     trace "Build the artifacts if not cached"
-    # we are not getting the build artifacts from a cache - do the slow full build
+    # we are not getting the build artifacts from a cache - do a full rebuild
     execute dotnet build  \
         --project "$test_project" \
         --configuration "$configuration" \
@@ -145,8 +145,8 @@ if [[ $cached_artifacts != "true" ]]; then
 fi
 
 # shellcheck disable=SC2154
-if [[ (! -f "${test_exe_path}" || ! -f "${test_dll_path}") && "$dry_run" != "true" ]]; then
-    echo "❌ Test executables ${test_exe_path} or ${test_dll_path} were not found." | tee >> "$GITHUB_STEP_SUMMARY" >&2
+if [[ (! -f "${test_exec_path}" || ! -f "${test_dll_path}") && "$dry_run" != "true" ]]; then
+    echo "❌ Test executables ${test_exec_path} or ${test_dll_path} were not found." | tee >> "$GITHUB_STEP_SUMMARY" >&2
     exit 2
 fi
 
