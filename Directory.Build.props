@@ -25,9 +25,6 @@
         <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
         <RestoreLockedMode Condition="'$(CI)' == 'true'">true</RestoreLockedMode>
         <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
-        <DefineConstants Condition="'$(CI)' == 'true'">$(DefineConstants);CI</DefineConstants>
-        <DefineConstants Condition="'$(OS)' == 'WINDOWS_NT'">$(DefineConstants);WINDOWS</DefineConstants>
-        <DefineConstants Condition="'$(OS)' != 'WINDOWS_NT'">$(DefineConstants);UNIX</DefineConstants>
     </PropertyGroup>
 
     <PropertyGroup Label="NuGetGlobal">

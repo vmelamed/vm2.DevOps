@@ -310,24 +310,35 @@ public sealed class TestFileStructureTests : IDisposable
         result.Should().Be(path);
     }
 
-#if WINDOWS
     [Theory]
     [InlineData("C:\\Users\\%USERNAME%\\Documents", "USERNAME")]
     [InlineData("%USERPROFILE%\\Documents", "USERPROFILE")]
     [InlineData("%TEMP%\\test.txt", "TEMP")]
-#elif UNIX
+    public void ExpandEnvironmentVariables_Windows_ShouldExpandVariables_Async(string path, string varName)
+    {
+        if (!OperatingSystem.IsWindows())
+            return; // Skip Windows-specific test on non-Windows platforms
+
+        // Arrange
+        var expectedValue = Environment.GetEnvironmentVariable(varName);
+        expectedValue.Should().NotBeNullOrEmpty();
+
+        // Act
+        var result = TestFileStructure.ExpandEnvironmentVariables(path);
+
+        // Assert
+        result.Should().Contain(expectedValue);
+    }
+
     [Theory]
     [InlineData("$HOME/documents", "HOME")]
     [InlineData("${USER}/data", "USER")]
     [InlineData("~/documents", "HOME")]
-#endif
-    public void ExpandEnvironmentVariables_ShouldExpandVariables_Async(string path, string varName)
+    public void ExpandEnvironmentVariables_Unix_ShouldExpandVariables_Async(string path, string varName)
     {
-#if WINDOWS
-        Console.WriteLine("WINDOWS is defined!");
-#elif UNIX
-        Console.WriteLine("UNIX is defined!");
-#endif
+        if (!(OperatingSystem.IsLinux() || OperatingSystem.IsMacOS() || OperatingSystem.IsFreeBSD()))
+            return; // Skip Unix-specific test on non-Unix platforms
+
         // Arrange
         var expectedValue = Environment.GetEnvironmentVariable(varName);
         expectedValue.Should().NotBeNullOrEmpty();
