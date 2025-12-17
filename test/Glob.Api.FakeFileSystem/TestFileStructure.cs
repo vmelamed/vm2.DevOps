@@ -96,7 +96,7 @@ public static class TestFileStructure
         if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS() || OperatingSystem.IsFreeBSD())
         {
             path = path.Replace(UnixShellSpecificHome, UnixHomeEnvironmentVar); // Support Unix shell home directory syntax: shell ~ -> Unix shell env.var. $HOME -> .NET env.var. %HOME%
-            UnixEnvVarRegex().Replace(path, UnixEnvVarReplacement);             // Support Unix shell env.var. syntax $ENV_VAR -> .NET env.var. %ENV_VAR%
+            path = UnixEnvVarRegex().Replace(path, UnixEnvVarReplacement);             // Support Unix shell env.var. syntax $ENV_VAR -> .NET env.var. %ENV_VAR%
         }
 
         return Environment.ExpandEnvironmentVariables(path);                    // Ensure environment variables are supported

@@ -322,11 +322,6 @@ public sealed class TestFileStructureTests : IDisposable
 #endif
     public void ExpandEnvironmentVariables_ShouldExpandVariables_Async(string path, string varName)
     {
-#if WINDOWS
-        Console.WriteLine("WINDOWS is defined!");
-#elif UNIX
-        Console.WriteLine("UNIX is defined!");
-#endif
         // Arrange
         var expectedValue = Environment.GetEnvironmentVariable(varName);
         expectedValue.Should().NotBeNullOrEmpty();
