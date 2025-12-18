@@ -218,19 +218,19 @@ execute mv """$coverage_reports_dir"""  """$coverage_summary_html_dir"""
 # Extract the coverage percentage from the summary file
 trace "Extracting coverage percentages from '$coverage_summary_text_path'..."
 if [[ $dry_run != "true" ]]; then
-    line_pct=$(sed -nE 's/Line coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_text_path" | head -n1)
+    line_pct=$(sed -nE 's/Line coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_text_path" | head -n1 | xargs)
     if [[ -z "$line_pct" ]]; then
         echo "❌ Could not parse line coverage percent from \"$coverage_summary_text_path\"" | tee >> "$github_step_summary" >&2
         sync
         exit 2
     fi
-    branch_pct=$(sed -nE 's/Branch coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_text_path" | head -n1)
+    branch_pct=$(sed -nE 's/Branch coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_text_path" | head -n1 | xargs)
     if [[ -z "$branch_pct" ]]; then
         echo "❌ Could not parse branch coverage percent from \"$coverage_summary_text_path\"" | tee >> "$github_step_summary" >&2
         sync
         exit 2
     fi
-    method_pct=$(sed -nE 's/Method coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_text_path" | head -n1)
+    method_pct=$(sed -nE 's/Method coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_text_path" | head -n1 | xargs)
     if [[ -z "$method_pct" ]]; then
         echo "❌ Could not parse method coverage percent from \"$coverage_summary_text_path\"" | tee >> "$github_step_summary" >&2
         sync
@@ -238,21 +238,18 @@ if [[ $dry_run != "true" ]]; then
     fi
 
     # Compare the coverage percentage against the threshold
-    if (( line_pct < min_coverage_pct )); then
-        echo "❌ Line coverage   $line_pct% (below the threshold ${min_coverage_pct}%)" | tee >> "$github_step_summary" >&2
-    else
-        echo "✔️ Line coverage   $line_pct% (meets the threshold ${min_coverage_pct}%)" >> "$github_step_summary"
-    fi
-    if (( method_pct < min_coverage_pct )); then
-        echo "❌ Method coverage $method_pct% (below the threshold ${min_coverage_pct}%)" | tee >> "$github_step_summary" >&2
-    else
-        echo "✔️ Method coverage $method_pct% (meets the threshold ${min_coverage_pct}%)" >> "$github_step_summary"
-    fi
-    if (( branch_pct < min_coverage_pct )); then
-        echo "❌ Branch coverage $branch_pct% (below the threshold ${min_coverage_pct}%)" | tee >> "$github_step_summary" >&2
-    else
-        echo "✔️ Branch coverage $branch_pct% (meets the threshold ${min_coverage_pct}%)" >> "$github_step_summary"
-    fi
+    {
+        echo "## Coverage Summary for project '$test_name'"
+        echo "Coverage | Percentage | Status"
+        echo ":--------|-----------:|:------:"
+        status="$([[ $line_pct -lt $min_coverage_pct ]] && echo '❌' || echo '✔️')"
+        echo "Line     | ${line_pct}% | $status"
+        status="$([[ $branch_pct -lt $min_coverage_pct ]] && echo '❌' || echo '✔️')"
+        echo "Branch   | ${branch_pct}% | $status"
+        status="$([[ $method_pct -lt $min_coverage_pct ]] && echo '❌' || echo '✔️')"
+        echo "Method   | ${method_pct}% | $status"
+        echo ""
+    } >> "$github_step_summary"
 
     # Export variables to GitHub Actions output
     {
