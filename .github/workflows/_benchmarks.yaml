@@ -125,11 +125,25 @@ jobs:
         if: inputs.cached-artifacts == true
         uses: actions/cache/restore@v5
         with:
+          key: build-artifacts-${{ runner.os }}-${{ github.sha }}-${{ inputs.configuration }}
+          fail-on-cache-miss: true
           path: |
             **/bin/${{ inputs.configuration }}
             **/obj
-          key: build-artifacts-${{ runner.os }}-${{ github.sha }}-${{ inputs.configuration }}
-          fail-on-cache-miss: true
+
+      - name: Verify the artifacts were restored
+        if: inputs.cached-artifacts == true
+        shell: bash
+        run: |
+          ARTIFACT_PATH=$(find . -type d -path "*/bin/${{ inputs.configuration }}" | head -n 1)
+          if [ -z "$ARTIFACT_PATH" ]; then
+            echo "Error: No build artifacts found in cache."
+            exit 1
+          else
+            echo "Build artifacts found at: $ARTIFACT_PATH"
+          fi
+          ls -la "$ARTIFACT_PATH"/**/*.*
+          ls -la ./test/**/bin/${{ inputs.configuration }}/*.*
 
       # Make bash scripts executable on Unix-like systems
       - name: Make Scripts Executable
@@ -150,10 +164,10 @@ jobs:
               --wf-path '.github/workflows/Glob.Api.CI.yaml' \
               --artifact benchmark-summaries-${{ inputs.os }} \
               --directory ${{ env.ARTIFACTS_DIR }}/baseline
-          # TODO: try to change to something that is not bound by repo name and path of the top level workflow!!!
+          # TODO: try to change --wf-path to something that is not bound by repo name and path of the top level workflow!!!
 
       - name: Run the benchmarks
-        if: ${{ success() || fromJSON(inputs.force-new-baseline) }}
+        if: ${{ !success() || fromJSON(inputs.force-new-baseline) }}
         shell: bash
         env:
           CONFIGURATION: ${{ inputs.configuration }}
