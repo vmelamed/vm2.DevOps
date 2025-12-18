@@ -30,12 +30,16 @@ function get_arguments()
             continue
         fi
         # do not use short options -q -v -x -y
-        case "$flag" in
-            --debugger )
-                ;;  # already processed above
-            --help|-h )
-                usage
-                exit 0
+        case "${flag,,}" in
+            --debugger ) ;;  # already processed above
+            --help|-h  ) usage; exit 0 ;;
+            --artifact|-a )
+               artifact_name="$1"
+               shift
+               ;;
+            --directory|-d )
+                artifacts_dir="$1"
+                shift
                 ;;
             --repository|-r )
                 repository="$1";
@@ -59,14 +63,6 @@ function get_arguments()
                 workflow_path="$1"
                 shift
                 ;;
-            --artifact|-a )
-               artifact_name="$1"
-               shift
-               ;;
-            --directory|-d )
-                artifacts_dir="$1"
-                shift
-                ;;
             * )
                 usage "Unknown option '$flag'."
                 exit 2
@@ -84,12 +80,12 @@ dump_all_variables()
         verbose \
         quiet \
         --blank \
-        repository \
-        workflow_name \
-        workflow_path \
-        workflow_id \
         artifact_name \
         artifacts_dir \
+        repository \
+        workflow_id \
+        workflow_name \
+        workflow_path \
         --header "other:" \
         ci
 }

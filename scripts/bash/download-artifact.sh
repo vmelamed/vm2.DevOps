@@ -11,12 +11,12 @@ declare -xr script_name
 
 source "$script_dir/_common.sh"
 
+declare -x artifact_name=${ARTIFACT_NAME:-}
+declare -x artifacts_dir=${ARTIFACT_DIR:-"./BmArtifacts/baseline"}
 declare -x repository=${REPOSITORY:-}
 declare -x workflow_id=${WORKFLOW_ID:-}
 declare -x workflow_name=${WORKFLOW_NAME:-}
 declare -x workflow_path=${WORKFLOW_PATH:-}
-declare -x artifact_name=${ARTIFACT_NAME:-}
-declare -x artifacts_dir=${ARTIFACT_DIR:-"./BmArtifacts/baseline"}
 
 source "$script_dir/download-artifact.utils.sh"
 source "$script_dir/download-artifact.usage.sh"
@@ -57,12 +57,15 @@ if [[ -z "$artifact_name" ]]; then
     exit 2
 fi
 
-declare -rx repository
-declare -rx workflow_name
-declare -rx workflow_path
-declare -x workflow_id
 declare -rx artifact_name
 declare -rx artifacts_dir
+declare -rx repository
+declare -x workflow_id
+declare -rx workflow_name
+declare -rx workflow_path
+
+declare -x github_output=${GITHUB_OUTPUT:-/dev/stdout}
+declare -x github_step_summary=${GITHUB_STEP_SUMMARY:-/dev/stdout}
 
 # install GitHub CLI and jq if not already installed
 if ! command -v jq >"$_ignore" 2>&1; then
@@ -116,7 +119,7 @@ mapfile -t runs < <(gh run list \
 
 if [[ ${#runs[@]} == 0 ]]; then
     # shellcheck disable=SC2154
-    usage "No successful runs found for the workflow '$workflow_id' in the repository '$repository'." | tee >> "$GITHUB_STEP_SUMMARY" >&2
+    usage "No successful runs found for the workflow '$workflow_id' in the repository '$repository'." | tee >> "$github_step_summary" >&2
     exit 2
 fi
 
@@ -129,7 +132,7 @@ for run in "${runs[@]}"; do
     query="any(.artifacts[]; .name==\"$artifact_name\")"
     if [[ ! $(gh api "repos/$repository/actions/runs/$run/artifacts" --jq "$query") == "true" ]]; then
         # shellcheck disable=SC2154
-        echo "The artifact '$artifact_name' not found in run $run." >> "$GITHUB_STEP_SUMMARY"
+        echo "The artifact '$artifact_name' not found in run $run." >> "$github_step_summary"
         continue
     fi
 
@@ -143,13 +146,13 @@ E.g. re-run the benchmarks with --force-new-baseline or vars.FORCE_NEW_BASELINE"
                                 --repo "$repository" \
                                 --name "$artifact_name" \
                                 --dir "$artifacts_dir") ; then
-        echo "Error while downloading '$artifact_name': $http_error" | tee >> "$GITHUB_STEP_SUMMARY" >&2
+        echo "Error while downloading '$artifact_name': $http_error" | tee >> "$github_step_summary" >&2
         exit 2
     fi
-    echo "✔️ The artifact '$artifact_name' successfully downloaded to directory '$artifacts_dir'." >> "$GITHUB_STEP_SUMMARY"
+    echo "✔️ The artifact '$artifact_name' successfully downloaded to directory '$artifacts_dir'." >> "$github_step_summary"
     exit 0
 done
 
 usage "❌ The artifact '$artifact_name' was not found in the last ${#runs[@]} successful runs of the workflow '$workflow_name' in \
-the repository '$repository'." | tee >> "$GITHUB_STEP_SUMMARY" >&2
+the repository '$repository'." | tee >> "$github_step_summary" >&2
 exit 2

@@ -147,9 +147,10 @@ jobs:
         run: |
           ./scripts/bash/download-artifact.sh \
               --repository ${{ github.repository }} \
-              --wf-path '.github/workflows/Glob.Api.CI.yaml' \  # TODO: try to change to something that is not bound by repo name and path of the top level workflow!!!
+              --wf-path '.github/workflows/Glob.Api.CI.yaml' \
               --artifact benchmark-summaries-${{ inputs.os }} \
               --directory ${{ env.ARTIFACTS_DIR }}/baseline
+          # TODO: try to change to something that is not bound by repo name and path of the top level workflow!!!
 
       - name: Run the benchmarks
         if: ${{ success() || fromJSON(inputs.force-new-baseline) }}
