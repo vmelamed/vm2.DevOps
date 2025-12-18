@@ -1,0 +1,19 @@
+[ReportGenerator]
+    # Include only the target assembly
+    assemblyfilter = +Glob.Api
+
+    # Exclude generated assemblies
+    classFilter = -*ExcludeFromCodeCoverage*
+    classFilter = -*GeneratedCode*
+    classFilter = -*GeneratedRegex*
+    classFilter = -*SourceGenerationContext*
+
+    # Exclude generated and irrelevant files
+    fileFilter = -*.g.cs
+    fileFilter = -*.i.cs
+    fileFilter = -*.generated.cs
+    fileFilter = -*Migrations/*
+    fileFilter = -*obj/*
+    fileFilter = -*AssemblyInfo.cs
+    fileFilter = -*Designer.cs
+    fileFilter = -*.designer.cs

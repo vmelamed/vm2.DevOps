@@ -191,16 +191,26 @@ jobs:
           {
             echo "### 📊 Coverage Report - ${{ steps.run-tests.outputs.proj-name }}"
             echo ""
-            pct="${{ steps.run-tests.outputs.coverage-pct }}"
             min_coverage_pct="${{ inputs.min-coverage-pct }}"
-            if [ -n "$pct" ]; then
-              if (( pct < min_coverage_pct )); then
-                  echo "❌ Coverage of $pct% is below the threshold of ${min_coverage_pct}%"
-              else
-                  echo "✔️ Coverage of $pct% meets the threshold of ${min_coverage_pct}%"
-              fi
-              echo ""
+            line_pct="${{ steps.run-tests.outputs.line-pct }}"
+            if (( line_pct < min_coverage_pct )); then
+                echo "❌ Coverage of $line_pct% is below the threshold of ${min_coverage_pct}%"
+            else
+                echo "✔️ Coverage of $line_pct% meets the threshold of ${min_coverage_pct}%"
             fi
+            branch_pct="${{ steps.run-tests.outputs.branch-pct }}"
+            if (( branch_pct < min_coverage_pct )); then
+                echo "❌ Coverage of $branch_pct% is below the threshold of ${min_coverage_pct}%"
+            else
+                echo "✔️ Coverage of $branch_pct% meets the threshold of ${min_coverage_pct}%"
+            fi
+            method_pct="${{ steps.run-tests.outputs.method-pct }}"
+            if (( method_pct < min_coverage_pct )); then
+                echo "❌ Coverage of $method_pct% is below the threshold of ${min_coverage_pct}%"
+            else
+                echo "✔️ Coverage of $method_pct% meets the threshold of ${min_coverage_pct}%"
+            fi
+            echo ""
             echo "🌐 View on [Codecov](https://app.codecov.io/gh/${{ github.repository }}/commit/${{ github.sha }})"
             echo ""
             echo "📥 Or download the [coverage-${{ steps.run-tests.outputs.proj-name }}-${{ inputs.os }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) artifact to view the HTML report locally."

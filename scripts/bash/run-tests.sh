@@ -32,18 +32,21 @@ if [[ ! -s "$test_project" ]]; then
     exit 2
 fi
 
-base_name=$(basename "${test_project%.*}")                                      # the base name of the test project without the path and file extension
+test_name=$(basename "${test_project%.*}")                                      # the base name of the test project without the path and file extension
+test_dir=$(dirname "$test_project")                                             # the directory of the test project
+
 
 declare -r test_project
 declare -r configuration
 declare -r preprocessor_symbols
 declare -r min_coverage_pct
-declare -r base_name
+declare -r test_name
+declare -r test_dir
 declare -r cached_dependencies
 declare -r cached_artifacts
 
-solution_dir="$(realpath -e "$(dirname "$test_project")/../..")" # assuming <solution-root>/test/<test-project>/test-project.csproj
-artifacts_dir=$(realpath -m "${artifacts_dir:-"$solution_dir/TestArtifacts/$base_name"}")  # ensure it's an absolute path per test project
+solution_dir="$(realpath -e "${test_dir}/../..")" # assuming <solution-root>/test/<test-project>/test-project.csproj
+artifacts_dir=$(realpath -m "${artifacts_dir:-"$solution_dir/TestArtifacts/$test_name"}")  # ensure it's an absolute path per test project
 
 declare -r solution_dir
 declare -r artifacts_dir
@@ -91,7 +94,7 @@ coverage_reports_path="$coverage_reports_dir/Summary.txt"                       
 coverage_summary_dir="$artifacts_dir/coverage"                                  # the directory for the coverage html artifacts
 coverage_summary_html_dir="$artifacts_dir/coverage/html"                        # the directory for the coverage html artifacts
 coverage_summary_text_dir="$artifacts_dir/coverage/text"                        # the directory for the text coverage summary artifacts
-coverage_summary_text_path="$coverage_summary_text_dir/$base_name-Summary.txt"  # the path to the coverage summary artifact file
+coverage_summary_text_path="$coverage_summary_text_dir/$test_name-Summary.txt"  # the path to the coverage summary artifact file
 
 declare -r test_results_dir
 
@@ -119,7 +122,7 @@ declare test_base_path
 declare test_dll_path
 declare test_exec_path
 
-test_base_path="$(dirname "$test_project")/bin/${configuration}/net10.0/$(basename "${test_project%.*}")"
+test_base_path="${test_dir}/bin/${configuration}/net10.0/${test_name}"
 test_dll_path="${test_base_path}.dll"
 os_name="$(uname -s)"
 if [[ "$os_name" == "Windows_NT" || "$os_name" == *MINGW* || "$os_name" == *MSYS* ]]; then
@@ -154,10 +157,6 @@ if [[ (! -f "${test_exec_path}" || ! -f "${test_dll_path}") && "$dry_run" != "tr
     exit 2
 fi
 
-# To be removed:
-env | sort >> "$GITHUB_STEP_SUMMARY"
-pwd >> "$GITHUB_STEP_SUMMARY"
-
 trace "Running tests in project ${test_project} with build configuration ${configuration}..."
 execute dotnet run \
     --project "$test_project" \
@@ -179,24 +178,28 @@ fi
 
 trace "Generating coverage reports..."
 uninstall_reportgenerator=false
-if ! dotnet tool list dotnet-reportgenerator-globaltool --global > "$_ignore"; then
-    echo "Installing the tool 'reportgenerator'..."; sync
-    execute dotnet tool install dotnet-reportgenerator-globaltool --global --version 5.*
+if ! execute dotnet tool list dotnet-reportgenerator-globaltool --global > "$_ignore"; then
+    trace "Installing the tool 'reportgenerator'..."
+    execute dotnet tool install dotnet-reportgenerator-globaltool --global --version "5.*"
     uninstall_reportgenerator=true
 else
-    echo "The tool 'reportgenerator' is already installed." >&2
+    trace "The tool 'reportgenerator' is already installed."
 fi
 
+pushd "$test_dir"
+
+# Execute the tool in this directory so that it can pick up the .netconfig file for filters specific to this project
 execute reportgenerator \
     -reports:"$coverage_source_path" \
     -targetdir:"$coverage_reports_dir" \
     -reporttypes:TextSummary,html \
-	-assemblyfilters:"-Test.Utilities*" \
 	-classfilters:"-*.ExcludeFromCodeCoverage*;-*.GeneratedCode*;-*GeneratedRegex*;-*SourceGenerationContext*" \
-    -filefilters:"-*.g.cs;-*Migrations/*"
+    -filefilters:"-*.g.cs;-*.g.i.cs;-*.i.cs;-*.generated.cs;-*Migrations/*;-*obj/*;-*AssemblyInfo.cs;-*Designer.cs;-*.designer.cs"
+
+popd
 
 if [[ "$uninstall_reportgenerator" = "true" ]]; then
-    echo "Uninstalling the tool 'reportgenerator'..."; sync
+    trace "Uninstalling the tool 'reportgenerator'..."
     execute dotnet tool uninstall dotnet-reportgenerator-globaltool --global
 fi
 
@@ -213,29 +216,47 @@ execute mv """$coverage_reports_path""" """$coverage_summary_text_path"""
 execute mv """$coverage_reports_dir"""  """$coverage_summary_html_dir"""
 
 # Extract the coverage percentage from the summary file
-trace "Extracting coverage percentage from '$coverage_summary_text_path'..."
+trace "Extracting coverage percentages from '$coverage_summary_text_path'..."
 if [[ $dry_run != "true" ]]; then
-    pct=$(sed -nE 's/Method coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_text_path" | head -n1)
-    if [[ -z "$pct" ]]; then
-        echo "❌ Could not parse coverage percent from \"$coverage_summary_text_path\"" | tee >> "$github_step_summary" >&2
+    line_pct=$(sed -nE 's/Line coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_text_path" | head -n1)
+    if [[ -z "$line_pct" ]]; then
+        echo "❌ Could not parse line coverage percent from \"$coverage_summary_text_path\"" | tee >> "$github_step_summary" >&2
+        sync
+        exit 2
+    fi
+    branch_pct=$(sed -nE 's/Branch coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_text_path" | head -n1)
+    if [[ -z "$branch_pct" ]]; then
+        echo "❌ Could not parse branch coverage percent from \"$coverage_summary_text_path\"" | tee >> "$github_step_summary" >&2
+        sync
+        exit 2
+    fi
+    method_pct=$(sed -nE 's/Method coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_text_path" | head -n1)
+    if [[ -z "$method_pct" ]]; then
+        echo "❌ Could not parse method coverage percent from \"$coverage_summary_text_path\"" | tee >> "$github_step_summary" >&2
         sync
         exit 2
     fi
 
     # Compare the coverage percentage against the threshold
-    if (( pct < min_coverage_pct )); then
-        echo "❌ Coverage of $pct% is below the threshold of ${min_coverage_pct}%" | tee >> "$github_step_summary" >&2
+    if (( line_pct < min_coverage_pct )); then
+        echo "❌ Line coverage   $line_pct% (below the threshold ${min_coverage_pct}%)" | tee >> "$github_step_summary" >&2
     else
-        echo "✔️ Coverage of $pct% meets the threshold of ${min_coverage_pct}%" >> "$github_step_summary"
+        echo "✔️ Line coverage   $line_pct% (meets the threshold ${min_coverage_pct}%)" >> "$github_step_summary"
+    fi
+    if (( method_pct < min_coverage_pct )); then
+        echo "❌ Method coverage $method_pct% (below the threshold ${min_coverage_pct}%)" | tee >> "$github_step_summary" >&2
+    else
+        echo "✔️ Method coverage $method_pct% (meets the threshold ${min_coverage_pct}%)" >> "$github_step_summary"
+    fi
+    if (( branch_pct < min_coverage_pct )); then
+        echo "❌ Branch coverage $branch_pct% (below the threshold ${min_coverage_pct}%)" | tee >> "$github_step_summary" >&2
+    else
+        echo "✔️ Branch coverage $branch_pct% (meets the threshold ${min_coverage_pct}%)" >> "$github_step_summary"
     fi
 
-    # Output coverage percentage for use in workflow
-    echo "coverage-pct=${pct}" >> "$github_output"
-    sync
-
-    proj_name="$(basename "${test_project%.*}")"
+    # Export variables to GitHub Actions output
     {
-        echo "proj-name=$proj_name"
+        echo "proj-name=$test_name"
         echo "artifacts-dir=$artifacts_dir"
         echo "coverage_results_dir=$coverage_results_dir"
         echo "coverage_source_path=$coverage_source_path"
@@ -243,9 +264,12 @@ if [[ $dry_run != "true" ]]; then
         echo "coverage_summary_text_dir=$coverage_summary_text_dir"
         echo "coverage_summary_html_dir=$coverage_summary_html_dir"
         echo "coverage_summary_text_path=$coverage_summary_text_path"
+        echo "line_pct=${line_pct}"
+        echo "branch_pct=${branch_pct}"
+        echo "method_pct=${method_pct}"
     } >> "$github_output"
 
-    if (( pct < min_coverage_pct )); then
+    if (( line_pct < min_coverage_pct )); then
         exit 2
     fi
 fi

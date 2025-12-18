@@ -74,14 +74,12 @@ jobs:
         shell: bash
         run: |
           # the following outputs are invariant - no matter how we trigger the workflow, they stay the same:
-            # build the whole solution at once:
-          build_projects='[ "./vm2.DevOps.slnx" ]'
-            # test projects to run:
+
+          build_projects='[ "./vm2.DevOps.slnx" ]'                                              # build the whole solution at once
           test_projects=" [ \
               \"./test/Glob.Api.FakeFileSystem.Tests/Glob.Api.FakeFileSystem.Tests.csproj\", \
-              \"./test/Glob.Api.Tests/Glob.Api.Tests.csproj\" ]"
-            # benchmark projects to run:
-          benchmark_projects='["./benchmarks/Glob.Api.Benchmarks/Glob.Api.Benchmarks.csproj"]'
+              \"./test/Glob.Api.Tests/Glob.Api.Tests.csproj\" ]"                                # test projects to run
+          benchmark_projects='["./benchmarks/Glob.Api.Benchmarks/Glob.Api.Benchmarks.csproj"]'  # benchmark projects to run
 
           # the following outputs are invariant - no matter how we trigger the workflow, they are externally set variables:
           dotnet_version=${{ vars.DOTNET_VERSION }}
@@ -91,44 +89,29 @@ jobs:
           force_new_baseline=${{ vars.FORCE_NEW_BASELINE }}
 
           # the following outputs are the default values for push and pull_request events
+
           if [ "${{ github.event_name }}" == "push" ] || \
              [ "${{ github.event_name }}" == "pull_request" ]; then
-            # Set the default values for push and pull_request events
-            os='["ubuntu-latest"]'
-            preprocessor_symbols="_"
-            cached_dependencies="true"
-            cached_artifacts="true"
-            verbose="false"
+              # Set the default values for push and pull_request events
+              os='["ubuntu-latest"]'
+              preprocessor_symbols="_"
+              cached_dependencies="true"
+              cached_artifacts="true"
+              verbose="false"
+          elif [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+              # Get the values from the inputs of workflow_dispatch event (the UI)
+              # Convert comma-separated runner's OS values to JSON array
+              os=$(echo "${{ inputs.os }}" | jq -Rc 'split(",") | map(select(length > 0) | gsub("^\\s+|\\s+$";""))')
+              preprocessor_symbols="${{ inputs.preprocessor-symbols }}"
+              cached_dependencies="${{ inputs.cached-dependencies }}"
+              cached_artifacts="${{ inputs.cached-artifacts }}"
+              verbose="${{ inputs.verbose }}"
+          else
+              echo "Unsupported event: ${{ github.event_name }}"
+              exit 5
           fi
 
-          # the following outputs are coming from the user by means of workflow_dispatch:
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            # Get the values from the inputs of workflow_dispatch event (the UI)
-            # Convert comma-separated OS values to JSON array
-            os=$(echo "${{ inputs.os }}" | jq -Rc 'split(",") | map(select(length > 0) | gsub("^\\s+|\\s+$";""))')
-            preprocessor_symbols="${{ inputs.preprocessor-symbols }}"
-            cached_dependencies="${{ inputs.cached-dependencies }}"
-            cached_artifacts="${{ inputs.cached-artifacts }}"
-            verbose="${{ inputs.verbose }}"
-          fi
-
-          # TO BE REMOVED:
-          {
-            echo "build-projects       ${build_projects}"
-            echo "test-projects        ${test_projects}"
-            echo "benchmark-projects   ${benchmark_projects}"
-            echo "os                   ${os}"
-            echo "dotnet-version       ${dotnet_version}"
-            echo "configuration        ${configuration}"
-            echo "preprocessor-symbols ${preprocessor_symbols}"
-            echo "min-coverage-pct     ${min_coverage_pct}"
-            echo "max-regression-pct   ${max_regression_pct}"
-            echo "force-new-baseline   ${force_new_baseline}"
-            echo "cached-dependencies  ${cached_dependencies}"
-            echo "cached-artifacts     ${cached_artifacts}"
-            echo "verbose              ${verbose}"
-          } >> $GITHUB_STEP_SUMMARY
-
+          # Set the outputs:
           {
             echo "build-projects=${build_projects}"
             echo "test-projects=${test_projects}"
@@ -164,29 +147,3 @@ jobs:
       cached-dependencies: ${{ fromJSON(needs.get-params.outputs.cached-dependencies) }}
       cached-artifacts: ${{ fromJSON(needs.get-params.outputs.cached-artifacts) }}
       verbose: ${{ fromJSON(needs.get-params.outputs.verbose) }}
-    # TO BE REMOVED WHEN ACTUALLY RUNNING THE BUILD WORKFLOW ABOVE:
-    # runs-on: ubuntu-latest
-    # needs:
-    #   - get-params
-    # steps:
-    #   - name: "Print #0: CI Workflow Call"
-    #     id: print-ci-workflow-call
-    #     shell: bash
-    #     run: |
-    #       {
-    #         echo "uses ./.github/workflows/_ci.yaml"
-    #         echo "with"
-    #         echo "  build-projects:       ${{ needs.get-params.outputs.build-projects       }}"
-    #         echo "  test-projects:        ${{ needs.get-params.outputs.test-projects        }}"
-    #         echo "  benchmark-projects:   ${{ needs.get-params.outputs.benchmark-projects   }}"
-    #         echo "  os:                   ${{ needs.get-params.outputs.os                   }}"
-    #         echo "  dotnet-version:       ${{ needs.get-params.outputs.dotnet-version       }}"
-    #         echo "  configuration:        ${{ needs.get-params.outputs.configuration        }}"
-    #         echo "  preprocessor-symbols: ${{ needs.get-params.outputs.preprocessor-symbols }}"
-    #         echo "  min-coverage-pct:     ${{ needs.get-params.outputs.min-coverage-pct     }}"
-    #         echo "  max-regression-pct:   ${{ needs.get-params.outputs.max-regression-pct   }}"
-    #         echo "  force-new-baseline:   ${{ needs.get-params.outputs.force-new-baseline   }}"
-    #         echo "  cached-dependencies:  ${{ needs.get-params.outputs.cached-dependencies  }}"
-    #         echo "  cached-artifacts:     ${{ needs.get-params.outputs.cached-artifacts     }}"
-    #         echo "  verbose:              ${{ needs.get-params.outputs.verbose              }}"
-    #       } >> $GITHUB_STEP_SUMMARY
