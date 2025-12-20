@@ -21,7 +21,7 @@ on:
       preprocessor-symbols:
         description: Define constants to pass to the compiler
         type: string
-        default: "_"
+        default: 'SHORT_RUN'
 
       cached-dependencies:
         description: Enable storing and retrieving NuGet dependencies to/from cache (default true)
@@ -90,11 +90,15 @@ jobs:
 
           # the following outputs are the default values for push and pull_request events
 
+          if [ "${{ github.event_name }}" == "push" ]; then
+              preprocessor_symbols="SHORT_RUN"
+          else
+              preprocessor_symbols="_"
+          fi
           if [ "${{ github.event_name }}" == "push" ] || \
              [ "${{ github.event_name }}" == "pull_request" ]; then
               # Set the default values for push and pull_request events
               os='["ubuntu-latest"]'
-              preprocessor_symbols="_"
               cached_dependencies="true"
               cached_artifacts="true"
               verbose="false"
