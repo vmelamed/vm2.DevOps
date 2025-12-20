@@ -50,6 +50,7 @@
         <File Path="Directory.Packages.props" />
         <File Path="global.json" />
         <File Path="LICENSE" />
+        <File Path="PR_GATES_SETUP.md" />
         <File Path="README.md" />
         <File Path="ReleaseProcess.md" />
         <File Path="ScratchPlan.md" />

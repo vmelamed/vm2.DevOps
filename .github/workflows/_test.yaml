@@ -61,6 +61,8 @@ on:
 
 permissions:
   contents: read # to checkout the code
+  checks: write # to create test result checks
+  pull-requests: write # to comment test results on PRs
 
 env:
   # this must be the same across all jobs and steps below.
@@ -187,6 +189,43 @@ jobs:
           files: ${{ steps.run-tests.outputs.coverage_source_path }}
           fail_ci_if_error: false
           verbose: true
+
+      # Create test result check and PR comment
+      - name: Publish test results
+        if: success() || failure() # Run even if tests fail, but not if cancelled
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          check_name: Test Results (${{ steps.run-tests.outputs.proj-name }} on ${{ inputs.os }})
+          files: |
+            ${{ steps.run-tests.outputs.artifacts-dir }}/**/*.trx
+            ${{ steps.run-tests.outputs.artifacts-dir }}/**/*.xml
+          comment_mode: always
+          compare_to_earlier_commit: true
+          report_individual_runs: true
+          deduplicate_classes_by_file_name: false
+
+      # Add coverage check status to summary
+      - name: Verify coverage threshold
+        if: always()
+        shell: bash
+        run: |
+          LINE_PCT="${{ steps.run-tests.outputs.line_pct }}"
+          MIN_PCT="${{ inputs.min-coverage-pct }}"
+
+          {
+            echo "### 📊 Code Coverage"
+            echo ""
+            echo "**Line Coverage:** ${LINE_PCT}%"
+            echo "**Minimum Required:** ${MIN_PCT}%"
+            echo ""
+            if (( $(echo "$LINE_PCT < $MIN_PCT" | bc -l) )); then
+              echo "❌ **FAILED:** Coverage ${LINE_PCT}% is below threshold ${MIN_PCT}%"
+              echo ""
+              echo "::error::Code coverage ${LINE_PCT}% is below the minimum required threshold of ${MIN_PCT}%"
+            else
+              echo "✅ **PASSED:** Coverage meets threshold"
+            fi
+          } >> $GITHUB_STEP_SUMMARY
 
       # Add coverage report link to job summary
       - name: Add coverage report link to summary

@@ -181,23 +181,6 @@ jobs:
       build-project: ${{ matrix.build-project }}
       cached-dependencies: ${{ fromJSON(inputs.cached-dependencies) }}
       cached-artifacts: ${{ fromJSON(inputs.cached-artifacts) }}
-    # TO BE REMOVED WHEN ACTUALLY RUNNING THE ABOVE BUILD WORKFLOW:
-    # runs-on: ${{ matrix.os }}
-    # steps:
-    #   - name: "Print #2 Build"
-    #     shell: bash
-    #     run: |
-    #       {
-    #         echo "uses: ./.github/workflows/_build.yaml"
-    #         echo "with:"
-    #         echo "  os:                   ${{ matrix.os }}"
-    #         echo "  dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}"
-    #         echo "  configuration:        ${{ needs.setup.outputs.configuration }}"
-    #         echo "  preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}"
-    #         echo "  build-project:        ${{ matrix.build-project }}"
-    #         echo "  cached-dependencies:  ${{ inputs.cached-dependencies }}"
-    #         echo "  cached-artifacts:     ${{ inputs.cached-artifacts }}"
-    #       } >> $GITHUB_STEP_SUMMARY
 
   # Run unit tests with code coverage analysis
   test:
@@ -211,6 +194,10 @@ jobs:
         os: ${{ fromJSON(inputs.os) }}
         test-project: ${{ fromJSON(inputs.test-projects) }}
     uses: ./.github/workflows/_test.yaml
+    permissions:
+      contents: read
+      pull-requests: write # Required to comment on PRs
+      checks: write # Required to create GitHub Checks
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     with:
@@ -223,25 +210,6 @@ jobs:
       cached-dependencies: ${{ fromJSON(inputs.cached-dependencies) }}
       cached-artifacts: ${{ fromJSON(inputs.cached-artifacts) }}
       verbose: ${{ fromJSON(needs.setup.outputs.verbose) }}
-    # TO BE REMOVED WHEN ACTUALLY RUNNING THE ABOVE TEST WORKFLOW:
-    # runs-on: ${{ matrix.os }}
-    # steps:
-    #   - name: Print \#3 Test
-    #     shell: bash
-    #     run: |
-    #       {
-    #         echo "uses: ./.github/workflows/_test.yaml"
-    #         echo "with:"
-    #         echo "  os:                   ${{ matrix.os }}"
-    #         echo "  dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}"
-    #         echo "  configuration:        ${{ needs.setup.outputs.configuration }}"
-    #         echo "  preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}"
-    #         echo "  test-project:         ${{ matrix.test-project }}"
-    #         echo "  min-coverage-pct:     ${{ fromJSON(needs.setup.outputs.min-coverage-pct) }}"
-    #         echo "  cached-dependencies:  ${{ fromJSON(inputs.cached-dependencies) }}"
-    #         echo "  cached-artifacts:     ${{ fromJSON(inputs.cached-artifacts) }}"
-    #         echo "  verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}"
-    #       } >> $GITHUB_STEP_SUMMARY
 
   # Run performance benchmarks and compare against baseline (if enabled and benchmark project specified)
   benchmarks:
@@ -257,9 +225,9 @@ jobs:
         benchmark-project: ${{ fromJSON(inputs.benchmark-projects) }}
     uses: ./.github/workflows/_benchmarks-bencher.yaml
     permissions:
-      pull-requests: write # Required for Bencher to comment on PRs
       contents: read
-      checks: write # Required for Bencher to create GitHub Checks
+      pull-requests: write # Required to comment on PRs
+      checks: write # Required to create GitHub Checks
     secrets:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
     with:
