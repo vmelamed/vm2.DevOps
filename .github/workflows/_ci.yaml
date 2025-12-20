@@ -258,6 +258,7 @@ jobs:
     uses: ./.github/workflows/_benchmarks-bencher.yaml
     permissions:
       pull-requests: write # Required for Bencher to comment on PRs
+      contents: read
     secrets:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
     with:
