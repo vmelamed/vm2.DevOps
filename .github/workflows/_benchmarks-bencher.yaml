@@ -172,28 +172,26 @@ jobs:
             --threshold-max-sample-size 64 \
             --threshold-upper-boundary $THRESHOLD"
 
-          declare -a files
+          # Combine multiple files into one table using median folding
+          BENCHER_CMD="$BENCHER_CMD \
+            --iter 1 \
+            --fold median"
 
-          mapfile -t -d " " files < <(list_of_files "${{ steps.run-benchmarks.outputs.results-dir }}/*-report.json")
-
-          if [[ ${#files[@]} == 0 ]]; then
-              echo "❌ No JSON reports found." | tee >> "$GITHUB_STEP_SUMMARY" >&2
-              exit 2
-          fi
-          for file in "${files[@]}"; do
-          {
-              # Add the benchmark results file
-              BENCHER_CMD1="$BENCHER_CMD --file $file"
-
-              # Echo the command for debugging (without token)
-              echo "Running: $BENCHER_CMD1"
-              echo "Threshold: ±${{ inputs.max-regression-pct }}% ($THRESHOLD)"
-
-              # Execute the command
-              BENCHER_CMD1="$BENCHER_CMD1 --token $BENCHER_API_TOKEN"
-              eval $BENCHER_CMD1
-          }
+          # Add all benchmark result files
+          for file in ${{ steps.run-benchmarks.outputs.results-dir }}/*-report.json; do
+            if [[ -f "$file" ]]; then
+              BENCHER_CMD="$BENCHER_CMD --file \"$file\""
+            fi
           done
+
+          # Echo the command for debugging (without token)
+          echo "Running: bencher run --branch ${{ github.ref_name }} --testbed ${{ inputs.os }} ..."
+          echo "Threshold: ±${{ inputs.max-regression-pct }}% ($THRESHOLD)"
+          echo "Files: ${{ steps.run-benchmarks.outputs.results-dir }}/*-report.json"
+
+          # Execute the command with token
+          BENCHER_CMD="$BENCHER_CMD --token $BENCHER_API_TOKEN"
+          eval $BENCHER_CMD
 
       # Upload benchmark results as workflow artifacts for manual inspection
       - name: Upload benchmark results artifact
