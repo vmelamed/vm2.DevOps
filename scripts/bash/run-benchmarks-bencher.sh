@@ -103,15 +103,18 @@ execute dotnet run \
 if [[ $dry_run != "true" ]]; then
     json_files=("$results_dir"/*-report.json)
     if [[ ! -f "${json_files[0]}" ]]; then
-        echo "❌ No JSON benchmark reports found in $results_dir" | tee -a "$GITHUB_STEP_SUMMARY" >&2
+        echo "❌ No JSON benchmark reports found in $results_dir" >&2
         exit 2
     fi
 
-    echo "✅ Benchmark results generated:" | tee -a "$GITHUB_STEP_SUMMARY"
+    echo "✅ Benchmark results generated:"
     for file in "${json_files[@]}"; do
-        echo "   - $(basename "$file")" | tee -a "$GITHUB_STEP_SUMMARY"
+        echo "   - $(basename "$file")"
     done
-fi
+fi >> "$GITHUB_STEP_SUMMARY"
 
 echo "✅ Benchmarks completed successfully" | tee -a "$GITHUB_STEP_SUMMARY"
 sync
+
+# shellcheck disable=SC2154
+echo "results-dir=$results_dir" >> "$GITHUB_OUTPUT"

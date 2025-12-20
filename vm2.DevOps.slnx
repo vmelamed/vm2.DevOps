@@ -5,6 +5,7 @@
     <Folder Name="/.github/workflows/">
         <File Path=".github/workflows/ClearCache.yaml" />
         <File Path=".github/workflows/Glob.Api.CI.yaml" />
+        <File Path=".github/workflows/_benchmarks-bencher.yaml" />
         <File Path=".github/workflows/_benchmarks.yaml" />
         <File Path=".github/workflows/_build.yaml" />
         <File Path=".github/workflows/_ci.yaml" />
@@ -22,6 +23,8 @@
         <File Path="scripts/bash/download-artifact.sh" />
         <File Path="scripts/bash/download-artifact.usage.sh" />
         <File Path="scripts/bash/download-artifact.utils.sh" />
+        <File Path="scripts/bash/move-commits-to-branch.sh" />
+        <File Path="scripts/bash/run-benchmarks-bencher.sh" />
         <File Path="scripts/bash/run-benchmarks.sh" />
         <File Path="scripts/bash/run-benchmarks.usage.sh" />
         <File Path="scripts/bash/run-benchmarks.utils.sh" />
@@ -49,6 +52,7 @@
         <File Path="LICENSE" />
         <File Path="README.md" />
         <File Path="ReleaseProcess.md" />
+        <File Path="ScratchPlan.md" />
         <File Path="test.runsettings" />
     </Folder>
     <Folder Name="/src/">

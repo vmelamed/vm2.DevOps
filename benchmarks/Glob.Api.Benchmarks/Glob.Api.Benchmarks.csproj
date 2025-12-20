@@ -6,7 +6,8 @@
         <RootNamespace>vm2.DevOps.Glob.Api.Benchmarks</RootNamespace>
         <DefineConstants>$(DefineConstants);$(UserDefined)</DefineConstants>
         <PublishTrimmed>False</PublishTrimmed>
-    </PropertyGroup>
+      <UserSecretsId>0d71ff3a-19a8-4f6e-b857-a8653ae30fa6</UserSecretsId>
+  </PropertyGroup>
 
     <ItemGroup>
         <Content Include="appsettings.$(USERNAME).json" Condition="Exists('appsettings.$(USERNAME).json')">

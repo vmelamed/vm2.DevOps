@@ -141,9 +141,6 @@ jobs:
               ${{ inputs.cached-dependencies && '--cached-dependencies' || '' }} \
               ${{ inputs.cached-artifacts    && '--cached-artifacts'    || '' }}
 
-          # Output the results directory for Bencher
-          echo "results-dir=${{ env.ARTIFACTS_DIR }}/results" >> $GITHUB_OUTPUT
-
       # Install Bencher CLI
       - name: Install Bencher CLI
         uses: bencherdev/bencher@main
@@ -152,24 +149,21 @@ jobs:
       - name: Track benchmarks with Bencher
         shell: bash
         env:
-          BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
-          BENCHER_PROJECT: vm2-devops
+          # BENCHER_PROJECT: vm2-devops
           BENCHER_BRANCH: ${{ github.ref_name }}
-          BENCHER_TESTBED: ${{ inputs.os }}
-          BENCHER_ADAPTER: json
           GITHUB_TOKEN: ${{ github.token }}
+          BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
         run: |
           # Calculate threshold as decimal (e.g., 10% -> 0.10)
-          THRESHOLD=$(echo "scale=4; ${{ inputs.max-regression-pct }} / 100" | bc)
+          THRESHOLD=$(echo "scale=4; 1 - ${{ inputs.max-regression-pct }} / 100" | bc)
 
           # Build bencher run command
           BENCHER_CMD="bencher run \
-            --project $BENCHER_PROJECT \
-            --branch $BENCHER_BRANCH \
-            --testbed $BENCHER_TESTBED \
-            --adapter $BENCHER_ADAPTER \
+            --branch \"${{ github.ref_name }}\" \
+            --testbed "${{ inputs.os }}" \
+            --adapter c_sharp_dot_net \
             --err \
-            --github-actions $GITHUB_TOKEN"
+            --github-actions \"$GITHUB_TOKEN\""
 
           # Add threshold configuration for latency metrics
           BENCHER_CMD="$BENCHER_CMD \
@@ -178,21 +172,28 @@ jobs:
             --threshold-max-sample-size 64 \
             --threshold-upper-boundary $THRESHOLD"
 
-          # For PRs, add baseline branch comparison
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            BENCHER_CMD="$BENCHER_CMD --if-branch ${{ github.base_ref }}"
+          declare -a files
+
+          mapfile -t -d " " files < <(list_of_files "${{ steps.run-benchmarks.outputs.results-dir }}/*-report.json")
+
+          if [[ ${#files[@]} == 0 ]]; then
+              echo "❌ No JSON reports found." | tee >> "$GITHUB_STEP_SUMMARY" >&2
+              exit 2
           fi
+          for file in "${files[@]}"; do
+          {
+              # Add the benchmark results file
+              BENCHER_CMD1="$BENCHER_CMD --file $file"
 
-          # Add the benchmark results files
-          BENCHER_CMD="$BENCHER_CMD --file ${{ steps.run-benchmarks.outputs.results-dir }}/*.json"
+              # Echo the command for debugging (without token)
+              echo "Running: $BENCHER_CMD1"
+              echo "Threshold: ±${{ inputs.max-regression-pct }}% ($THRESHOLD)"
 
-          # Echo the command for debugging (without token)
-          echo "Running: $BENCHER_CMD"
-          echo "Threshold: ±${{ inputs.max-regression-pct }}% ($THRESHOLD)"
-
-          # Execute the command
-          BENCHER_CMD="$BENCHER_CMD --token $BENCHER_API_TOKEN"
-          eval $BENCHER_CMD
+              # Execute the command
+              BENCHER_CMD1="$BENCHER_CMD1 --token $BENCHER_API_TOKEN"
+              eval $BENCHER_CMD1
+          }
+          done
 
       # Upload benchmark results as workflow artifacts for manual inspection
       - name: Upload benchmark results artifact
