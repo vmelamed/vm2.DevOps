@@ -210,6 +210,11 @@ jobs:
         if: always()
         shell: bash
         run: |
+          # Compute Bencher project slug from repository name
+          # Example: vmelamed/vm2.DevOps -> vm2-devops
+          REPO_NAME="${{ github.repository }}"
+          BENCHER_SLUG=$(echo "${REPO_NAME#*/}" | tr '[:upper:]' '[:lower:]' | tr '.' '-')
+
           {
             echo "### 📊 Benchmark Results"
             echo ""
@@ -218,5 +223,5 @@ jobs:
             echo "Testbed: **${{ inputs.os }}**"
             echo "Threshold: **±${{ inputs.max-regression-pct }}%**"
             echo ""
-            echo "🌐 [View detailed results on Bencher](https://bencher.dev/console/projects/${{ github.repository }})"
+            echo "🌐 [View detailed results on Bencher](https://bencher.dev/console/projects/${BENCHER_SLUG})"
           } >> $GITHUB_STEP_SUMMARY
