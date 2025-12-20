@@ -259,6 +259,7 @@ jobs:
     permissions:
       pull-requests: write # Required for Bencher to comment on PRs
       contents: read
+      checks: write # Required for Bencher to create GitHub Checks
     secrets:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
     with:
