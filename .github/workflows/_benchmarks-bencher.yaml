@@ -163,6 +163,7 @@ jobs:
             --testbed "${{ inputs.os }}" \
             --adapter c_sharp_dot_net \
             --err \
+            --ci-on-the-fly \
             --github-actions \"$GITHUB_TOKEN\""
 
           # Add threshold configuration for latency metrics
