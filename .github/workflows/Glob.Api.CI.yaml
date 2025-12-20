@@ -139,6 +139,9 @@ jobs:
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+    permissions:
+      contents: read
+      pull-requests: write # Required for Bencher to comment on PRs
     with:
       os: ${{ needs.get-params.outputs.os }}
       dotnet-version: ${{ needs.get-params.outputs.dotnet-version }}
