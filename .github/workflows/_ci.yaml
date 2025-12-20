@@ -256,6 +256,8 @@ jobs:
         os: ${{ fromJSON(inputs.os) }}
         benchmark-project: ${{ fromJSON(inputs.benchmark-projects) }}
     uses: ./.github/workflows/_benchmarks-bencher.yaml
+    permissions:
+      pull-requests: write # Required for Bencher to comment on PRs
     secrets:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
     with:
