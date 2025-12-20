@@ -212,10 +212,10 @@ jobs:
           {
             echo "### 📊 Benchmark Results"
             echo ""
-            echo "Project: **vm2.DevOps**"
+            echo "Project: **${{ github.repository }}**"
             echo "Branch: **${{ github.ref_name }}**"
             echo "Testbed: **${{ inputs.os }}**"
             echo "Threshold: **±${{ inputs.max-regression-pct }}%**"
             echo ""
-            echo "🌐 [View detailed results on Bencher](https://bencher.dev/console/projects/vm2.DevOps)"
+            echo "🌐 [View detailed results on Bencher](https://bencher.dev/console/projects/${{ github.repository }})"
           } >> $GITHUB_STEP_SUMMARY
