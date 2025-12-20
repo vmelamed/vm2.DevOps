@@ -48,6 +48,11 @@ on:
         type: boolean
         default: false
 
+    secrets:
+      CODECOV_TOKEN:
+        description: Codecov API token for uploading coverage reports
+        required: true
+
 # concurrency:
 #   group: test-${{ github.workflow_ref }}-${{ inputs.test-projects }}
 #   cancel-in-progress: true

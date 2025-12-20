@@ -136,7 +136,9 @@ jobs:
     uses: ./.github/workflows/_ci.yaml
     needs:
       - get-params
-    secrets: inherit
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
     with:
       os: ${{ needs.get-params.outputs.os }}
       dotnet-version: ${{ needs.get-params.outputs.dotnet-version }}

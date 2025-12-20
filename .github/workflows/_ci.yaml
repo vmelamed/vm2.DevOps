@@ -68,6 +68,14 @@ on:
         type: boolean
         default: false
 
+    secrets:
+      CODECOV_TOKEN:
+        description: Codecov API token for uploading coverage reports
+        required: true
+      BENCHER_API_TOKEN:
+        description: Bencher.dev API token for benchmark tracking
+        required: true
+
 env:
   # TODO: TO BE REMOVED! - this is only for debugging purposes
   ACTIONS_RUNNER_DEBUG: true
@@ -203,7 +211,8 @@ jobs:
         os: ${{ fromJSON(inputs.os) }}
         test-project: ${{ fromJSON(inputs.test-projects) }}
     uses: ./.github/workflows/_test.yaml
-    secrets: inherit
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     with:
       os: ${{ matrix.os }}
       dotnet-version: ${{ needs.setup.outputs.dotnet-version }}
@@ -246,7 +255,9 @@ jobs:
       matrix:
         os: ${{ fromJSON(inputs.os) }}
         benchmark-project: ${{ fromJSON(inputs.benchmark-projects) }}
-    uses: ./.github/workflows/_benchmarks.yaml
+    uses: ./.github/workflows/_benchmarks-bencher.yaml
+    secrets:
+      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
     with:
       os: ${{ matrix.os }}
       dotnet-version: ${{ needs.setup.outputs.dotnet-version }}
@@ -254,7 +265,6 @@ jobs:
       preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
       benchmark-project: ${{ matrix.benchmark-project }}
       max-regression-pct: ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}
-      force-new-baseline: ${{ fromJSON(needs.setup.outputs.force-new-baseline) }}
       cached-dependencies: ${{ fromJSON(inputs.cached-dependencies) }}
       cached-artifacts: ${{ fromJSON(inputs.cached-artifacts) }}
       verbose: ${{ fromJSON(needs.setup.outputs.verbose) }}
