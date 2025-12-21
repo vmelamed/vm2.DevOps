@@ -21,7 +21,7 @@ on:
       preprocessor-symbols:
         description: Define constants to pass to the compiler
         type: string
-        default: ""
+        default: "_"
 
       test-project:
         description: Path to the test project to run tests against (cannot be null or empty string)
@@ -48,14 +48,21 @@ on:
         type: boolean
         default: false
 
+    secrets:
+      CODECOV_TOKEN:
+        description: Codecov API token for uploading coverage reports
+        required: true
+
 # concurrency:
-#   group: test-${{ github.workflow_ref }}-${{ inputs.test-project }}
+#   group: test-${{ github.workflow_ref }}-${{ inputs.test-projects }}
 #   cancel-in-progress: true
-#   # NOTE: Only uncomment if this workflow is called directly (not via _ci.yaml)
+#   # NOTE: Only uncomment if this workflow is called directly (not by the _ci.yaml)
 #   # or if _ci.yaml runs build/test/benchmarks in parallel
 
 permissions:
   contents: read # to checkout the code
+  checks: write # to create test result checks
+  pull-requests: write # to comment test results on PRs
 
 env:
   # this must be the same across all jobs and steps below.
@@ -100,7 +107,7 @@ jobs:
       # Additional explicit cache layer with time-based rotation for NuGet packages
       - name: Cache NuGet packages (weekly rotation)
         if: inputs.cached-dependencies == true
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ steps.cache-timestamp.outputs.week }}-${{ hashFiles('**/packages.lock.json') }}
@@ -118,13 +125,27 @@ jobs:
       # Retrieve compiled binaries from the build job to avoid recompilation
       - name: Restore build artifacts from cache
         if: inputs.cached-artifacts == true
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           key: build-artifacts-${{ runner.os }}-${{ github.sha }}-${{ inputs.configuration }}
           fail-on-cache-miss: true
           path: |
             **/bin/${{ inputs.configuration }}
             **/obj
+
+      - name: Verify the artifacts were restored
+        if: inputs.cached-artifacts == true
+        shell: bash
+        run: |
+          ARTIFACT_PATH=$(find . -type d -path "*/bin/${{ inputs.configuration }}" | head -n 1)
+          if [ -z "$ARTIFACT_PATH" ]; then
+            echo "Error: No build artifacts found in cache."
+            exit 1
+          else
+            echo "Build artifacts found at: $ARTIFACT_PATH"
+          fi
+          ls -la "$ARTIFACT_PATH"/**/*.*
+          ls -la ./test/**/bin/${{ inputs.configuration }}/*.*
 
       # Make bash scripts executable on Unix-like systems
       - name: Make Scripts Executable
@@ -134,10 +155,11 @@ jobs:
 
       # Execute tests with code coverage collection and validation
       - name: Run script for unit test with coverage
+        id: run-tests
         env:
-          CONFIGURATION:        ${{ inputs.configuration }}
+          CONFIGURATION: ${{ inputs.configuration }}
           PREPROCESSOR_SYMBOLS: ${{ inputs.preprocessor-symbols }}
-          VERBOSE:              ${{ fromJSON(inputs.verbose) }}
+          VERBOSE: ${{ fromJSON(inputs.verbose) }}
         shell: bash
         run: |
           ./scripts/bash/run-tests.sh ${{ inputs.test-project }} \
@@ -149,9 +171,73 @@ jobs:
 
       # Upload test results and coverage reports as workflow artifacts
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
+        id: upload-coverage
         with:
-          name: coverage-${{ inputs.os }}
-          path: ${{ env.ARTIFACTS_DIR }}
+          name: coverage-${{ steps.run-tests.outputs.proj-name }}-${{ inputs.os }}
+          path: ${{ steps.run-tests.outputs.artifacts-dir }}
           if-no-files-found: error
           overwrite: true
+
+      # Upload coverage to Codecov for online viewing and PR integration
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          flags: ${{ steps.run-tests.outputs.proj-name }}-${{ inputs.os }}
+          slug: ${{ github.repository }}
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ${{ steps.run-tests.outputs.coverage_source_path }}
+          fail_ci_if_error: false
+          verbose: true
+
+      # Create test result check and PR comment
+      - name: Publish test results
+        if: success() || failure() # Run even if tests fail, but not if cancelled
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          check_name: Test Results (${{ steps.run-tests.outputs.proj-name }} on ${{ inputs.os }})
+          files: |
+            ${{ steps.run-tests.outputs.artifacts-dir }}/**/*.trx
+            ${{ steps.run-tests.outputs.artifacts-dir }}/**/*.xml
+          comment_mode: always
+          compare_to_earlier_commit: true
+          report_individual_runs: true
+          deduplicate_classes_by_file_name: false
+
+      # Add coverage check status to summary
+      - name: Verify coverage threshold
+        if: always()
+        shell: bash
+        run: |
+          LINE_PCT="${{ steps.run-tests.outputs.line_pct }}"
+          MIN_PCT="${{ inputs.min-coverage-pct }}"
+
+          {
+            echo "### 📊 Code Coverage"
+            echo ""
+            echo "**Line Coverage:** ${LINE_PCT}%"
+            echo "**Minimum Required:** ${MIN_PCT}%"
+            echo ""
+            if (( $(echo "$LINE_PCT < $MIN_PCT" | bc -l) )); then
+              echo "❌ **FAILED:** Coverage ${LINE_PCT}% is below threshold ${MIN_PCT}%"
+              echo ""
+              echo "::error::Code coverage ${LINE_PCT}% is below the minimum required threshold of ${MIN_PCT}%"
+            else
+              echo "✅ **PASSED:** Coverage meets threshold"
+            fi
+          } >> $GITHUB_STEP_SUMMARY
+
+      # Add coverage report link to job summary
+      - name: Add coverage report link to summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "### 📊 Coverage Report - ${{ steps.run-tests.outputs.proj-name }}"
+            echo ""
+            echo "🌐 View on [Codecov](https://app.codecov.io/gh/${{ github.repository }}/commit/${{ github.sha }})"
+            echo ""
+            echo "📥 Or download the [coverage-${{ steps.run-tests.outputs.proj-name }}-${{ inputs.os }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) artifact to view the HTML report locally."
+            echo ""
+            echo "Open \`coverage/html/index.html\` from the downloaded artifact in your browser."
+          } >> $GITHUB_STEP_SUMMARY

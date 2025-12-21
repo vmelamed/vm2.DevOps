@@ -15,7 +15,7 @@
     <PackageId>vm2.Glob</PackageId>
     <Title>Cross-platform Glob Pattern Matching CLI Tool</Title>
     <Description>
-        A fast, intuitive CLI tool for finding files and directories using glob patterns. 
+        A fast, intuitive CLI tool for finding files and directories using glob patterns.
         Install globally with 'dotnet tool install -g vm2.DevOps.Glob' and use anywhere.
         Perfect for shell scripts, CI/CD pipelines, and developer workflows.
     </Description>
@@ -25,7 +25,7 @@
   </PropertyGroup -->
 
   <ItemGroup>
-    <Content Include="appsettings.valme.json">
+    <Content Include="appsettings.$(USERNAME).json" Condition="Exists('appsettings.$(USERNAME).json')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="appsettings.Development.json">

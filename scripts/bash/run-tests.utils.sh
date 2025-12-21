@@ -96,6 +96,7 @@ dump_all_variables()
         quiet \
         --blank \
         test_project \
+        configuration \
         preprocessor_symbols \
         min_coverage_pct \
         artifacts_dir \

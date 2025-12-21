@@ -99,20 +99,18 @@ public class SpanWriterTests
     public void Write_Span_ExceedsBuffer_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        Span<char> buffer = stackalloc char[5];
-        var writer = new SpanWriter(buffer);
+        var write = () => { var writer = new SpanWriter(stackalloc char[5]); writer.Write("Too Long!".AsSpan()); };
 
         // Act & Assert
-        try
-        {
-            writer.Write("Too Long!".AsSpan());
-            Assert.Fail("Expected ArgumentOutOfRangeException was not thrown");
-        }
-        catch (ArgumentOutOfRangeException ex)
-        {
-            ex.ParamName.Should().Be("text");
-            ex.Message.Should().Contain("Not enough space in the span");
-        }
+        write
+            .Should()
+            .Throw<ArgumentOutOfRangeException>()
+            .WithMessage("Not enough space in the span (Parameter 'text')")
+            .And
+            .ParamName
+            .Should()
+            .Be("text")
+            ;
     }
 
     [Fact]
@@ -135,20 +133,23 @@ public class SpanWriterTests
     public void Write_Span_AfterFull_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        Span<char> buffer = stackalloc char[3];
-        var writer = new SpanWriter(buffer);
-        writer.Write("ABC".AsSpan()); // Fill buffer
+        var write = () =>
+        {
+            var writer = new SpanWriter(stackalloc char[3]);
+            writer.Write("ABC".AsSpan()); // Fill buffer
+            writer.Write("D".AsSpan());   // This should throw
+        };
 
         // Act & Assert
-        try
-        {
-            writer.Write("X".AsSpan());
-            Assert.Fail("Expected ArgumentOutOfRangeException was not thrown");
-        }
-        catch (ArgumentOutOfRangeException ex)
-        {
-            ex.ParamName.Should().Be("text");
-        }
+        write
+            .Should()
+            .Throw<ArgumentOutOfRangeException>()
+            .WithMessage("Not enough space in the span (Parameter 'text')")
+            .And
+            .ParamName
+            .Should()
+            .Be("text")
+            ;
     }
 
     #endregion
@@ -209,22 +210,24 @@ public class SpanWriterTests
     public void Write_Char_WhenFull_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        Span<char> buffer = stackalloc char[2];
-        var writer = new SpanWriter(buffer);
-        writer.Write('A');
-        writer.Write('B'); // Now full
+        var write = () =>
+        {
+            var writer = new SpanWriter(stackalloc char[2]);
+            writer.Write('A');
+            writer.Write('B'); // Now full
+            writer.Write('C');
+        };
 
         // Act & Assert
-        try
-        {
-            writer.Write('C');
-            Assert.Fail("Expected ArgumentOutOfRangeException was not thrown");
-        }
-        catch (ArgumentOutOfRangeException ex)
-        {
-            ex.ParamName.Should().Be("text");
-            ex.Message.Should().Contain("Not enough space in the span");
-        }
+        write
+            .Should()
+            .Throw<ArgumentOutOfRangeException>()
+            .WithMessage("Not enough space in the span (Parameter 'text')")
+            .And
+            .ParamName
+            .Should()
+            .Be("text")
+            ;
     }
 
     [Fact]

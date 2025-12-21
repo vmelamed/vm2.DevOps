@@ -95,7 +95,6 @@ public sealed partial class GlobEnumerator
         get => _options.MatchCasing;
         set
         {
-            _options.MatchCasing = value;
             switch (value)
             {
                 case MatchCasing.PlatformDefault:
@@ -119,6 +118,7 @@ public sealed partial class GlobEnumerator
                 default:
                     throw new ArgumentOutOfRangeException(nameof(value), "Invalid MatchCasing value.");
             }
+            _options.MatchCasing = value;
         }
     }
 
@@ -174,6 +174,8 @@ public sealed partial class GlobEnumerator
         _logger        = logger;
         MatchCasing    = MatchCasing.PlatformDefault;
         FileSystemRoot = _fileSystem.FileSystemRootRegex();
+        IgnoreInaccessible = true;
+        AttributesToSkip = FileAttributes.Hidden | FileAttributes.System;
     }
     #endregion
 

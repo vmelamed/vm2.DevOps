@@ -3,6 +3,7 @@
 
 namespace vm2.DevOps.Glob.Api.FakeFileSystem;
 
+[ExcludeFromCodeCoverage]
 public sealed partial class FakeFS
 {
     static readonly Dictionary<string, (DataType DataType, byte[] Bytes)> _fileSystemsData = [];    // fileName => data type, content in UTF8

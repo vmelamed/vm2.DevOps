@@ -6,18 +6,27 @@
         <RootNamespace>vm2.DevOps.Glob.Api.Benchmarks</RootNamespace>
         <DefineConstants>$(DefineConstants);$(UserDefined)</DefineConstants>
         <PublishTrimmed>False</PublishTrimmed>
-    </PropertyGroup>
+      <UserSecretsId>0d71ff3a-19a8-4f6e-b857-a8653ae30fa6</UserSecretsId>
+  </PropertyGroup>
 
     <ItemGroup>
-        <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
-        <Content Include="appsettings.*.json" CopyToOutputDirectory="PreserveNewest" />
-        <Content Include="FSModels\*.json" CopyToOutputDirectory="PreserveNewest" />
+        <Content Include="appsettings.$(USERNAME).json" Condition="Exists('appsettings.$(USERNAME).json')">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <Content Include="appsettings.Development.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <Content Include="appsettings.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <Content Include="FSModels\*.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\Glob.Api\Glob.Api.csproj" />
         <ProjectReference Include="..\..\test\Glob.Api.FakeFileSystem\Glob.Api.FakeFileSystem.csproj" />
     </ItemGroup>
-
 
 </Project>

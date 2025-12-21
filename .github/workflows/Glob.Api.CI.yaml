@@ -11,15 +11,17 @@ on:
 
   workflow_dispatch:
     inputs:
-      dotnet-version:
-        description: Version of .NET SDK to use (cannot be null, empty, or whitespace)
+      os:
+        description: "Runner OS (comma-separated for multiple, e.g. ubuntu-latest,windows-latest)"
         type: string
-        default: 10.0.x
+        default: "ubuntu-latest"
+        # Known GitHub Actions issue: the workflow dispatch UI doesn't properly handle JSON strings with quotes.
+        # E.g. for the input '["ubuntu-latest"]', the UI removes the inner quotes and it becomes the invalid JSON array: '[ubuntu-latest]'.
 
       preprocessor-symbols:
         description: Define constants to pass to the compiler
         type: string
-        default: ""
+        default: "SHORT_RUN"
 
       cached-dependencies:
         description: Enable storing and retrieving NuGet dependencies to/from cache (default true)
@@ -36,68 +38,116 @@ on:
         type: boolean
         default: false
 
-env:
-  # TODO: TO BE REMOVED! - this is only for debugging purposes
-  ACTIONS_RUNNER_DEBUG: true
-  ACTIONS_JOB_DEBUG: true
-  ACTIONS_STEP_DEBUG: true
-
 jobs:
-  call_ci:
-    name: Call the CI Workflow
+  get-params:
+    name: Prepare the default and passed in parameters
+    runs-on: ubuntu-latest # here it doesn't matter - we're preparing the inputs for the next workload'
     if: >
       ${{
       github.event_name == 'pull_request' ||
       github.event_name == 'workflow_dispatch' ||
       github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]')
       }}
-    strategy:
-      fail-fast: true
-      matrix:
-        os:
-          - ubuntu-latest
-        build-project:
-          - "" # build the whole solution once
-        test-project:
-          - ./test/Glob.Api.FakeFileSystem.Tests/Glob.Api.FakeFileSystem.Tests.csproj
-          - ./test/Glob.Api.Tests/Glob.Api.Tests.csproj
-        benchmark-project:
-          - ./benchmarks/Glob.Api.Benchmarks/Glob.Api.Benchmarks.csproj
-    # uses: ./.github/workflows/_ci.yaml
-    # with:
-    #   build-project:        ${{ matrix.build-project }}
-    #   test-project:         ${{ matrix.test-project }}
-    #   benchmark-project:    ${{ matrix.benchmark-project }}
-    #   os:                   ${{ matrix.os }}
-    #   dotnet-version:       ${{ vars.DOTNET_VERSION         || '10.0.x' }}
-    #   configuration:        ${{ vars.CONFIGURATION          || 'Release' }}
-    #   preprocessor-symbols: ${{ inputs.preprocessor-symbols || '' }}
-    #   min-coverage-pct:     ${{ vars.MIN_COVERAGE_PCT       || 80 }}
-    #   max-regression-pct:   ${{ vars.MAX_REGRESSION_PCT     || 10 }}
-    #   force-new-baseline:   ${{ (vars.FORCE_NEW_BASELINE    || false) == true  }}
-    #   cached-dependencies:  ${{ (inputs.cached-dependencies || true)  != false }}
-    #   cached-artifacts:     ${{ (inputs.cached-artifacts    || true)  != false }}
-    #   verbose:              ${{ (inputs.verbose             || false) == true  }}
-    # TO BE REMOVED WHEN ACTUALLY RUNNING THE BUILD WORKFLOW:
-    runs-on: ${{ matrix.os }}
+    outputs:
+      build-projects: ${{ steps.init-params.outputs.build-projects }}
+      test-projects: ${{ steps.init-params.outputs.test-projects }}
+      benchmark-projects: ${{ steps.init-params.outputs.benchmark-projects }}
+      os: ${{ steps.init-params.outputs.os }}
+      dotnet-version: ${{ steps.init-params.outputs.dotnet-version }}
+      configuration: ${{ steps.init-params.outputs.configuration }}
+      preprocessor-symbols: ${{ steps.init-params.outputs.preprocessor-symbols }}
+      min-coverage-pct: ${{ steps.init-params.outputs.min-coverage-pct }}
+      max-regression-pct: ${{ steps.init-params.outputs.max-regression-pct }}
+      force-new-baseline: ${{ steps.init-params.outputs.force-new-baseline }}
+      cached-dependencies: ${{ steps.init-params.outputs.cached-dependencies }}
+      cached-artifacts: ${{ steps.init-params.outputs.cached-artifacts }}
+      verbose: ${{ steps.init-params.outputs.verbose }}
     steps:
-      - name: Print \0
+      - name: Gather parameters
+        id: init-params
         shell: bash
-        run: |+
+        run: |
+          # the following outputs are invariant - no matter how we trigger the workflow, they stay the same:
+
+          build_projects='[ "./vm2.DevOps.slnx" ]'                                              # build the whole solution at once
+          test_projects=" [ \
+              \"./test/Glob.Api.FakeFileSystem.Tests/Glob.Api.FakeFileSystem.Tests.csproj\", \
+              \"./test/Glob.Api.Tests/Glob.Api.Tests.csproj\" ]"                                # test projects to run
+          benchmark_projects='["./benchmarks/Glob.Api.Benchmarks/Glob.Api.Benchmarks.csproj"]'  # benchmark projects to run
+
+          # the following outputs are invariant - no matter how we trigger the workflow, they are externally set variables:
+          dotnet_version=${{ vars.DOTNET_VERSION }}
+          configuration=${{ vars.CONFIGURATION }}
+          min_coverage_pct=${{ vars.MIN_COVERAGE_PCT }}
+          max_regression_pct=${{ vars.MAX_REGRESSION_PCT }}
+          force_new_baseline=${{ vars.FORCE_NEW_BASELINE }}
+
+          # the following outputs are the default values for push and pull_request events
+
+          if [ "${{ github.event_name }}" == "push" ]; then
+              preprocessor_symbols="SHORT_RUN"
+          else
+              preprocessor_symbols="_"
+          fi
+          if [ "${{ github.event_name }}" == "push" ] || \
+             [ "${{ github.event_name }}" == "pull_request" ]; then
+              # Set the default values for push and pull_request events
+              os='["ubuntu-latest"]'
+              cached_dependencies="true"
+              cached_artifacts="true"
+              verbose="false"
+          elif [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+              # Get the values from the inputs of workflow_dispatch event (the UI)
+              # Convert comma-separated runner's OS values to JSON array
+              os=$(echo "${{ inputs.os }}" | jq -Rc 'split(",") | map(select(length > 0) | gsub("^\\s+|\\s+$";""))')
+              preprocessor_symbols="${{ inputs.preprocessor-symbols }}"
+              cached_dependencies="${{ inputs.cached-dependencies }}"
+              cached_artifacts="${{ inputs.cached-artifacts }}"
+              verbose="${{ inputs.verbose }}"
+          else
+              echo "Unsupported event: ${{ github.event_name }}"
+              exit 5
+          fi
+
+          # Set the outputs:
           {
-            echo "uses ./.github/workflows/_ci.yaml"
-            echo "with"
-            echo "  build-project:        ${{ matrix.build-project }}"
-            echo "  test-project:         ${{ matrix.test-project }}"
-            echo "  benchmark-project:    ${{ matrix.benchmark-project }}"
-            echo "  os:                   ${{ matrix.os }}"
-            echo "  dotnet-version:       ${{ vars.DOTNET_VERSION         || '10.0.x' }}"
-            echo "  configuration:        ${{ vars.CONFIGURATION          || 'Release' }}"
-            echo "  preprocessor-symbols: ${{ inputs.preprocessor-symbols || '' }}"
-            echo "  min-coverage-pct:     ${{ vars.MIN_COVERAGE_PCT       || 80 }}"
-            echo "  max-regression-pct:   ${{ vars.MAX_REGRESSION_PCT     || 10 }}"
-            echo "  force-new-baseline:   ${{ vars.FORCE_NEW_BASELINE     != false }}"
-            echo "  cached-dependencies:  ${{ inputs.cached-dependencies  != false }}"
-            echo "  cached-artifacts:     ${{ inputs.cached-artifacts     != false }}"
-            echo "  verbose:              ${{ inputs.verbose              == true }}"
-          } >> $GITHUB_STEP_SUMMARY
+            echo "build-projects=${build_projects}"
+            echo "test-projects=${test_projects}"
+            echo "benchmark-projects=${benchmark_projects}"
+            echo "os=${os}"
+            echo "dotnet-version=${dotnet_version}"
+            echo "configuration=${configuration}"
+            echo "preprocessor-symbols=${preprocessor_symbols}"
+            echo "min-coverage-pct=${min_coverage_pct}"
+            echo "max-regression-pct=${max_regression_pct}"
+            echo "force-new-baseline=${force_new_baseline}"
+            echo "cached-dependencies=${cached_dependencies}"
+            echo "cached-artifacts=${cached_artifacts}"
+            echo "verbose=${verbose}"
+          }  >> $GITHUB_OUTPUT
+
+  call-ci:
+    uses: ./.github/workflows/_ci.yaml
+    needs:
+      - get-params
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+    permissions:
+      contents: read
+      pull-requests: write # Required to comment on PRs
+      checks: write # Required to create GitHub Checks
+    with:
+      os: ${{ needs.get-params.outputs.os }}
+      dotnet-version: ${{ needs.get-params.outputs.dotnet-version }}
+      configuration: ${{ needs.get-params.outputs.configuration }}
+      preprocessor-symbols: ${{ needs.get-params.outputs.preprocessor-symbols }}
+      build-projects: ${{ needs.get-params.outputs.build-projects }}
+      test-projects: ${{ needs.get-params.outputs.test-projects }}
+      benchmark-projects: ${{ needs.get-params.outputs.benchmark-projects }}
+      min-coverage-pct: ${{ fromJSON(needs.get-params.outputs.min-coverage-pct) }}
+      max-regression-pct: ${{ fromJSON(needs.get-params.outputs.max-regression-pct) }}
+      force-new-baseline: ${{ fromJSON(needs.get-params.outputs.force-new-baseline) }}
+      cached-dependencies: ${{ fromJSON(needs.get-params.outputs.cached-dependencies) }}
+      cached-artifacts: ${{ fromJSON(needs.get-params.outputs.cached-artifacts) }}
+      verbose: ${{ fromJSON(needs.get-params.outputs.verbose) }}

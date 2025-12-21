@@ -45,7 +45,8 @@ public partial class FakeFileSystemTests
         #endregion
     }
 
-    public static TheoryData<FakeFSTheoryElement> Text_To_Add =
+    [ExcludeFromCodeCoverage]
+    public static TheoryData<FakeFSTheoryElement> Text_To_Add =>
     [
         // Windows paths
         new FakeFSTheoryElement(TestFileLine(), @"C:/", false, @"{""name"":""C:/"",""folders"":[],""files"":[]}", true),
@@ -77,7 +78,8 @@ public partial class FakeFileSystemTests
             """, false, @"{""name"":""/"",""folders"":[{""name"":""d0"",""folders"":[],""files"":[""f1""]},{""name"":""dd"",""folders"":[],""files"":[""ff""]}],""files"":[""f0""]}", true),
     ];
 
-    public static TheoryData<FakeFSTheoryElement> Text_Files_To_Add =
+    [ExcludeFromCodeCoverage]
+    public static TheoryData<FakeFSTheoryElement> Text_Files_To_Add =>
     [
         new FakeFSTheoryElement(TestFileLine(), @"FSFiles/FS1.Win.txt",  false, "", false),
         new FakeFSTheoryElement(TestFileLine(), @"FSFiles/FS1.Unix.txt", false, "", false),
@@ -123,7 +125,8 @@ public partial class FakeFileSystemTests
         #endregion
     }
 
-    public static TheoryData<Json_To_Add_TestData> Json_To_Add =
+    [ExcludeFromCodeCoverage]
+    public static TheoryData<Json_To_Add_TestData> Json_To_Add =>
     [
         // Windows JSONs
         new Json_To_Add_TestData(TestFileLine(), @"{""name"":""C:/"",""folders"":[],""files"":[]}", false, true, @""),
@@ -141,7 +144,7 @@ public partial class FakeFileSystemTests
         new Json_To_Add_TestData(TestFileLine(), @"{""name"":""/"",""folders"":[{""name"":""d0"",""folders"":[],""files"":[""f1""]},{""name"":""dd"",""folders"":[],""files"":[""ff""]}],""files"":[""f0""]}", false, true, @""),
     ];
 
-    public static TheoryData<Json_To_Add_TestData> Json_Files_To_Add =
+    public static TheoryData<Json_To_Add_TestData> Json_Files_To_Add =>
     [
         new Json_To_Add_TestData(TestFileLine(), @"FSFiles/FS1.Win.json",  false, true, @""),
         new Json_To_Add_TestData(TestFileLine(), @"FSFiles/FS1.Unix.json", false, true, @""),
@@ -190,7 +193,8 @@ public partial class FakeFileSystemTests
         #endregion
     }
 
-    public static TheoryData<SetCurrentFolder_TestData> Set_Current_Folder_TestData =
+    [ExcludeFromCodeCoverage]
+    public static TheoryData<SetCurrentFolder_TestData> Set_Current_Folder_TestData =>
     [
         new SetCurrentFolder_TestData(TestFileLine(), "FSFiles/FS2.Win.json",  "",                    "",                     "C:/",                 false),
         new SetCurrentFolder_TestData(TestFileLine(), "FSFiles/FS2.Win.json",  "",                    "C:",                   "C:/",                 false),
@@ -281,7 +285,8 @@ public partial class FakeFileSystemTests
         #endregion
     }
 
-    public static TheoryData<GetPathFromRoot_TestData> FromPath_TestDataSet =
+    [ExcludeFromCodeCoverage]
+    public static TheoryData<GetPathFromRoot_TestData> FromPath_TestDataSet =>
     [
         new GetPathFromRoot_TestData(TestFileLine(), "FSFiles/FS2.Win.json", "C:/folder1/",         "",                     "C:/folder1/",          "",          false),
         new GetPathFromRoot_TestData(TestFileLine(), "FSFiles/FS2.Win.json", "C:/folder1/",         "C:/",                  "C:/",                  "",          false),
@@ -356,7 +361,8 @@ public partial class FakeFileSystemTests
         #endregion
     }
 
-    public static TheoryData<Folder_TestData> FolderExists_TestDataSet =
+    [ExcludeFromCodeCoverage]
+    public static TheoryData<Folder_TestData> FolderExists_TestDataSet =>
     [
         new Folder_TestData(TestFileLine(), "FSFiles/FS2.Win.json",  "",                    "",                     true,  false),
         new Folder_TestData(TestFileLine(), "FSFiles/FS2.Win.json",  "",                    "C:",                   true,  false),
@@ -394,7 +400,8 @@ public partial class FakeFileSystemTests
         new Folder_TestData(TestFileLine(), "FSFiles/FS2.Win.json",  "/folder1/folder2/",   "./file2.txt",          false, false),
     ];
 
-    public static TheoryData<Folder_TestData> FileExists_TestDataSet =
+    [ExcludeFromCodeCoverage]
+    public static TheoryData<Folder_TestData> FileExists_TestDataSet =>
     [
         new Folder_TestData(TestFileLine(), "FSFiles/FS2.Win.json",  "",                    "C:/folder1",           false, false),
         new Folder_TestData(TestFileLine(), "FSFiles/FS2.Win.json",  "",                    "C:/folder1/file1.txt", true,  false),
@@ -463,7 +470,8 @@ public partial class FakeFileSystemTests
         #endregion
     }
 
-    public static TheoryData<GetPath_TestData> GetPath_TestDataSet =
+    [ExcludeFromCodeCoverage]
+    public static TheoryData<GetPath_TestData> GetPath_TestDataSet =>
     [
         new GetPath_TestData(TestFileLine(), "FSFiles/FS2.Win.json",  "",            "D:/folder1",           true,  ""),
         new GetPath_TestData(TestFileLine(), "FSFiles/FS2.Win.json",  "",            "..",                   true,  ""),
@@ -548,7 +556,8 @@ public partial class FakeFileSystemTests
         #endregion
     }
 
-    public static TheoryData<Enumerate_TestData> EnumerateFolders_TestDataSet =
+    [ExcludeFromCodeCoverage]
+    public static TheoryData<Enumerate_TestData> EnumerateFolders_TestDataSet =>
     [
         new Enumerate_TestData(TestFileLine(), "FSFiles/FS2.Win.json", "", "C:/", ""                , false, false, ["C:/folder1/", "C:/folder3/"]),
         new Enumerate_TestData(TestFileLine(), "FSFiles/FS2.Win.json", "", "C:/", "*"               , false, false, ["C:/folder1/", "C:/folder3/"]),
@@ -579,7 +588,8 @@ public partial class FakeFileSystemTests
         new Enumerate_TestData(TestFileLine(), "FSFiles/FS2.Unix.json", "/folder1", "", ""          , true,  false, ["/folder1/folder2/"]),
     ];
 
-    public static TheoryData<Enumerate_TestData> EnumerateFiles_TestDataSet =
+    [ExcludeFromCodeCoverage]
+    public static TheoryData<Enumerate_TestData> EnumerateFiles_TestDataSet =>
     [
         new Enumerate_TestData(TestFileLine(), "FSFiles/FS2.Win.json", "", "C:/", ""                , false, false, ["C:/root.txt"]),
         new Enumerate_TestData(TestFileLine(), "FSFiles/FS2.Win.json", "", "C:/", "*"               , false, false, ["C:/root.txt"]),

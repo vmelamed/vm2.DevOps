@@ -1,0 +1,51 @@
+# Codecov configuration
+# Documentation: https://docs.codecov.com/docs/codecov-yaml
+# Validation: `curl -X POST --data-binary @codecov.yml https://codecov.io/validate`
+
+coverage:
+  precision: 2 # Report coverage to 2 decimal places
+  round: down # Round down coverage percentages
+  range: 70..100 # Green at 100%, red at 70%
+
+  status:
+    project:
+      default:
+        target: auto # Compare against parent commit
+        threshold: 0.5% # Allow 0.5% drop without failing
+
+    patch:
+      default:
+        target: 80% # New code must have 80% coverage
+        threshold: 0% # No tolerance for coverage drop in new code
+
+# Define the flags (test projects)
+flags:
+  Glob.Api.Tests-ubuntu-latest:
+    carryforward: true # Keep previous coverage if this flag is missing
+
+  Glob.Api.FakeFileSystem.Tests-ubuntu-latest:
+    carryforward: true
+
+# Configure PR comments
+comment:
+  layout: "reach,diff,flags,tree"
+  behavior: default # Post new comment for each commit
+  require_changes: false # Always post comment
+  require_base: false # Post even if no base commit
+  require_head: true
+
+# Ignore paths from coverage calculations
+ignore:
+  # - "test/**" # Exclude test projects
+  # - "**/obj/**" # Exclude build artifacts
+  # - "**/bin/**"
+  # - "**/*.Tests/**"
+  # - "**/Test.Utilities/**"
+  - "**/Migrations/**"
+  - "**/*.g.cs" # Exclude generated code files
+  - "**/*.Designer.cs"
+  - "**/*.g.i.cs"
+  - "**/*AssemblyInfo.cs"
+  - "**/Properties/**"
+  - "**/*.config"
+  - "**/*.xml"

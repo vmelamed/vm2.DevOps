@@ -114,14 +114,14 @@ public static partial class GlobConstants
     /// </summary>
     /// <returns></returns>
     [GeneratedRegex(UnixPathname, unixOptions)]
-    public static partial Regex UnixPathRgex();
+    public static partial Regex UnixPathRegex();
 
     /// <summary>
     /// Gets a <see cref="Regex"/> object for validating Unix pathnames.
     /// </summary>
     /// <returns></returns>
     [GeneratedRegex(UnixGlobPattern, unixOptions)]
-    public static partial Regex UnixGlobRgex();
+    public static partial Regex UnixGlobRegex();
 
     /// <summary>
     /// Gets a regular expression object that matches Unix-style environment variable patterns.

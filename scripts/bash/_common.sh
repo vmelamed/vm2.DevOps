@@ -373,13 +373,13 @@ function is_in() {
 
 function list_of_files() {
     if [[ $# -lt 1 ]]; then
-        echo "The function list_ofFiles() requires at least one parameter: the file pattern." >&2
+        echo "The function list_of_files() requires at least one parameter: the file pattern." >&2
         return 2
     fi
 
     local pattern="$1"
 
-    # by default, if a glob pattern does not match any files, it expands to an empty string instead of the default to leaving
+    # by default, if a glob pattern does not match any files, it expands to an empty string instead of the default: to leave
     # the pattern unchanged, e.g. ${artifacts_dir}/results/*-report.json - we don't want that
     shopt -s nullglob
     shopt -s globstar || true

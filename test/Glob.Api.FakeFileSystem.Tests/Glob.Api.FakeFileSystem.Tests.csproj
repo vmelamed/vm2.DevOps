@@ -10,9 +10,21 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="FSFiles\FS*.*.graph.txt" CopyToOutputDirectory="Never" />
-    <Content Include="FSFiles\FS*.*.txt" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="FSFiles\FS*.*.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="testconfig.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="FSFiles\FS*.*.graph.txt" >
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Content>
+    <Content Include="FSFiles\FS*.*.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="FSFiles\FS*.*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

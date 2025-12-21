@@ -547,6 +547,7 @@
           "Microsoft.Extensions.Logging.Console": "[10.0.1, )",
           "Microsoft.Extensions.Options.ConfigurationExtensions": "[10.0.1, )",
           "System.Configuration.ConfigurationManager": "[10.0.1, )",
+          "Test.Utilities": "[1.0.0, )",
           "vm2.Glob.Api": "[1.0.0, )",
           "xunit.v3.extensibility.core": "[3.2.1, )"
         }

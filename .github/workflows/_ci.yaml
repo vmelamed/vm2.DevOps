@@ -3,95 +3,100 @@ name: _ci (Reusable workflow)
 on:
   workflow_call:
     inputs:
-      build-project:
-        description: Path to the project to build (if null, empty, ow whitespace, builds the solution or the project in the current directory).
-        type: string
-        required: false
-
-      test-project:
-        description: Path to the test project to run tests against (cannot be null or empty string)
-        type: string
-        required: true
-
-      benchmark-project:
-        description: Path to the benchmark project. If not provided, null, or empty, benchmarks will be skipped.
-        type: string
-        required: false
-
       os:
-        description: Runner OS-s (cannot be null or empty string, default ubuntu-latest)
+        description: JSON array of runner OS-s. Cannot be null or empty!
         type: string
-        default: ubuntu-latest
+        default: "[\u0022ubuntu-latest\u0022]"
 
       dotnet-version:
-        description: Version of .NET SDK to use (cannot be null or empty string, default 10.0.x)
+        description: Version of .NET SDK to use. Cannot be null or empty!.
         type: string
         default: 10.0.x
 
       configuration:
-        description: The type of build to produce, e.g. Release vs Debug (cannot be null or empty string, default Release)
+        description: The type of build to produce, e.g. Release vs Debug. Cannot be null or empty!
         type: string
         default: Release
 
       preprocessor-symbols:
         description: Define preprocessor symbols to pass to the compiler
         type: string
-        default: ""
+        default: "_"
+
+      build-projects:
+        description: JSON array as a string of paths to the projects or solutions to build. If not provided, null, or empty, the solution/project in the repository root will be built.
+        type: string
+        required: false
+
+      test-projects:
+        description: JSON array as a string of paths to the test projects to run. Must be provided and cannot be null or empty!
+        type: string
+        required: true
+
+      benchmark-projects:
+        description: JSON array as a string of paths to the benchmark projects to run. If not provided, null, or empty, benchmarks will be skipped.
+        type: string
+        required: false
 
       min-coverage-pct:
-        description: Minimum acceptable code coverage percentage (cannot be 0, null or empty, default 80)
+        description: Minimum acceptable code coverage percentage. Cannot be 0, null or empty!
         type: number
         default: 80 # percent
 
       max-regression-pct:
-        description: Maximum acceptable performance regression percentage
+        description: Maximum acceptable performance regression percentage. Cannot be more than 50, null or empty!
         type: number
         default: 10 # percent
 
       force-new-baseline:
-        description: The benchmarks outputs become the new baseline (no regression check)
+        description: The benchmarks outputs will become the new baseline (no regression check)
         type: boolean
         default: false
 
       cached-dependencies:
-        description: Enable caching of NuGet dependencies (default true)
+        description: Enable caching of NuGet dependencies.
         type: boolean
         default: true
 
       cached-artifacts:
-        description: Enable caching of build artifacts (default true)
+        description: Enable caching of build artifacts.
         type: boolean
         default: true
 
       verbose:
-        description: Enable verbose logging by the scripts for debugging purposes
+        description: Enable verbose output from the invoked scripts.
         type: boolean
         default: false
 
+    secrets:
+      CODECOV_TOKEN:
+        description: Codecov API token for uploading coverage reports
+        required: true
+      BENCHER_API_TOKEN:
+        description: Bencher.dev API token for benchmark tracking
+        required: true
+
 concurrency:
-  group: ci-${{ github.ref }}-${{ inputs.build-project }}-${{ inputs.test-project }}
+  group: ci-${{ github.workflow_ref }}
   cancel-in-progress: true
 
 jobs:
-
   # Validate all input parameters and prepare them for downstream jobs
   setup:
     name: Parameters validation
-    runs-on: ${{ inputs.os }}
+    runs-on: ubuntu-latest
     outputs:
-      build-project:        ${{ steps.setup.outputs.build-project }}
-      test-project:         ${{ steps.setup.outputs.test-project }}
-      benchmark-project:    ${{ steps.setup.outputs.benchmark-project }}
-      os:                   ${{ steps.setup.outputs.os }}
-      dotnet-version:       ${{ steps.setup.outputs.dotnet-version }}
-      configuration:        ${{ steps.setup.outputs.configuration }}
+      build-projects: ${{ steps.setup.outputs.build-projects }}
+      test-projects: ${{ steps.setup.outputs.test-projects }}
+      benchmark-projects: ${{ steps.setup.outputs.benchmark-projects }}
+      os: ${{ steps.setup.outputs.os }}
+      dotnet-version: ${{ steps.setup.outputs.dotnet-version }}
+      configuration: ${{ steps.setup.outputs.configuration }}
       preprocessor-symbols: ${{ steps.setup.outputs.preprocessor-symbols }}
-      min-coverage-pct:     ${{ steps.setup.outputs.min-coverage-pct }}
-      max-regression-pct:   ${{ steps.setup.outputs.max-regression-pct }}
-      force-new-baseline:   ${{ steps.setup.outputs.force-new-baseline }}
-      verbose:              ${{ steps.setup.outputs.verbose }}
-      cached-dependencies:  ${{ inputs.cached-dependencies }}
-      cached-artifacts:     ${{ inputs.cached-artifacts }}
+      min-coverage-pct: ${{ steps.setup.outputs.min-coverage-pct }}
+      max-regression-pct: ${{ steps.setup.outputs.max-regression-pct }}
+      force-new-baseline: ${{ steps.setup.outputs.force-new-baseline }}
+      verbose: ${{ steps.setup.outputs.verbose }}
 
     steps:
       # Clone the repository to access validation scripts
@@ -102,83 +107,42 @@ jobs:
       - name: Make Scripts Executable
         run: chmod u+x ./scripts/bash/*.sh
 
-      - name: Print \#1 instead of calling the script
+      - name: Run validation script to verify and normalize all input parameters
         id: setup
         shell: bash
-        run: |   # TO BE REMOVED WHEN ACTUALLY RUNNING THE VALIDATION SCRIPT
-          {
-            echo "./scripts/bash/setup-ci-vars.sh \"
-            echo "    --build-project        ${{ inputs.build-project }} \"
-            echo "    --test-project         ${{ inputs.test-project }} \"
-            echo "    --benchmark-project    ${{ inputs.benchmark-project }} \"
-            echo "    --os                   ${{ inputs.os }} \"
-            echo "    --dotnet-version       ${{ inputs.dotnet-version }} \"
-            echo "    --configuration        ${{ inputs.configuration }} \"
-            echo "    --preprocessor-symbols ${{ inputs.preprocessor-symbols }} \"
-            echo "    --min-coverage-pct     ${{ inputs.min-coverage-pct }} \"
-            echo "    --max-regression-pct   ${{ inputs.max-regression-pct }} \"
-            echo "    --force-new-baseline   ${{ inputs.force-new-baseline }} \"
-            echo "    --verbose              ${{ inputs.verbose }}"
-          } >> $GITHUB_STEP_SUMMARY
-          {
-            echo "build-project=${{ inputs.build-project }}"
-            echo "test-project=${{ inputs.test-project }}"
-            echo "benchmark-project=${{ inputs.benchmark-project }}"
-            echo "os=${{ inputs.os }}"
-            echo "dotnet-version=${{ inputs.dotnet-version }}"
-            echo "configuration=${{ inputs.configuration }}"
-            echo "preprocessor-symbols=${{ inputs.preprocessor-symbols }}"
-            echo "min-coverage-pct=${{ inputs.min-coverage-pct }}"
-            echo "max-regression-pct=${{ inputs.max-regression-pct }}"
-            echo "force-new-baseline=${{ inputs.force-new-baseline }}"
-            echo "verbose=${{ inputs.verbose }}"
-          }  >> "${GITHUB_OUTPUT}"
-
-      ## Run validation script to verify and normalize all input parameters
-      #  run: |
-      #     ./scripts/bash/setup-ci-vars.sh \
-      #         --build-project        ${{ inputs.build-project }} \
-      #         --test-project         ${{ inputs.test-project }} \
-      #         --benchmark-project    ${{ inputs.benchmark-project }} \
-      #         --os                   ${{ inputs.os }} \
-      #         --dotnet-version       ${{ inputs.dotnet-version }} \
-      #         --configuration        ${{ inputs.configuration }} \
-      #         --preprocessor-symbols ${{ inputs.preprocessor-symbols }} \
-      #         --min-coverage-pct     ${{ inputs.min-coverage-pct }} \
-      #         --force-new-baseline   ${{ inputs.force-new-baseline }} \
-      #         --max-regression-pct   ${{ inputs.max-regression-pct }} \
-      #         --verbose              ${{ inputs.verbose }}
+        run: |
+          ./scripts/bash/validate-vars.sh \
+              --build-projects       '${{ inputs.build-projects }}' \
+              --test-projects        '${{ inputs.test-projects }}' \
+              --benchmark-projects   '${{ inputs.benchmark-projects }}' \
+              --os                   '${{ inputs.os }}' \
+              --dotnet-version       '${{ inputs.dotnet-version }}' \
+              --configuration        '${{ inputs.configuration }}' \
+              --preprocessor-symbols '${{ inputs.preprocessor-symbols }}' \
+              --min-coverage-pct     '${{ inputs.min-coverage-pct }}' \
+              --force-new-baseline   '${{ inputs.force-new-baseline }}' \
+              --max-regression-pct   '${{ inputs.max-regression-pct }}' \
+              $( [ ${{ inputs.verbose }} == true ] && echo '--verbose' || echo > /dev/null )
 
   # Build the project and cache artifacts for downstream test/benchmark jobs
   build:
     name: Build
     needs:
       - setup
-    # uses: ./.github/workflows/_build.yaml
-    # with:
-    #   build-project:        ${{ needs.setup.outputs.build-project }}
-    #   os:                   ${{ needs.setup.outputs.os }}
-    #   dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
-    #   configuration:        ${{ needs.setup.outputs.configuration }}
-    #   preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
-    #   cached-dependencies:  ${{ fromJSON(needs.setup.outputs.cached-dependencies) }}
-    #   cached-artifacts:     ${{ fromJSON(needs.setup.outputs.cached-artifacts) }}
-    runs-on: ${{ inputs.os }}
-    steps:                    # TO BE REMOVED WHEN ACTUALLY RUNNING THE BUILD WORKFLOW
-      - name: Print \#2
-        shell: bash
-        run: |
-          {
-            echo "uses: ./.github/workflows/_build.yaml"
-            echo "with:"
-            echo "  build-project:        ${{ needs.setup.outputs.build-project }}"
-            echo "  os:                   ${{ needs.setup.outputs.os }}"
-            echo "  dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}"
-            echo "  configuration:        ${{ needs.setup.outputs.configuration }}"
-            echo "  preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}"
-            echo "  cached-dependencies:  ${{ needs.setup.outputs.cached-dependencies }}"
-            echo "  cached-artifacts:     ${{ needs.setup.outputs.cached-artifacts }}"
-          } >> $GITHUB_STEP_SUMMARY
+    strategy:
+      # fail-fast: true
+      matrix:
+        os: ${{ fromJSON(inputs.os) }}
+        build-project: ${{ fromJSON(inputs.build-projects) }}
+    uses: ./.github/workflows/_build.yaml
+    with:
+      os: ${{ matrix.os }}
+      dotnet-version: ${{ needs.setup.outputs.dotnet-version }}
+      configuration: ${{ needs.setup.outputs.configuration }}
+      preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
+      build-project: ${{ matrix.build-project }}
+      cached-dependencies: ${{ fromJSON(inputs.cached-dependencies) }}
+      cached-artifacts: ${{ fromJSON(inputs.cached-artifacts) }}
 
   # Run unit tests with code coverage analysis
   test:
@@ -186,72 +150,55 @@ jobs:
     needs:
       - setup
       - build
-    # uses: ./.github/workflows/_test.yaml
-    # with:
-    #   test-project:         ${{ needs.setup.outputs.test-project }}
-    #   os:                   ${{ needs.setup.outputs.os }}
-    #   dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
-    #   configuration:        ${{ needs.setup.outputs.configuration }}
-    #   preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
-    #   min-coverage-pct:     ${{ fromJSON(needs.setup.outputs.min-coverage-pct) }}
-    #   verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
-    #   cached-dependencies:  ${{ fromJSON(needs.setup.outputs.cached-dependencies) }}
-    #   cached-artifacts:     ${{ fromJSON(needs.setup.outputs.cached-artifacts) }}
-    runs-on: ${{ inputs.os }}
-    steps:                    # TO BE REMOVED WHEN ACTUALLY RUNNING THE TEST WORKFLOW
-      - name: Print \#3
-        shell: bash
-        run: |
-          {
-            echo "uses: ./.github/workflows/_test.yaml"
-            echo "with:"
-            echo "  test-project:         ${{ needs.setup.outputs.test-project }}"
-            echo "  os:                   ${{ needs.setup.outputs.os }}"
-            echo "  dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}"
-            echo "  configuration:        ${{ needs.setup.outputs.configuration }}"
-            echo "  preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}"
-            echo "  min-coverage-pct:     ${{ fromJSON(needs.setup.outputs.min-coverage-pct) }}"
-            echo "  verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}"
-            echo "  cached-dependencies:  ${{ fromJSON(needs.setup.outputs.cached-dependencies) }}"
-            echo "  cached-artifacts:     ${{ fromJSON(needs.setup.outputs.cached-artifacts) }}"
-          } >> $GITHUB_STEP_SUMMARY
+    strategy:
+      # fail-fast: true
+      matrix:
+        os: ${{ fromJSON(inputs.os) }}
+        test-project: ${{ fromJSON(inputs.test-projects) }}
+    uses: ./.github/workflows/_test.yaml
+    permissions:
+      contents: read
+      pull-requests: write # Required to comment on PRs
+      checks: write # Required to create GitHub Checks
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    with:
+      os: ${{ matrix.os }}
+      dotnet-version: ${{ needs.setup.outputs.dotnet-version }}
+      configuration: ${{ needs.setup.outputs.configuration }}
+      preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
+      test-project: ${{ matrix.test-project }}
+      min-coverage-pct: ${{ fromJSON(needs.setup.outputs.min-coverage-pct) }}
+      cached-dependencies: ${{ fromJSON(inputs.cached-dependencies) }}
+      cached-artifacts: ${{ fromJSON(inputs.cached-artifacts) }}
+      verbose: ${{ fromJSON(needs.setup.outputs.verbose) }}
 
   # Run performance benchmarks and compare against baseline (if enabled and benchmark project specified)
   benchmarks:
     name: Benchmarks
-    if: ${{ fromJSON(needs.setup.outputs.benchmark-project) != '' }}
+    if: ${{ fromJSON(needs.setup.outputs.benchmark-projects) != '' }}
     needs:
       - setup
       - build
-    #uses: ./.github/workflows/_benchmarks.yaml
-    #with:
-    #  os:                   ${{ needs.setup.outputs.os }}
-    #  dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}
-    #  configuration:        ${{ needs.setup.outputs.configuration }}
-    #  preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
-    #  benchmark-project:    ${{ needs.setup.outputs.benchmark-project }}
-    #  max-regression-pct:   ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}
-    #  force-new-baseline:   ${{ fromJSON(needs.setup.outputs.force-new-baseline) }}
-    #  verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}
-    #  cached-dependencies:  ${{ fromJSON(needs.setup.outputs.cached-dependencies) }}
-    #  cached-artifacts:     ${{ fromJSON(needs.setup.outputs.cached-artifacts) }}
-    runs-on: ${{ inputs.os }}
-    steps:                    # TO BE REMOVED WHEN ACTUALLY RUNNING THE BENCHMARK WORKFLOW
-      # Display all workflow inputs for debugging and verification
-      - name: Print all inputs
-        shell: bash
-        run: |
-          {
-            echo "uses: ./.github/workflows/_benchmarks.yaml"
-            echo "with:"
-            echo "  benchmark-project:    ${{ needs.setup.outputs.benchmark-project }}"
-            echo "  os:                   ${{ needs.setup.outputs.os }}"
-            echo "  dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}"
-            echo "  configuration:        ${{ needs.setup.outputs.configuration }}"
-            echo "  preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}"
-            echo "  max-regression-pct:   ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}"
-            echo "  force-new-baseline:   ${{ fromJSON(needs.setup.outputs.force-new-baseline) }}"
-            echo "  verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}"
-            echo "  cached-dependencies:  ${{ fromJSON(needs.setup.outputs.cached-dependencies) }}"
-            echo "  cached-artifacts:     ${{ fromJSON(needs.setup.outputs.cached-artifacts) }}"
-          } >> $GITHUB_STEP_SUMMARY
+    strategy:
+      # fail-fast: true
+      matrix:
+        os: ${{ fromJSON(inputs.os) }}
+        benchmark-project: ${{ fromJSON(inputs.benchmark-projects) }}
+    uses: ./.github/workflows/_benchmarks.yaml
+    permissions:
+      contents: read
+      pull-requests: write # Required to comment on PRs
+      checks: write # Required to create GitHub Checks
+    secrets:
+      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+    with:
+      os: ${{ matrix.os }}
+      dotnet-version: ${{ needs.setup.outputs.dotnet-version }}
+      configuration: ${{ needs.setup.outputs.configuration }}
+      preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
+      benchmark-project: ${{ matrix.benchmark-project }}
+      max-regression-pct: ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}
+      cached-dependencies: ${{ fromJSON(inputs.cached-dependencies) }}
+      cached-artifacts: ${{ fromJSON(inputs.cached-artifacts) }}
+      verbose: ${{ fromJSON(needs.setup.outputs.verbose) }}

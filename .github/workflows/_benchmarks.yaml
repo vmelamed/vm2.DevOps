@@ -1,10 +1,10 @@
-name: _benchmarks (Reusable workflow)
+name: _benchmarks-bencher (Reusable workflow with Bencher.dev integration)
 
 on:
   workflow_call:
     inputs:
       os:
-        description: Runner OS-s (cannot be null or empty string, default ubuntu-latest)
+        description: Runner OS (cannot be null or empty string, default ubuntu-latest)
         type: string
         default: ubuntu-latest
 
@@ -21,6 +21,7 @@ on:
       preprocessor-symbols:
         description: Preprocessor symbols to pass to the compiler
         type: string
+        default: "_"
 
       benchmark-project:
         description: Path to the benchmark project to run benchmarks against (cannot be null or empty string)
@@ -28,14 +29,9 @@ on:
         required: true
 
       max-regression-pct:
-        description: Maximum acceptable performance regression percentage
+        description: Maximum acceptable performance regression percentage (used for Bencher threshold)
         type: number
         default: 10 # percent
-
-      force-new-baseline:
-        description: Ignore the existing baseline and force a new baseline
-        type: boolean
-        default: false
 
       cached-dependencies:
         description: Enable caching of NuGet dependencies (default true)
@@ -52,24 +48,22 @@ on:
         type: boolean
         default: false
 
-# concurrency:
-#   group: test-${{ github.workflow_ref }}-${{ inputs.test-project }}
-#   cancel-in-progress: true
-#   # NOTE: Only uncomment if this workflow is called directly (not via _ci.yaml)
-#   # or if _ci.yaml runs build/test/benchmarks in parallel
+    secrets:
+      BENCHER_API_TOKEN:
+        description: Bencher.dev API token for authentication
+        required: true
 
 permissions:
   contents: read
+  pull-requests: write # Required for Bencher to comment on PRs
+  checks: write # Required for Bencher to create GitHub Checks
 
 env:
-  # these must be the same across all jobs and steps below.
-  # We must know where to find the artifacts and where to download/upload to/from across all jobs and steps here.
   ARTIFACTS_DIR: ${{ github.workspace }}/BmArtifacts
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
-  # Execute performance benchmarks and compare results against baseline
   benchmarks:
     name: Benchmarks (${{ inputs.os }})
     runs-on: ${{ inputs.os }}
@@ -86,7 +80,6 @@ jobs:
         id: cache-timestamp
         shell: bash
         run: |
-          # Generate cache key based on calendar week
           CACHE_WEEK=$(date +%Y-W%V)
           echo "week=$CACHE_WEEK" >> $GITHUB_OUTPUT
           echo "Cache rotation key: $CACHE_WEEK"
@@ -97,14 +90,14 @@ jobs:
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
           cache: ${{ inputs.cached-dependencies }}
-          cache-dependency-path: |+
+          cache-dependency-path: |
             **/packages.lock.json
             **/*.csproj
 
-      # Additional explicit cache layer with time-based rotation for NuGet packages
+      # Additional explicit cache layer with time-based rotation
       - name: Cache NuGet packages (weekly rotation)
         if: inputs.cached-dependencies == true
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ steps.cache-timestamp.outputs.week }}-${{ hashFiles('**/packages.lock.json') }}
@@ -116,71 +109,119 @@ jobs:
       - name: Restore dependencies
         if: inputs.cached-dependencies == false
         shell: bash
-        run: |
-          dotnet restore --locked-mode
+        run: dotnet restore --locked-mode
 
-      # Retrieve compiled binaries from the build job to avoid recompilation
+      # Retrieve compiled binaries from the build job
       - name: Restore build artifacts from cache
         if: inputs.cached-artifacts == true
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
+          key: build-artifacts-${{ runner.os }}-${{ github.sha }}-${{ inputs.configuration }}
+          fail-on-cache-miss: true
           path: |
             **/bin/${{ inputs.configuration }}
             **/obj
-          key: build-artifacts-${{ runner.os }}-${{ github.sha }}-${{ inputs.configuration }}
-          fail-on-cache-miss: true
 
-      # Make bash scripts executable on Unix-like systems
+      # Make bash scripts executable
       - name: Make Scripts Executable
         shell: bash
-        run: |
-          chmod u+x ./scripts/bash/*.sh
+        run: chmod u+x ./scripts/bash/*.sh
 
-      # Download previous benchmark results to use as performance baseline (unless forcing new baseline)
-      - name: Download baseline benchmark summaries artifact
-        if: ${{ !inputs.force-new-baseline }}
+      # Run benchmarks using BenchmarkDotNet and export JSON results
+      - name: Run BenchmarkDotNet benchmarks
+        id: run-benchmarks
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
-          VERBOSE: ${{ fromJSON(inputs.verbose) || false }}
-        run: |
-          ./scripts/bash/download-artifact.sh \
-              --repository ${{ github.repository }} \
-              --wf-path '.github/workflows/Glob.Api.CI.yaml' \  # TODO: try to change to something that is not bound by repo name and path of the top level workflow!!!
-              --artifact benchmark-summaries-${{ inputs.os }} \
-              --directory ${{ env.ARTIFACTS_DIR }}/baseline
-
-      - name: Run the benchmarks
-        if: ${{ success() || fromJSON(inputs.force-new-baseline) }}
-        shell: bash
-        env:
-          CONFIGURATION:        ${{ inputs.configuration }}
+          CONFIGURATION: ${{ inputs.configuration }}
           PREPROCESSOR_SYMBOLS: ${{ inputs.preprocessor-symbols }}
-          VERBOSE:              ${{ fromJSON(inputs.verbose) }}
-          FORCE_NEW_BASELINE:   ${{ fromJSON(inputs.force-new-baseline) }}
+          VERBOSE: ${{ inputs.verbose }}
         run: |
           ./scripts/bash/run-benchmarks.sh ${{ inputs.benchmark-project }} \
               --configuration "${{ inputs.configuration }}" \
               --artifacts "${{ env.ARTIFACTS_DIR }}" \
-              --max-regression-pct "${{ inputs.max-regression-pct }}" \
               ${{ inputs.cached-dependencies && '--cached-dependencies' || '' }} \
               ${{ inputs.cached-artifacts    && '--cached-artifacts'    || '' }}
 
-      # Upload benchmark results as workflow artifacts for future baseline comparisons
-      - name: Upload benchmark summaries artifact
-        uses: actions/upload-artifact@v5
+      # Install Bencher CLI
+      - name: Install Bencher CLI
+        uses: bencherdev/bencher@main
+
+      # Track benchmarks with Bencher using CLI
+      - name: Track benchmarks with Bencher
+        shell: bash
+        env:
+          BENCHER_BRANCH: ${{ github.ref_name }}
+          BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+        run: |
+          # Calculate threshold as decimal (e.g., 10% -> 0.10)
+          THRESHOLD=$(echo "scale=4; 1 - ${{ inputs.max-regression-pct }} / 100" | bc)
+
+          # Build bencher run command
+          BENCHER_CMD="bencher run \
+            --branch \"${{ github.ref_name }}\" \
+            --testbed "${{ inputs.os }}" \
+            --adapter c_sharp_dot_net \
+            --err \
+            --ci-on-the-fly \
+            --github-actions \"$GITHUB_TOKEN\""
+
+          # Add threshold configuration for latency metrics
+          BENCHER_CMD="$BENCHER_CMD \
+            --threshold-measure latency \
+            --threshold-test t_test \
+            --threshold-max-sample-size 64 \
+            --threshold-upper-boundary $THRESHOLD"
+
+          # Combine multiple files into one table using median folding
+          BENCHER_CMD="$BENCHER_CMD \
+            --iter 1 \
+            --fold median"
+
+          # Add all benchmark result files
+          for file in ${{ steps.run-benchmarks.outputs.results-dir }}/*-report.json; do
+            if [[ -f "$file" ]]; then
+              BENCHER_CMD="$BENCHER_CMD --file \"$file\""
+            fi
+          done
+
+          # Echo the command for debugging (without token)
+          echo "Running: bencher run --branch ${{ github.ref_name }} --testbed ${{ inputs.os }} ..."
+          echo "Threshold: ±${{ inputs.max-regression-pct }}% ($THRESHOLD)"
+          echo "Files: ${{ steps.run-benchmarks.outputs.results-dir }}/*-report.json"
+
+          # Execute the command with token
+          BENCHER_CMD="$BENCHER_CMD --token $BENCHER_API_TOKEN"
+          eval $BENCHER_CMD
+
+      # Upload benchmark results as workflow artifacts for manual inspection
+      - name: Upload benchmark results artifact
+        if: always()
+        uses: actions/upload-artifact@v6
         with:
-          name: benchmark-summaries-${{ inputs.os }}
+          name: benchmark-results-${{ inputs.os }}
           path: ${{ env.ARTIFACTS_DIR }}
-          if-no-files-found: error
+          if-no-files-found: warn
           overwrite: true
 
-      # If forcing new baseline, save these results as the new baseline
-      - name: Upload benchmark results artifact as a new baseline
-        if: ${{ inputs.force-new-baseline || false }}
-        uses: actions/upload-artifact@v5
-        with:
-          name: benchmark-baseline-${{ inputs.os }}
-          path: ${{ env.ARTIFACTS_DIR }}
-          if-no-files-found: error
-          overwrite: true
+      # Add summary to job
+      - name: Add Bencher results to summary
+        if: always()
+        shell: bash
+        run: |
+          # Compute Bencher project slug from repository name
+          # Example: vmelamed/vm2.DevOps -> vm2-devops
+          REPO_NAME="${{ github.repository }}"
+          BENCHER_SLUG=$(echo "${REPO_NAME#*/}" | tr '[:upper:]' '[:lower:]' | tr '.' '-')
+
+          {
+            echo "### 📊 Benchmark Results"
+            echo ""
+            echo "Project: **${{ github.repository }}**"
+            echo "Branch: **${{ github.ref_name }}**"
+            echo "Testbed: **${{ inputs.os }}**"
+            echo "Threshold: **±${{ inputs.max-regression-pct }}%**"
+            echo ""
+            echo "🌐 [View detailed results on Bencher](https://bencher.dev/console/projects/${BENCHER_SLUG})"
+          } >> $GITHUB_STEP_SUMMARY

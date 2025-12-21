@@ -21,21 +21,29 @@ Parameters: All parameters are optional if the corresponding environment
 Switches:$common_switches
 
 Options:
-    --build-project | -b
-        Path to the build project file.
-        Initial value from \$BUILD_PROJECT
+    --build-projects | -b
+        String representing a JSON array of strings - paths to the projects to
+        be built. Can be empty string, or string representing null or empty
+        array, in which case the solution in the repository root will be built.
+        Initial value from \$BUILD_PROJECTS
 
-    --test-project | -t
-        Path to the test project file.
-        Initial value from \$TEST_PROJECT
+    --test-projects | -t
+        String representing a JSON array of strings - paths to the test projects
+        to be run. Cannot be empty string, or string representing null, or empty
+        array. Tests are mandatory.
+        Initial value from \$TEST_PROJECTS
 
-    --benchmark-project | -p
-        Path to the benchmark project file.
-        Initial value from \$BENCHMARK_PROJECT
+    --benchmark-projects | -p
+        String representing a JSON array of strings - paths to the benchmark
+        project files to be run. Can be empty string, or string representing
+        null or empty array, in which case no benchmark tests will be run.
+        Initial value from \$BENCHMARK_PROJECTS
 
     --os | -o
-        Target OS (e.g. from a matrix).
-        Initial value from \$OS or 'ubuntu-latest'
+        String representing a JSON array of strings - target OS-es (e.g. from a
+        GitHub actions matrix). Can be empty string, or string representing
+        null or empty array, in which case '["ubuntu-latest"]' will be used.
+        Initial value from \$OS or '["ubuntu-latest"]'
 
     --dotnet-version
         Version of .NET SDK to use.
@@ -47,7 +55,7 @@ Options:
 
     --preprocessor-symbols | -d
         Pre-processor symbols for compilation.
-        Initial value from \$PREPROCESSOR_SYMBOLS or ''
+        Initial value from \$PREPROCESSOR_SYMBOLS or '_'
 
     --min-coverage-pct | -min
         Minimum acceptable code coverage percentage (50-100).
@@ -60,10 +68,6 @@ Options:
     --max-regression-pct | -max
         Maximum acceptable performance regression percentage (0-50).
         Initial value from \$MAX_REGRESSION_PCT or 10
-
-    --verbose | -v
-        Whether to enable verbose logging (true/false).
-        Initial value from \$VERBOSE or false
 
 EOF
 }
