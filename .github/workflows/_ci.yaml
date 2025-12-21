@@ -76,12 +76,6 @@ on:
         description: Bencher.dev API token for benchmark tracking
         required: true
 
-env:
-  # TODO: TO BE REMOVED! - this is only for debugging purposes
-  ACTIONS_RUNNER_DEBUG: true
-  ACTIONS_JOB_DEBUG: true
-  ACTIONS_STEP_DEBUG: true
-
 concurrency:
   group: ci-${{ github.workflow_ref }}
   cancel-in-progress: true
@@ -129,38 +123,6 @@ jobs:
               --force-new-baseline   '${{ inputs.force-new-baseline }}' \
               --max-regression-pct   '${{ inputs.max-regression-pct }}' \
               $( [ ${{ inputs.verbose }} == true ] && echo '--verbose' || echo > /dev/null )
-      # TO BE REMOVED WHEN ACTUALLY RUNNING THE ABOVE VALIDATION SCRIPT:
-      # - name: "Print #1: Run validation script to verify and normalize all input parameters
-      #   id: setup
-      #   shell: bash
-      #   run: |
-      #     {
-      #       echo "./scripts/bash/validate-vars.sh \\"
-      #       echo "    --build-projects       '${{ inputs.build-projects }}' \\"
-      #       echo "    --test-projects        '${{ inputs.test-projects }}' \\"
-      #       echo "    --benchmark-projects   '${{ inputs.benchmark-projects }}' \\"
-      #       echo "    --os                   '${{ matrix.os }}' \\"
-      #       echo "    --dotnet-version       '${{ inputs.dotnet-version }}' \\"
-      #       echo "    --configuration        '${{ inputs.configuration }}' \\"
-      #       echo "    --preprocessor-symbols '${{ inputs.preprocessor-symbols }}' \\"
-      #       echo "    --min-coverage-pct     '${{ inputs.min-coverage-pct }}' \\"
-      #       echo "    --max-regression-pct   '${{ inputs.max-regression-pct }}' \\"
-      #       echo "    --force-new-baseline   '${{ inputs.force-new-baseline }}' \\"
-      #       echo $( [ ${{ inputs.verbose }} == true ] && echo '--verbose' || echo > /dev/null )"
-      #     } >> $GITHUB_STEP_SUMMARY
-      #     {
-      #       echo "build-project=${{ inputs.build-projects }}"
-      #       echo "test-project=${{ inputs.test-projects }}"
-      #       echo "benchmark-project=${{ inputs.benchmark-projects }}"
-      #       echo "os=${{ matrix.os }}"
-      #       echo "dotnet-version=${{ inputs.dotnet-version }}"
-      #       echo "configuration=${{ inputs.configuration }}"
-      #       echo "preprocessor-symbols=${{ inputs.preprocessor-symbols }}"
-      #       echo "min-coverage-pct=${{ inputs.min-coverage-pct }}"
-      #       echo "max-regression-pct=${{ inputs.max-regression-pct }}"
-      #       echo "force-new-baseline=${{ inputs.force-new-baseline }}"
-      #       echo "verbose=${{ inputs.verbose }}"
-      #     }  >> "${GITHUB_OUTPUT}
 
   # Build the project and cache artifacts for downstream test/benchmark jobs
   build:
@@ -223,7 +185,7 @@ jobs:
       matrix:
         os: ${{ fromJSON(inputs.os) }}
         benchmark-project: ${{ fromJSON(inputs.benchmark-projects) }}
-    uses: ./.github/workflows/_benchmarks-bencher.yaml
+    uses: ./.github/workflows/_benchmarks.yaml
     permissions:
       contents: read
       pull-requests: write # Required to comment on PRs
@@ -240,24 +202,3 @@ jobs:
       cached-dependencies: ${{ fromJSON(inputs.cached-dependencies) }}
       cached-artifacts: ${{ fromJSON(inputs.cached-artifacts) }}
       verbose: ${{ fromJSON(needs.setup.outputs.verbose) }}
-    # TO BE REMOVED WHEN ACTUALLY RUNNING THE ABOVE TEST WORKFLOW:
-    # Display all workflow inputs for debugging and verification
-    # runs-on: ${{ matrix.os }}
-    # steps:
-    #   - name: "Print #4 Benchmark"
-    #     shell: bash
-    #     run: |
-    #       {
-    #         echo "uses: ./.github/workflows/_benchmarks.yaml"
-    #         echo "with:"
-    #         echo "  os:                   ${{ matrix.os }}"
-    #         echo "  dotnet-version:       ${{ needs.setup.outputs.dotnet-version }}"
-    #         echo "  configuration:        ${{ needs.setup.outputs.configuration }}"
-    #         echo "  preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}"
-    #         echo "  benchmark-project:    ${{ matrix.benchmark-project }}"
-    #         echo "  max-regression-pct:   ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}"
-    #         echo "  force-new-baseline:   ${{ fromJSON(needs.setup.outputs.force-new-baseline) }}"
-    #         echo "  cached-dependencies:  ${{ fromJSON(inputs.cached-dependencies) }}"
-    #         echo "  cached-artifacts:     ${{ fromJSON(inputs.cached-artifacts) }}"
-    #         echo "  verbose:              ${{ fromJSON(needs.setup.outputs.verbose) }}"
-    #       } >> $GITHUB_STEP_SUMMARY

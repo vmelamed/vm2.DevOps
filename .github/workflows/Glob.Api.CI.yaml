@@ -38,12 +38,6 @@ on:
         type: boolean
         default: false
 
-env:
-  # TODO: TO BE REMOVED! - this is only for debugging purposes
-  ACTIONS_RUNNER_DEBUG: true
-  ACTIONS_JOB_DEBUG: true
-  ACTIONS_STEP_DEBUG: true
-
 jobs:
   get-params:
     name: Prepare the default and passed in parameters
