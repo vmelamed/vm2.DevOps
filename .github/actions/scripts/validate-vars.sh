@@ -31,6 +31,7 @@ declare -xr script_dir
 source "$script_dir/_common.sh"
 
 declare -r defaultBuildProjects='[""]'
+declare -r defaultTestProjects='[]'
 declare -r defaultBenchmarkProjects='[]'
 declare -r defaultOses='["ubuntu-latest"]'
 declare -r defaultDotnetVersion='10.0.x'
@@ -108,7 +109,7 @@ fi
 
 # There must be at least one test project specified:
 if [[ -z "$test_projects" ]] || ! echo "$test_projects" | jq -e "$jq_array_strings_nonempty" > /dev/null; then
-    error "The value of the option --test-projects '$test_projects' must be a string representing a non-empty, valid JSON array of non-empty strings - paths to the test project(s) to be run."
+    warning test_projects "The value of the option --test-projects is empty: will not run tests." "$defaultTestProjects"
 elif [[ $? == 5 ]]; then
     error "The value of the option --test-projects '$test_projects' is not a valid JSON."
 else
