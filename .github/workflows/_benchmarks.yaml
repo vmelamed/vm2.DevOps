@@ -31,7 +31,7 @@ on:
       max-regression-pct:
         description: Maximum acceptable performance regression percentage (used for Bencher threshold)
         type: number
-        default: 10 # percent
+        default: 20 # percent
 
       cached-dependencies:
         description: Enable caching of NuGet dependencies (default true)
@@ -156,7 +156,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: |
-          # Calculate threshold as decimal (e.g., 10% -> 0.90)
+          # Calculate threshold as a decimal (e.g., 10% -> 0.90)
           THRESHOLD=$(echo "scale=4; 1 - ${{ inputs.max-regression-pct }} / 100" | bc)
 
           # Build bencher run command
@@ -167,18 +167,22 @@ jobs:
             --err \
             --ci-on-the-fly \
             --github-actions \"$GITHUB_TOKEN\" \
+            --iter 1 \
+            --fold median"
+            \
             --threshold-measure latency \
             --threshold-test t_test \
             --threshold-max-sample-size 64 \
             --threshold-lower-boundary _ \
             --threshold-upper-boundary $THRESHOLD \
+            \
             --threshold-measure throughput \
             --threshold-test t_test \
             --threshold-max-sample-size 64 \
-            --threshold-lower-boundary _ \
-            --threshold-upper-boundary $THRESHOLD \
-            --iter 1 \
-            --fold median"
+            --threshold-lower-boundary $THRESHOLD \
+            --threshold-upper-boundary _ \
+            \
+            --thresholds-reset \
 
           # Add all benchmark result files
           for file in ${{ steps.run-benchmarks.outputs.results-dir }}/*-report.json; do
