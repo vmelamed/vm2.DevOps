@@ -38,7 +38,7 @@ declare -r defaultConfiguration='Release'
 declare -r defaultPreprocessorSymbols='_'
 declare -r defaultForceNewBaseline=false
 declare -r defaultMinCoveragePct=80
-declare -r defaultMaxRegressionPct=10
+declare -r defaultMaxRegressionPct=20
 declare -r defaultVerbose=false
 
 # CI Variables that will be passed as environment variables

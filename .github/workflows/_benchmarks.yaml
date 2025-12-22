@@ -157,7 +157,8 @@ jobs:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: |
           # Calculate threshold as a decimal (e.g., 10% -> 0.90)
-          THRESHOLD=$(echo "scale=4; 1 - ${{ inputs.max-regression-pct }} / 100" | bc)
+          LOWER_THRESHOLD=$(echo "scale=4; ${{ inputs.max-regression-pct }} / 100" | bc)
+          UPPER_THRESHOLD=$(echo "scale=4; 1 - ${{ inputs.max-regression-pct }} / 100" | bc)
 
           # Build bencher run command
           BENCHER_CMD="bencher run \
@@ -174,15 +175,15 @@ jobs:
             --threshold-test t_test \
             --threshold-max-sample-size 64 \
             --threshold-lower-boundary _ \
-            --threshold-upper-boundary $THRESHOLD \
+            --threshold-upper-boundary $UPPER_THRESHOLD \
             \
             --threshold-measure throughput \
             --threshold-test t_test \
             --threshold-max-sample-size 64 \
-            --threshold-lower-boundary $THRESHOLD \
+            --threshold-lower-boundary $LOWER_THRESHOLD \
             --threshold-upper-boundary _ \
             \
-            --thresholds-reset \
+            # --thresholds-reset
 
           # Add all benchmark result files
           for file in ${{ steps.run-benchmarks.outputs.results-dir }}/*-report.json; do

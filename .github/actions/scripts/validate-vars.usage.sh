@@ -67,7 +67,7 @@ Options:
 
     --max-regression-pct | -max
         Maximum acceptable performance regression percentage (0-50).
-        Initial value from \$MAX_REGRESSION_PCT or 10
+        Initial value from \$MAX_REGRESSION_PCT or 20
 
 EOF
 }

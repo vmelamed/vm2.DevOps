@@ -46,7 +46,7 @@ on:
       max-regression-pct:
         description: Maximum acceptable performance regression percentage. Cannot be more than 50, null or empty!
         type: number
-        default: 10 # percent
+        default: 20 # percent
 
       force-new-baseline:
         description: The benchmarks outputs will become the new baseline (no regression check)

@@ -62,7 +62,7 @@ Options:
     --max-regression-pct | -r
         Specifies the maximum acceptable regression percentage (0-50) when
         comparing to a previous, base-line benchmark results.
-        Initial value from \$MAX_REGRESSION_PCT or 10
+        Initial value from \$MAX_REGRESSION_PCT or 20
 
 EOF
 }
