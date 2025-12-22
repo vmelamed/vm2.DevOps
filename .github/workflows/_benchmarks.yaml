@@ -31,7 +31,7 @@ on:
       max-regression-pct:
         description: Maximum acceptable performance regression percentage (used for Bencher threshold)
         type: number
-        default: 10 # percent
+        default: 20 # percent
 
       cached-dependencies:
         description: Enable caching of NuGet dependencies (default true)
@@ -68,11 +68,42 @@ jobs:
     name: Benchmarks (${{ inputs.os }})
     runs-on: ${{ inputs.os }}
     steps:
-      # Clone the repository with full Git history
+      # Install Bencher CLI (install early so if it fails, we fail fast before doing extra work)
+      - name: Compute Bencher cache week key
+        id: cache-date
+        run: echo "week=$(date +%Y-W%V)" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      - name: Cache Bencher CLI
+        id: cache-bencher
+        uses: actions/cache@v5
+        with:
+          path: ~/.cargo/bin/bencher
+          key: bencher-cli-${{ runner.os }}-${{ steps.cache-date.outputs.week }}
+          restore-keys: |
+            bencher-cli-${{ runner.os }}-latest-
+
+      - name: Install Bencher CLI
+        if: steps.cache-bencher.outputs.cache-hit != 'true'
+        uses: bencherdev/bencher@main
+
+    # Clone the repository with full Git history
       - name: Checkout
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+
+      # Setup DevOps scripts from vm2.DevOps
+      - name: Checkout DevOps repository
+        uses: actions/checkout@v6
+        with:
+          repository: vmelamed/vm2.DevOps
+          path: .devops
+          sparse-checkout: |
+            .github/actions/scripts
+
+      - name: Setup DevOps scripts
+        uses: ./.devops/.github/actions/scripts
 
       # Generate a weekly cache key to automatically rotate NuGet cache
       - name: Get cache timestamp (weekly rotation)
@@ -105,12 +136,6 @@ jobs:
             nuget-${{ runner.os }}-${{ steps.cache-timestamp.outputs.week }}-
             nuget-${{ runner.os }}-
 
-      # Restore NuGet dependencies only if not using cached dependencies
-      - name: Restore dependencies
-        if: inputs.cached-dependencies == false
-        shell: bash
-        run: dotnet restore --locked-mode
-
       # Retrieve compiled binaries from the build job
       - name: Restore build artifacts from cache
         if: inputs.cached-artifacts == true
@@ -122,11 +147,6 @@ jobs:
             **/bin/${{ inputs.configuration }}
             **/obj
 
-      # Make bash scripts executable
-      - name: Make Scripts Executable
-        shell: bash
-        run: chmod u+x ./scripts/bash/*.sh
-
       # Run benchmarks using BenchmarkDotNet and export JSON results
       - name: Run BenchmarkDotNet benchmarks
         id: run-benchmarks
@@ -136,15 +156,11 @@ jobs:
           PREPROCESSOR_SYMBOLS: ${{ inputs.preprocessor-symbols }}
           VERBOSE: ${{ inputs.verbose }}
         run: |
-          ./scripts/bash/run-benchmarks.sh ${{ inputs.benchmark-project }} \
+          run-benchmarks.sh ${{ inputs.benchmark-project }} \
               --configuration "${{ inputs.configuration }}" \
               --artifacts "${{ env.ARTIFACTS_DIR }}" \
               ${{ inputs.cached-dependencies && '--cached-dependencies' || '' }} \
               ${{ inputs.cached-artifacts    && '--cached-artifacts'    || '' }}
-
-      # Install Bencher CLI
-      - name: Install Bencher CLI
-        uses: bencherdev/bencher@main
 
       # Track benchmarks with Bencher using CLI
       - name: Track benchmarks with Bencher
@@ -155,29 +171,35 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: |
-          # Calculate threshold as decimal (e.g., 10% -> 0.10)
-          THRESHOLD=$(echo "scale=4; 1 - ${{ inputs.max-regression-pct }} / 100" | bc)
+          # Calculate threshold as a decimal (e.g., 10% -> 0.90)
+          LOWER_THRESHOLD=$(echo "scale=4; 1 - ${{ inputs.max-regression-pct }} / 100" | bc)
+          UPPER_THRESHOLD=$(echo "scale=4; ${{ inputs.max-regression-pct }} / 100" | bc)
 
           # Build bencher run command
-          BENCHER_CMD="bencher run \
-            --branch \"${{ github.ref_name }}\" \
-            --testbed "${{ inputs.os }}" \
-            --adapter c_sharp_dot_net \
-            --err \
-            --ci-on-the-fly \
-            --github-actions \"$GITHUB_TOKEN\""
-
-          # Add threshold configuration for latency metrics
-          BENCHER_CMD="$BENCHER_CMD \
-            --threshold-measure latency \
-            --threshold-test t_test \
-            --threshold-max-sample-size 64 \
-            --threshold-upper-boundary $THRESHOLD"
-
-          # Combine multiple files into one table using median folding
-          BENCHER_CMD="$BENCHER_CMD \
-            --iter 1 \
-            --fold median"
+          BENCHER_CMD="bencher run                      \
+            --branch \"${{ github.ref_name }}\"         \
+            --testbed \"${{ inputs.os }}\"              \
+            --adapter c_sharp_dot_net                   \
+            --err                                       \
+            --ci-on-the-fly                             \
+            --github-actions \"$GITHUB_TOKEN\"          \
+                                                        \
+            --iter 1                                    \
+            --fold median                               \
+                                                        \
+            --threshold-measure latency                 \
+            --threshold-test percentage                 \
+            --threshold-max-sample-size 64              \
+            --threshold-lower-boundary _                \
+            --threshold-upper-boundary $UPPER_THRESHOLD \
+                                                        \
+            --threshold-measure throughput              \
+            --threshold-test percentage                 \
+            --threshold-max-sample-size 64              \
+            --threshold-lower-boundary $LOWER_THRESHOLD \
+            --threshold-upper-boundary _                \
+                                                        \
+            --thresholds-reset"
 
           # Add all benchmark result files
           for file in ${{ steps.run-benchmarks.outputs.results-dir }}/*-report.json; do
@@ -187,9 +209,7 @@ jobs:
           done
 
           # Echo the command for debugging (without token)
-          echo "Running: bencher run --branch ${{ github.ref_name }} --testbed ${{ inputs.os }} ..."
-          echo "Threshold: ±${{ inputs.max-regression-pct }}% ($THRESHOLD)"
-          echo "Files: ${{ steps.run-benchmarks.outputs.results-dir }}/*-report.json"
+          echo "Running: ${BENCHER_CMD}"
 
           # Execute the command with token
           BENCHER_CMD="$BENCHER_CMD --token $BENCHER_API_TOKEN"

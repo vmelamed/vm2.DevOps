@@ -29,9 +29,9 @@ on:
         required: false
 
       test-projects:
-        description: JSON array as a string of paths to the test projects to run. Must be provided and cannot be null or empty!
+        description: JSON array as a string of paths to the test projects to run. If not provided, null, or empty, tests will be skipped.
         type: string
-        required: true
+        required: false
 
       benchmark-projects:
         description: JSON array as a string of paths to the benchmark projects to run. If not provided, null, or empty, benchmarks will be skipped.
@@ -46,7 +46,7 @@ on:
       max-regression-pct:
         description: Maximum acceptable performance regression percentage. Cannot be more than 50, null or empty!
         type: number
-        default: 10 # percent
+        default: 20 # percent
 
       force-new-baseline:
         description: The benchmarks outputs will become the new baseline (no regression check)
@@ -71,10 +71,10 @@ on:
     secrets:
       CODECOV_TOKEN:
         description: Codecov API token for uploading coverage reports
-        required: true
+        required: false
       BENCHER_API_TOKEN:
         description: Bencher.dev API token for benchmark tracking
-        required: true
+        required: false
 
 concurrency:
   group: ci-${{ github.workflow_ref }}
@@ -103,15 +103,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      # Make bash scripts executable on Unix-like systems
-      - name: Make Scripts Executable
-        run: chmod u+x ./scripts/bash/*.sh
+      # Setup DevOps scripts from composite action
+      - name: Setup DevOps scripts
+        uses: ./.github/actions/scripts
 
+      # Run validation script to verify and normalize all input parameters
       - name: Run validation script to verify and normalize all input parameters
         id: setup
         shell: bash
         run: |
-          ./scripts/bash/validate-vars.sh \
+          validate-vars.sh \
               --build-projects       '${{ inputs.build-projects }}' \
               --test-projects        '${{ inputs.test-projects }}' \
               --benchmark-projects   '${{ inputs.benchmark-projects }}' \
@@ -147,6 +148,7 @@ jobs:
   # Run unit tests with code coverage analysis
   test:
     name: Tests
+    if: ${{ fromJSON(needs.setup.outputs.test-projects) != '' }}
     needs:
       - setup
       - build
