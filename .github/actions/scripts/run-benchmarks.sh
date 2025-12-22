@@ -1,9 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-# Script to run BenchmarkDotNet benchmarks for Bencher.dev integration
-# This is a simplified version that only runs benchmarks and exports JSON
-
 declare -xr this_script=${BASH_SOURCE[0]}
 
 script_name="$(basename "${this_script%.*}")"
@@ -64,17 +61,15 @@ declare -r bm_base_path
 declare -r bm_dll_path
 declare -r bm_exe_path
 
-# Restore dependencies if not cached
 trace "Restore dependencies if not cached"
 if [[ $cached_dependencies != "true" ]]; then
     execute dotnet restore
 fi
 
-# Build if not cached
 trace "Build if not cached"
 if [[ $cached_artifacts != "true" ]]; then
     execute dotnet build  \
-        --project "$bm_project" \
+        "$bm_project" \
         --configuration "$configuration" \
         --no-restore \
         /p:DefineConstants="$preprocessor_symbols"

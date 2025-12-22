@@ -134,16 +134,14 @@ declare -r test_base_path
 declare -r test_dll_path
 declare -rx test_exec_path
 
+trace "Restore dependencies if not cached"
 if [[ $cached_dependencies != "true" ]]; then
-    trace "Restore dependencies if not cached"
-    # we are not getting the dependencies from a cache - do restore
     execute dotnet restore
 fi
 
 # shellcheck disable=SC2154
+trace "Build the artifacts if not cached"
 if [[ $cached_artifacts != "true" ]]; then
-    trace "Build the artifacts if not cached"
-    # we are not getting the build artifacts from a cache - do a full rebuild
     execute dotnet build  \
         "$test_project" \
         --configuration "$configuration" \
