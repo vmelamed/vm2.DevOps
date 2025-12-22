@@ -103,9 +103,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      # Setup DevOps scripts from composite action
-      - name: Setup DevOps scripts
+      # Setup DevOps scripts (works for both local and external calls)
+      - name: Checkout DevOps repository scripts
+        if: github.repository != 'vmelamed/vm2.DevOps'
+        uses: actions/checkout@v6
+        with:
+          repository: vmelamed/vm2.DevOps
+          path: vm2-devops
+          sparse-checkout: |
+            .github/actions/scripts
+
+      - name: Setup DevOps scripts (local)
+        if: github.repository == 'vmelamed/vm2.DevOps'
         uses: ./.github/actions/scripts
+
+      - name: Setup DevOps scripts (external)
+        if: github.repository != 'vmelamed/vm2.DevOps'
+        uses: ./vm2-devops/.github/actions/scripts
 
       # Run validation script to verify and normalize all input parameters
       - name: Run validation script to verify and normalize all input parameters
