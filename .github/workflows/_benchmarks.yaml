@@ -161,29 +161,29 @@ jobs:
           UPPER_THRESHOLD=$(echo "scale=4; 1 - ${{ inputs.max-regression-pct }} / 100" | bc)
 
           # Build bencher run command
-          BENCHER_CMD="bencher run \
-            --branch \"${{ github.ref_name }}\" \
-            --testbed "${{ inputs.os }}" \
-            --adapter c_sharp_dot_net \
-            --err \
-            --ci-on-the-fly \
-            --github-actions \"$GITHUB_TOKEN\" \
-            --iter 1 \
-            --fold median"
-            \
-            --threshold-measure latency \
-            --threshold-test t_test \
-            --threshold-max-sample-size 64 \
-            --threshold-lower-boundary _ \
+          BENCHER_CMD="bencher run                      \
+            --branch \"${{ github.ref_name }}\"         \
+            --testbed "${{ inputs.os }}"                \
+            --adapter c_sharp_dot_net                   \
+            --err                                       \
+            --ci-on-the-fly                             \
+            --github-actions \"$GITHUB_TOKEN\"          \
+            --iter 1                                    \
+            --fold median"                              \
+                                                        \
+            --threshold-measure latency                 \
+            --threshold-test t_test                     \
+            --threshold-max-sample-size 64              \
+            --threshold-lower-boundary _                \
             --threshold-upper-boundary $UPPER_THRESHOLD \
-            \
-            --threshold-measure throughput \
-            --threshold-test t_test \
-            --threshold-max-sample-size 64 \
+                                                        \
+            --threshold-measure throughput              \
+            --threshold-test t_test                     \
+            --threshold-max-sample-size 64              \
             --threshold-lower-boundary $LOWER_THRESHOLD \
-            --threshold-upper-boundary _ \
-            \
-            # --thresholds-reset
+            --threshold-upper-boundary _                \
+                                                        \
+            # --thresholds-reset                        \
 
           # Add all benchmark result files
           for file in ${{ steps.run-benchmarks.outputs.results-dir }}/*-report.json; do
