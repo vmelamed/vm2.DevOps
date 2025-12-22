@@ -162,7 +162,7 @@ jobs:
   # Run unit tests with code coverage analysis
   test:
     name: Tests
-    if: ${{ fromJSON(needs.setup.outputs.test-projects) != '' }}
+    if: ${{ needs.setup.outputs.test-projects != '' && needs.setup.outputs.test-projects != '[]' }}
     needs:
       - setup
       - build
@@ -192,7 +192,7 @@ jobs:
   # Run performance benchmarks and compare against baseline (if enabled and benchmark project specified)
   benchmarks:
     name: Benchmarks
-    if: ${{ fromJSON(needs.setup.outputs.benchmark-projects) != '' }}
+    if: ${{ needs.setup.outputs.benchmark-projects != '' && needs.setup.outputs.benchmark-projects != '[]' }}
     needs:
       - setup
       - build
