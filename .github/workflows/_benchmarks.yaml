@@ -68,6 +68,10 @@ jobs:
     name: Benchmarks (${{ inputs.os }})
     runs-on: ${{ inputs.os }}
     steps:
+      # Install Bencher CLI (install early so if it fails, we fail fast before doing extra work)
+      - name: Install Bencher CLI
+        uses: bencherdev/bencher@main
+
       # Clone the repository with full Git history
       - name: Checkout
         uses: actions/checkout@v6
@@ -142,10 +146,6 @@ jobs:
               --artifacts "${{ env.ARTIFACTS_DIR }}" \
               ${{ inputs.cached-dependencies && '--cached-dependencies' || '' }} \
               ${{ inputs.cached-artifacts    && '--cached-artifacts'    || '' }}
-
-      # Install Bencher CLI
-      - name: Install Bencher CLI
-        uses: bencherdev/bencher@main
 
       # Track benchmarks with Bencher using CLI
       - name: Track benchmarks with Bencher
