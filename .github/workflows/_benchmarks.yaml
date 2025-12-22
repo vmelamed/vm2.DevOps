@@ -69,12 +69,17 @@ jobs:
     runs-on: ${{ inputs.os }}
     steps:
       # Install Bencher CLI (install early so if it fails, we fail fast before doing extra work)
+      - name: Compute Bencher cache week key
+        id: cache-date
+        run: echo "week=$(date +%Y-W%V)" >> "$GITHUB_OUTPUT"
+        shell: bash
+
       - name: Cache Bencher CLI
         id: cache-bencher
         uses: actions/cache@v5
         with:
           path: ~/.cargo/bin/bencher
-          key: bencher-cli-${{ runner.os }}-$(date +%Y-W%V)
+          key: bencher-cli-${{ runner.os }}-${{ steps.cache-date.outputs.week }}
           restore-keys: |
             bencher-cli-${{ runner.os }}-latest-
 
