@@ -53,21 +53,29 @@ bm_base_path="$(dirname "$bm_project")/bin/${configuration}/net10.0/$(basename "
 bm_dll_path="${bm_base_path}.dll"
 os_name="$(uname -s)"
 if [[ "$os_name" == "Windows_NT" || "$os_name" == *MINGW* || "$os_name" == *MSYS* ]]; then
-    bm_exe_path="${bm_base_path}.exe"
+    bm_exec_path="${bm_base_path}.exe"
 else
-    bm_exe_path="${bm_base_path}"
+    bm_exec_path="${bm_base_path}"
 fi
 declare -r bm_base_path
 declare -r bm_dll_path
-declare -r bm_exe_path
+declare -r bm_exec_path
 
 trace "Restore dependencies if not cached"
 if [[ $cached_dependencies != "true" ]]; then
-    execute dotnet restore
+    execute dotnet restore --locked-mode
+else
+    trace "Skipping restore (using cached dependencies)"
 fi
 
 trace "Build if not cached"
-if [[ $cached_artifacts != "true" ]]; then
+if [[ $cached_artifacts == "true" ]]; then
+    # Verify artifacts exist
+    if [[ ! -f "${bm_exec_path}" || ! -f "${bm_dll_path}" ]]; then
+        echo "❌ Cached artifacts missing, cannot proceed" >&2
+        exit 2
+    fi
+else
     execute dotnet build  \
         "$bm_project" \
         --configuration "$configuration" \

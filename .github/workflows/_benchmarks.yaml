@@ -117,12 +117,6 @@ jobs:
             nuget-${{ runner.os }}-${{ steps.cache-timestamp.outputs.week }}-
             nuget-${{ runner.os }}-
 
-      # Restore NuGet dependencies only if not using cached dependencies
-      - name: Restore dependencies
-        if: inputs.cached-dependencies == false
-        shell: bash
-        run: dotnet restore --locked-mode
-
       # Retrieve compiled binaries from the build job
       - name: Restore build artifacts from cache
         if: inputs.cached-artifacts == true

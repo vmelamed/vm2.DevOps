@@ -136,12 +136,20 @@ declare -rx test_exec_path
 
 trace "Restore dependencies if not cached"
 if [[ $cached_dependencies != "true" ]]; then
-    execute dotnet restore
+    execute dotnet restore --locked-mode
+else
+    trace "Skipping restore (using cached dependencies)"
 fi
 
 # shellcheck disable=SC2154
 trace "Build the artifacts if not cached"
-if [[ $cached_artifacts != "true" ]]; then
+if [[ $cached_artifacts == "true" ]]; then
+    # Verify artifacts exist
+    if [[ ! -f "${test_exec_path}" || ! -f "${test_dll_path}" ]]; then
+        echo "❌ Cached artifacts missing, cannot proceed" >&2
+        exit 2
+    fi
+else
     execute dotnet build  \
         "$test_project" \
         --configuration "$configuration" \
