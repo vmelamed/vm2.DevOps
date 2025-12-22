@@ -162,8 +162,8 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: |
-          # Calculate threshold as decimal (e.g., 10% -> 0.10)
-          THRESHOLD=$(echo "scale=4; 1 - ${{ inputs.max-regression-pct }} / 100" | bc)
+          # Calculate threshold as decimal (e.g., 10% -> 1.10)
+          THRESHOLD=$(echo "scale=4; 1 + ${{ inputs.max-regression-pct }} / 100" | bc)
 
           # Build bencher run command
           BENCHER_CMD="bencher run \
