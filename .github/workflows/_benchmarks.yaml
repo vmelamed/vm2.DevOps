@@ -157,33 +157,32 @@ jobs:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: |
           # Calculate threshold as a decimal (e.g., 10% -> 0.90)
-          LOWER_THRESHOLD=$(echo "scale=4; ${{ inputs.max-regression-pct }} / 100" | bc)
-          UPPER_THRESHOLD=$(echo "scale=4; 1 - ${{ inputs.max-regression-pct }} / 100" | bc)
+          THRESHOLD=$(echo "scale=4; ${{ inputs.max-regression-pct }} / 100" | bc)
 
           # Build bencher run command
-          BENCHER_CMD="bencher run                      \
-            --branch \"${{ github.ref_name }}\"         \
-            --testbed "${{ inputs.os }}"                \
-            --adapter c_sharp_dot_net                   \
-            --err                                       \
-            --ci-on-the-fly                             \
-            --github-actions \"$GITHUB_TOKEN\"          \
-            --iter 1                                    \
-            --fold median                               \
-                                                        \
-            --threshold-measure latency                 \
-            --threshold-test t_test                     \
-            --threshold-max-sample-size 64              \
-            --threshold-lower-boundary _                \
-            --threshold-upper-boundary $UPPER_THRESHOLD \
-                                                        \
-            --threshold-measure throughput              \
-            --threshold-test t_test                     \
-            --threshold-max-sample-size 64              \
-            --threshold-lower-boundary $LOWER_THRESHOLD \
-            --threshold-upper-boundary _                \
-                                                        \
-            # --thresholds-reset                        \
+          BENCHER_CMD="bencher run                  \
+            --branch \"${{ github.ref_name }}\"     \
+            --testbed \"${{ inputs.os }}\"          \
+            --adapter c_sharp_dot_net               \
+            --err                                   \
+            --ci-on-the-fly                         \
+            --github-actions \"$GITHUB_TOKEN\"      \
+            --iter 1                                \
+            --fold median                           \
+                                                    \
+            --threshold-measure latency             \
+            --threshold-test percentage             \
+            --threshold-max-sample-size 64          \
+            --threshold-lower-boundary _            \
+            --threshold-upper-boundary $THRESHOLD   \
+                                                    \
+            --threshold-measure throughput          \
+            --threshold-test percentage             \
+            --threshold-max-sample-size 64          \
+            --threshold-lower-boundary $THRESHOLD   \
+            --threshold-upper-boundary _            \
+                                                    \
+            # --thresholds-reset                    \
             "
 
           # Add all benchmark result files
@@ -194,9 +193,7 @@ jobs:
           done
 
           # Echo the command for debugging (without token)
-          echo "Running: bencher run --branch ${{ github.ref_name }} --testbed ${{ inputs.os }} ..."
-          echo "Threshold: ±${{ inputs.max-regression-pct }}% ($THRESHOLD)"
-          echo "Files: ${{ steps.run-benchmarks.outputs.results-dir }}/*-report.json"
+          echo "Running: ${BENCHER_CMD}"
 
           # Execute the command with token
           BENCHER_CMD="$BENCHER_CMD --token $BENCHER_API_TOKEN"
