@@ -85,8 +85,8 @@ fi
 
 # Verify executables exist
 # shellcheck disable=SC2154
-if [[ (! -f "${bm_exe_path}" || ! -f "${bm_dll_path}") && "$dry_run" != "true" ]]; then
-    echo "❌ Benchmark executables '${bm_exe_path}' or '${bm_dll_path}' were not found." | tee -a "$GITHUB_STEP_SUMMARY" >&2
+if [[ (! -f "${bm_exec_path}" || ! -f "${bm_dll_path}") && "$dry_run" != "true" ]]; then
+    echo "❌ Benchmark executables '${bm_exec_path}' or '${bm_dll_path}' were not found." | tee -a "$GITHUB_STEP_SUMMARY" >&2
     exit 2
 fi
 
