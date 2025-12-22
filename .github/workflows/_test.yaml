@@ -83,6 +83,18 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Setup DevOps scripts from vm2.DevOps
+      - name: Checkout DevOps repository
+        uses: actions/checkout@v6
+        with:
+          repository: vmelamed/vm2.DevOps
+          path: .devops
+          sparse-checkout: |
+            .github/actions/scripts
+
+      - name: Setup DevOps scripts
+        uses: ./.devops/.github/actions/scripts
+
       # Generate a weekly cache key to automatically rotate NuGet cache
       - name: Get cache timestamp (weekly rotation)
         id: cache-timestamp
@@ -147,12 +159,6 @@ jobs:
           ls -la "$ARTIFACT_PATH"/**/*.*
           ls -la ./test/**/bin/${{ inputs.configuration }}/*.*
 
-      # Make bash scripts executable on Unix-like systems
-      - name: Make Scripts Executable
-        shell: bash
-        run: |
-          chmod u+x ./scripts/bash/*.sh
-
       # Execute tests with code coverage collection and validation
       - name: Run script for unit test with coverage
         id: run-tests
@@ -162,7 +168,7 @@ jobs:
           VERBOSE: ${{ fromJSON(inputs.verbose) }}
         shell: bash
         run: |
-          ./scripts/bash/run-tests.sh ${{ inputs.test-project }} \
+          run-tests.sh ${{ inputs.test-project }} \
               --min-coverage-pct "${{ inputs.min-coverage-pct }}" \
               --configuration "${{ inputs.configuration }}" \
               --artifacts "${{ env.ARTIFACTS_DIR }}" \
