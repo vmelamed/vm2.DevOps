@@ -9,7 +9,7 @@ runs:
       shell: bash
       run: |
         # Make scripts executable
-        chmod +x "${{ github.action_path }}/*.sh"
+        chmod +x "${{ github.action_path }}"/*.sh
 
         # Add scripts directory to PATH for the remainder of the workflow
         echo "${{ github.action_path }}" >> $GITHUB_PATH
