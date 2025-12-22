@@ -156,8 +156,8 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: |
-          # Calculate threshold as decimal (e.g., 10% -> 1.10)
-          THRESHOLD=$(echo "scale=4; 1 + ${{ inputs.max-regression-pct }} / 100" | bc)
+          # Calculate threshold as decimal (e.g., 10% -> 0.90)
+          THRESHOLD=$(echo "scale=4; 1 - ${{ inputs.max-regression-pct }} / 100" | bc)
 
           # Build bencher run command
           BENCHER_CMD="bencher run \
@@ -166,17 +166,17 @@ jobs:
             --adapter c_sharp_dot_net \
             --err \
             --ci-on-the-fly \
-            --github-actions \"$GITHUB_TOKEN\""
-
-          # Add threshold configuration for latency metrics
-          BENCHER_CMD="$BENCHER_CMD \
+            --github-actions \"$GITHUB_TOKEN\" \
             --threshold-measure latency \
             --threshold-test t_test \
             --threshold-max-sample-size 64 \
-            --threshold-upper-boundary $THRESHOLD"
-
-          # Combine multiple files into one table using median folding
-          BENCHER_CMD="$BENCHER_CMD \
+            --threshold-lower-boundary _ \
+            --threshold-upper-boundary $THRESHOLD \
+            --threshold-measure throughput \
+            --threshold-test t_test \
+            --threshold-max-sample-size 64 \
+            --threshold-lower-boundary _ \
+            --threshold-upper-boundary $THRESHOLD \
             --iter 1 \
             --fold median"
 
