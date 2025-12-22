@@ -169,7 +169,7 @@ jobs:
             --ci-on-the-fly                             \
             --github-actions \"$GITHUB_TOKEN\"          \
             --iter 1                                    \
-            --fold median"                              \
+            --fold median                               \
                                                         \
             --threshold-measure latency                 \
             --threshold-test t_test                     \
@@ -184,6 +184,7 @@ jobs:
             --threshold-upper-boundary _                \
                                                         \
             # --thresholds-reset                        \
+            "
 
           # Add all benchmark result files
           for file in ${{ steps.run-benchmarks.outputs.results-dir }}/*-report.json; do
