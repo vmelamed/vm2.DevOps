@@ -36,4 +36,4 @@ jobs:
       semver-build-prefix: ${{ inputs.semver-build-prefix || 'preview' }}
       force-publish: ${{ inputs.force-publish || false }}
       save_package_artifacts: true
-      nuget-server: nuget # Publish to NuGet.org
+      nuget-server: github # Temporarily publish to 'github' - https://nuget.pkg.github.com/. Eventually should go to 'nuget' - https://api.nuget.org/v3/index.json
