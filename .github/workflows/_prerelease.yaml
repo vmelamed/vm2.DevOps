@@ -28,14 +28,20 @@ on:
         type: boolean
         default: false
 
+      nuget-server:
+        description: "NuGet server to publish to (nuget or github)"
+        type: string
+        default: "nuget"
+
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
-  DOTNET_VERSION:         ${{ inputs.dotnet-version         || '10.0.x' }}
-  FORCE_PUBLISH:          ${{ inputs.force-publish          || 'false' }}
+  DOTNET_VERSION: ${{ inputs.dotnet-version         || '10.0.x' }}
+  FORCE_PUBLISH: ${{ inputs.force-publish          || 'false' }}
   SAVE_PACKAGE_ARTIFACTS: ${{ inputs.save_package_artifacts || 'false' }}
-  SEMVER_BUILD_PREFIX:    ${{ inputs.semver-build-prefix    || 'preview' }}
-  MINVER_TAG_PREFIX:      "v"
+  SEMVER_BUILD_PREFIX: ${{ inputs.semver-build-prefix    || 'preview' }}
+  MINVER_TAG_PREFIX: "v"
+  NUGET_SERVER: ${{ inputs.nuget-server || 'nuget' }}
 
 permissions:
   contents: write
@@ -132,21 +138,35 @@ jobs:
             "/p:PackageReleaseNotes=Prerelease: ${REASON:-N/A}"
           ls -1 artifacts/pack
 
-      - name: Publish prerelease to NuGet
+      - name: Publish prerelease to NuGet server
         if: steps.tag_check.outputs.already_tagged == 'false'
         env:
           PRERELEASE_TAG: ${{ steps.compute.outputs.prerelease_tag }}
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |+
-          if [ -z "${NUGET_API_KEY}" ]; then
-            echo "NUGET_API_KEY not configured"; exit 1
+          if [ "$NUGET_SERVER" = "github" ]; then
+            if [ -z "${GITHUB_TOKEN}" ]; then
+              echo "GITHUB_TOKEN not configured"; exit 1
+            fi
+            SERVER_URL="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+            API_KEY="$GITHUB_TOKEN"
+            SERVER_NAME="GitHub Packages"
+          else
+            if [ -z "${NUGET_API_KEY}" ]; then
+              echo "NUGET_API_KEY not configured"; exit 1
+            fi
+            SERVER_URL="https://api.nuget.org/v3/index.json"
+            API_KEY="$NUGET_API_KEY"
+            SERVER_NAME="NuGet.org"
           fi
+
           dotnet nuget push artifacts/pack/*.nupkg \
-            --api-key "$NUGET_API_KEY" \
-            --source https://api.nuget.org/v3/index.json \
+            --api-key "$API_KEY" \
+            --source "$SERVER_URL" \
             --skip-duplicate
-          printf '## Packages %s pushed to NuGet:\n%s\n' "$PRERELEASE_TAG" "$(ls -1 artifacts/pack/*.nupkg | sed 's/^/  - /')" >> "$GITHUB_STEP_SUMMARY"
+          printf '## Packages %s pushed to %s:\n%s\n' "$PRERELEASE_TAG" "$SERVER_NAME" "$(ls -1 artifacts/pack/*.nupkg | sed 's/^/  - /')" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload package artifact
         if: env.SAVE_PACKAGE_ARTIFACTS == 'true'

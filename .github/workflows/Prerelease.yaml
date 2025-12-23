@@ -1,0 +1,39 @@
+name: Prerelease to NuGet
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+  workflow_dispatch:
+    inputs:
+      semver-build-prefix:
+        description: "Prerelease prefix (preview, alpha, beta, rc)"
+        type: choice
+        options:
+          - preview
+          - alpha
+          - beta
+          - rc
+        default: preview
+      force-publish:
+        description: "Force publish even if already tagged"
+        type: boolean
+        default: false
+
+jobs:
+  prerelease:
+    name: Prerelease
+    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.merged == true)
+    uses: ./.github/workflows/_prerelease.yaml
+    permissions:
+      contents: write
+    secrets: inherit
+    with:
+      os: ubuntu-latest
+      dotnet-version: ${{ vars.DOTNET_VERSION || '10.0.x' }}
+      semver-build-prefix: ${{ inputs.semver-build-prefix || 'preview' }}
+      force-publish: ${{ inputs.force-publish || false }}
+      save_package_artifacts: true
+      nuget-server: github # Temporarily publish to 'github' - https://nuget.pkg.github.com/. Eventually should go to 'nuget' - https://api.nuget.org/v3/index.json
