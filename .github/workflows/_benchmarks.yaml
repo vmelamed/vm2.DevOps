@@ -21,7 +21,7 @@ on:
       preprocessor-symbols:
         description: Preprocessor symbols to pass to the compiler
         type: string
-        default: "_"
+        default: ""
 
       benchmark-project:
         description: Path to the benchmark project to run benchmarks against (cannot be null or empty string)
@@ -32,21 +32,6 @@ on:
         description: Maximum acceptable performance regression percentage (used for Bencher threshold)
         type: number
         default: 20 # percent
-
-      cached-dependencies:
-        description: Enable caching of NuGet dependencies (default true)
-        type: boolean
-        default: true
-
-      cached-artifacts:
-        description: Enable caching of build artifacts (default true)
-        type: boolean
-        default: true
-
-      verbose:
-        description: Whether to enable verbose logging for debugging scripts
-        type: boolean
-        default: false
 
     secrets:
       BENCHER_API_TOKEN:
@@ -107,7 +92,6 @@ jobs:
 
       # Generate a weekly cache key to automatically rotate NuGet cache
       - name: Get cache timestamp (weekly rotation)
-        if: inputs.cached-dependencies == true
         id: cache-timestamp
         shell: bash
         run: |
@@ -120,14 +104,12 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
-          cache: ${{ inputs.cached-dependencies }}
           cache-dependency-path: |
             **/packages.lock.json
             **/*.csproj
 
       # Additional explicit cache layer with time-based rotation
       - name: Cache NuGet packages (weekly rotation)
-        if: inputs.cached-dependencies == true
         uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
@@ -138,7 +120,6 @@ jobs:
 
       # Retrieve compiled binaries from the build job
       - name: Restore build artifacts from cache
-        if: inputs.cached-artifacts == true
         uses: actions/cache/restore@v5
         with:
           key: build-artifacts-${{ runner.os }}-${{ github.sha }}-${{ inputs.configuration }}
@@ -154,13 +135,10 @@ jobs:
         env:
           CONFIGURATION: ${{ inputs.configuration }}
           PREPROCESSOR_SYMBOLS: ${{ inputs.preprocessor-symbols }}
-          VERBOSE: ${{ inputs.verbose }}
         run: |
           run-benchmarks.sh ${{ inputs.benchmark-project }} \
               --configuration "${{ inputs.configuration }}" \
-              --artifacts "${{ env.ARTIFACTS_DIR }}" \
-              ${{ inputs.cached-dependencies && '--cached-dependencies' || '' }} \
-              ${{ inputs.cached-artifacts    && '--cached-artifacts'    || '' }}
+              --artifacts "${{ env.ARTIFACTS_DIR }}"
 
       # Track benchmarks with Bencher using CLI
       - name: Track benchmarks with Bencher

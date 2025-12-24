@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       os:
-        description: Runner OS-s (cannot be null or empty string, default ubuntu-latest)
+        description: Runner OS
         type: string
         default: ubuntu-latest
 
@@ -21,7 +21,7 @@ on:
       preprocessor-symbols:
         description: Define constants to pass to the compiler
         type: string
-        default: "_"
+        default: ""
 
       test-project:
         description: Path to the test project to run tests against (cannot be null or empty string)
@@ -33,31 +33,10 @@ on:
         type: number
         default: 80 # percent
 
-      cached-dependencies:
-        description: Enable caching of NuGet dependencies (default true)
-        type: boolean
-        default: true
-
-      cached-artifacts:
-        description: Enable caching of build artifacts (default true)
-        type: boolean
-        default: true
-
-      verbose:
-        description: Whether to enable verbose logging
-        type: boolean
-        default: false
-
     secrets:
       CODECOV_TOKEN:
         description: Codecov API token for uploading coverage reports
         required: true
-
-# concurrency:
-#   group: test-${{ github.workflow_ref }}-${{ inputs.test-projects }}
-#   cancel-in-progress: true
-#   # NOTE: Only uncomment if this workflow is called directly (not by the _ci.yaml)
-#   # or if _ci.yaml runs build/test/benchmarks in parallel
 
 permissions:
   contents: read # to checkout the code
@@ -98,7 +77,6 @@ jobs:
       # Generate a weekly cache key to automatically rotate NuGet cache
       - name: Get cache timestamp (weekly rotation)
         id: cache-timestamp
-        if: inputs.cached-dependencies == true
         shell: bash
         run: |
           # Generate cache key based on calendar week
@@ -111,14 +89,12 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
-          cache: ${{ inputs.cached-dependencies }}
           cache-dependency-path: |
             **/packages.lock.json
             **/*.csproj
 
       # Additional explicit cache layer with time-based rotation for NuGet packages
       - name: Cache NuGet packages (weekly rotation)
-        if: inputs.cached-dependencies == true
         uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
@@ -129,7 +105,6 @@ jobs:
 
       # Retrieve compiled binaries from the build job to avoid recompilation
       - name: Restore build artifacts from cache
-        if: inputs.cached-artifacts == true
         uses: actions/cache/restore@v5
         with:
           key: build-artifacts-${{ runner.os }}-${{ github.sha }}-${{ inputs.configuration }}
@@ -139,7 +114,6 @@ jobs:
             **/obj
 
       - name: Verify the artifacts were restored
-        if: inputs.cached-artifacts == true
         shell: bash
         run: |
           ARTIFACT_PATH=$(find . -type d -path "*/bin/${{ inputs.configuration }}" | head -n 1)
@@ -158,15 +132,12 @@ jobs:
         env:
           CONFIGURATION: ${{ inputs.configuration }}
           PREPROCESSOR_SYMBOLS: ${{ inputs.preprocessor-symbols }}
-          VERBOSE: ${{ fromJSON(inputs.verbose) }}
         shell: bash
         run: |
           run-tests.sh ${{ inputs.test-project }} \
               --min-coverage-pct "${{ inputs.min-coverage-pct }}" \
               --configuration "${{ inputs.configuration }}" \
-              --artifacts "${{ env.ARTIFACTS_DIR }}" \
-              ${{ inputs.cached-dependencies && '--cached-dependencies' || '' }} \
-              ${{ inputs.cached-artifacts    && '--cached-artifacts'    || '' }}
+              --artifacts "${{ env.ARTIFACTS_DIR }}"
 
       # Upload test results and coverage reports as workflow artifacts
       - name: Upload coverage artifact
@@ -187,7 +158,6 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ${{ steps.run-tests.outputs.coverage_source_path }}
           fail_ci_if_error: false
-          verbose: true
 
       # Create test result check and PR comment
       - name: Publish test results

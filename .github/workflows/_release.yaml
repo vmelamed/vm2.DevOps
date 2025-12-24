@@ -3,10 +3,10 @@ name: _release (Reusable workflow)
 on:
   workflow_call:
     inputs:
-      os:
-        description: Runners
+      package-project:
+        description: path to the project or the solution to package and publish. Cannot be null or empty!
         type: string
-        default: ubuntu-latest
+        required: true
 
       dotnet-version:
         description: Version of .NET SDK to use
@@ -54,7 +54,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: ${{ inputs.dotnet-version || '9.0.x' }}
+          dotnet-version: ${{ inputs.dotnet-version || '10.0.x' }}
           cache: true
           cache-dependency-path: |+
             **/packages.lock.json
@@ -63,7 +63,9 @@ jobs:
       - name: Restore
         shell: bash
         run: |+
-          dotnet restore --locked-mode
+          dotnet restore \
+            ${{ inputs.package-project }} \
+            --locked-mode
 
       - name: Make Scripts Executable
         shell: bash
@@ -83,6 +85,7 @@ jobs:
         run: |+
           mkdir -p artifacts/pack
           dotnet pack \
+            ${{ inputs.package-project }} \
             --configuration Release \
             --output artifacts/pack \
             --no-restore \

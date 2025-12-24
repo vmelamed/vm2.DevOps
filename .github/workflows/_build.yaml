@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       os:
-        description: JSON array of runners (default ubuntu-latest)
+        description: Runner OS
         type: string
         default: ubuntu-latest
 
@@ -26,23 +26,7 @@ on:
       preprocessor-symbols:
         description: Preprocessor symbols to pass to the compiler (default - none)
         type: string
-        default: "_"
-
-      cached-dependencies:
-        description: Enable caching of NuGet dependencies (default true)
-        type: boolean
-        default: true
-
-      cached-artifacts:
-        description: Enable caching of build artifacts (default true)
-        type: boolean
-        default: true
-
-# concurrency:
-#   group: test-${{ github.workflow_ref }}-${{ inputs.build-project }}
-#   cancel-in-progress: true
-#   # NOTE: Only uncomment if this workflow is called directly (not via _ci.yaml)
-#   # or if _ci.yaml runs build/test/benchmarks in parallel
+        default: ""
 
 permissions:
   contents: read
@@ -66,7 +50,6 @@ jobs:
       # Generate a weekly cache key to automatically rotate NuGet cache
       - name: Get cache timestamp (weekly rotation)
         id: cache-timestamp
-        if: inputs.cached-dependencies == true
         shell: bash
         run: |
           # Generate cache key based on calendar week
@@ -79,14 +62,12 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
-          cache: ${{ inputs.cached-dependencies }}
           cache-dependency-path: |
             **/packages.lock.json
             **/*.csproj
 
       # Additional explicit cache layer with time-based rotation for NuGet packages
       - name: Cache NuGet packages (weekly rotation)
-        if: inputs.cached-dependencies == true
         uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
@@ -106,20 +87,17 @@ jobs:
         shell: bash
         run: |
           dotnet build ${{ inputs.build-project }} \
-              /p:DefineConstants="${{ inputs.preprocessor-symbols || '_' }}" \
-              --configuration ${{ inputs.configuration }} \
-              ${{ inputs.cached-dependencies && '--no-restore' || '' }}
+              /p:DefineConstants="${{ inputs.preprocessor-symbols || '' }}" \
+              --configuration ${{ inputs.configuration }}
           {
             echo "Build:               ✔️ Successful"
             echo "Runner:              ${{ inputs.os }}"
             echo "Build configuration: ${{ inputs.configuration }}"
-            echo "Defined symbols:     ${{ inputs.preprocessor-symbols || '_' }}"
-            echo "Cache dependencies:  ${{ inputs.cached-dependencies }}"
+            echo "Defined symbols:     ${{ inputs.preprocessor-symbols || '' }}"
           } >> $GITHUB_STEP_SUMMARY
 
       # Save compiled binaries and intermediate files to cache for downstream jobs
       - name: Cache build artifacts
-        if: inputs.cached-artifacts == true
         uses: actions/cache/save@v5
         with:
           key: build-artifacts-${{ runner.os }}-${{ github.sha }}-${{ inputs.configuration }}

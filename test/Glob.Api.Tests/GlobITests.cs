@@ -15,7 +15,7 @@ public partial class GlobEnumeratorIntegrationTests : IClassFixture<GlobIntegrat
         GlobIntegrationTestsFixture fixture,
         ITestOutputHelper output)
     {
-        Output  = output;
+        Output = output;
         Fixture = fixture;
 
         _host = Fixture.BuildHost(output);
@@ -55,10 +55,13 @@ public partial class GlobEnumeratorIntegrationTests : IClassFixture<GlobIntegrat
             {
                 Directory.Delete(TestRootPath, recursive: true);
             }
-            catch
-            {
-                // quietly swallow it - not much we can do about it
-            }
+            // ignore any errors during cleanup of the temp directory.
+            catch (UnauthorizedAccessException) { }
+            catch (ArgumentNullException) { }
+            catch (PathTooLongException) { }
+            catch (DirectoryNotFoundException) { }
+            catch (ArgumentException) { }
+            catch (IOException) { }
         }
     }
 

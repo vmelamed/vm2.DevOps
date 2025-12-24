@@ -94,10 +94,13 @@ public abstract class BenchmarkBase
             Directory.Delete(_realFSRootsPath, true);
             _createdTempDirectory = false;
         }
-        catch
-        {
-            // ignore any errors during cleanup of the temp directory.
-        }
+        // ignore any errors during cleanup of the temp directory.
+        catch (UnauthorizedAccessException) { }
+        catch (ArgumentNullException) { }
+        catch (PathTooLongException) { }
+        catch (DirectoryNotFoundException) { }
+        catch (ArgumentException) { }
+        catch (IOException) { }
     }
 
     /// <summary>

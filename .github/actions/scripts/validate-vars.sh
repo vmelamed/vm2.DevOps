@@ -95,7 +95,7 @@ if [[ -z "$build_projects" ]] || echo "$build_projects" | jq -e "$jq_empty" > /d
 elif [[ $? == 5 ]]; then
     error "The value of the option --build-projects '$build_projects' is not a valid JSON."
 elif ! echo "$build_projects" | jq -e "$jq_array_strings" > /dev/null; then
-    error "The value of the option --build-projects '$build_projects' must be a string representing a possibly empty JSON array of possibly empty strings - paths to the project(s) to be built."
+    error "The value of the option --build-projects '$build_projects' must be a string representing a (possibly empty) JSON array of (possibly empty) strings - paths to the project(s) to be built."
 elif echo "$build_projects" | jq -e "$jq_array_strings_has_empty" > /dev/null; then
     warning build_projects "At least one of the strings in the value of the option --build-projects '$build_projects' is empty: will build the entire solution." "$defaultBuildProjects"
 else
@@ -125,7 +125,7 @@ if [[ -z "$benchmark_projects" ]] || echo "$benchmark_projects" | jq -e "$jq_emp
 elif [[ $? == 5 ]]; then
     error "The value of the option --benchmark-projects '$benchmark_projects' is not a valid JSON."
 elif ! echo "$benchmark_projects" | jq -e "$jq_array_strings_nonempty" > /dev/null; then
-    error "The value of the option --benchmark-projects '$benchmark_projects' must be a string representing a non-empty, valid JSON array of non-empty strings - paths to the benchmark project(s) to be run."
+    error "The value of the option --benchmark-projects '$benchmark_projects' must be a string representing a non-empty JSON array of non-empty strings - paths to the benchmark project(s) to be run."
 else
     for p in $(echo "$benchmark_projects" | jq -r '.[]'); do
         if [[ ! -f "$p" ]]; then
@@ -140,7 +140,7 @@ if [[ -z "$os" ]] || echo "$os" | jq -e "$jq_empty" > /dev/null; then
 elif [[ $? == 5 ]]; then
     error "The value of the option --os '$os' is not a valid JSON."
 elif ! echo "$os" | jq -e "$jq_array_strings_nonempty" > /dev/null; then
-    error "The value of the option --os '$os' must be a string representing a non-empty JSON array of non-empty strings - names of GitHub runners."
+    error "The value of the option --os '$os' must be a string representing a non-empty JSON array of non-empty strings - monikers of GitHub runners."
 fi
 
 # Validate and set dotnet-version

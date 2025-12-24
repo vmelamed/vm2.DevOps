@@ -15,8 +15,6 @@ declare -x bm_project=${BM_PROJECT:-}
 declare -x configuration=${CONFIGURATION:="Release"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-" "}
 declare -x artifacts_dir=${ARTIFACTS_DIR:-}
-declare -x cached_dependencies=${CACHED_DEPENDENCIES:-false}
-declare -x cached_artifacts=${CACHED_ARTIFACTS:-false}
 
 source "$script_dir/run-benchmarks.usage.sh"
 source "$script_dir/run-benchmarks.utils.sh"
@@ -31,8 +29,6 @@ fi
 declare -r bm_project
 declare -r configuration
 declare -r preprocessor_symbols
-declare -r cached_dependencies
-declare -r cached_artifacts
 
 solution_dir="$(realpath -e "$(dirname "$bm_project")/../..")"
 artifacts_dir=$(realpath -m "${artifacts_dir:-"$solution_dir/BmArtifacts"}")
@@ -61,26 +57,10 @@ declare -r bm_base_path
 declare -r bm_dll_path
 declare -r bm_exec_path
 
-trace "Restore dependencies if not cached"
-if [[ $cached_dependencies != "true" ]]; then
-    execute dotnet restore --locked-mode
-else
-    trace "Skipping restore (using cached dependencies)"
-fi
-
-trace "Build if not cached"
-if [[ $cached_artifacts == "true" ]]; then
-    # Verify artifacts exist
-    if [[ ! -f "${bm_exec_path}" || ! -f "${bm_dll_path}" ]]; then
-        echo "❌ Cached artifacts missing, cannot proceed" >&2
-        exit 2
-    fi
-else
-    execute dotnet build  \
-        "$bm_project" \
-        --configuration "$configuration" \
-        --no-restore \
-        /p:DefineConstants="$preprocessor_symbols"
+# Verify artifacts exist
+if [[ ! -f "${bm_exec_path}" || ! -f "${bm_dll_path}" ]]; then
+    echo "❌ Cached artifacts missing, cannot proceed" >&2
+    exit 2
 fi
 
 # Verify executables exist

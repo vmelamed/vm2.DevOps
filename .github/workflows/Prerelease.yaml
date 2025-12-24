@@ -32,8 +32,8 @@ jobs:
     secrets: inherit
     with:
       os: ubuntu-latest
-      dotnet-version: ${{ vars.DOTNET_VERSION || '10.0.x' }}
+      dotnet-version: ${{ vars.DOTNET_VERSION             || '10.0.x' }}
       semver-build-prefix: ${{ inputs.semver-build-prefix || 'preview' }}
-      force-publish: ${{ inputs.force-publish || false }}
+      force-publish: ${{ inputs.force-publish             || false }}
       save_package_artifacts: true
       nuget-server: github # Temporarily publish to 'github' - https://nuget.pkg.github.com/. Eventually should go to 'nuget' - https://api.nuget.org/v3/index.json

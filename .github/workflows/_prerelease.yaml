@@ -3,10 +3,10 @@ name: _prerelease (Reusable workflow)
 on:
   workflow_call:
     inputs:
-      os:
-        description: Runner OS-s (cannot be null or empty string, default ubuntu-latest)
+      package-project:
+        description: path to the project or the solution to package and publish. Cannot be null or empty!
         type: string
-        default: ubuntu-latest
+        required: true
 
       dotnet-version:
         description: Version of .NET SDK to use (cannot be null or empty string, default 10.0.x)
@@ -36,12 +36,12 @@ on:
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
-  DOTNET_VERSION: ${{ inputs.dotnet-version         || '10.0.x' }}
-  FORCE_PUBLISH: ${{ inputs.force-publish          || 'false' }}
+  DOTNET_VERSION: ${{ inputs.dotnet-version                 || '10.0.x' }}
+  FORCE_PUBLISH: ${{ inputs.force-publish                   || 'false' }}
   SAVE_PACKAGE_ARTIFACTS: ${{ inputs.save_package_artifacts || 'false' }}
-  SEMVER_BUILD_PREFIX: ${{ inputs.semver-build-prefix    || 'preview' }}
+  SEMVER_BUILD_PREFIX: ${{ inputs.semver-build-prefix       || 'preview' }}
   MINVER_TAG_PREFIX: "v"
-  NUGET_SERVER: ${{ inputs.nuget-server || 'nuget' }}
+  NUGET_SERVER: ${{ inputs.nuget-server                     || 'nuget' }}
 
 permissions:
   contents: write
@@ -123,7 +123,9 @@ jobs:
       - name: Restore
         shell: bash
         run: |+
-          dotnet restore --locked-mode
+          dotnet restore \
+            ${{ inputs.package-project }} \
+            --locked-mode
 
       - name: Pack (MinVer consumes the just-pushed prerelease tag)
         if: steps.tag_check.outputs.already_tagged == 'false'
@@ -131,6 +133,7 @@ jobs:
         run: |+
           mkdir -p artifacts/pack
           dotnet pack \
+            ${{ inputs.package-project }} \
             --configuration Release \
             --output artifacts/pack \
             --no-restore \

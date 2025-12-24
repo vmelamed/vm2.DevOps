@@ -23,21 +23,6 @@ on:
         type: string
         default: "SHORT_RUN"
 
-      cached-dependencies:
-        description: Enable storing and retrieving NuGet dependencies to/from cache (default true)
-        type: boolean
-        default: true
-
-      cached-artifacts:
-        description: Enable storing and retrieving build artifacts to/from cache (default true)
-        type: boolean
-        default: true
-
-      verbose:
-        description: Enable verbose logging by the scripts for debugging purposes
-        type: boolean
-        default: false
-
 jobs:
   get-params:
     name: Prepare the default and passed in parameters
@@ -59,9 +44,6 @@ jobs:
       min-coverage-pct: ${{ steps.init-params.outputs.min-coverage-pct }}
       max-regression-pct: ${{ steps.init-params.outputs.max-regression-pct }}
       force-new-baseline: ${{ steps.init-params.outputs.force-new-baseline }}
-      cached-dependencies: ${{ steps.init-params.outputs.cached-dependencies }}
-      cached-artifacts: ${{ steps.init-params.outputs.cached-artifacts }}
-      verbose: ${{ steps.init-params.outputs.verbose }}
     steps:
       - name: Gather parameters
         id: init-params
@@ -87,23 +69,17 @@ jobs:
           if [ "${{ github.event_name }}" == "push" ]; then
               preprocessor_symbols="SHORT_RUN"
           else
-              preprocessor_symbols="_"
+              preprocessor_symbols=""
           fi
           if [ "${{ github.event_name }}" == "push" ] || \
              [ "${{ github.event_name }}" == "pull_request" ]; then
               # Set the default values for push and pull_request events
               os='["ubuntu-latest"]'
-              cached_dependencies="true"
-              cached_artifacts="true"
-              verbose="false"
           elif [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
               # Get the values from the inputs of workflow_dispatch event (the UI)
               # Convert comma-separated runner's OS values to JSON array
               os=$(echo "${{ inputs.os }}" | jq -Rc 'split(",") | map(select(length > 0) | gsub("^\\s+|\\s+$";""))')
               preprocessor_symbols="${{ inputs.preprocessor-symbols }}"
-              cached_dependencies="${{ inputs.cached-dependencies }}"
-              cached_artifacts="${{ inputs.cached-artifacts }}"
-              verbose="${{ inputs.verbose }}"
           else
               echo "Unsupported event: ${{ github.event_name }}"
               exit 5
@@ -121,9 +97,6 @@ jobs:
             echo "min-coverage-pct=${min_coverage_pct}"
             echo "max-regression-pct=${max_regression_pct}"
             echo "force-new-baseline=${force_new_baseline}"
-            echo "cached-dependencies=${cached_dependencies}"
-            echo "cached-artifacts=${cached_artifacts}"
-            echo "verbose=${verbose}"
           }  >> $GITHUB_OUTPUT
 
   call-ci:
@@ -148,6 +121,3 @@ jobs:
       min-coverage-pct: ${{ fromJSON(needs.get-params.outputs.min-coverage-pct) }}
       max-regression-pct: ${{ fromJSON(needs.get-params.outputs.max-regression-pct) }}
       force-new-baseline: ${{ fromJSON(needs.get-params.outputs.force-new-baseline) }}
-      cached-dependencies: ${{ fromJSON(needs.get-params.outputs.cached-dependencies) }}
-      cached-artifacts: ${{ fromJSON(needs.get-params.outputs.cached-artifacts) }}
-      verbose: ${{ fromJSON(needs.get-params.outputs.verbose) }}
