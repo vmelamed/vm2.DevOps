@@ -170,7 +170,12 @@ jobs:
   # Run performance benchmarks and compare against baseline (if enabled and benchmark project specified)
   benchmarks:
     name: Benchmarks
-    if: ${{ needs.setup.outputs.benchmark-projects != '' && needs.setup.outputs.benchmark-projects != '[]' }}
+    if: >
+      ${{
+      needs.setup.outputs.benchmark-projects != '' &&
+      needs.setup.outputs.benchmark-projects != '[]' &&
+      (github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip bm]'))
+      }}
     needs:
       - setup
       - build
