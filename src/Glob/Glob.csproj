@@ -1,11 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <RootNamespace>vm2.DevOps.Glob</RootNamespace>
-  </PropertyGroup>
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <RootNamespace>vm2.DevOps.Glob</RootNamespace>
+    </PropertyGroup>
 
-  <!-- PropertyGroup>
+    <!-- PropertyGroup>
     <!- - .NET Tool Configuration - ->
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>glob</ToolCommandName>
@@ -21,31 +21,32 @@
     </Description>
     <PackageTags>glob;pattern;matching;cli;tool;cross-platform;file-search;directory-search</PackageTags>
     <PackageProjectUrl>https://github.com/vmelamed/vm2.DevOps</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/vmelamed/vm2.DevOps</RepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup -->
 
-  <ItemGroup>
-    <Content Include="appsettings.$(USERNAME).json" Condition="Exists('appsettings.$(USERNAME).json')">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="appsettings.Development.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
+    <ItemGroup>
+        <Content Include="appsettings.$(USERNAME).json" Condition="Exists('appsettings.$(USERNAME).json')">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <Content Include="appsettings.Development.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <Content Include="appsettings.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="System.CommandLine" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="System.CommandLine" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Glob.Api\Glob.Api.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Glob.Api\Glob.Api.csproj" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <Content Include="README.md" Pack="true" PackagePath="\" />
-  </ItemGroup>
+    <ItemGroup>
+        <Content Include="README.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
 
 </Project>

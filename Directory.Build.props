@@ -16,6 +16,8 @@
         <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
         <WarningsAsErrors />
         <NoWarn>$(NoWarn);IDE0058;IDE0290;IDE0130;</NoWarn>
+        <Deterministic>true</Deterministic>
+        <DebugType>portable</DebugType>
         <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
         <IsTrimmable>true</IsTrimmable>
         <TieredPGO>true</TieredPGO>
@@ -41,10 +43,33 @@
         <EnablePackageValidation>true</EnablePackageValidation>
         <EmbedAllSources>true</EmbedAllSources>
         <EmbedUntrackedSources>true</EmbedUntrackedSources>
-        <DebugType>portable</DebugType>
         <MinVerTagPrefix>v</MinVerTagPrefix>
         <PublishRepositoryUrl>true</PublishRepositoryUrl>
-        <RepositoryUrl>https://github.com/vmelamed/vm2.DevOps</RepositoryUrl>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <IsInBenchmarksFolder Condition="
+            $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]benchmarks?[/\\]', RegexOptions.IgnoreCase))
+            ">true</IsInBenchmarksFolder>
+        <IsInExamplesFolder Condition="
+            $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]examples?[/\\]', RegexOptions.IgnoreCase))
+            ">true</IsInExamplesFolder>
+        <IsInTestFolder Condition="
+            $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]tests?[/\\]', RegexOptions.IgnoreCase))
+            ">true</IsInTestFolder>
+        <IsTestProject Condition="
+            $(IsInTestFolder) == 'true'
+            AND
+            $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '.*\.Tests$', RegexOptions.IgnoreCase))
+            ">true</IsTestProject>
+        <IsTestLibraryProject Condition="
+            $(IsInTestFolder) == 'true'
+            AND
+            !$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '.*\.Tests$', RegexOptions.IgnoreCase))
+            ">true</IsTestLibraryProject>
+        <TestEnvironment Condition="
+            $([System.Text.RegularExpressions.Regex]::IsMatch($(VisualStudioVersion), '^18\.\d+\.\d+$'))
+            ">VSTest</TestEnvironment>
     </PropertyGroup>
 
     <ItemGroup>
@@ -76,38 +101,47 @@
       For *.Tests projects in the ./test folder:
   -->
     <!-- ======================================================== -->
-    <PropertyGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]test[/\\]')) and $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '^*.Tests$'))">
+    <PropertyGroup Condition="$(IsTestProject) == 'true'">
         <!-- Test projects settings -->
         <OutputType>Exe</OutputType>
-        <IsTestProject>true</IsTestProject>
         <IsPackable>false</IsPackable>
         <IncludeSymbols>False</IncludeSymbols>
         <GenerateDocumentationFile>false</GenerateDocumentationFile>
-        <RunSettingsFilePath>$(MSBuildProjectDirectory)\..\..\test.runsettings</RunSettingsFilePath>        <!-- from the test project, usually ./test.Xyz.Tests -->
-        <!--<TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport> <!- - To be able to run MTP projects in VSTest and 'dotnet test' experience, available for .NET 9 SDK and earlier for backward compatibility - ->-->
-        <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>        <!-- To opt-in xUnit in the Microsoft Testing Platform and use native command line 'dotnet run' experience -->
-        <!-- For more information on Microsoft Testing Platform support in xUnit.net, please visit: https://xunit.net/docs/getting-started/v3/microsoft-testing-platform -->
+        <NoWarn>$(NoWarn);CA1701;CA1702;CA1707;CA1806;CA2211;CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290</NoWarn>
+        <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>        <!-- Opt-in xUnit in the Microsoft Testing Platform and use native command line 'dotnet run' experience -->
+        <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>        <!-- To be able to run MTP projects in VSTest (Visual Studio) and with 'dotnet test' experience, available for .NET 9 SDK and earlier for backward compatibility-->
+        <RunSettingsFilePath>$(MSBuildProjectDirectory)\..\..\test.runsettings</RunSettingsFilePath>        <!-- Assuming that test.runsettings is in the directory with the solution and the test project is at <solution dir>/test/<Xyz.Tests>/Xyz.csproj -->
+        <!-- For more information on Microsoft Testing Platform support in xUnit.net, visit: https://xunit.net/docs/getting-started/v3/microsoft-testing-platform -->
         <EnableCodeCoverage>true</EnableCodeCoverage>
         <!-- Enable code coverage collection with Microsoft.Testing.Extensions.CodeCoverage ADD MTP Code Coverage settings: -->
-        <CodeCoverageExcludeByFile>**/*.g.cs;**/obj/**/*</CodeCoverageExcludeByFile>
-        <CodeCoverageExcludeByAttribute>ExcludeFromCodeCoverage;GeneratedRegex;GeneratedCode;CompilerGenerated</CodeCoverageExcludeByAttribute>
-        <NoWarn>$(NoWarn);CA1701;CA1702;CA1707;CA1806;CA2211;CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290</NoWarn>
+        <CodeCoverageExcludeByFile>**/obj/**/*;**/*.g.cs;**/*.i.cs;**/*.g.i.cs;;*.generated.cs;*Migrations/*;*AssemblyInfo.cs;*Designer.cs;*.designer.cs</CodeCoverageExcludeByFile>
+        <CodeCoverageExcludeByAttribute>*ExcludeFromCodeCoverage*;*GeneratedRegex*;*GeneratedCode*;*SourceGenerationContext*;*CompilerGenerated*</CodeCoverageExcludeByAttribute>
     </PropertyGroup>
-
-    <ItemGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]test[/\\]')) and $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '^*.Tests$'))">
+    <ItemGroup Condition="$(IsTestProject) == 'true'">
+        <!-- For Visual Studio (MTP v1) -->
+        <PackageReference Condition="$(TestEnvironment) == 'VSTest'" Include="xunit.v3.mtp-v1" />
+        <!-- For VSCode, CI, and command line (MTP v2) -->
+        <PackageReference Condition="$(TestEnvironment) != 'VSTest'" Include="xunit.v3.mtp-v2" />
         <PackageReference Include="FluentAssertions" />
-        <PackageReference Include="xunit.v3.mtp-v2" />
-        <PackageReference Include="xunit.v3.extensibility.core" />
-        <PackageReference Include="xunit.runner.visualstudio">            <!-- SHOULD BE HERE TEMPORARILY! -->
+    </ItemGroup>
+    <ItemGroup Condition="$(IsTestProject) == 'true' and $(TestEnvironment) == 'VSTest'">
+        <!-- MTP v1 Code Coverage for Visual Studio only -->
+        <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage"/>
+    </ItemGroup>
+    <ItemGroup Condition="$(IsTestProject) == 'true' and $(TestEnvironment) == 'VSTest'">
+        <!-- These should be redundant for the MS Test platform -->
+        <!-- <PackageReference Include="xunit.runner.visualstudio">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
-
-        <!-- These should be redundant for the test platform -->
-        <PackageReference Include="Microsoft.NET.Test.Sdk" />
-        <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" />
-        <PackageReference Include="Microsoft.Testing.Extensions.TrxReport.Abstractions" />
-        <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage"/>
+        </PackageReference> -->
+        <!-- <PackageReference Include="Microsoft.NET.Test.Sdk" /> -->
+        <!-- <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" />
+        <PackageReference Include="Microsoft.Testing.Extensions.TrxReport.Abstractions" /> -->
+    </ItemGroup>
+    <!-- Common usings for test projects in the ./test folder: -->
+    <ItemGroup Condition="$(IsTestProject) == 'true'">
+        <Using Include="Xunit" />
+        <Using Include="FluentAssertions" />
     </ItemGroup>
 
     <!-- ================ Test Libraries Settings ================ -->
@@ -115,24 +149,22 @@
           Microsoft Testing Platform (MTP) with
           xUnit,
           FluentAssertions
-      For *.Tests.* projects in the ./test folder:
+      For *.Tests.* projects in the ./test folder - rather test libraries than test projects:
   -->
     <!-- ======================================================== -->
-    <PropertyGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]test[/\\]')) and !$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '^*.Tests$'))">
+    <PropertyGroup Condition="$(IsTestLibraryProject) == 'true'">
         <!-- Test libraries projects settings -->
         <IsPackable>false</IsPackable>
         <IncludeSymbols>False</IncludeSymbols>
         <GenerateDocumentationFile>false</GenerateDocumentationFile>
         <NoWarn>$(NoWarn);CA1701;CA1702;CA1707;CA1806;CA2211;CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290</NoWarn>
     </PropertyGroup>
-
-    <ItemGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]test[/\\]')) and !$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '^*.Tests$'))">
+    <ItemGroup Condition="$(IsTestLibraryProject) == 'true'">
         <PackageReference Include="FluentAssertions" />
         <PackageReference Include="xunit.v3.extensibility.core" />
     </ItemGroup>
-
     <!-- Common usings for tests and libraries projects in the ./test folder: -->
-    <ItemGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]test[/\\]'))">
+    <ItemGroup Condition="$(IsTestLibraryProject) == 'true'">
         <Using Include="Xunit" />
         <Using Include="FluentAssertions" />
         <Using Include="FluentAssertions.Formatting" />
@@ -144,7 +176,7 @@
           BenchmarkDotNet
   -->
     <!-- ============================================================= -->
-    <PropertyGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]benchmarks[/\\]'))">
+    <PropertyGroup Condition="$(IsInBenchmarksFolder) == 'true'">
         <!-- Test projects settings -->
         <OutputType>Exe</OutputType>
         <IsPackable>false</IsPackable>
@@ -152,24 +184,20 @@
         <GenerateDocumentationFile>false</GenerateDocumentationFile>
         <NoWarn>$(NoWarn);CA1701;CA1702;CA1707;CA1806;CA2211;CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290</NoWarn>
     </PropertyGroup>
-
     <!-- common packages for benchmark projects in the ./benchmarks folder: -->
-    <ItemGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]benchmarks[/\\]'))">
+    <ItemGroup Condition="$(IsInBenchmarksFolder) == 'true'">
         <PackageReference Include="BenchmarkDotNet" />
         <PackageReference Include="BenchmarkDotNet.Annotations" />
-        <!-- To show up in the VS test explorer (with some perf. penalty!) -->
-        <!--
-    <PackageReference Include="BenchmarkDotNet.TestAdapter" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    -->
-        <!-- for running with Visual Studio profiler: -->
-        <!--
-    <PackageReference Include="Microsoft.VisualStudio.DiagnosticsHub.BenchmarkDotNetDiagnosers" />
-    -->
+        <!-- To show up in the VS test explorer (with some perf. penalty!)
+        <PackageReference Include="BenchmarkDotNet.TestAdapter" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        -->
+        <!-- for running with Visual Studio profiler:
+        <PackageReference Include="Microsoft.VisualStudio.DiagnosticsHub.BenchmarkDotNetDiagnosers" />
+        -->
     </ItemGroup>
-
     <!-- common usings for benchmark projects in the ./benchmarks folder: -->
-    <ItemGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]benchmarks[/\\]'))">
+    <ItemGroup Condition="$(IsInBenchmarksFolder) == 'true'">
         <Using Include="BenchmarkDotNet" />
         <Using Include="BenchmarkDotNet.Attributes" />
         <Using Include="BenchmarkDotNet.Configs" />
@@ -179,7 +207,7 @@
     </ItemGroup>
 
     <!-- settings for example projects in the ./examples folder: -->
-    <PropertyGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]examples[/\\]'))">
+    <PropertyGroup Condition="$(IsInExamplesFolder) == 'true'">
         <!-- Example projects settings -->
         <IsPackable>false</IsPackable>
         <GenerateDocumentationFile>false</GenerateDocumentationFile>
