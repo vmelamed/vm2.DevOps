@@ -118,15 +118,11 @@
         <CodeCoverageExcludeByAttribute>*ExcludeFromCodeCoverage*;*GeneratedRegex*;*GeneratedCode*;*SourceGenerationContext*;*CompilerGenerated*</CodeCoverageExcludeByAttribute>
     </PropertyGroup>
     <ItemGroup Condition="$(IsTestProject) == 'true'">
-        <!-- For Visual Studio (MTP v1) -->
-        <PackageReference Condition="$(TestEnvironment) == 'VSTest'" Include="xunit.v3.mtp-v1" />
-        <!-- For VSCode, CI, and command line (MTP v2) -->
-        <PackageReference Condition="$(TestEnvironment) != 'VSTest'" Include="xunit.v3.mtp-v2" />
+        <!-- Use MTP v2 for all environments - VS 2022 should support it -->
+        <PackageReference Include="xunit.v3.mtp-v2" />
         <PackageReference Include="FluentAssertions" />
-    </ItemGroup>
-    <ItemGroup Condition="$(IsTestProject) == 'true' and $(TestEnvironment) == 'VSTest'">
-        <!-- MTP v1 Code Coverage for Visual Studio only -->
-        <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage"/>
+        <!-- Code coverage disabled for now due to MTP v2 compatibility - uncomment when available:
+        <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage"/> -->
     </ItemGroup>
     <ItemGroup Condition="$(IsTestProject) == 'true' and $(TestEnvironment) == 'VSTest'">
         <!-- These should be redundant for the MS Test platform -->
