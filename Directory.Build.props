@@ -1,10 +1,5 @@
 <Project>
-    <!-- ================ Common Settings ================ -->
-    <!-- Stack:
-          MinVer
-          GitHub
-  -->
-    <!-- ================================================= -->
+    <!-- ================ Common Settings for All projects ================ -->
     <PropertyGroup Label="Packages">
         <TargetFramework>net10.0</TargetFramework>
         <LangVersion>latest</LangVersion>
@@ -28,6 +23,7 @@
         <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
     </PropertyGroup>
 
+    <!-- ================ Package properties for all vm2 packages ================ -->
     <PropertyGroup Label="NuGetGlobal">
         <IsPackable>true</IsPackable>
         <Company>vm</Company>
@@ -47,6 +43,7 @@
         <PublishRepositoryUrl>true</PublishRepositoryUrl>
     </PropertyGroup>
 
+    <!-- ================ Properties to be used mostly in test projects ================ -->
     <PropertyGroup>
         <IsInBenchmarksFolder Condition="
             $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]benchmarks?[/\\]', RegexOptions.IgnoreCase))
@@ -68,22 +65,23 @@
             !$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '.*\.Tests$', RegexOptions.IgnoreCase))
             ">true</IsTestLibraryProject>
         <TestEnvironment Condition="
-            $([System.Text.RegularExpressions.Regex]::IsMatch($(VisualStudioVersion), '^18\.\d+\.\d+$'))
+            $([System.Text.RegularExpressions.Regex]::IsMatch($(VisualStudioVersion), '^18\.\d+.*'))
             ">VSTest</TestEnvironment>
     </PropertyGroup>
 
+    <!-- ================ Common Package References for All projects ================ -->
     <ItemGroup>
         <PackageReference Include="System.Configuration.ConfigurationManager" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
         <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" />
         <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Configuration" />
         <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection"/>
         <PackageReference Include="Microsoft.Extensions.Hosting"/>
         <PackageReference Include="Microsoft.Extensions.Logging"/>
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Configuration" />
         <PackageReference Include="Microsoft.Extensions.Logging.Console"/>
         <PackageReference Include="Microsoft.SourceLink.GitHub">
             <PrivateAssets>all</PrivateAssets>
@@ -99,8 +97,7 @@
           xUnit,
           FluentAssertions
       For *.Tests projects in the ./test folder:
-  -->
-    <!-- ======================================================== -->
+    -->
     <PropertyGroup Condition="$(IsTestProject) == 'true'">
         <!-- Test projects settings -->
         <OutputType>Exe</OutputType>
@@ -108,44 +105,51 @@
         <IncludeSymbols>False</IncludeSymbols>
         <GenerateDocumentationFile>false</GenerateDocumentationFile>
         <NoWarn>$(NoWarn);CA1701;CA1702;CA1707;CA1806;CA2211;CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290</NoWarn>
-        <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>        <!-- Opt-in xUnit in the Microsoft Testing Platform and use native command line 'dotnet run' experience -->
-        <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>        <!-- To be able to run MTP projects in VSTest (Visual Studio) and with 'dotnet test' experience, available for .NET 9 SDK and earlier for backward compatibility-->
-        <RunSettingsFilePath>$(MSBuildProjectDirectory)\..\..\test.runsettings</RunSettingsFilePath>        <!-- Assuming that test.runsettings is in the directory with the solution and the test project is at <solution dir>/test/<Xyz.Tests>/Xyz.csproj -->
+
         <!-- For more information on Microsoft Testing Platform support in xUnit.net, visit: https://xunit.net/docs/getting-started/v3/microsoft-testing-platform -->
-        <EnableCodeCoverage>true</EnableCodeCoverage>
+        <!-- Opt-in xUnit in the Microsoft Testing Platform, as well as use the native command line 'dotnet run' experience: -->
+        <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+        <!-- Enable running MTP projects in VSTest (Visual Studio), as well as with 'dotnet test' experience, available for .NET 9 SDK and earlier for backward compatibility-->
+        <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+        <!-- test.runsettings is assumed to be in the directory with the solution and the test project is at <solution dir>/test/<Xyz.Tests>/Xyz.Tests.csproj -->
+        <RunSettingsFilePath>$(MSBuildProjectDirectory)\..\..\test.runsettings</RunSettingsFilePath>
         <!-- Enable code coverage collection with Microsoft.Testing.Extensions.CodeCoverage ADD MTP Code Coverage settings: -->
+        <EnableCodeCoverage>true</EnableCodeCoverage>
         <CodeCoverageExcludeByFile>**/obj/**/*;**/*.g.cs;**/*.i.cs;**/*.g.i.cs;;*.generated.cs;*Migrations/*;*AssemblyInfo.cs;*Designer.cs;*.designer.cs</CodeCoverageExcludeByFile>
         <CodeCoverageExcludeByAttribute>*ExcludeFromCodeCoverage*;*GeneratedRegex*;*GeneratedCode*;*SourceGenerationContext*;*CompilerGenerated*</CodeCoverageExcludeByAttribute>
     </PropertyGroup>
     <ItemGroup Condition="$(IsTestProject) == 'true'">
         <!-- Use MTP v2 for all environments - VS 2022 should support it -->
-        <PackageReference Include="xunit.v3.mtp-v2" />
         <PackageReference Include="FluentAssertions" />
         <!-- Code coverage disabled for now due to MTP v2 compatibility - uncomment when available:
         <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage"/> -->
     </ItemGroup>
-    <ItemGroup Condition="$(IsTestProject) == 'true' and $(TestEnvironment) == 'VSTest'">
+    <ItemGroup Condition="$(IsTestProject) == 'true' and $(BuildingInsideVisualStudio) != 'true'">
+        <PackageReference Include="xunit.v3.mtp-v2" />
+    </ItemGroup>
+    <ItemGroup Condition="$(IsTestProject) == 'true' and $(BuildingInsideVisualStudio) == 'true'">
+        <PackageReference Include="xunit.v3.mtp-v1" />
         <!-- These should be redundant for the MS Test platform -->
-        <!-- <PackageReference Include="xunit.runner.visualstudio">
+        <PackageReference Include="xunit.runner.visualstudio">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference> -->
-        <!-- <PackageReference Include="Microsoft.NET.Test.Sdk" /> -->
-        <!-- <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" />
-        <PackageReference Include="Microsoft.Testing.Extensions.TrxReport.Abstractions" /> -->
+        </PackageReference>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" />
+        <PackageReference Include="Microsoft.Testing.Extensions.TrxReport.Abstractions" />
     </ItemGroup>
-    <!-- Common usings for test projects in the ./test folder: -->
+    <!-- Common usings for the test projects: -->
     <ItemGroup Condition="$(IsTestProject) == 'true'">
         <Using Include="Xunit" />
         <Using Include="FluentAssertions" />
     </ItemGroup>
 
-    <!-- ================ Test Libraries Settings ================ -->
+    <!-- ================ Test Library Projects' Settings ================ -->
     <!-- Test stack:
           Microsoft Testing Platform (MTP) with
           xUnit,
           FluentAssertions
-      For *.Tests.* projects in the ./test folder - rather test libraries than test projects:
+      For *.Tests.* projects in the ./test folder - these are rather test libraries than test projects:
   -->
     <!-- ======================================================== -->
     <PropertyGroup Condition="$(IsTestLibraryProject) == 'true'">
@@ -159,7 +163,7 @@
         <PackageReference Include="FluentAssertions" />
         <PackageReference Include="xunit.v3.extensibility.core" />
     </ItemGroup>
-    <!-- Common usings for tests and libraries projects in the ./test folder: -->
+    <!-- Common usings for test library projects in the ./test folder: -->
     <ItemGroup Condition="$(IsTestLibraryProject) == 'true'">
         <Using Include="Xunit" />
         <Using Include="FluentAssertions" />
