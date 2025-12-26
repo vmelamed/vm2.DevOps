@@ -37,6 +37,7 @@ on:
       NUGET_GITHUB_TOKEN:
         description: 'GitHub token for authentication'
         required: true
+
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
