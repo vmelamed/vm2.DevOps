@@ -29,8 +29,8 @@ on:
         default: "nuget"
 
     secrets:
-      NUGET_GITHUB_TOKEN:
-        description: 'GitHub token for authentication'
+      NUGET_API_KEY:
+        description: "Token for authentication to the NuGet server - must match the selected nuget-server"
         required: true
 
 concurrency:
@@ -99,31 +99,27 @@ jobs:
 
       - name: Publish stable to NuGet server
         env:
-          NUGET_GITHUB_TOKEN: ${{ secrets.NUGET_GITHUB_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         shell: bash
         run: |+
+          if [ -z "${NUGET_API_KEY}" ]; then
+            echo "NUGET_API_KEY not configured"; exit 1
+          fi
+          API_KEY="$NUGET_API_KEY"
           if [ "$NUGET_SERVER" = "github" ]; then
-            if [ -z "${NUGET_GITHUB_TOKEN}" ]; then
-              echo "NUGET_GITHUB_TOKEN not configured"; exit 1
-            fi
-            SERVER_URL="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
-            API_KEY="$GITHUB_TOKEN"
             SERVER_NAME="GitHub Packages"
+            SERVER_URL="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
           else
-            if [ -z "${NUGET_GITHUB_TOKEN}" ]; then
-              echo "NUGET_GITHUB_TOKEN not configured"; exit 1
-            fi
-            SERVER_URL="https://api.nuget.org/v3/index.json"
-            API_KEY="$NUGET_GITHUB_TOKEN"
             SERVER_NAME="NuGet.org"
+            SERVER_URL="https://api.nuget.org/v3/index.json"
           fi
 
           dotnet nuget push artifacts/pack/*.nupkg \
-            --api-key  "${API_KEY}" \
+            --api-key  "$NUGET_API_KEY" \
             --source "$SERVER_URL" \
             --skip-duplicate
-          printf '## Packages %s pushed to %s:\n%s\n' "$GITHUB_REF_NAME" "$SERVER_NAME" "$(ls -1 artifacts/pack/*.nupkg | sed 's/^/  - /')" >> "$GITHUB_STEP_SUMMARY"
+          printf '## Packages %s pushed to %s:\n%s\n' "$RELEASE_TAG" "$SERVER_NAME" "$(ls -1 artifacts/pack/*.nupkg | sed 's/^/  - /')" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload package artifact
         if: env.SAVE_PACKAGE_ARTIFACTS == 'true'
