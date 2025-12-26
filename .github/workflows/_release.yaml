@@ -28,6 +28,11 @@ on:
         type: string
         default: "nuget"
 
+    secrets:
+      NUGET_GITHUB_TOKEN:
+        description: 'GitHub token for authentication'
+        required: true
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -94,23 +99,23 @@ jobs:
 
       - name: Publish stable to NuGet server
         env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          NUGET_GITHUB_TOKEN: ${{ secrets.NUGET_GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |+
           if [ "$NUGET_SERVER" = "github" ]; then
-            if [ -z "${GITHUB_TOKEN}" ]; then
-              echo "GITHUB_TOKEN not configured"; exit 1
+            if [ -z "${NUGET_GITHUB_TOKEN}" ]; then
+              echo "NUGET_GITHUB_TOKEN not configured"; exit 1
             fi
             SERVER_URL="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
             API_KEY="$GITHUB_TOKEN"
             SERVER_NAME="GitHub Packages"
           else
-            if [ -z "${NUGET_API_KEY}" ]; then
-              echo "NUGET_API_KEY not configured"; exit 1
+            if [ -z "${NUGET_GITHUB_TOKEN}" ]; then
+              echo "NUGET_GITHUB_TOKEN not configured"; exit 1
             fi
             SERVER_URL="https://api.nuget.org/v3/index.json"
-            API_KEY="$NUGET_API_KEY"
+            API_KEY="$NUGET_GITHUB_TOKEN"
             SERVER_NAME="NuGet.org"
           fi
 

@@ -33,6 +33,10 @@ on:
         type: string
         default: "nuget"
 
+    secrets:
+      NUGET_GITHUB_TOKEN:
+        description: 'GitHub token for authentication'
+        required: true
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
@@ -145,7 +149,7 @@ jobs:
         if: steps.tag_check.outputs.already_tagged == 'false'
         env:
           PRERELEASE_TAG: ${{ steps.compute.outputs.prerelease_tag }}
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          NUGET_GITHUB_TOKEN: ${{ secrets.NUGET_GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |+
@@ -157,11 +161,11 @@ jobs:
             API_KEY="$GITHUB_TOKEN"
             SERVER_NAME="GitHub Packages"
           else
-            if [ -z "${NUGET_API_KEY}" ]; then
-              echo "NUGET_API_KEY not configured"; exit 1
+            if [ -z "${NUGET_GITHUB_TOKEN}" ]; then
+              echo "NUGET_GITHUB_TOKEN not configured"; exit 1
             fi
             SERVER_URL="https://api.nuget.org/v3/index.json"
-            API_KEY="$NUGET_API_KEY"
+            API_KEY="$NUGET_GITHUB_TOKEN"
             SERVER_NAME="NuGet.org"
           fi
 
