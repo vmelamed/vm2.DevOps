@@ -109,7 +109,7 @@
         <CodeCoverageExcludeByFile>**/obj/**/*;**/*.g.cs;**/*.i.cs;**/*.g.i.cs;;*.generated.cs;*Migrations/*;*AssemblyInfo.cs;*Designer.cs;*.designer.cs</CodeCoverageExcludeByFile>
         <CodeCoverageExcludeByAttribute>*ExcludeFromCodeCoverage*;*GeneratedRegex*;*GeneratedCode*;*SourceGenerationContext*;*CompilerGenerated*</CodeCoverageExcludeByAttribute>
 
-        <RestorePackagesWithLockFile Condition="$(BuildingInsideVisualStudio) == 'true')">false</RestorePackagesWithLockFile>
+        <RestorePackagesWithLockFile Condition="$(BuildingInsideVisualStudio) == 'true'">false</RestorePackagesWithLockFile>
         <!-- Opt-in xUnit in the Microsoft Testing Platform, as well as use the native command line 'dotnet run' experience: -->
         <!-- For more information on Microsoft Testing Platform support in xUnit.net, visit: https://xunit.net/docs/getting-started/v3/microsoft-testing-platform -->
         <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
