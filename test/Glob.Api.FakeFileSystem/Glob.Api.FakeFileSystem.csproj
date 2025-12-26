@@ -6,7 +6,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Glob.Api\Glob.Api.csproj" />
-    <ProjectReference Include="..\Test.Utilities\Test.Utilities.csproj" />
   </ItemGroup>
 
 </Project>

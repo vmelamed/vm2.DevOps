@@ -119,6 +119,7 @@
     <ItemGroup Condition="$(IsTestProject) == 'true'">
         <!-- Use MTP v2 for all environments - VS 2022 should support it -->
         <PackageReference Include="FluentAssertions" />
+        <PackageReference Include="vm2.TestUtilities" />
     </ItemGroup>
     <ItemGroup Condition="$(IsTestProject) == 'true' and $(BuildingInsideVisualStudio) != 'true'">
         <!-- Explicitly use MTP v2 with xUnit for non-VS environments (e.g., CI, command line, etc.) -->
@@ -188,7 +189,6 @@
         <PackageReference Include="BenchmarkDotNet" />
         <PackageReference Include="BenchmarkDotNet.Annotations" />
         <!-- To show up in the VS test explorer (with some perf. penalties!)
-        <RestorePackagesWithLockFile Condition="$(BuildingInsideVisualStudio) == 'true')">false</RestorePackagesWithLockFile>
         <PackageReference Include="BenchmarkDotNet.TestAdapter" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" />
         -->

@@ -183,6 +183,29 @@
           "System.Security.Cryptography.ProtectedData": "10.0.1"
         }
       },
+      "vm2.TestUtilities": {
+        "type": "Direct",
+        "requested": "[0.1.0-preview.20251226.10, )",
+        "resolved": "0.1.0-preview.20251226.10",
+        "contentHash": "nqwMShACQkCuuS95NXLfCk4d2R/0uQYe3tAY1DhFxUDTLMtun7TDFt/vERqkuIsbbK8dieigi/p/8K1xFwTJsQ==",
+        "dependencies": {
+          "FluentAssertions": "8.8.0",
+          "Microsoft.Extensions.Configuration.Binder": "10.0.1",
+          "Microsoft.Extensions.Configuration.CommandLine": "10.0.1",
+          "Microsoft.Extensions.Configuration.EnvironmentVariables": "10.0.1",
+          "Microsoft.Extensions.Configuration.Json": "10.0.1",
+          "Microsoft.Extensions.DependencyInjection": "10.0.1",
+          "Microsoft.Extensions.FileSystemGlobbing": "10.0.1",
+          "Microsoft.Extensions.Hosting": "10.0.1",
+          "Microsoft.Extensions.Logging": "10.0.1",
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.1",
+          "Microsoft.Extensions.Logging.Configuration": "10.0.1",
+          "Microsoft.Extensions.Logging.Console": "10.0.1",
+          "Microsoft.Extensions.Options.ConfigurationExtensions": "10.0.1",
+          "System.Configuration.ConfigurationManager": "10.0.1",
+          "xunit.v3.extensibility.core": "3.2.1"
+        }
+      },
       "xunit.v3.mtp-v2": {
         "type": "Direct",
         "requested": "[3.2.1, )",
@@ -438,27 +461,6 @@
         }
       },
       "glob.api.fakefilesystem": {
-        "type": "Project",
-        "dependencies": {
-          "FluentAssertions": "[8.8.0, )",
-          "Microsoft.Extensions.Configuration.Binder": "[10.0.1, )",
-          "Microsoft.Extensions.Configuration.CommandLine": "[10.0.1, )",
-          "Microsoft.Extensions.Configuration.EnvironmentVariables": "[10.0.1, )",
-          "Microsoft.Extensions.Configuration.Json": "[10.0.1, )",
-          "Microsoft.Extensions.DependencyInjection": "[10.0.1, )",
-          "Microsoft.Extensions.Hosting": "[10.0.1, )",
-          "Microsoft.Extensions.Logging": "[10.0.1, )",
-          "Microsoft.Extensions.Logging.Abstractions": "[10.0.1, )",
-          "Microsoft.Extensions.Logging.Configuration": "[10.0.1, )",
-          "Microsoft.Extensions.Logging.Console": "[10.0.1, )",
-          "Microsoft.Extensions.Options.ConfigurationExtensions": "[10.0.1, )",
-          "System.Configuration.ConfigurationManager": "[10.0.1, )",
-          "Test.Utilities": "[1.0.0, )",
-          "vm2.Glob.Api": "[1.0.0, )",
-          "xunit.v3.extensibility.core": "[3.2.1, )"
-        }
-      },
-      "test.utilities": {
         "type": "Project",
         "dependencies": {
           "FluentAssertions": "[8.8.0, )",

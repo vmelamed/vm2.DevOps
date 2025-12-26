@@ -65,6 +65,5 @@
         <Project Path="test/Glob.Api.FakeFileSystem.Tests/Glob.Api.FakeFileSystem.Tests.csproj" />
         <Project Path="test/Glob.Api.FakeFileSystem/Glob.Api.FakeFileSystem.csproj" />
         <Project Path="test/Glob.Api.Tests/Glob.Api.Tests.csproj" />
-        <Project Path="test/Test.Utilities/Test.Utilities.csproj" />
     </Folder>
 </Solution>
