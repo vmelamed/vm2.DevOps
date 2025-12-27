@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       os:
-        description: JSON array of runner OS-s. Cannot be null or empty!
+        description: String representing a JSON array of strings - monikers of GitHub runners. Cannot be null or empty!
         type: string
         default: "[\u0022ubuntu-latest\u0022]"
 
@@ -21,7 +21,7 @@ on:
       preprocessor-symbols:
         description: Define preprocessor symbols to pass to the compiler
         type: string
-        default: "_"
+        default: ""
 
       build-projects:
         description: JSON array as a string of paths to the projects or solutions to build. If not provided, null, or empty, the solution/project in the repository root will be built.
@@ -53,21 +53,6 @@ on:
         type: boolean
         default: false
 
-      cached-dependencies:
-        description: Enable caching of NuGet dependencies.
-        type: boolean
-        default: true
-
-      cached-artifacts:
-        description: Enable caching of build artifacts.
-        type: boolean
-        default: true
-
-      verbose:
-        description: Enable verbose output from the invoked scripts.
-        type: boolean
-        default: false
-
     secrets:
       CODECOV_TOKEN:
         description: Codecov API token for uploading coverage reports
@@ -96,7 +81,6 @@ jobs:
       min-coverage-pct: ${{ steps.setup.outputs.min-coverage-pct }}
       max-regression-pct: ${{ steps.setup.outputs.max-regression-pct }}
       force-new-baseline: ${{ steps.setup.outputs.force-new-baseline }}
-      verbose: ${{ steps.setup.outputs.verbose }}
 
     steps:
       # Clone the repository to access validation scripts
@@ -136,8 +120,7 @@ jobs:
               --preprocessor-symbols '${{ inputs.preprocessor-symbols }}' \
               --min-coverage-pct     '${{ inputs.min-coverage-pct }}' \
               --force-new-baseline   '${{ inputs.force-new-baseline }}' \
-              --max-regression-pct   '${{ inputs.max-regression-pct }}' \
-              $( [ ${{ inputs.verbose }} == true ] && echo '--verbose' || echo > /dev/null )
+              --max-regression-pct   '${{ inputs.max-regression-pct }}'
 
   # Build the project and cache artifacts for downstream test/benchmark jobs
   build:
@@ -156,8 +139,6 @@ jobs:
       configuration: ${{ needs.setup.outputs.configuration }}
       preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
       build-project: ${{ matrix.build-project }}
-      cached-dependencies: ${{ fromJSON(inputs.cached-dependencies) }}
-      cached-artifacts: ${{ fromJSON(inputs.cached-artifacts) }}
 
   # Run unit tests with code coverage analysis
   test:
@@ -185,14 +166,16 @@ jobs:
       preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
       test-project: ${{ matrix.test-project }}
       min-coverage-pct: ${{ fromJSON(needs.setup.outputs.min-coverage-pct) }}
-      cached-dependencies: ${{ fromJSON(inputs.cached-dependencies) }}
-      cached-artifacts: ${{ fromJSON(inputs.cached-artifacts) }}
-      verbose: ${{ fromJSON(needs.setup.outputs.verbose) }}
 
   # Run performance benchmarks and compare against baseline (if enabled and benchmark project specified)
   benchmarks:
     name: Benchmarks
-    if: ${{ needs.setup.outputs.benchmark-projects != '' && needs.setup.outputs.benchmark-projects != '[]' }}
+    if: >
+      ${{
+      needs.setup.outputs.benchmark-projects != '' &&
+      needs.setup.outputs.benchmark-projects != '[]' &&
+      (github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip bm]'))
+      }}
     needs:
       - setup
       - build
@@ -215,6 +198,3 @@ jobs:
       preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
       benchmark-project: ${{ matrix.benchmark-project }}
       max-regression-pct: ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}
-      cached-dependencies: ${{ fromJSON(inputs.cached-dependencies) }}
-      cached-artifacts: ${{ fromJSON(inputs.cached-artifacts) }}
-      verbose: ${{ fromJSON(needs.setup.outputs.verbose) }}

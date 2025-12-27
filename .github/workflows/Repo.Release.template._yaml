@@ -16,12 +16,11 @@ on:
 jobs:
   release:
     name: Stable Release
-    uses: ./.github/workflows/_release.yaml
+    uses: vmelamed/vm2.DevOps/.github/workflows/_release.yaml@main
     permissions:
       contents: write
     secrets: inherit
     with:
-      os: ubuntu-latest
       dotnet-version: ${{ vars.DOTNET_VERSION || '10.0.x' }}
       force-publish: ${{ inputs.force-publish || false }}
       save_package_artifacts: true

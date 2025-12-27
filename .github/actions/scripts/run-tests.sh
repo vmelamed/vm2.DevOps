@@ -16,8 +16,6 @@ declare -x configuration=${CONFIGURATION:="Release"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-" "}
 declare -ix min_coverage_pct=${MIN_COVERAGE_PCT:-80}
 declare -x artifacts_dir=${ARTIFACTS_DIR:-}
-declare -x cached_dependencies=${CACHED_DEPENDENCIES:-false}
-declare -x cached_artifacts=${CACHED_ARTIFACTS:-false}
 
 declare -x github_output=${GITHUB_OUTPUT:-/dev/stdout}
 declare -x github_step_summary=${GITHUB_STEP_SUMMARY:-/dev/stdout}
@@ -42,8 +40,6 @@ declare -r preprocessor_symbols
 declare -r min_coverage_pct
 declare -r test_name
 declare -r test_dir
-declare -r cached_dependencies
-declare -r cached_artifacts
 
 solution_dir="$(realpath -e "${test_dir}/../..")" # assuming <solution-root>/test/<test-project>/test-project.csproj
 artifacts_dir=$(realpath -m "${artifacts_dir:-"$solution_dir/TestArtifacts/$test_name"}")  # ensure it's an absolute path per test project
@@ -134,27 +130,10 @@ declare -r test_base_path
 declare -r test_dll_path
 declare -rx test_exec_path
 
-trace "Restore dependencies if not cached"
-if [[ $cached_dependencies != "true" ]]; then
-    execute dotnet restore --locked-mode
-else
-    trace "Skipping restore (using cached dependencies)"
-fi
-
-# shellcheck disable=SC2154
-trace "Build the artifacts if not cached"
-if [[ $cached_artifacts == "true" ]]; then
-    # Verify artifacts exist
-    if [[ ! -f "${test_exec_path}" || ! -f "${test_dll_path}" ]]; then
-        echo "❌ Cached artifacts missing, cannot proceed" >&2
-        exit 2
-    fi
-else
-    execute dotnet build  \
-        "$test_project" \
-        --configuration "$configuration" \
-        --no-restore \
-        /p:DefineConstants="$preprocessor_symbols"
+# Verify artifacts exist
+if [[ ! -f "${test_exec_path}" || ! -f "${test_dll_path}" ]]; then
+    echo "❌ Cached artifacts missing, cannot proceed" >&2
+    exit 2
 fi
 
 # shellcheck disable=SC2154

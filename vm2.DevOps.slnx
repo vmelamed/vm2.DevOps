@@ -2,10 +2,26 @@
     <Folder Name="/.github/">
         <File Path=".github/dependabot.yml" />
     </Folder>
+    <Folder Name="/.github/actions/scripts">
+        <File Path=".github/actions/scripts/_common.sh" />
+        <File Path=".github/actions/scripts/.shellcheckrc" />
+        <File Path=".github/actions/scripts/action.yaml" />
+        <File Path=".github/actions/scripts/download-artifact.sh" />
+        <File Path=".github/actions/scripts/download-artifact.usage.sh" />
+        <File Path=".github/actions/scripts/download-artifact.utils.sh" />
+        <File Path=".github/actions/scripts/move-commits-to-branch.sh" />
+        <File Path=".github/actions/scripts/run-benchmarks.sh" />
+        <File Path=".github/actions/scripts/run-benchmarks.usage.sh" />
+        <File Path=".github/actions/scripts/run-benchmarks.utils.sh" />
+        <File Path=".github/actions/scripts/run-tests.sh" />
+        <File Path=".github/actions/scripts/run-tests.usage.sh" />
+        <File Path=".github/actions/scripts/run-tests.utils.sh" />
+        <File Path=".github/actions/scripts/summary.jq" />
+        <File Path=".github/actions/scripts/validate-vars.sh" />
+        <File Path=".github/actions/scripts/validate-vars.usage.sh" />
+        <File Path=".github/actions/scripts/validate-vars.utils.sh" />
+    </Folder>
     <Folder Name="/.github/workflows/">
-        <File Path=".github/workflows/ClearCache.yaml" />
-        <File Path=".github/workflows/Glob.Api.CI.yaml" />
-        <File Path=".github/workflows/_benchmarks-bencher.yaml" />
         <File Path=".github/workflows/_benchmarks.yaml" />
         <File Path=".github/workflows/_build.yaml" />
         <File Path=".github/workflows/_ci.yaml" />
@@ -13,29 +29,10 @@
         <File Path=".github/workflows/_prerelease.yaml" />
         <File Path=".github/workflows/_release.yaml" />
         <File Path=".github/workflows/_test.yaml" />
-    </Folder>
-    <Folder Name="/benchmarks/">
-        <Project Path="benchmarks/Glob.Api.Benchmarks/Glob.Api.Benchmarks.csproj" Id="59282f2e-b8ee-45a7-9814-b69563c74e1d" />
-    </Folder>
-    <Folder Name="/scripts/" />
-    <Folder Name="/scripts/bash/">
-        <File Path="scripts/bash/.shellcheckrc" />
-        <File Path="scripts/bash/download-artifact.sh" />
-        <File Path="scripts/bash/download-artifact.usage.sh" />
-        <File Path="scripts/bash/download-artifact.utils.sh" />
-        <File Path="scripts/bash/move-commits-to-branch.sh" />
-        <File Path="scripts/bash/run-benchmarks-bencher.sh" />
-        <File Path="scripts/bash/run-benchmarks.sh" />
-        <File Path="scripts/bash/run-benchmarks.usage.sh" />
-        <File Path="scripts/bash/run-benchmarks.utils.sh" />
-        <File Path="scripts/bash/run-tests.sh" />
-        <File Path="scripts/bash/run-tests.usage.sh" />
-        <File Path="scripts/bash/run-tests.utils.sh" />
-        <File Path="scripts/bash/validate-vars.sh" />
-        <File Path="scripts/bash/validate-vars.usage.sh" />
-        <File Path="scripts/bash/validate-vars.utils.sh" />
-        <File Path="scripts/bash/summary.jq" />
-        <File Path="scripts/bash/_common.sh" />
+        <File Path=".github/workflows/ClearCache._yaml" />
+        <File Path=".github/workflows/Glob.Api.CI._yaml" />
+        <File Path=".github/workflows/Prerelease._yaml" />
+        <File Path=".github/workflows/Release._yaml" />
     </Folder>
     <Folder Name="/scripts/pwsh/">
         <File Path="scripts/pwsh/Add-SPDXHeaders.ps1" />
@@ -65,6 +62,5 @@
         <Project Path="test/Glob.Api.FakeFileSystem.Tests/Glob.Api.FakeFileSystem.Tests.csproj" />
         <Project Path="test/Glob.Api.FakeFileSystem/Glob.Api.FakeFileSystem.csproj" />
         <Project Path="test/Glob.Api.Tests/Glob.Api.Tests.csproj" />
-        <Project Path="test/Test.Utilities/Test.Utilities.csproj" />
     </Folder>
 </Solution>

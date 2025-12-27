@@ -3,10 +3,11 @@ name: _release (Reusable workflow)
 on:
   workflow_call:
     inputs:
-      os:
-        description: Runners
+      package-projects:
+        description: JSON array of project/solution paths to package and publish, e.g. '["src/Project1/Project1.csproj", "src/Project2/Project2.csproj"]'. If empty array, auto-detects root .sln or .csproj files.
         type: string
-        default: ubuntu-latest
+        required: false
+        default: '[""]'
 
       dotnet-version:
         description: Version of .NET SDK to use
@@ -28,6 +29,11 @@ on:
         type: string
         default: "nuget"
 
+    secrets:
+      NUGET_API_KEY:
+        description: "Token for authentication to the NuGet server - must match the selected nuget-server"
+        required: true
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -45,6 +51,10 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || (startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name,'-')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        project: ${{ fromJSON(inputs.package-projects) }}
     steps:
       - name: Checkout (full history)
         uses: actions/checkout@v6
@@ -54,7 +64,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: ${{ inputs.dotnet-version || '9.0.x' }}
+          dotnet-version: ${{ inputs.dotnet-version || '10.0.x' }}
           cache: true
           cache-dependency-path: |+
             **/packages.lock.json
@@ -63,17 +73,14 @@ jobs:
       - name: Restore
         shell: bash
         run: |+
-          dotnet restore --locked-mode
-
-      - name: Make Scripts Executable
-        shell: bash
-        run: |+
-          chmod u+x ./scripts/bash/*.sh
+          dotnet restore \
+            ${{ matrix.project }} \
+            --locked-mode
 
       - name: Validate the current tag
         shell: bash
         run: |+
-          if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+(\.[0-9]+)(\.[0-9]+)(\.[0-9]+)$ ]]; then
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "The current tag $GITHUB_REF_NAME is not a valid semantic version for a stable release (e.g. v1.2.3 or v2.0.0)"
             exit 1
           fi
@@ -83,6 +90,7 @@ jobs:
         run: |+
           mkdir -p artifacts/pack
           dotnet pack \
+            ${{ matrix.project }} \
             --configuration Release \
             --output artifacts/pack \
             --no-restore \
@@ -91,37 +99,33 @@ jobs:
 
       - name: Publish stable to NuGet server
         env:
+          RELEASE_TAG: ${{ github.ref_name }}
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |+
+          if [ -z "${NUGET_API_KEY}" ]; then
+            echo "NUGET_API_KEY not configured"; exit 1
+          fi
+          API_KEY="$NUGET_API_KEY"
           if [ "$NUGET_SERVER" = "github" ]; then
-            if [ -z "${GITHUB_TOKEN}" ]; then
-              echo "GITHUB_TOKEN not configured"; exit 1
-            fi
-            SERVER_URL="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
-            API_KEY="$GITHUB_TOKEN"
             SERVER_NAME="GitHub Packages"
+            SERVER_URL="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
           else
-            if [ -z "${NUGET_API_KEY}" ]; then
-              echo "NUGET_API_KEY not configured"; exit 1
-            fi
-            SERVER_URL="https://api.nuget.org/v3/index.json"
-            API_KEY="$NUGET_API_KEY"
             SERVER_NAME="NuGet.org"
+            SERVER_URL="https://api.nuget.org/v3/index.json"
           fi
 
           dotnet nuget push artifacts/pack/*.nupkg \
-            --api-key  "${API_KEY}" \
+            --api-key  "$NUGET_API_KEY" \
             --source "$SERVER_URL" \
             --skip-duplicate
-          printf '## Packages %s pushed to %s:\n%s\n' "$GITHUB_REF_NAME" "$SERVER_NAME" "$(ls -1 artifacts/pack/*.nupkg | sed 's/^/  - /')" >> "$GITHUB_STEP_SUMMARY"
+          printf '## Packages %s pushed to %s:\n%s\n' "$RELEASE_TAG" "$SERVER_NAME" "$(ls -1 artifacts/pack/*.nupkg | sed 's/^/  - /')" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload package artifact
         if: env.SAVE_PACKAGE_ARTIFACTS == 'true'
         uses: actions/upload-artifact@v6
         with:
-          name: nuget-packages-${{ github.ref_name }}
+          name: nuget-packages-${{ github.ref_name }}-${{ hashFiles(matrix.project) }}
           path: artifacts/pack/*.nupkg
           if-no-files-found: error
           overwrite: true

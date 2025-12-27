@@ -3,10 +3,11 @@ name: _prerelease (Reusable workflow)
 on:
   workflow_call:
     inputs:
-      os:
-        description: Runner OS-s (cannot be null or empty string, default ubuntu-latest)
+      package-projects:
+        description: JSON array of project/solution paths to package and publish, e.g. '["src/Project1/Project1.csproj", "src/Project2/Project2.csproj"]'. If empty array, auto-detects root .sln or .csproj files.
         type: string
-        default: ubuntu-latest
+        required: false
+        default: '[""]'
 
       dotnet-version:
         description: Version of .NET SDK to use (cannot be null or empty string, default 10.0.x)
@@ -29,27 +30,35 @@ on:
         default: false
 
       nuget-server:
-        description: "NuGet server to publish to (nuget or github)"
+        description: "NuGet server to publish to (supported values for now: 'nuget' or 'github')"
         type: string
-        default: "nuget"
+        default: nuget
+
+    secrets:
+      NUGET_API_KEY:
+        description: Nuget server token for authentication - must match the selected nuget-server
+        required: true
 
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
-  DOTNET_VERSION: ${{ inputs.dotnet-version         || '10.0.x' }}
-  FORCE_PUBLISH: ${{ inputs.force-publish          || 'false' }}
-  SAVE_PACKAGE_ARTIFACTS: ${{ inputs.save_package_artifacts || 'false' }}
-  SEMVER_BUILD_PREFIX: ${{ inputs.semver-build-prefix    || 'preview' }}
   MINVER_TAG_PREFIX: "v"
-  NUGET_SERVER: ${{ inputs.nuget-server || 'nuget' }}
+  DOTNET_VERSION: ${{ inputs.dotnet-version                 || '10.0.x' }}
+  FORCE_PUBLISH: ${{ inputs.force-publish                   || 'false' }}
+  SAVE_PACKAGE_ARTIFACTS: ${{ inputs.save_package_artifacts || 'false' }}
+  SEMVER_BUILD_PREFIX: ${{ inputs.semver-build-prefix       || 'preview' }}
+  NUGET_SERVER: ${{ inputs.nuget-server                     || 'nuget' }}
 
 permissions:
   contents: write
 
 jobs:
-  prerelease:
+  compute-tag:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
+    outputs:
+      prerelease_tag: ${{ steps.compute.outputs.prerelease_tag }}
+      should_publish: ${{ steps.tag_check.outputs.already_tagged == 'false' }}
     steps:
       - name: Checkout (full history)
         uses: actions/checkout@v6
@@ -110,8 +119,22 @@ jobs:
           git tag -a "$TAG" -m "Prerelease $TAG" -m "Reason: $REASON" || echo "Tag exists, continuing"
           git push origin "$TAG"
 
+  package-and-publish:
+    needs: compute-tag
+    if: needs.compute-tag.outputs.should_publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        project: ${{ fromJSON(inputs.package-projects) }}
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
       - name: Setup .NET
-        if: steps.tag_check.outputs.already_tagged == 'false'
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
@@ -123,14 +146,16 @@ jobs:
       - name: Restore
         shell: bash
         run: |+
-          dotnet restore --locked-mode
+          dotnet restore \
+            ${{ matrix.project }} \
+            --locked-mode
 
       - name: Pack (MinVer consumes the just-pushed prerelease tag)
-        if: steps.tag_check.outputs.already_tagged == 'false'
         shell: bash
         run: |+
           mkdir -p artifacts/pack
           dotnet pack \
+            ${{ matrix.project }} \
             --configuration Release \
             --output artifacts/pack \
             --no-restore \
@@ -139,31 +164,25 @@ jobs:
           ls -1 artifacts/pack
 
       - name: Publish prerelease to NuGet server
-        if: steps.tag_check.outputs.already_tagged == 'false'
         env:
-          PRERELEASE_TAG: ${{ steps.compute.outputs.prerelease_tag }}
+          PRERELEASE_TAG: ${{ needs.compute-tag.outputs.prerelease_tag }}
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |+
+          if [ -z "${NUGET_API_KEY}" ]; then
+            echo "NUGET_API_KEY not configured"; exit 1
+          fi
+          API_KEY="$NUGET_API_KEY"
           if [ "$NUGET_SERVER" = "github" ]; then
-            if [ -z "${GITHUB_TOKEN}" ]; then
-              echo "GITHUB_TOKEN not configured"; exit 1
-            fi
-            SERVER_URL="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
-            API_KEY="$GITHUB_TOKEN"
             SERVER_NAME="GitHub Packages"
+            SERVER_URL="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
           else
-            if [ -z "${NUGET_API_KEY}" ]; then
-              echo "NUGET_API_KEY not configured"; exit 1
-            fi
-            SERVER_URL="https://api.nuget.org/v3/index.json"
-            API_KEY="$NUGET_API_KEY"
             SERVER_NAME="NuGet.org"
+            SERVER_URL="https://api.nuget.org/v3/index.json"
           fi
 
           dotnet nuget push artifacts/pack/*.nupkg \
-            --api-key "$API_KEY" \
+            --api-key "$NUGET_API_KEY" \
             --source "$SERVER_URL" \
             --skip-duplicate
           printf '## Packages %s pushed to %s:\n%s\n' "$PRERELEASE_TAG" "$SERVER_NAME" "$(ls -1 artifacts/pack/*.nupkg | sed 's/^/  - /')" >> "$GITHUB_STEP_SUMMARY"
@@ -172,7 +191,7 @@ jobs:
         if: env.SAVE_PACKAGE_ARTIFACTS == 'true'
         uses: actions/upload-artifact@v6
         with:
-          name: nuget-packages-${{ steps.compute.outputs.prerelease_tag }}
+          name: nuget-packages-${{ needs.compute-tag.outputs.prerelease_tag }}-${{ hashFiles(matrix.project) }}
           path: artifacts/pack/*.nupkg
           if-no-files-found: error
           overwrite: true

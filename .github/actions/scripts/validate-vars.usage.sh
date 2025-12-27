@@ -55,7 +55,7 @@ Options:
 
     --preprocessor-symbols | -d
         Pre-processor symbols for compilation.
-        Initial value from \$PREPROCESSOR_SYMBOLS or '_'
+        Initial value from \$PREPROCESSOR_SYMBOLS or ''
 
     --min-coverage-pct | -min
         Minimum acceptable code coverage percentage (50-100).

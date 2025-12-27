@@ -26,14 +26,13 @@ jobs:
   prerelease:
     name: Prerelease
     if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.merged == true)
-    uses: ./.github/workflows/_prerelease.yaml
+    uses: vmelamed/vm2.DevOps/.github/workflows/_prerelease.yaml@main
     permissions:
       contents: write
     secrets: inherit
     with:
-      os: ubuntu-latest
-      dotnet-version: ${{ vars.DOTNET_VERSION || '10.0.x' }}
+      dotnet-version: ${{ vars.DOTNET_VERSION             || '10.0.x' }}
       semver-build-prefix: ${{ inputs.semver-build-prefix || 'preview' }}
-      force-publish: ${{ inputs.force-publish || false }}
+      force-publish: ${{ inputs.force-publish             || false }}
       save_package_artifacts: true
       nuget-server: github # Temporarily publish to 'github' - https://nuget.pkg.github.com/. Eventually should go to 'nuget' - https://api.nuget.org/v3/index.json
