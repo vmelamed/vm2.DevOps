@@ -23,7 +23,7 @@ permissions:
 jobs:
   call_ci:
     name: Call the CI Workflow
-    uses: ./.github/workflows/_clear_cache.yaml
+    uses: vmelamed/vm2.DevOps/.github/workflows/_clear_cache.yaml@main
     with:
       reason: ${{ inputs.reason }}
       cache-pattern: ${{ inputs.cache-pattern }}

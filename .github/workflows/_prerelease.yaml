@@ -3,10 +3,11 @@ name: _prerelease (Reusable workflow)
 on:
   workflow_call:
     inputs:
-      package-project:
-        description: path to the project or the solution to package and publish. Cannot be null or empty!
+      package-projects:
+        description: JSON array of project/solution paths to package and publish, e.g. '["src/Project1/Project1.csproj", "src/Project2/Project2.csproj"]'. If empty array, auto-detects root .sln or .csproj files.
         type: string
-        required: true
+        required: false
+        default: '[""]'
 
       dotnet-version:
         description: Version of .NET SDK to use (cannot be null or empty string, default 10.0.x)
@@ -41,20 +42,23 @@ on:
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
+  MINVER_TAG_PREFIX: "v"
   DOTNET_VERSION: ${{ inputs.dotnet-version                 || '10.0.x' }}
   FORCE_PUBLISH: ${{ inputs.force-publish                   || 'false' }}
   SAVE_PACKAGE_ARTIFACTS: ${{ inputs.save_package_artifacts || 'false' }}
   SEMVER_BUILD_PREFIX: ${{ inputs.semver-build-prefix       || 'preview' }}
-  MINVER_TAG_PREFIX: "v"
   NUGET_SERVER: ${{ inputs.nuget-server                     || 'nuget' }}
 
 permissions:
   contents: write
 
 jobs:
-  prerelease:
+  compute-tag:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
+    outputs:
+      prerelease_tag: ${{ steps.compute.outputs.prerelease_tag }}
+      should_publish: ${{ steps.tag_check.outputs.already_tagged == 'false' }}
     steps:
       - name: Checkout (full history)
         uses: actions/checkout@v6
@@ -115,8 +119,22 @@ jobs:
           git tag -a "$TAG" -m "Prerelease $TAG" -m "Reason: $REASON" || echo "Tag exists, continuing"
           git push origin "$TAG"
 
+  package-and-publish:
+    needs: compute-tag
+    if: needs.compute-tag.outputs.should_publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        project: ${{ fromJSON(inputs.package-projects) }}
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
       - name: Setup .NET
-        if: steps.tag_check.outputs.already_tagged == 'false'
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
@@ -129,16 +147,15 @@ jobs:
         shell: bash
         run: |+
           dotnet restore \
-            ${{ inputs.package-project }} \
+            ${{ matrix.project }} \
             --locked-mode
 
       - name: Pack (MinVer consumes the just-pushed prerelease tag)
-        if: steps.tag_check.outputs.already_tagged == 'false'
         shell: bash
         run: |+
           mkdir -p artifacts/pack
           dotnet pack \
-            ${{ inputs.package-project }} \
+            ${{ matrix.project }} \
             --configuration Release \
             --output artifacts/pack \
             --no-restore \
@@ -147,9 +164,8 @@ jobs:
           ls -1 artifacts/pack
 
       - name: Publish prerelease to NuGet server
-        if: steps.tag_check.outputs.already_tagged == 'false'
         env:
-          PRERELEASE_TAG: ${{ steps.compute.outputs.prerelease_tag }}
+          PRERELEASE_TAG: ${{ needs.compute-tag.outputs.prerelease_tag }}
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         shell: bash
         run: |+
@@ -175,7 +191,7 @@ jobs:
         if: env.SAVE_PACKAGE_ARTIFACTS == 'true'
         uses: actions/upload-artifact@v6
         with:
-          name: nuget-packages-${{ steps.compute.outputs.prerelease_tag }}
+          name: nuget-packages-${{ needs.compute-tag.outputs.prerelease_tag }}-${{ hashFiles(matrix.project) }}
           path: artifacts/pack/*.nupkg
           if-no-files-found: error
           overwrite: true

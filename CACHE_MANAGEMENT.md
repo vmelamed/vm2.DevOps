@@ -20,6 +20,7 @@ All workflows (`_build.yaml`, `_test.yaml`, `_benchmarks.yaml`) currently use:
           **/*.csproj
 
 **Current Behavior:**
+
 - ✅ Cache updates when `packages.lock.json` changes
 - ✅ Cache updates when any `.csproj` file changes
 - ❌ Cache does NOT update if package versions stay the same (even if packages are months old)
@@ -27,6 +28,7 @@ All workflows (`_build.yaml`, `_test.yaml`, `_benchmarks.yaml`) currently use:
 ## Problem Statement
 
 NuGet package caches can become stale over time, potentially leading to:
+
 - Security vulnerabilities in outdated packages
 - Missing bug fixes and performance improvements
 - Compatibility issues with newer .NET versions
@@ -34,7 +36,7 @@ NuGet package caches can become stale over time, potentially leading to:
 
 ## Recommended Solutions (Multi-Layered Approach)
 
-### Layer 1: Package Lock File (Immediate - High Priority) ✅ Done!
+### Layer 1: Package Lock File (Immediate - High Priority) ✅ Done
 
 **What:** Enforce deterministic package versions using `packages.lock.json`
 
@@ -43,11 +45,14 @@ NuGet package caches can become stale over time, potentially leading to:
 Update `Directory.Build.props`:
 
     <PropertyGroup>
+      ...
+
       <!-- Force generation and validation of packages.lock.json -->
       <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
-
       <!-- In CI, fail if lock file is out of date -->
       <RestoreLockedMode Condition="'$(CI)' == 'true'">true</RestoreLockedMode>
+
+      ...
     </PropertyGroup>
 
 **Benefits:**
@@ -56,12 +61,13 @@ Update `Directory.Build.props`:
 - Clear audit trail of package version changes
 
 **Maintenance:**
+
 - Update lock files: `dotnet restore --force-evaluate`
 - Commit updated `packages.lock.json` files
 
 ---
 
-### Layer 2: Dependabot (High Priority) ✅ Done!
+### Layer 2: Dependabot (High Priority) ✅ Done
 
 **What:** Automated weekly dependency update PRs
 

@@ -3,10 +3,11 @@ name: _release (Reusable workflow)
 on:
   workflow_call:
     inputs:
-      package-project:
-        description: path to the project or the solution to package and publish. Cannot be null or empty!
+      package-projects:
+        description: JSON array of project/solution paths to package and publish, e.g. '["src/Project1/Project1.csproj", "src/Project2/Project2.csproj"]'. If empty array, auto-detects root .sln or .csproj files.
         type: string
-        required: true
+        required: false
+        default: '[""]'
 
       dotnet-version:
         description: Version of .NET SDK to use
@@ -50,6 +51,10 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || (startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name,'-')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        project: ${{ fromJSON(inputs.package-projects) }}
     steps:
       - name: Checkout (full history)
         uses: actions/checkout@v6
@@ -69,7 +74,7 @@ jobs:
         shell: bash
         run: |+
           dotnet restore \
-            ${{ inputs.package-project }} \
+            ${{ matrix.project }} \
             --locked-mode
 
       - name: Validate the current tag
@@ -85,7 +90,7 @@ jobs:
         run: |+
           mkdir -p artifacts/pack
           dotnet pack \
-            ${{ inputs.package-project }} \
+            ${{ matrix.project }} \
             --configuration Release \
             --output artifacts/pack \
             --no-restore \
@@ -120,7 +125,7 @@ jobs:
         if: env.SAVE_PACKAGE_ARTIFACTS == 'true'
         uses: actions/upload-artifact@v6
         with:
-          name: nuget-packages-${{ github.ref_name }}
+          name: nuget-packages-${{ github.ref_name }}-${{ hashFiles(matrix.project) }}
           path: artifacts/pack/*.nupkg
           if-no-files-found: error
           overwrite: true

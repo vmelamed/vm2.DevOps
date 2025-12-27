@@ -100,7 +100,7 @@ jobs:
           }  >> $GITHUB_OUTPUT
 
   call-ci:
-    uses: ./.github/workflows/_ci.yaml
+    uses: vmelamed/vm2.DevOps/.github/workflows/_ci.yaml@main
     needs:
       - get-params
     secrets:
