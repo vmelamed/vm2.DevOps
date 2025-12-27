@@ -72,11 +72,6 @@ jobs:
             ${{ inputs.package-project }} \
             --locked-mode
 
-      - name: Make Scripts Executable
-        shell: bash
-        run: |+
-          chmod u+x ./scripts/bash/*.sh
-
       - name: Validate the current tag
         shell: bash
         run: |+
