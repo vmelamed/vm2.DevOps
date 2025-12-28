@@ -29,10 +29,10 @@
         <File Path=".github/workflows/_prerelease.yaml" />
         <File Path=".github/workflows/_release.yaml" />
         <File Path=".github/workflows/_test.yaml" />
-        <File Path=".github/workflows/ClearCache._yaml" />
-        <File Path=".github/workflows/Glob.Api.CI._yaml" />
-        <File Path=".github/workflows/Prerelease._yaml" />
-        <File Path=".github/workflows/Release._yaml" />
+        <File Path=".github/workflows/ClearCache.template._yaml" />
+        <File Path=".github/workflows/Repo.CI.template._yaml" />
+        <File Path=".github/workflows/Repo.Prerelease.template._yaml" />
+        <File Path=".github/workflows/Repo.Release.template._yaml" />
     </Folder>
     <Folder Name="/scripts/pwsh/">
         <File Path="scripts/pwsh/Add-SPDXHeaders.ps1" />
@@ -40,9 +40,10 @@
     <Folder Name="/Solution Items/">
         <File Path=".editorconfig" />
         <File Path=".gitignore" />
-        <File Path="codecov.yaml" />
-        <File Path="BENCHER_SETUP.md" />
+        <File Path=".gitattributes" />
         <File Path="CACHE_MANAGEMENT.md" />
+        <File Path="codecov.yaml" />
+        <File Path="context.md" />
         <File Path="COPILOT_INSTRUCTIONS.md" />
         <File Path="Directory.Build.props" />
         <File Path="Directory.Packages.props" />
@@ -51,16 +52,9 @@
         <File Path="PR_GATES_SETUP.md" />
         <File Path="README.md" />
         <File Path="ReleaseProcess.md" />
+        <File Path="Scratch-Prepare the Glob projects.md" />
         <File Path="ScratchPlan.md" />
         <File Path="test.runsettings" />
-    </Folder>
-    <Folder Name="/src/">
-        <Project Path="src/Glob.Api/Glob.Api.csproj" />
-        <Project Path="src/Glob/Glob.csproj" />
-    </Folder>
-    <Folder Name="/test/">
-        <Project Path="test/Glob.Api.FakeFileSystem.Tests/Glob.Api.FakeFileSystem.Tests.csproj" />
-        <Project Path="test/Glob.Api.FakeFileSystem/Glob.Api.FakeFileSystem.csproj" />
-        <Project Path="test/Glob.Api.Tests/Glob.Api.Tests.csproj" />
+        <File Path="vm2.DevOps.slnx" />
     </Folder>
 </Solution>
