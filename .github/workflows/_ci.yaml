@@ -133,7 +133,7 @@ jobs:
       matrix:
         os: ${{ fromJSON(inputs.os) }}
         build-project: ${{ fromJSON(inputs.build-projects) }}
-    uses: ./.github/workflows/_build.yaml
+    uses: vmelamed/vm2.DevOps/.github/workflows/_build.yaml@main
     with:
       os: ${{ matrix.os }}
       dotnet-version: ${{ needs.setup.outputs.dotnet-version }}
@@ -153,7 +153,7 @@ jobs:
       matrix:
         os: ${{ fromJSON(inputs.os) }}
         test-project: ${{ fromJSON(inputs.test-projects) }}
-    uses: ./.github/workflows/_test.yaml
+    uses: vmelamed/vm2.DevOps/.github/workflows/_test.yaml@main
     permissions:
       contents: read
       pull-requests: write # Required to comment on PRs
@@ -185,7 +185,7 @@ jobs:
       matrix:
         os: ${{ fromJSON(inputs.os) }}
         benchmark-project: ${{ fromJSON(inputs.benchmark-projects) }}
-    uses: ./.github/workflows/_benchmarks.yaml
+    uses: vmelamed/vm2.DevOps/.github/workflows/_benchmarks.yaml@main
     permissions:
       contents: read
       pull-requests: write # Required to comment on PRs
