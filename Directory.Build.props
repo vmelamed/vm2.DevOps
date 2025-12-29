@@ -44,6 +44,7 @@
         <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
         <RestoreLockedMode Condition="'$(CI)' == 'true'">true</RestoreLockedMode>
         <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+        <MinVerTagPrefix>v</MinVerTagPrefix>
     </PropertyGroup>
 
     <!-- ================ Package properties for all vm2 packages ================ -->
@@ -62,7 +63,6 @@
         <EnablePackageValidation>true</EnablePackageValidation>
         <EmbedAllSources>true</EmbedAllSources>
         <EmbedUntrackedSources>true</EmbedUntrackedSources>
-        <MinVerTagPrefix>v</MinVerTagPrefix>
         <PublishRepositoryUrl>true</PublishRepositoryUrl>
     </PropertyGroup>
 

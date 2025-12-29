@@ -19,9 +19,12 @@ jobs:
     uses: vmelamed/vm2.DevOps/.github/workflows/_release.yaml@main
     permissions:
       contents: write
-    secrets: inherit
+    secrets:
+      NUGET_API_KEY: ${{ secrets.NUGET_API_GITHUB_KEY }}  # the API key to use for publishing to GitHub NuGet packages or NuGet.org
+                                                          # Make sure it corresponds to the 'nuget-server' below
     with:
+      nuget-server: github # Publish to 'github' - https://nuget.pkg.github.com/; or publish to 'nuget' - https://api.nuget.org/v3/index.json
+      package-projects: '[""]' # Packs the solution. If you have more than one project, specify projects to package, e.g. '["src/Project1/Project1.csproj","src/Project2/Project2.csproj"]'
       dotnet-version: ${{ vars.DOTNET_VERSION || '10.0.x' }}
       force-publish: ${{ inputs.force-publish || false }}
       save_package_artifacts: true
-      nuget-server: github # Temporarily publish to 'github' - https://nuget.pkg.github.com/. Eventually should go to 'nuget' - https://api.nuget.org/v3/index.json

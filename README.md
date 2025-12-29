@@ -1,6 +1,17 @@
-# DevOps Automation Toolkit
+# vm2.DevOps
 
-This repository packages reusable GitHub Actions workflows and Bash automation that can be plugged into any .NET solution. All shell entry points sit under `scripts/bash/` and are linted during CI with [ShellCheck](https://www.shellcheck.net/) to keep the scripts portable and robust.
+Reusable GitHub Actions workflows and automation scripts for .NET projects.
+
+## Overview
+
+This repository provides a complete CI/CD automation toolkit for .NET solutions, including:
+
+- **Reusable GitHub Actions workflows** for building, testing, benchmarking, and releasing .NET packages
+- **Bash automation scripts** for local development and CI/CD pipelines
+- **Standardized release processes** using MinVer for semantic versioning
+- **Code coverage enforcement** with customizable thresholds
+- **Performance regression detection** using BenchmarkDotNet
+- **NuGet package publishing** to both NuGet.org and GitHub Packages
 
 ## High-level reusable workflows
 
@@ -26,7 +37,7 @@ These top-level workflows are intended to be called directly via `workflow_call`
 
 ### `.github/workflows/ci.yaml`
 
-- Orchestrates the full pipeline:
+- Orchestrates the full CI pipeline:
   1. Build
   1. Test
   1. Run benchmark tests
@@ -58,7 +69,7 @@ These top-level workflows are intended to be called directly via `workflow_call`
 
 These workflows are included by the high-level orchestrators, but can also be consumed individually if you only need part of the pipeline. E.g. all scripts are designed to be reusable and callable either from a workflow or directly from the command line. E.g. you can call `run-tests.sh` from your own workflow if you want to run tests with coverage but don't need the full CI.
 
-### `.github/workflows/build.yaml`
+### `.github/workflows/_build.yaml`
 
 - Checks out the repository
 - Installs the requested .NET SDK
@@ -67,14 +78,14 @@ These workflows are included by the high-level orchestrators, but can also be co
 - Runs ShellCheck (`ludeeus/action-shellcheck`) across `scripts/bash/`
 - Populates `$GITHUB_STEP_SUMMARY` with build results
 
-### `.github/workflows/test.yaml`
+### `.github/workflows/_test.yaml`
 
 - Provisions the .NET SDK
 - Calls `scripts/bash/run-tests.sh` to execute a specified test project with coverage collection
 - Publishes the resulting `TestArtifacts` directory (coverage reports, logs) as an artifact for future inspections
 - Populates `$GITHUB_STEP_SUMMARY` with coverage results, and fails the job if coverage is below the configured threshold
 
-### `.github/workflows/benchmarks.yaml`
+### `.github/workflows/_benchmarks.yaml`
 
 - Restores baseline benchmark summaries (if available) via `download-artifact.sh`
 - Executes `scripts/bash/run-benchmarks.sh`

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-dotnet test <project> <dash dash>settings test.runsettings
+dotnet run &dash;&dash;project <project> &dash;&dash;settings test.runsettings
 For more information on using a .runsettings file, see https://aka.ms/vstest-runsettings
 -->
 <RunSettings>

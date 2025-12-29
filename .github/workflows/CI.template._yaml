@@ -1,4 +1,4 @@
-name: Glob.Api.CI - Build, Test, Benchmarks
+name: "CI: Build, Test, Benchmarks"
 
 on:
   push:
@@ -12,16 +12,27 @@ on:
   workflow_dispatch:
     inputs:
       os:
-        description: "Runner OS (comma-separated for multiple, e.g. ubuntu-latest,windows-latest)"
+        description: "Runner OS (for multiple OS-es separate by comma, e.g. ubuntu-latest,windows-latest)"
         type: string
         default: "ubuntu-latest"
-        # Known GitHub Actions issue: the workflow dispatch UI doesn't properly handle JSON strings with quotes.
-        # E.g. for the input '["ubuntu-latest"]', the UI removes the inner quotes and it becomes the invalid JSON array: '[ubuntu-latest]'.
+        # There is a known GitHub actions issue: the workflow dispatch UI doesn't properly handle JSON strings with quotes.
+        # E.g. for the input '["ubuntu-latest"]', the UI removes the inner quotes and it becomes the invalid JSON: '[ubuntu-latest]'.
 
       preprocessor-symbols:
         description: Define constants to pass to the compiler
         type: string
-        default: "SHORT_RUN"
+        default: SHORT_RUN
+
+env:
+  BUILD_PROJECTS: >-
+    [""]
+  TEST_PROJECTS:
+    []
+  BENCHMARK_PROJECTS:
+    []
+  OS: >-
+    ["ubuntu-latest"]
+  PREPROCESSOR_SYMBOLS: ""
 
 jobs:
   get-params:
@@ -33,6 +44,12 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]')
       }}
+    env:
+      # the following are invariant - no matter how we trigger the workflow, they stay the same as specified in vars:
+      dotnet_version: ${{ vars.DOTNET_VERSION || '10.0.x' }}
+      configuration: ${{ vars.CONFIGURATION || 'Release' }}
+      min_coverage_pct: ${{ vars.MIN_COVERAGE_PCT || '80' }}
+      max_regression_pct: ${{ vars.MAX_REGRESSION_PCT || '20' }}
     outputs:
       build-projects: ${{ steps.init-params.outputs.build-projects }}
       test-projects: ${{ steps.init-params.outputs.test-projects }}
@@ -43,41 +60,26 @@ jobs:
       preprocessor-symbols: ${{ steps.init-params.outputs.preprocessor-symbols }}
       min-coverage-pct: ${{ steps.init-params.outputs.min-coverage-pct }}
       max-regression-pct: ${{ steps.init-params.outputs.max-regression-pct }}
-      force-new-baseline: ${{ steps.init-params.outputs.force-new-baseline }}
     steps:
       - name: Gather parameters
         id: init-params
         shell: bash
         run: |
-          # the following outputs are invariant - no matter how we trigger the workflow, they stay the same:
-
-          build_projects='[ "./vm2.DevOps.slnx" ]'                                              # build the whole solution at once
-          test_projects=" [ \
-              \"./test/Glob.Api.FakeFileSystem.Tests/Glob.Api.FakeFileSystem.Tests.csproj\", \
-              \"./test/Glob.Api.Tests/Glob.Api.Tests.csproj\" ]"                                # test projects to run
-          benchmark_projects='["./benchmarks/Glob.Api.Benchmarks/Glob.Api.Benchmarks.csproj"]'  # benchmark projects to run
-
-          # the following outputs are invariant - no matter how we trigger the workflow, they are externally set variables:
-          dotnet_version=${{ vars.DOTNET_VERSION }}
-          configuration=${{ vars.CONFIGURATION }}
-          min_coverage_pct=${{ vars.MIN_COVERAGE_PCT }}
-          max_regression_pct=${{ vars.MAX_REGRESSION_PCT }}
-          force_new_baseline=${{ vars.FORCE_NEW_BASELINE }}
-
-          # the following outputs are the default values for push and pull_request events
+          # the following outputs are invariant - no matter how we trigger the workflow, they stay the same as specified in env:
+          build_projects=${{ env.BUILD_PROJECTS }}
+          test_projects=${{ env.TEST_PROJECTS }}
+          benchmark_projects=${{ env.BENCHMARK_PROJECTS }}
 
           if [ "${{ github.event_name }}" == "push" ]; then
-              preprocessor_symbols="SHORT_RUN"
-          else
-              preprocessor_symbols=""
-          fi
-          if [ "${{ github.event_name }}" == "push" ] || \
-             [ "${{ github.event_name }}" == "pull_request" ]; then
-              # Set the default values for push and pull_request events
-              os='["ubuntu-latest"]'
+              # Set the values for push events, and add SHORT_RUN to preprocessor_symbols for faster benchmark tests (less precise)
+              os=${{ env.OS }}
+              preprocessor_symbols="${{ env.PREPROCESSOR_SYMBOLS }};SHORT_RUN"
+          elif [ "${{ github.event_name }}" == "pull_request" ]; then
+              # Set the values for pull_request events
+              os=${{ env.OS }}
+              preprocessor_symbols=${{ env.PREPROCESSOR_SYMBOLS }}
           elif [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-              # Get the values from the inputs of workflow_dispatch event (the UI)
-              # Convert comma-separated runner's OS values to JSON array
+              # Get the values from the inputs of workflow_dispatch event (the UI). Convert comma-separated runner's OS values to JSON array
               os=$(echo "${{ inputs.os }}" | jq -Rc 'split(",") | map(select(length > 0) | gsub("^\\s+|\\s+$";""))')
               preprocessor_symbols="${{ inputs.preprocessor-symbols }}"
           else
@@ -91,12 +93,11 @@ jobs:
             echo "test-projects=${test_projects}"
             echo "benchmark-projects=${benchmark_projects}"
             echo "os=${os}"
+            echo "preprocessor-symbols=${preprocessor_symbols}"
             echo "dotnet-version=${dotnet_version}"
             echo "configuration=${configuration}"
-            echo "preprocessor-symbols=${preprocessor_symbols}"
             echo "min-coverage-pct=${min_coverage_pct}"
             echo "max-regression-pct=${max_regression_pct}"
-            echo "force-new-baseline=${force_new_baseline}"
           }  >> $GITHUB_OUTPUT
 
   call-ci:
@@ -120,4 +121,3 @@ jobs:
       benchmark-projects: ${{ needs.get-params.outputs.benchmark-projects }}
       min-coverage-pct: ${{ fromJSON(needs.get-params.outputs.min-coverage-pct) }}
       max-regression-pct: ${{ fromJSON(needs.get-params.outputs.max-regression-pct) }}
-      force-new-baseline: ${{ fromJSON(needs.get-params.outputs.force-new-baseline) }}

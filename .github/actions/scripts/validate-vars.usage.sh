@@ -61,10 +61,6 @@ Options:
         Minimum acceptable code coverage percentage (50-100).
         Initial value from \$MIN_COVERAGE_PCT or 80
 
-    --force-new-baseline | -f
-        Whether to force new baseline (true/false).
-        Initial value from \$FORCE_NEW_BASELINE or false
-
     --max-regression-pct | -max
         Maximum acceptable performance regression percentage (0-50).
         Initial value from \$MAX_REGRESSION_PCT or 20

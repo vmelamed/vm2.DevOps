@@ -27,11 +27,6 @@ Switches:$common_switches
         The initial value from \$PREPROCESSOR_SYMBOLS or '' will be preserved and
         appended with 'SHORT_RUN' if not already present.
 
-    --force-new-baseline | -f
-        When specified, a new baseline will be created even if a previous
-        baseline already exists.
-        Initial value from \$FORCE_NEW_BASELINE or 'false'
-
 Options:
     --artifacts | -a
         Specifies the directory where to create the benchmark artifacts:

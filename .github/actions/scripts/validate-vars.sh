@@ -15,7 +15,6 @@ set -euo pipefail
 #   configuration
 #   preprocessor_symbols
 #   min_coverage_pct
-#   force_new_baseline
 #   max_regression_pct
 #   verbose
 # ==============================================================================
@@ -37,7 +36,6 @@ declare -r defaultOses='["ubuntu-latest"]'
 declare -r defaultDotnetVersion='10.0.x'
 declare -r defaultConfiguration='Release'
 declare -r defaultPreprocessorSymbols='_'
-declare -r defaultForceNewBaseline=false
 declare -r defaultMinCoveragePct=80
 declare -r defaultMaxRegressionPct=20
 declare -r defaultVerbose=false
@@ -51,7 +49,6 @@ declare -x dotnet_version=${DOTNET_VERSION:-${defaultDotnetVersion}}
 declare -x configuration=${CONFIGURATION:-${defaultConfiguration}}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-${defaultPreprocessorSymbols}}
 declare -x min_coverage_pct=${MIN_COVERAGE_PCT:-${defaultMinCoveragePct}}
-declare -x force_new_baseline=${FORCE_NEW_BASELINE:-${defaultForceNewBaseline}}
 declare -x max_regression_pct=${MAX_REGRESSION_PCT:-${defaultMaxRegressionPct}}
 declare -x verbose=${VERBOSE:-${defaultVerbose}}
 
@@ -162,10 +159,6 @@ if ! [[ "$min_coverage_pct" =~ ^[0-9]+$ ]] || (( min_coverage_pct < 50 || min_co
     warning min_coverage_pct "min-coverage-pct must be 50-100." "$defaultMinCoveragePct"
 fi
 
-if [[ "$force_new_baseline" != "true" && "$force_new_baseline" != "false" ]]; then
-    warning force_new_baseline "force-new-baseline must be true/false." "$defaultForceNewBaseline"
-fi
-
 if ! [[ "$max_regression_pct" =~ ^[0-9]+$ ]] || (( max_regression_pct < 0 || max_regression_pct > 50 )); then
     warning max_regression_pct "max-regression-pct must be 0-50." "$defaultMaxRegressionPct"
 fi
@@ -188,7 +181,6 @@ if (( errors > 0 )); then
         echo "| configuration        | $configuration        |"
         echo "| preprocessor-symbols | $preprocessor_symbols |"
         echo "| min-coverage-pct     | $min_coverage_pct     |"
-        echo "| force-new-baseline   | $force_new_baseline   |"
         echo "| max-regression-pct   | $max_regression_pct   |"
         echo "| verbose              | $verbose              |"
     } | tee >> "$GITHUB_STEP_SUMMARY" >&2
@@ -209,7 +201,6 @@ fi
     echo "| configuration        | $configuration        |"
     echo "| preprocessor-symbols | $preprocessor_symbols |"
     echo "| min-coverage-pct     | $min_coverage_pct     |"
-    echo "| force-new-baseline   | $force_new_baseline   |"
     echo "| max-regression-pct   | $max_regression_pct   |"
     echo "| verbose              | $verbose              |"
 } | tee >> "$GITHUB_STEP_SUMMARY"
@@ -234,6 +225,5 @@ github_output dotnet_version
 github_output configuration
 github_output preprocessor_symbols
 github_output min_coverage_pct
-github_output force_new_baseline
 github_output max_regression_pct
 github_output verbose

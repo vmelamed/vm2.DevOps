@@ -6,7 +6,10 @@ on:
       os:
         description: String representing a JSON array of strings - monikers of GitHub runners. Cannot be null or empty!
         type: string
-        default: "[\u0022ubuntu-latest\u0022]"
+        default: >-
+          [
+          "ubuntu-latest"
+          ]
 
       dotnet-version:
         description: Version of .NET SDK to use. Cannot be null or empty!.

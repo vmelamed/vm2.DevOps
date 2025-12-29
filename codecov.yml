@@ -37,6 +37,7 @@ comment:
 # Ignore paths from coverage calculations
 ignore:
   # - "test/**" # Exclude test projects
+  # - "tests/**" # Exclude test projects
   # - "**/obj/**" # Exclude build artifacts
   # - "**/bin/**"
   # - "**/*.Tests/**"
