@@ -63,10 +63,6 @@ function get_arguments()
                 value="$1"; shift
                 min_coverage_pct="$value"
                 ;;
-            --force-new-baseline|-f )
-                value="$1"; shift
-                force_new_baseline="$value"
-                ;;
             --max-regression-pct|-max )
                 value="$1"; shift
                 max_regression_pct="$value"
@@ -96,6 +92,5 @@ dump_all_variables()
         configuration \
         preprocessor_symbols \
         min_coverage_pct \
-        force_new_baseline \
         max_regression_pct
 }

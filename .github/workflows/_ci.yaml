@@ -49,11 +49,6 @@ on:
         type: number
         default: 20 # percent
 
-      force-new-baseline:
-        description: The benchmarks outputs will become the new baseline (no regression check)
-        type: boolean
-        default: false
-
     secrets:
       CODECOV_TOKEN:
         description: Codecov API token for uploading coverage reports
@@ -81,7 +76,6 @@ jobs:
       preprocessor-symbols: ${{ steps.setup.outputs.preprocessor-symbols }}
       min-coverage-pct: ${{ steps.setup.outputs.min-coverage-pct }}
       max-regression-pct: ${{ steps.setup.outputs.max-regression-pct }}
-      force-new-baseline: ${{ steps.setup.outputs.force-new-baseline }}
 
     steps:
       # Clone the repository to access validation scripts
@@ -120,7 +114,6 @@ jobs:
               --configuration        '${{ inputs.configuration }}' \
               --preprocessor-symbols '${{ inputs.preprocessor-symbols }}' \
               --min-coverage-pct     '${{ inputs.min-coverage-pct }}' \
-              --force-new-baseline   '${{ inputs.force-new-baseline }}' \
               --max-regression-pct   '${{ inputs.max-regression-pct }}'
 
   # Build the project and cache artifacts for downstream test/benchmark jobs
