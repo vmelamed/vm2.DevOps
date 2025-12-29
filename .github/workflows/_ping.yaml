@@ -1,0 +1,8 @@
+name: _ping
+on:
+  workflow_call: {}
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "::notice::pong"
