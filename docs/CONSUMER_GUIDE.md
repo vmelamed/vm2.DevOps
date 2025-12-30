@@ -36,11 +36,9 @@ Your repository should have:
    - `NUGET_API_NUGET_KEY`, if the packages will be published to NuGet.org
    - `CODECOV_TOKEN`, to use Codecov for test coverage reporting
    - `BENCHER_API_TOKEN`, to use Bencher for benchmark reporting
-
-   Sometimes, for debugging workflows, it is also useful to add two more secrets :
-
-   - `ACTIONS_RUNNER_DEBUG` - value `true` to enable runner-level debug logging, or `false` to disable it
-   - `ACTIONS_STEP_DEBUG` - value `true` to enable step-level debug logging, or `false` to disable it
+   - Sometimes, for workflow debugging purposes, it is useful to also add these two secrets :
+     - `ACTIONS_RUNNER_DEBUG` - value `true` to enable runner-level debug logging, or `false` to disable it
+     - `ACTIONS_STEP_DEBUG` - value `true` to enable step-level debug logging, or `false` to disable it
 
 1. [Variables](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets) (treat them as policies):
 
@@ -88,7 +86,7 @@ YourRepo/
 └── CHANGELOG.md
 ```
 
-> ⚠️ Note that the `src/`, `test/`, `benchmarks/`, etc. [folders are conventional and highly recommended](https://learn.microsoft.com/en-us/dotnet/core/porting/project-structure) but vm2 makes them mandatory and assumes this structure in the called GitHub workflows.
+> ⚠️ Note that the `src/`, `test/`, `benchmarks/`, etc. [folders although conventional are highly recommended](https://learn.microsoft.com/en-us/dotnet/core/porting/project-structure) but vm2 makes them mandatory and assumes this structure in the called GitHub workflows.
 > Also please note that we are committed to using the following features:
 >
 > - [`.slnx` solution files](https://devblogs.microsoft.com/dotnet/introducing-slnx-support-dotnet-cli/) (instead of `.sln`)
@@ -268,8 +266,8 @@ The `CI.yaml` invokes the reusable `_ci.yaml` workflow, that orchestrates the re
 
    - `env.BUILD_PROJECTS` - the projects to be built (solutions or individual projects). If empty, the workflow will attempt to build the `.slnx` or `csproj` file found in the repository root.
      > ⚠️ If you have multiple projects, prefer specifying the solution file (`.slnx`) to ensure proper dependency resolution or simply leave the default value `[""]` to let the workflow find the solution file automatically.
-   - `env.TEST_PROJECTS` - the test projects to run. If none, use an empty JSON array: `[]`
-   - `env.BENCHMARK_PROJECTS` - the benchmark projects to run. If none, use an empty JSON array: `[]`
+   - `env.TEST_PROJECTS` - the test projects to run as a JSON array of strings - path(s) to the test project files. If none, use the sentinel JSON array `["__skip__"]` to prevent an empty matrix.
+   - `env.BENCHMARK_PROJECTS` - the benchmark projects to run as a JSON array of strings - path(s) to the benchmark project files. If none, use the sentinel JSON array `["__skip__"]` to prevent an empty matrix.
 
    E.g.:
 
@@ -283,9 +281,10 @@ The `CI.yaml` invokes the reusable `_ci.yaml` workflow, that orchestrates the re
        TEST_PROJECTS: >-
          [
          "./test/Project1.Tests/Project1.Tests.csproj",
+         "./test/Project2.Tests/Project2.Tests.csproj",
          ]
        BENCHMARK_PROJECTS: >-
-         ["./benchmarks/Project1.Benchmarks/Project1.Benchmarks.csproj"]
+         ["__skip__"]
      ```
 
    > ⚠️ Hint: JSON arrays of strings require double quotes around each string, and the entire array must be a string, enclosed in quotes (because of the brackets). This can get tricky, especially, e.g.
