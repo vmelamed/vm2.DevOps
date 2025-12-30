@@ -31,7 +31,7 @@ on:
 env:
   # If you have more than one project, specify projects to package, e.g. ["src/Project1/Project1.csproj","src/Project2/Project2.csproj"]
   PACKAGE_PROJECTS: >-
-    [""]
+    ["./src/Xyz/Xyz.csproj"]
   NUGET_SERVER: github  # 'github' - GitHub Packages; 'nuget' - NuGet.org
 
 jobs:
