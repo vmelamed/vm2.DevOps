@@ -38,14 +38,9 @@ jobs:
   get-params:
     name: Prepare the default and passed in parameters
     runs-on: ubuntu-latest # here it doesn't matter - we're preparing the inputs for the next workload'
-    if: >
-      ${{
-      github.event_name == 'pull_request' ||
-      github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]')
-      }}
+    if: ${{ github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]') }}
     env:
-      # the following are invariant - no matter how we trigger the workflow, they stay the same as specified in vars:
+      # the following are invariant - no matter how we trigger the workflow, they stay the same as specified in the vars:
       dotnet_version: ${{ vars.DOTNET_VERSION || '10.0.x' }}
       configuration: ${{ vars.CONFIGURATION || 'Release' }}
       min_coverage_pct: ${{ vars.MIN_COVERAGE_PCT || '80' }}
@@ -66,22 +61,22 @@ jobs:
         shell: bash
         run: |
           # the following outputs are invariant - no matter how we trigger the workflow, they stay the same as specified in env:
-          build_projects=${{ env.BUILD_PROJECTS }}
-          test_projects=${{ env.TEST_PROJECTS }}
-          benchmark_projects=${{ env.BENCHMARK_PROJECTS }}
+          build_projects='${{ env.BUILD_PROJECTS }}'
+          test_projects='${{ env.TEST_PROJECTS }}'
+          benchmark_projects='${{ env.BENCHMARK_PROJECTS }}'
 
           if [ "${{ github.event_name }}" == "push" ]; then
               # Set the values for push events, and add SHORT_RUN to preprocessor_symbols for faster benchmark tests (less precise)
-              os=${{ env.OS }}
-              preprocessor_symbols="${{ env.PREPROCESSOR_SYMBOLS }};SHORT_RUN"
+              os='${{ env.OS }}'
+              preprocessor_symbols='SHORT_RUN;${{ env.PREPROCESSOR_SYMBOLS }}'
           elif [ "${{ github.event_name }}" == "pull_request" ]; then
               # Set the values for pull_request events
-              os=${{ env.OS }}
-              preprocessor_symbols=${{ env.PREPROCESSOR_SYMBOLS }}
+              os='${{ env.OS }}'
+              preprocessor_symbols='${{ env.PREPROCESSOR_SYMBOLS }}'
           elif [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
               # Get the values from the inputs of workflow_dispatch event (the UI). Convert comma-separated runner's OS values to JSON array
               os=$(echo "${{ inputs.os }}" | jq -Rc 'split(",") | map(select(length > 0) | gsub("^\\s+|\\s+$";""))')
-              preprocessor_symbols="${{ inputs.preprocessor-symbols }}"
+              preprocessor_symbols='${{ inputs.preprocessor-symbols }}'
           else
               echo "Unsupported event: ${{ github.event_name }}"
               exit 5
