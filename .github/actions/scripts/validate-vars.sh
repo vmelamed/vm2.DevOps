@@ -29,9 +29,9 @@ declare -xr script_dir
 
 source "$script_dir/_common.sh"
 
-declare -r defaultBuildProjects='[""]'
-declare -r defaultTestProjects='[]'
-declare -r defaultBenchmarkProjects='[]'
+declare -r defaultBuildProjects=''
+declare -r defaultTestProjects=''
+declare -r defaultBenchmarkProjects=''
 declare -r defaultOses='["ubuntu-latest"]'
 declare -r defaultDotnetVersion='10.0.x'
 declare -r defaultConfiguration='Release'
