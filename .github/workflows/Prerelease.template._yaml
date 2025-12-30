@@ -38,24 +38,25 @@ jobs:
   get-params:
     name: Prepare the parameters
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.merged == true)
+    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
     outputs:
       package-projects: ${{ steps.init-params.outputs.package-projects }}
       nuget-server: ${{ steps.init-params.outputs.nuget-server }}
       semver-build-prefix: ${{ steps.init-params.outputs.semver-build-prefix }}
+      force-publish: ${{ steps.init-params.outputs.force-publish }}
     steps:
       - name: Gather parameters
         id: init-params
         shell: bash
         run: |
-          package_projects=${{ env.PACKAGE_PROJECTS }}
-          nuget_server=${{ env.NUGET_SERVER }}
+          package_projects='${{ env.PACKAGE_PROJECTS }}'
+          nuget_server='${{ env.NUGET_SERVER }}'
           semver_build_prefix=preview
           force_publish=false
 
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            semver_build_prefix="${{ inputs.semver-build-prefix }}"
-            force_publish="${{ inputs.force-publish }}"
+            semver_build_prefix='${{ inputs.semver-build-prefix }}'
+            force_publish='${{ inputs.force-publish }}'
           fi
 
           # Set the outputs:
@@ -77,7 +78,6 @@ jobs:
 
   prerelease:
     name: Prerelease
-    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.merged == true)
     needs:
       - get-params
     uses: vmelamed/vm2.DevOps/.github/workflows/_prerelease.yaml@main
@@ -88,9 +88,9 @@ jobs:
       NUGET_API_KEY: ${{ secrets.NUGET_API_GITHUB_KEY }}  # the API key to use for publishing to GitHub NuGet packages or NuGet.org
                                                           # Make sure it corresponds to the 'env.NUGET_SERVER' above
     with:
-      nuget-server: ${{ needs.get-params.outputs.nuget-server }}
       package-projects: ${{ needs.get-params.outputs.package-projects }}
       dotnet-version: ${{ vars.DOTNET_VERSION }}
       semver-build-prefix: ${{ needs.get-params.outputs.semver-build-prefix }}
-      force-publish: ${{ needs.get-params.outputs.force-publish }}
+      force-publish: ${{ fromJSON(needs.get-params.outputs.force-publish) }}
+      nuget-server: ${{ needs.get-params.outputs.nuget-server }}
       save_package_artifacts: true
