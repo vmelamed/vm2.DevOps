@@ -19,15 +19,15 @@ on:
         type: boolean
         default: false
 
-      save_package_artifacts:
-        description: Upload package(s) as workflow artifacts
-        type: boolean
-        default: false
-
       nuget-server:
         description: "NuGet server to publish to (nuget or github)"
         type: string
         default: "nuget"
+
+      save_package_artifacts:
+        description: Upload package(s) as workflow artifacts
+        type: boolean
+        default: false
 
     secrets:
       NUGET_API_KEY:

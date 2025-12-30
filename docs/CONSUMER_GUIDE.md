@@ -37,6 +37,11 @@ Your repository should have:
    - `CODECOV_TOKEN`, to use Codecov for test coverage reporting
    - `BENCHER_API_TOKEN`, to use Bencher for benchmark reporting
 
+   Sometimes, for debugging workflows, it is also useful to add two more secrets :
+
+   - `ACTIONS_RUNNER_DEBUG` - value `true` to enable runner-level debug logging, or `false` to disable it
+   - `ACTIONS_STEP_DEBUG` - value `true` to enable step-level debug logging, or `false` to disable it
+
 1. [Variables](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets) (treat them as policies):
 
    - `DOTNET_VERSION` (default: `10.0.x`)
