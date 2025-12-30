@@ -137,7 +137,6 @@ jobs:
   # Run unit tests with code coverage analysis
   test:
     name: Tests
-    if: ${{ needs.setup.outputs.test-projects != '' && needs.setup.outputs.test-projects != '[]' }}
     needs:
       - setup
       - build
@@ -146,6 +145,7 @@ jobs:
       matrix:
         os: ${{ fromJSON(needs.setup.outputs.os) }}
         test-project: ${{ fromJSON(needs.setup.outputs.test-projects) }}
+    if: ${{ needs.setup.outputs.test-projects != '["__skip__"]' }}
     uses: vmelamed/vm2.DevOps/.github/workflows/_test.yaml@main
     permissions:
       contents: read
@@ -164,12 +164,6 @@ jobs:
   # Run performance benchmarks and compare against baseline (if enabled and benchmark project specified)
   benchmarks:
     name: Benchmarks
-    if: >
-      ${{
-      needs.setup.outputs.benchmark-projects != '' &&
-      needs.setup.outputs.benchmark-projects != '[]' &&
-      (github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip bm]'))
-      }}
     needs:
       - setup
       - build
@@ -178,6 +172,7 @@ jobs:
       matrix:
         os: ${{ fromJSON(needs.setup.outputs.os) }}
         benchmark-project: ${{ fromJSON(needs.setup.outputs.benchmark-projects) }}
+    if: ${{ needs.setup.outputs.benchmark-projects != '["__skip__"]' && (github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip bm]')) }}
     uses: vmelamed/vm2.DevOps/.github/workflows/_benchmarks.yaml@main
     permissions:
       contents: read
