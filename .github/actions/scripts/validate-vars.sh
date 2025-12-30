@@ -97,7 +97,7 @@ elif echo "$build_projects" | jq -e "$jq_array_strings_has_empty" > /dev/null; t
     warning build_projects "At least one of the strings in the value of the option --build-projects '$build_projects' is empty: will build the entire solution." "$defaultBuildProjects"
 else
     for p in $(echo "$build_projects" | jq -r '.[]'); do
-        if [[ ! -s "$p" ]]; then
+        if [[ ! -s "$p" && "$p" != "" ]]; then
             error "The project or solution file '$p' does not exist or is empty."
             pwd
         fi
@@ -111,7 +111,7 @@ elif [[ $? == 5 ]]; then
     error "The value of the option --test-projects '$test_projects' is not a valid JSON."
 else
     for p in $(echo "$test_projects" | jq -r '.[]'); do
-        if [[ ! -s "$p" ]]; then
+        if [[ ! -s "$p" && "$p" != "__skip__" ]]; then
             error "Test project file '$p' does not exist."
         fi
     done
@@ -125,7 +125,7 @@ elif ! echo "$benchmark_projects" | jq -e "$jq_array_strings_nonempty" > /dev/nu
     error "The value of the option --benchmark-projects '$benchmark_projects' must be a string representing a non-empty JSON array of non-empty strings - paths to the benchmark project(s) to be run."
 else
     for p in $(echo "$benchmark_projects" | jq -r '.[]'); do
-        if [[ ! -f "$p" ]]; then
+        if [[ ! -f "$p" && "$p" != "__skip__" ]]; then
             error "Benchmark project file '$p' does not exist."
         fi
     done
