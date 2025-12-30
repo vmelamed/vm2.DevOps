@@ -124,8 +124,8 @@ jobs:
     strategy:
       # fail-fast: true
       matrix:
-        os: ${{ fromJSON(inputs.os) }}
-        build-project: ${{ fromJSON(inputs.build-projects) }}
+        os: ${{ fromJSON(needs.setup.outputs.os) }}
+        build-project: ${{ fromJSON(needs.setup.outputs.build-projects) }}
     uses: vmelamed/vm2.DevOps/.github/workflows/_build.yaml@main
     with:
       os: ${{ matrix.os }}
@@ -144,8 +144,8 @@ jobs:
     strategy:
       # fail-fast: true
       matrix:
-        os: ${{ fromJSON(inputs.os) }}
-        test-project: ${{ fromJSON(inputs.test-projects) }}
+        os: ${{ fromJSON(needs.setup.outputs.os) }}
+        test-project: ${{ fromJSON(needs.setup.outputs.test-projects) }}
     uses: vmelamed/vm2.DevOps/.github/workflows/_test.yaml@main
     permissions:
       contents: read
@@ -176,8 +176,8 @@ jobs:
     strategy:
       # fail-fast: true
       matrix:
-        os: ${{ fromJSON(inputs.os) }}
-        benchmark-project: ${{ fromJSON(inputs.benchmark-projects) }}
+        os: ${{ fromJSON(needs.setup.outputs.os) }}
+        benchmark-project: ${{ fromJSON(needs.setup.outputs.benchmark-projects) }}
     uses: vmelamed/vm2.DevOps/.github/workflows/_benchmarks.yaml@main
     permissions:
       contents: read
