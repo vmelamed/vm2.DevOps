@@ -53,6 +53,7 @@ on:
       CODECOV_TOKEN:
         description: Codecov API token for uploading coverage reports
         required: false
+
       BENCHER_API_TOKEN:
         description: Bencher.dev API token for benchmark tracking
         required: false
