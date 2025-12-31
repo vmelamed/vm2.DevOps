@@ -99,7 +99,6 @@ jobs:
 
       - name: Compute prerelease tag
         id: compute
-        if: steps.tag-check.outputs.already-tagged == false
         shell: bash
         run: |+
           set -euo pipefail
