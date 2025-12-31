@@ -34,7 +34,7 @@ on:
         type: string
         default: nuget
 
-      save_package_artifacts:
+      save-package-artifacts:
         description: Upload package(s) as workflow artifacts
         type: boolean
         default: false
@@ -53,7 +53,7 @@ jobs:
     timeout-minutes: 10
     outputs:
       prerelease-tag: ${{ steps.compute.outputs.prerelease-tag }}
-      should_publish: ${{ steps.tag_check.outputs.already-tagged == 'false' }}
+      should_publish: ${{ steps.tag-check.outputs.already-tagged == 'false' }}
       package-projects: ${{ steps.validate.outputs.package-projects }}
       minver-tag-prefix: ${{ steps.validate.outputs.minver-tag-prefix }}
     steps:
@@ -87,7 +87,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Skip if commit already tagged (any v* tag)
-        id: tag_check
+        id: tag-check
         run: |+
           {
             if [[ '${{ inputs.force-publish }}' != 'true' ]] && git tag --points-at HEAD | grep -E '^v[0-9]'; then
@@ -98,6 +98,8 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Compute prerelease tag
+        id: compute
+        if: steps.tag-check.outputs.already-tagged == false
         shell: bash
         run: |+
           set -euo pipefail
@@ -131,7 +133,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Create & push prerelease tag
-        if: steps.tag_check.outputs.already-tagged == 'false'
+        if: steps.tag-check.outputs.already-tagged == 'false'
         env:
           TAG: ${{ steps.compute.outputs.prerelease-tag }}
         shell: bash
@@ -210,7 +212,7 @@ jobs:
           printf '## Packages %s pushed to %s:\n%s\n' "$PRERELEASE_TAG" "$SERVER_NAME" "$(ls -1 artifacts/pack/*.nupkg | sed 's/^/  - /')" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload package artifact
-        if: inputs.save_package_artifacts == 'true'
+        if: inputs.save-package-artifacts == 'true'
         uses: actions/upload-artifact@v6
         with:
           name: nuget-packages-${{ needs.compute-tag.outputs.prerelease-tag }}-${{ hashFiles(matrix.project) }}
@@ -220,7 +222,7 @@ jobs:
 
       - name: Summary
         env:
-          ARTIFACTS_SAVED: ${{ inputs.save_package_artifacts == 'true' }}
+          ARTIFACTS_SAVED: ${{ inputs.save-package-artifacts == 'true' }}
         shell: bash
         run: |+
           {
