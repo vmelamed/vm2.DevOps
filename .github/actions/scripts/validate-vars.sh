@@ -133,7 +133,7 @@ fi
 
 # Validate and set os
 if [[ -z "$os" ]] || echo "$os" | jq -e "$jq_empty" > /dev/null; then
-    warning os "The value of the option --os '$os' is empty: will use default OS." "$defaultOses"
+    warning os "The value of the option --os '$os' is empty: will use default runner OS." "$defaultOses"
 elif [[ $? == 5 ]]; then
     error "The value of the option --os '$os' is not a valid JSON."
 elif ! echo "$os" | jq -e "$jq_array_strings_nonempty" > /dev/null; then
