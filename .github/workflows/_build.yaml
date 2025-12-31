@@ -86,6 +86,8 @@ jobs:
       - name: Build (${{ inputs.configuration }})
         shell: bash
         run: |
+          set -euo pipefail
+
           dotnet build ${{ inputs.build-project }} \
               /p:DefineConstants="${{ inputs.preprocessor-symbols || '' }}" \
               --configuration ${{ inputs.configuration }}

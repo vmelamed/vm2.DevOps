@@ -43,6 +43,7 @@ Your repository should have:
    - `CONFIGURATION` (default: `Release`)
    - `MIN_COVERAGE_PCT` (default: `80`)
    - `MAX_REGRESSION_PCT` (default: `10`)
+   - `MINVER_TAG_PREFIX` (default: `v`)
 
 1. Sometimes, for workflow debugging purposes, it is useful to also add these two variables or secrets (secrets' values have precedence over variables' values):
    - `ACTIONS_RUNNER_DEBUG` - value `true` to enable runner-level debug logging, or `false` to disable it

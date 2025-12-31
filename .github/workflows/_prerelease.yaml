@@ -24,6 +24,11 @@ on:
         type: boolean
         default: false
 
+      reason:
+        description: Reason for the force-publish
+        type: string
+        default: ""
+
       nuget-server:
         description: "NuGet server to publish to (supported values for now: 'nuget' or 'github')"
         type: string
@@ -39,16 +44,6 @@ on:
         description: Nuget server token for authentication - must match the selected nuget-server
         required: true
 
-env:
-  DOTNET_NOLOGO: true
-  DOTNET_CLI_TELEMETRY_OPTOUT: true
-  MINVER_TAG_PREFIX: "v"
-  DOTNET_VERSION: ${{ inputs.dotnet-version                 || '10.0.x' }}
-  FORCE_PUBLISH: ${{ inputs.force-publish                   || 'false' }}
-  SAVE_PACKAGE_ARTIFACTS: ${{ inputs.save_package_artifacts || 'false' }}
-  SEMVER_BUILD_PREFIX: ${{ inputs.semver-build-prefix       || 'preview' }}
-  NUGET_SERVER: ${{ inputs.nuget-server                     || 'nuget' }}
-
 permissions:
   contents: write
 
@@ -59,20 +54,48 @@ jobs:
     outputs:
       prerelease_tag: ${{ steps.compute.outputs.prerelease_tag }}
       should_publish: ${{ steps.tag_check.outputs.already_tagged == 'false' }}
+      package-projects: ${{ steps.validate.outputs.package-projects }}
+      minver-tag-prefix: ${{ steps.validate.outputs.minver-tag-prefix }}
     steps:
       - name: Checkout (full history)
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
+      - name: Validate package projects input
+        id: validate
+        run: |+
+          package_projects='${{ inputs.package-projects }}'
+          {
+            if [[ -z "$package_projects" ]] || jq -e '. == null or . == "" or . == []' > /dev/null 2>&1 <<<"$package_projects"; then
+                echo "⚠️ WARNING The value of the input 'package-projects' is empty: will build and pack the entire solution. Assuming default value of '[\"\"]'."
+                package_projects='[""]'
+            elif [[ $? == 5 ]]; then
+                echo "❌ ERROR The value of the input 'package-projects'='$package_projects' is not a valid JSON."
+                exit 2
+            elif ! jq -e 'type == "array" and all(type == "string")' > /dev/null 2>&1 <<<"$package_projects"; then
+                echo "❌ ERROR The value of the input 'package-projects'='$package_projects' must be a string representing a JSON array of (possibly empty) strings - paths to the project(s) to be packed."
+                exit 2
+            elif jq -e 'any(. == "")' > /dev/null 2>&1 <<<"$package_projects"; then
+                echo "⚠️ WARNING At least one of the strings in the value of the input 'package-projects' is empty: will build and pack the entire solution. Assuming default value of '[\"\"]'."
+                package_projects='[""]'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "package-projects=$package_projects"
+            echo "minver-tag-prefix=${{ vars.MINVER_TAG_PREFIX || 'v' }}"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Skip if commit already tagged (any v* tag)
         id: tag_check
         run: |+
-          if [[ $FORCE_PUBLISH != 'true' ]] && git tag --points-at HEAD | grep -E '^v[0-9]'; then
-            printf 'already_tagged=%s\n' "true" >> "$GITHUB_OUTPUT"
-          else
-            printf 'already_tagged=%s\n' "false" >> "$GITHUB_OUTPUT"
-          fi
+          {
+            if [[ '${{ inputs.force-publish }}' != 'true' ]] && git tag --points-at HEAD | grep -E '^v[0-9]'; then
+              printf 'already_tagged=%s\n' "true"
+            else
+              printf 'already_tagged=%s\n' "false"
+            fi
+          } >> "$GITHUB_OUTPUT"
 
       - name: Compute prerelease tag
         if: steps.tag_check.outputs.already_tagged == 'false'
@@ -95,7 +118,7 @@ jobs:
 
           DATE=$(date -u +%Y%m%d)
           RUN=$GITHUB_RUN_NUMBER
-          PRERELEASE_TAG="v$MAJOR.$MINOR.$NEXT_PATCH-$SEMVER_BUILD_PREFIX.$DATE.$RUN"
+          PRERELEASE_TAG="v$MAJOR.$MINOR.$NEXT_PATCH-${{ inputs.semver-build-prefix }}.$DATE.$RUN"
           printf 'prerelease_tag=%s\n' "$PRERELEASE_TAG" >> "$GITHUB_OUTPUT"
           printf '## Prerelease Tag:\n- %s\n' "$PRERELEASE_TAG" >> "$GITHUB_STEP_SUMMARY"
 
@@ -105,7 +128,8 @@ jobs:
           {
               echo "## Prerelease reason:"
               echo
-              echo "- Force publish: $FORCE_PUBLISH"
+              echo "- Force publish: ${{ inputs.force-publish }}"
+              echo "- Reason: ${{ inputs.reason }}"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Create & push prerelease tag
@@ -116,18 +140,19 @@ jobs:
         run: |+
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "$TAG" -m "Prerelease $TAG" -m "Reason: $REASON" || echo "Tag exists, continuing"
+          git tag -a "$TAG" -m "Prerelease $TAG" -m "Reason: ${{ inputs.reason }}" || echo "Tag exists, continuing"
           git push origin "$TAG"
 
   package-and-publish:
-    needs: compute-tag
+    needs:
+      - compute-tag
     if: needs.compute-tag.outputs.should_publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        project: ${{ fromJSON(inputs.package-projects) }}
+        project: ${{ fromJSON(needs.compute-tag.outputs.package-projects) }}
     steps:
       - name: Checkout (full history)
         uses: actions/checkout@v6
@@ -137,7 +162,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-version: ${{ inputs.dotnet-version }}
           cache: true
           cache-dependency-path: |+
             **/packages.lock.json
@@ -159,8 +184,8 @@ jobs:
             --configuration Release \
             --output artifacts/pack \
             --no-restore \
-            /p:MinVerTagPrefix=${MINVER_TAG_PREFIX} \
-            "/p:PackageReleaseNotes=Prerelease: ${REASON:-N/A}"
+            /p:MinVerTagPrefix=${{ needs.compute-tag.outputs.minver-tag-prefix }} \
+            "/p:PackageReleaseNotes=Prerelease: ${{ inputs.reason || 'prerelease build' }}"
           ls -1 artifacts/pack
 
       - name: Publish prerelease to NuGet server
@@ -172,8 +197,7 @@ jobs:
           if [ -z "${NUGET_API_KEY}" ]; then
             echo "NUGET_API_KEY not configured"; exit 1
           fi
-          API_KEY="$NUGET_API_KEY"
-          if [ "$NUGET_SERVER" = "github" ]; then
+          if [ "${{ inputs.nuget-server }}" = "github" ]; then
             SERVER_NAME="GitHub Packages"
             SERVER_URL="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
           else
@@ -188,7 +212,7 @@ jobs:
           printf '## Packages %s pushed to %s:\n%s\n' "$PRERELEASE_TAG" "$SERVER_NAME" "$(ls -1 artifacts/pack/*.nupkg | sed 's/^/  - /')" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload package artifact
-        if: env.SAVE_PACKAGE_ARTIFACTS == 'true'
+        if: inputs.save_package_artifacts == 'true'
         uses: actions/upload-artifact@v6
         with:
           name: nuget-packages-${{ needs.compute-tag.outputs.prerelease_tag }}-${{ hashFiles(matrix.project) }}
@@ -198,13 +222,13 @@ jobs:
 
       - name: Summary
         env:
-          ARTIFACTS_SAVED: ${{ env.SAVE_PACKAGE_ARTIFACTS == 'true' }}
+          ARTIFACTS_SAVED: ${{ inputs.save_package_artifacts == 'true' }}
         shell: bash
         run: |+
           {
               echo "## Release Summary"
               echo
-              echo "- Tag: ${GITHUB_REF_NAME}"
+              echo "- Tag: ${{ needs.compute-tag.outputs.prerelease_tag }}"
               if [ "$ARTIFACTS_SAVED" = "true" ]; then
                 echo "- Artifacts:"
                 ls -1 artifacts/pack | sed 's/^/  - /'
