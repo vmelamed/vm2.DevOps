@@ -1,3 +1,4 @@
+# CP. This workflow must be in the ./.github directory of the repository!
 version: 2
 updates:
   # Update NuGet packages

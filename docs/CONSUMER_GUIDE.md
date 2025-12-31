@@ -36,9 +36,6 @@ Your repository should have:
    - `NUGET_API_NUGET_KEY`, if the packages will be published to NuGet.org
    - `CODECOV_TOKEN`, to use Codecov for test coverage reporting
    - `BENCHER_API_TOKEN`, to use Bencher for benchmark reporting
-   - Sometimes, for workflow debugging purposes, it is useful to also add these two secrets :
-     - `ACTIONS_RUNNER_DEBUG` - value `true` to enable runner-level debug logging, or `false` to disable it
-     - `ACTIONS_STEP_DEBUG` - value `true` to enable step-level debug logging, or `false` to disable it
 
 1. [Variables](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets) (treat them as policies):
 
@@ -46,6 +43,10 @@ Your repository should have:
    - `CONFIGURATION` (default: `Release`)
    - `MIN_COVERAGE_PCT` (default: `80`)
    - `MAX_REGRESSION_PCT` (default: `10`)
+
+1. Sometimes, for workflow debugging purposes, it is useful to also add these two variables or secrets (secrets' values have precedence over variables' values):
+   - `ACTIONS_RUNNER_DEBUG` - value `true` to enable runner-level debug logging, or `false` to disable it
+   - `ACTIONS_STEP_DEBUG` - value `true` to enable step-level debug logging, or `false` to disable it
 
 ## Repository Setup
 
