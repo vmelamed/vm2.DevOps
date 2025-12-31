@@ -87,11 +87,11 @@ Manual steps:
    git pull origin main
    ```
 
-1. Choose next version (SemVer) – update CHANGELOG if applicable:
+1. Choose next version (SemVer 2.0!) – update CHANGELOG if applicable:
 
    ```bash
    # bash:
-   export VER=v1.2.0
+   VER=v1.2.0
    git tag -a $VER -m "$VER"
    git push origin $VER
    ```
@@ -106,9 +106,10 @@ This triggers `.github/workflows/release.yml`, which:
 
 ## 5. Secrets & Requirements
 
-| Secret          | Purpose                       |
-| --------------- | ----------------------------- |
-| `NUGET_API_KEY` | Pushing packages to NuGet.org |
+| Secret                 | Purpose                             |
+| ---------------------- | ----------------------------------- |
+| `NUGET_API_GITHUB_KEY` | Pushing packages to GitHub Packages |
+| `NUGET_API_NUGET_KEY`  | Pushing packages to NuGet.org       |
 
 Ensure branch protection on `main` so only reviewed code generates prereleases.
 
@@ -138,20 +139,20 @@ Inspect produced dll
 
 ```bash
 dotnet tool install -g dotnet-ildasm
-dotnet-ildasm src/UlidType/bin/Release/net9.0/UlidType.dll | grep InformationalVersion
+dotnet-ildasm src/UlidType/bin/Release/net10.0/UlidType.dll | grep InformationalVersion
 ```
 
 Or:
 
 ```bash
-strings src/UlidType/bin/Release/net9.0/UlidType.dll | grep InformationalVersion
+strings src/UlidType/bin/Release/net10.0/UlidType.dll | grep InformationalVersion
 ```
 
 Or
 
 ```powershell
 # PowerShell
-([System.Reflection.Assembly]::LoadFrom("src/UlidType/bin/Release/net9.0/UlidType.dll")).GetCustomAttributes(
+([System.Reflection.Assembly]::LoadFrom("src/UlidType/bin/Release/net10.0/UlidType.dll")).GetCustomAttributes(
    [System.Reflection.AssemblyInformationalVersionAttribute], $false).InformationalVersion
 ```
 
@@ -219,7 +220,7 @@ Or define environment-driven label:
 
 ```bash
 LABEL=${PR_CHANNEL:-preview}
-PRERELEASE_TAG="v${MAJOR}.${MINOR}.${NEXT_PATCH}-${LABEL}.${DATE}.${RUN}"
+PRERELEASE_TAG="v${MAJOR}.${MINOR}.${PATCH}-${LABEL}.${DATE}.${RUN}"
 ```
 
 ---

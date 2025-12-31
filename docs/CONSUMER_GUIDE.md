@@ -59,7 +59,7 @@ Your repository is expected to follow the following structure:
 YourRepo/
 ├── .github/
 │   └── workflows/
-│       │ # Copied from `*.template._yaml` (see below)
+│       │ # Copied from vmelamed/.github/workflow-templates (see below)
 │       ├── ClearCache.yaml
 │       ├── CI.yaml
 │       ├── Prerelease.yaml
@@ -103,13 +103,18 @@ YourRepo/
 
 1. **Copy workflow templates** to your repository:
 
+   The workflow templates are available from the [`.github`](https://github.com/vmelamed/.github) repository as [GitHub workflow templates](https://docs.github.com/en/actions/using-workflows/creating-starter-workflows-for-your-organization). You can use them directly from the GitHub UI when creating new workflows in your repository.
+
+   Alternatively, copy them manually:
+
    ```bash
    # From your repository root
    mkdir -p .github/workflows
-   curl -o .github/workflows/CI.yaml https://raw.githubusercontent.com/vmelamed/vm2.DevOps/main/.github/workflows/Repo.CI.template._yaml
-   curl -o .github/workflows/ClearCache.yaml https://raw.githubusercontent.com/vmelamed/vm2.DevOps/main/.github/workflows/ClearCache.template._yaml
-   curl -o .github/workflows/Prerelease.yaml https://raw.githubusercontent.com/vmelamed/vm2.DevOps/main/.github/workflows/Repo.Prerelease.template._yaml
-   curl -o .github/workflows/Release.yaml https://raw.githubusercontent.com/vmelamed/vm2.DevOps/main/.github/workflows/Repo.Release.template._yaml
+   curl -o .github/workflows/CI.yaml https://raw.githubusercontent.com/vmelamed/.github/main/workflow-templates/CI.yaml
+   curl -o .github/workflows/ClearCache.yaml https://raw.githubusercontent.com/vmelamed/.github/main/workflow-templates/ClearCache.yaml
+   curl -o .github/workflows/Prerelease.yaml https://raw.githubusercontent.com/vmelamed/.github/main/workflow-templates/Prerelease.yaml
+   curl -o .github/workflows/Release.yaml https://raw.githubusercontent.com/vmelamed/.github/main/workflow-templates/Release.yaml
+   curl -o .github/dependabot.yaml https://raw.githubusercontent.com/vmelamed/.github/main/workflow-templates/dependabot.yaml
    ```
 
 1. Recommended Configuration Files
@@ -186,7 +191,7 @@ This file has several sections you might want to review and customize:
    > - Visual Studio Code with the C# extension, both on Windows and Linux
    > - Visual Studio 2026 on Windows
 
-   > ⚠️ Hopefully VS 2026 will improve its support for the new test platform in the near future and this section will be simplified.
+   ⚠️ Hopefully VS 2026 will improve their support for the new test platform in the near future and this section will be simplified.
 
    Other parts of the test stack (already included via `Directory.Packages.props`) are:
    - `xunit` test framework
@@ -238,7 +243,9 @@ Controls Git line ending handling and merge strategies. Typically no changes nee
 
 ## Workflow Templates
 
-### CI Workflow (`CI.yaml` copied from `CI.template._yaml`)
+Workflow templates are available from the [vmelamed/.github](https://github.com/vmelamed/.github/tree/main/workflow-templates) repository. You can use them via the GitHub UI when creating new workflows, or copy them manually as shown in [Initial Setup](#initial-setup).
+
+### CI Workflow (`CI.yaml`)
 
 **Purpose:** Build, test, and benchmark on every push, pull request, and manual workflow dispatch.
 
@@ -335,7 +342,7 @@ From the GitHub UI, navigate to the **Actions** tab, select the **CI** workflow 
 - `os`: Comma-separated list of OS monikers (e.g., `ubuntu-latest,windows-latest,macos-latest`). Note that this will be converted to a JSON array internally.
 - `preprocessor-symbols`: Semicolon-separated list of preprocessor symbols (e.g., `FEATURE_FLAG_A;DEBUG_MODE;SHORT_RUN`)
 
-### Prerelease Workflow (`Prerelease.yaml` copied from `Prerelease.template._yaml`)
+### Prerelease Workflow (`Prerelease.yaml`)
 
 **Purpose:** Automatically publish prerelease packages when PRs are merged to `main`.
 
@@ -372,7 +379,7 @@ env:
 1. **Prerelease prefix**: Default is `preview`, can also be `alpha`, `beta`, `rc`
 1. **Workflow name**: Update to match your repo
 
-### Release Workflow (`Repo.Release.template._yaml`)
+### Release Workflow (`Release.yaml`)
 
 **Purpose:** Publish stable releases when version tags are pushed.
 
@@ -421,7 +428,7 @@ Set these in your GitHub repository: **Settings → Secrets and variables → Ac
 | `CONFIGURATION`       | No       | `Release`  | Build configuration (`Debug` or `Release`)     |
 | `MIN_COVERAGE_PCT`    | No       | `80`       | Minimum code coverage percentage (0-100)       |
 | `MAX_REGRESSION_PCT`  | No       | `10`       | Maximum benchmark regression percentage        |
-| `FORCE_NEW_BASELINE`  | No       | `false`    | Ignore baseline and create new benchmark base  |
+| `MINVER_TAG_PREFIX`   | No       | `v`        | Prefix for MinVer tags (e.g. `v` for `v1.2.3`) |
 
 ### Repository Secrets
 
@@ -473,22 +480,6 @@ jobs:
             --configuration Debug \
             --min-coverage 90 \
             --verbose
-```
-
-### Script Flags
-
-All scripts support these common flags:
-
-```bash
-script-name.sh [options]
-
-Common Options:
-  --help, -h           Show usage information
-  --verbose, -v        Enable detailed output
-  --quiet, -q          Suppress interactive prompts (CI mode)
-  --dry-run, -n        Preview actions without executing
-  --trace, -x          Enable bash execution tracing
-  --debugger           Running under debugger (disables traps)
 ```
 
 ### Custom Workflows
@@ -652,7 +643,7 @@ preprocessor_symbols="FEATURE_FLAG_A;DEBUG_MODE"
 
 **Repository structure:**
 
-```
+```txt
 MyLib/
 ├── src/MyLib/MyLib.csproj
 ├── test/MyLib.Tests/MyLib.Tests.csproj
@@ -671,7 +662,7 @@ benchmark_projects='[]'  # No benchmarks
 
 **Repository structure:**
 
-```
+```txt
 MyApp/
 ├── src/
 │   ├── MyApp.Core/
@@ -713,7 +704,7 @@ benchmark_projects='["./benchmarks/Glob.Api.Benchmarks/Glob.Api.Benchmarks.cspro
 
 **Repository structure:**
 
-```
+```txt
 vm2.TestUtilities/
 └── src/vm2.TestUtilities/vm2.TestUtilities.csproj
 ```
@@ -762,9 +753,9 @@ uses: vmelamed/vm2.DevOps/.github/workflows/_ci.yaml@main
 ### Getting Help
 
 1. Check the [Scripts Reference](SCRIPTS_REFERENCE.md) for detailed script documentation
-1. Review [PR Gates Setup](../PR_GATES_SETUP.md) for branch protection configuration
-1. See [Cache Management](../CACHE_MANAGEMENT.md) for dependency cache strategies
-1. Consult [Release Process](../ReleaseProcess.md) for versioning and publishing
+1. Review [PR Gates Setup](PR_GATES_SETUP.md) for branch protection configuration
+1. See [Cache Management](CACHE_MANAGEMENT.md) for dependency cache strategies
+1. Consult [Release Process](RELEASE_PROCESS.md) for versioning and publishing
 
 ---
 
@@ -772,6 +763,6 @@ uses: vmelamed/vm2.DevOps/.github/workflows/_ci.yaml@main
 
 - 📖 Read the [Scripts Reference](SCRIPTS_REFERENCE.md) for detailed script documentation
 - 🔧 Check the [Maintainer Guide](MAINTAINER_GUIDE.md) if you want to contribute
-- 🔒 Set up [PR Gates](../PR_GATES_SETUP.md) for quality enforcement
-- ⚡ Optimize [Cache Management](../CACHE_MANAGEMENT.md) for faster builds
-- 🚀 Master the [Release Process](../ReleaseProcess.md) for publishing packages
+- 🔒 Set up [PR Gates](PR_GATES_SETUP.md) for quality enforcement
+- ⚡ Optimize [Cache Management](CACHE_MANAGEMENT.md) for faster builds
+- 🚀 Master the [Release Process](RELEASE_PROCESS.md) for publishing packages

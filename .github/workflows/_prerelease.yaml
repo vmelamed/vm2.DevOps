@@ -25,7 +25,7 @@ on:
         default: false
 
       reason:
-        description: Reason for the force-publish
+        description: Reason for manual pre-release
         type: string
         default: ""
 
@@ -98,7 +98,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Compute prerelease tag
-        if: steps.tag_check.outputs.already_tagged == 'false'
+        if: steps.tag_check.outputs.already_tagged == false
         id: compute
         shell: bash
         run: |+
@@ -128,8 +128,8 @@ jobs:
           {
               echo "## Prerelease reason:"
               echo
-              echo "- Force publish: ${{ inputs.force-publish }}"
-              echo "- Reason: ${{ inputs.reason }}"
+              echo "- Forced publish: ${{ inputs.force-publish }}"
+              echo "- Reason: ${{ inputs.reason || 'prerelease build' }}"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Create & push prerelease tag
