@@ -13,12 +13,9 @@ source "$script_dir/_common.sh"
 
 declare -x test_project=${TEST_PROJECT:-}
 declare -x configuration=${CONFIGURATION:="Release"}
-declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-" "}
+declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -ix min_coverage_pct=${MIN_COVERAGE_PCT:-80}
 declare -x artifacts_dir=${ARTIFACTS_DIR:-}
-
-declare -x github_output=${GITHUB_OUTPUT:-/dev/stdout}
-declare -x github_step_summary=${GITHUB_STEP_SUMMARY:-/dev/stdout}
 
 source "$script_dir/run-tests.usage.sh"
 source "$script_dir/run-tests.utils.sh"
@@ -51,27 +48,33 @@ renamed_artifacts_dir="$artifacts_dir-$(date -u +"%Y%m%dT%H%M%S")"
 declare -r renamed_artifacts_dir
 
 if [[ -d "$artifacts_dir" && -n "$(ls -A "$artifacts_dir")" ]]; then
-    choice=$(choose \
-                "The test results directory '$artifacts_dir' already exists. What do you want to do?" \
-                    "Delete the directory and continue" \
-                    "Rename the directory to '$renamed_artifacts_dir' and continue" \
-                    "Exit the script") || exit $?
+    if [[ -n "${CI:-}" ]]; then
+        # Auto-delete in CI
+        echo "Deleting existing artifacts directory (running in CI)..."
+        execute rm -rf "$artifacts_dir"
+    else
+        choice=$(choose \
+                    "The test results directory '$artifacts_dir' already exists. What do you want to do?" \
+                        "Delete the directory and continue" \
+                        "Rename the directory to '$renamed_artifacts_dir' and continue" \
+                        "Exit the script") || exit $?
 
-    trace "User selected option: $choice"
-    case $choice in
-        1)  echo "Deleting the directory '$artifacts_dir'..."
-            execute rm -rf "$artifacts_dir"
-            ;;
-        2)  echo "Renaming the directory '$artifacts_dir' to '$renamed_artifacts_dir'..."
-            execute mv "$artifacts_dir" "$renamed_artifacts_dir"
-            ;;
-        3)  echo "Exiting the script."
-            exit 0
-            ;;
-        *)  echo "Invalid option $choice. Exiting."
-            exit 2
-            ;;
-    esac
+        trace "User selected option: $choice"
+        case $choice in
+            1)  echo "Deleting the directory '$artifacts_dir'..."
+                execute rm -rf "$artifacts_dir"
+                ;;
+            2)  echo "Renaming the directory '$artifacts_dir' to '$renamed_artifacts_dir'..."
+                execute mv "$artifacts_dir" "$renamed_artifacts_dir"
+                ;;
+            3)  echo "Exiting the script."
+                exit 0
+                ;;
+            *)  echo "Invalid option $choice. Exiting."
+                exit 2
+                ;;
+        esac
+    fi
 fi
 
 test_results_dir="$artifacts_dir/TestResults"                                   # the directory for the log files from the test run
@@ -131,32 +134,31 @@ declare -r test_dll_path
 declare -rx test_exec_path
 
 # Verify artifacts exist
-if [[ ! -f "${test_exec_path}" || ! -f "${test_dll_path}" ]]; then
-    echo "❌ Cached artifacts missing, cannot proceed" >&2
-    exit 2
-fi
-
 # shellcheck disable=SC2154
 if [[ (! -f "${test_exec_path}" || ! -f "${test_dll_path}") && "$dry_run" != "true" ]]; then
-    echo "❌ Test executables ${test_exec_path} or ${test_dll_path} were not found." | tee >> "$GITHUB_STEP_SUMMARY" >&2
+    echo "❌ Cached test executables ${test_exec_path} or ${test_dll_path} were not found." | tee -a "$github_step_summary" >&2
     exit 2
 fi
 
 trace "Running tests in project ${test_project} with build configuration ${configuration}..."
-execute dotnet run \
-    --project "$test_project" \
-    --configuration "$configuration" \
-    --no-build \
-    --results-directory "$test_results_dir" \
-    --report-trx \
-    --coverage \
-    --coverage-output-format cobertura \
-    --coverage-output "$coverage_source_path"
+if ! execute dotnet run \
+        --project "$test_project" \
+        --configuration "$configuration" \
+        --no-build \
+        --results-directory "$test_results_dir" \
+        --report-trx \
+        --coverage \
+        --coverage-output-format cobertura \
+        --coverage-output "$coverage_source_path" \
+        /p:DefineConstants="$preprocessor_symbols"; then
+    echo "❌ Tests failed in project '$test_project'." | tee -a "$github_step_summary" >&2
+    exit 2
+fi
 
 # shellcheck disable=SC2154
 if [[ $dry_run != "true" ]]; then
     if [[ ! -s "$coverage_source_path" ]]; then
-        echo "❌ Coverage file not found or is empty." | tee >> "$GITHUB_STEP_SUMMARY" >&2
+        echo "❌ Coverage file not found or is empty." | tee -a "$github_step_summary" >&2
         exit 2
     fi
 fi
@@ -171,7 +173,7 @@ else
     trace "The tool 'reportgenerator' is already installed."
 fi
 
-pushd "$test_dir"
+pushd "$test_dir" > /dev/null
 
 # Execute the tool in this directory so that it can pick up the .netconfig file for filters specific to this project
 execute reportgenerator \
@@ -181,7 +183,7 @@ execute reportgenerator \
 	-classfilters:"-*.ExcludeFromCodeCoverage*;-*.GeneratedCode*;-*GeneratedRegex*;-*SourceGenerationContext*" \
     -filefilters:"-*.g.cs;-*.g.i.cs;-*.i.cs;-*.generated.cs;-*Migrations/*;-*obj/*;-*AssemblyInfo.cs;-*Designer.cs;-*.designer.cs"
 
-popd
+popd > /dev/null
 
 if [[ "$uninstall_reportgenerator" = "true" ]]; then
     trace "Uninstalling the tool 'reportgenerator'..."
@@ -190,35 +192,32 @@ fi
 
 if [[ $dry_run != "true" ]]; then
     if [[ ! -s "$coverage_reports_path" ]]; then
-        echo "❌ Coverage summary not found." | tee >> "$github_step_summary" >&2
+        echo "❌ Coverage summary not found." | tee -a "$github_step_summary" >&2
         exit 2
     fi
 fi
 
 # Copy the coverage report summary to the artifact directory
 trace "Copying coverage summary to '$coverage_summary_text_path'..."
-execute mv """$coverage_reports_path""" """$coverage_summary_text_path"""
-execute mv """$coverage_reports_dir"""  """$coverage_summary_html_dir"""
+execute mv "$coverage_reports_path" "$coverage_summary_text_path"
+execute mv "$coverage_reports_dir"  "$coverage_summary_html_dir"
 
 # Extract the coverage percentage from the summary file
 trace "Extracting coverage percentages from '$coverage_summary_text_path'..."
 if [[ $dry_run != "true" ]]; then
     line_pct=$(sed -nE 's/Line coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_text_path" | head -n1 | xargs)
     if [[ -z "$line_pct" ]]; then
-        echo "❌ Could not parse line coverage percent from \"$coverage_summary_text_path\"" | tee >> "$github_step_summary" >&2
-        sync
+        echo "❌ Could not parse line coverage percent from \"$coverage_summary_text_path\"" | tee -a "$github_step_summary" >&2
         exit 2
     fi
     branch_pct=$(sed -nE 's/Branch coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_text_path" | head -n1 | xargs)
     if [[ -z "$branch_pct" ]]; then
-        echo "❌ Could not parse branch coverage percent from \"$coverage_summary_text_path\"" | tee >> "$github_step_summary" >&2
-        sync
+        echo "❌ Could not parse branch coverage percent from \"$coverage_summary_text_path\"" | tee -a "$github_step_summary" >&2
         exit 2
     fi
     method_pct=$(sed -nE 's/Method coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_text_path" | head -n1 | xargs)
     if [[ -z "$method_pct" ]]; then
-        echo "❌ Could not parse method coverage percent from \"$coverage_summary_text_path\"" | tee >> "$github_step_summary" >&2
-        sync
+        echo "❌ Could not parse method coverage percent from \"$coverage_summary_text_path\"" | tee -a "$github_step_summary" >&2
         exit 2
     fi
 

@@ -13,7 +13,7 @@ source "$script_dir/_common.sh"
 
 declare -x bm_project=${BM_PROJECT:-}
 declare -x configuration=${CONFIGURATION:="Release"}
-declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-" "}
+declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -x artifacts_dir=${ARTIFACTS_DIR:-}
 
 source "$script_dir/run-benchmarks.usage.sh"
@@ -38,6 +38,39 @@ declare -r solution_dir
 declare -r artifacts_dir
 declare -r results_dir
 
+renamed_artifacts_dir="$artifacts_dir-$(date -u +"%Y%m%dT%H%M%S")"
+declare -r renamed_artifacts_dir
+
+if [[ -d "$artifacts_dir" && -n "$(ls -A "$artifacts_dir")" ]]; then
+    if [[ -n "${CI:-}" ]]; then
+        # Auto-delete in CI
+        echo "Deleting existing artifacts directory (running in CI)..."
+        execute rm -rf "$artifacts_dir"
+    else
+        choice=$(choose \
+                    "The benchmarks results directory '$artifacts_dir' already exists. What do you want to do?" \
+                        "Delete the directory and continue" \
+                        "Rename the directory to '$renamed_artifacts_dir' and continue" \
+                        "Exit the script") || exit $?
+
+        trace "User selected option: $choice"
+        case $choice in
+            1)  echo "Deleting the directory '$artifacts_dir'..."
+                execute rm -rf "$artifacts_dir"
+                ;;
+            2)  echo "Renaming the directory '$artifacts_dir' to '$renamed_artifacts_dir'..."
+                execute mv "$artifacts_dir" "$renamed_artifacts_dir"
+                ;;
+            3)  echo "Exiting the script."
+                exit 0
+                ;;
+            *)  echo "Invalid option $choice. Exiting."
+                exit 2
+                ;;
+        esac
+    fi
+fi
+
 dump_all_variables
 
 # Create artifacts directory
@@ -57,47 +90,46 @@ declare -r bm_base_path
 declare -r bm_dll_path
 declare -r bm_exec_path
 
-# Verify artifacts exist
-if [[ ! -f "${bm_exec_path}" || ! -f "${bm_dll_path}" ]]; then
-    echo "❌ Cached artifacts missing, cannot proceed" >&2
-    exit 2
-fi
-
 # Verify executables exist
 # shellcheck disable=SC2154
 if [[ (! -f "${bm_exec_path}" || ! -f "${bm_dll_path}") && "$dry_run" != "true" ]]; then
-    echo "❌ Benchmark executables '${bm_exec_path}' or '${bm_dll_path}' were not found." | tee -a "$GITHUB_STEP_SUMMARY" >&2
+    echo "❌ Cached benchmark executables '${bm_exec_path}' or '${bm_dll_path}' were not found." | tee -a "$github_step_summary" >&2
     exit 2
 fi
 
 # Run benchmarks with JSON export for Bencher
 trace "Running benchmark tests in project '$bm_project' with build configuration '$configuration'..."
-execute dotnet run \
-    --project "$bm_project" \
-    --configuration "$configuration" \
-    --no-build \
-    --filter '*' \
-    --memory \
-    --exporters JSON \
-    --artifacts "$artifacts_dir"
+if ! execute dotnet run \
+        --project "$bm_project" \
+        --configuration "$configuration" \
+        --no-build \
+        --filter '*' \
+        --memory \
+        --exporters JSON \
+        --artifacts "$artifacts_dir" \
+        /p:DefineConstants="$preprocessor_symbols"; then
+    echo "❌ Benchmarks failed in project '$bm_project'." | tee -a "$github_step_summary" >&2
+    exit 2
+fi
 
 # Verify JSON results were created
 # shellcheck disable=SC2154
 if [[ $dry_run != "true" ]]; then
     json_files=("$results_dir"/*-report.json)
     if [[ ! -f "${json_files[0]}" ]]; then
-        echo "❌ No JSON benchmark reports found in $results_dir" >&2
+        echo "❌ No JSON benchmark reports found in $results_dir" | tee -a "$github_step_summary" >&2
         exit 2
     fi
 
-    echo "✅ Benchmark results generated:"
-    for file in "${json_files[@]}"; do
-        echo "   - $(basename "$file")"
-    done
-fi >> "$GITHUB_STEP_SUMMARY"
+    {
+        echo "✅ Benchmark results generated:"
+        for file in "${json_files[@]}"; do
+            echo "   - $(basename "$file")"
+        done
+    } | tee -a "$github_step_summary"
+fi
 
-echo "✅ Benchmarks completed successfully" | tee -a "$GITHUB_STEP_SUMMARY"
-sync
+echo "✅ Benchmarks completed successfully" | tee -a "$github_step_summary"
 
 # shellcheck disable=SC2154
-echo "results-dir=$results_dir" >> "$GITHUB_OUTPUT"
+echo "results-dir=$results_dir" >> "$github_output"

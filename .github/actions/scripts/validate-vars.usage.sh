@@ -11,7 +11,7 @@ Usage:
                     --<long switch>|-<short switch> ]*
 
     This script validates and sets up CI variables for GitHub Actions workflows.
-    It validates all inputs and outputs them to GITHUB_OUTPUT for use by
+    It validates all inputs and outputs them to github_output for use by
     subsequent workflow jobs.
 
 Parameters: All parameters are optional if the corresponding environment

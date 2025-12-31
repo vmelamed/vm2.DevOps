@@ -3,7 +3,7 @@ set -euo pipefail
 
 # ==============================================================================
 # This script validates and sets up CI variables for GitHub Actions workflows.
-# It validates and adjusts all input variables and outputs them to GITHUB_OUTPUT
+# It validates and adjusts all input variables and outputs them to github_output
 # for use by subsequent workflow jobs. The initial values are coming either from
 # the respective environment variables or the script parameters.
 # Validated variables:
@@ -65,7 +65,7 @@ declare -i errors=0
 # shellcheck disable=SC2154
 function error()
 {
-    echo "❌ ERROR $*" | tee >> "$GITHUB_STEP_SUMMARY" >&2
+    echo "❌ ERROR $*" | tee -a "$github_step_summary"
     errors=$((errors + 1))
     return 0
 }
@@ -75,11 +75,16 @@ function error()
 function warning()
 {
     declare -n variable="$1";
-    echo "⚠️ WARNING $2 Assuming default value of '$3'." | tee >> "$GITHUB_STEP_SUMMARY" >&2
     # shellcheck disable=SC2034
     variable="$3"
+    echo "⚠️ WARNING $2 Assuming default value of '$3'." | tee -a "$github_step_summary"
     return 0
 }
+
+if ! command -v jq &> /dev/null; then
+    error "jq command not found. Please install jq."
+    exit 1
+fi
 
 jq_empty='. == null or . == "" or . == []'
 jq_array_strings='type == "array" and all(type == "string")'
@@ -87,57 +92,74 @@ jq_array_strings_has_empty="any(. == \"\")"
 jq_array_strings_nonempty="$jq_array_strings and length > 0 and all(length > 0)"
 
 # We can build one or more projects or one solution with all projects in it:
-if [[ -z "$build_projects" ]] || echo "$build_projects" | jq -e "$jq_empty" > /dev/null; then
+if [[ -z "$build_projects" ]] || jq -e "$jq_empty" <<< "$build_projects" > /dev/null 2>&1; then
     warning build_projects "The value of the option --build-projects is empty: will build the entire solution." "$defaultBuildProjects"
-elif [[ $? == 5 ]]; then
-    error "The value of the option --build-projects '$build_projects' is not a valid JSON."
-elif ! echo "$build_projects" | jq -e "$jq_array_strings" > /dev/null; then
-    error "The value of the option --build-projects '$build_projects' must be a string representing a (possibly empty) JSON array of (possibly empty) strings - paths to the project(s) to be built."
-elif echo "$build_projects" | jq -e "$jq_array_strings_has_empty" > /dev/null; then
-    warning build_projects "At least one of the strings in the value of the option --build-projects '$build_projects' is empty: will build the entire solution." "$defaultBuildProjects"
 else
-    for p in $(echo "$build_projects" | jq -r '.[]'); do
-        if [[ ! -s "$p" && "$p" != "" ]]; then
-            error "The project or solution file '$p' does not exist or is empty."
-            pwd
-        fi
-    done
+    jq -e "$jq_array_strings" <<< "$build_projects" > /dev/null 2>&1
+    jq_exit=$?
+    if [[ $jq_exit == 5 ]]; then
+        error "The value of the option --build-projects '$build_projects' is not a valid JSON."
+    elif [[ $jq_exit != 0 ]]; then
+        error "The value of the option --build-projects '$build_projects' must be a string representing a (possibly empty) JSON array of (possibly empty) strings - paths to the project(s) to be built."
+    elif jq -e "$jq_array_strings_has_empty" <<< "$build_projects" > /dev/null 2>&1; then
+        warning build_projects "At least one of the strings in the value of the option --build-projects '$build_projects' is empty: will build the entire solution." "$defaultBuildProjects"
+    else
+        for p in $(jq -r '.[]' <<< "$build_projects"); do
+            if [[ ! -s "$p" && "$p" != "" ]]; then
+                error "Build project file '$p' does not exist or is empty. Please check the path."
+            fi
+        done
+    fi
 fi
 
 # There must be at least one test project specified:
-if [[ -z "$test_projects" ]] || ! echo "$test_projects" | jq -e "$jq_array_strings_nonempty" > /dev/null; then
+if [[ -z "$test_projects" ]]; then
     warning test_projects "The value of the option --test-projects is empty: will not run tests." "$defaultTestProjects"
-elif [[ $? == 5 ]]; then
-    error "The value of the option --test-projects '$test_projects' is not a valid JSON."
 else
-    for p in $(echo "$test_projects" | jq -r '.[]'); do
-        if [[ ! -s "$p" && "$p" != "__skip__" ]]; then
-            error "Test project file '$p' does not exist."
-        fi
-    done
+    jq -e "$jq_array_strings_nonempty" <<< "$test_projects" > /dev/null 2>&1
+    jq_exit=$?
+    if [[ $jq_exit == 5 ]]; then
+        error "The value of the option --test-projects '$test_projects' is not a valid JSON."
+    elif [[ $jq_exit != 0 ]]; then
+        warning test_projects "The value of the option --test-projects is empty or invalid: will not run tests." "$defaultTestProjects"
+    else
+        for p in $(jq -r '.[]' <<< "$test_projects"); do
+            if [[ ! -s "$p" && "$p" != "__skip__" ]]; then
+                error "Test project file '$p' does not exist or is empty. Please verify the path in --test-projects."
+            fi
+        done
+    fi
 fi
 
-if [[ -z "$benchmark_projects" ]] || echo "$benchmark_projects" | jq -e "$jq_empty" > /dev/null; then
+if [[ -z "$benchmark_projects" ]] || jq -e "$jq_empty" <<< "$benchmark_projects" > /dev/null 2>&1; then
     warning benchmark_projects "The value of the option --benchmark-projects is empty: will not run benchmarks." "$defaultBenchmarkProjects"
-elif [[ $? == 5 ]]; then
-    error "The value of the option --benchmark-projects '$benchmark_projects' is not a valid JSON."
-elif ! echo "$benchmark_projects" | jq -e "$jq_array_strings_nonempty" > /dev/null; then
-    error "The value of the option --benchmark-projects '$benchmark_projects' must be a string representing a non-empty JSON array of non-empty strings - paths to the benchmark project(s) to be run."
 else
-    for p in $(echo "$benchmark_projects" | jq -r '.[]'); do
-        if [[ ! -f "$p" && "$p" != "__skip__" ]]; then
-            error "Benchmark project file '$p' does not exist."
-        fi
-    done
+    jq -e "$jq_array_strings_nonempty" <<< "$benchmark_projects" > /dev/null 2>&1
+    jq_exit=$?
+    if [[ $jq_exit == 5 ]]; then
+        error "The value of the option --benchmark-projects '$benchmark_projects' is not a valid JSON."
+    elif [[ $jq_exit != 0 ]]; then
+        error "The value of the option --benchmark-projects '$benchmark_projects' must be a string representing a non-empty JSON array of non-empty strings - paths to the benchmark project(s) to be run."
+    else
+        for p in $(jq -r '.[]' <<< "$benchmark_projects"); do
+            if [[ ! -s "$p" && "$p" != "__skip__" ]]; then
+                error "Benchmark project file '$p' does not exist or is empty. Please verify the path in --benchmark-projects."
+            fi
+        done
+    fi
 fi
 
 # Validate and set os
-if [[ -z "$os" ]] || echo "$os" | jq -e "$jq_empty" > /dev/null; then
+if [[ -z "$os" ]] || jq -e "$jq_empty" <<< "$os" > /dev/null 2>&1; then
     warning os "The value of the option --os '$os' is empty: will use default runner OS." "$defaultOses"
-elif [[ $? == 5 ]]; then
-    error "The value of the option --os '$os' is not a valid JSON."
-elif ! echo "$os" | jq -e "$jq_array_strings_nonempty" > /dev/null; then
-    error "The value of the option --os '$os' must be a string representing a non-empty JSON array of non-empty strings - monikers of GitHub runners."
+else
+    jq -e "$jq_array_strings_nonempty" <<< "$os" > /dev/null 2>&1
+    jq_exit=$?
+    if [[ $jq_exit == 5 ]]; then
+        error "The value of the option --os '$os' is not a valid JSON."
+    elif [[ $jq_exit != 0 ]]; then
+        error "The value of the option --os '$os' must be a string representing a non-empty JSON array of non-empty strings - monikers of GitHub runners."
+    fi
 fi
 
 # Validate and set dotnet-version
@@ -150,9 +172,7 @@ if [[ -z "$configuration" ]]; then
     warning configuration "configuration must have value." "$defaultConfiguration"
 fi
 
-if [[ -z "$preprocessor_symbols" ]]; then
-    warning preprocessor_symbols "preprocessor-symbols needs a value." "$defaultPreprocessorSymbols"
-fi
+# preprocessor_symbols can be empty - that's valid, so no validation needed
 
 # Validate numeric inputs
 if ! [[ "$min_coverage_pct" =~ ^[0-9]+$ ]] || (( min_coverage_pct < 50 || min_coverage_pct > 100 )); then
@@ -183,7 +203,7 @@ if (( errors > 0 )); then
         echo "| min-coverage-pct     | $min_coverage_pct     |"
         echo "| max-regression-pct   | $max_regression_pct   |"
         echo "| verbose              | $verbose              |"
-    } | tee >> "$GITHUB_STEP_SUMMARY" >&2
+    } | tee -a "$github_step_summary"
     exit 1
 fi
 
@@ -203,7 +223,7 @@ fi
     echo "| min-coverage-pct     | $min_coverage_pct     |"
     echo "| max-regression-pct   | $max_regression_pct   |"
     echo "| verbose              | $verbose              |"
-} | tee >> "$GITHUB_STEP_SUMMARY"
+} | tee -a "$github_step_summary"
 
 
 # shellcheck disable=SC2154
@@ -212,10 +232,10 @@ function github_output()
     declare -n variable="$1"
     declare modified="${1//_/-}"
 
-    echo "${modified}=${variable}" >> "${GITHUB_OUTPUT}"
+    echo "${modified}=${variable}" >> "${github_output}"
 }
 
-# Output all variables to GITHUB_OUTPUT for use in subsequent jobs
+# Output all variables to github_output for use in subsequent jobs
 # shellcheck disable=SC2154
 github_output build_projects
 github_output test_projects

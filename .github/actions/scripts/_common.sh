@@ -10,13 +10,17 @@
 
 
 # commonly used variables
-declare -xr initial_dir=$(pwd)
+declare -x initial_dir
+initial_dir=$(pwd)
+declare -r initial_dir
 declare -x debugger=${DEBUGGER:-false}
-declare -x verbose=${VERBOSE:-false}
+declare -x verbose=${verbose:-false}
 declare -x dry_run=${DRY_RUN:-false}
 declare -x quiet=${QUIET:-false}
 declare -xr ci=${CI:-false}
 declare -x _ignore=/dev/null  # the file to redirect unwanted output to
+declare -x github_output=${GITHUB_OUTPUT:-/dev/null}
+declare -x github_step_summary=${GITHUB_STEP_SUMMARY:-/dev/stdout}
 
 declare last_command
 declare current_command="$BASH_COMMAND"
@@ -109,7 +113,7 @@ function set_dry_run()
 function set_quiet()
 {
     if [[ $ci == true ]]; then
-        # do not user prompts in CI mode
+        # do not use user prompts in CI mode
         quiet=true
     else
         quiet=false
@@ -158,7 +162,6 @@ function dump_vars() {
             break
         fi
     done
-    sync
     if [[ $verbose == false && $force_verbose == false ]]; then
         return;
     fi
@@ -182,7 +185,7 @@ function dump_vars() {
             -h|--header )
                 v=$1
                 shift
-                if [[ $top != "true" ]]; then
+                if [[ $top != true ]]; then
                     echo "├───────────────────────────────────────────────────────────"
                 fi
                 echo "│ $v"
@@ -201,7 +204,7 @@ function dump_vars() {
     done
     echo "└───────────────────────────────────────────────────────────"
     sync
-    [[ "$quiet" == false ]] || press_any_key
+    [[ "$quiet" == false ]] && press_any_key
     _ignore=$save_ignore
     if ((tracing_on == 1)); then
         set -x
@@ -286,7 +289,7 @@ function display_usage_msg()
 }
 
 function trace() {
-    if [[ "$verbose" == "true" ]]; then
+    if [[ "$verbose" == true ]]; then
         echo "Trace: $*" >&2
     fi
     return 0
@@ -294,7 +297,7 @@ function trace() {
 
 # Depending on the value of $dry_run either executes or just displays what would have been executed.
 function execute() {
-    if [[ "$dry_run" == "true" ]]; then
+    if [[ "$dry_run" == true ]]; then
         echo "dry-run$ $*"
         return 0
     fi
@@ -320,8 +323,7 @@ function to_upper() {
 # capitalize converts the first character in the passed in value to upper case and the rest to lowercase and prints the to stdout.
 # Usage example: local a="$(capitalize "$1")"
 function capitalize() {
-    a=to_lower "$1"
-    # shellcheck disable=SC2154
+    a="${1,,}"
     printf "%s" "${a^}"
     return 0
 }
@@ -423,7 +425,7 @@ function confirm() {
     default=$(to_lower "${2:-y}")
 
     if [[ "$quiet" == true ]]; then
-        print '%s' "$default"
+        printf '%s' "$default"
         return 0
     fi
 
@@ -576,51 +578,51 @@ function scp_retry() {
 
 # --- test harness' assertion helpers -------------------------------------------------------
 
-PASS=0
-FAIL=0
-TOTAL=0
+declare -i pass=0
+declare -i fail=0
+declare -i total=0
 
 function fail() {
-  echo "[FAIL] $1" >&2
+  echo "[fail] $1" >&2
   exit 1;
 }
 
 function assert_eq() {
   local exp=$1 got=$2 msg=${3:-}
-  (( TOTAL++ ))
+  (( total++ ))
   if [[ "$exp" == "$got" ]]; then
-    (( PASS++ ))
-    ([[ $VERBOSE == true ]] && echo "[OK] ${msg:-eq}" >&2) || true
+    (( pass++ ))
+    ([[ $verbose == true ]] && echo "[OK] ${msg:-eq}" >&2) || true
   else
-    (( FAIL++ ))
-    echo "[FAIL] ${msg:-eq}: expected='$exp' got='$got'" >&2
+    (( fail++ ))
+    echo "[fail] ${msg:-eq}: expected='$exp' got='$got'" >&2
     exit 1
   fi
 }
 
 function assert_true() {
   local msg=$1; shift || true
-  (( TOTAL++ ))
+  (( total++ ))
   if "$@"; then
-    (( PASS++ ))
-    ([[ $VERBOSE == true ]] && echo "[OK] $msg" >&2) || true
+    (( pass++ ))
+    ([[ $verbose == true ]] && echo "[OK] $msg" >&2) || true
   else
-    (( FAIL++ ))
-    echo "[FAIL] $msg" >&2
+    (( fail++ ))
+    echo "[fail] $msg" >&2
     exit 1
   fi
 }
 
 assert_false() {
   local msg=$1; shift || true
-  (( TOTAL++ ))
+  (( total++ ))
   if "$@"; then
-    (( FAIL++ ))
-    echo "[FAIL] $msg (expected false)" >&2
+    (( fail++ ))
+    echo "[fail] $msg (expected false)" >&2
     exit 1
   else
-    (( PASS++ ))
-    ([[ $VERBOSE == true ]] && echo "[OK] $msg" >&2) || true
+    (( pass++ ))
+    ([[ $verbose == true ]] && echo "[OK] $msg" >&2) || true
   fi
 }
 
@@ -654,5 +656,5 @@ declare -x common_switches="
         dotnet, etc.) to be sent to 'stdout' instead of '/dev/null'. It also
         enables the output from the script function trace() and all other
         commands and functions that are otherwise silent.
-        Initial value from \$VERBOSE or 'false'
+        Initial value from \$verbose or 'false'
 "
