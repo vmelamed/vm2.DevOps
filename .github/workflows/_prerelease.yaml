@@ -52,8 +52,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
-      prerelease_tag: ${{ steps.compute.outputs.prerelease_tag }}
-      should_publish: ${{ steps.tag_check.outputs.already_tagged == 'false' }}
+      prerelease-tag: ${{ steps.compute.outputs.prerelease-tag }}
+      should_publish: ${{ steps.tag_check.outputs.already-tagged == 'false' }}
       package-projects: ${{ steps.validate.outputs.package-projects }}
       minver-tag-prefix: ${{ steps.validate.outputs.minver-tag-prefix }}
     steps:
@@ -91,15 +91,13 @@ jobs:
         run: |+
           {
             if [[ '${{ inputs.force-publish }}' != 'true' ]] && git tag --points-at HEAD | grep -E '^v[0-9]'; then
-              printf 'already_tagged=%s\n' "true"
+              printf 'already-tagged=%s\n' "true"
             else
-              printf 'already_tagged=%s\n' "false"
+              printf 'already-tagged=%s\n' "false"
             fi
           } >> "$GITHUB_OUTPUT"
 
       - name: Compute prerelease tag
-        if: steps.tag_check.outputs.already_tagged == false
-        id: compute
         shell: bash
         run: |+
           set -euo pipefail
@@ -119,7 +117,7 @@ jobs:
           DATE=$(date -u +%Y%m%d)
           RUN=$GITHUB_RUN_NUMBER
           PRERELEASE_TAG="v$MAJOR.$MINOR.$NEXT_PATCH-${{ inputs.semver-build-prefix }}.$DATE.$RUN"
-          printf 'prerelease_tag=%s\n' "$PRERELEASE_TAG" >> "$GITHUB_OUTPUT"
+          printf 'prerelease-tag=%s\n' "$PRERELEASE_TAG" >> "$GITHUB_OUTPUT"
           printf '## Prerelease Tag:\n- %s\n' "$PRERELEASE_TAG" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Log the reason for workflow dispatch
@@ -133,9 +131,9 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Create & push prerelease tag
-        if: steps.tag_check.outputs.already_tagged == 'false'
+        if: steps.tag_check.outputs.already-tagged == 'false'
         env:
-          TAG: ${{ steps.compute.outputs.prerelease_tag }}
+          TAG: ${{ steps.compute.outputs.prerelease-tag }}
         shell: bash
         run: |+
           git config --global user.name "github-actions[bot]"
@@ -190,7 +188,7 @@ jobs:
 
       - name: Publish prerelease to NuGet server
         env:
-          PRERELEASE_TAG: ${{ needs.compute-tag.outputs.prerelease_tag }}
+          PRERELEASE_TAG: ${{ needs.compute-tag.outputs.prerelease-tag }}
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         shell: bash
         run: |+
@@ -215,7 +213,7 @@ jobs:
         if: inputs.save_package_artifacts == 'true'
         uses: actions/upload-artifact@v6
         with:
-          name: nuget-packages-${{ needs.compute-tag.outputs.prerelease_tag }}-${{ hashFiles(matrix.project) }}
+          name: nuget-packages-${{ needs.compute-tag.outputs.prerelease-tag }}-${{ hashFiles(matrix.project) }}
           path: artifacts/pack/*.nupkg
           if-no-files-found: error
           overwrite: true
@@ -228,7 +226,7 @@ jobs:
           {
               echo "## Release Summary"
               echo
-              echo "- Tag: ${{ needs.compute-tag.outputs.prerelease_tag }}"
+              echo "- Tag: ${{ needs.compute-tag.outputs.prerelease-tag }}"
               if [ "$ARTIFACTS_SAVED" = "true" ]; then
                 echo "- Artifacts:"
                 ls -1 artifacts/pack | sed 's/^/  - /'
