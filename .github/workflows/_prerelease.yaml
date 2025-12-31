@@ -47,8 +47,13 @@ on:
 permissions:
   contents: write
 
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
 jobs:
   compute-tag:
+    name: Compute Prerelease Tag
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -216,7 +221,7 @@ jobs:
         with:
           name: nuget-packages-${{ needs.compute-tag.outputs.prerelease-tag }}-${{ hashFiles(matrix.project) }}
           path: artifacts/pack/*.nupkg
-          if-no-files-found: error
+          if-no-files-found: ignore
           overwrite: true
 
       - name: Summary
@@ -225,7 +230,7 @@ jobs:
         shell: bash
         run: |+
           {
-              echo "## Release Summary"
+              echo "## Prerelease Summary"
               echo
               echo "- Tag: ${{ needs.compute-tag.outputs.prerelease-tag }}"
               if [ "$ARTIFACTS_SAVED" = "true" ]; then

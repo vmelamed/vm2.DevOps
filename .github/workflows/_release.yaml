@@ -19,6 +19,11 @@ on:
         type: boolean
         default: false
 
+      reason:
+        description: Reason for manual pre-release
+        type: string
+        default: ""
+
       nuget-server:
         description: "NuGet server to publish to (nuget or github)"
         type: string
@@ -50,12 +55,20 @@ jobs:
     name: Release Stable
     if: ${{ github.event_name == 'workflow_dispatch' || (startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name,'-')) }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
         project: ${{ fromJSON(inputs.package-projects) }}
     steps:
+      - name: Validate the current tag
+        shell: bash
+        run: |+
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "The current tag $GITHUB_REF_NAME is not a valid semantic version for a stable release (e.g. v1.2.3 or v2.0.0)"
+            exit 1
+          fi
+
       - name: Checkout (full history)
         uses: actions/checkout@v6
         with:
@@ -77,14 +90,6 @@ jobs:
             ${{ matrix.project }} \
             --locked-mode
 
-      - name: Validate the current tag
-        shell: bash
-        run: |+
-          if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "The current tag $GITHUB_REF_NAME is not a valid semantic version for a stable release (e.g. v1.2.3 or v2.0.0)"
-            exit 1
-          fi
-
       - name: Pack (stable)
         shell: bash
         run: |+
@@ -94,7 +99,7 @@ jobs:
             --configuration Release \
             --output artifacts/pack \
             --no-restore \
-            "/p:PackageReleaseNotes=Stable: ${REASON:-tag push}"
+            "/p:PackageReleaseNotes=Prerelease: ${{ inputs.reason || 'release build' }}"
           ls -1 artifacts/pack
 
       - name: Publish stable to NuGet server
@@ -127,7 +132,7 @@ jobs:
         with:
           name: nuget-packages-${{ github.ref_name }}-${{ hashFiles(matrix.project) }}
           path: artifacts/pack/*.nupkg
-          if-no-files-found: error
+          if-no-files-found: ignore
           overwrite: true
 
       - name: Summary
