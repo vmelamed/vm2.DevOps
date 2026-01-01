@@ -139,9 +139,12 @@ jobs:
           if [ "$NUGET_SERVER" = "github" ]; then
             SERVER_NAME="GitHub Packages"
             SERVER_URL="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
-          else
+          elif [ "$NUGET_SERVER" = "nuget" ]; then
             SERVER_NAME="NuGet.org"
             SERVER_URL="https://api.nuget.org/v3/index.json"
+          else
+            SERVER_NAME="$NUGET_SERVER"
+            SERVER_URL="$NUGET_SERVER"
           fi
 
           dotnet nuget push artifacts/pack/*.nupkg \
