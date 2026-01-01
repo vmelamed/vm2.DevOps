@@ -49,16 +49,14 @@ env:
   NUGET_SERVER: ${{ inputs.nuget-server || 'nuget' }}
 
 jobs:
-  release:
-    name: Release Stable
+  validate:
+    name: Validate Inputs and Tag
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        project: ${{ fromJSON(inputs.package-projects) }}
+    outputs:
+      package-projects: ${{ steps.validate.outputs.package-projects }}
     steps:
       - name: Validate the current tag and inputs
+        id: validate
         shell: bash
         run: |+
           package_projects='${{ inputs.package-projects }}'
@@ -78,15 +76,23 @@ jobs:
             fi
           } >> "$GITHUB_STEP_SUMMARY"
           v="${{ vars.MINVER_TAG_PREFIX || 'v' }}"
-          {
-            echo "package-projects=$package_projects"
-            echo "minver-tag-prefix=$v"
-          } >> "$GITHUB_OUTPUT"
           if [[ ! "${{ github.ref_name }}" =~ ^${v}[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "The current tag ${{ github.ref_name }} is not a valid semantic version for a stable release (e.g. ${v}1.2.3 or ${v}2.0.0)"
             exit 2
           fi
+          echo "package-projects=$package_projects" >> "$GITHUB_OUTPUT"
 
+  release:
+    name: Release Stable
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs:
+      - validate
+    strategy:
+      fail-fast: false
+      matrix:
+        project: ${{ fromJSON(needs.validate.outputs.package-projects) }}
+    steps:
       - name: Checkout (full history)
         uses: actions/checkout@v6
         with:
