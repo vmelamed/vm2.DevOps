@@ -51,12 +51,6 @@ env:
 jobs:
   release:
     name: Release Stable
-    if: >+
-      ${{
-      github.event_name == 'workflow_dispatch' ||
-      (startsWith(github.ref, format('refs/tags/%s', vars.MINVER_TAG_PREFIX || 'v'))
-      && !contains(github.ref_name,'-'))
-      }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
