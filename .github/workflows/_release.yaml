@@ -46,14 +46,16 @@ concurrency:
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
-  FORCE_PUBLISH: ${{ inputs.force-publish }}
-  SAVE_PACKAGE_ARTIFACTS: ${{ inputs.save_package_artifacts }}
   NUGET_SERVER: ${{ inputs.nuget-server || 'nuget' }}
 
 jobs:
   release:
     name: Release Stable
-    if: ${{ github.event_name == 'workflow_dispatch' || (startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name,'-')) }}
+    if: >+
+      ${{ github.event_name == 'workflow_dispatch' ||
+      (startsWith(github.ref, format('refs/tags/%s', vars.MINVER_TAG_PREFIX || 'v'))
+      && !contains(github.ref_name,'-'))
+      }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -61,12 +63,33 @@ jobs:
       matrix:
         project: ${{ fromJSON(inputs.package-projects) }}
     steps:
-      - name: Validate the current tag
+      - name: Validate the current tag and inputs
         shell: bash
         run: |+
-          if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "The current tag $GITHUB_REF_NAME is not a valid semantic version for a stable release (e.g. v1.2.3 or v2.0.0)"
-            exit 1
+          package_projects='${{ inputs.package-projects }}'
+          {
+            if [[ -z "$package_projects" ]] || jq -e '. == null or . == "" or . == []' > /dev/null 2>&1 <<<"$package_projects"; then
+                echo "⚠️ WARNING The value of the input 'package-projects' is empty: will build and pack the entire solution. Assuming default value of '[\"\"]'."
+                package_projects='[""]'
+            elif [[ $? == 5 ]]; then
+                echo "❌ ERROR The value of the input 'package-projects'='$package_projects' is not a valid JSON."
+                exit 2
+            elif ! jq -e 'type == "array" and all(type == "string")' > /dev/null 2>&1 <<<"$package_projects"; then
+                echo "❌ ERROR The value of the input 'package-projects'='$package_projects' must be a string representing a JSON array of (possibly empty) strings - paths to the project(s) to be packed."
+                exit 2
+            elif jq -e 'any(. == "")' > /dev/null 2>&1 <<<"$package_projects"; then
+                echo "⚠️ WARNING At least one of the strings in the value of the input 'package-projects' is empty: will build and pack the entire solution. Assuming default value of '[\"\"]'."
+                package_projects='[""]'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          v="${{ vars.MINVER_TAG_PREFIX || 'v' }}"
+          {
+            echo "package-projects=$package_projects"
+            echo "minver-tag-prefix=$v"
+          } >> "$GITHUB_OUTPUT"
+          if [[ ! "${{ github.ref_name }}" =~ ^${v}[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "The current tag ${{ github.ref_name }} is not a valid semantic version for a stable release (e.g. ${v}1.2.3 or ${v}2.0.0)"
+            exit 2
           fi
 
       - name: Checkout (full history)
@@ -99,7 +122,7 @@ jobs:
             --configuration Release \
             --output artifacts/pack \
             --no-restore \
-            "/p:PackageReleaseNotes=Prerelease: ${{ inputs.reason || 'release build' }}"
+            "/p:PackageReleaseNotes=Release: ${{ inputs.reason || 'release build' }}"
           ls -1 artifacts/pack
 
       - name: Publish stable to NuGet server
@@ -127,7 +150,7 @@ jobs:
           printf '## Packages %s pushed to %s:\n%s\n' "$RELEASE_TAG" "$SERVER_NAME" "$(ls -1 artifacts/pack/*.nupkg | sed 's/^/  - /')" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload package artifact
-        if: env.SAVE_PACKAGE_ARTIFACTS == 'true'
+        if: inputs.save_package_artifacts == 'true'
         uses: actions/upload-artifact@v6
         with:
           name: nuget-packages-${{ github.ref_name }}-${{ hashFiles(matrix.project) }}
@@ -137,14 +160,15 @@ jobs:
 
       - name: Summary
         env:
-          ARTIFACTS_SAVED: ${{ env.SAVE_PACKAGE_ARTIFACTS == 'true' }}
+          ARTIFACTS_SAVED: ${{ inputs.save_package_artifacts == 'true' }}
         shell: bash
         run: |+
           {
+              reason="${{ inputs.reason || 'tagged with a new version' }}"
               echo "## Release Summary"
               echo
               echo "- Tag: ${GITHUB_REF_NAME}"
-              echo "- Stable release reason: ${REASON:-tag push}"
+              echo "- Stable release reason: ${reason}"
               if [ "$ARTIFACTS_SAVED" = "true" ]; then
                 echo "- Artifacts:"
                 ls -1 artifacts/pack | sed 's/^/  - /'
