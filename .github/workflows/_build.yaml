@@ -30,6 +30,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 env:
   DOTNET_NOLOGO: true
@@ -40,6 +41,11 @@ jobs:
   build:
     name: Build on ${{ inputs.os }}
     runs-on: ${{ inputs.os }}
+    permissions:
+          contents: read
+          packages: read
+    env:
+      NUGET_GITHUB_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       # Clone the repository with full Git history for version calculation
       - name: Checkout
@@ -76,21 +82,27 @@ jobs:
             nuget-${{ runner.os }}-${{ steps.cache-timestamp.outputs.week }}-
             nuget-${{ runner.os }}-
 
-      # Restore NuGet dependencies using locked mode to ensure reproducible builds
-      - name: Restore dependencies
-        shell: bash
-        run: |
-          dotnet restore --locked-mode
-
-      # Compile the project with optional preprocessor symbols
-      - name: Build (${{ inputs.configuration }})
+      - name: Build
         shell: bash
         run: |
           set -euo pipefail
 
+          # Configure NuGet source with GitHub Packages authentication
+          dotnet nuget update source github.vm2 \
+            --username "$GITHUB_ACTOR" \
+            --password "${{ secrets.GITHUB_TOKEN }}" \
+            --store-password-in-clear-text \
+            --configfile NuGet.config
+
+          # Restore dependencies
+          dotnet restore --locked-mode
+
+          # Build the project
           dotnet build ${{ inputs.build-project }} \
-              /p:DefineConstants="${{ inputs.preprocessor-symbols || '' }}" \
-              --configuration ${{ inputs.configuration }}
+            /p:DefineConstants="${{ inputs.preprocessor-symbols || '' }}" \
+            --configuration ${{ inputs.configuration }}
+
+          # Summarize the build results
           {
             echo "Build:               ✔️ Successful"
             echo "Runner:              ${{ inputs.os }}"

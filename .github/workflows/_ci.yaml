@@ -128,6 +128,7 @@ jobs:
         os: ${{ fromJSON(needs.setup.outputs.os) }}
         build-project: ${{ fromJSON(needs.setup.outputs.build-projects) }}
     uses: vmelamed/vm2.DevOps/.github/workflows/_build.yaml@main
+    secrets: inherit
     with:
       os: ${{ matrix.os }}
       dotnet-version: ${{ needs.setup.outputs.dotnet-version }}
