@@ -104,7 +104,7 @@ Each template includes:
    - `CONFIGURATION` (default: Release)
    - `MIN_COVERAGE_PCT` (default: 80)
    - `MAX_REGRESSION_PCT` (default: 10)
-   - `MINVER_TAG_PREFIX` (default: v)
+   - `MinVerTagPrefix` (default: v)
 
 4. **Set up secrets:**
    - `NUGET_API_GITHUB_KEY` - for GitHub Packages

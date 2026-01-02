@@ -88,7 +88,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           {
             echo "package-projects=$package_projects"
-            echo "minver-tag-prefix=${{ vars.MINVER_TAG_PREFIX || 'v' }}"
+            echo "minver-tag-prefix=${{ vars.MinVerTagPrefix || 'v' }}"
           } >> "$GITHUB_OUTPUT"
 
       - name: Skip if commit already tagged (any v* tag)

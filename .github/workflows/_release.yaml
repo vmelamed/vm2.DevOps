@@ -75,7 +75,7 @@ jobs:
                 package_projects='[""]'
             fi
           } >> "$GITHUB_STEP_SUMMARY"
-          v="${{ vars.MINVER_TAG_PREFIX || 'v' }}"
+          v="${{ vars.MinVerTagPrefix || 'v' }}"
           if [[ ! "${{ github.ref_name }}" =~ ^${v}[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "The current tag ${{ github.ref_name }} is not a valid semantic version for a stable release (e.g. ${v}1.2.3 or ${v}2.0.0)"
             exit 2

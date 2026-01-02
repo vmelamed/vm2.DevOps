@@ -43,7 +43,7 @@ Your repository should have:
    - `CONFIGURATION` (default: `Release`)
    - `MIN_COVERAGE_PCT` (default: `80`)
    - `MAX_REGRESSION_PCT` (default: `10`)
-   - `MINVER_TAG_PREFIX` (default: `v`)
+   - `MinVerTagPrefix` (default: `v`)
 
 1. Sometimes, for workflow debugging purposes, it is useful to also add these two variables or secrets (secrets' values have precedence over variables' values):
    - `ACTIONS_RUNNER_DEBUG` - value `true` to enable runner-level debug logging, or `false` to disable it
@@ -428,7 +428,7 @@ Set these in your GitHub repository: **Settings → Secrets and variables → Ac
 | `CONFIGURATION`       | No       | `Release`  | Build configuration (`Debug` or `Release`)     |
 | `MIN_COVERAGE_PCT`    | No       | `80`       | Minimum code coverage percentage (0-100)       |
 | `MAX_REGRESSION_PCT`  | No       | `10`       | Maximum benchmark regression percentage        |
-| `MINVER_TAG_PREFIX`   | No       | `v`        | Prefix for MinVer tags (e.g. `v` for `v1.2.3`) |
+| `MinVerTagPrefix`   | No       | `v`        | Prefix for MinVer tags (e.g. `v` for `v1.2.3`) |
 
 ### Repository Secrets
 

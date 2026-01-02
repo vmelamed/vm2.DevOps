@@ -69,7 +69,7 @@ Reusable workflow for publishing prerelease packages with automatic semantic ver
 - Multi-project matrix support via JSON array input
 - Publishes to NuGet.org or GitHub Packages
 - Optional workflow artifact uploads for `.nupkg` files
-- MinVer tag prefix configurable via `vars.MINVER_TAG_PREFIX` (default: `v`)
+- MinVer tag prefix configurable via `vars.MinVerTagPrefix` (default: `v`)
 - Comprehensive step summaries showing computed tags and published packages
 
 **Input Parameters:**
