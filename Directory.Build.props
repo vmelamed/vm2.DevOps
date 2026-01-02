@@ -20,6 +20,8 @@
             AND
             !$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '.*\.Tests$', RegexOptions.IgnoreCase))
             ">true</IsTestLibraryProject>
+        <DefineConstants Condition="'$(OS)' == 'WINDOWS_NT'">$(DefineConstants);WINDOWS</DefineConstants>
+        <DefineConstants Condition="'$(OS)' != 'WINDOWS_NT'">$(DefineConstants);UNIX</DefineConstants>
     </PropertyGroup>
 
     <!-- ================ Common Settings for All projects ================ -->
