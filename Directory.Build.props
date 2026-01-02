@@ -67,6 +67,10 @@
     </PropertyGroup>
 
     <!-- ================ Common Package References for All projects ================ -->
+    <PropertyGroup>
+        <RestoreSources>https://api.nuget.org/v3/index.json;https://nuget.pkg.github.com/vmelamed/index.json</RestoreSources>
+    </PropertyGroup>
+
     <ItemGroup>
         <PackageReference Include="System.Configuration.ConfigurationManager" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
@@ -102,7 +106,7 @@
         <IncludeSymbols>False</IncludeSymbols>
         <GenerateDocumentationFile>false</GenerateDocumentationFile>
         <NoWarn>$(NoWarn);CA1701;CA1702;CA1707;CA1806;CA2211;CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290</NoWarn>
-        <!-- test.runsettings is assumed to be in the directory with the solution and the test project is at <solution dir>/test/<Xyz.Tests>/Xyz.Tests.csproj -->
+        <!-- test.runsettings is assumed to be in the directory with the test project and it is supposed to be at <solution dir>/test/<Xyz.Tests>/Xyz.Tests.csproj -->
         <RunSettingsFilePath>$(MSBuildProjectDirectory)\..\..\test.runsettings</RunSettingsFilePath>
         <!-- Enable code coverage collection with Microsoft.Testing.Extensions.CodeCoverage ADD MTP Code Coverage settings: -->
         <EnableCodeCoverage>true</EnableCodeCoverage>
@@ -118,6 +122,8 @@
     </PropertyGroup>
     <ItemGroup Condition="$(IsTestProject) == 'true'">
         <!-- Use MTP v2 for all environments - VS 2022 should support it -->
+        <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" />
+        <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
         <PackageReference Include="FluentAssertions" />
         <PackageReference Include="vm2.TestUtilities" />
     </ItemGroup>
@@ -140,6 +146,14 @@
         <Using Include="Xunit" />
         <Using Include="FluentAssertions" />
     </ItemGroup>
+
+    <!-- Delete test lock files when restoring inside VS to avoid NU1005 while keeping lock files for CLI/CI. -->
+    <Target Name="RemoveTestLockFileInVS" Condition="'$(IsTestProject)' == 'true' and '$(BuildingInsideVisualStudio)' == 'true'" BeforeTargets="Restore">
+        <PropertyGroup>
+            <_PackagesLockFile>$(MSBuildProjectDirectory)\packages.lock.json</_PackagesLockFile>
+        </PropertyGroup>
+        <Delete Files="$(_PackagesLockFile)" Condition="Exists('$(_PackagesLockFile)')" />
+    </Target>
 
     <!-- ================ Test Library Projects' Settings ================ -->
     <!-- Test stack:
@@ -180,6 +194,7 @@
         <IncludeSymbols>False</IncludeSymbols>
         <GenerateDocumentationFile>false</GenerateDocumentationFile>
         <NoWarn>$(NoWarn);CA1701;CA1702;CA1707;CA1806;CA2211;CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290</NoWarn>
+        <TieredPGO>false</TieredPGO>
         <!-- To show up in the VS test explorer, see also below in the package references:
         <RestorePackagesWithLockFile Condition="$(BuildingInsideVisualStudio) == 'true')">false</RestorePackagesWithLockFile>
         -->
