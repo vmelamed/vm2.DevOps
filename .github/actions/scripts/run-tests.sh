@@ -222,17 +222,18 @@ if [[ $dry_run != "true" ]]; then
         exit 2
     fi
 
+    ln_status="$([[ $line_pct -lt $min_coverage_pct   ]] && echo '❌' || echo '✔️')"
+    br_status="$([[ $branch_pct -lt $min_coverage_pct ]] && echo '❌' || echo '✔️')"
+    me_status="$([[ $method_pct -lt $min_coverage_pct ]] && echo '❌' || echo '✔️')"
+
     # Compare the coverage percentage against the threshold
     {
         echo "## Coverage Summary for project '$test_name'"
-        echo "Coverage | Percentage | Status"
-        echo ":--------|-----------:|:------:"
-        status="$([[ $line_pct -lt $min_coverage_pct ]] && echo '❌' || echo '✔️')"
-        echo "Line     | ${line_pct}% | $status"
-        status="$([[ $branch_pct -lt $min_coverage_pct ]] && echo '❌' || echo '✔️')"
-        echo "Branch   | ${branch_pct}% | $status"
-        status="$([[ $method_pct -lt $min_coverage_pct ]] && echo '❌' || echo '✔️')"
-        echo "Method   | ${method_pct}% | $status"
+        echo "Coverage | Percentage     | Status"
+        echo ":--------|---------------:|:------:"
+        echo "Line     | ${line_pct}%   | $ln_status"
+        echo "Branch   | ${branch_pct}% | $br_status"
+        echo "Method   | ${method_pct}% | $me_status"
         echo ""
     } >> "$github_step_summary"
 
