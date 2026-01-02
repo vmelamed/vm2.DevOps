@@ -428,7 +428,7 @@ Set these in your GitHub repository: **Settings → Secrets and variables → Ac
 | `CONFIGURATION`       | No       | `Release`  | Build configuration (`Debug` or `Release`)     |
 | `MIN_COVERAGE_PCT`    | No       | `80`       | Minimum code coverage percentage (0-100)       |
 | `MAX_REGRESSION_PCT`  | No       | `10`       | Maximum benchmark regression percentage        |
-| `MinVerTagPrefix`   | No       | `v`        | Prefix for MinVer tags (e.g. `v` for `v1.2.3`) |
+| `MinVerTagPrefix`     | No       | `v`        | Prefix for MinVer tags (e.g. `v` for `v1.2.3`) |
 
 ### Repository Secrets
 
