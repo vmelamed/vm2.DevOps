@@ -404,7 +404,7 @@ jobs:
     with:
       dotnet-version: ${{ vars.DOTNET_VERSION || '10.0.x' }}
       force-publish: ${{ inputs.force-publish || false }}
-      save_package_artifacts: true
+      save-package-artifacts: true
       nuget-server: nuget  # Usually 'nuget' for stable releases
 ```
 

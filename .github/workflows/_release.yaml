@@ -29,7 +29,7 @@ on:
         type: string
         default: "nuget"
 
-      save_package_artifacts:
+      save-package-artifacts:
         description: Upload package(s) as workflow artifacts
         type: boolean
         default: false
@@ -154,7 +154,7 @@ jobs:
           printf '## Packages %s pushed to %s:\n%s\n' "$RELEASE_TAG" "$SERVER_NAME" "$(ls -1 artifacts/pack/*.nupkg | sed 's/^/  - /')" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload package artifact
-        if: inputs.save_package_artifacts == 'true'
+        if: inputs.save-package-artifacts == 'true'
         uses: actions/upload-artifact@v6
         with:
           name: nuget-packages-${{ github.ref_name }}-${{ hashFiles(matrix.project) }}
@@ -164,7 +164,7 @@ jobs:
 
       - name: Summary
         env:
-          ARTIFACTS_SAVED: ${{ inputs.save_package_artifacts == 'true' }}
+          ARTIFACTS_SAVED: ${{ inputs.save-package-artifacts == 'true' }}
         shell: bash
         run: |+
           {

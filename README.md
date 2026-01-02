@@ -80,7 +80,7 @@ Reusable workflow for publishing prerelease packages with automatic semantic ver
 - `force-publish`: Bypass tag-already-exists check (default: `false`)
 - `reason`: Description for release notes
 - `nuget-server`: Target server - `nuget` or `github` (default: `nuget`)
-- `save_package_artifacts`: Upload packages as artifacts (default: `false`)
+- `save-package-artifacts`: Upload packages as artifacts (default: `false`)
 
 **Secrets:**
 
