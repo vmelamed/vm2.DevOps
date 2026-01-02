@@ -146,11 +146,12 @@ if ! execute dotnet run \
         --configuration "$configuration" \
         --no-build \
         --results-directory "$test_results_dir" \
+        /p:DefineConstants="$preprocessor_symbols" \
+        -- \
         --report-trx \
         --coverage \
         --coverage-output-format cobertura \
-        --coverage-output "$coverage_source_path" \
-        /p:DefineConstants="$preprocessor_symbols"; then
+        --coverage-output "$coverage_source_path"; then
     echo "❌ Tests failed in project '$test_project'." | tee -a "$github_step_summary" >&2
     exit 2
 fi
