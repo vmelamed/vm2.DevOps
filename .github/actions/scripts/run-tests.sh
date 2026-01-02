@@ -145,10 +145,10 @@ if ! execute dotnet run \
         --project "$test_project" \
         --configuration "$configuration" \
         --no-build \
-        --results-directory "$test_results_dir" \
         /p:DefineConstants="$preprocessor_symbols" \
+        --results-directory "$test_results_dir" \
+        --report-xunit-trx \
         -- \
-        --report-trx \
         --coverage \
         --coverage-output-format cobertura \
         --coverage-output "$coverage_source_path"; then
