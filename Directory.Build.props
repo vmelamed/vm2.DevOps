@@ -1,29 +1,4 @@
 <Project>
-    <!-- ================ Properties to be used in condition mostly about test projects ================ -->
-    <PropertyGroup>
-        <IsInBenchmarksFolder Condition="
-            $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]benchmarks?[/\\]', RegexOptions.IgnoreCase))
-            ">true</IsInBenchmarksFolder>
-        <IsInExamplesFolder Condition="
-            $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]examples?[/\\]', RegexOptions.IgnoreCase))
-            ">true</IsInExamplesFolder>
-        <IsInTestFolder Condition="
-            $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]tests?[/\\]', RegexOptions.IgnoreCase))
-            ">true</IsInTestFolder>
-        <IsTestProject Condition="
-            $(IsInTestFolder) == 'true'
-            AND
-            $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '.*\.Tests$', RegexOptions.IgnoreCase))
-            ">true</IsTestProject>
-        <IsTestLibraryProject Condition="
-            $(IsInTestFolder) == 'true'
-            AND
-            !$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '.*\.Tests$', RegexOptions.IgnoreCase))
-            ">true</IsTestLibraryProject>
-        <DefineConstants Condition="'$(OS)' == 'WINDOWS_NT'">$(DefineConstants);WINDOWS</DefineConstants>
-        <DefineConstants Condition="'$(OS)' != 'WINDOWS_NT'">$(DefineConstants);UNIX</DefineConstants>
-    </PropertyGroup>
-
     <!-- ================ Common Settings for All projects ================ -->
     <PropertyGroup Label="Packages">
         <TargetFramework>net10.0</TargetFramework>
@@ -94,6 +69,33 @@
         </PackageReference>
     </ItemGroup>
 
+    <!-- ================ Properties to be used in conditions about test, benchmarks, and examples projects ================ -->
+    <PropertyGroup>
+        <IsInTestFolder Condition="
+                $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]tests?[/\\]', RegexOptions.IgnoreCase))
+                ">true</IsInTestFolder>
+        <IsTestProject Condition="
+                $(IsInTestFolder) == 'true'
+                AND
+                $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '.*\.Tests$', RegexOptions.IgnoreCase))
+                ">true</IsTestProject>
+        <IsTestLibraryProject Condition="
+                $(IsInTestFolder) == 'true'
+                AND
+                !$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '.*\.Tests$', RegexOptions.IgnoreCase))
+                ">true</IsTestLibraryProject>
+        <IsInBenchmarksFolder Condition="
+                $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]benchmarks?[/\\]', RegexOptions.IgnoreCase))
+                ">true</IsInBenchmarksFolder>
+        <IsInExamplesFolder Condition="
+                $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]examples?[/\\]', RegexOptions.IgnoreCase))
+                ">true</IsInExamplesFolder>
+
+        <!-- To use if there are OS-specific differences in APIs -->
+        <DefineConstants Condition="'$(OS)' == 'WINDOWS_NT'">$(DefineConstants);WINDOWS</DefineConstants>
+        <DefineConstants Condition="'$(OS)' != 'WINDOWS_NT'">$(DefineConstants);UNIX</DefineConstants>
+    </PropertyGroup>
+
     <!-- ================ Test Projects Settings ================ -->
     <!-- Test stack:
           Microsoft Testing Platform (MTP) with
@@ -107,14 +109,35 @@
         <IsPackable>false</IsPackable>
         <IncludeSymbols>False</IncludeSymbols>
         <GenerateDocumentationFile>false</GenerateDocumentationFile>
-        <NoWarn>$(NoWarn);CA1701;CA1702;CA1707;CA1806;CA2211;CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290</NoWarn>
+        <NoWarn>
+            $(NoWarn);
+            CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;
+            CA1701;CA1702;CA1707;CA1806;CA2211;
+            IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290
+        </NoWarn>
         <!-- test.runsettings is assumed to be in the directory with the test project and it is supposed to be at <solution dir>/test/<Xyz.Tests>/Xyz.Tests.csproj -->
         <RunSettingsFilePath>$(MSBuildProjectDirectory)\..\..\test.runsettings</RunSettingsFilePath>
         <!-- Enable code coverage collection with Microsoft.Testing.Extensions.CodeCoverage ADD MTP Code Coverage settings: -->
         <EnableCodeCoverage>true</EnableCodeCoverage>
-        <CodeCoverageExcludeByFile>**/obj/**/*;**/*.g.cs;**/*.i.cs;**/*.g.i.cs;;*.generated.cs;*Migrations/*;*AssemblyInfo.cs;*Designer.cs;*.designer.cs</CodeCoverageExcludeByFile>
-        <CodeCoverageExcludeByAttribute>*ExcludeFromCodeCoverage*;*GeneratedRegex*;*GeneratedCode*;*SourceGenerationContext*;*CompilerGenerated*</CodeCoverageExcludeByAttribute>
+        <CodeCoverageExcludeByFile>
+            **/obj/**/*;
+            **/*.g.cs;**/*.i.cs;
+            **/*.g.i.cs;
+            *.generated.cs;
+            *Migrations/*;
+            *AssemblyInfo.cs;
+            *Designer.cs;
+            *.designer.cs
+        </CodeCoverageExcludeByFile>
+        <CodeCoverageExcludeByAttribute>
+            *ExcludeFromCodeCoverage*;
+            *GeneratedRegex*;
+            *GeneratedCode*;
+            *SourceGenerationContext*;
+            *CompilerGenerated*
+        </CodeCoverageExcludeByAttribute>
 
+        <!-- Do not mix lock files between Visual Studio and command line/VSCode: -->
         <RestorePackagesWithLockFile Condition="$(BuildingInsideVisualStudio) == 'true'">false</RestorePackagesWithLockFile>
         <!-- Opt-in xUnit in the Microsoft Testing Platform, as well as use the native command line 'dotnet run' experience: -->
         <!-- For more information on Microsoft Testing Platform support in xUnit.net, visit: https://xunit.net/docs/getting-started/v3/microsoft-testing-platform -->
@@ -122,6 +145,7 @@
         <!-- Enable running MTP projects in VSTest (Visual Studio), as well as with 'dotnet test' experience, available for .NET 9 SDK and earlier for backward compatibility-->
         <TestingPlatformDotnetTestSupport Condition="$(BuildingInsideVisualStudio) == 'true'">true</TestingPlatformDotnetTestSupport>
     </PropertyGroup>
+
     <ItemGroup Condition="$(IsTestProject) == 'true'">
         <!-- Use MTP v2 for all environments - VS 2022 should support it -->
         <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" />
@@ -129,6 +153,7 @@
         <PackageReference Include="FluentAssertions" />
         <PackageReference Include="vm2.TestUtilities" />
     </ItemGroup>
+
     <ItemGroup Condition="$(IsTestProject) == 'true' and $(BuildingInsideVisualStudio) != 'true'">
         <!-- Explicitly use MTP v2 with xUnit for non-VS environments (e.g., CI, command line, etc.) -->
         <PackageReference Include="xunit.v3.mtp-v2" />
@@ -143,6 +168,7 @@
         </PackageReference>
         <PackageReference Include="Microsoft.NET.Test.Sdk" />
     </ItemGroup>
+
     <!-- Common usings for the test projects: -->
     <ItemGroup Condition="$(IsTestProject) == 'true'">
         <Using Include="Xunit" />
@@ -150,7 +176,7 @@
     </ItemGroup>
 
     <!-- Delete test lock files when restoring inside VS to avoid NU1005 while keeping lock files for CLI/CI. -->
-    <Target Name="RemoveTestLockFileInVS" Condition="'$(IsTestProject)' == 'true' and '$(BuildingInsideVisualStudio)' == 'true'" BeforeTargets="Restore">
+    <Target Name="RemoveTestLockFileInVS" BeforeTargets="Restore" Condition="'$(IsTestProject)' == 'true' and '$(BuildingInsideVisualStudio)' == 'true'">
         <PropertyGroup>
             <_PackagesLockFile>$(MSBuildProjectDirectory)\packages.lock.json</_PackagesLockFile>
         </PropertyGroup>
@@ -163,19 +189,25 @@
           xUnit,
           FluentAssertions
       For *.Tests.* projects in the ./test folder - these are rather test libraries than test projects:
-  -->
+    -->
     <!-- ======================================================== -->
     <PropertyGroup Condition="$(IsTestLibraryProject) == 'true'">
         <!-- Test libraries projects settings -->
         <IsPackable>false</IsPackable>
         <IncludeSymbols>False</IncludeSymbols>
         <GenerateDocumentationFile>false</GenerateDocumentationFile>
-        <NoWarn>$(NoWarn);CA1701;CA1702;CA1707;CA1806;CA2211;CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290</NoWarn>
+        <NoWarn>
+            $(NoWarn);
+            CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;
+            CA1701;CA1702;CA1707;CA1806;CA2211;
+            IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290</NoWarn>
     </PropertyGroup>
+
     <ItemGroup Condition="$(IsTestLibraryProject) == 'true'">
         <PackageReference Include="FluentAssertions" />
         <PackageReference Include="xunit.v3.extensibility.core" />
     </ItemGroup>
+
     <!-- Common usings for test library projects in the ./test folder: -->
     <ItemGroup Condition="$(IsTestLibraryProject) == 'true'">
         <Using Include="Xunit" />
@@ -187,7 +219,7 @@
     <!-- ================ Benchmark Projects Settings ================ -->
     <!-- Stack:
           BenchmarkDotNet
-  -->
+    -->
     <!-- ============================================================= -->
     <PropertyGroup Condition="$(IsInBenchmarksFolder) == 'true'">
         <!-- Test projects settings -->
@@ -195,12 +227,18 @@
         <IsPackable>false</IsPackable>
         <IncludeSymbols>False</IncludeSymbols>
         <GenerateDocumentationFile>false</GenerateDocumentationFile>
-        <NoWarn>$(NoWarn);CA1701;CA1702;CA1707;CA1806;CA2211;CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290</NoWarn>
+        <NoWarn>
+            $(NoWarn);
+            CS0618;CS1572;CS1573;CS1574;CS1591;CS1711;
+            CA1701;CA1702;CA1707;CA1806;CA2211;
+            IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290
+        </NoWarn>
         <TieredPGO>false</TieredPGO>
         <!-- To show up in the VS test explorer, see also below in the package references:
         <RestorePackagesWithLockFile Condition="$(BuildingInsideVisualStudio) == 'true')">false</RestorePackagesWithLockFile>
         -->
     </PropertyGroup>
+
     <!-- common packages for benchmark projects in the ./benchmarks folder: -->
     <ItemGroup Condition="$(IsInBenchmarksFolder) == 'true'">
         <PackageReference Include="BenchmarkDotNet" />
@@ -213,6 +251,15 @@
         <PackageReference Include="Microsoft.VisualStudio.DiagnosticsHub.BenchmarkDotNetDiagnosers" />
         -->
     </ItemGroup>
+
+    <PropertyGroup>
+        <DefineConstants Condition="
+            $(IsInBenchmarksFolder) == 'true'
+            AND
+            '$(CI)' != 'true'
+            ">$(DefineConstants);SHORT_RUN</DefineConstants>
+    </PropertyGroup>
+
     <!-- common usings for benchmark projects in the ./benchmarks folder: -->
     <ItemGroup Condition="$(IsInBenchmarksFolder) == 'true'">
         <Using Include="BenchmarkDotNet" />
@@ -229,5 +276,7 @@
         <IsPackable>false</IsPackable>
         <GenerateDocumentationFile>false</GenerateDocumentationFile>
     </PropertyGroup>
+
+    <!-- Add project-specific properties and packages here -->
 
 </Project>

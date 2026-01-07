@@ -18,6 +18,12 @@ fi
 
 target=${1:-vm2.Glob.slnx}
 
+if [[ ${1:-} == "1" ]]; then
+  echo "Error: positional argument must be a solution or project file." 1>&2
+  usage
+  exit 1
+fi
+
 echo "[restore-locked] refreshing lock files for ${target} (force-evaluate)…"
 dotnet restore "${target}" --force-evaluate
 

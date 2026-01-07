@@ -1,5 +1,35 @@
 ﻿# NuGet Dependency Cache Management Strategy
+<!-- TOC tocDepth:2..3 chapterDepth:2..6 -->
 
+- [Document Purpose](#document-purpose)
+- [Current State (As of Implementation)](#current-state-as-of-implementation)
+  - [Existing Cache Configuration](#existing-cache-configuration)
+- [Problem Statement](#problem-statement)
+- [Recommended Solutions (Multi-Layered Approach)](#recommended-solutions-multi-layered-approach)
+  - [Layer 1: Package Lock File (Immediate - High Priority) ✅ Done](#layer-1-package-lock-file-immediate---high-priority--done)
+  - [Layer 2: Dependabot (High Priority) ✅ Done](#layer-2-dependabot-high-priority--done)
+  - [Layer 3: Time-Based Cache Invalidation (Medium Priority)](#layer-3-time-based-cache-invalidation-medium-priority)
+  - [Layer 4: Cache Age Monitoring (Low Priority - Nice to Have) ❌ Not done yet](#layer-4-cache-age-monitoring-low-priority---nice-to-have--not-done-yet)
+  - [Layer 5: Manual Cache Clear Workflow (Low Priority - Emergency Use)](#layer-5-manual-cache-clear-workflow-low-priority---emergency-use)
+  - [Layer 6: Scheduled Cache Cleanup (Optional - Advanced) ❌ Not done yet](#layer-6-scheduled-cache-cleanup-optional---advanced--not-done-yet)
+- [Implementation Roadmap](#implementation-roadmap)
+  - [Phase 1: Immediate (Do After CI/CD Setup Complete)](#phase-1-immediate-do-after-cicd-setup-complete)
+  - [Phase 2: Week 1](#phase-2-week-1)
+  - [Phase 3: Week 2](#phase-3-week-2)
+  - [Phase 4: Month 1 (Optional)](#phase-4-month-1-optional)
+- [Monitoring and Maintenance](#monitoring-and-maintenance)
+  - [Weekly Tasks](#weekly-tasks)
+  - [Monthly Tasks](#monthly-tasks)
+  - [Quarterly Tasks](#quarterly-tasks)
+- [Troubleshooting](#troubleshooting)
+  - [Problem: Builds failing with "restore failed in locked mode"](#problem-builds-failing-with-restore-failed-in-locked-mode)
+  - [Problem: Cache size approaching 10GB limit](#problem-cache-size-approaching-10gb-limit)
+  - [Problem: Dependabot PRs failing tests](#problem-dependabot-prs-failing-tests)
+  - [Problem: Build slower than expected](#problem-build-slower-than-expected)
+- [References](#references)
+- [Document Metadata](#document-metadata)
+
+<!-- /TOC -->
 ## Document Purpose
 
 This document outlines strategies to prevent stale NuGet dependency caches in the vm2.DevOps CI/CD pipeline while maintaining build performance. Implement these strategies after the initial CI/CD setup is complete.
@@ -36,7 +66,7 @@ NuGet package caches can become stale over time, potentially leading to:
 
 ## Recommended Solutions (Multi-Layered Approach)
 
-### Layer 1: Package Lock File (Immediate - High Priority) ✅ Done
+### Layer 1: Package Lock File (Immediate - High Priority - ✅ Done)
 
 **What:** Enforce deterministic package versions using `packages.lock.json`
 
@@ -68,7 +98,7 @@ Update `Directory.Build.props`:
 
 ---
 
-### Layer 2: Dependabot (High Priority) ✅ Done
+### Layer 2: Dependabot (High Priority - ✅ Done)
 
 **What:** Automated weekly dependency update PRs
 
@@ -139,7 +169,7 @@ Create `.github/dependabot.yml`:
 
 ---
 
-### Layer 3: Time-Based Cache Invalidation (Medium Priority)
+### Layer 3: Time-Based Cache Invalidation (Medium Priority - ✅ Done)
 
 **What:** Add weekly rotation to cache keys to force periodic refresh
 
@@ -190,7 +220,7 @@ Then optionally add explicit cache with time-based rotation:
 
 ---
 
-### Layer 4: Cache Age Monitoring (Low Priority - Nice to Have) ❌ Not done yet
+### Layer 4: Cache Age Monitoring (Low Priority - Nice to Have - ❌ Not done yet)
 
 **What:** Add warnings when cache contains old packages
 
@@ -480,6 +510,39 @@ Create `.github/workflows/cache-cleanup-scheduled.yaml`:
 1. Check if weekly rotation just occurred
 2. Verify cache hit rate in workflow logs
 3. Ensure `packages.lock.json` hasn't changed unnecessarily
+
+## Test Projects targeting Visual Studio with MTP v1. vs CLI/Visual Studio Code targeting .NET SDK directly MTP v2
+
+### Problem: Inconsistent behavior between MTP v1 and MTP v2
+
+**Cause:** Different required test platform packages and different handling of package restoration and caching. See [Directory.Build.props](../src/Directory.Build.props) to understand the differences. The requirements for MTP v1 can be recognized by the conditions `$(BuildingInsideVisualStudio) == 'true'` and for MTP v2 by `$(BuildingInsideVisualStudio) != 'true'`. Unfortunately these conditions cannot be combined with `$(RestorePackagesWithLockFile)` and `$(RestoreLockedMode)` and lead to "polluting" the lock files with references to either MTP v1 or MTP v2 packages upon commit/restore.
+
+I am fully committed to eventually deprecate MTP v1 and switch all test projects to MTP v2 only, but until then we need a workaround to avoid the above issues. Proposed
+
+**Workaround:**
+
+Standardize on using MTP v2 for all CI builds and local development outside Visual Studio. This means:
+
+- For CI builds, the scripts and the workflows ensure that all test projects use MTP v2 (`BuildingInsideVisualStudio` is `` in those environment).
+- For local development using Visual Studio Code or CLI, developers should ensure that they do not open the test projects in Visual Studio, but rather use `dotnet build`, `dotnet test`, etc. from the command line or VS Code terminal. This way MTP v2 is used and the lock files remain consistent.
+- For local development in Visual Studio, developers can still use MTP v1, but they must be aware that the pulled lock files from github **will** be for MTP v2. To use the VSTest features inside the VS users must
+  - manually reevaluate the lock files and restore packages using Visual Studio (`BuildingInsideVisualStudio` is `true`), e.g. after pulling changes from github:
+
+        ```bash
+        BuildingInsideVisualStudio=true dotnet restore --force-evaluate
+        ```
+
+    but must remember before committing their work to also switch back any changes to the lock files:
+
+        ```bash
+        dotnet restore --force-evaluate
+        git add **/packages.lock.json
+        git commit -m "deps: update package lock files for MTP v1"
+        ```
+
+    Hopefully this is only temporary until VS starts using MTP v2 and we can fully switch to MTP v2.
+
+**Solution:**
 
 ## References
 
