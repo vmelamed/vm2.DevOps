@@ -11,6 +11,11 @@ dir="."
 what_if=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    -l|--license)
+      [[ $# -ge 2 ]] || usage
+      license="$2"
+      shift 2
+      ;;
     -d|--directory)
       [[ $# -ge 2 ]] || usage
       dir="$2"
@@ -33,7 +38,7 @@ done
 [[ -d "$dir" ]] || { echo "Directory not found: $dir" 1>&2; exit 1; }
 root=$(cd "$dir" && pwd)
 
-header="// SPDX-License-Identifier: MIT
+header="// SPDX-License-Identifier: $license
 // Copyright (c) 2025 Val Melamed
 
 
@@ -45,7 +50,7 @@ skipped=0
 
 while IFS= read -r -d '' file; do
   processed=$((processed + 1))
-  rel=".${file#${root}}"
+  rel=".${file#"${root}"}"
 
   if grep -q "SPDX-License-Identifier" "$file"; then
     echo "Skipping (has header): $rel"
