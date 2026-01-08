@@ -147,9 +147,47 @@ jobs:
           git tag -a "$TAG" -m "Prerelease $TAG" -m "Reason: ${{ inputs.reason }}" || echo "Tag exists, continuing"
           git push origin "$TAG"
 
+  changelog:
+    name: Update changelog
+    runs-on: ubuntu-latest
+    needs:
+      - compute-tag
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install git-cliff
+        run: |
+          if ! command -v git-cliff >/dev/null 2>&1; then
+            cargo install git-cliff --locked
+          fi
+
+      - name: Update CHANGELOG for prerelease
+        env:
+          TAG: ${{ needs.compute-tag.outputs.prerelease-tag }}
+        shell: bash
+        run: |
+          if [ ! -f changelog/cliff.prerelease.toml ]; then
+            echo "No changelog config found; skipping."; exit 0; fi
+
+          git-cliff -c changelog/cliff.prerelease.toml --tag "$TAG" -o CHANGELOG.md
+
+          if git status --porcelain -- CHANGELOG.md | grep -q .; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add CHANGELOG.md
+            git commit -m "chore: update changelog for $TAG"
+            git push
+          else
+            echo "No changelog changes to commit.";
+          fi
+
   package-and-publish:
     needs:
       - compute-tag
+      - changelog
     if: needs.compute-tag.outputs.should_publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -204,9 +242,12 @@ jobs:
           if [ "${{ inputs.nuget-server }}" = "github" ]; then
             SERVER_NAME="GitHub Packages"
             SERVER_URL="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
-          else
+          elif [ "${{ inputs.nuget-server }}" = "nuget" ]; then
             SERVER_NAME="NuGet.org"
             SERVER_URL="https://api.nuget.org/v3/index.json"
+          else
+            SERVER_NAME="${{ inputs.nuget-server }}"
+            SERVER_URL="${{ inputs.nuget-server }}"
           fi
 
           dotnet nuget push artifacts/pack/*.nupkg \

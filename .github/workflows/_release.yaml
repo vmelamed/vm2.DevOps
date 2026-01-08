@@ -98,6 +98,32 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install git-cliff
+        run: |
+          if ! command -v git-cliff >/dev/null 2>&1; then
+            cargo install git-cliff --locked
+          fi
+
+      - name: Update CHANGELOG for release
+        env:
+          TAG: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          if [ ! -f changelog/cliff.release-header.toml ]; then
+            echo "No changelog config found; skipping."; exit 0; fi
+
+          git-cliff -c changelog/cliff.release-header.toml --tag "$TAG" -o CHANGELOG.md
+
+          if git status --porcelain -- CHANGELOG.md | grep -q .; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add CHANGELOG.md
+            git commit -m "chore: update changelog for $TAG"
+            git push
+          else
+            echo "No changelog changes to commit.";
+          fi
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
