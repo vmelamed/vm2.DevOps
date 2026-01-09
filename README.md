@@ -20,15 +20,15 @@ Reusable GitHub Actions workflows and automation scripts for .NET projects.
 
 ## Overview
 
-This repository provides a complete CI/CD automation toolkit for .NET solutions, including:
+This repository provides a CI/CD automation toolkit for .NET solutions, including:
 
-- **Reusable GitHub Actions workflows** for building, testing, benchmarking, and releasing .NET packages
 - **[Workflow templates](https://github.com/vmelamed/.github/tree/main/workflow-templates)** available from the [`.github`](https://github.com/vmelamed/.github) organization repository
+- **Reusable GitHub Actions workflows** for building, testing, benchmarking, and releasing .NET packages
 - **Bash automation scripts** for local development and CI/CD pipelines
 - **Standardized release processes** using MinVer for semantic versioning
-- **Code coverage enforcement** with customizable thresholds
-- **Performance regression detection** using BenchmarkDotNet
-- **NuGet package publishing** to both NuGet.org and GitHub Packages
+- **Code coverage enforcement** with customizable thresholds, using Codecov
+- **Performance regression detection** using BenchmarkDotNet and Bencher
+- **NuGet package publishing** to NuGet.org, GitHub Packages, or custom feeds
 
 ## Getting Started
 
@@ -42,9 +42,15 @@ For detailed setup instructions, see the [Consumer Guide](docs/CONSUMER_GUIDE.md
 1. Copy workflow templates from [vmelamed/.github/workflow-templates](https://github.com/vmelamed/.github/tree/main/workflow-templates)
 1. Customize the workflows for your project structure
 
+Alternatively:
+
+1. Use `dotnet new vm2pkg` command to scaffold a new project with workflows and scripts for your project
+1. Execute `templates/AddNewPackage/content/scripts/bootstrap-new-package.sh` to create the repository
+1. Customize the generated workflows and scripts for your project
+
 ## High-level reusable workflows
 
-These top-level workflows are intended to be called directly via `workflow_call` from dependent repositories. They orchestrate the full CI/CD pipeline, and fan out to lower-level building blocks - reusable workflows and bash scripts as needed. The workflows and scripts share a common input surface to make it easy to toggle behavior across the pipeline:
+These reusable GitHub Actions workflows are intended to be called directly via `workflow_call` from dependent repositories. They orchestrate the full CI/CD pipeline, and fan out to lower-level building blocks - reusable workflows and bash scripts as needed. The workflows and scripts share a common input surface to make it easy to toggle behavior across the pipeline:
 
 - Common switches and options for the CI workflows and bash scripts:
   - `os`: List of operating systems of the jobs runners (default: `ubuntu-latest`)
@@ -56,11 +62,13 @@ These top-level workflows are intended to be called directly via `workflow_call`
   - `benchmark-projects`: Array of relative paths to benchmark projects to execute (may be empty)
   - `min-coverage-pct`: Minimum acceptable unit-test line coverage percentage (default: `80`)
   - `max-regression-pct`: Maximum acceptable performance regression percentage (default: `20`)
+  - etc. (other switches may be added as needed)
+
 - Common switches for all bash scripts:
   - `help`: If `true`, scripts will display usage information and exit (default: `false`)
   - `debugger`:  Set when the a script is running under a debugger, e.g. 'gdb'. If specified, the script will not set traps for DEBUG and EXIT, and will set the '--quiet' switch. (default: `false`)
   - `dry-run`: If `true`, scripts will simulate actions without making changes (default: `false`)
-  - `quiet`: If `true`, scripts will suppress all functions that request input from the user - binary (Y/N) or multiple ( a., b., c. ...) choices - and will assume some sensible default input
+  - `quiet`: If `true`, scripts will suppress all functions that request input from the user - binary (Y/N) or multiple ( a., b., c. ...) choices - and will assume some sensible default input (default: `false` or `true`, `$CI=true` as in GitHub Actions)
   - `verbose`: If `true`, scripts will emit tracing and diagnostic messages from all `trace()` calls, all executed commands, and all variable dumps (default: `false`)
 
 ### `.github/workflows/_ci.yaml`
@@ -178,6 +186,7 @@ Reusable workflow for publishing prerelease packages with automatic semantic ver
 - [Secrets](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets):
   - `NUGET_API_GITHUB_KEY`, if the packages will be published to GitHub Packages
   - `NUGET_API_NUGET_KEY`, if the packages will be published to NuGet.org
+  - `NUGET_API_KEY`, if the packages will be published to custom NuGet server
 - [Variables](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets) (treat them as policies):
   - `DOTNET_VERSION` (default: `10.0.x`)
   - `CONFIGURATION` (default: `Release`)
@@ -208,6 +217,7 @@ Reusable workflow for publishing stable release packages with automatic semantic
 - [Secrets](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets):
   - `NUGET_API_GITHUB_KEY`, if the packages will be published to GitHub Packages
   - `NUGET_API_NUGET_KEY`, if the packages will be published to NuGet.org
+  - `NUGET_API_KEY`, if the packages will be published to custom NuGet server
 - [Variables](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets) (treat them as policies):
   - `DOTNET_VERSION` (default: `10.0.x`)
   - `CONFIGURATION` (default: `Release`)
