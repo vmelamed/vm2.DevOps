@@ -124,6 +124,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Fetch tags
+        run: |
+          git fetch --tags --force
+
       - name: Install git-cliff
         uses: taiki-e/install-action@v2
         with:
