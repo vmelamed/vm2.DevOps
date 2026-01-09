@@ -195,7 +195,7 @@ jobs:
           if [ ! -f changelog/cliff.prerelease.toml ]; then
             echo "❌ Missing changelog/cliff.prerelease.toml; failing."; exit 1; fi
 
-          git-cliff -c changelog/cliff.prerelease.toml --tag "$TAG" -o CHANGELOG.md
+          git-cliff -c changelog/cliff.prerelease.toml --tag "$TAG" --prepend CHANGELOG.md
 
           if git status --porcelain -- CHANGELOG.md | grep -q .; then
             git config user.name "github-actions[bot]"
