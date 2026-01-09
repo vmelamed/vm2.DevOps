@@ -187,6 +187,7 @@ jobs:
             --configuration Release \
             --output artifacts/pack \
             --no-restore \
+            /p:MinVerTagPrefix=${{ needs.validate.outputs.minver-tag-prefix }} \
             "/p:PackageReleaseNotes=Release: ${{ inputs.reason || 'release build' }}"
           ls -1 artifacts/pack
 
