@@ -44,8 +44,6 @@ jobs:
     permissions:
           contents: read
           packages: read
-    env:
-      NUGET_GITHUB_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       # Clone the repository with full Git history for version calculation
       - name: Checkout

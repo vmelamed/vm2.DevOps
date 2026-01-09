@@ -155,6 +155,8 @@ jobs:
       - name: Publish stable to NuGet server
         env:
           RELEASE_TAG: ${{ github.ref_name }}
+          NUGET_API_GITHUB_KEY: ${{ secrets.NUGET_API_GITHUB_KEY }}
+          NUGET_API_NUGET_KEY: ${{ secrets.NUGET_API_NUGET_KEY }}
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         shell: bash
         run: |+
@@ -165,16 +167,19 @@ jobs:
           if [ "$NUGET_SERVER" = "github" ]; then
             SERVER_NAME="GitHub Packages"
             SERVER_URL="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+            SERVER_API_KEY="$NUGET_API_GITHUB_KEY"
           elif [ "$NUGET_SERVER" = "nuget" ]; then
             SERVER_NAME="NuGet.org"
             SERVER_URL="https://api.nuget.org/v3/index.json"
+            SERVER_API_KEY="$NUGET_API_NUGET_KEY"
           else
             SERVER_NAME="$NUGET_SERVER"
             SERVER_URL="$NUGET_SERVER"
+            SERVER_API_KEY="$NUGET_API_KEY"
           fi
 
           dotnet nuget push artifacts/pack/*.nupkg \
-            --api-key  "$NUGET_API_KEY" \
+            --api-key  "$SERVER_API_KEY" \
             --source "$SERVER_URL" \
             --skip-duplicate
           printf '## Packages %s pushed to %s:\n%s\n' "$RELEASE_TAG" "$SERVER_NAME" "$(ls -1 artifacts/pack/*.nupkg | sed 's/^/  - /')" >> "$GITHUB_STEP_SUMMARY"

@@ -39,10 +39,10 @@ on:
         type: boolean
         default: false
 
-    secrets:
-      NUGET_API_KEY:
-        description: Nuget server token for authentication - must match the selected nuget-server
-        required: true
+    # secrets:
+    #   NUGET_API_KEY:
+    #     description: Nuget server token for authentication - must match the selected nuget-server
+    #     required: true
 
 permissions:
   contents: write
@@ -191,6 +191,8 @@ jobs:
     if: needs.compute-tag.outputs.should_publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -233,6 +235,8 @@ jobs:
       - name: Publish prerelease to NuGet server
         env:
           PRERELEASE_TAG: ${{ needs.compute-tag.outputs.prerelease-tag }}
+          NUGET_API_GITHUB_KEY: ${{ secrets.NUGET_API_GITHUB_KEY }}
+          NUGET_API_NUGET_KEY: ${{ secrets.NUGET_API_NUGET_KEY }}
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         shell: bash
         run: |+
@@ -242,16 +246,19 @@ jobs:
           if [ "${{ inputs.nuget-server }}" = "github" ]; then
             SERVER_NAME="GitHub Packages"
             SERVER_URL="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+            SERVER_API_KEY="$NUGET_API_GITHUB_KEY"
           elif [ "${{ inputs.nuget-server }}" = "nuget" ]; then
             SERVER_NAME="NuGet.org"
             SERVER_URL="https://api.nuget.org/v3/index.json"
+            SERVER_API_KEY="$NUGET_API_NUGET_KEY"
           else
             SERVER_NAME="${{ inputs.nuget-server }}"
             SERVER_URL="${{ inputs.nuget-server }}"
+            SERVER_API_KEY="$NUGET_API_KEY"
           fi
 
           dotnet nuget push artifacts/pack/*.nupkg \
-            --api-key "$NUGET_API_KEY" \
+            --api-key "$SERVER_API_KEY" \
             --source "$SERVER_URL" \
             --skip-duplicate
           printf '## Packages %s pushed to %s:\n%s\n' "$PRERELEASE_TAG" "$SERVER_NAME" "$(ls -1 artifacts/pack/*.nupkg | sed 's/^/  - /')" >> "$GITHUB_STEP_SUMMARY"
