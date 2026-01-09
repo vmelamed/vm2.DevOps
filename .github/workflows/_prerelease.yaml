@@ -109,7 +109,7 @@ jobs:
           set -euo pipefail
 
           # Find latest stable (no hyphen) tag like v1.2.3
-          LATEST_STABLE=$(git tag --list 'v*' | grep -q -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1 || true)
+          LATEST_STABLE=$(git tag --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1 || true)
           if [ -n "$LATEST_STABLE" ]; then
             IFS='.' read -r MAJOR MINOR PATCH <<< "${LATEST_STABLE#v}"
             NEXT_PATCH=$((PATCH+1))
