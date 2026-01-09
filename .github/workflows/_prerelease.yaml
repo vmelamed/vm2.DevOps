@@ -199,10 +199,13 @@ jobs:
           if [ ! -f changelog/cliff.prerelease.toml ]; then
             echo "❌ Missing changelog/cliff.prerelease.toml; failing."; exit 1; fi
 
+          COMMIT=$(git rev-parse -q --verify "$TAG^{commit}" || git rev-parse HEAD)
+          RANGE="$COMMIT^..$COMMIT"
+          echo "Using range: $RANGE" >> "$GITHUB_STEP_SUMMARY"
           git-cliff -c changelog/cliff.prerelease.toml \
             --tag "$TAG" \
             --prepend CHANGELOG.md \
-            "$TAG^..$TAG"
+            "$RANGE"
 
           if git status --porcelain -- CHANGELOG.md | grep -q .; then
             git config user.name "github-actions[bot]"
