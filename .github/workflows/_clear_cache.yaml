@@ -37,6 +37,16 @@ jobs:
           echo "📝 Reason: ${REASON}"
           echo ""
 
+          # Restrict to known-safe prefixes to avoid accidental mass deletion
+          case "$CACHE_PATTERN" in
+            nuget-|build-artifacts-|bencher-cli-)
+              ;; # allowed prefixes
+            *)
+              echo "❌ Cache pattern '$CACHE_PATTERN' is not in the allowlist (nuget-, build-artifacts-, bencher-cli-)";
+              exit 2;
+              ;;
+          esac
+
           # List all caches
           echo "📋 Current caches before cleanup:"
           cache_list=$(gh cache list --limit 100 2>&1) || true
