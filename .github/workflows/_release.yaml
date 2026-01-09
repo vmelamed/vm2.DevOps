@@ -70,11 +70,13 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       package-projects: ${{ steps.validate.outputs.package-projects }}
+      nuget-server: ${{ steps.validate.outputs.nuget-server }}
     steps:
       - name: Validate the current tag and inputs
         id: validate
         shell: bash
         run: |+
+          nuget_server='${{ inputs.nuget-server }}'
           package_projects='${{ inputs.package-projects }}'
           {
             if [[ -z "$package_projects" ]] || jq -e '. == null or . == "" or . == []' > /dev/null 2>&1 <<<"$package_projects"; then
@@ -90,13 +92,21 @@ jobs:
                 echo "⚠️ WARNING At least one of the strings in the value of the input 'package-projects' is empty: will build and pack the entire solution. Assuming default value of '[\"\"]'."
                 package_projects='[""]'
             fi
+            if [ -z "$nuget_server" ]; then
+              echo "❌ ERROR No NuGet server configured - add variable NUGET_SERVER"
+              exit 2
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
           v="${{ vars.MinVerTagPrefix || 'v' }}"
           if [[ ! "${{ github.ref_name }}" =~ ^${v}[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "The current tag ${{ github.ref_name }} is not a valid semantic version for a stable release (e.g. ${v}1.2.3 or ${v}2.0.0)"
             exit 2
           fi
-          echo "package-projects=$package_projects" >> "$GITHUB_OUTPUT"
+          {
+            echo "nuget-server=$nuget_server"
+            echo "package-projects=$package_projects"
+            echo "minver-tag-prefix=$v"
+          } >> "$GITHUB_OUTPUT"
 
   release:
     name: Release Stable
@@ -126,7 +136,9 @@ jobs:
         shell: bash
         run: |
           if [ ! -f changelog/cliff.release-header.toml ]; then
-            echo "No changelog config found; skipping."; exit 0; fi
+            echo "No changelog config found; skipping."
+            exit 0
+          fi
 
           git-cliff -c changelog/cliff.release-header.toml --tag "$TAG" -o CHANGELOG.md
 
@@ -176,6 +188,7 @@ jobs:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         shell: bash
         run: |+
+          NUGET_SERVER=${{ needs.validate.outputs.nuget-server }}
           if [ "$NUGET_SERVER" = "github" ]; then
             SERVER_NAME="GitHub Packages"
             SERVER_URL="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
@@ -191,7 +204,8 @@ jobs:
           fi
 
           if [ -z "${SERVER_API_KEY}" ]; then
-            echo "No API key configured for server '$SERVER_NAME'"; exit 2
+            echo "No API key configured for server '$SERVER_NAME'"
+            exit 2
           fi
 
           dotnet nuget push artifacts/pack/*.nupkg \

@@ -75,15 +75,17 @@ jobs:
       should_publish: ${{ steps.tag-check.outputs.already-tagged == 'false' }}
       package-projects: ${{ steps.validate.outputs.package-projects }}
       minver-tag-prefix: ${{ steps.validate.outputs.minver-tag-prefix }}
+      nuget-server: ${{ steps.validate.outputs.nuget-server }}
     steps:
       - name: Checkout (full history)
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - name: Validate package projects input
+      - name: Validate inputs
         id: validate
         run: |+
+          nuget_server='${{ inputs.nuget-server }}'
           package_projects='${{ inputs.package-projects }}'
           {
             if [[ -z "$package_projects" ]] || jq -e '. == null or . == "" or . == []' > /dev/null 2>&1 <<<"$package_projects"; then
@@ -99,8 +101,14 @@ jobs:
                 echo "⚠️ WARNING At least one of the strings in the value of the input 'package-projects' is empty: will build and pack the entire solution. Assuming default value of '[\"\"]'."
                 package_projects='[""]'
             fi
+            if [ -z "$nuget_server" ]; then
+              echo "❌ ERROR No NuGet server configured - add variable NUGET_SERVER"
+              exit 2
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
+
           {
+            echo "nuget-server=$nuget_server"
             echo "package-projects=$package_projects"
             echo "minver-tag-prefix=${{ vars.MinVerTagPrefix || 'v' }}"
           } >> "$GITHUB_OUTPUT"
@@ -109,7 +117,8 @@ jobs:
         id: tag-check
         run: |+
           {
-            if [[ '${{ inputs.force-publish }}' != 'true' ]] && git tag --points-at HEAD | grep -q -E '^v[0-9]'; then
+            minVerTagPrefix=${{ steps.validate.outputs.minver-tag-prefix }}
+            if [[ '${{ inputs.force-publish }}' != 'true' ]] && git tag --points-at HEAD | grep -q -E "^${minVerTagPrefix}[0-9]"; then
               printf 'already-tagged=%s\n' "true"
             else
               printf 'already-tagged=%s\n' "false"
@@ -122,10 +131,11 @@ jobs:
         run: |+
           set -euo pipefail
 
+          minVerTagPrefix=${{ steps.validate.outputs.minver-tag-prefix }}
           # Find latest stable (no hyphen) tag like v1.2.3
-          LATEST_STABLE=$(git tag --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1 || true)
+          LATEST_STABLE=$(git tag --list "${minVerTagPrefix}*" | grep -E "^${minVerTagPrefix}[0-9]+\.[0-9]+\.[0-9]+$" | sort -V | tail -n1 || true)
           if [ -n "$LATEST_STABLE" ]; then
-            IFS='.' read -r MAJOR MINOR PATCH <<< "${LATEST_STABLE#v}"
+            IFS='.' read -r MAJOR MINOR PATCH <<< "${LATEST_STABLE#$minVerTagPrefix}"
             NEXT_PATCH=$((PATCH+1))
           else
             # No stable tag yet
@@ -136,7 +146,7 @@ jobs:
 
           DATE=$(date -u +%Y%m%d)
           RUN=$GITHUB_RUN_NUMBER
-          PRERELEASE_TAG="v$MAJOR.$MINOR.$NEXT_PATCH-${{ inputs.semver-build-prefix }}.$DATE.$RUN"
+          PRERELEASE_TAG="${minVerTagPrefix}$MAJOR.$MINOR.$NEXT_PATCH-${{ inputs.semver-build-prefix }}.$DATE.$RUN"
           printf 'prerelease-tag=%s\n' "$PRERELEASE_TAG" >> "$GITHUB_OUTPUT"
           printf '## Prerelease Tag:\n- %s\n' "$PRERELEASE_TAG" >> "$GITHUB_STEP_SUMMARY"
 
@@ -254,6 +264,7 @@ jobs:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         shell: bash
         run: |+
+          NUGET_SERVER=${{ needs.compute-tag.outputs.nuget-server }}
           if [ "$NUGET_SERVER" = "github" ]; then
             SERVER_NAME="GitHub Packages"
             SERVER_URL="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
