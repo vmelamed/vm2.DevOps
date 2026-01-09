@@ -119,15 +119,12 @@ jobs:
       matrix:
         project: ${{ fromJSON(needs.validate.outputs.package-projects) }}
     steps:
-      - name: Checkout (full history)
+      - name: Checkout release tag (full history)
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.repository.default_branch }}
+          ref: ${{ github.ref }}
+          fetch-tags: true
           fetch-depth: 0
-
-      - name: Fetch tags
-        run: |
-          git fetch --tags --force
 
       - name: Install git-cliff
         uses: taiki-e/install-action@v2
@@ -161,12 +158,6 @@ jobs:
           else
             echo "No changelog changes to commit.";
           fi
-
-      - name: Checkout release tag for build
-        env:
-          TAG: ${{ github.ref }}
-        run: |
-          git checkout "$TAG"
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
