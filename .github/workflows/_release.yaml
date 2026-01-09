@@ -139,7 +139,10 @@ jobs:
             exit 1
           fi
 
-          git-cliff -c changelog/cliff.release-header.toml --tag "$TAG" --prepend CHANGELOG.md
+          git-cliff -c changelog/cliff.release-header.toml \
+            --range "$TAG^..$TAG" \
+            --tag "$TAG" \
+            --prepend CHANGELOG.md
 
           if git status --porcelain -- CHANGELOG.md | grep -q .; then
             git config user.name "github-actions[bot]"
