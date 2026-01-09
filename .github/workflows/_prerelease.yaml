@@ -183,10 +183,9 @@ jobs:
           fetch-depth: 0
 
       - name: Install git-cliff
-        run: |
-          if ! command -v git-cliff >/dev/null 2>&1; then
-            cargo install git-cliff --locked
-          fi
+        uses: taiki-e/install-action@v2
+        with:
+          tool: git-cliff
 
       - name: Update CHANGELOG for prerelease
         env:
@@ -194,7 +193,7 @@ jobs:
         shell: bash
         run: |
           if [ ! -f changelog/cliff.prerelease.toml ]; then
-            echo "No changelog config found; skipping."; exit 0; fi
+            echo "❌ Missing changelog/cliff.prerelease.toml; failing."; exit 1; fi
 
           git-cliff -c changelog/cliff.prerelease.toml --tag "$TAG" -o CHANGELOG.md
 
