@@ -162,6 +162,12 @@ jobs:
             echo "No changelog changes to commit.";
           fi
 
+      - name: Checkout release tag for build
+        env:
+          TAG: ${{ github.ref }}
+        run: |
+          git checkout "$TAG"
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
