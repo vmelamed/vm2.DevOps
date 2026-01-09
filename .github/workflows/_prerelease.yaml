@@ -39,10 +39,24 @@ on:
         type: boolean
         default: false
 
-    # secrets:
-    #   NUGET_API_KEY:
-    #     description: Nuget server token for authentication - must match the selected nuget-server
-    #     required: true
+    secrets:
+      NUGET_API_GITHUB_KEY:
+        description: >-
+          Token for authentication to the GitHub NuGet server - must match the selected nuget-server.
+          At least one of NUGET_API_GITHUB_KEY, NUGET_API_NUGET_KEY, or NUGET_API_KEY must be provided.
+        required: false
+
+      NUGET_API_NUGET_KEY:
+        description: >-
+          Token for authentication to the nuget.org NuGet server - must match the selected nuget-server.
+          At least one of NUGET_API_GITHUB_KEY, NUGET_API_NUGET_KEY, or NUGET_API_KEY must be provided.
+        required: false
+
+      NUGET_API_KEY:
+        description: >-
+          Token for authentication to a custom NuGet server - must match the selected nuget-server.
+          At least one of NUGET_API_GITHUB_KEY, NUGET_API_NUGET_KEY, or NUGET_API_KEY must be provided.
+        required: false
 
 permissions:
   contents: write
@@ -240,21 +254,22 @@ jobs:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         shell: bash
         run: |+
-          if [ -z "${NUGET_API_KEY}" ]; then
-            echo "NUGET_API_KEY not configured"; exit 1
-          fi
-          if [ "${{ inputs.nuget-server }}" = "github" ]; then
+          if [ "$NUGET_SERVER" = "github" ]; then
             SERVER_NAME="GitHub Packages"
             SERVER_URL="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
-            SERVER_API_KEY="$NUGET_API_GITHUB_KEY"
-          elif [ "${{ inputs.nuget-server }}" = "nuget" ]; then
+            SERVER_API_KEY="${NUGET_API_GITHUB_KEY}"
+          elif [ "$NUGET_SERVER" = "nuget" ]; then
             SERVER_NAME="NuGet.org"
             SERVER_URL="https://api.nuget.org/v3/index.json"
-            SERVER_API_KEY="$NUGET_API_NUGET_KEY"
+            SERVER_API_KEY="${NUGET_API_NUGET_KEY}"
           else
-            SERVER_NAME="${{ inputs.nuget-server }}"
-            SERVER_URL="${{ inputs.nuget-server }}"
+            SERVER_NAME="$NUGET_SERVER"
+            SERVER_URL="$NUGET_SERVER"
             SERVER_API_KEY="$NUGET_API_KEY"
+          fi
+
+          if [ -z "${SERVER_API_KEY}" ]; then
+            echo "No API key configured for server '$SERVER_NAME'"; exit 2
           fi
 
           dotnet nuget push artifacts/pack/*.nupkg \

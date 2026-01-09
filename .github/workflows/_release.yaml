@@ -4,13 +4,15 @@ on:
   workflow_call:
     inputs:
       package-projects:
-        description: JSON array of project/solution paths to package and publish, e.g. '["src/Project1/Project1.csproj", "src/Project2/Project2.csproj"]'. If empty array, auto-detects root .sln or .csproj files.
+        description: >-
+          JSON array of project/solution paths to package and publish, e.g. '["src/Project1/Project1.csproj", "src/Project2/Project2.csproj"]'.
+          If empty array, auto-detects root .sln or .csproj files.
         type: string
         required: false
         default: '[""]'
 
       dotnet-version:
-        description: Version of .NET SDK to use
+        description: Version of .NET SDK to use (cannot be null or empty string, default 10.0.x)
         type: string
         default: 10.0.x
 
@@ -25,7 +27,7 @@ on:
         default: ""
 
       nuget-server:
-        description: "NuGet server to publish to (nuget or github)"
+        description: NuGet server to publish to (nuget or github)
         type: string
         default: "nuget"
 
@@ -35,9 +37,23 @@ on:
         default: false
 
     secrets:
+      NUGET_API_GITHUB_KEY:
+        description: >-
+          Token for authentication to the GitHub NuGet server - must match the selected nuget-server.
+          At least one of NUGET_API_GITHUB_KEY, NUGET_API_NUGET_KEY, or NUGET_API_KEY must be provided.
+        required: false
+
+      NUGET_API_NUGET_KEY:
+        description: >-
+          Token for authentication to the nuget.org NuGet server - must match the selected nuget-server.
+          At least one of NUGET_API_GITHUB_KEY, NUGET_API_NUGET_KEY, or NUGET_API_KEY must be provided.
+        required: false
+
       NUGET_API_KEY:
-        description: "Token for authentication to the NuGet server - must match the selected nuget-server"
-        required: true
+        description: >-
+          Token for authentication to a custom NuGet server - must match the selected nuget-server.
+          At least one of NUGET_API_GITHUB_KEY, NUGET_API_NUGET_KEY, or NUGET_API_KEY must be provided.
+        required: false
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -160,22 +176,22 @@ jobs:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         shell: bash
         run: |+
-          if [ -z "${NUGET_API_KEY}" ]; then
-            echo "NUGET_API_KEY not configured"; exit 1
-          fi
-          API_KEY="$NUGET_API_KEY"
           if [ "$NUGET_SERVER" = "github" ]; then
             SERVER_NAME="GitHub Packages"
             SERVER_URL="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
-            SERVER_API_KEY="$NUGET_API_GITHUB_KEY"
+            SERVER_API_KEY="${NUGET_API_GITHUB_KEY}"
           elif [ "$NUGET_SERVER" = "nuget" ]; then
             SERVER_NAME="NuGet.org"
             SERVER_URL="https://api.nuget.org/v3/index.json"
-            SERVER_API_KEY="$NUGET_API_NUGET_KEY"
+            SERVER_API_KEY="${NUGET_API_NUGET_KEY}"
           else
             SERVER_NAME="$NUGET_SERVER"
             SERVER_URL="$NUGET_SERVER"
             SERVER_API_KEY="$NUGET_API_KEY"
+          fi
+
+          if [ -z "${SERVER_API_KEY}" ]; then
+            echo "No API key configured for server '$SERVER_NAME'"; exit 2
           fi
 
           dotnet nuget push artifacts/pack/*.nupkg \
