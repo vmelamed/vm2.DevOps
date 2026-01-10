@@ -159,11 +159,11 @@ jobs:
             git commit -m "chore: update changelog for $TAG"
             DEFAULT_BRANCH=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|origin/||')
             if [ -z "$DEFAULT_BRANCH" ]; then
-              DEFAULT_BRANCH=$(git remote show origin | sed -n 's/.*HEAD branch: //p')
+              DEFAULT_BRANCH=$(git remote show origin 2>/dev/null | sed -n 's/.*HEAD branch: //p')
             fi
             if [ -z "$DEFAULT_BRANCH" ]; then
-              echo "❌ Unable to detect default branch to push changelog changes."
-              exit 1
+              echo "⚠️ Unable to detect default branch; assuming 'main'." | tee -a "$GITHUB_STEP_SUMMARY"
+              DEFAULT_BRANCH="main"
             fi
             if ! git push origin HEAD:"$DEFAULT_BRANCH"; then
               echo "⚠️ Unable to push changelog commit back to origin/$DEFAULT_BRANCH; continuing release." | tee -a "$GITHUB_STEP_SUMMARY"
