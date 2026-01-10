@@ -165,7 +165,9 @@ jobs:
               echo "❌ Unable to detect default branch to push changelog changes."
               exit 1
             fi
-            git push origin HEAD:"$DEFAULT_BRANCH"
+            if ! git push origin HEAD:"$DEFAULT_BRANCH"; then
+              echo "⚠️ Unable to push changelog commit back to origin/$DEFAULT_BRANCH; continuing release." | tee -a "$GITHUB_STEP_SUMMARY"
+            fi
           else
             echo "No changelog changes to commit.";
           fi
