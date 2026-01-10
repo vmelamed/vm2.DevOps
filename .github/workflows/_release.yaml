@@ -162,11 +162,15 @@ jobs:
               DEFAULT_BRANCH=$(git remote show origin 2>/dev/null | sed -n 's/.*HEAD branch: //p')
             fi
             if [ -z "$DEFAULT_BRANCH" ]; then
-              echo "⚠️ Unable to detect default branch; assuming 'main'." | tee -a "$GITHUB_STEP_SUMMARY"
+              echo "⚠️ Unable to detect default branch; assuming 'main'."
               DEFAULT_BRANCH="main"
             fi
-            if ! git push origin HEAD:"$DEFAULT_BRANCH"; then
-              echo "⚠️ Unable to push changelog commit back to origin/$DEFAULT_BRANCH; continuing release." | tee -a "$GITHUB_STEP_SUMMARY"
+            set +e
+            git push origin HEAD:"$DEFAULT_BRANCH"
+            PUSH_EXIT=$?
+            set -e
+            if [ $PUSH_EXIT -ne 0 ]; then
+              echo "⚠️ Unable to push changelog commit back to origin/$DEFAULT_BRANCH (exit $PUSH_EXIT); continuing release."
             fi
           else
             echo "No changelog changes to commit.";
