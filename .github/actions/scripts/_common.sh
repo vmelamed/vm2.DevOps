@@ -12,10 +12,7 @@
 initial_dir=$(pwd)
 declare -rx initial_dir
 
-declare -xr common_scripts=${BASH_SOURCE[0]}
-
-common_scripts_dir="$(dirname "${common_scripts}")"
-declare -xr common_scripts_dir
+common_scripts_dir="$(dirname "${BASH_SOURCE[0]}")"
 
 source "${common_scripts_dir}/_common_flags.sh"
 source "${common_scripts_dir}/_common_dump_vars.sh"

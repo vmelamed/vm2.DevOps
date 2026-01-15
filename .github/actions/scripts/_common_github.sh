@@ -1,15 +1,9 @@
 #!/bin/bash
 
-declare -r this_script=${BASH_SOURCE[0]}
+common_scripts_dir="$(dirname "${BASH_SOURCE[0]}")"
 
-script_name="$(basename "${this_script%.*}")"
-declare -r script_name
-
-script_dir="$(dirname "$(realpath -e "$this_script")")"
-declare -r script_dir
-
-source "$script_dir/_common.sh"
-source "$script_dir/_common_sanitize.sh"
+source "$common_scripts_dir/_common.sh"
+source "$common_scripts_dir/_common_sanitize.sh"
 
 # This script defines a number of DevOps specific constants, variables, and helper functions.
 
