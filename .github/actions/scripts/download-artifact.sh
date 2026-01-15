@@ -9,7 +9,7 @@ declare -xr script_dir
 script_name="$(basename "${this_script%.*}")"
 declare -xr script_name
 
-source "$script_dir/_common.sh"
+source "$script_dir/_common_github.sh"
 
 declare -x artifact_name=${ARTIFACT_NAME:-}
 declare -x artifacts_dir=${ARTIFACT_DIR:-"./BmArtifacts/baseline"}
@@ -118,7 +118,7 @@ mapfile -t runs < <(gh run list \
                         --jq '.[].databaseId')
 
 if [[ ${#runs[@]} == 0 ]]; then
-    # shellcheck disable=SC2154
+# shellcheck disable=SC2154 # variable is referenced but not assigned.
     usage "No successful runs found for the workflow '$workflow_id' in the repository '$repository'." | tee -a "$github_step_summary" >&2
     exit 2
 fi
@@ -131,7 +131,7 @@ for run in "${runs[@]}"; do
     trace "Checking run $run for the artifact '$artifact_name'..."
     query="any(.artifacts[]; .name==\"$artifact_name\")"
     if [[ ! $(gh api "repos/$repository/actions/runs/$run/artifacts" --jq "$query") == "true" ]]; then
-        # shellcheck disable=SC2154
+        # shellcheck disable=SC2154 # variable is referenced but not assigned.
         echo "The artifact '$artifact_name' not found in run $run." >> "$github_step_summary"
         continue
     fi
@@ -149,10 +149,10 @@ E.g. re-run the benchmarks with --force-new-baseline or vars.FORCE_NEW_BASELINE"
         echo "Error while downloading '$artifact_name': $http_error" | tee -a "$github_step_summary" >&2
         exit 2
     fi
-    echo "✔️ The artifact '$artifact_name' successfully downloaded to directory '$artifacts_dir'." >> "$github_step_summary"
+    echo "✅ The artifact '$artifact_name' successfully downloaded to directory '$artifacts_dir'." >> "$github_step_summary"
     exit 0
 done
 
-usage "❌ The artifact '$artifact_name' was not found in the last ${#runs[@]} successful runs of the workflow '$workflow_name' in \
+usage "The artifact '$artifact_name' was not found in the last ${#runs[@]} successful runs of the workflow '$workflow_name' in \
 the repository '$repository'." | tee -a "$github_step_summary" >&2
 exit 2

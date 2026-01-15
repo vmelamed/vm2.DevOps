@@ -6,7 +6,7 @@ All scripts live under `scripts/bash/` and follow a three-file convention:
 - `*.usage.sh` file that defines help text
 - `*.utils.sh` helper that encapsulates argument parsing
 
-They all source `_common.sh` for shared behavior and respect common flags (`--verbose`, `--quiet`, `--trace`, `--dry-run`, `--debugger`, see above).
+They all source `_common_github.sh` (ergo _common.sh) for shared behavior and respect common flags (`--verbose`, `--quiet`, `--trace`, `--dry-run`, `--debugger`, see above).
 
 ## `validate-vars.*.sh`
 
@@ -33,13 +33,18 @@ They all source `_common.sh` for shared behavior and respect common flags (`--ve
 - Downloads artifacts from prior workflow runs using the GitHub REST APIs and `gh` CLI semantics.
 - Used by `benchmarks.yaml` to hydrate baseline data before running new benchmarks, but is general-purpose for any artifact retrieval task.
 
-## `_common.sh`
+## `_common.sh` and `_common_github.sh`
 
 - Shared utility library that wires in tracing, verbosity, CI-safe defaults, and interactive prompts.
 - Implements helpers for argument parsing (`get_common_arg()`), logging (`trace()`, `dump_vars()`), command execution with dry-run support (`execute()`), user prompts (`choose()`, `confirm()`, `press_any_key()`), and numeric/string validation helpers (`is_integer`, `is_in`, etc.).
 - Should be sourced by all new scripts to ensure consistent behavior across the automation surface.
 
-### `_common.sh` functions and variables
+## `_common_github.sh`
+
+- Shared utility library that extends `_common.sh` with GitHub-specific helpers and behavior.
+- Should be sourced by all new scripts to ensure consistent behavior across the automation surface.
+
+### `_common.sh` and `_common_github.sh` functions and variables (**WIP**)
 
 #### Variables
 
@@ -51,7 +56,7 @@ They all source `_common.sh` for shared behavior and respect common flags (`--ve
 - `_ignore`: The file to redirect unwanted output to (default: `/dev/null`). When the calling script sets the common flag `--trace`, this is set to `/dev/`stdout`` so that the output from all executed commands are visible.
 - `common_switches`: A string that contains documentation of all common switches passed to the calling script's function `get_common_arg()`. For reuse by the calling scripts in their help strings.
 
-#### Functions
+#### Functions (**WIP**)
 
 - `on_debug()` and `on_exit()`: bash DEBUG and EXIT trap handlers that remember the last invoked bash command in `$last_command`. Used by `on_exit()` to report the last command when the script exits with an error.
 - `set-*` functions are invoked when the script is initializing from external environment variables or common arguments are being applied to the calling script (see `get_common_arg()`).
@@ -107,6 +112,7 @@ They all source `_common.sh` for shared behavior and respect common flags (`--ve
   - `is_integer()`: returns `0` if its parameter represents a valid integer number (..., -2, -1, 0, 1, 2, ...), `1` otherwise
   - `is_decimal()`: returns `0` if its parameter represents a valid decimal number, `1` otherwise
   - `is_in()`: returns `0` if the first parameter is found in the list of subsequent parameters, `1` otherwise. Usage: `is_in "value" "list_item1" "list_item2" ...`
+- `compare_semver()`: compares two semver compliant version strings and returns `0` if the first is equal to the second, `1` if the first is greater, and `255` if the first is smaller. Usage: `compare_semver "1.2.3" "1.2.4"`
 - `list_of_files()`: given a file pattern, lists all files as a bash list that match the pattern to `stdout`. Usage: `list_of_files "pattern"`. E.g. `files=$(list_of_files "*.json")`
 - User interaction functions:
   - `press_any_key()`: prompts the user to press any key to continue. Usage: `press_any_key "Prompt message"`. If `quiet` is `true`, does nothing and returns   immediately.

@@ -1,8 +1,8 @@
 #!/bin/bash
 
+# shellcheck disable=SC2154 # variable is referenced but not assigned.
 function usage_text()
 {
-    # shellcheck disable=SC2154 # variable is referenced but not assigned.
     cat << EOF
 Usage:
 
@@ -25,7 +25,7 @@ Options:
         Optional. If the directory does not exist, it will be created.
         If it exists and it is not empty, its contents will be clobbered without
         warning.
-        Initial value from \$ARTIFACT_DIR or './BmArtifacts/baseline'
+        Initial value from \$ARTIFACT_DIR or default './BmArtifacts/baseline'
 
     --repository | -r
         Specifies the GitHub repository in the form 'owner/repo' where to find
@@ -34,7 +34,7 @@ Options:
 
     --wf-id | -i
         Specifies the ID of the workflow. Optional.
-        Initial value from \$WORKFLOW_ID or ''.
+        Initial value from \$WORKFLOW_ID or default ''.
 
     --wf-name | -n
         Specifies the name of the workflow as shown in the GitHub Actions UI.
@@ -44,7 +44,7 @@ Options:
     --wf-path | -p
         Specifies the path of the workflow file in the repository, e.g.
         '.github/workflows/run-benchmarks.yml'. Optional.
-        Initial value from \$WORKFLOW_PATH or ''.
+        Initial value from \$WORKFLOW_PATH or default ''.
 
     Note:
         1) If none of the --wf-* options are specified, the script will try to find
@@ -55,6 +55,13 @@ Options:
         3) If one of the --wf-* options is specified, the environment variables
         will be ignored.
 
+Environment Variables:
+    ARTIFACT_NAME      - Name of the artifact to download.
+    ARTIFACT_DIR       - Directory where artifacts will be downloaded.
+    REPOSITORY         - GitHub repository in the form 'owner/repo'.
+    WORKFLOW_ID        - ID of the workflow.
+    WORKFLOW_NAME      - Name of the workflow.
+    WORKFLOW_PATH      - Path to the workflow file.
 EOF
 }
 

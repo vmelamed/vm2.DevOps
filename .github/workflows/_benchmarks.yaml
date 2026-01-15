@@ -72,7 +72,7 @@ jobs:
         if: steps.cache-bencher.outputs.cache-hit != 'true'
         uses: bencherdev/bencher@v0.5.9
 
-    # Clone the repository with full Git history
+      # Clone the repository with full Git history
       - name: Checkout
         uses: actions/checkout@v6
         with:
@@ -155,35 +155,35 @@ jobs:
 
           # Build bencher run command
           BENCHER_CMD="bencher run                      \
-            --branch \"${{ github.ref_name }}\"         \
-            --testbed \"${{ inputs.os }}\"              \
-            --adapter c_sharp_dot_net                   \
-            --err                                       \
-            --ci-on-the-fly                             \
-            --github-actions \"$GITHUB_TOKEN\"          \
-                                                        \
-            --iter 1                                    \
-            --fold median                               \
-                                                        \
-            --threshold-measure latency                 \
-            --threshold-test percentage                 \
-            --threshold-max-sample-size 64              \
-            --threshold-lower-boundary _                \
-            --threshold-upper-boundary $UPPER_THRESHOLD \
-                                                        \
-            --threshold-measure throughput              \
-            --threshold-test percentage                 \
-            --threshold-max-sample-size 64              \
-            --threshold-lower-boundary $LOWER_THRESHOLD \
-            --threshold-upper-boundary _                \
-                                                        \
-            --thresholds-reset"
+              --branch \"${{ github.ref_name }}\"         \
+              --testbed \"${{ inputs.os }}\"              \
+              --adapter c_sharp_dot_net                   \
+              --err                                       \
+              --ci-on-the-fly                             \
+              --github-actions \"$GITHUB_TOKEN\"          \
+                                                          \
+              --iter 1                                    \
+              --fold median                               \
+                                                          \
+              --threshold-measure latency                 \
+              --threshold-test percentage                 \
+              --threshold-max-sample-size 64              \
+              --threshold-lower-boundary _                \
+              --threshold-upper-boundary $UPPER_THRESHOLD \
+                                                          \
+              --threshold-measure throughput              \
+              --threshold-test percentage                 \
+              --threshold-max-sample-size 64              \
+              --threshold-lower-boundary $LOWER_THRESHOLD \
+              --threshold-upper-boundary _                \
+                                                          \
+              --thresholds-reset"
 
           # Add all benchmark result files
           for file in ${{ steps.run-benchmarks.outputs.results-dir }}/*-report.json; do
-            if [[ -f "$file" ]]; then
-              BENCHER_CMD="$BENCHER_CMD --file \"$file\""
-            fi
+              if [[ -f "$file" ]]; then
+                  BENCHER_CMD="$BENCHER_CMD --file \"$file\""
+              fi
           done
 
           # Echo the command for debugging (without token)
@@ -214,12 +214,12 @@ jobs:
           BENCHER_SLUG=$(echo "${REPO_NAME#*/}" | tr '[:upper:]' '[:lower:]' | tr '.' '-')
 
           {
-            echo "### 📊 Benchmark Results"
-            echo ""
-            echo "Project: **${{ github.repository }}**"
-            echo "Branch: **${{ github.ref_name }}**"
-            echo "Testbed: **${{ inputs.os }}**"
-            echo "Threshold: **±${{ inputs.max-regression-pct }}%**"
-            echo ""
-            echo "🌐 [View detailed results on Bencher](https://bencher.dev/console/projects/${BENCHER_SLUG})"
+              echo "### 📊 Benchmark Results"
+              echo ""
+              echo "Project: **${{ github.repository }}**"
+              echo "Branch: **${{ github.ref_name }}**"
+              echo "Testbed: **${{ inputs.os }}**"
+              echo "Threshold: **±${{ inputs.max-regression-pct }}%**"
+              echo ""
+              echo "🌐 [View detailed results on Bencher](https://bencher.dev/console/projects/${BENCHER_SLUG})"
           } >> $GITHUB_STEP_SUMMARY

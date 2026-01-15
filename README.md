@@ -196,7 +196,7 @@ Reusable workflow for publishing prerelease packages with automatic semantic ver
 - Other Parameters:
   - `package-projects`: JSON array of project paths to be packaged as NuGet packages
   - `dotnet-version`: .NET SDK version (default: `10.0.x`)
-  - `semver-build-prefix`: Prerelease label like `preview`, `alpha`, `beta`, `rc` (default: `preview`)
+  - `semver-prerelease-prefix`: Prerelease label like `preview`, `alpha`, `beta`, `rc` (default: `preview`)
   - `force-publish`: Bypass tag-already-exists check (default: `false`)
   - `reason`: Reason for manual triggering of a pre-release
   - `nuget-server`: Target server - `nuget`, `github`, or custom URL

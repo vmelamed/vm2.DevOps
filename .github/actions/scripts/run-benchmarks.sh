@@ -9,7 +9,7 @@ declare -xr script_name
 script_dir="$(dirname "$(realpath -e "$this_script")")"
 declare -xr script_dir
 
-source "$script_dir/_common.sh"
+source "$script_dir/_common_github.sh"
 
 declare -x bm_project=${BM_PROJECT:-}
 declare -x configuration=${CONFIGURATION:="Release"}
@@ -91,9 +91,9 @@ declare -r bm_dll_path
 declare -r bm_exec_path
 
 # Verify executables exist
-# shellcheck disable=SC2154
+# shellcheck disable=SC2154 # variable is referenced but not assigned.
 if [[ (! -f "${bm_exec_path}" || ! -f "${bm_dll_path}") && "$dry_run" != "true" ]]; then
-    echo "❌ Cached benchmark executables '${bm_exec_path}' or '${bm_dll_path}' were not found." | tee -a "$github_step_summary" >&2
+    error "Cached benchmark executables '${bm_exec_path}' or '${bm_dll_path}' were not found."
     exit 2
 fi
 
@@ -108,16 +108,16 @@ if ! execute dotnet run \
         --exporters JSON \
         --artifacts "$artifacts_dir" \
         /p:DefineConstants="$preprocessor_symbols"; then
-    echo "❌ Benchmarks failed in project '$bm_project'." | tee -a "$github_step_summary" >&2
+    error "Benchmarks failed in project '$bm_project'."
     exit 2
 fi
 
 # Verify JSON results were created
-# shellcheck disable=SC2154
+# shellcheck disable=SC2154 # variable is referenced but not assigned.
 if [[ $dry_run != "true" ]]; then
     json_files=("$results_dir"/*-report.json)
     if [[ ! -f "${json_files[0]}" ]]; then
-        echo "❌ No JSON benchmark reports found in $results_dir" | tee -a "$github_step_summary" >&2
+        error "No JSON benchmark reports found in $results_dir"
         exit 2
     fi
 
@@ -129,7 +129,6 @@ if [[ $dry_run != "true" ]]; then
     } | tee -a "$github_step_summary"
 fi
 
-echo "✅ Benchmarks completed successfully" | tee -a "$github_step_summary"
+info "✅ Benchmarks completed successfully" | tee -a "$github_step_summary"
 
-# shellcheck disable=SC2154
-echo "results-dir=$results_dir" >> "$github_output"
+to_github_output results_dir

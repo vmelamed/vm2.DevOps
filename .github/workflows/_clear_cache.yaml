@@ -3,17 +3,16 @@
 on:
   workflow_call:
     inputs:
-
       reason:
-        description: 'Reason for clearing cache'
+        description: "Reason for clearing cache"
         type: string
-        default: 'Emergency cache cleanup'
+        default: "Emergency cache cleanup"
 
       cache-pattern:
-        description: 'Cache key pattern to delete (build-artifacts-*, nuget-*, <other-patterns>) (default: nuget-*)'
+        description: "Cache key pattern to delete (build-artifacts-*, nuget-*, <other-patterns>) (default: nuget-*)"
         required: false
         type: string
-        default: 'nuget-'
+        default: "nuget-"
 
 permissions:
   actions: write
@@ -39,21 +38,21 @@ jobs:
 
           # Restrict to known-safe prefixes to avoid accidental mass deletion
           case "$CACHE_PATTERN" in
-            nuget-|build-artifacts-|bencher-cli-)
-              ;; # allowed prefixes
-            *)
-              echo "❌ Cache pattern '$CACHE_PATTERN' is not in the allowlist (nuget-, build-artifacts-, bencher-cli-)";
-              exit 2;
-              ;;
+              nuget-|build-artifacts-|bencher-cli-)
+                  ;; # allowed prefixes
+              * )
+                  echo "❌ Cache pattern '$CACHE_PATTERN' is not in the allowlist (nuget-, build-artifacts-, bencher-cli-)";
+                  exit 2;
+                  ;;
           esac
 
           # List all caches
           echo "📋 Current caches before cleanup:"
           cache_list=$(gh cache list --limit 100 2>&1) || true
           if [[ -n "$cache_list" ]]; then
-            echo "$cache_list"
+              echo "$cache_list"
           else
-            echo "No caches found in repository"
+              echo "No caches found in repository"
           fi
           echo ""
 
@@ -64,20 +63,20 @@ jobs:
           matched_caches=$(gh cache list --limit 1000 2>&1 | grep "^${CACHE_PATTERN}" || true)
 
           if [[ -z "$matched_caches" ]]; then
-            echo "ℹ️  No caches found matching pattern '${CACHE_PATTERN}*'"
+              echo "ℹ️  No caches found matching pattern '${CACHE_PATTERN}*'"
           else
-            echo ""
-            while IFS=$'\t' read -r cache_id cache_key rest; do
-              if [[ -n "$cache_id" ]]; then
-                echo "  🗑️  Deleting: ${cache_key} (ID: ${cache_id})"
-                if gh cache delete "${cache_id}" --confirm 2>/dev/null; then
-                  ((deleted_count++)) || true
-                  echo "      ✅ Deleted successfully"
-                else
-                  echo "      ⚠️  Failed to delete (may already be deleted)"
-                fi
-              fi
-            done <<< "$matched_caches"
+              echo ""
+              while IFS=$'\t' read -r cache_id cache_key rest; do
+                  if [[ -n "$cache_id" ]]; then
+                      echo "  🗑️  Deleting: ${cache_key} (ID: ${cache_id})"
+                      if gh cache delete "${cache_id}" --confirm 2>/dev/null; then
+                          ((deleted_count++)) || true
+                          echo "      ✅ Deleted successfully"
+                      else
+                          echo "      ⚠️  Failed to delete (may already be deleted)"
+                      fi
+                  fi
+              done <<< "$matched_caches"
           fi
 
           echo ""
@@ -85,13 +84,13 @@ jobs:
 
           # Output to step summary
           {
-            echo "## 🗑️ Cache Cleanup Complete"
-            echo ""
-            echo "**Pattern:** \`${CACHE_PATTERN}*\`"
-            echo ""
-            echo "**Reason:** ${REASON}"
-            echo ""
-            echo "### Remaining Caches"
-            echo ""
-            gh cache list --limit 20 || echo "No caches remaining"
+              echo "## 🗑️ Cache Cleanup Complete"
+              echo ""
+              echo "**Pattern:** \`${CACHE_PATTERN}*\`"
+              echo ""
+              echo "**Reason:** ${REASON}"
+              echo ""
+              echo "### Remaining Caches"
+              echo ""
+              gh cache list --limit 20 || echo "No caches remaining"
           } >> "$GITHUB_STEP_SUMMARY"

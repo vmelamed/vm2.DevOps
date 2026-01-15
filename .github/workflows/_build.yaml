@@ -42,8 +42,8 @@ jobs:
     name: Build on ${{ inputs.os }}
     runs-on: ${{ inputs.os }}
     permissions:
-          contents: read
-          packages: read
+      contents: read
+      packages: read
     steps:
       # Clone the repository with full Git history for version calculation
       - name: Checkout
@@ -87,25 +87,25 @@ jobs:
 
           # Configure NuGet source with GitHub Packages authentication
           dotnet nuget update source github.vm2 \
-            --username "$GITHUB_ACTOR" \
-            --password "${{ secrets.GITHUB_TOKEN }}" \
-            --store-password-in-clear-text \
-            --configfile NuGet.config
+              --username "$GITHUB_ACTOR" \
+              --password "${{ secrets.GITHUB_TOKEN }}" \
+              --store-password-in-clear-text \
+              --configfile NuGet.config
 
           # Restore dependencies
           dotnet restore --locked-mode
 
           # Build the project
           dotnet build ${{ inputs.build-project }} \
-            /p:DefineConstants="${{ inputs.preprocessor-symbols || '' }}" \
-            --configuration ${{ inputs.configuration }}
+              /p:DefineConstants="${{ inputs.preprocessor-symbols || '' }}" \
+              --configuration ${{ inputs.configuration }}
 
           # Summarize the build results
           {
-            echo "Build:               ✔️ Successful"
-            echo "Runner:              ${{ inputs.os }}"
-            echo "Build configuration: ${{ inputs.configuration }}"
-            echo "Defined symbols:     ${{ inputs.preprocessor-symbols || '' }}"
+              echo "Build:               ✅ Successful"
+              echo "Runner:              ${{ inputs.os }}"
+              echo "Build configuration: ${{ inputs.configuration }}"
+              echo "Defined symbols:     ${{ inputs.preprocessor-symbols || '' }}"
           } >> $GITHUB_STEP_SUMMARY
 
       # Save compiled binaries and intermediate files to cache for downstream jobs

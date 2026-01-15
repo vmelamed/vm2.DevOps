@@ -1,6 +1,6 @@
 ﻿# Release Process
 
-This document explains how versioning, prerelease automation, and stable publishing work for this repository.
+This document explains how versioning, prerelease, and stable release automation publishing work for the vm2 repositories.
 
 ---
 
@@ -54,24 +54,24 @@ The actual activation is via:
 |-------------------------|-----------------------------------------------------|-------------------------------------------|------------------|--------------------------|
 | Local build (no tag)    | `dotnet build`                                      | Computed prerelease (if no tag reachable) | No               | For development only     |
 | Prerelease (automated)  | Merge (push) to `main` (commit not already tagged)  | `vX.Y.(Z+1)-preview.YYYYMMDD.<run>`       | Yes (prerelease) | Preview package on NuGet |
-| Stable release (manual) | **Manual** annotated tag push                       | `vX.Y.Z`                                  | Yes (stable)     | Final package on NuGet   |
+| Stable release (manual) | **Manually** activated, computed tag from commits   | `vX.Y.Z`                                  | Yes (stable)     | Final package on NuGet   |
 
 ---
 
 ## 3. Automated Prerelease Tagging
 
-Workflow: `.github/workflows/prerelease.yml`
+Workflow: the current repo's `.github/workflows/Prerelease.yml` is triggered on push to `main` (PR).
 
 Logic:
 
 1. On push to `main`, check if `HEAD` already has a `v*` tag.
-2. If not, find latest stable `vX.Y.Z` (no hyphen).
-3. Increment patch to `Z+1` to form base.
-4. Create prerelease tag: `vX.Y.(Z+1)-preview.<UTCDate>.<GitHubRunNumber>`
-5. Push tag.
-6. Build, pack, publish to NuGet using MinVer (tag-driven).
+1. If not, find latest stable `vX.Y.Z` (no hyphen).
+1. Increment patch to `Z+1` to form base.
+1. Create prerelease tag: `vX.Y.(Z+1)-preview.<UTCDate>.<GitHubRunNumber>`
+1. Push tag.
+1. Build, pack, publish to NuGet using MinVer (tag-driven).
 
-Rationale: *Stable tags remain human-controlled; prereleases always advance from the last stable.*
+Rationale: *Stable tags remain human-initiated; prereleases always advance from the last stable.*
 
 ---
 
@@ -79,27 +79,16 @@ Rationale: *Stable tags remain human-controlled; prereleases always advance from
 
 Manual steps:
 
-1. Ensure main is up to date and CI green
+1. Trigger the Release workflow via GitHub UI or CLI:
 
-   ```bash
-   # bash:
-   git checkout main
-   git pull origin main
-   ```
+```bash
+gh release create vX.Y.Z --generate-notes
+```
 
-1. Choose next version (SemVer 2.0!) – update CHANGELOG if applicable:
+This triggers `.github/workflows/Release.yml`, which:
 
-   ```bash
-   # bash:
-   VER=v1.2.0
-   git tag -a $VER -m "$VER"
-   git push origin $VER
-   ```
-
-This triggers `.github/workflows/release.yml`, which:
-
-1. Restores, builds, tests.
-1. Packs using MinVer (exact tag).
+1. Restore.
+1. Build, pack, publish to NuGet using MinVer (tag-driven).
 1. Publishes `.nupkg` + `.snupkg` to NuGet (with symbol/source link).
 
 ---
@@ -110,8 +99,13 @@ This triggers `.github/workflows/release.yml`, which:
 | ---------------------- | ----------------------------------- |
 | `NUGET_API_GITHUB_KEY` | Pushing packages to GitHub Packages |
 | `NUGET_API_NUGET_KEY`  | Pushing packages to NuGet.org       |
+| `NUGET_API_KEY`        | Pushing packages to another server  |
 
-Ensure branch protection on `main` so only reviewed code generates prereleases.
+The key values are the respective API keys from the package hosts, stored as GitHub repository secrets. No need to define all
+if not used. Also `NUGET_API_KEY` is generic for any server, e.g. if the server is NuGet.org and `NUGET_API_NUGET_KEY` is not
+defined, `NUGET_API_KEY` is used.
+
+Ensure branch protection on `main` with `build`, `test`, and `benchmark` if present, so only reviewed code generates prereleases.
 
 ---
 

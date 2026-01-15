@@ -3,6 +3,11 @@ name: _release (Reusable workflow)
 on:
   workflow_call:
     inputs:
+      dotnet-version:
+        description: Version of .NET SDK to use (cannot be null or empty string, default 10.0.x)
+        type: string
+        default: 10.0.x
+
       package-projects:
         description: >-
           JSON array of project/solution paths to package and publish, e.g. '["src/Project1/Project1.csproj", "src/Project2/Project2.csproj"]'.
@@ -11,25 +16,15 @@ on:
         required: false
         default: '[""]'
 
-      dotnet-version:
-        description: Version of .NET SDK to use (cannot be null or empty string, default 10.0.x)
-        type: string
-        default: 10.0.x
-
-      force-publish:
-        description: Force publish even if already tagged
-        type: boolean
-        default: false
-
-      reason:
-        description: Reason for manual pre-release
-        type: string
-        default: ""
-
       nuget-server:
         description: NuGet server to publish to (nuget or github)
         type: string
         default: "nuget"
+
+      reason:
+        description: Reason for manual release
+        type: string
+        default: ""
 
       save-package-artifacts:
         description: Upload package(s) as workflow artifacts
@@ -39,20 +34,21 @@ on:
     secrets:
       NUGET_API_GITHUB_KEY:
         description: >-
-          Token for authentication to the GitHub NuGet server - must match the selected nuget-server.
-          At least one of NUGET_API_GITHUB_KEY, NUGET_API_NUGET_KEY, or NUGET_API_KEY must be provided.
+          Token for authentication to the GitHub NuGet server - must be for the GitHub Packages server.
+          If GitHub Packages server is not used, this secret can be left empty.
         required: false
 
       NUGET_API_NUGET_KEY:
         description: >-
-          Token for authentication to the nuget.org NuGet server - must match the selected nuget-server.
-          At least one of NUGET_API_GITHUB_KEY, NUGET_API_NUGET_KEY, or NUGET_API_KEY must be provided.
+          Token for authentication to the nuget.org NuGet server - must be for the nuget.org server.
+          If nuget.org server is not used, this secret can be left empty.
         required: false
 
       NUGET_API_KEY:
         description: >-
-          Token for authentication to a custom NuGet server - must match the selected nuget-server.
-          At least one of NUGET_API_GITHUB_KEY, NUGET_API_NUGET_KEY, or NUGET_API_KEY must be provided.
+          Token for authentication to a custom NuGet server - must be for the selected nuget-server.
+          Also used as the default token if nuget-server is 'nuget' or 'github'.
+          If a custom NuGet server is not used, this secret can be left empty.
         required: false
 
 concurrency:
@@ -66,68 +62,54 @@ env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   NUGET_SERVER: ${{ inputs.nuget-server || 'nuget' }}
+  ARTIFACTS_DIR: artifacts/pack
 
 jobs:
-  validate:
-    name: Validate Inputs and Tag
+  compute-version:
+    name: Compute Release Version
     runs-on: ubuntu-latest
     outputs:
-      package-projects: ${{ steps.validate.outputs.package-projects }}
-      nuget-server: ${{ steps.validate.outputs.nuget-server }}
+      package-projects: ${{ steps.version.outputs.package-projects }}
+      nuget-server: ${{ steps.version.outputs.nuget-server }}
+      minver-tag-prefix: ${{ steps.version.outputs.minver-tag-prefix }}
+      release-version: ${{ steps.version.outputs.release-version }}
+      release-tag: ${{ steps.version.outputs.release-tag }}
+      reason: ${{ steps.version.outputs.reason }}
     steps:
-      - name: Validate the current tag and inputs
-        id: validate
-        shell: bash
-        run: |+
-          nuget_server='${{ inputs.nuget-server }}'
-          package_projects='${{ inputs.package-projects }}'
-          {
-            if [[ -z "$package_projects" ]] || jq -e '. == null or . == "" or . == []' > /dev/null 2>&1 <<<"$package_projects"; then
-                echo "⚠️ WARNING The value of the input 'package-projects' is empty: will build and pack the entire solution. Assuming default value of '[\"\"]'."
-                package_projects='[""]'
-            elif [[ $? == 5 ]]; then
-                echo "❌ ERROR The value of the input 'package-projects'='$package_projects' is not a valid JSON."
-                exit 2
-            elif ! jq -e 'type == "array" and all(type == "string")' > /dev/null 2>&1 <<<"$package_projects"; then
-                echo "❌ ERROR The value of the input 'package-projects'='$package_projects' must be a string representing a JSON array of (possibly empty) strings - paths to the project(s) to be packed."
-                exit 2
-            elif jq -e 'any(. == "")' > /dev/null 2>&1 <<<"$package_projects"; then
-                echo "⚠️ WARNING At least one of the strings in the value of the input 'package-projects' is empty: will build and pack the entire solution. Assuming default value of '[\"\"]'."
-                package_projects='[""]'
-            fi
-            if [ -z "$nuget_server" ]; then
-              echo "❌ ERROR No NuGet server configured - add variable NUGET_SERVER"
-              exit 2
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
-          v="${{ vars.MinVerTagPrefix || 'v' }}"
-          if [[ ! "${{ github.ref_name }}" =~ ^${v}[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "The current tag ${{ github.ref_name }} is not a valid semantic version for a stable release (e.g. ${v}1.2.3 or ${v}2.0.0)"
-            exit 2
-          fi
-          {
-            echo "nuget-server=$nuget_server"
-            echo "package-projects=$package_projects"
-            echo "minver-tag-prefix=$v"
-          } >> "$GITHUB_OUTPUT"
-
-  release:
-    name: Release Stable
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs:
-      - validate
-    strategy:
-      fail-fast: false
-      matrix:
-        project: ${{ fromJSON(needs.validate.outputs.package-projects) }}
-    steps:
-      - name: Checkout release tag (full history)
+      - name: Checkout (full history)
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.ref }}
-          fetch-tags: true
           fetch-depth: 0
+
+      - name: Composite action Setup DevOps scripts (local)
+        uses: ./.github/actions/scripts
+
+      - name: Fetch tags
+        run: git fetch --tags --force
+
+      - name: Validate and compute release version
+        id: version
+        shell: bash
+        run: |+
+          .github/actions/scripts/compute-release-version.sh \
+              --package-projects '${{ inputs.package-projects }}' \
+              --nuget-server '${{ inputs.nuget-server }}' \
+              --minver-tag-prefix '${{ vars.MinVerTagPrefix || 'v' }}' \
+              --save-package-artifacts '${{ inputs.save-package-artifacts }}'
+
+  changelog:
+    name: Update CHANGELOG
+    runs-on: ubuntu-latest
+    needs:
+      - compute-version
+    steps:
+      - name: Checkout (full history on main)
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Composite action Setup DevOps scripts (local)
+        uses: ./.github/actions/scripts
 
       - name: Install git-cliff
         uses: taiki-e/install-action@v2
@@ -135,46 +117,56 @@ jobs:
           tool: git-cliff
 
       - name: Update CHANGELOG for release
-        env:
-          TAG: ${{ github.ref_name }}
         shell: bash
         run: |
-          if [ ! -f changelog/cliff.release-header.toml ]; then
-            echo "❌ Missing changelog/cliff.release-header.toml; failing."
-            exit 1
-          fi
+          .github/actions/scripts/update-changelog-release.sh \
+              --release-tag "${{ needs.compute-version.outputs.release-tag }}" \
+              --minver-tag-prefix "${{ needs.compute-version.outputs.minver-tag-prefix }}"
 
-          COMMIT=$(git rev-parse -q --verify "$TAG^{commit}" || git rev-parse HEAD)
-          RANGE="$COMMIT^..$COMMIT"
-          echo "Using range: $RANGE" >> "$GITHUB_STEP_SUMMARY"
-          git-cliff -c changelog/cliff.release-header.toml \
-            --tag "$TAG" \
-            --prepend CHANGELOG.md \
-            "$RANGE"
+  tag-release:
+    name: Create and Push Release Tag
+    runs-on: ubuntu-latest
+    needs:
+      - compute-version
+      - changelog
+    steps:
+      - name: Checkout (with changelog updates)
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: main # Get latest main with changelog updates
 
-          if git status --porcelain -- CHANGELOG.md | grep -q .; then
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add CHANGELOG.md
-            git commit -m "chore: update changelog for $TAG"
-            DEFAULT_BRANCH=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|origin/||')
-            if [ -z "$DEFAULT_BRANCH" ]; then
-              DEFAULT_BRANCH=$(git remote show origin 2>/dev/null | sed -n 's/.*HEAD branch: //p')
-            fi
-            if [ -z "$DEFAULT_BRANCH" ]; then
-              echo "⚠️ Unable to detect default branch; assuming 'main'."
-              DEFAULT_BRANCH="main"
-            fi
-            set +e
-            git push origin HEAD:"$DEFAULT_BRANCH"
-            PUSH_EXIT=$?
-            set -e
-            if [ $PUSH_EXIT -ne 0 ]; then
-              echo "⚠️ Unable to push changelog commit back to origin/$DEFAULT_BRANCH (exit $PUSH_EXIT); continuing release."
-            fi
-          else
-            echo "No changelog changes to commit.";
-          fi
+      - name: Composite action Setup DevOps scripts (local)
+        uses: ./.github/actions/scripts
+
+      - name: Create and push release tag
+        shell: bash
+        run: |
+          .github/actions/scripts/create-release-tag.sh \
+              --release-tag "${{ needs.compute-version.outputs.release-tag }}" \
+              --reason "${{ inputs.reason || 'stable release' }}"
+
+  release:
+    name: Build and Publish Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs:
+      - compute-version
+      - tag-release
+    strategy:
+      fail-fast: false
+      matrix:
+        project: ${{ fromJSON(needs.compute-version.outputs.package-projects) }}
+    steps:
+      - name: Checkout release tag (full history)
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.compute-version.outputs.release-tag }}
+          fetch-tags: true
+          fetch-depth: 0
+
+      - name: Composite action Setup DevOps scripts (local)
+        uses: ./.github/actions/scripts
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
@@ -185,82 +177,28 @@ jobs:
             **/packages.lock.json
             **/*.csproj
 
-      - name: Restore
+      - name: Build, Package and Publish release to NuGet server
         shell: bash
-        run: |+
-          dotnet restore \
-            ${{ matrix.project }} \
-            --locked-mode
-
-      - name: Pack (stable)
-        shell: bash
-        run: |+
-          mkdir -p artifacts/pack
-          dotnet pack \
-            ${{ matrix.project }} \
-            --configuration Release \
-            --output artifacts/pack \
-            --no-restore \
-            /p:MinVerTagPrefix=${{ needs.validate.outputs.minver-tag-prefix }} \
-            "/p:PackageReleaseNotes=Release: ${{ inputs.reason || 'release build' }}"
-          ls -1 artifacts/pack
-
-      - name: Publish stable to NuGet server
         env:
-          RELEASE_TAG: ${{ github.ref_name }}
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
           NUGET_API_GITHUB_KEY: ${{ secrets.NUGET_API_GITHUB_KEY }}
           NUGET_API_NUGET_KEY: ${{ secrets.NUGET_API_NUGET_KEY }}
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
-        shell: bash
         run: |+
-          NUGET_SERVER=${{ needs.validate.outputs.nuget-server }}
-          if [ "$NUGET_SERVER" = "github" ]; then
-            SERVER_NAME="GitHub Packages"
-            SERVER_URL="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
-            SERVER_API_KEY="${NUGET_API_GITHUB_KEY}"
-          elif [ "$NUGET_SERVER" = "nuget" ]; then
-            SERVER_NAME="NuGet.org"
-            SERVER_URL="https://api.nuget.org/v3/index.json"
-            SERVER_API_KEY="${NUGET_API_NUGET_KEY}"
-          else
-            SERVER_NAME="$NUGET_SERVER"
-            SERVER_URL="$NUGET_SERVER"
-            SERVER_API_KEY="$NUGET_API_KEY"
-          fi
-
-          if [ -z "${SERVER_API_KEY}" ]; then
-            echo "No API key configured for server '$SERVER_NAME'"
-            exit 2
-          fi
-
-          dotnet nuget push artifacts/pack/*.nupkg \
-            --api-key  "$SERVER_API_KEY" \
-            --source "$SERVER_URL" \
-            --skip-duplicate
-          printf '## Packages %s pushed to %s:\n%s\n' "$RELEASE_TAG" "$SERVER_NAME" "$(ls -1 artifacts/pack/*.nupkg | sed 's/^/  - /')" >> "$GITHUB_STEP_SUMMARY"
+          .github/actions/scripts/publish-packages.sh \
+              --package-project "${{ matrix.project }}" \
+              --nuget-server "${{ needs.compute-version.outputs.nuget-server }}" \
+              --minver-tag-prefix "${{ needs.compute-version.outputs.minver-tag-prefix }}" \
+              --version "${{ needs.compute-version.outputs.release-version }}" \
+              --git-tag "${{ needs.compute-version.outputs.release-tag }}" \
+              --reason "${{ needs.compute-version.outputs.reason }}" \
+              --artifacts-saved "${{ inputs.save-package-artifacts }}" \
+              --artifacts-dir "${{ env.ARTIFACTS_DIR }}"
 
       - name: Upload package artifact
         if: inputs.save-package-artifacts == 'true'
         uses: actions/upload-artifact@v6
         with:
-          name: nuget-packages-${{ github.ref_name }}-${{ hashFiles(matrix.project) }}
+          name: nuget-packages-${{ needs.compute-version.outputs.release-tag }}-${{ hashFiles(matrix.project) }}
           path: artifacts/pack/*.nupkg
           if-no-files-found: ignore
           overwrite: true
-
-      - name: Summary
-        env:
-          ARTIFACTS_SAVED: ${{ inputs.save-package-artifacts == 'true' }}
-        shell: bash
-        run: |+
-          {
-              reason="${{ inputs.reason || 'tagged with a new version' }}"
-              echo "## Release Summary"
-              echo
-              echo "- Tag: ${GITHUB_REF_NAME}"
-              echo "- Stable release reason: ${reason}"
-              if [ "$ARTIFACTS_SAVED" = "true" ]; then
-                echo "- Artifacts:"
-                ls -1 artifacts/pack | sed 's/^/  - /'
-              fi
-          } >> "$GITHUB_STEP_SUMMARY"

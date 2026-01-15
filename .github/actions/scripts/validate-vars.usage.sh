@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# shellcheck disable=SC2154
+# shellcheck disable=SC2154 # variable is referenced but not assigned.
 
 function usage_text()
 {
@@ -11,7 +11,7 @@ Usage:
                     --<long switch>|-<short switch> ]*
 
     This script validates and sets up CI variables for GitHub Actions workflows.
-    It validates all inputs and outputs them to github_output for use by
+    It validates all inputs and outputs them to GITHUB_OUTPUT for use by
     subsequent workflow jobs.
 
 Parameters: All parameters are optional if the corresponding environment
@@ -43,27 +43,50 @@ Options:
         String representing a JSON array of strings - target OS-es (e.g. from a
         GitHub actions matrix). Can be empty string, or string representing
         null or empty array, in which case '["ubuntu-latest"]' will be used.
-        Initial value from \$OS or '["ubuntu-latest"]'
+        Initial value from \$OS or default '["ubuntu-latest"]'
 
     --dotnet-version
         Version of .NET SDK to use.
-        Initial value from \$DOTNET_VERSION or '10.0.x'
+        Initial value from \$DOTNET_VERSION or default '10.0.x'
 
     --configuration | -c
         Build configuration ('Release' or 'Debug').
-        Initial value from \$CONFIGURATION or 'Release'
+        Initial value from \$CONFIGURATION or default 'Release'
 
     --preprocessor-symbols | -d
         Pre-processor symbols for compilation.
-        Initial value from \$PREPROCESSOR_SYMBOLS or ''
+        Initial value from \$PREPROCESSOR_SYMBOLS or default ''
 
     --min-coverage-pct | -min
         Minimum acceptable code coverage percentage (50-100).
-        Initial value from \$MIN_COVERAGE_PCT or 80
+        Initial value from \$MIN_COVERAGE_PCT or default 80
 
     --max-regression-pct | -max
         Maximum acceptable performance regression percentage (0-50).
-        Initial value from \$MAX_REGRESSION_PCT or 20
+        Initial value from \$MAX_REGRESSION_PCT or default 20
+
+Environment Variables:
+    BUILD_PROJECTS          JSON array of paths to projects to build.
+    TEST_PROJECTS           JSON array of paths to test projects to run.
+    BENCHMARK_PROJECTS      JSON array of paths to benchmark projects to run.
+    OS                      JSON array of target OS-es.
+    DOTNET_VERSION          Version of .NET SDK to use.
+    CONFIGURATION           Build configuration ('Release' or 'Debug').
+    PREPROCESSOR_SYMBOLS    Pre-processor symbols for compilation.
+    MIN_COVERAGE_PCT        Minimum acceptable code coverage percentage.
+    MAX_REGRESSION_PCT      Maximum acceptable performance regression percentage.
+
+Outputs (to GITHUB_OUTPUT):
+    build-projects          JSON array of paths to projects to build.
+    test-projects           JSON array of paths to test projects to run.
+    benchmark-projects      JSON array of paths to benchmark projects to run.
+    os                      JSON array of target OS-es.
+    dotnet-version          Version of .NET SDK to use.
+    configuration           Build configuration ('Release' or 'Debug').
+    preprocessor-symbols    Pre-processor symbols for compilation.
+    min-coverage-pct        Minimum acceptable code coverage percentage.
+    max-regression-pct      Maximum acceptable performance regression percentage.
+    verbose                 Is verbose output enabled?
 
 EOF
 }

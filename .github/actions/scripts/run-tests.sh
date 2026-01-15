@@ -9,7 +9,7 @@ declare -xr script_name
 script_dir="$(dirname "$(realpath -e "$this_script")")"
 declare -xr script_dir
 
-source "$script_dir/_common.sh"
+source "$script_dir/_common_github.sh"
 
 declare -x test_project=${TEST_PROJECT:-}
 declare -x configuration=${CONFIGURATION:="Release"}
@@ -90,7 +90,6 @@ coverage_source_path="$coverage_source_dir/$coverage_source_fileName"           
 coverage_reports_dir="$coverage_results_dir/coverage_reports"                   # the directory for the coverage reports
 coverage_reports_path="$coverage_reports_dir/Summary.txt"                       # the path to the coverage summary file
 
-coverage_summary_dir="$artifacts_dir/coverage"                                  # the directory for the coverage html artifacts
 coverage_summary_html_dir="$artifacts_dir/coverage/html"                        # the directory for the coverage html artifacts
 coverage_summary_text_dir="$artifacts_dir/coverage/text"                        # the directory for the text coverage summary artifacts
 coverage_summary_text_path="$coverage_summary_text_dir/$test_name-Summary.txt"  # the path to the coverage summary artifact file
@@ -104,7 +103,6 @@ declare -r coverage_source_path
 declare -r coverage_reports_dir
 declare -r coverage_reports_path
 
-declare -r coverage_summary_dir
 declare -r coverage_summary_text_dir
 declare -r coverage_summary_html_dir
 declare -r coverage_summary_text_path
@@ -134,9 +132,9 @@ declare -r test_dll_path
 declare -rx test_exec_path
 
 # Verify artifacts exist
-# shellcheck disable=SC2154
+# shellcheck disable=SC2154 # variable is referenced but not assigned.
 if [[ (! -f "${test_exec_path}" || ! -f "${test_dll_path}") && "$dry_run" != "true" ]]; then
-    echo "❌ Cached test executables ${test_exec_path} or ${test_dll_path} were not found." | tee -a "$github_step_summary" >&2
+    error "Cached test executables ${test_exec_path} or ${test_dll_path} were not found." | tee -a "$github_step_summary" >&2
     exit 2
 fi
 
@@ -152,14 +150,14 @@ if ! execute dotnet run \
         --coverage \
         --coverage-output-format cobertura \
         --coverage-output "$coverage_source_path"; then
-    echo "❌ Tests failed in project '$test_project'." | tee -a "$github_step_summary" >&2
+    error "Tests failed in project '$test_project'." | tee -a "$github_step_summary" >&2
     exit 2
 fi
 
-# shellcheck disable=SC2154
+# shellcheck disable=SC2154 # variable is referenced but not assigned.
 if [[ $dry_run != "true" ]]; then
     if [[ ! -s "$coverage_source_path" ]]; then
-        echo "❌ Coverage file not found or is empty." | tee -a "$github_step_summary" >&2
+        error "Coverage file not found or is empty." | tee -a "$github_step_summary" >&2
         exit 2
     fi
 fi
@@ -193,7 +191,7 @@ fi
 
 if [[ $dry_run != "true" ]]; then
     if [[ ! -s "$coverage_reports_path" ]]; then
-        echo "❌ Coverage summary not found." | tee -a "$github_step_summary" >&2
+        error "Coverage summary not found." | tee -a "$github_step_summary" >&2
         exit 2
     fi
 fi
@@ -208,23 +206,23 @@ trace "Extracting coverage percentages from '$coverage_summary_text_path'..."
 if [[ $dry_run != "true" ]]; then
     line_pct=$(sed -nE 's/Line coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_text_path" | head -n1 | xargs)
     if [[ -z "$line_pct" ]]; then
-        echo "❌ Could not parse line coverage percent from \"$coverage_summary_text_path\"" | tee -a "$github_step_summary" >&2
+        error "Could not parse line coverage percent from \"$coverage_summary_text_path\"" | tee -a "$github_step_summary" >&2
         exit 2
     fi
     branch_pct=$(sed -nE 's/Branch coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_text_path" | head -n1 | xargs)
     if [[ -z "$branch_pct" ]]; then
-        echo "❌ Could not parse branch coverage percent from \"$coverage_summary_text_path\"" | tee -a "$github_step_summary" >&2
+        error "Could not parse branch coverage percent from \"$coverage_summary_text_path\"" | tee -a "$github_step_summary" >&2
         exit 2
     fi
     method_pct=$(sed -nE 's/Method coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_text_path" | head -n1 | xargs)
     if [[ -z "$method_pct" ]]; then
-        echo "❌ Could not parse method coverage percent from \"$coverage_summary_text_path\"" | tee -a "$github_step_summary" >&2
+        error "Could not parse method coverage percent from \"$coverage_summary_text_path\"" | tee -a "$github_step_summary" >&2
         exit 2
     fi
 
-    ln_status="$([[ $line_pct -lt $min_coverage_pct   ]] && echo '❌' || echo '✔️')"
-    br_status="$([[ $branch_pct -lt $min_coverage_pct ]] && echo '❌' || echo '✔️')"
-    me_status="$([[ $method_pct -lt $min_coverage_pct ]] && echo '❌' || echo '✔️')"
+    ln_status="$([[ $line_pct -lt $min_coverage_pct   ]] && echo '❌' || echo '✅')"
+    br_status="$([[ $branch_pct -lt $min_coverage_pct ]] && echo '❌' || echo '✅')"
+    me_status="$([[ $method_pct -lt $min_coverage_pct ]] && echo '❌' || echo '✅')"
 
     # Compare the coverage percentage against the threshold
     {
@@ -238,19 +236,18 @@ if [[ $dry_run != "true" ]]; then
     } >> "$github_step_summary"
 
     # Export variables to GitHub Actions output
-    {
-        echo "proj-name=$test_name"
-        echo "artifacts-dir=$artifacts_dir"
-        echo "coverage_results_dir=$coverage_results_dir"
-        echo "coverage_source_path=$coverage_source_path"
-        echo "coverage_summary_dir=$coverage_summary_dir"
-        echo "coverage_summary_text_dir=$coverage_summary_text_dir"
-        echo "coverage_summary_html_dir=$coverage_summary_html_dir"
-        echo "coverage_summary_text_path=$coverage_summary_text_path"
-        echo "line_pct=${line_pct}"
-        echo "branch_pct=${branch_pct}"
-        echo "method_pct=${method_pct}"
-    } >> "$github_output"
+    to_github_output proj-name test_name
+    args_to_github_output \
+     artifacts_dir \
+     coverage_results_dir \
+     coverage_source_path \
+     coverage_summary_dir \
+     coverage_summary_text_dir \
+     coverage_summary_html_dir \
+     coverage_summary_text_path \
+     line_pct \
+     branch_pct \
+     method_pct
 
     if (( line_pct < min_coverage_pct )); then
         exit 2

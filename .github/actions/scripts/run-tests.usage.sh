@@ -32,18 +32,28 @@ Options:
 
     --configuration | -c
         Specifies the build configuration to use ('Debug' or 'Release').
-        Initial value from \$CONFIGURATION or 'Release'
+        Initial value from \$CONFIGURATION or default 'Release'
 
     --define | -d
         Defines one or more user-defined pre-processor symbols to be used when
         building the benchmark project, e.g. 'STAGING'. You can specify this
         option multiple times to define multiple symbols.
-        Initial value from \$PREPROCESSOR_SYMBOLS or ''
+        Initial value from \$PREPROCESSOR_SYMBOLS or default ''
 
     --min-coverage-pct | -t
         Specifies the minimum acceptable code coverage percentage (50-100).
-        Initial value from \$MIN_COVERAGE_PCT or 80
+        Initial value from \$MIN_COVERAGE_PCT or default 80
 
+Environment Variables:
+    TEST_PROJECT            Path to the test project file.
+    ARTIFACT_DIR            Directory where test artifacts will be created.
+    CONFIGURATION           Build configuration ('Debug' or 'Release').
+    PREPROCESSOR_SYMBOLS    Pre-processor symbols to define when building the
+                            test project.
+    MIN_COVERAGE_PCT        Minimum acceptable code coverage percentage.
+
+Outputs (to GITHUB_OUTPUT):
+    results-dir             The directory where test results are stored.
 EOF
 }
 

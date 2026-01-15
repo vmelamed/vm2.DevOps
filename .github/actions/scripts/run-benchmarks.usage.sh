@@ -24,8 +24,8 @@ Parameters:
 Switches:$common_switches
     --short-run | -s
         A shortcut for '--define SHORT_RUN'. See below.
-        The initial value from \$PREPROCESSOR_SYMBOLS or '' will be preserved and
-        appended with 'SHORT_RUN' if not already present.
+        The initial value from \$PREPROCESSOR_SYMBOLS or default '' will be
+        preserved and appended with 'SHORT_RUN' if not already present.
 
 Options:
     --artifacts | -a
@@ -35,20 +35,31 @@ Options:
 
     --configuration | -c
         Specifies the build configuration to use ('Debug' or 'Release').
-        Initial value from \$CONFIGURATION or 'Release'
+        Initial value from \$CONFIGURATION or default 'Release'
 
     --define | -d
         Defines one or more user-defined pre-processor symbols to be used when
         building the benchmark project, e.g. 'SHORT_RUN'. Which generates a
         shorter and faster, but less accurate benchmark run. You can specify
         this option multiple times to defined multiple symbols.
-        Initial value from \$PREPROCESSOR_SYMBOLS or ''
+        Initial value from \$PREPROCESSOR_SYMBOLS or default ''
 
     --max-regression-pct | -r
         Specifies the maximum acceptable regression percentage (0-50) when
         comparing to a previous, base-line benchmark results.
-        Initial value from \$MAX_REGRESSION_PCT or 20
+        Initial value from \$MAX_REGRESSION_PCT or default 20
 
+Environment Variables:
+    BM_PROJECT              Path to the benchmark project file.
+    ARTIFACT_DIR            Directory where benchmark artifacts will be created.
+    CONFIGURATION           Build configuration ('Debug' or 'Release').
+    PREPROCESSOR_SYMBOLS    Pre-processor symbols to define when building the
+                            benchmark project.
+    MAX_REGRESSION_PCT      Maximum acceptable regression percentage when
+                            comparing to previous benchmark results.
+
+Outputs (to GITHUB_OUTPUT):
+    results-dir             The directory where benchmark results are stored.
 EOF
 }
 

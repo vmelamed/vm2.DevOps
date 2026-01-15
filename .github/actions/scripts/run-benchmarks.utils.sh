@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# shellcheck disable=SC2034 # xyz appears unused. Verify use (or export if used externally).
+# shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
 function get_arguments()
 {
     if [[ "${#}" -eq 0 ]]; then return; fi
@@ -31,10 +31,12 @@ function get_arguments()
         fi
         # do not use short options -q -v -x -y
         case "${flag,,}" in
-            --debugger              ) ;;  # already processed
-            --help|-h               ) usage; exit 0 ;;
+            # do not use the common options:
+            --help|-h|--debugger|-q|--quiet-v|--verbose-x|--trace-y|--dry-run )
+                ;;
+
             --force-new-baseline|-f ) force_new_baseline=true ;;
-            --artifacts|-a          )
+            --artifacts|-a )
                 value="$1"
                 shift
                 artifacts_dir=$(realpath -m "$value")

@@ -101,19 +101,24 @@ Maybe it is worth exploring template repositories on GitHub for this purpose. Th
 The actions of this repo should have the following:
 
 - Variables:
-  - ACTIONS_RUNNER_DEBUG: false
-  - ACTIONS_STEP_DEBUG: false
-  - DOTNET_VERSION: 10.0.x
-  - CONFIGURATION: Release
-  - MAX_REGRESSION_PCT: 20%
-  - MIN_COVERAGE_PCT: 80%
-  - MINVERTAGPREFIX: v
+  - ACTIONS_RUNNER_DEBUG: `false`: Whether to enable GitHub Actions runner debug logging
+  - ACTIONS_STEP_DEBUG: `false`: Whether to enable GitHub Actions step debug logging
+  - DOTNET_VERSION: `10.0.x`: the .NET SDK version to use
+  - CONFIGURATION: `Release`: the build configuration to use (e.g., Release or Debug)
+  - NUGET_SERVER: `github`: the NuGet server to publish to (supported values: 'github', 'nuget', or custom URI)
+  - MINVERTAGPREFIX: `v`: Prefix for git tags to be recognized by MinVer
+  - SEMVER_PRERELEASE_PREFIX: `preview`: Prefix for the prerelease tag, e.g. 'preview', 'alpha', 'beta', 'rc', etc.
+  - SAVE_PACKAGE_ARTIFACTS: `false`: Whether to save package artifacts after build/publish
+  - MIN_COVERAGE_PCT: `80`%: Minimum code coverage percentage required
+  - MAX_REGRESSION_PCT: `20`%: Maximum allowed regression percentage
 
 - Secrets:
   - BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
   - CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-  - NUGET_API_GITHUB_KEY: ${{ secrets.NUGET_API_GITHUB_KEY }}
-  - NUGET_API_NUGET_KEY: ${{ secrets.NUGET_API_NUGET_KEY }}
+  - at least one of:
+    - NUGET_API_GITHUB_KEY: ${{ secrets.NUGET_API_GITHUB_KEY }}
+    - NUGET_API_NUGET_KEY: ${{ secrets.NUGET_API_NUGET_KEY }}
+    - NUGET_API_KEY: ${{ secrets.NUGET_API_NUGET_KEY }}
 
 The GitHub repositories have a lot of levers and knobs. Propose a sane default configuration for the new package repositories. You can discuss it with me as needed.
 
@@ -132,13 +137,13 @@ I am sure I am missing something at the moment, so please be proactive in asking
   5. Initializes git, commits, sets remote, and pushes.
 - Optionally expose a single entry-point command (the bootstrapper) that wraps all of the above.
 - Keep the bootstrapper generic so it can later support other project types (CLI, services, etc.), or ship a minimal script under `scripts/` in the generated repo when a full tool is overkill.
-- Align the script with existing patterns in `.github/actions/scripts/` and reuse helpers from `_common.sh` where possible.
+- Align the script with existing patterns in `.github/actions/scripts/` and reuse helpers from `_common_github.sh` where possible.
 
 ## Suggested repo defaults
 
 - Branching: default branch `main`; protect with required checks (CI/prerelease/release) and require PRs; dismiss stale approvals on push.
-- Actions variables: `DOTNET_VERSION=10.0.x`, `CONFIGURATION=Release`, `MAX_REGRESSION_PCT=20%`, `MIN_COVERAGE_PCT=80%`, `MINVERTAGPREFIX=v`, `ACTIONS_RUNNER_DEBUG=false`, `ACTIONS_STEP_DEBUG=false`.
-- Secrets expected: `BENCHER_API_TOKEN`, `CODECOV_TOKEN`, `NUGET_API_GITHUB_KEY`, `NUGET_API_NUGET_KEY`.
+- Actions variables: see Variables section above.
+- Secrets expected: `BENCHER_API_TOKEN`, `CODECOV_TOKEN`, and at least one of: `NUGET_API_GITHUB_KEY`, `NUGET_API_NUGET_KEY`, `NUGET_API_KEY` - corresponding to the selected NuGet server.
 - Repo features: issues on; wiki off; projects optional (off by default); vulnerability alerts on; Dependabot security updates on; Actions enabled.
 - Permissions: least privilege for `GITHUB_TOKEN` (read by default; scoped write for release job); require approval for outside-contributor workflow runs.
 - Environments: create `production` for release with required secrets; optional manual reviewer gate.

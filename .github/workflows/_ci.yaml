@@ -83,7 +83,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      # Setup DevOps scripts (works for both local and external calls)
+      # Composite action: setup DevOps scripts (works for both local and external calls)
       - name: Checkout DevOps repository scripts
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: actions/checkout@v6

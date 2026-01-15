@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# shellcheck disable=SC2154 # variable is referenced but not assigned.
 # shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
+# shellcheck disable=SC2154 # variable is referenced but not assigned.
 function get_arguments()
 {
     if [[ "${#}" -eq 0 ]]; then return; fi
@@ -13,6 +13,7 @@ function get_arguments()
             break
         fi
     done
+    # shellcheck disable=SC2154 # v appears unused. Verify use (or export if used externally).
     if [[ $debugger != "true" ]]; then
         trap on_debug DEBUG
         trap on_exit EXIT
@@ -22,6 +23,7 @@ function get_arguments()
     local value
 
     while [[ "${#}" -gt 0 ]]; do
+        # get the flag and convert it to lower case
         flag="$1"
         shift
         if get_common_arg "$flag"; then
@@ -32,44 +34,53 @@ function get_arguments()
             # do not use the common options:
             --help|-h|--debugger|-q|--quiet-v|--verbose-x|--trace-y|--dry-run )
                 ;;
-            --build-projects|-b )
+
+            --package-project|-p )
                 value="$1"; shift
-                build_projects="$value"
+                project="$value"
                 ;;
-            --test-projects|-t )
+
+            --nuget-server|-n )
                 value="$1"; shift
-                test_projects="$value"
+                nuget_server="$value"
                 ;;
-            --benchmark-projects|-p )
+
+            --minver-tag-prefix|-t )
                 value="$1"; shift
-                benchmark_projects="$value"
+                minver_tag_prefix="$value"
                 ;;
-            --os|-o )
+
+            --repo-owner|-o )
                 value="$1"; shift
-                os="$value"
+                repo_owner="$value"
                 ;;
-            --dotnet-version )
+
+            --version|-v )
                 value="$1"; shift
-                dotnet_version="$value"
+                version="$value"
                 ;;
-            --configuration|-c )
+
+            --git-tag|-g )
                 value="$1"; shift
-                configuration="$value"
+                git_tag="$value"
                 ;;
-            --preprocessor-symbols|-d )
+
+            --reason|-r )
                 value="$1"; shift
-                preprocessor_symbols="$value"
+                reason="$value"
                 ;;
-            --min-coverage-pct|-min )
+
+            --artifacts-saved|-a )
                 value="$1"; shift
-                min_coverage_pct="$value"
+                artifacts_saved="$value"
                 ;;
-            --max-regression-pct|-max )
+
+            --artifacts-dir|-d )
                 value="$1"; shift
-                max_regression_pct="$value"
+                artifacts_dir="$value"
                 ;;
-            * )
-                usage "Unknown option: $flag"
+
+            * ) usage "Unknown option: $flag"
                 exit 2
                 ;;
         esac
@@ -78,20 +89,20 @@ function get_arguments()
 
 dump_all_variables()
 {
-    dump_vars \
+    dump_vars --force --quiet \
         --header "Script Arguments:" \
         debugger \
         dry_run \
         verbose \
         quiet \
         --blank \
-        build_projects \
-        test_projects \
-        benchmark_projects \
-        os \
-        dotnet_version \
-        configuration \
-        preprocessor_symbols \
-        min_coverage_pct \
-        max_regression_pct
+        package_project \
+        nuget_server \
+        minver_tag_prefix \
+        repo_owner \
+        version \
+        git_tag \
+        reason \
+        artifacts_saved \
+        artifacts_dir
 }

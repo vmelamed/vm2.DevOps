@@ -98,10 +98,10 @@ jobs:
         shell: bash
         run: |
           dotnet nuget update source github.vm2 \
-            --username "$GITHUB_ACTOR" \
-            --password "${{ secrets.GITHUB_TOKEN }}" \
-            --store-password-in-clear-text \
-            --configfile NuGet.config
+              --username "$GITHUB_ACTOR" \
+              --password "${{ secrets.GITHUB_TOKEN }}" \
+              --store-password-in-clear-text \
+              --configfile NuGet.config
 
       # Additional explicit cache layer with time-based rotation for NuGet packages
       - name: Cache NuGet packages (weekly rotation)
@@ -132,10 +132,10 @@ jobs:
         run: |
           ARTIFACT_PATH=$(find . -type d -path "*/bin/${{ inputs.configuration }}" | head -n 1)
           if [ -z "$ARTIFACT_PATH" ]; then
-            echo "Error: No build artifacts found in cache."
-            exit 1
+              echo "Error: No build artifacts found in cache."
+              exit 1
           else
-            echo "Build artifacts found at: $ARTIFACT_PATH"
+              echo "Build artifacts found at: $ARTIFACT_PATH"
           fi
           ls -la "$ARTIFACT_PATH"/**/*.*
           ls -la ./test/**/bin/${{ inputs.configuration }}/*.*
@@ -188,18 +188,18 @@ jobs:
           MIN_PCT="${{ inputs.min-coverage-pct }}"
 
           {
-            echo "### 📊 Code Coverage"
-            echo ""
-            echo "**Line Coverage:** ${LINE_PCT}%"
-            echo "**Minimum Required:** ${MIN_PCT}%"
-            echo ""
-            if (( $(echo "$LINE_PCT < $MIN_PCT" | bc -l) )); then
-              echo "❌ **FAILED:** Coverage ${LINE_PCT}% is below threshold ${MIN_PCT}%"
+              echo "### 📊 Code Coverage"
               echo ""
-              echo "::error::Code coverage ${LINE_PCT}% is below the minimum required threshold of ${MIN_PCT}%"
-            else
-              echo "✅ **PASSED:** Coverage meets threshold"
-            fi
+              echo "**Line Coverage:** ${LINE_PCT}%"
+              echo "**Minimum Required:** ${MIN_PCT}%"
+              echo ""
+              if (( $(echo "$LINE_PCT < $MIN_PCT" | bc -l) )); then
+                  echo "❌ **FAILED:** Coverage ${LINE_PCT}% is below threshold ${MIN_PCT}%"
+                  echo ""
+                  echo "::error::Code coverage ${LINE_PCT}% is below the minimum required threshold of ${MIN_PCT}%"
+              else
+                  echo "✅ **PASSED:** Coverage meets threshold"
+              fi
           } >> $GITHUB_STEP_SUMMARY
 
       # Add coverage report link to job summary
@@ -208,11 +208,11 @@ jobs:
         shell: bash
         run: |
           {
-            echo "### 📊 Coverage Report - ${{ steps.run-tests.outputs.proj-name }}"
-            echo ""
-            echo "🌐 View on [Codecov](https://app.codecov.io/gh/${{ github.repository }}/commit/${{ github.sha }})"
-            echo ""
-            echo "📥 Or download the [coverage-${{ steps.run-tests.outputs.proj-name }}-${{ inputs.os }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) artifact to view the HTML report locally."
-            echo ""
-            echo "Open \`coverage/html/index.html\` from the downloaded artifact in your browser."
+              echo "### 📊 Coverage Report - ${{ steps.run-tests.outputs.proj-name }}"
+              echo ""
+              echo "🌐 View on [Codecov](https://app.codecov.io/gh/${{ github.repository }}/commit/${{ github.sha }})"
+              echo ""
+              echo "📥 Or download the [coverage-${{ steps.run-tests.outputs.proj-name }}-${{ inputs.os }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) artifact to view the HTML report locally."
+              echo ""
+              echo "Open \`coverage/html/index.html\` from the downloaded artifact in your browser."
           } >> $GITHUB_STEP_SUMMARY
