@@ -1,25 +1,5 @@
 #!/bin/bash
 
-declare -r default_table_format="graphical"
-
-## table_format determines the format in which dump tables are displayed by the
-## `dump_vars` function(with graphical ASCII characters or with markdown)
-declare -x table_format=${TABLE_FORMAT:-$default_table_format}
-
-
-function set_table_format()
-{
-    shopt -s nocasematch
-    if [[ "$1" =~ ^(graphical|markdown)$ ]]; then
-        table_format=${1,,}
-        [[ $table_format == "graphical" ]] && table=$graphical || table=$markdown
-    else
-        error "Invalid table format: $1"
-    fi
-    shopt -u nocasematch
-    return 0
-}
-
 gth="┌────────────────────────────────────────────────────────────────────────────"
 gbh="├──────────────────────────────────────┬─────────────────────────────────────"
 gmt="├──────────────────────────────────────┴─────────────────────────────────────"

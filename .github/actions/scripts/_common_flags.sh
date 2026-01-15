@@ -52,6 +52,26 @@ function set_verbose()
     return 0
 }
 
+declare -xr default_table_format="graphical"
+
+## table_format determines the format in which dump tables are displayed by the
+## `dump_vars` function(with graphical ASCII characters or with markdown)
+declare -x table_format=${TABLE_FORMAT:-$default_table_format}
+declare -axr table_formats=("graphical" "markdown")
+
+function set_table_format()
+{
+    for f in "${table_formats[@]}"; do
+        if [[ "$f" == "${1,,}" ]]; then
+            table_format=$f
+            return 0
+        fi
+    done
+    error "Invalid table format: $1"
+    
+    return 0
+}
+
 if [[ $debugger == true ]]; then
     set_debugger
 fi
@@ -82,8 +102,8 @@ function get_common_arg()
         -v|--verbose    ) set_verbose ;;
         -x|--trace      ) set_trace_enabled ;;
         -y|--dry-run    ) set_dry_run ;;
-        -gr|--graphical ) table_format="graphical" ;;
-        -md|--markdown  ) table_format="markdown" ;;
+        -gr|--graphical ) set_table_format "graphical" ;;
+        -md|--markdown  ) set_table_format "markdown" ;;
         * ) return 1 ;;  # not a common argument
     esac
     return 0 # it was a common argument and was processed
