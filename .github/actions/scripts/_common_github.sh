@@ -1,6 +1,13 @@
 #!/bin/bash
 
-script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+declare -r this_script=${BASH_SOURCE[0]}
+
+script_name="$(basename "${this_script%.*}")"
+declare -r script_name
+
+script_dir="$(dirname "$(realpath -e "$this_script")")"
+declare -r script_dir
+
 source "$script_dir/_common.sh"
 source "$script_dir/_common_sanitize.sh"
 
