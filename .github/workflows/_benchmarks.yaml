@@ -70,7 +70,7 @@ jobs:
 
       - name: Install Bencher CLI
         if: steps.cache-bencher.outputs.cache-hit != 'true'
-        uses: bencherdev/bencher@v0.5.9
+        uses: bencherdev/bencher@v0.5.10
 
       # Clone the repository with full Git history
       - name: Checkout
