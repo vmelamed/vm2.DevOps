@@ -74,7 +74,7 @@ function set_table_format()
     return 0
 }
 
-function_get_table_format()
+function get_table_format()
 {
     printf "%s" "$table_format"
     return 0
