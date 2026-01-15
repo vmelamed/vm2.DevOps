@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if ! declare -pF "error" > /dev/null; then
+    semver_dir="$(dirname "${BASH_SOURCE[0]}")"
+    source "$semver_dir/_common_diagnostics.sh"
+fi
+
 # Regular expressions that test if a string contains a semantic version:
 declare -xr semverRex="([0-9]+)\.([0-9]+)\.([0-9]+)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?"
 declare -xr semverReleaseRex="([0-9]+)\.([0-9]+)\.([0-9]+)"
@@ -33,7 +38,7 @@ function compare_semver() {
     local -i e=0
 
     if [[ $# -lt 2 ]]; then
-        echo "❌  ERROR The function compare_semver() requires at least 2 arguments: version1 and version2." >&2
+        error "The function compare_semver() requires at least 2 arguments: version1 and version2." >&2
         e=$((e + 1))
     fi
 
@@ -43,7 +48,7 @@ function compare_semver() {
         local -i patch1=${BASH_REMATCH[$semver_patch]}
         local prerelease1=${BASH_REMATCH[$semver_prerelease]#-}
     else
-        echo "❌  ERROR version1 argument to compare_semver() must be a valid [Semantic Versioning 2.0.0](https://semver.org/) string." >&2
+        error "version1 argument to compare_semver() must be a valid [Semantic Versioning 2.0.0](https://semver.org/) string." >&2
         e=$((e + 1))
     fi
     # local build1=${BASH_REMATCH[semver_build]#-} does not participate in comparison by spec
@@ -54,13 +59,12 @@ function compare_semver() {
         local -i patch2=${BASH_REMATCH[$semver_patch]}
         local prerelease2=${BASH_REMATCH[$semver_prerelease]#-}
     else
-        echo "❌  ERROR version2 argument to compare_semver() must be a valid [Semantic Versioning 2.0.0](https://semver.org/) string." >&2
+        error "version2 argument to compare_semver() must be a valid [Semantic Versioning 2.0.0](https://semver.org/) string." >&2
         e=$((e + 1))
     fi
     # local build2=${BASH_REMATCH[semver_build]#-} does not participate in comparison by spec
 
     if (( e > 0 )); then
-        errors=$((errors + e))
         return "$argsError"
     fi
 

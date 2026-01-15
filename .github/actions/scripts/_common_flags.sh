@@ -13,7 +13,6 @@ declare -x dry_run=${DRY_RUN:-$default_dry_run}
 declare -x quiet=${QUIET:-$default_quiet}
 declare -x _ignore=$default__ignore  # the file to redirect unwanted output to
 
-
 ## Sets the script to debugger mode
 function set_debugger()
 {
@@ -56,19 +55,28 @@ declare -xr default_table_format="graphical"
 
 ## table_format determines the format in which dump tables are displayed by the
 ## `dump_vars` function(with graphical ASCII characters or with markdown)
-declare -x table_format=${TABLE_FORMAT:-$default_table_format}
+declare table_format=${TABLE_FORMAT:-$default_table_format}
 declare -axr table_formats=("graphical" "markdown")
 
+## Sets the table format for variable dumps
+## Usage: set_table_format <format>
+## where <format> is one of: "graphical", "markdown"
 function set_table_format()
 {
     for f in "${table_formats[@]}"; do
         if [[ "$f" == "${1,,}" ]]; then
-            table_format=$f
+            table_format="$f"
             return 0
         fi
     done
     error "Invalid table format: $1"
-    
+
+    return 0
+}
+
+function_get_table_format()
+{
+    printf "%s" "$table_format"
     return 0
 }
 
@@ -109,6 +117,42 @@ function get_common_arg()
     return 0 # it was a common argument and was processed
 }
 
+## Displays a usage message and optionally an additional error message.
+## Avoid calling this function directly; instead, override the usage() function in the calling script to provide custom usage
+## information.
+## Usage: display_usage_msg <usage_text> [<additional_message>]
+function display_usage_msg()
+{
+    if [[ "${#}" -eq 0 || -z "$1" ]]; then
+        error "There must be at least one parameter - the usage text" >&2
+        exit 2
+    fi
+
+    # save the tracing state and disable tracing
+    local set_tracing_on=0
+    if [[ $- =~ .*x.* ]]; then
+        set_tracing_on=1
+    fi
+    set +x
+
+    echo "$1
+"
+    if [[ "${#}" -gt 1 && -n "$2" ]]; then
+        echo "$2
+"
+    fi
+    sync
+
+    # restore the tracing state
+    if ((set_tracing_on == 1)); then
+        set -x
+    fi
+    return 0
+}
+
+## Displays the usage message for common flags.
+## Override this function in the calling script to provide custom usage information.
+## Usage: usage()
 function usage()
 {
     display_usage_msg "$common_switches" "OVERRIDE THE FUNCTION usage() IN THE CALLING SCRIPT TO PROVIDE CUSTOM USAGE INFORMATION."
@@ -154,34 +198,3 @@ declare -x common_switches="
         Sets the output dump table format to markdown.
         Initial value from \$TABLE_FORMAT or 'graphical'
 "
-
-## Displays a usage message and optionally an additional message.
-## Usage: display_usage_msg <usage_text> [<additional_message>]
-function display_usage_msg()
-{
-    if [[ "${#}" -eq 0 || -z "$1" ]]; then
-        error "There must be at least one parameter - the usage text" >&2
-        exit 2
-    fi
-
-    # save the tracing state and disable tracing
-    local set_tracing_on=0
-    if [[ $- =~ .*x.* ]]; then
-        set_tracing_on=1
-    fi
-    set +x
-
-    echo "$1
-"
-    if [[ "${#}" -gt 1 && -n "$2" ]]; then
-        echo "$2
-"
-    fi
-    sync
-
-    # restore the tracing state
-    if ((set_tracing_on == 1)); then
-        set -x
-    fi
-    return 0
-}

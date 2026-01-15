@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if ! declare -pF "error" > /dev/null; then
+    semver_dir="$(dirname "${BASH_SOURCE[0]}")"
+    source "$semver_dir/_common_diagnostics.sh"
+fi
+
 ## Displays a prompt, followed by "Press any key to continue..." and returns only after the script user
 ## presses a key. If there is defined variable $quiet with value "true", the function will not display prompt and will
 ## not wait for response.
@@ -54,7 +59,8 @@ function confirm() {
             printf '%s' "$response"
             return 0;
         fi
-        echo "Please enter y or n." >&2
+        error "Please enter y or n." >&2
+        errors=$((errors - 1))
     done
 }
 
@@ -68,7 +74,7 @@ function confirm() {
 ## The function will exit with code 2 if less than 3 parameters are specified.
 function choose() {
     if [[ $# -lt 3 ]]; then
-        echo "The function choose() requires 3 or more arguments: a prompt and at least two choices." >&2;
+        error "The function choose() requires 3 or more arguments: a prompt and at least two choices." >&2;
         return 2;
     fi
 
@@ -100,7 +106,7 @@ function choose() {
             printf '%d' "$selection"
             return 0
         fi
-        echo "Invalid choice: $selection" >&2
+        error "Invalid choice: $selection" >&2
     done
     return 0
 }

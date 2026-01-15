@@ -1,11 +1,16 @@
 #!/bin/bash
 
+if ! declare -pF "error" > /dev/null; then
+    semver_dir="$(dirname "${BASH_SOURCE[0]}")"
+    source "$semver_dir/_common_diagnostics.sh"
+fi
+
 ## Shell function to test if a variable is defined.
 ## Usage: is_defined <variable_name>
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 function is_defined() {
     if [[ $# -ne 1 ]]; then
-        echo "The function is_defined() requires exactly one argument: the name of the variable to test." >&2
+        error "The function is_defined() requires exactly one argument: the name of the variable to test."
         return 2
     fi
     declare -p "$1" >"$_ignore" 2>&1
@@ -69,7 +74,7 @@ function is_in() {
 function has_errors()
 {
     if ((errors > 0)); then
-        echo "❌  ERROR: $errors error(s) encountered. Please fix the issues and try again." >&2
+        error "$errors error(s) encountered. Please fix the issues and try again." >&2
         if [[ -n $1 ]]; then
             usage
             exit 2
