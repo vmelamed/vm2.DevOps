@@ -99,10 +99,6 @@ prerelease_version="${major}.${minor}.${next_patch}-$comp_semver_prerelease"
 prerelease_tag="${minver_tag_prefix}$prerelease_version"
 
 dump_vars -q -f \
-  -h "So, we've got this:" \
-  prerelease_version \
-  minver_tag_prefix \
-  prerelease_tag \
   -h "This goes into the GitHub Actions outputs:" \
   package_projects \
   nuget_server \
