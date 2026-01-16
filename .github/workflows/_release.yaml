@@ -104,7 +104,7 @@ jobs:
         id: version
         shell: bash
         run: |+
-          .github/actions/scripts/compute-release-version.sh \
+          compute-release-version.sh \
               --package-projects '${{ inputs.package-projects }}' \
               --nuget-server '${{ inputs.nuget-server }}' \
               --minver-tag-prefix '${{ vars.MinVerTagPrefix || 'v' }}' \
@@ -146,7 +146,7 @@ jobs:
       - name: Update CHANGELOG for release
         shell: bash
         run: |
-          .github/actions/scripts/update-changelog-release.sh \
+          update-changelog-release.sh \
               --release-tag "${{ needs.compute-version.outputs.release-tag }}" \
               --minver-tag-prefix "${{ needs.compute-version.outputs.minver-tag-prefix }}"
 
@@ -183,7 +183,7 @@ jobs:
       - name: Create and push release tag
         shell: bash
         run: |
-          .github/actions/scripts/create-release-tag.sh \
+          create-release-tag.sh \
               --release-tag "${{ needs.compute-version.outputs.release-tag }}" \
               --reason "${{ inputs.reason }}"
 
@@ -239,7 +239,7 @@ jobs:
           NUGET_API_GITHUB_KEY: ${{ secrets.NUGET_API_GITHUB_KEY }}
           NUGET_API_NUGET_KEY: ${{ secrets.NUGET_API_NUGET_KEY }}
         run: |+
-          .github/actions/scripts/publish-packages.sh \
+          publish-packages.sh \
               --package-project "${{ matrix.project }}" \
               --nuget-server "${{ needs.compute-version.outputs.nuget-server }}" \
               --minver-tag-prefix "${{ needs.compute-version.outputs.minver-tag-prefix }}" \

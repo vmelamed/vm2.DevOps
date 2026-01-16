@@ -115,7 +115,7 @@ jobs:
         id: validate
         shell: bash
         run: |+
-          .github/actions/scripts/compute-prerelease-version.sh \
+          compute-prerelease-version.sh \
               --package-projects '${{ inputs.package-projects }}' \
               --nuget-server '${{ inputs.nuget-server }}' \
               --minver-tag-prefix '${{ inputs.minver-tag-prefix || 'v' }}' \
@@ -243,7 +243,7 @@ jobs:
           NUGET_API_GITHUB_KEY: ${{ secrets.NUGET_API_GITHUB_KEY }}
           NUGET_API_NUGET_KEY: ${{ secrets.NUGET_API_NUGET_KEY }}
         run: |+
-          .github/actions/scripts/publish-packages.sh \
+          publish-packages.sh \
               --package-project "${{ matrix.project }}" \
               --nuget-server "${{ inputs.nuget-server }}" \
               --minver-tag-prefix "${{ vars.MinVerTagPrefix || 'v' }}" \
