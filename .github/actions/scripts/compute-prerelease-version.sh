@@ -72,7 +72,7 @@ exit_if_has_errors
 latest_stable=$(git tag --list "${minver_tag_prefix}*" | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1 || echo "")
 
 dump_vars -q -f \
-  --h "Did we find the latest stable tag?" \
+  -h "Did we find the latest stable tag?" \
   latest_stable \
   minver_tag_prefix \
   semverTagReleaseRegex
