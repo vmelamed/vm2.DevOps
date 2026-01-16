@@ -37,7 +37,7 @@ function get_arguments()
 
             --package-project|-p )
                 value="$1"; shift
-                project="$value"
+                package_project="$value"
                 ;;
 
             --nuget-server|-n )

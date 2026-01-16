@@ -239,7 +239,7 @@ jobs:
           NUGET_API_GITHUB_KEY: ${{ secrets.NUGET_API_GITHUB_KEY }}
           NUGET_API_NUGET_KEY: ${{ secrets.NUGET_API_NUGET_KEY }}
         run: |+
-          publish-packages.sh \
+          publish-package.sh \
               --package-project "${{ matrix.project }}" \
               --nuget-server "${{ needs.compute-version.outputs.nuget-server }}" \
               --minver-tag-prefix "${{ needs.compute-version.outputs.minver-tag-prefix }}" \

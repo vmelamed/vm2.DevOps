@@ -25,8 +25,8 @@ declare -x reason=${REASON:-}
 declare -x artifacts_dir=${ARTIFACTS_DIR:-artifacts/pack}
 declare -x artifacts_saved=${ARTIFACTS_SAVED:-false}
 
-source "$script_dir/publish-packages.usage.sh"
-source "$script_dir/publish-packages.utils.sh"
+source "$script_dir/publish-package.usage.sh"
+source "$script_dir/publish-package.utils.sh"
 
 get_arguments "$@"
 
