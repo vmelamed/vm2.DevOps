@@ -49,11 +49,6 @@ function get_arguments()
                 minver_tag_prefix="$value"
                 ;;
 
-            --manual-version|-m )
-                value="$1"; shift
-                manual_version="$value"
-                ;;
-
             --reason|-r )
                 value="$1"; shift
                 reason="$value"
@@ -78,7 +73,6 @@ dump_all_variables()
         package_projects \
         nuget_server \
         minver_tag_prefix \
-        manual_version \
         reason \
         --header "other:" \
         ci

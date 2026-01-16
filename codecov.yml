@@ -5,7 +5,7 @@
 coverage:
   precision: 2 # Report coverage to 2 decimal places
   round: down # Round down coverage percentages
-  range: 70..100 # Green at 100%, red at 70%
+  range: 80..100 # Green at 100%, red at 80%
 
   status:
     project:

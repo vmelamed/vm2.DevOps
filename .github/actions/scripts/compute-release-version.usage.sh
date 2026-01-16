@@ -44,14 +44,6 @@ Options:
         Reason for release (e.g., "stable release", "hotfix", etc.).
         Initial value from \$REASON or default "release build"
 
-    --manual-version | -m
-        Manually specify the release version (e.g., '1.2.3' without prefix).
-        If not specified, version is auto-detected from conventional commits:
-          - BREAKING CHANGE or feat! → major bump
-          - feat: → minor bump
-          - fix: or other → patch bump
-        Initial value from \$MANUAL_VERSION or default ''
-
 Environment Variables:
     PACKAGE_PROJECTS    JSON array of project/solution paths to package and
                         publish

@@ -13,7 +13,6 @@ on:
           JSON array of project/solution paths to package and publish, e.g. '["src/Project1/Project1.csproj", "src/Project2/Project2.csproj"]'.
           If empty array, auto-detects root .sln or .csproj files.
         type: string
-        required: false
         default: '[""]'
 
       nuget-server:
@@ -24,7 +23,7 @@ on:
       reason:
         description: Reason for manual release
         type: string
-        default: ""
+        required: true
 
       save-package-artifacts:
         description: Upload package(s) as workflow artifacts
@@ -95,7 +94,7 @@ jobs:
               --package-projects '${{ inputs.package-projects }}' \
               --nuget-server '${{ inputs.nuget-server }}' \
               --minver-tag-prefix '${{ vars.MinVerTagPrefix || 'v' }}' \
-              --save-package-artifacts '${{ inputs.save-package-artifacts }}'
+              --reason '${{ inputs.reason }}'
 
   changelog:
     name: Update CHANGELOG
@@ -144,7 +143,7 @@ jobs:
         run: |
           .github/actions/scripts/create-release-tag.sh \
               --release-tag "${{ needs.compute-version.outputs.release-tag }}" \
-              --reason "${{ inputs.reason || 'stable release' }}"
+              --reason "${{ inputs.reason }}"
 
   release:
     name: Build and Publish Release
