@@ -90,8 +90,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Composite action Setup DevOps scripts (local)
+      - name: Checkout DevOps repository scripts
+        if: github.repository != 'vmelamed/vm2.DevOps'
+        uses: actions/checkout@v6
+        with:
+          repository: vmelamed/vm2.DevOps
+          path: vm2-devops
+          sparse-checkout: |
+            .github/actions/scripts
+
+      - name: Setup DevOps scripts (local)
+        if: github.repository == 'vmelamed/vm2.DevOps'
         uses: ./.github/actions/scripts
+
+      - name: Setup DevOps scripts (external)
+        if: github.repository != 'vmelamed/vm2.DevOps'
+        uses: ./vm2-devops/.github/actions/scripts
 
       - name: Fetch tags
         run: |
@@ -119,8 +133,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Composite action Setup DevOps scripts (local)
+      - name: Checkout DevOps repository scripts
+        if: github.repository != 'vmelamed/vm2.DevOps'
+        uses: actions/checkout@v6
+        with:
+          repository: vmelamed/vm2.DevOps
+          path: vm2-devops
+          sparse-checkout: |
+            .github/actions/scripts
+
+      - name: Setup DevOps scripts (local)
+        if: github.repository == 'vmelamed/vm2.DevOps'
         uses: ./.github/actions/scripts
+
+      - name: Setup DevOps scripts (external)
+        if: github.repository != 'vmelamed/vm2.DevOps'
+        uses: ./vm2-devops/.github/actions/scripts
 
       - name: Install git-cliff
         uses: taiki-e/install-action@v2
@@ -182,8 +210,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Composite action Setup DevOps scripts (local)
+      - name: Checkout DevOps repository scripts
+        if: github.repository != 'vmelamed/vm2.DevOps'
+        uses: actions/checkout@v6
+        with:
+          repository: vmelamed/vm2.DevOps
+          path: vm2-devops
+          sparse-checkout: |
+            .github/actions/scripts
+
+      - name: Setup DevOps scripts (local)
+        if: github.repository == 'vmelamed/vm2.DevOps'
         uses: ./.github/actions/scripts
+
+      - name: Setup DevOps scripts (external)
+        if: github.repository != 'vmelamed/vm2.DevOps'
+        uses: ./vm2-devops/.github/actions/scripts
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
