@@ -212,19 +212,3 @@ function validate_projects() {
             "$default_projects"
     fi
 }
-
-declare -xr nugetServersRegex="^(nuget|github|https?://.+)$";
-
-function validate_nuget_server() {
-    local -n server=$1
-    local default_server=${2:-"nuget"}
-
-    if [[ -z "$server" ]]; then
-        warning_var "server" "No NuGet server configured." "$default_server"
-        return 0
-    fi
-
-    if [[ ! "$server" =~ $nugetServersRegex ]]; then
-        error "Invalid NuGet server: $server"
-    fi
-}

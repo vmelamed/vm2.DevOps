@@ -47,7 +47,8 @@ create_tag_regexes "$minver_tag_prefix"
 if [[ ! -s "${package_project}" ]]; then
     error "Invalid package_project file '${package_project}' specified"
 fi
-validate_nuget_server "$nuget_server"
+
+validate_nuget_server "nuget_server"
 
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 # shellcheck disable=SC2153 # Possible Misspelling: MYVARIABLE may not be assigned. Did you mean MY_VARIABLE?

@@ -101,21 +101,28 @@ function is_safe_reason() {
     return 0
 }
 
+declare -xr nugetServersRegex="^(nuget|github|https?://[a-zA-Z0-9._/-]+)$";
+
 ## Validates NuGet server URL or known server name
 ## Returns 0 if valid, 1 otherwise
 function is_safe_nuget_server() {
-    local server="$1"
-
-    # Known safe values
-    if [[ "$server" == "nuget" ]] || [[ "$server" == "github" ]]; then
+    if [[ "$1" =~ $nugetServersRegex ]]; then
         return 0
     fi
-
-    # Must be a valid https URL
-    if [[ "$server" =~ ^https://[a-zA-Z0-9._/-]+$ ]]; then
-        return 0
-    fi
-
-    error "The NuGet server '$server' is not valid. Must be 'nuget', 'github', or a valid https URL."
+    error "The NuGet server '$1' is not valid. Must be 'nuget', 'github', or a valid https URL."
     return 1
+}
+
+function validate_nuget_server() {
+    local -n server=$1
+    local default_server=${2:-"nuget"}
+
+    if [[ -z "$server" ]]; then
+        warning_var "server" "No NuGet server configured." "$default_server"
+        return 0
+    fi
+
+    if [[ ! "$server" =~ $nugetServersRegex ]]; then
+        error "Invalid NuGet server: $server"
+    fi
 }
