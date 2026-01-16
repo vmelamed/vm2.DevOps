@@ -103,7 +103,7 @@ if ((major == 0)); then
     major=1
     minor=0
     patch=0
-    bump_type="adjusted major to 1 for SemVer compliance"
+    bump_type="adjusted to 1.0.0 for SemVer compliance"
 fi
 
 release_version="$major.$minor.$patch"
@@ -124,7 +124,7 @@ if [[ -n "$latest_prerelease_tag" ]] && \
         bump_type="adjusted to be > latest prerelease version"
 fi
 
-info "🤖 Calculated new release version: $release_version [$bump_type]"
+info "🤖 Finalized new release version: $release_version [$bump_type]"
 
 release_tag="${minver_tag_prefix}${release_version}"
 
@@ -135,7 +135,6 @@ declare -xr release_tag
 if git rev-parse "$release_tag" >"$_ignore" 2>&1; then
     error "Tag '$release_tag' already exists. Possible remedy: branch 'main' again, and do a new PR and release with a higher version number."
 fi
-
 exit_if_has_errors
 
 # Output for GitHub Actions

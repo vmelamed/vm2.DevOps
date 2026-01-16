@@ -96,6 +96,12 @@ comp_semver_prerelease="$semver_prerelease_prefix.$(date -u +%Y%m%d).${GITHUB_RU
 prerelease_version="${major}.${minor}.${patch}-$comp_semver_prerelease"
 prerelease_tag="${minver_tag_prefix}$prerelease_version"
 
+# Check if tag already exists
+if git rev-parse "$prerelease_tag" >"$_ignore" 2>&1; then
+    error "Tag '$prerelease_tag' already exists. Possible remedy: delete it, or branch 'main' again, and do a new PR and release with a higher version number."
+fi
+exit_if_has_errors
+
 # Output for GitHub Actions
 args_to_github_output \
   package_projects \
