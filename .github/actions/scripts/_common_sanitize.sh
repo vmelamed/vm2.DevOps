@@ -13,13 +13,14 @@ function is_safe_input() {
     fi
 
     # Dangerous characters that could enable command injection
-    local dangerous_chars='[;|&$`\\<>(){}\n\r]'
+    dangerous_chars=$'[;|&$`\\\\<>(){}\n\r]'
 
     if [[ "$allow_spaces" != "true" ]]; then
-        dangerous_chars='[;|&$`\\<>(){}\n\r ]'
+        dangerous_chars=$'[;|&$`\\\\<>(){}\n\r ]'
     fi
 
     if [[ "$input" =~ $dangerous_chars ]]; then
+        error "The input '$input' contains one or more of the unsafe characters '$dangerous_chars'."
         return 1
     fi
 
@@ -42,6 +43,7 @@ function is_safe_version() {
         return 0
     fi
 
+    error "The version '$version' is not a valid semantic version."
     return 1
 }
 
@@ -53,16 +55,19 @@ function is_safe_path() {
 
     # Reject paths with directory traversal
     if [[ "$path" =~ \.\. ]]; then
+        error "The path '$path' contains directory traversal sequences."
         return 1
     fi
 
     # Reject absolute paths starting with /
     if [[ "$path" =~ ^/ ]]; then
+        error "The path '$path' is an absolute path, which is not allowed."
         return 1
     fi
 
     # Reject paths with dangerous characters
     if [[ "$path" =~ [\$\`\;] ]]; then
+        error "The path '$path' contains unsafe characters."
         return 1
     fi
 
@@ -78,6 +83,7 @@ function is_safe_reason() {
 
     # Check length
     if [[ ${#reason} -gt $max_length ]]; then
+        error "The reason is too long. Maximum length is $max_length characters."
         return 1
     fi
 
@@ -88,6 +94,7 @@ function is_safe_reason() {
 
     # Reject if it looks like a command (starts with -, /, .)
     if [[ "$reason" =~ ^[-/.] ]]; then
+        error "The reason '$reason' appears to be a command or unsafe input (contains one or more unsafe characters)."
         return 1
     fi
 
@@ -109,5 +116,6 @@ function is_safe_nuget_server() {
         return 0
     fi
 
+    error "The NuGet server '$server' is not valid. Must be 'nuget', 'github', or a valid https URL."
     return 1
 }
