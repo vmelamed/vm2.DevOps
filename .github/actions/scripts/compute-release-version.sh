@@ -57,7 +57,7 @@ declare -i major=0
 declare -i minor=0
 declare -i patch=0
 
-if [[ -n "$latest_stable" && $latest_stable =~ $semverTagReleaseRegex ]]; then
+if [[ $latest_stable =~ $semverTagReleaseRegex ]]; then
     major=${BASH_REMATCH[$semver_major]}
     minor=${BASH_REMATCH[$semver_minor]}
     patch=${BASH_REMATCH[$semver_patch]}
@@ -99,13 +99,12 @@ release_version="$major.$minor.$patch"
 # make sure the computed version so far is not lower than the latest prerelease
 latest_prerelease_tag=$(git tag --list "${minver_tag_prefix}*" | grep -E "$semverTagPrereleaseRegex" | sort -V | tail -n1 || echo "")
 
-if [[ -n "$latest_prerelease_tag" ]]; then
-    latest_prerelease_version="${latest_prerelease_tag#"$minver_tag_prefix"}"
+if [[ "$latest_prerelease_tag" =~ $semverTagPrereleaseRegex ]]; then
     # compare calculated so far release_version with latest_prerelease_version
-    compare_semver "$release_version" "$latest_prerelease_version"
-    if (( $? == isLt )) && [[ $latest_prerelease_version =~ $semverPrereleaseRegex ]]; then
+    compare_semver "$release_version" "${latest_prerelease_tag#"$minver_tag_prefix"}"
+    if (( $? == isLt )); then
         # we calculated a version that is less than the latest prerelease version,
-        # so adopt the major, minor, and patch from it
+        # so adopt the major, minor, and patch from it and make it a release version
         major=${BASH_REMATCH[$semver_major]}
         minor=${BASH_REMATCH[$semver_minor]}
         patch=${BASH_REMATCH[$semver_patch]}

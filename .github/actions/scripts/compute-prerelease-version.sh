@@ -80,22 +80,21 @@ dump_vars -q -f \
 declare -i major=0
 declare -i minor=0
 declare -i patch=0
-declare -i next_patch=0
 
-if [[ -n "$latest_stable" && $latest_stable =~ $semverReleaseRegex ]]; then
+if [[ $latest_stable =~ $semverTagReleaseRegex ]]; then
     major=${BASH_REMATCH[$semver_major]}
     minor=${BASH_REMATCH[$semver_minor]}
     patch=${BASH_REMATCH[$semver_patch]}
-    next_patch=$((patch+1))
+    patch=$(( patch + 1 ))
 else
     # No stable tag yet - start with v0.1.0
     major=0
     minor=1
-    next_patch=0
+    patch=0
 fi
 
 comp_semver_prerelease="$semver_prerelease_prefix.$(date -u +%Y%m%d).${GITHUB_RUN_NUMBER:-"$default_github_run_number"}"
-prerelease_version="${major}.${minor}.${next_patch}-$comp_semver_prerelease"
+prerelease_version="${major}.${minor}.${patch}-$comp_semver_prerelease"
 prerelease_tag="${minver_tag_prefix}$prerelease_version"
 
 dump_vars -q -f \
