@@ -71,6 +71,12 @@ exit_if_has_errors
 # Find latest stable tag like v1.2.3
 latest_stable=$(git tag --list "${minver_tag_prefix}*" | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1 || echo "")
 
+dump_vars -q -f \
+  --h "Did we find the latest stable tag?" \
+  latest_stable \
+  minver_tag_prefix \
+  semverTagReleaseRegex
+
 declare -i major=0
 declare -i minor=0
 declare -i patch=0
@@ -91,6 +97,12 @@ fi
 comp_semver_prerelease="$semver_prerelease_prefix.$(date -u +%Y%m%d).${GITHUB_RUN_NUMBER:-"$default_github_run_number"}"
 prerelease_version="${major}.${minor}.${next_patch}-$comp_semver_prerelease"
 prerelease_tag="${minver_tag_prefix}$prerelease_version"
+
+dump_vars -q -f \
+  --h "So, we've got this:" \
+  prerelease_version \
+  minver_tag_prefix \
+  prerelease_tag
 
 # Output for GitHub Actions
 args_to_github_output \
