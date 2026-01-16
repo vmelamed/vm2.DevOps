@@ -47,7 +47,7 @@ All workflow templates have been migrated to **[vmelamed/.github](https://github
 Each template includes:
 
 - Properties file (`.properties.json`) with metadata
-- Customization points marked with `*CP*` comments
+- Customization points marked with `*TODO*` comments
 - Default configurations for vm2 projects
 
 ## 📝 Documentation Updates
@@ -93,7 +93,7 @@ Each template includes:
    curl -o .github/workflows/Release.yaml https://raw.githubusercontent.com/vmelamed/.github/main/workflow-templates/Release.yaml
    ```
 
-2. **Customize the *CP* (Customization Points):**
+2. **Customize the _CP_ (Customization Points):**
    - Set `PACKAGE_PROJECTS` for prerelease/release
    - Set `BUILD_PROJECTS`, `TEST_PROJECTS`, `BENCHMARK_PROJECTS` for CI
    - Configure `NUGET_SERVER` (github/nuget)
