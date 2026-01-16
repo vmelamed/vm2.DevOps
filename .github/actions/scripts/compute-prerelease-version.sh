@@ -88,8 +88,8 @@ else
     next_patch=0
 fi
 
-semver_prerelease="$semver_prerelease_prefix.$(date -u +%Y%m%d).${GITHUB_RUN_NUMBER:-"$default_github_run_number"}"
-prerelease_version="${major}.${minor}.${next_patch}-$semver_prerelease"
+comp_semver_prerelease="$semver_prerelease_prefix.$(date -u +%Y%m%d).${GITHUB_RUN_NUMBER:-"$default_github_run_number"}"
+prerelease_version="${major}.${minor}.${next_patch}-$comp_semver_prerelease"
 prerelease_tag="${minver_tag_prefix}$prerelease_version"
 
 # Output for GitHub Actions
