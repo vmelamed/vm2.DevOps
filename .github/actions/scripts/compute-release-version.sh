@@ -27,19 +27,19 @@ source "$script_dir/compute-release-version.utils.sh"
 get_arguments "$@"
 
 # Sanitize inputs to prevent injection attacks
+if ! is_safe_nuget_server "$nuget_server"; then
+    error "Invalid nuget-server: must be 'nuget', 'github', or a valid https:// URL"
+fi
 if [[ -n "$reason" ]] && ! is_safe_reason "$reason"; then
     error "Invalid reason: contains unsafe characters or exceeds length limit"
 fi
 
-if ! is_safe_nuget_server "$nuget_server"; then
-    error "Invalid nuget-server: must be 'nuget', 'github', or a valid https:// URL"
-fi
-
-dump_all_variables
-
 declare -xr package_projects
 declare -xr nuget_server
 declare -xr minver_tag_prefix
+declare -xr reason
+
+dump_all_variables
 
 create_tag_regexes "$minver_tag_prefix"
 
@@ -50,7 +50,15 @@ validate_projects "package_projects" "$default_package_projects"
 # Validate NuGet server (does not affect release version computation)
 validate_nuget_server "nuget_server" "$default_nuget_server"
 
-# Find latest stable and prerelease tags
+# detect if the head is already tagged
+head_tag=$(git tag --points-at HEAD)
+if [[ -n $head_tag ]]; then
+    error "The HEAD is already tagged with '$head_tag'. Possible remedy: delete the tag, or branch 'main' again, do a new PR, and release with a new, higher version number."
+fi
+
+exit_if_has_errors
+
+# Find latest stable like v1.2.3
 latest_stable=$(git tag --list "${minver_tag_prefix}*" | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1 || echo "")
 
 declare -i major=0
@@ -63,14 +71,14 @@ if [[ $latest_stable =~ $semverTagReleaseRegex ]]; then
     patch=${BASH_REMATCH[$semver_patch]}
     if ((major <= 0 || minor < 0 || patch < 0)); then
         error "Invalid version numbers in latest stable tag '$latest_stable': $major.$minor.$patch. Major must be > 0, minor and patch must be >= 0."
-    else
-        info "📌 Latest stable release: $latest_stable ($major.$minor.$patch)"
+        exit 2
     fi
+    info "📌 Latest stable release: $latest_stable ($major.$minor.$patch)"
 else
     info "📌 No previous stable release found; starting at 0.0.0"
 fi
 
-# Auto-detect from conventional commits
+# Auto-detect next stable version from conventional commits
 last_tag="${latest_stable:-$(git rev-list --max-parents=0 HEAD)}"
 commits=$(git log "$last_tag"..HEAD --pretty=format:"%s" 2>"$_ignore" || echo "")
 
@@ -91,25 +99,29 @@ else
     bump_type="patch (fixes or other changes)"
 fi
 if ((major == 0)); then
+    # SemVer 2.0.0 requires major version to be at least 1 for releases
     major=1
+    minor=0
+    patch=0
+    bump_type="adjusted major to 1 for SemVer compliance"
 fi
 
 release_version="$major.$minor.$patch"
+info "🤖 Calculated release version from commit messages: $release_version [$bump_type]"
 
 # make sure the computed version so far is not lower than the latest prerelease
 latest_prerelease_tag=$(git tag --list "${minver_tag_prefix}*" | grep -E "$semverTagPrereleaseRegex" | sort -V | tail -n1 || echo "")
 
-if [[ "$latest_prerelease_tag" =~ $semverTagPrereleaseRegex ]]; then
-    # compare calculated so far release_version with latest_prerelease_version
-    compare_semver "$release_version" "${latest_prerelease_tag#"$minver_tag_prefix"}"
-    if (( $? == isLt )); then
-        # we calculated a version that is less than the latest prerelease version,
-        # so adopt the major, minor, and patch from it and make it a release version
+if [[ -n "$latest_prerelease_tag" ]] && \
+   (( $(compare_semver "$release_version" "${latest_prerelease_tag#"$minver_tag_prefix"}") == isLt )); then
+        # the calculated release version so far is less than the latest prerelease version,
+        # so adopt the major, minor, and patch from the latest prerelease version and make it a release version
+        [[ "$latest_prerelease_tag" =~ $semverTagPrereleaseRegex ]]
         major=${BASH_REMATCH[$semver_major]}
         minor=${BASH_REMATCH[$semver_minor]}
         patch=${BASH_REMATCH[$semver_patch]}
         release_version="$major.$minor.$patch"
-    fi
+        bump_type="adjusted to be > latest prerelease version"
 fi
 
 info "🤖 Calculated new release version: $release_version [$bump_type]"
