@@ -14,12 +14,12 @@ declare -rx initial_dir
 
 common_scripts_dir="$(dirname "${BASH_SOURCE[0]}")"
 
-source "${common_scripts_dir}/_common_diagnostics.sh"
-source "${common_scripts_dir}/_common_flags.sh"
-source "${common_scripts_dir}/_common_dump_vars.sh"
-source "${common_scripts_dir}/_common_semver.sh"
-source "${common_scripts_dir}/_common_predicates.sh"
-source "${common_scripts_dir}/_common_user.sh"
+source "${common_scripts_dir}/_common.diagnostics.sh"
+source "${common_scripts_dir}/_common.flags.sh"
+source "${common_scripts_dir}/_common.dump_vars.sh"
+source "${common_scripts_dir}/_common.semver.sh"
+source "${common_scripts_dir}/_common.predicates.sh"
+source "${common_scripts_dir}/_common.user.sh"
 
 trap on_debug DEBUG
 trap on_exit EXIT

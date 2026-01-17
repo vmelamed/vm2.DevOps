@@ -95,8 +95,8 @@ function on_debug() {
 function on_exit() {
     # echo an error message before exiting
     local x=$?
-    if ((x != 0)); then
-        error "'$last_command' command failed with exit code $x"
+    if ((x != 0)) && [[ ! $last_command =~ exit.* ]]; then
+        error "on_exit: '$last_command' command failed with exit code $x"
     fi
     if [[ -n "$initial_dir" ]]; then
         cd "$initial_dir" || exit

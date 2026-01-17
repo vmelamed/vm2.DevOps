@@ -27,7 +27,7 @@ declare -r script_name
 script_dir="$(dirname "$(realpath -e "$this_script")")"
 declare -r script_dir
 
-source "$script_dir/_common_github.sh"
+source "$script_dir/_common.github.sh"
 
 declare -r defaultBuildProjects='[""]'
 declare -r defaultTestProjects='["__skip__"]'

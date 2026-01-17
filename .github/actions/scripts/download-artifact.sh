@@ -9,7 +9,7 @@ declare -r script_dir
 script_name="$(basename "${this_script%.*}")"
 declare -r script_name
 
-source "$script_dir/_common_github.sh"
+source "$script_dir/_common.github.sh"
 
 declare -x artifact_name=${ARTIFACT_NAME:-}
 declare -x artifacts_dir=${ARTIFACT_DIR:-"./BmArtifacts/baseline"}

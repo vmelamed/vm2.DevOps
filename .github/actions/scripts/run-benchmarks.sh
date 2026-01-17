@@ -4,12 +4,10 @@ set -euo pipefail
 declare -r this_script=${BASH_SOURCE[0]}
 
 script_name="$(basename "${this_script%.*}")"
-declare -r script_name
-
 script_dir="$(dirname "$(realpath -e "$this_script")")"
 declare -r script_dir
 
-source "$script_dir/_common_github.sh"
+source "$script_dir/_common.github.sh"
 
 declare -x bm_project=${BM_PROJECT:-}
 declare -x configuration=${CONFIGURATION:="Release"}

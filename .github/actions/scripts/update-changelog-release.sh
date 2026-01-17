@@ -9,10 +9,10 @@ declare -r script_name
 script_dir="$(dirname "$(realpath -e "$this_script")")"
 declare -r script_dir
 
-source "$script_dir/_common_github.sh"
+source "$script_dir/_common.github.sh"
 
 declare -x release_tag=${RELEASE_TAG:-}
-declare -x minver_tag_prefix=${MINVER_TAG_PREFIX:-v}
+declare -x minver_tag_prefix=${MinVerTagPrefix:-v}
 
 source "$script_dir/update-changelog-release.usage.sh"
 source "$script_dir/update-changelog-release.utils.sh"

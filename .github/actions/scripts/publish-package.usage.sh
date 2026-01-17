@@ -35,7 +35,7 @@ Options:
 
     --minver-tag-prefix | -t
         Specifies the tag prefix used by MinVer (e.g., 'v').
-        Initial value from \$MINVER_TAG_PREFIX environment variable or 'v'.
+        Initial value from \$MinVerTagPrefix environment variable or 'v'.
 
     --repo-owner | -o
         Repository owner. When run on a GitHub runner, this is automatically set
@@ -50,7 +50,7 @@ Options:
         Initial value from the \$VERSION environment variable.
 
     --git-tag | -g
-        The git tag to associate with the release. Usually \$MINVER_TAG_PREFIX
+        The git tag to associate with the release. Usually \$MinVerTagPrefix
         concatenated with \$VERSION (e.g., 'v2.0.0-preview.1')
         Initial value from the \$GIT_TAG environment variable, or
         "${minver_tag_prefix}${version}"
@@ -75,7 +75,7 @@ Environment Variables:
                         'github', or custom URI)
                         (default: 'nuget')
 
-    MINVER_TAG_PREFIX   Git tag prefix to be recognized by MinVer
+    MinVerTagPrefix   Git tag prefix to be recognized by MinVer
                         (default: 'v')
 
     GITHUB_REPOSITORY_OWNER The owner of the GitHub repository
@@ -85,7 +85,7 @@ Environment Variables:
                         release 2.0.0 or for a prerelease 2.0.0-preview...).
 
     GIT_TAG             The git tag associated with the release. Usually
-                        \$MINVER_TAG_PREFIX and \$VERSION concatenated (e.g.,
+                        \$MinVerTagPrefix and \$VERSION concatenated (e.g.,
                         'v2.0.0-preview.1')
 
     REASON              Reason for triggering the release.

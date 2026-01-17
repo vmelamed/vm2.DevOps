@@ -9,7 +9,7 @@ declare -r script_name
 script_dir="$(dirname "$(realpath -e "$this_script")")"
 declare -r script_dir
 
-source "$script_dir/_common_github.sh"
+source "$script_dir/_common.github.sh"
 
 default_github_run_number="$(date -u +%H%M%S)"
 declare -xr default_github_run_number
@@ -22,7 +22,7 @@ declare -xr default_reason="prerelease build"
 
 declare -x package_projects=${PACKAGE_PROJECTS:-"$default_package_projects"}
 declare -x nuget_server=${NUGET_SERVER:-"$default_nuget_server"}
-declare -x minver_tag_prefix=${MINVER_TAG_PREFIX:-"$default_minver_tag_prefix"}
+declare -x minver_tag_prefix=${MinVerTagPrefix:-"$default_minver_tag_prefix"}
 declare -x semver_prerelease_prefix=${SEMVER_PRERELEASE_PREFIX:-"$default_semver_prerelease_prefix"}
 declare -x reason=${REASON:-"$default_reason"}
 

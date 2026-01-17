@@ -33,7 +33,7 @@ function is_safe_input() {
 function is_safe_version() {
     local version="$1"
 
-    # Must match semver pattern (already defined in _common_semver.sh)
+    # Must match semver pattern (already defined in _common.semver.sh)
     if [[ -n "$semverRegex" ]] && [[ "$version" =~ $semverRegex ]]; then
         return 0
     fi

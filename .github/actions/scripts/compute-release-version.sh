@@ -9,7 +9,7 @@ declare -r script_name
 script_dir="$(dirname "$(realpath -e "$this_script")")"
 declare -r script_dir
 
-source "$script_dir/_common_github.sh"
+source "$script_dir/_common.github.sh"
 
 declare -xr default_package_projects='[""]'
 declare -xr default_nuget_server='nuget'
@@ -18,7 +18,7 @@ declare -xr default_reason="release build"
 
 declare -x package_projects=${PACKAGE_PROJECTS:-"$default_package_projects"}
 declare -x nuget_server=${NUGET_SERVER:-"$default_nuget_server"}
-declare -x minver_tag_prefix=${MINVER_TAG_PREFIX:-"$default_minver_tag_prefix"}
+declare -x minver_tag_prefix=${MinVerTagPrefix:-"$default_minver_tag_prefix"}
 declare -x reason=${REASON:-"$default_reason"}
 
 source "$script_dir/compute-release-version.usage.sh"
