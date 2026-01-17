@@ -38,7 +38,7 @@ Options:
 
     --minver-tag-prefix | -t
         Specifies the tag prefix used by MinVer (e.g., 'v').
-        Initial value from \$MINVER_TAG_PREFIX or default 'v'
+        Initial value from \$MinVerTagPrefix or default 'v'
 
     --reason | -r
         Reason for release (e.g., "stable release", "hotfix", etc.).
@@ -53,7 +53,7 @@ Environment Variables:
                         'github', or custom URI)
                         (default: 'nuget')
 
-    MINVER_TAG_PREFIX   Git tag prefix to be recognized by MinVer
+    MinVerTagPrefix   Git tag prefix to be recognized by MinVer
                         (default: 'v')
 
     MANUAL_VERSION      Manual version to override the natural versioning

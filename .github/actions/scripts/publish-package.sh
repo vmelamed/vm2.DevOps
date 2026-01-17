@@ -9,7 +9,7 @@ declare -r script_name
 script_dir="$(dirname "$(realpath -e "$this_script")")"
 declare -r script_dir
 
-source "$script_dir/_common_github.sh"
+source "$script_dir/_common.github.sh"
 
 declare -xr default_nuget_server="github"
 declare -xr default_minver_tag_prefix='v'
@@ -17,7 +17,7 @@ declare -xr default_repo_owner="vmelamed"
 
 declare -x package_project=${PACKAGE_PROJECT:-}
 declare -x nuget_server=${NUGET_SERVER:-"$default_nuget_server"}
-declare -x minver_tag_prefix=${MINVER_TAG_PREFIX:-"$default_minver_tag_prefix"}
+declare -x minver_tag_prefix=${MinVerTagPrefix:-"$default_minver_tag_prefix"}
 declare -x repo_owner=${GITHUB_REPOSITORY_OWNER:-"$default_repo_owner"}
 declare -x version=${VERSION:-}
 declare -x git_tag=${GIT_TAG:-}

@@ -3,7 +3,7 @@
 common_scripts_dir="$(dirname "${BASH_SOURCE[0]}")"
 
 source "$common_scripts_dir/_common.sh"
-source "$common_scripts_dir/_common_sanitize.sh"
+source "$common_scripts_dir/_common.sanitize.sh"
 
 # This script defines a number of DevOps specific constants, variables, and helper functions.
 

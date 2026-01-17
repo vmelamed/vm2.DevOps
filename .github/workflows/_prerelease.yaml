@@ -161,7 +161,7 @@ jobs:
           #!/bin/bash
           set -euo pipefail
 
-          source _common_github.sh
+          source _common.github.sh
 
           if [ ! -s changelog/cliff.prerelease.toml ]; then
               error "Missing changelog/cliff.prerelease.toml; failing."

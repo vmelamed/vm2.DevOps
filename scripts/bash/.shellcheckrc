@@ -1,0 +1,12 @@
+external-sources=true
+source-path=SCRIPTDIR
+enable=quote-safe-variables
+enable=check-unassigned-uppercase
+enable=double-quote
+enable=add-default-case
+enable=check-sourced
+enable=avoid-nullary-conditions
+enable=check-unassigned-uppercase
+enable=require-double-brackets
+enable=useless-use-of-cat
+disable=SC1017

@@ -33,7 +33,7 @@ Options:
 
     --minver-tag-prefix | -t
         Specifies the tag prefix to be recognized by MinVer (e.g., 'v').
-        Initial value from \$MINVER_TAG_PREFIX or default 'v'
+        Initial value from \$MinVerTagPrefix or default 'v'
 
     --semver-prerelease-prefix | -s
         Specifies the prefix for the semver's prerelease component in prerelease
@@ -53,7 +53,7 @@ Environment Variables:
                         'github', or custom URI)
                         (default: 'nuget')
 
-    MINVER_TAG_PREFIX   Git tag prefix to be recognized by MinVer
+    MinVerTagPrefix   Git tag prefix to be recognized by MinVer
                         (default: 'v')
 
     SEMVER_PRERELEASE_PREFIX Prefix for semver's prerelease component in
