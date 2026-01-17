@@ -1,4 +1,9 @@
 <Project>
+    <PropertyGroup>
+        <GITHUB_RUN_NUMBER Condition="'$(GITHUB_RUN_NUMBER)' == ''">0</GITHUB_RUN_NUMBER>
+        <RestoreSources>https://api.nuget.org/v3/index.json;https://nuget.pkg.github.com/vmelamed/index.json</RestoreSources>
+    </PropertyGroup>
+
     <!-- ================ Common Settings for All projects ================ -->
     <PropertyGroup Label="Packages">
         <TargetFramework>net10.0</TargetFramework>
@@ -9,7 +14,7 @@
         <AnalysisLevel>latest</AnalysisLevel>
         <WarningLevel>9999</WarningLevel>
         <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
-        <WarningsAsErrors />
+        <WarningsAsErrors>$(WarningsAsErrors);NU1605;NU1608;NU1701;NU1702;</WarningsAsErrors>
         <NoWarn>$(NoWarn);IDE0058;IDE0290;IDE0130;</NoWarn>
         <Deterministic>true</Deterministic>
         <DebugType>portable</DebugType>
@@ -22,6 +27,9 @@
         <RestoreLockedMode Condition="'$(CI)' == 'true'">true</RestoreLockedMode>
         <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
         <MinVerTagPrefix>v</MinVerTagPrefix>
+        <MinVerDefaultPreReleaseIdentifiers>preview</MinVerDefaultPreReleaseIdentifiers>
+        <AssemblyVersion>$(MinVerMajor).$(MinVerMinor).$(GITHUB_RUN_NUMBER).$(MinVerPatch)</AssemblyVersion>
+        <FileVersion>$(MinVerMajor).$(MinVerMinor).$(MinVerPatch).$(GITHUB_RUN_NUMBER)</FileVersion>
     </PropertyGroup>
 
     <!-- ================ Package properties for all vm2 packages ================ -->
@@ -44,10 +52,6 @@
     </PropertyGroup>
 
     <!-- ================ Common Package References for All projects ================ -->
-    <PropertyGroup>
-        <RestoreSources>https://api.nuget.org/v3/index.json;https://nuget.pkg.github.com/vmelamed/index.json</RestoreSources>
-    </PropertyGroup>
-
     <ItemGroup>
         <PackageReference Include="System.Configuration.ConfigurationManager" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />

@@ -107,7 +107,8 @@ function is_git_repo()
 function is_latest_stable_tag()
 {
     if [[ $# != 2 ]]; then
-        error "The function is_latest_stable_tag() takes 2 arguments: directory and regular expression for stable tag."
+        error "The function is_latest_stable_tag() takes 2 arguments: directory and regular expression for stable tag." \
+              "A third argument may be specified to fetch latest in main changes from remote."
     fi
     if [[ ! -d $1 ]]; then
         error "The specified directory '$1' does not exist."
@@ -125,10 +126,11 @@ function is_latest_stable_tag()
     fi
 
     # Get latest stable tag (excludes pre-release tags with -)
-    latest_tag=$(git -C "$1" tag -l "$2" | sort -V | tail -n1)
+    latest_tag=$(git -C "$1" tag | grep -E "$2" | sort -V | tail -n1)
     [[ -n $latest_tag ]] || return 1
 
     current_commit=$(git -C "$1" rev-parse HEAD)
+
     tag_commit=$(git -C "$1" rev-parse "$latest_tag^{commit}" 2>/dev/null)
 
     [[ "$current_commit" == "$tag_commit" ]]
@@ -139,7 +141,8 @@ function is_latest_stable_tag()
 function is_after_latest_stable_tag()
 {
     if [[ $# != 2 ]]; then
-        error "The function is_after_latest_stable_tag() takes 2 arguments: directory and regular expression for stable tag."
+        error "The function is_after_latest_stable_tag() takes 2 arguments: directory and regular expression for stable tag." \
+              "A third argument may be specified to fetch latest in main changes from remote."
     fi
     if [[ ! -d $1 ]]; then
         error "The specified directory '$1' does not exist."
@@ -157,7 +160,7 @@ function is_after_latest_stable_tag()
     fi
 
     # Get latest stable tag (excludes pre-release tags with -)
-    latest_tag=$(git -C "$1" tag -l "$2" | sort -V | tail -n1)
+    latest_tag=$(git -C "$1" tag | grep -E "$2" | sort -V | tail -n1)
     [[ -n $latest_tag ]] || return 1
 
     tag_commit=$(git -C "$1" rev-parse "$latest_tag^{commit}" 2>/dev/null)
@@ -172,7 +175,8 @@ function is_after_latest_stable_tag()
 function is_on_or_after_latest_stable_tag()
 {
     if [[ $# != 2 ]]; then
-        error "The function is_on_or_after_latest_stable_tag() takes 2 arguments: directory and regular expression for stable tag."
+        error "The function is_on_or_after_latest_stable_tag() takes 2 arguments: directory and regular expression for stable tag." \
+              "A third argument may be specified to fetch latest in main changes from remote."
     fi
     if [[ ! -d $1 ]]; then
         error "The specified directory '$1' does not exist."
@@ -190,7 +194,7 @@ function is_on_or_after_latest_stable_tag()
     fi
 
     # Get latest stable tag
-    latest_tag=$(git -C "$1" tag -l "$2" | sort -V | tail -n1)
+    latest_tag=$(git -C "$1" tag | grep -E "$2" | sort -V | tail -n1)
     [[ -n $latest_tag ]] || return 1
 
     tag_commit=$(git -C "$1" rev-parse "$latest_tag^{commit}" 2>/dev/null)
