@@ -75,16 +75,16 @@ esac
 if [[ -z "${server_api_key}" ]]; then
     error "No API key provided for server '$server_name'"
 fi
-if [[ ! "$version" =~ $semverRegex ]]; then
+if ! is_semver "$version"; then
     error "Version '$version' is not a valid semantic version."
 fi
-if [[ -n "$git_tag" && ! "$git_tag" =~ $semverTagRegex ]]; then
+if [[ -n "$git_tag" ]] && ! is_semverTag "$git_tag"; then
     error "Tag '$git_tag' is not a valid Git tag."
 else
     git_tag="${minver_tag_prefix}${version}"
 fi
 if [[ -z "$reason" ]]; then
-    if [[ "$version" =~ $semverReleaseRegex ]]; then
+    if is_semverRelease "$version"; then
         reason="${reason:-"stable release"}"
         summary_header="Release Summary"
     else

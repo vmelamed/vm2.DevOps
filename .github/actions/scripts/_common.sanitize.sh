@@ -27,26 +27,6 @@ function is_safe_input() {
     return 0
 }
 
-## Sanitizes version strings (semver format)
-## Returns 0 if valid semver, 1 otherwise
-## Usage: if is_safe_version "$version"; then ... fi
-function is_safe_version() {
-    local version="$1"
-
-    # Must match semver pattern (already defined in _common.semver.sh)
-    if [[ -n "$semverRegex" ]] && [[ "$version" =~ $semverRegex ]]; then
-        return 0
-    fi
-
-    # Fallback basic validation
-    if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$ ]]; then
-        return 0
-    fi
-
-    error "The version '$version' is not a valid semantic version."
-    return 1
-}
-
 ## Sanitizes file paths - ensures they don't contain directory traversal or dangerous patterns
 ## Returns 0 if safe path, 1 otherwise
 ## Usage: if is_safe_path "$file_path"; then ... fi

@@ -6,18 +6,25 @@ declare -r default_dry_run=false
 declare -r default_verbose=false
 declare -r default_debugger=false
 declare -r default__ignore=/dev/null
+declare -r default_ci=false
 
 declare -x debugger=${DEBUGGER:-$default_debugger}
 declare -x verbose=${VERBOSE:-$default_verbose}
 declare -x dry_run=${DRY_RUN:-$default_dry_run}
 declare -x quiet=${QUIET:-$default_quiet}
 declare -x _ignore=$default__ignore  # the file to redirect unwanted output to
+declare -rx ci=${CI:-$default_ci}
 
 ## Sets the script to debugger mode
 function set_debugger()
 {
-    debugger=true
-    quiet=true
+    if [[ $ci == true ]]; then
+        # do not allow in CI mode - we cannot debug in CI
+        debugger=false
+    else
+        debugger=true
+        quiet=true
+    fi
     return 0
 }
 
@@ -50,6 +57,24 @@ function set_verbose()
     verbose=true
     return 0
 }
+
+## Sets the script to CI mode
+# shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
+function set_ci()
+{
+    quiet=true
+    dry_run=false
+    verbose=false
+    debugger=false
+    _ignore=/dev/null
+    set_table_format markdown
+    set +x
+    return 0
+}
+
+if [[ $ci == true ]]; then
+    set_ci
+fi
 
 declare -xr default_table_format="graphical"
 

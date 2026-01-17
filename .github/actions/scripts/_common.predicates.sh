@@ -98,12 +98,8 @@ function is_git_repo()
         error "The function is_git_repo() requires exactly one argument: the directory to test."
         return 2
     fi
-    if [[ ! -d $1 ]]; then
-        error "The specified directory '$1' does not exist."
-        return 2
-    fi
 
-    git -C "$1" rev-parse --is-inside-work-tree &>/dev/null
+    [[ -d $1 ]] && git -C "$1" rev-parse --is-inside-work-tree &>/dev/null
 }
 
 ## Tests if the current commit in the specified directory is on the latest stable tag.

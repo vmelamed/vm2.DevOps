@@ -21,8 +21,8 @@ source "${common_scripts_dir}/_common.semver.sh"
 source "${common_scripts_dir}/_common.predicates.sh"
 source "${common_scripts_dir}/_common.user.sh"
 
-trap on_debug DEBUG
-trap on_exit EXIT
+# trap on_debug DEBUG
+# trap on_exit EXIT
 
 ## Depending on the value of $dry_run either executes or just displays what would have been executed.
 ## Usage: execute <command> [args...]

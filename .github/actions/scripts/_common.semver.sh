@@ -6,14 +6,33 @@ if ! declare -pF "error" > /dev/null; then
 fi
 
 # Regular expressions that test if a string contains a semantic version:
-declare -xr semverRex="([0-9]+)\.([0-9]+)\.([0-9]+)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?"
-declare -xr semverReleaseRex="([0-9]+)\.([0-9]+)\.([0-9]+)"
-declare -xr semverPrereleaseRex="([0-9]+)\.([0-9]+)\.([0-9]+)(-[0-9A-Za-z.-]+)(\+[0-9A-Za-z.-]+)?"
+declare -xr semverRex='([0-9]+)\.([0-9]+)\.([0-9]+)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?'
+declare -xr semverReleaseRex='([0-9]+)\.([0-9]+)\.([0-9]+)'
+declare -xr semverPrereleaseRex='([0-9]+)\.([0-9]+)\.([0-9]+)(-[0-9A-Za-z.-]+)(\+[0-9A-Za-z.-]+)?'
 
 # Regular expressions that test if a string is exactly a semantic version:
 declare -xr semverRegex="^$semverRex$"
 declare -xr semverReleaseRegex="^$semverReleaseRex$"
 declare -xr semverPrereleaseRegex="^$semverPrereleaseRex$"
+
+# Regular expressions that test if a string is exactly a git tag with semantic version (e.g. v1.2.3)
+declare -x semverTagRegex
+declare -x semverTagReleaseRegex
+declare -x semverTagPrereleaseRegex
+
+## Shell function to create the regular expressions above for tags comprising a given prefix and a semantic version.
+## Call once when the tag prefix is known. For example: create_tag_regexes "ver.".
+function create_tag_regexes() {
+    local tag_prefix="${1:-"${MinVerTagPrefix:-"v"}"}"
+
+    semverTagRegex="^${tag_prefix}${semverRex}$"
+    semverTagReleaseRegex="^${tag_prefix}${semverReleaseRex}$"
+    semverTagPrereleaseRegex="^${tag_prefix}${semverPrereleaseRex}$"
+}
+
+# create the regexes with default prefix from $MinVerTagPrefix or 'v' for now, they can be re-created later by calling
+# create_tag_regexes with a different prefix if needed
+create_tag_regexes
 
 # semver components indexes in BASH_REMATCH
 declare -irx semver_major=1
@@ -30,6 +49,60 @@ declare -irx argsError=2
 
 declare -ix errors=0
 
+## Tests if the parameter is a valid semantic version (semver format).
+## Returns 0 if valid semver, > 0 otherwise
+## Usage: if is_semver "$version"; then ... fi
+function is_semver() {
+    [[ "$1" =~ $semverRegex ]]
+}
+
+## Tests if the parameter is a valid minimum version (semver format).
+## Returns 0 if valid semver, > 0 otherwise
+## Usage: if is_semver "$version"; then ... fi
+function is_semverTag() {
+    local tag="$1"
+    local tag_prefix="${2:-"${MinVerTagPrefix:-"v"}"}"
+
+    # Must match semver pattern (already defined in _common.semver.sh)
+    [[ "$tag" =~ ^${tag_prefix}${semverRex}$ ]]
+}
+
+## Tests if the parameter is a valid semantic version (semver format).
+## Returns 0 if valid semver, > 0 otherwise
+## Usage: if is_semver "$version"; then ... fi
+function is_semverPrerelease() {
+    [[ "$1" =~ $semverPrereleaseRegex ]]
+}
+
+## Tests if the parameter is a valid minimum version (semver format).
+## Returns 0 if valid semver, > 0 otherwise
+## Usage: if is_semver "$version"; then ... fi
+function is_semverPrereleaseTag() {
+    local tag="$1"
+    local tag_prefix="${2:-"${MinVerTagPrefix:-"v"}"}"
+
+    # Must match semver pattern (already defined in _common.semver.sh)
+    [[ "$tag" =~ ^${tag_prefix}${semverPrereleaseRex}$ ]]
+}
+
+## Tests if the parameter is a valid semantic version (semver format).
+## Returns 0 if valid semver, > 0 otherwise
+## Usage: if is_semver "$version"; then ... fi
+function is_semverRelease() {
+    [[ "$1" =~ $semverReleaseRegex ]]
+}
+
+## Tests if the parameter is a valid minimum version (semver format).
+## Returns 0 if valid semver, > 0 otherwise
+## Usage: if is_semver "$version"; then ... fi
+function is_semverReleaseTag() {
+    local tag="$1"
+    local tag_prefix="${2:-"${MinVerTagPrefix:-"v"}"}"
+
+    # Must match semver pattern (already defined in _common.semver.sh)
+    [[ "$tag" =~ ^${tag_prefix}${semverReleaseRex}$ ]]
+}
+
 ## Compares two semantic versions, see https://semver.org/.
 ## Returns $isEq if '$1 == $2', $isGt if '$1 > $2', $isLt if '$1 < $2'.
 ## Returns $argsError if invalid arguments are provided (also increments $errors).
@@ -37,8 +110,8 @@ declare -ix errors=0
 function compare_semver() {
     local -i e=0
 
-    if [[ $# -lt 2 ]]; then
-        error "The function compare_semver() requires at least 2 arguments: version1 and version2." >&2
+    if [[ $# -ne 2 ]]; then
+        error "The function compare_semver() requires at exactly 2 arguments: version1 and version2." >&2
         e=$((e + 1))
     fi
 
