@@ -22,7 +22,8 @@ declare -x semverTagPrereleaseRegex
 
 ## Shell function to create the regular expressions above for tags comprising a given prefix and a semantic version.
 ## Call once when the tag prefix is known. For example: create_tag_regexes "ver.".
-function create_tag_regexes() {
+function create_tag_regexes()
+{
     local tag_prefix="${1:-"${MinVerTagPrefix:-"v"}"}"
 
     semverTagRegex="^${tag_prefix}${semverRex}$"
