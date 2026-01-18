@@ -10,7 +10,6 @@ source "${common_dir}/_common.sh"
 declare repos="${GIT_REPOS:-$HOME/repos}"
 declare target_repo=""
 declare minver_tag_prefix=${MinVerTagPrefix:-"v"}
-declare interactive=false
 
 script_dir="$(dirname "$(realpath -e "$this_script")")"
 
