@@ -1,12 +1,19 @@
 #!/bin/bash
 
 gth="┌────────────────────────────────────────────────────────────────────────────"
+
 gbh="├──────────────────────────────────────┬─────────────────────────────────────"
+
 gmt="├──────────────────────────────────────┴─────────────────────────────────────"
+
 gmb="├──────────────────────────────────────┬─────────────────────────────────────"
+
 gln="├──────────────────────────────────────┼─────────────────────────────────────"
+
 gbl="│                                      │                                     "
+
 gbt="└──────────────────────────────────────┴─────────────────────────────────────"
+
 ghf="│ %s\n"
 gvf="│ \$%-35s │ %-35s\n"
 
@@ -120,6 +127,7 @@ function dump_vars() {
                     echo "${table["top_header"]}"
                     _write_title "$v"
                     echo "${table["bottom_header"]}"
+                    top=false
                 else
                     echo "${table["top_mid_header"]}"
                     _write_title "$v"
@@ -128,18 +136,20 @@ function dump_vars() {
                 ;;
             -b|--blank )
                 echo "${table["blank"]}"
+                top=false
                 ;;
             -l|--line )
                 echo "${table["line"]}"
+                top=false
                 ;;
             *)
                 if [[ ! $v =~ ^-.* ]]; then
                     _write_line "$v";
+                    top=false
                 fi
                 # all options starting with '-' are already processed
                 ;;
         esac
-        top=false
     done
     echo "${table["bottom"]}"
     sync

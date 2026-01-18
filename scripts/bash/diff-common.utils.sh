@@ -34,10 +34,6 @@ function get_arguments()
             --help|-h|--debugger|-q|--quiet-v|--verbose-x|--trace-y|--dry-run )
                 ;;
 
-            --interactive|-i )
-                interactive=true
-                ;;
-
             --repos|-r )
                 value="$1"; shift
                 repos="$value"
@@ -62,14 +58,13 @@ function get_arguments()
 
 dump_all_variables()
 {
-    dump_vars --force --quiet \
+    dump_vars "$@" \
         --header "Script Arguments:" \
         debugger \
         dry_run \
         verbose \
         quiet \
         --blank \
-        interactive \
         repos \
         minver_tag_prefix \
         target_repo \

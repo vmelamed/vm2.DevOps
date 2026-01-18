@@ -28,9 +28,6 @@ Parameters:
         project repository to diff against the templates.
 
 Switches:$common_switches
-    --interactive | -i
-        Enables interactive mode. Default: false.
-
 Options:
     --repos | -r
         The parent directory where the .github workflow templates and vm2.DevOps
