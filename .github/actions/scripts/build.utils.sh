@@ -13,7 +13,6 @@ function get_arguments()
             break
         fi
     done
-
     if [[ $debugger != "true" ]]; then
         trap on_debug DEBUG
         trap on_exit EXIT
@@ -33,25 +32,37 @@ function get_arguments()
             # do not use the common options:
             --help|-h|--debugger|-q|--quiet-v|--verbose-x|--trace-y|--dry-run )
                 ;;
-
-            --release-tag|-t )
+            --build-project|-b )
                 value="$1"; shift
-                release_tag="$value"
+                build_project="$value"
                 ;;
-
-            --minver-tag-prefix|-p )
+            --configuration|-c )
+                value="$1"; shift
+                configuration="$value"
+                ;;
+            --preprocessor-symbols|-d )
+                value="$1"; shift
+                preprocessor_symbols="$value"
+                ;;
+            --minver-tag-prefix|-f )
                 value="$1"; shift
                 minver_tag_prefix="$value"
                 ;;
-
-            --reason|-r )
+            --minver-prerelease-id|-i )
                 value="$1"; shift
-                reason="$value"
+                minver_prerelease_id="$value"
                 ;;
-
+            --nuget-username )
+                value="$1"; shift
+                nuget_username="$value"
+                ;;
+            --nuget-password )
+                value="$1"; shift
+                nuget_password="$value"
+                ;;
             * )
-                usage "Unknown option: $flag"
-                exit 2
+                echo "Unknown argument: $flag"
+                return 1
                 ;;
         esac
     done
@@ -67,8 +78,12 @@ dump_all_variables()
         verbose \
         quiet \
         --blank \
-        release_tag \
-        reason \
+        build_project \
+        configuration \
+        preprocessor_symbols \
+        minver_tag_prefix \
+        minver_prerelease_id \
+        nuget_username \
         --header "other:" \
         ci
 }

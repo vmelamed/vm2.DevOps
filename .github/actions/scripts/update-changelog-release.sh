@@ -1,18 +1,16 @@
 #!/bin/bash
 set -euo pipefail
 
-declare -r this_script=${BASH_SOURCE[0]}
+script_name="$(basename "${BASH_SOURCE[0]}")"
+script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
 
-script_name="$(basename "${this_script%.*}")"
 declare -r script_name
-
-script_dir="$(dirname "$(realpath -e "$this_script")")"
 declare -r script_dir
 
 source "$script_dir/_common.github.sh"
 
 declare -x release_tag=${RELEASE_TAG:-}
-declare -x minver_tag_prefix=${MinVerTagPrefix:-v}
+declare -x minver_tag_prefix=${MINVERTAGPREFIX:-v}
 
 source "$script_dir/update-changelog-release.usage.sh"
 source "$script_dir/update-changelog-release.utils.sh"

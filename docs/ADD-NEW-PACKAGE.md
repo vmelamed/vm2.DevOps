@@ -107,7 +107,7 @@ The actions of this repo should have the following:
   - CONFIGURATION: `Release`: the build configuration to use (e.g., Release or Debug)
   - NUGET_SERVER: `github`: the NuGet server to publish to (supported values: 'github', 'nuget', or custom URI)
   - MINVERTAGPREFIX: `v`: Prefix for git tags to be recognized by MinVer
-  - SEMVER_PRERELEASE_PREFIX: `preview`: Prefix for the prerelease tag, e.g. 'preview', 'alpha', 'beta', 'rc', etc.
+  - MINVERDEFAULTPRERELEASEIDENTIFIERS: `preview`: Prefix for the prerelease tag, e.g. 'preview.0', 'alpha', 'beta', 'rc', etc.
   - SAVE_PACKAGE_ARTIFACTS: `false`: Whether to save package artifacts after build/publish
   - MIN_COVERAGE_PCT: `80`%: Minimum code coverage percentage required
   - MAX_REGRESSION_PCT: `20`%: Maximum allowed regression percentage

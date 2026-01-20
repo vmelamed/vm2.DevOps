@@ -26,10 +26,10 @@ on:
         type: string
         default: "v"
 
-      semver-prerelease-prefix:
-        description: Prefix for the prerelease tag, e.g. 'preview', 'alpha', 'beta', 'rc', etc. (cannot be null or empty string, default 'preview')
+      minver-prerelease-id:
+        description: Prefix for the prerelease tag, e.g. 'preview.0', 'alpha', 'beta', 'rc', etc. (cannot be null or empty string, default 'preview.0')
         type: string
-        default: "preview"
+        default: "preview.0"
 
       reason:
         description: Reason for manual pre-release
@@ -81,6 +81,7 @@ jobs:
       package-projects: ${{ steps.validate.outputs.package-projects }}
       nuget-server: ${{ steps.validate.outputs.nuget-server }}
       minver-tag-prefix: ${{ steps.validate.outputs.minver-tag-prefix }}
+      minver-prerelease-id: ${{ steps.validate.outputs.minver-prerelease-id }}
       prerelease-version: ${{ steps.validate.outputs.prerelease-version }}
       prerelease-tag: ${{ steps.validate.outputs.prerelease-tag }}
       reason: ${{ steps.validate.outputs.reason }}
@@ -89,6 +90,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          filter: tree:0
 
       - name: Checkout DevOps repository scripts
         if: github.repository != 'vmelamed/vm2.DevOps'
@@ -119,7 +121,7 @@ jobs:
               --package-projects '${{ inputs.package-projects }}' \
               --nuget-server '${{ inputs.nuget-server }}' \
               --minver-tag-prefix '${{ inputs.minver-tag-prefix || 'v' }}' \
-              --semver-prerelease-prefix '${{ inputs.semver-prerelease-prefix }}' \
+              --minver-prerelease-id '${{ inputs.minver-prerelease-id }}' \
               --reason '${{ inputs.reason }}'
 
   changelog:
@@ -132,6 +134,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          filter: tree:0
 
       - name: Checkout DevOps repository scripts
         if: github.repository != 'vmelamed/vm2.DevOps'
@@ -209,6 +212,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          filter: tree:0
 
       - name: Checkout DevOps repository scripts
         if: github.repository != 'vmelamed/vm2.DevOps'
@@ -246,7 +250,7 @@ jobs:
           publish-package.sh \
               --package-project "${{ matrix.project }}" \
               --nuget-server "${{ inputs.nuget-server }}" \
-              --minver-tag-prefix "${{ vars.MinVerTagPrefix || 'v' }}" \
+              --minver-tag-prefix "${{ needs.compute-version.outputs.minver-tag-prefix }}" \
               --version "${{ needs.compute-version.outputs.prerelease-version }}" \
               --git-tag "${{ needs.compute-version.outputs.prerelease-tag }}" \
               --reason "${{ needs.compute-version.outputs.reason }}" \

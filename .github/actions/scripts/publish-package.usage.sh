@@ -33,9 +33,18 @@ Options:
             nuget  - \$NUGET_API_NUGET_KEY or \$NUGET_API_KEY for NuGet.org
             custom - \$NUGET_API_KEY for a custom NuGet server.
 
+    --preprocessor-symbols | -s
+        Pre-processor symbols for compilation.
+        Initial value from \$PREPROCESSOR_SYMBOLS or default ''.
+
     --minver-tag-prefix | -t
         Specifies the tag prefix used by MinVer (e.g., 'v').
-        Initial value from \$MinVerTagPrefix environment variable or 'v'.
+        Initial value from \$MINVERTAGPREFIX environment variable or 'v'.
+
+    --minver-prerelease-id | -i
+        Default semver pre-release identifiers for MinVer (e.g., 'preview.0').
+        Initial value from \$MINVERDEFAULTPRERELEASEIDENTIFIERS environment
+        variable or 'preview.0'.
 
     --repo-owner | -o
         Repository owner. When run on a GitHub runner, this is automatically set
@@ -50,7 +59,7 @@ Options:
         Initial value from the \$VERSION environment variable.
 
     --git-tag | -g
-        The git tag to associate with the release. Usually \$MinVerTagPrefix
+        The git tag to associate with the release. Usually \$MINVERTAGPREFIX
         concatenated with \$VERSION (e.g., 'v2.0.0-preview.1')
         Initial value from the \$GIT_TAG environment variable, or
         "${minver_tag_prefix}${version}"
@@ -75,17 +84,26 @@ Environment Variables:
                         'github', or custom URI)
                         (default: 'nuget')
 
-    MinVerTagPrefix   Git tag prefix to be recognized by MinVer
+    PREPROCESSOR_SYMBOLS
+                        Pre-processor symbols for compilation.
+                        (default: '')
+
+    MINVERDEFAULTPRERELEASEIDENTIFIERS
+                        Default semver pre-release identifiers for MinVer
+                        (default: 'preview.0')
+
+    MINVERTAGPREFIX     Git tag prefix to be recognized by MinVer
                         (default: 'v')
 
-    GITHUB_REPOSITORY_OWNER The owner of the GitHub repository
+    GITHUB_REPOSITORY_OWNER
+                        The owner of the GitHub repository
                         (default: 'vmelamed')
 
     VERSION             Semantic Version  of the package (e.g. for a stable
                         release 2.0.0 or for a prerelease 2.0.0-preview...).
 
     GIT_TAG             The git tag associated with the release. Usually
-                        \$MinVerTagPrefix and \$VERSION concatenated (e.g.,
+                        \$MINVERTAGPREFIX and \$VERSION concatenated (e.g.,
                         'v2.0.0-preview.1')
 
     REASON              Reason for triggering the release.

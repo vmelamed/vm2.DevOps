@@ -20,6 +20,11 @@ on:
         type: string
         default: "nuget"
 
+      minver-tag-prefix:
+        description: "Prefix for git tags to be recognized by MinVer (default 'v')"
+        type: string
+        default: "v"
+
       reason:
         description: Reason for manual release
         type: string
@@ -79,6 +84,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          filter: tree:0
 
       - name: Checkout DevOps repository scripts
         if: github.repository != 'vmelamed/vm2.DevOps'
@@ -107,7 +113,7 @@ jobs:
           compute-release-version.sh \
               --package-projects '${{ inputs.package-projects }}' \
               --nuget-server '${{ inputs.nuget-server }}' \
-              --minver-tag-prefix '${{ vars.MinVerTagPrefix || 'v' }}' \
+              --minver-tag-prefix '${{ inputs.minver-tag-prefix || 'v' }}' \
               --reason '${{ inputs.reason }}'
 
   changelog:
@@ -120,6 +126,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          filter: tree:0
 
       - name: Checkout DevOps repository scripts
         if: github.repository != 'vmelamed/vm2.DevOps'
@@ -161,6 +168,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          filter: tree:0
           ref: main # Get latest main with changelog updates
 
       - name: Checkout DevOps repository scripts
@@ -185,7 +193,8 @@ jobs:
         run: |
           create-release-tag.sh \
               --release-tag "${{ needs.compute-version.outputs.release-tag }}" \
-              --reason "${{ inputs.reason }}"
+              --reason "${{ inputs.reason }}" \
+              --minver-tag-prefix "${{ needs.compute-version.outputs.minver-tag-prefix }}"
 
   release:
     name: Build and Publish Release
@@ -205,6 +214,7 @@ jobs:
           ref: ${{ needs.compute-version.outputs.release-tag }}
           fetch-tags: true
           fetch-depth: 0
+          filter: tree:0
 
       - name: Checkout DevOps repository scripts
         if: github.repository != 'vmelamed/vm2.DevOps'

@@ -1,6 +1,7 @@
 #!/bin/bash
 
-if ! declare -pF "error" > /dev/null; then
+# shellcheck disable=SC2154 # variable is referenced but not assigned.
+if ! declare -pF "error" > "$_ignore"; then
     semver_dir="$(dirname "${BASH_SOURCE[0]}")"
     source "$semver_dir/_common.diagnostics.sh"
 fi

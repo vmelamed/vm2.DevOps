@@ -24,12 +24,12 @@ Options:
 
     --minver-tag-prefix | -p
         Specifies the tag prefix used by MinVer (e.g., 'v').
-        Initial value from \$MinVerTagPrefix or default 'v'
+        Initial value from \$MINVERTAGPREFIX or default 'v'
 
 Environment Variables:
     RELEASE_TAG         The release tag (e.g., 'v1.2.3')
 
-    MinVerTagPrefix   Tag prefix (default: 'v')
+    MINVERTAGPREFIX   Tag prefix (default: 'v')
 
 Requirements:
     - git-cliff must be installed

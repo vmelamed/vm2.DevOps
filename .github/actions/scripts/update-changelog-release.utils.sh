@@ -54,7 +54,7 @@ function get_arguments()
 
 dump_all_variables()
 {
-    dump_vars --quiet --force \
+    dump_vars --force --quiet --markdown \
         --header "Script Arguments:" \
         debugger \
         dry_run \

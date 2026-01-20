@@ -8,12 +8,12 @@ This document explains how versioning, prerelease, and stable release automation
 
 We use [MinVer] to derive all version numbers from Git tags.
 
-| Aspect                            | Source                                     |
-| --------------------------------- | ------------------------------------------ |
-| NuGet package version             | Git tag (or computed prerelease if ahead)  |
-| AssemblyInformationalVersion      | Full SemVer (incl. prerelease)             |
-| FileVersion                       | Major.Minor.Patch.0                        |
-| AssemblyVersion (binding)         | Major.0.0.0 (MinVer default for stability) |
+| Aspect                       | Source                                     |
+| ---------------------------- | ------------------------------------------ |
+| NuGet package version        | Git tag (or computed prerelease if ahead)  |
+| AssemblyInformationalVersion | Full SemVer (incl. prerelease)             |
+| FileVersion                  | Major.Minor.Patch.0                        |
+| AssemblyVersion (binding)    | Major.0.0.0 (MinVer default for stability) |
 
 We use central package management. Central version declaration exists in `Directory.Packages.props`:
 
@@ -50,11 +50,11 @@ The actual activation is via:
 
 ## 2. Flows Overview
 
-| Flow                    | Trigger                                             | Tag Format                                | Publishes?       | Result                   |
-|-------------------------|-----------------------------------------------------|-------------------------------------------|------------------|--------------------------|
-| Local build (no tag)    | `dotnet build`                                      | Computed prerelease (if no tag reachable) | No               | For development only     |
-| Prerelease (automated)  | Merge (push) to `main` (commit not already tagged)  | `vX.Y.(Z+1)-preview.YYYYMMDD.<run>`       | Yes (prerelease) | Preview package on NuGet |
-| Stable release (manual) | **Manually** activated, computed tag from commits   | `vX.Y.Z`                                  | Yes (stable)     | Final package on NuGet   |
+| Flow                    | Trigger                                            | Tag Format                                | Publishes?       | Result                   |
+| ----------------------- | -------------------------------------------------- | ----------------------------------------- | ---------------- | ------------------------ |
+| Local build (no tag)    | `dotnet build`                                     | Computed prerelease (if no tag reachable) | No               | For development only     |
+| Prerelease (automated)  | Merge (push) to `main` (commit not already tagged) | `vX.Y.(Z+1)-preview.YYYYMMDD.<run>`       | Yes (prerelease) | Preview package on NuGet |
+| Stable release (manual) | **Manually** activated, computed tag from commits  | `vX.Y.Z`                                  | Yes (stable)     | Final package on NuGet   |
 
 ---
 
@@ -71,7 +71,7 @@ Logic:
 1. Push tag.
 1. Build, pack, publish to NuGet using MinVer (tag-driven).
 
-Rationale: *Stable tags remain human-initiated; prereleases always advance from the last stable.*
+Rationale: _Stable tags remain human-initiated; prereleases always advance from the last stable._
 
 ---
 
@@ -264,6 +264,8 @@ Avoid unless strong justification (most libraries keep AssemblyVersion stable ac
 - Dual publish to GitHub Packages (add secondary source).
 - Add SBOM / signing (`dotnet nuget sign`) if required.
 - Add validation job to ensure tag matches CHANGELOG.
+
+Introduce [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/).
 
 ---
 

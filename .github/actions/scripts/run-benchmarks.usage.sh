@@ -49,6 +49,15 @@ Options:
         comparing to a previous, base-line benchmark results.
         Initial value from \$MAX_REGRESSION_PCT or default 20
 
+    --minver-tag-prefix | -f
+        Specifies the git tag prefix used by MinVer (e.g., 'v').
+        Initial value from \$MINVERTAGPREFIX environment variable or 'v'.
+
+    --minver-prerelease-id | -i
+        Default semver pre-release identifiers for MinVer (e.g., 'preview.0').
+        Initial value from \$MINVERDEFAULTPRERELEASEIDENTIFIERS environment
+        variable or 'preview.0'.
+
 Environment Variables:
     BM_PROJECT              Path to the benchmark project file.
     ARTIFACT_DIR            Directory where benchmark artifacts will be created.
@@ -57,7 +66,9 @@ Environment Variables:
                             benchmark project.
     MAX_REGRESSION_PCT      Maximum acceptable regression percentage when
                             comparing to previous benchmark results.
-
+    MINVERTAGPREFIX         Git tag prefix used by MinVer (e.g., 'v').
+    MINVERDEFAULTPRERELEASEIDENTIFIERS
+                            Default semver pre-release identifiers for MinVer.
 Outputs (to GITHUB_OUTPUT):
     results-dir             The directory where benchmark results are stored.
 EOF

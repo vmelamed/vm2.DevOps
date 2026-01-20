@@ -70,11 +70,12 @@ function get_arguments()
                 ;;
         esac
     done
+    dump_all_variables
 }
 
 dump_all_variables()
 {
-    dump_vars \
+    dump_vars --force --quiet --markdown \
         --header "Script Arguments:" \
         debugger \
         dry_run \

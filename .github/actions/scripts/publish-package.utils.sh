@@ -45,9 +45,19 @@ function get_arguments()
                 nuget_server="$value"
                 ;;
 
+            --preprocessor-symbols|-s )
+                value="$1"; shift
+                preprocessor_symbols="$value"
+                ;;
+
             --minver-tag-prefix|-t )
                 value="$1"; shift
                 minver_tag_prefix="$value"
+                ;;
+
+            --minver-prerelease-id|-i )
+                value="$1"; shift
+                minver_prerelease_id="$value"
                 ;;
 
             --repo-owner|-o )
@@ -85,11 +95,12 @@ function get_arguments()
                 ;;
         esac
     done
+    dump_all_variables
 }
 
 dump_all_variables()
 {
-    dump_vars --force --quiet \
+    dump_vars --force --quiet --markdown \
         --header "Script Arguments:" \
         debugger \
         dry_run \
@@ -98,11 +109,16 @@ dump_all_variables()
         --blank \
         package_project \
         nuget_server \
+        preprocessor_symbols \
         minver_tag_prefix \
+        minver_prerelease_id \
         repo_owner \
         version \
         git_tag \
         reason \
         artifacts_saved \
-        artifacts_dir
+        artifacts_dir \
+        --header "other:" \
+        ci
+
 }

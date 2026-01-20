@@ -1,24 +1,24 @@
 #!/bin/bash
 set -euo pipefail
 
-declare -r this_script=${BASH_SOURCE[0]}
+script_name="$(basename "${BASH_SOURCE[0]}")"
+script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
 
-script_name="$(basename "${this_script%.*}")"
-declare -r script_name
-
-script_dir="$(dirname "$(realpath -e "$this_script")")"
-declare -r script_dir
+declare -xr script_name
+declare -xr script_dir
 
 source "$script_dir/_common.github.sh"
 
+# default constants for parameters
 declare -xr default_package_projects='[""]'
 declare -xr default_nuget_server='nuget'
 declare -xr default_minver_tag_prefix='v'
 declare -xr default_reason="release build"
 
+# parameters with initial values from environment variables or defaults
 declare -x package_projects=${PACKAGE_PROJECTS:-"$default_package_projects"}
 declare -x nuget_server=${NUGET_SERVER:-"$default_nuget_server"}
-declare -x minver_tag_prefix=${MinVerTagPrefix:-"$default_minver_tag_prefix"}
+declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x reason=${REASON:-"$default_reason"}
 
 source "$script_dir/compute-release-version.usage.sh"
@@ -27,28 +27,16 @@ source "$script_dir/compute-release-version.utils.sh"
 get_arguments "$@"
 
 # Sanitize inputs to prevent injection attacks
-if ! is_safe_nuget_server "$nuget_server"; then
-    error "Invalid nuget-server: must be 'nuget', 'github', or a valid https:// URL"
-fi
-if [[ -n "$reason" ]] && ! is_safe_reason "$reason"; then
-    error "Invalid reason: contains unsafe characters or exceeds length limit"
-fi
+are_safe_projects "package_projects" "$default_package_projects"
+validate_nuget_server "nuget_server" "$default_nuget_server"
+is_safe_input "$minver_tag_prefix"
+is_safe_reason "$reason"
 
+# freeze the parameters
 declare -xr package_projects
 declare -xr nuget_server
 declare -xr minver_tag_prefix
 declare -xr reason
-
-dump_all_variables
-
-create_tag_regexes "$minver_tag_prefix"
-
-# Validate NuGet server and package projects (these do not affect release version computation)
-# but are here to fail fast if misconfigured
-validate_projects "package_projects" "$default_package_projects"
-
-# Validate NuGet server (does not affect release version computation)
-validate_nuget_server "nuget_server" "$default_nuget_server"
 
 # detect if the head is already tagged
 head_tag=$(git tag --points-at HEAD)
@@ -58,6 +46,8 @@ fi
 
 exit_if_has_errors
 
+create_tag_regexes "$minver_tag_prefix"
+
 # Find latest stable like v1.2.3
 latest_stable=$(git tag --list "${minver_tag_prefix}*" | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1 || echo "")
 
@@ -65,7 +55,7 @@ declare -i major=0
 declare -i minor=0
 declare -i patch=0
 
-if [[ $latest_stable =~ $semverTagReleaseRegex ]]; then
+if is_semverReleaseTag "$latest_stable"; then
     major=${BASH_REMATCH[$semver_major]}
     minor=${BASH_REMATCH[$semver_minor]}
     patch=${BASH_REMATCH[$semver_patch]}
@@ -73,9 +63,9 @@ if [[ $latest_stable =~ $semverTagReleaseRegex ]]; then
         error "Invalid version numbers in latest stable tag '$latest_stable': $major.$minor.$patch. Major must be > 0, minor and patch must be >= 0."
         exit 2
     fi
-    info "📌 Latest stable release: $latest_stable ($major.$minor.$patch)"
+    trace "Latest stable release: $latest_stable ($major.$minor.$patch)"
 else
-    info "📌 No previous stable release found; starting at 0.0.0"
+    trace "No previous stable release found; starting at 0.0.0"
 fi
 
 # Auto-detect next stable version from conventional commits
@@ -107,15 +97,16 @@ if ((major == 0)); then
 fi
 
 release_version="$major.$minor.$patch"
-info "🤖 Calculated release version from commit messages: $release_version [$bump_type]"
+trace "Calculated release version from commit messages: $release_version [$bump_type]"
 
-# make sure the computed version so far is not lower than the latest prerelease
+# make sure the computed version is not lower than the latest prerelease
 latest_prerelease_tag=$(git tag --list "${minver_tag_prefix}*" | grep -E "$semverTagPrereleaseRegex" | sort -V | tail -n1 || echo "")
 
 if [[ -n "$latest_prerelease_tag" ]] && \
    (( $(compare_semver "$release_version" "${latest_prerelease_tag#"$minver_tag_prefix"}") == isLt )); then
-        # the calculated release version so far is less than the latest prerelease version,
+        # the computed release version is less than the latest prerelease version,
         # so adopt the major, minor, and patch from the latest prerelease version and make it a release version
+        trace "Latest prerelease tag '$latest_prerelease_tag' is greater than computed release version '$release_version'; adjusting release version."
         [[ "$latest_prerelease_tag" =~ $semverTagPrereleaseRegex ]]
         major=${BASH_REMATCH[$semver_major]}
         minor=${BASH_REMATCH[$semver_minor]}
@@ -124,7 +115,7 @@ if [[ -n "$latest_prerelease_tag" ]] && \
         bump_type="adjusted to be > latest prerelease version"
 fi
 
-info "🤖 Finalized new release version: $release_version [$bump_type]"
+info "Finalized new release version: $release_version [$bump_type]"
 
 release_tag="${minver_tag_prefix}${release_version}"
 
@@ -135,6 +126,7 @@ declare -xr release_tag
 if git rev-parse "$release_tag" >"$_ignore" 2>&1; then
     error "Tag '$release_tag' already exists. Possible remedy: branch 'main' again, and do a new PR and release with a higher version number."
 fi
+
 exit_if_has_errors
 
 # Output for GitHub Actions

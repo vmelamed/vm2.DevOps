@@ -10,7 +10,7 @@
     - [`.github/workflows/_test.yaml`](#githubworkflows_testyaml)
     - [`.github/workflows/_benchmarks.yaml`](#githubworkflows_benchmarksyaml)
   - [`.github/workflows/_prerelease.yaml`](#githubworkflows_prereleaseyaml)
-  - [.github/workflows/_release.yaml`](#githubworkflows_releaseyaml)
+  - [.github/workflows/\_release.yaml`](#githubworkflows_releaseyaml)
 - [Script library (lowest layer)](#script-library-lowest-layer)
 - [Additional notes](#additional-notes)
 
@@ -66,7 +66,7 @@ These reusable GitHub Actions workflows are intended to be called directly via `
 
 - Common switches for all bash scripts:
   - `help`: If `true`, scripts will display usage information and exit (default: `false`)
-  - `debugger`:  Set when the a script is running under a debugger, e.g. 'gdb'. If specified, the script will not set traps for DEBUG and EXIT, and will set the '--quiet' switch. (default: `false`)
+  - `debugger`: Set when the a script is running under a debugger, e.g. 'gdb'. If specified, the script will not set traps for DEBUG and EXIT, and will set the '--quiet' switch. (default: `false`)
   - `dry-run`: If `true`, scripts will simulate actions without making changes (default: `false`)
   - `quiet`: If `true`, scripts will suppress all functions that request input from the user - binary (Y/N) or multiple ( a., b., c. ...) choices - and will assume some sensible default input (default: `false` or `true`, `$CI=true` as in GitHub Actions)
   - `verbose`: If `true`, scripts will emit tracing and diagnostic messages from all `trace()` calls, all executed commands, and all variable dumps (default: `false`)
@@ -75,7 +75,7 @@ These reusable GitHub Actions workflows are intended to be called directly via `
 
 Orchestrates a "Continuous Integration" pipeline. Invoked by a workflow, typically created out of the template in `vmelamed/.github/workflow-templates/CI.yaml`, which is usually triggered on pull requests and pushes to `main` branches.
 
-- Normalizes and validates all incoming inputs (target OS, .NET SDK, projects, configuration, defined  symbols, etc.) through `validate-vars.sh` (see the list of parameters above).
+- Normalizes and validates all incoming inputs (target OS, .NET SDK, projects, configuration, defined symbols, etc.) through `validate-vars.sh` (see the list of parameters above).
 - Builds the specified projects/solution
 - Unit and Integration Tests with coverage collection and enforcement
 - Run benchmark tests
@@ -196,13 +196,13 @@ Reusable workflow for publishing prerelease packages with automatic semantic ver
 - Other Parameters:
   - `package-projects`: JSON array of project paths to be packaged as NuGet packages
   - `dotnet-version`: .NET SDK version (default: `10.0.x`)
-  - `semver-prerelease-prefix`: Prerelease label like `preview`, `alpha`, `beta`, `rc` (default: `preview`)
+  - `minver-prerelease-id`: Prerelease label like `preview`, `alpha`, `beta`, `rc` (default: `preview`)
   - `force-publish`: Bypass tag-already-exists check (default: `false`)
   - `reason`: Reason for manual triggering of a pre-release
   - `nuget-server`: Target server - `nuget`, `github`, or custom URL
   - `save-package-artifacts`: Enables uploading packages as artifacts (default: `false`)
 
-### .github/workflows/_release.yaml`
+### .github/workflows/\_release.yaml`
 
 Reusable workflow for publishing stable release packages with automatic semantic versioning. Invoked by a workflow, typically created out of the template in `vmelamed/.github/workflow-templates/Release.yaml`, which is usually triggered on administrator creating Git tags matching the stable version pattern (e.g. `vX.Y.Z`).
 

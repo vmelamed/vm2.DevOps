@@ -1,17 +1,19 @@
 #!/bin/bash
 set -euo pipefail
 
-declare -r this_script=${BASH_SOURCE[0]}
+script_name="$(basename "${BASH_SOURCE[0]}")"
+script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
 
-script_name="$(basename "${this_script%.*}")"
-script_dir="$(dirname "$(realpath -e "$this_script")")"
-declare -r script_dir
+declare -xr script_name
+declare -xr script_dir
 
 source "$script_dir/_common.github.sh"
 
 declare -x bm_project=${BM_PROJECT:-}
-declare -x configuration=${CONFIGURATION:="Release"}
+declare -x configuration=${CONFIGURATION:-"Release"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
+declare -x minver_tag_prefix=${MINVERTAGPREFIX:-'v'}
+declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"preview.0"}
 declare -x artifacts_dir=${ARTIFACTS_DIR:-}
 
 source "$script_dir/run-benchmarks.usage.sh"
@@ -24,17 +26,29 @@ if [[ ! -s "$bm_project" ]]; then
     exit 2
 fi
 
-declare -r bm_project
-declare -r configuration
-declare -r preprocessor_symbols
+is_safe_path "$bm_project"
+is_safe_input "$configuration"
+is_safe_input "$preprocessor_symbols"
+is_safe_input "$minver_tag_prefix"
+is_safe_input "$minver_prerelease_id"
+is_safe_path "$artifacts_dir"
 
+# Freeze variables
+declare -xr bm_project
+declare -xr configuration
+declare -xr preprocessor_symbols
+declare -xr minver_tag_prefix
+declare -xr minver_prerelease_id
+declare -xr artifacts_dir
+
+# Determine solution directory and artifacts directory
 solution_dir="$(realpath -e "$(dirname "$bm_project")/../..")"
 artifacts_dir=$(realpath -m "${artifacts_dir:-"$solution_dir/BmArtifacts"}")
 results_dir="$artifacts_dir/results"
 
-declare -r solution_dir
-declare -r artifacts_dir
-declare -r results_dir
+declare -xr solution_dir
+declare -xr artifacts_dir
+declare -xr results_dir
 
 renamed_artifacts_dir="$artifacts_dir-$(date -u +"%Y%m%dT%H%M%S")"
 declare -r renamed_artifacts_dir
@@ -70,6 +84,7 @@ if [[ -d "$artifacts_dir" && -n "$(ls -A "$artifacts_dir")" ]]; then
 fi
 
 dump_all_variables
+exit_if_has_errors
 
 # Create artifacts directory
 trace "Creating directory(s)..."
@@ -105,7 +120,9 @@ if ! execute dotnet run \
         --memory \
         --exporters JSON \
         --artifacts "$artifacts_dir" \
-        /p:DefineConstants="$preprocessor_symbols"; then
+        /p:DefineConstants="$preprocessor_symbols" \
+        /p:MinVerTagPrefix="$minver_tag_prefix" \
+        /p:MinVerPrereleaseIdentifiers="$minver_prerelease_id"; then
     error "Benchmarks failed in project '$bm_project'."
     exit 2
 fi
@@ -127,6 +144,6 @@ if [[ $dry_run != "true" ]]; then
     } | tee -a "$github_step_summary"
 fi
 
-info "✅ Benchmarks completed successfully" | tee -a "$github_step_summary"
+summary "✅ Benchmarks completed successfully"
 
 to_github_output results_dir

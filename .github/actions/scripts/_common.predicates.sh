@@ -1,6 +1,7 @@
 #!/bin/bash
 
-if ! declare -pF "error" > /dev/null; then
+# shellcheck disable=SC2154 # variable is referenced but not assigned.
+if ! declare -pF "error" > "$_ignore"; then
     semver_dir="$(dirname "${BASH_SOURCE[0]}")"
     source "$semver_dir/_common.diagnostics.sh"
 fi
@@ -99,7 +100,7 @@ function is_git_repo()
         return 2
     fi
 
-    [[ -d $1 ]] && git -C "$1" rev-parse --is-inside-work-tree &>/dev/null
+    [[ -d $1 ]] && git -C "$1" rev-parse --is-inside-work-tree &>"$_ignore"
 }
 
 ## Tests if the current commit in the specified directory is on the latest stable tag.
@@ -131,7 +132,7 @@ function is_latest_stable_tag()
 
     current_commit=$(git -C "$1" rev-parse HEAD)
 
-    tag_commit=$(git -C "$1" rev-parse "$latest_tag^{commit}" 2>/dev/null)
+    tag_commit=$(git -C "$1" rev-parse "$latest_tag^{commit}" 2>"$_ignore")
 
     [[ "$current_commit" == "$tag_commit" ]]
 }
@@ -163,10 +164,10 @@ function is_after_latest_stable_tag()
     latest_tag=$(git -C "$1" tag | grep -E "$2" | sort -V | tail -n1)
     [[ -n $latest_tag ]] || return 1
 
-    tag_commit=$(git -C "$1" rev-parse "$latest_tag^{commit}" 2>/dev/null)
+    tag_commit=$(git -C "$1" rev-parse "$latest_tag^{commit}" 2>"$_ignore")
 
     # Check if current commit is after the latest stable tag
-    commits_after=$(git -C "$1" rev-list "$tag_commit..HEAD" --count 2>/dev/null)
+    commits_after=$(git -C "$1" rev-list "$tag_commit..HEAD" --count 2>"$_ignore")
     [[ $commits_after -gt 0 ]]
 }
 
@@ -197,9 +198,9 @@ function is_on_or_after_latest_stable_tag()
     latest_tag=$(git -C "$1" tag | grep -E "$2" | sort -V | tail -n1)
     [[ -n $latest_tag ]] || return 1
 
-    tag_commit=$(git -C "$1" rev-parse "$latest_tag^{commit}" 2>/dev/null)
+    tag_commit=$(git -C "$1" rev-parse "$latest_tag^{commit}" 2>"$_ignore")
 
     # Check if current commit is on or after the latest stable tag
     # Returns 0 if tag commit is an ancestor of HEAD (i.e., HEAD is at or after the tag)
-    git -C "$1" merge-base --is-ancestor "$tag_commit" HEAD &>/dev/null
+    git -C "$1" merge-base --is-ancestor "$tag_commit" HEAD &>"$_ignore"
 }

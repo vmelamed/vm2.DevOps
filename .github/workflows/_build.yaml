@@ -28,6 +28,16 @@ on:
         type: string
         default: ""
 
+      minver-tag-prefix:
+        description: MinVer tag prefix to use for version calculation. Cannot be null or empty!
+        type: string
+        default: v
+
+      minver-default-pre-release-identifiers:
+        description: MinVer default pre-release identifiers to use for version calculation. Cannot be null or empty!
+        type: string
+        default: preview
+
 permissions:
   contents: read
   packages: read
@@ -50,6 +60,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          filter: tree:0
 
       # Generate a weekly cache key to automatically rotate NuGet cache
       - name: Get cache timestamp (weekly rotation)
@@ -81,32 +92,18 @@ jobs:
             nuget-${{ runner.os }}-
 
       - name: Build
+        id: build
         shell: bash
+        env:
+          MINVERTAGPREFIX: ${{ inputs.minver-tag-prefix }}
+          MINVERDEFAULTPRERELEASEIDENTIFIERS: ${{ inputs.minver-default-pre-release-identifiers }}
         run: |
-          set -euo pipefail
-
-          # Configure NuGet source with GitHub Packages authentication
-          dotnet nuget update source github.vm2 \
-              --username "$GITHUB_ACTOR" \
-              --password "${{ secrets.GITHUB_TOKEN }}" \
-              --store-password-in-clear-text \
-              --configfile NuGet.config
-
-          # Restore dependencies
-          dotnet restore --locked-mode
-
-          # Build the project
-          dotnet build ${{ inputs.build-project }} \
-              /p:DefineConstants="${{ inputs.preprocessor-symbols || '' }}" \
-              --configuration ${{ inputs.configuration }}
-
-          # Summarize the build results
-          {
-              echo "Build:               ✅ Successful"
-              echo "Runner:              ${{ inputs.os }}"
-              echo "Build configuration: ${{ inputs.configuration }}"
-              echo "Defined symbols:     ${{ inputs.preprocessor-symbols || '' }}"
-          } >> $GITHUB_STEP_SUMMARY
+          build.sh \
+              --build-project "${{ inputs.build-project }}" \
+              --configuration "${{ inputs.configuration }}" \
+              --preprocessor-symbols "${{ inputs.preprocessor-symbols }}" \
+              --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
+              --minver-prerelease-id "${{ inputs.minver-default-pre-release-identifiers }}"
 
       # Save compiled binaries and intermediate files to cache for downstream jobs
       - name: Cache build artifacts

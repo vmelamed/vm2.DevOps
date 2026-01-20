@@ -1,54 +1,49 @@
 #!/bin/bash
 set -euo pipefail
 
-declare -r this_script=${BASH_SOURCE[0]}
+script_name="$(basename "${BASH_SOURCE[0]}")"
+script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
 
-script_name="$(basename "${this_script%.*}")"
-declare -r script_name
-
-script_dir="$(dirname "$(realpath -e "$this_script")")"
-declare -r script_dir
+declare -xr script_name
+declare -xr script_dir
 
 source "$script_dir/_common.github.sh"
 
+# constants and default values
 declare -xr default_nuget_server="github"
 declare -xr default_minver_tag_prefix='v'
+declare -xr default_minver_prerelease_id="preview.0"
 declare -xr default_repo_owner="vmelamed"
 
+# parameters with initial values from environment variables and defaults
 declare -x package_project=${PACKAGE_PROJECT:-}
 declare -x nuget_server=${NUGET_SERVER:-"$default_nuget_server"}
-declare -x minver_tag_prefix=${MinVerTagPrefix:-"$default_minver_tag_prefix"}
+declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-""}
+declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
+declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}
 declare -x repo_owner=${GITHUB_REPOSITORY_OWNER:-"$default_repo_owner"}
 declare -x version=${VERSION:-}
 declare -x git_tag=${GIT_TAG:-}
 declare -x reason=${REASON:-}
-declare -x artifacts_dir=${ARTIFACTS_DIR:-artifacts/pack}
 declare -x artifacts_saved=${ARTIFACTS_SAVED:-false}
+declare -x artifacts_dir=${ARTIFACTS_DIR:-artifacts/pack}
 
 source "$script_dir/publish-package.usage.sh"
 source "$script_dir/publish-package.utils.sh"
 
 get_arguments "$@"
 
-# Sanitize inputs to prevent injection attacks
-if [[ -n "$reason" ]] && ! is_safe_reason "$reason"; then
-    error "Invalid reason: contains unsafe characters or exceeds length limit"
-fi
-
-if [[ -n "$version" ]] && ! is_safe_version "$version"; then
-    error "Invalid version: must be valid semantic version"
-fi
-
-dump_all_variables
-
+is_valid_path "$package_project"
+validate_nuget_server "$nuget_server"
+is_safe_input "$preprocessor_symbols"
+is_safe_input "$minver_tag_prefix"
+is_safe_input "$minver_prerelease_id"
+is_safe_input "$repo_owner"
+is_safe_reason "$reason"
+is_safe_path "$artifacts_dir"
 create_tag_regexes "$minver_tag_prefix"
-
-# validate inputs
-if [[ ! -s "${package_project}" ]]; then
-    error "Invalid package_project file '${package_project}' specified"
-fi
-
-validate_nuget_server "nuget_server"
+is_safe_semver "$version"
+is_safe_semverTag "$git_tag"
 
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 # shellcheck disable=SC2153 # Possible Misspelling: MYVARIABLE may not be assigned. Did you mean MY_VARIABLE?
@@ -75,14 +70,9 @@ esac
 if [[ -z "${server_api_key}" ]]; then
     error "No API key provided for server '$server_name'"
 fi
-if ! is_semver "$version"; then
-    error "Version '$version' is not a valid semantic version."
-fi
-if [[ -n "$git_tag" ]] && ! is_semverTag "$git_tag"; then
-    error "Tag '$git_tag' is not a valid Git tag."
-else
-    git_tag="${minver_tag_prefix}${version}"
-fi
+
+exit_if_has_errors
+
 if [[ -z "$reason" ]]; then
     if is_semverRelease "$version"; then
         reason="${reason:-"stable release"}"
@@ -92,8 +82,6 @@ if [[ -z "$reason" ]]; then
         summary_header="Prerelease Summary"
     fi
 fi
-
-exit_if_has_errors
 
 # restore dependencies
 execute dotnet restore "${package_project}" --locked-mode
@@ -107,7 +95,9 @@ execute dotnet pack \
     --configuration Release \
     --output "$artifacts_dir" \
     --no-restore \
-    /p:MinVerTagPrefix="${minver_tag_prefix}" \
+    "/p:DefineConstants=$preprocessor_symbols" \
+    "/p:MinVerTagPrefix=$minver_tag_prefix" \
+    "/p:MinVerPrereleaseIdentifiers=$minver_prerelease_id" \
     "/p:PackageReleaseNotes=Prerelease: ${reason}"
 
 # push packages to NuGet server

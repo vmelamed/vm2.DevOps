@@ -1,15 +1,17 @@
 #!/bin/bash
+set -euo pipefail
 
 declare -r this_script=${BASH_SOURCE[0]}
 
-common_dir=$(realpath "$(dirname "${this_script}")/../../.github/actions/scripts")
+# shellcheck disable=SC2154 # GIT_REPOS is referenced but not assigned. It is expected to be set in the environment.
+common_dir=$(realpath "$(dirname "${GIT_REPOS}/vm2.DevOps/.github/actions/scripts")")
 
 # shellcheck disable=SC1091
 source "${common_dir}/_common.sh"
 
 declare repos="${GIT_REPOS:-$HOME/repos}"
 declare target_repo=""
-declare minver_tag_prefix=${MinVerTagPrefix:-"v"}
+declare minver_tag_prefix=${MinVerTagPrefix:-'v'}
 
 script_dir="$(dirname "$(realpath -e "$this_script")")"
 

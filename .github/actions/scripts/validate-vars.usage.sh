@@ -65,6 +65,15 @@ Options:
         Maximum acceptable performance regression percentage (0-50).
         Initial value from \$MAX_REGRESSION_PCT or default 20
 
+    --minver-tag-prefix | -f
+        Specifies the tag prefix used by MinVer (e.g., 'v').
+        Initial value from \$MINVERTAGPREFIX environment variable or 'v'.
+
+    --minver-prerelease-id | -i
+        Default semver pre-release identifiers for MinVer (e.g., 'preview.1').
+        Initial value from \$MinVerDefaultPreReleaseIdentifiers environment
+        variable or 'preview.1'.
+
 Environment Variables:
     BUILD_PROJECTS          JSON array of paths to projects to build.
     TEST_PROJECTS           JSON array of paths to test projects to run.
@@ -75,6 +84,10 @@ Environment Variables:
     PREPROCESSOR_SYMBOLS    Pre-processor symbols for compilation.
     MIN_COVERAGE_PCT        Minimum acceptable code coverage percentage.
     MAX_REGRESSION_PCT      Maximum acceptable performance regression percentage.
+    MINVERTAGPREFIX         Prefix for MinVer version git tags.
+    MinVerDefaultPreReleaseIdentifiers
+                            Default semver pre-release identifiers for MinVer.
+    VERBOSE                 Is verbose output enabled?
 
 Outputs (to GITHUB_OUTPUT):
     build-projects          JSON array of paths to projects to build.
@@ -87,6 +100,8 @@ Outputs (to GITHUB_OUTPUT):
     min-coverage-pct        Minimum acceptable code coverage percentage.
     max-regression-pct      Maximum acceptable performance regression percentage.
     verbose                 Is verbose output enabled?
+    minver-tag-prefix       Prefix for MinVer version git tags.
+    minver-prerelease-id    Default semver pre-release identifiers for MinVer.
 
 EOF
 }

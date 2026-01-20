@@ -68,6 +68,14 @@ function get_arguments()
                 value="$1"; shift
                 max_regression_pct="$value"
                 ;;
+            --minver-tag-prefix|-f )
+                value="$1"; shift
+                minver_tag_prefix="$value"
+                ;;
+            --minver-prerelease-id|-i )
+                value="$1"; shift
+                minver_prerelease_id="$value"
+                ;;
             * )
                 usage "Unknown option: $flag"
                 exit 2
@@ -78,7 +86,7 @@ function get_arguments()
 
 dump_all_variables()
 {
-    dump_vars \
+    dump_vars --force --quiet --markdown \
         --header "Script Arguments:" \
         debugger \
         dry_run \

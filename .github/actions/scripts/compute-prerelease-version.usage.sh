@@ -33,12 +33,13 @@ Options:
 
     --minver-tag-prefix | -t
         Specifies the tag prefix to be recognized by MinVer (e.g., 'v').
-        Initial value from \$MinVerTagPrefix or default 'v'
+        Initial value from \$MINVERTAGPREFIX or default 'v'
 
-    --semver-prerelease-prefix | -s
+    --minver-prerelease-id | -s
         Specifies the prefix for the semver's prerelease component in prerelease
-        versions (e.g., 'preview', 'alpha', 'rc1' as in '1.2.3-preview.1').
-        Initial value from \$SEMVER_PRERELEASE_PREFIX or default 'preview'
+        versions (e.g., 'preview.0', 'alpha', 'rc1' as in '1.2.3-preview.1').
+        Initial value from \$MINVERDEFAULTPRERELEASEIDENTIFIERS or default
+        'preview.0'
 
     --reason | -r
         Reason for prerelease (e.g., "prerelease build", "hotfix", etc.).
@@ -53,12 +54,12 @@ Environment Variables:
                         'github', or custom URI)
                         (default: 'nuget')
 
-    MinVerTagPrefix   Git tag prefix to be recognized by MinVer
+    MINVERTAGPREFIX   Git tag prefix to be recognized by MinVer
                         (default: 'v')
 
-    SEMVER_PRERELEASE_PREFIX Prefix for semver's prerelease component in
-                        prerelease versions
-                        (default: 'preview' as in '1.2.3-preview.1')
+    MINVERDEFAULTPRERELEASEIDENTIFIERS Prefix for semver's prerelease component
+                        in prerelease versions
+                        (default: 'preview.0' as in '1.2.3-preview.1')
 
     REASON              Reason for manual prerelease
                         (default: "prerelease build")

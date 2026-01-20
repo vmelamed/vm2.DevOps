@@ -6,7 +6,6 @@ declare -ix errors=0
 ## Shell function to log error messages to the standard output and to the GitHub step summary (github_step_summary).
 ## Increments the error counter.
 ## Usage: `error <message1> [<message2> ...]`, or `echo "message" | error`, or error <<< "message"
-# shellcheck disable=SC2154 # variable is referenced but not assigned.
 function error()
 {
     if [[ $# -gt 0 ]]; then
@@ -78,6 +77,10 @@ function trace() {
 declare last_command
 declare current_command="$BASH_COMMAND"
 
+# on_debug and on_exit are trying to cooperatively do error handling when exit is invoked. To be effective, after
+# sourcing this script, set these signal traps:
+#   trap on_debug DEBUG
+#   trap on_exit EXIT
 function on_debug() {
     # keep track of the last executed command
     last_command="$current_command"

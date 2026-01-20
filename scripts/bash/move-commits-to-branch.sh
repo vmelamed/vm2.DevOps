@@ -4,7 +4,7 @@ set -euo pipefail
 # Script to move commits from a specific SHA onwards to a new branch
 # Usage: ./move-commits-to-branch.sh <commit-sha> <new-branch-name>
 
-if [ $# -lt 2 ]; then
+if [[ $# -lt 2 ]]; then
     echo "Usage: $0 <commit-sha> <new-branch-name>" >&2
     echo "Example: $0 ff5c2d182c0d3a01c1f1dfd66c9267f0569d9802 feature/my-feature" >&2
     exit 1
@@ -15,7 +15,7 @@ NEW_BRANCH="$2"
 
 # Verify we're on main branch
 CURRENT_BRANCH=$(git branch --show-current)
-if [ "$CURRENT_BRANCH" != "main" ]; then
+if [[ "$CURRENT_BRANCH" != "main" ]]; then
     echo "Error: You must be on the 'main' branch. Currently on '$CURRENT_BRANCH'" >&2
     exit 1
 fi

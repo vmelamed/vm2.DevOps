@@ -49,9 +49,9 @@ function get_arguments()
                 minver_tag_prefix="$value"
                 ;;
 
-            --semver-prerelease-prefix|-s )
+            --minver-prerelease-id|-s )
                 value="$1"; shift
-                semver_prerelease_prefix="$value"
+                minver_prerelease_id="$value"
                 ;;
 
             --reason|-r )
@@ -64,11 +64,12 @@ function get_arguments()
                 ;;
         esac
     done
+    dump_all_variables
 }
 
 dump_all_variables()
 {
-    dump_vars --force --quiet \
+    dump_vars --force --quiet --markdown \
         --header "Script Arguments:" \
         debugger \
         dry_run \
@@ -78,7 +79,7 @@ dump_all_variables()
         package_projects \
         nuget_server \
         minver_tag_prefix \
-        semver_prerelease_prefix \
+        minver_prerelease_id \
         reason \
         --header "other:" \
         ci

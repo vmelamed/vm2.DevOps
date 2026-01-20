@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# shellcheck disable=SC2154 # variable is referenced but not assigned.
 if ! pushd "$GIT_REPOS" > /dev/null; then
     echo "❌  ERROR: Could not change directory to '\$GIT_REPOS: $GIT_REPOS'." >&2
     exit 2

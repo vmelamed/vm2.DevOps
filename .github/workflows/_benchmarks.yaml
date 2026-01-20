@@ -28,6 +28,16 @@ on:
         type: string
         required: true
 
+      minver-tag-prefix:
+        description: MinVer tag prefix to use for version calculation. Cannot be null or empty!
+        type: string
+        default: v
+
+      minver-prerelease-id:
+        description: MinVer default pre-release identifiers to use for version calculation. Cannot be null or empty!
+        type: string
+        default: preview
+
       max-regression-pct:
         description: Maximum acceptable performance regression percentage (used for Bencher threshold)
         type: number
@@ -77,6 +87,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          filter: tree:0
 
       # Setup DevOps scripts from vm2.DevOps
       - name: Checkout DevOps repository

@@ -20,6 +20,10 @@ Options:
         Specifies the release tag to create (required, e.g., 'v1.2.3').
         Initial value from \$RELEASE_TAG
 
+    --minver-tag-prefix | -p
+        Specifies the MinVer tag prefix (e.g., 'v').
+        Initial value from \$MINVERTAGPREFIX or default 'v'
+
     --reason | -r
         Specifies the reason for the release (included in tag annotation).
         Initial value from \$REASON or default 'stable release'

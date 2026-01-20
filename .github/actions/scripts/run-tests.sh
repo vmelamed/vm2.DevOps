@@ -1,14 +1,13 @@
 #!/bin/bash
 set -euo pipefail
 
-declare -r this_script=${BASH_SOURCE[0]}
+script_name="$(basename "${BASH_SOURCE[0]}")"
+script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
 
-script_name="$(basename "${this_script%.*}")"
 declare -r script_name
-
-script_dir="$(dirname "$(realpath -e "$this_script")")"
 declare -r script_dir
 
+source "$script_dir/_common.github.sh"
 source "$script_dir/_common.github.sh"
 
 declare -x test_project=${TEST_PROJECT:-}
@@ -16,36 +15,44 @@ declare -x configuration=${CONFIGURATION:="Release"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -ix min_coverage_pct=${MIN_COVERAGE_PCT:-80}
 declare -x artifacts_dir=${ARTIFACTS_DIR:-}
+declare -x minver_tag_prefix=${MINVERTAGPREFIX:-'v'}
+declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"preview.0"}
 
 source "$script_dir/run-tests.usage.sh"
 source "$script_dir/run-tests.utils.sh"
 
 get_arguments "$@"
 
-if [[ ! -s "$test_project" ]]; then
-    usage "The specified test project file '$test_project' does not exist." >&2
-    exit 2
-fi
+is_safe_existing_file "$test_project"
+is_safe_input "$configuration"
+is_safe_input "$preprocessor_symbols" true
+is_safe_input "$minver_tag_prefix" true
+is_safe_input "$minver_prerelease_id" true
+is_safe_path "$artifacts_dir"
 
-test_name=$(basename "${test_project%.*}")                                      # the base name of the test project without the path and file extension
-test_dir=$(dirname "$test_project")                                             # the directory of the test project
+exit_if_has_errors
 
+test_name=$(basename "${test_project%.*}")      # the base name of the test project (without the path and file extension)
+test_dir=$(dirname "$test_project")             # the directory of the test project
 
-declare -r test_project
-declare -r configuration
-declare -r preprocessor_symbols
-declare -r min_coverage_pct
-declare -r test_name
-declare -r test_dir
+# Freeze the variables
+declare -xr test_project
+declare -xr configuration
+declare -xr preprocessor_symbols
+declare -xr min_coverage_pct
+declare -xr minver_tag_prefix
+declare -xr minver_prerelease_id
+declare -xr test_name
+declare -xr test_dir
 
 solution_dir="$(realpath -e "${test_dir}/../..")" # assuming <solution-root>/test/<test-project>/test-project.csproj
 artifacts_dir=$(realpath -m "${artifacts_dir:-"$solution_dir/TestArtifacts/$test_name"}")  # ensure it's an absolute path per test project
 
-declare -r solution_dir
-declare -r artifacts_dir
+declare -xr solution_dir
+declare -xr artifacts_dir
 
 renamed_artifacts_dir="$artifacts_dir-$(date -u +"%Y%m%dT%H%M%S")"
-declare -r renamed_artifacts_dir
+declare -xr renamed_artifacts_dir
 
 if [[ -d "$artifacts_dir" && -n "$(ls -A "$artifacts_dir")" ]]; then
     if [[ -n "${CI:-}" ]]; then
@@ -132,7 +139,6 @@ declare -r test_dll_path
 declare -rx test_exec_path
 
 # Verify artifacts exist
-# shellcheck disable=SC2154 # variable is referenced but not assigned.
 if [[ (! -f "${test_exec_path}" || ! -f "${test_dll_path}") && "$dry_run" != "true" ]]; then
     error "Cached test executables ${test_exec_path} or ${test_dll_path} were not found." | tee -a "$github_step_summary" >&2
     exit 2
@@ -144,6 +150,8 @@ if ! execute dotnet run \
         --configuration "$configuration" \
         --no-build \
         /p:DefineConstants="$preprocessor_symbols" \
+        /p:MinVerTagPrefix="$minver_tag_prefix" \
+        /p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" \
         --results-directory "$test_results_dir" \
         --report-xunit-trx \
         -- \
@@ -154,7 +162,6 @@ if ! execute dotnet run \
     exit 2
 fi
 
-# shellcheck disable=SC2154 # variable is referenced but not assigned.
 if [[ $dry_run != "true" ]]; then
     if [[ ! -s "$coverage_source_path" ]]; then
         error "Coverage file not found or is empty." | tee -a "$github_step_summary" >&2
@@ -172,7 +179,7 @@ else
     trace "The tool 'reportgenerator' is already installed."
 fi
 
-pushd "$test_dir" > /dev/null
+pushd "$test_dir" > "$_ignore"
 
 # Execute the tool in this directory so that it can pick up the .netconfig file for filters specific to this project
 execute reportgenerator \
@@ -182,7 +189,7 @@ execute reportgenerator \
 	-classfilters:"-*.ExcludeFromCodeCoverage*;-*.GeneratedCode*;-*GeneratedRegex*;-*SourceGenerationContext*" \
     -filefilters:"-*.g.cs;-*.g.i.cs;-*.i.cs;-*.generated.cs;-*Migrations/*;-*obj/*;-*AssemblyInfo.cs;-*Designer.cs;-*.designer.cs"
 
-popd > /dev/null
+popd > "$_ignore"
 
 if [[ "$uninstall_reportgenerator" = "true" ]]; then
     trace "Uninstalling the tool 'reportgenerator'..."

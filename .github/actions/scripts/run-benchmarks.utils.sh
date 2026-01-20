@@ -79,6 +79,16 @@ function get_arguments()
                 fi
                 ;;
 
+            --minver-tag-prefix|-p )
+                value="$1"; shift
+                minver_tag_prefix="$value"
+                ;;
+
+            --minver-prerelease-id|-i )
+                value="$1"; shift
+                minver_prerelease_id="$value"
+                ;;
+
             *)  value="$flag"
                 if [[ ! -s "$value" ]]; then
                     usage "The specified test project file $value does not exist."
@@ -92,7 +102,7 @@ function get_arguments()
 
 dump_all_variables()
 {
-    dump_vars \
+    dump_vars --force --quiet --markdown \
         --header "Script Arguments:" \
         debugger \
         dry_run \

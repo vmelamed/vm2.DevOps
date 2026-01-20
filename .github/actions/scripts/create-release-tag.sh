@@ -1,16 +1,17 @@
 #!/bin/bash
 set -euo pipefail
 
-declare -r this_script=${BASH_SOURCE[0]}
+script_name="$(basename "${BASH_SOURCE[0]}")"
+script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
 
-script_name="$(basename "${this_script%.*}")"
-declare -r script_name
-
-script_dir="$(dirname "$(realpath -e "$this_script")")"
-declare -r script_dir
+declare -xr script_name
+declare -xr script_dir
 
 source "$script_dir/_common.github.sh"
 
+declare -xr default_minver_tag_prefix='v'
+
+declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x release_tag=${RELEASE_TAG:-}
 declare -x reason=${REASON:-stable release}
 
@@ -20,20 +21,15 @@ source "$script_dir/create-release-tag.utils.sh"
 get_arguments "$@"
 
 # Sanitize inputs to prevent injection attacks
-if [[ -n "$reason" ]] && ! is_safe_reason "$reason"; then
-    error "Invalid reason: contains unsafe characters or exceeds length limit"
-fi
-
-dump_all_variables
-
-declare -r release_tag
-declare -r reason
-
-if [[ -z "$release_tag" ]]; then
-    error "Release tag is required"
-fi
+is_safe_reason "$reason"
+is_safe_input "$minver_tag_prefix"
+create_tag_regexes "$minver_tag_prefix"
+is_safeReleaseTag "$release_tag"
 
 exit_if_has_errors
+
+declare -xr release_tag
+declare -xr reason
 
 if [[ "$CI" == "true" ]]; then
     execute git config user.name "github-actions[bot]"
@@ -43,11 +39,11 @@ fi
 # Ensure we have the latest changes (changelog)
 if ! execute git pull --rebase; then
     error "Failed to pull latest changes from remote"
-    exit 1
+    exit 2
 fi
 
 if ! execute git tag -a "$release_tag" -m "Release $release_tag" -m "Reason: $reason"; then
-    error "Failed to create tag $release_tag (may already exist)"
+    error "Failed to create tag $release_tag (does it already exist?)"
     exit 2
 fi
 

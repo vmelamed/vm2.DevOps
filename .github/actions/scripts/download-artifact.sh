@@ -1,18 +1,16 @@
 #!/bin/bash
 set -euo pipefail
 
-declare -r this_script=${BASH_SOURCE[0]}
+script_name="$(basename "${BASH_SOURCE[0]}")"
+script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
 
-script_dir="$(dirname "$(realpath -e "$this_script")")"
-declare -r script_dir
-
-script_name="$(basename "${this_script%.*}")"
 declare -r script_name
+declare -r script_dir
 
 source "$script_dir/_common.github.sh"
 
 declare -x artifact_name=${ARTIFACT_NAME:-}
-declare -x artifacts_dir=${ARTIFACT_DIR:-"./BmArtifacts/baseline"}
+declare -x artifacts_dir=${ARTIFACT_DIR:-}
 declare -x repository=${REPOSITORY:-}
 declare -x workflow_id=${WORKFLOW_ID:-}
 declare -x workflow_name=${WORKFLOW_NAME:-}
@@ -23,12 +21,31 @@ source "$script_dir/download-artifact.usage.sh"
 
 get_arguments "$@"
 
-dump_all_variables
+is_safe_input "$artifact_name"
+if [[ -z "$artifact_name" ]]; then
+    error "The name of the artifact to download must be specified." >&2
+fi
+is_safe_path "$artifacts_dir"
+is_safe_input "$repository"
+is_safe_input "$workflow_id"
+is_safe_input "$workflow_name"
+is_safe_path "$workflow_path"
+if [[ -n "$workflow_id" && ! "$workflow_id" =~ ^[0-9]+$ ]]; then
+    error "The specified workflow identifier '$workflow_id' is not valid."
+fi
+exit_if_has_errors
 
-renamed_artifacts_dir="$artifacts_dir-$(date -u +"%Y%m%dT%H%M%S")"
-declare -r renamed_artifacts_dir
+# freeze the variables
+declare -rx artifact_name
+declare -rx artifacts_dir
+declare -rx repository
+declare -rx workflow_name
+declare -rx workflow_path
 
 if [[ -d "$artifacts_dir" && -n "$(ls -A "$artifacts_dir")" ]]; then
+    renamed_artifacts_dir="$artifacts_dir-$(date -u +"%Y%m%dT%H%M%S")"
+    declare -r renamed_artifacts_dir
+
     choice=$(choose \
                 "The artifacts' directory '$artifacts_dir' already exists. What do you want to do?" \
                     "Delete the directory and continue" \
@@ -52,18 +69,6 @@ if [[ -d "$artifacts_dir" && -n "$(ls -A "$artifacts_dir")" ]]; then
     esac
 fi
 
-if [[ -z "$artifact_name" ]]; then
-    usage "The name of the artifact to download must be specified." >&2
-    exit 2
-fi
-
-declare -rx artifact_name
-declare -rx artifacts_dir
-declare -rx repository
-declare -x workflow_id
-declare -rx workflow_name
-declare -rx workflow_path
-
 declare -x github_output=${github_output:-/dev/stdout}
 declare -x github_step_summary=${github_step_summary:-/dev/stdout}
 
@@ -77,33 +82,33 @@ declare -a runs
 declare query
 
 # get the workflow ID if not provided
-if [[ -n "$workflow_id" && -n "$workflow_id" && ! "$workflow_id" =~ ^[0-9]+$ ]]; then
-    usage "The specified workflow identifier '$workflow_id' is not valid."
-    exit 2
-else
-    # query for the workflow ID using the name or path
-    if [[ -n "$workflow_name" && -n "$workflow_name" ]]; then
+# query for the workflow ID using the name or path
+if [[ -z "$workflow_id" ]]; then
+    if [[ -n "$workflow_name" ]]; then
         query=".[] | select(.name==\"$workflow_name\").id"
-    elif [[ -n "$workflow_path" && -n "$workflow_path" ]]; then
+    elif [[ -n "$workflow_path" ]]; then
         query=".[] | select(.path==\"$workflow_path\").id"
     else
-        usage "Either the workflow id, or the workflow name or the workflow path must be specified."
+        error "Either the workflow id, the workflow name, or the workflow path must be specified."
     fi
-    workflow_id=$(execute gh workflow list --repo "$repository" --json "id,name,path" --jq "$query")
-    if [[ "$dry_run" == true ]]; then
-        workflow_id=1234567890
-    fi
+fi
+exit_if_has_errors
+
+workflow_id=$(execute gh workflow list --repo "$repository" --json "id,name,path" --jq "$query")
+
+if [[ "$dry_run" == true ]]; then
+    workflow_id=1234567890
 fi
 
 if [[ -z $workflow_id ]]; then
     if [[ -n "$workflow_id" && ! "$workflow_id" =~ ^[0-9]+$ ]]; then
-        usage "The specified workflow identifier '$workflow_id' is not valid."
+        error "The specified workflow identifier '$workflow_id' is not valid."
     elif [[ -n "$workflow_path" ]]; then
-        usage "The specified workflow path '$workflow_path' does not exist in the repository '$repository'."
+        error "The specified workflow path '$workflow_path' does not exist in the repository '$repository'."
     else
-        usage "The specified workflow name '$workflow_name' does not exist in the repository '$repository'."
+        error "The specified workflow name '$workflow_name' does not exist in the repository '$repository'."
     fi
-    exit 2
+    exit_if_has_errors
 fi
 
 dump_all_variables
@@ -119,7 +124,7 @@ mapfile -t runs < <(gh run list \
 
 if [[ ${#runs[@]} == 0 ]]; then
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
-    usage "No successful runs found for the workflow '$workflow_id' in the repository '$repository'." | tee -a "$github_step_summary" >&2
+    error "No successful runs found for the workflow '$workflow_id' in the repository '$repository'." | tee -a "$github_step_summary" >&2
     exit 2
 fi
 
@@ -137,7 +142,7 @@ for run in "${runs[@]}"; do
     fi
 
     if ((i > 80)); then
-        echo "⚠️ Warning: The artifact was found in a run $i out of 100. \
+        warning "The artifact was found in a run $i out of 100. \
 You may want to refresh the artifact. \
 E.g. re-run the benchmarks with --force-new-baseline or vars.FORCE_NEW_BASELINE" >&2
     fi
@@ -149,10 +154,10 @@ E.g. re-run the benchmarks with --force-new-baseline or vars.FORCE_NEW_BASELINE"
         echo "Error while downloading '$artifact_name': $http_error" | tee -a "$github_step_summary" >&2
         exit 2
     fi
-    echo "✅ The artifact '$artifact_name' successfully downloaded to directory '$artifacts_dir'." >> "$github_step_summary"
+    info "✅ The artifact '$artifact_name' successfully downloaded to directory '$artifacts_dir'." >> "$github_step_summary"
     exit 0
 done
 
-usage "The artifact '$artifact_name' was not found in the last ${#runs[@]} successful runs of the workflow '$workflow_name' in \
+error "The artifact '$artifact_name' was not found in the last ${#runs[@]} successful runs of the workflow '$workflow_name' in \
 the repository '$repository'." | tee -a "$github_step_summary" >&2
 exit 2

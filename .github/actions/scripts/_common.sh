@@ -14,6 +14,7 @@ declare -rx initial_dir
 
 common_scripts_dir="$(dirname "${BASH_SOURCE[0]}")"
 
+source "${common_scripts_dir}/_common.constants.sh"
 source "${common_scripts_dir}/_common.diagnostics.sh"
 source "${common_scripts_dir}/_common.flags.sh"
 source "${common_scripts_dir}/_common.dump_vars.sh"

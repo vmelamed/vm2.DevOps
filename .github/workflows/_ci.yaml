@@ -39,6 +39,16 @@ on:
         type: string
         required: false
 
+      minver-tag-prefix:
+        description: MinVer tag prefix to use for version calculation. Cannot be null or empty!
+        type: string
+        default: v
+
+      minver-prerelease-id:
+        description: MinVer default pre-release identifiers to use for version calculation. Cannot be null or empty!
+        type: string
+        default: preview
+
       min-coverage-pct:
         description: Minimum acceptable code coverage percentage. Cannot be 0, null or empty!
         type: number
@@ -64,26 +74,28 @@ concurrency:
 
 jobs:
   # Validate all input parameters and prepare them for downstream jobs
-  setup:
+  validate-vars:
     name: Parameters validation
     runs-on: ubuntu-latest
     outputs:
-      build-projects: ${{ steps.setup.outputs.build-projects }}
-      test-projects: ${{ steps.setup.outputs.test-projects }}
-      benchmark-projects: ${{ steps.setup.outputs.benchmark-projects }}
-      os: ${{ steps.setup.outputs.os }}
-      dotnet-version: ${{ steps.setup.outputs.dotnet-version }}
-      configuration: ${{ steps.setup.outputs.configuration }}
-      preprocessor-symbols: ${{ steps.setup.outputs.preprocessor-symbols }}
-      min-coverage-pct: ${{ steps.setup.outputs.min-coverage-pct }}
-      max-regression-pct: ${{ steps.setup.outputs.max-regression-pct }}
+      build-projects: ${{ steps.validate.outputs.build-projects }}
+      test-projects: ${{ steps.validate.outputs.test-projects }}
+      benchmark-projects: ${{ steps.validate.outputs.benchmark-projects }}
+      os: ${{ steps.validate.outputs.os }}
+      dotnet-version: ${{ steps.validate.outputs.dotnet-version }}
+      configuration: ${{ steps.validate.outputs.configuration }}
+      preprocessor-symbols: ${{ steps.validate.outputs.preprocessor-symbols }}
+      min-coverage-pct: ${{ steps.validate.outputs.min-coverage-pct }}
+      max-regression-pct: ${{ steps.validate.outputs.max-regression-pct }}
+      minver-tag-prefix: ${{ steps.validate.outputs.minver-tag-prefix }}
+      minver-prerelease-id: ${{ steps.validate.outputs.minver-prerelease-id }}
 
     steps:
       # Clone the repository to access validation scripts
       - name: Checkout
         uses: actions/checkout@v6
 
-      # Composite action: setup DevOps scripts (works for both local and external calls)
+      # Composite action: validate-vars DevOps scripts (works for both local and external calls)
       - name: Checkout DevOps repository scripts
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: actions/checkout@v6
@@ -93,17 +105,17 @@ jobs:
           sparse-checkout: |
             .github/actions/scripts
 
-      - name: Setup DevOps scripts (local)
+      - name: validate-vars DevOps scripts (local - allow execution of the scripts and add to PATH)
         if: github.repository == 'vmelamed/vm2.DevOps'
         uses: ./.github/actions/scripts
 
-      - name: Setup DevOps scripts (external)
+      - name: validate-vars DevOps scripts (external - allow execution of the scripts and add to PATH)
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: ./vm2-devops/.github/actions/scripts
 
       # Run validation script to verify and normalize all input parameters
       - name: Run validation script to verify and normalize all input parameters
-        id: setup
+        id: validate
         shell: bash
         run: |
           validate-vars.sh \
@@ -116,38 +128,42 @@ jobs:
               --preprocessor-symbols '${{ inputs.preprocessor-symbols }}' \
               --min-coverage-pct     '${{ inputs.min-coverage-pct }}' \
               --max-regression-pct   '${{ inputs.max-regression-pct }}'
+              --minver-tag-prefix    '${{ inputs.minver-tag-prefix }}' \
+              --minver-prerelease-id '${{ inputs.minver-prerelease-id }}'
 
   # Build the project and cache artifacts for downstream test/benchmark jobs
   build:
     name: Build
     needs:
-      - setup
+      - validate-vars
     strategy:
       # fail-fast: true
       matrix:
-        os: ${{ fromJSON(needs.setup.outputs.os) }}
-        build-project: ${{ fromJSON(needs.setup.outputs.build-projects) }}
+        os: ${{ fromJSON(needs.validate-vars.outputs.os) }}
+        build-project: ${{ fromJSON(needs.validate-vars.outputs.build-projects) }}
     uses: vmelamed/vm2.DevOps/.github/workflows/_build.yaml@main
     with:
+      dotnet-version: ${{ needs.validate-vars.outputs.dotnet-version }}
       os: ${{ matrix.os }}
-      dotnet-version: ${{ needs.setup.outputs.dotnet-version }}
-      configuration: ${{ needs.setup.outputs.configuration }}
-      preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
+      configuration: ${{ needs.validate-vars.outputs.configuration }}
       build-project: ${{ matrix.build-project }}
+      preprocessor-symbols: ${{ needs.validate-vars.outputs.preprocessor-symbols }}
+      minver-tag-prefix: ${{ needs.validate-vars.outputs.minver-tag-prefix }}
+      minver-prerelease-id: ${{ needs.validate-vars.outputs.minver-prerelease-id }}
 
   # Run unit tests with code coverage analysis
   test:
     name: Tests
     needs:
-      - setup
+      - validate-vars
       - build
     strategy:
       # fail-fast: true
       matrix:
-        os: ${{ fromJSON(needs.setup.outputs.os) }}
-        test-project: ${{ fromJSON(needs.setup.outputs.test-projects) }}
+        os: ${{ fromJSON(needs.validate-vars.outputs.os) }}
+        test-project: ${{ fromJSON(needs.validate-vars.outputs.test-projects) }}
     # __skip__ sentinel avoids empty-matrix expansion when no tests are requested
-    if: needs.setup.outputs.test-projects != '["__skip__"]'
+    if: needs.validate-vars.outputs.test-projects != '["__skip__"]'
     uses: vmelamed/vm2.DevOps/.github/workflows/_test.yaml@main
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
@@ -157,25 +173,27 @@ jobs:
       checks: write # Required to create GitHub Checks
     with:
       os: ${{ matrix.os }}
-      dotnet-version: ${{ needs.setup.outputs.dotnet-version }}
-      configuration: ${{ needs.setup.outputs.configuration }}
-      preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
+      dotnet-version: ${{ needs.validate-vars.outputs.dotnet-version }}
+      configuration: ${{ needs.validate-vars.outputs.configuration }}
+      preprocessor-symbols: ${{ needs.validate-vars.outputs.preprocessor-symbols }}
       test-project: ${{ matrix.test-project }}
-      min-coverage-pct: ${{ fromJSON(needs.setup.outputs.min-coverage-pct) }}
+      min-coverage-pct: ${{ fromJSON(needs.validate-vars.outputs.min-coverage-pct) }}
+      minver-tag-prefix: ${{ needs.validate-vars.outputs.minver-tag-prefix }}
+      minver-prerelease-id: ${{ needs.validate-vars.outputs.minver-prerelease-id }}
 
   # Run performance benchmarks and compare against baseline (if enabled and benchmark project specified)
   benchmarks:
     name: Benchmarks
     needs:
-      - setup
+      - validate-vars
       - build
     strategy:
       # fail-fast: true
       matrix:
-        os: ${{ fromJSON(needs.setup.outputs.os) }}
-        benchmark-project: ${{ fromJSON(needs.setup.outputs.benchmark-projects) }}
+        os: ${{ fromJSON(needs.validate-vars.outputs.os) }}
+        benchmark-project: ${{ fromJSON(needs.validate-vars.outputs.benchmark-projects) }}
     # __skip__ sentinel avoids empty-matrix expansion; still honor [skip bm] on pushes
-    if: needs.setup.outputs.benchmark-projects != '["__skip__"]' && (github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip bm]'))
+    if: needs.validate-vars.outputs.benchmark-projects != '["__skip__"]' && (github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip bm]'))
     uses: vmelamed/vm2.DevOps/.github/workflows/_benchmarks.yaml@main
     secrets:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
@@ -185,8 +203,10 @@ jobs:
       checks: write # Required to create GitHub Checks
     with:
       os: ${{ matrix.os }}
-      dotnet-version: ${{ needs.setup.outputs.dotnet-version }}
-      configuration: ${{ needs.setup.outputs.configuration }}
-      preprocessor-symbols: ${{ needs.setup.outputs.preprocessor-symbols }}
+      dotnet-version: ${{ needs.validate-vars.outputs.dotnet-version }}
+      configuration: ${{ needs.validate-vars.outputs.configuration }}
+      preprocessor-symbols: ${{ needs.validate-vars.outputs.preprocessor-symbols }}
       benchmark-project: ${{ matrix.benchmark-project }}
-      max-regression-pct: ${{ fromJSON(needs.setup.outputs.max-regression-pct) }}
+      max-regression-pct: ${{ fromJSON(needs.validate-vars.outputs.max-regression-pct) }}
+      minver-tag-prefix: ${{ needs.validate-vars.outputs.minver-tag-prefix }}
+      minver-prerelease-id: ${{ needs.validate-vars.outputs.minver-prerelease-id }}
