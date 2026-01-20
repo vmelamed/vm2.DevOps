@@ -25,14 +25,16 @@ is_safe_input "$artifact_name"
 if [[ -z "$artifact_name" ]]; then
     error "The name of the artifact to download must be specified." >&2
 fi
-is_safe_path "$artifacts_dir"
-is_safe_input "$repository"
-is_safe_input "$workflow_id"
-is_safe_input "$workflow_name"
-is_safe_path "$workflow_path"
+is_safe_path "$artifacts_dir" || true
+is_safe_input "$repository" || true
+is_safe_input "$workflow_id" || true
+is_safe_input "$workflow_name" || true
+is_safe_path "$workflow_path" || true
 if [[ -n "$workflow_id" && ! "$workflow_id" =~ ^[0-9]+$ ]]; then
-    error "The specified workflow identifier '$workflow_id' is not valid."
+    error "The specified workflow identifier '$workflow_id' is not valid." || true
 fi
+
+dump_all_variables
 exit_if_has_errors
 
 # freeze the variables

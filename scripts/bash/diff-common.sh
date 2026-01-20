@@ -22,6 +22,91 @@ declare minver_tag_prefix=${MINVERTAGPREFIX:-'v'}
 source "${script_dir}/diff-common.utils.sh"
 source "${script_dir}/diff-common.usage.sh"
 
+declare -a source_files
+declare -a target_files
+declare -A file_actions
+
+## Loads custom file actions from JSON configuration file
+## Reads ${target_path}/diff-common.actions.json and overrides file_actions
+function load_custom_actions()
+{
+    local config_file="${target_path}/diff-common.actions.json"
+
+    if [[ ! -f "$config_file" ]]; then
+        trace "No custom actions file found at: $config_file"
+        return 0
+    fi
+
+    info "Loading custom actions from: $config_file"
+
+    # Validate JSON format
+    if ! jq empty "$config_file" 2>/dev/null; then
+        warning "Invalid JSON in $config_file - skipping custom actions"
+        return 1
+    fi
+
+    # Valid actions
+    local valid_actions=("ask to copy" "copy" "merge or copy" "ignore")
+
+    # Read each key-value pair from JSON
+    while IFS='=' read -r rel_path action; do
+        [[ -z "$rel_path" ]] && continue
+
+        # Validate action
+        local is_valid=false
+        for valid in "${valid_actions[@]}"; do
+            if [[ "$action" == "$valid" ]]; then
+                is_valid=true
+                break
+            fi
+        done
+
+        if [[ "$is_valid" == false ]]; then
+            warning "Invalid action '$action' for '$rel_path' in $config_file - must be one of: ${valid_actions[*]}"
+            continue
+        fi
+
+        # Find corresponding target file and source file
+        local target_file="${target_path}/${rel_path}"
+        local source_file=""
+        local found=false
+
+        for ((idx=0; idx<${#target_files[@]}; idx++)); do
+            if [[ "${target_files[idx]}" == "$target_file" ]]; then
+                source_file="${source_files[idx]}"
+                found=true
+                break
+            fi
+        done
+
+        if [[ "$found" == false ]]; then
+            warning "Path '$rel_path' from $config_file does not match any known target file"
+            continue
+        fi
+
+        # Override the action
+        trace "Overriding action for $source_file: ${file_actions[$source_file]} → $action"
+        file_actions["$source_file"]="$action"
+
+    done < <(jq -r 'to_entries | .[] | .key + "=" + .value' "$config_file" 2>/dev/null)
+
+    info "Custom actions loaded successfully"
+}
+
+function copy_file()
+{
+    local src_file="$1"
+    local dest_file="$2"
+
+    local dest_dir
+    dest_dir=$(dirname "$dest_file")
+    if [[ ! -d "$dest_dir" ]]; then
+        mkdir -p "$dest_dir"
+    fi
+    cp "$src_file" "$dest_file"
+    echo "File '${dest_file}' copied from '${src_file}'."
+}
+
 # shellcheck disable=SC2154
 semverTagReleaseRegex="^${minver_tag_prefix}${semverReleaseRex}$"
 
@@ -68,7 +153,7 @@ fi
 if [[ "$target_repo" =~ ${repos%}/.* ]]; then
     target_path="$target_repo"
 else
-    target_path="${repos%}/$target_repo"
+    target_path="${repos%/}/$target_repo"
 fi
 trace "Target repository path: $target_path"
 
@@ -145,6 +230,7 @@ target_files=(
     "${target_path}/scripts/diff-common.utils.sh"
     "${target_path}/scripts/diff-common.usage.sh"
     )
+
 declare -A file_actions
 file_actions=(
     ["${repos}/vm2.DevOps/.editorconfig"]="merge or copy"
@@ -178,6 +264,9 @@ file_actions=(
     ["${repos}/vm2.DevOps/scripts/bash/diff-common.usage.sh"]="copy"
 )
 
+# Load custom actions from JSON config if it exists
+load_custom_actions
+
 if [[ ${#source_files[@]} -ne ${#target_files[@]} ]] || [[ ${#source_files[@]} -ne ${#file_actions[@]} ]]; then
     error "The data in the tables do not match."
 fi
@@ -187,19 +276,6 @@ exit_if_has_errors
 declare -r repos
 declare -r target_repo
 declare -r minver_tag_prefix
-
-function copy_file() {
-    local src_file="$1"
-    local dest_file="$2"
-
-    local dest_dir
-    dest_dir=$(dirname "$dest_file")
-    if [[ ! -d "$dest_dir" ]]; then
-        mkdir -p "$dest_dir"
-    fi
-    cp "$src_file" "$dest_file"
-    echo "File '${dest_file}' copied from '${src_file}'."
-}
 
 declare -i i=0
 
@@ -250,6 +326,7 @@ while [[ $i -lt ${#source_files[@]} ]]; do
                     continue
                     ;;
                 *)
+                    error "Unknown action '$actions' for files '${source_file}' and '${target_file}'." || 0
                     press_any_key
                     ;;
             esac

@@ -36,17 +36,18 @@ source "$script_dir/compute-prerelease-version.utils.sh"
 get_arguments "$@"
 
 # Sanitize inputs to prevent injection attacks
-are_safe_projects "package_projects" "$default_package_projects"
-validate_nuget_server "nuget_server" "$default_nuget_server"
-is_safe_input "$minver_tag_prefix"
-is_safe_input "$minver_prerelease_id"
-is_safe_reason "$reason"
+are_safe_projects "package_projects" "$default_package_projects" || true
+validate_nuget_server "nuget_server" "$default_nuget_server" || true
+is_safe_input "$minver_tag_prefix" || true
+is_safe_input "$minver_prerelease_id" || true
+is_safe_reason "$reason" || true
 # detect if the head is already tagged
 head_tag=$(git tag --points-at HEAD)
 if [[ -n $head_tag ]]; then
-    error "The HEAD is already tagged with '$head_tag'. Possible remedy: delete the tag, or branch 'main' again, do a new PR, and release with a new, higher version number."
+    error "The HEAD is already tagged with '$head_tag'. Possible remedy: delete the tag, or branch 'main' again, do a new PR, and release with a new, higher version number." || true
 fi
 
+dump_all_variables
 exit_if_has_errors
 
 # freeze the parameters

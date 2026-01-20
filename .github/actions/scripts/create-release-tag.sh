@@ -21,11 +21,12 @@ source "$script_dir/create-release-tag.utils.sh"
 get_arguments "$@"
 
 # Sanitize inputs to prevent injection attacks
-is_safe_reason "$reason"
-is_safe_input "$minver_tag_prefix"
-create_tag_regexes "$minver_tag_prefix"
-is_safeReleaseTag "$release_tag"
+is_safe_reason "$reason" || true
+is_safe_input "$minver_tag_prefix" || true
+create_tag_regexes "$minver_tag_prefix" || true
+is_safeReleaseTag "$release_tag" || true
 
+dump_all_variables
 exit_if_has_errors
 
 declare -xr release_tag

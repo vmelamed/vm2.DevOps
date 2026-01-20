@@ -21,6 +21,9 @@ Usage:
     2) determine whether they need to update their project files to align with
        the latest templates.
 
+    ATTENTION: It is assumed that all repositories are under the same parent
+    directory.
+
 Parameters:
     <project-repo-name>
         The path to the target project repository or if it is under the same

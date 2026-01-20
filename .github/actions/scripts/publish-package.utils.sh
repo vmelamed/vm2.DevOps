@@ -95,7 +95,6 @@ function get_arguments()
                 ;;
         esac
     done
-    dump_all_variables
 }
 
 dump_all_variables()

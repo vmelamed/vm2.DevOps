@@ -27,10 +27,10 @@ source "$script_dir/compute-release-version.utils.sh"
 get_arguments "$@"
 
 # Sanitize inputs to prevent injection attacks
-are_safe_projects "package_projects" "$default_package_projects"
-validate_nuget_server "nuget_server" "$default_nuget_server"
-is_safe_input "$minver_tag_prefix"
-is_safe_reason "$reason"
+are_safe_projects "package_projects" "$default_package_projects" || true
+validate_nuget_server "nuget_server" "$default_nuget_server" || true
+is_safe_input "$minver_tag_prefix" || true
+is_safe_reason "$reason" || true
 
 # freeze the parameters
 declare -xr package_projects
@@ -41,9 +41,10 @@ declare -xr reason
 # detect if the head is already tagged
 head_tag=$(git tag --points-at HEAD)
 if [[ -n $head_tag ]]; then
-    error "The HEAD is already tagged with '$head_tag'. Possible remedy: delete the tag, or branch 'main' again, do a new PR, and release with a new, higher version number."
+    error "The HEAD is already tagged with '$head_tag'. Possible remedy: delete the tag, or branch 'main' again, do a new PR, and release with a new, higher version number." || true
 fi
 
+dump_all_variables
 exit_if_has_errors
 
 create_tag_regexes "$minver_tag_prefix"

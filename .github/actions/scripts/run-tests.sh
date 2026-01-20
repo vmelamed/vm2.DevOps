@@ -23,13 +23,14 @@ source "$script_dir/run-tests.utils.sh"
 
 get_arguments "$@"
 
-is_safe_existing_file "$test_project"
-is_safe_input "$configuration"
-is_safe_input "$preprocessor_symbols" true
-is_safe_input "$minver_tag_prefix" true
-is_safe_input "$minver_prerelease_id" true
-is_safe_path "$artifacts_dir"
+is_safe_existing_file "$test_project" || true
+is_safe_input "$configuration" || true
+is_safe_input "$preprocessor_symbols" true || true
+is_safe_input "$minver_tag_prefix" true || true
+is_safe_input "$minver_prerelease_id" true || true
+is_safe_path "$artifacts_dir" || true
 
+dump_all_variables
 exit_if_has_errors
 
 test_name=$(basename "${test_project%.*}")      # the base name of the test project (without the path and file extension)

@@ -27,11 +27,14 @@ source "$script_dir/build.utils.sh"
 get_arguments "$@"
 
 # sanitize inputs
-is_safe_path "$build_project"
-is_safe_input "$configuration"
-is_safe_input "$preprocessor_symbols"
-is_safe_input "$minver_tag_prefix"
-is_safe_input "$minver_prerelease_id"
+is_safe_path "$build_project" || true
+is_safe_input "$configuration" || true
+is_safe_input "$preprocessor_symbols" || true
+is_safe_input "$minver_tag_prefix" || true
+is_safe_input "$minver_prerelease_id" || true
+is_safe_input "$nuget_username" || true
+
+dump_all_variables
 exit_if_has_errors
 
 # freeze the parameters

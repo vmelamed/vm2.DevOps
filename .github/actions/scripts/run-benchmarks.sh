@@ -26,12 +26,12 @@ if [[ ! -s "$bm_project" ]]; then
     exit 2
 fi
 
-is_safe_path "$bm_project"
-is_safe_input "$configuration"
-is_safe_input "$preprocessor_symbols"
-is_safe_input "$minver_tag_prefix"
-is_safe_input "$minver_prerelease_id"
-is_safe_path "$artifacts_dir"
+is_safe_path "$bm_project" || true
+is_safe_input "$configuration" || true
+is_safe_input "$preprocessor_symbols" || true
+is_safe_input "$minver_tag_prefix" || true
+is_safe_input "$minver_prerelease_id" || true
+is_safe_path "$artifacts_dir" || true
 
 # Freeze variables
 declare -xr bm_project
