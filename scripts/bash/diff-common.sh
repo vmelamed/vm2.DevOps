@@ -202,7 +202,6 @@ function copy_file() {
 }
 
 declare -i i=0
-declare -i ret_code=0
 
 while [[ $i -lt ${#source_files[@]} ]]; do
     source_file="${source_files[i]}"
@@ -224,10 +223,8 @@ while [[ $i -lt ${#source_files[@]} ]]; do
         continue
     fi
 
-    ret_code=0
-    diff -a -w -B --strip-trailing-cr -s -y -W 167 --suppress-common-lines --color=auto "${source_file}" "${target_file}" || ret_code=$?
-
-    if [[ $ret_code -ne 0 ]]; then
+    if ! diff -a -w -B --strip-trailing-cr -s -y -W 167 --suppress-common-lines --color=auto "${source_file}" "${target_file}"
+    then
         echo "Files ${source_file} and ${target_file} are different"
         if [[ "$quiet" != true ]]; then
             if [[ "$actions" == "c" ]]; then
