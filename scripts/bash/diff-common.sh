@@ -147,35 +147,35 @@ target_files=(
     )
 declare -A file_actions
 file_actions=(
-    ["${repos}/vm2.DevOps/.editorconfig"]="mc"
-    ["${repos}/vm2.DevOps/.gitattributes"]="mc"
-    ["${repos}/vm2.DevOps/.gitignore"]="mc"
-    ["${repos}/vm2.DevOps/codecov.yml"]="mc"
-    ["${repos}/vm2.DevOps/Directory.Build.props"]="mc"
-    ["${repos}/vm2.DevOps/Directory.Packages.props"]="mc"
-    ["${repos}/vm2.DevOps/global.json"]="mc"
-    ["${repos}/vm2.DevOps/LICENSE"]="c"
-    ["${repos}/vm2.DevOps/NuGet.config"]="mc"
-    ["${repos}/vm2.DevOps/test.runsettings"]="mc"
+    ["${repos}/vm2.DevOps/.editorconfig"]="merge or copy"
+    ["${repos}/vm2.DevOps/.gitattributes"]="merge or copy"
+    ["${repos}/vm2.DevOps/.gitignore"]="merge or copy"
+    ["${repos}/vm2.DevOps/codecov.yml"]="merge or copy"
+    ["${repos}/vm2.DevOps/Directory.Build.props"]="merge or copy"
+    ["${repos}/vm2.DevOps/Directory.Packages.props"]="merge or copy"
+    ["${repos}/vm2.DevOps/global.json"]="merge or copy"
+    ["${repos}/vm2.DevOps/LICENSE"]="copy"
+    ["${repos}/vm2.DevOps/NuGet.config"]="merge or copy"
+    ["${repos}/vm2.DevOps/test.runsettings"]="merge or copy"
 
-    ["${repos}/.github/workflow-templates/dependabot.yaml"]="mc"
-    ["${repos}/.github/workflow-templates/CI.yaml"]="mc"
-    ["${repos}/.github/workflow-templates/Prerelease.yaml"]="mc"
-    ["${repos}/.github/workflow-templates/Release.yaml"]="mc"
-    ["${repos}/.github/workflow-templates/ClearCache.yaml"]="mc"
+    ["${repos}/.github/workflow-templates/dependabot.yaml"]="merge or copy"
+    ["${repos}/.github/workflow-templates/CI.yaml"]="merge or copy"
+    ["${repos}/.github/workflow-templates/Prerelease.yaml"]="merge or copy"
+    ["${repos}/.github/workflow-templates/Release.yaml"]="merge or copy"
+    ["${repos}/.github/workflow-templates/ClearCache.yaml"]="merge or copy"
 
-    ["${repos}/vm2.DevOps/.github/actions/scripts/_common.diagnostics.sh"]="c"
-    ["${repos}/vm2.DevOps/.github/actions/scripts/_common.dump_vars.sh"]="c"
-    ["${repos}/vm2.DevOps/.github/actions/scripts/_common.flags.sh"]="c"
-    ["${repos}/vm2.DevOps/.github/actions/scripts/_common.predicates.sh"]="c"
-    ["${repos}/vm2.DevOps/.github/actions/scripts/_common.sanitize.sh"]="c"
-    ["${repos}/vm2.DevOps/.github/actions/scripts/_common.semver.sh"]="c"
-    ["${repos}/vm2.DevOps/.github/actions/scripts/_common.user.sh"]="c"
-    ["${repos}/vm2.DevOps/.github/actions/scripts/_common.sh"]="c"
-    ["${repos}/vm2.DevOps/.github/actions/scripts/.shellcheckrc"]="mc"
-    ["${repos}/vm2.DevOps/scripts/bash/diff-common.sh"]="c"
-    ["${repos}/vm2.DevOps/scripts/bash/diff-common.utils.sh"]="c"
-    ["${repos}/vm2.DevOps/scripts/bash/diff-common.usage.sh"]="c"
+    ["${repos}/vm2.DevOps/.github/actions/scripts/_common.diagnostics.sh"]="copy"
+    ["${repos}/vm2.DevOps/.github/actions/scripts/_common.dump_vars.sh"]="copy"
+    ["${repos}/vm2.DevOps/.github/actions/scripts/_common.flags.sh"]="copy"
+    ["${repos}/vm2.DevOps/.github/actions/scripts/_common.predicates.sh"]="copy"
+    ["${repos}/vm2.DevOps/.github/actions/scripts/_common.sanitize.sh"]="copy"
+    ["${repos}/vm2.DevOps/.github/actions/scripts/_common.semver.sh"]="copy"
+    ["${repos}/vm2.DevOps/.github/actions/scripts/_common.user.sh"]="copy"
+    ["${repos}/vm2.DevOps/.github/actions/scripts/_common.sh"]="copy"
+    ["${repos}/vm2.DevOps/.github/actions/scripts/.shellcheckrc"]="merge or copy"
+    ["${repos}/vm2.DevOps/scripts/bash/diff-common.sh"]="copy"
+    ["${repos}/vm2.DevOps/scripts/bash/diff-common.utils.sh"]="copy"
+    ["${repos}/vm2.DevOps/scripts/bash/diff-common.usage.sh"]="copy"
 )
 
 if [[ ${#source_files[@]} -ne ${#target_files[@]} ]] || [[ ${#source_files[@]} -ne ${#file_actions[@]} ]]; then
@@ -227,23 +227,32 @@ while [[ $i -lt ${#source_files[@]} ]]; do
     then
         echo "Files ${source_file} and ${target_file} are different"
         if [[ "$quiet" != true ]]; then
-            if [[ "$actions" == "c" ]]; then
-                yn=$(confirm "Do you want to copy the source file '${source_file}' to the target file '${target_file}'?" "n")
-                if [[ "$yn" == y ]]; then
+            case $actions in
+                "ask to copy")
+                    if confirm "Do you want to copy the source file '${source_file}' to the target file '${target_file}'?" "y"; then
+                        copy_file "$source_file" "$target_file"
+                    fi
+                    ;;
+                "copy")
                     copy_file "$source_file" "$target_file"
-                fi
-            elif [[ "$actions" == "mc" ]]; then
-                case $(choose "What do you want to do?" \
-                    "Do nothing - continue" \
-                    "Merge files using 'Visual Studio Code' (you need to have 'VSCode' installed)" \
-                    "Copy source file to target file") in
-                    2) code --diff "$source_file" "$target_file" --new-window --wait ;;
-                    3) copy_file "$source_file" "$target_file" ;;
-                    *) ;;
-                esac
-            else
-                press_any_key
-            fi
+                    ;;
+                "merge or copy")
+                    case $(choose "What do you want to do?" \
+                                  "Do nothing - continue" \
+                                  "Merge files using 'Visual Studio Code' (you need to have 'VSCode' installed)" \
+                                  "Copy source file to target file") in
+                        2) code --diff "$source_file" "$target_file" --new-window --wait ;;
+                        3) copy_file "$source_file" "$target_file" ;;
+                        *) ;;
+                    esac
+                    ;;
+                "ignore")
+                    continue
+                    ;;
+                *)
+                    press_any_key
+                    ;;
+            esac
         fi
     fi
 done

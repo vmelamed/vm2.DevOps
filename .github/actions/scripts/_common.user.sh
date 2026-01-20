@@ -64,6 +64,7 @@ function confirm()
         error "Please enter y or n." >&2
         errors=$((errors - 1))
     done
+    [[ ${response,,} == "y" ]]
 }
 
 ## Displays a prompt and a list of options to the script user and asks them to choose one of the options.
