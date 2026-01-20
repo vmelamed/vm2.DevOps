@@ -25,7 +25,7 @@ declare -x package_version
 ##    package_version
 function summarizeDotnetBuild()
 {
-    if [[ -z "$1" ]]; then
+    if [[ $# -eq 0 || -z "$1" ]]; then
         echo "summarizeDotnet requires the output of 'dotnet build -v d ...' as a parameter"
         return 1
     fi
@@ -69,17 +69,15 @@ function summarizeDotnetBuild()
         package_version=${BASH_REMATCH[1]}
     fi
 
-    if [[ $2 == true ]]; then
-        echo "Build result:        $build_result"
-        echo "Errors:              $errors_count"
-        echo "Warnings:            $warnings_count"
-        if [[ $build_result =~ "Successful" ]]; then
-            echo "Assembly Version:     $assembly_version"
-            echo "File Version:         $file_version"
-            echo "InformationalVersion: $informational_version"
-            echo "Version:              $version"
-            echo "PackageVersion:       $package_version"
-        fi
+    echo "Build result:        $build_result"
+    echo "Errors:              $errors_count"
+    echo "Warnings:            $warnings_count"
+    if [[ $build_result =~ "Successful" ]]; then
+        echo "Assembly Version:     $assembly_version"
+        echo "File Version:         $file_version"
+        echo "InformationalVersion: $informational_version"
+        echo "Version:              $version"
+        echo "PackageVersion:       $package_version"
     fi
 
     eval "$restoreShopt"

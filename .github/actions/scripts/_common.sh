@@ -8,19 +8,27 @@
 # Common scripts variables and environment initialization
 #-------------------------------------------------------------------------------
 
+if [[ ! -v script_name || -z "$script_name" ]]; then
+    script_name="$(basename "${BASH_SOURCE[-1]}")"
+fi
+if [[ ! -v script_dir || -z "$script_dir" ]]; then
+    script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[-1]}")")"
+fi
+if [[ ! -v common_dir || -z "$common_dir" ]]; then
+    common_dir="$(dirname "${BASH_SOURCE[0]}")"
+fi
+
 # commonly used variables
 initial_dir=$(pwd)
 declare -rx initial_dir
 
-common_scripts_dir="$(dirname "${BASH_SOURCE[0]}")"
-
-source "${common_scripts_dir}/_common.constants.sh"
-source "${common_scripts_dir}/_common.diagnostics.sh"
-source "${common_scripts_dir}/_common.flags.sh"
-source "${common_scripts_dir}/_common.dump_vars.sh"
-source "${common_scripts_dir}/_common.semver.sh"
-source "${common_scripts_dir}/_common.predicates.sh"
-source "${common_scripts_dir}/_common.user.sh"
+source "${common_dir}/_common.constants.sh"
+source "${common_dir}/_common.diagnostics.sh"
+source "${common_dir}/_common.flags.sh"
+source "${common_dir}/_common.dump_vars.sh"
+source "${common_dir}/_common.semver.sh"
+source "${common_dir}/_common.predicates.sh"
+source "${common_dir}/_common.user.sh"
 
 # trap on_debug DEBUG
 # trap on_exit EXIT

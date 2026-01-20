@@ -48,5 +48,6 @@ EOF
 
 function usage()
 {
-    display_usage_msg "$(usage_text)" "$@"
+    text="$(usage_text)"
+    display_usage_msg  "$text" "$@"
 }

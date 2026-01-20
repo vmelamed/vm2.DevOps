@@ -1,10 +1,8 @@
 #!/bin/bash
 
 semver_dir="$(dirname "${BASH_SOURCE[0]}")"
+
 # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
-if ! declare -p "semverPrereleaseRegex" > "$_ignore"; then
-    source "$semver_dir/_common.constants.sh"
-fi
 if ! declare -pF "error" > "$_ignore"; then
     source "$semver_dir/_common.diagnostics.sh"
 fi
@@ -33,7 +31,7 @@ declare -xi tag_regexes_initialized=128
 # shellcheck disable=SC2120 # create_tag_regexes references arguments, but none are ever passed.
 function create_tag_regexes()
 {
-    if [[ $# -gt 1 ]]; then
+    if [[ $# -ne 1 ]]; then
         error "${FUNCNAME[0]}() requires exactly 1 argument: the semver tag prefix used by MinVer."
         return 2
     fi
@@ -49,7 +47,7 @@ function create_tag_regexes()
 
 # create the regexes with default prefix from $MINVERTAGPREFIX or 'v' for now, they can be re-created later by calling
 # create_tag_regexes with a different prefix if needed
-create_tag_regexes
+create_tag_regexes "${MINVERTAGPREFIX:-'v'}"
 
 # semver components indexes in BASH_REMATCH
 declare -irx semver_major=1
@@ -174,7 +172,7 @@ function is_semver()
 ## Usage: if is_semver "$version"; then ... fi
 function is_semverTag()
 {
-    if [[ $# -lt 1 || $# -ge 2 ]]; then
+    if [[ $# -lt 1 || $# -gt 2 ]]; then
         error "${FUNCNAME[0]}() requires 1 or 2 arguments: the version and the semver tag prefix used by MinVer."
         return 2
     fi
@@ -214,7 +212,7 @@ function is_semverPrerelease()
 ## Usage: if is_semver "$version"; then ... fi
 function is_semverPrereleaseTag()
 {
-    if [[ $# -lt 1 || $# -ge 2 ]]; then
+    if [[ $# -lt 1 || $# -gt 2 ]]; then
         error "${FUNCNAME[0]}() requires 1 or 2 arguments: the version and the semver tag prefix used by MinVer."
         return 2
     fi
@@ -245,7 +243,7 @@ function is_semverRelease()
 ## Usage: if is_semver "$version"; then ... fi
 function is_semverReleaseTag()
 {
-    if [[ $# -lt 1 || $# -ge 2 ]]; then
+    if [[ $# -lt 1 || $# -gt 2 ]]; then
         error "${FUNCNAME[0]}() requires 1 or 2 arguments: the version and the semver tag prefix used by MinVer."
         return 2
     fi
@@ -281,7 +279,7 @@ function is_safe_semver()
 ## Usage: is_safe_semverTag <version> [<semver tag prefix>]
 function is_safe_semverTag()
 {
-    if [[ $# -lt 1 || $# -ge 2 ]]; then
+    if [[ $# -lt 1 || $# -gt 2 ]]; then
         error "${FUNCNAME[0]}() requires 1 or 2 arguments: the version and the semver tag prefix used by MinVer."
         return 2
     fi
@@ -317,7 +315,7 @@ function is_safe_semverPrerelease()
 ## Usage: is_safe_semverPrereleaseTag <version> [<semver tag prefix>]
 function is_safe_semverPrereleaseTag()
 {
-    if [[ $# -lt 1 || $# -ge 2 ]]; then
+    if [[ $# -lt 1 || $# -gt 2 ]]; then
         error "${FUNCNAME[0]}() requires 1 or 2 arguments: the version and the semver tag prefix used by MinVer."
         return 2
     fi
@@ -353,7 +351,7 @@ function is_safe_semverRelease()
 ## Usage: is_safe_semverReleaseTag <version> [<semver tag prefix>]
 function is_safe_semverReleaseTag()
 {
-    if [[ $# -lt 1 || $# -ge 2 ]]; then
+    if [[ $# -lt 1 || $# -gt 2 ]]; then
         error "${FUNCNAME[0]}() requires 1 or 2 arguments: the version and the semver tag prefix used by MinVer."
         return 2
     fi

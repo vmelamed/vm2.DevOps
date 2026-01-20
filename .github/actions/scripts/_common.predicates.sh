@@ -75,10 +75,11 @@ function is_in() {
 function has_errors()
 {
     if ((errors > 0)); then
-        error "$errors error(s) encountered. Please fix the issues and try again." >&2
         if [[ -n $1 ]]; then
-            usage
+            usage "❌  ERROR: $errors error(s) encountered. Please fix the above issues and try again."
             exit 2
+        else
+            error "$errors error(s) encountered. Please fix the above issues and try again."
         fi
         return 1
     fi
@@ -107,14 +108,14 @@ function is_git_repo()
 ## Usage: is_on_or_after_latest_stable_tag <directory> <stable-tag-regex> [<skip-fetch>]
 function is_latest_stable_tag()
 {
-    if [[ $# != 2 ]]; then
+    if [[ $# -lt 2 || $# -gt 3 ]]; then
         error "The function is_latest_stable_tag() takes 2 arguments: directory and regular expression for stable tag." \
               "A third argument may be specified to fetch latest in main changes from remote."
     fi
-    if [[ ! -d $1 ]]; then
+    if [[ ! -d "$1" ]]; then
         error "The specified directory '$1' does not exist."
     fi
-    if [[ -z $2 ]]; then
+    if [[ -z "$2" ]]; then
         error "The regular expression for stable tag cannot be empty."
     fi
     ((errors == 0 )) || return 2
@@ -122,7 +123,7 @@ function is_latest_stable_tag()
     local latest_tag current_commit tag_commit
 
     is_git_repo "$1" || return 2
-    if [[ $3 != "true" ]]; then
+    if [[ $# -eq 3 && "$3" != "true" ]]; then
         git -C "$1" fetch origin main --quiet
     fi
 
@@ -141,14 +142,14 @@ function is_latest_stable_tag()
 ## Usage: is_after_latest_stable_tag <directory> <stable-tag-regex> [<skip-fetch>]
 function is_after_latest_stable_tag()
 {
-    if [[ $# != 2 ]]; then
+    if [[ $# -lt 2 || $# -gt 3 ]]; then
         error "The function is_after_latest_stable_tag() takes 2 arguments: directory and regular expression for stable tag." \
               "A third argument may be specified to fetch latest in main changes from remote."
     fi
-    if [[ ! -d $1 ]]; then
+    if [[ ! -d "$1" ]]; then
         error "The specified directory '$1' does not exist."
     fi
-    if [[ -z $2 ]]; then
+    if [[ -z "$2" ]]; then
         error "The regular expression for stable tag cannot be empty."
     fi
     ((errors == 0 )) || return 2
@@ -156,7 +157,7 @@ function is_after_latest_stable_tag()
     local latest_tag tag_commit commits_after
 
     is_git_repo "$1" || return 2
-    if [[ $3 != "true" ]]; then
+    if [[ $# -eq 3 && "$3" != "true" ]]; then
         git -C "$1" fetch origin main --quiet
     fi
 
@@ -175,14 +176,14 @@ function is_after_latest_stable_tag()
 ## Usage: is_on_or_after_latest_stable_tag <directory> <stable-tag-regex> [<skip-fetch>]
 function is_on_or_after_latest_stable_tag()
 {
-    if [[ $# != 2 ]]; then
+    if [[ $# -lt 2 || $# -gt 3 ]]; then
         error "The function is_on_or_after_latest_stable_tag() takes 2 arguments: directory and regular expression for stable tag." \
               "A third argument may be specified to fetch latest in main changes from remote."
     fi
-    if [[ ! -d $1 ]]; then
+    if [[ ! -d "$1" ]]; then
         error "The specified directory '$1' does not exist."
     fi
-    if [[ -z $2 ]]; then
+    if [[ -z "$2" ]]; then
         error "The regular expression for stable tag cannot be empty."
     fi
     ((errors == 0 )) || return 2
@@ -190,7 +191,7 @@ function is_on_or_after_latest_stable_tag()
     local latest_tag tag_commit
 
     is_git_repo "$1" || return 2
-    if [[ $3 != "true" ]]; then
+    if [[ $# -eq 3 && "$3" != "true" ]]; then
         git -C "$1" fetch origin main --quiet
     fi
 

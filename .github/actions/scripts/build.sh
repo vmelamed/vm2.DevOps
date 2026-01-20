@@ -63,4 +63,4 @@ build_output=$(dotnet build "$build_project" -v d \
     /p:MinVerPrereleaseIdentifiers="$minver_prerelease_id")
 
 # Summarize the build results
-summarizeDotnetBuild "$build_output" true > "$github_step_summary"
+summarizeDotnetBuild "$build_output" > "$github_step_summary"

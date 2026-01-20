@@ -1,19 +1,23 @@
 #!/bin/bash
 set -euo pipefail
 
-declare -r this_script=${BASH_SOURCE[0]}
-
 # shellcheck disable=SC2154 # GIT_REPOS is referenced but not assigned. It is expected to be set in the environment.
-common_dir=$(realpath "$(dirname "${GIT_REPOS}/vm2.DevOps/.github/actions/scripts")")
+this_script=${BASH_SOURCE[0]}
+
+script_name=$(basename "$this_script")
+script_dir=$(dirname "$(realpath -e "$this_script")")
+common_dir=$(realpath "${script_dir%/bash}/../.github/actions/scripts")
+
+declare -r script_name
+declare -r script_dir
+declare -r common_dir
 
 # shellcheck disable=SC1091
 source "${common_dir}/_common.sh"
 
 declare repos="${GIT_REPOS:-$HOME/repos}"
 declare target_repo=""
-declare minver_tag_prefix=${MinVerTagPrefix:-'v'}
-
-script_dir="$(dirname "$(realpath -e "$this_script")")"
+declare minver_tag_prefix=${MINVERTAGPREFIX:-'v'}
 
 source "${script_dir}/diff-common.utils.sh"
 source "${script_dir}/diff-common.usage.sh"
@@ -55,10 +59,10 @@ if ! is_git_repo "${repos}/vm2.DevOps"; then
     error "The vm2.DevOps repository at '${repos}/vm2.DevOps' is not a valid git repository."
 fi
 if ! is_on_or_after_latest_stable_tag "${repos}/.github" "$semverTagReleaseRegex"; then
-    error "The HEAD of the .github repository is before the latest stable tag."
+    error "The HEAD of the '.github' repository is before the latest stable tag."
 fi
 if ! is_on_or_after_latest_stable_tag "${repos}/vm2.DevOps" "$semverTagReleaseRegex"; then
-    error "The HEAD of the vm2.DevOps repository is before the latest stable tag."
+    error "The HEAD of the 'vm2.DevOps' repository is before the latest stable tag."
 fi
 
 if [[ "$target_repo" =~ ${repos%}/.* ]]; then
@@ -72,10 +76,10 @@ if [[ ! -d "$target_path" ]]; then
     error "The target repository '$target_path' does not exist."
 fi
 if [[ ! -d "$target_path/.github/workflows" ]]; then
-    error "The target repository '$target_path' does not contain the .github/workflows directory."
+    error "The target repository '$target_path' does not contain the '.github/workflows' directory."
 fi
-if [[ ! -d "$target_path/.github/scripts" ]]; then
-    warning "The target repository '$target_path' does not contain the .github/scripts directory."
+if [[ ! -d "$target_path/src" ]]; then
+    warning "The target repository '$target_path' does not contain the 'src' directory."
 fi
 
 # shellcheck disable=SC2154
@@ -180,6 +184,10 @@ fi
 
 exit_if_has_errors
 
+declare -r repos
+declare -r target_repo
+declare -r minver_tag_prefix
+
 function copy_file() {
     local src_file="$1"
     local dest_file="$2"
@@ -194,12 +202,13 @@ function copy_file() {
 }
 
 declare -i i=0
+declare -i ret_code=0
 
 while [[ $i -lt ${#source_files[@]} ]]; do
     source_file="${source_files[i]}"
     target_file="${target_files[i]}"
     actions="${file_actions[$source_file]}"
-    ((i++))
+    i=$((i+1))
 
     echo -e "\n${source_file} <-----> ${target_file}:"
 
@@ -215,10 +224,10 @@ while [[ $i -lt ${#source_files[@]} ]]; do
         continue
     fi
 
-    diff -a -w -B --strip-trailing-cr -s -y -W 167 --suppress-common-lines --color=auto "${source_file}" "${target_file}"
-    res=$?
+    ret_code=0
+    diff -a -w -B --strip-trailing-cr -s -y -W 167 --suppress-common-lines --color=auto "${source_file}" "${target_file}" || ret_code=$?
 
-    if [[ $res -ne 0 ]]; then
+    if [[ $ret_code -ne 0 ]]; then
         echo "Files ${source_file} and ${target_file} are different"
         if [[ "$quiet" != true ]]; then
             if [[ "$actions" == "c" ]]; then
