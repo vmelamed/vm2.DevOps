@@ -3,7 +3,8 @@
 # error counter
 declare -ix errors=0
 
-## Shell function to log error messages to the standard output and to the GitHub step summary (github_step_summary).
+## Shell function to log error messages to the standard output.
+## Overridden in _common.github.sh to output also to the GitHub Actions step summary.
 ## Increments the error counter.
 ## Usage: `error <message1> [<message2> ...]`, or `echo "message" | error`, or error <<< "message"
 function error()
@@ -19,7 +20,8 @@ function error()
     return 0
 }
 
-## Shell function to log warning messages to the standard output and to the GitHub step summary (github_step_summary).
+## Shell function to log warning messages to the standard output.
+## Overridden in _common.github.sh to output also to the GitHub Actions step summary.
 ## Usage: `warning <message1> [<message2> ...]`, or `echo "message" | warning`, or warning <<< "message"
 function warning()
 {
@@ -33,7 +35,8 @@ function warning()
     return 0
 }
 
-## Shell function to log informational messages to the standard output and to the GitHub step summary (github_step_summary).
+## Shell function to log informational messages to the standard output.
+## Overridden in _common.github.sh to output also to the GitHub Actions step summary.
 ## Usage: info <message1> [<message2> ...]
 function info()
 {
@@ -48,7 +51,7 @@ function info()
 }
 
 ## Shell function to log a warning about a variable's value and set it to a default value.
-## GitHub step summary (github_step_summary).
+## Overridden in _common.github.sh to output also to the GitHub Actions step summary.
 ## Usage: warning_var <variable_name> <warning message> <variable's default value>
 function warning_var()
 {
@@ -60,6 +63,7 @@ function warning_var()
 }
 
 ## Logs a trace message if verbose mode is enabled.
+## Overridden in _common.github.sh to output also to the GitHub Actions step summary.
 ## Usage: trace <message>
 function trace() {
     # shellcheck disable=SC2154 # variable is referenced but not assigned.

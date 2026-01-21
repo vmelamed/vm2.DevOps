@@ -1,0 +1,142 @@
+[
+    {
+        "sourceFile": "${repos}/vm2.DevOps/.editorconfig",
+        "targetFile": "${target_path}/.editorconfig",
+        "action": "merge or copy"
+    },
+    {
+        "sourceFile": "${repos}/vm2.DevOps/.gitattributes",
+        "targetFile": "${target_path}/.gitattributes",
+        "action": "merge or copy"
+    },
+    {
+        "sourceFile": "${repos}/vm2.DevOps/.gitignore",
+        "targetFile": "${target_path}/.gitignore",
+        "action": "merge or copy"
+    },
+    {
+        "sourceFile": "${repos}/vm2.DevOps/codecov.yml",
+        "targetFile": "${target_path}/codecov.yml",
+        "action": "merge or copy"
+    },
+    {
+        "sourceFile": "${repos}/vm2.DevOps/Directory.Build.props",
+        "targetFile": "${target_path}/Directory.Build.props",
+        "action": "merge or copy"
+    },
+    {
+        "sourceFile": "${repos}/vm2.DevOps/Directory.Packages.props",
+        "targetFile": "${target_path}/Directory.Packages.props",
+        "action": "merge or copy"
+    },
+    {
+        "sourceFile": "${repos}/vm2.DevOps/global.json",
+        "targetFile": "${target_path}/global.json",
+        "action": "merge or copy"
+    },
+    {
+        "sourceFile": "${repos}/vm2.DevOps/LICENSE",
+        "targetFile": "${target_path}/LICENSE",
+        "action": "copy"
+    },
+    {
+        "sourceFile": "${repos}/vm2.DevOps/NuGet.config",
+        "targetFile": "${target_path}/NuGet.config",
+        "action": "merge or copy"
+    },
+    {
+        "sourceFile": "${repos}/vm2.DevOps/test.runsettings",
+        "targetFile": "${target_path}/test.runsettings",
+        "action": "merge or copy"
+    },
+    {
+        "sourceFile": "${repos}/.github/dependabot.yaml",
+        "targetFile": "${target_path}/.github/dependabot.yaml",
+        "action": "merge or copy"
+    },
+    {
+        "sourceFile": "${repos}/.github/workflow-templates/CI.yaml",
+        "targetFile": "${target_path}/.github/workflows/CI.yaml",
+        "action": "merge or copy"
+    },
+    {
+        "sourceFile": "${repos}/.github/workflow-templates/Prerelease.yaml",
+        "targetFile": "${target_path}/.github/workflows/Prerelease.yaml",
+        "action": "merge or copy"
+    },
+    {
+        "sourceFile": "${repos}/.github/workflow-templates/Release.yaml",
+        "targetFile": "${target_path}/.github/workflows/Release.yaml",
+        "action": "merge or copy"
+    },
+    {
+        "sourceFile": "${repos}/.github/workflow-templates/ClearCache.yaml",
+        "targetFile": "${target_path}/.github/workflows/ClearCache.yaml",
+        "action": "merge or copy"
+    },
+    {
+        "sourceFile": "${repos}/vm2.DevOps/.github/actions/scripts/_common.diagnostics.sh",
+        "targetFile": "${target_path}/scripts/_common.diagnostics.sh",
+        "action": "copy"
+    },
+    {
+        "sourceFile": "${repos}/vm2.DevOps/.github/actions/scripts/_common.dump_vars.sh",
+        "targetFile": "${target_path}/scripts/_common.dump_vars.sh",
+        "action": "copy"
+    },
+    {
+        "sourceFile": "${repos}/vm2.DevOps/.github/actions/scripts/_common.flags.sh",
+        "targetFile": "${target_path}/scripts/_common.flags.sh",
+        "action": "copy"
+    },
+    {
+        "sourceFile": "${repos}/vm2.DevOps/.github/actions/scripts/_common.predicates.sh",
+        "targetFile": "${target_path}/scripts/_common.predicates.sh",
+        "action": "copy"
+    },
+    {
+        "sourceFile": "${repos}/vm2.DevOps/.github/actions/scripts/_common.sanitize.sh",
+        "targetFile": "${target_path}/scripts/_common.sanitize.sh",
+        "action": "copy"
+    },
+    {
+        "sourceFile": "${repos}/vm2.DevOps/.github/actions/scripts/_common.semver.sh",
+        "targetFile": "${target_path}/scripts/_common.semver.sh",
+        "action": "copy"
+    },
+    {
+        "sourceFile": "${repos}/vm2.DevOps/.github/actions/scripts/_common.user.sh",
+        "targetFile": "${target_path}/scripts/_common.user.sh",
+        "action": "copy"
+    },
+    {
+        "sourceFile": "${repos}/vm2.DevOps/.github/actions/scripts/_common.sh",
+        "targetFile": "${target_path}/scripts/_common.sh",
+        "action": "copy"
+    },
+    {
+        "sourceFile": "${repos}/vm2.DevOps/.github/actions/scripts/.shellcheckrc",
+        "targetFile": "${target_path}/scripts/.shellcheckrc",
+        "action": "merge or copy"
+    },
+    {
+        "sourceFile": "${repos}/vm2.DevOps/scripts/bash/diff-common.sh",
+        "targetFile": "${target_path}/scripts/diff-common.sh",
+        "action": "copy"
+    },
+    {
+        "sourceFile": "${repos}/vm2.DevOps/scripts/bash/diff-common.utils.sh",
+        "targetFile": "${target_path}/scripts/diff-common.utils.sh",
+        "action": "copy"
+    },
+    {
+        "sourceFile": "${repos}/vm2.DevOps/scripts/bash/diff-common.usage.sh",
+        "targetFile": "${target_path}/scripts/diff-common.usage.sh",
+        "action": "copy"
+    },
+    {
+        "sourceFile": "${repos}/vm2.DevOps/scripts/bash/diff-common.config.json",
+        "targetFile": "${target_path}/scripts/diff-common.config.json",
+        "action": "copy"
+    }
+]
