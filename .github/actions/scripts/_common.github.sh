@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script defines a number of GitHub specific constants, variables, and helper functions.
 

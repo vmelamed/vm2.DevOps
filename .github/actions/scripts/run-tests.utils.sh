@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
 function get_arguments()

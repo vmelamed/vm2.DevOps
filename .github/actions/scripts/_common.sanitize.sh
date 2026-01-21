@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 ## Sanitizes user input by removing or escaping potentially dangerous characters.
 ## Returns 0 if input is safe, 1 if it contains unsafe characters.

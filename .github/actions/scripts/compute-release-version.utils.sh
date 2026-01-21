@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
 # shellcheck disable=SC2154 # variable is referenced but not assigned.

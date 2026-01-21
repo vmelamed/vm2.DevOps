@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script defines a number of general purpose functions.
 # For the functions to be invocable by other scripts, this script needs to be sourced.

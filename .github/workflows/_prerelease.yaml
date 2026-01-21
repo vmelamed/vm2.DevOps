@@ -161,7 +161,7 @@ jobs:
       - name: Update CHANGELOG for prerelease
         shell: bash
         run: |
-          #!/bin/bash
+          #!/usr/bin/env bash
           set -euo pipefail
 
           source _common.github.sh

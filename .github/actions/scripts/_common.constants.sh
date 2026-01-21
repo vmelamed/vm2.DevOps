@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 if [[ -t 1 ]]; then
     declare -xr BOLD='\033[1m'

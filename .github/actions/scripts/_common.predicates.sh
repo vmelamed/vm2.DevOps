@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 if ! declare -pF "error" > "$_ignore"; then
