@@ -92,17 +92,17 @@ function choose()
     fi
 
     echo "$prompt" >&2
-    local -arg arg=1
+    local -i i=1
     for o in "${options[@]}"; do
-        if [[ $arg -eq 1 ]]; then
-            echo "  $arg) $o (default)" >&2
+        if [[ $i -eq 1 ]]; then
+            echo "  $i) $o (default)" >&2
         else
-            echo "  $arg) $o" >&2
+            echo "  $i) $o" >&2
         fi
-        ((arg++))
+        i=$((i+1))
     done
 
-    local -arg selection=1
+    local -i selection=1
     while true; do
         read -rp "Enter choice [1-${#options[@]}]: " selection
         selection=${selection:-1}

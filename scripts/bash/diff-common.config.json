@@ -50,9 +50,9 @@
         "action": "merge or copy"
     },
     {
-        "sourceFile": "${repos}/.github/dependabot.yaml",
+        "sourceFile": "${repos}/.github/workflow-templates/dependabot.yaml",
         "targetFile": "${target_path}/.github/dependabot.yaml",
-        "action": "merge or copy"
+        "action": "copy"
     },
     {
         "sourceFile": "${repos}/.github/workflow-templates/CI.yaml",

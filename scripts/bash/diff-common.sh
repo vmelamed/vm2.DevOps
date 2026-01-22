@@ -31,6 +31,9 @@ declare -ar valid_actions=("ask to copy" "copy" "merge or copy" "ignore")
 all_actions_str=$(print_sequence -s=', ' -q='"' "${valid_actions[@]}")
 declare -r all_actions_str
 
+declare -r default_diff_tool="diff" # "delta"
+declare -r default_merge_tool="code"
+
 ## Loads all file actions from JSON configuration file
 ## Reads ${script_dir}/diff-common.config.json and populates arrays
 function load_actions()
@@ -132,6 +135,88 @@ function load_custom_actions()
     info "$script_name was customized successfully with ${num_actions} modified actions."
 }
 
+function differences()
+{
+    LOCAL=$1
+    REMOTE=$2
+
+    # Get configured git diff tool
+    local git_diff_tool
+    git_diff_tool=$(git config --global --get diff.tool 2>/dev/null || echo "")
+
+    if [[ -z "$git_diff_tool" || "$git_diff_tool" =~ code ]]; then
+        trace "No git diff tool configured, using diff as default"
+        git_diff_tool="$default_diff_tool"
+    fi
+
+    trace "Using diff tool: $git_diff_tool"
+    case "$git_diff_tool" in
+        delta|git-delta)
+            delta --side-by-side --line-numbers "$LOCAL" "$REMOTE"
+            ;;
+        icdiff)
+            icdiff --line-numbers --no-bold "$LOCAL" "$REMOTE"
+            ;;
+        difftastic|difft)
+            difft "$LOCAL" "$REMOTE"
+            ;;
+        ydiff)
+            ydiff -s -w 0 "$LOCAL" "$REMOTE"
+            ;;
+        colordiff)
+            colordiff -a -w -B --strip-trailing-cr -s -y -W 167 --suppress-common-lines "$LOCAL" "$REMOTE"
+            ;;
+        diff)
+            diff -a -w -B --strip-trailing-cr -s -y -W 167 --suppress-common-lines --color=auto "$LOCAL" "$REMOTE"
+            ;;
+        *)
+            warning "Unknown diff tool '$git_diff_tool', falling back to standard diff"
+            diff -a -w -B --strip-trailing-cr -s -y -W 167 --suppress-common-lines --color=auto "$LOCAL" "$REMOTE"
+            ;;
+    esac
+}
+
+function merge()
+{
+    LOCAL=$1
+    REMOTE=$2
+
+    # Get configured git merge tool
+    local git_merge_tool
+    git_merge_tool=$(git config --global --get merge.tool 2>/dev/null || echo "")
+
+    if [[ -z "$git_merge_tool" ]]; then
+        trace "No git merge tool configured, using VS Code as default"
+        git_merge_tool="$default_merge_tool"
+    fi
+
+    if [[ -n "$git_merge_tool" ]]; then
+        trace "Using git configured merge tool: $git_merge_tool"
+        case "$git_merge_tool" in
+            code|vscode)
+                code --wait --merge "$REMOTE" "$LOCAL" "$REMOTE" "$LOCAL"
+                ;;
+            meld)
+                meld "$LOCAL" "$REMOTE"
+                ;;
+            kdiff3)
+                kdiff3 "$LOCAL" "$REMOTE"
+                ;;
+            vimdiff)
+                vimdiff "$LOCAL" "$REMOTE"
+                ;;
+            *)
+                # Try to use git mergetool infrastructure
+                warning "Unknown merge tool '$git_merge_tool', attempting to use git mergetool command"
+                git mergetool --tool="$git_merge_tool" -- "$LOCAL" "$REMOTE" 2>/dev/null || {
+                    warning "Failed to invoke '$git_merge_tool', falling back to VS Code"
+                    code --wait --merge "$REMOTE" "$LOCAL" "$REMOTE" "$LOCAL"
+                }
+                ;;
+        esac
+    fi
+}
+
 function copy_file()
 {
     local src_file="$1"
@@ -143,7 +228,7 @@ function copy_file()
         mkdir -p "$dest_dir"
     fi
     cp "$src_file" "$dest_file"
-    echo "File '${dest_file}' copied from '${src_file}'."
+    echo "File '${dest_file}' was copied from '${src_file}'."
 }
 
 # shellcheck disable=SC2154
@@ -152,21 +237,15 @@ semverTagReleaseRegex="^${minver_tag_prefix}${semverReleaseRex}$"
 get_arguments "$@"
 create_tag_regexes "$minver_tag_prefix"
 
-# TODO: remove these lines once the script is stable
-# shellcheck disable=SC2034
-{
-    verbose=true
-    quiet=false
-}
-
 # shellcheck disable=SC2119 # Use dump_all_variables "$@" if function's $1 should mean script's $1.
 dump_all_variables
 
 if [[ -z "$repos" ]]; then
-    error "The source repositories directory is not specified."
+    error "The source repositories directory was not specified."
 fi
+[[ -z "$target_repo" ]] && target_repo="$(basename "$(git rev-parse --show-toplevel 2> /dev/null)")" || true
 if [[ -z "$target_repo" ]]; then
-    error "No target repository specified."
+    error "No target repository specified and could not determine it from the current git repository."
 else
     if [[ ! -d "$target_repo" ]] || ! is_git_repo "$target_repo"; then
         if [[ -d "${repos%}/$target_repo" ]] && is_git_repo "${repos%}/$target_repo"; then
@@ -188,7 +267,6 @@ fi
 if ! is_on_or_after_latest_stable_tag "${repos}/vm2.DevOps" "$semverTagReleaseRegex"; then
     error "The HEAD of the 'vm2.DevOps' repository is before the latest stable tag."
 fi
-
 if [[ "$target_repo" =~ ${repos%}/.* ]]; then
     target_path="$target_repo"
 else
@@ -240,23 +318,24 @@ while [[ $i -lt ${#source_files[@]} ]]; do
         continue
     fi
 
-    if ! diff -a -w -B --strip-trailing-cr -s -y -W 167 --suppress-common-lines --color=auto "${source_file}" "${target_file}"
-    then
-        echo "Files ${source_file} and ${target_file} are different"
+    if ! differences "${source_file}" "${target_file}"; then
+        echo "File '${source_file}' is different from '${target_file}'."
+        # shellcheck disable=SC2154
         if [[ "$quiet" != true ]]; then
             case $actions in
                 "copy")
                     copy_file "$source_file" "$target_file"
                     ;;
                 "ask to copy")
-                    confirm "Do you want to copy the source file '${source_file}' to the target file '${target_file}'?" "y" && \
+                    confirm "Do you want to copy '${source_file}' to file '${target_file}'?" "y" && \
                     copy_file "$source_file" "$target_file" || true
                     ;;
                 "merge or copy")
                     case $(choose "What do you want to do?" \
                                   "Do nothing - continue" \
-                                  "Merge files using 'Visual Studio Code' (you need to have 'VSCode' installed)" \
-                                  "Copy source file to target file") in
+                                  "Merge the files" \
+                                  "Copy '$source_file' file to '$target_file'") in
+                        1) ;;
                         2) code --diff "$source_file" "$target_file" --new-window --wait ;;
                         3) copy_file "$source_file" "$target_file" ;;
                         *) ;;
@@ -271,5 +350,6 @@ while [[ $i -lt ${#source_files[@]} ]]; do
                     ;;
             esac
         fi
+        echo ""
     fi
 done
