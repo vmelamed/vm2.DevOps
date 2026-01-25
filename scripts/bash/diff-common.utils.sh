@@ -358,5 +358,5 @@ function copy_file()
         execute mkdir -p "$dest_dir"
     fi
     execute cp "$src_file" "$dest_file"
-    info "File '${dest_file}' was copied from '${src_file}'."
+    info "File '${src_file}' was copied to '${dest_file}'."
 }
