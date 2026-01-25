@@ -42,9 +42,13 @@ source "$script_dir/validate-vars.utils.sh"
 get_arguments "$@"
 dump_all_variables
 
-if ! command -v jq &> "$_ignore"; then
-    error "jq command not found. Please install jq."
-    exit 1
+if ! command -v -p jq &> "$_ignore" || ! command -v -p gh 2>&1 "$_ignore"; then
+    if execute sudo apt-get update && sudo apt-get install -y gh jq; then
+        info "GitHub CLI 'gh' and/or 'jq' successfully installed."
+    else
+        error "GitHub CLI 'gh' and/or 'jq' were not found and could not install them. Please have 'gh' and 'jq' installed."
+        exit 1
+    fi
 fi
 
 jq_empty='. == null or . == "" or . == []'
@@ -170,7 +174,8 @@ fi
     echo "| verbose              | $verbose              |"
 } | tee -a "$github_step_summary" 1>&2
 
-has_errors 2
+exit_if_has_errors
+
 info "✅ All variables validated successfully"
 
 # Output all variables to github_output for use in subsequent jobs

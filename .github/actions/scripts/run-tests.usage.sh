@@ -1,63 +1,57 @@
 #!/usr/bin/env bash
 
+# shellcheck disable=SC2154 # solution_dir is referenced but not assigned
 function usage_text()
 {
-    # shellcheck disable=SC2154 # solution_dir is referenced but not assigned.
+    local std_switches=""
+    local std_vars=""
+
+    if [[ $1 == true ]]; then
+        std_switches="
+Switches:
+$common_switches"
+        std_vars=$common_vars
+    fi
+
     cat << EOF
-Usage:
+Usage: ${script_name} [<test-project-path>] | [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
+Runs the tests in the specified test project and collects code coverage information. It assumes that the solution folder is two
+levels up from the project directory, i.e., <solution-root>/test/<test-project-dir>/<test-project>.csproj. All parameters are
+optional if the corresponding environment variables are set. If both are specified, the command line arguments take precedence
 
-    ${script_name} [<test-project-path>] |
-        [--<long option> <value>|-<short option> <value> |
-         --<long switch>|-<short switch> ]*
+Arguments:
+    <test-project-path>         The path to the test project file. Optional if the environment variable TEST_PROJECT is set
 
-    This script runs the tests in the specified test project and collects code
-    coverage information. It assumes that the solution folder is two levels up
-    from the project directory, i.e.,
-    <solution-root>/test/<test-project-dir>/<test-project>.csproj.
-    All parameters are optional if the corresponding environment variables are
-    set. If both are specified, the command line arguments take precedence.
-
-
-Parameters:
-    <test-project-path>
-        The path to the benchmark project file. Optional if the environment
-        variable TEST_PROJECT is set.
-
-Switches:$common_switches
 Options:
-    --artifacts | -a
-        Specifies the directory where to create the script's artifacts: summary,
-        report files, etc.
-        Initial value: '<solution root>/TestArtifacts'.
+  -a, --artifacts               Specifies the directory where to create the script's artifacts: summary, report files, etc
+                                Initial value: '<solution root>/TestArtifacts'
+  -c, --configuration           Specifies the build configuration to use ('Debug' or 'Release')
+                                Initial value from \$CONFIGURATION or default 'Release'
+  -d, --define                  Defines one or more user-defined pre-processor symbols to be used when building the test
+                                project, e.g. 'STAGING'. You can specify this option multiple times to define multiple symbols
+                                Initial value from \$PREPROCESSOR_SYMBOLS or default ''
+  -t, --min-coverage-pct        Specifies the minimum acceptable code coverage percentage (50-100)
+                                Initial value from \$MIN_COVERAGE_PCT or default 80
 
-    --configuration | -c
-        Specifies the build configuration to use ('Debug' or 'Release').
-        Initial value from \$CONFIGURATION or default 'Release'
-
-    --define | -d
-        Defines one or more user-defined pre-processor symbols to be used when
-        building the benchmark project, e.g. 'STAGING'. You can specify this
-        option multiple times to define multiple symbols.
-        Initial value from \$PREPROCESSOR_SYMBOLS or default ''
-
-    --min-coverage-pct | -t
-        Specifies the minimum acceptable code coverage percentage (50-100).
-        Initial value from \$MIN_COVERAGE_PCT or default 80
-
+$std_switches
 Environment Variables:
-    TEST_PROJECT            Path to the test project file.
-    ARTIFACT_DIR            Directory where test artifacts will be created.
-    CONFIGURATION           Build configuration ('Debug' or 'Release').
-    PREPROCESSOR_SYMBOLS    Pre-processor symbols to define when building the
-                            test project.
-    MIN_COVERAGE_PCT        Minimum acceptable code coverage percentage.
-
+  TEST_PROJECT                  Path to the test project file
+  ARTIFACT_DIR                  Directory where to create the script's artifacts
+  CONFIGURATION                 Build configuration ('Release' or 'Debug')
+  PREPROCESSOR_SYMBOLS          Pre-processor symbols to define when building the test project
+  MIN_COVERAGE_PCT              Minimum acceptable code coverage percentage
+$std_vars
 Outputs (to GITHUB_OUTPUT):
-    results-dir             The directory where test results are stored.
+  results-dir                   The directory where test results are stored
 EOF
 }
 
 function usage()
 {
-    display_usage_msg "$(usage_text)" "$@"
+    local long_help=true
+    if [[ $# -gt 0 && ($1 == true || $1 == false) ]]; then
+        long_help=$1
+        shift
+    fi
+    display_usage_msg "$(usage_text "$long_help")" "$@"
 }

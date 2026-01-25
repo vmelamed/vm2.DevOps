@@ -1,78 +1,85 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Script to move commits from a specific SHA onwards to a new branch
-# Usage: ./move-commits-to-branch.sh <commit-sha> <new-branch-name>
+# shellcheck disable=SC2154 # GIT_REPOS is referenced but not assigned. It is expected to be set in the environment.
+this_script=${BASH_SOURCE[0]}
 
-if [[ $# -lt 2 ]]; then
-    echo "Usage: $0 <commit-sha> <new-branch-name>" >&2
-    echo "Example: $0 ff5c2d182c0d3a01c1f1dfd66c9267f0569d9802 feature/my-feature" >&2
-    exit 1
+script_name=$(basename "$this_script")
+script_dir=$(dirname "$(realpath -e "$this_script")")
+common_dir=$(realpath "${script_dir%/}/../../.github/actions/scripts")
+
+declare -xr script_name
+declare -xr script_dir
+declare -xr common_dir
+
+# shellcheck disable=SC1091
+source "${common_dir}/_common.sh"
+
+declare -x commit_sha=""
+declare -x new_branch=""
+declare -x check_out_new_branch=false
+
+source "${script_dir}/move-commits-to-branch.utils.sh"
+source "${script_dir}/move-commits-to-branch.usage.sh"
+
+get_arguments "$@"
+
+# freeze the arguments
+declare -rx commit_sha
+declare -rx new_branch
+declare -rx check_out_new_branch
+
+if [[ -z "$commit_sha" || -z "$new_branch" ]]; then
+    usage false "The options '--commit-sha' and '--branch' are mandatory and cannot be null or empty" >&2
 fi
 
-COMMIT_SHA="$1"
-NEW_BRANCH="$2"
+if [[ ! "$commit_sha" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
+    usage false "The commit SHA must be a valid 7 to 40 hexadecimal digits string" >&2
+fi
 
+if [[ "$new_branch" == "main" ]]; then
+    usage false "The new branch name cannot be 'main'" >&2
+fi
 # Verify we're on main branch
-CURRENT_BRANCH=$(git branch --show-current)
-if [[ "$CURRENT_BRANCH" != "main" ]]; then
-    echo "Error: You must be on the 'main' branch. Currently on '$CURRENT_BRANCH'" >&2
-    exit 1
+current_branch=$(git branch --show-current)
+if [[ "$current_branch" != "main" ]]; then
+    usage false "You must be on the 'main' branch. Currently on '$current_branch'" >&2
 fi
-
 # Check for uncommitted changes
 if ! git diff-index --quiet HEAD --; then
-    echo "Error: You have uncommitted changes. Please commit or stash them first." >&2
+    usage false "You have uncommitted changes. Please commit or stash them first." >&2
     git status --short
-    exit 1
 fi
-
 # Verify the commit exists
-if ! git cat-file -e "$COMMIT_SHA^{commit}" 2>/dev/null; then
-    echo "Error: Commit '$COMMIT_SHA' does not exist" >&2
-    exit 1
+if ! git cat-file -e "$commit_sha^{commit}" 2>/dev/null; then
+    usage false "Commit '$commit_sha' does not exist" >&2
 fi
-
-# Show what will happen
-echo "Current branch: $CURRENT_BRANCH"
-echo "Commit to split at: $COMMIT_SHA"
-echo ""
-echo "This will:"
-echo "  1. Create new branch '$NEW_BRANCH' with all current commits"
-echo "  2. Reset main to commit BEFORE $COMMIT_SHA"
-echo "  3. Push both branches to GitHub"
-echo ""
-echo "Commits from $COMMIT_SHA onwards will be moved to '$NEW_BRANCH'"
-echo ""
 
 # Show the commits that will be moved
-echo "Commits that will be moved to '$NEW_BRANCH':"
-git log --oneline "$COMMIT_SHA^..$CURRENT_BRANCH"
+echo "Commits from $commit_sha onwards that would be moved to '$new_branch':"
+git log --oneline "$commit_sha^..$current_branch"
 echo ""
-
-read -p "Do you want to continue? (yes/no): " -r
-if [[ ! $REPLY =~ ^[Yy][Ee][Ss]$ ]]; then
-    echo "Aborted."
-    exit 0
+if ! confirm "Do you want to continue?" "n"; then
+    exit 1
 fi
 
 echo ""
-echo "Step 1: Creating branch '$NEW_BRANCH' at current HEAD..."
-git branch "$NEW_BRANCH"
+info "Step 1: Creating branch '$new_branch' at current HEAD..."
+git branch "$new_branch"
 
-echo "Step 2: Resetting main to commit before $COMMIT_SHA..."
-git reset --hard "$COMMIT_SHA^"
+info "Step 2: Resetting main to commit before $commit_sha..."
+git reset --hard "$commit_sha^"
 
-echo "Step 3: Pushing new branch to GitHub..."
-git push -u origin "$NEW_BRANCH"
+info "Step 3: Pushing new branch to the origin (GitHub)..."
+git push -u origin "$new_branch"
 
-echo "Step 4: Force pushing main to GitHub..."
+info "Step 4: Force pushing main to the origin (GitHub)..."
 git push --force origin main
 
+if [[ "$check_out_new_branch" == true ]]; then
+    info "Step 5: Checking out the new branch '$new_branch'..."
+    git checkout "$new_branch"
+fi
+
 echo ""
-echo "✅ Done!"
-echo "   - Branch '$NEW_BRANCH' created with commits from $COMMIT_SHA onwards"
-echo "   - Main reset to commit before $COMMIT_SHA"
-echo "   - Both branches pushed to GitHub"
-echo ""
-echo "To switch to the new branch: git checkout $NEW_BRANCH"
+info "Done! To switch to the new branch: git checkout $new_branch"

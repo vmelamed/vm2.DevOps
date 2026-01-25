@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
 semver_dir="$(dirname "${BASH_SOURCE[0]}")"
 

@@ -3,70 +3,51 @@
 # shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
 function get_arguments()
 {
-    if [[ "${#}" -eq 0 ]]; then return; fi
+    local option
 
-    # process --debugger first
-    for v in "$@"; do
-        if [[ "$v" == "--debugger" ]]; then
-            get_common_arg "--debugger"
-            break
-        fi
-    done
-    # shellcheck disable=SC2154 # v appears unused. Verify use (or export if used externally).
-    if [[ $debugger != "true" ]]; then
-        trap on_debug DEBUG
-        trap on_exit EXIT
-    fi
-
-    local flag
-    local value
-    local p
-
-    while [[ "${#}" -gt 0 ]]; do
-        # get the flag and convert it to lower case
-        flag="$1"
-        shift
-        if get_common_arg "$flag"; then
+    while [[ $# -gt 0 ]]; do
+        # get the option and convert it to lower case
+        option="$1"; shift
+        if get_common_arg "$option"; then
             continue
         fi
         # do not use short options -q -v -x -y
-        case "${flag,,}" in
+        case "${option,,}" in
             # do not use the common options:
-            --help|-h|--debugger|-q|--quiet-v|--verbose-x|--trace-y|--dry-run )
+            -h|-v|-q|-x|-y|--help|--debugger|--quiet|--verbose|--trace|--dry-run )
                 ;;
             --artifact|-a )
-               artifact_name="$1"
-               shift
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+               artifact_name="$1"; shift
                ;;
             --directory|-d )
-                artifacts_dir="$1"
-                shift
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                artifacts_dir="$1"; shift
                 ;;
             --repository|-r )
-                repository="$1";
-                shift
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                repository="$1"; shift
                 ;;
             --wf-id|-i )
-                workflow_id="$1"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                workflow_id="$1"; shift
                 workflow_name=""
                 workflow_path=""
-                shift
                 ;;
             --wf-name|-n )
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 workflow_id=""
-                workflow_name="$1"
+                workflow_name="$1"; shift
                 workflow_path=""
-                shift
                 ;;
             --wf-path|-p )
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 workflow_id=""
                 workflow_name="";
-                workflow_path="$1"
-                shift
+                workflow_path="$1"; shift
                 ;;
             * )
-                usage "Unknown option '$flag'."
-                exit 2
+                usage false "Unknown argument '$option'."
                 ;;
         esac
     done

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
 # This script defines a number of general purpose functions.
 # For the functions to be invocable by other scripts, this script needs to be sourced.
@@ -29,9 +29,6 @@ source "${common_dir}/_common.dump_vars.sh"
 source "${common_dir}/_common.semver.sh"
 source "${common_dir}/_common.predicates.sh"
 source "${common_dir}/_common.user.sh"
-
-# trap on_debug DEBUG
-# trap on_exit EXIT
 
 ## Depending on the value of $dry_run either executes or just displays what would have been executed.
 ## Usage: execute <command> [args...]

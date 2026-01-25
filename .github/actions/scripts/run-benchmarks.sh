@@ -22,7 +22,7 @@ source "$script_dir/run-benchmarks.utils.sh"
 get_arguments "$@"
 
 if [[ ! -s "$bm_project" ]]; then
-    usage "The specified benchmark project file '$bm_project' does not exist." >&2
+    usage false "The specified benchmark project file '$bm_project' does not exist." >&2
     exit 2
 fi
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
 declare -x build_result
 declare -x warnings_count

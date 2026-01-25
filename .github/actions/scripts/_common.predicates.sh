@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 if ! declare -pF "error" > "$_ignore"; then
@@ -70,34 +70,23 @@ function is_in() {
 }
 
 ## Tests the error counter to determine if there are any accumulated errors so far
-## Usage: has_errors [<flag>]. The flag is optional and doesn't matter what it is - if it is passed, the method calls `exit 2`.
+## Usage: exit_if_has_errors [<flag>]. The flag is optional and doesn't matter what it is - if it is passed, the method calls `exit 2`.
 ## Return: If it didn't exit, returns 1 if there are errors, 0 otherwise.
-function has_errors()
+function exit_if_has_errors()
 {
     if ((errors > 0)); then
-        if [[ -n $1 ]]; then
-            usage "❌  ERROR: $errors error(s) encountered. Please fix the above issues and try again."
-            exit 2
-        else
-            error "$errors error(s) encountered. Please fix the above issues and try again."
-        fi
-        return 1
+        usage false "$errors error(s) encountered. Please fix the above issues and try again."
+        exit 2
     fi
     return 0
 }
 
-## Exits the script if there are any accumulated errors so far.
-function exit_if_has_errors()
-{
-    has_errors 2
-}
-
 ## Tests if the specified directory is a Git repository.
-## Usage: is_git_repo <directory>
-function is_git_repo()
+## Usage: is_inside_work_tree <directory>
+function is_inside_work_tree()
 {
     if [[ $# -ne 1 ]]; then
-        error "The function is_git_repo() requires exactly one argument: the directory to test."
+        error "The function is_inside_work_tree() requires exactly one argument: the directory to test."
         return 2
     fi
 
@@ -110,7 +99,7 @@ function is_latest_stable_tag()
 {
     if [[ $# -lt 2 || $# -gt 3 ]]; then
         error "The function is_latest_stable_tag() takes 2 arguments: directory and regular expression for stable tag." \
-              "A third argument may be specified to fetch latest in main changes from remote."
+              "A third argument may be specified to fetch the latest changes in main from remote."
     fi
     if [[ ! -d "$1" ]]; then
         error "The specified directory '$1' does not exist."
@@ -122,7 +111,7 @@ function is_latest_stable_tag()
 
     local latest_tag current_commit tag_commit
 
-    is_git_repo "$1" || return 2
+    is_inside_work_tree "$1" || return 2
     if [[ $# -eq 3 && "$3" != "true" ]]; then
         git -C "$1" fetch origin main --quiet
     fi
@@ -144,7 +133,7 @@ function is_after_latest_stable_tag()
 {
     if [[ $# -lt 2 || $# -gt 3 ]]; then
         error "The function is_after_latest_stable_tag() takes 2 arguments: directory and regular expression for stable tag." \
-              "A third argument may be specified to fetch latest in main changes from remote."
+              "A third argument may be specified to fetch the latest changes in main from remote."
     fi
     if [[ ! -d "$1" ]]; then
         error "The specified directory '$1' does not exist."
@@ -156,7 +145,7 @@ function is_after_latest_stable_tag()
 
     local latest_tag tag_commit commits_after
 
-    is_git_repo "$1" || return 2
+    is_inside_work_tree "$1" || return 2
     if [[ $# -eq 3 && "$3" != "true" ]]; then
         git -C "$1" fetch origin main --quiet
     fi
@@ -178,7 +167,7 @@ function is_on_or_after_latest_stable_tag()
 {
     if [[ $# -lt 2 || $# -gt 3 ]]; then
         error "The function is_on_or_after_latest_stable_tag() takes 2 arguments: directory and regular expression for stable tag." \
-              "A third argument may be specified to fetch latest in main changes from remote."
+              "A third argument may be specified to fetch the latest changes in main from remote."
     fi
     if [[ ! -d "$1" ]]; then
         error "The specified directory '$1' does not exist."
@@ -190,7 +179,7 @@ function is_on_or_after_latest_stable_tag()
 
     local latest_tag tag_commit
 
-    is_git_repo "$1" || return 2
+    is_inside_work_tree "$1" || return 2
     if [[ $# -eq 3 && "$3" != "true" ]]; then
         git -C "$1" fetch origin main --quiet
     fi

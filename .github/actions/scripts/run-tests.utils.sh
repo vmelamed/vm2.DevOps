@@ -3,50 +3,32 @@
 # shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
 function get_arguments()
 {
-    if [[ "${#}" -eq 0 ]]; then return; fi
-
-    # process --debugger first
-    for v in "$@"; do
-        if [[ "$v" == "--debugger" ]]; then
-            get_common_arg "--debugger"
-            break
-        fi
-    done
-    # shellcheck disable=SC2154 # v appears unused. Verify use (or export if used externally).
-    if [[ $debugger != "true" ]]; then
-        trap on_debug DEBUG
-        trap on_exit EXIT
-    fi
-
-    local flag
+    local option
     local value
-    local p
 
-    while [[ "${#}" -gt 0 ]]; do
-        # get the flag and convert it to lower case
-        flag="$1"
-        shift
-        if get_common_arg "$flag"; then
+    while [[ $# -gt 0 ]]; do
+        # get the option and convert it to lower case
+        option="$1"; shift
+        if get_common_arg "$option"; then
             continue
         fi
-
         # do not use short options -q -v -x -y
-        case "${flag,,}" in
+        case "${option,,}" in
             # do not use the common options:
-            --help|-h|--debugger|-q|--quiet-v|--verbose-x|--trace-y|--dry-run )
+            -h|-v|-q|-x|-y|--help|--debugger|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
             --artifacts|-a )
-                value="$1"
-                shift
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                value="$1"; shift
                 artifacts_dir=$(realpath -m "$value")
                 ;;
 
             --define|-d    )
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 value="$1"; shift
                 if ! [[ "$value" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
-                    usage "The specified preprocessor symbol '$value' is not valid."
-                    exit 2
+                    usage false "The specified preprocessor symbol '$value' is not valid."
                 fi
                 if [[ ! "$preprocessor_symbols" =~ (^|;)"$value"($|;) ]]; then
                     preprocessor_symbols="$value $preprocessor_symbols"   # NOTE: space-separated!
@@ -54,29 +36,28 @@ function get_arguments()
                 ;;
 
             --min-coverage-pct|-t )
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 value="$1"; shift
                 if ! [[ "$value" =~ ^[0-9]+$ ]] || (( value < 0 || value > 100 )); then
-                    usage "The coverage threshold must be an integer between 0 and 100. Got '$value'."
-                    exit 2
+                    usage false "The coverage threshold must be an integer between 0 and 100. Got '$value'."
                 fi
                 min_coverage_pct=$((value + 0))  # ensure it's an integer
                 ;;
 
             --configuration|-c )
-                value="$1"
-                shift
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                value="$1"; shift
                 configuration="${value,,}"
                 configuration="${configuration^}"
                 if ! is_in "$configuration" "Release" "Debug"; then
-                    usage "The coverage threshold must be either 'Release' or 'Debug'. Got '$value'."
-                    exit 2
+                    usage false "The coverage threshold must be either 'Release' or 'Debug'. Got '$value'."
                 fi
                 ;;
 
-            * ) value="$flag"
+            * ) value="$option"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 if [[ ! -s "$value" ]]; then
-                    usage "The specified test project file '$value' does not exist."
-                    exit 2
+                    usage false "The specified test project file '$value' does not exist."
                 fi
                 test_project="$value"
                 ;;

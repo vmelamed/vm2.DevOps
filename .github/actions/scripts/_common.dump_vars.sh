@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
 gth="┌────────────────────────────────────────────────────────────────────────────"
 
@@ -88,7 +88,7 @@ function pop_state() {
 }
 
 function dump_vars() {
-    if (( $# == 0 )); then
+    if [[ $verbose == false ]] || (( $# == 0 )); then
         return 0
     fi
 
@@ -105,11 +105,6 @@ function dump_vars() {
             * ) ;;
         esac
     done
-
-    if [[ $verbose == false ]]; then
-        pop_state
-        return 0
-    fi
 
     # for the proper behavior of this function change some global flags (to be restored before returning from the function)
     local -n table
@@ -151,8 +146,8 @@ function dump_vars() {
                 ;;
         esac
     done
-    echo "${table["bottom"]}"
-    sync
+    echo "${table["bottom"]}"; sync
+
     press_any_key
     pop_state
     return 0

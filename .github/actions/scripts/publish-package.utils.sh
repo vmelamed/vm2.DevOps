@@ -4,94 +4,70 @@
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 function get_arguments()
 {
-    if [[ "${#}" -eq 0 ]]; then return; fi
+    local option
 
-    # process --debugger first
-    for v in "$@"; do
-        if [[ "$v" == "--debugger" ]]; then
-            get_common_arg "--debugger"
-            break
-        fi
-    done
-    # shellcheck disable=SC2154 # v appears unused. Verify use (or export if used externally).
-    if [[ $debugger != "true" ]]; then
-        trap on_debug DEBUG
-        trap on_exit EXIT
-    fi
-
-    local flag
-    local value
-
-    while [[ "${#}" -gt 0 ]]; do
-        # get the flag and convert it to lower case
-        flag="$1"
-        shift
-        if get_common_arg "$flag"; then
+    while [[ $# -gt 0 ]]; do
+        # get the option and convert it to lower case
+        option="$1"; shift
+        if get_common_arg "$option"; then
             continue
         fi
-
-        case "${flag,,}" in
+        case "${option,,}" in
             # do not use the common options:
-            --help|-h|--debugger|-q|--quiet-v|--verbose-x|--trace-y|--dry-run )
+            -h|-v|-q|-x|-y|--help|--debugger|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
             --package-project|-p )
-                value="$1"; shift
-                package_project="$value"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                package_project="$1"; shift
                 ;;
 
             --nuget-server|-n )
-                value="$1"; shift
-                nuget_server="$value"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                nuget_server="$1"; shift
                 ;;
 
             --preprocessor-symbols|-s )
-                value="$1"; shift
-                preprocessor_symbols="$value"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                preprocessor_symbols="$1"; shift
                 ;;
 
             --minver-tag-prefix|-t )
-                value="$1"; shift
-                minver_tag_prefix="$value"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                minver_tag_prefix="$1"; shift
                 ;;
 
             --minver-prerelease-id|-i )
-                value="$1"; shift
-                minver_prerelease_id="$value"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                minver_prerelease_id="$1"; shift
                 ;;
 
             --repo-owner|-o )
-                value="$1"; shift
-                repo_owner="$value"
-                ;;
-
-            --version|-v )
-                value="$1"; shift
-                version="$value"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                repo_owner="$1"; shift
                 ;;
 
             --git-tag|-g )
-                value="$1"; shift
-                git_tag="$value"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                git_tag="$1"; shift
                 ;;
 
             --reason|-r )
-                value="$1"; shift
-                reason="$value"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                reason="$1"; shift
                 ;;
 
             --artifacts-saved|-a )
-                value="$1"; shift
-                artifacts_saved="$value"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                artifacts_saved="$1"; shift
                 ;;
 
             --artifacts-dir|-d )
-                value="$1"; shift
-                artifacts_dir="$value"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                artifacts_dir="$1"; shift
                 ;;
 
-            * ) usage "Unknown option: $flag"
-                exit 2
+            * ) usage false "Unknown option: $option"
                 ;;
         esac
     done

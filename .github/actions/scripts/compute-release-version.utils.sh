@@ -4,58 +4,39 @@
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 function get_arguments()
 {
-    if [[ "${#}" -eq 0 ]]; then return; fi
+    local option
 
-    # process --debugger first
-    for v in "$@"; do
-        if [[ "$v" == "--debugger" ]]; then
-            get_common_arg "$v"
-            break
-        fi
-    done
-
-    if [[ $debugger != "true" ]]; then
-        trap on_debug DEBUG
-        trap on_exit EXIT
-    fi
-
-    local flag
-    local value
-
-    while [[ "${#}" -gt 0 ]]; do
-        flag="$1"
-        shift
-        if get_common_arg "$flag"; then
+    while [[ $# -gt 0 ]]; do
+        option="$1"; shift
+        if get_common_arg "$option"; then
             continue
         fi
-
-        case "${flag,,}" in
+        case "${option,,}" in
             # do not use the common options:
-            --help|-h|--debugger|-q|--quiet-v|--verbose-x|--trace-y|--dry-run )
+            -h|-v|-q|-x|-y|--help|--debugger|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
             --package-projects|-p )
-                value="$1"; shift
-                package_projects="$value"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                package_projects="$1"; shift
                 ;;
 
             --nuget-server|-n )
-                value="$1"; shift
-                nuget_server="$value"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                nuget_server="$1"; shift
                 ;;
 
             --minver-tag-prefix|-t )
-                value="$1"; shift
-                minver_tag_prefix="$value"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                minver_tag_prefix="$1"; shift
                 ;;
 
             --reason|-r )
-                value="$1"; shift
-                reason="$value"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                reason="$1"; shift
                 ;;
 
-            * ) usage "Unknown option: $flag"
-                exit 2
+            * ) usage false "Unknown option: $option"
                 ;;
         esac
     done

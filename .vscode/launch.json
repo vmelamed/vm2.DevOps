@@ -1,0 +1,49 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "Bash-Debug diff-common.sh",
+            "cwd": "${workspaceFolder}",
+            "program": "/home/valo/repos/vm2.DevOps/scripts/bash/diff-common.sh",
+            "terminalKind": "integrated",
+            "env": {
+                "DEBUGGER": true,
+                "VERBOSE": true,
+            },
+            "args": [
+                "vm2.Templates/templates/AddNewPackage/content"
+            ]
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "Bash-Debug (current file)",
+            "cwd": "${workspaceFolder}",
+            "program": "${file}",
+            "terminalKind": "integrated",
+            "env": {
+                "DEBUGGER": true,
+                "VERBOSE": true,
+            },
+            "args": []
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "Bash-Debug (select script from list of sh files)",
+            "cwd": "${workspaceFolder}",
+            "terminalKind": "integrated",
+            "program": "${command:SelectScriptName}",
+            "env": {
+                "DEBUGGER": true,
+                "VERBOSE": true,
+            },
+            "args": []
+        },
+    ]
+}

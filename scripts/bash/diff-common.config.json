@@ -118,25 +118,5 @@
         "sourceFile": "${repos}/vm2.DevOps/.github/actions/scripts/.shellcheckrc",
         "targetFile": "${target_path}/scripts/.shellcheckrc",
         "action": "merge or copy"
-    },
-    {
-        "sourceFile": "${repos}/vm2.DevOps/scripts/bash/diff-common.sh",
-        "targetFile": "${target_path}/scripts/diff-common.sh",
-        "action": "copy"
-    },
-    {
-        "sourceFile": "${repos}/vm2.DevOps/scripts/bash/diff-common.utils.sh",
-        "targetFile": "${target_path}/scripts/diff-common.utils.sh",
-        "action": "copy"
-    },
-    {
-        "sourceFile": "${repos}/vm2.DevOps/scripts/bash/diff-common.usage.sh",
-        "targetFile": "${target_path}/scripts/diff-common.usage.sh",
-        "action": "copy"
-    },
-    {
-        "sourceFile": "${repos}/vm2.DevOps/scripts/bash/diff-common.config.json",
-        "targetFile": "${target_path}/scripts/diff-common.config.json",
-        "action": "copy"
     }
 ]

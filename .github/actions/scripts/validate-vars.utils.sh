@@ -4,81 +4,75 @@
 # shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
 function get_arguments()
 {
-    if [[ "${#}" -eq 0 ]]; then return; fi
+    local option
 
-    # process --debugger first
-    for v in "$@"; do
-        if [[ "$v" == "--debugger" ]]; then
-            get_common_arg "--debugger"
-            break
-        fi
-    done
-    if [[ $debugger != "true" ]]; then
-        trap on_debug DEBUG
-        trap on_exit EXIT
-    fi
-
-    local flag
-    local value
-
-    while [[ "${#}" -gt 0 ]]; do
-        flag="$1"
-        shift
-        if get_common_arg "$flag"; then
+    while [[ $# -gt 0 ]]; do
+        option="$1"; shift
+        if get_common_arg "$option"; then
             continue
         fi
-
-        case "${flag,,}" in
+        case "${option,,}" in
             # do not use the common options:
-            --help|-h|--debugger|-q|--quiet-v|--verbose-x|--trace-y|--dry-run )
+            -h|-v|-q|-x|-y|--help|--debugger|--quiet|--verbose|--trace|--dry-run )
                 ;;
+
             --build-projects|-b )
-                value="$1"; shift
-                build_projects="$value"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                build_projects="$1"; shift
                 ;;
+
             --test-projects|-t )
-                value="$1"; shift
-                test_projects="$value"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                test_projects="$1"; shift
                 ;;
+
             --benchmark-projects|-p )
-                value="$1"; shift
-                benchmark_projects="$value"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                benchmark_projects="$1"; shift
                 ;;
+
             --os|-o )
-                value="$1"; shift
-                os="$value"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                os="$1"; shift
                 ;;
+
             --dotnet-version )
-                value="$1"; shift
-                dotnet_version="$value"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                dotnet_version="$1"; shift
                 ;;
+
             --configuration|-c )
-                value="$1"; shift
-                configuration="$value"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                configuration="$1"; shift
                 ;;
+
             --preprocessor-symbols|-d )
-                value="$1"; shift
-                preprocessor_symbols="$value"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                preprocessor_symbols="$1"; shift
                 ;;
+
             --min-coverage-pct|-min )
-                value="$1"; shift
-                min_coverage_pct="$value"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                min_coverage_pct="$1"; shift
                 ;;
+
             --max-regression-pct|-max )
-                value="$1"; shift
-                max_regression_pct="$value"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                max_regression_pct="$1"; shift
                 ;;
+
             --minver-tag-prefix|-f )
-                value="$1"; shift
-                minver_tag_prefix="$value"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                minver_tag_prefix="$1"; shift
                 ;;
+
             --minver-prerelease-id|-i )
-                value="$1"; shift
-                minver_prerelease_id="$value"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                minver_prerelease_id="$1"; shift
                 ;;
+
             * )
-                usage "Unknown option: $flag"
-                exit 2
+                usage false "Unknown option: $option"
                 ;;
         esac
     done

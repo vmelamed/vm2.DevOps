@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 if ! declare -pF "error" > "$_ignore"; then
@@ -30,16 +30,13 @@ function confirm()
         error "The function confirm() requires at least one parameter: the prompt and a second, optional parameter -default response."
         return 2
     fi
-    if [[ -n "$2" && ! "$2" =~ ^[NYny]$ ]]; then
-        error "If a default response parameter is specified for the function confirm(), it must be either 'y' or 'n'"
-        exit 2
-    fi
-
-    local default
     local prompt="$1"
-
-    default=$(to_lower "${2:-y}")
-
+    local default
+    if [[ $# -eq 2 ]]; then
+        default=${2,,}
+    else
+        default="y"
+    fi
     if [[ "$quiet" == true ]]; then
         printf '%s' "$default"
         return 0

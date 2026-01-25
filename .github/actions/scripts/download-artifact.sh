@@ -75,9 +75,13 @@ declare -x github_output=${github_output:-/dev/stdout}
 declare -x github_step_summary=${github_step_summary:-/dev/stdout}
 
 # install GitHub CLI and jq if not already installed
-if ! command -v jq >"$_ignore" 2>&1; then
-    execute sudo apt-get update && sudo apt-get install -y gh jq
-    echo "GitHub CLI and jq successfully installed."
+if ! command -v -p jq &> "$_ignore" || ! command -v -p gh 2>&1 "$_ignore"; then
+    if execute sudo apt-get update && sudo apt-get install -y gh jq; then
+        info "GitHub CLI 'gh' and/or 'jq' successfully installed."
+    else
+        error "GitHub CLI 'gh' and/or 'jq' were not found and could not install them. Please have 'gh' and 'jq' installed."
+        exit 1
+    fi
 fi
 
 declare -a runs

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
 ## Sanitizes user input by removing or escaping potentially dangerous characters.
 ## Returns 0 if input is safe, 1 if it contains unsafe characters.

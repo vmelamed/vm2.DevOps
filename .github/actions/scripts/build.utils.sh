@@ -4,65 +4,44 @@
 # shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
 function get_arguments()
 {
-    if [[ "${#}" -eq 0 ]]; then return; fi
+    local option
 
-    # process --debugger first
-    for v in "$@"; do
-        if [[ "$v" == "--debugger" ]]; then
-            get_common_arg "--debugger"
-            break
-        fi
-    done
-    if [[ $debugger != "true" ]]; then
-        trap on_debug DEBUG
-        trap on_exit EXIT
-    fi
-
-    local flag
-    local value
-
-    while [[ "${#}" -gt 0 ]]; do
-        flag="$1"
-        shift
-        if get_common_arg "$flag"; then
+    while [[ $# -gt 0 ]]; do
+        option="$1"; shift
+        if get_common_arg "$option"; then
             continue
         fi
-
-        case "${flag,,}" in
+        case "${option,,}" in
             # do not use the common options:
-            --help|-h|--debugger|-q|--quiet-v|--verbose-x|--trace-y|--dry-run )
+            -h|-v|-q|-x|-y|--help|--debugger|--quiet|--verbose|--trace|--dry-run )
                 ;;
             --build-project|-b )
-                value="$1"; shift
-                build_project="$value"
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                if [[ -n $build_project ]]; then
+                    usage false "The script accepts 0 or 1 project or solution."
+                fi
+                build_project="$1"; shift
                 ;;
             --configuration|-c )
-                value="$1"; shift
-                configuration="$value"
+                configuration="$1"; shift
                 ;;
             --preprocessor-symbols|-d )
-                value="$1"; shift
-                preprocessor_symbols="$value"
+                preprocessor_symbols="$1"; shift
                 ;;
             --minver-tag-prefix|-f )
-                value="$1"; shift
-                minver_tag_prefix="$value"
+                minver_tag_prefix="$1"; shift
                 ;;
             --minver-prerelease-id|-i )
-                value="$1"; shift
-                minver_prerelease_id="$value"
+                minver_prerelease_id="$1"; shift
                 ;;
             --nuget-username )
-                value="$1"; shift
-                nuget_username="$value"
+                nuget_username="$1"; shift
                 ;;
             --nuget-password )
-                value="$1"; shift
-                nuget_password="$value"
+                nuget_password="$1"; shift
                 ;;
             * )
-                echo "Unknown argument: $flag"
-                return 1
+                usage false "Unknown argument: $option"
                 ;;
         esac
     done
