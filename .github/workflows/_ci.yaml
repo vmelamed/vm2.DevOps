@@ -127,7 +127,7 @@ jobs:
               --configuration        '${{ inputs.configuration }}' \
               --preprocessor-symbols '${{ inputs.preprocessor-symbols }}' \
               --min-coverage-pct     '${{ inputs.min-coverage-pct }}' \
-              --max-regression-pct   '${{ inputs.max-regression-pct }}'
+              --max-regression-pct   '${{ inputs.max-regression-pct }}' \
               --minver-tag-prefix    '${{ inputs.minver-tag-prefix }}' \
               --minver-prerelease-id '${{ inputs.minver-prerelease-id }}'
 
