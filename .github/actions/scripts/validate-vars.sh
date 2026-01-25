@@ -156,23 +156,20 @@ if [[ "$verbose" != "true" && "$verbose" != "false" ]]; then
     warning_var verbose "verbose must be true/false." "$defaultVerbose"
 fi
 
-{
-    echo ""
-    echo "| Variable             | Value                 |"
-    echo "|:---------------------|:----------------------|"
-    echo "| build-projects       | $build_projects       |"
-    echo "| test-projects        | $test_projects        |"
-    echo "| benchmark-projects   | $benchmark_projects   |"
-    echo "| os                   | $os                   |"
-    echo "| dotnet-version       | $dotnet_version       |"
-    echo "| configuration        | $configuration        |"
-    echo "| preprocessor-symbols | $preprocessor_symbols |"
-    echo "| min-coverage-pct     | $min_coverage_pct     |"
-    echo "| max-regression-pct   | $max_regression_pct   |"
-    echo "| minver-tag-prefix    | $minver_tag_prefix    |"
-    echo "| minver-prerelease-id | $minver_prerelease_id |"
-    echo "| verbose              | $verbose              |"
-} | tee -a "$github_step_summary" 1>&2
+dump_vars --quiet --force --markdown \
+    -h "Validated Variables" \
+    build_projects \
+    test_projects \
+    benchmark_projects \
+    os \
+    dotnet_version \
+    configuration \
+    preprocessor_symbols \
+    min_coverage_pct \
+    max_regression_pct \
+    minver_tag_prefix \
+    minver_prerelease_id \
+    | tee -a "$github_step_summary" 1>&2    # add more variables above this line
 
 exit_if_has_errors
 
@@ -192,5 +189,4 @@ args_to_github_output \
     max_regression_pct \
     minver_tag_prefix \
     minver_prerelease_id \
-    verbose \
     # add more variables above this line
