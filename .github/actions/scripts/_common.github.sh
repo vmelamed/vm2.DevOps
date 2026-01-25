@@ -25,7 +25,6 @@ unset -f error
 unset -f warning
 unset -f info
 unset -f trace
-unset -f warning_var
 
 ## Shell function to log error messages to the standard output and to the GitHub Actions step summary ($github_step_summary).
 ## Increments the error counter.
@@ -77,10 +76,20 @@ function info()
 function trace() {
     # shellcheck disable=SC2154 # variable is referenced but not assigned.
     if [[ "$verbose" == true ]]; then
-        if [[ "$trace_to_summary" == true ]]; then
-            echo "🐾 TRACE: $*" | tee -a "$github_step_summary"
+        if [[ $# -gt 0 ]]; then
+            if [[ "$trace_to_summary" == true ]]; then
+                echo "🐾 TRACE: $*" | tee -a "$github_step_summary"
+            else
+                echo "🐾 TRACE: $*"
+            fi
         else
-            echo "🐾 TRACE: $*"
+            while IFS= read -r line; do
+                if [[ "$trace_to_summary" == true ]]; then
+                    echo "🐾 TRACE: $line" | tee -a "$github_step_summary"
+                else
+                    echo "🐾 TRACE: $line"
+                fi
+            done
         fi
     fi
     return 0
