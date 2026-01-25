@@ -111,7 +111,12 @@ while [[ $i -lt ${#source_files[@]} ]]; do
         continue
     fi
 
-    if are_different "${source_file}" "${target_file}"; then
+    show_diff=true
+    if is_in "$actions" "copy" "merge" "ignore"; then
+        show_diff=false
+    fi
+
+    if are_different "${source_file}" "${target_file}" "$show_diff"; then
         echo "File '${source_file}' is different from '${target_file}'."
         # shellcheck disable=SC2154
         if [[ "$quiet" != true ]]; then
@@ -119,9 +124,19 @@ while [[ $i -lt ${#source_files[@]} ]]; do
                 "copy")
                     copy_file "$source_file" "$target_file"
                     ;;
+                "merge")
+                    merge "$target_file" "$source_file" || true
+                    ;;
+                "ignore")
+                    continue
+                    ;;
                 "ask to copy")
                     confirm "Do you want to copy '${source_file}' to file '${target_file}'?" "y" && \
-                    copy_file "$source_file" "$target_file" || true
+                    copy_file "$source_file" "$target_file"
+                    ;;
+                "ask to merge")
+                    confirm "Do you want to merge '${source_file}' to file '${target_file}'?" "y" && \
+                    merge "$target_file" "$source_file" || true
                     ;;
                 "merge or copy")
                     case $(choose "What do you want to do?" \
@@ -129,13 +144,10 @@ while [[ $i -lt ${#source_files[@]} ]]; do
                                   "Merge the files" \
                                   "Copy '$source_file' file to '$target_file'") in
                         1) ;;
-                        2) merge "$source_file" "$target_file" ;;
+                        2) merge "$target_file" "$source_file" || true ;;
                         3) copy_file "$source_file" "$target_file" ;;
                         *) ;;
                     esac
-                    ;;
-                "ignore")
-                    continue
                     ;;
                 *)
                     error "Unknown action '$actions' for files '${source_file}' and '${target_file}'." || 0

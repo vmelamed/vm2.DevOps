@@ -6,7 +6,7 @@ declare -xr common_dir
 
 declare -xr config_file="${script_dir}/diff-common.config.json"
 
-declare -ar valid_actions=("ask to copy" "copy" "merge or copy" "ignore")
+declare -ar valid_actions=("copy" "merge" "ignore" "ask to copy" "ask to merge" "merge or copy")
 
 all_actions_str=$(print_sequence -s=', ' -q='"' "${valid_actions[@]}")
 declare -xr all_actions_str
@@ -16,7 +16,7 @@ declare REMOTE=""
 
 declare -x diff_tool=""
 declare -x diff_command=""
-declare -xr default_diff_tool="diff" # "delta"
+declare -xr default_diff_tool="delta" # "diff"
 declare -rA diff_commands=(
     ["code"]="code --new-window --wait --diff \"\$LOCAL\" \"\$REMOTE\""
     ["vscode"]="code --new-window --wait --diff \"\$LOCAL\" \"\$REMOTE\""
@@ -34,8 +34,8 @@ declare -x merge_tool=""
 declare -x merge_command=""
 declare -xr default_merge_tool="code"
 declare -rA merge_commands=(
-    ["code"]="code --new-window --wait --merge \"\$LOCAL\" \"\$REMOTE\" \"\$LOCAL\" \"\$REMOTE\""
-    ["vscode"]="code --new-window --wait --merge \"\$LOCAL\" \"\$REMOTE\" \"\$LOCAL\" \"\$REMOTE\""
+    ["code"]="code --new-window --wait --diff \"\$REMOTE\" \"\$LOCAL\""
+    ["vscode"]="code --new-window --wait --merge \"\$REMOTE\" \"\$LOCAL\" \"\$REMOTE\" \"\$LOCAL\""
     ["meld"]="meld \"\$LOCAL\" \"\$REMOTE\""
     ["kdiff3"]="kdiff3 \"\$LOCAL\" \"\$REMOTE\""
     ["vimdiff"]="vimdiff \"\$LOCAL\" \"\$REMOTE\""
@@ -172,6 +172,7 @@ function configure()
 
     # Populate the arrays
     local -i i=0
+    local source_file target_file action
     while IFS='=' read -r source_file target_file action; do
         if [[ -z "$source_file" ]]; then
             error "Empty source file path found in $config_file." || true
@@ -225,20 +226,21 @@ function customize()
 
     if [[ -s "$custom_config" ]]; then
         # Read each key-value pair from JSON
-        while IFS='=' read -r rel_path action; do
+        local  relative_path action
+        while IFS='=' read -r relative_path action; do
             # Validate action
             if ! is_in "$action" "${valid_actions[@]}"; then
-                warning "Invalid action '$action' for '$rel_path' in $custom_config - must be one of: $all_actions_str."
+                warning "Invalid action '$action' for '$relative_path' in $custom_config - must be one of: $all_actions_str."
                 continue
             fi
             # Validate the path
-            if [[ -z "$rel_path" ]]; then
+            if [[ -z "$relative_path" ]]; then
                 warning "Empty relative path in $custom_config."
                 continue
             fi
 
             # Find corresponding target file and source file
-            local target_file="${target_path}/${rel_path}"
+            local target_file="${target_path}/${relative_path}"
             local source_file=""
             local found=false
 
@@ -251,7 +253,7 @@ function customize()
             done
 
             if [[ "$found" == false ]]; then
-                warning "Path '$rel_path' from $custom_config does not match any known target relative path."
+                warning "Path '$relative_path' from $custom_config does not match any known target relative path."
                 continue
             fi
 
@@ -292,8 +294,14 @@ function customize()
     # Which merge tool to use:
     if [[ -z $merge_tool || -z $merge_command ]] || ! (command -p -v "$merge_tool" || which "$merge_tool" &>"$_ignore"); then
         # If we didn't get a merge tool from the config file, get it from git:
-        merge_tool=$(git config --global --get merge.tool 2>/dev/null) && \
-        merge_command=$(git config --global --get "mergetool.$merge_tool.cmd" 2>/dev/null || true)
+        merge_tool=$(git config --global --get merge.tool 2>/dev/null)
+        if is_in "$merge_tool" "${!merge_commands[@]}"; then
+            # our merge commands work better in this script than the configured in git ones
+            merge_command=${merge_commands[$merge_tool]}
+        else
+            # we don't know it - get the git configured command
+            merge_command=$(git config --global --get "mergetool.$merge_tool.cmd" 2>/dev/null || true)
+        fi
         if [[ -z "$merge_tool" ]] || \
               ! (command -v -p "$merge_tool" > "$_ignore" || which "$merge_tool" &>"$_ignore"); then
             trace "There is no merge tool configured in git, or it is inaccessible. Will try the default $default_merge_tool."
@@ -317,12 +325,17 @@ function customize()
 ## Usage: are_different <local-file> <remote-file>
 function are_different()
 {
+    local display_diff=${3:-true}
+
     LOCAL=$1
     REMOTE=$2
 
     # compare fast, return fast, if no significant diffs; otherwise continue with the fancy diff tool of choice
     if diff -q -w -B "$LOCAL" "$REMOTE" > "$_ignore"; then
         return 1
+    fi
+    if [[ "$display_diff" != true ]]; then
+        return 0
     fi
     local line=$diff_command
     eval "$line"
@@ -334,10 +347,10 @@ function are_different()
 # shellcheck disable=SC2034 # BASE appears unused. Verify use (or export if used externally).
 function merge()
 {
-    REMOTE=$1
-    LOCAL=$2
-    BASE=$1
-    MERGED=$2
+    REMOTE=$2
+    LOCAL=$1
+    BASE=$2
+    MERGED=$1
 
     local line=$merge_command
     eval "$line"

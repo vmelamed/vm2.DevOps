@@ -55,24 +55,24 @@
         "action": "copy"
     },
     {
+        "sourceFile": "${repos}/.github/workflow-templates/ClearCache.yaml",
+        "targetFile": "${target_path}/.github/workflows/ClearCache.yaml",
+        "action": "copy"
+    },
+    {
         "sourceFile": "${repos}/.github/workflow-templates/CI.yaml",
         "targetFile": "${target_path}/.github/workflows/CI.yaml",
-        "action": "merge or copy"
+        "action": "ask to merge"
     },
     {
         "sourceFile": "${repos}/.github/workflow-templates/Prerelease.yaml",
         "targetFile": "${target_path}/.github/workflows/Prerelease.yaml",
-        "action": "merge or copy"
+        "action": "ask to merge"
     },
     {
         "sourceFile": "${repos}/.github/workflow-templates/Release.yaml",
         "targetFile": "${target_path}/.github/workflows/Release.yaml",
-        "action": "merge or copy"
-    },
-    {
-        "sourceFile": "${repos}/.github/workflow-templates/ClearCache.yaml",
-        "targetFile": "${target_path}/.github/workflows/ClearCache.yaml",
-        "action": "merge or copy"
+        "action": "ask to merge"
     },
     {
         "sourceFile": "${repos}/vm2.DevOps/.github/actions/scripts/_common.diagnostics.sh",

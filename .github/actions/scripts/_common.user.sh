@@ -23,45 +23,33 @@ function press_any_key()
 ## value "true", the function will not display the prompt and will assume the default response or 'y'.
 ## Parameter 1 - the prompt to confirm.
 ## Parameter 2 - the default response if the user presses [Enter]. When specified should be either 'y' or 'n'. Optional.
-## Outputs the result to stdout as 'y' or 'n'.
+## Returns 0 if the response is 'y', or 1 if the response is 'n'.
+## Outputs the response to stdout as 'y' or 'n'.
 function confirm()
 {
     if [[ $# -eq 0 || $# -gt 2 || -z "$1" ]]; then
         error "The function confirm() requires at least one parameter: the prompt and a second, optional parameter -default response."
         return 2
     fi
-    local prompt="$1"
+
     local default
-    if [[ $# -eq 2 ]]; then
-        default=${2,,}
-    else
-        default="y"
-    fi
-    if [[ "$quiet" == true ]]; then
-        printf '%s' "$default"
-        return 0
-    fi
+    [[ $# -eq 2 ]] && default=${2,,} || default="y"
 
-    local suffix
+    local response=$default
+    if [[ "$quiet" != true ]]; then
+        local prompt="$1"
+        local suffix
+        [[ "$default" == y ]] && suffix="[Y/n]" || suffix="[y/N]"
 
-    if [[ "$default" == y ]]; then
-        suffix="[Y/n]"
-    else
-        suffix="[y/N]"
+        while true; do
+            read -rp "$prompt $suffix: " response >&2
+            response=${response:-$default}
+            response=${response,,}
+            [[ "$response" =~ ^[yn]$ ]] && break
+            warning "Please enter y/Y or n/N." >&2
+        done
     fi
-
-    local response
-    while true; do
-        read -rp "$prompt $suffix: " response >&2
-        response=${response:-$default}
-        response=${response,,}
-        if [[ "$response" =~ ^[yn]$ ]]; then
-            printf '%s' "$response"
-            return 0;
-        fi
-        error "Please enter y or n." >&2
-        errors=$((errors - 1))
-    done
+    printf '%s' "$response"
     [[ ${response,,} == "y" ]]
 }
 
@@ -80,36 +68,36 @@ function choose()
         return 2;
     fi
 
-    local prompt=$1; shift
-    local options=("$@")
+    local -i selection=1
 
-    if [[ "$quiet" == true ]]; then
-        printf '1'
-        return 0
+    if [[ "$quiet" != true ]]; then
+        # print the menu
+        local prompt=$1; shift
+        local options=("$@")
+
+        echo "$prompt" >&2
+
+        local -i i=1
+        for o in "${options[@]}"; do
+            if [[ $i -eq 1 ]]; then
+                echo "  $i) $o (default)" >&2
+            else
+                echo "  $i) $o" >&2
+            fi
+            i=$((i+1))
+        done
+
+        # read the choice
+        while true; do
+            read -rp "Enter choice [1-${#options[@]}]: " selection
+            selection=${selection:-1}
+            [[ $selection -eq 0 ]] && selection=1 # the default
+            [[ $selection =~ ^[1-9][0-9]*$ && $selection -ge 1 && $selection -le ${#options[@]} ]] && break
+            warning "Invalid choice: $selection" >&2
+        done
     fi
 
-    echo "$prompt" >&2
-    local -i i=1
-    for o in "${options[@]}"; do
-        if [[ $i -eq 1 ]]; then
-            echo "  $i) $o (default)" >&2
-        else
-            echo "  $i) $o" >&2
-        fi
-        i=$((i+1))
-    done
-
-    local -i selection=1
-    while true; do
-        read -rp "Enter choice [1-${#options[@]}]: " selection
-        selection=${selection:-1}
-        [[ $selection = 0 ]] && selection=1
-        if [[ $selection =~ ^[1-9][0-9]*$ && $selection -ge 1 && $selection -le ${#options[@]} ]]; then
-            printf '%d' "$selection"
-            return 0
-        fi
-        error "Invalid choice: $selection" >&2
-    done
+    printf '%d' "$selection"
     return 0
 }
 
