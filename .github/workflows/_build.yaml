@@ -33,8 +33,8 @@ on:
         type: string
         default: v
 
-      minver-default-pre-release-identifiers:
-        description: MinVer default pre-release identifiers to use for version calculation. Cannot be null or empty!
+      minver-prerelease-id:
+        description: MinVer pre-release identifiers to use for version calculation. Cannot be null or empty!
         type: string
         default: preview
 
@@ -96,14 +96,14 @@ jobs:
         shell: bash
         env:
           MINVERTAGPREFIX: ${{ inputs.minver-tag-prefix }}
-          MINVERDEFAULTPRERELEASEIDENTIFIERS: ${{ inputs.minver-default-pre-release-identifiers }}
+          MINVERDEFAULTPRERELEASEIDENTIFIERS: ${{ inputs.minver-prerelease-id }}
         run: |
           build.sh \
               --build-project "${{ inputs.build-project }}" \
               --configuration "${{ inputs.configuration }}" \
               --preprocessor-symbols "${{ inputs.preprocessor-symbols }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
-              --minver-prerelease-id "${{ inputs.minver-default-pre-release-identifiers }}"
+              --minver-prerelease-id "${{ inputs.minver-prerelease-id }}"
 
       # Save compiled binaries and intermediate files to cache for downstream jobs
       - name: Cache build artifacts
