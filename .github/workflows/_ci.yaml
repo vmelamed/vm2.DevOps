@@ -178,8 +178,6 @@ jobs:
       preprocessor-symbols: ${{ needs.validate-vars.outputs.preprocessor-symbols }}
       test-project: ${{ matrix.test-project }}
       min-coverage-pct: ${{ fromJSON(needs.validate-vars.outputs.min-coverage-pct) }}
-      minver-tag-prefix: ${{ needs.validate-vars.outputs.minver-tag-prefix }}
-      minver-prerelease-id: ${{ needs.validate-vars.outputs.minver-prerelease-id }}
 
   # Run performance benchmarks and compare against baseline (if enabled and benchmark project specified)
   benchmarks:
