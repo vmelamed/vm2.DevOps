@@ -22,26 +22,6 @@ declare table_format=${DUMP_FORMAT:-$default_table_format} # determines the form
 declare -rx ci=${CI:-$default_ci}                   # CI is usually defined by most CI/CD systems. Set from the env. variable CI.
                                                     # Never allow CI to be overridden from the command line.
 
-## Sets the script to CI mode
-# shellcheck disable=SC2034 # variable appears unused. Verify it or export it
-function set_ci()
-{
-    # guard CI from set_debugger
-    debugger=false
-    # guard CI from quiet off
-    quiet=true
-    _ignore=/dev/null
-    set_table_format markdown
-    set +x
-    return 0
-}
-
-# Override the default or environment values of common flags based on other flags upon sourcing.
-# Make sure that the other set_* functions are honoring the ci flag.
-if [[ $ci == true ]]; then
-    set_ci
-fi
-
 ## Sets the script to debugger mode
 # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
 function set_debugger()
@@ -124,6 +104,26 @@ function get_debugger()
     got_debugger=true
     return 0
 }
+
+## Sets the script to CI mode
+# shellcheck disable=SC2034 # variable appears unused. Verify it or export it
+function set_ci()
+{
+    # guard CI from set_debugger
+    debugger=false
+    # guard CI from quiet off
+    quiet=true
+    _ignore=/dev/null
+    set_table_format markdown
+    set +x
+    return 0
+}
+
+# Override the default or environment values of common flags based on other flags upon sourcing.
+# Make sure that the other set_* functions are honoring the ci flag.
+if [[ $ci == true ]]; then
+    set_ci
+fi
 
 ## Processes common command-line arguments like --debugger, --quiet, --verbose, --trace, --dry-run
 ## Usage: get_common_arg <argument>
