@@ -22,13 +22,13 @@ fi
 initial_dir=$(pwd)
 declare -rx initial_dir
 
-source "${common_dir}/_common.constants.sh"
-source "${common_dir}/_common.diagnostics.sh"
-source "${common_dir}/_common.flags.sh"
-source "${common_dir}/_common.dump_vars.sh"
-source "${common_dir}/_common.semver.sh"
-source "${common_dir}/_common.predicates.sh"
-source "${common_dir}/_common.user.sh"
+source "${common_dir}/_constants.sh"
+source "${common_dir}/_diagnostics.sh"
+source "${common_dir}/_args.sh"
+source "${common_dir}/_dump_vars.sh"
+source "${common_dir}/_semver.sh"
+source "${common_dir}/_predicates.sh"
+source "${common_dir}/_user.sh"
 
 ## Depending on the value of $dry_run either executes or just displays what would have been executed.
 ## Usage: execute <command> [args...]

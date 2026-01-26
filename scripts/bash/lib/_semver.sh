@@ -4,7 +4,7 @@ semver_dir="$(dirname "${BASH_SOURCE[0]}")"
 
 # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
 if ! declare -pF "error" > "$_ignore"; then
-    source "$semver_dir/_common.diagnostics.sh"
+    source "$semver_dir/_diagnostics.sh"
 fi
 
 # Regular expressions that test if a string contains a semantic version:

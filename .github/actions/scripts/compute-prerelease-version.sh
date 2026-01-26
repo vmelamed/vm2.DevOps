@@ -3,11 +3,12 @@ set -euo pipefail
 
 script_name="$(basename "${BASH_SOURCE[0]}")"
 script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
+lib_dir="$script_dir/../../../scripts/bash/lib"
+declare -r script_dir
+declare -r lib_dir
 
-declare -xr script_name
-declare -xr script_dir
-
-source "$script_dir/_common.github.sh"
+# shellcheck disable=SC1091 # Not following: ./github.sh: openBinaryFile: does not exist (No such file or directory)
+source "$lib_dir/github.sh"
 
 # default constants for parameters
 declare -xr default_package_projects='[""]'

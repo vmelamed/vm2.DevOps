@@ -3,11 +3,12 @@ set -euo pipefail
 
 script_name="$(basename "${BASH_SOURCE[0]}")"
 script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
+lib_dir="$script_dir/../../../scripts/bash/lib"
+declare -r script_dir
+declare -r lib_dir
 
-declare -xr script_name
-declare -xr script_dir
-
-source "$script_dir/_common.github.sh"
+# shellcheck disable=SC1091 # Not following: ./github.sh: openBinaryFile: does not exist (No such file or directory)
+source "$lib_dir/github.sh"
 
 declare -x bm_project=${BM_PROJECT:-}
 declare -x configuration=${CONFIGURATION:-"Release"}
@@ -137,13 +138,12 @@ if [[ $dry_run != "true" ]]; then
     fi
 
     {
+        echo "✅ Benchmarks completed successfully"
         echo "✅ Benchmark results generated:"
         for file in "${json_files[@]}"; do
             echo "   - $(basename "$file")"
         done
-    } | tee -a "$github_step_summary"
+    } | summary
 fi
-
-summary "✅ Benchmarks completed successfully"
 
 to_github_output results_dir

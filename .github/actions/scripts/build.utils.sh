@@ -12,8 +12,8 @@ function get_arguments()
             continue
         fi
         case "${option,,}" in
-            # do not use the common options:
-            -h|-v|-q|-x|-y|--help|--debugger|--quiet|--verbose|--trace|--dry-run )
+            # do not use the common options - they were already processed by get_common_arg:
+            -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
             --build-project|-b )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
@@ -45,13 +45,13 @@ function get_arguments()
                 ;;
         esac
     done
+    return 0
 }
 
 dump_all_variables()
 {
     dump_vars --force --quiet --markdown \
         --header "Script Arguments:" \
-        debugger \
         dry_run \
         verbose \
         quiet \

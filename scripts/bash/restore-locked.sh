@@ -6,8 +6,8 @@ usage() {
 Usage: restore-locked.sh [solution-or-project]
 
 Refresh package lock files with --force-evaluate, then verify in --locked-mode
-(the same enforcement used in CI). Defaults to vm2.Glob.slnx when no target
-is provided.
+(the same enforcement used in CI). Defaults to the solution, project, or file
+in the current directory, when no target is provided.
 EOF
 }
 

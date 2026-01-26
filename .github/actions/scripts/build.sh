@@ -2,11 +2,14 @@
 set -euo pipefail
 
 script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
-
+lib_dir="$script_dir/../../../scripts/bash/lib"
 declare -r script_dir
+declare -r lib_dir
 
-source "$script_dir/_common.github.sh"
-source "$script_dir/_common.dotnet.sh"
+# shellcheck disable=SC1091 # Not following: ./github.sh: openBinaryFile: does not exist (No such file or directory)
+source "$lib_dir/github.sh"
+# shellcheck disable=SC1091 # Not following: ./github.sh: openBinaryFile: does not exist (No such file or directory)
+source "$lib_dir/_dotnet.sh"
 
 # default values for parameters
 declare -xr default_minver_tag_prefix='v'
@@ -68,7 +71,7 @@ build_output=$(dotnet build "$build_project" \
     /p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" | tail -n 50)
 
 # Summarize the build results
-summary=$(summarizeDotnetBuild "$build_output")
-echo "$summary" | tee -a "$github_step_summary"
+sum=$(summarizeDotnetBuild "$build_output")
+summary "$sum"
 # TODO: why the line below doesn't work?
-# summarizeDotnetBuild "$build_output" 2>&1 | tee -a "$github_step_summary"
+# summarizeDotnetBuild "$build_output" | summary

@@ -13,8 +13,8 @@ function get_arguments()
         fi
         # do not use short options -q -v -x -y
         case "${option,,}" in
-            # do not use the common options:
-            -h|-v|-q|-x|-y|--help|--debugger|--quiet|--verbose|--trace|--dry-run )
+            # do not use the common options - they were already processed by get_common_arg:
+            -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
             --artifact|-a )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
@@ -57,7 +57,6 @@ dump_all_variables()
 {
     dump_vars --force --quiet --markdown \
         --header "Script Arguments:" \
-        debugger \
         dry_run \
         verbose \
         quiet \

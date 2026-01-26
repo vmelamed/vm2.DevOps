@@ -71,6 +71,7 @@ jobs:
           repository: vmelamed/vm2.DevOps
           path: vm2-devops
           sparse-checkout: |
+            scripts/bash/lib
             .github/actions/scripts
 
       - name: validate-vars DevOps scripts (local - allow execution of the scripts and add to PATH)

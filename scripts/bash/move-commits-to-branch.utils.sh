@@ -24,8 +24,8 @@ function get_arguments()
         fi
 
         case "${option,,}" in
-            # do not use the common options:
-            -h|-v|-q|-x|-y|--help|--debugger|--quiet|--verbose|--trace|--dry-run )
+            # do not use the common options - they were already processed by get_common_arg:
+            -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
             --branch|-b )

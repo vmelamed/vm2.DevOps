@@ -66,7 +66,6 @@ These reusable GitHub Actions workflows are intended to be called directly via `
 
 - Common switches for all bash scripts:
   - `help`: If `true`, scripts will display usage information and exit (default: `false`)
-  - `debugger`: Set when the a script is running under a debugger, e.g. 'gdb'. If specified, the script will not set traps for DEBUG and EXIT, and will set the '--quiet' switch. (default: `false`)
   - `dry-run`: If `true`, scripts will simulate actions without making changes (default: `false`)
   - `quiet`: If `true`, scripts will suppress all functions that request input from the user - binary (Y/N) or multiple ( a., b., c. ...) choices - and will assume some sensible default input (default: `false` or `true`, `$CI=true` as in GitHub Actions)
   - `verbose`: If `true`, scripts will emit tracing and diagnostic messages from all `trace()` calls, all executed commands, and all variable dumps (default: `false`)

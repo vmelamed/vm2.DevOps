@@ -3,13 +3,12 @@ set -euo pipefail
 
 script_name="$(basename "${BASH_SOURCE[0]}")"
 script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
-
-declare -r script_name
+lib_dir="$script_dir/../../../scripts/bash/lib"
 declare -r script_dir
+declare -r lib_dir
 
-source "$script_dir/_common.github.sh"
-
-declare -x artifact_name=${ARTIFACT_NAME:-}
+# shellcheck disable=SC1091 # Not following: ./github.sh: openBinaryFile: does not exist (No such file or directory)
+source "$lib_dir/github.sh"
 declare -x artifacts_dir=${ARTIFACT_DIR:-}
 declare -x repository=${REPOSITORY:-}
 declare -x workflow_id=${WORKFLOW_ID:-}
@@ -74,6 +73,9 @@ fi
 declare -x github_output=${github_output:-/dev/stdout}
 declare -x github_step_summary=${github_step_summary:-/dev/stdout}
 
+declare -x _ignore
+declare -rx dry_run
+
 # install GitHub CLI and jq if not already installed
 if ! command -v -p jq &> "$_ignore" || ! command -v -p gh 2>&1 "$_ignore"; then
     if execute sudo apt-get update && sudo apt-get install -y gh jq; then
@@ -130,7 +132,7 @@ mapfile -t runs < <(gh run list \
 
 if [[ ${#runs[@]} == 0 ]]; then
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
-    error "No successful runs found for the workflow '$workflow_id' in the repository '$repository'." | tee -a "$github_step_summary" >&2
+    error "No successful runs found for the workflow '$workflow_id' in the repository '$repository'."
     exit 2
 fi
 
@@ -157,13 +159,12 @@ E.g. re-run the benchmarks with --force-new-baseline or vars.FORCE_NEW_BASELINE"
                                 --repo "$repository" \
                                 --name "$artifact_name" \
                                 --dir "$artifacts_dir") ; then
-        echo "Error while downloading '$artifact_name': $http_error" | tee -a "$github_step_summary" >&2
+        error "Error while downloading '$artifact_name': $http_error"
         exit 2
     fi
     info "✅ The artifact '$artifact_name' successfully downloaded to directory '$artifacts_dir'." >> "$github_step_summary"
     exit 0
 done
 
-error "The artifact '$artifact_name' was not found in the last ${#runs[@]} successful runs of the workflow '$workflow_name' in \
-the repository '$repository'." | tee -a "$github_step_summary" >&2
+error "The artifact '$artifact_name' was not found in the last ${#runs[@]} successful runs of the workflow '$workflow_name' in the repository '$repository'."
 exit 2

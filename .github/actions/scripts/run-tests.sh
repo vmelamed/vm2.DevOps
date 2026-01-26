@@ -3,12 +3,12 @@ set -euo pipefail
 
 script_name="$(basename "${BASH_SOURCE[0]}")"
 script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
-
-declare -r script_name
+lib_dir="$script_dir/../../../scripts/bash/lib"
 declare -r script_dir
+declare -r lib_dir
 
-source "$script_dir/_common.github.sh"
-source "$script_dir/_common.github.sh"
+# shellcheck disable=SC1091 # Not following: ./github.sh: openBinaryFile: does not exist (No such file or directory)
+source "$lib_dir/github.sh"
 
 declare -x test_project=${TEST_PROJECT:-}
 declare -x configuration=${CONFIGURATION:="Release"}
@@ -139,9 +139,12 @@ declare -r test_base_path
 declare -r test_dll_path
 declare -rx test_exec_path
 
+declare -x _ignore
+declare -rx dry_run
+
 # Verify artifacts exist
 if [[ (! -f "${test_exec_path}" || ! -f "${test_dll_path}") && "$dry_run" != "true" ]]; then
-    error "Cached test executables ${test_exec_path} or ${test_dll_path} were not found." | tee -a "$github_step_summary" >&2
+    error "Cached test executables ${test_exec_path} or ${test_dll_path} were not found."
     exit 2
 fi
 
@@ -159,13 +162,13 @@ if ! execute dotnet run \
         --coverage \
         --coverage-output-format cobertura \
         --coverage-output "$coverage_source_path"; then
-    error "Tests failed in project '$test_project'." | tee -a "$github_step_summary" >&2
+    error "Tests failed in project '$test_project'."
     exit 2
 fi
 
 if [[ $dry_run != "true" ]]; then
     if [[ ! -s "$coverage_source_path" ]]; then
-        error "Coverage file not found or is empty." | tee -a "$github_step_summary" >&2
+        error "Coverage file not found or is empty."
         exit 2
     fi
 fi
@@ -199,7 +202,7 @@ fi
 
 if [[ $dry_run != "true" ]]; then
     if [[ ! -s "$coverage_reports_path" ]]; then
-        error "Coverage summary not found." | tee -a "$github_step_summary" >&2
+        error "Coverage summary not found."
         exit 2
     fi
 fi
@@ -214,17 +217,17 @@ trace "Extracting coverage percentages from '$coverage_summary_text_path'..."
 if [[ $dry_run != "true" ]]; then
     line_pct=$(sed -nE 's/Line coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_text_path" | head -n1 | xargs)
     if [[ -z "$line_pct" ]]; then
-        error "Could not parse line coverage percent from \"$coverage_summary_text_path\"" | tee -a "$github_step_summary" >&2
+        error "Could not parse line coverage percent from \"$coverage_summary_text_path\""
         exit 2
     fi
     branch_pct=$(sed -nE 's/Branch coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_text_path" | head -n1 | xargs)
     if [[ -z "$branch_pct" ]]; then
-        error "Could not parse branch coverage percent from \"$coverage_summary_text_path\"" | tee -a "$github_step_summary" >&2
+        error "Could not parse branch coverage percent from \"$coverage_summary_text_path\""
         exit 2
     fi
     method_pct=$(sed -nE 's/Method coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_text_path" | head -n1 | xargs)
     if [[ -z "$method_pct" ]]; then
-        error "Could not parse method coverage percent from \"$coverage_summary_text_path\"" | tee -a "$github_step_summary" >&2
+        error "Could not parse method coverage percent from \"$coverage_summary_text_path\""
         exit 2
     fi
 
@@ -241,7 +244,7 @@ if [[ $dry_run != "true" ]]; then
         echo "Branch   | ${branch_pct}% | $br_status"
         echo "Method   | ${method_pct}% | $me_status"
         echo ""
-    } >> "$github_step_summary"
+    } | summary
 
     # Export variables to GitHub Actions output
     to_github_output proj-name test_name

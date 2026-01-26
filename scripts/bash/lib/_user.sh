@@ -3,7 +3,7 @@
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 if ! declare -pF "error" > "$_ignore"; then
     semver_dir="$(dirname "${BASH_SOURCE[0]}")"
-    source "$semver_dir/_common.diagnostics.sh"
+    source "$semver_dir/_diagnostics.sh"
 fi
 
 ## Displays a prompt, followed by "Press any key to continue..." and returns only after the script user

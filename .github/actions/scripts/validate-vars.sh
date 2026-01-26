@@ -3,13 +3,13 @@ set -euo pipefail
 
 script_name="$(basename "${BASH_SOURCE[0]}")"
 script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
-
-declare -r script_name
+lib_dir="$script_dir/../../../scripts/bash/lib"
 declare -r script_dir
+declare -r lib_dir
 
-source "$script_dir/_common.github.sh"
+# shellcheck disable=SC1091 # Not following: ./github.sh: openBinaryFile: does not exist (No such file or directory)
+source "$lib_dir/github.sh"
 
-declare -r defaultBuildProjects='[""]'
 declare -r defaultTestProjects='["__skip__"]'
 declare -r defaultBenchmarkProjects='["__skip__"]'
 declare -r defaultOses='["ubuntu-latest"]'
@@ -169,7 +169,7 @@ dump_vars --quiet --force --markdown \
     max_regression_pct \
     minver_tag_prefix \
     minver_prerelease_id \
-    | tee -a "$github_step_summary" 1>&2    # add more variables above this line
+    | to_stdout
 
 exit_if_has_errors
 

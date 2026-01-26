@@ -1,35 +1,39 @@
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-# default values for common flags
-declare -r default_debugger=false
-declare -r default_quiet=false
-declare -r default_verbose=false
-declare -r default_dry_run=false
-declare -r default__ignore=/dev/null
+# default values for the common flags below
+declare -xr default_ci=false
+declare -xr default__ignore=/dev/null
+declare -xr default_quiet=false
+declare -xr default_verbose=false
+declare -xr default_dry_run=false
 declare -xr default_table_format="graphical"
-declare -axr table_formats=("graphical" "markdown")
-declare -r default_ci=false
 
-declare -x debugger=${DEBUGGER:-$default_debugger}  # must be set if the script is running under a debugger, e.g. 'bashdb'
+declare -axr table_formats=("graphical" "markdown")
+
+declare -x ci=$default_ci                           # indicates whether the script is running in CI/CD environment.
+                                                    # MUST NOT BE OVERRIDDEN BY TOP-LEVEL SWITCHES AND OPTIONS
+                                                    # their values should be based only on environment variables defined by the
+                                                    # CI/CD system, e.g. GitHub Actions, Azure DevOps, etc.
+
+# common flags exported for use by the top-level scripts with CLI switches, options and by other means. Prefer the set_* functions below to set them.
+declare -x _ignore=$default__ignore                 # the file to redirect unwanted output to
 declare -x quiet=${QUIET:-$default_quiet}           # suppresses user prompts, assuming default answers
 declare -x verbose=${VERBOSE:-$default_verbose}     # enables detailed output
 declare -x dry_run=${DRY_RUN:-$default_dry_run}     # simulates commands without executing them
-declare -x _ignore=$default__ignore                 # the file to redirect unwanted output to
-declare table_format=${DUMP_FORMAT:-$default_table_format} # determines the format in which dump tables are displayed by the
-                                                           # function `dump_vars`: graphical ASCII characters or markdown
-                                                           # see also the available values in the array `table_formats` above
+                                                    # the function `dump_vars`: graphical ASCII characters or markdown.
+                                                    # See also the available values in the array `table_formats` above
 
-declare -rx ci=${CI:-$default_ci}                   # CI is usually defined by most CI/CD systems. Set from the env. variable CI.
-                                                    # Never allow CI to be overridden from the command line.
+[[ -n "${_Dbg_DEBUGGER_LEVEL:-}" || -n "${BASHDB_HOME:-}" ]] && debugger=true || debugger=false
+declare -xr debugger                                # indicates whether the script is running under a debugger, e.g. bashdb
 
-## Sets the script to debugger mode
-# shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-function set_debugger()
-{
-    # guard CI from set_debugger
-    [[ $ci == true ]] && debugger=false || debugger=true
-    return 0
-}
+if [[ "${GITHUB_ACTIONS:-}" == "true" || "${TF_BUILD:-}" == "True" || "${CI:-}" == "true" ]]; then # CI is usually defined by most CI/CD systems. Set from the env. variable CI.
+    ci=true
+    table_format=${DUMP_FORMAT:-markdown}           # in CI/CD environments, default to markdown format unless overridden by DUMP_FORMAT
+else
+    ci=false
+    table_format=${DUMP_FORMAT:-graphical}          # on terminal, default to graphical format unless overridden by DUMP_FORMAT
+fi
+declare -rx ci                                      # freeze the value of ci after setting it above
 
 ## Sets the script to quiet mode (suppresses user prompts)
 function set_quiet()
@@ -66,14 +70,16 @@ function set_trace_enabled()
 ## where <format> is one of: "graphical", "markdown"
 function set_table_format()
 {
-    for f in "${table_formats[@]}"; do
-        if [[ "$f" == "${1,,}" ]]; then
-            table_format="$f"
-            return 0
-        fi
-    done
-    error "Invalid table format: $1"
-
+    if [[ $# -ne 1 || -z "$1" ]]; then
+        error "set_table_format requires one parameter - the table format"
+        return 1
+    fi
+    local f="${1,,}"
+    if ! is_in "$f" "${table_formats[@]}"; then
+        error "Invalid table format: $1"
+        return 1
+    fi
+    table_format="$f"
     return 0
 }
 
@@ -83,49 +89,7 @@ function get_table_format()
     return 0
 }
 
-declare got_debugger=false
-
-function get_debugger()
-{
-    if [[ $got_debugger == true ]]; then
-        return 0
-    fi
-    for v in "$@"; do
-        if [[ "${v,,}" == "--debugger" ]]; then
-            set_debugger
-        fi
-    done
-
-    if [[ $debugger != "true" ]]; then
-        # set the traps to see the last faulted command. However, they get in the way of debugging.
-        trap on_debug DEBUG
-        trap on_exit EXIT
-    fi
-    got_debugger=true
-    return 0
-}
-
-## Sets the script to CI mode
-# shellcheck disable=SC2034 # variable appears unused. Verify it or export it
-function set_ci()
-{
-    # guard CI from set_debugger
-    debugger=false
-    # guard CI from quiet off
-    quiet=true
-    _ignore=/dev/null
-    set_table_format markdown
-    set +x
-    return 0
-}
-
-# Override the default or environment values of common flags based on other flags upon sourcing.
-# Make sure that the other set_* functions are honoring the ci flag.
-if [[ $ci == true ]]; then
-    set_ci
-fi
-
-## Processes common command-line arguments like --debugger, --quiet, --verbose, --trace, --dry-run
+## Processes common command-line arguments like --quiet, --verbose, --trace, --dry-run
 ## Usage: get_common_arg <argument>
 # shellcheck disable=SC2034 # variable appears unused. Verify it or export it
 function get_common_arg()
@@ -133,11 +97,9 @@ function get_common_arg()
     if [[ $# -eq 0 ]]; then
         return 2
     fi
-    get_debugger "$@"
     # the calling scripts should not use short options:
-    # --help|-h|-\?--debugger|-q|--quiet-v|--verbose-x|--trace-y|--dry-run
+    # --help|-h|-\?|-v|--verbose|-q|--quiet|-x|--trace|-y|--dry-run
     case "${1,,}" in
-        --debugger      ) set_debugger ;;
         --help          ) usage true; exit 0 ;;
         -h|-\?          ) usage false; exit 0 ;;
         -v|--verbose    ) set_verbose ;;
@@ -209,10 +171,6 @@ declare -rx common_switches="  -v, --verbose                 Enables verbose out
                                 Initial value from \$DUMP_FORMAT or 'graphical'
   -md, --markdown               Sets the output dump table format to markdown
                                 Initial value from \$DUMP_FORMAT or 'graphical'
-  --debugger                    Must be set if the script is running under a debugger, e.g. 'gdb'. WhenMust be set if the script
-                                is running under a debugger, e.g. 'gdb'. When specified, the script will not trap DEBUG and
-                                EXIT, and will set the '--quiet' switch
-                                Initial value from \$DEBUGGER or 'false'
   --help                        Displays longer version of the usage text - including all common flags
   -h | -?                       Displays shorter version of the usage text - without common flags
 
@@ -222,6 +180,23 @@ declare -rx common_vars="  VERBOSE                       Enables verbose output 
   DRY_RUN                       Does not execute commands that can change environments. (see --dry-run)
   QUIET                         Suppresses all user prompts, assuming the default answers
   DUMP_FORMAT                   Sets the output dump table format. Must be 'graphical' or 'markdown'
-  DEBUGGER                      Could be set when the script is running under a debugger, e.g. 'gdb'
 
 "
+
+# Override the default or environment values of common flags based on other flags upon sourcing.
+# Make sure that the other set_* functions are honoring the ci flag.
+if [[ $ci == true ]]; then
+    # guard CI from quiet off
+    _ignore=/dev/null
+    set_quiet
+    set_table_format markdown
+    set +x
+fi
+# By default all scripts trap DEBUG and EXIT to provide better error handling.
+# However, when running under a debugger, e.g. 'bashdb', trapping these signals
+# interferes with the debugging session.
+if [[ $debugger != "true" ]]; then
+    # set the traps to see the last faulted command. However, they get in the way of debugging.
+    trap on_debug DEBUG
+    trap on_exit EXIT
+fi

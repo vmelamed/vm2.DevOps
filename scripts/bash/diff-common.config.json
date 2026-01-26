@@ -73,50 +73,5 @@
         "sourceFile": "${repos}/.github/workflow-templates/Release.yaml",
         "targetFile": "${target_path}/.github/workflows/Release.yaml",
         "action": "ask to merge"
-    },
-    {
-        "sourceFile": "${repos}/vm2.DevOps/.github/actions/scripts/_common.diagnostics.sh",
-        "targetFile": "${target_path}/scripts/_common.diagnostics.sh",
-        "action": "copy"
-    },
-    {
-        "sourceFile": "${repos}/vm2.DevOps/.github/actions/scripts/_common.dump_vars.sh",
-        "targetFile": "${target_path}/scripts/_common.dump_vars.sh",
-        "action": "copy"
-    },
-    {
-        "sourceFile": "${repos}/vm2.DevOps/.github/actions/scripts/_common.flags.sh",
-        "targetFile": "${target_path}/scripts/_common.flags.sh",
-        "action": "copy"
-    },
-    {
-        "sourceFile": "${repos}/vm2.DevOps/.github/actions/scripts/_common.predicates.sh",
-        "targetFile": "${target_path}/scripts/_common.predicates.sh",
-        "action": "copy"
-    },
-    {
-        "sourceFile": "${repos}/vm2.DevOps/.github/actions/scripts/_common.sanitize.sh",
-        "targetFile": "${target_path}/scripts/_common.sanitize.sh",
-        "action": "copy"
-    },
-    {
-        "sourceFile": "${repos}/vm2.DevOps/.github/actions/scripts/_common.semver.sh",
-        "targetFile": "${target_path}/scripts/_common.semver.sh",
-        "action": "copy"
-    },
-    {
-        "sourceFile": "${repos}/vm2.DevOps/.github/actions/scripts/_common.user.sh",
-        "targetFile": "${target_path}/scripts/_common.user.sh",
-        "action": "copy"
-    },
-    {
-        "sourceFile": "${repos}/vm2.DevOps/.github/actions/scripts/_common.sh",
-        "targetFile": "${target_path}/scripts/_common.sh",
-        "action": "copy"
-    },
-    {
-        "sourceFile": "${repos}/vm2.DevOps/.github/actions/scripts/.shellcheckrc",
-        "targetFile": "${target_path}/scripts/.shellcheckrc",
-        "action": "merge or copy"
     }
 ]
