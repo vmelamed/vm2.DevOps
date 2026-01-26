@@ -72,4 +72,5 @@ echo "github_step_summary: $github_step_summary"
 echo "build_output: $build_output"
 
 # Summarize the build results
-summarizeDotnetBuild "$build_output" | tee -a "$github_step_summary" 1>&2
+summary=$(summarizeDotnetBuild "$build_output")
+echo "$summary" > "$github_step_summary"
