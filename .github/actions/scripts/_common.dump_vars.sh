@@ -150,7 +150,7 @@ function dump_vars() {
                 ;;
         esac
     done
-    echo "${table["bottom"]}"; sync
+    echo "${table["bottom"]}";
 
     press_any_key
     pop_state
