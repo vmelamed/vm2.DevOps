@@ -86,7 +86,7 @@ function summarizeDotnetBuild()
         file_version \
         informational_version \
         version \
-        package_version
+        package_version > "$github_step_summary"
 
     # echo "Build result:        $build_result"
     # echo "Errors:              $errors_count"
