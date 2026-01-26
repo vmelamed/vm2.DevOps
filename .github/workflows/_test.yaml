@@ -63,7 +63,7 @@ jobs:
           fetch-depth: 0
           filter: tree:0
 
-      # Setup DevOps scripts from vm2.DevOps
+      # Clone only the scripts from vm2.DevOps, so that we can run the composite action .github/actions/scripts/action.yaml
       - name: Checkout DevOps repository
         uses: actions/checkout@v6
         with:

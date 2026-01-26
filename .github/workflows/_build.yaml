@@ -62,6 +62,18 @@ jobs:
           fetch-depth: 0
           filter: tree:0
 
+      # Clone only the scripts from vm2.DevOps, so that we can run the composite action .github/actions/scripts/action.yaml
+      - name: Checkout DevOps repository
+        uses: actions/checkout@v6
+        with:
+          repository: vmelamed/vm2.DevOps
+          path: .devops
+          sparse-checkout: |
+            .github/actions/scripts
+
+      - name: Setup DevOps scripts
+        uses: ./.devops/.github/actions/scripts
+
       # Generate a weekly cache key to automatically rotate NuGet cache
       - name: Get cache timestamp (weekly rotation)
         id: cache-timestamp
