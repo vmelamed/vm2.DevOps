@@ -13,7 +13,6 @@ declare -x package_version
 ##  Parameters:
 ##    $1 - The output of the 'dotnet build -v d ...' command, e.g. captured via command substitution
 ##         'build_output=$(dotnet build -v d ...)'
-##    $2 - (optional) If 'true', prints the summary to stdout
 ##  Sets the following global variables for later use:
 ##    build_result
 ##    warnings_count
@@ -30,6 +29,7 @@ function summarizeDotnetBuild()
         return 1
     fi
     local bo="$1"
+    local build_result
 
     restoreShopt=$(shopt -p nocasematch)
     shopt -s nocasematch
@@ -72,7 +72,7 @@ function summarizeDotnetBuild()
     echo "Build result:        $build_result"
     echo "Errors:              $errors_count"
     echo "Warnings:            $warnings_count"
-    if [[ $build_result =~ "Successful" ]]; then
+    if [[ $build_result == "Successful" ]]; then
         echo "Assembly Version:     $assembly_version"
         echo "File Version:         $file_version"
         echo "InformationalVersion: $informational_version"
@@ -80,5 +80,6 @@ function summarizeDotnetBuild()
         echo "PackageVersion:       $package_version"
     fi
 
-    eval "$restoreShopt"
+    # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
+    eval "$restoreShopt" &> "$_ignore"
 }
