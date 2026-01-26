@@ -56,19 +56,19 @@ function summarizeDotnetBuild()
 
     if [[ $build_result == "Successful" ]]; then
 
-        regex="AssemblyVersion: ([^ ]*)"
+        regex="AssemblyVersion: ([^ ]*)$"
         [[ $bo =~ $regex ]] || true
         assembly_version=${BASH_REMATCH[1]}
 
-        regex="FileVersion: ([^ ]*)"
+        regex="FileVersion: ([^ ]*)$"
         [[ $bo =~ $regex ]] || true
         file_version=${BASH_REMATCH[1]}
 
-        regex="InformationalVersion: ([^ ]*)"
+        regex="InformationalVersion: ([^ ]*)$"
         [[ $bo =~ $regex ]] || true
         informational_version=${BASH_REMATCH[1]}
 
-        regex=" Version: ([^ ]*)"
+        regex=" Version: ([^ ]*)$"
         [[ $bo =~ $regex ]] || true
         version=${BASH_REMATCH[1]}
 
@@ -77,7 +77,7 @@ function summarizeDotnetBuild()
         package_version=${BASH_REMATCH[1]}
     fi
 
-    dump_vars -f -q -md \
+    dump_vars -f -q \
         --header "Dotnet Build Summary:" \
         build_result \
         warnings_count \
