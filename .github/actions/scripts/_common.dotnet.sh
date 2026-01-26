@@ -29,14 +29,22 @@ function summarizeDotnetBuild()
         return 1
     fi
     local bo="$1"
-    local build_result
+    local build_result=""
+    local errors_count=""
+    local warnings_count=""
+    local assembly_version=""
+    local file_version=""
+    local informational_version=""
+    local version=""
+    local package_version=""
 
     restoreShopt=$(shopt -p nocasematch)
     shopt -s nocasematch
 
     regex="Build (succeeded)|(FAILED)"
     [[ $bo =~ $regex ]] || true
-    [[ ${BASH_REMATCH[1]} == "succeeded" ]] && build_result="Successful" || build_result="Failed"
+    [[ ${BASH_REMATCH[1]} == "succeeded" ]] && build_result="Successful"
+    [[ ${BASH_REMATCH[2]} == "FAILED" ]] && build_result="Failed"
 
     regex="([0-9]+) Warning(s)?"
     [[ $bo =~ $regex ]] || true
