@@ -103,7 +103,7 @@ function on_exit() {
     # echo an error message before exiting
     local x=$?
     if ((x != 0)) && [[ ! $last_command =~ exit.* ]]; then
-        error "on_exit: '$last_command' command failed with exit code $x"
+        echo "❌  ERROR: on_exit: '$last_command' command failed with exit code $x" >&2
     fi
     if [[ -n "$initial_dir" ]]; then
         cd "$initial_dir" || exit
