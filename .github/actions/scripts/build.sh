@@ -65,9 +65,10 @@ build_output=$(dotnet build "$build_project" \
     --configuration "$configuration" \
     /p:DefineConstants="$preprocessor_symbols" \
     /p:MinVerTagPrefix="$minver_tag_prefix" \
-    /p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" | tail -n 200)
+    /p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" | tail -n 50)
 
-echo "$build_output"
+echo "build_output: $build_output"
+echo "github_step_summary: $github_step_summary"
 
 # Summarize the build results
 summarizeDotnetBuild "$build_output" | tee -a "$github_step_summary"
