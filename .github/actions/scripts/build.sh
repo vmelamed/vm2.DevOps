@@ -69,4 +69,4 @@ build_output=$(dotnet build "$build_project" \
 
 # Summarize the build results
 summary=$(summarizeDotnetBuild "$build_output")
-echo "$summary" > "$github_step_summary"
+echo "$summary" | tee -a "$github_step_summary"

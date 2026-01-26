@@ -54,52 +54,44 @@ function summarizeDotnetBuild()
     [[ $bo =~ $regex ]] || true
     errors_count=${BASH_REMATCH[1]}
 
+    version_regex="([[:alnum:][:punct:]]+)"
     if [[ $build_result == "Successful" ]]; then
 
-        regex="AssemblyVersion: ([^ ]*)$"
+        regex="AssemblyVersion: $version_regex"
         [[ $bo =~ $regex ]] || true
         assembly_version=${BASH_REMATCH[1]}
 
-        regex="FileVersion: ([^ ]*)$"
+        regex="FileVersion: $version_regex"
         [[ $bo =~ $regex ]] || true
         file_version=${BASH_REMATCH[1]}
 
-        regex="InformationalVersion: ([^ ]*)$"
+        regex="InformationalVersion: $version_regex"
         [[ $bo =~ $regex ]] || true
         informational_version=${BASH_REMATCH[1]}
 
-        regex=" Version: ([^ ]*)$"
+        regex=" Version: $version_regex"
         [[ $bo =~ $regex ]] || true
         version=${BASH_REMATCH[1]}
 
-        regex="PackageVersion: ([^ ]*)"
+        regex="PackageVersion: $version_regex"
         [[ $bo =~ $regex ]] || true
         package_version=${BASH_REMATCH[1]}
     fi
+    # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
+    eval "$restoreShopt" &> "$_ignore"
 
     dump_vars -f -q \
         --header "Dotnet Build Summary:" \
         build_result \
+        --line \
         warnings_count \
         errors_count \
+        --header "Version Information:" \
         assembly_version \
         file_version \
-        informational_version \
         version \
-        package_version
+        package_version \
+        informational_version
 
-    # echo "Build result:        $build_result"
-    # echo "Errors:              $errors_count"
-    # echo "Warnings:            $warnings_count"
-    # if [[ $build_result == "Successful" ]]; then
-    #     echo "Assembly Version:     $assembly_version"
-    #     echo "File Version:         $file_version"
-    #     echo "InformationalVersion: $informational_version"
-    #     echo "Version:              $version"
-    #     echo "PackageVersion:       $package_version"
-    # fi
-
-    # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
-    eval "$restoreShopt" &> "$_ignore"
     return 0
 }

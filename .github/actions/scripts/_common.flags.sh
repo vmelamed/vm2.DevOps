@@ -219,10 +219,10 @@ declare -rx common_switches="  -v, --verbose                 Enables verbose out
 
 "
 
-declare -rx common_vars="    VERBOSE                     Enables verbose output (see --verbose)
-    DRY_RUN                     Does not execute commands that can change environments. (see --dry-run)
-    QUIET                       Suppresses all user prompts, assuming the default answers
-    DUMP_FORMAT                 Sets the output dump table format. Must be 'graphical' or 'markdown'
-    DEBUGGER                    Could be set when the script is running under a debugger, e.g. 'gdb'
+declare -rx common_vars="  VERBOSE                       Enables verbose output (see --verbose)
+  DRY_RUN                       Does not execute commands that can change environments. (see --dry-run)
+  QUIET                         Suppresses all user prompts, assuming the default answers
+  DUMP_FORMAT                   Sets the output dump table format. Must be 'graphical' or 'markdown'
+  DEBUGGER                      Could be set when the script is running under a debugger, e.g. 'gdb'
 
 "
