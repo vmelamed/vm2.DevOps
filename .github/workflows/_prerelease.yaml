@@ -92,6 +92,8 @@ jobs:
           fetch-depth: 0
           filter: tree:0
 
+      # Clone only the scripts from vm2.DevOps, so that we can run the composite
+      # action .github/actions/scripts/action.yaml for both local and external calls
       - name: Checkout DevOps repository scripts
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: actions/checkout@v6
@@ -101,11 +103,11 @@ jobs:
           sparse-checkout: |
             .github/actions/scripts
 
-      - name: Setup DevOps scripts (local)
+      - name: validate-vars DevOps scripts (local - allow execution of the scripts and add to PATH)
         if: github.repository == 'vmelamed/vm2.DevOps'
         uses: ./.github/actions/scripts
 
-      - name: Setup DevOps scripts (external)
+      - name: validate-vars DevOps scripts (external - allow execution of the scripts and add to PATH)
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: ./vm2-devops/.github/actions/scripts
 
@@ -136,6 +138,8 @@ jobs:
           fetch-depth: 0
           filter: tree:0
 
+      # Clone only the scripts from vm2.DevOps, so that we can run the composite
+      # action .github/actions/scripts/action.yaml for both local and external calls
       - name: Checkout DevOps repository scripts
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: actions/checkout@v6
@@ -145,11 +149,11 @@ jobs:
           sparse-checkout: |
             .github/actions/scripts
 
-      - name: Setup DevOps scripts (local)
+      - name: validate-vars DevOps scripts (local - allow execution of the scripts and add to PATH)
         if: github.repository == 'vmelamed/vm2.DevOps'
         uses: ./.github/actions/scripts
 
-      - name: Setup DevOps scripts (external)
+      - name: validate-vars DevOps scripts (external - allow execution of the scripts and add to PATH)
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: ./vm2-devops/.github/actions/scripts
 
@@ -214,6 +218,8 @@ jobs:
           fetch-depth: 0
           filter: tree:0
 
+      # Clone only the scripts from vm2.DevOps, so that we can run the composite
+      # action .github/actions/scripts/action.yaml for both local and external calls
       - name: Checkout DevOps repository scripts
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: actions/checkout@v6
@@ -223,11 +229,11 @@ jobs:
           sparse-checkout: |
             .github/actions/scripts
 
-      - name: Setup DevOps scripts (local)
+      - name: validate-vars DevOps scripts (local - allow execution of the scripts and add to PATH)
         if: github.repository == 'vmelamed/vm2.DevOps'
         uses: ./.github/actions/scripts
 
-      - name: Setup DevOps scripts (external)
+      - name: validate-vars DevOps scripts (external - allow execution of the scripts and add to PATH)
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: ./vm2-devops/.github/actions/scripts
 

@@ -95,7 +95,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      # Composite action: validate-vars DevOps scripts (works for both local and external calls)
+      # Clone only the scripts from vm2.DevOps, so that we can run the composite
+      # action .github/actions/scripts/action.yaml for both local and external calls
       - name: Checkout DevOps repository scripts
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: actions/checkout@v6
