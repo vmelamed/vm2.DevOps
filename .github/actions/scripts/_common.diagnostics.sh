@@ -78,7 +78,7 @@ function trace() {
 # sourcing this script, set these signal traps:
 #   trap on_debug DEBUG
 #   trap on_exit EXIT
-declare last_command
+declare last_command=""
 declare current_command="$BASH_COMMAND"
 
 # on_debug and on_exit are trying to cooperatively do error handling when exit is invoked. To be effective, after
