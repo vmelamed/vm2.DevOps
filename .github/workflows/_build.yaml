@@ -126,6 +126,7 @@ jobs:
 
       # Save compiled binaries and intermediate files to cache for downstream jobs
       - name: Cache build artifacts
+        continue-on-error: true
         uses: actions/cache/save@v5
         with:
           key: build-artifacts-${{ runner.os }}-${{ github.sha }}-${{ inputs.configuration }}
