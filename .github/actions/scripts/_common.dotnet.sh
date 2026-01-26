@@ -82,4 +82,5 @@ function summarizeDotnetBuild()
 
     # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
     eval "$restoreShopt" &> "$_ignore"
+    return 0
 }
