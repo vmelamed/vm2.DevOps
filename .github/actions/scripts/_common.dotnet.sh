@@ -35,37 +35,37 @@ function summarizeDotnetBuild()
     shopt -s nocasematch
 
     regex="Build (succeeded)|(FAILED)"
-    [[ $bo =~ $regex ]]
+    [[ $bo =~ $regex ]] || true
     [[ ${BASH_REMATCH[1]} == "succeeded" ]] && build_result="Successful" || build_result="Failed"
 
     regex="([0-9]+) Warning(s)?"
-    [[ $bo =~ $regex ]]
+    [[ $bo =~ $regex ]] || true
     warnings_count=${BASH_REMATCH[1]}
 
     regex="([0-9]+) Error(s)?"
-    [[ $bo =~ $regex ]]
+    [[ $bo =~ $regex ]] || true
     errors_count=${BASH_REMATCH[1]}
 
     if [[ $build_result == "Successful" ]]; then
 
         regex="AssemblyVersion: ([^ ]*)"
-        [[ $bo =~ $regex ]]
+        [[ $bo =~ $regex ]] || true
         assembly_version=${BASH_REMATCH[1]}
 
         regex="FileVersion: ([^ ]*)"
-        [[ $bo =~ $regex ]]
+        [[ $bo =~ $regex ]] || true
         file_version=${BASH_REMATCH[1]}
 
         regex="InformationalVersion: ([^ ]*)"
-        [[ $bo =~ $regex ]]
+        [[ $bo =~ $regex ]] || true
         informational_version=${BASH_REMATCH[1]}
 
         regex=" Version: ([^ ]*)"
-        [[ $bo =~ $regex ]]
+        [[ $bo =~ $regex ]] || true
         version=${BASH_REMATCH[1]}
 
         regex="PackageVersion: ([^ ]*)"
-        [[ $bo =~ $regex ]]
+        [[ $bo =~ $regex ]] || true
         package_version=${BASH_REMATCH[1]}
     fi
 
