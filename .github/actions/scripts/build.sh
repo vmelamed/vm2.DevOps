@@ -6,6 +6,7 @@ script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
 declare -r script_dir
 
 source "$script_dir/_common.github.sh"
+source "$script_dir/_common.dotnet.sh"
 
 # default values for parameters
 declare -xr default_minver_tag_prefix='v'
