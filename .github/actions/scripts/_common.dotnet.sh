@@ -77,16 +77,27 @@ function summarizeDotnetBuild()
         package_version=${BASH_REMATCH[1]}
     fi
 
-    echo "Build result:        $build_result"
-    echo "Errors:              $errors_count"
-    echo "Warnings:            $warnings_count"
-    if [[ $build_result == "Successful" ]]; then
-        echo "Assembly Version:     $assembly_version"
-        echo "File Version:         $file_version"
-        echo "InformationalVersion: $informational_version"
-        echo "Version:              $version"
-        echo "PackageVersion:       $package_version"
-    fi
+    dump_vars -f -q -md \
+        --header "Dotnet Build Summary:" \
+        build_result \
+        warnings_count \
+        errors_count \
+        assembly_version \
+        file_version \
+        informational_version \
+        version \
+        package_version
+
+    # echo "Build result:        $build_result"
+    # echo "Errors:              $errors_count"
+    # echo "Warnings:            $warnings_count"
+    # if [[ $build_result == "Successful" ]]; then
+    #     echo "Assembly Version:     $assembly_version"
+    #     echo "File Version:         $file_version"
+    #     echo "InformationalVersion: $informational_version"
+    #     echo "Version:              $version"
+    #     echo "PackageVersion:       $package_version"
+    # fi
 
     # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
     eval "$restoreShopt" &> "$_ignore"
