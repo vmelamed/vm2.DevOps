@@ -77,7 +77,7 @@ function summarizeDotnetBuild()
         package_version=${BASH_REMATCH[1]}
     fi
 
-    dump_vars -f -q -md \
+    dump_vars -f -q \
         --header "Dotnet Build Summary:" \
         build_result \
         warnings_count \
