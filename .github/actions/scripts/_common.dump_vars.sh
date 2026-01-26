@@ -88,7 +88,7 @@ function pop_state() {
 }
 
 function dump_vars() {
-    if [[ $verbose == false ]] || (( $# == 0 )); then
+    if (( $# == 0 )); then
         return 0
     fi
 
@@ -105,6 +105,10 @@ function dump_vars() {
             * ) ;;
         esac
     done
+
+    if [[ $verbose == false ]]; then
+        return 0
+    fi
 
     # for the proper behavior of this function change some global flags (to be restored before returning from the function)
     local -n table

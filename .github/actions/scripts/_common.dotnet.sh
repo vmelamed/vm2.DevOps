@@ -76,8 +76,8 @@ function summarizeDotnetBuild()
         [[ $bo =~ $regex ]] || true
         package_version=${BASH_REMATCH[1]}
     fi
-    verbose=true
-    dump_vars -f -q \
+
+    dump_vars -f -q -md \
         --header "Dotnet Build Summary:" \
         build_result \
         warnings_count \
@@ -86,7 +86,7 @@ function summarizeDotnetBuild()
         file_version \
         informational_version \
         version \
-        package_version | tee "$github_step_summary"
+        package_version
 
     # echo "Build result:        $build_result"
     # echo "Errors:              $errors_count"
