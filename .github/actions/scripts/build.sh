@@ -72,6 +72,6 @@ build_output=$(dotnet build "$build_project" \
 
 # Summarize the build results
 sum=$(summarizeDotnetBuild "$build_output")
-summary "$sum"
+echo "$sum" | summary
 # TODO: why the line below doesn't work?
 # summarizeDotnetBuild "$build_output" | summary

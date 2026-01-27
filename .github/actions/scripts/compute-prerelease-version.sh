@@ -61,6 +61,7 @@ declare -xr reason
 create_tag_regexes "$minver_tag_prefix"
 
 # Find latest stable tag like v1.2.3
+# shellcheck disable=SC2154 # semverTagReleaseRegex is referenced but not assigned.
 latest_stable=$(git tag --list "${minver_tag_prefix}[0-9]*" | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1 || echo "")
 
 declare -i major=0
@@ -90,6 +91,7 @@ prerelease_version="${major}.${minor}.${patch}-$semver_prerelease"
 prerelease_tag="${minver_tag_prefix}$prerelease_version"
 
 # Check if tag already exists
+# shellcheck disable=SC2154 # _ignore is referenced but not assigned.
 if git rev-parse "$prerelease_tag" >"$_ignore" 2>&1; then
     error "Tag '$prerelease_tag' already exists. Possible remedy: delete it, or branch 'main' again, and do a new PR and release with a higher version number."
 fi
@@ -107,10 +109,9 @@ args_to_github_output \
 
 # Summary
 
-summary "$(cat << EOF
-✅ Prerelease Version: **$prerelease_version**
-- Git Tag: \`$prerelease_tag\`
-## Prerelease Reason:
-- Reason: ${reason:-"prerelease build"}
-EOF
-)"
+{
+    echo "✅ Prerelease Version: **$prerelease_version**"
+    echo "- Git Tag: '$prerelease_tag'"
+    echo "## Prerelease Reason:"
+    echo "- Reason: ${reason:-"prerelease build"}"
+} | summary

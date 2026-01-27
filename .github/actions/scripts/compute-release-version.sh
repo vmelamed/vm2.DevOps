@@ -51,6 +51,7 @@ exit_if_has_errors
 create_tag_regexes "$minver_tag_prefix"
 
 # Find latest stable like v1.2.3
+# shellcheck disable=SC2154 # semverTagReleaseRegex is referenced but not assigned.
 latest_stable=$(git tag --list "${minver_tag_prefix}*" | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1 || echo "")
 
 declare -i major=0
@@ -72,6 +73,7 @@ fi
 
 # Auto-detect next stable version from conventional commits
 last_tag="${latest_stable:-$(git rev-list --max-parents=0 HEAD)}"
+# shellcheck disable=SC2154 # _ignore is referenced but not assigned.
 commits=$(git log "$last_tag"..HEAD --pretty=format:"%s" 2>"$_ignore" || echo "")
 
 if echo "$commits" | grep -qiE '^[a-z]+(\(.+\))?!:|BREAKING CHANGE:'; then
@@ -102,8 +104,10 @@ release_version="$major.$minor.$patch"
 trace "Calculated release version from commit messages: $release_version [$bump_type]"
 
 # make sure the computed version is not lower than the latest prerelease
+# shellcheck disable=SC2154 # semverTagPrereleaseRegex is referenced but not assigned.
 latest_prerelease_tag=$(git tag --list "${minver_tag_prefix}*" | grep -E "$semverTagPrereleaseRegex" | sort -V | tail -n1 || echo "")
 
+   # shellcheck disable=SC2154 # isLt is referenced but not assigned.
 if [[ -n "$latest_prerelease_tag" ]] && \
    (( $(compare_semver "$release_version" "${latest_prerelease_tag#"$minver_tag_prefix"}") == isLt )); then
         # the computed release version is less than the latest prerelease version,
@@ -141,11 +145,10 @@ args_to_github_output \
   reason
 
 # Summary
-summary "$(cat << EOF
-## 🎯 Release Version: **$release_version**
-- Git Tag: \`$release_tag\`
-## Release version
-- Reason: ${reason:-"release build"}
-- Manual version: ${manual_version:-"none - automatic versioning"}
-EOF
-)"
+{
+    echo "## 🎯 Release Version: **$release_version**"
+    echo "- Git Tag: \`$release_tag\`"
+    echo "## Release version"
+    echo "- Reason: ${reason:-"release build"}"
+    echo "- Manual version: ${manual_version:-"none - automatic versioning"}"
+} | summary

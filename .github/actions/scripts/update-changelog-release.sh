@@ -35,6 +35,7 @@ fi
 exit_if_has_errors
 
 # Use the range from last stable tag to HEAD
+# shellcheck disable=SC2154 # semverTagReleaseRegex is referenced but not assigned.
 last_stable=$(git tag --list "${minver_tag_prefix}*" | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1 || echo "")
 if [[ -n "$last_stable" ]]; then
     range="$last_stable..HEAD"
@@ -56,6 +57,7 @@ else
 fi
 
 if git status --porcelain -- CHANGELOG.md | grep -q .; then
+    # shellcheck disable=SC2154 # CI is referenced but not assigned.
     if [[ "$CI" == "true" ]]; then
         execute git config user.name "github-actions[bot]"
         execute git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
