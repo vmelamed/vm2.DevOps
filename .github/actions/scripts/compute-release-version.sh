@@ -40,6 +40,8 @@ declare -xr nuget_server
 declare -xr minver_tag_prefix
 declare -xr reason
 
+create_tag_regexes "$minver_tag_prefix"
+
 # detect if the head is already tagged
 head_tag=$(git tag --points-at HEAD)
 if [[ -n $head_tag ]]; then
@@ -48,8 +50,6 @@ fi
 
 dump_all_variables
 exit_if_has_errors
-
-create_tag_regexes "$minver_tag_prefix"
 
 # Find latest stable like v1.2.3
 # shellcheck disable=SC2154 # semverTagReleaseRegex is referenced but not assigned.

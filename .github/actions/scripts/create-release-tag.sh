@@ -28,11 +28,11 @@ is_safe_minverTagPrefix "$minver_tag_prefix" || true
 create_tag_regexes "$minver_tag_prefix" || true
 is_safeReleaseTag "$release_tag" || true
 
-dump_all_variables
-exit_if_has_errors
-
 declare -xr release_tag
 declare -xr reason
+
+dump_all_variables
+exit_if_has_errors
 
 # shellcheck disable=SC2154 # ci is referenced but not assigned.
 if [[ "$ci" == "true" ]]; then

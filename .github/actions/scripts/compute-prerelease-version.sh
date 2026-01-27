@@ -69,7 +69,7 @@ declare -i major=0
 declare -i minor=0
 declare -i patch=0
 
-if is_semverReleaseTag "$latest_stable" "$minver_tag_prefix"; then
+if is_semverReleaseTag "$latest_stable"; then
     major=${BASH_REMATCH[$semver_major]}
     minor=${BASH_REMATCH[$semver_minor]}
     patch=${BASH_REMATCH[$semver_patch]}

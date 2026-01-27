@@ -49,7 +49,7 @@ function create_tag_regexes()
         error "${FUNCNAME[0]}() requires exactly 1 argument: the semver tag prefix used by MinVer."
         return 2
     fi
-    if [[ ! $1 =~ $minverTagPrefixRegex ]]; then
+    if ! is_safe_minverTagPrefix "$1"; then
         error "The semver tag prefix used by MinVer ('$1') is not valid. It must match the regex: $minverTagPrefixRegex"
         return 1
     fi
@@ -187,17 +187,11 @@ function is_semver()
 ## Usage: if is_semver "$version"; then ... fi
 function is_semverTag()
 {
-    if [[ $# -lt 1 || $# -gt 2 ]]; then
-        error "${FUNCNAME[0]}() requires 1 or 2 arguments: the version and the optional minver tag prefix used by MinVer."
+    if [[ $# -ne 1 ]]; then
+        error "${FUNCNAME[0]}() requires exactly 1 argument: the semver tag."
         return 2
     fi
-
-    local tag="$1"
-    local tag_prefix
-    [[ -z "$2" ]] && tag_prefix=$minverTagPrefixRegex || tag_prefix="$2"
-
-    # Must match semver pattern (already defined in _common.semver.sh)
-    [[ "$tag" =~ $tag_prefix ]]
+    [[ "$1" =~ $semverTagRegex ]]
 }
 
 ## Tests if the parameter is a valid semantic version (semver format).
@@ -207,7 +201,7 @@ function is_semverTag()
 function is_semverPrerelease()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires exactly 1 argument: the version."
+        error "${FUNCNAME[0]}() requires exactly 1 argument: the semver prerelease."
         return 2
     fi
     [[ "$1" =~ $semverPrereleaseRegex ]]
@@ -218,16 +212,11 @@ function is_semverPrerelease()
 ## Usage: if is_semver "$version"; then ... fi
 function is_semverPrereleaseTag()
 {
-    if [[ $# -lt 1 || $# -gt 2 ]]; then
-        error "${FUNCNAME[0]}() requires 1 or 2 arguments: the version and the semver tag prefix used by MinVer."
+    if [[ $# -ne 1 ]]; then
+        error "${FUNCNAME[0]}() requires exactly 1 argument: the semver prerelease tag."
         return 2
     fi
-
-    local tag="$1"
-    local tag_prefix="${2:-"${MINVERTAGPREFIX:-'v'}"}"
-
-    # Must match semver pattern (already defined in _common.semver.sh)
-    [[ "$tag" =~ ^${tag_prefix}${semverPrereleaseRex}$ ]]
+    [[ "$1" =~ $semverTagPrereleaseRegex ]]
 }
 
 ## Tests if the parameter is a valid semantic version (semver format).
@@ -249,17 +238,9 @@ function is_semverRelease()
 ## Usage: if is_semver "$version"; then ... fi
 function is_semverReleaseTag()
 {
-    if [[ $# -lt 1 || $# -gt 2 ]]; then
-        error "${FUNCNAME[0]}() requires 1 or 2 arguments: the version and optional semver tag prefix used by MinVer."
+    if [[ $# -ne 1 ]]; then
+        error "${FUNCNAME[0]}() requires exactly 1 argument: the semver release tag."
         return 2
     fi
-
-    local tag="$1"
-    local tag_prefix="${2:-"${MINVERTAGPREFIX:-'v'}"}"
-
-    # Must match semver pattern (already defined in _common.semver.sh)
-    [[ "$tag" =~ ^${tag_prefix}${semverReleaseRex}$ ]]; ret=$?
-    dump_vars -q -f -h "is_semverReleaseTag locals" tag tag_prefix semverReleaseRex ret
-
-    [[ "$tag" =~ ^${tag_prefix}${semverReleaseRex}$ ]]
+    [[ "$1" =~ $semverTagReleaseRegex ]]
 }

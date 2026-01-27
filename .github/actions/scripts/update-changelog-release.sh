@@ -17,14 +17,13 @@ declare -x minver_tag_prefix=${MINVERTAGPREFIX:-v}
 source "$script_dir/update-changelog-release.usage.sh"
 source "$script_dir/update-changelog-release.utils.sh"
 
-get_arguments "$@"
-
-dump_all_variables
-
 declare -xr release_tag
 declare -xr minver_tag_prefix
 
 create_tag_regexes "$minver_tag_prefix"
+
+get_arguments "$@"
+dump_all_variables
 
 if [[ -z "$release_tag" ]]; then
     error "Release tag is required" >&2

@@ -31,9 +31,6 @@ is_safe_minverTagPrefix "$minver_tag_prefix" true || true
 is_safe_minverPrereleaseId "$minver_prerelease_id" true || true
 is_safe_path "$artifacts_dir" || true
 
-dump_all_variables
-exit_if_has_errors
-
 test_name=$(basename "${test_project%.*}")      # the base name of the test project (without the path and file extension)
 test_dir=$(dirname "$test_project")             # the directory of the test project
 
@@ -46,6 +43,11 @@ declare -xr minver_tag_prefix
 declare -xr minver_prerelease_id
 declare -xr test_name
 declare -xr test_dir
+
+create_tag_regexes "$minver_tag_prefix"
+
+dump_all_variables
+exit_if_has_errors
 
 solution_dir="$(realpath -e "${test_dir}/../..")" # assuming <solution-root>/test/<test-project>/test-project.csproj
 artifacts_dir=$(realpath -m "${artifacts_dir:-"$solution_dir/TestArtifacts/$test_name"}")  # ensure it's an absolute path per test project

@@ -43,6 +43,8 @@ declare -xr minver_tag_prefix
 declare -xr minver_prerelease_id
 declare -xr artifacts_dir
 
+create_tag_regexes "$minver_tag_prefix"
+
 # Determine solution directory and artifacts directory
 solution_dir="$(realpath -e "$(dirname "$bm_project")/../..")"
 artifacts_dir=$(realpath -m "${artifacts_dir:-"$solution_dir/BmArtifacts"}")

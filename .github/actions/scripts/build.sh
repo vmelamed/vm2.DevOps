@@ -52,6 +52,8 @@ declare -xr minver_prerelease_id
 declare -xr nuget_username
 declare -xr nuget_password
 
+create_tag_regexes "$minver_tag_prefix"
+
 # Configure NuGet source with GitHub Packages authentication
 if [[ -n "$nuget_username" && -n "$nuget_password" ]]; then
     dotnet nuget update source github.vm2 \
@@ -73,7 +75,7 @@ build_output=$(dotnet build "$build_project" \
     /p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" | tail -n 50)
 
 # Summarize the build results
-sum=$(summarizeDotnetBuild "$build_output")
-echo "$sum" | summary
+# sum=$(summarizeDotnetBuild "$build_output")
+# echo "$sum" | summary
 # TODO: why the line below doesn't work?
-# summarizeDotnetBuild "$build_output" | summary
+summarizeDotnetBuild "$build_output" | summary
