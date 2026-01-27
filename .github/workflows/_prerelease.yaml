@@ -170,7 +170,7 @@ jobs:
           #!/usr/bin/env bash
           set -euo pipefail
 
-          source ${DEVOPS_LIB_DIR}/scripts/bash/lib/gh_core.sh
+          source ${DEVOPS_LIB_DIR}/gh_core.sh
 
           if [ ! -s changelog/cliff.prerelease.toml ]; then
               error "Missing changelog/cliff.prerelease.toml; failing."
