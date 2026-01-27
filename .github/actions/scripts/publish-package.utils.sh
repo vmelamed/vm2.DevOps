@@ -47,6 +47,11 @@ function get_arguments()
                 repo_owner="$1"; shift
                 ;;
 
+            --version )
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                version="$1"; shift
+                ;;
+
             --git-tag|-g )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 git_tag="$1"; shift
