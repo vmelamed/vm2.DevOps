@@ -200,11 +200,11 @@ function is_safe_nuget_server()
 function validate_nuget_server()
 {
     if [[ $# -lt 1 ]]; then
-        error "The function validate_nuget_server() requires at least one parameter: the NuGet server to validate."
+        error "The function validate_nuget_server() requires at least one parameter: the NAME OF THE VARIABLE containing the NuGet server to validate."
         return 2
     fi
 
-    local server=$1
+    local -n server=$1
     local default_server=${2:-"nuget"}
 
     if [[ -z "$server" ]]; then
