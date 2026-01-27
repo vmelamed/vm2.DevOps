@@ -13,8 +13,8 @@ fi
 declare -xr majorLabelRex='[0-9]+'
 declare -xr minorLabelRex='[0-9]+'
 declare -xr patchLabelRex='[0-9]+'
-declare -xr prereleaseLabelRex='[0-9A-Za-z.-]+'
-declare -xr buildLabelRex='[0-9A-Za-z.-]+?'
+declare -xr prereleaseLabelRex='[-0-9A-Za-z.]+'
+declare -xr buildLabelRex='[-0-9A-Za-z.]+?'
 
 declare -xr semverReleaseRex="($majorLabelRex)\\.($minorLabelRex)\\.($patchLabelRex)(\\+$buildLabelRex)?"
 declare -xr semverPrereleaseRex="($majorLabelRex)\\.($minorLabelRex)\\.($patchLabelRex)(-$prereleaseLabelRex)(\\+$buildLabelRex)?"
@@ -30,7 +30,7 @@ declare -x semverTagRegex
 declare -x semverTagReleaseRegex
 declare -x semverTagPrereleaseRegex
 
-declare -xr minverTagPrefixRex='[0-9A-Za-z_]([0-9A-Za-z._-/]*[A-Za-z_-])?'
+declare -xr minverTagPrefixRex='[0-9A-Za-z_]([-0-9A-Za-z._/]*[-A-Za-z_])?'
 declare -xr minverTagPrefixRegex="^$minverTagPrefixRex$"
 
 declare -xr minverPrereleaseIdRex=$prereleaseLabelRex

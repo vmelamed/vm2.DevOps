@@ -226,7 +226,7 @@ function is_safe_reason()
     return 0
 }
 
-declare -xr nugetServersRegex="^(nuget|github|https?://[a-zA-Z0-9._/-]+)$";
+declare -xr nugetServersRegex="^(nuget|github|https?://[-a-zA-Z0-9._/]+)$";
 
 ## Validates NuGet server URL or known server name
 ## Returns 0 if valid, 1 otherwise
