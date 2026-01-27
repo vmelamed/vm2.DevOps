@@ -87,8 +87,8 @@ else
     patch=0
 fi
 
-semver_prerelease="$minver_prerelease_id.$github_run_date.$github_run_number"
-prerelease_version="${major}.${minor}.${patch}-$semver_prerelease"
+prerelease="$minver_prerelease_id.$github_run_date.$github_run_number"
+prerelease_version="${major}.${minor}.${patch}-$prerelease"
 prerelease_tag="${minver_tag_prefix}$prerelease_version"
 
 # Check if tag already exists
