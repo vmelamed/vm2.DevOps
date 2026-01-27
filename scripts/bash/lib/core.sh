@@ -8,11 +8,15 @@
 # Common scripts variables and environment initialization
 #-------------------------------------------------------------------------------
 
+declare -x script_name
+declare -x script_dir
+declare -x lib_dir
+
 if [[ ! -v script_name || -z "$script_name" ]]; then
     script_name="$(basename "${BASH_SOURCE[-1]}")"
 fi
-if [[ ! -v lib_dir || -z "$lib_dir" ]]; then
-    lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[-1]}")")"
+if [[ ! -v script_dir || -z "$script_dir" ]]; then
+    script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[-1]}")")"
 fi
 if [[ ! -v lib_dir || -z "$lib_dir" ]]; then
     lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"

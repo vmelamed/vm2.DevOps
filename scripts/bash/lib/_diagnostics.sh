@@ -173,6 +173,7 @@ function show_stack()
 {
     [[ "$verbose" != true ]] && return 0
 
+    echo "${BASH_SOURCE[-1]} stack trace:"
     local i
     for ((i=0; i<${#FUNCNAME[@]}; i++)); do
         echo "$i: ${FUNCNAME[i]} at ${BASH_SOURCE[i]}:${BASH_LINENO[i]}"

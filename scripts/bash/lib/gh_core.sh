@@ -1,13 +1,17 @@
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-# This script defines a number of GitHub specific constants, variables, and helper functions typical for GitHub Actions environment.
+# This script defines several GitHub specific constants, variables, and helper functions typical for GitHub Actions environment.
 # For the functions to be invocable by other scripts, this script needs to be sourced.
+
+declare -x script_name
+declare -x script_dir
+declare -x lib_dir
 
 if [[ ! -v script_name || -z "$script_name" ]]; then
     script_name="$(basename "${BASH_SOURCE[-1]}")"
 fi
-if [[ ! -v lib_dir || -z "$lib_dir" ]]; then
-    lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[-1]}")")"
+if [[ ! -v script_dir || -z "$script_dir" ]]; then
+    script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[-1]}")")"
 fi
 if [[ ! -v lib_dir || -z "$lib_dir" ]]; then
     lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
