@@ -35,7 +35,7 @@ source "$script_dir/publish-package.utils.sh"
 
 get_arguments "$@"
 
-is_valid_path "$package_project" || true
+is_safe_path "$package_project" || true
 validate_nuget_server "$nuget_server" || true
 is_safe_input "$preprocessor_symbols" || true
 is_safe_input "$minver_tag_prefix" || true
