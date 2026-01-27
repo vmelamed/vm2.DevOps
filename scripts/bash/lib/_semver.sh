@@ -14,7 +14,7 @@ declare -xr majorLabelRex='[0-9]+'
 declare -xr minorLabelRex='[0-9]+'
 declare -xr patchLabelRex='[0-9]+'
 declare -xr prereleaseLabelRex='[-0-9A-Za-z.]+'
-declare -xr buildLabelRex='[-0-9A-Za-z.]+?'
+declare -xr buildLabelRex='[-0-9A-Za-z.]+'
 
 declare -xr semverReleaseRex="($majorLabelRex)\\.($minorLabelRex)\\.($patchLabelRex)(\\+$buildLabelRex)?"
 declare -xr semverPrereleaseRex="($majorLabelRex)\\.($minorLabelRex)\\.($patchLabelRex)(-$prereleaseLabelRex)(\\+$buildLabelRex)?"
@@ -257,10 +257,9 @@ function is_semverReleaseTag()
     local tag="$1"
     local tag_prefix="${2:-"${MINVERTAGPREFIX:-'v'}"}"
 
-    dump_vars -q -f tag tag_prefix
     # Must match semver pattern (already defined in _common.semver.sh)
-    [[ "$tag" =~ ^${tag_prefix}${semverReleaseRex}$ ]]
-    ret=$?
+    [[ "$tag" =~ ^${tag_prefix}${semverReleaseRex}$ ]]; ret=$?
     dump_vars -q -f tag tag_prefix semverReleaseRex ret
-    return "$ret"
+
+    [[ "$tag" =~ ^${tag_prefix}${semverReleaseRex}$ ]]
 }
