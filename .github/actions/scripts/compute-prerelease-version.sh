@@ -77,11 +77,11 @@ if is_semverReleaseTag "$latest_stable"; then
         error "Invalid version numbers in latest stable tag '$latest_stable': $major.$minor.$patch. Major must be > 0, minor and patch must be >= 0."
         exit 2
     fi
-    info "📌 Latest stable release: $latest_stable"
+    info "Latest stable release: $latest_stable"
     patch=$(( patch + 1 ))
 else
     # No stable tag yet - start with v0.1.0
-    info "📌 No previous stable release found; starting at 0.1.0"
+    info "No previous stable release found; starting at 0.1.0 (latest stable: '$latest_stable')"
     major=0
     minor=1
     patch=0

@@ -116,7 +116,7 @@ jobs:
         run: |
           git fetch --tags --force
 
-      - name: Validate and compute prerelease version
+      - name: Compute prerelease version
         id: validate
         shell: bash
         run: |+
@@ -199,7 +199,7 @@ jobs:
           fi
 
   package-and-publish:
-    name: Package and Publish Prerelease to NuGet server
+    name: Publish Package (prerelease) to NuGet server
     needs:
       - compute-version
       - changelog
@@ -249,7 +249,7 @@ jobs:
             **/packages.lock.json
             **/*.csproj
 
-      - name: Build, Package and Publish prerelease to NuGet server
+      - name: Publish package (prerelease) to NuGet server
         shell: bash
         env:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}

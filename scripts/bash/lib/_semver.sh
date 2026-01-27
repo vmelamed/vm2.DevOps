@@ -267,10 +267,11 @@ function is_safe_semver()
         return 2
     fi
 
-    if ! is_semver %1; then
-        error "%1 is not a valid semver."
+    if ! is_semver "$1"; then
+        error "$1 is not a valid semver."
         return 1
     fi
+
     return 0
 }
 
@@ -285,10 +286,11 @@ function is_safe_semverTag()
         return 2
     fi
 
-    if ! is_semverTag %1 %2; then
-        error "%1 is not a valid semver git tag."
+    if ! is_semverTag "$1" "${2:-}"; then
+        error "$1 is not a valid semver git tag."
         return 1
     fi
+
     return 0
 }
 
@@ -303,10 +305,11 @@ function is_safe_semverPrerelease()
         return 2
     fi
 
-    if ! is_semverPrerelease %1; then
-        error "%1 is not a valid prerelease semver."
+    if ! is_semverPrerelease "$1"; then
+        error "$1 is not a valid prerelease semver."
         return 1
     fi
+
     return 0
 }
 
@@ -321,10 +324,11 @@ function is_safe_semverPrereleaseTag()
         return 2
     fi
 
-    if ! is_semverPrereleaseTag %1 %2; then
-        error "%1 is not a valid prerelease semver git tag."
+    if ! is_semverPrereleaseTag "$1" "${2:-}"; then
+        error "$1 is not a valid prerelease semver git tag."
         return 1
     fi
+
     return 0
 }
 
@@ -339,10 +343,11 @@ function is_safe_semverRelease()
         return 2
     fi
 
-    if ! is_semverRelease %1; then
-        error "%1 is not a valid release (stable) semver."
+    if ! is_semverRelease "$1"; then
+        error "$1 is not a valid release (stable) semver."
         return 1
     fi
+
     return 0
 }
 
@@ -357,9 +362,10 @@ function is_safe_semverReleaseTag()
         return 2
     fi
 
-    if ! is_semverReleaseTag %1 %2; then
-        error "%1 is not a valid release (stable) semver git tag."
+    if ! is_semverReleaseTag "$1" "${2:-}"; then
+        error "$1 is not a valid release (stable) semver git tag."
         return 1
     fi
+
     return 0
 }
