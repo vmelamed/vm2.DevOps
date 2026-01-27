@@ -2,10 +2,10 @@
 set -euo pipefail
 
 script_name="$(basename "${BASH_SOURCE[0]}")"
-lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
-lib_dir="$lib_dir/../../../scripts/bash/lib"
+script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
+lib_dir="$script_dir/../../../scripts/bash/lib"
 
-declare -r lib_dir
+declare -r script_dir
 declare -r lib_dir
 
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
@@ -38,8 +38,8 @@ declare -x verbose=${VERBOSE:-${defaultVerbose}}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-${defaultMinverTagPrefix}}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-${defaultMinverPrereleaseId}}
 
-source "$lib_dir/validate-vars.usage.sh"
-source "$lib_dir/validate-vars.utils.sh"
+source "$script_dir/validate-vars.usage.sh"
+source "$script_dir/validate-vars.utils.sh"
 
 get_arguments "$@"
 dump_all_variables

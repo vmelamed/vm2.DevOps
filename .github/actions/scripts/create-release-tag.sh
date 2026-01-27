@@ -2,9 +2,10 @@
 set -euo pipefail
 
 script_name="$(basename "${BASH_SOURCE[0]}")"
-lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
-lib_dir="$lib_dir/../../../scripts/bash/lib"
-declare -r lib_dir
+script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
+lib_dir="$script_dir/../../../scripts/bash/lib"
+
+declare -r script_dir
 declare -r lib_dir
 
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
@@ -16,8 +17,8 @@ declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x release_tag=${RELEASE_TAG:-}
 declare -x reason=${REASON:-stable release}
 
-source "$lib_dir/create-release-tag.usage.sh"
-source "$lib_dir/create-release-tag.utils.sh"
+source "$script_dir/create-release-tag.usage.sh"
+source "$script_dir/create-release-tag.utils.sh"
 
 get_arguments "$@"
 

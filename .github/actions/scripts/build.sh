@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
-lib_dir="$lib_dir/../../../scripts/bash/lib"
-declare -r lib_dir
+script_name="$(basename "${BASH_SOURCE[0]}")"
+script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
+lib_dir="$script_dir/../../../scripts/bash/lib"
+
+declare -r script_dir
 declare -r lib_dir
 
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
@@ -25,8 +27,8 @@ declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_
 declare -x nuget_username=${GITHUB_ACTOR:-""}
 declare -x nuget_password=${GITHUB_TOKEN:-""}
 
-source "$lib_dir/build.usage.sh"
-source "$lib_dir/build.utils.sh"
+source "$script_dir/build.usage.sh"
+source "$script_dir/build.utils.sh"
 
 get_arguments "$@"
 

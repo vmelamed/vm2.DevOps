@@ -2,21 +2,23 @@
 set -euo pipefail
 
 script_name="$(basename "${BASH_SOURCE[0]}")"
-lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
-lib_dir="$lib_dir/../../../scripts/bash/lib"
-declare -r lib_dir
+script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
+lib_dir="$script_dir/../../../scripts/bash/lib"
+
+declare -r script_dir
 declare -r lib_dir
 
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
 source "$lib_dir/gh_core.sh"
+
 declare -x artifacts_dir=${ARTIFACT_DIR:-}
 declare -x repository=${REPOSITORY:-}
 declare -x workflow_id=${WORKFLOW_ID:-}
 declare -x workflow_name=${WORKFLOW_NAME:-}
 declare -x workflow_path=${WORKFLOW_PATH:-}
 
-source "$lib_dir/download-artifact.utils.sh"
-source "$lib_dir/download-artifact.usage.sh"
+source "$script_dir/download-artifact.utils.sh"
+source "$script_dir/download-artifact.usage.sh"
 
 get_arguments "$@"
 
