@@ -77,18 +77,6 @@ function is_in()
     return 1
 }
 
-## Tests the error counter to determine if there are any accumulated errors so far
-## Usage: exit_if_has_errors [<flag>]. The flag is optional and doesn't matter what it is - if it is passed, the method calls `exit 2`.
-## Return: If it didn't exit, returns 1 if there are errors, 0 otherwise.
-function exit_if_has_errors()
-{
-    if ((errors > 0)); then
-        usage false "$errors error(s) encountered. Please fix the above issues and try again."
-        exit 2
-    fi
-    return 0
-}
-
 ## Tests if the specified directory is a Git repository.
 ## Usage: is_inside_work_tree <directory>
 function is_inside_work_tree()

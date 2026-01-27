@@ -42,6 +42,7 @@ source "$script_dir/validate-vars.utils.sh"
 get_arguments "$@"
 dump_all_variables
 
+# shellcheck disable=SC2154 # _ignore is referenced but not assigned.
 if ! command -v -p jq &> "$_ignore" || ! command -v -p gh 2>&1 "$_ignore"; then
     if execute sudo apt-get update && sudo apt-get install -y gh jq; then
         info "GitHub CLI 'gh' and/or 'jq' successfully installed."

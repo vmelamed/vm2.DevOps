@@ -157,6 +157,19 @@ function usage()
     display_usage_msg "$common_switches" "OVERRIDE THE FUNCTION usage() IN THE CALLING SCRIPT TO PROVIDE CUSTOM USAGE INFORMATION."
 }
 
+## Tests the error counter to determine if there are any accumulated errors so far
+## Usage: exit_if_has_errors [<flag>]. The flag is optional and doesn't matter what it is - if it is passed, the method calls `exit 2`.
+## Return: If it didn't exit, returns 1 if there are errors, 0 otherwise.
+function exit_if_has_errors()
+{
+    # shellcheck disable=SC2154 # errors is referenced but not assigned.
+    if ((errors > 0)); then
+        usage false "$errors error(s) encountered. Please fix the above issues and try again."
+        exit 2
+    fi
+    return 0
+}
+
 declare -rx common_switches="  -v, --verbose                 Enables verbose output:
                                 1) displays the commands that will change some state, e.g. 'mkdir', 'git', 'dotnet', etc
                                 2) all output to '/dev/null' is redirected to '/dev/stdout'
