@@ -36,8 +36,8 @@ get_arguments "$@"
 is_safe_path "$build_project" || true
 is_safe_input "$configuration" || true
 is_safe_input "$preprocessor_symbols" || true
-is_safe_input "$minver_tag_prefix" || true
-is_safe_input "$minver_prerelease_id" || true
+is_safe_minverTagPrefix "$minver_tag_prefix" || true
+is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 is_safe_input "$nuget_username" || true
 
 dump_all_variables

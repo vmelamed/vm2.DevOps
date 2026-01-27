@@ -1,16 +1,24 @@
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-semver_dir="$(dirname "${BASH_SOURCE[0]}")"
+if [[ ! -v lib_dir || -z "$lib_dir" ]]; then
+    lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
+fi
 
 # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
 if ! declare -pF "error" > "$_ignore"; then
-    source "$semver_dir/_diagnostics.sh"
+    source "$lib_dir/_diagnostics.sh"
 fi
 
 # Regular expressions that test if a string contains a semantic version:
-declare -xr semverRex='([0-9]+)\.([0-9]+)\.([0-9]+)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?'
-declare -xr semverReleaseRex='([0-9]+)\.([0-9]+)\.([0-9]+)'
-declare -xr semverPrereleaseRex='([0-9]+)\.([0-9]+)\.([0-9]+)(-[0-9A-Za-z.-]+)(\+[0-9A-Za-z.-]+)?'
+declare -xr majorLabelRex='[0-9]+'
+declare -xr minorLabelRex='[0-9]+'
+declare -xr patchLabelRex='[0-9]+'
+declare -xr prereleaseLabelRex='[0-9A-Za-z.-]+'
+declare -xr buildLabelRex='[0-9A-Za-z.-]+?'
+
+declare -xr semverReleaseRex="($majorLabelRex)\\.($minorLabelRex)\\.($patchLabelRex)(\\+$buildLabelRex)?"
+declare -xr semverPrereleaseRex="($majorLabelRex)\\.($minorLabelRex)\\.($patchLabelRex)(-$prereleaseLabelRex)(\\+$buildLabelRex)?"
+declare -xr semverRex="($majorLabelRex)\\.($minorLabelRex)\\.($patchLabelRex)(-$prereleaseLabelRex)?(\\+$buildLabelRex)?"
 
 # Regular expressions that test if a string is exactly a semantic version:
 declare -xr semverRegex="^$semverRex$"
@@ -22,9 +30,15 @@ declare -x semverTagRegex
 declare -x semverTagReleaseRegex
 declare -x semverTagPrereleaseRegex
 
+declare -xr minverTagPrefixRex='([0-9A-Za-z_][0-9A-Za-z._-/]*)?[A-Za-z_-]'
+declare -xr minverTagPrefixRegex="^$minverTagPrefixRex$"
+
+declare -xr minverPrereleaseIdRex=$prereleaseLabelRex
+declare -xr minverPrereleaseIdRegex="^$minverPrereleaseIdRex$"
+
 ## Flag indicating whether the tag regexes have been initialized with default value for the tag prefix or with actual parameter
-## 0 - actual, 1 - default, 128 - not initialized
-declare -xi tag_regexes_initialized=128
+## 0 - actual, 1 - default
+declare -xi tag_regexes_initialized=1
 
 ## Shell function to create the regular expressions above for tags comprising a given prefix and a semantic version.
 ## Call once when the tag prefix is known. For example: create_tag_regexes "ver.".
@@ -35,19 +49,19 @@ function create_tag_regexes()
         error "${FUNCNAME[0]}() requires exactly 1 argument: the semver tag prefix used by MinVer."
         return 2
     fi
+    if [[ ! $1 =~ $minverTagPrefixRegex ]]; then
+        error "The semver tag prefix used by MinVer ('$1') is not valid. It must match the regex: $minverTagPrefixRegex"
+        return 1
+    fi
 
-    [[ -z "$1" ]] && tag_regexes_initialized=1 || tag_regexes_initialized=0
-
-    local tag_prefix="${1:-"${MINVERTAGPREFIX:-'v'}"}"
-
-    semverTagRegex="^${tag_prefix}${semverRex}$"
-    semverTagReleaseRegex="^${tag_prefix}${semverReleaseRex}$"
-    semverTagPrereleaseRegex="^${tag_prefix}${semverPrereleaseRex}$"
+    semverTagRegex="^${1}${semverRex}$"
+    semverTagReleaseRegex="^${1}${semverReleaseRex}$"
+    semverTagPrereleaseRegex="^${1}${semverPrereleaseRex}$"
 }
 
 # create the regexes with default prefix from $MINVERTAGPREFIX or 'v' for now, they can be re-created later by calling
 # create_tag_regexes with a different prefix if needed
-create_tag_regexes "${MINVERTAGPREFIX:-'v'}"
+create_tag_regexes "${MINVERTAGPREFIX:-"v"}"
 
 # semver components indexes in BASH_REMATCH
 declare -irx semver_major=1
@@ -174,22 +188,13 @@ function is_semver()
 function is_semverTag()
 {
     if [[ $# -lt 1 || $# -gt 2 ]]; then
-        error "${FUNCNAME[0]}() requires 1 or 2 arguments: the version and the semver tag prefix used by MinVer."
+        error "${FUNCNAME[0]}() requires 1 or 2 arguments: the version and the optional minver tag prefix used by MinVer."
         return 2
     fi
 
     local tag="$1"
-    if [[ -z "$2" ]]; then
-        if [[ $tag_regexes_initialized -eq 128 ]]; then
-            create_tag_regexes
-        fi
-        if [[ $tag_regexes_initialized -eq 1 ]]; then
-            warning "${FUNCNAME[0]}(): The semver tag regexes were created with default parameters - not with actual prefix."
-        fi
-        tag_prefix=$semverTagRegex
-    else
-        tag_prefix="$2"
-    fi
+    local tag_prefix
+    [[ -z "$2" ]] && tag_prefix=$minverTagPrefixRegex || tag_prefix="$2"
 
     # Must match semver pattern (already defined in _common.semver.sh)
     [[ "$tag" =~ $tag_prefix ]]
@@ -245,127 +250,17 @@ function is_semverRelease()
 function is_semverReleaseTag()
 {
     if [[ $# -lt 1 || $# -gt 2 ]]; then
-        error "${FUNCNAME[0]}() requires 1 or 2 arguments: the version and the semver tag prefix used by MinVer."
+        error "${FUNCNAME[0]}() requires 1 or 2 arguments: the version and optional semver tag prefix used by MinVer."
         return 2
     fi
 
     local tag="$1"
     local tag_prefix="${2:-"${MINVERTAGPREFIX:-'v'}"}"
 
+    dump_vars -q -f tag tag_prefix
     # Must match semver pattern (already defined in _common.semver.sh)
     [[ "$tag" =~ ^${tag_prefix}${semverReleaseRex}$ ]]
-}
-
-## Shell function to validate that the parameter is a safe semantic version (semver format).
-## Returns 0 if valid semver, > 0 otherwise. On success sets the array variable BASH_REMATCH, and you can use the indexes:
-## $semver_major, $semver_minor, $semver_patch, $semver_prerelease, and $semver_build.
-## Usage: is_safe_semver <version>
-function is_safe_semver()
-{
-    if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires exactly 1 argument: the version."
-        return 2
-    fi
-
-    if ! is_semver "$1"; then
-        error "$1 is not a valid semver."
-        return 1
-    fi
-
-    return 0
-}
-
-## Shell function to validate that the parameter is a safe semantic version tag (semver format).
-## Returns 0 if valid semver, > 0 otherwise. On success sets the array variable BASH_REMATCH, and you can use the indexes:
-## $semver_major, $semver_minor, $semver_patch, $semver_prerelease, and $semver_build.
-## Usage: is_safe_semverTag <version> [<semver tag prefix>]
-function is_safe_semverTag()
-{
-    if [[ $# -lt 1 || $# -gt 2 ]]; then
-        error "${FUNCNAME[0]}() requires 1 or 2 arguments: the version and the semver tag prefix used by MinVer."
-        return 2
-    fi
-
-    if ! is_semverTag "$1" "${2:-}"; then
-        error "$1 is not a valid semver git tag."
-        return 1
-    fi
-
-    return 0
-}
-
-## Shell function to validate that the parameter is a safe prerelease semantic version (semver format).
-## Returns 0 if valid semver, > 0 otherwise. On success sets the array variable BASH_REMATCH, and you can use the indexes:
-## $semver_major, $semver_minor, $semver_patch, $semver_prerelease, and $semver_build.
-## Usage: is_safe_semverPrerelease <version>
-function is_safe_semverPrerelease()
-{
-    if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires exactly 1 argument: the version."
-        return 2
-    fi
-
-    if ! is_semverPrerelease "$1"; then
-        error "$1 is not a valid prerelease semver."
-        return 1
-    fi
-
-    return 0
-}
-
-## Shell function to validate that the parameter is a safe prerelease semantic version tag (semver format).
-## Returns 0 if valid semver, > 0 otherwise. On success sets the array variable BASH_REMATCH, and you can use the indexes:
-## $semver_major, $semver_minor, $semver_patch, $semver_prerelease, and $semver_build.
-## Usage: is_safe_semverPrereleaseTag <version> [<semver tag prefix>]
-function is_safe_semverPrereleaseTag()
-{
-    if [[ $# -lt 1 || $# -gt 2 ]]; then
-        error "${FUNCNAME[0]}() requires 1 or 2 arguments: the version and the semver tag prefix used by MinVer."
-        return 2
-    fi
-
-    if ! is_semverPrereleaseTag "$1" "${2:-}"; then
-        error "$1 is not a valid prerelease semver git tag."
-        return 1
-    fi
-
-    return 0
-}
-
-## Shell function to validate that the parameter is a safe release semantic version (semver format).
-## Returns 0 if valid semver, > 0 otherwise. On success sets the array variable BASH_REMATCH, and you can use the indexes:
-## $semver_major, $semver_minor, $semver_patch, $semver_prerelease, and $semver_build.
-## Usage: is_safe_semverRelease <version>
-function is_safe_semverRelease()
-{
-    if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires exactly 1 argument: the version."
-        return 2
-    fi
-
-    if ! is_semverRelease "$1"; then
-        error "$1 is not a valid release (stable) semver."
-        return 1
-    fi
-
-    return 0
-}
-
-## Shell function to validate that the parameter is a safe release semantic version tag (semver format).
-## Returns 0 if valid semver, > 0 otherwise. On success sets the array variable BASH_REMATCH, and you can use the indexes:
-## $semver_major, $semver_minor, $semver_patch, $semver_prerelease, and $semver_build.
-## Usage: is_safe_semverReleaseTag <version> [<semver tag prefix>]
-function is_safe_semverReleaseTag()
-{
-    if [[ $# -lt 1 || $# -gt 2 ]]; then
-        error "${FUNCNAME[0]}() requires 1 or 2 arguments: the version and the semver tag prefix used by MinVer."
-        return 2
-    fi
-
-    if ! is_semverReleaseTag "$1" "${2:-}"; then
-        error "$1 is not a valid release (stable) semver git tag."
-        return 1
-    fi
-
-    return 0
+    ret=$?
+    dump_vars -q -f tag tag_prefix semverReleaseRex ret
+    return "$ret"
 }

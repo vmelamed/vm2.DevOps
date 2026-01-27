@@ -24,7 +24,7 @@ get_arguments "$@"
 
 # Sanitize inputs to prevent injection attacks
 is_safe_reason "$reason" || true
-is_safe_input "$minver_tag_prefix" || true
+is_safe_minverTagPrefix "$minver_tag_prefix" || true
 create_tag_regexes "$minver_tag_prefix" || true
 is_safeReleaseTag "$release_tag" || true
 

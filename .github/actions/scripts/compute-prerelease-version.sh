@@ -40,8 +40,8 @@ get_arguments "$@"
 # Sanitize inputs to prevent injection attacks
 are_safe_projects "package_projects" "$default_package_projects" || true
 validate_nuget_server "nuget_server" "$default_nuget_server" || true
-is_safe_input "$minver_tag_prefix" || true
-is_safe_input "$minver_prerelease_id" || true
+is_safe_minverTagPrefix "$minver_tag_prefix" || true
+is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 is_safe_reason "$reason" || true
 # detect if the head is already tagged
 head_tag=$(git tag --points-at HEAD)
@@ -69,7 +69,7 @@ declare -i major=0
 declare -i minor=0
 declare -i patch=0
 
-if is_semverReleaseTag "$latest_stable"; then
+if is_semverReleaseTag "$latest_stable" "$minver_tag_prefix"; then
     major=${BASH_REMATCH[$semver_major]}
     minor=${BASH_REMATCH[$semver_minor]}
     patch=${BASH_REMATCH[$semver_patch]}

@@ -27,8 +27,8 @@ get_arguments "$@"
 is_safe_existing_file "$test_project" || true
 is_safe_input "$configuration" || true
 is_safe_input "$preprocessor_symbols" true || true
-is_safe_input "$minver_tag_prefix" true || true
-is_safe_input "$minver_prerelease_id" true || true
+is_safe_minverTagPrefix "$minver_tag_prefix" true || true
+is_safe_minverPrereleaseId "$minver_prerelease_id" true || true
 is_safe_path "$artifacts_dir" || true
 
 dump_all_variables

@@ -31,7 +31,7 @@ get_arguments "$@"
 # Sanitize inputs to prevent injection attacks
 are_safe_projects "package_projects" "$default_package_projects" || true
 validate_nuget_server "nuget_server" "$default_nuget_server" || true
-is_safe_input "$minver_tag_prefix" || true
+is_safe_minverTagPrefix "$minver_tag_prefix" || true
 is_safe_reason "$reason" || true
 
 # freeze the parameters

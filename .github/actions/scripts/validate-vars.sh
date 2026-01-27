@@ -12,8 +12,8 @@ declare -r lib_dir
 source "$lib_dir/gh_core.sh"
 
 declare -r defaultBuildProjects='[""]'
-declare -r defaultTestProjects='["__skip__"]'
-declare -r defaultBenchmarkProjects='["__skip__"]'
+declare -r defaultTestProjects='[skip_projects_sentinel]'
+declare -r defaultBenchmarkProjects='[skip_projects_sentinel]'
 declare -r defaultOses='["ubuntu-latest"]'
 declare -r defaultDotnetVersion='10.0.x'
 declare -r defaultConfiguration='Release'
@@ -54,12 +54,8 @@ if ! command -v -p jq &> "$_ignore" || ! command -v -p gh 2>&1 "$_ignore"; then
     fi
 fi
 
-jq_empty='. == null or . == "" or . == []'
-jq_array_strings='type == "array" and all(type == "string")'
-jq_array_strings_has_empty="any(. == \"\")"
-jq_array_strings_nonempty="$jq_array_strings and length > 0 and all(length > 0)"
-
 # We can build one or more projects or one solution with all projects in it:
+# shellcheck disable=SC2154 # variable is referenced but not assigned.
 if [[ -z "$build_projects" ]] || jq -e "$jq_empty" <<< "$build_projects" > "$_ignore" 2>&1; then
     warning_var build_projects "The value of the option --build-projects is empty: will build the entire solution." "$defaultBuildProjects"
 else
@@ -73,7 +69,7 @@ else
         warning_var build_projects "At least one of the strings in the value of the option --build-projects '$build_projects' is empty: will build the entire solution." "$defaultBuildProjects"
     else
         for p in $(jq -r '.[]' <<< "$build_projects"); do
-            if [[ ! -s "$p" && "$p" != "" ]]; then
+            if [[ "$p" != "" && "$p" != skip_projects_sentinel && ! -s "$p" ]]; then
                 error "Build project file '$p' does not exist or is empty. Please check the path."
             fi
         done
@@ -81,6 +77,7 @@ else
 fi
 
 # There must be at least one test project specified:
+# shellcheck disable=SC2154 # variable is referenced but not assigned.
 if [[ -z "$test_projects" ]]; then
     warning_var test_projects "The value of the option --test-projects is empty: will not run tests." "$defaultTestProjects"
 else
@@ -92,7 +89,7 @@ else
         warning_var test_projects "The value of the option --test-projects is empty or invalid: will not run tests." "$defaultTestProjects"
     else
         for p in $(jq -r '.[]' <<< "$test_projects"); do
-            if [[ ! -s "$p" && "$p" != "__skip__" ]]; then
+            if [[ "$p" != skip_projects_sentinel  && ! -s "$p" ]]; then
                 error "Test project file '$p' does not exist or is empty. Please verify the path in --test-projects."
             fi
         done
@@ -110,7 +107,7 @@ else
         error "The value of the option --benchmark-projects '$benchmark_projects' must be a string representing a non-empty JSON array of non-empty strings - paths to the benchmark project(s) to be run."
     else
         for p in $(jq -r '.[]' <<< "$benchmark_projects"); do
-            if [[ ! -s "$p" && "$p" != "__skip__" ]]; then
+            if [[ "$p" != skip_projects_sentinel  && ! -s "$p" ]]; then
                 error "Benchmark project file '$p' does not exist or is empty. Please verify the path in --benchmark-projects."
             fi
         done
