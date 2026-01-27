@@ -11,6 +11,7 @@ declare -r lib_dir
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
 source "$lib_dir/gh_core.sh"
 
+declare -r defaultBuildProjects='[""]'
 declare -r defaultTestProjects='["__skip__"]'
 declare -r defaultBenchmarkProjects='["__skip__"]'
 declare -r defaultOses='["ubuntu-latest"]'
