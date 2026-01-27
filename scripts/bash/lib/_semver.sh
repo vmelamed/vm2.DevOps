@@ -259,7 +259,7 @@ function is_semverReleaseTag()
 
     # Must match semver pattern (already defined in _common.semver.sh)
     [[ "$tag" =~ ^${tag_prefix}${semverReleaseRex}$ ]]; ret=$?
-    dump_vars -q -f tag tag_prefix semverReleaseRex ret
+    dump_vars -q -f -h "is_semverReleaseTag locals" tag tag_prefix semverReleaseRex ret
 
     [[ "$tag" =~ ^${tag_prefix}${semverReleaseRex}$ ]]
 }
