@@ -1,19 +1,16 @@
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
 # default values for the common flags below
-declare -xr default_ci=false
 declare -xr default__ignore=/dev/null
 declare -xr default_quiet=false
 declare -xr default_verbose=false
 declare -xr default_dry_run=false
+
+declare -xr default_ci=false
+
 declare -xr default_table_format="graphical"
 
 declare -axr table_formats=("graphical" "markdown")
-
-declare -x ci=$default_ci                           # indicates whether the script is running in CI/CD environment.
-                                                    # MUST NOT BE OVERRIDDEN BY TOP-LEVEL SWITCHES AND OPTIONS
-                                                    # their values should be based only on environment variables defined by the
-                                                    # CI/CD system, e.g. GitHub Actions, Azure DevOps, etc.
 
 # common flags exported for use by the top-level scripts with CLI switches, options and by other means. Prefer the set_* functions below to set them.
 declare -x _ignore=$default__ignore                 # the file to redirect unwanted output to
@@ -22,6 +19,11 @@ declare -x verbose=${VERBOSE:-$default_verbose}     # enables detailed output
 declare -x dry_run=${DRY_RUN:-$default_dry_run}     # simulates commands without executing them
                                                     # the function `dump_vars`: graphical ASCII characters or markdown.
                                                     # See also the available values in the array `table_formats` above
+
+declare -x ci=$default_ci                           # indicates whether the script is running in CI/CD environment.
+                                                    # MUST NOT BE OVERRIDDEN BY TOP-LEVEL SWITCHES AND OPTIONS
+                                                    # their values should be based only on environment variables defined by the
+                                                    # CI/CD system, e.g. GitHub Actions, Azure DevOps, etc.
 
 [[ -n "${_Dbg_DEBUGGER_LEVEL:-}" || -n "${BASHDB_HOME:-}" ]] && debugger=true || debugger=false
 declare -xr debugger                                # indicates whether the script is running under a debugger, e.g. bashdb

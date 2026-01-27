@@ -14,25 +14,26 @@ fi
 if [[ ! -v script_dir || -z "$script_dir" ]]; then
     script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[-1]}")")"
 fi
-if [[ ! -v common_dir || -z "$common_dir" ]]; then
-    common_dir="$(dirname "${BASH_SOURCE[0]}")"
+if [[ ! -v lib_dir || -z "$lib_dir" ]]; then
+    lib_dir="$(dirname "${BASH_SOURCE[0]}")"
 fi
 
 # commonly used variables
 initial_dir=$(pwd)
 declare -rx initial_dir
 
-source "${common_dir}/_constants.sh"
-source "${common_dir}/_diagnostics.sh"
-source "${common_dir}/_args.sh"
-source "${common_dir}/_dump_vars.sh"
-source "${common_dir}/_semver.sh"
-source "${common_dir}/_predicates.sh"
-source "${common_dir}/_user.sh"
+source "${lib_dir}/_constants.sh"
+source "${lib_dir}/_diagnostics.sh"
+source "${lib_dir}/_args.sh"
+source "${lib_dir}/_dump_vars.sh"
+source "${lib_dir}/_semver.sh"
+source "${lib_dir}/_predicates.sh"
+source "${lib_dir}/_user.sh"
 
 ## Depending on the value of $dry_run either executes or just displays what would have been executed.
 ## Usage: execute <command> [args...]
-function execute() {
+function execute()
+{
     if [[ "$dry_run" == true ]]; then
         echo "dry-run$ $*"
         return 0
@@ -47,21 +48,24 @@ function execute() {
 
 # to_lower converts all characters in the passed in value to lowercase and prints the to stdout.
 # Usage example: local a="$(to_lower "$1")"
-function to_lower() {
+function to_lower()
+{
     printf "%s" "${1,,}"
     return 0
 }
 
 # to_upper converts all characters in the passed in value to uppercase and prints the to stdout.
 # Usage example: local a="$(to_upper "$1")"
-function to_upper() {
+function to_upper()
+{
     printf "%s" "${1^^}"
     return 0
 }
 
 # capitalize converts the first character in the passed in value to upper case and the rest to lowercase and prints the to stdout.
 # Usage example: local a="$(capitalize "$1")"
-function capitalize() {
+function capitalize()
+{
     a="${1,,}"
     printf "%s" "${a^}"
     return 0
@@ -75,7 +79,8 @@ function capitalize() {
 ## Usage: list_of_files <file_pattern>
 ## Returns: space separated list of matching files in stdout
 ## Example: list_of_files "artifacts/pack/*.nupkg"
-function list_of_files() {
+function list_of_files()
+{
     if [[ $# -lt 1 ]]; then
         error "The function list_of_files() requires at least one parameter: the file pattern."
         return 2
@@ -129,7 +134,8 @@ function get_from_yaml()
 ## their input.
 ## The user ID and the password will be held in $return_userid and $return_passwd until the next invocation of the
 ## function.
-function get_credentials() {
+function get_credentials()
+{
     local promptUserID=${1:-"User ID: "}
     local promptPassword=${2:-"Password: "}
     local promptConfirm=$3
@@ -153,7 +159,8 @@ function get_credentials() {
 # scp_retry tries the SSH copy command up to three times with timeout of 10sec timeout between retries.
 # Parameters - the same parameters as the scp command, this is there must be at least 2 arguments.
 # If the operation is successful it will set $return_copied to 'true' until the next invocation.
-function scp_retry() {
+function scp_retry()
+{
     local -i maxRetries=3
     local -i retry_after=10
     local -i try=0

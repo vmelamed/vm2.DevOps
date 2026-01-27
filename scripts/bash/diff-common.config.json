@@ -1,51 +1,51 @@
 [
     {
-        "sourceFile": "${repos}/vm2.DevOps/.editorconfig",
+        "sourceFile": "${repos}/vm2.DevOps/solution/.editorconfig",
         "targetFile": "${target_path}/.editorconfig",
         "action": "merge or copy"
     },
     {
-        "sourceFile": "${repos}/vm2.DevOps/.gitattributes",
+        "sourceFile": "${repos}/vm2.DevOps/solution/.gitattributes",
         "targetFile": "${target_path}/.gitattributes",
         "action": "merge or copy"
     },
     {
-        "sourceFile": "${repos}/vm2.DevOps/.gitignore",
+        "sourceFile": "${repos}/vm2.DevOps/solution/.gitignore",
         "targetFile": "${target_path}/.gitignore",
         "action": "merge or copy"
     },
     {
-        "sourceFile": "${repos}/vm2.DevOps/codecov.yml",
+        "sourceFile": "${repos}/vm2.DevOps/solution/codecov.yml",
         "targetFile": "${target_path}/codecov.yml",
         "action": "merge or copy"
     },
     {
-        "sourceFile": "${repos}/vm2.DevOps/Directory.Build.props",
+        "sourceFile": "${repos}/vm2.DevOps/solution/Directory.Build.props",
         "targetFile": "${target_path}/Directory.Build.props",
         "action": "merge or copy"
     },
     {
-        "sourceFile": "${repos}/vm2.DevOps/Directory.Packages.props",
+        "sourceFile": "${repos}/vm2.DevOps/solution/Directory.Packages.props",
         "targetFile": "${target_path}/Directory.Packages.props",
         "action": "merge or copy"
     },
     {
-        "sourceFile": "${repos}/vm2.DevOps/global.json",
+        "sourceFile": "${repos}/vm2.DevOps/solution/global.json",
         "targetFile": "${target_path}/global.json",
         "action": "merge or copy"
     },
     {
-        "sourceFile": "${repos}/vm2.DevOps/LICENSE",
+        "sourceFile": "${repos}/vm2.DevOps/solution/LICENSE",
         "targetFile": "${target_path}/LICENSE",
         "action": "copy"
     },
     {
-        "sourceFile": "${repos}/vm2.DevOps/NuGet.config",
+        "sourceFile": "${repos}/vm2.DevOps/solution/NuGet.config",
         "targetFile": "${target_path}/NuGet.config",
         "action": "merge or copy"
     },
     {
-        "sourceFile": "${repos}/vm2.DevOps/test.runsettings",
+        "sourceFile": "${repos}/vm2.DevOps/solution/test.runsettings",
         "targetFile": "${target_path}/test.runsettings",
         "action": "merge or copy"
     },

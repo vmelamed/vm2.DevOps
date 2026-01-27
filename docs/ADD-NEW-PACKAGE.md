@@ -137,7 +137,7 @@ I am sure I am missing something at the moment, so please be proactive in asking
   5. Initializes git, commits, sets remote, and pushes.
 - Optionally expose a single entry-point command (the bootstrapper) that wraps all of the above.
 - Keep the bootstrapper generic so it can later support other project types (CLI, services, etc.), or ship a minimal script under `scripts/` in the generated repo when a full tool is overkill.
-- Align the script with existing patterns in `.github/actions/scripts/` and reuse helpers from `_common.github.sh` where possible.
+- Align the script with existing patterns in `.github/actions/scripts/` and reuse helpers from `github.sh` where possible.
 
 ## Suggested repo defaults
 

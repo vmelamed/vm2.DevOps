@@ -3,17 +3,16 @@ set -euo pipefail
 
 # shellcheck disable=SC2154 # GIT_REPOS is referenced but not assigned. It is expected to be set in the environment.
 this_script=${BASH_SOURCE[0]}
-
 script_name=$(basename "$this_script")
 script_dir=$(dirname "$(realpath -e "$this_script")")
-common_dir=$(realpath "${script_dir%/}/../../.github/actions/scripts")
+lib_dir="$script_dir/lib"
 
 declare -xr script_name
 declare -xr script_dir
-declare -xr common_dir
+declare -xr lib_dir
 
 # shellcheck disable=SC1091
-source "${common_dir}/_common.sh"
+source "${lib_dir}/core.sh"
 
 # arguments
 declare -x repos="${GIT_REPOS:-$HOME/repos}"
@@ -112,7 +111,7 @@ while [[ $i -lt ${#source_files[@]} ]]; do
     fi
 
     show_diff=true
-    if is_in "$actions" "copy" "merge" "ignore"; then
+    if is_in "$actions" "ignore" "merge" "copy"; then
         show_diff=false
     fi
 
@@ -121,22 +120,8 @@ while [[ $i -lt ${#source_files[@]} ]]; do
         # shellcheck disable=SC2154
         if [[ "$quiet" != true ]]; then
             case $actions in
-                "copy")
-                    copy_file "$source_file" "$target_file"
-                    ;;
-                "merge")
-                    merge "$target_file" "$source_file" || true
-                    ;;
                 "ignore")
                     continue
-                    ;;
-                "ask to copy")
-                    confirm "Do you want to copy '${source_file}' to file '${target_file}'?" "y" && \
-                    copy_file "$source_file" "$target_file"
-                    ;;
-                "ask to merge")
-                    confirm "Do you want to merge '${source_file}' to file '${target_file}'?" "y" && \
-                    merge "$target_file" "$source_file" || true
                     ;;
                 "merge or copy")
                     case $(choose "What do you want to do?" \
@@ -148,6 +133,20 @@ while [[ $i -lt ${#source_files[@]} ]]; do
                         3) copy_file "$source_file" "$target_file" ;;
                         *) ;;
                     esac
+                    ;;
+                "ask to merge")
+                    confirm "Do you want to merge '${source_file}' to file '${target_file}'?" "y" && \
+                    merge "$target_file" "$source_file" || true
+                    ;;
+                "merge")
+                    merge "$target_file" "$source_file" || true
+                    ;;
+                "ask to copy")
+                    confirm "Do you want to copy '${source_file}' to file '${target_file}'?" "y" && \
+                    copy_file "$source_file" "$target_file"
+                    ;;
+                "copy")
+                    copy_file "$source_file" "$target_file"
                     ;;
                 *)
                     error "Unknown action '$actions' for files '${source_file}' and '${target_file}'." || 0

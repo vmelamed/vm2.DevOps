@@ -160,7 +160,8 @@ function are_safe_projects()
 ## Validates and sanitizes a "reason" text input
 ## Returns 0 if safe, 1 otherwise
 ## Usage: if is_safe_reason "$reason"; then ... fi
-function is_safe_reason() {
+function is_safe_reason()
+{
     local reason="$1"
     local max_length=200
 
@@ -187,7 +188,8 @@ declare -xr nugetServersRegex="^(nuget|github|https?://[a-zA-Z0-9._/-]+)$";
 
 ## Validates NuGet server URL or known server name
 ## Returns 0 if valid, 1 otherwise
-function is_safe_nuget_server() {
+function is_safe_nuget_server()
+{
     if [[ ! "$1" =~ $nugetServersRegex ]]; then
         return 1
     fi
@@ -195,7 +197,8 @@ function is_safe_nuget_server() {
     return 0
 }
 
-function validate_nuget_server() {
+function validate_nuget_server()
+{
     local -n server=$1
     local default_server=${2:-"nuget"}
 

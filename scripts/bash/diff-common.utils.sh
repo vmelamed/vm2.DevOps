@@ -6,9 +6,10 @@ declare -xr common_dir
 
 declare -xr config_file="${script_dir}/diff-common.config.json"
 
-declare -ar valid_actions=("copy" "merge" "ignore" "ask to copy" "ask to merge" "merge or copy")
+declare -ar valid_actions=("ignore" "merge or copy" "ask to merge" "merge" "ask to copy" "copy")
 
 all_actions_str=$(print_sequence -s=', ' -q='"' "${valid_actions[@]}")
+
 declare -xr all_actions_str
 
 declare LOCAL=""
@@ -72,7 +73,7 @@ function get_arguments()
             * ) if [[ -z "$target_dir" ]]; then
                     target_dir="$option"
                 else
-                    usage false "Too many positional arguments: ${value}"
+                    usage false "Too many positional arguments: ${option}"
                 fi
                 ;;
         esac

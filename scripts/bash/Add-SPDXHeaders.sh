@@ -2,7 +2,8 @@
 set -euo pipefail
 
 # Adds SPDX headers to C# sources, skipping generated artifacts.
-usage() {
+usage()
+{
   echo "Usage: $(basename "$0") [-d DIR] [--what-if]" 1>&2
   exit 1
 }

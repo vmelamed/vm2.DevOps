@@ -111,11 +111,10 @@ function info()
 
 ## Logs a trace message to the standard output if verbose mode is enabled.
 ## Usage: `trace <message1> [<message2> ...]`, or `echo "message" | trace`, or trace <<< "message"
-function trace() {
+function trace()
+{
     # shellcheck disable=SC2154 # variable is referenced but not assigned.
-    if [[ "$verbose" != true ]]; then
-        return 0
-    fi
+    [[ "$verbose" != true ]] && return 0
 
     {
         if [[ $# -gt 0 ]]; then
@@ -142,7 +141,8 @@ declare current_command="$BASH_COMMAND"
 # sourcing this script, set these signal traps:
 #   trap on_debug DEBUG
 #   trap on_exit EXIT
-function on_debug() {
+function on_debug()
+{
     # keep track of the last executed command
     last_command="$current_command"
     current_command="$BASH_COMMAND"
@@ -156,7 +156,8 @@ function on_debug() {
 # sourcing this script, set these signal traps:
 #   trap on_debug DEBUG
 #   trap on_exit EXIT
-function on_exit() {
+function on_exit()
+{
     # echo an error message before exiting
     local x=$?
     if ((x != 0)) && [[ ! $last_command =~ exit.* ]]; then
@@ -166,4 +167,14 @@ function on_exit() {
         cd "$initial_dir" || exit
     fi
     set +x
+}
+
+function show_stack()
+{
+    [[ "$verbose" != true ]] && return 0
+
+    local i
+    for ((i=0; i<${#FUNCNAME[@]}; i++)); do
+        echo "$i: ${FUNCNAME[i]} at ${BASH_SOURCE[i]}:${BASH_LINENO[i]}"
+    done
 }

@@ -67,7 +67,8 @@ declare -irx argsError=2
 ## $argsError if invalid arguments are provided.
 ## Returns $argsError if invalid arguments are provided (also increments $errors).
 ## Usage: compare_semver <version1> <version2>
-function compare_semver() {
+function compare_semver()
+{
     local -i e=0
 
     if [[ $# -ne 2 ]]; then

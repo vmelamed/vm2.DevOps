@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-usage() {
+echo "THIS SCRIPT NEEDS TO BE UPDATED TO USE THE COMMON LIBRARIES AND ARGUMENT HANDLING."
+exit 1
+
+usage()
+{
   cat <<'EOF'
-Usage: restore-locked.sh [solution-or-project]
+Usage: restore-locked.sh [directory-or-solution-or-project]
 
 Refresh package lock files with --force-evaluate, then verify in --locked-mode
 (the same enforcement used in CI). Defaults to the solution, project, or file

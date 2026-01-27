@@ -6,7 +6,7 @@ All scripts live under `scripts/bash/` and follow a three-file convention:
 - `*.usage.sh` file that defines help text
 - `*.utils.sh` helper that encapsulates argument parsing
 
-They all source `_common.github.sh` (ergo _common.sh) for shared behavior and respect common flags (`--verbose`, `--quiet`, `--trace`, `--dry-run`, `--debugger`, see above).
+They all source `github.sh` (ergo _common.sh) for shared behavior and respect common flags (`--verbose`, `--quiet`, `--trace`, `--dry-run`, `--debugger`, see above).
 
 ## `validate-vars.*.sh`
 
@@ -33,18 +33,18 @@ They all source `_common.github.sh` (ergo _common.sh) for shared behavior and re
 - Downloads artifacts from prior workflow runs using the GitHub REST APIs and `gh` CLI semantics.
 - Used by `benchmarks.yaml` to hydrate baseline data before running new benchmarks, but is general-purpose for any artifact retrieval task.
 
-## `_common.sh` and `_common.github.sh`
+## `_common.sh` and `github.sh`
 
 - Shared utility library that wires in tracing, verbosity, CI-safe defaults, and interactive prompts.
 - Implements helpers for argument parsing (`get_common_arg()`), logging (`trace()`, `dump_vars()`), command execution with dry-run support (`execute()`), user prompts (`choose()`, `confirm()`, `press_any_key()`), and numeric/string validation helpers (`is_integer`, `is_in`, etc.).
 - Should be sourced by all new scripts to ensure consistent behavior across the automation surface.
 
-## `_common.github.sh`
+## `github.sh`
 
 - Shared utility library that extends `_common.sh` with GitHub-specific helpers and behavior.
 - Should be sourced by all new scripts to ensure consistent behavior across the automation surface.
 
-### `_common.sh` and `_common.github.sh` functions and variables (**WIP**)
+### `_common.sh` and `github.sh` functions and variables (**WIP**)
 
 #### Variables
 

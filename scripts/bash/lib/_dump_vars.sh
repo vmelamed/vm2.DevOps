@@ -67,7 +67,8 @@ declare set_tracing_on
 ## -l or --line will display a dividing horizontal line in the table
 ## -q or --quiet will not ask the user to "press any key to continue" after dumping the variables, even if $quiet is false
 ## -f or --force will dump the variables even if $verbose is not true
-function push_state() {
+function push_state()
+{
     save_quiet=$quiet
     save_verbose=$verbose
     save_table_format=$(get_table_format)
@@ -76,7 +77,8 @@ function push_state() {
     return 0
 }
 
-function pop_state() {
+function pop_state()
+{
     quiet=$save_quiet
     verbose=$save_verbose
     set_table_format "$save_table_format"
@@ -87,7 +89,8 @@ function pop_state() {
     return 0
 }
 
-function dump_vars() {
+function dump_vars()
+{
     if (( $# == 0 )); then
         return 0
     fi
@@ -107,6 +110,7 @@ function dump_vars() {
     done
 
     if [[ $verbose == false ]]; then
+        pop_state
         return 0
     fi
 
@@ -158,7 +162,8 @@ function dump_vars() {
 }
 
 ## internal function to write a line for a variable in the variable dump table
-function _write_title() {
+function _write_title()
+{
     local -n table
     table=$(get_table_format)
 
@@ -167,7 +172,8 @@ function _write_title() {
     return 0
 }
 
-function _write_line() {
+function _write_line()
+{
     local -n v=$1
     local value
 
