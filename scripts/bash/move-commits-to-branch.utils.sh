@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 declare -xr script_name
-declare -xr script_dir
+declare -xr lib_dir
 declare -xr common_dir
 
 declare -x commit_sha

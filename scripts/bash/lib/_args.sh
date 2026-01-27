@@ -67,6 +67,9 @@ function set_trace_enabled()
     return 0
 }
 
+## Will be overridden in _predicates.sh
+function is_in() { return 0; }
+
 ## Sets the table format for variable dumps
 ## Usage: set_table_format <format>
 ## where <format> is one of: "graphical", "markdown"

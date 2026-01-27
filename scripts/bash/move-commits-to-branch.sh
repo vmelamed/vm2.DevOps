@@ -1,26 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# shellcheck disable=SC2154 # GIT_REPOS is referenced but not assigned. It is expected to be set in the environment.
-this_script=${BASH_SOURCE[0]}
-
-script_name=$(basename "$this_script")
-script_dir=$(dirname "$(realpath -e "$this_script")")
-common_dir=$(realpath "${script_dir%/}/../../.github/actions/scripts")
+script_name="$(basename "${BASH_SOURCE[-1]}")"
+lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[-1]}")")"
+lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
 
 declare -xr script_name
-declare -xr script_dir
-declare -xr common_dir
+declare -xr lib_dir
+declare -xr lib_dir
 
 # shellcheck disable=SC1091
-source "${common_dir}/_common.sh"
+source "$lib_dir/core.sh"
 
 declare -x commit_sha=""
 declare -x new_branch=""
 declare -x check_out_new_branch=false
 
-source "${script_dir}/move-commits-to-branch.utils.sh"
-source "${script_dir}/move-commits-to-branch.usage.sh"
+source "${lib_dir}/move-commits-to-branch.utils.sh"
+source "${lib_dir}/move-commits-to-branch.usage.sh"
 
 get_arguments "$@"
 

@@ -1,11 +1,20 @@
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-# This script defines a number of GitHub specific constants, variables, and helper functions.
+# This script defines a number of GitHub specific constants, variables, and helper functions typical for GitHub Actions environment.
+# For the functions to be invocable by other scripts, this script needs to be sourced.
 
-common_scripts_dir="$(dirname "${BASH_SOURCE[0]}")"
+if [[ ! -v script_name || -z "$script_name" ]]; then
+    script_name="$(basename "${BASH_SOURCE[-1]}")"
+fi
+if [[ ! -v lib_dir || -z "$lib_dir" ]]; then
+    lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[-1]}")")"
+fi
+if [[ ! -v lib_dir || -z "$lib_dir" ]]; then
+    lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
+fi
 
-source "$common_scripts_dir/core.sh"
-source "$common_scripts_dir/_sanitize.sh"
+source "$lib_dir/core.sh"
+source "$lib_dir/_sanitize.sh"
 
 ## In CI mode, indicates whether the script is running within GitHub Actions.
 declare -x github_actions=${GITHUB_ACTIONS:-false}

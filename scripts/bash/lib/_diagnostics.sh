@@ -5,7 +5,7 @@ declare -ix errors=0
 
 ## Logs messages to /dev/stdout
 ## Usage: `echo "message" | to_stdout`, or to_stdout <<< "message" - used with pipes only
-## While trivial and seemingly unnecessary this function allows for overriding in other scripts (see github.sh) and sending the
+## While trivial and seemingly unnecessary this function allows for overriding in other scripts (see gh_core.sh) and sending the
 ## output to other destinations (e.g. GitHub Actions step summary file).
 function to_stdout()
 {
@@ -19,7 +19,7 @@ function to_stdout()
 
 ## Logs trace messages to /dev/stdout
 ## Usage: `echo "message" | to_trace_out`, or to_trace_out <<< "message" - used with pipes only
-## While trivial and seemingly unnecessary this function allows for overriding in other scripts (see github.sh) and sending the
+## While trivial and seemingly unnecessary this function allows for overriding in other scripts (see gh_core.sh) and sending the
 ## output to other destinations as well (e.g. GitHub Actions step summary file).
 function to_trace_out()
 {
@@ -33,7 +33,7 @@ function to_trace_out()
 
 ## Logs messages to /dev/stderr
 ## Usage: `echo "message" | to_stderr`, or to_stderr <<< "message" - used with pipes only
-## While trivial and seemingly unnecessary this function allows for overriding in other scripts (see github.sh) and sending the
+## While trivial and seemingly unnecessary this function allows for overriding in other scripts (see gh_core.sh) and sending the
 ## output to other destinations as well (e.g. GitHub Actions step summary file).
 function to_stderr()
 {

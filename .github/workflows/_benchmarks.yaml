@@ -101,11 +101,11 @@ jobs:
             scripts/bash/lib
             .github/actions/scripts
 
-      - name: validate-vars DevOps scripts (local - allow execution of the scripts and add to PATH)
+      - name: Ensure the reusable workflows work correctly from within vm2.DevOps
         if: github.repository == 'vmelamed/vm2.DevOps'
         uses: ./.github/actions/scripts
 
-      - name: validate-vars DevOps scripts (external - allow execution of the scripts and add to PATH)
+      - name: Ensure the reusable workflows work correctly from outside vm2.DevOps
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: ./vm2-devops/.github/actions/scripts
 

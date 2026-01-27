@@ -88,6 +88,8 @@ jobs:
 
       # Clone only the scripts from vm2.DevOps, so that we can run the composite
       # action .github/actions/scripts/action.yaml for both local and external calls
+      # Clone only the scripts from vm2.DevOps, so that we can run the composite
+      # action .github/actions/scripts/action.yaml for both local and external calls
       - name: Checkout DevOps repository scripts
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: actions/checkout@v6
@@ -98,11 +100,11 @@ jobs:
             scripts/bash/lib
             .github/actions/scripts
 
-      - name: validate-vars DevOps scripts (local - allow execution of the scripts and add to PATH)
+      - name: Ensure the reusable workflows work correctly from within vm2.DevOps
         if: github.repository == 'vmelamed/vm2.DevOps'
         uses: ./.github/actions/scripts
 
-      - name: validate-vars DevOps scripts (external - allow execution of the scripts and add to PATH)
+      - name: Ensure the reusable workflows work correctly from outside vm2.DevOps
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: ./vm2-devops/.github/actions/scripts
 
@@ -143,11 +145,11 @@ jobs:
             scripts/bash/lib
             .github/actions/scripts
 
-      - name: validate-vars DevOps scripts (local - allow execution of the scripts and add to PATH)
+      - name: Ensure the reusable workflows work correctly from within vm2.DevOps
         if: github.repository == 'vmelamed/vm2.DevOps'
         uses: ./.github/actions/scripts
 
-      - name: validate-vars DevOps scripts (external - allow execution of the scripts and add to PATH)
+      - name: Ensure the reusable workflows work correctly from outside vm2.DevOps
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: ./vm2-devops/.github/actions/scripts
 
@@ -189,11 +191,11 @@ jobs:
             scripts/bash/lib
             .github/actions/scripts
 
-      - name: validate-vars DevOps scripts (local - allow execution of the scripts and add to PATH)
+      - name: Ensure the reusable workflows work correctly from within vm2.DevOps
         if: github.repository == 'vmelamed/vm2.DevOps'
         uses: ./.github/actions/scripts
 
-      - name: validate-vars DevOps scripts (external - allow execution of the scripts and add to PATH)
+      - name: Ensure the reusable workflows work correctly from outside vm2.DevOps
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: ./vm2-devops/.github/actions/scripts
 
@@ -237,11 +239,11 @@ jobs:
             scripts/bash/lib
             .github/actions/scripts
 
-      - name: validate-vars DevOps scripts (local - allow execution of the scripts and add to PATH)
+      - name: Ensure the reusable workflows work correctly from within vm2.DevOps
         if: github.repository == 'vmelamed/vm2.DevOps'
         uses: ./.github/actions/scripts
 
-      - name: validate-vars DevOps scripts (external - allow execution of the scripts and add to PATH)
+      - name: Ensure the reusable workflows work correctly from outside vm2.DevOps
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: ./vm2-devops/.github/actions/scripts
 

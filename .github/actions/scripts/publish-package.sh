@@ -2,13 +2,13 @@
 set -euo pipefail
 
 script_name="$(basename "${BASH_SOURCE[0]}")"
-script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
-lib_dir="$script_dir/../../../scripts/bash/lib"
-declare -r script_dir
+lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
+lib_dir="$lib_dir/../../../scripts/bash/lib"
+declare -r lib_dir
 declare -r lib_dir
 
-# shellcheck disable=SC1091 # Not following: ./github.sh: openBinaryFile: does not exist (No such file or directory)
-source "$lib_dir/github.sh"
+# shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
+source "$lib_dir/gh_core.sh"
 
 # constants and default values
 declare -xr default_nuget_server="github"
@@ -29,8 +29,8 @@ declare -x reason=${REASON:-}
 declare -x artifacts_saved=${ARTIFACTS_SAVED:-false}
 declare -x artifacts_dir=${ARTIFACTS_DIR:-artifacts/pack}
 
-source "$script_dir/publish-package.usage.sh"
-source "$script_dir/publish-package.utils.sh"
+source "$lib_dir/publish-package.usage.sh"
+source "$lib_dir/publish-package.utils.sh"
 
 get_arguments "$@"
 

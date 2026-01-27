@@ -2,13 +2,13 @@
 set -euo pipefail
 
 script_name="$(basename "${BASH_SOURCE[0]}")"
-script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
-lib_dir="$script_dir/../../../scripts/bash/lib"
-declare -r script_dir
+lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
+lib_dir="$lib_dir/../../../scripts/bash/lib"
+declare -r lib_dir
 declare -r lib_dir
 
-# shellcheck disable=SC1091 # Not following: ./github.sh: openBinaryFile: does not exist (No such file or directory)
-source "$lib_dir/github.sh"
+# shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
+source "$lib_dir/gh_core.sh"
 
 declare -x test_project=${TEST_PROJECT:-}
 declare -x configuration=${CONFIGURATION:="Release"}
@@ -18,8 +18,8 @@ declare -x artifacts_dir=${ARTIFACTS_DIR:-}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-'v'}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"preview.0"}
 
-source "$script_dir/run-tests.usage.sh"
-source "$script_dir/run-tests.utils.sh"
+source "$lib_dir/run-tests.usage.sh"
+source "$lib_dir/run-tests.utils.sh"
 
 get_arguments "$@"
 

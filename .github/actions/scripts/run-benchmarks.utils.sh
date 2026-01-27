@@ -105,7 +105,7 @@ dump_all_variables()
         artifacts_dir \
         --header "other:" \
         ci \
-        script_dir \
+        lib_dir \
         --blank \
         solution_dir \
         results_dir \

@@ -11,11 +11,11 @@
 if [[ ! -v script_name || -z "$script_name" ]]; then
     script_name="$(basename "${BASH_SOURCE[-1]}")"
 fi
-if [[ ! -v script_dir || -z "$script_dir" ]]; then
-    script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[-1]}")")"
+if [[ ! -v lib_dir || -z "$lib_dir" ]]; then
+    lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[-1]}")")"
 fi
 if [[ ! -v lib_dir || -z "$lib_dir" ]]; then
-    lib_dir="$(dirname "${BASH_SOURCE[0]}")"
+    lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
 fi
 
 # commonly used variables

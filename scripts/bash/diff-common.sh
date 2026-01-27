@@ -1,26 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# shellcheck disable=SC2154 # GIT_REPOS is referenced but not assigned. It is expected to be set in the environment.
-this_script=${BASH_SOURCE[0]}
-script_name=$(basename "$this_script")
-script_dir=$(dirname "$(realpath -e "$this_script")")
-lib_dir="$script_dir/lib"
+script_name="$(basename "${BASH_SOURCE[-1]}")"
+lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[-1]}")")"
+lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
 
 declare -xr script_name
-declare -xr script_dir
+declare -xr lib_dir
 declare -xr lib_dir
 
 # shellcheck disable=SC1091
-source "${lib_dir}/core.sh"
+source "$lib_dir/core.sh"
 
 # arguments
 declare -x repos="${GIT_REPOS:-$HOME/repos}"
 declare -x target_dir=""
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-'v'}
 
-source "${script_dir}/diff-common.utils.sh"
-source "${script_dir}/diff-common.usage.sh"
+source "${lib_dir}/diff-common.utils.sh"
+source "${lib_dir}/diff-common.usage.sh"
 
 get_arguments "$@"
 

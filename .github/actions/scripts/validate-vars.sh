@@ -2,13 +2,14 @@
 set -euo pipefail
 
 script_name="$(basename "${BASH_SOURCE[0]}")"
-script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
-lib_dir="$script_dir/../../../scripts/bash/lib"
-declare -r script_dir
+lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
+lib_dir="$lib_dir/../../../scripts/bash/lib"
+
+declare -r lib_dir
 declare -r lib_dir
 
-# shellcheck disable=SC1091 # Not following: ./github.sh: openBinaryFile: does not exist (No such file or directory)
-source "$lib_dir/github.sh"
+# shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
+source "$lib_dir/gh_core.sh"
 
 declare -r defaultTestProjects='["__skip__"]'
 declare -r defaultBenchmarkProjects='["__skip__"]'
@@ -36,8 +37,8 @@ declare -x verbose=${VERBOSE:-${defaultVerbose}}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-${defaultMinverTagPrefix}}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-${defaultMinverPrereleaseId}}
 
-source "$script_dir/validate-vars.usage.sh"
-source "$script_dir/validate-vars.utils.sh"
+source "$lib_dir/validate-vars.usage.sh"
+source "$lib_dir/validate-vars.utils.sh"
 
 get_arguments "$@"
 dump_all_variables

@@ -2,13 +2,13 @@
 set -euo pipefail
 
 script_name="$(basename "${BASH_SOURCE[0]}")"
-script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
-lib_dir="$script_dir/../../../scripts/bash/lib"
-declare -r script_dir
+lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
+lib_dir="$lib_dir/../../../scripts/bash/lib"
+declare -r lib_dir
 declare -r lib_dir
 
-# shellcheck disable=SC1091 # Not following: ./github.sh: openBinaryFile: does not exist (No such file or directory)
-source "$lib_dir/github.sh"
+# shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
+source "$lib_dir/gh_core.sh"
 
 # default constants for parameters
 declare -xr default_package_projects='[""]'
@@ -22,8 +22,8 @@ declare -x nuget_server=${NUGET_SERVER:-"$default_nuget_server"}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x reason=${REASON:-"$default_reason"}
 
-source "$script_dir/compute-release-version.usage.sh"
-source "$script_dir/compute-release-version.utils.sh"
+source "$lib_dir/compute-release-version.usage.sh"
+source "$lib_dir/compute-release-version.utils.sh"
 
 get_arguments "$@"
 

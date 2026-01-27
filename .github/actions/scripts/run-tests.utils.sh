@@ -80,7 +80,7 @@ dump_all_variables()
         artifacts_dir \
         --header "other:" \
         ci \
-        script_dir \
+        lib_dir \
         solution_dir \
         base_name \
         test_results_dir \
