@@ -30,7 +30,7 @@ declare -x semverTagRegex
 declare -x semverTagReleaseRegex
 declare -x semverTagPrereleaseRegex
 
-declare -xr minverTagPrefixRex='([0-9A-Za-z_][0-9A-Za-z._-/]*)?[A-Za-z_-]'
+declare -xr minverTagPrefixRex='[0-9A-Za-z_]([0-9A-Za-z._-/]*[A-Za-z_-])?'
 declare -xr minverTagPrefixRegex="^$minverTagPrefixRex$"
 
 declare -xr minverPrereleaseIdRex=$prereleaseLabelRex
