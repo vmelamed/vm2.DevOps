@@ -178,7 +178,13 @@ function _write_line()
     local value
 
     if declare -p "$1" 2>"$_ignore" | grep -q 'declare -[xir-]'; then
-        value="$v"
+        case $1 in
+            verbose      ) value=$save_verbose ;;
+            quiet        ) value=$save_quiet ;;
+            table_format ) value=$save_table_format ;;
+            _ignore      ) value=$save_ignore ;;
+            *            ) value="$v" ;;
+        esac
     elif declare -p "$1" 2>"$_ignore" | grep -q 'declare -a'; then
         value="${#v[@]}: (${v[*]})"
     elif declare -p "$1" 2>"$_ignore" | grep -q 'declare -A'; then

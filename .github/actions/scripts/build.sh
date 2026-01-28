@@ -74,7 +74,7 @@ build_output=$(dotnet build "$build_project" \
     /p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" | tail -n 50)
 
 # Summarize the build results
-# sum=$(summarizeDotnetBuild "$build_output")
-# echo "$sum" | summary
-# TODO: why the line below doesn't work?
-summarizeDotnetBuild "$build_output" | summary
+sum=$(summarizeDotnetBuild "$build_output")
+echo "$sum" | summary
+# TODO: why this line doesn't work?
+# summarizeDotnetBuild "$build_output" | summary
