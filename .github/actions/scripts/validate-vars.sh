@@ -58,15 +58,15 @@ validate_minverTagPrefix "$minver_tag_prefix" || true
 is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 
 # Validate the build solution/projects specified:
-is_safe_json_array "$build_projects" "$defaultBuildProjects" is_safe_existing_file || true
+is_safe_json_array "build_projects" "$defaultBuildProjects" is_safe_existing_file || true
 
 # Validate the test projects specified:
-is_safe_json_array "$test_projects" "" is_safe_existing_file || true
+is_safe_json_array "test_projects" "" is_safe_existing_file || true
 
 # Validate the benchmark projects specified:
-is_safe_json_array "$benchmark_projects" "" is_safe_existing_file || true
+is_safe_json_array "benchmark_projects" "" is_safe_existing_file || true
 
-is_safe_json_array "$runners_os" "$defaultRunnersOs" is_safe_runner_os || true
+is_safe_json_array "runners_os" "$defaultRunnersOs" is_safe_runner_os || true
 
 if [[ -z "$dotnet_version" ]]; then
     warning_var dotnet_version "dotnet-version is empty." "$defaultDotnetVersion"
