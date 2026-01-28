@@ -12,8 +12,8 @@ declare -r lib_dir
 source "$lib_dir/gh_core.sh"
 
 declare -r defaultBuildProjects='[""]'
-declare -r defaultTestProjects='[]'
-declare -r defaultBenchmarkProjects='[]'
+declare -r defaultTestProjects='["__skip__"]'
+declare -r defaultBenchmarkProjects='["__skip__"]'
 declare -r defaultRunnersOs='["ubuntu-latest"]'
 declare -r defaultDotnetVersion='10.0.x'
 declare -r defaultConfiguration='Release'
