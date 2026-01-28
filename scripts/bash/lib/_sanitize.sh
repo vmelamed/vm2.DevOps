@@ -13,13 +13,26 @@ if [[ ! -v "minverTagPrefixRegex" || ! -v "minverPrereleaseIdRegex" ]]; then
     source "$lib_dir/_semver.sh"
 fi
 
+declare -xra allowed_runners_os=(
+    "ubuntu-latest"
+    "ubuntu-22.04"
+    "ubuntu-20.04"
+    "windows-latest"
+    "windows-2022"
+    "windows-2019"
+    "macos-latest"
+    "macos-12"
+    "macos-11")
+
+declare -xr nugetServersRegex="^(nuget|github|https?://[-a-zA-Z0-9._/]+)$";
+
 ## Sanitizes user input by removing or escaping potentially dangerous characters.
 ## Returns 0 if input is safe, 1 if it contains unsafe characters.
 ## Usage: if sanitize_input "$user_input" [<allow_spaces>]; then ... fi
 function is_safe_input()
 {
     if [[ $# -lt 1 || $# -gt 2 ]]; then
-        error "The function is_safe_input() requires one or two parameters: the input string to sanitize and an optional flag to allow spaces."
+        error "${FUNCNAME[0]}() requires one or two parameters: the input string to sanitize and an optional flag to allow spaces."
         return 2
     fi
 
@@ -36,7 +49,7 @@ function is_safe_input()
     [[ "$allow_spaces" != "true" ]] && dangerous_chars=$'[;|&$`\\\\<>(){}\n\r ]' || dangerous_chars=$'[;|&$`\\\\<>(){}\n\r]'
 
     if [[ "$input" =~ $dangerous_chars ]]; then
-        error "The input '$input' contains one or more of the unsafe characters '$dangerous_chars'."
+        error "${FUNCNAME[0]}(): The input '$input' contains one or more of the unsafe characters '$dangerous_chars'."
         return 1
     fi
 
@@ -48,6 +61,10 @@ function is_safe_input()
 ## Usage: if ! is_safe_path "$file_path"; then error ... fi
 function is_safe_path()
 {
+    if [[ $# -ne 1 ]]; then
+        error "${FUNCNAME[0]}() requires exactly one parameter: the file path to test."
+        return 2
+    fi
     local path="$1"
 
     # Reject paths with directory traversal
@@ -76,6 +93,10 @@ function is_safe_path()
 ## Usage: if ! is_safe_existing_path "$file_path"; then error ... fi
 function is_safe_existing_path()
 {
+    if [[ $# -ne 1 ]]; then
+        error "${FUNCNAME[0]}() requires exactly one parameter: the file path to test."
+        return 2
+    fi
     if ! is_safe_path "$1"; then
         return 1
     fi
@@ -93,6 +114,10 @@ function is_safe_existing_path()
 ## Usage: if ! is_safe_existing_directory "$file_path"; then error ... fi
 function is_safe_existing_directory()
 {
+    if [[ $# -ne 1 ]]; then
+        error "${FUNCNAME[0]}() requires exactly one parameter: the directory path to test."
+        return 2
+    fi
     if ! is_safe_existing_path "$1"; then
         return 1
     fi
@@ -110,6 +135,10 @@ function is_safe_existing_directory()
 ## Usage: if ! is_safe_existing_file "$file_path"; then error ... fi
 function is_safe_existing_file()
 {
+    if [[ $# -ne 1 ]]; then
+        error "${FUNCNAME[0]}() requires exactly one parameter: the file path to test."
+        return 2
+    fi
     if ! is_safe_existing_path "$1"; then
         return 1
     fi
@@ -122,81 +151,73 @@ function is_safe_existing_file()
     return 0
 }
 
-declare -xr skip_projects_sentinel="__skip__"
 declare -xr jq_empty='. == null or . == "" or . == []'
 declare -xr jq_array_strings='type == "array" and all(type == "string")'
-declare -xr jq_array_strings_has_empty="any(. == \"\" or . == \"$skip_projects_sentinel\")"
-declare -xr jq_array_strings_nonempty="$jq_array_strings and length > 0 and all(length > 0)"
+declare -xr jq_array_strings_has_empty="any(. == \"\")"
+declare -xr jq_array_strings_nonempty='type == "array" and length > 0 and all(type == "string") and all(length > 0)'
 
-## Validates if the first argument is a name of a variable containing a valid JSON array of project paths, if it is null, empty
-## or empty array, it use the second parameter if provided, defaults to `[""]`.
-## Returns 0 if valid, 1 otherwise
-## Usage:
-##   if ! are_safe_projects <variable_name> [<default_value>]; then error ... fi
-##   if ! are_safe_projects ${projects[@]}; then error ... fi
-# shellcheck disable=SC2154 # variable is referenced but not assigned.
-function are_safe_projects()
+function is_safe_json_array()
 {
-    local -n projects=$1
-    local default_projects=${2:-'[""]'}
+    if [[ $# -ne 3 ]]; then
+        error "${FUNCNAME[0]}() requires exactly three parameters: \
+\$1: the name of the variable containing the JSON array, \
+\$2: the default value to use if the variable is unbound or empty, and \
+\$3: the name of the function to validate each item in the array."
+        return 2
+    fi
 
-    if [[ -z "$projects" ]]; then
-        warning_var "projects" \
-            "The value of the input '$1' is empty: will use the solution/project/file in the repo's root folder." \
-            "$default_projects"
+    local -n array="$1"
+    local default_array="$2"
+    local is_safe_item=$3
+
+    if [[ -z "$array" ]]; then
+        warning_var "$1" "The value of '$1' is unbound or empty string." "$default_array"
         return 0
     fi
 
     local jq_output
 
-    # Validate JSON format
-    # warn if it is null, empty string, or empty array
-    jq_output="$(jq -e "$jq_empty" 2>&1 <<< "$projects")"
-    if [[ $? -gt 1 ]]; then
-        error "Error  querying JSON (jq): $jq_output"
-        return 2
-    fi
-    if [[ $jq_output == true ]]; then
-        warning_var "projects" \
-            "The value of the input '$1' is empty: will use the solution/project/file in the repo's root folder." \
-            "$default_projects"
-        return 0
-    fi
-
-    # Validate it's an array of strings
-    jq_output="$(jq -e "$jq_array_strings" 2>&1 <<< "$projects")"
+    # Validate that the first parameter is a JSON string containing a non-empty array of non-empty strings
+    jq_output="$(jq -e "$jq_array_strings_nonempty" 2>&1 <<< "$array")"
     if [[ $? -gt 1 ]]; then
         error "Error  querying JSON (jq): $jq_output"
         return 2
     fi
     if [[ $jq_output != true ]]; then
-        error "The value of the input '\$1'='$projects' must be a string containing a JSON array of strings:\
-               paths to solution(s), project(s), '$skip_projects_sentinel', or empty."
+        error "The value of '$1'='$array' must be a string containing a JSON non-empty array of non-empty strings."
         return 1
     fi
 
-    # Warn if array contains empty strings
-    jq_output="$(jq -e "$jq_array_strings_has_empty" 2>&1 <<< "$projects")"
-    if [[ $? -gt 1 ]]; then
-        error "Error  querying JSON (jq): $jq_output"
+    # Validate each item of the array for safety
+    return_value=0
+
+    while IFS= read -r item; do
+        if [[ -n "$item" ]] && ! $is_safe_item "$item"; then
+            return_value=1 # check all paths before returning
+        fi
+    done < <(jq -r '.[]' 2>"$_ignore" <<< "$array" || true)
+
+    return "$return_value"
+}
+
+function is_safe_runner_os()
+{
+    if [[ $# -ne 1 ]]; then
+        error "${FUNCNAME[0]}() requires exactly one parameter: the runner OS to test."
         return 2
     fi
-    if [[ $jq_output == true ]]; then
-        warning_var "projects" \
-            "At least one of the strings in the value of the input '$1' is empty: will use the solution/project/file in the repo's root folder." \
-            "$default_projects"
+
+    local runner_os="$1"
+    if [[ -z "$runner_os" ]]; then
+        error "The runner OS name is empty."
+        return 2
+    fi
+    if is_in "$runner_os" "${allowed_runners_os[@]}"; then
         return 0
     fi
 
-    # Validate each project path for safety
-    return_value=0
-    while IFS= read -r project_path; do
-        if [[ -n "$project_path" ]] && ! is_safe_existing_file "$project_path"; then
-            error "Unsafe project path detected: '$project_path'"
-            return_value=1 # check all paths before returning
-        fi
-    done < <(jq -r '.[]' 2>"$_ignore" <<<"$projects" || true)
-    return "$return_value"
+    error "The runner OS '$runner_os' is not in the list of allowed GitHub Actions runner OS names: ${allowed_runners_os[*]}."
+    return 1
 }
 
 ## Validates and sanitizes a "reason" text input
@@ -204,6 +225,11 @@ function are_safe_projects()
 ## Usage: if is_safe_reason "$reason"; then ... fi
 function is_safe_reason()
 {
+    if [[ $# -ne 1 ]]; then
+        error "${FUNCNAME[0]}() requires exactly one parameter: the reason text to test."
+        return 2
+    fi
+
     local reason="$1"
     local max_length=200
 
@@ -226,14 +252,12 @@ function is_safe_reason()
     return 0
 }
 
-declare -xr nugetServersRegex="^(nuget|github|https?://[-a-zA-Z0-9._/]+)$";
-
 ## Validates NuGet server URL or known server name
 ## Returns 0 if valid, 1 otherwise
 function is_safe_nuget_server()
 {
     if [[ $# -ne 1 ]]; then
-        error "The function is_safe_nuget_server() requires exactly one parameter: the NuGet server to test."
+        error "${FUNCNAME[0]}() requires exactly one parameter: the NuGet server to test."
         return 2
     fi
     [[ ! "$1" =~ $nugetServersRegex ]]
@@ -242,7 +266,7 @@ function is_safe_nuget_server()
 function validate_nuget_server()
 {
     if [[ $# -lt 1 || $# -gt 2 ]]; then
-        error "The function validate_nuget_server() requires at least one or two parameters: the NAME OF THE VARIABLE containing the NuGet server to validate and an optional default value for the NuGet server."
+        error "${FUNCNAME[0]}() requires at least one or two parameters: the NAME OF THE VARIABLE containing the NuGet server to validate and an optional default value for the NuGet server."
         return 2
     fi
 
@@ -267,20 +291,10 @@ function validate_nuget_server()
     return 0
 }
 
-function is_safe_minverTagPrefix()
-{
-    if [[ $# -ne 1 ]]; then
-        error "The function is_safe_minverTagPrefix() requires one parameter: the MinVer tag prefix to test."
-        return 2
-    fi
-
-    [[ ! "$1" =~ $minverTagPrefixRegex ]]
-}
-
 function is_safe_minverPrereleaseId()
 {
     if [[ $# -ne 1 ]]; then
-        error "The function is_safe_minverTagPrefix() requires one parameter: the MinVer tag prefix to test."
+        error "${FUNCNAME[0]}() requires one parameter: the MinVer tag prefix to test."
         return 2
     fi
 

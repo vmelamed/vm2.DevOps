@@ -34,10 +34,10 @@ Options:
   -p, --benchmark-projects      String containing a JSON array of strings - paths to the benchmark project files to be run. Can
                                 be empty string, or string representing null or empty array, in which case no benchmark tests
                                 will be run Initial value from \$BENCHMARK_PROJECTS
-  -o, --os                      String containing a JSON array of strings - target OS-es (e.g. from a GitHub actions matrix).
+  -o, --runners-os              String containing a JSON array of strings - target OS-es (e.g. from a GitHub actions matrix).
                                 Can be empty string, or string representing null or empty array, in which case
                                 '["ubuntu-latest"]' will be used
-                                Initial value from \$OS or default '["ubuntu-latest"]'
+                                Initial value from \$RUNNERSOS or default '["ubuntu-latest"]'
     --dotnet-version            Version of .NET SDK to use
                                 Initial value from \$DOTNET_VERSION or default '10.0.x'
   -c, --configuration           Build configuration ('Release' or 'Debug')
@@ -58,7 +58,7 @@ Environment Variables:
     BUILD_PROJECTS              JSON array of paths to projects to build
     TEST_PROJECTS               JSON array of paths to test projects to run
     BENCHMARK_PROJECTS          JSON array of paths to benchmark projects to run
-    OS                          JSON array of target OS-es
+    RUNNERS_OS                  JSON array of target OS-es
     DOTNET_VERSION              Version of .NET SDK to use
     CONFIGURATION               Build configuration ('Release' or 'Debug')
     PREPROCESSOR_SYMBOLS        Pre-processor symbols for compilation
@@ -72,7 +72,7 @@ Outputs (to GITHUB_OUTPUT):
     build-projects              JSON array of paths to projects to build
     test-projects               JSON array of paths to test projects to run
     benchmark-projects          JSON array of paths to benchmark projects to run
-    os                          JSON array of target OS-es
+    runners-os                  JSON array of target OS-es
     dotnet-version              Version of .NET SDK to use
     configuration               Build configuration ('Release' or 'Debug')
     preprocessor-symbols        Pre-processor symbols for compilation

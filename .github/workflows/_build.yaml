@@ -3,7 +3,7 @@ name: _build (Reusable workflow)
 on:
   workflow_call:
     inputs:
-      os:
+      runner-os:
         description: Runner OS
         type: string
         default: ubuntu-latest
@@ -49,8 +49,8 @@ env:
 jobs:
   # Compile the project and optionally cache the build artifacts
   build:
-    name: Build on ${{ inputs.os }}
-    runs-on: ${{ inputs.os }}
+    name: Build on ${{ inputs.runner-os }}
+    runs-on: ${{ inputs.runner-os }}
     permissions:
       contents: read
       packages: read

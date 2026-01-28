@@ -40,7 +40,7 @@ get_arguments "$@"
 # Sanitize inputs to prevent injection attacks
 are_safe_projects "package_projects" "$default_package_projects" || true
 validate_nuget_server "nuget_server" "$default_nuget_server" || true
-is_safe_minverTagPrefix "$minver_tag_prefix" || true
+validate_minverTagPrefix "$minver_tag_prefix" || true
 is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 is_safe_reason "$reason" || true
 # detect if the head is already tagged
@@ -58,8 +58,6 @@ declare -xr nuget_server
 declare -xr minver_tag_prefix
 declare -xr minver_prerelease_id
 declare -xr reason
-
-create_tag_regexes "$minver_tag_prefix"
 
 # Find latest stable tag like v1.2.3
 # shellcheck disable=SC2154 # semverTagReleaseRegex is referenced but not assigned.

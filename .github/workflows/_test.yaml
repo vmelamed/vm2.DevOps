@@ -3,7 +3,7 @@ name: _test (Reusable workflow)
 on:
   workflow_call:
     inputs:
-      os:
+      runner-os:
         description: Runner OS
         type: string
         default: ubuntu-latest
@@ -53,8 +53,8 @@ env:
 jobs:
   # Execute unit tests with code coverage and enforce minimum coverage threshold
   test:
-    name: Test on ${{ inputs.os }}
-    runs-on: ${{ inputs.os }}
+    name: Test on ${{ inputs.runner-os }}
+    runs-on: ${{ inputs.runner-os }}
     steps:
       # Clone the repository with full Git history
       - name: Checkout
@@ -159,7 +159,7 @@ jobs:
         uses: actions/upload-artifact@v6
         id: upload-coverage
         with:
-          name: coverage-${{ steps.run-tests.outputs.proj-name }}-${{ inputs.os }}
+          name: coverage-${{ steps.run-tests.outputs.proj-name }}-${{ inputs.runner-os }}
           path: ${{ steps.run-tests.outputs.artifacts-dir }}
           if-no-files-found: error
           overwrite: true
@@ -168,7 +168,7 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
-          flags: ${{ steps.run-tests.outputs.proj-name }}-${{ inputs.os }}
+          flags: ${{ steps.run-tests.outputs.proj-name }}-${{ inputs.runner-os }}
           slug: ${{ github.repository }}
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ${{ steps.run-tests.outputs.coverage_source_path }}
@@ -179,7 +179,7 @@ jobs:
         if: success() || failure() # Run even if tests fail, but not if cancelled
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
-          check_name: Test Results (${{ steps.run-tests.outputs.proj-name }} on ${{ inputs.os }})
+          check_name: Test Results (${{ steps.run-tests.outputs.proj-name }} on ${{ inputs.runner-os }})
           files: |
             ${{ steps.run-tests.outputs.artifacts-dir }}/**/*.trx
             ${{ steps.run-tests.outputs.artifacts-dir }}/**/*.xml
@@ -221,7 +221,7 @@ jobs:
               echo ""
               echo "🌐 View on [Codecov](https://app.codecov.io/gh/${{ github.repository }}/commit/${{ github.sha }})"
               echo ""
-              echo "📥 Or download the [coverage-${{ steps.run-tests.outputs.proj-name }}-${{ inputs.os }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) artifact to view the HTML report locally."
+              echo "📥 Or download the [coverage-${{ steps.run-tests.outputs.proj-name }}-${{ inputs.runner-os }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) artifact to view the HTML report locally."
               echo ""
               echo "Open \`coverage/html/index.html\` from the downloaded artifact in your browser."
           } >> $GITHUB_STEP_SUMMARY

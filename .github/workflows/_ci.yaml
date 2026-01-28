@@ -3,8 +3,8 @@ name: _ci (Reusable workflow)
 on:
   workflow_call:
     inputs:
-      os:
-        description: String representing a JSON array of strings - monikers of GitHub runners. Cannot be null or empty!
+      runners-os:
+        description: String containing a JSON array of strings - monikers of GitHub runners. Cannot be null or empty!
         type: string
         default: >-
           ["ubuntu-latest"]
@@ -81,7 +81,7 @@ jobs:
       build-projects: ${{ steps.validate.outputs.build-projects }}
       test-projects: ${{ steps.validate.outputs.test-projects }}
       benchmark-projects: ${{ steps.validate.outputs.benchmark-projects }}
-      os: ${{ steps.validate.outputs.os }}
+      runners-os: ${{ steps.validate.outputs.runners-os }}
       dotnet-version: ${{ steps.validate.outputs.dotnet-version }}
       configuration: ${{ steps.validate.outputs.configuration }}
       preprocessor-symbols: ${{ steps.validate.outputs.preprocessor-symbols }}
@@ -124,7 +124,7 @@ jobs:
               --build-projects       '${{ inputs.build-projects }}' \
               --test-projects        '${{ inputs.test-projects }}' \
               --benchmark-projects   '${{ inputs.benchmark-projects }}' \
-              --os                   '${{ inputs.os }}' \
+              --runners-os           '${{ inputs.runners-os }}' \
               --dotnet-version       '${{ inputs.dotnet-version }}' \
               --configuration        '${{ inputs.configuration }}' \
               --preprocessor-symbols '${{ inputs.preprocessor-symbols }}' \
@@ -141,12 +141,12 @@ jobs:
     strategy:
       # fail-fast: true
       matrix:
-        os: ${{ fromJSON(needs.validate-vars.outputs.os) }}
+        runner-os: ${{ fromJSON(needs.validate-vars.outputs.runners-os) }}
         build-project: ${{ fromJSON(needs.validate-vars.outputs.build-projects) }}
     uses: vmelamed/vm2.DevOps/.github/workflows/_build.yaml@main
     with:
       dotnet-version: ${{ needs.validate-vars.outputs.dotnet-version }}
-      os: ${{ matrix.os }}
+      runner-os: ${{ matrix.runner-os }}
       configuration: ${{ needs.validate-vars.outputs.configuration }}
       build-project: ${{ matrix.build-project }}
       preprocessor-symbols: ${{ needs.validate-vars.outputs.preprocessor-symbols }}
@@ -162,7 +162,7 @@ jobs:
     strategy:
       # fail-fast: true
       matrix:
-        os: ${{ fromJSON(needs.validate-vars.outputs.os) }}
+        runner-os: ${{ fromJSON(needs.validate-vars.outputs.runners-os) }}
         test-project: ${{ fromJSON(needs.validate-vars.outputs.test-projects) }}
     # __skip__ sentinel avoids empty-matrix expansion when no tests are requested
     if: needs.validate-vars.outputs.test-projects != '["__skip__"]'
@@ -174,7 +174,7 @@ jobs:
       pull-requests: write # Required to comment on PRs
       checks: write # Required to create GitHub Checks
     with:
-      os: ${{ matrix.os }}
+      runner-os: ${{ matrix.runner-os }}
       dotnet-version: ${{ needs.validate-vars.outputs.dotnet-version }}
       configuration: ${{ needs.validate-vars.outputs.configuration }}
       preprocessor-symbols: ${{ needs.validate-vars.outputs.preprocessor-symbols }}
@@ -190,7 +190,7 @@ jobs:
     strategy:
       # fail-fast: true
       matrix:
-        os: ${{ fromJSON(needs.validate-vars.outputs.os) }}
+        runner-os: ${{ fromJSON(needs.validate-vars.outputs.runners-os) }}
         benchmark-project: ${{ fromJSON(needs.validate-vars.outputs.benchmark-projects) }}
     # __skip__ sentinel avoids empty-matrix expansion; still honor [skip bm] on pushes
     if: needs.validate-vars.outputs.benchmark-projects != '["__skip__"]' && (github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip bm]'))
@@ -202,7 +202,7 @@ jobs:
       pull-requests: write # Required to comment on PRs
       checks: write # Required to create GitHub Checks
     with:
-      os: ${{ matrix.os }}
+      runner-os: ${{ matrix.runner-os }}
       dotnet-version: ${{ needs.validate-vars.outputs.dotnet-version }}
       configuration: ${{ needs.validate-vars.outputs.configuration }}
       preprocessor-symbols: ${{ needs.validate-vars.outputs.preprocessor-symbols }}

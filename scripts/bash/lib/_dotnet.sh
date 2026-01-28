@@ -25,7 +25,7 @@ declare -x package_version
 function summarizeDotnetBuild()
 {
     if [[ $# -eq 0 || -z "$1" ]]; then
-        echo "summarizeDotnet requires the output of 'dotnet build -v d ...' as a parameter"
+        echo "${FUNCNAME[0]}() requires the output of 'dotnet build -v d ...' as a parameter"
         return 1
     fi
     local bo="$1"

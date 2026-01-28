@@ -20,7 +20,7 @@ source "$script_dir/update-changelog-release.utils.sh"
 declare -xr release_tag
 declare -xr minver_tag_prefix
 
-create_tag_regexes "$minver_tag_prefix"
+validate_minverTagPrefix "$minver_tag_prefix"
 
 get_arguments "$@"
 dump_all_variables

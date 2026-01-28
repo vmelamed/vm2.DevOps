@@ -55,8 +55,15 @@ function error()
             echo "❌  ERROR: $*"
         else
             local line
+            local first=true
             while IFS= read -r line; do
-                echo "❌  ERROR: $line"
+                if [[ "$first" == true ]]; then
+                    echo "❌  ERROR: $line"
+                    first=false
+                else
+                    # prevent leading new line
+                    echo "$line"
+                fi
             done
         fi
     } | to_stderr
@@ -73,9 +80,17 @@ function warning()
             echo "⚠️  WARNING: $*"
         else
             local line
+            local first=true
             while IFS= read -r line; do
-                echo "⚠️  WARNING: $line"
+                if [[ "$first" == true ]]; then
+                    echo "⚠️  WARNING: $line"
+                    first=false
+                else
+                    # prevent leading new line
+                    echo "$line"
+                fi
             done
+
         fi
     } | to_stderr
     return 0
@@ -85,6 +100,10 @@ function warning()
 ## Usage: warning_var <variable_name> <warning message> <variable's default value>
 function warning_var()
 {
+    if [[ $# -ne 3 || -z "$1" || -z "$2" ]]; then
+        error "${FUNCNAME[0]}() requires three parameters: variable name, warning message, and default value."
+        return 1
+    fi
     warning "$2" "Assuming the default value of '$3'."
     local -n var="$1";
     # shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
@@ -101,8 +120,15 @@ function info()
             echo "ℹ️  INFO: $*"
         else
             local line
+            local first=true
             while IFS= read -r line; do
-                echo "ℹ️  INFO: $line"
+                if [[ "$first" == true ]]; then
+                    echo "ℹ️  INFO: $line"
+                    first=false
+                else
+                    # prevent leading new line
+                    echo "$line"
+                fi
             done
         fi
     } | to_stdout
@@ -121,8 +147,15 @@ function trace()
             echo "🐾 TRACE: $*"
         else
             local line
+            local first=true
             while IFS= read -r line; do
-                echo "🐾 TRACE: $line"
+                if [[ "$first" == true ]]; then
+                    echo "🐾 TRACE: $line"
+                    first=false
+                else
+                    # prevent leading new line
+                    echo "$line"
+                fi
             done
         fi
     } | to_trace_out

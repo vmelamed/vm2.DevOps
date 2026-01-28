@@ -3,7 +3,7 @@ name: _benchmarks-bencher (Reusable workflow with Bencher.dev integration)
 on:
   workflow_call:
     inputs:
-      os:
+      runner-os:
         description: Runner OS (cannot be null or empty string, default ubuntu-latest)
         type: string
         default: ubuntu-latest
@@ -60,8 +60,8 @@ env:
 
 jobs:
   benchmarks:
-    name: Benchmarks (${{ inputs.os }})
-    runs-on: ${{ inputs.os }}
+    name: Benchmarks (${{ inputs.runner-os }})
+    runs-on: ${{ inputs.runner-os }}
     steps:
       # Install Bencher CLI (install early so if it fails, we fail fast before doing extra work)
       - name: Compute Bencher cache week key
@@ -173,9 +173,9 @@ jobs:
           UPPER_THRESHOLD=$(echo "scale=4; ${{ inputs.max-regression-pct }} / 100" | bc)
 
           # Build bencher run command
-          BENCHER_CMD="bencher run                      \
+          BENCHER_CMD="bencher run                        \
               --branch \"${{ github.ref_name }}\"         \
-              --testbed \"${{ inputs.os }}\"              \
+              --testbed \"${{ inputs.runner-os }}\"       \
               --adapter c_sharp_dot_net                   \
               --err                                       \
               --ci-on-the-fly                             \
@@ -217,7 +217,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: benchmark-results-${{ inputs.os }}
+          name: benchmark-results-${{ inputs.runner-os }}
           path: ${{ env.ARTIFACTS_DIR }}
           if-no-files-found: warn
           overwrite: true
@@ -237,7 +237,7 @@ jobs:
               echo ""
               echo "Project: **${{ github.repository }}**"
               echo "Branch: **${{ github.ref_name }}**"
-              echo "Testbed: **${{ inputs.os }}**"
+              echo "Testbed: **${{ inputs.runner-os }}**"
               echo "Threshold: **±${{ inputs.max-regression-pct }}%**"
               echo ""
               echo "🌐 [View detailed results on Bencher](https://bencher.dev/console/projects/${BENCHER_SLUG})"

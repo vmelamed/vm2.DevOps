@@ -29,7 +29,7 @@ declare -xr repos
 declare -xr target_dir
 declare -xr minver_tag_prefix
 
-create_tag_regexes "$minver_tag_prefix"
+validate_minverTagPrefix "$minver_tag_prefix"
 
 # shellcheck disable=SC2154
 declare -xr semverTagReleaseRegex

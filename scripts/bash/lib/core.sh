@@ -38,6 +38,10 @@ source "${lib_dir}/_user.sh"
 ## Usage: execute <command> [args...]
 function execute()
 {
+    if [[ $# -eq 0 ]]; then
+        error "${FUNCNAME[0]}() requires at least one argument: the command to execute."
+        return 2
+    fi
     if [[ "$dry_run" == true ]]; then
         echo "dry-run$ $*"
         return 0
@@ -54,6 +58,10 @@ function execute()
 # Usage example: local a="$(to_lower "$1")"
 function to_lower()
 {
+    if [[ $# -eq 0 ]]; then
+        error "${FUNCNAME[0]}() requires one argument: the string to convert to lowercase." >&2
+        return 2
+    fi
     printf "%s" "${1,,}"
     return 0
 }
@@ -62,6 +70,10 @@ function to_lower()
 # Usage example: local a="$(to_upper "$1")"
 function to_upper()
 {
+    if [[ $# -eq 0 ]]; then
+        error "${FUNCNAME[0]}() requires one argument: the string to convert to uppercase." >&2
+        return 2
+    fi
     printf "%s" "${1^^}"
     return 0
 }
@@ -70,6 +82,10 @@ function to_upper()
 # Usage example: local a="$(capitalize "$1")"
 function capitalize()
 {
+    if [[ $# -eq 0 ]]; then
+        error "${FUNCNAME[0]}() requires one argument: the string to capitalize." >&2
+        return 2
+    fi
     a="${1,,}"
     printf "%s" "${a^}"
     return 0
@@ -86,7 +102,7 @@ function capitalize()
 function list_of_files()
 {
     if [[ $# -lt 1 ]]; then
-        error "The function list_of_files() requires at least one parameter: the file pattern."
+        error "${FUNCNAME[0]}() requires at least one parameter: the file pattern."
         return 2
     fi
 
@@ -113,7 +129,7 @@ function list_of_files()
 function get_from_yaml()
 {
     if [[ $# -lt 2 ]]; then
-        echo "The function get_from_yaml() requires two parameters: the query and the yaml file name." >&2
+        echo "${FUNCNAME[0]}() requires two parameters: the query and the yaml file name." >&2
         return 2
     fi
 
@@ -165,6 +181,11 @@ function get_credentials()
 # If the operation is successful it will set $return_copied to 'true' until the next invocation.
 function scp_retry()
 {
+    if [[ $# -lt 2 ]]; then
+        error "${FUNCNAME[0]}() requires at least two arguments: the source and the destination."
+        return 2
+    fi
+
     local -i maxRetries=3
     local -i retry_after=10
     local -i try=0

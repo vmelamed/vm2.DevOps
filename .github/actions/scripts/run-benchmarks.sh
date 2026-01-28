@@ -31,7 +31,7 @@ fi
 is_safe_path "$bm_project" || true
 is_safe_input "$configuration" || true
 is_safe_input "$preprocessor_symbols" || true
-is_safe_minverTagPrefix "$minver_tag_prefix" || true
+validate_minverTagPrefix "$minver_tag_prefix" || true
 is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 is_safe_path "$artifacts_dir" || true
 
@@ -42,8 +42,6 @@ declare -xr preprocessor_symbols
 declare -xr minver_tag_prefix
 declare -xr minver_prerelease_id
 declare -xr artifacts_dir
-
-create_tag_regexes "$minver_tag_prefix"
 
 # Determine solution directory and artifacts directory
 solution_dir="$(realpath -e "$(dirname "$bm_project")/../..")"

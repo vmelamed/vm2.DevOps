@@ -9,9 +9,10 @@ declare -r script_dir
 declare -r lib_dir
 
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
-source "$lib_dir/gh_core.sh"
-# shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
-source "$lib_dir/_dotnet.sh"
+{
+    source "$lib_dir/gh_core.sh"
+    source "$lib_dir/_dotnet.sh"
+}
 
 # default values for parameters
 declare -xr default_minver_tag_prefix='v'
@@ -31,16 +32,16 @@ source "$script_dir/build.usage.sh"
 source "$script_dir/build.utils.sh"
 
 get_arguments "$@"
+dump_all_variables
 
 # sanitize inputs
+validate_minverTagPrefix "$minver_tag_prefix" || true
+is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 is_safe_path "$build_project" || true
 is_safe_input "$configuration" || true
 is_safe_input "$preprocessor_symbols" || true
-is_safe_minverTagPrefix "$minver_tag_prefix" || true
-is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 is_safe_input "$nuget_username" || true
 
-dump_all_variables
 exit_if_has_errors
 
 # freeze the parameters
@@ -51,8 +52,6 @@ declare -xr minver_tag_prefix
 declare -xr minver_prerelease_id
 declare -xr nuget_username
 declare -xr nuget_password
-
-create_tag_regexes "$minver_tag_prefix"
 
 # Configure NuGet source with GitHub Packages authentication
 if [[ -n "$nuget_username" && -n "$nuget_password" ]]; then

@@ -12,7 +12,7 @@ fi
 function is_defined()
 {
     if [[ $# -ne 1 ]]; then
-        error "The function is_defined() requires exactly one argument: the name of the variable to test."
+        error "${FUNCNAME[0]}() requires exactly one argument: the name of the variable to test."
         return 2
     fi
     declare -p "$1" >"$_ignore" 2>&1
@@ -65,7 +65,7 @@ function is_decimal()
 function is_in()
 {
     if [[ $# -lt 2 ]]; then
-        error "The function is_in() requires at least 2 arguments: the value to test and at least one valid option."
+        error "${FUNCNAME[0]}() requires at least 2 arguments: the value to test and at least one valid option."
         return 2
     fi
 
@@ -82,7 +82,7 @@ function is_in()
 function is_inside_work_tree()
 {
     if [[ $# -ne 1 ]]; then
-        error "The function is_inside_work_tree() requires exactly one argument: the directory to test."
+        error "${FUNCNAME[0]}() requires exactly one argument: the directory to test."
         return 2
     fi
 
@@ -94,7 +94,7 @@ function is_inside_work_tree()
 function is_latest_stable_tag()
 {
     if [[ $# -lt 2 || $# -gt 3 ]]; then
-        error "The function is_latest_stable_tag() takes 2 arguments: directory and regular expression for stable tag." \
+        error "${FUNCNAME[0]}() takes 2 arguments: directory and regular expression for stable tag." \
               "A third argument may be specified to fetch the latest changes in main from remote."
     fi
     if [[ ! -d "$1" ]]; then
@@ -128,7 +128,7 @@ function is_latest_stable_tag()
 function is_after_latest_stable_tag()
 {
     if [[ $# -lt 2 || $# -gt 3 ]]; then
-        error "The function is_after_latest_stable_tag() takes 2 arguments: directory and regular expression for stable tag." \
+        error "${FUNCNAME[0]}() takes 2 arguments: directory and regular expression for stable tag." \
               "A third argument may be specified to fetch the latest changes in main from remote."
     fi
     if [[ ! -d "$1" ]]; then
@@ -162,7 +162,7 @@ function is_after_latest_stable_tag()
 function is_on_or_after_latest_stable_tag()
 {
     if [[ $# -lt 2 || $# -gt 3 ]]; then
-        error "The function is_on_or_after_latest_stable_tag() takes 2 arguments: directory and regular expression for stable tag." \
+        error "${FUNCNAME[0]}() takes 2 arguments: directory and regular expression for stable tag." \
               "A third argument may be specified to fetch the latest changes in main from remote."
     fi
     if [[ ! -d "$1" ]]; then

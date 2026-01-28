@@ -27,7 +27,7 @@ get_arguments "$@"
 is_safe_existing_file "$test_project" || true
 is_safe_input "$configuration" || true
 is_safe_input "$preprocessor_symbols" true || true
-is_safe_minverTagPrefix "$minver_tag_prefix" true || true
+validate_minverTagPrefix "$minver_tag_prefix" true || true
 is_safe_minverPrereleaseId "$minver_prerelease_id" true || true
 is_safe_path "$artifacts_dir" || true
 
@@ -43,8 +43,6 @@ declare -xr minver_tag_prefix
 declare -xr minver_prerelease_id
 declare -xr test_name
 declare -xr test_dir
-
-create_tag_regexes "$minver_tag_prefix"
 
 dump_all_variables
 exit_if_has_errors

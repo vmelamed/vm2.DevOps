@@ -76,7 +76,7 @@ function is_in() { return 0; }
 function set_table_format()
 {
     if [[ $# -ne 1 || -z "$1" ]]; then
-        error "set_table_format requires one parameter - the table format"
+        error "${FUNCNAME[0]}() requires one parameter - the table format"
         return 1
     fi
     local f="${1,,}"
@@ -125,7 +125,7 @@ function get_common_arg()
 function display_usage_msg()
 {
     if [[ $# -eq 0 || -z "$1" ]]; then
-        error "There must be at least one parameter - the usage text" >&2
+        error "${FUNCNAME[0]}() requires at least one parameter - the usage text" >&2
         exit 2
     fi
 
@@ -210,6 +210,7 @@ if [[ $ci == true ]]; then
     set_table_format markdown
     set +x
 fi
+
 # By default all scripts trap DEBUG and EXIT to provide better error handling.
 # However, when running under a debugger, e.g. 'bashdb', trapping these signals
 # interferes with the debugging session.

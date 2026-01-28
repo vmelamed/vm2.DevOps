@@ -38,12 +38,11 @@ get_arguments "$@"
 is_safe_path "$package_project" || true
 validate_nuget_server "nuget_server" || true
 is_safe_input "$preprocessor_symbols" || true
-is_safe_minverTagPrefix "$minver_tag_prefix" || true
+validate_minverTagPrefix "$minver_tag_prefix" || true
 is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 is_safe_input "$repo_owner" || true
 is_safe_reason "$reason" || true
 is_safe_path "$artifacts_dir" || true
-create_tag_regexes "$minver_tag_prefix"
 is_semver "$version" || true
 is_semverTag "$git_tag" || true
 

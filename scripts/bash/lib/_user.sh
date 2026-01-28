@@ -28,7 +28,7 @@ function press_any_key()
 function confirm()
 {
     if [[ $# -eq 0 || $# -gt 2 || -z "$1" ]]; then
-        error "The function confirm() requires at least one parameter: the prompt and a second, optional parameter -default response."
+        error "${FUNCNAME[0]}() requires at least one parameter: the prompt and a second, optional parameter -default response."
         return 2
     fi
 
@@ -64,7 +64,7 @@ function confirm()
 function choose()
 {
     if [[ $# -lt 3 ]]; then
-        error "The function choose() requires 3 or more arguments: a prompt and at least two choices." >&2;
+        error "${FUNCNAME[0]}() requires 3 or more arguments: a prompt and at least two choices." >&2;
         return 2;
     fi
 

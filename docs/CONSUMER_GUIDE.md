@@ -318,7 +318,7 @@ The `CI.yaml` invokes the reusable `_ci.yaml` workflow, that orchestrates the re
 
    ```yaml
    env:
-     OS: >-
+     RUNNERS_OS: >-
        [
        "ubuntu-latest",
        "windows-latest",
@@ -339,7 +339,7 @@ The `CI.yaml` invokes the reusable `_ci.yaml` workflow, that orchestrates the re
 
 From the GitHub UI, navigate to the **Actions** tab, select the **CI** workflow from the left sidebar, and click the **Run workflow** button. You can specify:
 
-- `os`: Comma-separated list of OS monikers (e.g., `ubuntu-latest,windows-latest,macos-latest`). Note that this will be converted to a JSON array internally.
+- `runners-os`: Comma-separated list of OS monikers (e.g., `ubuntu-latest,windows-latest,macos-latest`). Note that this will be converted to a JSON array internally.
 - `preprocessor-symbols`: Semicolon-separated list of preprocessor symbols (e.g., `FEATURE_FLAG_A;DEBUG_MODE;SHORT_RUN`)
 
 ### Prerelease Workflow (`Prerelease.yaml`)
@@ -495,7 +495,7 @@ jobs:
   build:
     uses: vmelamed/vm2.DevOps/.github/workflows/_build.yaml@main
     with:
-      os: 'ubuntu-latest'  # Single OS (not an array)
+      runner-os: 'ubuntu-latest'  # Single OS (not an array)
       dotnet-version: '10.0.x'
       configuration: 'Release'
       build-project: './YourSolution.slnx'  # Single project (not an array)
@@ -508,10 +508,10 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        runner-os: [ubuntu-latest, windows-latest, macos-latest]
     uses: vmelamed/vm2.DevOps/.github/workflows/_build.yaml@main
     with:
-      os: ${{ matrix.os }}
+      runner-os: ${{ matrix.runner-os }}
       dotnet-version: '10.0.x'
       configuration: 'Release'
       build-project: './YourSolution.slnx'
@@ -526,7 +526,7 @@ jobs:
   test:
     uses: vmelamed/vm2.DevOps/.github/workflows/_test.yaml@main
     with:
-      os: 'ubuntu-latest'  # Single OS (not an array)
+      runner-os: 'ubuntu-latest'  # Single OS (not an array)
       dotnet-version: '10.0.x'
       configuration: 'Release'
       test-project: './test/YourTests/YourTests.csproj'  # Single project (not an array)
@@ -547,7 +547,7 @@ jobs:
           - ./test/YourProject.Integration.Tests/YourProject.Integration.Tests.csproj
     uses: vmelamed/vm2.DevOps/.github/workflows/_test.yaml@main
     with:
-      os: 'ubuntu-latest'
+      runner-os: 'ubuntu-latest'
       dotnet-version: '10.0.x'
       configuration: 'Release'
       test-project: ${{ matrix.test-project }}
@@ -565,7 +565,7 @@ jobs:
   benchmark:
     uses: vmelamed/vm2.DevOps/.github/workflows/_benchmarks.yaml@main
     with:
-      os: 'ubuntu-latest'  # Single OS (not an array)
+      runner-os: 'ubuntu-latest'  # Single OS (not an array)
       dotnet-version: '10.0.x'
       configuration: 'Release'
       benchmark-project: './benchmarks/YourBenchmarks/YourBenchmarks.csproj'  # Single project (not an array)
@@ -586,7 +586,7 @@ jobs:
           - ./benchmarks/ApiBenchmarks/ApiBenchmarks.csproj
     uses: vmelamed/vm2.DevOps/.github/workflows/_benchmarks.yaml@main
     with:
-      os: 'ubuntu-latest'
+      runner-os: 'ubuntu-latest'
       dotnet-version: '10.0.x'
       configuration: 'Release'
       benchmark-project: ${{ matrix.benchmark-project }}
@@ -604,8 +604,8 @@ To test on multiple operating systems:
 on:
   workflow_dispatch:
     inputs:
-      os:
-        description: "Runner OS (comma-separated)"
+      runners-os:
+        description: "Runners OS (comma-separated)"
         type: string
         default: "ubuntu-latest,windows-latest,macos-latest"
 ```
@@ -616,7 +616,7 @@ Then in the `get-params` job:
 # For push/PR, test on all platforms
 if [ "${{ github.event_name }}" == "push" ] || \
    [ "${{ github.event_name }}" == "pull_request" ]; then
-    os='["ubuntu-latest", "windows-latest", "macos-latest"]'
+    runners-os='["ubuntu-latest", "windows-latest", "macos-latest"]'
 fi
 ```
 

@@ -115,8 +115,10 @@ function to_output()
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 function to_github_output()
 {
-    [[ $# -eq 0 || $# -ge 3 ]] &&
-        error "to_github_output() requires one or two arguments: the name of the variable to output and optionally the name to use in GitHub Actions output."
+    if [[ $# -eq 0 || $# -ge 3 ]]; then
+        error "${FUNCNAME[0]}() requires one or two arguments: the name of the variable to output and optionally the name to use in GitHub Actions output."
+        return 2
+    fi
     declare -n var="$1"
 
     local m
@@ -128,7 +130,7 @@ function to_github_output()
 function args_to_github_output()
 {
     if [[ $# -eq 0 ]]; then
-        error "args_to_github_output() requires one or more arguments: the names of the variables to output."
+        error "${FUNCNAME[0]}() requires one or more arguments: the names of the variables to output."
         return 2
     fi
 

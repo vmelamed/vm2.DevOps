@@ -53,7 +53,7 @@ Alternatively:
 These reusable GitHub Actions workflows are intended to be called directly via `workflow_call` from dependent repositories. They orchestrate the full CI/CD pipeline, and fan out to lower-level building blocks - reusable workflows and bash scripts as needed. The workflows and scripts share a common input surface to make it easy to toggle behavior across the pipeline:
 
 - Common switches and options for the CI workflows and bash scripts:
-  - `os`: List of operating systems of the jobs runners (default: `ubuntu-latest`)
+  - `runners_os`: List of operating systems of the jobs runners (default: `ubuntu-latest`)
   - `dotnet-version`: .NET SDK version to install (default: `10.0.x`)
   - `configuration`: Build configuration (default: `Release`)
   - `preprocessor-symbols`: Optional preprocessor symbols to pass to `dotnet build` (e.g. SHORT_RUN for benchmarks) (default: empty)
@@ -116,7 +116,7 @@ Builds the specified projects/solution with caching for sharing the results betw
 
 **Input Parameters:**
 
-- `os`: Runner operating system (default: `ubuntu-latest`)
+- `runners_os`: Runner operating system (default: `ubuntu-latest`)
 - `dotnet-version`: .NET SDK version (default: `10.0.x`)
 - `configuration`: Build configuration like `Release` or `Debug` (default: `Release`)
 - `build-project`: Path to specific project; empty/null builds solution or root project (optional)
@@ -140,7 +140,7 @@ Runs the specified test projects with coverage collection and enforcement.
 
 **Input Parameters:**
 
-- `os`: Runner operating system (default: `ubuntu-latest`)
+- `runners_os`: Runner operating system (default: `ubuntu-latest`)
 - `dotnet-version`: .NET SDK version (default: `10.0.x`)
 - `configuration`: Build configuration like `Release` or `Debug` (default: `Release`)
 - `preprocessor-symbols`: Semicolon-separated preprocessor defines (optional)
@@ -161,7 +161,7 @@ Runs the specified benchmark projects, compares the results to previous runs, an
 
 **Input Parameters:**
 
-- `os`: Runner operating system (default: `ubuntu-latest`)
+- `runners_os`: Runner operating system (default: `ubuntu-latest`)
 - `dotnet-version`: .NET SDK version (default: `10.0.x`)
 - `configuration`: Build configuration like `Release` or `Debug` (default: `Release`)
 - `preprocessor-symbols`: Semicolon-separated preprocessor defines (optional)

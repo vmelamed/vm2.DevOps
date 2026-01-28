@@ -31,9 +31,9 @@ function get_arguments()
                 benchmark_projects="$1"; shift
                 ;;
 
-            --os|-o )
+            --runners-os|-o )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
-                os="$1"; shift
+                runners_os="$1"; shift
                 ;;
 
             --dotnet-version )
@@ -89,7 +89,7 @@ dump_all_variables()
         build_projects \
         test_projects \
         benchmark_projects \
-        os \
+        runners_os \
         dotnet_version \
         configuration \
         preprocessor_symbols \

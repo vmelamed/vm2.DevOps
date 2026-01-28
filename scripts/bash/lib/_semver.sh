@@ -25,31 +25,37 @@ declare -xr semverRegex="^$semverRex$"
 declare -xr semverReleaseRegex="^$semverReleaseRex$"
 declare -xr semverPrereleaseRegex="^$semverPrereleaseRex$"
 
-# Regular expressions that test if a string is exactly a git tag with semantic version (e.g. v1.2.3)
-declare -x semverTagRegex
-declare -x semverTagReleaseRegex
-declare -x semverTagPrereleaseRegex
-
+# Regular expressions that test if a string is a safe MinVer tag prefix and MinVerDefaultPrereleaseIds (MinverPrereleaseId)
 declare -xr minverTagPrefixRex='[0-9A-Za-z_]([-0-9A-Za-z._/]*[-A-Za-z_])?'
 declare -xr minverTagPrefixRegex="^$minverTagPrefixRex$"
 
 declare -xr minverPrereleaseIdRex=$prereleaseLabelRex
 declare -xr minverPrereleaseIdRegex="^$minverPrereleaseIdRex$"
 
+# Regular expressions that test if a string is exactly a git tag with semantic version (e.g. v1.2.3)
+declare -x semverTagRegex
+declare -x semverTagReleaseRegex
+declare -x semverTagPrereleaseRegex
+
 ## Flag indicating whether the tag regexes have been initialized with default value for the tag prefix or with actual parameter
 ## 0 - actual, 1 - default
 declare -xi tag_regexes_initialized=1
 
-## Shell function to create the regular expressions above for tags comprising a given prefix and a semantic version.
-## Call once when the tag prefix is known. For example: create_tag_regexes "ver.".
-# shellcheck disable=SC2120 # create_tag_regexes references arguments, but none are ever passed.
-function create_tag_regexes()
+## Shell function to validate MinVerTagPrefix used my MinVer and create the regular expressions above for validating tags.
+## Call once when the tag prefix is known. For example: validate_minverTagPrefix "ver.".
+## Parameter 1 - the MinVer tag prefix.
+## Returns 0 if valid, > 0 otherwise.
+## Usage: validate_minverTagPrefix <minver_tag_prefix>
+## On success sets the regex variables: $semverTagRegex, $semverTagReleaseRegex, and $semverTagPrereleaseRegex, therefore call
+## this function only once and as early as possible to make validation and extraction from git tags reliable.
+function validate_minverTagPrefix()
 {
     if [[ $# -ne 1 ]]; then
         error "${FUNCNAME[0]}() requires exactly 1 argument: the semver tag prefix used by MinVer."
         return 2
     fi
-    if ! is_safe_minverTagPrefix "$1"; then
+
+    if [[ ! "$1" =~ $minverTagPrefixRegex ]]; then
         error "The semver tag prefix used by MinVer ('$1') is not valid. It must match the regex: $minverTagPrefixRegex"
         return 1
     fi
@@ -59,9 +65,9 @@ function create_tag_regexes()
     semverTagPrereleaseRegex="^${1}${semverPrereleaseRex}$"
 }
 
-# create the regexes with default prefix from $MINVERTAGPREFIX or 'v' for now, they can be re-created later by calling
-# create_tag_regexes with a different prefix if needed
-create_tag_regexes "${MINVERTAGPREFIX:-"v"}"
+# create the regexes with environment var prefix from $MINVERTAGPREFIX or the default 'v' for now, they should be re-created
+# later by calling validate_minverTagPrefix with a different prefix
+validate_minverTagPrefix "${MINVERTAGPREFIX:-"v"}"
 
 # semver components indexes in BASH_REMATCH
 declare -irx semver_major=1
@@ -86,7 +92,7 @@ function compare_semver()
     local -i e=0
 
     if [[ $# -ne 2 ]]; then
-        error "The function ${FUNCNAME[0]}() requires at exactly 2 arguments: version1 and version2." >&2
+        error "${FUNCNAME[0]}() requires at exactly 2 arguments: version1 and version2." >&2
         e=$((e + 1))
     fi
 
@@ -96,7 +102,7 @@ function compare_semver()
         local -i patch1=${BASH_REMATCH[$semver_patch]}
         local prerelease1=${BASH_REMATCH[$semver_prerelease]#-}
     else
-        error "version1 argument to ${FUNCNAME[0]}() must be a valid [Semantic Versioning 2.0.0](https://semver.org/) string." >&2
+        error "${FUNCNAME[0]}() requires the version1 argument to be a valid [Semantic Versioning 2.0.0](https://semver.org/) string." >&2
         e=$((e + 1))
     fi
     # local build1=${BASH_REMATCH[semver_build]#-} does not participate in comparison by spec
@@ -107,7 +113,7 @@ function compare_semver()
         local -i patch2=${BASH_REMATCH[$semver_patch]}
         local prerelease2=${BASH_REMATCH[$semver_prerelease]#-}
     else
-        error "version2 argument to ${FUNCNAME[0]}() must be a valid [Semantic Versioning 2.0.0](https://semver.org/) string." >&2
+        error "${FUNCNAME[0]}() requires the version2 argument to be a valid [Semantic Versioning 2.0.0](https://semver.org/) string." >&2
         e=$((e + 1))
     fi
     # local build2=${BASH_REMATCH[semver_build]#-} does not participate in comparison by spec

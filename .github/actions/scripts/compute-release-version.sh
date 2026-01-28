@@ -31,7 +31,7 @@ get_arguments "$@"
 # Sanitize inputs to prevent injection attacks
 are_safe_projects "package_projects" "$default_package_projects" || true
 validate_nuget_server "nuget_server" "$default_nuget_server" || true
-is_safe_minverTagPrefix "$minver_tag_prefix" || true
+validate_minverTagPrefix "$minver_tag_prefix" || true
 is_safe_reason "$reason" || true
 
 # freeze the parameters
@@ -39,8 +39,6 @@ declare -xr package_projects
 declare -xr nuget_server
 declare -xr minver_tag_prefix
 declare -xr reason
-
-create_tag_regexes "$minver_tag_prefix"
 
 # detect if the head is already tagged
 head_tag=$(git tag --points-at HEAD)

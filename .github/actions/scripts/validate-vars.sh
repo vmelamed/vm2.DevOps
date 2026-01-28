@@ -11,12 +11,8 @@ declare -r lib_dir
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
 source "$lib_dir/gh_core.sh"
 
-declare -xr skip_projects_sentinel
-
 declare -r defaultBuildProjects='[""]'
-declare -r defaultTestProjects="[\"$skip_projects_sentinel\"]"
-declare -r defaultBenchmarkProjects="[\"$skip_projects_sentinel\"]"
-declare -r defaultOses='["ubuntu-latest"]'
+declare -r defaultRunnersOs='["ubuntu-latest"]'
 declare -r defaultDotnetVersion='10.0.x'
 declare -r defaultConfiguration='Release'
 declare -r defaultPreprocessorSymbols=''
@@ -29,8 +25,8 @@ declare -r defaultMinverPrereleaseId='preview.0'
 # CI Variables that will be passed as environment variables
 declare -x build_projects=${BUILD_PROJECTS:-${defaultBuildProjects}}
 declare -x test_projects=${TEST_PROJECTS:-}
-declare -x benchmark_projects=${BENCHMARK_PROJECTS:-${defaultBenchmarkProjects}}
-declare -x os=${OS:-${defaultOses}}
+declare -x benchmark_projects=${BENCHMARK_PROJECTS:-}
+declare -x runners_os=${RUNNERS_OS:-${defaultRunnersOs}}
 declare -x dotnet_version=${DOTNET_VERSION:-${defaultDotnetVersion}}
 declare -x configuration=${CONFIGURATION:-${defaultConfiguration}}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-${defaultPreprocessorSymbols}}
@@ -56,102 +52,46 @@ if ! command -v -p jq &> "$_ignore" || ! command -v -p gh 2>&1 "$_ignore"; then
     fi
 fi
 
-# We can build one or more projects or one solution with all projects in it:
-# shellcheck disable=SC2154 # variable is referenced but not assigned.
-if [[ -z "$build_projects" ]] || jq -e "$jq_empty" <<< "$build_projects" > "$_ignore" 2>&1; then
-    warning_var build_projects "The value of the option --build-projects is empty: will build the entire solution." "$defaultBuildProjects"
-else
-    jq -e "$jq_array_strings" <<< "$build_projects" > "$_ignore" 2>&1
-    jq_exit=$?
-    if [[ $jq_exit == 5 ]]; then
-        error "The value of the option --build-projects '$build_projects' is not a valid JSON."
-    elif [[ $jq_exit != 0 ]]; then
-        error "The value of the option --build-projects '$build_projects' must be a string representing a (possibly empty) JSON array of (possibly empty) strings - paths to the project(s) to be built."
-    elif jq -e "$jq_array_strings_has_empty" <<< "$build_projects" > "$_ignore" 2>&1; then
-        warning_var build_projects "At least one of the strings in the value of the option --build-projects '$build_projects' is empty: will build the entire solution." "$defaultBuildProjects"
-    else
-        for p in $(jq -r '.[]' <<< "$build_projects"); do
-            if [[ "$p" != "" && "$p" != "$skip_projects_sentinel" && ! -s "$p" ]]; then
-                error "Build project file '$p' does not exist or is empty. Please check the path."
-            fi
-        done
-    fi
-fi
+# Validate minver tag prefix: always first to populate the tag regexes used later
+validate_minverTagPrefix "$minver_tag_prefix" || true
 
-# There must be at least one test project specified:
-# shellcheck disable=SC2154 # variable is referenced but not assigned.
-if [[ -z "$test_projects" ]]; then
-    warning_var test_projects "The value of the option --test-projects is empty: will not run tests." "$defaultTestProjects"
-else
-    jq -e "$jq_array_strings_nonempty" <<< "$test_projects" > "$_ignore" 2>&1
-    jq_exit=$?
-    if [[ $jq_exit == 5 ]]; then
-        error "The value of the option --test-projects '$test_projects' is not a valid JSON."
-    elif [[ $jq_exit != 0 ]]; then
-        warning_var test_projects "The value of the option --test-projects is empty or invalid: will not run tests." "$defaultTestProjects"
-    else
-        for p in $(jq -r '.[]' <<< "$test_projects"); do
-            if [[ "$p" != "$skip_projects_sentinel"  && ! -s "$p" ]]; then
-                error "Test project file '$p' does not exist or is empty. Please verify the path in --test-projects."
-            fi
-        done
-    fi
-fi
+is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 
-if [[ -z "$benchmark_projects" ]] || jq -e "$jq_empty" <<< "$benchmark_projects" > "$_ignore" 2>&1; then
-    warning_var benchmark_projects "The value of the option --benchmark-projects is empty: will not run benchmarks." "$defaultBenchmarkProjects"
-else
-    jq -e "$jq_array_strings_nonempty" <<< "$benchmark_projects" > "$_ignore" 2>&1
-    jq_exit=$?
-    if [[ $jq_exit == 5 ]]; then
-        error "The value of the option --benchmark-projects '$benchmark_projects' is not a valid JSON."
-    elif [[ $jq_exit != 0 ]]; then
-        error "The value of the option --benchmark-projects '$benchmark_projects' must be a string representing a non-empty JSON array of non-empty strings - paths to the benchmark project(s) to be run."
-    else
-        for p in $(jq -r '.[]' <<< "$benchmark_projects"); do
-            if [[ "$p" != "$skip_projects_sentinel"  && ! -s "$p" ]]; then
-                error "Benchmark project file '$p' does not exist or is empty. Please verify the path in --benchmark-projects."
-            fi
-        done
-    fi
-fi
+# Validate the build solution/projects specified:
+is_safe_json_array "$build_projects" "$defaultBuildProjects" is_safe_existing_file || true
 
-if [[ -z "$os" ]] || jq -e "$jq_empty" <<< "$os" > "$_ignore" 2>&1; then
-    warning_var os "The value of the option --os '$os' is empty: will use default runner OS." "$defaultOses"
-else
-    jq -e "$jq_array_strings_nonempty" <<< "$os" > "$_ignore" 2>&1
-    jq_exit=$?
-    if [[ $jq_exit == 5 ]]; then
-        error "The value of the option --os '$os' is not a valid JSON."
-    elif [[ $jq_exit != 0 ]]; then
-        error "The value of the option --os '$os' must be a string representing a non-empty JSON array of non-empty strings - monikers of GitHub runners."
-    fi
-fi
+# Validate the test projects specified:
+is_safe_json_array "$test_projects" "" is_safe_existing_file || true
+
+# Validate the benchmark projects specified:
+is_safe_json_array "$benchmark_projects" "" is_safe_existing_file || true
+
+is_safe_json_array "$runners_os" "$defaultRunnersOs" is_safe_runner_os || true
 
 if [[ -z "$dotnet_version" ]]; then
     warning_var dotnet_version "dotnet-version is empty." "$defaultDotnetVersion"
 fi
+is_safe_input "$dotnet_version" || true
 
 if [[ -z "$configuration" ]]; then
     warning_var configuration "configuration must have value." "$defaultConfiguration"
 fi
+is_safe_input "$configuration" || true
 
-# preprocessor_symbols can be empty - that's valid, so no validation needed
+is_safe_input "$preprocessor_symbols" || true
 
-if ! [[ "$min_coverage_pct" =~ ^[0-9]+$ ]] || (( min_coverage_pct < 50 || min_coverage_pct > 100 )); then
-    warning_var min_coverage_pct "min-coverage-pct must be 50-100." "$defaultMinCoveragePct"
+if [[ ! "$min_coverage_pct" =~ ^[0-9]+$ ]]; then
+    error "min-coverage-pct must be an integer between 50-100." || true
+fi
+if (( min_coverage_pct < 50 || min_coverage_pct > 100 )); then
+    warning_var min_coverage_pct "min-coverage-pct must be between 50-100." "$defaultMinCoveragePct"
 fi
 
-if ! [[ "$max_regression_pct" =~ ^[0-9]+$ ]] || (( max_regression_pct < 0 || max_regression_pct > 50 )); then
-    warning_var max_regression_pct "max-regression-pct must be 0-50." "$defaultMaxRegressionPct"
+if [[ ! "$max_regression_pct" =~ ^[0-9]+$ ]]; then
+    error "max-regression-pct must be an integer between 0-50." || true
 fi
-
-if [[ -z "$minver_tag_prefix" ]]; then
-    warning_var minver_tag_prefix "minver-tag-prefix must have value." "$defaultMinverTagPrefix"
-fi
-
-if [[ -z "$minver_prerelease_id" ]]; then
-    warning_var minver_prerelease_id "minver-prerelease-id must have value." "$defaultMinverPrereleaseId"
+if (( max_regression_pct < 0 || max_regression_pct > 50 )); then
+    warning_var max_regression_pct "max-regression-pct must be between 0-50." "$defaultMaxRegressionPct"
 fi
 
 if [[ "$verbose" != "true" && "$verbose" != "false" ]]; then
@@ -163,7 +103,7 @@ dump_vars --quiet --force --markdown \
     build_projects \
     test_projects \
     benchmark_projects \
-    os \
+    runners_os \
     dotnet_version \
     configuration \
     preprocessor_symbols \
@@ -171,6 +111,7 @@ dump_vars --quiet --force --markdown \
     max_regression_pct \
     minver_tag_prefix \
     minver_prerelease_id \
+    verbose \
     | to_stdout
 
 exit_if_has_errors
@@ -183,7 +124,7 @@ args_to_github_output \
     build_projects \
     test_projects \
     benchmark_projects \
-    os \
+    runners_os \
     dotnet_version \
     configuration \
     preprocessor_symbols \
@@ -191,4 +132,5 @@ args_to_github_output \
     max_regression_pct \
     minver_tag_prefix \
     minver_prerelease_id \
+    verbose \
     # add more variables above this line
