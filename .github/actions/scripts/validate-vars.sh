@@ -12,6 +12,8 @@ declare -r lib_dir
 source "$lib_dir/gh_core.sh"
 
 declare -r defaultBuildProjects='[""]'
+declare -r defaultTestProjects='[]'
+declare -r defaultBenchmarkProjects='[]'
 declare -r defaultRunnersOs='["ubuntu-latest"]'
 declare -r defaultDotnetVersion='10.0.x'
 declare -r defaultConfiguration='Release'
@@ -24,8 +26,8 @@ declare -r defaultMinverPrereleaseId='preview.0'
 
 # CI Variables that will be passed as environment variables
 declare -x build_projects=${BUILD_PROJECTS:-${defaultBuildProjects}}
-declare -x test_projects=${TEST_PROJECTS:-}
-declare -x benchmark_projects=${BENCHMARK_PROJECTS:-}
+declare -x test_projects=${TEST_PROJECTS:-${defaultTestProjects}}
+declare -x benchmark_projects=${BENCHMARK_PROJECTS:-${defaultBenchmarkProjects}}
 declare -x runners_os=${RUNNERS_OS:-${defaultRunnersOs}}
 declare -x dotnet_version=${DOTNET_VERSION:-${defaultDotnetVersion}}
 declare -x configuration=${CONFIGURATION:-${defaultConfiguration}}
