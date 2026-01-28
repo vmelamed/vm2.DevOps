@@ -38,8 +38,8 @@ declare -x verbose=${VERBOSE:-${defaultVerbose}}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-${defaultMinverTagPrefix}}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-${defaultMinverPrereleaseId}}
 
-source "$script_dir/validate-vars.usage.sh"
-source "$script_dir/validate-vars.utils.sh"
+source "$script_dir/validate-input.usage.sh"
+source "$script_dir/validate-input.utils.sh"
 
 get_arguments "$@"
 dump_all_variables
@@ -101,7 +101,7 @@ if [[ "$verbose" != "true" && "$verbose" != "false" ]]; then
 fi
 
 dump_vars --quiet --force --markdown \
-    -h "Validated Variables" \
+    -h "Validated Parameters" \
     build_projects \
     test_projects \
     benchmark_projects \
@@ -118,7 +118,7 @@ dump_vars --quiet --force --markdown \
 
 exit_if_has_errors
 
-info "✅ All variables validated successfully"
+info "✅ All parameters validated successfully"
 
 # Output all variables to github_output for use in subsequent jobs
 # shellcheck disable=SC2154 # variable is referenced but not assigned.

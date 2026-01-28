@@ -8,6 +8,7 @@ declare -x file_version
 declare -x informational_version
 declare -x version
 declare -x package_version
+declare -x minver_version
 
 ## Summarizes the output of a 'dotnet build -v d ...' command.
 ##  Parameters:
@@ -22,6 +23,7 @@ declare -x package_version
 ##    informational_version
 ##    version
 ##    package_version
+##    minver_version
 function summarizeDotnetBuild()
 {
     if [[ $# -eq 0 || -z "$1" ]]; then
@@ -29,14 +31,6 @@ function summarizeDotnetBuild()
         return 1
     fi
     local bo="$1"
-    local build_result=""
-    local errors_count=""
-    local warnings_count=""
-    local assembly_version=""
-    local file_version=""
-    local informational_version=""
-    local version=""
-    local package_version=""
 
     restoreShopt=$(shopt -p nocasematch)
     shopt -s nocasematch
@@ -47,35 +41,30 @@ function summarizeDotnetBuild()
     [[ ${BASH_REMATCH[2]} == "FAILED" ]] && build_result="Failed"
 
     regex="([0-9]+) Warning(s)?"
-    [[ $bo =~ $regex ]] || true
-    warnings_count=${BASH_REMATCH[1]}
+    [[ $bo =~ $regex ]] && warnings_count=${BASH_REMATCH[1]}
 
     regex="([0-9]+) Error(s)?"
-    [[ $bo =~ $regex ]] || true
-    errors_count=${BASH_REMATCH[1]}
+    [[ $bo =~ $regex ]] && errors_count=${BASH_REMATCH[1]}
 
     version_regex="([[:alnum:][:punct:]]+)"
     if [[ $build_result == "Successful" ]]; then
 
         regex="AssemblyVersion: $version_regex"
-        [[ $bo =~ $regex ]] || true
-        assembly_version=${BASH_REMATCH[1]}
+        [[ $bo =~ $regex ]] && assembly_version=${BASH_REMATCH[1]}
 
         regex="FileVersion: $version_regex"
-        [[ $bo =~ $regex ]] || true
-        file_version=${BASH_REMATCH[1]}
-
+        [[ $bo =~ $regex ]] && file_version=${BASH_REMATCH[1]}
         regex="InformationalVersion: $version_regex"
-        [[ $bo =~ $regex ]] || true
-        informational_version=${BASH_REMATCH[1]}
+        [[ $bo =~ $regex ]] && informational_version=${BASH_REMATCH[1]}
 
         regex=" Version: $version_regex"
-        [[ $bo =~ $regex ]] || true
-        version=${BASH_REMATCH[1]}
+        [[ $bo =~ $regex ]] && version=${BASH_REMATCH[1]}
 
         regex="PackageVersion: $version_regex"
-        [[ $bo =~ $regex ]] || true
-        package_version=${BASH_REMATCH[1]}
+        [[ $bo =~ $regex ]] && package_version=${BASH_REMATCH[1]}
+
+        regex="MinVerVersion: $version_regex"
+        [[ $bo =~ $regex ]] && minver_version=${BASH_REMATCH[1]}
     fi
     # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
     eval "$restoreShopt" &> "$_ignore"
@@ -91,7 +80,8 @@ function summarizeDotnetBuild()
         file_version \
         version \
         package_version \
-        informational_version
+        informational_version \
+        minver_version
 
     return 0
 }

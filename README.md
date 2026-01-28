@@ -74,7 +74,7 @@ These reusable GitHub Actions workflows are intended to be called directly via `
 
 Orchestrates a "Continuous Integration" pipeline. Invoked by a workflow, typically created out of the template in `vmelamed/.github/workflow-templates/CI.yaml`, which is usually triggered on pull requests and pushes to `main` branches.
 
-- Normalizes and validates all incoming inputs (target OS, .NET SDK, projects, configuration, defined symbols, etc.) through `validate-vars.sh` (see the list of parameters above).
+- Normalizes and validates all incoming inputs (target OS, .NET SDK, projects, configuration, defined symbols, etc.) through `validate-input.sh` (see the list of parameters above).
 - Builds the specified projects/solution
 - Unit and Integration Tests with coverage collection and enforcement
 - Run benchmark tests

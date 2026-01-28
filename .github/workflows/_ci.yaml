@@ -74,8 +74,8 @@ concurrency:
 
 jobs:
   # Validate all input parameters and prepare them for downstream jobs
-  validate-vars:
-    name: Parameters validation
+  validate-input:
+    name: Input validation
     runs-on: ubuntu-latest
     outputs:
       build-projects: ${{ steps.validate.outputs.build-projects }}
@@ -107,20 +107,20 @@ jobs:
             scripts/bash/lib
             .github/actions/scripts
 
-      - name: Ensure the reusable workflows work correctly from within vm2.DevOps
+      - name: Ensure the workflows can access scripts from within vm2.DevOps
         if: github.repository == 'vmelamed/vm2.DevOps'
         uses: ./.github/actions/scripts
 
-      - name: Ensure the reusable workflows work correctly from outside vm2.DevOps
+      - name: Ensure the workflows can access scripts from outside vm2.DevOps
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: ./vm2-devops/.github/actions/scripts
 
-      # Run validation script to verify and normalize all input parameters
-      - name: Run validation script to verify and normalize all input parameters
+      # Run validation script to verify and normalize all inputs (inputs, env, vars, secrets, etc.)
+      - name: Validate and normalize all inputs
         id: validate
         shell: bash
         run: |
-          validate-vars.sh \
+          validate-input.sh \
               --build-projects       '${{ inputs.build-projects }}' \
               --test-projects        '${{ inputs.test-projects }}' \
               --benchmark-projects   '${{ inputs.benchmark-projects }}' \
@@ -135,37 +135,37 @@ jobs:
 
   # Build the project and cache artifacts for downstream test/benchmark jobs
   build:
-    name: Build
+    name: Build the source code
     needs:
-      - validate-vars
+      - validate-input
     strategy:
       # fail-fast: true
       matrix:
-        runner-os: ${{ fromJSON(needs.validate-vars.outputs.runners-os) }}
-        build-project: ${{ fromJSON(needs.validate-vars.outputs.build-projects) }}
+        runner-os: ${{ fromJSON(needs.validate-input.outputs.runners-os) }}
+        build-project: ${{ fromJSON(needs.validate-input.outputs.build-projects) }}
     uses: vmelamed/vm2.DevOps/.github/workflows/_build.yaml@main
     with:
-      dotnet-version: ${{ needs.validate-vars.outputs.dotnet-version }}
+      dotnet-version: ${{ needs.validate-input.outputs.dotnet-version }}
       runner-os: ${{ matrix.runner-os }}
-      configuration: ${{ needs.validate-vars.outputs.configuration }}
+      configuration: ${{ needs.validate-input.outputs.configuration }}
       build-project: ${{ matrix.build-project }}
-      preprocessor-symbols: ${{ needs.validate-vars.outputs.preprocessor-symbols }}
-      minver-tag-prefix: ${{ needs.validate-vars.outputs.minver-tag-prefix }}
-      minver-prerelease-id: ${{ needs.validate-vars.outputs.minver-prerelease-id }}
+      preprocessor-symbols: ${{ needs.validate-input.outputs.preprocessor-symbols }}
+      minver-tag-prefix: ${{ needs.validate-input.outputs.minver-tag-prefix }}
+      minver-prerelease-id: ${{ needs.validate-input.outputs.minver-prerelease-id }}
 
   # Run unit tests with code coverage analysis
   test:
-    name: Tests
+    name: Run unit tests
     needs:
-      - validate-vars
+      - validate-input
       - build
     strategy:
       # fail-fast: true
       matrix:
-        runner-os: ${{ fromJSON(needs.validate-vars.outputs.runners-os) }}
-        test-project: ${{ fromJSON(needs.validate-vars.outputs.test-projects) }}
+        runner-os: ${{ fromJSON(needs.validate-input.outputs.runners-os) }}
+        test-project: ${{ fromJSON(needs.validate-input.outputs.test-projects) }}
     # __skip__ sentinel avoids empty-matrix expansion when no tests are requested
-    if: needs.validate-vars.outputs.test-projects != '["__skip__"]'
+    if: needs.validate-input.outputs.test-projects != '["__skip__"]'
     uses: vmelamed/vm2.DevOps/.github/workflows/_test.yaml@main
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
@@ -175,25 +175,25 @@ jobs:
       checks: write # Required to create GitHub Checks
     with:
       runner-os: ${{ matrix.runner-os }}
-      dotnet-version: ${{ needs.validate-vars.outputs.dotnet-version }}
-      configuration: ${{ needs.validate-vars.outputs.configuration }}
-      preprocessor-symbols: ${{ needs.validate-vars.outputs.preprocessor-symbols }}
+      dotnet-version: ${{ needs.validate-input.outputs.dotnet-version }}
+      configuration: ${{ needs.validate-input.outputs.configuration }}
+      preprocessor-symbols: ${{ needs.validate-input.outputs.preprocessor-symbols }}
       test-project: ${{ matrix.test-project }}
-      min-coverage-pct: ${{ fromJSON(needs.validate-vars.outputs.min-coverage-pct) }}
+      min-coverage-pct: ${{ fromJSON(needs.validate-input.outputs.min-coverage-pct) }}
 
   # Run performance benchmarks and compare against baseline (if enabled and benchmark project specified)
   benchmarks:
-    name: Benchmarks
+    name: Run performance benchmarks
     needs:
-      - validate-vars
+      - validate-input
       - build
     strategy:
       # fail-fast: true
       matrix:
-        runner-os: ${{ fromJSON(needs.validate-vars.outputs.runners-os) }}
-        benchmark-project: ${{ fromJSON(needs.validate-vars.outputs.benchmark-projects) }}
+        runner-os: ${{ fromJSON(needs.validate-input.outputs.runners-os) }}
+        benchmark-project: ${{ fromJSON(needs.validate-input.outputs.benchmark-projects) }}
     # __skip__ sentinel avoids empty-matrix expansion; still honor [skip bm] on pushes
-    if: needs.validate-vars.outputs.benchmark-projects != '["__skip__"]' && (github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip bm]'))
+    if: needs.validate-input.outputs.benchmark-projects != '["__skip__"]' && (github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip bm]'))
     uses: vmelamed/vm2.DevOps/.github/workflows/_benchmarks.yaml@main
     secrets:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
@@ -203,10 +203,10 @@ jobs:
       checks: write # Required to create GitHub Checks
     with:
       runner-os: ${{ matrix.runner-os }}
-      dotnet-version: ${{ needs.validate-vars.outputs.dotnet-version }}
-      configuration: ${{ needs.validate-vars.outputs.configuration }}
-      preprocessor-symbols: ${{ needs.validate-vars.outputs.preprocessor-symbols }}
+      dotnet-version: ${{ needs.validate-input.outputs.dotnet-version }}
+      configuration: ${{ needs.validate-input.outputs.configuration }}
+      preprocessor-symbols: ${{ needs.validate-input.outputs.preprocessor-symbols }}
       benchmark-project: ${{ matrix.benchmark-project }}
-      max-regression-pct: ${{ fromJSON(needs.validate-vars.outputs.max-regression-pct) }}
-      minver-tag-prefix: ${{ needs.validate-vars.outputs.minver-tag-prefix }}
-      minver-prerelease-id: ${{ needs.validate-vars.outputs.minver-prerelease-id }}
+      max-regression-pct: ${{ fromJSON(needs.validate-input.outputs.max-regression-pct) }}
+      minver-tag-prefix: ${{ needs.validate-input.outputs.minver-tag-prefix }}
+      minver-prerelease-id: ${{ needs.validate-input.outputs.minver-prerelease-id }}
