@@ -79,7 +79,7 @@ if is_semverRelease "$version"; then
     reason="${reason:="stable release"}"
     summary_header="Release Summary"
 else
-    reason="${reason:="prerelease"}"
+    reason="${reason:="pre-release"}"
     summary_header="Prerelease Summary"
 fi
 
