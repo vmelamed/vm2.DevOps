@@ -75,14 +75,12 @@ fi
 dump_all_variables
 exit_if_has_errors
 
-if [[ -z "$reason" ]]; then
-    if is_semverRelease "$version"; then
-        reason="${reason:-"stable release"}"
-        summary_header="Release Summary"
-    else
-        reason="${reason:-"prerelease"}"
-        summary_header="Prerelease Summary"
-    fi
+if is_semverRelease "$version"; then
+    reason="${reason:="stable release"}"
+    summary_header="Release Summary"
+else
+    reason="${reason:="prerelease"}"
+    summary_header="Prerelease Summary"
 fi
 
 # restore dependencies
