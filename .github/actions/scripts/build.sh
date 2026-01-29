@@ -66,12 +66,14 @@ fi
 dotnet restore --locked-mode
 
 # Build the project
-dotnet build "$build_project" \
+summary=$(dotnet build "$build_project" \
     --verbosity detailed \
     --configuration "$configuration" \
     /p:DefineConstants="$preprocessor_symbols" \
     /p:MinVerTagPrefix="$minver_tag_prefix" \
-    /p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" | summarizeDotnetBuild | to_summary
+    /p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" | summarizeDotnetBuild)
+
+echo "$summary" | to_summary
 
 # Summarize the build results
 
