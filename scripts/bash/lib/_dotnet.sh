@@ -6,8 +6,8 @@
 function summarizeDotnetBuild()
 {
     local build_result='Unknown'
-    local -i warnings_count
-    local -i errors_count
+    local warnings_count
+    local errors_count
     local assembly_version
     local file_version
     local informational_version
@@ -67,7 +67,7 @@ function summarizeDotnetBuild()
     # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
     eval "$restoreShopt" &> "$_ignore"
 
-    dump_vars -f -q \
+    dump_vars --force --quiet \
         --header "Dotnet Build Summary:" \
         build_result \
         --line \
