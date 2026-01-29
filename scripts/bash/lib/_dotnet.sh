@@ -6,8 +6,8 @@
 function summarizeDotnetBuild()
 {
     local build_result='Unknown'
-    local warnings_count
-    local errors_count
+    local -i warnings_count=-1
+    local -i errors_count=-1
     local assembly_version
     local file_version
     local informational_version
@@ -28,10 +28,10 @@ function summarizeDotnetBuild()
                 build_result="${BASH_REMATCH[1]}${BASH_REMATCH[2]}"
             fi
             continue
-        elif [[ -z $warnings_count && $line =~ ([0-9]+)\ Warning ]]; then
+        elif [[ $warnings_count -lt 0 && $line =~ ([0-9]+)\ Warning ]]; then
             warnings_count=${BASH_REMATCH[1]}
             continue
-        elif [[ -z $errors_count && $line =~ ([0-9]+)\ Error ]]; then
+        elif [[ $errors_count -lt 0 && $line =~ ([0-9]+)\ Error ]]; then
             errors_count=${BASH_REMATCH[1]}
             continue
         elif [[ $build_result == FAILED ]]; then
