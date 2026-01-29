@@ -73,7 +73,7 @@ function push_state()
     save_verbose=$verbose
     save_table_format=$(get_table_format)
     save_ignore=$_ignore
-    if [[ $- =~ .*x.* ]]; then set_tracing_on=1; else set_tracing_on=0; fi
+    [[ $- =~ .*x.* ]] && set_tracing_on=1 || set_tracing_on=0
     return 0
 }
 
