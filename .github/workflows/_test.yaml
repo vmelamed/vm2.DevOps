@@ -126,7 +126,7 @@ jobs:
       - name: Restore build artifacts from cache
         uses: actions/cache/restore@v5
         with:
-          key: build-artifacts-${{ runner.os }}-${{ github.sha }}-${{ inputs.configuration }}
+          key: build-artifacts-${{ runner.os }}-${{ github.sha }}-${{ inputs.configuration }}-${{ github.run_id }}
           fail-on-cache-miss: true
           path: |
             **/bin/${{ inputs.configuration }}
