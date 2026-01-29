@@ -66,21 +66,18 @@ fi
 dotnet restore --locked-mode
 
 # Build the project
-summary=$(dotnet build "$build_project" \
+dotnet build "$build_project" \
     --verbosity detailed \
     --configuration "$configuration" \
     /p:DefineConstants="$preprocessor_symbols" \
     /p:MinVerTagPrefix="$minver_tag_prefix" \
-    /p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" | summarizeDotnetBuild)
+    /p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" | summarizeDotnetBuild | to_summary
 
-echo "$summary" | to_summary
-
-# Summarize the build results
-
-# sum=$(summarizeDotnetBuild "$build_output")
-# echo "$sum" | to_summary
-
-# to_summary < <(summarizeDotnetBuild "$build_output")
-
-# TODO: why this line doesn't work?
-# summarizeDotnetBuild "$build_output" | to_summary
+# summary=$(dotnet build "$build_project" \
+#     --verbosity detailed \
+#     --configuration "$configuration" \
+#     /p:DefineConstants="$preprocessor_symbols" \
+#     /p:MinVerTagPrefix="$minver_tag_prefix" \
+#     /p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" | summarizeDotnetBuild)
+#
+# echo "$summary" | to_summary
