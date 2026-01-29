@@ -118,4 +118,4 @@ execute dotnet nuget push "$artifacts_dir"/*.nupkg \
     echo "- Version: ${version}"
     echo "- Git Tag: ${git_tag}"
     echo "- Reason: ${reason}"
-} | summary
+} | to_summary

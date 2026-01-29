@@ -245,7 +245,7 @@ if [[ $dry_run != "true" ]]; then
         echo "Branch   | ${branch_pct}% | $br_status"
         echo "Method   | ${method_pct}% | $me_status"
         echo ""
-    } | summary
+    } | to_summary
 
     # Export variables to GitHub Actions output
     to_github_output proj-name test_name

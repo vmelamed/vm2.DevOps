@@ -113,4 +113,4 @@ args_to_github_output \
     echo "- Git Tag: '$prerelease_tag'"
     echo "## Prerelease Reason:"
     echo "- Reason: ${reason:-"prerelease build"}"
-} | summary
+} | to_summary

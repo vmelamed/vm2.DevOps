@@ -74,7 +74,7 @@ function to_stderr()
 
 ## Shell function to log a summary message to the GitHub step summary (github_step_summary).
 ## Usage: summary <message1> [<message2> ...]
-function summary()
+function to_summary()
 {
     if [[ $# -gt 0 ]]; then
         echo "## Summary: $*" | to_stdout

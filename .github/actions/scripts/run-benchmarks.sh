@@ -144,7 +144,7 @@ if [[ $dry_run != "true" ]]; then
         for file in "${json_files[@]}"; do
             echo "   - $(basename "$file")"
         done
-    } | summary
+    } | to_summary
 fi
 
 to_github_output results_dir

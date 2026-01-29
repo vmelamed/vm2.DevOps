@@ -150,4 +150,4 @@ args_to_github_output \
     echo "## Release version"
     echo "- Reason: ${reason:-"release build"}"
     echo "- Manual version: ${manual_version:-"none - automatic versioning"}"
-} | summary
+} | to_summary
