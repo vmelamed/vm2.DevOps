@@ -6,14 +6,14 @@
 function summarizeDotnetBuild()
 {
     local build_result='Unknown'
-    local warnings_count
-    local errors_count
-    local assembly_version
-    local file_version
-    local informational_version
-    local version
-    local package_version
-    local minver_version
+    local warnings_count=''
+    local errors_count=''
+    local assembly_version=''
+    local file_version=''
+    local informational_version=''
+    local version=''
+    local package_version=''
+    local minver_version=''
 
     restoreShopt=$(shopt -p nocasematch)
     shopt -s nocasematch
