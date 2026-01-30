@@ -121,11 +121,11 @@ execute dotnet nuget push "$artifacts_dir"/*.nupkg \
         echo "  - $(basename "$f")"
     done
     [[ "$artifacts_saved" == "true" ]] && echo "Will be saved as workflow artifacts to $artifacts_dir."
-    echo "| ## ${summary_header} |                |"
-    echo "|----------------------|----------------|"
-    echo "| Server               | ${server_name} |"
-    echo "| Server URL           | ${server_url}  |"
-    echo "| Version              | ${version}     |"
-    echo "| Git Tag              | ${git_tag}     |"
-    echo "| Reason               | ${reason}      |"
+    echo "| ${summary_header} |                |"
+    echo "|:------------------|:---------------|"
+    echo "| Server            | ${server_name} |"
+    echo "| Server URL        | ${server_url}  |"
+    echo "| Version           | ${version}     |"
+    echo "| Git Tag           | ${git_tag}     |"
+    echo "| Reason            | ${reason}      |"
 } | to_summary
