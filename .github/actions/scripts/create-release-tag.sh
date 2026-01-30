@@ -5,8 +5,9 @@ script_name="$(basename "${BASH_SOURCE[0]}")"
 script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
 lib_dir="$script_dir/../../../scripts/bash/lib"
 
-declare -r script_dir
-declare -r lib_dir
+declare -xr script_name
+declare -xr script_dir
+declare -xr lib_dir
 
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
 source "$lib_dir/gh_core.sh"
@@ -23,12 +24,13 @@ source "$script_dir/create-release-tag.utils.sh"
 get_arguments "$@"
 
 # Sanitize inputs to prevent injection attacks
-is_safe_reason "$reason" || true
 validate_minverTagPrefix "$minver_tag_prefix" || true
-is_safeReleaseTag "$release_tag" || true
+is_semverReleaseTag "$release_tag" || true
+is_safe_reason "$reason" || true
 
 declare -xr release_tag
 declare -xr reason
+declare -xr minver_tag_prefix
 
 dump_all_variables
 exit_if_has_errors
@@ -40,8 +42,13 @@ if [[ "$ci" == "true" ]]; then
 fi
 
 # Ensure we have the latest changes (changelog)
-if ! execute git pull --rebase; then
-    error "Failed to pull latest changes from remote"
+if ! execute git fetch origin main; then
+    error "Failed to fetch latest changes from remote"
+    exit 2
+fi
+
+if ! execute git reset --hard origin/main; then
+    error "Failed to reset to latest main"
     exit 2
 fi
 

@@ -12,23 +12,29 @@ declare -xr lib_dir
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
 source "$lib_dir/gh_core.sh"
 
-declare -x minver_tag_prefix=${MINVERTAGPREFIX:-v}
+declare -xr default_minver_tag_prefix='v'
+
+declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
+declare -x release_tag=${RELEASE_TAG:-}
+declare -x reason=${REASON:-stable release}
 
 source "$script_dir/update-changelog-release.usage.sh"
 source "$script_dir/update-changelog-release.utils.sh"
 
-declare -x release_tag
-declare -x minver_tag_prefix
-
 get_arguments "$@"
 
-is_semverReleaseTag "$release_tag"
-validate_minverTagPrefix "$minver_tag_prefix"
+validate_minverTagPrefix "$minver_tag_prefix" || true
+is_semverReleaseTag "$release_tag" || true
+is_safe_reason "$reason" || true
 
-if [[ -z "$release_tag" ]]; then
-    error "Release tag is required" >&2
-fi
-if [[ ! -f changelog/cliff.release-header.toml ]]; then
+declare -xr release_tag
+declare -xr reason
+declare -xr minver_tag_prefix
+
+dump_all_variables
+exit_if_has_errors
+
+if [[ ! -s changelog/cliff.release-header.toml ]]; then
     warning "Missing changelog/cliff.release-header.toml; skipping changelog update."
     exit 0
 fi

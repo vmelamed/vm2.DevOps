@@ -126,8 +126,8 @@ jobs:
               --minver-tag-prefix '${{ inputs.minver-tag-prefix }}' \
               --reason '${{ inputs.reason }}'
 
-  changelog:
-    name: Update CHANGELOG
+  changelog-and-tag:
+    name: Update CHANGELOG.md and Create Release Tag
     runs-on: ubuntu-latest
     needs:
       - compute-version
@@ -163,51 +163,10 @@ jobs:
         with:
           tool: git-cliff
 
-      - name: Update CHANGELOG for release
+      - name: Update CHANGELOG.md and create release tag
         shell: bash
         run: |
-          update-changelog-release.sh \
-              --release-tag "${{ needs.compute-version.outputs.release-tag }}" \
-              --minver-tag-prefix "${{ inputs.minver-tag-prefix }}"
-
-  tag-release:
-    name: Create and Push Release Tag
-    runs-on: ubuntu-latest
-    needs:
-      - compute-version
-      - changelog
-    steps:
-      - name: Checkout (with changelog updates)
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          filter: tree:0
-          ref: main # Get latest main with changelog updates
-
-      # Clone only the scripts from vm2.DevOps, so that we can run the composite
-      # action .github/actions/scripts/action.yaml for both local and external calls
-      - name: Checkout vm2.DevOps repository scripts
-        if: github.repository != 'vmelamed/vm2.DevOps'
-        uses: actions/checkout@v6
-        with:
-          repository: vmelamed/vm2.DevOps
-          path: vm2-devops
-          sparse-checkout: |
-            scripts/bash/lib
-            .github/actions/scripts
-
-      - name: Add vm2.DevOps to PATH for work inside vm2.DevOps
-        if: github.repository == 'vmelamed/vm2.DevOps'
-        uses: ./.github/actions/scripts
-
-      - name: Add vm2.DevOps to PATH for work outside vm2.DevOps
-        if: github.repository != 'vmelamed/vm2.DevOps'
-        uses: ./vm2-devops/.github/actions/scripts
-
-      - name: Create and push release tag
-        shell: bash
-        run: |
-          create-release-tag.sh \
+          changelog-and-tag.sh \
               --release-tag "${{ needs.compute-version.outputs.release-tag }}" \
               --reason "${{ inputs.reason }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}"
@@ -218,7 +177,7 @@ jobs:
     timeout-minutes: 10
     needs:
       - compute-version
-      - tag-release
+      - changelog-and-tag
     strategy:
       fail-fast: false
       matrix:
