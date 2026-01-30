@@ -12,16 +12,12 @@ declare -r lib_dir
 source "$lib_dir/gh_core.sh"
 
 # default constants for parameters
-declare -xr default_package_projects='[""]'
 declare -xr default_minver_tag_prefix='v'
 declare -xr default_reason="release build"
-declare -xr default_nuget_server='nuget'
 
 # parameters with initial values from environment variables or defaults
-declare -x package_projects=${PACKAGE_PROJECTS:-"$default_package_projects"}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x reason=${REASON:-"$default_reason"}
-declare -x nuget_server=${NUGET_SERVER:-"$default_nuget_server"}
 
 source "$script_dir/compute-release-version.usage.sh"
 source "$script_dir/compute-release-version.utils.sh"
@@ -29,16 +25,12 @@ source "$script_dir/compute-release-version.utils.sh"
 get_arguments "$@"
 
 # Sanitize inputs to prevent injection attacks
-are_safe_projects "package_projects" "$default_package_projects" || true
 validate_minverTagPrefix "$minver_tag_prefix" || true
 is_safe_reason "$reason" || true
-validate_nuget_server "nuget_server" "$default_nuget_server" || true
 
 # freeze the parameters
-declare -xr package_projects
 declare -xr minver_tag_prefix
 declare -xr reason
-declare -xr nuget_server
 
 # detect if the head is already tagged
 head_tag=$(git tag --points-at HEAD)
@@ -136,18 +128,13 @@ exit_if_has_errors
 
 # Output for GitHub Actions
 args_to_github_output \
-  package_projects \
-  minver_tag_prefix \
   release_version \
   release_tag \
-  reason \
-  nuget_server
+  reason
 
 # Summary
 {
     echo "## 🎯 Release Version: **$release_version**"
     echo "- Git Tag: \`$release_tag\`"
-    echo "## Release version"
-    echo "- Reason: ${reason:-"release build"}"
-    echo "- Manual version: ${manual_version:-"none - automatic versioning"}"
+    echo "- Reason: ${reason}"
 } | to_summary

@@ -22,38 +22,22 @@ stable tag to determine the appropriate semantic version bump:
   - fix: or other -> patch bump
 
 Options:
-  -pp, --package-projects       JSON array of project/solution paths to package and publish, e.g
-                                '["src/Project1/Project1.csproj", "src/Project2/Project2.csproj"]'. If the array is empty,
-                                auto-detects root .sln or .csproj files. Does not participate in the release version
-                                computation, but will be validated to fail the workflow early if invalid
-                                Initial value from \$PACKAGE_PROJECTS or default '[""]'
   -mp, --minver-tag-prefix      Specifies the tag prefix used by MinVer (e.g., 'v')
                                 Initial value from \$MINVERTAGPREFIX or default 'v'
   -r, --reason                  Reason for release (e.g., "stable release", "hotfix", etc.)
                                 Initial value from \$REASON or default "release build"
-  -n, --nuget-server            NuGet server to publish to (supported values for now: 'nuget', 'github', or custom URI)
-                                Does not participate in the release version computation, but will be
-                                validated to fail the workflow early if invalid
-                                Initial value from \$NUGET_SERVER or default 'nuget'
 $std_switches
 Environment Variables:
-    PACKAGE_PROJECTS            JSON array of project/solution paths to package and publish
-                                (default: '[""]')
     MINVERTAGPREFIX             Git tag prefix to be recognized by MinVer
                                 (default: 'v')
     REASON                      Reason for the release build and possibly overriding the natural versioning
                                 (default: 'release build')
-    NUGET_SERVER                NuGet server to publish to (supported values: 'nuget', 'github', or custom URI)
-                                (default: 'nuget')
 $std_vars
 Outputs (to GITHUB_OUTPUT):
   release-version               The computed version (e.g., '1.2.3')
   release-tag                   The full tag (e.g., 'v1.2.3')
-  package-projects              The JSON array of project/solution paths to package and publish
-  minver-tag-prefix             Tag prefix used by MinVer (e.g., 'v')
   reason                        The reason for the release build and possibly overriding the natural versioning
                                 (default: 'release build')
-  nuget-server                  The NuGet server to publish to
 EOF
 }
 

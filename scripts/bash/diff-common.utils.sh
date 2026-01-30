@@ -65,7 +65,7 @@ function get_arguments()
                 repos="$1"; shift
                 ;;
 
-            --minver-tag-prefix|-t )
+            --minver-tag-prefix|-mp )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 minver_tag_prefix="$1"; shift
                 ;;

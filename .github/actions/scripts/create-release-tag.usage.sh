@@ -27,6 +27,7 @@ Options:
 $std_switches
 Environment Variables:
   RELEASE_TAG                   The release tag (e.g., 'v1.2.3')
+  MINVERTAGPREFIX               Git tag prefix to be recognized by MinVer (default: 'v')
   REASON                        Release reason
   GITHUB_STEP_SUMMARY           Path to write GitHub Actions summary
 $std_vars

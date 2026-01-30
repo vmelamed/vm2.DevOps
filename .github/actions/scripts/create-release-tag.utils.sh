@@ -47,6 +47,7 @@ dump_all_variables()
         quiet \
         --blank \
         release_tag \
+        minver_tag_prefix \
         reason \
         --header "other:" \
         ci

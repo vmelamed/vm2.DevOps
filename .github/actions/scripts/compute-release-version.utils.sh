@@ -16,11 +16,6 @@ function get_arguments()
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
-            --package-projects|-pp )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
-                package_projects="$1"; shift
-                ;;
-
             --minver-tag-prefix|-mp )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 minver_tag_prefix="$1"; shift
@@ -29,11 +24,6 @@ function get_arguments()
             --reason|-r )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 reason="$1"; shift
-                ;;
-
-            --nuget-server|-n )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
-                nuget_server="$1"; shift
                 ;;
 
             * ) usage false "Unknown option: $option"
@@ -50,10 +40,8 @@ dump_all_variables()
         verbose \
         quiet \
         --blank \
-        package_projects \
         minver_tag_prefix \
         reason \
-        nuget_server \
         --header "other:" \
         ci
 }

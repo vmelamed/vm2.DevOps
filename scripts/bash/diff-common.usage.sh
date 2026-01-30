@@ -29,7 +29,7 @@ Arguments:
 Options:
   -r, --repos                   The parent directory where the .github workflow templates and vm2.DevOps are cloned
                                 Initial from the GIT_REPOS environment variable or '~/repos'
-  -t, --minver-tag-prefix       The prefix used for MinVer version tags in the repositories. Used to detect the latest stable
+  -mp, --minver-tag-prefix      The prefix used for MinVer version tags in the repositories. Used to detect the latest stable
                                 version tag of the source repositories 'vm2.DevOps' and '.github'
                                 Initial from the \$MINVERTAGPREFIX environment variable or 'v'
 

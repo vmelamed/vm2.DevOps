@@ -83,12 +83,9 @@ jobs:
     name: Compute Release Version
     runs-on: ubuntu-latest
     outputs:
-      package-projects: ${{ steps.version.outputs.package-projects }}
-      minver-tag-prefix: ${{ steps.version.outputs.minver-tag-prefix }}
       release-version: ${{ steps.version.outputs.release-version }}
       release-tag: ${{ steps.version.outputs.release-tag }}
       reason: ${{ steps.version.outputs.reason }}
-      nuget-server: ${{ steps.version.outputs.nuget-server }}
     steps:
       - name: Checkout (full history)
         uses: actions/checkout@v6
@@ -126,11 +123,8 @@ jobs:
         shell: bash
         run: |+
           compute-release-version.sh \
-              --package-projects '${{ inputs.package-projects }}' \
               --minver-tag-prefix '${{ inputs.minver-tag-prefix }}' \
-              --minver-prerelease-id '${{ inputs.minver-prerelease-id }}' \
-              --reason '${{ inputs.reason }}' \
-              --nuget-server '${{ inputs.nuget-server }}'
+              --reason '${{ inputs.reason }}'
 
   changelog:
     name: Update CHANGELOG
@@ -174,7 +168,7 @@ jobs:
         run: |
           update-changelog-release.sh \
               --release-tag "${{ needs.compute-version.outputs.release-tag }}" \
-              --minver-tag-prefix "${{ needs.compute-version.outputs.minver-tag-prefix }}"
+              --minver-tag-prefix "${{ inputs.minver-tag-prefix }}"
 
   tag-release:
     name: Create and Push Release Tag
@@ -216,7 +210,7 @@ jobs:
           create-release-tag.sh \
               --release-tag "${{ needs.compute-version.outputs.release-tag }}" \
               --reason "${{ inputs.reason }}" \
-              --minver-tag-prefix "${{ needs.compute-version.outputs.minver-tag-prefix }}"
+              --minver-tag-prefix "${{ inputs.minver-tag-prefix }}"
 
   release:
     name: Build and Publish Release
@@ -228,7 +222,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: ${{ fromJSON(needs.compute-version.outputs.package-projects) }}
+        project: ${{ fromJSON(inputs.package-projects) }}
     steps:
       - name: Checkout release tag (full history)
         uses: actions/checkout@v6
@@ -276,11 +270,10 @@ jobs:
         run: |+
           publish-package.sh \
               --package-project "${{ matrix.project }}" \
-              --minver-tag-prefix "${{ needs.compute-version.outputs.minver-tag-prefix }}" \
-              --version "${{ needs.compute-version.outputs.release-version }}" \
-              --git-tag "${{ needs.compute-version.outputs.release-tag }}" \
+              --preprocessor-symbols "${{ inputs.preprocessor-symbols }}" \
+              --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
               --reason "${{ needs.compute-version.outputs.reason }}" \
-              --nuget-server "${{ needs.compute-version.outputs.nuget-server }}" \
+              --nuget-server "${{ inputs.nuget-server }}" \
               --artifacts-saved "${{ inputs.save-package-artifacts }}" \
               --artifacts-dir "${{ env.ARTIFACTS_DIR }}"
 
