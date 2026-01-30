@@ -86,7 +86,7 @@ execute dotnet pack \
     "/p:DefineConstants=$preprocessor_symbols" \
     "/p:MinVerTagPrefix=$minver_tag_prefix" \
     "/p:MinVerPrereleaseIdentifiers=$minver_prerelease_id" \
-    "/p:PackageReleaseNotes=Prerelease: ${reason}" | summarizeDotnetPack
+    "/p:PackageReleaseNotes=Prerelease: ${reason}" | summarizeDotnetBuild
 
 # the build/pack
 declare -x build_result
