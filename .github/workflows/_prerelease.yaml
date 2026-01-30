@@ -127,7 +127,6 @@ jobs:
           fi
 
           prerelease_date=$(date +%Y-%m-%d)
-          info "Using range: $range"
           git-cliff -c changelog/cliff.prerelease.toml \
               --tag "Prerelease-$prerelease_date" \
               --unreleased \
