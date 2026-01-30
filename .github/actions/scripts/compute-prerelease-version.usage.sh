@@ -23,10 +23,6 @@ Options:
                                 auto-detects root .sln, .slnx or .csproj files. Does not participate in the release version
                                 computation, but will be validated to fail the workflow early if invalid
                                 Initial value from \$PACKAGE_PROJECTS or default '[""]'
-  -n, --nuget-server            NuGet server to publish to (supported values for now: 'nuget', 'github', or custom URI). Does
-                                not participate in the release version computation, but will be validated to fail the workflow
-                                early if invalid
-                                Initial value from \$NUGET_SERVER or default 'nuget'
   -t, --minver-tag-prefix       Specifies the tag prefix to be recognized by MinVer (e.g., 'v')
                                 Initial value from \$MINVERTAGPREFIX or default 'v'
   -s, --minver-prerelease-id    Specifies the prefix for the semver's prerelease component in prerelease versions (e.g.,
@@ -34,19 +30,23 @@ Options:
                                 Initial value from \$MINVERDEFAULTPRERELEASEIDENTIFIERS or default 'preview.0'
   -r, --reason                  Reason for prerelease (e.g., "prerelease build", "hotfix", etc.)
                                 Initial value from \$REASON or default "prerelease build"
+  -n, --nuget-server            NuGet server to publish to (supported values for now: 'nuget', 'github', or custom URI). Does
+                                not participate in the release version computation, but will be validated to fail the workflow
+                                early if invalid
+                                Initial value from \$NUGET_SERVER or default 'nuget'
 
 $std_switches
 Environment Variables:
     PACKAGE_PROJECTS            JSON array of project/solution paths to package and publish
                                 (default: '[""]')
-    NUGET_SERVER                NuGet server to publish to. Supported values: 'nuget', 'github', or custom URI
-                                (default: 'nuget')
     MINVERTAGPREFIX             Git tag prefix to be recognized by MinVer
                                 (default: 'v')
     MINVERDEFAULTPRERELEASEIDENTIFIERS
                                 Prefix for semver's prerelease component in prerelease versions
                                 (default: 'preview.0' as in '1.2.3-preview.1')
     REASON                      Reason for manual prerelease (default: "prerelease build")
+    NUGET_SERVER                NuGet server to publish to. Supported values: 'nuget', 'github', or custom URI
+                                (default: 'nuget')
     GITHUB_OUTPUT               Path to write GitHub Actions outputs (or /dev/null)
                                 (default: '/dev/null' if not set by GitHub Actions)
     GITHUB_STEP_SUMMARY         Path to write GitHub Actions summary
@@ -56,10 +56,10 @@ Environment Variables:
 $std_vars
 Output to \$GITHUB_OUTPUT:
   package-projects
-  nuget-server
   minver-tag-prefix
   prerelease-version
   prerelease-tag
+  nuget-server
 
 EOF
 }

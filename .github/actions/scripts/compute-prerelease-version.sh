@@ -13,17 +13,17 @@ source "$lib_dir/gh_core.sh"
 
 # default constants for parameters
 declare -xr default_package_projects='[""]'
-declare -xr default_nuget_server="nuget"
 declare -xr default_minver_tag_prefix='v'
 declare -xr default_minver_prerelease_id='preview.0'
 declare -xr default_reason="prerelease build"
+declare -xr default_nuget_server="nuget"
 
 # parameters with initial values from environment variables or defaults
 declare -x package_projects=${PACKAGE_PROJECTS:-"$default_package_projects"}
-declare -x nuget_server=${NUGET_SERVER:-"$default_nuget_server"}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}
 declare -x reason=${REASON:-"$default_reason"}
+declare -x nuget_server=${NUGET_SERVER:-"$default_nuget_server"}
 
 # GitHub run date and number for prerelease versioning
 github_run_date="$(date -u +%Y%m%d)"
@@ -39,10 +39,10 @@ get_arguments "$@"
 
 # Sanitize inputs to prevent injection attacks
 are_safe_projects "package_projects" "$default_package_projects" || true
-validate_nuget_server "nuget_server" "$default_nuget_server" || true
 validate_minverTagPrefix "$minver_tag_prefix" || true
 is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 is_safe_reason "$reason" || true
+validate_nuget_server "nuget_server" "$default_nuget_server" || true
 # detect if the head is already tagged
 head_tag=$(git tag --points-at HEAD)
 if [[ -n $head_tag ]]; then
@@ -54,10 +54,10 @@ exit_if_has_errors
 
 # freeze the parameters
 declare -xr package_projects
-declare -xr nuget_server
 declare -xr minver_tag_prefix
 declare -xr minver_prerelease_id
 declare -xr reason
+declare -xr nuget_server
 
 # Find latest stable tag like v1.2.3
 # shellcheck disable=SC2154 # semverTagReleaseRegex is referenced but not assigned.
@@ -99,12 +99,12 @@ exit_if_has_errors
 # Output for GitHub Actions
 args_to_github_output \
   package_projects \
-  nuget_server \
   minver_tag_prefix \
   minver_prerelease_id \
   prerelease_version \
   prerelease_tag \
-  reason
+  reason \
+  nuget_server
 
 # Summary
 

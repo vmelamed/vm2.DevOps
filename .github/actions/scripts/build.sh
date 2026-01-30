@@ -72,4 +72,5 @@ s=$(dotnet build "$build_project" \
     /p:DefineConstants="$preprocessor_symbols" \
     /p:MinVerTagPrefix="$minver_tag_prefix" \
     /p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" | summarizeDotnetBuild)
+
 echo "$s" | to_summary

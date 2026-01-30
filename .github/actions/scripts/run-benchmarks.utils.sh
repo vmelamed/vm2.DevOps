@@ -19,26 +19,6 @@ function get_arguments()
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
-            --force-new-baseline|-f )
-                force_new_baseline=true
-                ;;
-
-            --artifacts|-a )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
-                value="$1"; shift
-                artifacts_dir=$(realpath -m "$value")
-                ;;
-
-            --max-regression-pct|-r )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
-                value="$1"; shift
-                if ! [[ "$value" =~ ^[0-9]+$ ]] || (( value < 0 || value > 100 )); then
-                    usage false "$(usage_text)" "The regression threshold must be an integer between 0 and 100. Got '$value'."
-                    exit 2
-                fi
-                max_regression_pct=$((value + 0))  # ensure it's an integer
-                ;;
-
             --configuration|-c )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 value="$1"; shift
@@ -50,7 +30,7 @@ function get_arguments()
                 fi
                 ;;
 
-            --define|-d )
+            --preprocessor-symbols|-d )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 value="$1"; shift
                 if ! [[ "$value" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
@@ -63,13 +43,13 @@ function get_arguments()
                 ;;
 
             --short-run|-s )
-                # Shortcut for --preprocessor_symbols SHORT_RUN
+                # Shortcut for --preprocessor-symbols SHORT_RUN
                 if [[ ! "$preprocessor_symbols" =~ (^|;)SHORT_RUN($|;) ]]; then
                     preprocessor_symbols="$preprocessor_symbols SHORT_RUN"  # NOTE: space-separated!
                 fi
                 ;;
 
-            --minver-tag-prefix|-p )
+            --minver-tag-prefix|-mp )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 minver_tag_prefix="$1"; shift
                 ;;
@@ -77,6 +57,22 @@ function get_arguments()
             --minver-prerelease-id|-i )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 minver_prerelease_id="$1"; shift
+                ;;
+
+            --max-regression-pct|-max )
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                value="$1"; shift
+                if ! [[ "$value" =~ ^[0-9]+$ ]] || (( value < 0 || value > 100 )); then
+                    usage false "$(usage_text)" "The regression threshold must be an integer between 0 and 100. Got '$value'."
+                    exit 2
+                fi
+                max_regression_pct=$((value + 0))  # ensure it's an integer
+                ;;
+
+            --artifacts|-a )
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                value="$1"; shift
+                artifacts_dir=$(realpath -m "$value")
                 ;;
 
             *)  value="$option"

@@ -17,44 +17,24 @@ function get_arguments()
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
-            --package-project|-p )
+            --package-project|-pp )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 package_project="$1"; shift
                 ;;
 
-            --nuget-server|-n )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
-                nuget_server="$1"; shift
-                ;;
-
-            --preprocessor-symbols|-s )
+            --preprocessor-symbols|-d )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 preprocessor_symbols="$1"; shift
                 ;;
 
-            --minver-tag-prefix|-t )
+            --minver-tag-prefix|-mp )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 minver_tag_prefix="$1"; shift
                 ;;
 
-            --minver-prerelease-id|-i )
+            --minver-prerelease-id|-mi )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 minver_prerelease_id="$1"; shift
-                ;;
-
-            --repo-owner|-o )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
-                repo_owner="$1"; shift
-                ;;
-
-            --version )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
-                version="$1"; shift
-                ;;
-
-            --git-tag|-g )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
-                git_tag="$1"; shift
                 ;;
 
             --reason|-r )
@@ -62,12 +42,22 @@ function get_arguments()
                 reason="$1"; shift
                 ;;
 
+            --nuget-server|-n )
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                nuget_server="$1"; shift
+                ;;
+
+            --repo-owner|-o )
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                repo_owner="$1"; shift
+                ;;
+
             --artifacts-saved|-a )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 artifacts_saved="$1"; shift
                 ;;
 
-            --artifacts-dir|-d )
+            --artifacts-dir|-ad )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 artifacts_dir="$1"; shift
                 ;;
@@ -87,14 +77,12 @@ dump_all_variables()
         quiet \
         --blank \
         package_project \
-        nuget_server \
         preprocessor_symbols \
         minver_tag_prefix \
         minver_prerelease_id \
-        repo_owner \
-        version \
-        git_tag \
         reason \
+        nuget_server \
+        repo_owner \
         artifacts_saved \
         artifacts_dir \
         --header "other:" \

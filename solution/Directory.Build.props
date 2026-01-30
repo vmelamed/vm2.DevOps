@@ -288,7 +288,6 @@
         <Message Importance="high" Text="InformationalVersion: $(InformationalVersion)" />
         <Message Importance="high" Text="PackageVersion: $(PackageVersion)" />
         <Message Importance="high" Text="Version: $(Version)" />
-        <Message Importance="high" Text="MinVerVersion: $(MinVerVersion)" />
     </Target>
 
     <!-- Add project-specific properties and packages here -->

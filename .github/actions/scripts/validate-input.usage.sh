@@ -24,21 +24,22 @@ All options are optional if the corresponding environment variables are set. If 
 take precedence
 
 Options:
--b, --build-projects            String containing a JSON array of strings - paths to the projects to be built. Can be empty
+  -bp, --build-projects         String containing a JSON array of strings - paths to the projects to be built. Can be empty
                                 string, or string representing null or empty array, in which case the solution in the repository
                                 root will be built
                                 Initial value from \$BUILD_PROJECTS
-  -t, --test-projects           String containing a JSON array of strings - paths to the test projects to be run. Cannot be
+  -tp, --test-projects          String containing a JSON array of strings - paths to the test projects to be run. Cannot be
                                 empty string, or string representing null, or empty array. Tests are mandatory
                                 Initial value from \$TEST_PROJECTS
-  -p, --benchmark-projects      String containing a JSON array of strings - paths to the benchmark project files to be run. Can
+  -pp, --benchmark-projects     String containing a JSON array of strings - paths to the benchmark project files to be run. Can
                                 be empty string, or string representing null or empty array, in which case no benchmark tests
-                                will be run Initial value from \$BENCHMARK_PROJECTS
-  -o, --runners-os              String containing a JSON array of strings - target OS-es (e.g. from a GitHub actions matrix).
+                                will be run
+                                Initial value from \$BENCHMARK_PROJECTS
+  -os, --runners-os             String containing a JSON array of strings - target OS-es (e.g. from a GitHub actions matrix).
                                 Can be empty string, or string representing null or empty array, in which case
                                 '["ubuntu-latest"]' will be used
                                 Initial value from \$RUNNERSOS or default '["ubuntu-latest"]'
-    --dotnet-version            Version of .NET SDK to use
+  -dn, --dotnet-version         Version of .NET SDK to use
                                 Initial value from \$DOTNET_VERSION or default '10.0.x'
   -c, --configuration           Build configuration ('Release' or 'Debug')
                                 Initial value from \$CONFIGURATION or default 'Release'
@@ -48,9 +49,9 @@ Options:
                                 Initial value from \$MIN_COVERAGE_PCT or default 80
   -max, --max-regression-pct    Maximum acceptable performance regression percentage (0-50)
                                 Initial value from \$MAX_REGRESSION_PCT or default 20
-  -f, --minver-tag-prefix       Specifies the tag prefix used by MinVer (e.g., 'v')
+  -mp, --minver-tag-prefix      Specifies the tag prefix used by MinVer (e.g., 'v')
                                 Initial value from \$MINVERTAGPREFIX environment variable or 'v'
-  -i, --minver-prerelease-id    Default semver pre-release identifiers for MinVer (e.g., 'preview.1')
+  -mi, --minver-prerelease-id   Default semver pre-release identifiers for MinVer (e.g., 'preview.1')
                                 Initial value from \$MINVERDEFAULTPRERELEASEIDENTIFIERS environment variable or 'preview.0'
 
 $std_switches

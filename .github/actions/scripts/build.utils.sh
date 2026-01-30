@@ -15,7 +15,7 @@ function get_arguments()
             # do not use the common options - they were already processed by get_common_arg:
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
-            --build-project|-b )
+            --build-project|-bp )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 if [[ -n $build_project ]]; then
                     usage false "The script accepts 0 or 1 project or solution."
@@ -28,10 +28,10 @@ function get_arguments()
             --preprocessor-symbols|-d )
                 preprocessor_symbols="$1"; shift
                 ;;
-            --minver-tag-prefix|-f )
+            --minver-tag-prefix|-mp )
                 minver_tag_prefix="$1"; shift
                 ;;
-            --minver-prerelease-id|-i )
+            --minver-prerelease-id|-mi )
                 minver_prerelease_id="$1"; shift
                 ;;
             --nuget-username )

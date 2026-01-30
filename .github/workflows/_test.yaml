@@ -3,6 +3,11 @@ name: _test (Reusable workflow)
 on:
   workflow_call:
     inputs:
+      test-project:
+        description: Path to the test project to run tests against (cannot be null or empty string)
+        type: string
+        required: true
+
       runner-os:
         description: Runner OS
         type: string
@@ -23,15 +28,20 @@ on:
         type: string
         default: ""
 
-      test-project:
-        description: Path to the test project to run tests against (cannot be null or empty string)
-        type: string
-        required: true
-
       min-coverage-pct:
         description: Minimum acceptable code coverage percentage (cannot be 0, null or empty, default 80)
         type: number
         default: 80 # percent
+
+      minver-tag-prefix:
+        description: MinVer tag prefix to use for version calculation. Cannot be null or empty!
+        type: string
+        default: v
+
+      minver-prerelease-id:
+        description: MinVer default pre-release identifiers to use for version calculation. Cannot be null or empty!
+        type: string
+        default: preview
 
     secrets:
       CODECOV_TOKEN:
@@ -65,7 +75,7 @@ jobs:
 
       # Clone only the scripts from vm2.DevOps, so that we can run the composite
       # action .github/actions/scripts/action.yaml for both local and external calls
-      - name: Checkout DevOps repository scripts
+      - name: Checkout vm2.DevOps repository scripts
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: actions/checkout@v6
         with:
@@ -75,11 +85,11 @@ jobs:
             scripts/bash/lib
             .github/actions/scripts
 
-      - name: Ensure the reusable workflows work correctly from within vm2.DevOps
+      - name: Add vm2.DevOps to PATH for work inside vm2.DevOps
         if: github.repository == 'vmelamed/vm2.DevOps'
         uses: ./.github/actions/scripts
 
-      - name: Ensure the reusable workflows work correctly from outside vm2.DevOps
+      - name: Add vm2.DevOps to PATH for work outside vm2.DevOps
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: ./vm2-devops/.github/actions/scripts
 
@@ -152,6 +162,8 @@ jobs:
           run-tests.sh ${{ inputs.test-project }} \
               --configuration "${{ inputs.configuration }}" \
               --min-coverage-pct "${{ inputs.min-coverage-pct }}" \
+              --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
+              --minver-prerelease-id "${{ inputs.minver-prerelease-id }}" \
               --artifacts "${{ env.TEST_ARTIFACTS_DIR }}"
 
       # Upload test results and coverage reports as workflow artifacts

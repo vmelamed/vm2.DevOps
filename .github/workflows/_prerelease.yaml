@@ -3,11 +3,6 @@ name: _prerelease (Reusable workflow)
 on:
   workflow_call:
     inputs:
-      dotnet-version:
-        description: Version of .NET SDK to use (cannot be null or empty string, default 10.0.x)
-        type: string
-        default: 10.0.x
-
       package-projects:
         description: >-
           JSON array of project/solution paths to package and publish, e.g. '["src/Project1/Project1.csproj", "src/Project2/Project2.csproj"]'.
@@ -16,10 +11,15 @@ on:
         required: false
         default: '[""]'
 
-      nuget-server:
-        description: "NuGet server to publish to (supported values for now: 'nuget' or 'github')"
+      dotnet-version:
+        description: Version of .NET SDK to use (cannot be null or empty string, default 10.0.x)
         type: string
-        default: nuget
+        default: 10.0.x
+
+      preprocessor-symbols:
+        description: Preprocessor symbols to pass to the compiler
+        type: string
+        default: ""
 
       minver-tag-prefix:
         description: "Prefix for git tags to be recognized by MinVer (default 'v')"
@@ -35,6 +35,11 @@ on:
         description: Reason for manual pre-release
         type: string
         default: ""
+
+      nuget-server:
+        description: "NuGet server to publish to (supported values for now: 'nuget' or 'github')"
+        type: string
+        default: nuget
 
       save-package-artifacts:
         description: Upload package(s) as workflow artifacts
@@ -73,65 +78,9 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
-  compute-version:
-    name: Compute Prerelease Tag
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    outputs:
-      package-projects: ${{ steps.validate.outputs.package-projects }}
-      nuget-server: ${{ steps.validate.outputs.nuget-server }}
-      minver-tag-prefix: ${{ steps.validate.outputs.minver-tag-prefix }}
-      minver-prerelease-id: ${{ steps.validate.outputs.minver-prerelease-id }}
-      prerelease-version: ${{ steps.validate.outputs.prerelease-version }}
-      prerelease-tag: ${{ steps.validate.outputs.prerelease-tag }}
-      reason: ${{ steps.validate.outputs.reason }}
-    steps:
-      - name: Checkout (full history)
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          filter: tree:0
-
-      # Clone only the scripts from vm2.DevOps, so that we can run the composite
-      # action .github/actions/scripts/action.yaml for both local and external calls
-      - name: Checkout DevOps repository scripts
-        if: github.repository != 'vmelamed/vm2.DevOps'
-        uses: actions/checkout@v6
-        with:
-          repository: vmelamed/vm2.DevOps
-          path: vm2-devops
-          sparse-checkout: |
-            scripts/bash/lib
-            .github/actions/scripts
-
-      - name: Ensure the reusable workflows work correctly from within vm2.DevOps
-        if: github.repository == 'vmelamed/vm2.DevOps'
-        uses: ./.github/actions/scripts
-
-      - name: Ensure the reusable workflows work correctly from outside vm2.DevOps
-        if: github.repository != 'vmelamed/vm2.DevOps'
-        uses: ./vm2-devops/.github/actions/scripts
-
-      - name: Fetch tags
-        run: |
-          git fetch --tags --force
-
-      - name: Compute prerelease version
-        id: validate
-        shell: bash
-        run: |+
-          compute-prerelease-version.sh \
-              --package-projects '${{ inputs.package-projects }}' \
-              --nuget-server '${{ inputs.nuget-server }}' \
-              --minver-tag-prefix '${{ inputs.minver-tag-prefix || 'v' }}' \
-              --minver-prerelease-id '${{ inputs.minver-prerelease-id }}' \
-              --reason '${{ inputs.reason }}'
-
   changelog:
     name: Update changelog
     runs-on: ubuntu-latest
-    needs:
-      - compute-version
     steps:
       - name: Checkout (full history)
         uses: actions/checkout@v6
@@ -141,7 +90,7 @@ jobs:
 
       # Clone only the scripts from vm2.DevOps, so that we can run the composite
       # action .github/actions/scripts/action.yaml for both local and external calls
-      - name: Checkout DevOps repository scripts
+      - name: Checkout vm2.DevOps repository scripts
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: actions/checkout@v6
         with:
@@ -151,11 +100,11 @@ jobs:
             scripts/bash/lib
             .github/actions/scripts
 
-      - name: Ensure the reusable workflows work correctly from within vm2.DevOps
+      - name: Add vm2.DevOps to PATH for work inside vm2.DevOps
         if: github.repository == 'vmelamed/vm2.DevOps'
         uses: ./.github/actions/scripts
 
-      - name: Ensure the reusable workflows work correctly from outside vm2.DevOps
+      - name: Add vm2.DevOps to PATH for work outside vm2.DevOps
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: ./vm2-devops/.github/actions/scripts
 
@@ -177,22 +126,20 @@ jobs:
               exit 2
           fi
 
-          prerelease_tag=${{ needs.compute-version.outputs.prerelease-tag }}
-          commit=$(git rev-parse -q --verify "$prerelease_tag^{commit}" || git rev-parse HEAD)
-          range="$commit^..$commit"
+          prerelease_date=$(date +%Y-%m-%d)
           info "Using range: $range"
           git-cliff -c changelog/cliff.prerelease.toml \
-              --tag "$prerelease_tag" \
-              --prepend CHANGELOG.md \
-              "$range"
+              --tag "Prerelease-$prerelease_date" \
+              --unreleased \
+              --prepend CHANGELOG.md
 
           if git status --porcelain -- CHANGELOG.md | grep -q .; then
               git config user.name "github-actions[bot]"
               git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
               git add CHANGELOG.md
-              git commit -m "chore: update changelog for $prerelease_tag"
+              git commit -m "chore: update changelog for Prerelease-$prerelease_date"
               git push
-              info "Changelog updated and pushed for $prerelease_tag."
+              info "Changelog updated and pushed for Prerelease-$prerelease_date."
               warning "Review the CHANGELOG.md before release."
           else
               warning "No changelog changes to commit."
@@ -201,7 +148,6 @@ jobs:
   package-and-publish:
     name: Publish Package (prerelease) to NuGet server
     needs:
-      - compute-version
       - changelog
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -210,7 +156,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: ${{ fromJSON(needs.compute-version.outputs.package-projects) }}
+        project: ${{ fromJSON(inputs.package-projects) }}
     env:
       ARTIFACTS_DIR: artifacts/pack
     steps:
@@ -222,7 +168,7 @@ jobs:
 
       # Clone only the scripts from vm2.DevOps, so that we can run the composite
       # action .github/actions/scripts/action.yaml for both local and external calls
-      - name: Checkout DevOps repository scripts
+      - name: Checkout vm2.DevOps repository scripts
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: actions/checkout@v6
         with:
@@ -232,11 +178,11 @@ jobs:
             scripts/bash/lib
             .github/actions/scripts
 
-      - name: Ensure the reusable workflows work correctly from within vm2.DevOps
+      - name: Add vm2.DevOps to PATH for work inside vm2.DevOps
         if: github.repository == 'vmelamed/vm2.DevOps'
         uses: ./.github/actions/scripts
 
-      - name: Ensure the reusable workflows work correctly from outside vm2.DevOps
+      - name: Add vm2.DevOps to PATH for work outside vm2.DevOps
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: ./vm2-devops/.github/actions/scripts
 
@@ -251,6 +197,7 @@ jobs:
 
       - name: Publish package (prerelease) to NuGet server
         shell: bash
+        id: publish
         env:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
           NUGET_API_GITHUB_KEY: ${{ secrets.NUGET_API_GITHUB_KEY }}
@@ -258,11 +205,11 @@ jobs:
         run: |+
           publish-package.sh \
               --package-project "${{ matrix.project }}" \
+              --preprocessor-symbols "${{ inputs.preprocessor-symbols }}" \
+              --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
+              --minver-prerelease-id "${{ inputs.minver-prerelease-id }}" \
+              --reason "${{ inputs.reason }}" \
               --nuget-server "${{ inputs.nuget-server }}" \
-              --minver-tag-prefix "${{ needs.compute-version.outputs.minver-tag-prefix }}" \
-              --version "${{ needs.compute-version.outputs.prerelease-version }}" \
-              --git-tag "${{ needs.compute-version.outputs.prerelease-tag }}" \
-              --reason "${{ needs.compute-version.outputs.reason }}" \
               --artifacts-saved "${{ inputs.save-package-artifacts }}" \
               --artifacts-dir "${{ env.ARTIFACTS_DIR }}"
 
@@ -270,7 +217,7 @@ jobs:
         if: inputs.save-package-artifacts == 'true'
         uses: actions/upload-artifact@v6
         with:
-          name: nuget-packages-${{ needs.compute-version.outputs.prerelease-tag }}-${{ hashFiles(matrix.project) }}
+          name: nuget-packages-${{ steps.publish.outputs.prerelease-tag }}-${{ hashFiles(matrix.project) }}
           path: ${{ env.ARTIFACTS_DIR }}/*.nupkg
           if-no-files-found: ignore
           overwrite: true

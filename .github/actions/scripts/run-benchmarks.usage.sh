@@ -22,23 +22,23 @@ Arguments:
   <bm-project-path>             The path to the benchmark project file. Optional if the environment variable \$BM_PROJECT is set
 
 Options:
-  -a, --artifacts               Specifies the directory where to create the benchmark artifacts: results, summaries, base lines,
-                                etc.
-                                Initial value: '<solution root>/BmArtifacts'
   -c, --configuration           Specifies the build configuration to use ('Debug' or 'Release')
                                 Initial value from \$CONFIGURATION or default 'Release'
-  -d, --define                  Defines one or more user-defined pre-processor symbols to be used when building the benchmark
+  -d, --preprocessor-symbols    Defines one or more user-defined pre-processor symbols to be used when building the benchmark
                                 project, e.g. 'SHORT_RUN'. Which generates a shorter and faster, but less accurate benchmark
                                 run. You can specify this option multiple times to defined multiple symbols
                                 Initial value from \$PREPROCESSOR_SYMBOLS or default ''
-  -r, --max-regression-pct      Specifies the maximum acceptable regression percentage (0-50) when comparing to a previous,
-                                base-line benchmark results
-                                Initial value from \$MAX_REGRESSION_PCT or default 20
-  -f, --minver-tag-prefix       Specifies the git tag prefix used by MinVer (e.g., 'v')
+  -mp, --minver-tag-prefix      Specifies the git tag prefix used by MinVer (e.g., 'v')
                                 Initial value from \$MINVERTAGPREFIX environment variable or 'v'
-  -i, --minver-prerelease-id    Default semver pre-release identifiers for MinVer (e.g., 'preview.0')
+  -mi, --minver-prerelease-id   Default semver pre-release identifiers for MinVer (e.g., 'preview.0')
                                 Initial value from \$MINVERDEFAULTPRERELEASEIDENTIFIERS environment
                                 variable or 'preview.0'
+  -max, --max-regression-pct    Specifies the maximum acceptable regression percentage (0-50) when comparing to a previous,
+                                base-line benchmark results
+                                Initial value from \$MAX_REGRESSION_PCT or default 20
+  -a, --artifacts               Specifies the directory where to create the benchmark artifacts: results, summaries, base lines,
+                                etc.
+                                Initial value: '<solution root>/BmArtifacts'
 
 Switches:
   -s, --short-run               A shortcut for '--define SHORT_RUN'. See above.

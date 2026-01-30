@@ -19,14 +19,12 @@ declare -xr default_repo_owner="vmelamed"
 
 # parameters with initial values from environment variables and defaults
 declare -x package_project=${PACKAGE_PROJECT:-}
-declare -x nuget_server=${NUGET_SERVER:-"$default_nuget_server"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-""}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}
-declare -x repo_owner=${GITHUB_REPOSITORY_OWNER:-"$default_repo_owner"}
-declare -x version=${VERSION:-}
-declare -x git_tag=${GIT_TAG:-}
 declare -x reason=${REASON:-}
+declare -x nuget_server=${NUGET_SERVER:-"$default_nuget_server"}
+declare -x repo_owner=${GITHUB_REPOSITORY_OWNER:-"$default_repo_owner"}
 declare -x artifacts_saved=${ARTIFACTS_SAVED:-false}
 declare -x artifacts_dir=${ARTIFACTS_DIR:-artifacts/pack}
 
@@ -36,15 +34,13 @@ source "$script_dir/publish-package.utils.sh"
 get_arguments "$@"
 
 is_safe_path "$package_project" || true
-validate_nuget_server "nuget_server" || true
 is_safe_input "$preprocessor_symbols" || true
 validate_minverTagPrefix "$minver_tag_prefix" || true
 is_safe_minverPrereleaseId "$minver_prerelease_id" || true
-is_safe_input "$repo_owner" || true
 is_safe_reason "$reason" || true
+validate_nuget_server "nuget_server" || true
+is_safe_input "$repo_owner" || true
 is_safe_path "$artifacts_dir" || true
-is_semver "$version" || true
-is_semverTag "$git_tag" || true
 
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 # shellcheck disable=SC2153 # Possible Misspelling: MYVARIABLE may not be assigned. Did you mean MY_VARIABLE?
@@ -75,14 +71,6 @@ fi
 dump_all_variables
 exit_if_has_errors
 
-if is_semverRelease "$version"; then
-    summary_header="Release Summary"
-    reason="${reason:="stable release"}"
-else
-    summary_header="Prerelease Summary"
-    reason="${reason:="pre-release"}"
-fi
-
 # restore dependencies
 execute dotnet restore "${package_project}" --locked-mode
 
@@ -98,7 +86,27 @@ execute dotnet pack \
     "/p:DefineConstants=$preprocessor_symbols" \
     "/p:MinVerTagPrefix=$minver_tag_prefix" \
     "/p:MinVerPrereleaseIdentifiers=$minver_prerelease_id" \
-    "/p:PackageReleaseNotes=Prerelease: ${reason}"
+    "/p:PackageReleaseNotes=Prerelease: ${reason}" | summarizeDotnetPack
+
+# the build/pack
+declare -x build_result
+declare -x warnings_count
+declare -x errors_count
+declare -x assembly_version
+declare -x file_version
+declare -x informational_version
+declare -x version
+declare -x package_version
+
+if is_semverRelease "$version"; then
+    summary_header="Release Summary"
+    reason="${reason:="stable release"}"
+    git_tag="${minver_tag_prefix}${version}"
+else
+    summary_header="Prerelease Summary"
+    reason="${reason:="pre-release"}"
+    git_tag="N/A"
+fi
 
 # push packages to NuGet server
 execute dotnet nuget push "$artifacts_dir"/*.nupkg \
@@ -107,15 +115,16 @@ execute dotnet nuget push "$artifacts_dir"/*.nupkg \
     --skip-duplicate
 
 {
-    echo "🎯 Package(s) $git_tag pushed to $server_name:"
+    echo "🎯 Package(s) $package_version pushed to $server_name:"
     for f in "$artifacts_dir"/*.nupkg; do
         echo "  - $(basename "$f")"
     done
-    [[ "$artifacts_saved" == "true" ]] && echo "Saved as workload artifacts."
-    echo "## ${summary_header}"
-    echo "- Server: ${server_name}"
-    echo "- Server URL: ${server_url}"
-    echo "- Version: ${version}"
-    echo "- Git Tag: ${git_tag}"
-    echo "- Reason: ${reason}"
+    [[ "$artifacts_saved" == "true" ]] && echo "Will be saved as workflow artifacts to $artifacts_dir."
+    echo "| ## ${summary_header} |                |"
+    echo "|----------------------|----------------|"
+    echo "| Server               | ${server_name} |"
+    echo "| Server URL           | ${server_url}  |"
+    echo "| Version              | ${version}     |"
+    echo "| Git Tag              | ${git_tag}     |"
+    echo "| Reason               | ${reason}      |"
 } | to_summary

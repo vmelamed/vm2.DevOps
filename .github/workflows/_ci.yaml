@@ -3,6 +3,21 @@ name: _ci (Reusable workflow)
 on:
   workflow_call:
     inputs:
+      build-projects:
+        description: JSON array as a string of paths to the projects or solutions to build. If not provided, null, or empty, the solution/project in the repository root will be built.
+        type: string
+        required: false
+
+      test-projects:
+        description: JSON array as a string of paths to the test projects to run. If not provided, null, or empty, tests will be skipped.
+        type: string
+        required: false
+
+      benchmark-projects:
+        description: JSON array as a string of paths to the benchmark projects to run. If not provided, null, or empty, benchmarks will be skipped.
+        type: string
+        required: false
+
       runners-os:
         description: String containing a JSON array of strings - monikers of GitHub runners. Cannot be null or empty!
         type: string
@@ -24,20 +39,15 @@ on:
         type: string
         default: ""
 
-      build-projects:
-        description: JSON array as a string of paths to the projects or solutions to build. If not provided, null, or empty, the solution/project in the repository root will be built.
-        type: string
-        required: false
+      min-coverage-pct:
+        description: Minimum acceptable code coverage percentage. Cannot be 0, null or empty!
+        type: number
+        default: 80 # percent
 
-      test-projects:
-        description: JSON array as a string of paths to the test projects to run. If not provided, null, or empty, tests will be skipped.
-        type: string
-        required: false
-
-      benchmark-projects:
-        description: JSON array as a string of paths to the benchmark projects to run. If not provided, null, or empty, benchmarks will be skipped.
-        type: string
-        required: false
+      max-regression-pct:
+        description: Maximum acceptable performance regression percentage. Cannot be more than 50, null or empty!
+        type: number
+        default: 20 # percent
 
       minver-tag-prefix:
         description: MinVer tag prefix to use for version calculation. Cannot be null or empty!
@@ -48,16 +58,6 @@ on:
         description: MinVer default pre-release identifiers to use for version calculation. Cannot be null or empty!
         type: string
         default: preview
-
-      min-coverage-pct:
-        description: Minimum acceptable code coverage percentage. Cannot be 0, null or empty!
-        type: number
-        default: 80 # percent
-
-      max-regression-pct:
-        description: Maximum acceptable performance regression percentage. Cannot be more than 50, null or empty!
-        type: number
-        default: 20 # percent
 
     secrets:
       CODECOV_TOKEN:
@@ -97,7 +97,7 @@ jobs:
 
       # Clone only the scripts from vm2.DevOps, so that we can run the composite
       # action .github/actions/scripts/action.yaml for both local and external calls
-      - name: Checkout DevOps repository scripts
+      - name: Checkout vm2.DevOps repository scripts
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: actions/checkout@v6
         with:
@@ -145,10 +145,10 @@ jobs:
         build-project: ${{ fromJSON(needs.validate-input.outputs.build-projects) }}
     uses: vmelamed/vm2.DevOps/.github/workflows/_build.yaml@main
     with:
-      dotnet-version: ${{ needs.validate-input.outputs.dotnet-version }}
-      runner-os: ${{ matrix.runner-os }}
-      configuration: ${{ needs.validate-input.outputs.configuration }}
       build-project: ${{ matrix.build-project }}
+      runner-os: ${{ matrix.runner-os }}
+      dotnet-version: ${{ needs.validate-input.outputs.dotnet-version }}
+      configuration: ${{ needs.validate-input.outputs.configuration }}
       preprocessor-symbols: ${{ needs.validate-input.outputs.preprocessor-symbols }}
       minver-tag-prefix: ${{ needs.validate-input.outputs.minver-tag-prefix }}
       minver-prerelease-id: ${{ needs.validate-input.outputs.minver-prerelease-id }}
@@ -165,7 +165,9 @@ jobs:
         runner-os: ${{ fromJSON(needs.validate-input.outputs.runners-os) }}
         test-project: ${{ fromJSON(needs.validate-input.outputs.test-projects) }}
     # __skip__ sentinel avoids empty-matrix expansion when no tests are requested
-    if: needs.validate-input.outputs.test-projects != '["__skip__"]'
+    if: >
+      needs.validate-input.outputs.test-projects != '["__skip__"]' &&
+      needs.validate-input.outputs.test-projects != '[""]'
     uses: vmelamed/vm2.DevOps/.github/workflows/_test.yaml@main
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
@@ -174,12 +176,14 @@ jobs:
       pull-requests: write # Required to comment on PRs
       checks: write # Required to create GitHub Checks
     with:
+      test-project: ${{ matrix.test-project }}
       runner-os: ${{ matrix.runner-os }}
       dotnet-version: ${{ needs.validate-input.outputs.dotnet-version }}
       configuration: ${{ needs.validate-input.outputs.configuration }}
       preprocessor-symbols: ${{ needs.validate-input.outputs.preprocessor-symbols }}
-      test-project: ${{ matrix.test-project }}
       min-coverage-pct: ${{ fromJSON(needs.validate-input.outputs.min-coverage-pct) }}
+      minver-tag-prefix: ${{ needs.validate-input.outputs.minver-tag-prefix }}
+      minver-prerelease-id: ${{ needs.validate-input.outputs.minver-prerelease-id }}
 
   # Run performance benchmarks and compare against baseline (if enabled and benchmark project specified)
   benchmarks:
@@ -193,7 +197,10 @@ jobs:
         runner-os: ${{ fromJSON(needs.validate-input.outputs.runners-os) }}
         benchmark-project: ${{ fromJSON(needs.validate-input.outputs.benchmark-projects) }}
     # __skip__ sentinel avoids empty-matrix expansion; still honor [skip bm] on pushes
-    if: needs.validate-input.outputs.benchmark-projects != '["__skip__"]' && (github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip bm]'))
+    if: >
+      needs.validate-input.outputs.benchmark-projects != '["__skip__"]' &&
+      needs.validate-input.outputs.benchmark-projects != '[""]' &&
+      (github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip bm]'))
     uses: vmelamed/vm2.DevOps/.github/workflows/_benchmarks.yaml@main
     secrets:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
@@ -202,11 +209,11 @@ jobs:
       pull-requests: write # Required to comment on PRs
       checks: write # Required to create GitHub Checks
     with:
+      benchmark-project: ${{ matrix.benchmark-project }}
       runner-os: ${{ matrix.runner-os }}
       dotnet-version: ${{ needs.validate-input.outputs.dotnet-version }}
       configuration: ${{ needs.validate-input.outputs.configuration }}
       preprocessor-symbols: ${{ needs.validate-input.outputs.preprocessor-symbols }}
-      benchmark-project: ${{ matrix.benchmark-project }}
-      max-regression-pct: ${{ fromJSON(needs.validate-input.outputs.max-regression-pct) }}
       minver-tag-prefix: ${{ needs.validate-input.outputs.minver-tag-prefix }}
       minver-prerelease-id: ${{ needs.validate-input.outputs.minver-prerelease-id }}
+      max-regression-pct: ${{ fromJSON(needs.validate-input.outputs.max-regression-pct) }}

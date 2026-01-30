@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
 declare -xr script_name
+declare -xr script_dir
 declare -xr lib_dir
-declare -xr common_dir
 
-declare -xr config_file="${lib_dir}/diff-common.config.json"
+declare -xr config_file="${script_dir}/diff-common.config.json"
 
 declare -ar valid_actions=("ignore" "merge or copy" "ask to merge" "merge" "ask to copy" "copy")
 

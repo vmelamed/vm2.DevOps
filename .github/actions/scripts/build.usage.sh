@@ -21,16 +21,16 @@ Usage: ${script_name} [<project|solution>] [--<long option> <value>|-<short opti
 Builds a solution or project specified with '--build-project' (see below)
 
 Options:
-  -b, --build-project           Path to the project to be built. Can be empty string, in which case the solution in the
+  -bp, --build-project          Path to the project to be built. Can be empty string, in which case the solution in the
                                 repository root will be built
                                 Initial value from \$BUILD_PROJECT
   -c, --configuration           Build configuration ('Release' or 'Debug')
                                 Initial value from \$CONFIGURATION or default 'Release'
   -d, --preprocessor-symbols    Pre-processor symbols for compilation
                                 Initial value from \$PREPROCESSOR_SYMBOLS or default ''
-  -f, --minver-tag-prefix       Specifies the git tag prefix used by MinVer (e.g., 'v')
+  -mp, --minver-tag-prefix      Specifies the git tag prefix used by MinVer (e.g., 'v')
                                 Initial value from \$MINVERTAGPREFIX or 'v'
-  -i, --minver-prerelease-id    Default semver pre-release identifiers used by MinVer (e.g., 'preview.0')
+  -mi, --minver-prerelease-id   Default semver pre-release identifiers used by MinVer (e.g., 'preview.0')
                                 Initial value from \$MINVERDEFAULTPRERELEASEIDENTIFIERS or 'preview.0'
   --nuget-username              Username for authenticating with the NuGet repository if needed
                                 Initial value from \$GITHUB_ACTOR or ''

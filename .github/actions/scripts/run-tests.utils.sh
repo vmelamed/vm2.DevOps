@@ -18,10 +18,14 @@ function get_arguments()
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
-            --artifacts|-a )
+            --configuration|-c )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 value="$1"; shift
-                artifacts_dir=$(realpath -m "$value")
+                configuration="${value,,}"
+                configuration="${configuration^}"
+                if ! is_in "$configuration" "Release" "Debug"; then
+                    usage false "The coverage threshold must be either 'Release' or 'Debug'. Got '$value'."
+                fi
                 ;;
 
             --define|-d    )
@@ -35,7 +39,7 @@ function get_arguments()
                 fi
                 ;;
 
-            --min-coverage-pct|-t )
+            --min-coverage-pct|-min )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 value="$1"; shift
                 if ! [[ "$value" =~ ^[0-9]+$ ]] || (( value < 0 || value > 100 )); then
@@ -44,14 +48,20 @@ function get_arguments()
                 min_coverage_pct=$((value + 0))  # ensure it's an integer
                 ;;
 
-            --configuration|-c )
+            --minver-tag-prefix|-mp )
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                minver_tag_prefix="$1"; shift
+                ;;
+
+            --minver-prerelease-id|-mi )
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                minver_prerelease_id="$1"; shift
+                ;;
+
+            --artifacts|-a )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 value="$1"; shift
-                configuration="${value,,}"
-                configuration="${configuration^}"
-                if ! is_in "$configuration" "Release" "Debug"; then
-                    usage false "The coverage threshold must be either 'Release' or 'Debug'. Got '$value'."
-                fi
+                artifacts_dir=$(realpath -m "$value")
                 ;;
 
             * ) value="$option"

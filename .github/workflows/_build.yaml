@@ -3,6 +3,11 @@ name: _build (Reusable workflow)
 on:
   workflow_call:
     inputs:
+      build-project:
+        description: Path to the project to build (if empty, null, or whitespace, builds the solution or the project in the current directory)
+        type: string
+        required: false
+
       runner-os:
         description: Runner OS
         type: string
@@ -17,11 +22,6 @@ on:
         description: The type of build to produce, e.g. Release vs Debug (default Release)
         type: string
         default: Release
-
-      build-project:
-        description: Path to the project to build (if empty, null, or whitespace, builds the solution or the project in the current directory)
-        type: string
-        required: false
 
       preprocessor-symbols:
         description: Preprocessor symbols to pass to the compiler (default - none)
@@ -64,7 +64,7 @@ jobs:
 
       # Clone only the scripts from vm2.DevOps, so that we can run the composite
       # action .github/actions/scripts/action.yaml for both local and external calls
-      - name: Checkout DevOps repository scripts
+      - name: Checkout vm2.DevOps repository scripts
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: actions/checkout@v6
         with:
@@ -74,11 +74,11 @@ jobs:
             scripts/bash/lib
             .github/actions/scripts
 
-      - name: Ensure the reusable workflows work correctly from within vm2.DevOps
+      - name: Add vm2.DevOps to PATH for work inside vm2.DevOps
         if: github.repository == 'vmelamed/vm2.DevOps'
         uses: ./.github/actions/scripts
 
-      - name: Ensure the reusable workflows work correctly from outside vm2.DevOps
+      - name: Add vm2.DevOps to PATH for work outside vm2.DevOps
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: ./vm2-devops/.github/actions/scripts
 
@@ -106,7 +106,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ steps.cache-timestamp.outputs.week }}-${{ hashFiles('**/packages.lock.json') }}-${{ github.run_id }}
+          key: nuget-${{ runner.os }}-${{ steps.cache-timestamp.outputs.week }}-${{ hashFiles('**/packages.lock.json') }}
           restore-keys: |
             nuget-${{ runner.os }}-${{ steps.cache-timestamp.outputs.week }}-
             nuget-${{ runner.os }}-

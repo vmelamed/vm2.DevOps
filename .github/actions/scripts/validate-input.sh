@@ -20,9 +20,9 @@ declare -r defaultConfiguration='Release'
 declare -r defaultPreprocessorSymbols=''
 declare -r defaultMinCoveragePct=80
 declare -r defaultMaxRegressionPct=20
-declare -r defaultVerbose=false
 declare -r defaultMinverTagPrefix='v'
 declare -r defaultMinverPrereleaseId='preview.0'
+declare -r defaultVerbose=false
 
 # CI Variables that will be passed as environment variables
 declare -x build_projects=${BUILD_PROJECTS:-${defaultBuildProjects}}
@@ -34,9 +34,9 @@ declare -x configuration=${CONFIGURATION:-${defaultConfiguration}}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-${defaultPreprocessorSymbols}}
 declare -x min_coverage_pct=${MIN_COVERAGE_PCT:-${defaultMinCoveragePct}}
 declare -x max_regression_pct=${MAX_REGRESSION_PCT:-${defaultMaxRegressionPct}}
-declare -x verbose=${VERBOSE:-${defaultVerbose}}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-${defaultMinverTagPrefix}}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-${defaultMinverPrereleaseId}}
+declare -x verbose=${VERBOSE:-${defaultVerbose}}
 
 source "$script_dir/validate-input.usage.sh"
 source "$script_dir/validate-input.utils.sh"
@@ -134,5 +134,5 @@ args_to_github_output \
     max_regression_pct \
     minver_tag_prefix \
     minver_prerelease_id \
-    verbose \
+    verbose
     # add more variables above this line

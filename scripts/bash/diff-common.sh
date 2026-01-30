@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-script_name="$(basename "${BASH_SOURCE[-1]}")"
-lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[-1]}")")"
-lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
+script_name="$(basename "${BASH_SOURCE[0]}")"
+script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
+lib_dir="$script_dir/lib"
 
 declare -xr script_name
-declare -xr lib_dir
+declare -xr script_dir
 declare -xr lib_dir
 
 # shellcheck disable=SC1091
@@ -17,8 +17,8 @@ declare -x repos="${GIT_REPOS:-$HOME/repos}"
 declare -x target_dir=""
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-'v'}
 
-source "${lib_dir}/diff-common.utils.sh"
-source "${lib_dir}/diff-common.usage.sh"
+source "${script_dir}/diff-common.utils.sh"
+source "${script_dir}/diff-common.usage.sh"
 
 get_arguments "$@"
 

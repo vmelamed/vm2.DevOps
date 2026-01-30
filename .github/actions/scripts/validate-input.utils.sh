@@ -16,27 +16,27 @@ function get_arguments()
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
-            --build-projects|-b )
+            --build-projects|-bp )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 build_projects="$1"; shift
                 ;;
 
-            --test-projects|-t )
+            --test-projects|-tp )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 test_projects="$1"; shift
                 ;;
 
-            --benchmark-projects|-p )
+            --benchmark-projects|-pp )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 benchmark_projects="$1"; shift
                 ;;
 
-            --runners-os|-o )
+            --runners-os|-os )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 runners_os="$1"; shift
                 ;;
 
-            --dotnet-version )
+            --dotnet-version|-dn )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 dotnet_version="$1"; shift
                 ;;
@@ -61,12 +61,12 @@ function get_arguments()
                 max_regression_pct="$1"; shift
                 ;;
 
-            --minver-tag-prefix|-f )
+            --minver-tag-prefix|-mp )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 minver_tag_prefix="$1"; shift
                 ;;
 
-            --minver-prerelease-id|-i )
+            --minver-prerelease-id|-mi )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 minver_prerelease_id="$1"; shift
                 ;;

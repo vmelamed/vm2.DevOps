@@ -23,20 +23,24 @@ Arguments:
     <test-project-path>         The path to the test project file. Optional if the environment variable TEST_PROJECT is set
 
 Options:
-  -a, --artifacts               Specifies the directory where to create the script's artifacts: summary, report files, etc
-                                Initial value: '<solution root>/TestArtifacts'
   -c, --configuration           Specifies the build configuration to use ('Debug' or 'Release')
                                 Initial value from \$CONFIGURATION or default 'Release'
   -d, --define                  Defines one or more user-defined pre-processor symbols to be used when building the test
                                 project, e.g. 'STAGING'. You can specify this option multiple times to define multiple symbols
                                 Initial value from \$PREPROCESSOR_SYMBOLS or default ''
-  -t, --min-coverage-pct        Specifies the minimum acceptable code coverage percentage (50-100)
+  -min, --min-coverage-pct      Specifies the minimum acceptable code coverage percentage (50-100)
                                 Initial value from \$MIN_COVERAGE_PCT or default 80
+  -mp, --minver-tag-prefix      Specifies the tag prefix used by MinVer (e.g., 'v')
+                                Initial value from \$MINVERTAGPREFIX environment variable or 'v'
+  -mi, --minver-prerelease-id   Default semver pre-release identifiers for MinVer (e.g., 'preview.1')
+                                Initial value from \$MINVERDEFAULTPRERELEASEIDENTIFIERS environment variable or 'preview.0'
+  -a, --artifacts               Specifies the directory where to create the script's artifacts: summary, report files, etc
+                                Initial value: \$TEST_ARTIFACTS_DIR or default '<solution-root>/TestArtifacts'
 
 $std_switches
 Environment Variables:
   TEST_PROJECT                  Path to the test project file
-  ARTIFACT_DIR                  Directory where to create the script's artifacts
+  TEST_ARTIFACTS_DIR            Directory where to create the script's artifacts
   CONFIGURATION                 Build configuration ('Release' or 'Debug')
   PREPROCESSOR_SYMBOLS          Pre-processor symbols to define when building the test project
   MIN_COVERAGE_PCT              Minimum acceptable code coverage percentage

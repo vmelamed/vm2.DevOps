@@ -1,20 +1,20 @@
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
+# export variables to hold the results
+declare -x build_result='Unknown'
+declare -x warnings_count=''
+declare -x errors_count=''
+declare -x assembly_version=''
+declare -x file_version=''
+declare -x informational_version=''
+declare -x version=''
+declare -x package_version=''
+
 ## Summarizes the output of a 'dotnet build -v d ...' command.
 ##  Parameters:
 ##    The redirected output of the 'dotnet build -v d ...' command, e.g. 'dotnet build -v d ... | summarizeDotnetBuild | to_summary'
 function summarizeDotnetBuild()
 {
-    local build_result='Unknown'
-    local warnings_count=''
-    local errors_count=''
-    local assembly_version=''
-    local file_version=''
-    local informational_version=''
-    local version=''
-    local package_version=''
-    local minver_version=''
-
     restoreShopt=$(shopt -p nocasematch)
     shopt -s nocasematch
 
@@ -36,8 +36,6 @@ function summarizeDotnetBuild()
             version=${BASH_REMATCH[1]}
         elif [[ -z $package_version && $line =~ PackageVersion:\ ([[:alnum:][:punct:]]+) ]]; then
             package_version=${BASH_REMATCH[1]}
-        elif [[ -z $minver_version && $line =~ MinVerVersion:\ ([[:alnum:][:punct:]]+) ]]; then
-            minver_version=${BASH_REMATCH[1]}
         fi
     done
 
@@ -47,7 +45,6 @@ function summarizeDotnetBuild()
         informational_version='N/A'
         version='N/A'
         package_version='N/A'
-        minver_version='N/A'
     fi
 
     # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
@@ -64,8 +61,7 @@ function summarizeDotnetBuild()
         file_version \
         version \
         package_version \
-        informational_version \
-        minver_version
+        informational_version
 
     return 0
 }
