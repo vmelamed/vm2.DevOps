@@ -17,13 +17,13 @@ declare -x minver_tag_prefix=${MINVERTAGPREFIX:-v}
 source "$script_dir/update-changelog-release.usage.sh"
 source "$script_dir/update-changelog-release.utils.sh"
 
-declare -xr release_tag
-declare -xr minver_tag_prefix
-
-validate_minverTagPrefix "$minver_tag_prefix"
+declare -x release_tag
+declare -x minver_tag_prefix
 
 get_arguments "$@"
-dump_all_variables
+
+is_semverReleaseTag "$release_tag"
+validate_minverTagPrefix "$minver_tag_prefix"
 
 if [[ -z "$release_tag" ]]; then
     error "Release tag is required" >&2
@@ -33,6 +33,7 @@ if [[ ! -f changelog/cliff.release-header.toml ]]; then
     exit 0
 fi
 
+dump_all_variables
 exit_if_has_errors
 
 # Use the range from last stable tag to HEAD
