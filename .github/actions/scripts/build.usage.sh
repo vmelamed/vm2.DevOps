@@ -26,7 +26,7 @@ Options:
                                 Initial value from \$BUILD_PROJECT
   -c, --configuration           Build configuration ('Release' or 'Debug')
                                 Initial value from \$CONFIGURATION or default 'Release'
-  -d, --preprocessor-symbols    Pre-processor symbols for compilation
+  -d, --preprocessor-symbols    Defines one or more user-defined, space, comma, or semicolon-separated pre-processor symbols.
                                 Initial value from \$PREPROCESSOR_SYMBOLS or default ''
   -mp, --minver-tag-prefix      Specifies the git tag prefix used by MinVer (e.g., 'v')
                                 Initial value from \$MINVERTAGPREFIX or 'v'

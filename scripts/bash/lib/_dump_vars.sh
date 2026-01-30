@@ -55,18 +55,15 @@ declare save_table_format
 declare save_ignore
 declare set_tracing_on
 
-## Dumps a table of variables and in the end asks the user to "press any key to continue."
-## If $verbose is false and --force is not specified, the function will not display anything.
-## The names of the variables must be specified as strings - no leading $.
-## Optionally the caller can specify flags like:
-## -h or --header <text> will display the header text and the dividing horizontal lines in the table,
-##         so PASS THE TOP HEADER TEXT FIRST. Subsequent headers will be treated as mid headers
-## -m or --markdown will display the table in markdown format instead of the current format
-## -g or --graphical will display the table in graphical format instead of the current format
-## -b or --blank will display a blank line in the table
-## -l or --line will display a dividing horizontal line in the table
-## -q or --quiet will not ask the user to "press any key to continue" after dumping the variables, even if $quiet is false
-## -f or --force will dump the variables even if $verbose is not true
+#-------------------------------------------------------------------------------
+# Summary: Saves current state of global flags to be restored later by pop_state.
+# Parameters: none
+# Returns:
+#   Exit code: 0 always
+# Usage: push_state
+# Example: push_state  # typically called at beginning of dump_vars
+# Notes: Internally used by dump_vars. Do not use, as it may change in the future. Works cooperatively with pop_state to ensure no side effects in dump_vars.
+#-------------------------------------------------------------------------------
 function push_state()
 {
     save_quiet=$quiet
@@ -77,6 +74,15 @@ function push_state()
     return 0
 }
 
+#-------------------------------------------------------------------------------
+# Summary: Restores state of global flags previously saved by push_state.
+# Parameters: none
+# Returns:
+#   Exit code: 0 always
+# Usage: pop_state
+# Example: pop_state  # typically called at end of dump_vars
+# Notes: Internally used by dump_vars. Do not use, as it may change in the future. Works cooperatively with push_state to ensure no side effects in dump_vars.
+#-------------------------------------------------------------------------------
 function pop_state()
 {
     quiet=$save_quiet
@@ -89,6 +95,99 @@ function pop_state()
     return 0
 }
 
+#-------------------------------------------------------------------------------
+# Summary: Internal function to write a header title in the variable dump table.
+# Parameters:
+#   1 - title - header text to display
+# Returns:
+#   stdout: formatted header line
+#   Exit code: 0 always
+# Usage: _write_title <title>  # internal use only
+# Notes: Internally used by dump_vars. Do not use, as it may change in the future.
+#-------------------------------------------------------------------------------
+function _write_title()
+{
+    local -n table
+    table=$(get_table_format)
+
+    # shellcheck disable=SC2059 # Don't use variables in the printf format string. Use printf "..%s.." "$foo".
+    printf "${table["header_format"]}" "$1"
+    return 0
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Internal function to write a variable name and value line in the dump table.
+# Parameters:
+#   1 - variable_name - name of the variable to display (passed as nameref)
+# Returns:
+#   stdout: formatted variable line showing name and value
+#   Exit code: 0 always
+# Usage: _write_line <variable_name>  # internal use only
+# Notes: Internally used by dump_vars. Do not use, as it may change in the future. Handles scalars, arrays, associative arrays, functions, and undefined variables differently.
+#-------------------------------------------------------------------------------
+function _write_line()
+{
+    local -n v=$1
+    local value
+
+    if declare -p "$1" 2>"$_ignore" | grep -q 'declare -[xir-]'; then
+        case $1 in
+            verbose      ) value=$save_verbose ;;
+            quiet        ) value=$save_quiet ;;
+            table_format ) value=$save_table_format ;;
+            _ignore      ) value=$save_ignore ;;
+            *            ) value="$v" ;;
+        esac
+    elif declare -p "$1" 2>"$_ignore" | grep -q 'declare -a'; then
+        value="${#v[@]}: (${v[*]})"
+    elif declare -p "$1" 2>"$_ignore" | grep -q 'declare -A'; then
+        first=true
+        for key in "${!v[@]}"; do
+            if [[ $first == true ]]; then
+                value="${#v[@]}: ($key→${v[$key]}"
+                first=false
+            else
+                value+=", $key→${v[$key]}"
+            fi
+        done
+        value+=")"
+    elif declare -pF "$1" 2>"$_ignore" | grep -q 'declare -f'; then
+        value="$1()"
+    elif ! is_defined "$1"; then
+        value="****** unbound, undefined, or invalid"
+    else
+        value="$v"
+    fi
+
+    local -n table
+    table=$(get_table_format)
+
+    # shellcheck disable=SC2059 # Don't use variables in the printf format string. Use printf "..%s.." "$foo".
+    printf "${table["value_format"]}" "$1" "$value"
+    return 0
+}
+
+#-------------------------------------------------------------------------------
+# Summary: If $verbose is on, dumps a table of variables and in the end, if $quiet is off, asks the user to "press any key to continue." (see also the flags --quiet and --force below)
+# Parameters:
+#   1+ - variable_names - names of variables to dump (passed as strings without leading $ - nameref-s). Optionally the caller can put in the list flags like:
+#        -h or --header <text>: will display the header text and the dividing horizontal lines in the table, so PASS THE TOP HEADER TEXT FIRST. Subsequent headers will be treated as mid headers
+#        -m or --markdown: will display the table in markdown format instead of the current format
+#        -g or --graphical: will display the table in graphical format instead of the current format
+#        -b or --blank: will display a blank line in the table
+#        -l or --line: will display a dividing horizontal line in the table
+#        -q or --quiet: will not ask the user to "press any key to continue" after dumping the variables, even if $quiet is false
+#        -f or --force: will dump the variables even if $verbose is not true
+# Exit Codes:
+#   0 - success
+# Returns:
+#   stdout: formatted table of variable names and values
+# Side Effects: Will display output to stdout and prompt user for key press, if $quiet is false.
+# Usage: dump_vars [options] <variable_name1> [<variable_name2> ...]
+# Example:
+#   dump_vars --header "Build Summary:" build_result warnings_count errors_count
+#   dump_vars --markdown --header "Configuration:" config_path log_level --line setting1 setting2
+#-------------------------------------------------------------------------------
 function dump_vars()
 {
     if (( $# == 0 )); then
@@ -161,55 +260,3 @@ function dump_vars()
     return 0
 }
 
-## internal function to write a line for a variable in the variable dump table
-function _write_title()
-{
-    local -n table
-    table=$(get_table_format)
-
-    # shellcheck disable=SC2059 # Don't use variables in the printf format string. Use printf "..%s.." "$foo".
-    printf "${table["header_format"]}" "$1"
-    return 0
-}
-
-function _write_line()
-{
-    local -n v=$1
-    local value
-
-    if declare -p "$1" 2>"$_ignore" | grep -q 'declare -[xir-]'; then
-        case $1 in
-            verbose      ) value=$save_verbose ;;
-            quiet        ) value=$save_quiet ;;
-            table_format ) value=$save_table_format ;;
-            _ignore      ) value=$save_ignore ;;
-            *            ) value="$v" ;;
-        esac
-    elif declare -p "$1" 2>"$_ignore" | grep -q 'declare -a'; then
-        value="${#v[@]}: (${v[*]})"
-    elif declare -p "$1" 2>"$_ignore" | grep -q 'declare -A'; then
-        first=true
-        for key in "${!v[@]}"; do
-            if [[ $first == true ]]; then
-                value="${#v[@]}: ($key→${v[$key]}"
-                first=false
-            else
-                value+=", $key→${v[$key]}"
-            fi
-        done
-        value+=")"
-    elif declare -pF "$1" 2>"$_ignore" | grep -q 'declare -f'; then
-        value="$1()"
-    elif ! is_defined "$1"; then
-        value="****** unbound, undefined, or invalid"
-    else
-        value="$v"
-    fi
-
-    local -n table
-    table=$(get_table_format)
-
-    # shellcheck disable=SC2059 # Don't use variables in the printf format string. Use printf "..%s.." "$foo".
-    printf "${table["value_format"]}" "$1" "$value"
-    return 0
-}

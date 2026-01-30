@@ -24,9 +24,7 @@ Arguments:
 Options:
   -c, --configuration           Specifies the build configuration to use ('Debug' or 'Release')
                                 Initial value from \$CONFIGURATION or default 'Release'
-  -d, --preprocessor-symbols    Defines one or more user-defined pre-processor symbols to be used when building the benchmark
-                                project, e.g. 'SHORT_RUN'. Which generates a shorter and faster, but less accurate benchmark
-                                run. You can specify this option multiple times to defined multiple symbols
+  -d, --preprocessor-symbols    Defines one or more user-defined, space, comma, or semicolon-separated pre-processor symbols.
                                 Initial value from \$PREPROCESSOR_SYMBOLS or default ''
   -mp, --minver-tag-prefix      Specifies the git tag prefix used by MinVer (e.g., 'v')
                                 Initial value from \$MINVERTAGPREFIX environment variable or 'v'

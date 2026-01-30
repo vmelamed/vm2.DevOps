@@ -29,8 +29,8 @@ if [[ ! -s "$bm_project" ]]; then
 fi
 
 is_safe_path "$bm_project" || true
-is_safe_input "$configuration" || true
-is_safe_input "$preprocessor_symbols" || true
+is_safe_configuration "$configuration" || true
+validate_preprocessor_symbols preprocessor_symbols || true
 validate_minverTagPrefix "$minver_tag_prefix" || true
 is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 is_safe_path "$artifacts_dir" || true

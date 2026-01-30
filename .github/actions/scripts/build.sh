@@ -36,8 +36,8 @@ dump_all_variables
 validate_minverTagPrefix "$minver_tag_prefix" || true
 is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 is_safe_path "$build_project" || true
-is_safe_input "$configuration" || true
-is_safe_input "$preprocessor_symbols" || true
+is_safe_configuration "$configuration" || true
+validate_preprocessor_symbols preprocessor_symbols || true
 is_safe_input "$nuget_username" || true
 
 exit_if_has_errors

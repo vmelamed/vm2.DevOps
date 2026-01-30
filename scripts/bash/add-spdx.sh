@@ -4,13 +4,14 @@ set -euo pipefail
 # Adds SPDX headers to C# sources and bash scripts, skipping generated artifacts.
 usage()
 {
-  echo "Usage: $(basename "$0") [-l LICENSE] [-d DIR] [--what-if]" 1>&2
+  echo "Usage: $(basename "$0") [-l LICENSE] [-d DIR] [--dry-run]" 1>&2
+  echo "  -l LICENSE    SPDX license identifier (default: MIT)" 1>&2
   exit 1
 }
 
 dir="."
 license="MIT"
-what_if=false
+dry_run=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -l|--license)
@@ -23,11 +24,11 @@ while [[ $# -gt 0 ]]; do
       dir="$2"
       shift 2
       ;;
-    -n|--what-if)
-      what_if=true
+    -y|--dry-run)
+      dry_run=true
       shift
       ;;
-    -h|--help)
+    -h|--help|-\?)
       usage
       ;;
     *)
@@ -66,7 +67,7 @@ while IFS= read -r -d '' file; do
     continue
   fi
 
-  if $what_if; then
+  if $dry_run; then
     echo "Would add header to: $rel"
     continue
   fi
@@ -109,7 +110,7 @@ while IFS= read -r -d '' file; do
     continue
   fi
 
-  if $what_if; then
+  if $dry_run; then
     echo "Would add header to: $rel"
     continue
   fi
@@ -135,7 +136,7 @@ while IFS= read -r -d '' file; do
   modified=$((modified + 1))
 done < <(find "$root" -type f -name '*.sh' -print0)
 
-if $what_if; then
+if $dry_run; then
   echo "Summary (dry run): scanned=$processed, would modify=$((processed - skipped)), skipped=$skipped"
 else
   echo "Summary: scanned=$processed, modified=$modified, skipped=$skipped"

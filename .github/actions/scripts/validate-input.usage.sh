@@ -43,7 +43,7 @@ Options:
                                 Initial value from \$DOTNET_VERSION or default '10.0.x'
   -c, --configuration           Build configuration ('Release' or 'Debug')
                                 Initial value from \$CONFIGURATION or default 'Release'
-  -d, --preprocessor-symbols    Pre-processor symbols for compilation
+  -d, --preprocessor-symbols    Defines one or more user-defined, space, comma, or semicolon-separated pre-processor symbols.
                                 Initial value from \$PREPROCESSOR_SYMBOLS or default ''
   -min, --min-coverage-pct      Minimum acceptable code coverage percentage (50-100)
                                 Initial value from \$MIN_COVERAGE_PCT or default 80

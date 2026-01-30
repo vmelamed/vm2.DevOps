@@ -6,9 +6,16 @@ if ! declare -pF "error" > "$_ignore"; then
     source "$semver_dir/_diagnostics.sh"
 fi
 
-## Displays a prompt, followed by "Press any key to continue..." and returns only after the script user
-## presses a key. If there is defined variable $quiet with value "true", the function will not display prompt and will
-## not wait for response.
+#-------------------------------------------------------------------------------
+# Summary: Displays a prompt and waits for user to press any key before continuing.
+# Parameters: none
+# Returns:
+#   Exit code: 0 always
+# Env. Vars:
+#   quiet - when true, skips prompt and returns immediately
+# Usage: press_any_key
+# Example: press_any_key  # typically called after displaying information
+#-------------------------------------------------------------------------------
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 function press_any_key()
 {
@@ -19,12 +26,22 @@ function press_any_key()
     return 0
 }
 
-## Asks the script user to respond yes or no to some prompt. If there is a defined variable $quiet with
-## value "true", the function will not display the prompt and will assume the default response or 'y'.
-## Parameter 1 - the prompt to confirm.
-## Parameter 2 - the default response if the user presses [Enter]. When specified should be either 'y' or 'n'. Optional.
-## Returns 0 if the response is 'y', or 1 if the response is 'n'.
-## Outputs the response to stdout as 'y' or 'n'.
+#-------------------------------------------------------------------------------
+# Summary: Asks the user to respond yes or no to a prompt.
+# Parameters:
+#   1 - prompt - the confirmation question to ask
+#   2 - default - default response if user presses Enter: "y" or "n" (optional, default: "y")
+# Returns:
+#   stdout: 'y' or 'n' based on user response
+#   Exit code: 0 if response is 'y', 1 if response is 'n', 2 on invalid arguments
+# Env. Vars:
+#   quiet - when true, assumes default response without prompting
+# Usage: if confirm <prompt> [default]; then ... fi
+# Example:
+#   if confirm "Delete all files?" "n"; then
+#     rm -rf *
+#   fi
+#-------------------------------------------------------------------------------
 function confirm()
 {
     if [[ $# -eq 0 || $# -gt 2 || -z "$1" ]]; then
@@ -53,14 +70,25 @@ function confirm()
     [[ ${response,,} == "y" ]]
 }
 
-## Displays a prompt and a list of options to the script user and asks them to choose one of the options.
-## Parameter 1 - the prompt to display before the options
-## Parameter 2 - the text of the first option
-## Parameter 3 - the text of the second option.
-## ... - etc.
-## The first option is the default one.
-## The result will be printed in stdout as the number of the chosen option.
-## The function will exit with code 2 if less than 3 parameters are specified.
+#-------------------------------------------------------------------------------
+# Summary: Displays a prompt and list of options, asks user to choose one.
+# Parameters:
+#   1 - prompt - the prompt to display before options
+#   2+ - options - two or more option texts (first option is default)
+# Returns:
+#   stdout: number of chosen option (1-based index)
+#   Exit code: 0 on success, 2 on invalid arguments (less than 3 parameters)
+# Env. Vars:
+#   quiet - when true, assumes first option (default) without prompting
+# Usage: selection=$(choose <prompt> <option1> <option2> [option3...])
+# Example:
+#   choice=$(choose "Select environment:" "Development" "Staging" "Production")
+#   case $choice in
+#     1) env="dev" ;;
+#     2) env="staging" ;;
+#     3) env="prod" ;;
+#   esac
+#-------------------------------------------------------------------------------
 function choose()
 {
     if [[ $# -lt 3 ]]; then
@@ -101,24 +129,24 @@ function choose()
     return 0
 }
 
-## Prints the specified sequence of quoted values, separated by a separator and enclosed in parentheses.
-## The function can take optionally named parameters to customize the output:
-##   --quote|-q='<quote_char>': Specifies the quote character to use. Default is single quote (').
-##     You can also specify --quote='' for no quotes (empty string).
-##   --separator|-s='<separator_char>': Specifies the separator character to use. Default is comma (,).
-##     Special values for separator are: nl (newline) or $'\n', tab (tab character) or $'\t', and '' (no separator).
-##   --paren|-p='('|')'|'['|']'|'{'|'}'|'()'|'[]'|'{}': Specifies the type of parentheses to use. Default is no parentheses.
-##     Special values for separator is: nl (newline) or $'\n'.
-## Usage: print_sequence [--quote='<quote_char>'] [--separator='<separator_char>']
-##                        [--paren='('|')'|'['|']'|'{'|'}'|'()'|'[]'|'{}'|nl] <value1> [<value2> ...]
-## Note: The named parameters can be specified in any order before the list of values, but they should not be last.
-## Examples:
-##   print_sequence --quote='"' --separator='; ' --paren='()' apple banana cherry
-##     Output: ("apple"; "banana"; "cherry")
-##   print_sequence -p='[]' -s=' | ' 1 2 3 4 5
-##     Output: [1 | 2 | 3 | 4 | 5]
-##   print_sequence -p='[]' 1 2 3 4 5 -s=' | ' (putting a named parameter last spoils the output):
-##     Output: [1 | 2 | 3 | 4 | 5 | ]
+#-------------------------------------------------------------------------------
+# Summary: Prints a sequence of quoted values with customizable quote, separator, and parentheses.
+# Parameters:
+#   Named parameters (must come before values):
+#     --quote=<char>|-q=<char> - quote character (default: '). Use '' for no quotes
+#     --separator=<char>|-s=<char> - separator (default: ,). Special: 'nl', 'tab', ''
+#     --paren=<type>|-p=<type> - parentheses type: (), [], {}, nl, or none (default: none)
+#   Positional parameters:
+#     1+ - values - values to include in sequence
+# Returns:
+#   stdout: formatted sequence
+#   Exit code: 0 always
+# Usage: print_sequence [--quote=<char>] [--separator=<char>] [--paren=<type>] <value1> [value2...]
+# Example:
+#   print_sequence --quote='"' --separator='; ' --paren='()' apple banana cherry
+#   Output: ("apple"; "banana"; "cherry")
+# Notes: Named parameters should not be placed last in the argument list.
+#-------------------------------------------------------------------------------
 function print_sequence()
 {
     open_paren=""

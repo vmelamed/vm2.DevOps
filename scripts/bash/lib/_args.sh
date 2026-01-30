@@ -37,28 +37,63 @@ else
 fi
 declare -rx ci                                      # freeze the value of ci after setting it above
 
-## Sets the script to quiet mode (suppresses user prompts)
+#-------------------------------------------------------------------------------
+# Summary: Sets the script to quiet mode, suppressing user prompts.
+# Parameters: none
+# Returns:
+#   Exit code: 0 always
+# Side Effects: Sets global variable $quiet to true
+# Usage: set_quiet
+# Example: set_quiet  # typically called when --quiet flag is passed
+#-------------------------------------------------------------------------------
 function set_quiet()
 {
     quiet=true
     return 0
 }
 
-## Sets the script to verbose mode (enables detailed output)
+#-------------------------------------------------------------------------------
+# Summary: Sets the script to verbose mode, enabling detailed output.
+# Parameters: none
+# Returns:
+#   Exit code: 0 always
+# Side Effects: Sets global variable $verbose to true
+# Usage: set_verbose
+# Example: set_verbose  # typically called when --verbose flag is passed
+#-------------------------------------------------------------------------------
 function set_verbose()
 {
     verbose=true
     return 0
 }
 
-## Sets the script to dry-run mode (does not execute commands, only simulates)
+#-------------------------------------------------------------------------------
+# Summary: Sets the script to dry-run mode, simulating commands without execution.
+# Parameters: none
+# Returns:
+#   Exit code: 0 always
+# Side Effects: Sets global variable $dry_run to true
+# Usage: set_dry_run
+# Example: set_dry_run  # typically called when --dry-run flag is passed
+#-------------------------------------------------------------------------------
 function set_dry_run()
 {
     dry_run=true
     return 0
 }
 
-## Enables trace mode for debugging
+#-------------------------------------------------------------------------------
+# Summary: Enables trace mode for debugging by setting verbose, redirecting output, and enabling bash tracing.
+# Parameters: none
+# Returns:
+#   Exit code: 0 always
+# Side Effects:
+#   - Sets global variable $verbose to true
+#   - Sets global variable $_ignore to /dev/stdout
+#   - Enables bash trace mode (set -x)
+# Usage: set_trace_enabled
+# Example: set_trace_enabled  # typically called when --trace flag is passed
+#-------------------------------------------------------------------------------
 function set_trace_enabled()
 {
     verbose=true
@@ -67,35 +102,64 @@ function set_trace_enabled()
     return 0
 }
 
-## Will be overridden in _predicates.sh
+## Will be overridden in _predicates.sh, akin to forward declaration in C/C++
 function is_in() { return 0; }
 
-## Sets the table format for variable dumps
-## Usage: set_table_format <format>
-## where <format> is one of: "graphical", "markdown"
+#-------------------------------------------------------------------------------
+# Summary: Sets the table format for variable dumps to either graphical or markdown.
+# Parameters:
+#   1 - format - desired table format: "graphical" or "markdown"
+# Returns:
+#   Exit code: 0 on success, 2 on invalid format
+# Side Effects: Sets global variable $table_format
+# Dependencies: is_in function
+# Usage: set_table_format <format>
+# Example: set_table_format "markdown"
+#-------------------------------------------------------------------------------
 function set_table_format()
 {
     if [[ $# -ne 1 || -z "$1" ]]; then
         error "${FUNCNAME[0]}() requires one parameter - the table format"
-        return 1
+        return 2
     fi
     local f="${1,,}"
     if ! is_in "$f" "${table_formats[@]}"; then
         error "Invalid table format: $1"
-        return 1
+        return 2
     fi
     table_format="$f"
     return 0
 }
 
+#-------------------------------------------------------------------------------
+# Summary: Returns the current table format setting.
+# Parameters: none
+# Returns:
+#   stdout: current table format ("graphical" or "markdown")
+#   Exit code: 0 always
+# Usage: format=$(get_table_format)
+# Example: current_format=$(get_table_format)
+#-------------------------------------------------------------------------------
 function get_table_format()
 {
     printf "%s" "$table_format"
     return 0
 }
 
-## Processes common command-line arguments like --quiet, --verbose, --trace, --dry-run
-## Usage: get_common_arg <argument>
+#-------------------------------------------------------------------------------
+# Summary: Processes common command-line arguments like --quiet, --verbose, --trace, --dry-run.
+# Parameters:
+#   1 - argument - command-line argument to process
+# Returns:
+#   Exit code: 0 if argument was processed, 1 if not a common argument, 2 if no argument provided
+# Side Effects: May call set_* functions or usage/exit based on argument
+# Usage: get_common_arg <argument>
+# Example:
+#   for arg in "$@"; do
+#     get_common_arg "$arg" && continue
+#     # handle custom arguments
+#   done
+#-------------------------------------------------------------------------------
 # shellcheck disable=SC2034 # variable appears unused. Verify it or export it
 function get_common_arg()
 {
@@ -118,10 +182,19 @@ function get_common_arg()
     return 0 # it was a common argument and was processed
 }
 
-## Displays a usage message and optionally an additional error message(s). If there are additional message, the function exits
-## with code 2. Avoid calling this function directly; instead, override the usage() function in the calling script to provide
-## custom usage information
-## Usage: display_usage_msg <usage_text> [<additional_message>]
+#-------------------------------------------------------------------------------
+# Summary: Displays a usage message and optionally additional error messages, exiting with code 2 if error messages are present.
+# Parameters:
+#   1 - usage_text - the usage text to display
+#   2+ - additional_message - optional error messages to display (optional)
+# Returns:
+#   stdout: usage text
+#   stderr: error messages if provided
+#   Exit code: exits with 2 if additional messages provided, otherwise returns to caller
+# Usage: display_usage_msg <usage_text> [additional_message...]
+# Example: display_usage_msg "$usage_text" "Invalid parameter: $param"
+# Notes: Temporarily disables tracing during display. Override usage() in calling scripts for custom help.
+#-------------------------------------------------------------------------------
 function display_usage_msg()
 {
     if [[ $# -eq 0 || -z "$1" ]]; then
@@ -152,17 +225,34 @@ function display_usage_msg()
     return 0
 }
 
-## Displays the usage message for common flags
-## ATTENTION: Override this function in the calling script to provide custom usage information
-## Usage: usage()
+#-------------------------------------------------------------------------------
+# Summary: Displays the usage message; MUST be overridden in calling scripts for custom usage information.
+# Parameters: varies by implementation in calling script
+# Returns:
+#   Exit code: depends on implementation
+# Usage: Override this function in your script
+# Example:
+#   function usage() {
+#     display_usage_msg "Usage: $script_name [options]" "$@"
+#   }
+#-------------------------------------------------------------------------------
 function usage()
 {
     display_usage_msg "$common_switches" "OVERRIDE THE FUNCTION usage() IN THE CALLING SCRIPT TO PROVIDE CUSTOM USAGE INFORMATION."
 }
 
-## Tests the error counter to determine if there are any accumulated errors so far
-## Usage: exit_if_has_errors [<flag>]. The flag is optional and doesn't matter what it is - if it is passed, the method calls `exit 2`.
-## Return: If it didn't exit, returns 1 if there are errors, 0 otherwise.
+#-------------------------------------------------------------------------------
+# Summary: Tests the global error counter and exits if errors were encountered.
+# Parameters:
+#   1 - flag - optional parameter; if any value is provided, forces call to exit 2
+# Returns:
+#   Exit code: 2 if errors exist, 0 otherwise
+# Env. Vars:
+#   errors - global error counter
+# Usage: exit_if_has_errors
+# Example:
+#   exit_if_has_errors  # exits with code 2 if errors exist
+#-------------------------------------------------------------------------------
 function exit_if_has_errors()
 {
     # shellcheck disable=SC2154 # errors is referenced but not assigned.

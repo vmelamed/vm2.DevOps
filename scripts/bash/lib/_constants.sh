@@ -1,5 +1,19 @@
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
+#===============================================================================
+# Terminal Color and Formatting Constants
+#
+# This script defines ANSI escape codes for terminal text formatting and colors.
+# When stdout is connected to a terminal (tty), color codes are enabled.
+# When stdout is redirected to a file or pipe, codes are set to empty strings.
+#
+# Available constants:
+#   - Text formatting: BOLD, RESET
+#   - Basic colors: RED, GREEN, YELLOW, BLUE
+#   - Bold colors: BOLDRED, BOLDGREEN, BOLDYELLOW, BOLDBLUE
+#   - NC (No Color) - alias for RESET
+#===============================================================================
+
 if [[ -t 1 ]]; then
     declare -xr BOLD='\033[1m'
     declare -xr RESET='\033[0m'

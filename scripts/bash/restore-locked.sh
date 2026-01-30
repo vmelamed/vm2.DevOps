@@ -4,7 +4,7 @@ set -euo pipefail
 echo "THIS SCRIPT NEEDS TO BE UPDATED TO USE THE COMMON LIBRARIES AND ARGUMENT HANDLING."
 exit 1
 
-usage()
+function usage()
 {
   cat <<'EOF'
 Usage: restore-locked.sh [directory-or-solution-or-project]

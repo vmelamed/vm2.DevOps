@@ -10,9 +10,20 @@ declare -x informational_version=''
 declare -x version=''
 declare -x package_version=''
 
-## Summarizes the output of a 'dotnet build -v d ...' command.
-##  Parameters:
-##    The redirected output of the 'dotnet build -v d ...' command, e.g. 'dotnet build -v d ... | summarizeDotnetBuild | to_summary'
+#-------------------------------------------------------------------------------
+# Summary: Summarizes the output of a 'dotnet build -v d' command, extracting version info and results.
+# Parameters: none (reads from stdin)
+# Returns:
+#   stdout: formatted table of build summary via dump_vars
+#   Exit code: 0 always
+# Side Effects: Sets global exported variables: $build_result, $warnings_count, $errors_count,
+#               $assembly_version, $file_version, $informational_version, $version, $package_version
+# Dependencies: dump_vars
+# Usage: dotnet build -v d ... | summarizeDotnetBuild
+# Example:
+#   dotnet build -v d MyProject.csproj | summarizeDotnetBuild | to_summary
+# Notes: Requires detailed verbosity (-v d) to extract version information. Globals persist until next call.
+#-------------------------------------------------------------------------------
 function summarizeDotnetBuild()
 {
     restoreShopt=$(shopt -p nocasematch)

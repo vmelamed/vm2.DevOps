@@ -32,21 +32,7 @@ function get_arguments()
 
             --preprocessor-symbols|-d )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
-                value="$1"; shift
-                if ! [[ "$value" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
-                    usage false "The specified pre-processor symbol '$value' is not valid."
-                    exit 2
-                fi
-                if [[ ! "$preprocessor_symbols" =~ (^|;)"$value"($|;) ]]; then
-                    preprocessor_symbols="$value $preprocessor_symbols"  # NOTE: space-separated!
-                fi
-                ;;
-
-            --short-run|-s )
-                # Shortcut for --preprocessor-symbols SHORT_RUN
-                if [[ ! "$preprocessor_symbols" =~ (^|;)SHORT_RUN($|;) ]]; then
-                    preprocessor_symbols="$preprocessor_symbols SHORT_RUN"  # NOTE: space-separated!
-                fi
+                preprocessor_symbols="$1"; shift
                 ;;
 
             --minver-tag-prefix|-mp )

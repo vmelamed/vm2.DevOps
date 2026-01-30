@@ -26,9 +26,17 @@ declare -xra allowed_runners_os=(
 
 declare -xr nugetServersRegex="^(nuget|github|https?://[-a-zA-Z0-9._/]+)$";
 
-## Sanitizes user input by removing or escaping potentially dangerous characters.
-## Returns 0 if input is safe, 1 if it contains unsafe characters.
-## Usage: if sanitize_input "$user_input" [<allow_spaces>]; then ... fi
+#-------------------------------------------------------------------------------
+# Summary: Tests if user input is safe by checking for potentially dangerous characters.
+# Parameters:
+#   1 - input - the input string to test
+#   2 - allow_spaces - if "true", allows spaces in input (optional, default: "false")
+# Returns:
+#   Exit code: 0 if input is safe, 1 if contains unsafe characters, 2 on invalid arguments
+# Usage: if is_safe_input <input> [allow_spaces]; then ... fi
+# Example: if is_safe_input "$user_input" true; then echo "Safe input"; fi
+# Notes: Rejects characters that could enable command injection: ; | & $ ` \ < > ( ) { } newlines carriage-returns
+#-------------------------------------------------------------------------------
 function is_safe_input()
 {
     if [[ $# -lt 1 || $# -gt 2 ]]; then
@@ -56,9 +64,16 @@ function is_safe_input()
     return 0
 }
 
-## Sanitizes file paths - ensures they don't contain directory traversal or dangerous patterns
-## Returns 0 if safe path, 1 otherwise
-## Usage: if ! is_safe_path "$file_path"; then error ... fi
+#-------------------------------------------------------------------------------
+# Summary: Validates file paths to prevent directory traversal and dangerous patterns.
+# Parameters:
+#   1 - path - the file path to test (should be relative)
+# Returns:
+#   Exit code: 0 if safe path, 1 if contains dangerous patterns, 2 on invalid arguments
+# Usage: if is_safe_path <path>; then ... fi
+# Example: if is_safe_path "config/settings.json"; then echo "Safe path"; fi
+# Notes: Rejects paths with: .. (traversal), leading / (absolute), and $ ` ; characters.
+#-------------------------------------------------------------------------------
 function is_safe_path()
 {
     if [[ $# -ne 1 ]]; then
@@ -88,9 +103,16 @@ function is_safe_path()
     return 0
 }
 
-## Sanitizes file paths - ensures they don't contain directory traversal or dangerous patterns
-## Returns 0 if safe path, 1 otherwise
-## Usage: if ! is_safe_existing_path "$file_path"; then error ... fi
+#-------------------------------------------------------------------------------
+# Summary: Validates that a path is safe and exists.
+# Parameters:
+#   1 - path - the file or directory path to test
+# Returns:
+#   Exit code: 0 if safe and exists, 1 if unsafe or doesn't exist, 2 on invalid arguments
+# Dependencies: is_safe_path
+# Usage: if is_safe_existing_path <path>; then ... fi
+# Example: if is_safe_existing_path "$config_file"; then source "$config_file"; fi
+#-------------------------------------------------------------------------------
 function is_safe_existing_path()
 {
     if [[ $# -ne 1 ]]; then
@@ -109,9 +131,16 @@ function is_safe_existing_path()
     return 0
 }
 
-## Sanitizes file paths - ensures they don't contain directory traversal or dangerous patterns
-## Returns 0 if safe path, 1 otherwise
-## Usage: if ! is_safe_existing_directory "$file_path"; then error ... fi
+#-------------------------------------------------------------------------------
+# Summary: Validates that a path is safe, exists, and is a directory.
+# Parameters:
+#   1 - path - the directory path to test
+# Returns:
+#   Exit code: 0 if safe, exists, and is directory, 1 otherwise, 2 on invalid arguments
+# Dependencies: is_safe_existing_path
+# Usage: if is_safe_existing_directory <path>; then ... fi
+# Example: if is_safe_existing_directory "$build_dir"; then cd "$build_dir"; fi
+#-------------------------------------------------------------------------------
 function is_safe_existing_directory()
 {
     if [[ $# -ne 1 ]]; then
@@ -130,9 +159,16 @@ function is_safe_existing_directory()
     return 0
 }
 
-## Sanitizes file paths - ensures they don't contain directory traversal or dangerous patterns
-## Returns 0 if safe path, 1 otherwise
-## Usage: if ! is_safe_existing_file "$file_path"; then error ... fi
+#-------------------------------------------------------------------------------
+# Summary: Validates that a path is safe, exists, and is a non-empty file.
+# Parameters:
+#   1 - path - the file path to test
+# Returns:
+#   Exit code: 0 if safe, exists, and is non-empty file, 1 otherwise, 2 on invalid arguments
+# Dependencies: is_safe_existing_path
+# Usage: if is_safe_existing_file <path>; then ... fi
+# Example: if is_safe_existing_file "$script"; then bash "$script"; fi
+#-------------------------------------------------------------------------------
 function is_safe_existing_file()
 {
     if [[ $# -ne 1 ]]; then
@@ -156,6 +192,19 @@ declare -xr jq_array_strings='type == "array" and all(type == "string")'
 declare -xr jq_array_strings_has_empty="any(. == \"\")"
 declare -xr jq_array_strings_nonempty='type == "array" and length > 0 and all(type == "string") and all(length > 0)'
 
+#-------------------------------------------------------------------------------
+# Summary: Validates a JSON array of strings and checks each item's safety using provided validator function.
+# Parameters:
+#   1 - array - name of variable containing JSON array (nameref)
+#   2 - default_array - default value if variable is unbound or empty
+#   3 - is_safe_item - name of function to validate each array item
+# Returns:
+#   Exit code: 0 if valid and all items safe, 1 if invalid or items unsafe, 2 on invalid arguments or jq errors
+# Dependencies: jq, warning_var
+# Side Effects: Sets array variable to default if unbound or empty
+# Usage: if is_safe_json_array <array_var_name> <default> <validator_function>; then ... fi
+# Example: is_safe_json_array runners '["ubuntu-latest"]' is_safe_runner_os
+#-------------------------------------------------------------------------------
 function is_safe_json_array()
 {
     if [[ $# -ne 3 ]]; then
@@ -200,6 +249,16 @@ function is_safe_json_array()
     return "$return_value"
 }
 
+#-------------------------------------------------------------------------------
+# Summary: Validates that a runner OS name is in the allowed list of GitHub Actions runners.
+# Parameters:
+#   1 - runner_os - runner OS name to validate
+# Returns:
+#   Exit code: 0 if valid runner OS, 1 if invalid, 2 on invalid arguments
+# Usage: if is_safe_runner_os <runner_os>; then ... fi
+# Example: if is_safe_runner_os "ubuntu-latest"; then echo "Valid runner"; fi
+# Notes: Allowed values defined in $allowed_runners_os array.
+#-------------------------------------------------------------------------------
 function is_safe_runner_os()
 {
     if [[ $# -ne 1 ]]; then
@@ -220,9 +279,17 @@ function is_safe_runner_os()
     return 1
 }
 
-## Validates and sanitizes a "reason" text input
-## Returns 0 if safe, 1 otherwise
-## Usage: if is_safe_reason "$reason"; then ... fi
+#-------------------------------------------------------------------------------
+# Summary: Validates a "reason" text input for safety and length constraints.
+# Parameters:
+#   1 - reason - the reason text to validate
+# Returns:
+#   Exit code: 0 if safe, 1 if unsafe or too long, 2 on invalid arguments
+# Dependencies: is_safe_input
+# Usage: if is_safe_reason <reason>; then ... fi
+# Example: if is_safe_reason "$user_reason"; then log_reason "$user_reason"; fi
+# Notes: Maximum length 200 characters. Allows spaces but rejects shell metacharacters and command-like patterns.
+#-------------------------------------------------------------------------------
 function is_safe_reason()
 {
     if [[ $# -ne 1 ]]; then
@@ -252,8 +319,16 @@ function is_safe_reason()
     return 0
 }
 
-## Validates NuGet server URL or known server name
-## Returns 0 if valid, 1 otherwise
+#-------------------------------------------------------------------------------
+# Summary: Validates NuGet server URL or known server name.
+# Parameters:
+#   1 - server - NuGet server URL or name to validate
+# Returns:
+#   Exit code: 0 if valid, 1 if invalid, 2 on invalid arguments
+# Usage: if is_safe_nuget_server <server>; then ... fi
+# Example: if is_safe_nuget_server "nuget"; then echo "Valid server"; fi
+# Notes: Accepts "nuget", "github", or valid http(s) URLs matching $nugetServersRegex.
+#-------------------------------------------------------------------------------
 function is_safe_nuget_server()
 {
     if [[ $# -ne 1 ]]; then
@@ -263,6 +338,18 @@ function is_safe_nuget_server()
     [[ ! "$1" =~ $nugetServersRegex ]]
 }
 
+#-------------------------------------------------------------------------------
+# Summary: Validates NuGet server variable and sets to default if empty.
+# Parameters:
+#   1 - server - name of variable containing NuGet server (nameref)
+#   2 - default_server - default server value (optional, default: "nuget")
+# Returns:
+#   Exit code: 0 on success, 1 if server invalid, 2 on invalid arguments or bad default
+# Side Effects: Sets server variable to default if empty
+# Dependencies: warning_var
+# Usage: validate_nuget_server <server_var_name> [default_server]
+# Example: validate_nuget_server nuget_server "github"
+#-------------------------------------------------------------------------------
 function validate_nuget_server()
 {
     if [[ $# -lt 1 || $# -gt 2 ]]; then
@@ -291,6 +378,80 @@ function validate_nuget_server()
     return 0
 }
 
+#-------------------------------------------------------------------------------
+# Summary: Validates that a configuration name is a valid identifier.
+# Parameters:
+#   1 - configuration - configuration name to validate
+# Returns:
+#   Exit code: 0 if valid identifier or empty, 1 if invalid, 2 on invalid arguments
+# Usage: if is_safe_configuration <config_name>; then ... fi
+# Example: if is_safe_configuration "$build_config"; then echo "Valid config"; fi
+# Notes: Must match pattern [A-Za-z_][A-Za-z0-9_]* (valid C-style identifier).
+#-------------------------------------------------------------------------------
+function is_safe_configuration()
+{
+    if [[ $# -ne 1 ]]; then
+        error "${FUNCNAME[0]}() requires one parameter: the NAME of the configuration variable to test."
+        return 2
+    fi
+    [[ -z $1 || $1 =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] && return 0
+    error "The configuration '$1' is not valid."
+    return 1
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Validates preprocessor symbols and formats them for MSBuild with DefineConstants preservation.
+# Parameters:
+#   1 - symbols - name of variable containing semicolon/comma/space-separated symbols (nameref)
+# Returns:
+#   Exit code: 0 if all symbols valid, 1 if any invalid, 2 on invalid arguments
+# Side Effects: Reformats symbols variable to URL-encoded semicolon-separated list with $(DefineConstants) appended
+# Usage: validate_preprocessor_symbols <symbols_var_name>
+# Example:
+#   preproc="DEBUG;TRACE"
+#   validate_preprocessor_symbols preproc
+#   # preproc becomes: "DEBUG%3BTRACE%3B$(DefineConstants)"
+# Notes: Each symbol must match [A-Za-z_][A-Za-z0-9_]*.
+#-------------------------------------------------------------------------------
+function validate_preprocessor_symbols()
+{
+    if [[ $# -ne 1 ]]; then
+        error "${FUNCNAME[0]}() requires one parameter: the NAME of the preprocessor symbol parameter to test."
+        return 2
+    fi
+    [[ -z $1 ]] && return 0
+
+    local -n symbols="$1"
+    local -a symbol_array=()
+
+    IFS=';, ' read -ra symbol_array <<< "$symbols"
+    local bad=false
+    for symbol in "${symbol_array[@]}"; do
+        if ! [[ "$symbol" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+            error "The pre-processor symbol '$symbol' is not valid."
+            bad=true
+        fi
+    done
+    [[ "$bad" == "true" ]] && return 1
+
+    # append '$(DefineConstants)' to ensure existing symbols are preserved
+    local len=$(( ${#symbol_array[@]} ))
+    # shellcheck disable=SC2016 # Expressions don't expand in single quotes, use double quotes for that. Good!
+    symbol_array[len]='$(DefineConstants)'
+    symbols=$(IFS='%3B'; printf '%s' "${symbol_array[*]}")
+    return 0
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Validates MinVer prerelease identifier format.
+# Parameters:
+#   1 - prerelease_id - MinVer prerelease ID to validate
+# Returns:
+#   Exit code: 0 if valid, 1 if invalid, 2 on invalid arguments
+# Usage: if is_safe_minverPrereleaseId <id>; then ... fi
+# Example: if is_safe_minverPrereleaseId "alpha.1"; then echo "Valid prerelease ID"; fi
+# Notes: Must match $minverPrereleaseIdRegex (same as semver prerelease label format).
+#-------------------------------------------------------------------------------
 function is_safe_minverPrereleaseId()
 {
     if [[ $# -ne 1 ]]; then
@@ -299,4 +460,40 @@ function is_safe_minverPrereleaseId()
     fi
 
     [[ ! "$1" =~ $minverPrereleaseIdRegex ]]
+}
+
+# The dotnet-version input supports following syntax:
+#
+# A.B.C (e.g 9.0.308, 10.0.100-preview.1.25120.13) - installs the exact version of .NET SDK semver 2.0 format
+# A or A.x (e.g. 8, 8.x) - the latest minor version of the specific .NET SDK, including prerelease versions (preview, rc)
+# A.B or A.B.x (e.g. 8.0, 8.0.x) - the latest patch version of the specific .NET SDK, including prerelease versions (preview, rc)
+# A.B.Cxx (e.g. 8.0.4xx) - the latest version of the specific SDK release, including prerelease versions (preview, rc).
+declare -xr dotnet_regex="^([0-9]+\\.[0-9]+(\\.x)?)|([0-9]+(\\.x)?)|([0-9]+\\.[0-9]+\\.[0-9]xx)|($semverRegex)$"
+
+#-------------------------------------------------------------------------------
+# Summary: Validates .NET version input format.
+# Parameters:
+#   1 - version - .NET version string to validate
+# Returns:
+#   Exit code: 0 if valid, 1 if invalid, 2 on invalid arguments
+# Usage: if is_safe_dotnet_version <version>; then ... fi
+# Example: if is_safe_dotnet_version "10.0.100-preview.1.25120.13"; then echo "Valid .NET version"; fi
+# Notes: Must match $dotnet_regex. The dotnet-version input supports the following syntax (from [actions/setup-dotnet](https://github.com/actions/setup-dotnet)):
+#   - A.B.C (e.g 9.0.308, 10.0.100-preview.1.25120.13) - installs the exact version of .NET SDK semver 2.0 format
+#   - A or A.x (e.g. 8, 8.x) - the latest minor version of the specific .NET SDK, including prerelease versions (preview, rc)
+#   - A.B or A.B.x (e.g. 8.0, 8.0.x) - the latest patch version of the specific .NET SDK, including prerelease versions (preview, rc)
+#   - A.B.Cxx (e.g. 8.0.4xx) - the latest version of the specific SDK release, including prerelease versions (preview, rc).
+#-------------------------------------------------------------------------------
+function is_safe_dotnet_version()
+{
+    if [[ $# -ne 1 ]]; then
+        error "${FUNCNAME[0]}() requires one parameter: the .NET version to test."
+        return 2
+    fi
+
+    if [[ ! "$1" =~ $dotnet_regex ]]; then
+        error "The .NET version '$1' is not valid. Expected formats: semver 2.0.0, A, A.x, A.B, A.B.x, A.B.Cxx."
+        return 1
+    fi
+    return 0
 }

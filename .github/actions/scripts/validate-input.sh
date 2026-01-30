@@ -73,14 +73,14 @@ is_safe_json_array "runners_os" "$defaultRunnersOs" is_safe_runner_os || true
 if [[ -z "$dotnet_version" ]]; then
     warning_var dotnet_version "dotnet-version is empty." "$defaultDotnetVersion"
 fi
-is_safe_input "$dotnet_version" || true
+is_safe_dotnet_version "$dotnet_version" || true
 
 if [[ -z "$configuration" ]]; then
     warning_var configuration "configuration must have value." "$defaultConfiguration"
 fi
-is_safe_input "$configuration" || true
+is_safe_configuration "$configuration" || true
 
-is_safe_input "$preprocessor_symbols" || true
+validate_preprocessor_symbols preprocessor_symbols || true
 
 if [[ ! "$min_coverage_pct" =~ ^[0-9]+$ ]]; then
     error "min-coverage-pct must be an integer between 50-100." || true
