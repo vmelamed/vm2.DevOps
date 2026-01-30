@@ -13,9 +13,9 @@ source "$lib_dir/gh_core.sh"
 
 # default constants for parameters
 declare -xr default_package_projects='[""]'
-declare -xr default_nuget_server='nuget'
 declare -xr default_minver_tag_prefix='v'
 declare -xr default_reason="release build"
+declare -xr default_nuget_server='nuget'
 
 # parameters with initial values from environment variables or defaults
 declare -x package_projects=${PACKAGE_PROJECTS:-"$default_package_projects"}
