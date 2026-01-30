@@ -19,6 +19,7 @@ fi
 
 source "$lib_dir/core.sh"
 source "$lib_dir/_sanitize.sh"
+source "$lib_dir/_dotnet.sh"
 
 ## In CI mode, indicates whether the script is running within GitHub Actions.
 declare -x github_actions=${GITHUB_ACTIONS:-false}

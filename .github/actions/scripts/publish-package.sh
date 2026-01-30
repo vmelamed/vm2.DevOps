@@ -78,7 +78,7 @@ execute dotnet restore "${package_project}" --locked-mode
 execute mkdir -p "$artifacts_dir"
 
 # build and pack the project
-execute dotnet pack \
+s=$(execute dotnet pack \
     "${package_project}" \
     --configuration Release \
     --output "$artifacts_dir" \
@@ -86,7 +86,8 @@ execute dotnet pack \
     "/p:DefineConstants=$preprocessor_symbols" \
     "/p:MinVerTagPrefix=$minver_tag_prefix" \
     "/p:MinVerPrereleaseIdentifiers=$minver_prerelease_id" \
-    "/p:PackageReleaseNotes=Prerelease: ${reason}" | summarizeDotnetBuild
+    "/p:PackageReleaseNotes=Prerelease: ${reason}" | summarizeDotnetBuild)
+echo "$s" | to_summary
 
 # the build/pack
 declare -x build_result

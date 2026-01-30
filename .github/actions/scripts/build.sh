@@ -9,10 +9,7 @@ declare -r script_dir
 declare -r lib_dir
 
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
-{
-    source "$lib_dir/gh_core.sh"
-    source "$lib_dir/_dotnet.sh"
-}
+source "$lib_dir/gh_core.sh"
 
 # default values for parameters
 declare -xr default_minver_tag_prefix='v'
