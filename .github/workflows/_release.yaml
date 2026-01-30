@@ -220,6 +220,15 @@ jobs:
             **/packages.lock.json
             **/*.csproj
 
+      # Authenticate with GitHub Packages for NuGet restore
+      - name: Authenticate with GitHub Packages
+        shell: bash
+        run: |
+          dotnet nuget update source github.vm2 \
+            --username ${{ github.actor }} \
+            --password ${{ secrets.GITHUB_TOKEN }} \
+            --store-password-in-clear-text
+
       - name: Build, Package and Publish release to NuGet server
         shell: bash
         env:
