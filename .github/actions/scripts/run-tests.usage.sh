@@ -36,7 +36,6 @@ Options:
                                 Initial value from \$MINVERDEFAULTPRERELEASEIDENTIFIERS environment variable or 'preview.0'
   -a, --artifacts               Specifies the directory where to create the script's artifacts: summary, report files, etc
                                 Initial value: \$TEST_ARTIFACTS_DIR or default '<solution-root>/TestArtifacts'
-
 $std_switches
 Environment Variables:
   TEST_PROJECT                  Path to the test project file
