@@ -13,7 +13,7 @@ fi
 #-------------------------------------------------------------------------------
 # Summary: Tests if a variable is defined.
 # Parameters:
-#   1 - variable_name - name of the variable to test (nameref)
+#   1 - variable_name (nameref!) - name of the variable to test
 # Returns:
 #   Exit code: 0 if variable is defined, non-zero otherwise, 2 on invalid arguments
 # Env. Vars:

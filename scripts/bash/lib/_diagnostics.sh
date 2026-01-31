@@ -141,7 +141,7 @@ function warning()
 #-------------------------------------------------------------------------------
 # Summary: Logs a warning about a variable's value and sets it to a default value.
 # Parameters:
-#   1 - variable_name - name of the variable to set (nameref)
+#   1 - variable_name (nameref!) - name of the variable to set
 #   2 - warning_message - warning message to display
 #   3 - default_value - default value to assign to the variable
 # Returns:

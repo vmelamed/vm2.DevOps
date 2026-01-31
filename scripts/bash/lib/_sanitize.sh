@@ -199,7 +199,7 @@ declare -xr jq_array_strings_nonempty='type == "array" and length > 0 and all(ty
 #-------------------------------------------------------------------------------
 # Summary: Validates a JSON array of strings and checks each item's safety using provided validator function.
 # Parameters:
-#   1 - array - name of variable containing JSON array (nameref)
+#   1 - array (nameref!) - name of variable containing JSON array
 #   2 - default_array - default value if variable is unbound or empty
 #   3 - is_safe_item - name of function to validate each array item
 # Returns:
@@ -345,7 +345,7 @@ function is_safe_nuget_server()
 #-------------------------------------------------------------------------------
 # Summary: Validates NuGet server variable and sets to default if empty.
 # Parameters:
-#   1 - server - name of variable containing NuGet server (nameref)
+#   1 - server (nameref!) - name of variable containing NuGet server
 #   2 - default_server - default server value (optional, default: "nuget")
 # Returns:
 #   Exit code: 0 on success, 1 if server invalid, 2 on invalid arguments or bad default
@@ -406,7 +406,7 @@ function is_safe_configuration()
 #-------------------------------------------------------------------------------
 # Summary: Validates preprocessor symbols and formats them for MSBuild with DefineConstants preservation.
 # Parameters:
-#   1 - symbols - name of variable containing semicolon/comma/space-separated symbols (nameref)
+#   1 - symbols (nameref!) - name of variable containing space/comma/semicolon-separated symbols
 # Returns:
 #   Exit code: 0 if all symbols valid, 1 if any invalid, 2 on invalid arguments
 # Side Effects: Reformats symbols variable to URL-encoded semicolon-separated list with $(DefineConstants) appended

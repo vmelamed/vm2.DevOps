@@ -175,7 +175,7 @@ function to_output()
 #-------------------------------------------------------------------------------
 # Summary: Outputs a variable to GitHub Actions output, converting underscores to hyphens in the key name.
 # Parameters:
-#   1 - variable_name - name of the variable to output (nameref)
+#   1 - variable_name (nameref!) - name of the variable to output
 #   2 - output_name - custom name for output key (optional, defaults to variable_name with _ → -)
 # Returns:
 #   Outputs to $github_output via to_output
