@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-script_name="$(basename "${BASH_SOURCE[0]}")"
-script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
-lib_dir="$script_dir/lib"
+script_name=$(basename "${BASH_SOURCE[0]}")
+script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
+lib_dir=$(realpath -e "$script_dir/lib")
 
 declare -xr script_name
 declare -xr script_dir

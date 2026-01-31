@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-script_name="$(basename "${BASH_SOURCE[0]}")"
-script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
-lib_dir="$script_dir/../../../scripts/bash/lib"
+script_name=$(basename "${BASH_SOURCE[0]}")
+script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
+lib_dir=$(realpath -e "$script_dir/../../../scripts/bash/lib")
 
 declare -r script_dir
 declare -r lib_dir
@@ -41,7 +41,7 @@ declare -xr preprocessor_symbols
 declare -xr min_coverage_pct
 declare -xr minver_tag_prefix
 declare -xr minver_prerelease_id
-artifacts_dir=$(realpath -m "${artifacts_dir}")
+artifacts_dir="${test_dir}/${artifacts_dir}"
 declare -xr artifacts_dir
 
 declare -xr test_name

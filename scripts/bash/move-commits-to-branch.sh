@@ -2,16 +2,15 @@
 set -euo pipefail
 
 script_name="$(basename "${BASH_SOURCE[-1]}")"
-lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[-1]}")")"
+script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[-1]}")")"
 lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
 
 declare -xr script_name
-declare -xr lib_dir
+declare -xr script_dir
 declare -xr lib_dir
 
 # shellcheck disable=SC1091
-source "$lib_dir/core.sh"
-
+source "${lib_dir}/core.sh"
 declare -x commit_sha=""
 declare -x new_branch=""
 declare -x check_out_new_branch=false

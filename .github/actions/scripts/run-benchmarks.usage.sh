@@ -19,7 +19,7 @@ directory, i.e., <solution-root>/benchmarks/<benchmark-project-dir>/<benchmark-p
 the corresponding environment variables are set. If both are specified, the command line arguments take precedence
 
 Arguments:
-  <bm-project-path>             The path to the benchmark project file. Optional if the environment variable \$BM_PROJECT is set
+  <benchmark-project-path>      The path to the benchmark project file. Optional if the environment variable \$BENCHMARK_PROJECT is set
 
 Options:
   -c, --configuration           Specifies the build configuration to use ('Debug' or 'Release')
@@ -36,7 +36,7 @@ Options:
                                 Initial value from \$MAX_REGRESSION_PCT or default 20
   -a, --artifacts               Specifies the directory where to create the benchmark artifacts: results, summaries, base lines,
                                 etc.
-                                Initial value: '<solution root>/BmArtifacts'
+                                Initial value: '<solution root>/BenchmarkArtifacts'
 
 Switches:
   -s, --short-run               A shortcut for '--define SHORT_RUN'. See above.
@@ -44,8 +44,8 @@ Switches:
                                 'SHORT_RUN' if not already present
 $std_switches
 Environment Variables:
-  BM_PROJECT                    Path to the benchmark project file
-  ARTIFACT_DIR                  Directory where benchmark artifacts will be created
+  BENCHMARK_PROJECT             Path to the benchmark project file
+  ARTIFACTS_DIR                 Directory where benchmark artifacts will be created
   CONFIGURATION                 Build configuration ('Debug' or 'Release')
   PREPROCESSOR_SYMBOLS          Pre-processor symbols to define when building the benchmark project
   MAX_REGRESSION_PCT            Maximum acceptable regression percentage when comparing to previous benchmark results

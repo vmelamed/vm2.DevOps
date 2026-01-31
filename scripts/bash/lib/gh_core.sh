@@ -14,13 +14,13 @@ declare -x script_dir
 # The directory of my core library for shell scripts - usually "$GIT_REPOS/vm2.DevOps/scripts/bash/lib"
 declare -x lib_dir
 
-[[ ! -v script_name || -z "$script_name" ]] && script_name="$(basename "${BASH_SOURCE[-1]}")"
-[[ ! -v script_dir || -z "$script_dir" ]] && script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[-1]}")")"
-[[ ! -v lib_dir || -z "$lib_dir" ]] && lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
+[[ ! -v script_name || -z "$script_name" ]] && script_name=$(basename "${BASH_SOURCE[-1]}")
+[[ ! -v script_dir || -z "$script_dir" ]] && script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[-1]}")")
+[[ ! -v lib_dir || -z "$lib_dir" ]] && lib_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 
-source "$lib_dir/core.sh"
-source "$lib_dir/_sanitize.sh"
-source "$lib_dir/_dotnet.sh"
+source "${lib_dir}/core.sh"
+source "${lib_dir}/_sanitize.sh"
+source "${lib_dir}/_dotnet.sh"
 
 ## In CI mode, indicates whether the script is running within GitHub Actions.
 declare -x github_actions=${GITHUB_ACTIONS:-false}

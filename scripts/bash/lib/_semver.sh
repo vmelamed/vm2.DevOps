@@ -5,12 +5,12 @@
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
 if [[ ! -v lib_dir || -z "$lib_dir" ]]; then
-    lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
+    lib_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 fi
 
 # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
 if ! declare -pF "error" > "$_ignore"; then
-    source "$lib_dir/_diagnostics.sh"
+    source "${lib_dir}/_diagnostics.sh"
 fi
 
 # Regular expressions that test if a string contains a semantic version:

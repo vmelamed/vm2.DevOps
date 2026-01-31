@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-script_name="$(basename "${BASH_SOURCE[0]}")"
-script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
-lib_dir="$script_dir/../../../scripts/bash/lib"
+script_name=$(basename "${BASH_SOURCE[0]}")
+script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
+lib_dir=$(realpath -e "$script_dir/../../../scripts/bash/lib")
 
 declare -r script_dir
 declare -r lib_dir
@@ -11,7 +11,7 @@ declare -r lib_dir
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
 source "$lib_dir/gh_core.sh"
 
-declare -x bm_project=${BM_PROJECT:-}
+declare -x benchmark_project=${BENCHMARK_PROJECT:-}
 declare -x configuration=${CONFIGURATION:-"Release"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-'v'}
@@ -23,34 +23,33 @@ source "$script_dir/run-benchmarks.utils.sh"
 
 get_arguments "$@"
 
-if [[ ! -s "$bm_project" ]]; then
-    usage false "The specified benchmark project file '$bm_project' does not exist." >&2
-    exit 2
-fi
-
-is_safe_path "$bm_project" || true
+is_safe_existing_path "$benchmark_project" || true
 is_safe_configuration "$configuration" || true
 validate_preprocessor_symbols preprocessor_symbols || true
 validate_minverTagPrefix "$minver_tag_prefix" || true
 is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 is_safe_path "$artifacts_dir" || true
 
+benchmark_name=$(basename "${benchmark_project%.*}")      # the base name of the benchmark project (without the path and file extension)
+benchmark_dir=$(realpath -e "$(dirname "$benchmark_project")")             # the directory of the benchmark project
+
 # Freeze variables
-declare -xr bm_project
+declare -xr benchmark_project
+declare -xr benchmark_name
+declare -xr benchmark_dir
 declare -xr configuration
 declare -xr preprocessor_symbols
 declare -xr minver_tag_prefix
 declare -xr minver_prerelease_id
 declare -xr artifacts_dir
 
-# Determine solution directory and artifacts directory
-solution_dir="$(realpath -e "$(dirname "$bm_project")/../..")"
-artifacts_dir=$(realpath -m "${artifacts_dir:-"$solution_dir/BmArtifacts"}")
-results_dir="$artifacts_dir/results"
-
 declare -xr solution_dir
 declare -xr artifacts_dir
 declare -xr results_dir
+
+# Determine solution directory and artifacts directory
+artifacts_dir="${artifacts_dir:-"$benchmark_dir/BenchmarkArtifacts"}"
+results_dir="$artifacts_dir/results"
 
 renamed_artifacts_dir="$artifacts_dir-$(date -u +"%Y%m%dT%H%M%S")"
 declare -r renamed_artifacts_dir
@@ -92,30 +91,31 @@ exit_if_has_errors
 trace "Creating directory(s)..."
 execute mkdir -p "$results_dir"
 
-# Determine benchmark executable paths
-bm_base_path="$(dirname "$bm_project")/bin/${configuration}/net10.0/$(basename "${bm_project%.*}")"
-bm_dll_path="${bm_base_path}.dll"
+# Determine the benchmark executable paths
+benchmark_executables_pathname="${benchmark_dir}/bin/${configuration}/net10.0/${benchmark_name}"
 os_name="$(uname -s)"
 if [[ "$os_name" == "Windows_NT" || "$os_name" == *MINGW* || "$os_name" == *MSYS* ]]; then
-    bm_exec_path="${bm_base_path}.exe"
+    benchmark_exe_path="${benchmark_executables_pathname}.exe"
 else
-    bm_exec_path="${bm_base_path}"
+    benchmark_exe_path="${benchmark_executables_pathname}"
 fi
-declare -r bm_base_path
-declare -r bm_dll_path
-declare -r bm_exec_path
+benchmark_dll_path="${benchmark_executables_pathname}.dll"
+
+declare -r benchmark_executables_pathname
+declare -r benchmark_dll_path
+declare -r benchmark_exe_path
 
 # Verify executables exist
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
-if [[ (! -f "${bm_exec_path}" || ! -f "${bm_dll_path}") && "$dry_run" != "true" ]]; then
-    error "Cached benchmark executables '${bm_exec_path}' or '${bm_dll_path}' were not found."
+if [[ (! -f "${benchmark_exe_path}" || ! -f "${benchmark_dll_path}") && "$dry_run" != "true" ]]; then
+    error "Cached benchmark executables '${benchmark_exe_path}' or '${benchmark_dll_path}' were not found."
     exit 2
 fi
 
 # Run benchmarks with JSON export for Bencher
-trace "Running benchmark tests in project '$bm_project' with build configuration '$configuration'..."
+trace "Running benchmark tests in project '$benchmark_project' with build configuration '$configuration'..."
 if ! execute dotnet run \
-        --project "$bm_project" \
+        --project "$benchmark_project" \
         --configuration "$configuration" \
         --no-build \
         --filter '*' \
@@ -125,7 +125,7 @@ if ! execute dotnet run \
         -p:preprocessor_symbols="$preprocessor_symbols" \
         -p:MinVerTagPrefix="$minver_tag_prefix" \
         -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id"; then
-    error "Benchmarks failed in project '$bm_project'."
+    error "Benchmarks failed in project '$benchmark_project'."
     exit 2
 fi
 
