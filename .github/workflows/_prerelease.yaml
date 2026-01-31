@@ -115,6 +115,8 @@ jobs:
 
       - name: Update CHANGELOG for prerelease
         shell: bash
+        env:
+          VERBOSE: ${{ vars.VERBOSE}}
         run: |
           #!/usr/bin/env bash
           set -euo pipefail
@@ -210,7 +212,8 @@ jobs:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
           NUGET_API_GITHUB_KEY: ${{ secrets.NUGET_API_GITHUB_KEY }}
           NUGET_API_NUGET_KEY: ${{ secrets.NUGET_API_NUGET_KEY }}
-        run: |+
+          VERBOSE: ${{ vars.VERBOSE}}
+        run: |
           publish-package.sh \
               --package-project "${{ matrix.project }}" \
               --preprocessor-symbols "${{ inputs.preprocessor-symbols }}" \

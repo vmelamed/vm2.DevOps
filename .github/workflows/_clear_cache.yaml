@@ -29,6 +29,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CACHE_PATTERN: ${{ inputs.cache-pattern }}
           REASON: ${{ inputs.reason }}
+          VERBOSE: ${{ vars.VERBOSE}}
         run: |
           set -euo pipefail  # Enable strict error handling
 

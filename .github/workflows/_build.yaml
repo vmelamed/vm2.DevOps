@@ -126,6 +126,7 @@ jobs:
         env:
           MINVERTAGPREFIX: ${{ inputs.minver-tag-prefix }}
           MINVERDEFAULTPRERELEASEIDENTIFIERS: ${{ inputs.minver-prerelease-id }}
+          VERBOSE: ${{ vars.VERBOSE}}
         run: |
           build.sh \
               --build-project "${{ inputs.build-project }}" \

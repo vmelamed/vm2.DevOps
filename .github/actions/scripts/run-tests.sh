@@ -29,6 +29,16 @@ source "$script_dir/run-tests.utils.sh"
 
 get_arguments "$@"
 
+dump_vars --quiet \
+    --header "Inputs" \
+    test_project \
+    configuration \
+    preprocessor_symbols \
+    min_coverage_pct \
+    minver_tag_prefix \
+    minver_prerelease_id \
+    artifacts_dir
+
 is_safe_existing_file "$test_project" || true
 is_safe_configuration "$configuration" || true
 validate_preprocessor_symbols preprocessor_symbols || true

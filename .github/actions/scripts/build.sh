@@ -30,7 +30,15 @@ source "$script_dir/build.usage.sh"
 source "$script_dir/build.utils.sh"
 
 get_arguments "$@"
-dump_all_variables
+
+dump_vars --quiet \
+    --header "Inputs" \
+    build_project \
+    configuration \
+    preprocessor_symbols \
+    minver_tag_prefix \
+    minver_prerelease_id \
+    nuget_username
 
 # sanitize inputs
 validate_minverTagPrefix "$minver_tag_prefix" || true
@@ -40,6 +48,7 @@ is_safe_configuration "$configuration" || true
 validate_preprocessor_symbols preprocessor_symbols || true
 is_safe_input "$nuget_username" || true
 
+dump_all_variables
 exit_if_has_errors
 
 # freeze the parameters

@@ -33,6 +33,18 @@ source "$script_dir/publish-package.utils.sh"
 
 get_arguments "$@"
 
+dump_vars --quiet \
+    --header "Inputs" \
+    package_project \
+    preprocessor_symbols \
+    minver_tag_prefix \
+    minver_prerelease_id \
+    reason \
+    nuget_server \
+    repo_owner \
+    artifacts_saved \
+    artifacts_dir
+
 is_safe_path "$package_project" || true
 validate_preprocessor_symbols preprocessor_symbols || true
 validate_minverTagPrefix "$minver_tag_prefix" || true

@@ -154,6 +154,7 @@ jobs:
         env:
           CONFIGURATION: ${{ inputs.configuration }}
           PREPROCESSOR_SYMBOLS: ${{ inputs.preprocessor-symbols }}
+          VERBOSE: ${{ vars.VERBOSE}}
         run: |
           run-benchmarks.sh ${{ inputs.benchmark-project }} \
               --configuration "${{ inputs.configuration }}" \

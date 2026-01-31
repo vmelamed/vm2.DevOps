@@ -11,6 +11,7 @@ declare -r lib_dir
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
 source "$lib_dir/gh_core.sh"
 
+declare -x artifact_name=${ARTIFACT_NAME:-}
 declare -x artifacts_dir=${ARTIFACT_DIR:-}
 declare -x repository=${REPOSITORY:-}
 declare -x workflow_id=${WORKFLOW_ID:-}
@@ -21,6 +22,15 @@ source "$script_dir/download-artifact.utils.sh"
 source "$script_dir/download-artifact.usage.sh"
 
 get_arguments "$@"
+
+dump_vars --quiet \
+    --header "Inputs" \
+    artifact_name \
+    artifacts_dir \
+    repository \
+    workflow_id \
+    workflow_name \
+    workflow_path
 
 is_safe_input "$artifact_name"
 if [[ -z "$artifact_name" ]]; then

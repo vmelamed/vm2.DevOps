@@ -24,6 +24,11 @@ source "$script_dir/compute-release-version.utils.sh"
 
 get_arguments "$@"
 
+dump_vars --quiet \
+    --header "Inputs" \
+    minver_tag_prefix \
+    reason
+
 # Sanitize inputs to prevent injection attacks
 validate_minverTagPrefix "$minver_tag_prefix" || true
 is_safe_reason "$reason" || true

@@ -119,6 +119,8 @@ jobs:
       - name: Validate and normalize all inputs
         id: validate
         shell: bash
+        env:
+          VERBOSE: ${{ vars.VERBOSE}}
         run: |
           validate-input.sh \
               --build-projects       '${{ inputs.build-projects }}' \

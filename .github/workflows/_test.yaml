@@ -147,6 +147,7 @@ jobs:
         env:
           CONFIGURATION: ${{ inputs.configuration }}
           PREPROCESSOR_SYMBOLS: ${{ inputs.preprocessor-symbols }}
+          VERBOSE: ${{ vars.VERBOSE }}
         shell: bash
         run: |
           ARTIFACT_PATH=$(find . -type d -path "*/bin/${{ inputs.configuration }}" | head -n 1)

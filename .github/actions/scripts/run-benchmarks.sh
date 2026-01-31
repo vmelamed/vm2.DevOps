@@ -28,6 +28,15 @@ source "$script_dir/run-benchmarks.utils.sh"
 
 get_arguments "$@"
 
+dump_vars --quiet \
+    --header "Inputs" \
+    benchmark_project \
+    configuration \
+    preprocessor_symbols \
+    minver_tag_prefix \
+    minver_prerelease_id \
+    artifacts_dir
+
 is_safe_existing_path "$benchmark_project" || true
 is_safe_configuration "$configuration" || true
 validate_preprocessor_symbols preprocessor_symbols || true
