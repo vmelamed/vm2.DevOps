@@ -122,9 +122,9 @@ if ! execute dotnet run \
         --memory \
         --exporters JSON \
         --artifacts "$artifacts_dir" \
-        /p:DefineConstants="$preprocessor_symbols" \
-        /p:MinVerTagPrefix="$minver_tag_prefix" \
-        /p:MinVerPrereleaseIdentifiers="$minver_prerelease_id"; then
+        -p:preprocessor_symbols="$preprocessor_symbols" \
+        -p:MinVerTagPrefix="$minver_tag_prefix" \
+        -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id"; then
     error "Benchmarks failed in project '$bm_project'."
     exit 2
 fi

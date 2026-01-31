@@ -2,6 +2,14 @@
     <PropertyGroup>
         <GITHUB_RUN_NUMBER Condition="'$(GITHUB_RUN_NUMBER)' == ''">0</GITHUB_RUN_NUMBER>
         <RestoreSources>https://api.nuget.org/v3/index.json;https://nuget.pkg.github.com/vmelamed/index.json</RestoreSources>
+
+        <!-- To use if there are OS-specific differences in .NET APIs -->
+        <DefineConstants Condition="'$(OS)' == 'WINDOWS_NT'">$(DefineConstants);WINDOWS</DefineConstants>
+        <DefineConstants Condition="'$(OS)' != 'WINDOWS_NT'">$(DefineConstants);UNIX</DefineConstants>
+
+        <!-- Use to define custom preprocessor symbols, e.g. "dotnet build -p:preprocessor_symbols="SHORT_RUN FEATURE_A FEATURE_B" ...",
+             without overriding the rest of the symbols like DEBUG, TRACE, etc. -->
+        <DefineConstants Condition="'preprocessor_symbols' != ''">$(DefineConstants);$(preprocessor_symbols)</DefineConstants>
     </PropertyGroup>
 
     <!-- ================ Common Settings for All projects ================ -->
@@ -94,10 +102,6 @@
         <IsInExamplesFolder Condition="
                 $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]examples?[/\\]', RegexOptions.IgnoreCase))
                 ">true</IsInExamplesFolder>
-
-        <!-- To use if there are OS-specific differences in APIs -->
-        <DefineConstants Condition="'$(OS)' == 'WINDOWS_NT'">$(DefineConstants);WINDOWS</DefineConstants>
-        <DefineConstants Condition="'$(OS)' != 'WINDOWS_NT'">$(DefineConstants);UNIX</DefineConstants>
     </PropertyGroup>
 
     <!-- ================ Test Projects Settings ================ -->

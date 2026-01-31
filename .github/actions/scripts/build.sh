@@ -67,8 +67,8 @@ dotnet restore --locked-mode
 s=$(dotnet build "$build_project" \
     --verbosity detailed \
     --configuration "$configuration" \
-    /p:DefineConstants="$preprocessor_symbols" \
-    /p:MinVerTagPrefix="$minver_tag_prefix" \
-    /p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" | summarizeDotnetBuild)
+    -p:preprocessor_symbols="$preprocessor_symbols" \
+    -p:MinVerTagPrefix="$minver_tag_prefix" \
+    -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" | summarizeDotnetBuild)
 
 echo "$s" | to_summary

@@ -126,7 +126,7 @@ Subsequent merges create `v0.1.1-preview.*` prereleases automatically.
 
 ```bash
 dotnet clean
-dotnet build -c Release /p:MinVerVerbosity=detailed
+dotnet build -c Release -p:MinVerVerbosity=detailed
 ```
 
 Inspect produced dll
@@ -239,8 +239,8 @@ Avoid unless strong justification (most libraries keep AssemblyVersion stable ac
 | ----------------------- | ---------------------------------------------------------- |
 | Manual stable release   | `git tag -a vX.Y.Z -m vX.Y.Z && git push origin vX.Y.Z`    |
 | Trigger prerelease      | Merge to `main` (no existing tag)                          |
-| Inspect version locally | `dotnet build -c Release /p:MinVerVerbosity=detailed`      |
-| Dry-run pack            | `dotnet pack -c Release -o artifacts /p:MinVerTagPrefix=v` |
+| Inspect version locally | `dotnet build -c Release -p:MinVerVerbosity=detailed`      |
+| Dry-run pack            | `dotnet pack -c Release -o artifacts -p:MinVerTagPrefix=v` |
 | Fix failed prerelease   | Commit fix ? merge ? new prerelease tag                    |
 | Introduce first tag     | `git tag -a v0.1.0 -m v0.1.0 && git push origin v0.1.0`    |
 

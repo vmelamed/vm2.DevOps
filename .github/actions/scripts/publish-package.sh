@@ -83,10 +83,10 @@ s=$(execute dotnet pack \
     --configuration Release \
     --output "$artifacts_dir" \
     --no-restore \
-    "/p:DefineConstants=$preprocessor_symbols" \
-    "/p:MinVerTagPrefix=$minver_tag_prefix" \
-    "/p:MinVerPrereleaseIdentifiers=$minver_prerelease_id" \
-    "/p:PackageReleaseNotes=Prerelease: ${reason}" | summarizeDotnetBuild)
+    "-p:preprocessor_symbols=$preprocessor_symbols" \
+    "-p:MinVerTagPrefix=$minver_tag_prefix" \
+    "-p:MinVerPrereleaseIdentifiers=$minver_prerelease_id" \
+    "-p:PackageReleaseNotes=Prerelease: ${reason}" | summarizeDotnetBuild)
 echo "$s" | to_summary
 
 # the build/pack

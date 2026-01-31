@@ -24,7 +24,7 @@ git push origin :refs/tags/v1.2.3-preview.20260115.123
 dotnet pack src/YourProject/YourProject.csproj \
     --configuration Release \
     --output ./artifacts/pack \
-    /p:MinVerTagPrefix=v
+    -p:MinVerTagPrefix=v
 
 dotnet nuget push ./artifacts/pack/*.nupkg \
     --source https://api.nuget.org/v3/index.json \
@@ -105,7 +105,7 @@ dotnet restore --locked-mode
 dotnet pack src/YourProject/YourProject.csproj \
     --configuration Release \
     --output ./artifacts/pack \
-    /p:MinVerTagPrefix=v
+    -p:MinVerTagPrefix=v
 
 dotnet nuget push ./artifacts/pack/*.nupkg \
     --source https://api.nuget.org/v3/index.json \

@@ -439,10 +439,8 @@ function validate_preprocessor_symbols()
     [[ "$bad" == "true" ]] && return 1
 
     # append '$(DefineConstants)' to ensure existing symbols are preserved
-    local len=$(( ${#symbol_array[@]} ))
     # shellcheck disable=SC2016 # Expressions don't expand in single quotes, use double quotes for that. Good!
-    symbol_array[len]='$(DefineConstants)'
-    symbols=$(IFS='%3B'; printf '%s' "${symbol_array[*]}")
+    symbols="${symbol_array[*]}"
     return 0
 }
 

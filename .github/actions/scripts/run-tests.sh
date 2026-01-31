@@ -155,9 +155,9 @@ if ! execute dotnet run \
         --project "$test_project" \
         --configuration "$configuration" \
         --no-build \
-        /p:DefineConstants="$preprocessor_symbols" \
-        /p:MinVerTagPrefix="$minver_tag_prefix" \
-        /p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" \
+        -p:preprocessor_symbols="$preprocessor_symbols" \
+        -p:MinVerTagPrefix="$minver_tag_prefix" \
+        -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" \
         --results-directory "$test_results_dir" \
         --report-xunit-trx \
         -- \
