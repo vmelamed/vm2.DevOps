@@ -133,14 +133,14 @@ while [[ $i -lt ${#source_files[@]} ]]; do
                     esac
                     ;;
                 "ask to merge")
-                    confirm "Do you want to merge '${source_file}' to file '${target_file}'?" "y" && \
+                    confirm "Do you want to merge '${source_file}' to file '${target_file}'?" "n" && \
                     merge "$target_file" "$source_file" || true
                     ;;
                 "merge")
                     merge "$target_file" "$source_file" || true
                     ;;
                 "ask to copy")
-                    confirm "Do you want to copy '${source_file}' to file '${target_file}'?" "y" && \
+                    confirm "Do you want to copy '${source_file}' to file '${target_file}'?" "n" && \
                     copy_file "$source_file" "$target_file"
                     ;;
                 "copy")
