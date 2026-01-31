@@ -284,6 +284,37 @@ function is_safe_runner_os()
 }
 
 #-------------------------------------------------------------------------------
+# Summary: Validates that the elements of a list of runner OS names is in the allowed list of GitHub Actions runners.
+# Parameters:
+#   1 - runners_os - runner OS names to validate
+# Returns:
+#   Exit code: 0 if valid runner OS, 1 if invalid, 2 on invalid arguments
+# Usage: if is_safe_runner_os <runner_os>; then ... fi
+# Example: if is_safe_runner_os "ubuntu-latest"; then echo "Valid runner"; fi
+# Notes: Allowed values defined in $allowed_runners_os array.
+#-------------------------------------------------------------------------------
+function is_safe_runners_os()
+{
+    if [[ $# -ne 1 ]]; then
+        error "${FUNCNAME[0]}() requires exactly one parameter: the runner OS to test."
+        return 2
+    fi
+
+    is_safe_json_array "$1" || return 1
+
+    # Validate each item of the array for safety
+    return_value=0
+
+    while IFS= read -r runner_os; do
+        if [[ -n "$runner_os" ]] && ! is_safe_runner_os "$runner_os"; then
+            return_value=1 # check all paths before returning
+        fi
+    done < <(jq -r '.[]' 2>"$_ignore" <<< "$1" || true)
+
+    return "$return_value"
+}
+
+#-------------------------------------------------------------------------------
 # Summary: Validates a "reason" text input for safety and length constraints.
 # Parameters:
 #   1 - reason - the reason text to validate
@@ -292,7 +323,7 @@ function is_safe_runner_os()
 # Dependencies: is_safe_input
 # Usage: if is_safe_reason <reason>; then ... fi
 # Example: if is_safe_reason "$user_reason"; then log_reason "$user_reason"; fi
-# Notes: Maximum length 200 characters. Allows spaces but rejects shell metacharacters and command-like patterns.
+# Notes: Maximum length 200 characters. Allows spaces but rejects shell meta-characters and command-like patterns.
 #-------------------------------------------------------------------------------
 function is_safe_reason()
 {
@@ -445,6 +476,64 @@ function validate_preprocessor_symbols()
 }
 
 #-------------------------------------------------------------------------------
+# Summary: Validates minimum coverage percentage input.
+# Parameters:
+#   1 - min_coverage_pct - minimum coverage percentage to validate
+# Returns:
+#   Exit code: 0 if valid percentage, 1 if invalid, 2 on invalid arguments
+# Usage: if is_safe_min_coverage_pct <min_coverage_pct>; then ... fi
+# Example: if is_safe_min_coverage_pct "80"; then echo "Valid coverage percentage"; fi
+# Notes: Must be an integer between 50 and 100.
+function is_safe_min_coverage_pct()
+{
+    if [[ $# -ne 1 ]]; then
+        error "${FUNCNAME[0]}() requires one parameter: the min coverage percentage to test."
+        return 2
+    fi
+
+    if ! [[ "$1" =~ ^[0-9]+$ ]]; then
+        error "The min coverage percentage '$1' is not a valid integer."
+        return 1
+    fi
+
+    if (( $1 < 50 || $1 > 100 )); then
+        error "The min coverage percentage '$1' must be between 50 and 100."
+        return 1
+    fi
+
+    return 0
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Validates maximum regression percentage input.
+# Parameters:
+#   1 - max_regression_pct - maximum regression percentage to validate
+# Returns:
+#   Exit code: 0 if valid percentage, 1 if invalid, 2 on invalid arguments
+# Usage: if is_safe_max_regression_pct <max_regression_pct>; then ... fi
+# Example: if is_safe_max_regression_pct "10"; then echo "Valid regression percentage"; fi
+# Notes: Must be an integer between 0 and 50.
+function is_safe_max_regression_pct()
+{
+    if [[ $# -ne 1 ]]; then
+        error "${FUNCNAME[0]}() requires one parameter: the max regression percentage to test."
+        return 2
+    fi
+
+    if ! [[ "$1" =~ ^[0-9]+$ ]]; then
+        error "The max regression percentage '$1' is not a valid integer."
+        return 1
+    fi
+
+    if (( $1 < 0 || $1 > 50 )); then
+        error "The max regression percentage '$1' must be between 0 and 50."
+        return 1
+    fi
+
+    return 0
+}
+
+#-------------------------------------------------------------------------------
 # Summary: Validates MinVer prerelease identifier format.
 # Parameters:
 #   1 - prerelease_id - MinVer prerelease ID to validate
@@ -457,7 +546,7 @@ function validate_preprocessor_symbols()
 function is_safe_minverPrereleaseId()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires one parameter: the MinVer tag prefix to test."
+        error "${FUNCNAME[0]}() requires one parameter: the MinVer prerelease ID to test."
         return 2
     fi
 

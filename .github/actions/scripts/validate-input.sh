@@ -54,21 +54,10 @@ if ! command -v -p jq &> "$_ignore" || ! command -v -p gh 2>&1 "$_ignore"; then
     fi
 fi
 
-# Validate minver tag prefix: always first to populate the tag regexes used later
-validate_minverTagPrefix "$minver_tag_prefix" || true
-
-is_safe_minverPrereleaseId "$minver_prerelease_id" || true
-
-# Validate the build solution/projects specified:
 is_safe_json_array "build_projects" "$defaultBuildProjects" is_safe_existing_file || true
-
-# Validate the test projects specified:
 is_safe_json_array "test_projects" "$defaultTestProjects" is_safe_existing_file || true
-
-# Validate the benchmark projects specified:
 is_safe_json_array "benchmark_projects" "$defaultBenchmarkProjects" is_safe_existing_file || true
-
-is_safe_json_array "runners_os" "$defaultRunnersOs" is_safe_runner_os || true
+is_safe_runner_os "runners_os" "$defaultRunnersOs" is_safe_runner_os || true
 
 if [[ -z "$dotnet_version" ]]; then
     warning_var dotnet_version "dotnet-version is empty." "$defaultDotnetVersion"
@@ -95,6 +84,11 @@ fi
 if (( max_regression_pct < 0 || max_regression_pct > 50 )); then
     warning_var max_regression_pct "max-regression-pct must be between 0-50." "$defaultMaxRegressionPct"
 fi
+
+# Validate minver tag prefix: always first to populate the tag regexes used later
+validate_minverTagPrefix "$minver_tag_prefix" || true
+
+is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 
 if [[ "$verbose" != "true" && "$verbose" != "false" ]]; then
     warning_var verbose "verbose must be true/false." "$defaultVerbose"

@@ -48,7 +48,7 @@ declare -xi tag_regexes_initialized=1
 #-------------------------------------------------------------------------------
 # Summary: Validates MinVer tag prefix and creates tag validation regular expressions.
 # Parameters:
-#   1 - minver_tag_prefix - the MinVer tag prefix (e.g., "v", "ver.", "release-")
+#   1 - minver_tag_prefix (NOT nameref!) - the MinVer tag prefix (e.g., "v", "ver.", "release-")
 # Returns:
 #   Exit code: 0 if valid prefix, 1 if invalid format, 2 on invalid arguments
 # Side Effects: Sets global regex variables $semverTagRegex, $semverTagReleaseRegex, $semverTagPrereleaseRegex
