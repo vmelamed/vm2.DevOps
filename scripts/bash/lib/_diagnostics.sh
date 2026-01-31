@@ -83,7 +83,6 @@ function to_stderr()
 function error()
 {
     {
-        show_stack
         if [[ $# -gt 0 ]]; then
             echo "❌  ERROR: ${BASH_SOURCE[2]}:${BASH_LINENO[1]}: $*"
         else
