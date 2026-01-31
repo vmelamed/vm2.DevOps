@@ -212,10 +212,10 @@ declare -xr jq_array_strings_nonempty='type == "array" and length > 0 and all(ty
 function is_safe_json_array()
 {
     if [[ $# -ne 3 ]]; then
-        error "${FUNCNAME[0]}() requires exactly three parameters: \
-\$1: the name of the variable containing the JSON array, \
-\$2: the default value to use if the variable is unbound or empty, and \
-\$3: the name of the function to validate each item in the array."
+        error "${FUNCNAME[0]}() requires exactly three parameters:"$'\n' \
+              "  \$1: the name of the variable containing the JSON array"$'\n' \
+              "  \$2: the default value to use if the variable is unbound or empty, and"$'\n' \
+              "  \$3: the name of the function to validate each item in the array."
         return 2
     fi
 
