@@ -404,17 +404,17 @@ function is_safe_configuration()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Validates preprocessor symbols and formats them for MSBuild with DefineConstants preservation.
+# Summary: Validates preprocessor symbols and formats them for passing to 'dotnet build'.
 # Parameters:
-#   1 - symbols (nameref!) - name of variable containing space/comma/semicolon-separated symbols
+#   1 - symbols (nameref!) - name of variable containing space/comma/colon/semicolon-separated symbols
 # Returns:
 #   Exit code: 0 if all symbols valid, 1 if any invalid, 2 on invalid arguments
-# Side Effects: Reformats symbols variable to URL-encoded semicolon-separated list with $(DefineConstants) appended
+# Side Effects: Reformats symbols variable to semicolon-separated list
 # Usage: validate_preprocessor_symbols <symbols_var_name>
 # Example:
-#   preproc="DEBUG;TRACE"
+#   preproc="DEBUG TRACE"
 #   validate_preprocessor_symbols preproc
-#   # preproc becomes: "DEBUG%3BTRACE%3B$(DefineConstants)"
+#   # preproc becomes: "DEBUG;TRACE"
 # Notes: Each symbol must match [A-Za-z_][A-Za-z0-9_]*.
 #-------------------------------------------------------------------------------
 function validate_preprocessor_symbols()
@@ -428,19 +428,20 @@ function validate_preprocessor_symbols()
     local -n symbols="$1"
     local -a symbol_array=()
 
-    IFS=';, ' read -ra symbol_array <<< "$symbols"
-    local bad=false
+    IFS=' ,:;' read -ra symbol_array <<< "$symbols"
+    local s bad=false
     for symbol in "${symbol_array[@]}"; do
+        [[ -z $symbol ]] && continue
         if ! [[ "$symbol" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
             error "The pre-processor symbol '$symbol' is not valid."
             bad=true
+        else
+            [[ -z $s ]] && s="$symbol" || s="$s;$symbol"
         fi
     done
     [[ "$bad" == "true" ]] && return 1
 
-    # append '$(DefineConstants)' to ensure existing symbols are preserved
-    # shellcheck disable=SC2016 # Expressions don't expand in single quotes, use double quotes for that. Good!
-    symbols="${symbol_array[*]}"
+    symbols=$s
     return 0
 }
 
