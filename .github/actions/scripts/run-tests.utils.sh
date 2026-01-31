@@ -87,6 +87,8 @@ dump_all_variables()
         configuration \
         preprocessor_symbols \
         min_coverage_pct \
+        minver_tag_prefix \
+        minver_prerelease_id \
         artifacts_dir \
         --header "other:" \
         ci \

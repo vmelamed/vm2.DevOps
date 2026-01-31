@@ -83,7 +83,7 @@ They all source `github.sh` (ergo _common.sh) for shared behavior and respect co
   - `-h` or `--header` followed by a header string: include a header line before or between the variable dumps
   - `-b` or `--blank`: include a blank line between variable dumps
   - `-l` or `--line`: include a line between variable dumps
-- `is_defined()`: returns `0` if the passed variable is defined (not null), `1` otherwise. Usage: `is_defined var_name` (without the `$`).
+- `is_defined_variable()`: returns `0` if the passed variable is defined (not null), `1` otherwise. Usage: `is_defined_variable var_name` (without the `$`).
 - `write_line()`: for internal use by `dump_vars()`
 - `get_common_arg()`: parses common arguments passed to the calling script and invokes the corresponding `set-*` functions. Usage: `get_common_arg "$@"` (pass all script arguments). Recognizes the following arguments:
   - `--debugger`: calls `set_debugger()` (see above)

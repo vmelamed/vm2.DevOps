@@ -134,17 +134,7 @@ function _write_line()
     local -n v=$1
     local value
 
-    if declare -p "$1" 2>"$_ignore" | grep -q 'declare -[xir-]'; then
-        case $1 in
-            verbose      ) value=$save_verbose ;;
-            quiet        ) value=$save_quiet ;;
-            table_format ) value=$save_table_format ;;
-            _ignore      ) value=$save_ignore ;;
-            *            ) value="$v" ;;
-        esac
-    elif declare -p "$1" 2>"$_ignore" | grep -q 'declare -a'; then
-        value="${#v[@]}: (${v[*]})"
-    elif declare -p "$1" 2>"$_ignore" | grep -q 'declare -A'; then
+    if is_defined_associative_array "$1"; then
         first=true
         for key in "${!v[@]}"; do
             if [[ $first == true ]]; then
@@ -155,12 +145,20 @@ function _write_line()
             fi
         done
         value+=")"
-    elif declare -pF "$1" 2>"$_ignore" | grep -q 'declare -f'; then
+    elif is_defined_array "$1"; then
+        value="${#v[@]}: (${v[*]})"
+    elif is_defined_function "$1"; then
         value="$1()"
-    elif ! is_defined "$1"; then
-        value="****** unbound, undefined, or invalid"
+    elif is_defined_variable "$1"; then
+        case $1 in
+            verbose      ) value=$save_verbose ;;
+            quiet        ) value=$save_quiet ;;
+            table_format ) value=$save_table_format ;;
+            _ignore      ) value=$save_ignore ;;
+            *            ) value="$v" ;;
+        esac
     else
-        value="$v"
+        value="****** unbound, undefined, or invalid"
     fi
 
     local -n table

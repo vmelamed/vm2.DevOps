@@ -106,7 +106,7 @@ Tests the global error counter and exits if errors were encountered.
 
 ## _predicates.sh
 
-### is_defined()
+### is_defined_variable()
 
 Tests if a variable is defined.
 

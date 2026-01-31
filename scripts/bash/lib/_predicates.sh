@@ -18,17 +18,100 @@ fi
 #   Exit code: 0 if variable is defined, non-zero otherwise, 2 on invalid arguments
 # Env. Vars:
 #   _ignore - file to redirect unwanted output to
-# Usage: if is_defined <variable_name>; then ... fi
-# Example: if is_defined MY_VAR; then echo "MY_VAR is defined"; fi
+# Usage: if is_defined_variable <variable_name>; then ... fi
+# Example: if is_defined_variable MY_VAR; then echo "MY_VAR is defined"; fi
 #-------------------------------------------------------------------------------
-# shellcheck disable=SC2154 # variable is referenced but not assigned.
-function is_defined()
+function is_defined_variable()
 {
     if [[ $# -ne 1 ]]; then
         error "${FUNCNAME[0]}() requires exactly one argument: the name of the variable to test."
         return 2
     fi
     declare -p "$1" > "$_ignore" 2>&1
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Tests if an array variable is defined.
+# Parameters:
+#   1 - variable_name (nameref!) - name of the array variable to test
+# Returns:
+#   Exit code: 0 if array variable is defined, non-zero otherwise, 2 on invalid arguments
+# Env. Vars:
+#   _ignore - file to redirect unwanted output to
+# Usage: if is_defined_array <variable_name>; then ... fi
+# Example: if is_defined_array MY_ARRAY; then echo "MY_ARRAY is defined"; fi
+#-------------------------------------------------------------------------------
+function is_defined_array()
+{
+    if [[ $# -ne 1 ]]; then
+        error "${FUNCNAME[0]}() requires exactly one argument: the name of the array variable to test."
+        return 2
+    fi
+
+    restoreShopt=$(shopt -p nocasematch)
+    shopt -u nocasematch
+
+    local decl ret=1
+
+    if is_defined_variable "$1"; then
+        decl=$(declare -p "$1" 2>"$_ignore")
+        [[ $decl =~ ^declare\ -a ]] && ret=0
+    fi
+
+    eval "$restoreShopt" &> "$_ignore"
+    return "$ret"
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Tests if an associative array variable is defined.
+# Parameters:
+#   1 - variable_name (nameref!) - name of the associative array variable to test
+# Returns:
+#   Exit code: 0 if associative array variable is defined, non-zero otherwise, 2 on invalid arguments
+# Env. Vars:
+#   _ignore - file to redirect unwanted output to
+# Usage: if is_defined_associative_array <variable_name>; then ... fi
+# Example: if is_defined_associative_array MY_ASSOC_ARRAY; then echo "MY_ASSOC_ARRAY is defined"; fi
+#-------------------------------------------------------------------------------
+function is_defined_associative_array()
+{
+    if [[ $# -ne 1 ]]; then
+        error "${FUNCNAME[0]}() requires exactly one argument: the name of the associative array variable to test."
+        return 2
+    fi
+
+    restoreShopt=$(shopt -p nocasematch)
+    shopt -u nocasematch
+
+    local decl ret=1
+
+    if is_defined_variable "$1"; then
+        decl=$(declare -p "$1" 2>"$_ignore")
+        [[ $decl =~ ^declare\ -A ]] && ret=0
+    fi
+
+    eval "$restoreShopt" &> "$_ignore"
+    return "$ret"
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Tests if a function is defined.
+# Parameters:
+#   1 - function_name (nameref!) - name of the function to test
+# Returns:
+#   Exit code: 0 if function is defined, non-zero otherwise, 2 on invalid arguments
+# Env. Vars:
+#   _ignore - file to redirect unwanted output to
+# Usage: if is_defined_function <function_name>; then ... fi
+# Example: if is_defined_function MY_FUNC; then echo "MY_FUNC is defined"; fi
+#-------------------------------------------------------------------------------
+function is_defined_function()
+{
+    if [[ $# -ne 1 ]]; then
+        error "${FUNCNAME[0]}() requires exactly one argument: the name of the function to test."
+        return 2
+    fi
+    declare -pF "$1" > "$_ignore" 2>&1
 }
 
 #-------------------------------------------------------------------------------
