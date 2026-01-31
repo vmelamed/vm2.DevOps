@@ -83,8 +83,9 @@ function to_stderr()
 function error()
 {
     {
+        show_stack
         if [[ $# -gt 0 ]]; then
-            echo "❌  ERROR: ${BASH_SOURCE[1]}:${BASH_LINENO[1]}: $*"
+            echo "❌  ERROR: ${BASH_SOURCE[2]}:${BASH_LINENO[1]}: $*"
         else
             local line
             local first=true
@@ -309,7 +310,7 @@ function show_stack()
 
     echo "${BASH_SOURCE[-1]} stack trace:"
     local i
-    for ((i=0; i<${#FUNCNAME[@]}; i++)); do
-        echo "$i: ${FUNCNAME[i]} at ${BASH_SOURCE[i]}:${BASH_LINENO[i]}"
+    for ((i=0; i<${#FUNCNAME[@]}-1; i++)); do
+        echo "$i: ${FUNCNAME[i]} called from ${BASH_SOURCE[i+1]}:${BASH_LINENO[i]}"
     done
 }
