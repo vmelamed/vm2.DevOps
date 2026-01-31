@@ -4,18 +4,23 @@ set -euo pipefail
 script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../../../scripts/bash/lib")
-
+declare -r script_name
 declare -r script_dir
 declare -r lib_dir
 
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
 source "$lib_dir/gh_core.sh"
 
+declare -xr default_configuration="Release"
+declare -ixr default_min_coverage_pct=80
+declare -xr default_minver_tag_prefix='v'
+declare -xr default_minver_prerelease_id="preview.0"
+
 declare -x benchmark_project=${BENCHMARK_PROJECT:-}
-declare -x configuration=${CONFIGURATION:-"Release"}
+declare -x configuration=${CONFIGURATION:-"${default_configuration}"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
-declare -x minver_tag_prefix=${MINVERTAGPREFIX:-'v'}
-declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"preview.0"}
+declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"${default_minver_tag_prefix}"}
+declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"${default_minver_prerelease_id}"}
 declare -x artifacts_dir=${ARTIFACTS_DIR:-"${BENCHMARK_PROJECT%/*}/BenchmarkArtifacts"}
 
 source "$script_dir/run-benchmarks.usage.sh"

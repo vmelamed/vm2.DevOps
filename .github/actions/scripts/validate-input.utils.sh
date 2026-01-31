@@ -46,7 +46,7 @@ function get_arguments()
                 configuration="$1"; shift
                 ;;
 
-            --preprocessor-symbols|-d )
+            --define|-d )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 preprocessor_symbols="$1"; shift
                 ;;

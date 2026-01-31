@@ -4,20 +4,25 @@ set -euo pipefail
 script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(realpath -e "$(dirname "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../../../scripts/bash/lib")
-
+declare -r script_name
 declare -r script_dir
 declare -r lib_dir
 
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
 source "$lib_dir/gh_core.sh"
 
+declare -xr default_configuration="Release"
+declare -xr default_minver_tag_prefix='v'
+declare -xr default_minver_prerelease_id="preview.0"
+declare -ixr default_min_coverage_pct=80
+
 declare -x test_project=${TEST_PROJECT:-}
-declare -x configuration=${CONFIGURATION:="Release"}
+declare -x configuration=${CONFIGURATION:="${default_configuration}"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
-declare -ix min_coverage_pct=${MIN_COVERAGE_PCT:-80}
-declare -x minver_tag_prefix=${MINVERTAGPREFIX:-'v'}
-declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"preview.0"}
+declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"${default_minver_tag_prefix}"}
+declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"${default_minver_prerelease_id}"}
 declare -x artifacts_dir=${TEST_ARTIFACTS_DIR:-"${TEST_PROJECT%/*}/TestArtifacts"} # make sure it is absolute path
+declare -ix min_coverage_pct=${MIN_COVERAGE_PCT:-"${default_min_coverage_pct}"}
 
 source "$script_dir/run-tests.usage.sh"
 source "$script_dir/run-tests.utils.sh"

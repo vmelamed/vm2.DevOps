@@ -25,7 +25,7 @@ function get_arguments()
             --configuration|-c )
                 configuration="$1"; shift
                 ;;
-            --preprocessor-symbols|-d )
+            --define|-d )
                 preprocessor_symbols="$1"; shift
                 ;;
             --minver-tag-prefix|-mp )

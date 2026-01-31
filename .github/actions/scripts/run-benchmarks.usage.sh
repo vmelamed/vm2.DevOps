@@ -24,7 +24,7 @@ Arguments:
 Options:
   -c, --configuration           Specifies the build configuration to use ('Debug' or 'Release')
                                 Initial value from \$CONFIGURATION or default 'Release'
-  -d, --preprocessor-symbols    Defines one or more user-defined, space, comma, or semicolon-separated pre-processor symbols.
+  -d, --define                  Defines one or more user-defined, space, comma, or semicolon-separated pre-processor symbols.
                                 Initial value from \$PREPROCESSOR_SYMBOLS or default ''
   -mp, --minver-tag-prefix      Specifies the git tag prefix used by MinVer (e.g., 'v')
                                 Initial value from \$MINVERTAGPREFIX environment variable or 'v'
