@@ -296,7 +296,7 @@ function is_safe_runner_os()
 function is_safe_runners_os()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires exactly one parameter: the runner OS to test."
+        error "${FUNCNAME[0]}() requires exactly one parameter: the JSON array of runners OS to test."
         return 2
     fi
 
