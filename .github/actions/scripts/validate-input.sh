@@ -54,7 +54,7 @@ if ! command -v -p jq &> "$_ignore" || ! command -v -p gh 2>&1 "$_ignore"; then
     fi
 fi
 
-is_safe_json_array "build_projects" "$defaultBuildProjects" is_safe_existing_file || true
+is_safe_json_array "build_projects" || true
 is_safe_json_array "test_projects" "$defaultTestProjects" is_safe_existing_file || true
 is_safe_json_array "benchmark_projects" "$defaultBenchmarkProjects" is_safe_existing_file || true
 is_safe_json_array "runners_os" "$defaultRunnersOs" is_safe_runner_os || true
