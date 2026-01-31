@@ -16,7 +16,7 @@ declare -x configuration=${CONFIGURATION:-"Release"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-'v'}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"preview.0"}
-declare -x artifacts_dir=${ARTIFACTS_DIR:-}
+declare -x artifacts_dir=${ARTIFACTS_DIR:-"${BENCHMARK_PROJECT%/*}/BenchmarkArtifacts"}
 
 source "$script_dir/run-benchmarks.usage.sh"
 source "$script_dir/run-benchmarks.utils.sh"
@@ -30,8 +30,8 @@ validate_minverTagPrefix "$minver_tag_prefix" || true
 is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 is_safe_path "$artifacts_dir" || true
 
-benchmark_name=$(basename "${benchmark_project%.*}")      # the base name of the benchmark project (without the path and file extension)
-benchmark_dir=$(realpath -e "$(dirname "$benchmark_project")")             # the directory of the benchmark project
+benchmark_name=$(basename "${benchmark_project%.*}")            # the base name of the benchmark project (without the path and file extension)
+benchmark_dir=$(realpath -e "$(dirname "$benchmark_project")")  # the directory of the benchmark project
 
 # Freeze variables
 declare -xr benchmark_project
@@ -41,9 +41,6 @@ declare -xr configuration
 declare -xr preprocessor_symbols
 declare -xr minver_tag_prefix
 declare -xr minver_prerelease_id
-declare -xr artifacts_dir
-
-declare -xr solution_dir
 declare -xr artifacts_dir
 declare -xr results_dir
 

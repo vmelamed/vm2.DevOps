@@ -2,7 +2,7 @@
 set -euo pipefail
 
 script_name=$(basename "${BASH_SOURCE[0]}")
-script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
+script_dir=$(realpath -e "$(dirname "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../../../scripts/bash/lib")
 
 declare -r script_dir
@@ -17,7 +17,7 @@ declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -ix min_coverage_pct=${MIN_COVERAGE_PCT:-80}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-'v'}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"preview.0"}
-declare -x artifacts_dir=${TEST_ARTIFACTS_DIR:-"$solution_dir/TestArtifacts/$test_name"} # make sure it is absolute path
+declare -x artifacts_dir=${TEST_ARTIFACTS_DIR:-"${TEST_PROJECT%/*}/TestArtifacts"} # make sure it is absolute path
 
 source "$script_dir/run-tests.usage.sh"
 source "$script_dir/run-tests.utils.sh"
@@ -31,8 +31,8 @@ validate_minverTagPrefix "$minver_tag_prefix" || true
 is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 is_safe_path "$artifacts_dir" || true
 
-test_name=$(basename "${test_project%.*}")      # the base name of the test project (without the path and file extension)
-test_dir=$(dirname "$test_project")             # the directory of the test project
+test_name=$(basename "${test_project%.*}")              # the base name of the test project (without the path and file extension)
+test_dir=$(realpath -e "$(dirname "$test_project")")    # the directory of the test project
 
 # Freeze the variables
 declare -xr test_project
@@ -41,7 +41,6 @@ declare -xr preprocessor_symbols
 declare -xr min_coverage_pct
 declare -xr minver_tag_prefix
 declare -xr minver_prerelease_id
-artifacts_dir="${test_dir}/${artifacts_dir}"
 declare -xr artifacts_dir
 
 declare -xr test_name
@@ -49,10 +48,6 @@ declare -xr test_dir
 
 dump_all_variables
 exit_if_has_errors
-
-solution_dir="$(realpath -e "${test_dir}/../..")" # assuming <solution-root>/test/<test-project>/test-project.csproj
-
-declare -xr solution_dir
 
 renamed_artifacts_dir="$artifacts_dir-$(date -u +"%Y%m%dT%H%M%S")"
 declare -xr renamed_artifacts_dir

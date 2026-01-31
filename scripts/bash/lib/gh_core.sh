@@ -15,8 +15,8 @@ declare -x script_dir
 declare -x lib_dir
 
 [[ ! -v script_name || -z "$script_name" ]] && script_name=$(basename "${BASH_SOURCE[-1]}")
-[[ ! -v script_dir || -z "$script_dir" ]] && script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[-1]}")")
-[[ ! -v lib_dir || -z "$lib_dir" ]] && lib_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
+[[ ! -v script_dir || -z "$script_dir" ]] && script_dir=$(realpath -e "$(dirname "${BASH_SOURCE[-1]}")")
+[[ ! -v lib_dir || -z "$lib_dir" ]] && lib_dir=$(realpath -e "$(dirname "${BASH_SOURCE[0]}")")
 
 source "${lib_dir}/core.sh"
 source "${lib_dir}/_sanitize.sh"

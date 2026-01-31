@@ -56,7 +56,7 @@ permissions:
 env:
   # this must be the same across all jobs and steps below.
   # We must know where to find the artifacts and where to download/upload to/from across all jobs and steps here.
-  TEST_ARTIFACTS_DIR: "TestArtifacts"
+  TEST_ARTIFACTS_DIR: ${{ github.workspace }}/TestArtifacts
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 
@@ -156,8 +156,9 @@ jobs:
           else
               echo "Build artifacts found at: $ARTIFACT_PATH"
           fi
-          ls -la "$ARTIFACT_PATH"/**/*.*
-          ls -la ./test/**/bin/${{ inputs.configuration }}/*.*
+          # uncomment the next 2 lines if you want to debug the contents of the artifact path
+          # ls -la "$ARTIFACT_PATH"/**/*.*
+          # ls -la ./test/**/bin/${{ inputs.configuration }}/*.*
 
           run-tests.sh ${{ inputs.test-project }} \
               --configuration "${{ inputs.configuration }}" \
