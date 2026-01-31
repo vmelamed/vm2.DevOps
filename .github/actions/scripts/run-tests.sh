@@ -28,7 +28,6 @@ source "$script_dir/run-tests.usage.sh"
 source "$script_dir/run-tests.utils.sh"
 
 get_arguments "$@"
-dump_all_variables
 
 dump_vars --quiet \
     --header "Inputs" \
@@ -38,7 +37,12 @@ dump_vars --quiet \
     min_coverage_pct \
     minver_tag_prefix \
     minver_prerelease_id \
-    artifacts_dir
+    artifacts_dir \
+    --header "other:" \
+    ci \
+    script_name \
+    script_dir \
+    lib_dir
 
 is_safe_existing_file "$test_project" || true
 is_safe_configuration "$configuration" || true

@@ -20,32 +20,18 @@ function get_arguments()
 
             --configuration|-c )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
-                value="$1"; shift
-                configuration="${value,,}"
-                configuration="${configuration^}"
-                if ! is_in "$configuration" "Release" "Debug"; then
-                    usage false "The coverage threshold must be either 'Release' or 'Debug'. Got '$value'."
-                fi
+                configuration=$1; shift
                 ;;
 
             --define|-d    )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
-                value="$1"; shift
-                if ! [[ "$value" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
-                    usage false "The specified preprocessor symbol '$value' is not valid."
-                fi
-                if [[ ! "$preprocessor_symbols" =~ (^|;)"$value"($|;) ]]; then
-                    preprocessor_symbols="$value $preprocessor_symbols"   # NOTE: space-separated!
-                fi
+                preprocessor_symbols=$1; shift
                 ;;
 
             --min-coverage-pct|-min )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
-                value="$1"; shift
-                if ! [[ "$value" =~ ^[0-9]+$ ]] || (( value < 0 || value > 100 )); then
-                    usage false "The coverage threshold must be an integer between 0 and 100. Got '$value'."
-                fi
-                min_coverage_pct=$((value + 0))  # ensure it's an integer
+                min_coverage_pct=$1; shift
+                min_coverage_pct=$((min_coverage_pct + 0))  # ensure it's an integer
                 ;;
 
             --minver-tag-prefix|-mp )
@@ -60,15 +46,10 @@ function get_arguments()
 
             --artifacts|-a )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
-                value="$1"; shift
-                artifacts_dir=$(realpath -m "$value")
+                artifacts_dir=$1; shift
                 ;;
 
             * ) value="$option"
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
-                if [[ ! -s "$value" ]]; then
-                    usage false "The specified test project file '$value' does not exist."
-                fi
                 test_project="$value"
                 ;;
         esac
@@ -93,8 +74,6 @@ dump_all_variables()
         --header "other:" \
         ci \
         lib_dir \
-        solution_dir \
-        base_name \
         test_results_dir \
         coverage_results_dir \
         --blank \

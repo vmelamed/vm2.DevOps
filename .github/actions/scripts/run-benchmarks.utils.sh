@@ -21,13 +21,7 @@ function get_arguments()
 
             --configuration|-c )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
-                value="$1"; shift
-                configuration="${value,,}"
-                configuration="${configuration^}"
-                if ! is_in "$configuration" "Release" "Debug"; then
-                    usage false "The coverage threshold must be either 'Release' or 'Debug'. Got '$value'."
-                    exit 2
-                fi
+                configuration="$1"; shift
                 ;;
 
             --define|-d )
@@ -48,24 +42,16 @@ function get_arguments()
             --max-regression-pct|-max )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 value="$1"; shift
-                if ! [[ "$value" =~ ^[0-9]+$ ]] || (( value < 0 || value > 100 )); then
-                    usage false "$(usage_text)" "The regression threshold must be an integer between 0 and 100. Got '$value'."
-                    exit 2
-                fi
                 max_regression_pct=$((value + 0))  # ensure it's an integer
                 ;;
 
             --artifacts|-a )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
-                value="$1"; shift
-                artifacts_dir=$(realpath -m "$value")
+                artifacts_dir=$1; shift
                 ;;
 
             *)  value="$option"
-                if [[ ! -s "$value" ]]; then
-                    usage false "The specified test project file $value does not exist."
-                fi
-                bm_project="$value"
+                benchmark_project="$value"
                 ;;
         esac
     done
@@ -79,11 +65,11 @@ dump_all_variables()
         verbose \
         quiet \
         --blank \
-        bm_project \
+        benchmark_project \
         configuration \
         preprocessor_symbols \
-        max_regression_pct \
-        force_new_baseline \
+        minver_tag_prefix \
+        minver_prerelease_id \
         artifacts_dir \
         --header "other:" \
         ci \
