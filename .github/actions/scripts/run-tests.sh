@@ -26,9 +26,9 @@ get_arguments "$@"
 
 is_safe_existing_file "$test_project" || true
 is_safe_configuration "$configuration" || true
-validate_preprocessor_symbols preprocessor_symbols true || true
-validate_minverTagPrefix "$minver_tag_prefix" true || true
-is_safe_minverPrereleaseId "$minver_prerelease_id" true || true
+validate_preprocessor_symbols preprocessor_symbols || true
+validate_minverTagPrefix "$minver_tag_prefix" || true
+is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 is_safe_path "$artifacts_dir" || true
 
 test_name=$(basename "${test_project%.*}")      # the base name of the test project (without the path and file extension)
