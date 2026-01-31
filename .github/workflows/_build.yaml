@@ -131,7 +131,7 @@ jobs:
           build.sh \
               --build-project "${{ inputs.build-project }}" \
               --configuration "${{ inputs.configuration }}" \
-              --preprocessor-symbols "${{ inputs.preprocessor-symbols }}" \
+              --define "${{ inputs.preprocessor-symbols }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
               --minver-prerelease-id "${{ inputs.minver-prerelease-id }}"
 

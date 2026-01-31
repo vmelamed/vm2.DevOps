@@ -129,7 +129,7 @@ jobs:
               --runners-os           '${{ inputs.runners-os }}' \
               --dotnet-version       '${{ inputs.dotnet-version }}' \
               --configuration        '${{ inputs.configuration }}' \
-              --preprocessor-symbols '${{ inputs.preprocessor-symbols }}' \
+              --define '${{ inputs.preprocessor-symbols }}' \
               --min-coverage-pct     '${{ inputs.min-coverage-pct }}' \
               --max-regression-pct   '${{ inputs.max-regression-pct }}' \
               --minver-tag-prefix    '${{ inputs.minver-tag-prefix }}' \
