@@ -57,7 +57,7 @@ fi
 is_safe_json_array "build_projects" "$defaultBuildProjects" is_safe_existing_file || true
 is_safe_json_array "test_projects" "$defaultTestProjects" is_safe_existing_file || true
 is_safe_json_array "benchmark_projects" "$defaultBenchmarkProjects" is_safe_existing_file || true
-is_safe_runner_os "runners_os" "$defaultRunnersOs" is_safe_runner_os || true
+is_safe_runners_os "runners_os" "$defaultRunnersOs" is_safe_runner_os || true
 if [[ -z "$dotnet_version" ]]; then
     warning_var dotnet_version "dotnet-version is empty." "$defaultDotnetVersion"
 fi
