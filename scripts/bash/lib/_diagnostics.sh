@@ -306,8 +306,6 @@ function on_exit()
 #-------------------------------------------------------------------------------
 function show_stack()
 {
-    [[ "$verbose" != true ]] && return 0
-
     echo "${BASH_SOURCE[-1]} stack trace:"
     local i
     for ((i=0; i<${#FUNCNAME[@]}-1; i++)); do
