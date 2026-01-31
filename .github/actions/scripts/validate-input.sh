@@ -58,41 +58,25 @@ is_safe_json_array "build_projects" "$defaultBuildProjects" is_safe_existing_fil
 is_safe_json_array "test_projects" "$defaultTestProjects" is_safe_existing_file || true
 is_safe_json_array "benchmark_projects" "$defaultBenchmarkProjects" is_safe_existing_file || true
 is_safe_runner_os "runners_os" "$defaultRunnersOs" is_safe_runner_os || true
-
 if [[ -z "$dotnet_version" ]]; then
     warning_var dotnet_version "dotnet-version is empty." "$defaultDotnetVersion"
 fi
 is_safe_dotnet_version "$dotnet_version" || true
-
 if [[ -z "$configuration" ]]; then
     warning_var configuration "configuration must have value." "$defaultConfiguration"
 fi
 is_safe_configuration "$configuration" || true
-
 validate_preprocessor_symbols preprocessor_symbols || true
-
-if [[ ! "$min_coverage_pct" =~ ^[0-9]+$ ]]; then
-    error "min-coverage-pct must be an integer between 50-100." || true
-fi
+is_safe_min_coverage_pct "$min_coverage_pct" || true
 if (( min_coverage_pct < 50 || min_coverage_pct > 100 )); then
     warning_var min_coverage_pct "min-coverage-pct must be between 50-100." "$defaultMinCoveragePct"
 fi
-
-if [[ ! "$max_regression_pct" =~ ^[0-9]+$ ]]; then
-    error "max-regression-pct must be an integer between 0-50." || true
-fi
+is_safe_max_regression_pct "$max_regression_pct" || true
 if (( max_regression_pct < 0 || max_regression_pct > 50 )); then
     warning_var max_regression_pct "max-regression-pct must be between 0-50." "$defaultMaxRegressionPct"
 fi
-
-# Validate minver tag prefix: always first to populate the tag regexes used later
 validate_minverTagPrefix "$minver_tag_prefix" || true
-
 is_safe_minverPrereleaseId "$minver_prerelease_id" || true
-
-if [[ "$verbose" != "true" && "$verbose" != "false" ]]; then
-    warning_var verbose "verbose must be true/false." "$defaultVerbose"
-fi
 
 dump_vars --quiet --force --markdown \
     -h "Validated Parameters" \
@@ -106,9 +90,7 @@ dump_vars --quiet --force --markdown \
     min_coverage_pct \
     max_regression_pct \
     minver_tag_prefix \
-    minver_prerelease_id \
-    verbose \
-    | to_stdout
+    minver_prerelease_id | to_stdout
 
 exit_if_has_errors
 
@@ -127,6 +109,5 @@ args_to_github_output \
     min_coverage_pct \
     max_regression_pct \
     minver_tag_prefix \
-    minver_prerelease_id \
-    verbose
+    minver_prerelease_id
     # add more variables above this line

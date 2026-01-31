@@ -483,7 +483,7 @@ function validate_preprocessor_symbols()
 #   Exit code: 0 if valid percentage, 1 if invalid, 2 on invalid arguments
 # Usage: if is_safe_min_coverage_pct <min_coverage_pct>; then ... fi
 # Example: if is_safe_min_coverage_pct "80"; then echo "Valid coverage percentage"; fi
-# Notes: Must be an integer between 50 and 100.
+# Notes: Must be an integer between 0 and 100.
 function is_safe_min_coverage_pct()
 {
     if [[ $# -ne 1 ]]; then
@@ -496,8 +496,8 @@ function is_safe_min_coverage_pct()
         return 1
     fi
 
-    if (( $1 < 50 || $1 > 100 )); then
-        error "The min coverage percentage '$1' must be between 50 and 100."
+    if (( $1 < 0 || $1 > 100 )); then
+        error "The min coverage percentage '$1' must be between 0 and 100."
         return 1
     fi
 
@@ -512,7 +512,7 @@ function is_safe_min_coverage_pct()
 #   Exit code: 0 if valid percentage, 1 if invalid, 2 on invalid arguments
 # Usage: if is_safe_max_regression_pct <max_regression_pct>; then ... fi
 # Example: if is_safe_max_regression_pct "10"; then echo "Valid regression percentage"; fi
-# Notes: Must be an integer between 0 and 50.
+# Notes: Must be an integer between 0 and 100.
 function is_safe_max_regression_pct()
 {
     if [[ $# -ne 1 ]]; then
@@ -525,8 +525,8 @@ function is_safe_max_regression_pct()
         return 1
     fi
 
-    if (( $1 < 0 || $1 > 50 )); then
-        error "The max regression percentage '$1' must be between 0 and 50."
+    if (( $1 < 0 || $1 > 100 )); then
+        error "The max regression percentage '$1' must be between 0 and 100."
         return 1
     fi
 
