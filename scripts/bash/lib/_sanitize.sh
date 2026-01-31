@@ -284,37 +284,6 @@ function is_safe_runner_os()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Validates that the elements of a list of runner OS names is in the allowed list of GitHub Actions runners.
-# Parameters:
-#   1 - runners_os - runner OS names to validate
-# Returns:
-#   Exit code: 0 if valid runner OS, 1 if invalid, 2 on invalid arguments
-# Usage: if is_safe_runner_os <runner_os>; then ... fi
-# Example: if is_safe_runner_os "ubuntu-latest"; then echo "Valid runner"; fi
-# Notes: Allowed values defined in $allowed_runners_os array.
-#-------------------------------------------------------------------------------
-function is_safe_runners_os()
-{
-    if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires exactly one parameter: the JSON array of runners OS to test."
-        return 2
-    fi
-
-    is_safe_json_array "$1" || return 1
-
-    # Validate each item of the array for safety
-    return_value=0
-
-    while IFS= read -r runner_os; do
-        if [[ -n "$runner_os" ]] && ! is_safe_runner_os "$runner_os"; then
-            return_value=1 # check all paths before returning
-        fi
-    done < <(jq -r '.[]' 2>"$_ignore" <<< "$1" || true)
-
-    return "$return_value"
-}
-
-#-------------------------------------------------------------------------------
 # Summary: Validates a "reason" text input for safety and length constraints.
 # Parameters:
 #   1 - reason - the reason text to validate

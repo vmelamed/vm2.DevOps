@@ -84,13 +84,13 @@ function error()
 {
     {
         if [[ $# -gt 0 ]]; then
-            echo "❌  ERROR: $*"
+            echo "❌  ERROR: ${BASH_SOURCE[1]}:${BASH_LINENO[1]}: $*"
         else
             local line
             local first=true
             while IFS= read -r line; do
                 if [[ "$first" == true ]]; then
-                    echo "❌  ERROR: $line"
+                    echo "❌  ERROR: ${BASH_SOURCE[1]}:${BASH_LINENO[1]}: $line"
                     first=false
                 else
                     # prevent leading new line
