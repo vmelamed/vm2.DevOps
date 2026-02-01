@@ -77,6 +77,7 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   NUGET_SERVER: ${{ inputs.nuget-server || 'nuget' }}
   ARTIFACTS_DIR: artifacts/pack
+  VERBOSE: ${{ vars.VERBOSE }}
 
 jobs:
   compute-version:
@@ -121,8 +122,6 @@ jobs:
       - name: Validate and compute release version
         id: version
         shell: bash
-        env:
-          VERBOSE: ${{ vars.VERBOSE }}
         run: |
           compute-release-version.sh \
               --minver-tag-prefix '${{ inputs.minver-tag-prefix }}' \
@@ -167,8 +166,6 @@ jobs:
 
       - name: Update CHANGELOG.md and create release tag
         shell: bash
-        env:
-          VERBOSE: ${{ vars.VERBOSE }}
         run: |
           changelog-and-tag.sh \
               --release-tag "${{ needs.compute-version.outputs.release-tag }}" \
@@ -239,7 +236,6 @@ jobs:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
           NUGET_API_GITHUB_KEY: ${{ secrets.NUGET_API_GITHUB_KEY }}
           NUGET_API_NUGET_KEY: ${{ secrets.NUGET_API_NUGET_KEY }}
-          VERBOSE: ${{ vars.VERBOSE }}
         run: |
           publish-package.sh \
               --package-project "${{ matrix.project }}" \

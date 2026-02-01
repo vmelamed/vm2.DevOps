@@ -59,6 +59,7 @@ env:
   TEST_ARTIFACTS_DIR: ./TestArtifacts
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
+  VERBOSE: ${{ vars.VERBOSE }}
 
 jobs:
   # Execute unit tests with code coverage and enforce minimum coverage threshold
@@ -144,10 +145,6 @@ jobs:
 
       - name: Verify the artifacts were restored and run the tests
         id: run-tests
-        env:
-          CONFIGURATION: ${{ inputs.configuration }}
-          PREPROCESSOR_SYMBOLS: ${{ inputs.preprocessor-symbols }}
-          VERBOSE: ${{ vars.VERBOSE }}
         shell: bash
         run: |
           ARTIFACT_PATH=$(find . -type d -path "*/bin/${{ inputs.configuration }}" | head -n 1)
