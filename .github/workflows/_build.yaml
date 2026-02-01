@@ -45,6 +45,7 @@ permissions:
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
+  VERBOSE: ${{ vars.VERBOSE }}
 
 jobs:
   # Compile the project and optionally cache the build artifacts
@@ -123,10 +124,6 @@ jobs:
       - name: Build
         id: build
         shell: bash
-        env:
-          MINVERTAGPREFIX: ${{ inputs.minver-tag-prefix }}
-          MINVERDEFAULTPRERELEASEIDENTIFIERS: ${{ inputs.minver-prerelease-id }}
-          VERBOSE: ${{ vars.VERBOSE}}
         run: |
           build.sh \
               --build-project "${{ inputs.build-project }}" \

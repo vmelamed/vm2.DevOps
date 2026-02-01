@@ -68,6 +68,9 @@ on:
         description: Bencher.dev API token for benchmark tracking
         required: false
 
+env:
+  VERBOSE: ${{ vars.VERBOSE }}
+
 concurrency:
   group: ci-${{ github.workflow_ref }}
   cancel-in-progress: true
@@ -119,8 +122,6 @@ jobs:
       - name: Validate and normalize all inputs
         id: validate
         shell: bash
-        env:
-          VERBOSE: ${{ vars.VERBOSE}}
         run: |
           validate-input.sh \
               --build-projects       '${{ inputs.build-projects }}' \
@@ -129,7 +130,7 @@ jobs:
               --runners-os           '${{ inputs.runners-os }}' \
               --dotnet-version       '${{ inputs.dotnet-version }}' \
               --configuration        '${{ inputs.configuration }}' \
-              --define '${{ inputs.preprocessor-symbols }}' \
+              --define               '${{ inputs.preprocessor-symbols }}' \
               --min-coverage-pct     '${{ inputs.min-coverage-pct }}' \
               --max-regression-pct   '${{ inputs.max-regression-pct }}' \
               --minver-tag-prefix    '${{ inputs.minver-tag-prefix }}' \
