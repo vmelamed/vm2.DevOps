@@ -46,6 +46,9 @@ is_safe_path "$artifacts_dir" || true
 
 benchmark_name=$(basename "${benchmark_project%.*}")            # the base name of the benchmark project (without the path and file extension)
 benchmark_dir=$(realpath -e "$(dirname "$benchmark_project")")  # the directory of the benchmark project
+artifacts_dir="${artifacts_dir:-"$benchmark_dir/BenchmarkArtifacts"}"
+results_dir="$artifacts_dir/results"
+renamed_artifacts_dir="$artifacts_dir-$(date -u +"%Y%m%dT%H%M%S")"
 
 # Freeze variables
 declare -xr benchmark_project
@@ -57,12 +60,6 @@ declare -xr minver_tag_prefix
 declare -xr minver_prerelease_id
 declare -xr artifacts_dir
 declare -xr results_dir
-
-# Determine solution directory and artifacts directory
-artifacts_dir="${artifacts_dir:-"$benchmark_dir/BenchmarkArtifacts"}"
-results_dir="$artifacts_dir/results"
-
-renamed_artifacts_dir="$artifacts_dir-$(date -u +"%Y%m%dT%H%M%S")"
 declare -r renamed_artifacts_dir
 
 if [[ -d "$artifacts_dir" && -n "$(ls -A "$artifacts_dir")" ]]; then

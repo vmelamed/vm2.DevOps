@@ -84,13 +84,17 @@ function error()
 {
     {
         if [[ $# -gt 0 ]]; then
-            echo "❌  ERROR: ${BASH_SOURCE[2]}:${BASH_LINENO[1]}: $*"
+            local bash_source=${BASH_SOURCE[2]:-}
+            local bash_lineno=${BASH_LINENO[1]:-}
+            echo "❌  ERROR: ${bash_source}:${bash_lineno}: $*"
         else
             local line
             local first=true
             while IFS= read -r line; do
                 if [[ "$first" == true ]]; then
-                    echo "❌  ERROR: ${BASH_SOURCE[1]}:${BASH_LINENO[1]}: $line"
+                    local bash_source=${BASH_SOURCE[1]:-}
+                    local bash_lineno=${BASH_LINENO[1]:-}
+                    echo "❌  ERROR: ${bash_source}:${bash_lineno}: $line"
                     first=false
                 else
                     # prevent leading new line
@@ -305,9 +309,14 @@ function on_exit()
 #-------------------------------------------------------------------------------
 function show_stack()
 {
-    echo "${BASH_SOURCE[-1]} stack trace:"
+    local bash_source, funcname, bash_lineno
+    bash_source=${BASH_SOURCE[-1]:-}
+    echo "${bash_source} stack trace:"
     local i
     for ((i=0; i<${#FUNCNAME[@]}-1; i++)); do
-        echo "$i: ${FUNCNAME[i]} called from ${BASH_SOURCE[i+1]}:${BASH_LINENO[i]}"
+        bash_source=${BASH_SOURCE[i+1]:-}
+        funcname=${FUNCNAME[i]:-}
+        bash_lineno=${BASH_LINENO[i]:-}
+        echo "$i: ${funcname} called from ${bash_source}:${bash_lineno}"
     done
 }
