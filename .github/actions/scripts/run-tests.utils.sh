@@ -58,7 +58,7 @@ function get_arguments()
 
 dump_all_variables()
 {
-    dump_vars --force --quiet --markdown \
+    dump_vars --force \
         --header "Script Arguments:" \
         dry_run \
         verbose \
@@ -74,17 +74,13 @@ dump_all_variables()
         --header "other:" \
         ci \
         lib_dir \
-        test_results_dir \
         coverage_results_dir \
         --blank \
-        coverage_source_dir \
-        coverage_source_fileName \
         coverage_source_path \
         --blank \
-        coverage_reports_dir \
         coverage_reports_path \
         --blank \
-        coverage_summary_dir \
-        coverage_summary_path \
-        coverage_summary_html_dir
+        coverage_summary_text_dir \
+        coverage_summary_html_dir \
+        coverage_summary_text_path
 }

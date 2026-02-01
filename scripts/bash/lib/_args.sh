@@ -35,6 +35,7 @@ declare -xr debugger                                # indicates whether the scri
 if [[ "${GITHUB_ACTIONS:-}" == "true" || "${TF_BUILD:-}" == "True" || "${CI:-}" == "true" ]]; then # CI is usually defined by most CI/CD systems. Set from the env. variable CI.
     ci=true
     table_format=${DUMP_FORMAT:-markdown}           # in CI/CD environments, default to markdown format unless overridden by DUMP_FORMAT
+    quiet=true                                      # in CI/CD environments, default to quiet mode
 else
     ci=false
     table_format=${DUMP_FORMAT:-graphical}          # on terminal, default to graphical format unless overridden by DUMP_FORMAT
