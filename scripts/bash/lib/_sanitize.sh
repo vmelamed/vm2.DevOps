@@ -429,7 +429,8 @@ function validate_preprocessor_symbols()
     local -a symbol_array=()
 
     IFS=' ,:;' read -ra symbol_array <<< "$symbols"
-    local s bad=false
+    local bad=false
+    local s=''
     for symbol in "${symbol_array[@]}"; do
         [[ -z $symbol ]] && continue
         if ! [[ "$symbol" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
