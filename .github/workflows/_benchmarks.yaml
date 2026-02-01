@@ -54,7 +54,7 @@ permissions:
   checks: write # Required for Bencher to create GitHub Checks
 
 env:
-  ARTIFACTS_DIR: ${{ github.workspace }}/BenchmarkArtifacts
+  ARTIFACTS_DIR: ./BenchmarkArtifacts
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 

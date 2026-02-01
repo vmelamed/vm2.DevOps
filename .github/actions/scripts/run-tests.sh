@@ -42,7 +42,10 @@ dump_vars --quiet \
     ci \
     script_name \
     script_dir \
-    lib_dir
+    lib_dir \
+    dry_run \
+    verbose \
+    quiet
 
 is_safe_existing_file "$test_project" || true
 is_safe_configuration "$configuration" || true
