@@ -398,7 +398,7 @@ function is_safe_configuration()
         error "${FUNCNAME[0]}() requires one parameter: the NAME of the configuration variable to test."
         return 2
     fi
-    [[ -z $1 || $1 =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] && return 0
+    [[ $1 =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] && return 0
     error "The configuration '$1' is not valid."
     return 1
 }
