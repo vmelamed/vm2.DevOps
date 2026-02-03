@@ -63,8 +63,13 @@ dump_all_variables()
         dry_run \
         verbose \
         quiet \
+        ci \
+        lib_dir \
         --blank \
+        solution_dir \
         test_project \
+        test_name \
+        test_dir \
         configuration \
         preprocessor_symbols \
         min_coverage_pct \
@@ -72,15 +77,7 @@ dump_all_variables()
         minver_prerelease_id \
         artifacts_dir \
         --header "other:" \
-        ci \
-        lib_dir \
-        coverage_results_dir \
-        --blank \
         coverage_source_path \
-        --blank \
-        coverage_reports_path \
-        --blank \
-        coverage_summary_text_dir \
-        coverage_summary_html_dir \
-        coverage_summary_text_path
+        coverage_reports_dir \
+        coverage_summary_path
 }

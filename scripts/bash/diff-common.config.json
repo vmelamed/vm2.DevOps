@@ -15,11 +15,6 @@
         "action": "merge or copy"
     },
     {
-        "sourceFile": "${repos}/vm2.DevOps/solution/codecov.yml",
-        "targetFile": "${target_path}/codecov.yml",
-        "action": "merge or copy"
-    },
-    {
         "sourceFile": "${repos}/vm2.DevOps/solution/Directory.Build.props",
         "targetFile": "${target_path}/Directory.Build.props",
         "action": "merge or copy"
@@ -45,8 +40,18 @@
         "action": "merge or copy"
     },
     {
-        "sourceFile": "${repos}/vm2.DevOps/solution/test.runsettings",
-        "targetFile": "${target_path}/test.runsettings",
+        "sourceFile": "${repos}/vm2.DevOps/solution/testconfig.json",
+        "targetFile": "${target_path}/testconfig.json",
+        "action": "merge or copy"
+    },
+    {
+        "sourceFile": "${repos}/vm2.DevOps/solution/CodeCoverage.runsettings",
+        "targetFile": "${target_path}/CodeCoverage.runsettings",
+        "action": "merge or copy"
+    },
+    {
+        "sourceFile": "${repos}/vm2.DevOps/solution/codecov.yml",
+        "targetFile": "${target_path}/codecov.yml",
         "action": "merge or copy"
     },
     {

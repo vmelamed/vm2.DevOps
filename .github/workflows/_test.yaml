@@ -177,10 +177,11 @@ jobs:
       # Upload coverage to Codecov for online viewing and PR integration
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
           flags: ${{ steps.run-tests.outputs.proj-name }}-${{ inputs.runner-os }}
           slug: ${{ github.repository }}
-          token: ${{ secrets.CODECOV_TOKEN }}
           files: ${{ steps.run-tests.outputs.coverage_source_path }}
           fail_ci_if_error: false
 

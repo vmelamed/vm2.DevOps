@@ -1,0 +1,34 @@
+{
+    "version": "1.0",
+    "testPlatform": {
+        "environmentVariables": {
+            "DOTNET_EnableDiagnostics": "0"
+        },
+        "logging": {
+            "verbosity": "normal"
+        }
+    },
+    "xUnit": {
+        "assertEquivalentMaxDepth": 50,
+        "culture": "en-US",
+        "diagnosticMessages": true,
+        "explicit": "",
+        "failSkips": false,
+        "failWarns": false,
+        "internalDiagnosticMessages": true,
+        "longRunningTestSeconds": 10,
+        "maxParallelThreads": -1,
+        "methodDisplay": "classAndMethod",
+        "methodDisplayOptions": "none",
+        "parallelAlgorithm": "conservative",
+        "parallelizeTestCollections": true,
+        "parallelizeTestMethods": true,
+        "preEnumerateTheories": true,
+        "printMaxEnumerableLength": 5,
+        "printMaxObjectDepth": 3,
+        "printMaxObjectMemberCount": 5,
+        "printMaxStringLength": 50,
+        "showLiveOutput": true,
+        "stopOnFail": false
+    }
+}

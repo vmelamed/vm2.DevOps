@@ -63,7 +63,7 @@ function confirm()
         [[ "$default" == y ]] && suffix="[Y/n]" || suffix="[y/N]"
 
         while true; do
-            read -rp "$prompt $suffix: " response >&2
+            read -rp "$prompt $suffix: " response
             response=${response:-$default}
             response=${response,,}
             [[ "$response" =~ ^[yn]$ ]] && break

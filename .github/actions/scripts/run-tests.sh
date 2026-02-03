@@ -31,6 +31,12 @@ source "$script_dir/run-tests.utils.sh"
 get_arguments "$@"
 dump_vars --quiet \
     --header "Inputs" \
+    dry_run \
+    verbose \
+    quiet \
+    ci \
+    lib_dir \
+    --blank \
     test_project \
     configuration \
     preprocessor_symbols \
@@ -39,13 +45,8 @@ dump_vars --quiet \
     minver_prerelease_id \
     artifacts_dir \
     --header "other:" \
-    ci \
     script_name \
     script_dir \
-    lib_dir \
-    dry_run \
-    verbose \
-    quiet
 
 is_safe_existing_file "$test_project" || true
 test_name=$(basename "${test_project%.*}")                                      # the base name of the test project (without the path and file extension)
@@ -62,6 +63,7 @@ exit_if_has_errors
 
 test_name=$(basename "${test_project%.*}")              # the base name of the test project (without the path and file extension)
 test_dir=$(realpath -e "$(dirname "$test_project")")    # the directory of the test project
+solution_dir=$(realpath -e "$test_dir/../..")            # the directory of the solution
 artifacts_dir=$(realpath -m "$artifacts_dir" 2> "$_ignore")
 renamed_artifacts_dir="$artifacts_dir-$(date -u +"%Y%m%dT%H%M%S")"
 
@@ -74,6 +76,7 @@ declare -xr minver_tag_prefix
 declare -xr minver_prerelease_id
 declare -xr test_name
 declare -xr test_dir
+declare -xr solution_dir
 declare -xr artifacts_dir
 declare -xr renamed_artifacts_dir
 
@@ -107,71 +110,49 @@ if [[ -d "$artifacts_dir" && -n "$(ls -A "$artifacts_dir")" ]]; then
     fi
 fi
 
-coverage_results_dir="${artifacts_dir}/CoverageResults"
-declare -r coverage_results_dir
-
-coverage_source_dir="$coverage_results_dir"                                     # the directory for the raw coverage files
-coverage_source_fileName="coverage.cobertura.xml"                               # the name of the raw coverage file
-coverage_source_path="$coverage_source_dir/$coverage_source_fileName"           # the path to the raw coverage file
-
-coverage_reports_dir="$coverage_results_dir/reports"                            # the directory for the coverage reports
-coverage_reports_path="$coverage_reports_dir/Summary.txt"                       # the path to the coverage summary file
-
-coverage_summary_html_dir="$coverage_reports_dir/html"                                 # the directory for the coverage html artifacts
-coverage_summary_text_dir="$coverage_reports_dir/text"                                 # the directory for the text coverage summary artifacts
-coverage_summary_text_path="$coverage_summary_text_dir/$test_name-Summary.txt"  # the path to the coverage summary artifact file
+# ${artifacts_dir}                                                              # abs.path to test results and reports          ~/repos/vm2.Glob/TestResults
+coverage_source_path="${artifacts_dir}/CoverageResults/${test_name}.xml"        # path to the raw coverage file                 ~/repos/vm2.Glob/TestResults/CoverageResults/Glob.Api.Tests.xml
+coverage_reports_dir="${artifacts_dir}/CoverageResults/${test_name}/reports"    # directory for coverage reports                ~/repos/vm2.Glob/TestResults/CoverageResults/Glob.Api.Tests/reports
+coverage_summary_path="${coverage_reports_dir}/Summary.txt"                     # path to text coverage summary file            ~/repos/vm2.Glob/TestResults/CoverageResults/Glob.Api.Tests/reports/Summary.txt
 
 declare -r coverage_source_path
-declare -r coverage_source_dir
-declare -r coverage_source_fileName
-
 declare -r coverage_reports_dir
-declare -r coverage_reports_path
-
-declare -r coverage_summary_text_dir
-declare -r coverage_summary_html_dir
-declare -r coverage_summary_text_path
+declare -r coverage_summary_path
 
 dump_all_variables
 
-trace "Creating directories..."
-execute mkdir -p "$coverage_reports_dir"
-execute mkdir -p "$coverage_summary_html_dir"
-execute mkdir -p "$coverage_summary_text_dir"
-
-declare test_base_path
-declare test_dll_path
-declare test_exec_path
-
-test_base_path="${test_dir}/bin/${configuration}/net10.0/${test_name}"
-test_dll_path="${test_base_path}.dll"
+test_base_dir="${test_dir}/bin/${configuration}/net10.0"
+test_exec_path="${test_base_dir}/${test_name}"
 os_name="$(uname -s)"
 if [[ "$os_name" == "Windows_NT" || "$os_name" == *MINGW* || "$os_name" == *MSYS* ]]; then
-    test_exec_path="${test_base_path}.exe"
-else
-    test_exec_path="${test_base_path}"
+    test_exec_path="${test_exec_path}.exe"
 fi
-declare -r test_base_path
-declare -r test_dll_path
+declare -r test_base_dir
 declare -rx test_exec_path
 
 declare -x _ignore
 declare -rx dry_run
 
-# Verify artifacts exist
-if [[ (! -f "${test_exec_path}" || ! -f "${test_dll_path}") && "$dry_run" != "true" ]]; then
-    error "Cached test executables ${test_exec_path} or ${test_dll_path} were not found."
-    exit 2
+# Verify artifacts exist, if not - rebuild the project (mostly for local runs)
+if [[ ! -s "${test_exec_path}" && "$dry_run" != "true" ]]; then
+    warning "Cached test executable ${test_exec_path} was not found. Rebuilding the test project"
+    execute dotnet clean "$test_project" --configuration "$configuration" || true
+    if ! execute dotnet build "$test_project" \
+                --verbosity detailed \
+                --configuration "$configuration" \
+                -p:preprocessor_symbols="$preprocessor_symbols" \
+                -p:MinVerTagPrefix="$minver_tag_prefix" \
+                -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id"; then
+        error "Building $test_project failed."
+        exit 2
+    fi
 fi
 
-
 trace "Running tests from ${test_project}..."
-if ! execute "$test_exec_path" \
-        --results-directory "$artifacts_dir" \
-        --report-xunit-trx \
-        --coverage \
-        --coverage-output-format cobertura \
-        --coverage-output "$coverage_source_path"; then
+if ! execute dotnet test \
+        --project "$test_project" \
+        --configuration "$configuration" \
+        --no-build; then
     error "Tests failed in project '$test_project'."
     exit 2
 fi
@@ -197,9 +178,14 @@ fi
 execute reportgenerator \
     -reports:"$coverage_source_path" \
     -targetdir:"$coverage_reports_dir" \
-    -reporttypes:TextSummary,html \
-	-classfilters:"-*.ExcludeFromCodeCoverage*;-*.GeneratedCode*;-*GeneratedRegex*;-*SourceGenerationContext*" \
-    -filefilters:"-*.g.cs;-*.g.i.cs;-*.i.cs;-*.generated.cs;-*Migrations/*;-*obj/*;-*AssemblyInfo.cs;-*Designer.cs;-*.designer.cs"
+    -reporttypes:TextSummary \
+	-classfilters:"-*.GeneratedCodeAttribute*;-*GeneratedRegexAttribute*;-*.I[A-Z]*" \
+    -filefilters:"-*.g.cs;-*.g.i.cs;-*.i.cs;-*.generated.cs;-*Migrations/*;-*obj/*;-*AssemblyInfo.cs;-*Designer.cs;-*.designer.cs;-*.I[A-Z]*.cs;-*.MoveNext;-*.d__*;-*.<>c-*.<>c__DisplayClass*"
+
+# reportgenerator -reports:~/repos/vm2.Glob/TestResults/CoverageResults/coverage.cobertura.xml -targetdir:~/repos/vm2.Glob/TestResults/CoverageResults/reports \
+#     -reporttypes:TextSummary \
+#     -classfilters:"-*.GeneratedCodeAttribute*;-*GeneratedRegexAttribute*" \
+#     -filefilters:"-*.g.cs;-*.g.i.cs;-*.i.cs;-*.generated.cs;-*Migrations/*;-*obj/*;-*AssemblyInfo.cs;-*Designer.cs;-*.designer.cs"
 
 if [[ "$uninstall_reportgenerator" = "true" ]]; then
     trace "Uninstalling the tool 'reportgenerator'..."
@@ -207,33 +193,28 @@ if [[ "$uninstall_reportgenerator" = "true" ]]; then
 fi
 
 if [[ $dry_run != "true" ]]; then
-    if [[ ! -s "$coverage_reports_path" ]]; then
+    if [[ ! -s "$coverage_summary_path" ]]; then
         error "Coverage summary not found."
         exit 2
     fi
 fi
 
-# Copy the coverage report summary to the artifact directory
-trace "Copying coverage summary to '$coverage_summary_text_path'..."
-execute mv "$coverage_reports_path" "$coverage_summary_text_path"
-# execute mv "$coverage_reports_dir"  "$coverage_summary_html_dir"
-
 # Extract the coverage percentage from the summary file
-trace "Extracting coverage percentages from '$coverage_summary_text_path'..."
+trace "Extracting coverage percentages from '$coverage_summary_path'..."
 if [[ $dry_run != "true" ]]; then
-    line_pct=$(sed -nE 's/Line coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_text_path" | head -n1 | xargs)
+    line_pct=$(sed -nE 's/Line coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_path" | head -n1 | xargs)
     if [[ -z "$line_pct" ]]; then
-        error "Could not parse line coverage percent from \"$coverage_summary_text_path\""
+        error "Could not parse line coverage percent from \"$coverage_summary_path\""
         exit 2
     fi
-    branch_pct=$(sed -nE 's/Branch coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_text_path" | head -n1 | xargs)
+    branch_pct=$(sed -nE 's/Branch coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_path" | head -n1 | xargs)
     if [[ -z "$branch_pct" ]]; then
-        error "Could not parse branch coverage percent from \"$coverage_summary_text_path\""
+        error "Could not parse branch coverage percent from \"$coverage_summary_path\""
         exit 2
     fi
-    method_pct=$(sed -nE 's/Method coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_text_path" | head -n1 | xargs)
+    method_pct=$(sed -nE 's/Method coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_path" | head -n1 | xargs)
     if [[ -z "$method_pct" ]]; then
-        error "Could not parse method coverage percent from \"$coverage_summary_text_path\""
+        error "Could not parse method coverage percent from \"$coverage_summary_path\""
         exit 2
     fi
 
@@ -241,7 +222,32 @@ if [[ $dry_run != "true" ]]; then
     br_status="$([[ $branch_pct -lt $min_coverage_pct ]] && echo '❌' || echo '✅')"
     me_status="$([[ $method_pct -lt $min_coverage_pct ]] && echo '❌' || echo '✅')"
 
-    # Compare the coverage percentage against the threshold
+    # # Compare the coverage percentage against the threshold
+    # table_format=$(get_table_format)
+    # if [[ $table_format == "markdown" ]]; then
+    # {
+    #     echo "Coverage for project '$test_name'"
+    #     echo ""
+    #     echo "Coverage | Percentage     | Status"
+    #     echo ":--------|---------------:|:------:"
+    #     echo "Line     | ${line_pct}%   | $ln_status"
+    #     echo "Branch   | ${branch_pct}% | $br_status"
+    #     echo "Method   | ${method_pct}% | $me_status"
+    #     echo ""
+    # } | to_summary
+    # else
+    # {
+    #     echo "Coverage for project '$test_name'"
+    #     echo ""
+    #     echo "┌──────────┬────────────────┬────────────┬"
+    #     echo "│ Coverage │ Percentage     │ Status     │"
+    #     echo "├──────────┼────────────────┼────────────┼"
+    #     echo "│ Line     │ ${line_pct}%   │ $ln_status │"
+    #     echo "│ Branch   │ ${branch_pct}% │ $br_status │"
+    #     echo "│ Method   │ ${method_pct}% │ $me_status │"
+    #     echo "└──────────┴────────────────┴────────────┴"
+    # } | to_summary
+    # fi
     {
         echo "Coverage for project '$test_name'"
         echo ""
@@ -257,11 +263,8 @@ if [[ $dry_run != "true" ]]; then
     to_github_output test_name proj-name
     args_to_github_output \
      artifacts_dir \
-     coverage_results_dir \
      coverage_source_path \
-     coverage_summary_text_dir \
-     coverage_summary_html_dir \
-     coverage_summary_text_path \
+     coverage_summary_path \
      line_pct \
      branch_pct \
      method_pct

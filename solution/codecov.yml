@@ -38,10 +38,10 @@ comment:
 ignore:
   # - "test/**" # Exclude test projects
   # - "tests/**" # Exclude test projects
-  # - "**/obj/**" # Exclude build artifacts
-  # - "**/bin/**"
   # - "**/*.Tests/**"
-  # - "**/Test.Utilities/**"
+  - "**/obj/**" # Exclude build artifacts
+  - "**/bin/**"
+  - "**/Test.Utilities/**"
   - "**/Migrations/**"
   - "**/*.g.cs" # Exclude generated code files
   - "**/*.Designer.cs"
@@ -50,3 +50,14 @@ ignore:
   - "**/Properties/**"
   - "**/*.config"
   - "**/*.xml"
+  - "**/*GeneratedRegex*.cs"
+  - "**/*d__*.cs"
+  - "**/*<>c*.cs"
+
+parsers:
+  cobertura:
+    branch_detection:
+      conditional: yes
+      loop: yes
+      method: yes
+      macro: yes
