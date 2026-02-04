@@ -98,7 +98,7 @@ s=$(execute dotnet pack \
     "-p:preprocessor_symbols=$preprocessor_symbols" \
     "-p:MinVerTagPrefix=$minver_tag_prefix" \
     "-p:MinVerPrereleaseIdentifiers=$minver_prerelease_id" \
-    "-p:PackageReleaseNotes=Prerelease: ${reason}" | summarizeDotnetBuild)
+    "-p:PackageReleaseNotes=\"$reason\"" | summarizeDotnetBuild)
 echo "$s" | to_summary
 
 # the build/pack
