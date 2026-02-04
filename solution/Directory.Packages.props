@@ -5,7 +5,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageVersion Include="System.CommandLine" Version="2.0.1" />
+        <PackageVersion Include="System.CommandLine" Version="2.0.2" />
         <PackageVersion Include="System.Configuration.ConfigurationManager" Version="10.0.2" />
         <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.2" />
         <PackageVersion Include="Microsoft.Extensions.Configuration.CommandLine" Version="10.0.2" />
@@ -30,7 +30,7 @@
         <PackageVersion Include="xunit.v3" Version="3.2.2" />
         <PackageVersion Include="xunit.v3.extensibility.core" Version="3.2.2" />
         <PackageVersion Include="xunit.v3.runner.inproc" Version="3.2.2" />
-        <PackageVersion Include="vm2.TestUtilities" Version="1.0.3" />
+        <PackageVersion Include="vm2.TestUtilities" Version="1.2.0" />
 
         <!-- Benchmarking packages: -->
         <!-- for running with Visual Studio profiler:<PackageVersion Include="Microsoft.VisualStudio.DiagnosticsHub.BenchmarkDotNetDiagnosers" Version="18.0.36421.1" />-->
