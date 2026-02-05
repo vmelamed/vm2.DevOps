@@ -16,9 +16,11 @@ source "$lib_dir/core.sh"
 declare -x repos="${GIT_REPOS:-$HOME/repos}"
 declare -x target_dir=""
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-'v'}
+declare -xa file_regexes=()
 
 source "${script_dir}/diff-common.utils.sh"
 source "${script_dir}/diff-common.usage.sh"
+source "${script_dir}/diff-common.functions.sh"
 
 get_arguments "$@"
 
@@ -96,7 +98,21 @@ while [[ $i -lt ${#source_files[@]} ]]; do
     actions="${file_actions[$source_file]}"
     i=$((i+1))
 
-    echo -e "\n${source_file} <---------> ${target_file}:"
+    if [[ ${#file_regexes[@]} -gt 0 ]]; then
+        matched=false
+        for regex in "${file_regexes[@]}"; do
+            if [[ "$source_file" =~ $regex ]]; then
+                matched=true
+                break
+            fi
+        done
+        if [[ $matched == false ]]; then
+            trace "Skipping file '$source_file' as it does not match any of the provided regexes."
+            continue
+        fi
+    fi
+
+    trace -e "\n${source_file} <--- Comparing ---> ${target_file}"
 
     if [[ ! -s "$target_file" ]]; then
         if [[ "$actions" != "ignore" ]]; then

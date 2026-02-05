@@ -20,7 +20,7 @@ This is opinionated tool that requires certain file structure of  the repository
 file for more details
 
 Arguments:
-    <repository-name>           Determines the target directory for the operation. It can be:
+  <repository-name>             Determines the target directory for the operation. It can be:
                                 1) not specified - the current working directory is used
                                 2) just the name of the project's repository (assumed under \$GIT_REPOS)
                                 3) the full path to the project's directory that is either the root of the working tree or
@@ -32,6 +32,10 @@ Options:
   -mp, --minver-tag-prefix      The prefix used for MinVer version tags in the repositories. Used to detect the latest stable
                                 version tag of the source repositories 'vm2.DevOps' and '.github'
                                 Initial from the \$MINVERTAGPREFIX environment variable or 'v'
+  -f, --files                   A comma-separated list of files to compare/copy/merge. Instead of going through all the pre-
+                                defined files, only the specified files from the full list are processed. The file names can be
+                                regular expressions.
+                                Example: -f '.*ya?ml$' or --files 'Dockerfile,Directory.*'
 
 $std_switches
 Environment Variables:

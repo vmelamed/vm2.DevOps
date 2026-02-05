@@ -129,7 +129,7 @@
         <!-- Use MTP v2 for all environments - VS 2022 should support it -->
         <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" />
         <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
-        <PackageReference Include="xunit.v3" />
+        <PackageReference Include="xunit.v3.mtp-v2" />
         <PackageReference Include="FluentAssertions" />
         <PackageReference Include="vm2.TestUtilities" />
     </ItemGroup>

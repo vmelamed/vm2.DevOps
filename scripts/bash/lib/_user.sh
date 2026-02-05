@@ -64,13 +64,11 @@ function confirm()
 
         while true; do
             read -rp "$prompt $suffix: " response
-            response=${response:-$default}
-            response=${response,,}
-            [[ "$response" =~ ^[yn]$ ]] && break
-            warning "Please enter y/Y or n/N." >&2
+            [[ -z "$response" || "$response" =~ ^[ynYN]$ ]] && break
+            warning "Please enter one of y/Y/n/N." >&2
         done
     fi
-    printf '%s' "$response"
+    response=${response:-$default}
     [[ ${response,,} == "y" ]]
 }
 
