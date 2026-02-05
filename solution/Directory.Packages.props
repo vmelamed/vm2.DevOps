@@ -32,7 +32,7 @@
         <PackageVersion Include="xunit.v3.mtp-v2" Version="3.2.2" />
         <PackageVersion Include="xunit.v3.extensibility.core" Version="3.2.2" />
         <PackageVersion Include="xunit.v3.runner.inproc" Version="3.2.2" />
-        <PackageVersion Include="vm2.TestUtilities" Version="1.2.0" />
+        <PackageVersion Include="vm2.TestUtilities" Version="1.2.1" />
 
         <!-- Benchmarking packages: -->
         <!-- for running with Visual Studio profiler:<PackageVersion Include="Microsoft.VisualStudio.DiagnosticsHub.BenchmarkDotNetDiagnosers" Version="18.0.36421.1" />-->
