@@ -162,8 +162,8 @@ jobs:
               # ls -la ./test/**/bin/${{ inputs.configuration }}/*.*
           fi
 
-          [[ -n "${{ inputs.test-subject }}" ]]         && opt_subject="--subject "${{ inputs.test-subject }}""                      || opt_subject=""
-          [[ -n "${{ inputs.preprocessor-symbols }}" ]] && opt_preproc="--preprocessor-symbols "${{ inputs.preprocessor-symbols }}"" || opt_preproc=""
+          [[ -n "${{ inputs.test-subject }}" ]]         && opt_subject="--subject "${{ inputs.test-subject }}""        || opt_subject=""
+          [[ -n "${{ inputs.preprocessor-symbols }}" ]] && opt_preproc="--define "${{ inputs.preprocessor-symbols }}"" || opt_preproc=""
 
           run-tests.sh ${{ inputs.test-project }} \
               $opt_subject \
