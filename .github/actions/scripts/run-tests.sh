@@ -183,7 +183,7 @@ execute reportgenerator \
 	-classfilters:"-*.GeneratedCodeAttribute*;-*GeneratedRegexAttribute*;-*.I[A-Z]*" \
     -filefilters:"-*.g.cs;-*.g.i.cs;-*.i.cs;-*.generated.cs;-*Migrations/*;-*obj/*;-*AssemblyInfo.cs;-*Designer.cs;-*.designer.cs;-*.I[A-Z]*.cs;-*.MoveNext;-*.d__*;-*.<>c-*.<>c__DisplayClass*"
 
-trace "$(cat "$coverage_reports_dir/Summary.txt")"
+trace "$(cat "$coverage_summary_path")"
 
 # reportgenerator -reports:~/repos/vm2.Glob/TestResults/CoverageResults/coverage.cobertura.xml -targetdir:~/repos/vm2.Glob/TestResults/CoverageResults/reports \
 #     -reporttypes:TextSummary \
@@ -205,61 +205,22 @@ fi
 # Extract the coverage percentage from the summary file
 trace "Extracting coverage percentages from '$coverage_summary_path'..."
 if [[ $dry_run != "true" ]]; then
-    line_pct=$(sed -nE 's/Line coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_path" | head -n1 | xargs)
-    if [[ -z "$line_pct" ]]; then
+    coverage=$(sed -nE "s/${test_name%.Tests}"' +([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_path" | head -n1 | xargs)
+    if [[ -z "$coverage" ]]; then
         error "Could not parse line coverage percent from \"$coverage_summary_path\""
         exit 2
     fi
-    branch_pct=$(sed -nE 's/Branch coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_path" | head -n1 | xargs)
-    if [[ -z "$branch_pct" ]]; then
-        error "Could not parse branch coverage percent from \"$coverage_summary_path\""
-        exit 2
-    fi
-    method_pct=$(sed -nE 's/Method coverage: ([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_path" | head -n1 | xargs)
-    if [[ -z "$method_pct" ]]; then
-        error "Could not parse method coverage percent from \"$coverage_summary_path\""
-        exit 2
-    fi
 
-    ln_status="$([[ $line_pct -lt $min_coverage_pct   ]] && echo '❌' || echo '✅')"
-    br_status="$([[ $branch_pct -lt $min_coverage_pct ]] && echo '❌' || echo '✅')"
-    me_status="$([[ $method_pct -lt $min_coverage_pct ]] && echo '❌' || echo '✅')"
+    ln_status="$([[ $coverage -lt $min_coverage_pct   ]] && echo '❌' || echo '✅')"
 
-    # # Compare the coverage percentage against the threshold
-    # table_format=$(get_table_format)
-    # if [[ $table_format == "markdown" ]]; then
-    # {
-    #     echo "Coverage for project '$test_name'"
-    #     echo ""
-    #     echo "Coverage | Percentage     | Status"
-    #     echo ":--------|---------------:|:------:"
-    #     echo "Line     | ${line_pct}%   | $ln_status"
-    #     echo "Branch   | ${branch_pct}% | $br_status"
-    #     echo "Method   | ${method_pct}% | $me_status"
-    #     echo ""
-    # } | to_summary
-    # else
-    # {
-    #     echo "Coverage for project '$test_name'"
-    #     echo ""
-    #     echo "┌──────────┬────────────────┬────────────┬"
-    #     echo "│ Coverage │ Percentage     │ Status     │"
-    #     echo "├──────────┼────────────────┼────────────┼"
-    #     echo "│ Line     │ ${line_pct}%   │ $ln_status │"
-    #     echo "│ Branch   │ ${branch_pct}% │ $br_status │"
-    #     echo "│ Method   │ ${method_pct}% │ $me_status │"
-    #     echo "└──────────┴────────────────┴────────────┴"
-    # } | to_summary
-    # fi
     {
         echo "Coverage for project '$test_name'"
         echo ""
         echo "Coverage | Percentage     | Status"
         echo ":--------|---------------:|:------:"
-        echo "Line     | ${line_pct}%   | $ln_status"
-        echo "Branch   | ${branch_pct}% | $br_status"
-        echo "Method   | ${method_pct}% | $me_status"
+        echo "         | ${coverage}%   | $ln_status"
         echo ""
+        echo "Wait for the detailed coverage report to be published as an artifact on CodeCov."
     } | to_summary
 
     # Export variables to GitHub Actions output
@@ -272,7 +233,7 @@ if [[ $dry_run != "true" ]]; then
      branch_pct \
      method_pct
 
-    if (( line_pct < min_coverage_pct )); then
+    if (( coverage < min_coverage_pct )); then
         exit 2
     fi
 fi
