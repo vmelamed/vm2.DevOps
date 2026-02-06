@@ -8,6 +8,11 @@ on:
         type: string
         required: true
 
+      test-subject:
+        description: The name of the project being tested, without the .csproj suffix (can be null or empty string, in which case it is inferred from the test project)
+        type: string
+        required: false
+
       runner-os:
         description: Runner OS
         type: string
@@ -158,6 +163,8 @@ jobs:
           # ls -la ./test/**/bin/${{ inputs.configuration }}/*.*
 
           run-tests.sh ${{ inputs.test-project }} \
+              --test-subject "${{ inputs.test-subject }}" \
+              --preprocessor-symbols "${{ inputs.preprocessor-symbols }}" \
               --configuration "${{ inputs.configuration }}" \
               --min-coverage-pct "${{ inputs.min-coverage-pct }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \

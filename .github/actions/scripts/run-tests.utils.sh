@@ -18,6 +18,11 @@ function get_arguments()
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
+            --subject|-s )
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                test_subject=$1; shift
+                ;;
+
             --configuration|-c )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 configuration=$1; shift
@@ -70,6 +75,7 @@ dump_all_variables()
         test_project \
         test_name \
         test_dir \
+        test_subject \
         configuration \
         preprocessor_symbols \
         min_coverage_pct \

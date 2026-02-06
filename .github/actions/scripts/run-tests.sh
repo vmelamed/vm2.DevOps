@@ -18,6 +18,7 @@ declare -xr default_artifacts_dir="./TestResults"
 declare -ixr default_min_coverage_pct=80
 
 declare -x test_project=${TEST_PROJECT:-}
+declare -x test_subject=${TEST_SUBJECT:-}
 declare -x configuration=${CONFIGURATION:="${default_configuration}"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"${default_minver_tag_prefix}"}
@@ -38,7 +39,7 @@ dump_vars --quiet \
     lib_dir \
     --blank \
     test_project \
-    configuration \
+    test_subject \
     preprocessor_symbols \
     min_coverage_pct \
     minver_tag_prefix \
@@ -51,6 +52,8 @@ dump_vars --quiet \
 is_safe_existing_file "$test_project" || true
 test_name=$(basename "${test_project%.*}")                                      # the base name of the test project (without the path and file extension)
 test_dir=$(dirname "$test_project")                                             # the directory of the test project
+test_subject=${test_subject:-${test_name%.Tests}}                               # the name of the project being tested, inferred from the test project if not provided
+is_safe_input "$test_subject" || true
 is_safe_configuration "$configuration" || true
 validate_preprocessor_symbols preprocessor_symbols || true
 validate_minverTagPrefix "$minver_tag_prefix" || true
@@ -60,7 +63,6 @@ is_safe_min_coverage_pct "$min_coverage_pct" || true
 
 exit_if_has_errors
 
-test_name=$(basename "${test_project%.*}")                                      # the base name of the test project (without the path and file extension)
 test_dir=$(realpath -e "$(dirname "$test_project")")                            # the directory of the test project
 [[ -z "$artifacts_dir" ]] && artifacts_dir="${default_artifacts_dir}/${test_name}"
 artifacts_dir=$(realpath -m "${artifacts_dir}" 2> "$_ignore")                   # the directory for test results and reports (resolved to an absolute path, if it was relative)
@@ -185,11 +187,6 @@ execute reportgenerator \
 
 trace "$(cat "$coverage_summary_path")"
 
-# reportgenerator -reports:~/repos/vm2.Glob/TestResults/CoverageResults/coverage.cobertura.xml -targetdir:~/repos/vm2.Glob/TestResults/CoverageResults/reports \
-#     -reporttypes:TextSummary \
-#     -classfilters:"-*.GeneratedCodeAttribute*;-*GeneratedRegexAttribute*" \
-#     -filefilters:"-*.g.cs;-*.g.i.cs;-*.i.cs;-*.generated.cs;-*Migrations/*;-*obj/*;-*AssemblyInfo.cs;-*Designer.cs;-*.designer.cs"
-
 if [[ "$uninstall_reportgenerator" = "true" ]]; then
     trace "Uninstalling the tool 'reportgenerator'..."
     execute dotnet tool uninstall dotnet-reportgenerator-globaltool --global
@@ -205,7 +202,7 @@ fi
 # Extract the coverage percentage from the summary file
 trace "Extracting coverage percentages from '$coverage_summary_path'..."
 if [[ $dry_run != "true" ]]; then
-    coverage=$(sed -nE "s/${test_name%.Tests}"' +([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_path" | head -n1 | xargs)
+    coverage=$(sed -nE "s/${test_subject}"' +([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_path" | head -n1 | xargs)
     if [[ -z "$coverage" ]]; then
         error "Could not parse line coverage percent from \"$coverage_summary_path\""
         exit 2
@@ -214,11 +211,11 @@ if [[ $dry_run != "true" ]]; then
     ln_status="$([[ $coverage -lt $min_coverage_pct   ]] && echo '❌' || echo '✅')"
 
     {
-        echo "Coverage for project '$test_name'"
+        echo "Coverage for subject '$test_subject'"
         echo ""
-        echo "Coverage | Percentage     | Status"
-        echo ":--------|---------------:|:------:"
-        echo "         | ${coverage}%   | $ln_status"
+        echo "|Coverage         | Percentage     | Status       |"
+        echo "|:----------------|---------------:|:------------:|"
+        echo "| ${test_subject} | ${coverage}%   | $ln_status   |"
         echo ""
         echo "Wait for the detailed coverage report to be published as an artifact on CodeCov."
     } | to_summary
@@ -229,9 +226,8 @@ if [[ $dry_run != "true" ]]; then
      artifacts_dir \
      coverage_source_path \
      coverage_summary_path \
-     line_pct \
-     branch_pct \
-     method_pct
+     test_subject \
+     coverage
 
     if (( coverage < min_coverage_pct )); then
         exit 2
