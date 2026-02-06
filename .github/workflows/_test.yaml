@@ -166,8 +166,8 @@ jobs:
           [[ -n "${{ inputs.preprocessor-symbols }}" ]] && opt_preproc="--define "${{ inputs.preprocessor-symbols }}"" || opt_preproc=""
 
           run-tests.sh ${{ inputs.test-project }} \
-              $opt_subject \
-              $opt_preproc \
+              --subject "${{ inputs.test-subject }}" \
+              --define "${{ inputs.preprocessor-symbols }}" \
               --configuration "${{ inputs.configuration }}" \
               --min-coverage-pct "${{ inputs.min-coverage-pct }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
