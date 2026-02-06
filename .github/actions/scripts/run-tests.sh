@@ -183,6 +183,8 @@ execute reportgenerator \
 	-classfilters:"-*.GeneratedCodeAttribute*;-*GeneratedRegexAttribute*;-*.I[A-Z]*" \
     -filefilters:"-*.g.cs;-*.g.i.cs;-*.i.cs;-*.generated.cs;-*Migrations/*;-*obj/*;-*AssemblyInfo.cs;-*Designer.cs;-*.designer.cs;-*.I[A-Z]*.cs;-*.MoveNext;-*.d__*;-*.<>c-*.<>c__DisplayClass*"
 
+trace "$(cat "$coverage_reports_dir/Summary.txt")"
+
 # reportgenerator -reports:~/repos/vm2.Glob/TestResults/CoverageResults/coverage.cobertura.xml -targetdir:~/repos/vm2.Glob/TestResults/CoverageResults/reports \
 #     -reporttypes:TextSummary \
 #     -classfilters:"-*.GeneratedCodeAttribute*;-*GeneratedRegexAttribute*" \
