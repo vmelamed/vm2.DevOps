@@ -146,7 +146,7 @@ if [[ ! -s "${test_exec_path}" && "$dry_run" != "true" ]]; then
 fi
 
 trace "Running tests from ${test_project}..."
-if ! execute test_exec_path \
+if ! execute "${test_exec_path}" \
         --results-directory "${artifacts_dir}" \
         --report-trx \
         --coverage \

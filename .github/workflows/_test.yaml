@@ -161,8 +161,7 @@ jobs:
               --configuration "${{ inputs.configuration }}" \
               --min-coverage-pct "${{ inputs.min-coverage-pct }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
-              --minver-prerelease-id "${{ inputs.minver-prerelease-id }}" \
-              --artifacts "${{ env.TEST_ARTIFACTS_DIR }}"
+              --minver-prerelease-id "${{ inputs.minver-prerelease-id }}"
 
       # Upload test results and coverage reports as workflow artifacts
       - name: Upload coverage artifact
@@ -187,7 +186,6 @@ jobs:
 
       # Create test result check and PR comment
       - name: Publish test results
-        if: success() || failure() # Run even if tests fail, but not if cancelled
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           check_name: Test Results (${{ steps.run-tests.outputs.proj-name }} on ${{ inputs.runner-os }})
