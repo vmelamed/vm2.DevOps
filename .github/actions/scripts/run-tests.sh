@@ -14,7 +14,7 @@ source "$lib_dir/gh_core.sh"
 declare -xr default_configuration="Release"
 declare -xr default_minver_tag_prefix='v'
 declare -xr default_minver_prerelease_id="preview.0"
-declare -xr default_artifacts_dir="TestResults"
+declare -xr default_artifacts_dir="./TestResults"
 declare -ixr default_min_coverage_pct=80
 
 declare -x test_project=${TEST_PROJECT:-}
@@ -55,16 +55,15 @@ is_safe_configuration "$configuration" || true
 validate_preprocessor_symbols preprocessor_symbols || true
 validate_minverTagPrefix "$minver_tag_prefix" || true
 is_safe_minverPrereleaseId "$minver_prerelease_id" || true
-[[ -z $artifacts_dir ]] && artifacts_dir="${test_dir}/${default_artifacts_dir}" # default artifacts directory
 is_safe_path "$artifacts_dir" || true
 is_safe_min_coverage_pct "$min_coverage_pct" || true
 
 exit_if_has_errors
 
-test_name=$(basename "${test_project%.*}")              # the base name of the test project (without the path and file extension)
-test_dir=$(realpath -e "$(dirname "$test_project")")    # the directory of the test project
-solution_dir=$(realpath -e "$test_dir/../..")            # the directory of the solution
-artifacts_dir=$(realpath -m "$artifacts_dir" 2> "$_ignore")
+test_name=$(basename "${test_project%.*}")                                      # the base name of the test project (without the path and file extension)
+test_dir=$(realpath -e "$(dirname "$test_project")")                            # the directory of the test project
+[[ -z "$artifacts_dir" ]] && artifacts_dir="${default_artifacts_dir}/${test_name}"
+artifacts_dir=$(realpath -m "${artifacts_dir}" 2> "$_ignore")                   # the directory for test results and reports (resolved to an absolute path, if it was relative)
 renamed_artifacts_dir="$artifacts_dir-$(date -u +"%Y%m%dT%H%M%S")"
 
 # Freeze the variables
@@ -76,7 +75,6 @@ declare -xr minver_tag_prefix
 declare -xr minver_prerelease_id
 declare -xr test_name
 declare -xr test_dir
-declare -xr solution_dir
 declare -xr artifacts_dir
 declare -xr renamed_artifacts_dir
 
@@ -111,9 +109,9 @@ if [[ -d "$artifacts_dir" && -n "$(ls -A "$artifacts_dir")" ]]; then
 fi
 
 # ${artifacts_dir}                                                              # abs.path to test results and reports          ~/repos/vm2.Glob/TestResults
-coverage_source_path="${artifacts_dir}/CoverageResults/${test_name}.xml"        # path to the raw coverage file                 ~/repos/vm2.Glob/TestResults/CoverageResults/Glob.Api.Tests.xml
-coverage_reports_dir="${artifacts_dir}/CoverageResults/${test_name}/reports"    # directory for coverage reports                ~/repos/vm2.Glob/TestResults/CoverageResults/Glob.Api.Tests/reports
-coverage_summary_path="${coverage_reports_dir}/Summary.txt"                     # path to text coverage summary file            ~/repos/vm2.Glob/TestResults/CoverageResults/Glob.Api.Tests/reports/Summary.txt
+coverage_source_path="${artifacts_dir}/coverage.cobertura.xml"                  # path to the raw coverage file                 ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/coverage.cobertura.xml
+coverage_reports_dir="${artifacts_dir}/reports"                                 # directory for coverage reports                ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/reports
+coverage_summary_path="${coverage_reports_dir}/Summary.txt"                     # path to text coverage summary file            ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/reports/Summary.txt
 
 declare -r coverage_source_path
 declare -r coverage_reports_dir
@@ -138,7 +136,6 @@ if [[ ! -s "${test_exec_path}" && "$dry_run" != "true" ]]; then
     warning "Cached test executable ${test_exec_path} was not found. Rebuilding the test project"
     execute dotnet clean "$test_project" --configuration "$configuration" || true
     if ! execute dotnet build "$test_project" \
-                --verbosity detailed \
                 --configuration "$configuration" \
                 -p:preprocessor_symbols="$preprocessor_symbols" \
                 -p:MinVerTagPrefix="$minver_tag_prefix" \
@@ -149,10 +146,14 @@ if [[ ! -s "${test_exec_path}" && "$dry_run" != "true" ]]; then
 fi
 
 trace "Running tests from ${test_project}..."
-if ! execute dotnet test \
-        --project "$test_project" \
-        --configuration "$configuration" \
-        --no-build; then
+if ! execute test_exec_path \
+        --results-directory "${artifacts_dir}" \
+        --report-trx \
+        --coverage \
+        --coverage-output-format "cobertura" \
+        --coverage-output "coverage.cobertura.xml" \
+        --coverage-settings "CodeCoverage.runsettings" \
+        ; then
     error "Tests failed in project '$test_project'."
     exit 2
 fi
