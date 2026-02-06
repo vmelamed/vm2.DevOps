@@ -153,18 +153,21 @@ jobs:
         run: |
           ARTIFACT_PATH=$(find . -type d -path "*/bin/${{ inputs.configuration }}" | head -n 1)
           if [ -z "$ARTIFACT_PATH" ]; then
-              echo "Error: No build artifacts found in cache."
+              warning "No build artifacts found in cache."
               exit 1
           else
               echo "Build artifacts found at: $ARTIFACT_PATH"
+              # uncomment the next 2 lines if you want to debug the contents of the artifact path
+              # ls -la "$ARTIFACT_PATH"/**/*.*
+              # ls -la ./test/**/bin/${{ inputs.configuration }}/*.*
           fi
-          # uncomment the next 2 lines if you want to debug the contents of the artifact path
-          # ls -la "$ARTIFACT_PATH"/**/*.*
-          # ls -la ./test/**/bin/${{ inputs.configuration }}/*.*
+
+          [[ -n "${{ inputs.test-subject }}" ]]         && opt_subject="--subject "${{ inputs.test-subject }}""                      || opt_subject=""
+          [[ -n "${{ inputs.preprocessor-symbols }}" ]] && opt_preproc="--preprocessor-symbols "${{ inputs.preprocessor-symbols }}"" || opt_preproc=""
 
           run-tests.sh ${{ inputs.test-project }} \
-              --subject "${{ inputs.test-subject }}" \
-              --preprocessor-symbols "${{ inputs.preprocessor-symbols }}" \
+              $opt_subject \
+              $opt_preproc \
               --configuration "${{ inputs.configuration }}" \
               --min-coverage-pct "${{ inputs.min-coverage-pct }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \

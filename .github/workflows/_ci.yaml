@@ -78,7 +78,7 @@ concurrency:
 jobs:
   # Validate all input parameters and prepare them for downstream jobs
   validate-input:
-    name: Input validation
+    name: Parameters validation
     runs-on: ubuntu-latest
     outputs:
       build-projects: ${{ steps.validate.outputs.build-projects }}
@@ -158,7 +158,7 @@ jobs:
 
   # Run unit tests with code coverage analysis
   test:
-    name: Run unit tests
+    name: Run unit and integration tests
     needs:
       - validate-input
       - build

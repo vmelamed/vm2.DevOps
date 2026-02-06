@@ -181,7 +181,8 @@ fi
 execute reportgenerator \
     -reports:"$coverage_source_path" \
     -targetdir:"$coverage_reports_dir" \
-    -reporttypes:TextSummary \
+    -reporttypes:TextSummary,html_dark \
+    -settings:excludeTestProjects=true \
 	-classfilters:"-*.GeneratedCodeAttribute*;-*GeneratedRegexAttribute*;-*.I[A-Z]*" \
     -filefilters:"-*.g.cs;-*.g.i.cs;-*.i.cs;-*.generated.cs;-*Migrations/*;-*obj/*;-*AssemblyInfo.cs;-*Designer.cs;-*.designer.cs;-*.I[A-Z]*.cs;-*.MoveNext;-*.d__*;-*.<>c-*.<>c__DisplayClass*"
 
@@ -208,14 +209,14 @@ if [[ $dry_run != "true" ]]; then
         exit 2
     fi
 
-    ln_status="$([[ $coverage -lt $min_coverage_pct   ]] && echo '❌' || echo '✅')"
+    [[ $coverage -lt $min_coverage_pct   ]] && status='❌' || status='✅'
 
     {
         echo "Coverage for subject '$test_subject'"
         echo ""
-        echo "|Coverage         | Percentage     | Status       |"
-        echo "|:----------------|---------------:|:------------:|"
-        echo "| ${test_subject} | ${coverage}%   | $ln_status   |"
+        echo "|Coverage         | Percentage     | Status    |"
+        echo "|:----------------|---------------:|:---------:|"
+        echo "| ${test_subject} | ${coverage}%   | $status   |"
         echo ""
         echo "Wait for the detailed coverage report to be published as an artifact on CodeCov."
     } | to_summary
