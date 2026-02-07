@@ -175,8 +175,8 @@ jobs:
       - name: Generate coverage report
         uses: danielpalme/ReportGenerator-GitHub-Action@5.5.1
         with:
-          reports: ${{ steps.run-tests.outputs.coverage_source_path }}
-          targetdir: ${{ steps.run-tests.outputs.coverage_reports_dir }}
+          reports: ${{ steps.run-tests.outputs.coverage-source-path }}
+          targetdir: ${{ steps.run-tests.outputs.coverage-reports-dir }}
           reporttypes: Html_Dark;Badges;MarkdownSummaryGithub
           classfilters: >
             -*.GeneratedCodeAttribute*;
@@ -210,13 +210,13 @@ jobs:
         id: upload-coverage
         with:
           name: coverage-${{ steps.run-tests.outputs.proj-name }}-${{ inputs.runner-os }}
-          path: ${{ steps.run-tests.outputs.coverage_reports_dir }}
+          path: ${{ steps.run-tests.outputs.coverage-reports-dir }}
           if-no-files-found: error
           overwrite: true
 
       - name: Add comment to PR # Only applicable if 'MarkdownSummaryGithub' or one of the other Markdown report types is generated
         if: github.event_name == 'pull_request'
-        run: gh pr comment $PR_NUMBER --edit-last --create-if-none --body-file ${{ steps.run-tests.outputs.coverage_reports_dir }}/SummaryGithub.md # Adjust path and filename if necessary
+        run: gh pr comment $PR_NUMBER --edit-last --create-if-none --body-file ${{ steps.run-tests.outputs.coverage-reports-dir }}/SummaryGithub.md # Adjust path and filename if necessary
         env:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             PR_NUMBER: ${{ github.event.number }}

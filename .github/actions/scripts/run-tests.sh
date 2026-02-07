@@ -113,11 +113,9 @@ fi
 # ${artifacts_dir}                                                              # abs.path to test results and reports          ~/repos/vm2.Glob/TestResults
 coverage_source_path="${artifacts_dir}/coverage.cobertura.xml"                  # path to the raw coverage file                 ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/coverage.cobertura.xml
 coverage_reports_dir="${artifacts_dir}/reports"                                 # directory for coverage reports                ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/reports
-coverage_summary_path="${coverage_reports_dir}/Summary.txt"                     # path to text coverage summary file            ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/reports/Summary.txt
 
 declare -r coverage_source_path
 declare -r coverage_reports_dir
-declare -r coverage_summary_path
 
 dump_all_variables
 
@@ -186,6 +184,8 @@ fi
 # 	  -classfilters:"-*.GeneratedCodeAttribute*;-*GeneratedRegexAttribute*;-*.I[A-Z]*" \
 #     -filefilters:"-*.g.cs;-*.g.i.cs;-*.i.cs;-*.generated.cs;-*Migrations/*;-*obj/*;-*AssemblyInfo.cs;-*Designer.cs;-*.designer.cs;-*.I[A-Z]*.cs;-*.MoveNext;-*.d__*;-*.<>c-*.<>c__DisplayClass*"
 #
+# coverage_summary_path="${coverage_reports_dir}/Summary.txt"                     # path to text coverage summary file            ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/reports/Summary.txt
+# declare -r coverage_summary_path
 # trace "$(cat "$coverage_summary_path")"
 #
 # if [[ "$uninstall_reportgenerator" = "true" ]]; then
@@ -231,5 +231,4 @@ fi
      artifacts_dir \
      coverage_source_path \
      coverage_reports_dir \
-     test_subject \
-     coverage
+     # test_subject
