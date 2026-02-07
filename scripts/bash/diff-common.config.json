@@ -2,17 +2,17 @@
     {
         "sourceFile": "${repos}/vm2.DevOps/solution/.editorconfig",
         "targetFile": "${target_path}/.editorconfig",
-        "action": "merge or copy"
+        "action": "copy"
     },
     {
         "sourceFile": "${repos}/vm2.DevOps/solution/.gitattributes",
         "targetFile": "${target_path}/.gitattributes",
-        "action": "merge or copy"
+        "action": "copy"
     },
     {
         "sourceFile": "${repos}/vm2.DevOps/solution/.gitignore",
         "targetFile": "${target_path}/.gitignore",
-        "action": "merge or copy"
+        "action": "copy"
     },
     {
         "sourceFile": "${repos}/vm2.DevOps/solution/Directory.Build.props",
@@ -27,7 +27,7 @@
     {
         "sourceFile": "${repos}/vm2.DevOps/solution/global.json",
         "targetFile": "${target_path}/global.json",
-        "action": "merge or copy"
+        "action": "copy"
     },
     {
         "sourceFile": "${repos}/vm2.DevOps/solution/LICENSE",
@@ -37,22 +37,22 @@
     {
         "sourceFile": "${repos}/vm2.DevOps/solution/NuGet.config",
         "targetFile": "${target_path}/NuGet.config",
-        "action": "merge or copy"
+        "action": "copy"
     },
     {
         "sourceFile": "${repos}/vm2.DevOps/solution/testconfig.json",
         "targetFile": "${target_path}/testconfig.json",
-        "action": "merge or copy"
+        "action": "copy"
     },
     {
         "sourceFile": "${repos}/vm2.DevOps/solution/CodeCoverage.runsettings",
         "targetFile": "${target_path}/CodeCoverage.runsettings",
-        "action": "merge or copy"
+        "action": "copy"
     },
     {
         "sourceFile": "${repos}/vm2.DevOps/solution/codecov.yml",
         "targetFile": "${target_path}/codecov.yml",
-        "action": "merge or copy"
+        "action": "copy"
     },
     {
         "sourceFile": "${repos}/.github/workflow-templates/dependabot.yaml",

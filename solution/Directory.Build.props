@@ -9,7 +9,7 @@
 
         <!-- Use to define custom preprocessor symbols, e.g. "dotnet build -p:preprocessor_symbols="SHORT_RUN FEATURE_A FEATURE_B" ...",
              without overriding the rest of the symbols like DEBUG, TRACE, etc. -->
-        <DefineConstants Condition="'preprocessor_symbols' != ''">$(DefineConstants);$(preprocessor_symbols)</DefineConstants>
+        <DefineConstants Condition="'$([System.String]::IsNullOrWhiteSpace($(preprocessor_symbols)))' != 'true'">$(DefineConstants);$(preprocessor_symbols)</DefineConstants>
 
         <RepoRoot>$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), 'Directory.Build.props'))</RepoRoot>
     </PropertyGroup>
