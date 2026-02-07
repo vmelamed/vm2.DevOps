@@ -113,6 +113,8 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
+          dotnet-quality: 'ga'
+          cache: true
           cache-dependency-path: |
             **/packages.lock.json
             **/*.csproj
@@ -162,9 +164,6 @@ jobs:
               # ls -la ./test/**/bin/${{ inputs.configuration }}/*.*
           fi
 
-          [[ -n "${{ inputs.test-subject }}" ]]         && opt_subject="--subject "${{ inputs.test-subject }}""        || opt_subject=""
-          [[ -n "${{ inputs.preprocessor-symbols }}" ]] && opt_preproc="--define "${{ inputs.preprocessor-symbols }}"" || opt_preproc=""
-
           run-tests.sh ${{ inputs.test-project }} \
               --subject "${{ inputs.test-subject }}" \
               --define "${{ inputs.preprocessor-symbols }}" \
@@ -173,62 +172,101 @@ jobs:
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
               --minver-prerelease-id "${{ inputs.minver-prerelease-id }}"
 
+      - name: Generate coverage report
+        uses: danielpalme/ReportGenerator-GitHub-Action@5.5.1
+        with:
+          reports: ${{ steps.run-tests.outputs.coverage_source_path }}
+          targetdir: ${{ steps.run-tests.outputs.coverage_reports_dir }}
+          reporttypes: Html_Dark;Badges;MarkdownSummaryGithub
+          classfilters: >
+            -*.GeneratedCodeAttribute*;
+            -*GeneratedRegexAttribute*;
+            -*.I[A-Z]*
+          filefilters: >
+            -*.g.cs
+            -*.g.i.cs
+            -*.i.cs
+            -*.generated.cs
+            -*Migrations/*
+            -*obj/*
+            -*AssemblyInfo.cs
+            -*Designer.cs
+            -*.designer.cs
+            -*.I[A-Z]*.cs
+            -*.MoveNext
+            -*.d__*
+            -*.<>c-*.<>c__DisplayClass*
+          customSettings: >
+            settings:excludeTestProjects=true;
+            minimumCoverageThresholds:lineCoverage=${{ inputs.min-coverage-pct }};
+            minimumCoverageThresholds:branchCoverage=${{ inputs.min-coverage-pct }};
+            minimumCoverageThresholds:methodCoverage=${{ inputs.min-coverage-pct }};
+            minimumCoverageThresholds:fullMethodCoverage=${{ inputs.min-coverage-pct }}
+          license: ${{ secrets.REPORT_GENERATOR_LICENSE }}
+
       # Upload test results and coverage reports as workflow artifacts
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v6
         id: upload-coverage
         with:
           name: coverage-${{ steps.run-tests.outputs.proj-name }}-${{ inputs.runner-os }}
-          path: ${{ steps.run-tests.outputs.artifacts-dir }}
+          path: ${{ steps.run-tests.outputs.coverage_reports_dir }}
           if-no-files-found: error
           overwrite: true
 
-      # Upload coverage to Codecov for online viewing and PR integration
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+      - name: Add comment to PR # Only applicable if 'MarkdownSummaryGithub' or one of the other Markdown report types is generated
+        if: github.event_name == 'pull_request'
+        run: gh pr comment $PR_NUMBER --edit-last --create-if-none --body-file ${{ steps.run-tests.outputs.coverage_reports_dir }}/SummaryGithub.md # Adjust path and filename if necessary
         env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-        with:
-          flags: ${{ steps.run-tests.outputs.proj-name }}-${{ inputs.runner-os }}
-          slug: ${{ github.repository }}
-          files: ${{ steps.run-tests.outputs.coverage_source_path }}
-          fail_ci_if_error: false
+            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            PR_NUMBER: ${{ github.event.number }}
 
-      # Create test result check and PR comment
-      - name: Publish test results
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        with:
-          check_name: Test Results (${{ steps.run-tests.outputs.proj-name }} on ${{ inputs.runner-os }})
-          files: |
-            ${{ steps.run-tests.outputs.artifacts-dir }}/**/*.trx
-            ${{ steps.run-tests.outputs.artifacts-dir }}/**/*.xml
-          comment_mode: always
-          compare_to_earlier_commit: true
-          report_individual_runs: true
-          deduplicate_classes_by_file_name: false
+      # # Upload coverage to Codecov for online viewing and PR integration
+      # - name: Upload coverage to Codecov
+      #   uses: codecov/codecov-action@v5
+      #   env:
+      #     CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      #   with:
+      #     flags: ${{ steps.run-tests.outputs.proj-name }}-${{ inputs.runner-os }}
+      #     slug: ${{ github.repository }}
+      #     files: ${{ steps.run-tests.outputs.coverage_source_path }}
+      #     fail_ci_if_error: false
+#
+      # # Create test result check and PR comment
+      # - name: Publish test results
+      #   uses: EnricoMi/publish-unit-test-result-action@v2
+      #   with:
+      #     check_name: Test Results (${{ steps.run-tests.outputs.proj-name }} on ${{ inputs.runner-os }})
+      #     files: |
+      #       ${{ steps.run-tests.outputs.artifacts-dir }}/**/*.trx
+      #       ${{ steps.run-tests.outputs.artifacts-dir }}/**/*.xml
+      #     comment_mode: always
+      #     compare_to_earlier_commit: true
+      #     report_individual_runs: true
+      #     deduplicate_classes_by_file_name: false
 
       # Add coverage check status to summary
-      - name: Verify coverage threshold
-        if: always()
-        shell: bash
-        run: |
-          LINE_PCT="${{ steps.run-tests.outputs.line_pct }}"
-          MIN_PCT="${{ inputs.min-coverage-pct }}"
+      #  - name: Verify coverage threshold
+      #    if: always()
+      #    shell: bash
+      #    run: |
+      #      LINE_PCT="${{ steps.run-tests.outputs.line_pct }}"
+      #      MIN_PCT="${{ inputs.min-coverage-pct }}"
 
-          {
-              echo "### 📊 Code Coverage"
-              echo ""
-              echo "**Line Coverage:** ${LINE_PCT}%"
-              echo "**Minimum Required:** ${MIN_PCT}%"
-              echo ""
-              if (( $(echo "$LINE_PCT < $MIN_PCT" | bc -l) )); then
-                  echo "❌ **FAILED:** Coverage ${LINE_PCT}% is below threshold ${MIN_PCT}%"
-                  echo ""
-                  echo "::error::Code coverage ${LINE_PCT}% is below the minimum required threshold of ${MIN_PCT}%"
-              else
-                  echo "✅ **PASSED:** Coverage meets threshold"
-              fi
-          } >> $GITHUB_STEP_SUMMARY
+      #      {
+      #          echo "### 📊 Code Coverage"
+      #          echo ""
+      #          echo "**Line Coverage:** ${LINE_PCT}%"
+      #          echo "**Minimum Required:** ${MIN_PCT}%"
+      #          echo ""
+      #          if (( $(echo "$LINE_PCT < $MIN_PCT" | bc -l) )); then
+      #              echo "❌ **FAILED:** Coverage ${LINE_PCT}% is below threshold ${MIN_PCT}%"
+      #              echo ""
+      #              echo "::error::Code coverage ${LINE_PCT}% is below the minimum required threshold of ${MIN_PCT}%"
+      #          else
+      #              echo "✅ **PASSED:** Coverage meets threshold"
+      #          fi
+      #      } >> $GITHUB_STEP_SUMMARY
 
       # Add coverage report link to job summary
       - name: Add coverage report link to summary
