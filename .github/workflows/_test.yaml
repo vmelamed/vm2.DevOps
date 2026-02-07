@@ -183,18 +183,18 @@ jobs:
             -*GeneratedRegexAttribute*;
             -*.I[A-Z]*
           filefilters: >
-            -*.g.cs
-            -*.g.i.cs
-            -*.i.cs
-            -*.generated.cs
-            -*Migrations/*
-            -*obj/*
-            -*AssemblyInfo.cs
-            -*Designer.cs
-            -*.designer.cs
-            -*.I[A-Z]*.cs
-            -*.MoveNext
-            -*.d__*
+            -*.g.cs;
+            -*.g.i.cs;
+            -*.i.cs;
+            -*.generated.cs;
+            -*Migrations/*;
+            -*obj/*;
+            -*AssemblyInfo.cs;
+            -*Designer.cs;
+            -*.designer.cs;
+            -*.I[A-Z]*.cs;
+            -*.MoveNext;
+            -*.d__*;
             -*.<>c-*.<>c__DisplayClass*
           customSettings: >
             settings:excludeTestProjects=true;
