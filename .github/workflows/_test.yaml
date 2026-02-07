@@ -178,30 +178,9 @@ jobs:
           reports: ${{ steps.run-tests.outputs.coverage-source-path }}
           targetdir: ${{ steps.run-tests.outputs.coverage-reports-dir }}
           reporttypes: Html_Dark;Badges;MarkdownSummaryGithub
-          classfilters: >
-            -*.GeneratedCodeAttribute*;
-            -*GeneratedRegexAttribute*;
-            -*.I[A-Z]*
-          filefilters: >
-            -*.g.cs;
-            -*.g.i.cs;
-            -*.i.cs;
-            -*.generated.cs;
-            -*Migrations/*;
-            -*obj/*;
-            -*AssemblyInfo.cs;
-            -*Designer.cs;
-            -*.designer.cs;
-            -*.I[A-Z]*.cs;
-            -*.MoveNext;
-            -*.d__*;
-            -*.<>c-*.<>c__DisplayClass*
-          customSettings: >
-            settings:excludeTestProjects=true;
-            minimumCoverageThresholds:lineCoverage=${{ inputs.min-coverage-pct }};
-            minimumCoverageThresholds:branchCoverage=${{ inputs.min-coverage-pct }};
-            minimumCoverageThresholds:methodCoverage=${{ inputs.min-coverage-pct }};
-            minimumCoverageThresholds:fullMethodCoverage=${{ inputs.min-coverage-pct }}
+          classfilters: -*.GeneratedCodeAttribute*;-*GeneratedRegexAttribute*;-*.I[A-Z]*
+          filefilters: -*.g.cs;-*.g.i.cs;-*.i.cs;-*.generated.cs;-*Migrations/*;-*obj/*;-*AssemblyInfo.cs;-*Designer.cs;-*.designer.cs;-*.I[A-Z]*.cs;-*.MoveNext;-*.d__*;-*.<>c-*.<>c__DisplayClass*
+          customSettings: settings:excludeTestProjects=true;minimumCoverageThresholds:lineCoverage=${{ inputs.min-coverage-pct }};minimumCoverageThresholds:branchCoverage=${{ inputs.min-coverage-pct }};minimumCoverageThresholds:methodCoverage=${{ inputs.min-coverage-pct }};minimumCoverageThresholds:fullMethodCoverage=${{ inputs.min-coverage-pct }}
           license: ${{ secrets.REPORT_GENERATOR_LICENSE }}
 
       # Upload test results and coverage reports as workflow artifacts
