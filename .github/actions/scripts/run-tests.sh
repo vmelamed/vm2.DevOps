@@ -183,7 +183,7 @@ fi
 #     -targetdir:"$coverage_reports_dir" \
 #     -reporttypes:TextSummary,html_dark \
 #     -settings:excludeTestProjects=true \
-# 	-classfilters:"-*.GeneratedCodeAttribute*;-*GeneratedRegexAttribute*;-*.I[A-Z]*" \
+# 	  -classfilters:"-*.GeneratedCodeAttribute*;-*GeneratedRegexAttribute*;-*.I[A-Z]*" \
 #     -filefilters:"-*.g.cs;-*.g.i.cs;-*.i.cs;-*.generated.cs;-*Migrations/*;-*obj/*;-*AssemblyInfo.cs;-*Designer.cs;-*.designer.cs;-*.I[A-Z]*.cs;-*.MoveNext;-*.d__*;-*.<>c-*.<>c__DisplayClass*"
 #
 # trace "$(cat "$coverage_summary_path")"
@@ -192,14 +192,14 @@ fi
 #     trace "Uninstalling the tool 'reportgenerator'..."
 #     execute dotnet tool uninstall dotnet-reportgenerator-globaltool --global
 # fi
-
-if [[ $dry_run != "true" ]]; then
-    if [[ ! -s "$coverage_summary_path" ]]; then
-        error "Coverage summary not found."
-        exit 2
-    fi
-fi
-
+#
+# if [[ $dry_run != "true" ]]; then
+#     if [[ ! -s "$coverage_summary_path" ]]; then
+#         error "Coverage summary not found."
+#         exit 2
+#     fi
+# fi
+#
 # # Extract the coverage percentage from the summary file
 # trace "Extracting coverage percentages from '$coverage_summary_path'..."
 # if [[ $dry_run != "true" ]]; then
