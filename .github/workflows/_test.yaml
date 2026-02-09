@@ -178,9 +178,12 @@ jobs:
           reports: ${{ steps.run-tests.outputs.coverage-source-path }}
           targetdir: ${{ steps.run-tests.outputs.coverage-reports-dir }}
           reporttypes: Html_Dark;Badges;MarkdownSummaryGithub
-          classfilters: -*.GeneratedCodeAttribute*;-*GeneratedRegexAttribute*;-*.I[A-Z]*;-*.Fake*;-*.Mock*
-          filefilters: -*.g.cs;-*.g.i.cs;-*.i.cs;-*.generated.cs;-*Migrations/*;-*obj/*;-*AssemblyInfo.cs;-*Designer.cs;-*.designer.cs;-*.I[A-Z]*.cs;-*.MoveNext;-*.d__*;-*.<>c-*.<>c__DisplayClass*;-*.Fake*;-*.Mock*
-          customSettings: settings:excludeTestProjects=true;minimumCoverageThresholds:lineCoverage=${{ inputs.min-coverage-pct }};minimumCoverageThresholds:branchCoverage=${{ inputs.min-coverage-pct }};minimumCoverageThresholds:methodCoverage=${{ inputs.min-coverage-pct }};minimumCoverageThresholds:fullMethodCoverage=${{ inputs.min-coverage-pct }}
+          # MTP v2 already handles most exclusions via Directory.Build.props
+          # Only exclude interfaces and compiler-generated items here
+          classfilters: -*.I[A-Z]*
+          filefilters: -*.MoveNext;-*.d__*;-*.<>c*
+          # Don't exclude test projects here - MTP v2 already handles it
+          customSettings: minimumCoverageThresholds:lineCoverage=${{ inputs.min-coverage-pct }};minimumCoverageThresholds:branchCoverage=${{ inputs.min-coverage-pct }};minimumCoverageThresholds:methodCoverage=${{ inputs.min-coverage-pct }};minimumCoverageThresholds:fullMethodCoverage=${{ inputs.min-coverage-pct }}
 
       # Upload test results and coverage reports as workflow artifacts
       - name: Upload coverage artifact
