@@ -45,11 +45,6 @@
         "action": "copy"
     },
     {
-        "sourceFile": "${repos}/vm2.DevOps/solution/CodeCoverage.runsettings",
-        "targetFile": "${target_path}/CodeCoverage.runsettings",
-        "action": "copy"
-    },
-    {
         "sourceFile": "${repos}/vm2.DevOps/solution/codecov.yml",
         "targetFile": "${target_path}/codecov.yml",
         "action": "copy"

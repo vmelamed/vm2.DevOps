@@ -152,7 +152,6 @@ if ! execute "${test_exec_path}" \
         --coverage \
         --coverage-output-format "cobertura" \
         --coverage-output "coverage.cobertura.xml" \
-        --coverage-settings "CodeCoverage.runsettings" \
         ; then
     error "Tests failed in project '$test_project'."
     exit 2
