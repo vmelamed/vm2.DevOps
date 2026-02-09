@@ -103,9 +103,11 @@ trace "Calculated release version from commit messages: $release_version [$bump_
 # shellcheck disable=SC2154 # semverTagPrereleaseRegex is referenced but not assigned.
 latest_prerelease_tag=$(git tag --list "${minver_tag_prefix}*" | grep -E "$semverTagPrereleaseRegex" | sort -V | tail -n1 || echo "")
 
-   # shellcheck disable=SC2154 # isLt is referenced but not assigned.
-if [[ -n "$latest_prerelease_tag" ]] && \
-   (( $(compare_semver "$release_version" "${latest_prerelease_tag#"$minver_tag_prefix"}") == isLt )); then
+if [[ -n "$latest_prerelease_tag" ]]; then
+    result=0
+    compare_semver "$release_version" "${latest_prerelease_tag#"$minver_tag_prefix"}" || result=$?
+    # shellcheck disable=SC2154 # isLt is referenced but not assigned.
+    if (( result == isLt )); then
         # the computed release version is less than the latest prerelease version,
         # so adopt the major, minor, and patch from the latest prerelease version and make it a release version
         trace "Latest prerelease tag '$latest_prerelease_tag' is greater than computed release version '$release_version'; adjusting release version."
@@ -115,6 +117,7 @@ if [[ -n "$latest_prerelease_tag" ]] && \
         patch=${BASH_REMATCH[$semver_patch]}
         release_version="$major.$minor.$patch"
         bump_type="adjusted to be > latest prerelease version"
+    fi
 fi
 
 info "Finalized new release version: $release_version [$bump_type]"

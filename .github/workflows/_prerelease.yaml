@@ -97,14 +97,12 @@ jobs:
         with:
           repository: vmelamed/vm2.DevOps
           path: vm2-devops
-          sparse-checkout: |
+          sparse-checkout: |+
             scripts/bash/lib
             .github/actions/scripts
-
       - name: Add vm2.DevOps to PATH for work inside vm2.DevOps
         if: github.repository == 'vmelamed/vm2.DevOps'
         uses: ./.github/actions/scripts
-
       - name: Add vm2.DevOps to PATH for work outside vm2.DevOps
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: ./vm2-devops/.github/actions/scripts
@@ -174,14 +172,12 @@ jobs:
         with:
           repository: vmelamed/vm2.DevOps
           path: vm2-devops
-          sparse-checkout: |
+          sparse-checkout: |+
             scripts/bash/lib
             .github/actions/scripts
-
       - name: Add vm2.DevOps to PATH for work inside vm2.DevOps
         if: github.repository == 'vmelamed/vm2.DevOps'
         uses: ./.github/actions/scripts
-
       - name: Add vm2.DevOps to PATH for work outside vm2.DevOps
         if: github.repository != 'vmelamed/vm2.DevOps'
         uses: ./vm2-devops/.github/actions/scripts
