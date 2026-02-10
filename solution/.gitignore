@@ -146,6 +146,8 @@ _TeamCity*
 coverage*.json
 coverage*.xml
 coverage*.info
+# But keep the settings file, which is not auto-generated and is needed for code coverage to work properly
+!coverage.settings.xml
 
 # Visual Studio code coverage results
 *.coverage

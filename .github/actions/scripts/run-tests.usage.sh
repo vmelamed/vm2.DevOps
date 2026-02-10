@@ -23,10 +23,6 @@ Arguments:
   <test-project-path>           The path to the test project file. Optional if the environment variable TEST_PROJECT is set
 
 Options:
-  -s, --subject                 The name of the project being tested (the test subject). Optional, inferred from the test
-                                project name if not provided.
-                                Initial value from \$TEST_SUBJECT environment variable or inferred from the test project name,
-                                by removing the path and the '.Tests.csproj' suffix if present
   -c, --configuration           Specifies the build configuration to use ('Debug' or 'Release')
                                 Initial value from \$CONFIGURATION or default 'Release'
   -d, --define                  Defines one or more user-defined pre-processor symbols to be used when building the test

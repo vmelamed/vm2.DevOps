@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Configuration>
+    <CodeCoverage>
+        <!-- Match assemblies to include in coverage -->
+        <ModulePaths>
+            <Include>
+                <ModulePath>.*Glob\.Api\.dll$</ModulePath>
+            </Include>
+            <Exclude>
+                <ModulePath>.*Tests\.dll$</ModulePath>
+                <ModulePath>.*TestUtilities\.dll$</ModulePath>
+                <ModulePath>.*\.FakeFileSystem\.dll$</ModulePath>
+            </Exclude>
+        </ModulePaths>
+
+        <!-- Exclude specific source files -->
+        <Sources>
+            <Exclude>
+                <!-- Generated code -->
+                <Source>.*\\obj\\.*</Source>
+                <Source>.*\\bin\\.*</Source>
+                <Source>.*\.g\.cs$</Source>
+                <Source>.*\.g\.i\.cs$</Source>
+                <Source>.*\.Designer\.cs$</Source>
+                <Source>.*AssemblyInfo\.cs$</Source>
+
+                <!-- Regex generator files - multiple patterns to catch all variations -->
+                <Source>.*RegexGenerator.*\.cs$</Source>
+                <Source>.*GeneratedRegex.*\.cs$</Source>
+                <Source>.*System\.Text\.RegularExpressions\.Generated.*</Source>
+                <Source>.*\\&lt;RegexGenerator_g&gt;.*</Source>
+
+                <!-- Compiler-generated -->
+                <Source>.*\\&lt;&gt;c.*\.cs$</Source>
+                <Source>.*\\d__.*\.cs$</Source>
+
+                <!-- Test files -->
+                <Source>.*\\Test\.Utilities\\.*</Source>
+                <Source>.*\.Tests\\.*</Source>
+            </Exclude>
+        </Sources>
+
+        <!-- Exclude by attribute -->
+        <Attributes>
+            <Exclude>
+                <Attribute>^System\.Diagnostics\.CodeAnalysis\.ExcludeFromCodeCoverageAttribute$</Attribute>
+                <Attribute>^System\.CodeDom\.Compiler\.GeneratedCodeAttribute$</Attribute>
+                <Attribute>^System\.Runtime\.CompilerServices\.CompilerGeneratedAttribute$</Attribute>
+                <Attribute>^System\.ObsoleteAttribute$</Attribute>
+                <Attribute>^System\.Text\.RegularExpressions\.GeneratedRegexAttribute$</Attribute>
+            </Exclude>
+        </Attributes>
+
+        <!-- Functions to exclude -->
+        <Functions>
+            <Exclude>
+                <!-- System.Text.RegularExpressions.Generated classes -->
+                <Function>^System\.Text\.RegularExpressions\.Generated\..*::.*$</Function>
+                <!-- RegexGenerator generated code -->
+                <Function>^.*&lt;RegexGenerator_g&gt;.*::.*$</Function>
+            </Exclude>
+        </Functions>
+
+    </CodeCoverage>
+</Configuration>

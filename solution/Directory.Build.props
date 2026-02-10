@@ -1,9 +1,11 @@
 <Project>
     <PropertyGroup>
         <GITHUB_RUN_NUMBER Condition="'$(GITHUB_RUN_NUMBER)' == ''">0</GITHUB_RUN_NUMBER>
+
+        <!-- NuGet sources -->
         <RestoreSources>https://api.nuget.org/v3/index.json;https://nuget.pkg.github.com/vmelamed/index.json</RestoreSources>
 
-        <!-- To use if there are OS-specific differences in .NET APIs -->
+        <!-- To use if there are OS-specific differences in the public .NET APIs -->
         <DefineConstants Condition="'$(OS)' == 'WINDOWS_NT'">$(DefineConstants);WINDOWS</DefineConstants>
         <DefineConstants Condition="'$(OS)' != 'WINDOWS_NT'">$(DefineConstants);UNIX</DefineConstants>
 
@@ -102,10 +104,10 @@
     <!-- ================ Property to be used in condition attributes for detecting test projects ================ -->
     <PropertyGroup>
         <IsTestProject Condition="
-                $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]tests?[/\\]', RegexOptions.IgnoreCase))
-                AND
-                $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '.*\.Tests$', RegexOptions.IgnoreCase))
-                ">true</IsTestProject>
+            $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]tests?[/\\]', RegexOptions.IgnoreCase))
+            AND
+            $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '.*\.Tests$', RegexOptions.IgnoreCase))
+            ">true</IsTestProject>
     </PropertyGroup>
 
     <PropertyGroup Condition="$(IsTestProject) == 'true'">
@@ -120,12 +122,13 @@
             CA1701;CA1702;CA1707;CA1806;CA2211;
             IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290
         </NoWarn>
-        <!-- Enable MTP v.2 For more information on Microsoft Testing Platform support in xUnit.net, visit: https://xunit.net/docs/getting-started/v3/microsoft-testing-platform -->
+        <!-- Enable MTP v2 For more information on Microsoft Testing Platform support in xUnit.net, visit: https://xunit.net/docs/getting-started/v3/microsoft-testing-platform -->
         <UseMicrosoftTestingPlatform>true</UseMicrosoftTestingPlatform>
         <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
 
-        <!-- Enable code coverage by default -->
-        <EnableCodeCoverage>true</EnableCodeCoverage>
+        <!-- MTP v2: Configure coverage with coverage.settings.xml -->
+        <!-- This ensures VS Code Test Explorer uses the same coverage exclusions as command-line runs -->
+        <TestingPlatformCommandLineArguments>$(TestingPlatformCommandLineArguments) --coverage --coverage-output-format cobertura --coverage-settings "$(RepoRoot)coverage.settings.xml"</TestingPlatformCommandLineArguments>
     </PropertyGroup>
 
     <ItemGroup Condition="$(IsTestProject) == 'true'">

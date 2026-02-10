@@ -15,6 +15,16 @@
         "action": "copy"
     },
     {
+        "sourceFile": "${repos}/vm2.DevOps/solution/codecov.yaml",
+        "targetFile": "${target_path}/codecov.yaml",
+        "action": "copy"
+    },
+    {
+        "sourceFile": "${repos}/vm2.DevOps/solution/coverage.settings.xml",
+        "targetFile": "${target_path}/coverage.settings.xml",
+        "action": "copy"
+    },
+    {
         "sourceFile": "${repos}/vm2.DevOps/solution/Directory.Build.props",
         "targetFile": "${target_path}/Directory.Build.props",
         "action": "merge or copy"
@@ -42,11 +52,6 @@
     {
         "sourceFile": "${repos}/vm2.DevOps/solution/testconfig.json",
         "targetFile": "${target_path}/testconfig.json",
-        "action": "copy"
-    },
-    {
-        "sourceFile": "${repos}/vm2.DevOps/solution/codecov.yml",
-        "targetFile": "${target_path}/codecov.yml",
         "action": "copy"
     },
     {

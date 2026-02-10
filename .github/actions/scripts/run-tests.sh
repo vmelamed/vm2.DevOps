@@ -18,7 +18,6 @@ declare -xr default_artifacts_dir="./TestResults"
 declare -ixr default_min_coverage_pct=80
 
 declare -x test_project=${TEST_PROJECT:-}
-declare -x test_subject=${TEST_SUBJECT:-}
 declare -x configuration=${CONFIGURATION:="${default_configuration}"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"${default_minver_tag_prefix}"}
@@ -39,7 +38,6 @@ dump_vars --quiet \
     lib_dir \
     --blank \
     test_project \
-    test_subject \
     preprocessor_symbols \
     min_coverage_pct \
     minver_tag_prefix \
@@ -52,8 +50,7 @@ dump_vars --quiet \
 is_safe_existing_file "$test_project" || true
 test_name=$(basename "${test_project%.*}")                                      # the base name of the test project (without the path and file extension)
 test_dir=$(dirname "$test_project")                                             # the directory of the test project
-test_subject=${test_subject:-${test_name%.Tests}}                               # the name of the project being tested, inferred from the test project if not provided
-is_safe_input "$test_subject" || true
+is_safe_input "$test_name" || true
 is_safe_configuration "$configuration" || true
 validate_preprocessor_symbols preprocessor_symbols || true
 validate_minverTagPrefix "$minver_tag_prefix" || true
@@ -64,6 +61,7 @@ is_safe_min_coverage_pct "$min_coverage_pct" || true
 exit_if_has_errors
 
 test_dir=$(realpath -e "$(dirname "$test_project")")                            # the directory of the test project
+repo_root=$(realpath -e "$test_dir/../..")                                      # the repository root (two levels up from test project dir)
 [[ -z "$artifacts_dir" ]] && artifacts_dir="${default_artifacts_dir}/${test_name}"
 artifacts_dir=$(realpath -m "${artifacts_dir}" 2> "$_ignore")                   # the directory for test results and reports (resolved to an absolute path, if it was relative)
 renamed_artifacts_dir="$artifacts_dir-$(date -u +"%Y%m%dT%H%M%S")"
@@ -77,6 +75,7 @@ declare -xr minver_tag_prefix
 declare -xr minver_prerelease_id
 declare -xr test_name
 declare -xr test_dir
+declare -xr repo_root
 declare -xr artifacts_dir
 declare -xr renamed_artifacts_dir
 
@@ -113,9 +112,11 @@ fi
 # ${artifacts_dir}                                                              # abs.path to test results and reports          ~/repos/vm2.Glob/TestResults
 coverage_source_path="${artifacts_dir}/coverage.cobertura.xml"                  # path to the raw coverage file                 ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/coverage.cobertura.xml
 coverage_reports_dir="${artifacts_dir}/reports"                                 # directory for coverage reports                ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/reports
+coverage_settings_path="${repo_root}/coverage.settings.xml"                     # path to coverage settings file                ~/repos/vm2.Glob/coverage.settings.xml
 
 declare -r coverage_source_path
 declare -r coverage_reports_dir
+declare -r coverage_settings_path
 
 dump_all_variables
 
@@ -146,13 +147,25 @@ if [[ ! -s "${test_exec_path}" && "$dry_run" != "true" ]]; then
 fi
 
 trace "Running tests from ${test_project}..."
-if ! execute "${test_exec_path}" \
-        --results-directory "${artifacts_dir}" \
-        --report-trx \
-        --coverage \
-        --coverage-output-format "cobertura" \
-        --coverage-output "coverage.cobertura.xml" \
-        ; then
+
+# Build coverage command arguments
+coverage_args=(
+    --results-directory "${artifacts_dir}"
+    --report-trx
+    --coverage
+    --coverage-output-format "cobertura"
+    --coverage-output "coverage.cobertura.xml"
+)
+
+# Add coverage settings if file exists
+if [[ -s "$coverage_settings_path" ]]; then
+    trace "Using coverage settings from: $coverage_settings_path"
+    coverage_args+=(--coverage-settings "${coverage_settings_path}")
+else
+    trace "Coverage settings file not found at: $coverage_settings_path (using defaults)"
+fi
+
+if ! execute "${test_exec_path}" "${coverage_args[@]}"; then
     error "Tests failed in project '$test_project'."
     exit 2
 fi
@@ -164,70 +177,9 @@ if [[ $dry_run != "true" ]]; then
     fi
 fi
 
-# trace "Generating coverage reports..."
-# uninstall_reportgenerator=false
-# if ! execute dotnet tool list dotnet-reportgenerator-globaltool --global > "$_ignore"; then
-#     trace "Installing the tool 'reportgenerator'..."
-#     execute dotnet tool install dotnet-reportgenerator-globaltool --global --version "5.*"
-#     uninstall_reportgenerator=true
-# else
-#     trace "The tool 'reportgenerator' is already installed."
-# fi
-#
-# # Execute the tool in this directory so that it can pick up the .netconfig file for filters specific to this project
-# execute reportgenerator \
-#     -reports:"$coverage_source_path" \
-#     -targetdir:"$coverage_reports_dir" \
-#     -reporttypes:TextSummary,html_dark \
-#     -settings:excludeTestProjects=true \
-# 	  -classfilters:"-*.GeneratedCodeAttribute*;-*GeneratedRegexAttribute*;-*.I[A-Z]*" \
-#     -filefilters:"-*.g.cs;-*.g.i.cs;-*.i.cs;-*.generated.cs;-*Migrations/*;-*obj/*;-*AssemblyInfo.cs;-*Designer.cs;-*.designer.cs;-*.I[A-Z]*.cs;-*.MoveNext;-*.d__*;-*.<>c-*.<>c__DisplayClass*"
-#
-# coverage_summary_path="${coverage_reports_dir}/Summary.txt"                     # path to text coverage summary file            ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/reports/Summary.txt
-# declare -r coverage_summary_path
-# trace "$(cat "$coverage_summary_path")"
-#
-# if [[ "$uninstall_reportgenerator" = "true" ]]; then
-#     trace "Uninstalling the tool 'reportgenerator'..."
-#     execute dotnet tool uninstall dotnet-reportgenerator-globaltool --global
-# fi
-#
-# if [[ $dry_run != "true" ]]; then
-#     if [[ ! -s "$coverage_summary_path" ]]; then
-#         error "Coverage summary not found."
-#         exit 2
-#     fi
-# fi
-#
-# # Extract the coverage percentage from the summary file
-# trace "Extracting coverage percentages from '$coverage_summary_path'..."
-# if [[ $dry_run != "true" ]]; then
-#     coverage=$(sed -nE "s/${test_subject}"' +([0-9]+)(\.[0-9]+)?%.*/\1/p' "$coverage_summary_path" | head -n1 | xargs)
-#     if [[ -z "$coverage" ]]; then
-#         error "Could not parse line coverage percent from \"$coverage_summary_path\""
-#         exit 2
-#     fi
-#
-#     [[ $coverage -lt $min_coverage_pct   ]] && status='❌' || status='✅'
-#
-#     {
-#         echo "Coverage for subject '$test_subject'"
-#         echo ""
-#         echo "|Coverage         | Percentage     | Status    |"
-#         echo "|:----------------|---------------:|:---------:|"
-#         echo "| ${test_subject} | ${coverage}%   | $status   |"
-#         echo ""
-#         echo "Wait for the detailed coverage report to be published as an artifact on CodeCov."
-#     } | to_summary
-#     if (( coverage < min_coverage_pct )); then
-#         exit 2
-#     fi
-# fi
-
-    # Export variables to GitHub Actions output
-    to_github_output test_name proj-name
-    args_to_github_output \
-     artifacts_dir \
-     coverage_source_path \
-     coverage_reports_dir \
-     # test_subject
+# Export variables to GitHub Actions output
+to_github_output test_name proj-name
+args_to_github_output \
+    artifacts_dir \
+    coverage_source_path \
+    coverage_reports_dir
