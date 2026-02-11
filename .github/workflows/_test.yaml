@@ -150,6 +150,8 @@ jobs:
       - name: Verify the artifacts were restored and run the tests
         id: run-tests
         shell: bash
+        env:
+          REPORTGENERATOR_LICENSE: ${{ secrets.REPORTGENERATOR_LICENSE }}
         run: |
           ARTIFACT_PATH=$(find . -type d -path "*/bin/${{ inputs.configuration }}" | head -n 1)
           if [ -z "$ARTIFACT_PATH" ]; then
@@ -176,8 +178,7 @@ jobs:
         with:
           reports: ${{ steps.run-tests.outputs.coverage-source-path }}
           targetdir: ${{ steps.run-tests.outputs.coverage-reports-dir }}
-          reporttypes: Html_Dark;MarkdownSummaryGithub # ;Badges
-          # MTP v2 already handles most exclusions via coverage.settings.xml
+          reporttypes: Html_Dark;MarkdownSummaryGithub;Badges
           customSettings: >
             minimumCoverageThresholds:lineCoverage=${{ inputs.min-coverage-pct }};
             minimumCoverageThresholds:branchCoverage=${{ inputs.min-coverage-pct }};

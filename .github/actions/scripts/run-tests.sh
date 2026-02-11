@@ -29,7 +29,8 @@ source "$script_dir/run-tests.usage.sh"
 source "$script_dir/run-tests.utils.sh"
 
 get_arguments "$@"
-dump_inputs --force --quiet
+# shellcheck disable=SC2119 # Use dump_all_variables "$@" if function's $1 should mean script's $1.
+dump_inputs --quiet
 
 is_safe_existing_file "$test_project" || true
 test_name=$(basename "${test_project%.*}")                                      # the base name of the test project (without the path and file extension)
@@ -53,11 +54,12 @@ if [[ ! -s "$coverage_settings_path" ]]; then
     error "Coverage settings file not found at: $coverage_settings_path"
 fi
 
-# shellcheck disable=SC2154
-if (( errors > 0 )); then
-    dump_inputs --force --quiet
-    exit_if_has_errors
+if [[ -n "$REPORTGENERATOR_LICENSE" ]]; then
+    trace "ReportGenerator license provided '${REPORTGENERATOR_LICENSE:0:4}...${REPORTGENERATOR_LICENSE:952}' via environment variable."
+else
+    warning "No ReportGenerator license provided. If you have a license, you can set it via the environment variable REPORTGENERATOR_LICENSE to enable additional features in the generated reports."
 fi
+exit_if_has_errors
 
 test_dir=$(realpath -e "${test_dir}")                                           # the directory of the test project
 [[ -z "$artifacts_dir" ]] && artifacts_dir="${default_artifacts_dir}/${test_name}"
@@ -116,7 +118,8 @@ coverage_reports_dir="${artifacts_dir}/reports"                                 
 declare -xr coverage_source_path
 declare -xr coverage_settings_path
 
-dump_all_variables --force --quiet
+# shellcheck disable=SC2119 # Use dump_all_variables "$@" if function's $1 should mean script's $1.
+dump_all_variables --quiet # --force
 
 test_base_dir="${test_dir}/bin/${configuration}/net10.0"
 test_exec_path="${test_base_dir}/${test_name}"
