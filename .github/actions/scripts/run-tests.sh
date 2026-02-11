@@ -54,7 +54,7 @@ if [[ ! -s "$coverage_settings_path" ]]; then
     error "Coverage settings file not found at: $coverage_settings_path"
 fi
 
-if [[ -n "$REPORTGENERATOR_LICENSE" ]]; then
+if is_defined_variable REPORTGENERATOR_LICENSE && [[ -n "$REPORTGENERATOR_LICENSE" ]]; then
     trace "ReportGenerator license provided '${REPORTGENERATOR_LICENSE:0:4}...${REPORTGENERATOR_LICENSE:952}' via environment variable."
 else
     warning "No ReportGenerator license provided. If you have a license, you can set it via the environment variable REPORTGENERATOR_LICENSE to enable additional features in the generated reports."
