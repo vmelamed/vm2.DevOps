@@ -152,6 +152,7 @@ jobs:
         shell: bash
         env:
           REPORTGENERATOR_LICENSE: ${{ secrets.REPORTGENERATOR_LICENSE }}
+          TEST_VAR: test-value
         run: |
           ARTIFACT_PATH=$(find . -type d -path "*/bin/${{ inputs.configuration }}" | head -n 1)
           if [ -z "$ARTIFACT_PATH" ]; then
