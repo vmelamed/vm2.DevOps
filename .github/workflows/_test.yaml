@@ -163,7 +163,6 @@ jobs:
           fi
 
           run-tests.sh ${{ inputs.test-project }} \
-              --subject "${{ inputs.test-subject }}" \
               --define "${{ inputs.preprocessor-symbols }}" \
               --configuration "${{ inputs.configuration }}" \
               --min-coverage-pct "${{ inputs.min-coverage-pct }}" \

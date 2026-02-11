@@ -111,12 +111,13 @@ fi
 
 # ${artifacts_dir}                                                              # abs.path to test results and reports          ~/repos/vm2.Glob/TestResults
 coverage_source_path="${artifacts_dir}/coverage.cobertura.xml"                  # path to the raw coverage file                 ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/coverage.cobertura.xml
-coverage_reports_dir="${artifacts_dir}/reports"                                 # directory for coverage reports                ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/reports
 coverage_settings_path="${repo_root}/coverage.settings.xml"                     # path to coverage settings file                ~/repos/vm2.Glob/coverage.settings.xml
+coverage_reports_dir="${artifacts_dir}/reports"                                 # directory for coverage reports                ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/reports
 
 declare -r coverage_source_path
-declare -r coverage_reports_dir
 declare -r coverage_settings_path
+# shellcheck disable=SC2034 # coverage_reports_dir appears unused. Verify use (or export if used externally). Used in args_to_github_output below
+declare -r coverage_reports_dir
 
 dump_all_variables
 
@@ -137,10 +138,10 @@ if [[ ! -s "${test_exec_path}" && "$dry_run" != "true" ]]; then
     warning "Cached test executable ${test_exec_path} was not found. Rebuilding the test project"
     execute dotnet clean "$test_project" --configuration "$configuration" || true
     if ! execute dotnet build "$test_project" \
-                --configuration "$configuration" \
-                -p:preprocessor_symbols="$preprocessor_symbols" \
-                -p:MinVerTagPrefix="$minver_tag_prefix" \
-                -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id"; then
+            --configuration "$configuration" \
+            -p:preprocessor_symbols="$preprocessor_symbols" \
+            -p:MinVerTagPrefix="$minver_tag_prefix" \
+            -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id"; then
         error "Building $test_project failed."
         exit 2
     fi
