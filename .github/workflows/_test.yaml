@@ -178,7 +178,16 @@ jobs:
           targetdir: ${{ steps.run-tests.outputs.coverage-reports-dir }}
           reporttypes: Html_Dark;MarkdownSummaryGithub # ;Badges
           # MTP v2 already handles most exclusions via coverage.settings.xml
-          customSettings: minimumCoverageThresholds:lineCoverage=${{ inputs.min-coverage-pct }};minimumCoverageThresholds:branchCoverage=${{ inputs.min-coverage-pct }};minimumCoverageThresholds:methodCoverage=${{ inputs.min-coverage-pct }};minimumCoverageThresholds:fullMethodCoverage=${{ inputs.min-coverage-pct }}
+          customSettings: >
+            minimumCoverageThresholds:lineCoverage=${{ inputs.min-coverage-pct }};
+            minimumCoverageThresholds:branchCoverage=${{ inputs.min-coverage-pct }};
+            minimumCoverageThresholds:methodCoverage=${{ inputs.min-coverage-pct }};
+            minimumCoverageThresholds:fullMethodCoverage=${{ inputs.min-coverage-pct }}
+
+      - name: Copy coverage reports to GitHub Actions step output directory
+        shell: bash
+        run: |
+          cat ${{ steps.run-tests.outputs.coverage-reports-dir }}/*.md > $GITHUB_STEP_SUMMARY
 
       # Upload test results and coverage reports as workflow artifacts
       - name: Upload coverage artifact
@@ -196,65 +205,3 @@ jobs:
         env:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             PR_NUMBER: ${{ github.event.number }}
-
-      # # Upload coverage to Codecov for online viewing and PR integration
-      # - name: Upload coverage to Codecov
-      #   uses: codecov/codecov-action@v5
-      #   env:
-      #     CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-      #   with:
-      #     flags: ${{ steps.run-tests.outputs.proj-name }}-${{ inputs.runner-os }}
-      #     slug: ${{ github.repository }}
-      #     files: ${{ steps.run-tests.outputs.coverage_source_path }}
-      #     fail_ci_if_error: false
-#
-      # # Create test result check and PR comment
-      # - name: Publish test results
-      #   uses: EnricoMi/publish-unit-test-result-action@v2
-      #   with:
-      #     check_name: Test Results (${{ steps.run-tests.outputs.proj-name }} on ${{ inputs.runner-os }})
-      #     files: |
-      #       ${{ steps.run-tests.outputs.artifacts-dir }}/**/*.trx
-      #       ${{ steps.run-tests.outputs.artifacts-dir }}/**/*.xml
-      #     comment_mode: always
-      #     compare_to_earlier_commit: true
-      #     report_individual_runs: true
-      #     deduplicate_classes_by_file_name: false
-
-      # Add coverage check status to summary
-      #  - name: Verify coverage threshold
-      #    if: always()
-      #    shell: bash
-      #    run: |
-      #      LINE_PCT="${{ steps.run-tests.outputs.line_pct }}"
-      #      MIN_PCT="${{ inputs.min-coverage-pct }}"
-
-      #      {
-      #          echo "### 📊 Code Coverage"
-      #          echo ""
-      #          echo "**Line Coverage:** ${LINE_PCT}%"
-      #          echo "**Minimum Required:** ${MIN_PCT}%"
-      #          echo ""
-      #          if (( $(echo "$LINE_PCT < $MIN_PCT" | bc -l) )); then
-      #              echo "❌ **FAILED:** Coverage ${LINE_PCT}% is below threshold ${MIN_PCT}%"
-      #              echo ""
-      #              echo "::error::Code coverage ${LINE_PCT}% is below the minimum required threshold of ${MIN_PCT}%"
-      #          else
-      #              echo "✅ **PASSED:** Coverage meets threshold"
-      #          fi
-      #      } >> $GITHUB_STEP_SUMMARY
-
-      # Add coverage report link to job summary
-      - name: Add coverage report link to summary
-        if: always()
-        shell: bash
-        run: |
-          {
-              echo "### 📊 Coverage Report - ${{ steps.run-tests.outputs.proj-name }}"
-              echo ""
-              echo "🌐 View on [Codecov](https://app.codecov.io/gh/${{ github.repository }}/commit/${{ github.sha }})"
-              echo ""
-              echo "📥 Or download the [coverage-${{ steps.run-tests.outputs.proj-name }}-${{ inputs.runner-os }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) artifact to view the HTML report locally."
-              echo ""
-              echo "Open \`coverage/html/index.html\` from the downloaded artifact in your browser."
-          } >> $GITHUB_STEP_SUMMARY

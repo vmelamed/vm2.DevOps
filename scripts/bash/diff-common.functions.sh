@@ -31,7 +31,7 @@ declare -rA diff_commands=(
     ["difftastic"]="dift \"\$LOCAL\" \"\$REMOTE\""
     ["ydiff"]="ydiff -s -w 0 \"\$LOCAL\" \"\$REMOTE\""
     ["colordiff"]="colordiff -a -w -B --strip-trailing-cr -s -y -W 167 --suppress-common-lines \"\$LOCAL\" \"\$REMOTE\""
-    ["diff"]="diff -a -w -B --strip-trailing-cr -s -y -W 167 --suppress-common-lines --color=auto \"\$LOCAL\" \"\$REMOTE\""
+    ["diff"]="diff -w -B -a --strip-trailing-cr -s -y -W 167 --suppress-common-lines --color=auto \"\$LOCAL\" \"\$REMOTE\"" # add/remove -w -B - ignore whitespace and blank lines
 )
 
 declare -x merge_tool=""

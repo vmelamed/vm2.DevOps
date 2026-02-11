@@ -163,10 +163,10 @@
     <!-- ================ Property to be used in condition attributes for detecting test library projects (utilities, extensions, etc.) ================ -->
     <PropertyGroup>
         <IsTestLibraryProject Condition="
-                $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]tests?[/\\]', RegexOptions.IgnoreCase))
-                AND
-                !$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '.*\.Tests$', RegexOptions.IgnoreCase))
-                ">true</IsTestLibraryProject>
+            $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]tests?[/\\]', RegexOptions.IgnoreCase))
+            AND
+            !$([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectName), '.*\.Tests$', RegexOptions.IgnoreCase))
+            ">true</IsTestLibraryProject>
     </PropertyGroup>
 
     <PropertyGroup Condition="$(IsTestLibraryProject) == 'true'">
@@ -201,8 +201,8 @@
     <!-- ================ Property to be used in conditions about benchmarks ================ -->
     <PropertyGroup>
         <IsInBenchmarksFolder Condition="
-                $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]benchmarks?[/\\]', RegexOptions.IgnoreCase))
-                ">true</IsInBenchmarksFolder>
+            $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]benchmarks?[/\\]', RegexOptions.IgnoreCase))
+            ">true</IsInBenchmarksFolder>
     </PropertyGroup>
 
     <PropertyGroup Condition="$(IsInBenchmarksFolder) == 'true'">
@@ -257,8 +257,8 @@
     <!-- ================ Property to be used in conditions about examples projects ================ -->
     <PropertyGroup>
         <IsInExamplesFolder Condition="
-                $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]examples?[/\\]', RegexOptions.IgnoreCase))
-                ">true</IsInExamplesFolder>
+            $([System.Text.RegularExpressions.Regex]::IsMatch($(MSBuildProjectDirectory), '[/\\]examples?[/\\]', RegexOptions.IgnoreCase))
+            ">true</IsInExamplesFolder>
     </PropertyGroup>
 
     <PropertyGroup Condition="$(IsInExamplesFolder) == 'true'">

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# shellcheck disable=SC2154 # solution_dir is referenced but not assigned
+# shellcheck disable=SC2154 # var is referenced but not assigned
 function usage_text()
 {
     local std_switches=""

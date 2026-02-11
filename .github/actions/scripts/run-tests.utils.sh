@@ -56,9 +56,22 @@ function get_arguments()
     done
 }
 
+dump_inputs()
+{
+    dump_vars "$@" \
+        --header "Inputs:" \
+        test_project \
+        configuration \
+        preprocessor_symbols \
+        min_coverage_pct \
+        minver_tag_prefix \
+        minver_prerelease_id \
+        artifacts_dir
+}
+
 dump_all_variables()
 {
-    dump_vars --force \
+    dump_vars "$@" \
         --header "Script Arguments:" \
         dry_run \
         verbose \
@@ -66,7 +79,6 @@ dump_all_variables()
         ci \
         lib_dir \
         --blank \
-        solution_dir \
         repo_root \
         test_project \
         test_name \
@@ -77,8 +89,7 @@ dump_all_variables()
         minver_tag_prefix \
         minver_prerelease_id \
         artifacts_dir \
-        --header "other:" \
-        coverage_source_path \
         coverage_settings_path \
+        coverage_source_path \
         coverage_reports_dir
 }

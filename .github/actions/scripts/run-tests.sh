@@ -29,23 +29,7 @@ source "$script_dir/run-tests.usage.sh"
 source "$script_dir/run-tests.utils.sh"
 
 get_arguments "$@"
-dump_vars --quiet \
-    --header "Inputs" \
-    dry_run \
-    verbose \
-    quiet \
-    ci \
-    lib_dir \
-    --blank \
-    test_project \
-    preprocessor_symbols \
-    min_coverage_pct \
-    minver_tag_prefix \
-    minver_prerelease_id \
-    artifacts_dir \
-    --header "other:" \
-    script_name \
-    script_dir \
+dump_inputs --force --quiet
 
 is_safe_existing_file "$test_project" || true
 test_name=$(basename "${test_project%.*}")                                      # the base name of the test project (without the path and file extension)
@@ -58,10 +42,24 @@ is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 is_safe_path "$artifacts_dir" || true
 is_safe_min_coverage_pct "$min_coverage_pct" || true
 
-exit_if_has_errors
+repo_root=$(git rev-parse --show-toplevel)
+test_config_path="${repo_root}/testconfig.json"
+coverage_settings_path="${repo_root}/coverage.settings.xml"                     # path to coverage settings file                ~/repos/vm2.Glob/coverage.settings.xml
 
-test_dir=$(realpath -e "$(dirname "$test_project")")                            # the directory of the test project
-repo_root=$(realpath -e "$test_dir/../..")                                      # the repository root (two levels up from test project dir)
+if [[ ! -s "$test_config_path" ]]; then
+    error "Test config file not found at: $test_config_path"
+fi
+if [[ ! -s "$coverage_settings_path" ]]; then
+    error "Coverage settings file not found at: $coverage_settings_path"
+fi
+
+# shellcheck disable=SC2154
+if (( errors > 0 )); then
+    dump_inputs --force --quiet
+    exit_if_has_errors
+fi
+
+test_dir=$(realpath -e "${test_dir}")                                           # the directory of the test project
 [[ -z "$artifacts_dir" ]] && artifacts_dir="${default_artifacts_dir}/${test_name}"
 artifacts_dir=$(realpath -m "${artifacts_dir}" 2> "$_ignore")                   # the directory for test results and reports (resolved to an absolute path, if it was relative)
 renamed_artifacts_dir="$artifacts_dir-$(date -u +"%Y%m%dT%H%M%S")"
@@ -76,6 +74,7 @@ declare -xr minver_prerelease_id
 declare -xr test_name
 declare -xr test_dir
 declare -xr repo_root
+declare -xr test_config_path
 declare -xr artifacts_dir
 declare -xr renamed_artifacts_dir
 
@@ -111,15 +110,13 @@ fi
 
 # ${artifacts_dir}                                                              # abs.path to test results and reports          ~/repos/vm2.Glob/TestResults
 coverage_source_path="${artifacts_dir}/coverage.cobertura.xml"                  # path to the raw coverage file                 ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/coverage.cobertura.xml
-coverage_settings_path="${repo_root}/coverage.settings.xml"                     # path to coverage settings file                ~/repos/vm2.Glob/coverage.settings.xml
 coverage_reports_dir="${artifacts_dir}/reports"                                 # directory for coverage reports                ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/reports
 
-declare -r coverage_source_path
-declare -r coverage_settings_path
 # shellcheck disable=SC2034 # coverage_reports_dir appears unused. Verify use (or export if used externally). Used in args_to_github_output below
-declare -r coverage_reports_dir
+declare -xr coverage_source_path
+declare -xr coverage_settings_path
 
-dump_all_variables
+dump_all_variables --force --quiet
 
 test_base_dir="${test_dir}/bin/${configuration}/net10.0"
 test_exec_path="${test_base_dir}/${test_name}"
@@ -135,7 +132,7 @@ declare -rx dry_run
 
 # Verify artifacts exist, if not - rebuild the project (mostly for local runs)
 if [[ ! -s "${test_exec_path}" && "$dry_run" != "true" ]]; then
-    warning "Cached test executable ${test_exec_path} was not found. Rebuilding the test project"
+    warning "Cached test executable '${test_exec_path}' was not found. Rebuilding the test project"
     execute dotnet clean "$test_project" --configuration "$configuration" || true
     if ! execute dotnet build "$test_project" \
             --configuration "$configuration" \
@@ -143,29 +140,27 @@ if [[ ! -s "${test_exec_path}" && "$dry_run" != "true" ]]; then
             -p:MinVerTagPrefix="$minver_tag_prefix" \
             -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id"; then
         error "Building $test_project failed."
-        exit 2
+        exit_if_has_errors
     fi
 fi
+
 
 trace "Running tests from ${test_project}..."
 
 # Build coverage command arguments
 coverage_args=(
+    --config-file "$test_config_path"
     --results-directory "${artifacts_dir}"
+    --coverage-settings "${coverage_settings_path}"
     --report-trx
     --coverage
     --coverage-output-format "cobertura"
-    --coverage-output "coverage.cobertura.xml"
+    --coverage-output "$coverage_source_path"
 )
 
-# Add coverage settings if file exists
-if [[ -s "$coverage_settings_path" ]]; then
-    trace "Using coverage settings from: $coverage_settings_path"
-    coverage_args+=(--coverage-settings "${coverage_settings_path}")
-else
-    trace "Coverage settings file not found at: $coverage_settings_path (using defaults)"
-fi
-
+##########################################
+### Run the tests with coverage collection
+##########################################
 if ! execute "${test_exec_path}" "${coverage_args[@]}"; then
     error "Tests failed in project '$test_project'."
     exit 2
@@ -178,9 +173,42 @@ if [[ $dry_run != "true" ]]; then
     fi
 fi
 
-# Export variables to GitHub Actions output
-to_github_output test_name proj-name
-args_to_github_output \
-    artifacts_dir \
-    coverage_source_path \
-    coverage_reports_dir
+# shellcheck disable=SC2154 # ci is referenced but not assigned.
+if [[ "$ci" == true ]]; then
+    trace "Running in CI environment, skipping coverage report generation - will be generated later by an action."
+
+    # Export variables to GitHub Actions output
+    to_github_output test_name proj-name
+    args_to_github_output \
+        artifacts_dir \
+        coverage_source_path \
+        coverage_reports_dir
+
+    exit 0
+fi
+
+trace "Generating coverage reports..."
+
+uninstall_reportgenerator=false
+if ! execute dotnet tool list dotnet-reportgenerator-globaltool --global > "$_ignore"; then
+    trace "Installing the tool 'reportgenerator'..."
+    execute dotnet tool install dotnet-reportgenerator-globaltool --global --version "5.5.*"
+    uninstall_reportgenerator=true
+else
+    trace "The tool 'reportgenerator' is already installed."
+fi
+
+# Execute the tool in this directory so that it can pick up the .netconfig file for filters specific to this project
+execute reportgenerator \
+    -reports:"$coverage_source_path" \
+    -targetdir:"$coverage_reports_dir" \
+    -reporttypes:TextSummary,html_dark,MarkdownSummaryGithub,Badges \
+    minimumCoverageThresholds:lineCoverage=80 \
+    minimumCoverageThresholds:branchCoverage=80 \
+    minimumCoverageThresholds:methodCoverage=80 \
+    minimumCoverageThresholds:fullMethodCoverage=80
+
+if [[ "$uninstall_reportgenerator" = "true" ]]; then
+    trace "Uninstalling the tool 'reportgenerator'..."
+    execute dotnet tool uninstall dotnet-reportgenerator-globaltool --global
+fi
