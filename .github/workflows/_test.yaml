@@ -176,12 +176,8 @@ jobs:
         with:
           reports: ${{ steps.run-tests.outputs.coverage-source-path }}
           targetdir: ${{ steps.run-tests.outputs.coverage-reports-dir }}
-          reporttypes: Html_Dark;Badges;MarkdownSummaryGithub
-          # MTP v2 already handles most exclusions via Directory.Build.props
-          # Only exclude interfaces and compiler-generated items here
-          classfilters: -*.I[A-Z]*
-          filefilters: -*.MoveNext;-*.d__*;-*.<>c*
-          # Don't exclude test projects here - MTP v2 already handles it
+          reporttypes: Html_Dark;MarkdownSummaryGithub # ;Badges
+          # MTP v2 already handles most exclusions via coverage.settings.xml
           customSettings: minimumCoverageThresholds:lineCoverage=${{ inputs.min-coverage-pct }};minimumCoverageThresholds:branchCoverage=${{ inputs.min-coverage-pct }};minimumCoverageThresholds:methodCoverage=${{ inputs.min-coverage-pct }};minimumCoverageThresholds:fullMethodCoverage=${{ inputs.min-coverage-pct }}
 
       # Upload test results and coverage reports as workflow artifacts
