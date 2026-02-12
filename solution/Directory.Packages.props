@@ -22,8 +22,7 @@
         <PackageVersion Include="MinVer" Version="7.0.0" />
 
         <!-- The test stack: -->
-        <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.1.0" />
-        <!-- 18.4.1? -->
+        <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.4.1" />
         <PackageVersion Include="Microsoft.Testing.Platform" Version="2.1.0" />
         <PackageVersion Include="Microsoft.Testing.Platform.MSBuild" Version="2.1.0" />
         <PackageVersion Include="Microsoft.Testing.Extensions.Telemetry" Version="2.1.0" />
@@ -41,6 +40,5 @@
         <PackageVersion Include="BenchmarkDotNet.Annotations" Version="0.15.8" />
 
         <!-- Add project-specific packages below this line: -->
-
     </ItemGroup>
 </Project>
