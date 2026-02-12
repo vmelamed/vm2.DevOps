@@ -68,6 +68,10 @@ on:
         description: Bencher.dev API token for benchmark tracking
         required: false
 
+      REPORTGENERATOR_LICENSE:
+        description: ReportGenerator license key for enhanced coverage reports
+        required: false
+
 env:
   VERBOSE: ${{ vars.VERBOSE }}
 
@@ -172,6 +176,7 @@ jobs:
     uses: vmelamed/vm2.DevOps/.github/workflows/_test.yaml@main
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      REPORTGENERATOR_LICENSE: ${{ secrets.REPORTGENERATOR_LICENSE }}
     permissions:
       contents: read
       pull-requests: write # Required to comment on PRs
