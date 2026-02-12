@@ -54,17 +54,6 @@ if [[ ! -s "$coverage_settings_path" ]]; then
     error "Coverage settings file not found at: $coverage_settings_path"
 fi
 
-if is_defined_variable REPORTGENERATOR_LICENSE && [[ -n "$REPORTGENERATOR_LICENSE" ]]; then
-    trace "ReportGenerator license provided '${REPORTGENERATOR_LICENSE:0:4}...${REPORTGENERATOR_LICENSE:952}' via environment variable."
-else
-    warning "No ReportGenerator license provided. If you have a license, you can set it via the environment variable REPORTGENERATOR_LICENSE to enable additional features in the generated reports."
-fi
-if is_defined_variable TEST_VAR && [[ -n "$TEST_VAR" ]]; then
-    trace "Test variable provided '${TEST_VAR}' via environment variable."
-else
-    warning "No test variable provided. If you have a test variable, you can set it via the environment variable TEST_VAR to enable additional features in the generated reports."
-fi
-
 exit_if_has_errors
 
 test_dir=$(realpath -e "${test_dir}")                                           # the directory of the test project
