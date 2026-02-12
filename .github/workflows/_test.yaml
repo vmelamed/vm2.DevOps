@@ -226,3 +226,14 @@ jobs:
         env:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             PR_NUMBER: ${{ github.event.number }}
+
+      # Upload coverage to Codecov for historical tracking and PR integration
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ${{ steps.run-tests.outputs.coverage-source-path }}
+          flags: ${{ steps.run-tests.outputs.proj-name }}-${{ inputs.runner-os }}
+          name: ${{ steps.run-tests.outputs.proj-name }}-${{ inputs.runner-os }}
+          fail_ci_if_error: false
+          verbose: true
