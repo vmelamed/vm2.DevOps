@@ -46,7 +46,7 @@ function get_arguments()
 
             --artifacts|-a )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
-                artifacts_dir=$1; shift
+                tests_artifacts_dir=$1; shift
                 ;;
 
             * ) value="$option"
@@ -66,7 +66,7 @@ dump_inputs()
         min_coverage_pct \
         minver_tag_prefix \
         minver_prerelease_id \
-        artifacts_dir
+        tests_artifacts_dir
 }
 
 dump_all_variables()

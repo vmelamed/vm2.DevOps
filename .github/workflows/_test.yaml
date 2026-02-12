@@ -3,8 +3,8 @@ name: _test (Reusable workflow)
 on:
   workflow_call:
     inputs:
-      test-project:
-        description: Path to the test project to run tests against (cannot be null or empty string)
+      test-projects:
+        description: JSON array string of test project paths to run tests against (cannot be null or empty string)
         type: string
         required: true
 
@@ -168,19 +168,35 @@ jobs:
               # ls -la ./test/**/bin/${{ inputs.configuration }}/*.*
           fi
 
-          run-tests.sh ${{ inputs.test-project }} \
-              --define "${{ inputs.preprocessor-symbols }}" \
-              --configuration "${{ inputs.configuration }}" \
-              --min-coverage-pct "${{ inputs.min-coverage-pct }}" \
-              --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
-              --minver-prerelease-id "${{ inputs.minver-prerelease-id }}"
+          # Parse test projects JSON array and run each test project
+          tests_artifacts_dir="./TestResults"
+          TEST_PROJECTS='${{ inputs.test-projects }}'
+          echo "$TEST_PROJECTS" | jq -r '.[]' | while read -r test_project; do
+            echo "Running tests for: $test_project"
+            run-tests.sh "$test_project" \
+                --define "${{ inputs.preprocessor-symbols }}" \
+                --configuration "${{ inputs.configuration }}" \
+                --min-coverage-pct "${{ inputs.min-coverage-pct }}" \
+                --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
+                --minver-prerelease-id "${{ inputs.minver-prerelease-id }}" \
+                --artifacts "$tests_artifacts_dir"
+                # This is the root artifacts directory. The script will create a subdirectory for each test project,
+                # e.g. ./TestResults/<test-project-name>/*
+          done
+
+          # Set outputs for merged coverage
+          repo_name=$(basename "$(git rev-parse --show-toplevel)")
+          echo "proj-name=${repo_name}" >> $GITHUB_OUTPUT
+          echo "artifacts-dir=$tests_artifacts_dir" >> $GITHUB_OUTPUT
+          echo "coverage-source-path=**/$tests_artifacts_dir/**/coverage.cobertura.xml" >> $GITHUB_OUTPUT
+          echo "coverage-reports-dir=$tests_artifacts_dir/reports" >> $GITHUB_OUTPUT
 
       - name: Generate coverage report
         uses: danielpalme/ReportGenerator-GitHub-Action@5.5.1
         env:
           REPORTGENERATOR_LICENSE: ${{ secrets.REPORTGENERATOR_LICENSE }}
         with:
-          reports: '**/TestResults/**/coverage.cobertura.xml'
+          reports: ${{ steps.run-tests.outputs.coverage-source-path }}
           targetdir: ${{ steps.run-tests.outputs.coverage-reports-dir }}
           reporttypes: Html_Dark;MarkdownSummaryGithub;Badges
           customSettings: >

@@ -168,7 +168,6 @@ jobs:
       # fail-fast: true
       matrix:
         runner-os: ${{ fromJSON(needs.validate-input.outputs.runners-os) }}
-        test-project: ${{ fromJSON(needs.validate-input.outputs.test-projects) }}
     # __skip__ sentinel avoids empty-matrix expansion when no tests are requested
     if: >
       needs.validate-input.outputs.test-projects != '["__skip__"]' &&
@@ -182,7 +181,7 @@ jobs:
       pull-requests: write # Required to comment on PRs
       checks: write # Required to create GitHub Checks
     with:
-      test-project: ${{ matrix.test-project }}
+      test-projects: ${{ needs.validate-input.outputs.test-projects }}
       runner-os: ${{ matrix.runner-os }}
       dotnet-version: ${{ needs.validate-input.outputs.dotnet-version }}
       configuration: ${{ needs.validate-input.outputs.configuration }}

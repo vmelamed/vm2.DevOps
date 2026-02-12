@@ -14,7 +14,7 @@ source "$lib_dir/gh_core.sh"
 declare -xr default_configuration="Release"
 declare -xr default_minver_tag_prefix='v'
 declare -xr default_minver_prerelease_id="preview.0"
-declare -xr default_artifacts_dir="./TestResults"
+declare -xr default_test_artifacts_dir="TestResults"
 declare -ixr default_min_coverage_pct=80
 
 declare -x test_project=${TEST_PROJECT:-}
@@ -22,7 +22,7 @@ declare -x configuration=${CONFIGURATION:="${default_configuration}"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"${default_minver_tag_prefix}"}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"${default_minver_prerelease_id}"}
-declare -x artifacts_dir=${TEST_ARTIFACTS_DIR:-}
+declare -x tests_artifacts_dir=${TEST_ARTIFACTS_DIR:-}
 declare -ix min_coverage_pct=${MIN_COVERAGE_PCT:-"${default_min_coverage_pct}"}
 
 source "$script_dir/run-tests.usage.sh"
@@ -40,13 +40,16 @@ is_safe_configuration "$configuration" || true
 validate_preprocessor_symbols preprocessor_symbols || true
 validate_minverTagPrefix "$minver_tag_prefix" || true
 is_safe_minverPrereleaseId "$minver_prerelease_id" || true
-is_safe_path "$artifacts_dir" || true
+is_safe_path "$tests_artifacts_dir" || true
 is_safe_min_coverage_pct "$min_coverage_pct" || true
 
 repo_root=$(git rev-parse --show-toplevel)
 test_config_path="${repo_root}/testconfig.json"
 coverage_settings_path="${repo_root}/coverage.settings.xml"                     # path to coverage settings file                ~/repos/vm2.Glob/coverage.settings.xml
 
+if [[ -z "$tests_artifacts_dir" ]]; then
+    tests_artifacts_dir="${repo_root}/${default_test_artifacts_dir}"
+fi
 if [[ ! -s "$test_config_path" ]]; then
     error "Test config file not found at: $test_config_path"
 fi
@@ -56,9 +59,9 @@ fi
 
 exit_if_has_errors
 
-test_dir=$(realpath -e "${test_dir}")                                           # the directory of the test project
-[[ -z "$artifacts_dir" ]] && artifacts_dir="${default_artifacts_dir}/${test_name}"
-artifacts_dir=$(realpath -m "${artifacts_dir}" 2> "$_ignore")                   # the directory for test results and reports (resolved to an absolute path, if it was relative)
+test_dir=$(realpath -e "${test_dir}")
+                                       # the directory of the test project
+artifacts_dir=$(realpath -m "${tests_artifacts_dir}/${test_name}" 2> "$_ignore")                   # the directory for test results and reports (resolved to an absolute path, if it was relative)
 renamed_artifacts_dir="$artifacts_dir-$(date -u +"%Y%m%dT%H%M%S")"
 
 # Freeze the variables
@@ -174,14 +177,6 @@ fi
 # shellcheck disable=SC2154 # ci is referenced but not assigned.
 if [[ "$ci" == true ]]; then
     trace "Running in CI environment, skipping coverage report generation - will be generated later by an action."
-
-    # Export variables to GitHub Actions output
-    to_github_output test_name proj-name
-    args_to_github_output \
-        artifacts_dir \
-        coverage_source_path \
-        coverage_reports_dir
-
     exit 0
 fi
 
