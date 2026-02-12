@@ -208,7 +208,7 @@ jobs:
       - name: Copy coverage reports to GitHub Actions step output directory
         shell: bash
         run: |
-          cat ${{ steps.run-tests.outputs.coverage-reports-dir }}/*.md > $GITHUB_STEP_SUMMARY
+          cat ${{ steps.run-tests.outputs.coverage-reports-dir }}/*.md >> $GITHUB_STEP_SUMMARY
 
       # Upload test results and coverage reports as workflow artifacts
       - name: Upload coverage artifact
@@ -237,3 +237,8 @@ jobs:
           name: ${{ steps.run-tests.outputs.proj-name }}-${{ inputs.runner-os }}
           fail_ci_if_error: false
           verbose: true
+
+      - name: Coverage report on CodeCov
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "Coverage report will be available shortly at: https://app.codecov.io/gh/${{ github.repository }}/tree/${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
