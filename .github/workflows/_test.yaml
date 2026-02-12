@@ -180,7 +180,7 @@ jobs:
         env:
           REPORTGENERATOR_LICENSE: ${{ secrets.REPORTGENERATOR_LICENSE }}
         with:
-          reports: ${{ steps.run-tests.outputs.coverage-source-path }}
+          reports: '**/TestResults/**/coverage.cobertura.xml'
           targetdir: ${{ steps.run-tests.outputs.coverage-reports-dir }}
           reporttypes: Html_Dark;MarkdownSummaryGithub;Badges
           customSettings: >
