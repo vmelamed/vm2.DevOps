@@ -198,7 +198,7 @@ jobs:
         with:
           reports: ${{ steps.run-tests.outputs.coverage-source-path }}
           targetdir: ${{ steps.run-tests.outputs.coverage-reports-dir }}
-          reporttypes: Html_Dark;MarkdownSummaryGithub;Badges
+          reporttypes: MarkdownSummaryGithub
           customSettings: >
             minimumCoverageThresholds:lineCoverage=${{ inputs.min-coverage-pct }};
             minimumCoverageThresholds:branchCoverage=${{ inputs.min-coverage-pct }};
@@ -239,6 +239,6 @@ jobs:
           verbose: true
 
       - name: Coverage report on CodeCov
-        if: github.event_name == 'pull_request'
+        shell: bash
         run: |
           echo "Coverage report will be available shortly at: https://app.codecov.io/gh/${{ github.repository }}/tree/${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
