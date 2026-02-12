@@ -36,23 +36,8 @@ comment:
 
 # Ignore paths from coverage calculations
 ignore:
-  # - "test/**" # Exclude test projects
-  # - "tests/**" # Exclude test projects
-  # - "**/*.Tests/**"
   - "**/obj/**" # Exclude build artifacts
   - "**/bin/**"
-  - "**/Test.Utilities/**"
-  - "**/Migrations/**"
-  - "**/*.g.cs" # Exclude generated code files
-  - "**/*.Designer.cs"
-  - "**/*.g.i.cs"
-  - "**/*AssemblyInfo.cs"
-  - "**/Properties/**"
-  - "**/*.config"
-  - "**/*.xml"
-  - "**/*GeneratedRegex*.cs"
-  - "**/*d__*.cs"
-  - "**/*<>c*.cs"
 
 parsers:
   cobertura:

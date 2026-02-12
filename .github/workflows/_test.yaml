@@ -241,4 +241,4 @@ jobs:
       - name: Coverage report on CodeCov
         shell: bash
         run: |
-          echo "Coverage report will be available shortly at: https://app.codecov.io/gh/${{ github.repository }}/tree/${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "[Coverage report](https://app.codecov.io/gh/${{ github.repository }}/tree/${{ github.ref_name }})" >> $GITHUB_STEP_SUMMARY
