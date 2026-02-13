@@ -27,7 +27,8 @@
                 <Source>.*\\&lt;RegexGenerator_g&gt;.*</Source>
 
                 <!-- Compiler-generated -->
-                <Source>.*\\&lt;&gt;c.*\.cs$;*.MoveNext.*</Source>
+                <Source>.*\\&lt;&gt;c.*\.cs$</Source>
+                <Source>*.MoveNext.*</Source>
                 <Source>.*\\d__.*\.cs$</Source>
 
                 <!-- Test files -->
