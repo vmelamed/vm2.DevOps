@@ -104,7 +104,8 @@ execute dotnet pack \
     "-p:MinVerPrereleaseIdentifiers=$minver_prerelease_id" \
     "-p:PackageReleaseNotes=\"$reason\"" > "$temp_output" 2>&1 || build_exit=$?
 
-(summarizeDotnetBuild < "$temp_output") | to_summary
+# shellcheck disable=SC2005 # Useless echo? Instead of 'echo $(cmd)', just use 'cmd'.
+echo "$(summarizeDotnetBuild < "$temp_output")" | to_summary
 [[ $build_exit -eq 0 ]] || exit "$build_exit"
 
 # the build/pack
