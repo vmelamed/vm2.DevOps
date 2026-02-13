@@ -84,6 +84,6 @@ execute dotnet build "$build_project" \
             -p:MinVerTagPrefix="$minver_tag_prefix" \
             -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" > "$temp_output" 2>&1 || build_exit=$?
 
-(summarizeDotnetBuild < "$temp_output") | to_summary
-
+# shellcheck disable=SC2005; the echo is not useless - too much complexity in the pipeline
+echo "$(summarizeDotnetBuild < "$temp_output")" | to_summary
 exit "$build_exit"

@@ -130,14 +130,14 @@ function to_stderr()
 function to_summary()
 {
     if [[ $# -gt 0 ]]; then
-        echo "## Summary: $*" | to_stdout
+        echo "## Summary:"$'\n'"$*" | to_stdout
     else
         {
             local line
             local first=true
             while IFS= read -r line; do
                 if [[ $first == true ]]; then
-                    echo "## Summary: $line"
+                    echo "## Summary:"$'\n'"$line"
                     first=false
                 else
                     echo "$line"
