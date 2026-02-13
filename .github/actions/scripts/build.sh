@@ -62,7 +62,7 @@ declare -xr nuget_password
 
 # Configure NuGet source with GitHub Packages authentication
 if [[ -n "$nuget_username" && -n "$nuget_password" ]]; then
-    dotnet nuget update source github.vm2 \
+    execute dotnet nuget update source github.vm2 \
         --username "$nuget_username" \
         --password "$nuget_password" \
         --store-password-in-clear-text \
@@ -70,14 +70,20 @@ if [[ -n "$nuget_username" && -n "$nuget_password" ]]; then
 fi
 
 # Restore dependencies
-dotnet restore --locked-mode
+execute dotnet restore --locked-mode
 
 # Build the project
-s=$(dotnet build "$build_project" \
-    --verbosity detailed \
-    --configuration "$configuration" \
-    -p:preprocessor_symbols="$preprocessor_symbols" \
-    -p:MinVerTagPrefix="$minver_tag_prefix" \
-    -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" | summarizeDotnetBuild)
+temp_output=$(mktemp)
+trap 'rm -f "$temp_output"' EXIT
 
-echo "$s" | to_summary
+build_exit=0
+execute dotnet build "$build_project" \
+            --verbosity detailed \
+            --configuration "$configuration" \
+            -p:preprocessor_symbols="$preprocessor_symbols" \
+            -p:MinVerTagPrefix="$minver_tag_prefix" \
+            -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" > "$temp_output" 2>&1 || build_exit=$?
+
+(summarizeDotnetBuild < "$temp_output") | to_summary
+
+exit "$build_exit"

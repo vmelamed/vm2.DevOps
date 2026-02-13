@@ -90,7 +90,11 @@ execute dotnet restore "${package_project}" --locked-mode
 execute mkdir -p "$artifacts_dir"
 
 # build and pack the project
-s=$(execute dotnet pack \
+temp_output=$(mktemp)
+trap 'rm -f "$temp_output"' EXIT
+
+build_exit=0
+execute dotnet pack \
     "${package_project}" \
     --configuration Release \
     --output "$artifacts_dir" \
@@ -98,8 +102,10 @@ s=$(execute dotnet pack \
     "-p:preprocessor_symbols=$preprocessor_symbols" \
     "-p:MinVerTagPrefix=$minver_tag_prefix" \
     "-p:MinVerPrereleaseIdentifiers=$minver_prerelease_id" \
-    "-p:PackageReleaseNotes=\"$reason\"" | summarizeDotnetBuild)
-echo "$s" | to_summary
+    "-p:PackageReleaseNotes=\"$reason\"" > "$temp_output" 2>&1 || build_exit=$?
+
+(summarizeDotnetBuild < "$temp_output") | to_summary
+[[ $build_exit -eq 0 ]] || exit "$build_exit"
 
 # the build/pack
 declare -x build_result
