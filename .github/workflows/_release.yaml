@@ -104,6 +104,7 @@ jobs:
         with:
           repository: vmelamed/vm2.DevOps
           path: vm2-devops
+          persist-credentials: false
           sparse-checkout: |+
             scripts/bash/lib
             .github/actions/scripts
@@ -143,6 +144,7 @@ jobs:
         with:
           repository: vmelamed/vm2.DevOps
           path: vm2-devops
+          persist-credentials: false
           sparse-checkout: |+
             scripts/bash/lib
             .github/actions/scripts
@@ -194,6 +196,7 @@ jobs:
         with:
           repository: vmelamed/vm2.DevOps
           path: vm2-devops
+          persist-credentials: false
           sparse-checkout: |+
             scripts/bash/lib
             .github/actions/scripts
