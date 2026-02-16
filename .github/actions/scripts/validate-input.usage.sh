@@ -31,10 +31,13 @@ Options:
   -tp, --test-projects          String containing a JSON array of strings - paths to the test projects to be run. Cannot be
                                 empty string, or string representing null, or empty array. Tests are mandatory
                                 Initial value from \$TEST_PROJECTS
-  -pp, --benchmark-projects     String containing a JSON array of strings - paths to the benchmark project files to be run. Can
+  -bmp, --benchmark-projects    String containing a JSON array of strings - paths to the benchmark project files to be run. Can
                                 be empty string, or string representing null or empty array, in which case no benchmark tests
                                 will be run
                                 Initial value from \$BENCHMARK_PROJECTS
+  -pp, --package-projects       String containing a JSON array of strings - paths to the projects to pack. Can be empty string,
+                                or string representing null or empty array, in which case pack validation will be skipped
+                                Initial value from \$PACKAGE_PROJECTS
   -os, --runners-os             String containing a JSON array of strings - target OS-es (e.g. from a GitHub actions matrix).
                                 Can be empty string, or string representing null or empty array, in which case
                                 '["ubuntu-latest"]' will be used
@@ -59,6 +62,7 @@ Environment Variables:
     BUILD_PROJECTS              JSON array of paths to projects to build
     TEST_PROJECTS               JSON array of paths to test projects to run
     BENCHMARK_PROJECTS          JSON array of paths to benchmark projects to run
+    PACKAGE_PROJECTS            JSON array of paths to projects to pack
     RUNNERS_OS                  JSON array of target OS-es
     DOTNET_VERSION              Version of .NET SDK to use
     CONFIGURATION               Build configuration ('Release' or 'Debug')
@@ -73,6 +77,7 @@ Outputs (to GITHUB_OUTPUT):
     build-projects              JSON array of paths to projects to build
     test-projects               JSON array of paths to test projects to run
     benchmark-projects          JSON array of paths to benchmark projects to run
+    package-projects            JSON array of paths to projects to pack
     runners-os                  JSON array of target OS-es
     dotnet-version              Version of .NET SDK to use
     configuration               Build configuration ('Release' or 'Debug')

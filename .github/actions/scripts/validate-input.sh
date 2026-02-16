@@ -14,6 +14,7 @@ source "$lib_dir/gh_core.sh"
 declare -r defaultBuildProjects='[""]'
 declare -r defaultTestProjects='["__skip__"]'
 declare -r defaultBenchmarkProjects='["__skip__"]'
+declare -r defaultPackageProjects='["__skip__"]'
 declare -r defaultRunnersOs='["ubuntu-latest"]'
 declare -r defaultDotnetVersion='10.0.x'
 declare -r defaultConfiguration='Release'
@@ -28,6 +29,7 @@ declare -r defaultVerbose=false
 declare -x build_projects=${BUILD_PROJECTS:-${defaultBuildProjects}}
 declare -x test_projects=${TEST_PROJECTS:-${defaultTestProjects}}
 declare -x benchmark_projects=${BENCHMARK_PROJECTS:-${defaultBenchmarkProjects}}
+declare -x package_projects=${PACKAGE_PROJECTS:-${defaultPackageProjects}}
 declare -x runners_os=${RUNNERS_OS:-${defaultRunnersOs}}
 declare -x dotnet_version=${DOTNET_VERSION:-${defaultDotnetVersion}}
 declare -x configuration=${CONFIGURATION:-${defaultConfiguration}}
@@ -57,6 +59,7 @@ fi
 is_safe_json_array "build_projects" "$defaultBuildProjects" is_safe_existing_file || true
 is_safe_json_array "test_projects" "$defaultTestProjects" is_safe_existing_file || true
 is_safe_json_array "benchmark_projects" "$defaultBenchmarkProjects" is_safe_existing_file || true
+is_safe_json_array "package_projects" "$defaultPackageProjects" is_safe_existing_file || true
 is_safe_json_array "runners_os" "$defaultRunnersOs" is_safe_runner_os || true
 is_safe_dotnet_version "$dotnet_version" || true
 is_safe_configuration "$configuration" || true
@@ -77,6 +80,7 @@ dump_vars --quiet --force --markdown \
     build_projects \
     test_projects \
     benchmark_projects \
+    package_projects \
     runners_os \
     dotnet_version \
     configuration \
@@ -96,6 +100,7 @@ args_to_github_output \
     build_projects \
     test_projects \
     benchmark_projects \
+    package_projects \
     runners_os \
     dotnet_version \
     configuration \

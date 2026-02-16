@@ -18,6 +18,11 @@ on:
         type: string
         required: false
 
+      package-projects:
+        description: JSON array as a string of paths to the projects to pack. If not provided, null, or empty, pack validation will be skipped.
+        type: string
+        required: false
+
       runners-os:
         description: String containing a JSON array of strings - monikers of GitHub runners. Cannot be null or empty!
         type: string
@@ -88,6 +93,7 @@ jobs:
       build-projects: ${{ steps.validate.outputs.build-projects }}
       test-projects: ${{ steps.validate.outputs.test-projects }}
       benchmark-projects: ${{ steps.validate.outputs.benchmark-projects }}
+      package-projects: ${{ steps.validate.outputs.package-projects }}
       runners-os: ${{ steps.validate.outputs.runners-os }}
       dotnet-version: ${{ steps.validate.outputs.dotnet-version }}
       configuration: ${{ steps.validate.outputs.configuration }}
@@ -130,6 +136,7 @@ jobs:
               --build-projects       '${{ inputs.build-projects }}' \
               --test-projects        '${{ inputs.test-projects }}' \
               --benchmark-projects   '${{ inputs.benchmark-projects }}' \
+              --package-projects     '${{ inputs.package-projects }}' \
               --runners-os           '${{ inputs.runners-os }}' \
               --dotnet-version       '${{ inputs.dotnet-version }}' \
               --configuration        '${{ inputs.configuration }}' \
@@ -223,3 +230,28 @@ jobs:
       minver-tag-prefix: ${{ needs.validate-input.outputs.minver-tag-prefix }}
       minver-prerelease-id: ${{ needs.validate-input.outputs.minver-prerelease-id }}
       max-regression-pct: ${{ fromJSON(needs.validate-input.outputs.max-regression-pct) }}
+
+  # Validate that projects can be packed into NuGet packages
+  pack:
+    name: Validate NuGet packaging
+    needs:
+      - validate-input
+      - build
+    strategy:
+      # fail-fast: true
+      matrix:
+        runner-os: ${{ fromJSON(needs.validate-input.outputs.runners-os) }}
+        package-project: ${{ fromJSON(needs.validate-input.outputs.package-projects) }}
+    # __skip__ sentinel avoids empty-matrix expansion when no package projects are specified
+    if: >
+      needs.validate-input.outputs.package-projects != '["__skip__"]' &&
+      needs.validate-input.outputs.package-projects != '[""]'
+    uses: vmelamed/vm2.DevOps/.github/workflows/_pack.yaml@main
+    with:
+      package-project: ${{ matrix.package-project }}
+      runner-os: ${{ matrix.runner-os }}
+      dotnet-version: ${{ needs.validate-input.outputs.dotnet-version }}
+      configuration: ${{ needs.validate-input.outputs.configuration }}
+      preprocessor-symbols: ${{ needs.validate-input.outputs.preprocessor-symbols }}
+      minver-tag-prefix: ${{ needs.validate-input.outputs.minver-tag-prefix }}
+      minver-prerelease-id: ${{ needs.validate-input.outputs.minver-prerelease-id }}
