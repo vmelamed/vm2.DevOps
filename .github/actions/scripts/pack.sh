@@ -67,7 +67,7 @@ execute dotnet pack \
     "-p:MinVerPrereleaseIdentifiers=$minver_prerelease_id" > "$temp_output" 2>&1 || pack_exit=$?
 
 # shellcheck disable=SC2005 # Useless echo? Instead of 'echo $(cmd)', just use 'cmd'.
-echo "$(summarizeDotnetBuild < "$temp_output")" | to_summary
+# echo "$(summarizeDotnetBuild < "$temp_output")" | to_summary
 
 if [[ $pack_exit -eq 0 ]]; then
     nupkg_count=$(find "$pack_output_dir" -name "*.nupkg" | wc -l)
