@@ -32,7 +32,7 @@ Options:
                                 Initial value from \$MIN_COVERAGE_PCT or default 80
   -mp, --minver-tag-prefix      Specifies the tag prefix used by MinVer (e.g., 'v')
                                 Initial value from \$MINVERTAGPREFIX environment variable or 'v'
-  -mi, --minver-prerelease-id   Default semver pre-release identifiers for MinVer (e.g., 'preview.1')
+  -mi, --minver-prerelease-id   Default semver pre-release identifiers for MinVer (e.g., 'preview.0', 'alpha', 'beta', 'rc1', etc.)
                                 Initial value from \$MINVERDEFAULTPRERELEASEIDENTIFIERS environment variable or 'preview.0'
   -a, --artifacts               Specifies the root directory (preferably relative to the repository root) where to create the
                                 script's artifacts: summaries, report files, etc. The artifacts will be in a subdirectory of the

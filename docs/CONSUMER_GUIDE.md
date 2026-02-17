@@ -376,7 +376,7 @@ env:
 1. **NuGet server**: Set `nuget-server` to:
    - `github` for GitHub Packages (<https://nuget.pkg.github.com/>)
    - `nuget` for NuGet.org (<https://api.nuget.org/v3/index.json>)
-1. **Prerelease prefix**: Default is `preview`, can also be `alpha`, `beta`, `rc`
+1. **Prerelease prefix**: Default is `preview.0`, can also be `alpha`, `beta`, `rc`
 1. **Workflow name**: Update to match your repo
 
 ### Release Workflow (`Release.yaml`)

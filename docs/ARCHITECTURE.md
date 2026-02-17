@@ -1,5 +1,37 @@
 # Architecture
 
+<!-- TOC tocDepth:2..5 chapterDepth:2..6 -->
+
+- [Layers](#layers)
+  - [Layer 1: Consumer Workflows](#layer-1-consumer-workflows)
+  - [Layer 2: Reusable Workflows](#layer-2-reusable-workflows)
+    - [CI Pipeline (`_ci.yaml`)](#ci-pipeline-_ciyaml)
+    - [Build (`_build.yaml`)](#build-_buildyaml)
+    - [Test (`_test.yaml`)](#test-_testyaml)
+    - [Benchmarks (`_benchmarks.yaml`)](#benchmarks-_benchmarksyaml)
+    - [Pack (`_pack.yaml`)](#pack-_packyaml)
+    - [Prerelease (`_prerelease.yaml`)](#prerelease-_prereleaseyaml)
+    - [Release (`_release.yaml`)](#release-_releaseyaml)
+      - [Algorithm for Calculating Release Version](#algorithm-for-calculating-release-version)
+      - [Example Walkthrough](#example-walkthrough)
+      - [Prerelease Guard](#prerelease-guard)
+    - [Clear Cache (`_clear_cache.yaml`)](#clear-cache-_clear_cacheyaml)
+  - [Layer 3: Bash Scripts](#layer-3-bash-scripts)
+    - [CI Scripts (`/.github/actions/scripts/`)](#ci-scripts-githubactionsscripts)
+    - [Composite Action (`action.yaml`)](#composite-action-actionyaml)
+    - [Bash Library (`/scripts/bash/lib/`)](#bash-library-scriptsbashlib)
+    - [Utility Scripts (`/scripts/bash/`)](#utility-scripts-scriptsbash)
+- [Caching Strategy](#caching-strategy)
+  - [NuGet Package Cache (dual-layer)](#nuget-package-cache-dual-layer)
+  - [Build Artifact Cache](#build-artifact-cache)
+  - [Cache Cleanup](#cache-cleanup)
+- [Script Distribution](#script-distribution)
+- [NuGet Authentication](#nuget-authentication)
+- [Secrets](#secrets)
+- [Naming Conventions](#naming-conventions)
+
+<!-- /TOC -->
+
 vm2.DevOps provides CI/CD automation for .NET NuGet packages through a three-layer architecture.
 
 ## Layers
@@ -23,7 +55,7 @@ vm2.DevOps provides CI/CD automation for .NET NuGet packages through a three-lay
 └─────────────────────────────────────────────────────────┘
 ```
 
-### Layer 1 — Consumer Workflows
+### Layer 1: Consumer Workflows
 
 Stored in **`vmelamed/.github/workflow-templates/`**, these are the thin, per-repo entry points.
 Each consumer workflow sets repo-specific parameters (project paths, coverage thresholds, etc.)
@@ -37,7 +69,7 @@ and delegates to a reusable workflow via GitHub Actions property
 | `Release.yaml`       | Manual `workflow_dispatch`                       | `_release`    |
 | `ClearCache.yaml`    | Manual `workflow_dispatch`                       | `_clear_cache`|
 
-### Layer 2 — Reusable Workflows
+### Layer 2: Reusable Workflows
 
 Located in **`vm2.DevOps/.github/workflows/`**. All are `workflow_call` triggered.
 
@@ -149,7 +181,7 @@ stable version with a lower number than an already-published prerelease.
 
 Emergency cleanup. Deletes caches matching an allowlisted prefix (`nuget-`, `build-artifacts-`, or `bencher-cli-`).
 
-### Layer 3 — Bash Scripts
+### Layer 3: Bash Scripts
 
 #### CI Scripts (`/.github/actions/scripts/`)
 

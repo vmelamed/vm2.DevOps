@@ -54,7 +54,7 @@ Options:
                                 Initial value from \$MAX_REGRESSION_PCT or default 20
   -mp, --minver-tag-prefix      Specifies the tag prefix used by MinVer (e.g., 'v')
                                 Initial value from \$MINVERTAGPREFIX environment variable or 'v'
-  -mi, --minver-prerelease-id   Default semver pre-release identifiers for MinVer (e.g., 'preview.1')
+  -mi, --minver-prerelease-id   Default semver pre-release identifiers for MinVer (e.g., 'preview.0', 'alpha', 'beta', 'rc1', etc.)
                                 Initial value from \$MINVERDEFAULTPRERELEASEIDENTIFIERS environment variable or 'preview.0'
 
 $std_switches

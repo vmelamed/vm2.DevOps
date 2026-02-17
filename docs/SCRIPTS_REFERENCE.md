@@ -1,149 +1,324 @@
-# Script library
+# Scripts Reference
 
-All scripts live under `scripts/bash/` and follow a three-file convention:
+<!-- TOC tocDepth:2..5 chapterDepth:2..6 -->
 
-- the main script
-- `*.usage.sh` file that defines help text
-- `*.utils.sh` helper that encapsulates argument parsing
+- [Sourcing Chains](#sourcing-chains)
+  - [Common Switches](#common-switches)
+- [1. CI Scripts](#1-ci-scripts)
+  - [validate-input.sh](#validate-inputsh)
+  - [build.sh](#buildsh)
+  - [run-tests.sh](#run-testssh)
+  - [run-benchmarks.sh](#run-benchmarkssh)
+  - [pack.sh](#packsh)
+  - [publish-package.sh](#publish-packagesh)
+  - [compute-release-version.sh](#compute-release-versionsh)
+  - [changelog-and-tag.sh](#changelog-and-tagsh)
+  - [download-artifact.sh](#download-artifactsh)
+- [2. Bash Library](#2-bash-library)
+- [3. Utility Scripts](#3-utility-scripts)
+  - [diff-common.sh](#diff-commonsh)
+  - [move-commits-to-branch.sh](#move-commits-to-branchsh)
+  - [Other Utilities](#other-utilities)
 
-They all source `github.sh` (ergo _common.sh) for shared behavior and respect common flags (`--verbose`, `--quiet`, `--trace`, `--dry-run`, `--debugger`, see above).
+<!-- /TOC -->
 
-## `validate-input.*.sh`
+vm2.DevOps contains three distinct categories of scripts:
 
-- Validates and normalizes workflow inputs, emitting derived values for downstream jobs in `$GITHUB_OUTPUT`
-- Ensures consistent environment variable defaults for the pipeline
+1. **CI Scripts** — GitHub Actions scripts invoked by reusable workflows. Built on `gh_core.sh`.
+1. **Utility Scripts** — Developer-facing tools for one-off chores. Built on `core.sh` directly.
+1. **Bash Library** — Shared function library sourced by all scripts. The foundation layer.
 
-## `run-tests.*.sh`
+## Sourcing Chains
 
-- Runs `dotnet test` with configurable build configuration, preprocessor symbols, and coverage thresholds
-- Manages artifacts (`TestArtifacts/Results`, coverage summaries)
-- Installs/uninstalls the `dotnet-reportgenerator-globaltool` on demand
-- Populates `$GITHUB_STEP_SUMMARY` with coverage outcomes and e
-- Exits with a non-zero status when coverage falls below the configured threshold
+    CI Scripts:          script.sh → gh_core.sh ---→ core.sh → all _*.sh modules
+                                   ↘ _sanitize.sh
+                                   ↘ _dotnet.sh
 
-## `run-benchmarks.*.sh`
+    Utility Scripts:     script.sh ----------------→ core.sh → all _*.sh modules
 
-- Executes BenchmarkDotNet projects via `dotnet run`
-- Exports JSON results and compact summaries (rendered using `jq` and the query `summary.jq`)
-- Compares current performance against stored baselines
-- Sets `FORCE_NEW_BASELINE` when improvements/regressions exceed significantly the configured tolerances. This causes the `benchmarks.yaml` to upload the results as new baselines.
+`core.sh` sources all component modules (`_constants.sh`, `_diagnostics.sh`, `_args.sh`,
+`_predicates.sh`, `_dump_vars.sh`, `_semver.sh`, `_user.sh`).
 
-## `download-artifact.*.sh`
+`gh_core.sh` adds GitHub Actions–specific helpers on top, plus the CI specific `_sanitize.sh` and `_dotnet.sh`.
 
-- Downloads artifacts from prior workflow runs using the GitHub REST APIs and `gh` CLI semantics.
-- Used by `benchmarks.yaml` to hydrate baseline data before running new benchmarks, but is general-purpose for any artifact retrieval task.
+### Common Switches
 
-## `_common.sh` and `github.sh`
+All scripts (CI and utility) inherit these switches from the bash library:
 
-- Shared utility library that wires in tracing, verbosity, CI-safe defaults, and interactive prompts.
-- Implements helpers for argument parsing (`get_common_arg()`), logging (`trace()`, `dump_vars()`), command execution with dry-run support (`execute()`), user prompts (`choose()`, `confirm()`, `press_any_key()`), and numeric/string validation helpers (`is_integer`, `is_in`, etc.).
-- Should be sourced by all new scripts to ensure consistent behavior across the automation surface.
+| Switch             | Short | Description                                               |
+| :----------------- | :---- | :-------------------------------------------------------- |
+| `--verbose`        | `-v`  | Enable verbose output, tracing, and dump outputs          |
+| `--trace`          | `-x`  | Verbose + bash `set -x`                                   |
+| `--dry-run`        | `-y`  | Show commands without executing state-changing operations |
+| `--quiet`          | `-q`  | Suppress interactive prompts (default in CI)              |
+| `--graphical`      | `-gr` | Dump tables in graphical format                           |
+| `--markdown`       | `-md` | Dump tables in markdown format (default in CI)            |
+| `--help`           |       | Long usage text including common switches                 |
+|                    | `-h`  | Short usage text                                          |
 
-## `github.sh`
+---
 
-- Shared utility library that extends `_common.sh` with GitHub-specific helpers and behavior.
-- Should be sourced by all new scripts to ensure consistent behavior across the automation surface.
+## 1. Bash Library
 
-### `_common.sh` and `github.sh` functions and variables (**WIP**)
+Located in **`scripts/bash/lib/`**. The foundation layer sourced by all scripts.
 
-#### Variables
+`core.sh` is the entry point — it sources all component modules automatically:
 
-- `debugger`: If `true`, indicates the script is running under a debugger, e.g. 'gdb'. If specified, the script will not set traps for DEBUG and EXIT (see below), and will set the '--quiet' as user input from stdin interferes with the debugger. (default: `false`)
-- `verbose`: If `true`, enables the output from the functions `execute()`, `trace()`, and `dump_vars()` (default: `false`)
-- `dry_run`: If `true`, simulates actions without making changes (default: `false`)
-- `quiet`: If `true`, suppresses all functions that request input from the user - confirmations - Y/N, choices - 1) 2)..., etc. and will assume some sensible default input. (default: `false`, in CI - `true`)
-- `ci`: If `true`, indicates the script is running in a CI environment, as always set by GitHub Actions (default: `false`, or `true` in GitHub Actions)
-- `_ignore`: The file to redirect unwanted output to (default: `/dev/null`). When the calling script sets the common flag `--trace`, this is set to `/dev/`stdout`` so that the output from all executed commands are visible.
-- `common_switches`: A string that contains documentation of all common switches passed to the calling script's function `get_common_arg()`. For reuse by the calling scripts in their help strings.
+    core.sh
+     ├── _constants.sh
+     ├── _diagnostics.sh    (info, warning, error, trace)
+     ├── _args.sh           (argument parsing, common switches, get_common_arg)
+     ├── _predicates.sh     (boolean test functions)
+     ├── _dump_vars.sh      (dump_vars for debugging)
+     ├── _semver.sh         (semver parsing, comparison, tag validation)
+     └── _user.sh           (user/identity helpers)
 
-#### Functions (**WIP**)
+`gh_core.sh` extends `core.sh` for the GitHub Actions environment:
 
-- `on_debug()` and `on_exit()`: bash DEBUG and EXIT trap handlers that remember the last invoked bash command in `$last_command`. Used by `on_exit()` to report the last command when the script exits with an error.
-- `set-*` functions are invoked when the script is initializing from external environment variables or common arguments are being applied to the calling script (see `get_common_arg()`).
-  - `set_ci()`: when the variable `CI` is `true`, sets the following variables as follows:
-    - `ci` to `true`
-    - `quiet` to `true`
-    - `debugger` to `false`
-    - `verbose` to `false`
-    - `dry_run` to `false`
-    - `_ignore` to `/dev/null`
-    - `set +x` - disables bash tracing
-  - `set_debugger()`: sets (except when `ci` is `true`):
-    - `debugger` to `true`
-    - `quiet` to `true`
-  - `set_trace_enabled()`: when `true`, sets (except when `ci` is `true`):
-    - `verbose` to `true`
-    - `_ignore` to `/dev/`stdout``
-    - `set -x` enables bash tracing
-  - `set_dry_run()`: when `true`, sets (except when `ci` is `true`) `dry_run` to `true`
-  - `set_quiet()`: when `true`, sets (except when `ci` is `true`) `quiet` to `true`
-  - `set_verbose()`: when `true`, sets `verbose` to `true`. Note that verbose is not disabled in CI, as it is useful when debugging workflows or to see trace output from `execute()`, `trace()`, and `dump_vars()` calls.
-- `dump_vars()`: dumps the values of all passed variables to `stdout`. Useful for debugging. Pass the name of the variables you want dumped (without the `$`), e.g. `dump_vars var1 var2`. Also you can pass "flags" between the variable names:
-  - `-f` or `--force`: dump the variables even if `verbose` is not `true`. Useful when you want to see variable dumps in quiet mode or in CI.
-  - `-h` or `--header` followed by a header string: include a header line before or between the variable dumps
-  - `-b` or `--blank`: include a blank line between variable dumps
-  - `-l` or `--line`: include a line between variable dumps
-- `is_defined_variable()`: returns `0` if the passed variable is defined (not null), `1` otherwise. Usage: `is_defined_variable var_name` (without the `$`).
-- `write_line()`: for internal use by `dump_vars()`
-- `get_common_arg()`: parses common arguments passed to the calling script and invokes the corresponding `set-*` functions. Usage: `get_common_arg "$@"` (pass all script arguments). Recognizes the following arguments:
-  - `--debugger`: calls `set_debugger()` (see above)
-  - `--quiet`, `-q`: calls `set_quiet()` (see above)
-  - `--verbose`, `-v`: calls `set_verbose()` (see above)
-  - `--trace`, `-x`: calls `set_trace_enabled()` (see above)
-  - `--dry-run`, `-n`: calls `set_dry_run()` (see above)
+    gh_core.sh
+     ├── core.sh            (everything above)
+     ├── _sanitize.sh       (input sanitization: is_safe_reason, etc.)
+     └── _dotnet.sh         (.NET SDK helpers)
 
-  Returns `0` if a common argument was found and processed, `1` otherwise.
+See [FUNCTIONS_REFERENCE.md](../scripts/bash/lib/FUNCTIONS_REFERENCE.md) for the full list
+of 67 library functions.
 
-- `display_usage_msg()`: suppresses temporarily the bash tracing (if enabled) and displays the passed usage message. Usage: `display_usage_msg "$usage_msg"` (pass the usage message as a single string).
-- `trace()`: if `verbose` is `true`, prints the passed message to `stdout`. Usage: `trace "message"`.
-- `execute()`: depending on the value of `dry_run`, either executes or just displays what would have been executed. Usage: `execute "command"`. E.g.:
-  - `execute sudo apt-get update && sudo apt-get install -y gh jq`
-  - `execute mkdir -p "$artifacts_dir"`
+---
 
-  Suggestion: use the execute function to run commands that have no side effects, i.e. do not change the system state, e.g. install/uninstall software, create/delete files or directories, etc.
+## 2. Utility Scripts
 
-- `to_lower()` and `to_upper()`: converts the passed string to lower or upper case and outputs the result to `stdout`. Usage: `to_lower "STRING"`. E.g. `lower_str=$(to_lower "$str")`
-- `is_*` predicates are useful for arguments validation:
-  - `is_integer()`: returns `0` if its parameter represents a valid integer number, `1` otherwise
-  - `is_non_positive()`: returns `0` if its parameter represents a valid non-positive, integer number: {..., -3, -2, -1, 0}, `1` otherwise
-  - `is_positive()`: returns `0` if its parameter represents a valid positive, integer number (aka natural number): {1, 2, 3, ...}, `1` otherwise
-  - `is_non_negative()`: returns `0` if its parameter represents a valid non-negative, integer number: {0, 1, 2, 3, ...}, `1` otherwise
-  - `is_negative()`: returns `0` if its parameter represents a valid negative: {..., -3, -2, -1}, `1` otherwise
-  - `is_integer()`: returns `0` if its parameter represents a valid integer number (..., -2, -1, 0, 1, 2, ...), `1` otherwise
-  - `is_decimal()`: returns `0` if its parameter represents a valid decimal number, `1` otherwise
-  - `is_in()`: returns `0` if the first parameter is found in the list of subsequent parameters, `1` otherwise. Usage: `is_in "value" "list_item1" "list_item2" ...`
-- `compare_semver()`: compares two semver compliant version strings and returns `0` if the first is equal to the second, `1` if the first is greater, and `255` if the first is smaller. Usage: `compare_semver "1.2.3" "1.2.4"`
-- `list_of_files()`: given a file pattern, lists all files as a bash list that match the pattern to `stdout`. Usage: `list_of_files "pattern"`. E.g. `files=$(list_of_files "*.json")`
-- User interaction functions:
-  - `press_any_key()`: prompts the user to press any key to continue. Usage: `press_any_key "Prompt message"`. If `quiet` is `true`, does nothing and returns   immediately.
-  - `confirm()`: prompts the user with a Y/N question and returns `0` if the answer is yes, `1` otherwise. Usage: `if confirm "Are you sure?"; then ...;  fi`.   If `quiet` is `true`, assumes the default answer is yes.
-  - `choose()`: prompts the user to choose one of the passed options and returns the selected option to `stdout`. Usage: `choose "Prompt message" "Option 1" "Option 2" ...`. The function automatically displays the options in a numbered list and outputs the user's choice to `stdout`. E.g.:
+Located in **`scripts/bash/`**. Developer-facing tools for one-off chores. These source
+`core.sh` directly (not `gh_core.sh`) and do not require the GitHub Actions environment.
 
-    ```bash
-    choice=$(choose \
-                "The benchmark results directory '$artifacts_dir' already exists. What do you want to do?" \
-                    "Clobber the directory '$artifacts_dir' with the new contents" \
-                    "Move the contents of the directory to '$renamed_artifacts_dir', and continue" \
-                    "Delete the contents of the directory, and continue" \
-                    "Exit the script") || exit $?
-    ```
+They follow the same three-file pattern where applicable.
 
-    If `quiet` is `true`, assumes the first option is selected.
+### diff-common.sh
 
-  - `get_credentials()`: prompts the user to enter a username and password, and returns them via predefined variables `username` and `password`. Usage: `get_credentials "Prompt message"`.
+Compares pre-defined shared set of files between source-of-truth repos (vm2.DevOps, .github) and a target project. Useful for
+keeping common configuration files in sync across repos.
 
-    ```bash
-    credentials=$(get_credentials "Enter your user ID: " "Enter your password: " "Are these correct?") || exit $?
-    username=${credentials%%:*}
-    password=${credentials#*:}
-    ```
+| Option                      | Short | Default      | Description                              |
+| :-------------------------- | :---- | :----------- | :--------------------------------------- |
+| `<repository-name-or-path>` |       | current dir  | Positional: repo name or path to compare |
+| `--repos`                   | `-r`  | `$GIT_REPOS` | Parent directory of all repos            |
+| `--minver-tag-prefix`       | `-mp` | `v`          | Tag prefix for detecting stable versions |
+| `--files`                   | `-f`  | all          | Comma-separated list or regex of files   |
 
-    If `quiet` is `true`, returns ":".
+### move-commits-to-branch.sh
 
-- `scp_retry()`: attempts to SSH copy a file via `scp` up to a specified number of times with a delay between attempts. Usage: `scp_retry "source" "destination" max_attempts delay_seconds`. E.g. `scp_retry "file.txt" "user@host:/path/" 5 10` tries to copy `file.txt` to `user@host:/path/` up to 5 times, waiting 10 seconds between attempts.
+Moves commits from a specified SHA onward to a new branch, resetting main to the prior commit.
 
-- Test functions for building test harnesses:
-  - `fail()`: prints the passed message to `stderr` and exits with status `1`. Usage: `fail "Error message"`. E.g. `if ! is_integer "$var"; then fail "The variable 'var' must be an integer"; fi`
-  - `assert_eq()`: compares two values and exits with status `1` if they are not equal. Usage: `assert_eq "value1" "value2" "Error message"`. E.g. `assert_eq "$expected" "$actual" "The actual value does not match the expected value"`
-  - `assert_true()`: checks if the passed expression is true and exits with status `1` if it is not. Usage: `assert_true "expression" "Error message"`. E.g. `assert_true "$var" "The variable 'var' must be true"; fi`
-  - `assert_false()`: checks if the passed expression is false and exits with status `1` if it is not. Usage: `assert_false "expression" "Error message"`. E.g. `assert_false "$var" "The variable 'var' must be false"; fi`
+| Option            | Short | Description                             |
+| :---------------- | :---- | :-------------------------------------- |
+| `--commit-sha`    | `-c`  | SHA from which to move commits          |
+| `--branch`        | `-b`  | New branch name                         |
+| `--check-out-new` | `-n`  | Check out the new branch after the move |
+
+### Other Utilities
+
+| Script                  | Purpose                                    |
+| :---------------------- | :----------------------------------------- |
+| `add-spdx.sh`           | Add SPDX license headers to source files   |
+| `retag.sh`              | Recreate a Git tag at a different commit   |
+| `restore-locked.sh`     | Restore locked NuGet packages              |
+| `restore-force-eval.sh` | Force re-evaluation of NuGet restore       |
+
+## 3. CI Scripts
+
+Located in **`.github/actions/scripts/`**. These are the scripts invoked by the reusable
+workflows documented in [WORKFLOWS_REFERENCE.md](WORKFLOWS_REFERENCE.md). They require
+the GitHub Actions environment and source `gh_core.sh`.
+
+Each CI script follows a **three-file pattern**:
+
+| File               | Purpose                         |
+| :----------------- | :------------------------------ |
+| `script.sh`        | Entry point — sources lib, runs |
+| `script.usage.sh`  | `--help` text                   |
+| `script.utils.sh`  | Argument parsing                |
+
+---
+
+### validate-input.sh
+
+Validates and normalizes all CI workflow inputs. Outputs them to `$GITHUB_OUTPUT` for
+downstream jobs.
+
+**Called by:** `_ci.yaml`
+
+| Option                   | Short  | Default              | Description                                  |
+| :----------------------- | :----- | :------------------- | :------------------------------------------- |
+| `--build-projects`       | `-bp`  | auto-detect          | JSON array of project paths to build         |
+| `--test-projects`        | `-tp`  | —                    | JSON array of test project paths             |
+| `--benchmark-projects`   | `-bmp` | —                    | JSON array of benchmark project paths        |
+| `--package-projects`     | `-pp`  | —                    | JSON array of project paths to pack          |
+| `--runners-os`           | `-os`  | `["ubuntu-latest"]`  | JSON array of runner OS monikers             |
+| `--dotnet-version`       | `-dn`  | `10.0.x`             | .NET SDK version                             |
+| `--configuration`        | `-c`   | `Release`            | Build configuration                          |
+| `--define`               | `-d`   | `""`                 | Preprocessor symbols                         |
+| `--min-coverage-pct`     | `-min` | `80`                 | Minimum code coverage (50–100)               |
+| `--max-regression-pct`   | `-max` | `20`                 | Maximum benchmark regression (0–50)          |
+| `--minver-tag-prefix`    | `-mp`  | `v`                  | MinVer tag prefix                            |
+| `--minver-prerelease-id` | `-mi`  | `preview.0`          | MinVer pre-release identifiers               |
+
+**Outputs:** All inputs echoed to `$GITHUB_OUTPUT` in `kebab-case` format.
+
+---
+
+### build.sh
+
+Compiles a .NET project or solution.
+
+**Called by:** `_build.yaml`
+
+| Option                   | Short | Default         | Description                    |
+| :----------------------- | :---- | :-------------- | :----------------------------- |
+| `--build-project`        | `-bp` | auto-detect     | Path to project/solution       |
+| `--configuration`        | `-c`  | `Release`       | Build configuration            |
+| `--define`               | `-d`  | `""`            | Preprocessor symbols           |
+| `--minver-tag-prefix`    | `-mp` | `v`             | MinVer tag prefix              |
+| `--minver-prerelease-id` | `-mi` | `preview.0`     | MinVer pre-release identifiers |
+| `--nuget-username`       |       | `$GITHUB_ACTOR` | NuGet auth username            |
+| `--nuget-password`       |       | `$GITHUB_TOKEN` | NuGet auth token               |
+
+---
+
+### run-tests.sh
+
+Runs tests and collects code coverage. Assumes project layout:
+`<solution>/test/<project>/<project>.csproj`.
+
+**Called by:** `_test.yaml`
+
+| Option                   | Short  | Default         | Description                          |
+| :----------------------- | :----- | :-------------- | :----------------------------------- |
+| `<test-project-path>`    |        | `$TEST_PROJECT` | Positional: path to test project     |
+| `--configuration`        | `-c`   | `Release`       | Build configuration                  |
+| `--define`               | `-d`   | `""`            | Preprocessor symbols                 |
+| `--min-coverage-pct`     | `-min` | `80`            | Minimum coverage percentage (50–100) |
+| `--minver-tag-prefix`    | `-mp`  | `v`             | MinVer tag prefix                    |
+| `--minver-prerelease-id` | `-mi`  | `preview.0`     | MinVer pre-release identifiers       |
+| `--artifacts`            | `-a`   | `TestArtifacts` | Artifacts output directory           |
+
+**Output:** `results-dir` → `$GITHUB_OUTPUT`
+
+---
+
+### run-benchmarks.sh
+
+Runs BenchmarkDotNet benchmarks. Assumes layout:
+`<solution>/benchmarks/<project>/<project>.csproj`.
+
+**Called by:** `_benchmarks.yaml`
+
+| Option                   | Short  | Default              | Description                           |
+| :----------------------- | :----- | :------------------- | :------------------------------------ |
+| `<bm-project-path>`      |        | `$BENCHMARK_PROJECT` | Positional: path to benchmark project |
+| `--configuration`        | `-c`   | `Release`            | Build configuration                   |
+| `--define`               | `-d`   | `""`                 | Preprocessor symbols                  |
+| `--max-regression-pct`   | `-max` | `20`                 | Max regression percentage (0–50)      |
+| `--minver-tag-prefix`    | `-mp`  | `v`                  | MinVer tag prefix                     |
+| `--minver-prerelease-id` | `-mi`  | `preview.0`          | MinVer pre-release identifiers        |
+| `--artifacts`            | `-a`   | `BenchmarkArtifacts` | Artifacts output directory            |
+| `--short-run`            | `-s`   | —                    | Shortcut for `--define SHORT_RUN`     |
+
+**Output:** `results-dir` → `$GITHUB_OUTPUT`
+
+---
+
+### pack.sh
+
+Validates that a project can be packed into a NuGet package (dry-run, no publish).
+
+**Called by:** `_pack.yaml`
+
+| Option                   | Short | Default     | Description                    |
+| :----------------------- | :---- | :---------- | :----------------------------- |
+| `--package-project`      | `-pp` | —           | Path to the project to pack    |
+| `--configuration`        | `-c`  | `Release`   | Build configuration            |
+| `--define`               | `-d`  | `""`        | Preprocessor symbols           |
+| `--minver-tag-prefix`    | `-mp` | `v`         | MinVer tag prefix              |
+| `--minver-prerelease-id` | `-mi` | `preview.0` | MinVer pre-release identifiers |
+
+---
+
+### publish-package.sh
+
+Builds, packs, and pushes a NuGet package to the specified server.
+
+**Called by:** `_prerelease.yaml`, `_release.yaml`
+
+| Option                   | Short | Default                    | Description                                    |
+| :----------------------- | :---- | :------------------------- | :--------------------------------------------- |
+| `--package-project`      | `-pp` | —                          | Path to the project to package                 |
+| `--define`               | `-d`  | `""`                       | Preprocessor symbols                           |
+| `--minver-tag-prefix`    | `-mp` | `v`                        | MinVer tag prefix                              |
+| `--minver-prerelease-id` | `-mi` | `preview.0`                | MinVer pre-release identifiers                 |
+| `--reason`               | `-r`  | `release build`            | Reason for release (added to package metadata) |
+| `--nuget-server`         | `-n`  | `github`                   | Target: `github`, `nuget`, or a custom URI     |
+| `--artifacts-saved`      | `-a`  | `false`                    | Upload packages as workflow artifacts          |
+| `--artifacts-dir`        | `-ad` | `artifacts/pack`           | Directory for saved artifacts                  |
+| `--repo-owner`           | `-o`  | `$GITHUB_REPOSITORY_OWNER` | Repo owner (for GitHub Packages)               |
+
+**NuGet API key resolution:**
+
+| Server   | Primary env var          | Fallback         |
+| :------- | :----------------------- | :--------------- |
+| `github` | `$NUGET_API_GITHUB_KEY`  | `$NUGET_API_KEY` |
+| `nuget`  | `$NUGET_API_NUGET_KEY`   | `$NUGET_API_KEY` |
+| custom   | `$NUGET_API_KEY`         | —                |
+
+---
+
+### compute-release-version.sh
+
+Determines the next stable release version from conventional commit messages.
+
+**Called by:** `_release.yaml`
+
+| Option                | Short | Default         | Description       |
+| :-------------------- | :---- | :-------------- | :---------------- |
+| `--minver-tag-prefix` | `-mp` | `v`             | MinVer tag prefix |
+| `--reason`            | `-r`  | `release build` | Reason for release|
+
+**Outputs:** `release-version`, `release-tag`, `reason` → `$GITHUB_OUTPUT`
+
+See [ARCHITECTURE.md — Release Version Calculation](ARCHITECTURE.md#release-version-calculation)
+for the algorithm.
+
+---
+
+### changelog-and-tag.sh
+
+Updates CHANGELOG.md via git-cliff, then creates and pushes the release tag.
+
+**Called by:** `_release.yaml`
+
+**Requires:** `git-cliff` installed; `changelog/cliff.release-header.toml` in the repo.
+
+| Option                | Short | Default          | Description                             |
+| :-------------------- | :---- | :--------------- | :-------------------------------------- |
+| `--release-tag`       | `-t`  | —                | Release tag to create (e.g., `v1.2.3`)  |
+| `--minver-tag-prefix` | `-p`  | `v`              | MinVer tag prefix                       |
+| `--reason`            | `-r`  | `stable release` | Reason (included in tag annotation)     |
+
+---
+
+### download-artifact.sh
+
+Downloads the latest artifact from a previous workflow run.
+
+**Called by:** utility — not directly invoked by the standard workflows.
+
+| Option         | Short | Default                  | Description                           |
+| :------------- | :---- | :----------------------- | :------------------------------------ |
+| `--artifact`   | `-a`  | —                        | Name of the artifact to download      |
+| `--directory`  | `-d`  | `./BmArtifacts/baseline` | Download destination directory        |
+| `--repository` | `-r`  | —                        | GitHub repository (`owner/repo`)      |
+| `--wf-id`      | `-i`  | —                        | Workflow ID                           |
+| `--wf-name`    | `-n`  | —                        | Workflow name (as shown in GitHub UI) |
+| `--wf-path`    | `-p`  | —                        | Workflow file path in the repo        |
+
+Workflow lookup priority: `--wf-name` > `--wf-path` > `--wf-id` (or the corresponding env vars).
+
+---

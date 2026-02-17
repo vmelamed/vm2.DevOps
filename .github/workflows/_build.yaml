@@ -36,7 +36,7 @@ on:
       minver-prerelease-id:
         description: MinVer pre-release identifiers to use for version calculation. Cannot be null or empty!
         type: string
-        default: preview
+        default: preview.0
 
 permissions:
   contents: read
