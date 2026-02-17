@@ -22,10 +22,11 @@ Reusable GitHub Actions workflows and automation scripts for .NET projects.
 
 This repository provides a CI/CD automation toolkit for .NET solutions, including:
 
-- **[Workflow templates](https://github.com/vmelamed/.github/tree/main/workflow-templates)** available from the [`.github`](https://github.com/vmelamed/.github) organization repository
-- **Reusable GitHub Actions workflows** for building, testing, benchmarking, and releasing .NET packages
+- **[Workflow templates](https://github.com/vmelamed/.github/tree/main/workflow-templates)** available from the
+  [`.github`](https://github.com/vmelamed/.github) repository
+- **Reusable GitHub Actions workflows** for building, testing, benchmarking, packaging, and releasing .NET packages
 - **Bash automation scripts** for local development and CI/CD pipelines
-- **Standardized release processes** using MinVer for semantic versioning
+- **Standardized release processes** using **MinVer** for semantic versioning
 - **Code coverage enforcement** with customizable thresholds, using Codecov
 - **Performance regression detection** using BenchmarkDotNet and Bencher
 - **NuGet package publishing** to NuGet.org, GitHub Packages, or custom feeds
@@ -50,18 +51,26 @@ Alternatively:
 
 ## High-level reusable workflows
 
-These reusable GitHub Actions workflows are intended to be called directly via `workflow_call` from dependent repositories. They orchestrate the full CI/CD pipeline, and fan out to lower-level building blocks - reusable workflows and bash scripts as needed. The workflows and scripts share a common input surface to make it easy to toggle behavior across the pipeline:
+These reusable GitHub Actions workflows are intended to be called directly via `workflow_call` from the repositories's workflows.
+They orchestrate the full CI/CD pipeline, and fan out to lower-level building blocks - reusable workflows and bash scripts as
+needed. The workflows and scripts share a common input surface to make it easy to toggle behavior across the pipeline:
 
 - Common switches and options for the CI workflows and bash scripts:
+  - `build-projects`: Array of relative paths to the solution or the projects to build (default: `[""]` to build the solution or
+    root project)
+  - `test-projects`: Array of relative paths to the test project to execute (while not recommended, the array can be empty)
+  - `benchmark-projects`: Array of relative paths to benchmark projects to execute (may be empty)
+  - `package-projects`: Array of relative paths to projects to package as NuGet packages (may be empty)
   - `runners_os`: List of operating systems of the jobs runners (default: `ubuntu-latest`)
   - `dotnet-version`: .NET SDK version to install (default: `10.0.x`)
   - `configuration`: Build configuration (default: `Release`)
   - `preprocessor-symbols`: Optional preprocessor symbols to pass to `dotnet build` (e.g. SHORT_RUN for benchmarks) (default: empty)
-  - `build-projects`: Array of relative paths to the solution or the projects to build (default: `[""]` to build the solution or root project)
-  - `test-projects`: Array of relative paths to the test project to execute (while not recommended, the array can be empty)
-  - `benchmark-projects`: Array of relative paths to benchmark projects to execute (may be empty)
   - `min-coverage-pct`: Minimum acceptable unit-test line coverage percentage (default: `80`)
   - `max-regression-pct`: Maximum acceptable performance regression percentage (default: `20`)
+  - `minver-tag-prefix`: Prefix for MinVer tags (default: `v`, e.g. `v1.2.3`); used by the prerelease and release workflows to
+    compute semantic version tags for the packages they publish
+  - `minver-prerelease-id`: Prerelease label to use for prerelease tags (default: `preview.0`, e.g. resulting in a tag
+    `v1.2.3-preview.20240601.1`)
   - etc. (other switches may be added as needed)
 
 - Common switches for all bash scripts:
@@ -72,19 +81,29 @@ These reusable GitHub Actions workflows are intended to be called directly via `
 
 ### `.github/workflows/_ci.yaml`
 
-Orchestrates a "Continuous Integration" pipeline. Invoked by a workflow, typically created out of the template in `vmelamed/.github/workflow-templates/CI.yaml`, which is usually triggered on pull requests and pushes to `main` branches.
+Orchestrates the "Continuous Integration" pipeline. Invoked by a workflow, typically created out of the template
+`vmelamed/.github/workflow-templates/CI.yaml`, which is usually triggered on every commit to every branch, pull requests and
+pushes to the `main` branches.
 
-- Normalizes and validates all incoming inputs (target OS, .NET SDK, projects, configuration, defined symbols, etc.) through `validate-input.sh` (see the list of parameters above).
+- Normalizes and validates all inputs (target OS, .NET SDK, projects, configuration, defined symbols, etc.) through
+  `validate-input.sh` (see the list of parameters above).
 - Builds the specified projects/solution
 - Unit and Integration Tests with coverage collection and enforcement
 - Run benchmark tests
   - Fans out to the lower-level reusable workflows (`build.yaml`, `test.yaml`, `benchmarks.yaml`).
-  - Uploads/Downloads artifacts from/to artifact directories (`TestArtifacts`, `BmArtifacts`) so downstream jobs and scripts stay in sync, compare with previous versions (esp. for benchmarks), track progress of non-functional changes (e.g. test coverage and performance benchmarks), etc. history.
-- Comprehensive step summaries showing build, coverage and benchmark results
+  - Uploads/Downloads artifacts from/to artifact directories (`TestArtifacts`, `BmArtifacts`) so downstream jobs and scripts
+    stay in sync, compare with previous versions (esp. for benchmarks), track progress of non-functional changes (e.g. test
+    coverage and performance benchmarks), etc. history.
+- Publishes the results in a comprehensive and user-friendly format in the step summaries, with clear pass/fail indicators for
+  coverage and benchmarks, and links to the detailed reports on codecov and bencher.
+- Packaging validation is performed to ensure that the projects can be packaged successfully, but the actual packaging and
+  publishing is left to the prerelease and release workflows.
+- Comprehensive step summaries showing build, coverage, benchmark, and packaging results
 - [Secrets](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets):
   - `CODECOV_TOKEN`, to use Codecov for test coverage reporting
   - `BENCHER_API_TOKEN`, to use Bencher for benchmark reporting
-- [Variables](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets) (treat them as policies):
+- [Variables](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets) (treat them as
+  policies that should rarely change, and if they do, the change should be applied across all workflows):
   - `DOTNET_VERSION` (default: `10.0.x`)
   - `CONFIGURATION` (default: `Release`)
   - `MIN_COVERAGE_PCT` (default: `80`)
