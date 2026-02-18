@@ -216,12 +216,11 @@ The `NUGET_SERVER` variable (or `nuget-server` input) determines where packages 
 | NuGet push fails (401/403)           | Invalid or missing API key  | Verify the `NUGET_API_*` secret matches the configured `NUGET_SERVER`          |
 | Package version already exists       | Immutable NuGet versions    | Increment version; deprecate old package via NuGet.org UI                      |
 
-## Further Reading
+### Branch Protection Bypass
 
-| Topic              | Document                                         |
-| :----------------- | :----------------------------------------------- |
-| Architecture       | [ARCHITECTURE.md](ARCHITECTURE.md)               |
-| Workflow reference | [WORKFLOWS_REFERENCE.md](WORKFLOWS_REFERENCE.md) |
-| Script reference   | [SCRIPTS_REFERENCE.md](SCRIPTS_REFERENCE.md)     |
-| Configuration      | [CONFIGURATION.md](CONFIGURATION.md)             |
-| Error recovery     | [ERROR_RECOVERY.md](ERROR_RECOVERY.md)           |
+The release workflow pushes a changelog commit and tag directly to `main`. Since `main` is
+protected by repository rulesets requiring status checks, the workflow must authenticate with a
+fine-grained Personal Access Token (`RELEASE_PAT` secret) rather than the default `GITHUB_TOKEN`.
+
+The PAT owner must be listed as a **Repository Admin** bypass actor in the ruleset. Create the PAT
+with `contents: write` scope, scoped to the relevant repositories.

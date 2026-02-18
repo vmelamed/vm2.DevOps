@@ -7,6 +7,7 @@ How to set up a new .NET repository to use vm2.DevOps CI/CD automation.
 - A .NET solution in `.slnx` format (migrate .sln files with `dotnet solution migrate` if needed)
 - GitHub repository with Actions enabled
 - Repository variables and secrets configured (see [CONFIGURATION.md](CONFIGURATION.md#github-repository-secrets))
+- A `RELEASE_PAT` secret for stable releases (fine-grained PAT with `contents: write`) — see [CONFIGURATION.md](CONFIGURATION.md#github-repository-secrets)
 
 ## Two Setup Paths
 

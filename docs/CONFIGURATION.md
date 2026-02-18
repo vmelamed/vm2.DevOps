@@ -67,6 +67,7 @@ Set in repo Settings → Secrets and variables → Actions → Secrets.
 | `NUGET_API_KEY`            | Prerelease, Release | Default NuGet API key (fallback for any server)          |
 | `NUGET_API_GITHUB_KEY`     | Prerelease, Release | GitHub Packages API key                                  |
 | `NUGET_API_NUGET_KEY`      | Prerelease, Release | nuget.org API key                                        |
+| `RELEASE_PAT`              | Release             | Fine-grained PAT with `contents: write` — required to push the changelog commit and release tag to `main` (bypasses branch protection rulesets) |
 
 For NuGet publishing, the key used depends on the `NUGET_SERVER` value:
 
