@@ -74,6 +74,7 @@ else
     else
         execute git-cliff -c changelog/cliff.release-header.toml \
             --tag "$release_tag" \
+            --unreleased \
             --prepend CHANGELOG.md
     fi
 
