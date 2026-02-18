@@ -146,7 +146,7 @@ jobs:
         id: create_changelog_pr
         if: steps.changelog_update.outputs.changed == 'true'
         continue-on-error: true
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           add-paths: CHANGELOG.md
