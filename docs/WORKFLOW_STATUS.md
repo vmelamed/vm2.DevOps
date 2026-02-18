@@ -42,7 +42,10 @@ All workflow templates have been migrated to **[vmelamed/.github](https://github
 - ✅ `Prerelease.yaml` - Prerelease publishing workflow
 - ✅ `Release.yaml` - Stable release workflow
 - ✅ `ClearCache.yaml` - Manual cache clearing
-- ✅ `dependabot.yaml` - Dependency updates
+- ✅ `dependabot.yml` - Dependency updates
+
+> [!Warning]
+> Note that GitHub only recognizes `dependabot.yml` filename, not `dependabot.yAml`
 
 Each template includes:
 

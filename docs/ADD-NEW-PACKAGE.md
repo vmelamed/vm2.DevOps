@@ -34,6 +34,9 @@ RootOfRepo/
 └── CHANGELOG.md
 ```
 
+> [!Warning]
+> Note that GitHub only recognizes `dependabot.yml` filename, not `dependabot.yAml`
+
 Here are the sources and content of the listed files above:
 
 ## `.github/**/*.yaml` - copied from [vmelamed/.github/workflow-templates](https://github.com/vmelamed/.github/tree/main/workflow-templates) - basically materialize the templates for the new package repo

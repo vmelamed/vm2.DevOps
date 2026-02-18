@@ -155,6 +155,9 @@ Create `.github/dependabot.yml`:
           - "github-actions"
           - "automated"
 
+> [!Warning]
+> Note that GitHub only recognizes `dependabot.yml` filename, not `dependabot.yAml`
+
 **Benefits:**
 
 - Automatic PRs for package updates

@@ -55,8 +55,8 @@
         "action": "copy"
     },
     {
-        "sourceFile": "${repos}/.github/workflow-templates/dependabot.yaml",
-        "targetFile": "${target_path}/.github/dependabot.yaml",
+        "sourceFile": "${repos}/vm2.DevOps/.github/dependabot.yml",
+        "targetFile": "${target_path}/.github/dependabot.yml",
         "action": "copy"
     },
     {

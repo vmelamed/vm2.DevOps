@@ -45,7 +45,7 @@
     </PropertyGroup>
 
     <!-- ================ Package properties for all vm2 packages ================ -->
-    <PropertyGroup Label="NuGetGlobal">
+    <PropertyGroup Label="NuGetCommon">
         <IsPackable>true</IsPackable>
         <Company>vm</Company>
         <Product>vm2</Product>
