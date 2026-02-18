@@ -16,7 +16,7 @@ declare -xr default_minver_tag_prefix='v'
 
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x release_tag=${RELEASE_TAG:-}
-declare -x reason=${REASON:-stable release}
+declare -x reason=${REASON:-}
 
 source "$script_dir/changelog-and-tag.usage.sh"
 source "$script_dir/changelog-and-tag.utils.sh"
@@ -31,12 +31,27 @@ dump_vars --quiet \
 
 # Sanitize inputs
 validate_minverTagPrefix "$minver_tag_prefix" || true
-is_semverReleaseTag "$release_tag" || true
+
+# Determine tag type: release or prerelease
+is_release=false
+is_prerelease=false
+if is_semverReleaseTag "$release_tag"; then
+    is_release=true
+    reason=${reason:-"stable release"}
+elif is_semverPrereleaseTag "$release_tag"; then
+    is_prerelease=true
+    reason=${reason:-"pre-release"}
+else
+    error "Tag '$release_tag' is not a valid semver release or prerelease tag." || true
+fi
+
 is_safe_reason "$reason" || true
 
 declare -xr release_tag
 declare -xr reason
 declare -xr minver_tag_prefix
+declare -xr is_release
+declare -xr is_prerelease
 
 dump_all_variables
 exit_if_has_errors
@@ -52,14 +67,28 @@ fi
 # STEP 1: Update CHANGELOG
 # ============================================================================
 
-if [[ ! -s changelog/cliff.release-header.toml ]]; then
-    warning "Missing changelog/cliff.release-header.toml; skipping changelog update."
+# Select cliff config based on tag type
+if [[ "$is_release" == "true" ]]; then
+    cliff_config="changelog/cliff.release-header.toml"
 else
-    # Use the range from last stable tag to HEAD
+    cliff_config="changelog/cliff.prerelease.toml"
+fi
+
+if [[ ! -s "$cliff_config" ]]; then
+    warning "Missing $cliff_config; skipping changelog update."
+else
+    # Determine the commit range
     # shellcheck disable=SC2154 # semverTagReleaseRegex is referenced but not assigned.
-    last_stable=$(git tag --list "${minver_tag_prefix}*" | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1 || echo "")
-    if [[ -n "$last_stable" ]]; then
-        range="$last_stable..HEAD"
+    if [[ "$is_release" == "true" ]]; then
+        # For stable releases: range from last stable tag to HEAD
+        last_ref=$(git tag --list "${minver_tag_prefix}*" | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1 || echo "")
+    else
+        # For prereleases: range from last tag of any kind to HEAD
+        last_ref=$(git tag --list "${minver_tag_prefix}*" | sort -V | tail -n1 || echo "")
+    fi
+
+    if [[ -n "$last_ref" ]]; then
+        range="$last_ref..HEAD"
     else
         range=""
     fi
@@ -67,12 +96,12 @@ else
     echo "Generating changelog for $release_tag (range: ${range:-all commits})"
 
     if [[ -n "$range" ]]; then
-        execute git-cliff -c changelog/cliff.release-header.toml \
+        execute git-cliff -c "$cliff_config" \
             --tag "$release_tag" \
             --prepend CHANGELOG.md \
             "$range"
     else
-        execute git-cliff -c changelog/cliff.release-header.toml \
+        execute git-cliff -c "$cliff_config" \
             --tag "$release_tag" \
             --unreleased \
             --prepend CHANGELOG.md
@@ -89,10 +118,15 @@ else
 fi
 
 # ============================================================================
-# STEP 2: Create and push release tag
+# STEP 2: Create and push tag
 # ============================================================================
 
-if ! execute git tag -a "$release_tag" -m "Release $release_tag" -m "Reason: $reason"; then
+tag_message="Release $release_tag"
+if [[ "$is_prerelease" == "true" ]]; then
+    tag_message="Prerelease $release_tag"
+fi
+
+if ! execute git tag -a "$release_tag" -m "$tag_message" -m "Reason: $reason"; then
     error "Failed to create tag $release_tag (does it already exist?)"
     exit 2
 fi

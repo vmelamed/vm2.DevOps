@@ -7,7 +7,7 @@ How to set up a new .NET repository to use vm2.DevOps CI/CD automation.
 - A .NET solution in `.slnx` format (migrate .sln files with `dotnet solution migrate` if needed)
 - GitHub repository with Actions enabled
 - Repository variables and secrets configured (see [CONFIGURATION.md](CONFIGURATION.md#github-repository-secrets))
-- A `RELEASE_PAT` secret for stable releases (fine-grained PAT with `contents: write`) — see [CONFIGURATION.md](CONFIGURATION.md#github-repository-secrets)
+- A `RELEASE_PAT` secret for prerelease and stable release workflows (fine-grained PAT with `contents: write`) — see [CONFIGURATION.md](CONFIGURATION.md#github-repository-secrets)
 
 ## Two Setup Paths
 
@@ -245,9 +245,6 @@ with known cost), the new baseline will be established on the next main branch r
 
 **NuGet push fails with authentication error:**
 Verify the appropriate `NUGET_API_*` secret is set for your configured `NUGET_SERVER`.
-
-**Prerelease fails with "GitHub Actions is not permitted to create or approve pull requests":**
-Enable `Settings -> Actions -> General -> Workflow permissions -> Allow GitHub Actions to create and approve pull requests`.
 
 ## Further Reading
 

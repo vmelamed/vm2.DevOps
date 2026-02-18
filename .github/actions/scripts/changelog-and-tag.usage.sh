@@ -15,24 +15,29 @@ $common_switches"
 
     cat << EOF
 Usage: ${script_name} [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
-Updates CHANGELOG.md for a release using git-cliff, then creates and pushes the release tag
+Updates CHANGELOG.md using git-cliff, then creates and pushes a Git tag.
+
+Accepts both release tags (e.g., v1.2.3) and prerelease tags (e.g., v1.2.3-preview.1).
+Automatically selects the correct git-cliff config based on tag type:
+  - Release:    changelog/cliff.release-header.toml
+  - Prerelease: changelog/cliff.prerelease.toml
 
 Requirements:
   - git-cliff must be installed
-  - changelog/cliff.release-header.toml should exist (optional, will warn if missing)
+  - The appropriate cliff config file should exist (optional, will warn if missing)
 
 Options:
-  -t, --release-tag             Specifies the release tag to create and use for changelog (required, e.g., 'v1.2.3')
+  -t, --release-tag             Specifies the tag to create (required, e.g., 'v1.2.3' or 'v1.2.3-preview.1')
                                 Initial value from \$RELEASE_TAG
   -p, --minver-tag-prefix       Specifies the tag prefix used by MinVer (e.g., 'v')
                                 Initial value from \$MINVERTAGPREFIX or default 'v'
   -r, --reason                  Specifies the reason for the release (included in tag annotation)
-                                Initial value from \$REASON or default 'stable release'
+                                Initial value from \$REASON or default based on tag type
 $std_switches
 Environment Variables:
-  RELEASE_TAG                   The release tag (e.g., 'v1.2.3')
+  RELEASE_TAG                   The tag to create (e.g., 'v1.2.3' or 'v1.2.3-preview.1')
   MINVERTAGPREFIX               Tag prefix (default: 'v')
-  REASON                        Release reason (default: 'stable release')
+  REASON                        Release reason (default: auto-detected from tag type)
 $std_vars
 EOF
 }

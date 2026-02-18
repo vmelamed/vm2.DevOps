@@ -1,6 +1,6 @@
 # Workflows Reference
 
-<!-- TOC tocDepth:2..3 chapterDepth:2..6 -->
+<!-- TOC tocDepth:2..5 chapterDepth:2..6 -->
 
 - [_ci.yaml](#_ciyaml)
   - [Inputs](#inputs)
@@ -229,7 +229,7 @@ Validates that projects can be packed into NuGet packages.
 
 ## _prerelease.yaml
 
-Updates the changelog and publishes a prerelease NuGet package.
+Computes a prerelease version, updates the changelog, tags, and publishes a prerelease NuGet package.
 
 ### Inputs
 
@@ -251,11 +251,11 @@ Updates the changelog and publishes a prerelease NuGet package.
 | `NUGET_API_KEY`        | no       | Default/custom NuGet server API key                  |
 | `NUGET_API_GITHUB_KEY` | no       | GitHub Packages API key                              |
 | `NUGET_API_NUGET_KEY`  | no       | nuget.org API key                                    |
+| `RELEASE_PAT`          | **yes**  | PAT with `contents:write` for pushing to main        |
 
 ### Permissions
 
     contents: write
-    packages: write
 
 ### Concurrency
 
@@ -264,14 +264,15 @@ Updates the changelog and publishes a prerelease NuGet package.
 
 ### Jobs
 
-| Job                    | Needs       | Description                                        |
-| :--------------------- | :---------- | :------------------------------------------------- |
-| `changelog`            | —           | Updates CHANGELOG.md via git-cliff                 |
-| `package-and-publish`  | `changelog` | Builds, packs, and pushes to NuGet server          |
+| Job                    | Needs                                    | Description                                           |
+| :--------------------- | :--------------------------------------- | :---------------------------------------------------- |
+| `compute-version`      | —                                        | Determines prerelease version from conventional commits|
+| `changelog-and-tag`    | `compute-version`                        | Updates CHANGELOG.md and creates prerelease Git tag    |
+| `package-and-publish`  | `compute-version`, `changelog-and-tag`   | Checks out tag, builds, packs, and pushes to NuGet     |
 
 ### Scripts
 
-`publish-package.sh`
+`compute-prerelease-version.sh`, `changelog-and-tag.sh`, `publish-package.sh`
 
 ---
 
@@ -299,6 +300,7 @@ Computes a stable release version, updates the changelog, tags, and publishes.
 | `NUGET_API_KEY`        | no       | Default/custom NuGet server API key                  |
 | `NUGET_API_GITHUB_KEY` | no       | GitHub Packages API key                              |
 | `NUGET_API_NUGET_KEY`  | no       | nuget.org API key                                    |
+| `RELEASE_PAT`          | **yes**  | PAT with `contents:write` for pushing to main        |
 
 ### Permissions
 

@@ -1,5 +1,24 @@
 ﻿# Release Process
 
+<!-- TOC tocDepth:2..5 chapterDepth:2..6 -->
+
+- [Development Model](#development-model)
+- [Version Source: MinVer](#version-source-minver)
+- [Two Publishing Flows](#two-publishing-flows)
+- [Prerelease Flow](#prerelease-flow)
+- [Stable Release Flow](#stable-release-flow)
+  - [Release Version Calculation Algorithm](#release-version-calculation-algorithm)
+  - [Prerelease Version Calculation Algorithm](#prerelease-version-calculation-algorithm)
+  - [Changelog and Tagging](#changelog-and-tagging)
+- [Changelog Strategy](#changelog-strategy)
+- [Initial Bootstrapping](#initial-bootstrapping)
+- [NuGet Server Selection](#nuget-server-selection)
+- [Quick Reference](#quick-reference)
+- [Troubleshooting](#troubleshooting)
+  - [Branch Protection Bypass](#branch-protection-bypass)
+
+<!-- /TOC -->
+
 How versioning, prerelease publishing, and stable release publishing work in the vm2 CI/CD system.
 
 ## Development Model
@@ -21,7 +40,7 @@ All version numbers are derived from Git tags by [MinVer](https://github.com/ada
 
 | Aspect                         | Value                                                      |
 | :----------------------------- | :--------------------------------------------------------- |
-| NuGet package version          | Git tag (or MinVer-computed prerelease if commits ahead)   |
+| NuGet package version          | Git tag (exact match for releases and prereleases)         |
 | `AssemblyInformationalVersion` | Full SemVer string including prerelease + commit metadata  |
 | `FileVersion`                  | `Major.Minor.Patch.0`                                      |
 | `AssemblyVersion`              | `Major.0.0.0` (MinVer default — keeps binding stable)      |
@@ -40,12 +59,12 @@ The tag prefix is `v` (e.g. `v1.2.3`), configured via the `MINVERTAGPREFIX` repo
 
 ## Two Publishing Flows
 
-| Flow       | Trigger                                            | Version Format                                    | NuGet Package |
-| :--------- | :------------------------------------------------- | :------------------------------------------------ | :------------ |
-| Prerelease | PR merge → push to `main` → CI success (automated) | MinVer-computed prerelease                        | Preview       |
-| Release    | Manual `workflow_dispatch`                         | Computed stable `X.Y.Z` from conventional commits | Stable        |
+| Flow       | Trigger                                             | Version Format                    | NuGet Package |
+| :--------- | :-------------------------------------------------- | :-------------------------------- | :------------ |
+| Prerelease | PR merge → push to `main` → CI success (automated)  | `X.Y.Z-preview.N` (computed)      | Preview       |
+| Release    | Manual `workflow_dispatch`                          | `X.Y.Z` (computed)                | Stable        |
 
-Both flows call the same `publish-package.sh` script for the final build → pack → push steps.
+Both flows share the same `changelog-and-tag.sh` and `publish-package.sh` scripts for changelog updates, tagging, and publishing.
 
 ## Prerelease Flow
 
@@ -58,16 +77,31 @@ PR merged → push to main → CI workflow runs
                               │
                               ↓
                     ┌─────────────────────┐
-                    │  changelog (job 1)  │
-                    │  * git-cliff        │
-                    │  * create PR for    │
-                    │    CHANGELOG update │
+                    │  compute-version    │
+                    │  (job 1)            │
+                    │  * scan commits     │
+                    │  * determine bump   │
+                    │  * compute preview  │
+                    │    counter          │
+                    └─────────┬───────────┘
+                              │
+                              ↓
+                    ┌─────────────────────┐
+                    │  changelog-and-tag  │
+                    │  (job 2)            │
+                    │  * git-cliff with   │
+                    │    cliff.prerelease │
+                    │    .toml            │
+                    │  * commit + push    │
+                    │    CHANGELOG.md     │
+                    │  * git tag + push   │
                     └─────────┬───────────┘
                               │
                               ↓
                     ┌──────────────────────┐
                     │ package-and-publish  │
-                    │  (job 2, per project)│
+                    │  (job 3, per project)│
+                    │  * checkout tag      │
                     │  * dotnet restore    │
                     │  * dotnet pack       │
                     │  * dotnet nuget push │
@@ -87,11 +121,13 @@ if: |
 
 This ensures prereleases only fire after a successful CI run on `main` (i.e. merged PRs), never from CI runs on feature branches.
 
-**Version**: MinVer computes the prerelease version automatically — it sees HEAD is ahead of the latest stable tag and appends
-the prerelease identifier (e.g. `v1.2.3-preview.0.1`). No version computation script is involved.
+**Version**: The `compute-prerelease-version.sh` script determines the next prerelease version by scanning conventional commits
+since the last stable tag and appending a `-preview.N` suffix. The counter increments within the same base version and resets
+when the bump type changes.
 
-**Changelog**: `git-cliff` generates a changelog entry and opens a PR (rather than pushing directly to `main`), to comply with
-branch protection rules.
+**Changelog**: `changelog-and-tag.sh` runs `git-cliff` with `cliff.prerelease.toml` to add an entry directly to `CHANGELOG.md`
+on `main`, then creates and pushes the prerelease tag. This mirrors the stable release pattern — direct commit via `RELEASE_PAT`
+to bypass branch protection.
 
 **Manual trigger**: The prerelease workflow also supports `workflow_dispatch` with a custom `minver-prerelease-id` input (e.g.
 `alpha`, `beta`, `rc1`).
@@ -134,7 +170,7 @@ Manual workflow_dispatch (with reason)
   └────────────────────┘
 ```
 
-### Version Calculation Algorithm
+### Release Version Calculation Algorithm
 
 The `compute-release-version.sh` script determines the next stable version:
 
@@ -152,22 +188,57 @@ The `compute-release-version.sh` script determines the next stable version:
 3. **SemVer floor**: if the computed major is `0`, the version is raised to `1.0.0` (SemVer 2.0.0 requires major ≥ 1 for
    releases).
 
-4. **Prerelease guard**: if the latest prerelease tag (e.g. `v2.0.0-preview.0.3`) is *higher* than the computed release version,
+4. **Prerelease guard**: if the latest prerelease tag (e.g. `v2.0.0-preview.3`) is *higher* than the computed release version,
    the release version adopts the prerelease's major.minor.patch. This prevents publishing a stable version lower than an
    existing prerelease.
 
 5. **Duplicate guard**: if `HEAD` is already tagged or the computed tag already exists, the script fails with an error and
    suggests remediation.
 
+### Prerelease Version Calculation Algorithm
+
+The `compute-prerelease-version.sh` script determines the next prerelease version:
+
+1. **Find latest stable and prerelease tags** — both are needed to determine the base version and counter.
+
+2. **Scan conventional commits** since the last stable tag — same bump logic as the release algorithm.
+
+3. **SemVer floor**: same `1.0.0` minimum.
+
+4. **Compute the prerelease counter**:
+   - If the latest prerelease has the same base version → increment the counter (`preview.N+1`)
+   - If the base version changed (e.g. new `feat:` appeared) → reset counter to `1`
+   - If no previous prerelease exists → start at `1`
+
+5. **Duplicate guard**: same as release.
+
+Example: latest stable `v1.2.3`, latest prerelease `v1.3.0-preview.2`, new commit is `fix: typo`:
+
+- Commits since `v1.2.3` include a `feat:` → minor bump → base `1.3.0`
+- Same base as latest prerelease → counter = 2 + 1 = **3**
+- Result: `v1.3.0-preview.3`
+
 ### Changelog and Tagging
 
-The `changelog-and-tag.sh` script:
+The `changelog-and-tag.sh` script is shared by both flows:
 
-1. Runs `git-cliff` with `changelog/cliff.release-header.toml` to prepend the release entry to `CHANGELOG.md`.
-2. Commits and pushes the changelog update directly to `main`.
-3. Creates an annotated tag (`git tag -a vX.Y.Z -m "Release vX.Y.Z"`) and pushes it.
+1. **Detects the tag type** (release or prerelease) and selects the appropriate git-cliff config:
+   - Stable release → `cliff.release-header.toml` (outputs "See prereleases below.")
+   - Prerelease → `cliff.prerelease.toml` (outputs a full commit-level changelog entry)
+2. **Determines the commit range**:
+   - Stable release → from last stable tag to HEAD
+   - Prerelease → from last tag (any type) to HEAD
+3. Commits and pushes the changelog update directly to `main`.
+4. Creates an annotated tag and pushes it.
 
-The release job then checks out this tag so MinVer resolves the exact stable version.
+The publish job then checks out this tag so MinVer resolves the exact version.
+
+## Changelog Strategy
+
+Each prerelease gets its own entry in `CHANGELOG.md` — a detailed, commit-level record generated by `cliff.prerelease.toml`.
+
+When a stable release is cut, `cliff.release-header.toml` adds a header entry that says "See prereleases below." This works
+because the prerelease entries immediately below it already contain everything. No information is duplicated.
 
 ## Initial Bootstrapping
 
@@ -178,7 +249,7 @@ git tag -a v0.1.0 -m "Initial baseline"
 git push origin v0.1.0
 ```
 
-Subsequent PR merges create MinVer-computed prereleases automatically. The first stable release
+Subsequent PR merges create prerelease packages automatically. The first stable release
 (via `workflow_dispatch`) will compute `v1.0.0` due to the SemVer floor.
 
 ## NuGet Server Selection
@@ -218,9 +289,9 @@ The `NUGET_SERVER` variable (or `nuget-server` input) determines where packages 
 
 ### Branch Protection Bypass
 
-The release workflow pushes a changelog commit and tag directly to `main`. Since `main` is
-protected by repository rulesets requiring status checks, the workflow must authenticate with a
-fine-grained Personal Access Token (`RELEASE_PAT` secret) rather than the default `GITHUB_TOKEN`.
+Both the prerelease and release workflows push changelog commits and tags directly to `main`. Since `main` is protected by
+repository rulesets requiring status checks, workflows must authenticate with a fine-grained Personal Access Token (`RELEASE_PAT`
+secret) rather than the default `GITHUB_TOKEN`.
 
 The PAT owner must be listed as a **Repository Admin** bypass actor in the ruleset. Create the PAT
 with `contents: write` scope, scoped to the relevant repositories.

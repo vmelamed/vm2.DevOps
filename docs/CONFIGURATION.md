@@ -20,6 +20,12 @@
   - [CI.yaml](#ciyaml)
   - [Prerelease.yaml](#prereleaseyaml)
   - [Release.yaml](#releaseyaml)
+- [Repository Setup via UI](#repository-setup-via-ui)
+  - [Repository Settings](#repository-settings)
+  - [Actions Permissions](#actions-permissions)
+  - [Secrets](#secrets)
+  - [Variables](#variables)
+  - [Branch Protection](#branch-protection)
 
 <!-- /TOC -->
 
@@ -67,7 +73,7 @@ Set in repo Settings → Secrets and variables → Actions → Secrets.
 | `NUGET_API_KEY`            | Prerelease, Release | Default NuGet API key (fallback for any server)          |
 | `NUGET_API_GITHUB_KEY`     | Prerelease, Release | GitHub Packages API key                                  |
 | `NUGET_API_NUGET_KEY`      | Prerelease, Release | nuget.org API key                                        |
-| `RELEASE_PAT`              | Release             | Fine-grained PAT with `contents: write` — required to push the changelog commit and release tag to `main` (bypasses branch protection rulesets) |
+| `RELEASE_PAT`              | Prerelease, Release | Fine-grained PAT with `contents: write` — required to push the changelog commit and tag to `main` (bypasses branch protection rulesets) |
 
 For NuGet publishing, the key used depends on the `NUGET_SERVER` value:
 
@@ -169,15 +175,6 @@ permissions:
   checks: write           # GitHub Check annotations
 ```
 
-For workflows that create pull requests (for example prerelease changelog updates), also enable this repository setting:
-
-- `Settings` -> `Actions` -> `General` -> `Workflow permissions`
-- `Allow GitHub Actions to create and approve pull requests`
-
-If this setting is disabled, actions that call the Pull Requests API may fail with:
-
-- `GitHub Actions is not permitted to create or approve pull requests`
-
 ## Consumer Workflow Customization
 
 Each consumer workflow has customizable `env:` variables, `inputs:`, and `secrets:` sections. Consumer workflows can be created
@@ -271,7 +268,89 @@ env:
 
 ```yaml
 secrets:
+  RELEASE_PAT: ${{ secrets.RELEASE_PAT }}
   NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
   NUGET_API_GITHUB_KEY: ${{ secrets.NUGET_API_GITHUB_KEY }}
   NUGET_API_NUGET_KEY: ${{ secrets.NUGET_API_NUGET_KEY }}
 ```
+
+## Repository Setup via UI
+
+The `bootstrap-new-package.sh` script automates the steps below. If you prefer to configure
+manually, or need to verify/adjust settings on an existing repo, follow these steps.
+
+### Repository Settings
+
+**Settings → General → Pull Requests:**
+
+1. Enable **Allow squash merging** (default merge strategy)
+1. Disable **Allow merge commits**
+1. Disable **Allow rebase merging**
+1. Enable **Allow auto-merge**
+1. Enable **Automatically delete head branches**
+
+**Settings → General → Features:**
+
+1. Disable **Wikis** (documentation lives in the repo)
+1. Disable **Projects** (not used)
+
+### Actions Permissions
+
+**Settings → Actions → General → Workflow permissions:**
+
+1. Select **Read repository contents and packages permissions**
+
+### Secrets
+
+**Settings → Secrets and variables → Actions → Secrets → New repository secret** for each:
+
+| Secret                    | Value                                             |
+| :------------------------ | :------------------------------------------------ |
+| `CODECOV_TOKEN`           | From [codecov.io](https://codecov.io) dashboard   |
+| `BENCHER_API_TOKEN`       | From [bencher.dev](https://bencher.dev) dashboard |
+| `REPORTGENERATOR_LICENSE` | ReportGenerator Pro license key (optional)        |
+| `NUGET_API_GITHUB_KEY`    | GitHub PAT with `packages:write`                  |
+| `NUGET_API_NUGET_KEY`     | From [nuget.org](https://nuget.org) API keys      |
+| `NUGET_API_KEY`           | Fallback key (optional)                           |
+| `RELEASE_PAT`             | Fine-grained PAT with `contents:write` — owner must be added as bypass actor in branch ruleset |
+
+### Variables
+
+**Settings → Secrets and variables → Actions → Variables → New repository variable** for each:
+
+| Variable                             | Default     |
+| :----------------------------------- | :---------- |
+| `DOTNET_VERSION`                     | `10.0.x`    |
+| `CONFIGURATION`                      | `Release`   |
+| `MIN_COVERAGE_PCT`                   | `80`        |
+| `MAX_REGRESSION_PCT`                 | `20`        |
+| `MINVERTAGPREFIX`                    | `v`         |
+| `MINVERDEFAULTPRERELEASEIDENTIFIERS` | `preview.0` |
+| `NUGET_SERVER`                       | `github`    |
+| `SAVE_PACKAGE_ARTIFACTS`             | `false`     |
+| `VERBOSE`                            | `false`     |
+
+All variables are optional — workflows use these defaults when the variable is not set.
+
+### Branch Protection
+
+**Settings → Rules → Rulesets → New ruleset:**
+
+1. **Name:** `main protection`
+1. **Target:** Include default branch
+1. **Bypass actors:** Add the `RELEASE_PAT` owner as an admin bypass actor
+1. Enable rules:
+
+   | Rule                                  | Setting                                       |
+   | :------------------------------------ | :-------------------------------------------- |
+   | Require a pull request before merging  | 1 approval, dismiss stale reviews            |
+   | Require status checks to pass          | Add: `build`, `test`, `benchmarks` as needed |
+   | Require up-to-date branches            | Enabled                                      |
+   | Require linear history                 | Enabled                                      |
+   | Require conversation resolution        | Enabled                                      |
+   | Block force pushes                     | Enabled                                      |
+   | Block deletions                        | Enabled                                      |
+
+> **Note:** Only add `test` and `benchmarks` checks if the repo has test/benchmark
+> projects. GitHub only shows checks that have run at least once — create a test PR
+> first to populate the list.

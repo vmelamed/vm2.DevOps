@@ -4,7 +4,12 @@
 
 - [Sourcing Chains](#sourcing-chains)
   - [Common Switches](#common-switches)
-- [1. CI Scripts](#1-ci-scripts)
+- [1. Bash Library](#1-bash-library)
+- [2. Utility Scripts](#2-utility-scripts)
+  - [diff-common.sh](#diff-commonsh)
+  - [move-commits-to-branch.sh](#move-commits-to-branchsh)
+  - [Other Utilities](#other-utilities)
+- [3. CI Scripts](#3-ci-scripts)
   - [validate-input.sh](#validate-inputsh)
   - [build.sh](#buildsh)
   - [run-tests.sh](#run-testssh)
@@ -12,13 +17,10 @@
   - [pack.sh](#packsh)
   - [publish-package.sh](#publish-packagesh)
   - [compute-release-version.sh](#compute-release-versionsh)
+  - [compute-prerelease-version.sh](#compute-prerelease-versionsh)
   - [changelog-and-tag.sh](#changelog-and-tagsh)
   - [download-artifact.sh](#download-artifactsh)
-- [2. Bash Library](#2-bash-library)
-- [3. Utility Scripts](#3-utility-scripts)
-  - [diff-common.sh](#diff-commonsh)
-  - [move-commits-to-branch.sh](#move-commits-to-branchsh)
-  - [Other Utilities](#other-utilities)
+  - [bootstrap-new-package.sh](#bootstrap-new-packagesh)
 
 <!-- /TOC -->
 
@@ -120,7 +122,6 @@ Moves commits from a specified SHA onward to a new branch, resetting main to the
 | :---------------------- | :----------------------------------------- |
 | `add-spdx.sh`           | Add SPDX license headers to source files   |
 | `retag.sh`              | Recreate a Git tag at a different commit   |
-| `restore-locked.sh`     | Restore locked NuGet packages              |
 | `restore-force-eval.sh` | Force re-evaluation of NuGet restore       |
 
 ## 3. CI Scripts
@@ -276,10 +277,10 @@ Determines the next stable release version from conventional commit messages.
 
 **Called by:** `_release.yaml`
 
-| Option                | Short | Default         | Description       |
-| :-------------------- | :---- | :-------------- | :---------------- |
-| `--minver-tag-prefix` | `-mp` | `v`             | MinVer tag prefix |
-| `--reason`            | `-r`  | `release build` | Reason for release|
+| Option                | Short | Default         | Description        |
+| :-------------------- | :---- | :-------------- | :----------------- |
+| `--minver-tag-prefix` | `-mp` | `v`             | MinVer tag prefix  |
+| `--reason`            | `-r`  | `release build` | Reason for release |
 
 **Outputs:** `release-version`, `release-tag`, `reason` → `$GITHUB_OUTPUT`
 
@@ -288,19 +289,40 @@ for the algorithm.
 
 ---
 
+### compute-prerelease-version.sh
+
+Determines the next prerelease version from conventional commit messages.
+
+**Called by:** `_prerelease.yaml`
+
+| Option                   | Short | Default      | Description                                            |
+| :----------------------- | :---- | :----------- | :----------------------------------------------------- |
+| `--minver-tag-prefix`    | `-mp` | `v`          | MinVer tag prefix                                      |
+| `--minver-prerelease-id` | `-mi` | `preview.0`  | MinVer pre-release identifiers (e.g., `preview.0`)     |
+| `--reason`               | `-r`  | `prerelease` | Reason for release                                     |
+
+**Outputs:** `prerelease-version`, `prerelease-tag`, `reason` → `$GITHUB_OUTPUT`
+
+See [ARCHITECTURE.md — Prerelease Version Calculation](ARCHITECTURE.md#prerelease-version-calculation)
+for the algorithm.
+
+---
+
 ### changelog-and-tag.sh
 
-Updates CHANGELOG.md via git-cliff, then creates and pushes the release tag.
+Updates CHANGELOG.md via git-cliff, then creates and pushes the tag (release or prerelease).
 
-**Called by:** `_release.yaml`
+**Called by:** `_prerelease.yaml`, `_release.yaml`
 
-**Requires:** `git-cliff` installed; `changelog/cliff.release-header.toml` in the repo.
+**Requires:** `git-cliff` installed; `changelog/cliff.release-header.toml` (stable) or
+`changelog/cliff.prerelease.toml` (prerelease) in the repo. Config is auto-selected based
+on the tag type.
 
-| Option                | Short | Default          | Description                             |
-| :-------------------- | :---- | :--------------- | :-------------------------------------- |
-| `--release-tag`       | `-t`  | —                | Release tag to create (e.g., `v1.2.3`)  |
-| `--minver-tag-prefix` | `-p`  | `v`              | MinVer tag prefix                       |
-| `--reason`            | `-r`  | `stable release` | Reason (included in tag annotation)     |
+| Option                | Short | Default          | Description                                                      |
+| :-------------------- | :---- | :--------------- | :--------------------------------------------------------------- |
+| `--release-tag`       | `-t`  | —                | Tag to create (e.g., `v1.2.3` or `v1.3.0-preview.1`)             |
+| `--minver-tag-prefix` | `-p`  | `v`              | MinVer tag prefix                                                |
+| `--reason`            | `-r`  | auto-detected    | Reason (included in tag annotation); defaults based on tag type  |
 
 ---
 
@@ -322,3 +344,27 @@ Downloads the latest artifact from a previous workflow run.
 Workflow lookup priority: `--wf-name` > `--wf-path` > `--wf-id` (or the corresponding env vars).
 
 ---
+
+### bootstrap-new-package.sh
+
+Bootstraps and configures a vm2 package repository using the GitHub CLI. Creates the repo,
+sets secrets/variables, configures repo settings, Actions permissions, and branch protection.
+
+**Requires:** `gh` (authenticated), `jq`
+
+| Option             | Short | Default     | Description                                         |
+| :----------------- | :---- | :---------- | :-------------------------------------------------- |
+| `--repo`           | `-r`  | —           | Full repo name (`owner/repo`)                       |
+| `--name`           | `-n`  | —           | Package name (repo becomes `<org>/vm2.<name>`)      |
+| `--org`            | `-o`  | `vmelamed`  | GitHub owner/org (used with `--name`)               |
+| `--visibility`     |       | `public`    | `public` or `private`                               |
+| `--branch`         | `-b`  | `main`      | Branch to protect                                   |
+| `--configure-only` |       | —           | Skip repo creation; configure existing repo only    |
+| `--skip-secrets`   |       | —           | Skip setting repository secrets                     |
+| `--skip-variables` |       | —           | Skip setting repository variables                   |
+| `--audit`          |       | —           | Read-only: report current vs expected settings      |
+
+Either `--repo` or `--name` is required (but not both).
+
+See [CONFIGURATION.md — Repository Setup via UI](CONFIGURATION.md#repository-setup-via-ui) for the
+equivalent manual steps.

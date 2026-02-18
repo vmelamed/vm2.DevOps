@@ -121,12 +121,11 @@ declare -x package_version
 if is_semverRelease "$version"; then
     summary_header="Release Summary"
     reason="${reason:="stable release"}"
-    git_tag="${minver_tag_prefix}${version}"
 else
     summary_header="Prerelease Summary"
     reason="${reason:="pre-release"}"
-    git_tag="N/A"
 fi
+git_tag="${minver_tag_prefix}${version}"
 
 # push packages to NuGet server
 execute dotnet nuget push "$artifacts_dir"/*.nupkg \

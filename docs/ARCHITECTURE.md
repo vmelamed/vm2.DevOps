@@ -62,12 +62,12 @@ Each consumer workflow sets repo-specific parameters (project paths, coverage th
 and delegates to a reusable workflow via GitHub Actions property
 `uses: vmelamed/vm2.DevOps/.github/workflows/_*.yaml@main`.
 
-| Template             | Triggers                                         | Calls         |
-| :------------------- | :----------------------------------------------- | :------------ |
-| `CI.yaml`            | `push` to main, `pull_request` targeting main    | `_ci.yaml`    |
-| `Prerelease.yaml`    | workflow_run (after CI succeeds on main)         | `_prerelease` |
-| `Release.yaml`       | Manual `workflow_dispatch`                       | `_release`    |
-| `ClearCache.yaml`    | Manual `workflow_dispatch`                       | `_clear_cache`|
+| Template             | Triggers                                         | Calls          |
+| :------------------- | :----------------------------------------------- | :------------- |
+| `CI.yaml`            | `push` to main, `pull_request` targeting main    | `_ci.yaml`     |
+| `Prerelease.yaml`    | workflow_run (after CI succeeds on main)         | `_prerelease`  |
+| `Release.yaml`       | Manual `workflow_dispatch`                       | `_release`     |
+| `ClearCache.yaml`    | Manual `workflow_dispatch`                       | `_clear_cache` |
 
 ### Layer 2: Reusable Workflows
 
@@ -83,10 +83,12 @@ validate-input ──► build ──┬──► test
                            └──► pack
 ```
 
-- **validate-input** — Normalizes and validates all inputs through `validate-input.sh`. Uses a `["__skip__"]` sentinel for optional stages (test, benchmarks, pack).
+- **validate-input** — Normalizes and validates all inputs through `validate-input.sh`. Uses a `["__skip__"]` sentinel for
+  optional stages (test, benchmarks, pack).
 - **build** — Compiles via `_build.yaml`. Matrices over `runners-os × build-projects`.
 - **test** — Runs via `_test.yaml`. Matrices over `runners-os`. Skipped when `test-projects` is the sentinel.
-- **benchmarks** — Runs via `_benchmarks.yaml`. Matrices over `runners-os × benchmark-projects`. Also skipped on push commits containing `[skip bm]`.
+- **benchmarks** — Runs via `_benchmarks.yaml`. Matrices over `runners-os × benchmark-projects`. Also skipped on push commits
+  containing `[skip bm]`.
 - **pack** — Validates NuGet packaging via `_pack.yaml`. Matrices over `runners-os × package-projects`.
 
 Concurrency group `ci-${{ github.workflow_ref }}` cancels in-progress runs on new pushes.
@@ -123,17 +125,23 @@ Concurrency group `ci-${{ github.workflow_ref }}` cancels in-progress runs on ne
 
 #### Prerelease (`_prerelease.yaml`)
 
-Triggered automatically when CI succeeds after a PR merge to main (a workflow_run on the CI workflow, gated to push events on main with conclusion == 'success'). Can also be triggered manually via workflow_dispatch. Two sequential jobs:
+Triggered automatically when CI succeeds after a PR merge to main (a workflow_run on the CI workflow, gated to push events on
+main with conclusion == 'success'). Can also be triggered manually via workflow_dispatch. Three sequential jobs:
 
-1. **changelog** — Updates `CHANGELOG.md` using `git-cliff` with `cliff.prerelease.toml`.
-2. **package-and-publish** — Calls `publish-package.sh` to build, pack, and push the prerelease package to the configured NuGet server.
+1. **compute-version** — Calls `compute-prerelease-version.sh` to determine the next prerelease version from conventional
+   commits.
+1. **changelog-and-tag** — Calls `changelog-and-tag.sh` to update `CHANGELOG.md` using `cliff.prerelease.toml`, commit, and
+   create the prerelease tag.
+1. **package-and-publish** — Checks out the prerelease tag, then calls `publish-package.sh` to build, pack, and push the
+   prerelease package to the configured NuGet server.
 
 #### Release (`_release.yaml`)
 
 Manual dispatch. Three sequential jobs:
 
-1. **compute-version** — Calls `compute-release-version.sh` to determine the stable version from MinVer tags.
-2. **changelog-and-tag** — Calls `changelog-and-tag.sh` to finalize the changelog and create a Git tag.
+1. **compute-version** — Calls `compute-release-version.sh` to determine the stable version from conventional commits.
+2. **changelog-and-tag** — Calls `changelog-and-tag.sh` to update the changelog using `cliff.release-header.toml` and create the
+   release Git tag.
 3. **release** — Checks out the release tag, then calls `publish-package.sh` to build, pack, and push.
 
 ##### Algorithm for Calculating Release Version
@@ -193,19 +201,20 @@ Each CI script follows a **three-file pattern**:
 | `script.usage.sh`   | `--help` text                    |
 | `script.utils.sh`   | Argument parsing and validation  |
 
-The nine CI scripts:
+The CI scripts:
 
-| Script                        | Called by                 | Purpose                                      |
-| :---------------------------- | :------------------------ | :------------------------------------------- |
-| `validate-input.sh`           | `_ci`                     | Validate and normalize workflow inputs       |
-| `build.sh`                    | `_build`                  | Compile .NET projects                        |
-| `run-tests.sh`                | `_test`                   | Run tests and collect coverage               |
-| `run-benchmarks.sh`           | `_benchmarks`             | Run BenchmarkDotNet benchmarks               |
-| `pack.sh`                     | `_pack`                   | Validate NuGet packaging                     |
-| `publish-package.sh`          | `_prerelease`, `_release` | Build, pack, and push NuGet packages         |
-| `compute-release-version.sh`  | `_release`                | Determine stable release version via MinVer  |
-| `changelog-and-tag.sh`        | `_release`                | Finalize changelog and create Git tag        |
-| `download-artifact.sh`        | (utility)                 | Download and extract remote artifacts        |
+| Script                          | Called by                     | Purpose                                       |
+| :------------------------------ | :---------------------------- | :-------------------------------------------- |
+| `validate-input.sh`             | `_ci`                         | Validate and normalize workflow inputs        |
+| `build.sh`                      | `_build`                      | Compile .NET projects                         |
+| `run-tests.sh`                  | `_test`                       | Run tests and collect coverage                |
+| `run-benchmarks.sh`             | `_benchmarks`                 | Run BenchmarkDotNet benchmarks                |
+| `pack.sh`                       | `_pack`                       | Validate NuGet packaging                      |
+| `publish-package.sh`            | `_prerelease`, `_release`     | Build, pack, and push NuGet packages          |
+| `compute-prerelease-version.sh` | `_prerelease`                 | Determine prerelease version from commits     |
+| `compute-release-version.sh`    | `_release`                    | Determine stable release version from commits |
+| `changelog-and-tag.sh`          | `_prerelease`, `_release`     | Update changelog and create Git tag           |
+| `download-artifact.sh`          | (utility)                     | Download and extract remote artifacts         |
 
 #### Composite Action (`action.yaml`)
 
@@ -246,9 +255,9 @@ Development-time scripts not used in CI:
 | :-------------------------- | :----------------------------------------- |
 | `diff-common.sh`            | Diff shared files across vm2 repos         |
 | `move-commits-to-branch.sh` | Move commits from one branch to another    |
+| `bootstrap-new-package.sh`  | Bootstrap and configure a new GitHub repo  |
 | `add-spdx.sh`               | Add SPDX license headers to source files   |
 | `retag.sh`                  | Recreate a Git tag at a different commit   |
-| `restore-locked.sh`         | Restore locked NuGet packages              |
 | `restore-force-eval.sh`     | Force re-evaluation of NuGet restore       |
 
 These also follow the three-file pattern where applicable.
@@ -305,22 +314,23 @@ The `github.vm2` source is configured in each repo's `NuGet.config`.
 
 ## Secrets
 
-| Secret                       | Used by                       | Purpose                        |
-| :--------------------------- | :---------------------------- | :----------------------------- |
-| `NUGET_API_GITHUB_KEY`       | `_prerelease`, `_release`     | GitHub Packages API key        |
-| `NUGET_API_NUGET_KEY`        | `_prerelease`, `_release`     | nuget.org API key              |
-| `NUGET_API_KEY`              | `_prerelease`, `_release`     | Custom NuGet server API key    |
-| `CODECOV_TOKEN`              | `_ci` → `_test`               | Codecov upload token           |
-| `BENCHER_API_TOKEN`          | `_ci` → `_benchmarks`         | Bencher.dev tracking token     |
-| `REPORTGENERATOR_LICENSE`    | `_ci` → `_test`               | ReportGenerator license key    |
+| Secret                       | Used by                       | Purpose                                                                           |
+| :--------------------------- | :---------------------------- | :-------------------------------------------------------------------------------- |
+| `NUGET_API_GITHUB_KEY`       | `_prerelease`, `_release`     | GitHub Packages API key                                                           |
+| `NUGET_API_NUGET_KEY`        | `_prerelease`, `_release`     | nuget.org API key                                                                 |
+| `NUGET_API_KEY`              | `_prerelease`, `_release`     | Custom NuGet server API key                                                       |
+| `CODECOV_TOKEN`              | `_ci` → `_test`               | Codecov upload token                                                              |
+| `BENCHER_API_TOKEN`          | `_ci` → `_benchmarks`         | Bencher.dev tracking token                                                        |
+| `REPORTGENERATOR_LICENSE`    | `_ci` → `_test`               | ReportGenerator license key                                                       |
+| `RELEASE_PAT`                | `_prerelease`, `_release`     | Fine-grained PAT (`contents: write`) for pushing to `main` past branch protection |
 
 ## Naming Conventions
 
 Consistent naming transforms flow across the layers:
 
-| Layer                | Convention                | Example                 |
-| :------------------- | :------------------------ | :---------------------- |
-| GitHub repo vars     | `UPPER_SNAKE_CASE`        | `MAX_REGRESSION_PCT`    |
-| Workflow inputs      | `lower-kebab-case`        | `max-regression-pct`    |
-| Script parameters    | `--lower-kebab-case`      | `--max-regression-pct`  |
-| Script variables     | `lower_snake_case`        | `max_regression_pct`    |
+| Layer                      | Convention                | Example                 |
+| :------------------------- | :------------------------ | :---------------------- |
+| GitHub repo vars           | `UPPER_SNAKE_CASE`        | `MAX_REGRESSION_PCT`    |
+| Workflow inputs            | `lower-kebab-case`        | `max-regression-pct`    |
+| Script parameters          | `--lower-kebab-case`      | `--max-regression-pct`  |
+| Script variables           | `lower_snake_case`        | `max_regression_pct`    |

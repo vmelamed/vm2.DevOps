@@ -1,5 +1,20 @@
 # Error Recovery
 
+<!-- TOC tocDepth:2..5 chapterDepth:2..6 -->
+
+- [General Principles](#general-principles)
+- [Prerelease Failures](#prerelease-failures)
+  - [Version Computation Failed](#version-computation-failed)
+  - [Changelog Committed But Tag Not Created](#changelog-committed-but-tag-not-created)
+  - [NuGet Push Failed](#nuget-push-failed)
+  - [Changelog PR Creation Blocked](#changelog-pr-creation-blocked)
+- [Stable Release Failures](#stable-release-failures)
+  - [Version Computation Failed](#version-computation-failed)
+  - [Changelog Committed But Tag Not Created](#changelog-committed-but-tag-not-created)
+  - [Tag Created But NuGet Push Failed](#tag-created-but-nuget-push-failed)
+
+<!-- /TOC -->
+
 Recovery procedures for common CI/CD failure scenarios.
 
 ## General Principles
@@ -10,6 +25,28 @@ Recovery procedures for common CI/CD failure scenarios.
   until the tag is created.
 
 ## Prerelease Failures
+
+The prerelease workflow runs three sequential jobs: `compute-version` → `changelog-and-tag` → `package-and-publish`. Failure at
+each stage has different recovery procedures.
+
+### Version Computation Failed
+
+No side effects — nothing was committed or tagged.
+
+**Recovery:** Fix the issue (e.g., commit messages, tag conflicts) and re-run the workflow.
+
+### Changelog Committed But Tag Not Created
+
+The `changelog-and-tag.sh` script commits the changelog first, then creates the tag. If tagging fails after the changelog push:
+
+```bash
+# Revert the changelog commit
+git checkout main && git pull
+git revert HEAD --no-edit
+git push origin main
+
+# Re-run the prerelease workflow
+```
 
 ### NuGet Push Failed
 
@@ -31,8 +68,8 @@ CHANGELOG.md manually.
 
 ## Stable Release Failures
 
-The release workflow runs three sequential jobs: `compute-version` → `changelog-and-tag` → `release`. Failure at each stage has
-different recovery procedures.
+The release workflow runs three sequential jobs: `compute-version` → `changelog-and-tag` → `package-and-publish`. Failure at
+each stage has different recovery procedures.
 
 ### Version Computation Failed
 
@@ -62,13 +99,12 @@ The tag and changelog are on `main`, but the package wasn't published.
 gh run rerun <run-id> --failed
 
 # Option B: Delete tag, revert changelog, and retry from scratch
-git tag -d v1.2.3
-git push origin :refs/tags/v1.2.3
+git tag -d v1.2.3-preview.1
+git push origin :refs/tags/v1.2.3-preview.1
 git checkout main && git pull
 git revert HEAD --no-edit
 git push origin main
-# Re-run the release workflow
-```
+# Re-run the prerelease workflow```
 
 ### Package Version Already Exists on NuGet
 
