@@ -21,7 +21,23 @@ dotnet new vm2 -n MyProject
 This generates the full directory structure, workflows, and configuration files — no manual
 customization needed.
 
-### Option B: GitHub Workflow Templates + Manual Setup
+Still it is very useful to familiarize yourself with the `scripts/bash/diff-common.sh` script and its usage to streamline the
+process of your subsequent updates of common files.
+
+### Option B: `diff-common.sh` Script
+
+Clone the .github and vm2.DevOps repositories and run the `scripts/bash/diff-common.sh` script to copy all required files from
+
+- the `workflow-templates/` directory of the `vmelamed/.github` repository
+- the `.github/dependabot.yml` from the `vmelamed/vm2.DevOps` repository
+- the `solution/` directory of the `vmelamed/vm2.DevOps` repository
+
+> [!Tip]
+> The `diff-common.sh` script automates the process of copying the common files, ensuring consistency and saving time. It would
+be a good idea to familiarize yourself with the script and its usage to streamline the process of your setup and subsequent
+updates.
+
+### Option C: GitHub Workflow Templates + Manual Setup
 
 1. **Create workflows** from the GitHub UI:
    - Go to your repo → Actions → New workflow
@@ -37,10 +53,10 @@ customization needed.
            https://raw.githubusercontent.com/vmelamed/.github/main/workflow-templates/${wf}.yaml
    done
    curl -o .github/dependabot.yml \
-       https://raw.githubusercontent.com/vmelamed/.github/main/workflow-templates/dependabot.yml
+    <https://raw.githubusercontent.com/vmelamed/vm2.DevOps/main/.github/dependabot.yml>
    ```
 
-2. **Copy configuration files** from vm2.DevOps `solution/` directory:
+1. **Copy configuration files** from vm2.DevOps `solution/` directory:
 
    ```bash
    for f in Directory.Build.props Directory.Packages.props global.json \
@@ -51,9 +67,9 @@ customization needed.
    done
    ```
 
-3. **Edit the `# *TODO*` markers** in each workflow .yaml file to set your project paths and other repo-specific values.
+1. **Edit the `# *TODO*` markers** in each workflow .yaml file to set your project paths and other repo-specific values.
 
-4. **Customize configuration files** for your project (see below).
+1. **Customize configuration files** for your project (see below).
 
 ## Required Directory Structure
 
@@ -68,9 +84,9 @@ YourRepo/
 │       └── ClearCache.yaml
 ├── src/
 │   └── MyProject/
-├── test/                           # highly recommended
+├── test/                           # not having one MUST be justified
 │   └── MyProject.Tests/
-├── benchmarks/                     # recommended
+├── benchmarks/                     # highly recommended
 │   └── MyProject.Benchmarks/
 ├── changelog/
 │   ├── cliff.prerelease.toml
@@ -129,26 +145,29 @@ directory of this repository are the canonical versions that you can copy from.
        ...
    ```
 
-   > Note: project-specific NuGet metadata (`PackageId`, `Title`, `Description`, etc.) goes in individual `.csproj` files.
+   > [!Note] Project-specific NuGet metadata (`PackageId`, `Title`, `Description`, etc.) goes in individual `.csproj` files.
 
 1. Test Stack
 
-   This is where the properties and references to the common test stack is defined based on entries conditioned via the MSBuild property `IsTestProject`. The test stack includes:
+   This is where the properties and references to the common test stack is defined based on entries conditioned via the MSBuild
+   property `IsTestProject`. The test stack includes:
 
+   - Microsoft Testing Platform (MTP v2)
    - xUnit
    - FluentAssertions,
    - ReportGenerator
 
-   > The file includes also a few references that might be needed by test library projects (.e.g.
+   > [!Note] The file includes also a few references that might be needed by test library projects (.e.g.
      `vm2.Glob/test/Glob.Api.FakeFileSystem`). These are conditioned on `IsTestLibraryProject`.
 
 1. Benchmark Stack
 
-   The benchmark stack is defined based on entries conditioned via the MSBuild property `IsBenchmarkProject`. The benchmark stack includes:
+   The benchmark stack is defined based on entries conditioned via the MSBuild property `IsBenchmarkProject`. The benchmark
+   stack includes:
 
    - BenchmarkDotNet
 
-At the bottom of the file Add more `PackageReference` entries as needed.
+Add more `PackageReference` entries at the bottom of the file as needed.
 
 ### Directory.Packages.props
 
@@ -157,26 +176,26 @@ xUnit, FluentAssertions, BenchmarkDotNet, and ReportGenerator.
 
 ### global.json
 
-Pins the .NET SDK version. Should match the `DOTNET_VERSION` repository variable
-(default `10.0.x`).
+Pins the .NET SDK version. Should match the `DOTNET_VERSION` repository variable (default `10.0.x`). Rarely needs changes after
+initial setup.
 
 ### NuGet.config
 
-Must include the `github.vm2` source for private package restore. The source name
-`github.vm2` is referenced by the workflow authentication step.
+Must include the `github.vm2` source for private package restore. The source name `github.vm2` is referenced by the workflow
+authentication step. Rarely needs changes after initial setup.
 
 ### codecov.yaml
 
-Configure per-repo coverage flags matching your test project names. See existing repos
-(vm2.Glob, vm2.Ulid) for examples.
+Per-repo configuration coverage flags matching your test project names. See existing repos (vm2.Glob, vm2.Ulid) for examples.
+Rarely needs changes after initial setup.
 
 ## .NET Conventions
 
 vm2 projects are committed to:
 
 - [`.slnx` solution files](https://devblogs.microsoft.com/dotnet/introducing-slnx-support-dotnet-cli/)
-- [Central Package Management](https://learn.microsoft.com/en-us/nuget/consume-packages/central-package-management)
-  via `Directory.Build.props` + `Directory.Packages.props`
+- [Central Package Management](https://learn.microsoft.com/en-us/nuget/consume-packages/central-package-management) via
+  `Directory.Build.props` + `Directory.Packages.props`
 - [Microsoft Testing Platform](https://learn.microsoft.com/en-us/dotnet/core/testing/microsoft-testing-platform-intro)
   with xUnit
 - [MinVer](https://github.com/adamralph/minver) for Git tag–based semantic versioning
@@ -184,8 +203,8 @@ vm2 projects are committed to:
 
 ## Workflow Customization
 
-After setup, customize the workflow `env:` blocks, `inputs:`, and `secrets:` for your repo.
-See [CONFIGURATION.md — Consumer Workflow Customization](CONFIGURATION.md#consumer-workflow-customization)
+After setup, customize the workflow `env:` blocks, `inputs:`, and `secrets:` for your repo. See [CONFIGURATION.md — Consumer
+Workflow Customization](CONFIGURATION.md#consumer-workflow-customization)
 for the full reference.
 
 ### Quick Example (CI.yaml)

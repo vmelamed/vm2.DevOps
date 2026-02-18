@@ -1,115 +1,175 @@
 ﻿# Release Process
 
-This document explains how versioning, prerelease, and stable release automation publishing work for the vm2 repositories.
+How versioning, prerelease publishing, and stable release publishing work in the vm2 CI/CD system.
 
----
+## Development Model
 
-## 1. Version Source (MinVer)
+The vm2 repositories follow **trunk-based development** with **continuous delivery**:
 
-We use [MinVer] to derive all version numbers from Git tags.
+- **Single trunk** (`main`) — all work merges via short-lived feature branches and pull requests
+- **No long-lived branches** — no `develop`, `staging`, or `release` branches
+- **Automated prerelease on every merge** — each PR merge to `main` triggers CI, and on success, a preview NuGet package is
+  published automatically
+- **Manual stable release** — a human decides *when* to promote to a stable release via `workflow_dispatch`; the *what* (version
+  number) is computed automatically from conventional commits
 
-| Aspect                       | Source                                     |
-| ---------------------------- | ------------------------------------------ |
-| NuGet package version        | Git tag (or computed prerelease if ahead)  |
-| AssemblyInformationalVersion | Full SemVer (incl. prerelease)             |
-| FileVersion                  | Major.Minor.Patch.0                        |
-| AssemblyVersion (binding)    | Major.0.0.0 (MinVer default for stability) |
+This is a **library release model** layered on trunk-based development: every merge produces a consumable prerelease artifact, and stable releases are batched by human decision.
 
-We use central package management. Central version declaration exists in `Directory.Packages.props`:
+## Version Source: MinVer
+
+All version numbers are derived from Git tags by [MinVer](https://github.com/adamralph/minver).
+
+| Aspect                         | Value                                                      |
+| :----------------------------- | :--------------------------------------------------------- |
+| NuGet package version          | Git tag (or MinVer-computed prerelease if commits ahead)   |
+| `AssemblyInformationalVersion` | Full SemVer string including prerelease + commit metadata  |
+| `FileVersion`                  | `Major.Minor.Patch.0`                                      |
+| `AssemblyVersion`              | `Major.0.0.0` (MinVer default — keeps binding stable)      |
+
+MinVer is declared once in `Directory.Build.props` (via Central Package Management) so all packable projects get it:
 
 ```xml
+<!-- Directory.Packages.props -->
 <PackageVersion Include="MinVer" Version="6.0.0" />
-```
 
-The actual activation is via:
-
-```xml
+<!-- Directory.Build.props -->
 <PackageReference Include="MinVer" PrivateAssets="all" />
 ```
 
-(Defined once in `Directory.Build.props` so all packable projects get it.)
+The tag prefix is `v` (e.g. `v1.2.3`), configured via the `MINVERTAGPREFIX` repository variable.
 
-### Optional MinVer knobs (only add if needed)
+## Two Publishing Flows
 
-```xml
-<PropertyGroup>
-    <!-- Tag prefix (we use 'v' like v1.2.3) -->
+| Flow       | Trigger                                            | Version Format                                    | NuGet Package |
+| :--------- | :------------------------------------------------- | :------------------------------------------------ | :------------ |
+| Prerelease | PR merge → push to `main` → CI success (automated) | MinVer-computed prerelease                        | Preview       |
+| Release    | Manual `workflow_dispatch`                         | Computed stable `X.Y.Z` from conventional commits | Stable        |
 
-    <MinVerTagPrefix>v</MinVerTagPrefix>
+Both flows call the same `publish-package.sh` script for the final build → pack → push steps.
 
-    <!-- Force a prerelease label when not on a tag (disabled now – prerelease tags are created instead) -->
-    <!-- <MinVerDefaultPreReleaseIdentifiers>preview.0</MinVerDefaultPreReleaseIdentifiers> -->
+## Prerelease Flow
 
-    <!-- If you ever want AssemblyVersion = Major.Minor.Patch.0 -->
-    <!-- <MinVerMajorMinorPatch>true</MinVerMajorMinorPatch> -->
-
-</PropertyGroup>
+```text
+PR merged → push to main → CI workflow runs
+                              │
+                              │ (on success)
+                              ↓
+                        Prerelease workflow
+                              │
+                              ↓
+                    ┌─────────────────────┐
+                    │  changelog (job 1)  │
+                    │  * git-cliff        │
+                    │  * create PR for    │
+                    │    CHANGELOG update │
+                    └─────────┬───────────┘
+                              │
+                              ↓
+                    ┌──────────────────────┐
+                    │ package-and-publish  │
+                    │  (job 2, per project)│
+                    │  * dotnet restore    │
+                    │  * dotnet pack       │
+                    │  * dotnet nuget push │
+                    └──────────────────────┘
 ```
 
----
+**Trigger guard** (in consumer `Prerelease.yaml`):
 
-## 2. Flows Overview
-
-| Flow                    | Trigger                                            | Tag Format                                | Publishes?       | Result                   |
-| ----------------------- | -------------------------------------------------- | ----------------------------------------- | ---------------- | ------------------------ |
-| Local build (no tag)    | `dotnet build`                                     | Computed prerelease (if no tag reachable) | No               | For development only     |
-| Prerelease (automated)  | Merge (push) to `main` (commit not already tagged) | `vX.Y.(Z+1)-preview.YYYYMMDD.<run>`       | Yes (prerelease) | Preview package on NuGet |
-| Stable release (manual) | **Manually** activated, computed tag from commits  | `vX.Y.Z`                                  | Yes (stable)     | Final package on NuGet   |
-
----
-
-## 3. Automated Prerelease Tagging
-
-Workflow: the current repo's `.github/workflows/Prerelease.yml` is triggered on push to `main` (PR).
-
-Logic:
-
-1. On push to `main`, check if `HEAD` already has a `v*` tag.
-1. If not, find latest stable `vX.Y.Z` (no hyphen).
-1. Increment patch to `Z+1` to form base.
-1. Create prerelease tag: `vX.Y.(Z+1)-preview.<UTCDate>.<GitHubRunNumber>`
-1. Push tag.
-1. Build, pack, publish to NuGet using MinVer (tag-driven).
-
-Rationale: _Stable tags remain human-initiated; prereleases always advance from the last stable._
-
----
-
-## 4. Stable Release
-
-Manual steps:
-
-1. Trigger the Release workflow via GitHub UI or CLI:
-
-```bash
-gh release create vX.Y.Z --generate-notes
+```yaml
+if: |
+  github.event_name == 'workflow_dispatch' ||
+  ( github.event_name == 'workflow_run' &&
+    github.event.workflow_run.conclusion == 'success' &&
+    github.event.workflow_run.event == 'push' &&
+    github.event.workflow_run.head_branch == 'main' )
 ```
 
-This triggers `.github/workflows/Release.yml`, which:
+This ensures prereleases only fire after a successful CI run on `main` (i.e. merged PRs), never from CI runs on feature branches.
 
-1. Restore.
-1. Build, pack, publish to NuGet using MinVer (tag-driven).
-1. Publishes `.nupkg` + `.snupkg` to NuGet (with symbol/source link).
+**Version**: MinVer computes the prerelease version automatically — it sees HEAD is ahead of the latest stable tag and appends
+the prerelease identifier (e.g. `v1.2.3-preview.0.1`). No version computation script is involved.
 
----
+**Changelog**: `git-cliff` generates a changelog entry and opens a PR (rather than pushing directly to `main`), to comply with
+branch protection rules.
 
-## 5. Secrets & Requirements
+**Manual trigger**: The prerelease workflow also supports `workflow_dispatch` with a custom `minver-prerelease-id` input (e.g.
+`alpha`, `beta`, `rc1`).
 
-| Secret                 | Purpose                             |
-| ---------------------- | ----------------------------------- |
-| `NUGET_API_GITHUB_KEY` | Pushing packages to GitHub Packages |
-| `NUGET_API_NUGET_KEY`  | Pushing packages to NuGet.org       |
-| `NUGET_API_KEY`        | Pushing packages to another server  |
+## Stable Release Flow
 
-The key values are the respective API keys from the package hosts, stored as GitHub repository secrets. No need to define all
-if not used. Also `NUGET_API_KEY` is generic for any server, e.g. if the server is NuGet.org and `NUGET_API_NUGET_KEY` is not
-defined, `NUGET_API_KEY` is used.
+```text
+Manual workflow_dispatch (with reason)
+           │
+           ↓
+  ┌────────────────────┐
+  │  compute-version   │
+  │  (job 1)           │
+  │  * scan commits    │
+  │  * determine bump  │
+  │  * guard against   │
+  │    prerelease      │
+  └────────┬───────────┘
+           │
+           ↓
+  ┌────────────────────┐
+  │  changelog-and-tag │
+  │  (job 2)           │
+  │  * git-cliff       │
+  │  * commit + push   │
+  │    CHANGELOG.md    │
+  │  * git tag + push  │
+  └────────┬───────────┘
+           │
+           ↓
+  ┌────────────────────┐
+  │  release           │
+  │  (job 3, per       │
+  │   project)         │
+  │  * checkout tag    │
+  │  * dotnet restore  │
+  │  * dotnet pack     │
+  │  * dotnet nuget    │
+  │    push            │
+  └────────────────────┘
+```
 
-Ensure branch protection on `main` with `build`, `test`, and `benchmark` if present, so only reviewed code generates prereleases.
+### Version Calculation Algorithm
 
----
+The `compute-release-version.sh` script determines the next stable version:
 
-## 6. Initial Bootstrapping
+1. **Find latest stable tag** — filter `v*` tags matching the release regex (`vX.Y.Z` with no hyphen), sort semantically, take
+   the highest.
+
+2. **Scan conventional commits** since that tag:
+
+   | Commit Pattern                              | Bump  | Example                              |
+   | :------------------------------------------ | :---- | :----------------------------------- |
+   | `^[a-z]+(\(.+\))?!:` or `BREAKING CHANGE:`  | Major | `feat!: redesign API`                |
+   | `^feat(\(.+\))?:`                           | Minor | `feat(parser): add glob negation`    |
+   | Everything else                             | Patch | `fix: handle null input`             |
+
+3. **SemVer floor**: if the computed major is `0`, the version is raised to `1.0.0` (SemVer 2.0.0 requires major ≥ 1 for
+   releases).
+
+4. **Prerelease guard**: if the latest prerelease tag (e.g. `v2.0.0-preview.0.3`) is *higher* than the computed release version,
+   the release version adopts the prerelease's major.minor.patch. This prevents publishing a stable version lower than an
+   existing prerelease.
+
+5. **Duplicate guard**: if `HEAD` is already tagged or the computed tag already exists, the script fails with an error and
+   suggests remediation.
+
+### Changelog and Tagging
+
+The `changelog-and-tag.sh` script:
+
+1. Runs `git-cliff` with `changelog/cliff.release-header.toml` to prepend the release entry to `CHANGELOG.md`.
+2. Commits and pushes the changelog update directly to `main`.
+3. Creates an annotated tag (`git tag -a vX.Y.Z -m "Release vX.Y.Z"`) and pushes it.
+
+The release job then checks out this tag so MinVer resolves the exact stable version.
+
+## Initial Bootstrapping
 
 If no stable tag exists yet:
 
@@ -118,155 +178,50 @@ git tag -a v0.1.0 -m "Initial baseline"
 git push origin v0.1.0
 ```
 
-Subsequent merges create `v0.1.1-preview.*` prereleases automatically.
+Subsequent PR merges create MinVer-computed prereleases automatically. The first stable release
+(via `workflow_dispatch`) will compute `v1.0.0` due to the SemVer floor.
 
----
+## NuGet Server Selection
 
-## 7. Verifying a Build Locally
+The `NUGET_SERVER` variable (or `nuget-server` input) determines where packages are pushed:
 
-```bash
-dotnet clean
-dotnet build -c Release -p:MinVerVerbosity=detailed
-```
+| Value      | Server                                             | API Key Secret           |
+| :--------- | :------------------------------------------------- | :----------------------- |
+| `github`   | `https://nuget.pkg.github.com/{owner}/index.json`  | `NUGET_API_GITHUB_KEY`   |
+| `nuget`    | `https://api.nuget.org/v3/index.json`              | `NUGET_API_NUGET_KEY`    |
+| Custom URL | The URL as provided                                | `NUGET_API_KEY`          |
 
-Inspect produced dll
+`NUGET_API_KEY` is also the fallback if the server-specific secret is not defined.
 
-```bash
-dotnet tool install -g dotnet-ildasm
-dotnet-ildasm src/UlidType/bin/Release/net10.0/UlidType.dll | grep InformationalVersion
-```
+## Quick Reference
 
-Or:
+| Action                          | How                                                                         |
+| :------------------------------ | :-------------------------------------------------------------------------- |
+| Trigger a prerelease            | Merge a PR to `main` (automatic after CI)                                   |
+| Trigger a manual prerelease     | Actions → Publish NuGet Pre-Release → Run workflow                          |
+| Trigger a stable release        | Actions → Publish NuGet Stable Release → Run workflow (provide reason)      |
+| Inspect version locally         | `dotnet build -c Release -p:MinVerVerbosity=detailed`                       |
+| Dry-run pack                    | `dotnet pack -c Release -o artifacts -p:MinVerTagPrefix=v`                  |
+| Force a prerelease without code | `git commit --allow-empty -m "chore: trigger prerelease" && git push`       |
+| Bootstrap first tag             | `git tag -a v0.1.0 -m "Initial baseline" && git push origin v0.1.0`         |
 
-```bash
-strings src/UlidType/bin/Release/net10.0/UlidType.dll | grep InformationalVersion
-```
+## Troubleshooting
 
-Or
+| Symptom                              | Cause                       | Fix                                                                            |
+| :----------------------------------- | :-------------------------- | :----------------------------------------------------------------------------- |
+| Version always `0.0.0-alpha.0`       | No reachable tag            | Create initial tag (`v0.1.0`)                                                  |
+| Prerelease not created after PR      | CI didn't succeed           | Check CI workflow run; fix failures                                            |
+| Wrong bump type (patch vs minor)     | Commit messages don't match | Use conventional commit format: `feat:` for minor, `fix:` for patch            |
+| Tag already exists error             | Duplicate release attempt   | Delete the tag, or release with a higher version                               |
+| NuGet push fails (401/403)           | Invalid or missing API key  | Verify the `NUGET_API_*` secret matches the configured `NUGET_SERVER`          |
+| Package version already exists       | Immutable NuGet versions    | Increment version; deprecate old package via NuGet.org UI                      |
 
-```powershell
-# PowerShell
-([System.Reflection.Assembly]::LoadFrom("src/UlidType/bin/Release/net10.0/UlidType.dll")).GetCustomAttributes(
-   [System.Reflection.AssemblyInformationalVersionAttribute], $false).InformationalVersion
-```
+## Further Reading
 
-Or
-
-```powershell
-# PowerShell
-(Get-ItemProperty -Path src/UlidType/bin/Release/net9.0/UlidType.dll).VersionInfo.ProductVersion
-```
-
----
-
-## 8. Changelog Integration (Optional)
-
-Maintaining `CHANGELOG.md`:
-
-1. During development: append under `## [Unreleased]`.
-1. Before stable tag: move `Unreleased` content under `## [X.Y.Z] - YYYY-MM-DD`.
-1. Commit & tag.
-
----
-
-## 9. Rollback / Yank Procedure
-
-If a broken prerelease:
-
-1. Delete the package version on NuGet (if urgent) or leave (prereleases seldom consumed widely).
-1. Revert offending commit(s) on `main`.
-1. A new prerelease tag will be created on next push automatically.
-
-If a broken stable:
-
-1. Create a patch fix commit.
-1. Tag next patch: `vX.Y.(Z+1)`.
-
-Never retag an existing pushed version (immutability ensures reproducibility).
-
----
-
-## 10. Forcing a New Prerelease Without Code Changes
-
-Empty commit then push
-
-```bash
-git checkout main
-git pull
-git commit --allow-empty -m "Trigger prerelease"
-git push
-```
-
-Generates a new prerelease tag & package.
-
----
-
-## 11. Adding Another Prerelease Channel
-
-Example: introduce `beta` before `preview`.
-
-Adjust prerelease workflow compute step to decide label:
-
-- Use `beta` if feature freeze label file exists.
-- Fallback to `preview`.
-
-Or define environment-driven label:
-
-```bash
-LABEL=${PR_CHANNEL:-preview}
-PRERELEASE_TAG="v${MAJOR}.${MINOR}.${PATCH}-${LABEL}.${DATE}.${RUN}"
-```
-
----
-
-## 12. Custom Assembly Version Strategy (Optional)
-
-If you decide to align `AssemblyVersion` with full Major.Minor.Patch (risking binding churn):
-
-```xml
-<PropertyGroup>
-    <MinVerMajorMinorPatch>true</MinVerMajorMinorPatch>
-</PropertyGroup>
-```
-
-Avoid unless strong justification (most libraries keep AssemblyVersion stable across patches).
-
----
-
-## 13. Summary Cheat Sheet
-
-| Action                  | Command(s)                                                 |
-| ----------------------- | ---------------------------------------------------------- |
-| Manual stable release   | `git tag -a vX.Y.Z -m vX.Y.Z && git push origin vX.Y.Z`    |
-| Trigger prerelease      | Merge to `main` (no existing tag)                          |
-| Inspect version locally | `dotnet build -c Release -p:MinVerVerbosity=detailed`      |
-| Dry-run pack            | `dotnet pack -c Release -o artifacts -p:MinVerTagPrefix=v` |
-| Fix failed prerelease   | Commit fix ? merge ? new prerelease tag                    |
-| Introduce first tag     | `git tag -a v0.1.0 -m v0.1.0 && git push origin v0.1.0`    |
-
----
-
-## 14. Troubleshooting
-
-| Symptom                                | Cause                       | Fix                                                                        |
-| -------------------------------------- | --------------------------- | -------------------------------------------------------------------------- |
-| Package version always 1.0.0           | MinVer not referenced       | Ensure `<PackageReference Include="MinVer" PrivateAssets="all" />` present |
-| Prerelease not created                 | Commit already tagged       | Make a new commit (even empty)                                             |
-| Stable tag produced prerelease package | Tag included hyphen         | Use strictly `vX.Y.Z` for stable                                           |
-| Symbols missing                        | Symbol package not pushed   | Confirm `.snupkg` is in `artifacts/pack` and push step not skipped         |
-| Wrong next prerelease base             | Latest stable tag incorrect | Retag correct latest stable (new higher stable version)                    |
-
----
-
-## 15. Future Enhancements (Optional Ideas)
-
-- Auto-generate GitHub Release notes from commits.
-- Dual publish to GitHub Packages (add secondary source).
-- Add SBOM / signing (`dotnet nuget sign`) if required.
-- Add validation job to ensure tag matches CHANGELOG.
-
-Introduce [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/).
-
----
-
-See also: [MinVer](https://github.com/adamralph/minver)
+| Topic              | Document                                         |
+| :----------------- | :----------------------------------------------- |
+| Architecture       | [ARCHITECTURE.md](ARCHITECTURE.md)               |
+| Workflow reference | [WORKFLOWS_REFERENCE.md](WORKFLOWS_REFERENCE.md) |
+| Script reference   | [SCRIPTS_REFERENCE.md](SCRIPTS_REFERENCE.md)     |
+| Configuration      | [CONFIGURATION.md](CONFIGURATION.md)             |
+| Error recovery     | [ERROR_RECOVERY.md](ERROR_RECOVERY.md)           |
