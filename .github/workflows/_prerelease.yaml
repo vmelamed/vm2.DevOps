@@ -143,7 +143,9 @@ jobs:
           fi
 
       - name: Create PR for changelog update
+        id: create_changelog_pr
         if: steps.changelog_update.outputs.changed == 'true'
+        continue-on-error: true
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -161,13 +163,28 @@ jobs:
         if: always()
         env:
           CHANGELOG_CHANGED: ${{ steps.changelog_update.outputs.changed }}
+          PR_CREATE_OUTCOME: ${{ steps.create_changelog_pr.outcome }}
         shell: bash
         run: |
-          if [ "$CHANGELOG_CHANGED" == "true" ]; then
+          if [ "$CHANGELOG_CHANGED" != "true" ]; then
+            echo "::warning::No changelog changes to commit."
+          elif [ "$PR_CREATE_OUTCOME" == "success" ]; then
             echo "::notice::Changelog changes detected; a pull request was created/updated."
             echo "::warning::Review CHANGELOG.md before release."
           else
-            echo "::warning::No changelog changes to commit."
+            echo "::warning::Changelog changed, but PR creation failed."
+            echo "::warning::Enable repository setting 'Allow GitHub Actions to create and approve pull requests' or use a PAT-based bot token."
+            {
+              echo "## Changelog PR automation blocked"
+              echo
+              echo "The prerelease workflow updated CHANGELOG.md, but creating/updating a PR was blocked by repository Actions permissions."
+              echo
+              echo "To enable automatic changelog PRs:"
+              echo "- Settings -> Actions -> General -> Workflow permissions"
+              echo "- Enable: Allow GitHub Actions to create and approve pull requests"
+              echo
+              echo "Alternative: provide a dedicated PAT-based bot token for PR creation."
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
 
   package-and-publish:

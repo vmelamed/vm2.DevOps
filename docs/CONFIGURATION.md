@@ -168,6 +168,15 @@ permissions:
   checks: write           # GitHub Check annotations
 ```
 
+For workflows that create pull requests (for example prerelease changelog updates), also enable this repository setting:
+
+- `Settings` -> `Actions` -> `General` -> `Workflow permissions`
+- `Allow GitHub Actions to create and approve pull requests`
+
+If this setting is disabled, actions that call the Pull Requests API may fail with:
+
+- `GitHub Actions is not permitted to create or approve pull requests`
+
 ## Consumer Workflow Customization
 
 Each consumer workflow has customizable `env:` variables, `inputs:`, and `secrets:` sections. Consumer workflows can be created
