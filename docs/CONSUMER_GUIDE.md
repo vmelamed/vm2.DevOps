@@ -145,7 +145,7 @@ directory of this repository are the canonical versions that you can copy from.
        ...
    ```
 
-   > [!Note] Project-specific NuGet metadata (`PackageId`, `Title`, `Description`, etc.) goes in individual `.csproj` files.
+   > [!NOTE] Project-specific NuGet metadata (`PackageId`, `Title`, `Description`, etc.) goes in individual `.csproj` files.
 
 1. Test Stack
 
