@@ -91,7 +91,7 @@ YourRepo/
 └── MyRepo.slnx
 ```
 
-> [!Attention]
+> [!Important]
 > Note that GitHub only recognizes `dependabot.yml` filename, not `dependabot.yAml`
 
 The `src/`, `test/`, and `benchmarks/` folder conventions are mandatory — the CI scripts assume this layout (e.g.,
