@@ -283,22 +283,22 @@ manually, or need to verify/adjust settings on an existing repo, follow these st
 
 **Settings → General → Pull Requests:**
 
-1. Enable **Allow squash merging** (default merge strategy)
-1. Disable **Allow merge commits**
-1. Disable **Allow rebase merging**
-1. Enable **Allow auto-merge**
-1. Enable **Automatically delete head branches**
+1. Enable  ✔️ **Allow squash merging** (default merge strategy)
+1. Disable ❌ **Allow merge commits**
+1. Disable ❌ **Allow rebase merging**
+1. Enable  ✔️ **Allow auto-merge**
+1. Enable  ✔️ **Automatically delete head branches**
 
 **Settings → General → Features:**
 
-1. Disable **Wikis** (documentation lives in the repo)
-1. Disable **Projects** (not used)
+1. Disable ❌ **Wikis** (documentation lives in the repo)
+1. Disable ❌ **Projects** (not used)
 
 ### Actions Permissions
 
 **Settings → Actions → General → Workflow permissions:**
 
-1. Select **Read repository contents and packages permissions**
+1. Select  ✔️ **Read repository contents and packages permissions**
 
 ### Secrets
 
@@ -338,19 +338,32 @@ All variables are optional — workflows use these defaults when the variable is
 
 1. **Name:** `main protection`
 1. **Target:** Include default branch
-1. **Bypass actors:** Add the `RELEASE_PAT` owner as an admin bypass actor
+1. **Bypass list:**
+   1. Click **+ Add bypass**
+   1. Select **Repository admin** (Role) and set the bypass mode to **Always**
+   1. This allows the prerelease and release workflows (which authenticate via `RELEASE_PAT` as the repo admin) to push the
+      changelog commit and tag directly to `main`
 1. Enable rules:
 
-   | Rule                                  | Setting                                       |
-   | :------------------------------------ | :-------------------------------------------- |
-   | Require a pull request before merging  | 1 approval, dismiss stale reviews            |
-   | Require status checks to pass          | Add: `build`, `test`, `benchmarks` as needed |
-   | Require up-to-date branches            | Enabled                                      |
-   | Require linear history                 | Enabled                                      |
-   | Require conversation resolution        | Enabled                                      |
-   | Block force pushes                     | Enabled                                      |
-   | Block deletions                        | Enabled                                      |
+   | Rule                                              | Setting                                      |
+   | :------------------------------------------------ | :------------------------------------------- |
+   | Require a pull request before merging             | 1 approval, dismiss stale reviews            |
+   | Require status checks to pass                     | Add the CI job checks (see note below)       |
+   | Require up-to-date branches                       | Enabled                                      |
+   | Require linear history                            | Enabled                                      |
+   | Require conversation resolution before merging    | Enabled                                      |
+   | Restrict force pushes                             | Enabled                                      |
+   | Restrict deletions                                | Enabled                                      |
 
-> **Note:** Only add `test` and `benchmarks` checks if the repo has test/benchmark
-> projects. GitHub only shows checks that have run at least once — create a test PR
-> first to populate the list.
+> [!Note] **Only add checks for jobs the repo actually runs** (e.g., skip `Run performance benchmarks`
+> if the repo has no benchmark projects). The check names follow the pattern
+> `Run {consumer-workflow-name} / {job-name}` — search for them in the status checks dialog after
+> running CI at least once.
+> GitHub only shows checks that have run at least once — create a test PR first to populate the list.
+
+### Copilot Code Review
+
+**Settings → Copilot → Code review:**
+
+1. Enable ✔️ **Copilot code review** to automatically review pull requests
+2. This is advisory only — it does not block merging

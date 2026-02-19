@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: MIT
 set -euo pipefail
 
-script_name="$(basename "${BASH_SOURCE[-1]}")"
-script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[-1]}")")"
-lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
+script_name=$(basename "${BASH_SOURCE[0]}")
+script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
+lib_dir=$(realpath -e "$script_dir/lib")
 
 declare -xr script_name
 declare -xr script_dir
@@ -39,16 +39,20 @@ fi
 
 if [[ -z "$repo" && -z "$package_name" ]]; then
     # try to detect from current git remote
-    if [[ -d .git ]] || git rev-parse --git-dir &>/dev/null; then
+    # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
+    if git -C "." rev-parse --is-inside-work-tree &> "$_ignore"; then
         local_remote=$(git remote get-url origin 2>/dev/null || true)
-        if [[ -n "$local_remote" ]]; then
+        trace "Detected git remote URL: ${local_remote}"
+        if [[ -n "$local_remote" && "$local_remote" =~ .*[:/]([^/]+)/([^/]+)(\.git) ]]; then
             # extract owner/repo from SSH or HTTPS URL
-            repo=$(echo "$local_remote" | sed -E 's#^.*[:/]([^/]+/[^/]+?)(\.git)?$#\1#')
+            org="${BASH_REMATCH[1]}"
+            package_name="${BASH_REMATCH[2]}"
+            repo="${org}/${package_name}"
             info "Auto-detected repo from git remote: ${repo}"
         fi
     fi
 
-    if [[ -z "$repo" ]]; then
+    if [[ -z "$repo" || -z "$org" || -z "$package_name" ]]; then
         usage false "Either '--repo <owner/repo>', '--name <PackageName>', or run from within a git repo with an origin remote."
     fi
 fi
@@ -228,183 +232,12 @@ configure_variables()
     info "Variables configured."
 }
 
-audit_repo()
-{
-    local pass=0
-    local fail=0
-
-    # --- Repo settings ---
-    info "Checking repository settings..."
-    local repo_json
-    repo_json=$(gh api "repos/${repo}" 2>/dev/null) || { error "Cannot read repo settings."; return 1; }
-
-    local -A repo_checks=(
-        ["delete_branch_on_merge"]="true"
-        ["allow_squash_merge"]="true"
-        ["allow_merge_commit"]="false"
-        ["allow_rebase_merge"]="false"
-        ["allow_auto_merge"]="true"
-        ["has_wiki"]="false"
-        ["has_projects"]="false"
-    )
-
-    for key in "${!repo_checks[@]}"; do
-        local actual
-        actual=$(echo "$repo_json" | jq -r ".${key}")
-        if [[ "$actual" == "${repo_checks[$key]}" ]]; then
-            info "  ✅ ${key} = ${actual}"
-            (( pass++ ))
-        else
-            warning "  ❌ ${key} = ${actual} (expected: ${repo_checks[$key]})"
-            (( fail++ ))
-        fi
-    done
-
-    # --- Actions permissions ---
-    info "Checking Actions permissions..."
-    local actions_json
-    actions_json=$(gh api "repos/${repo}/actions/permissions/workflow" 2>/dev/null) || { warning "Cannot read Actions permissions."; }
-
-    if [[ -n "${actions_json:-}" ]]; then
-        local default_perms
-        default_perms=$(echo "$actions_json" | jq -r '.default_workflow_permissions')
-        if [[ "$default_perms" == "read" ]]; then
-            info "  ✅ default_workflow_permissions = read"
-            (( pass++ ))
-        else
-            warning "  ❌ default_workflow_permissions = ${default_perms} (expected: read)"
-            (( fail++ ))
-        fi
-    fi
-
-    # --- Secrets ---
-    info "Checking secrets exist..."
-    local secrets_json
-    secrets_json=$(gh api "repos/${repo}/actions/secrets" 2>/dev/null) || { warning "Cannot read secrets."; }
-
-    if [[ -n "${secrets_json:-}" ]]; then
-        local -a expected_secrets=(
-            CODECOV_TOKEN BENCHER_API_TOKEN REPORTGENERATOR_LICENSE
-            NUGET_API_GITHUB_KEY NUGET_API_NUGET_KEY NUGET_API_KEY RELEASE_PAT
-        )
-        for secret in "${expected_secrets[@]}"; do
-            if echo "$secrets_json" | jq -e ".secrets[] | select(.name == \"${secret}\")" &>/dev/null; then
-                info "  ✅ ${secret} exists"
-                (( pass++ ))
-            else
-                warning "  ❌ ${secret} missing"
-                (( fail++ ))
-            fi
-        done
-    fi
-
-    # --- Variables ---
-    info "Checking variables..."
-    local vars_json
-    vars_json=$(gh api "repos/${repo}/actions/variables" 2>/dev/null) || { warning "Cannot read variables."; }
-
-    if [[ -n "${vars_json:-}" ]]; then
-        local -A expected_vars=(
-            ["DOTNET_VERSION"]="10.0.x"
-            ["CONFIGURATION"]="Release"
-            ["MAX_REGRESSION_PCT"]="20"
-            ["MIN_COVERAGE_PCT"]="80"
-            ["MINVERTAGPREFIX"]="v"
-            ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="preview.0"
-            ["NUGET_SERVER"]="github"
-            ["SAVE_PACKAGE_ARTIFACTS"]="false"
-            ["VERBOSE"]="false"
-        )
-        for var in "${!expected_vars[@]}"; do
-            local actual
-            actual=$(echo "$vars_json" | jq -r ".variables[] | select(.name == \"${var}\") | .value" 2>/dev/null)
-            if [[ -z "$actual" ]]; then
-                warning "  ❌ ${var} missing"
-                (( fail++ ))
-            elif [[ "$actual" == "${expected_vars[$var]}" ]]; then
-                info "  ✅ ${var} = ${actual}"
-                (( pass++ ))
-            else
-                info "  ⚠️  ${var} = ${actual} (default: ${expected_vars[$var]}) — custom value"
-                (( pass++ ))  # custom is fine, just informational
-            fi
-        done
-    fi
-
-    # --- Branch protection ---
-    info "Checking branch protection for '${branch}'..."
-    local bp_json
-    bp_json=$(gh api "repos/${repo}/branches/${branch}/protection" 2>/dev/null) || { warning "No branch protection found on '${branch}'."; (( fail++ )); }
-
-    if [[ -n "${bp_json:-}" ]]; then
-        local linear
-        linear=$(echo "$bp_json" | jq -r '.required_linear_history.enabled // false')
-        if [[ "$linear" == "true" ]]; then
-            info "  ✅ required_linear_history = true"
-            (( pass++ ))
-        else
-            warning "  ❌ required_linear_history = ${linear} (expected: true)"
-            (( fail++ ))
-        fi
-
-        local strict
-        strict=$(echo "$bp_json" | jq -r '.required_status_checks.strict // false')
-        if [[ "$strict" == "true" ]]; then
-            info "  ✅ require_up_to_date = true"
-            (( pass++ ))
-        else
-            warning "  ❌ require_up_to_date = ${strict} (expected: true)"
-            (( fail++ ))
-        fi
-
-        local contexts
-        contexts=$(echo "$bp_json" | jq -r '.required_status_checks.contexts[]? // empty' 2>/dev/null)
-        detect_required_checks
-        for check in "${required_checks[@]}"; do
-            if echo "$contexts" | grep -qx "$check"; then
-                info "  ✅ required check: ${check}"
-                (( pass++ ))
-            else
-                warning "  ❌ required check missing: ${check}"
-                (( fail++ ))
-            fi
-        done
-
-        local dismiss_stale
-        dismiss_stale=$(echo "$bp_json" | jq -r '.required_pull_request_reviews.dismiss_stale_reviews // false')
-        if [[ "$dismiss_stale" == "true" ]]; then
-            info "  ✅ dismiss_stale_reviews = true"
-            (( pass++ ))
-        else
-            warning "  ❌ dismiss_stale_reviews = ${dismiss_stale} (expected: true)"
-            (( fail++ ))
-        fi
-
-        local approvals
-        approvals=$(echo "$bp_json" | jq -r '.required_pull_request_reviews.required_approving_review_count // 0')
-        if [[ "$approvals" -ge 1 ]]; then
-            info "  ✅ required_approving_review_count = ${approvals}"
-            (( pass++ ))
-        else
-            warning "  ❌ required_approving_review_count = ${approvals} (expected: >= 1)"
-            (( fail++ ))
-        fi
-    fi
-
-    # --- Summary ---
-    echo ""
-    info "Audit complete: ${pass} passed, ${fail} failed."
-    if (( fail > 0 )); then
-        warning "Run without --audit to fix mismatches (use --configure-only --skip-secrets for existing repos)."
-        return 1
-    fi
-}
-
 # ------------------------------------------------------------------
 # Main
 # ------------------------------------------------------------------
 
 if [[ "$audit" == true ]]; then
+    source "${script_dir}/bootstrap-new-package.audit.sh"
     info "Audit mode — reading current settings for ${repo}..."
     audit_repo
     exit 0
