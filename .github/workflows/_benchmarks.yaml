@@ -186,6 +186,7 @@ jobs:
               --github-actions \"$GITHUB_TOKEN\"          \
               --ci-event \"$GITHUB_EVENT_NAME\"           \
               --ci-number $GITHUB_RUN_NUMBER              \
+              --ci-on-the-fly                             \
                                                           \
               --iter 1                                    \
               --fold median                               \
