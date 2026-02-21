@@ -103,7 +103,7 @@ function error()
             done
         fi
     } | to_stderr
-    errors=$((errors + 1))
+    (( ++errors ))
     return 0
 }
 

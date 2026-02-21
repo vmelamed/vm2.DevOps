@@ -138,22 +138,6 @@ Tests if the parameter represents a valid decimal number (including integers and
 
 Tests if the first parameter equals one of the following parameters.
 
-### is_inside_work_tree()
-
-Tests if the specified directory is a Git repository (inside a work tree).
-
-### is_latest_stable_tag()
-
-Tests if the current commit in the specified directory is on the latest stable tag.
-
-### is_after_latest_stable_tag()
-
-Tests if the current commit in the specified directory is after the latest stable tag.
-
-### is_on_or_after_latest_stable_tag()
-
-Tests if the current commit in the specified directory is on or after the latest stable tag.
-
 ---
 
 ## _dump_vars.sh
@@ -177,6 +161,34 @@ Internal function to write a header title in the variable dump table.
 ### _write_line()
 
 Internal function to write a variable name and value line in the dump table.
+
+---
+
+## _git.sh
+
+### find_repo_root()
+
+Finds the root directory of a Git repository by searching for a specified directory name, with options to restrict to work tree directories.
+
+### get_github_repo_info()
+
+Retrieves GitHub repository information (URL, owner, name) from a local Git repository root by parsing the origin remote URL.
+
+### is_inside_work_tree()
+
+Tests if the specified directory is a Git repository (inside a work tree).
+
+### is_latest_stable_tag()
+
+Tests if the current commit in the specified directory is on the latest stable tag.
+
+### is_after_latest_stable_tag()
+
+Tests if the current commit in the specified directory is after the latest stable tag.
+
+### is_on_or_after_latest_stable_tag()
+
+Tests if the current commit in the specified directory is on or after the latest stable tag.
 
 ---
 
@@ -356,26 +368,27 @@ Summarizes the output of a 'dotnet build -v d' command, extracting version info 
 
 ## Summary
 
-**Total Functions: 67**
+### Total Functions: 76
 
 - _diagnostics.sh: 11 functions
 - _args.sh: 10 functions
-- _predicates.sh: 12 functions
+- _predicates.sh: 8 functions
 - _dump_vars.sh: 5 functions
+- _git.sh: 6 functions
 - _semver.sh: 8 functions
 - _user.sh: 4 functions
-- core.sh: 4 functions
+- core.sh: 2 functions
 - gh_core.sh: 7 functions
 - _sanitize.sh: 14 functions (13 validators + 1 formatter)
 - _dotnet.sh: 1 function
 
-**Usage Pattern:**
+### Usage Pattern
 
 1. Source `core.sh` in your scripts to get all base functionality
 2. Source `gh_core.sh` for GitHub Actions-specific features
 3. Individual component files can be sourced directly if needed
 
-**Key Design Principles:**
+### Key Design Principles
 
 - Functions read from stdin and write to stdout where appropriate for pipeline composition
 - Global state modifications are minimized (e.g., `dump_vars` uses push_state/pop_state)

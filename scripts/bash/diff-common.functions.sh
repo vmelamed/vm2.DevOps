@@ -1,4 +1,7 @@
-#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025 Val Melamed
+
+# shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
 declare -xr script_name
 declare -xr script_dir
@@ -69,7 +72,7 @@ function find_target_path()
     dir=${1:-"$(pwd)"}
 
     if [[ ! -d "$dir" ]]; then
-        # if it is not a directory - try under $repos
+        # if it is not a directory - try under $git_repos
         trace "'$dir' is not a directory."
         dir=${repos%/}/${dir}
         if [[ ! -d "$dir" ]]; then
@@ -94,7 +97,7 @@ function find_target_path()
         return 1
     fi
 
-    # try under $repos
+    # try under $git_repos
     dir=${repos%/}/${dir}
     trace "New candidate: '$dir'."
     if [[ -d $dir ]] && is_inside_work_tree "$dir"; then

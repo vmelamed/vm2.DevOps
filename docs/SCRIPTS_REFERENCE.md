@@ -39,7 +39,7 @@ vm2.DevOps contains three distinct categories of scripts:
     Utility Scripts:     script.sh ----------------→ core.sh → all _*.sh modules
 
 `core.sh` sources all component modules (`_constants.sh`, `_diagnostics.sh`, `_args.sh`,
-`_predicates.sh`, `_dump_vars.sh`, `_semver.sh`, `_user.sh`).
+`_predicates.sh`, `_dump_vars.sh`, `_git.sh`, `_semver.sh`, `_user.sh`).
 
 `gh_core.sh` adds GitHub Actions–specific helpers on top, plus the CI specific `_sanitize.sh` and `_dotnet.sh`.
 
@@ -72,6 +72,7 @@ Located in **`scripts/bash/lib/`**. The foundation layer sourced by all scripts.
      ├── _args.sh           (argument parsing, common switches, get_common_arg)
      ├── _predicates.sh     (boolean test functions)
      ├── _dump_vars.sh      (dump_vars for debugging)
+     ├── _git.sh            (Git repository helpers)
      ├── _semver.sh         (semver parsing, comparison, tag validation)
      └── _user.sh           (user/identity helpers)
 

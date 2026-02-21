@@ -1,10 +1,15 @@
-#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025 Val Melamed
+
+# shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
 declare -xr script_name
 declare -xr lib_dir
 
-declare -x package_name
-declare -x org
+declare -x git_repos
+declare -x repo_name
+declare -x repo_path
+declare -x owner
 declare -x repo
 declare -x visibility
 declare -x branch
@@ -28,47 +33,29 @@ function get_arguments()
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
-            --name|-n )
-                if [[ $# -lt 1 ]]; then
-                    error "Missing package name after '$option'."
-                    exit 2
-                fi
-                package_name="$1"; shift
+            --path )
+                [[ $# -ge 1 ]] || { usage false "Missing path after '$option'."; exit 2; }
+                repo_path="$1"; shift
                 ;;
 
-            --repo|-r )
-                if [[ $# -lt 1 ]]; then
-                    error "Missing repo name after '$option'."
-                    exit 2
-                fi
-                repo="$1"; shift
-                ;;
-
-            --org|-o )
-                if [[ $# -lt 1 ]]; then
-                    error "Missing org name after '$option'."
-                    exit 2
-                fi
-                org="$1"; shift
+            --owner )
+                [[ $# -ge 1 ]] || { usage false "Missing owner after '$option'."; exit 2; }
+                owner="$1"; shift
                 ;;
 
             --visibility )
-                if [[ $# -lt 1 ]]; then
-                    error "Missing visibility after '$option'."
-                    exit 2
-                fi
+                [[ $# -ge 1 ]] || { usage false "Missing visibility after '$option'."; exit 2; }
                 visibility="$1"; shift
-                if [[ "$visibility" != "public" && "$visibility" != "private" ]]; then
-                    usage false "Visibility must be 'public' or 'private', got '${visibility}'."
-                fi
                 ;;
 
             --branch|-b )
-                if [[ $# -lt 1 ]]; then
-                    error "Missing branch name after '$option'."
-                    exit 2
-                fi
+                [[ $# -ge 1 ]] || { usage false "Missing branch name after '$option'."; exit 2; }
                 branch="$1"; shift
+                ;;
+
+            --git-repos|-r )
+                [[ $# -ge 1 ]] || { usage false "Missing path after '$option'."; exit 2; }
+                git_repos="$1"; shift
                 ;;
 
             --configure-only )

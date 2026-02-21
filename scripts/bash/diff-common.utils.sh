@@ -1,4 +1,7 @@
-#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025 Val Melamed
+
+# shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
 declare -x repos
 declare -x minver_tag_prefix
@@ -21,7 +24,7 @@ function get_arguments()
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
-            --repos|-r )
+            --git-repos|-r )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 repos="$1"; shift
                 ;;

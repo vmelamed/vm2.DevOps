@@ -239,6 +239,7 @@ A shared function library sourced by scripts at startup.
 | `_diagnostics.sh`  | Debug and diagnostic output                                              |
 | `_dotnet.sh`       | .NET SDK helpers                                                         |
 | `_dump_vars.sh`    | Variable dump for debugging                                              |
+| `_git.sh`          | Git repository helpers                                                   |
 | `_predicates.sh`   | Boolean test functions                                                   |
 | `_sanitize.sh`     | Input sanitization                                                       |
 | `_semver.sh`       | Semantic versioning utilities                                            |

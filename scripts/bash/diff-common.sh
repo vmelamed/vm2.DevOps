@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025 Val Melamed
+
 set -euo pipefail
 
 script_name=$(basename "${BASH_SOURCE[0]}")
@@ -24,7 +28,7 @@ source "${script_dir}/diff-common.functions.sh"
 
 get_arguments "$@"
 
-repos=$(realpath -e "$repos")
+repos=$(realpath -e "$git_repos")
 
 # freeze the arguments
 declare -xr repos
@@ -44,19 +48,20 @@ declare -a target_files
 declare -A file_actions
 
 # Validate environment:
-if [[ -z "$repos" ]]; then
-    error "The common directory of the repositories was not specified (GIT_REPOS env. var. or --repos option)."
+if [[ -z "$git_repos" ]]; then
+    error "The common directory of the source repositories was not specified (export GIT_REPOS env. variable or use --git-repos option)."
     exit 2
 fi
 validate_source_repo ".github"
 validate_source_repo "vm2.DevOps"
-trace "All source repositories are in '$repos'"
+trace "All source repositories are in '$git_repos'"
 
 # Resolve the project path
-if ! find_target_path "$target_dir"; then
+target_path=$(find_repo_root "$target_dir" true) || {
     error "Could not find a directory inside a working tree related to the parameter '$target_dir'."
     exit 2
-fi
+}
+
 if is_in "$target_path" "${repos}/vm2.DevOps" "${repos}/.github" ; then
     error "The target project cannot be '${repos}/vm2.DevOps' or '${repos}/.github'."
     exit 2

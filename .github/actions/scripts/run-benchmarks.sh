@@ -130,6 +130,7 @@ if ! execute dotnet run \
         --memory \
         --exporters JSON \
         --artifacts "$artifacts_dir" \
+        --join \
         -p:preprocessor_symbols="$preprocessor_symbols" \
         -p:MinVerTagPrefix="$minver_tag_prefix" \
         -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id"; then

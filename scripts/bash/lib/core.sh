@@ -39,6 +39,7 @@ source "${lib_dir}/_predicates.sh"
 source "${lib_dir}/_dump_vars.sh"
 source "${lib_dir}/_semver.sh"
 source "${lib_dir}/_user.sh"
+source "${lib_dir}/_git.sh"
 
 #-------------------------------------------------------------------------------
 # Summary: Depending on the value of $dry_run, either executes or displays what would have been executed.

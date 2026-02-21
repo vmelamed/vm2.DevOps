@@ -1,4 +1,7 @@
-#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025 Val Melamed
+
+# shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
 # shellcheck disable=SC2154 # solution_dir is referenced but not assigned
 function usage_text()
@@ -27,7 +30,7 @@ Arguments:
                                    inside it (useful for dotnet template projects)
 
 Options:
-  -r, --repos                   The parent directory where the .github workflow templates and vm2.DevOps are cloned
+  -r, --git-repos               The parent directory where the .github workflow templates and vm2.DevOps are cloned
                                 Initial from the GIT_REPOS environment variable or '~/repos'
   -mp, --minver-tag-prefix      The prefix used for MinVer version tags in the repositories. Used to detect the latest stable
                                 version tag of the source repositories 'vm2.DevOps' and '.github'

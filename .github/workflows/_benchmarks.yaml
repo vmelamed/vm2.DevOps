@@ -185,6 +185,8 @@ jobs:
               --err                                       \
               --ci-on-the-fly                             \
               --github-actions \"$GITHUB_TOKEN\"          \
+              --ci-event \"$GITHUB_EVENT_NAME\"           \
+              --ci-number $GITHUB_RUN_NUMBER              \
                                                           \
               --iter 1                                    \
               --fold median                               \

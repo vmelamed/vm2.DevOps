@@ -17,7 +17,7 @@ declare -xr default_table_format="graphical"
 declare -axr table_formats=("graphical" "markdown")
 
 # common flags exported for use by the top-level scripts with CLI switches, options and by other means. Prefer the set_* functions below to set them.
-declare -x _ignore=$default__ignore                 # the file to redirect unwanted output to
+declare -x _ignore=$default__ignore                 # the file to redirect unwanted output to, changing the value may be useful for debugging, e.g. to redirect to /dev/stdout
 declare -x quiet=${QUIET:-$default_quiet}           # suppresses user prompts, assuming default answers
 declare -x verbose=${VERBOSE:-$default_verbose}     # enables detailed output
 declare -x dry_run=${DRY_RUN:-$default_dry_run}     # simulates commands without executing them
