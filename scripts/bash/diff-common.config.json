@@ -1,81 +1,81 @@
 [
     {
-        "sourceFile": "${repos}/vm2.DevOps/solution/.editorconfig",
+        "sourceFile": "${git_repos}/vm2.DevOps/solution/.editorconfig",
         "targetFile": "${target_path}/.editorconfig",
         "action": "copy"
     },
     {
-        "sourceFile": "${repos}/vm2.DevOps/solution/.gitattributes",
+        "sourceFile": "${git_repos}/vm2.DevOps/solution/.gitattributes",
         "targetFile": "${target_path}/.gitattributes",
         "action": "copy"
     },
     {
-        "sourceFile": "${repos}/vm2.DevOps/solution/.gitignore",
+        "sourceFile": "${git_repos}/vm2.DevOps/solution/.gitignore",
         "targetFile": "${target_path}/.gitignore",
         "action": "copy"
     },
     {
-        "sourceFile": "${repos}/vm2.DevOps/solution/codecov.yaml",
+        "sourceFile": "${git_repos}/vm2.DevOps/solution/codecov.yaml",
         "targetFile": "${target_path}/codecov.yaml",
         "action": "copy"
     },
     {
-        "sourceFile": "${repos}/vm2.DevOps/solution/coverage.settings.xml",
+        "sourceFile": "${git_repos}/vm2.DevOps/solution/coverage.settings.xml",
         "targetFile": "${target_path}/coverage.settings.xml",
         "action": "copy"
     },
     {
-        "sourceFile": "${repos}/vm2.DevOps/solution/Directory.Build.props",
+        "sourceFile": "${git_repos}/vm2.DevOps/solution/Directory.Build.props",
         "targetFile": "${target_path}/Directory.Build.props",
         "action": "merge or copy"
     },
     {
-        "sourceFile": "${repos}/vm2.DevOps/solution/Directory.Packages.props",
+        "sourceFile": "${git_repos}/vm2.DevOps/solution/Directory.Packages.props",
         "targetFile": "${target_path}/Directory.Packages.props",
         "action": "merge or copy"
     },
     {
-        "sourceFile": "${repos}/vm2.DevOps/solution/global.json",
+        "sourceFile": "${git_repos}/vm2.DevOps/solution/global.json",
         "targetFile": "${target_path}/global.json",
         "action": "copy"
     },
     {
-        "sourceFile": "${repos}/vm2.DevOps/solution/LICENSE",
+        "sourceFile": "${git_repos}/vm2.DevOps/solution/LICENSE",
         "targetFile": "${target_path}/LICENSE",
         "action": "copy"
     },
     {
-        "sourceFile": "${repos}/vm2.DevOps/solution/NuGet.config",
+        "sourceFile": "${git_repos}/vm2.DevOps/solution/NuGet.config",
         "targetFile": "${target_path}/NuGet.config",
         "action": "copy"
     },
     {
-        "sourceFile": "${repos}/vm2.DevOps/solution/testconfig.json",
+        "sourceFile": "${git_repos}/vm2.DevOps/solution/testconfig.json",
         "targetFile": "${target_path}/testconfig.json",
         "action": "copy"
     },
     {
-        "sourceFile": "${repos}/vm2.DevOps/.github/dependabot.yml",
+        "sourceFile": "${git_repos}/vm2.DevOps/.github/dependabot.yml",
         "targetFile": "${target_path}/.github/dependabot.yml",
         "action": "copy"
     },
     {
-        "sourceFile": "${repos}/.github/workflow-templates/ClearCache.yaml",
+        "sourceFile": "${git_repos}/.github/workflow-templates/ClearCache.yaml",
         "targetFile": "${target_path}/.github/workflows/ClearCache.yaml",
         "action": "copy"
     },
     {
-        "sourceFile": "${repos}/.github/workflow-templates/CI.yaml",
+        "sourceFile": "${git_repos}/.github/workflow-templates/CI.yaml",
         "targetFile": "${target_path}/.github/workflows/CI.yaml",
         "action": "ask to merge"
     },
     {
-        "sourceFile": "${repos}/.github/workflow-templates/Prerelease.yaml",
+        "sourceFile": "${git_repos}/.github/workflow-templates/Prerelease.yaml",
         "targetFile": "${target_path}/.github/workflows/Prerelease.yaml",
         "action": "ask to merge"
     },
     {
-        "sourceFile": "${repos}/.github/workflow-templates/Release.yaml",
+        "sourceFile": "${git_repos}/.github/workflow-templates/Release.yaml",
         "targetFile": "${target_path}/.github/workflows/Release.yaml",
         "action": "ask to merge"
     }

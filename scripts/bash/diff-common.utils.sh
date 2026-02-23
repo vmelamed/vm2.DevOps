@@ -3,7 +3,7 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -x repos
+declare -x git_repos
 declare -x minver_tag_prefix
 declare -xa file_regexes
 declare -x target_dir
@@ -26,7 +26,7 @@ function get_arguments()
 
             --git-repos|-r )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
-                repos="$1"; shift
+                git_repos="$1"; shift
                 ;;
 
             --minver-tag-prefix|-mp )

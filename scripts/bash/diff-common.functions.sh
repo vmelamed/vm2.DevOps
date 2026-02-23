@@ -7,7 +7,7 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
-declare -x repos
+declare -x git_repos
 declare -xa file_regexes
 
 declare -xr config_file="${script_dir}/diff-common.config.json"
@@ -48,21 +48,21 @@ declare -rA merge_commands=(
     ["vimdiff"]="vimdiff \"\$LOCAL\" \"\$REMOTE\""
 )
 
-## Validates that the given repository exists under the repos directory,
+## Validates that the given repository exists under the git_repos directory,
 ## is a git repository, and its HEAD is on or after the latest stable tag.
 ## Usage: validate_source_repo <repo-name>
 function validate_source_repo()
 {
     local repo_name=$1
 
-    if [[ ! -d "${repos}/${repo_name}" ]]; then
-        error "The '${repo_name}' repository was not cloned or is not under ${repos}."
+    if [[ ! -d "${git_repos}/${repo_name}" ]]; then
+        error "The '${repo_name}' repository was not cloned or is not under ${git_repos}."
     fi
-    if ! is_inside_work_tree "${repos}/${repo_name}"; then
-        error "The ${repo_name} repository at '${repos}/${repo_name}' is not a git repository."
+    if ! is_inside_work_tree "${git_repos}/${repo_name}"; then
+        error "The ${repo_name} repository at '${git_repos}/${repo_name}' is not a git repository."
     fi
     # shellcheck disable=SC2154 # semverTagReleaseRegex is referenced but not assigned.
-    if ! is_on_or_after_latest_stable_tag "${repos}/${repo_name}" "$semverTagReleaseRegex"; then
+    if ! is_on_or_after_latest_stable_tag "${git_repos}/${repo_name}" "$semverTagReleaseRegex"; then
         error "The HEAD of the '${repo_name}' repository is before the latest stable tag."
     fi
 }
@@ -74,7 +74,7 @@ function find_target_path()
     if [[ ! -d "$dir" ]]; then
         # if it is not a directory - try under $git_repos
         trace "'$dir' is not a directory."
-        dir=${repos%/}/${dir}
+        dir=${git_repos%/}/${dir}
         if [[ ! -d "$dir" ]]; then
             # still not a directory - return false
             error "Could not find directory '$1' or '$dir'."
@@ -98,7 +98,7 @@ function find_target_path()
     fi
 
     # try under $git_repos
-    dir=${repos%/}/${dir}
+    dir=${git_repos%/}/${dir}
     trace "New candidate: '$dir'."
     if [[ -d $dir ]] && is_inside_work_tree "$dir"; then
         # if it is inside a tree - this is it, return true

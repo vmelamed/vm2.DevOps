@@ -17,7 +17,7 @@ declare -xr lib_dir
 source "$lib_dir/core.sh"
 
 # arguments
-declare -x repos="${GIT_REPOS:-$HOME/repos}"
+declare -x git_repos="${GIT_REPOS:-$HOME/repos}"
 declare -x target_dir=""
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-'v'}
 declare -xa file_regexes=()
@@ -28,10 +28,10 @@ source "${script_dir}/diff-common.functions.sh"
 
 get_arguments "$@"
 
-repos=$(realpath -e "$git_repos")
+git_repos=$(realpath -e "$git_repos")
 
 # freeze the arguments
-declare -xr repos
+declare -xr git_repos
 declare -xr target_dir
 declare -xr minver_tag_prefix
 
@@ -62,8 +62,8 @@ target_path=$(find_repo_root "$target_dir" true) || {
     exit 2
 }
 
-if is_in "$target_path" "${repos}/vm2.DevOps" "${repos}/.github" ; then
-    error "The target project cannot be '${repos}/vm2.DevOps' or '${repos}/.github'."
+if is_in "$target_path" "${git_repos}/vm2.DevOps" "${git_repos}/.github" ; then
+    error "The target project cannot be '${git_repos}/vm2.DevOps' or '${git_repos}/.github'."
     exit 2
 fi
 trace "The target project is in '$target_path'"
