@@ -57,11 +57,13 @@ env:
   ARTIFACTS_DIR: ./BenchmarkArtifacts
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
-  VERBOSE: ${{ vars.VERBOSE }}
+  VERBOSE: ${{ vars.VERBOSE || false }}
 
 jobs:
   benchmarks:
     name: Benchmarks (${{ inputs.runner-os }})
+    permissions:
+      checks: write # Required for Bencher to create GitHub Checks
     runs-on: ${{ inputs.runner-os }}
     steps:
       # Install Bencher CLI (install early so if it fails, we fail fast before doing extra work)
@@ -174,44 +176,38 @@ jobs:
 
           # Build bencher run command
           BENCHER_CMD="bencher run                        \
-              --project \"${BENCHER_SLUG}\"               \
-              --branch \"${{ github.ref_name }}\"         \
-              --testbed \"${{ inputs.runner-os }}\"       \
-              --adapter c_sharp_dot_net                   \
-              --err                                       \
               --github-actions \"$GITHUB_TOKEN\"          \
               --ci-event \"${{ github.event_name }}\"     \
               --ci-number $GITHUB_RUN_NUMBER              \
-                                                          \
               --iter 1                                    \
               --fold median                               \
-                                                          \
+              --project \"${BENCHER_SLUG}\"               \
+              --branch \"${{ github.ref_name }}\"         \
+              --testbed \"${{ inputs.runner-os }}\"       \
               --threshold-measure latency                 \
               --threshold-test percentage                 \
               --threshold-max-sample-size 64              \
               --threshold-lower-boundary _                \
               --threshold-upper-boundary $UPPER_THRESHOLD \
-                                                          \
               --threshold-measure throughput              \
               --threshold-test percentage                 \
               --threshold-max-sample-size 64              \
               --threshold-lower-boundary $LOWER_THRESHOLD \
-              --threshold-upper-boundary _"
-
-          # --thresholds-reset
+              --threshold-upper-boundary _                \
+              --thresholds-reset"                         \
+              --err                                       \
+              --adapter c_sharp_dot_net                   \
+              --token \"$BENCHER_API_TOKEN\""
 
           # Add all benchmark result files
           for file in ${{ env.ARTIFACTS_DIR }}/results/*-report.json; do
-              if [[ -f "$file" ]]; then
+              if [[ -s "$file" ]]; then
+                  trace "Adding benchmark result file: $file"
                   BENCHER_CMD="$BENCHER_CMD --file \"$file\""
               fi
           done
 
-          # Echo the command for debugging (without token)
-          echo "Running: ${BENCHER_CMD}"
-
-          # Execute the command with token
-          BENCHER_CMD="$BENCHER_CMD --token $BENCHER_API_TOKEN"
+          trace "Will run: ${BENCHER_CMD}"
           eval $BENCHER_CMD
 
       # Upload benchmark results as workflow artifacts for manual inspection
