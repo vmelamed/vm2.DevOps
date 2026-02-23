@@ -159,7 +159,8 @@ jobs:
           BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          source $LIB_DIR/gh_core.sh
+          echo "$DEVOPS_LIB_DIR/gh_core.sh"
+          source "$DEVOPS_LIB_DIR/gh_core.sh"
 
           run-benchmarks.sh ${{ inputs.benchmark-project }} \
               --configuration "${{ inputs.configuration }}" \

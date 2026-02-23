@@ -15,8 +15,12 @@ runs:
         echo "${{ github.action_path }}" >> $GITHUB_PATH
         echo "$LIB_DIR" >> $GITHUB_PATH
 
+        trace "Added ${{ github.action_path }} and $LIB_DIR to PATH: $PATH"
+
         # Export the directories for reference
         echo "DEVOPS_SCRIPTS_DIR=${{ github.action_path }}" >> $GITHUB_ENV
         echo "DEVOPS_LIB_DIR=$LIB_DIR" >> $GITHUB_ENV
+
+        trace "Exported DEVOPS_SCRIPTS_DIR and DEVOPS_LIB_DIR environment variables"
 
         echo "✅ DevOps scripts and libraries are now available in PATH"
