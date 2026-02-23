@@ -159,6 +159,8 @@ jobs:
           BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
+          source $LIB_DIR/gh_core.sh
+
           run-benchmarks.sh ${{ inputs.benchmark-project }} \
               --configuration "${{ inputs.configuration }}" \
               --define "${{ inputs.preprocessor-symbols }}" \
@@ -166,7 +168,7 @@ jobs:
               --minver-prerelease-id "${{ inputs.minver-prerelease-id }}" \
               --artifacts "${{ env.ARTIFACTS_DIR }}"
 
-          # Calculate threshold as a decimal (e.g., 10% -> 0.90)
+          # Calculate thresholds as decimals (e.g., 10% -> LOWER_THRESHOLD=0.90, 10% -> UPPER_THRESHOLD=0.10)
           LOWER_THRESHOLD=$(echo "scale=4; 1 - ${{ inputs.max-regression-pct }} / 100" | bc)
           UPPER_THRESHOLD=$(echo "scale=4; ${{ inputs.max-regression-pct }} / 100" | bc)
 
