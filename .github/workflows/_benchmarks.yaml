@@ -196,9 +196,9 @@ jobs:
               --threshold-test percentage                 \
               --threshold-max-sample-size 64              \
               --threshold-lower-boundary $LOWER_THRESHOLD \
-              --threshold-upper-boundary _
+              --threshold-upper-boundary _"
 
-              # --thresholds-reset"
+          # --thresholds-reset
 
           # Add all benchmark result files
           for file in ${{ env.ARTIFACTS_DIR }}/results/*-report.json; do
