@@ -159,8 +159,9 @@ jobs:
           BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          echo "$DEVOPS_LIB_DIR/gh_core.sh"
           source "$DEVOPS_LIB_DIR/gh_core.sh"
+
+          trace "Running benchmarks for project: ${{ inputs.benchmark-project }} with configuration: ${{ inputs.configuration }} on runner OS: ${{ inputs.runner-os }}"
 
           run-benchmarks.sh ${{ inputs.benchmark-project }} \
               --configuration "${{ inputs.configuration }}" \
@@ -201,6 +202,9 @@ jobs:
               --err                                       \
               --adapter c_sharp_dot_net                   \
               --token \"$BENCHER_API_TOKEN\""
+
+          trace "Looking for benchmark result files matching: ${{ env.ARTIFACTS_DIR }}/results/*-report.json:"
+          trace "$(ls -l ${{ env.ARTIFACTS_DIR }}/results/*-report.json)"
 
           # Add all benchmark result files
           for file in ${{ env.ARTIFACTS_DIR }}/results/*-report.json; do
