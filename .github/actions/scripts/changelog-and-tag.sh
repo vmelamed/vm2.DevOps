@@ -109,7 +109,7 @@ else
 
     if git status --porcelain -- CHANGELOG.md | grep -q .; then
         execute git add CHANGELOG.md
-        execute git commit -m "chore: update changelog for $release_tag"
+        execute git commit -m "chore: update changelog for $release_tag [skip ci]"
         execute git push
         info "✅ CHANGELOG updated and pushed"
     else
