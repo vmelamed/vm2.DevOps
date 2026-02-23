@@ -179,29 +179,30 @@ jobs:
           BENCHER_SLUG=$(echo "${REPO_NAME#*/}" | tr '[:upper:]' '[:lower:]' | tr '.' '-')
 
           # Build bencher run command
-          BENCHER_CMD="bencher run                        \
-              --project \"$BENCHER_SLUG\"               \
-              --github-actions \"$GITHUB_TOKEN\"          \
-              --ci-event \"${{ github.event_name }}\"     \
-              --ci-number $GITHUB_RUN_NUMBER              \
-              --iter 1                                    \
-              --fold median                               \
-              --branch \"${{ github.ref_name }}\"         \
-              --testbed \"${{ inputs.runner-os }}\"       \
-              --threshold-measure latency                 \
-              --threshold-test percentage                 \
-              --threshold-max-sample-size 64              \
-              --threshold-lower-boundary _                \
-              --threshold-upper-boundary $UPPER_THRESHOLD \
-              --threshold-measure throughput              \
-              --threshold-test percentage                 \
-              --threshold-max-sample-size 64              \
-              --threshold-lower-boundary $LOWER_THRESHOLD \
-              --threshold-upper-boundary _                \
-              --thresholds-reset                          \
-              --err                                       \
-              --adapter c_sharp_dot_net                   \
-              --token \"$BENCHER_API_TOKEN\""
+          BENCHER_ARGS=(
+              --project "${BENCHER_SLUG}"
+              --github-actions "$GITHUB_TOKEN"
+              --ci-event "${{ github.event_name }}"
+              --ci-number "$GITHUB_RUN_NUMBER"
+              --iter 1
+              --fold median
+              --branch "${{ github.ref_name }}"
+              --testbed "${{ inputs.runner-os }}"
+              --threshold-measure latency
+              --threshold-test percentage
+              --threshold-max-sample-size 64
+              --threshold-lower-boundary _
+              --threshold-upper-boundary "$UPPER_THRESHOLD"
+              --threshold-measure throughput
+              --threshold-test percentage
+              --threshold-max-sample-size 64
+              --threshold-lower-boundary "$LOWER_THRESHOLD"
+              --threshold-upper-boundary _
+              --thresholds-reset
+              --err
+              --adapter c_sharp_dot_net
+              --token "$BENCHER_API_TOKEN"
+          )
 
           trace "Looking for benchmark result files matching: ${{ env.ARTIFACTS_DIR }}/results/*-report.json:"
           trace "$(ls -l ${{ env.ARTIFACTS_DIR }}/results/*-report.json)"
@@ -210,12 +211,24 @@ jobs:
           for file in ${{ env.ARTIFACTS_DIR }}/results/*-report.json; do
               if [[ -s "$file" ]]; then
                   trace "Adding benchmark result file: $file"
-                  BENCHER_CMD="$BENCHER_CMD --file \"$file\""
+                  BENCHER_ARGS+=(--file "$file")
               fi
           done
 
-          trace "Will run: ${BENCHER_CMD}"
-          eval $BENCHER_CMD
+          trace "Running command: bencher run ${BENCHER_ARGS[*]}"
+          if bencher_output=$(bencher run "${BENCHER_ARGS[@]}"); then
+              info "Bencher run succeeded." | to_summary
+              info "Bencher run succeeded."
+              echo "$bencher_output"
+          else
+              error "Bencher run failed. Output:"
+              echo "$bencher_output"
+              {
+                  error "Bencher run failed. Output:"
+                  echo "$bencher_output"
+                  exit 1
+              } | to_summary
+          fi
 
       # Upload benchmark results as workflow artifacts for manual inspection
       - name: Upload benchmark results artifact
