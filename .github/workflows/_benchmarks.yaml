@@ -154,8 +154,8 @@ jobs:
         id: run-benchmarks
         shell: bash
         env:
-          CONFIGURATION: ${{ inputs.configuration }}
-          PREPROCESSOR_SYMBOLS: ${{ inputs.preprocessor-symbols }}
+          BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           run-benchmarks.sh ${{ inputs.benchmark-project }} \
               --configuration "${{ inputs.configuration }}" \
@@ -164,29 +164,24 @@ jobs:
               --minver-prerelease-id "${{ inputs.minver-prerelease-id }}" \
               --artifacts "${{ env.ARTIFACTS_DIR }}"
 
-      # Track benchmarks with Bencher using CLI
-      - name: Track benchmarks with Bencher
-        shell: bash
-        env:
-          BENCHER_BRANCH: ${{ github.ref_name }}
-          BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
-          GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
-        run: |
           # Calculate threshold as a decimal (e.g., 10% -> 0.90)
           LOWER_THRESHOLD=$(echo "scale=4; 1 - ${{ inputs.max-regression-pct }} / 100" | bc)
           UPPER_THRESHOLD=$(echo "scale=4; ${{ inputs.max-regression-pct }} / 100" | bc)
 
+          # Compute Bencher project slug from repository name, e.g., vmelamed/vm2.DevOps -> vm2-devops
+          REPO_NAME="${{ github.repository }}"
+          BENCHER_SLUG=$(echo "${REPO_NAME#*/}" | tr '[:upper:]' '[:lower:]' | tr '.' '-')
+
           # Build bencher run command
           BENCHER_CMD="bencher run                        \
+              --project \"${BENCHER_SLUG}\"               \
               --branch \"${{ github.ref_name }}\"         \
               --testbed \"${{ inputs.runner-os }}\"       \
               --adapter c_sharp_dot_net                   \
               --err                                       \
               --github-actions \"$GITHUB_TOKEN\"          \
-              --ci-event \"$GITHUB_EVENT_NAME\"           \
+              --ci-event \"${{ github.event_name }}\"     \
               --ci-number $GITHUB_RUN_NUMBER              \
-              --ci-on-the-fly                             \
                                                           \
               --iter 1                                    \
               --fold median                               \
@@ -201,12 +196,12 @@ jobs:
               --threshold-test percentage                 \
               --threshold-max-sample-size 64              \
               --threshold-lower-boundary $LOWER_THRESHOLD \
-              --threshold-upper-boundary _                \
-                                                          \
-              --thresholds-reset"
+              --threshold-upper-boundary _
+
+              # --thresholds-reset"
 
           # Add all benchmark result files
-          for file in ${{ steps.run-benchmarks.outputs.results-dir }}/*-report.json; do
+          for file in ${{ env.ARTIFACTS_DIR }}/results/*-report.json; do
               if [[ -f "$file" ]]; then
                   BENCHER_CMD="$BENCHER_CMD --file \"$file\""
               fi
@@ -234,8 +229,6 @@ jobs:
         if: always()
         shell: bash
         run: |
-          # Compute Bencher project slug from repository name
-          # Example: vmelamed/vm2.DevOps -> vm2-devops
           REPO_NAME="${{ github.repository }}"
           BENCHER_SLUG=$(echo "${REPO_NAME#*/}" | tr '[:upper:]' '[:lower:]' | tr '.' '-')
 

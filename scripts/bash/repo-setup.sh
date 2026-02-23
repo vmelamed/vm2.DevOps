@@ -27,11 +27,12 @@ declare -xr default_skip_variables=false
 declare -xr default_force_defaults=false
 declare -xr default_audit=false
 
-# defaults
+# start with defaults
 repo_path="$(pwd)"
+repo_path="${repo_path#"${HOME}"/}" # get the name of the current directory as the default repo path
 
-declare -x git_repos="${GIT_REPOS:-}"
 declare -x repo_path
+declare -x git_repos="${GIT_REPOS:-}"
 declare -x repo_name=""
 declare -x owner=${ORGANIZATION:-$default_owner}
 declare -x repo=""
