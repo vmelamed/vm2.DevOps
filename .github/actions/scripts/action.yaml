@@ -7,20 +7,26 @@ runs:
   steps:
     - name: Setup DevOps scripts
       shell: bash
+      env:
+        VERBOSE: ${{ vars.VERBOSE || false }}
       run: |
         # Determine the lib directory path relative to the action
-        LIB_DIR="${{ github.action_path }}/../../../scripts/bash/lib"
+        LIB_DIR=$(realpath "${{ github.action_path }}/../../../scripts/bash/lib")
 
         # Add both scripts and lib directories to PATH for the remainder of the workflow
         echo "${{ github.action_path }}" >> $GITHUB_PATH
         echo "$LIB_DIR" >> $GITHUB_PATH
 
-        trace "Added ${{ github.action_path }} and $LIB_DIR to PATH: $PATH"
+        if [[ "$VERBOSE" == 'true' ]]; then
+          echo "Added ${{ github.action_path }} and $LIB_DIR to PATH: $PATH"
+        fi
 
         # Export the directories for reference
         echo "DEVOPS_SCRIPTS_DIR=${{ github.action_path }}" >> $GITHUB_ENV
         echo "DEVOPS_LIB_DIR=$LIB_DIR" >> $GITHUB_ENV
 
-        trace "Exported DEVOPS_SCRIPTS_DIR and DEVOPS_LIB_DIR environment variables"
+        if [[ "$VERBOSE" == 'true' ]]; then
+          echo "Exported DEVOPS_SCRIPTS_DIR and DEVOPS_LIB_DIR environment variables"
+        fi
 
         echo "✅ DevOps scripts and libraries are now available in PATH"
