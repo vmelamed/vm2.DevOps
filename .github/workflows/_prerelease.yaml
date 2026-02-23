@@ -47,6 +47,12 @@ on:
         default: false
 
     secrets:
+      RELEASE_PAT:
+        description: >-
+          Personal Access Token with contents:write scope for pushing changelog commits and tags to main.
+          Required to bypass branch protection rulesets.
+        required: true
+
       NUGET_API_GITHUB_KEY:
         description: >-
           Token for authentication to the GitHub NuGet server - must be for the GitHub Packages server.
@@ -65,12 +71,6 @@ on:
           Also used as the default token if nuget-server is 'nuget' or 'github'.
           If a custom NuGet server is not used, this secret can be left empty.
         required: false
-
-      RELEASE_PAT:
-        description: >-
-          Personal Access Token with contents:write scope for pushing changelog commits and tags to main.
-          Required to bypass branch protection rulesets.
-        required: true
 
 concurrency:
   group: prerelease-${{ github.ref }}
@@ -139,7 +139,7 @@ jobs:
         with:
           fetch-depth: 0
           filter: tree:0
-          token: ${{ secrets.RELEASE_PAT || github.token }}
+          token: ${{ secrets.RELEASE_PAT }}
 
       # Clone only the scripts from vm2.DevOps, so that we can run the composite
       # action .github/actions/scripts/action.yaml for both local and external calls
