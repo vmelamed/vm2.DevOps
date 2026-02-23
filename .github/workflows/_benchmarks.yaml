@@ -198,7 +198,7 @@ jobs:
               --threshold-max-sample-size 64              \
               --threshold-lower-boundary $LOWER_THRESHOLD \
               --threshold-upper-boundary _                \
-              --thresholds-reset"                         \
+              --thresholds-reset                          \
               --err                                       \
               --adapter c_sharp_dot_net                   \
               --token \"$BENCHER_API_TOKEN\""
