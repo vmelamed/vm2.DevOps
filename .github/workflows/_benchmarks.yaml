@@ -176,10 +176,11 @@ jobs:
 
           # Compute Bencher project slug from repository name, e.g., vmelamed/vm2.DevOps -> vm2-devops
           REPO_NAME="${{ github.repository }}"
+          BENCHER_SLUG=$(echo "${REPO_NAME#*/}" | tr '[:upper:]' '[:lower:]' | tr '.' '-')
 
           # Build bencher run command
           BENCHER_CMD="bencher run                        \
-              --project \"${REPO_NAME#*/}\"               \
+              --project \"$BENCHER_SLUG\"               \
               --github-actions \"$GITHUB_TOKEN\"          \
               --ci-event \"${{ github.event_name }}\"     \
               --ci-number $GITHUB_RUN_NUMBER              \
