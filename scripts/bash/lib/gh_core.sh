@@ -1,17 +1,18 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025 Val Melamed
 
-
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-# This script defines several GitHub specific constants, variables, and helper functions typical for the GitHub Actions environment.
-# For the functions to be invocable by other scripts, this script needs to be sourced.
+# This script defines several GitHub specific constants, variables, and helper
+# functions typical for the GitHub Actions environment. For the functions to be
+# invocable by other scripts, this script needs to be sourced.
 
 # The name of the top-level calling script name without the path
 declare -x script_name
 # The directory of the top-level calling script
 declare -x script_dir
-# The directory of my core library for shell scripts - usually "$GIT_REPOS/vm2.DevOps/scripts/bash/lib"
+# The directory of my core library for shell scripts - usually
+# "$GIT_REPOS/vm2.DevOps/scripts/bash/lib"
 declare -x lib_dir
 
 [[ ! -v script_name || -z "$script_name" ]] && script_name=$(basename "${BASH_SOURCE[-1]}")
@@ -25,16 +26,21 @@ source "${lib_dir}/_dotnet.sh"
 ## In CI mode, indicates whether the script is running within GitHub Actions.
 declare -x github_actions=${GITHUB_ACTIONS:-false}
 
-# In CI mode '$github_output' is equal to the $GITHUB_OUTPUT file where GitHub Actions are allowed to pass key=value pairs from
-# one job to another within the same workflow. If GITHUB_OUTPUT is not defined (e.g. running locally), it defaults to
-# $_ignore (usually '/dev/null') to not duplicate the output to stdout.
+# In CI mode '$github_output' is equal to the $GITHUB_OUTPUT file where GitHub
+# Actions are allowed to pass key=value pairs from one job to another within the
+# same workflow. If GITHUB_OUTPUT is not defined (e.g. running locally), it
+# defaults to $_ignore (usually '/dev/null') to not duplicate the output to
+# stdout.
 declare -x github_output=${GITHUB_OUTPUT:-"$_ignore"}
 
-# In CI mode '$github_step_summary' is equal to the $GITHUB_STEP_SUMMARY file which is used to add custom Markdown content to
-# the workflow run summary. defaults to $_ignore (usually '/dev/null') - so that the output to $_ignore to not duplicate the output to stdout.
+# In CI mode '$github_step_summary' is equal to the $GITHUB_STEP_SUMMARY file
+# which is used to add custom Markdown content to the workflow run summary.
+# Defaults to $_ignore (usually '/dev/null') - so that the output to $_ignore to
+# not duplicate the output to stdout.
 declare -x github_step_summary=${GITHUB_STEP_SUMMARY:-"$_ignore"}
 
-# Whether to trace messages to /dev/stdout only or to GitHub Actions step summary (GITHUB_STEP_SUMMARY) as well.
+# Whether to trace messages to /dev/stdout only or to GitHub Actions step
+# summary (GITHUB_STEP_SUMMARY) as well.
 declare -x trace_to_summary=${TRACE_TO_SUMMARY:-false}
 
 # redefined functions in GitHub actions context:
@@ -42,12 +48,14 @@ unset -f to_stdout
 unset -f to_stderr
 
 #-------------------------------------------------------------------------------
-# Summary: Sends input to stdout and, if in GitHub Actions, also appends to the GitHub step summary.
+# Summary: Sends input to stdout and, if in GitHub Actions, also appends to the
+#   GitHub step summary.
 # Parameters: none (reads from stdin)
 # Returns:
 #   stdout: each line read from stdin
 #   Exit code: 0 always
-# Side Effects: Appends to $github_step_summary file when $github_actions is true
+# Side Effects: Appends to $github_step_summary file when $github_actions is
+#   true
 # Env. Vars:
 #   github_actions - when true, indicates running in GitHub Actions environment
 #   github_step_summary - path to GitHub Actions step summary file
@@ -72,7 +80,8 @@ function to_stdout()
 # Returns:
 #   stdout: each line read from stdin
 #   Exit code: 0 always
-# Side Effects: Appends to $github_step_summary file when both $github_actions and $trace_to_summary are true
+# Side Effects: Appends to $github_step_summary file when both $github_actions
+#   and $trace_to_summary are true
 # Env. Vars:
 #   github_actions - when true, indicates running in GitHub Actions environment
 #   trace_to_summary - when true, also writes to step summary
@@ -92,12 +101,14 @@ function to_trace_out()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Sends input to stderr and, if in GitHub Actions, also appends to the GitHub step summary.
+# Summary: Sends input to stderr and, if in GitHub Actions, also appends to the
+#   GitHub step summary.
 # Parameters: none (reads from stdin)
 # Returns:
 #   stderr: each line read from stdin
 #   Exit code: 0 always
-# Side Effects: Appends to $github_step_summary file when $github_actions is true
+# Side Effects: Appends to $github_step_summary file when $github_actions is
+#   true
 # Env. Vars:
 #   github_actions - when true, indicates running in GitHub Actions environment
 #   github_step_summary - path to GitHub Actions step summary file
@@ -116,9 +127,11 @@ function to_stderr()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Logs a summary message with markdown heading to stdout and GitHub step summary.
+# Summary: Logs a summary message with markdown heading to stdout and GitHub
+#   step summary.
 # Parameters:
-#   1+ - message - summary message parts (optional, if not provided reads from stdin)
+#   1+ - message - summary message parts (optional, if not provided reads from
+#       stdin)
 # Returns:
 #   stdout: formatted summary with ## heading prefix via to_stdout
 #   Exit code: 0 always
@@ -149,7 +162,8 @@ function to_summary()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Sends input to stdout and, if in GitHub Actions, also appends to the GitHub output file.
+# Summary: Sends input to stdout and, if in GitHub Actions, also appends to the
+#   GitHub output file.
 # Parameters: none (reads from stdin)
 # Returns:
 #   stdout: each line read from stdin
@@ -173,10 +187,12 @@ function to_output()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Outputs a variable to GitHub Actions output, converting underscores to hyphens in the key name.
+# Summary: Outputs a variable to GitHub Actions output, converting underscores
+#   to hyphens in the key name.
 # Parameters:
 #   1 - variable_name (nameref!) - name of the variable to output
-#   2 - output_name - custom name for output key (optional, defaults to variable_name with _ → -)
+#   2 - output_name - custom name for output key (optional, defaults to
+#       variable_name with _ → -)
 # Returns:
 #   Outputs to $github_output via to_output
 #   Exit code: 0 on success, 2 on invalid arguments
@@ -190,7 +206,8 @@ function to_output()
 function to_github_output()
 {
     if [[ $# -eq 0 || $# -ge 3 ]]; then
-        error "${FUNCNAME[0]}() requires one or two arguments: the name of the variable to output and optionally the name to use in GitHub Actions output."
+        error "${FUNCNAME[0]}() requires one or two arguments: " \
+              "the name of the variable to output and optionally the name to use in GitHub Actions output."
         return 2
     fi
     declare -n var="$1"
@@ -202,7 +219,8 @@ function to_github_output()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Outputs multiple variables to GitHub Actions output, converting underscores to hyphens in key names.
+# Summary: Outputs multiple variables to GitHub Actions output, converting
+#   underscores to hyphens in key names.
 # Parameters:
 #   1+ - variable_names - names of variables to output
 # Returns:

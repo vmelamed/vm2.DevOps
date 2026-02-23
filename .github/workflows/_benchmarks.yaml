@@ -180,10 +180,9 @@ jobs:
 
           # Build bencher run command
           BENCHER_ARGS=(
-              --project "${BENCHER_SLUG}"
+              --project "$BENCHER_SLUG"
+              --token "$BENCHER_API_TOKEN"
               --github-actions "$GITHUB_TOKEN"
-              --ci-event "${{ github.event_name }}"
-              --ci-number "$GITHUB_RUN_NUMBER"
               --iter 1
               --fold median
               --branch "${{ github.ref_name }}"
@@ -201,7 +200,6 @@ jobs:
               --thresholds-reset
               --err
               --adapter c_sharp_dot_net
-              --token "$BENCHER_API_TOKEN"
           )
 
           trace "Looking for benchmark result files matching: ${{ env.ARTIFACTS_DIR }}/results/*-report.json:"
@@ -217,17 +215,11 @@ jobs:
 
           trace "Running command: bencher run ${BENCHER_ARGS[*]}"
           if bencher_output=$(bencher run "${BENCHER_ARGS[@]}"); then
-              info "Bencher run succeeded." | to_summary
-              info "Bencher run succeeded."
-              echo "$bencher_output"
+              info "Upload to Bencher succeeded."
+              trace "$bencher_output" | to_trace_out
           else
-              error "Bencher run failed. Output:"
-              echo "$bencher_output"
-              {
-                  error "Bencher run failed. Output:"
-                  echo "$bencher_output"
-                  exit 1
-              } | to_summary
+              error "Upload to Bencher failed."
+              echo "$bencher_output" | to_trace_out
           fi
 
       # Upload benchmark results as workflow artifacts for manual inspection
