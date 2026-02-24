@@ -93,7 +93,7 @@ fi
 
 last_stable_ref="${latest_stable:-$(git rev-list --max-parents=0 HEAD)}"
 # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
-commits=$(git log "$last_stable_ref"..HEAD --pretty=format:"%s" 2>"$_ignore" || echo "")
+commits=$(git log "$last_stable_ref"..HEAD --pretty=format:"%s%n%b" 2>"$_ignore" || echo "")
 
 # Determine bump type from conventional commits
 if echo "$commits" | grep -qiE '^[a-z]+(\(.+\))?!:|BREAKING CHANGE:'; then
