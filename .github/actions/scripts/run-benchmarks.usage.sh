@@ -39,9 +39,6 @@ Options:
                                 Initial value: '<solution root>/BenchmarkArtifacts'
 
 Switches:
-  -s, --short-run               A shortcut for '--define SHORT_RUN'. See above.
-                                The initial value from \$PREPROCESSOR_SYMBOLS or default '' will be preserved and appended with
-                                'SHORT_RUN' if not already present
 $std_switches
 Environment Variables:
   BENCHMARK_PROJECT             Path to the benchmark project file

@@ -11,10 +11,10 @@ declare -r lib_dir
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
 source "$lib_dir/gh_core.sh"
 
-declare -r defaultBuildProjects='[""]'
-declare -r defaultTestProjects='["__skip__"]'
-declare -r defaultBenchmarkProjects='["__skip__"]'
-declare -r defaultPackageProjects='["__skip__"]'
+declare -r defaultBuildProjects='[]'
+declare -r defaultTestProjects='[]'
+declare -r defaultBenchmarkProjects='[]'
+declare -r defaultPackageProjects='[]'
 declare -r defaultRunnersOs='["ubuntu-latest"]'
 declare -r defaultDotnetVersion='10.0.x'
 declare -r defaultConfiguration='Release'
@@ -47,11 +47,20 @@ get_arguments "$@"
 dump_all_variables
 
 # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
-if ! command -v -p jq &> "$_ignore" || ! command -v -p gh 2>&1 "$_ignore"; then
-    if execute sudo apt-get update && sudo apt-get install -y gh jq; then
-        info "GitHub CLI 'gh' and/or 'jq' successfully installed."
+# Check for required dependencies (jq and gh) and attempt to install them if not found
+if ! command -v -p jq &> "$_ignore"; then
+    if execute sudo apt-get update && sudo apt-get install -y jq; then
+        info "GitHub CLI 'jq' successfully installed."
     else
-        error "GitHub CLI 'gh' and/or 'jq' were not found and could not install them. Please have 'gh' and 'jq' installed."
+        error "GitHub CLI 'jq' was not found and could not install it. Please have 'jq' installed."
+        exit 1
+    fi
+fi
+if ! command -v -p gh 2>&1 "$_ignore"; then
+    if execute sudo apt-get update && sudo apt-get install -y gh; then
+        info "GitHub CLI 'gh' successfully installed."
+    else
+        error "GitHub CLI 'gh' was not found and could not install it. Please have 'gh' installed."
         exit 1
     fi
 fi

@@ -108,7 +108,7 @@ jobs:
           # Generate cache key based on calendar week
           CACHE_WEEK=$(date +%Y-W%V)
           echo "week=$CACHE_WEEK" >> $GITHUB_OUTPUT
-          echo "Cache rotation key: $CACHE_WEEK"
+          echo "ℹ️  INFO: Cache rotation key: $CACHE_WEEK"
 
       # Install .NET SDK with built-in NuGet package caching
       - name: Setup .NET
@@ -121,7 +121,7 @@ jobs:
             **/packages.lock.json
             **/*.csproj
 
-      # Authenticate to GitHub Packages for vm2.TestUtilities restore
+      # Authenticate to GitHub Packages for vm2.* on GitHub packages restore (e.g. vm2.TestUtilities, or vm2.Templates)
       - name: Configure GitHub Packages source
         shell: bash
         run: |
@@ -158,22 +158,27 @@ jobs:
           REPORTGENERATOR_LICENSE: ${{ secrets.REPORTGENERATOR_LICENSE }}
           TEST_VAR: test-value
         run: |
+          source $DEVOPS_LIB_DIR/gh_core.sh
+
           ARTIFACT_PATH=$(find . -type d -path "*/bin/${{ inputs.configuration }}" | head -n 1)
+
           if [ -z "$ARTIFACT_PATH" ]; then
-              warning "No build artifacts found in cache."
+              error "No build artifacts found in cache."
               exit 1
           else
-              echo "Build artifacts found at: $ARTIFACT_PATH"
+              info "Build artifacts found at: $ARTIFACT_PATH"
+
               # uncomment the next 2 lines if you want to debug the contents of the artifact path
               # ls -la "$ARTIFACT_PATH"/**/*.*
               # ls -la ./test/**/bin/${{ inputs.configuration }}/*.*
           fi
 
           # Parse test projects JSON array and run each test project
+
           tests_artifacts_dir="./TestResults"
-          TEST_PROJECTS='${{ inputs.test-projects }}'
-          echo "$TEST_PROJECTS" | jq -r '.[]' | while read -r test_project; do
-            echo "Running tests for: $test_project"
+          test_projects='${{ inputs.test-projects }}'
+          echo "$test_projects" | jq -r '.[]' | while read -r test_project; do
+            trace "Running tests for: $test_project"
             run-tests.sh "$test_project" \
                 --define "${{ inputs.preprocessor-symbols }}" \
                 --configuration "${{ inputs.configuration }}" \
@@ -181,16 +186,19 @@ jobs:
                 --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
                 --minver-prerelease-id "${{ inputs.minver-prerelease-id }}" \
                 --artifacts "$tests_artifacts_dir"
+
                 # This is the root artifacts directory. The script will create a subdirectory for each test project,
                 # e.g. ./TestResults/<test-project-name>/*
           done
 
           # Set outputs for merged coverage
           repo_name=$(basename "$(git rev-parse --show-toplevel)")
-          echo "proj-name=${repo_name}" >> $GITHUB_OUTPUT
-          echo "artifacts-dir=$tests_artifacts_dir" >> $GITHUB_OUTPUT
-          echo "coverage-source-path=**/$tests_artifacts_dir/**/coverage.cobertura.xml" >> $GITHUB_OUTPUT
-          echo "coverage-reports-dir=$tests_artifacts_dir/reports" >> $GITHUB_OUTPUT
+          {
+              echo "proj-name=${repo_name}"
+              echo "artifacts-dir=$tests_artifacts_dir"
+              echo "coverage-source-path=$tests_artifacts_dir/*/coverage.cobertura.xml"
+              echo "coverage-reports-dir=$tests_artifacts_dir/reports"
+          } >> $GITHUB_OUTPUT
 
       - name: Generate coverage report
         uses: danielpalme/ReportGenerator-GitHub-Action@5.5.1

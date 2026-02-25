@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025 Val Melamed
 
-
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
 if [[ ! -v lib_dir || -z "$lib_dir" ]]; then
@@ -84,6 +83,7 @@ function is_safe_path()
         error "${FUNCNAME[0]}() requires exactly one parameter: the file path to test."
         return 2
     fi
+
     local path="$1"
 
     # Reject paths with directory traversal
@@ -123,9 +123,9 @@ function is_safe_existing_path()
         error "${FUNCNAME[0]}() requires exactly one parameter: the file path to test."
         return 2
     fi
-    if ! is_safe_path "$1"; then
-        return 1
-    fi
+
+    ! is_safe_path "$1" && return 1
+
 
     if [[ ! -e "$1" ]]; then
         error "The path '$1' does not exist."
@@ -151,9 +151,8 @@ function is_safe_existing_directory()
         error "${FUNCNAME[0]}() requires exactly one parameter: the directory path to test."
         return 2
     fi
-    if ! is_safe_existing_path "$1"; then
-        return 1
-    fi
+
+    ! is_safe_existing_path "$1" && return 1
 
     if [[ ! -d "$1" ]]; then
         error "The path '$1' is not a directory."
@@ -179,9 +178,8 @@ function is_safe_existing_file()
         error "${FUNCNAME[0]}() requires exactly one parameter: the file path to test."
         return 2
     fi
-    if ! is_safe_existing_path "$1"; then
-        return 1
-    fi
+
+    ! is_safe_existing_path "$1" && return 1
 
     if [[ ! -s "$1" ]]; then
         error "The path '$1' is not a file or is empty."
@@ -230,6 +228,12 @@ function is_safe_json_array()
 
     local jq_output
 
+    # Allow empty arrays — they signal "skip this job" via zero matrix combinations
+    jq_output="$(jq -e "$jq_empty" 2>&1 <<< "$array")"
+    if [[ "$jq_output" == "true" ]]; then
+        return 0
+    fi
+
     # Validate that the first parameter is a JSON string containing a non-empty array of non-empty strings
     jq_output="$(jq -e "$jq_array_strings_nonempty" 2>&1 <<< "$array")"
     if [[ $? -gt 1 ]]; then
@@ -237,7 +241,7 @@ function is_safe_json_array()
         return 2
     fi
     if [[ $jq_output != true ]]; then
-        error "The value of '$1'='$array' must be a string containing a JSON non-empty array of non-empty strings."
+        error "The value of '$1'='$array' must be a string containing a JSON array of non-empty strings, or an empty array '[]'."
         return 1
     fi
 

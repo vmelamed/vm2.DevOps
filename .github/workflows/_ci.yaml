@@ -154,8 +154,8 @@ jobs:
     strategy:
       # fail-fast: true
       matrix:
-        runner-os: ${{ fromJSON(needs.validate-input.outputs.runners-os) }}
         build-project: ${{ fromJSON(needs.validate-input.outputs.build-projects) }}
+        runner-os: ${{ fromJSON(needs.validate-input.outputs.runners-os) }}
     uses: vmelamed/vm2.DevOps/.github/workflows/_build.yaml@main
     with:
       build-project: ${{ matrix.build-project }}
@@ -176,10 +176,8 @@ jobs:
       # fail-fast: true
       matrix:
         runner-os: ${{ fromJSON(needs.validate-input.outputs.runners-os) }}
-    # __skip__ sentinel avoids empty-matrix expansion when no tests are requested
-    if: >
-      needs.validate-input.outputs.test-projects != '["__skip__"]' &&
-      needs.validate-input.outputs.test-projects != '[""]'
+        # Note that here we run ALL tests on a single runner, to get a all code coverage reports and avoid spreading them across
+        # multiple test runners. It makes it easier to work with, without a need for additional aggregation job and min. coverage validation.
     uses: vmelamed/vm2.DevOps/.github/workflows/_test.yaml@main
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
@@ -209,11 +207,9 @@ jobs:
       matrix:
         runner-os: ${{ fromJSON(needs.validate-input.outputs.runners-os) }}
         benchmark-project: ${{ fromJSON(needs.validate-input.outputs.benchmark-projects) }}
-    # __skip__ sentinel avoids empty-matrix expansion; still honor [skip bm] on pushes
-    if: >
-      needs.validate-input.outputs.benchmark-projects != '["__skip__"]' &&
-      needs.validate-input.outputs.benchmark-projects != '[""]' &&
-      (github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip bm]'))
+    # Honor [skip bm] on pushes
+    if: >-
+      github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip bm]')
     uses: vmelamed/vm2.DevOps/.github/workflows/_benchmarks.yaml@main
     secrets:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
@@ -242,10 +238,6 @@ jobs:
       matrix:
         runner-os: ${{ fromJSON(needs.validate-input.outputs.runners-os) }}
         package-project: ${{ fromJSON(needs.validate-input.outputs.package-projects) }}
-    # __skip__ sentinel avoids empty-matrix expansion when no package projects are specified
-    if: >
-      needs.validate-input.outputs.package-projects != '["__skip__"]' &&
-      needs.validate-input.outputs.package-projects != '[""]'
     uses: vmelamed/vm2.DevOps/.github/workflows/_pack.yaml@main
     with:
       package-project: ${{ matrix.package-project }}

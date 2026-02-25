@@ -216,11 +216,10 @@ jobs:
           trace "Running command: bencher run ${BENCHER_ARGS[*]}"
           if bencher_output=$(bencher run "${BENCHER_ARGS[@]}"); then
               info "Upload to Bencher succeeded."
-              trace "$bencher_output" | to_trace_out
           else
               error "Upload to Bencher failed."
-              echo "$bencher_output" | to_trace_out
           fi
+          trace "$bencher_output" | to_trace_out
 
       # Upload benchmark results as workflow artifacts for manual inspection
       - name: Upload benchmark results artifact

@@ -48,12 +48,12 @@ via the `${{ vars.NAME || '<default>' }}` pattern.
 
 | Variable                             | Default       | Used by                    | Description                                    |
 | :----------------------------------- | :------------ | :------------------------- | :--------------------------------------------- |
-| `DOTNET_VERSION`                     | `10.0.x`      | CI, Prerelease, Release    | .NET SDK version                               |
 | `CONFIGURATION`                      | `Release`     | CI, Prerelease, Release    | Build configuration                            |
-| `MIN_COVERAGE_PCT`                   | `80`          | CI                         | Minimum code coverage percentage (50–100)      |
+| `DOTNET_VERSION`                     | `10.0.x`      | CI, Prerelease, Release    | .NET SDK version                               |
 | `MAX_REGRESSION_PCT`                 | `20`          | CI                         | Maximum benchmark regression percentage (0–50) |
-| `MINVERTAGPREFIX`                    | `v`           | CI, Prerelease, Release    | MinVer tag prefix                              |
 | `MINVERDEFAULTPRERELEASEIDENTIFIERS` | `preview.0`   | CI, Prerelease, Release    | MinVer default pre-release identifiers         |
+| `MINVERTAGPREFIX`                    | `v`           | CI, Prerelease, Release    | MinVer tag prefix                              |
+| `MIN_COVERAGE_PCT`                   | `80`          | CI                         | Minimum code coverage percentage (50–100)      |
 | `NUGET_SERVER`                       | `github`      | Prerelease, Release        | NuGet server: `github`, `nuget`, or URI        |
 | `SAVE_PACKAGE_ARTIFACTS`             | `false`       | Prerelease                 | Upload packages as workflow artifacts          |
 | `VERBOSE`                            | `false`       | All                        | Enable verbose logging in scripts              |
@@ -67,12 +67,12 @@ Set in repo Settings → Secrets and variables → Actions → Secrets.
 
 | Secret                     | Required by         | Description                                              |
 | :------------------------- | :------------------ | :------------------------------------------------------- |
-| `CODECOV_TOKEN`            | CI (test)           | Codecov API token for coverage uploads                   |
 | `BENCHER_API_TOKEN`        | CI (benchmarks)     | Bencher.dev API token for benchmark tracking             |
-| `REPORTGENERATOR_LICENSE`  | CI (test)           | ReportGenerator license key (optional, for Pro features) |
-| `NUGET_API_KEY`            | Prerelease, Release | Default NuGet API key (fallback for any server)          |
+| `CODECOV_TOKEN`            | CI (test)           | Codecov API token for coverage uploads                   |
 | `NUGET_API_GITHUB_KEY`     | Prerelease, Release | GitHub Packages API key                                  |
+| `NUGET_API_KEY`            | Prerelease, Release | Default NuGet API key (fallback for any server)          |
 | `NUGET_API_NUGET_KEY`      | Prerelease, Release | nuget.org API key                                        |
+| `REPORTGENERATOR_LICENSE`  | CI (test)           | ReportGenerator license key (optional, for Pro features) |
 | `RELEASE_PAT`              | Prerelease, Release | Fine-grained PAT with `contents: write` — required to push the changelog commit and tag to `main` (bypasses branch protection rulesets) |
 
 For NuGet publishing, the key used depends on the `NUGET_SERVER` value:
@@ -191,32 +191,34 @@ in two ways:
 
 ```yaml
 env:
-  BUILD_PROJECTS: >                     # JSON array of project/solution paths
+  BUILD_PROJECTS: >                     # JSON array of project/solution paths. If empty, assumes the solution file in the root
     [ "src/MyProject/MyProject.slnx" ]
   TEST_PROJECTS: >                      # JSON array of test project paths
     [ "test/MyProject.Tests/MyProject.Tests.csproj" ]
-  BENCHMARK_PROJECTS: >                 # JSON array of benchmark project paths (optional)
+  BENCHMARK_PROJECTS: >                 # JSON array of benchmark project paths
     [ "benchmarks/MyProject.Benchmarks/MyProject.Benchmarks.csproj" ]
-  PACKAGE_PROJECTS: >                   # JSON array of projects to pack (optional)
+  PACKAGE_PROJECTS: >                   # JSON array of projects to package and publish
     [ "src/MyProject/MyProject.csproj" ]
   RUNNERS_OS: >                         # JSON array of runner OS monikers
     [ "ubuntu-latest" ]
   PREPROCESSOR_SYMBOLS: ""              # Semicolon-separated preprocessor symbols
 ```
 
+> [!NOTE] If any of the project arrays are empty, not set, or contains `["__skip__"]`, the corresponding CI steps will be skipped.
+
 **`workflow_dispatch` inputs:**
 
 | Input                  | Description                          |
 | :--------------------- | :----------------------------------- |
-| `runners-os`           | Comma-separated runner OS overrides  |
 | `preprocessor-symbols` | Comma-separated preprocessor symbols |
+| `runners-os`           | Comma-separated runner OS overrides  |
 
 **Secrets passed to `_ci.yaml`:**
 
 ```yaml
 secrets:
-  CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
   BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+  CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
   REPORTGENERATOR_LICENSE: ${{ secrets.REPORTGENERATOR_LICENSE }}
 ```
 
@@ -242,8 +244,8 @@ env:
 
 ```yaml
 secrets:
-  NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
   NUGET_API_GITHUB_KEY: ${{ secrets.NUGET_API_GITHUB_KEY }}
+  NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
   NUGET_API_NUGET_KEY: ${{ secrets.NUGET_API_NUGET_KEY }}
 ```
 
@@ -269,8 +271,8 @@ env:
 ```yaml
 secrets:
   RELEASE_PAT: ${{ secrets.RELEASE_PAT }}
-  NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
   NUGET_API_GITHUB_KEY: ${{ secrets.NUGET_API_GITHUB_KEY }}
+  NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
   NUGET_API_NUGET_KEY: ${{ secrets.NUGET_API_NUGET_KEY }}
 ```
 
@@ -281,18 +283,67 @@ manually, or need to verify/adjust settings on an existing repo, follow these st
 
 ### Repository Settings
 
-**Settings → General → Pull Requests:**
-
-1. Enable  ✔️ **Allow squash merging** (default merge strategy)
-1. Disable ❌ **Allow merge commits**
-1. Disable ❌ **Allow rebase merging**
-1. Enable  ✔️ **Allow auto-merge**
-1. Enable  ✔️ **Automatically delete head branches**
-
 **Settings → General → Features:**
 
-1. Disable ❌ **Wikis** (documentation lives in the repo)
-1. Disable ❌ **Projects** (not used)
+1. ❌ **Wikis** (documentation lives in the repo README.md and possibly docs/ folder)
+1. ❌ **Projects** (not used)
+
+**Settings → General → Pull Requests:**
+
+1. ✔️ **Allow merge commits**
+1. ❌ **Allow squash merging** (default merge strategy)
+1. ❌ **Allow rebase merging**
+1. ✔️ **Allow auto-merge**
+1. ✔️ **Automatically delete head branches**
+
+### Branch Protection
+
+**Settings → Rules → Rulesets → New ruleset:**
+
+1. **Ruleset Name:** e.g. `main protection`
+1. **Enforcement status:** Active
+1. **Bypass list:** click **+ Add bypass** and choose:
+
+   - **Repository admin (Role)** — allows the prerelease and release workflows (which authenticate via `RELEASE_PAT` as the repo
+     admin) to push the changelog commit and tag directly to `main`
+     - bypass mode **Always**
+
+1. **Target branches:** click **Add target** and choose:
+
+   - Include default branch
+
+1. Enable rules:
+
+   - ✔️ Restrict deletions
+   - ✔️ Require linear history
+   - ✔️ Require a pull request before merging (🔽 show additional settings)
+     - Required approvals - **1**
+     - ✔️ Dismiss stale pull request approvals when new commits are pushed
+     - ✔️ Require conversation resolution before merging
+     - 🔽 Allowed merge methods
+       - ✔️ Merge  (required for proper work of git-cliff)
+       - ❌ Squash
+       - ❌ Rebase
+   - Require status checks to pass 🔽 Select CI jobs* (see note below)
+     - ✔️ Require up-to-date branches
+   - ✔️ Block force pushes
+   - ✔️ Automatically request Copilot code reviews
+     - ✔️ Review new pushes
+     - ✔️ Review draft pull requests (Optional)
+
+> [!NOTE] **Only add checks for jobs the repo actually runs** (e.g., skip `Run performance benchmarks`
+> if the repo has no benchmark projects). The check names follow the pattern `Run CI: Build, Test, Benchmark, Pack / {job-name}`.
+> Search for check names in the status checks dialog after running CI at least once. E.g. search for "build", then you should be
+> able to see and check things like:
+>
+> - `Run CI: Build, Test, Benchmark, Pack / Build the source code` if you have build projects configured.
+> - `Run CI: Build, Test, Benchmark, Pack / Run unit and integration tests` if you have test projects configured.
+> - `Run CI: Build, Test, Benchmark, Pack / Run performance benchmarks` if you have benchmark projects configured.
+> - `Run CI: Build, Test, Benchmark, Pack / Validate NuGet packaging` if you have packable projects configured.
+>
+> GitHub only shows checks that have run at least once — create a test PR first to populate the list.
+
+Click **Create** or **Save changes** to save the ruleset.
 
 ### Actions Permissions
 
@@ -306,13 +357,13 @@ manually, or need to verify/adjust settings on an existing repo, follow these st
 
 | Secret                    | Value                                             |
 | :------------------------ | :------------------------------------------------ |
-| `CODECOV_TOKEN`           | From [codecov.io](https://codecov.io) dashboard   |
 | `BENCHER_API_TOKEN`       | From [bencher.dev](https://bencher.dev) dashboard |
-| `REPORTGENERATOR_LICENSE` | ReportGenerator Pro license key (optional)        |
+| `CODECOV_TOKEN`           | From [codecov.io](https://codecov.io) dashboard   |
 | `NUGET_API_GITHUB_KEY`    | GitHub PAT with `packages:write`                  |
-| `NUGET_API_NUGET_KEY`     | From [nuget.org](https://nuget.org) API keys      |
 | `NUGET_API_KEY`           | Fallback key (optional)                           |
+| `NUGET_API_NUGET_KEY`     | From [nuget.org](https://nuget.org) API keys      |
 | `RELEASE_PAT`             | Fine-grained PAT with `contents:write` — owner must be added as bypass actor in branch ruleset |
+| `REPORTGENERATOR_LICENSE` | ReportGenerator Pro license key (optional)        |
 
 ### Variables
 
@@ -320,46 +371,18 @@ manually, or need to verify/adjust settings on an existing repo, follow these st
 
 | Variable                             | Default     |
 | :----------------------------------- | :---------- |
-| `DOTNET_VERSION`                     | `10.0.x`    |
 | `CONFIGURATION`                      | `Release`   |
-| `MIN_COVERAGE_PCT`                   | `80`        |
+| `DOTNET_VERSION`                     | `10.0.x`    |
 | `MAX_REGRESSION_PCT`                 | `20`        |
-| `MINVERTAGPREFIX`                    | `v`         |
 | `MINVERDEFAULTPRERELEASEIDENTIFIERS` | `preview.0` |
+| `MINVERTAGPREFIX`                    | `v`         |
+| `MIN_COVERAGE_PCT`                   | `80`        |
 | `NUGET_SERVER`                       | `github`    |
 | `SAVE_PACKAGE_ARTIFACTS`             | `false`     |
 | `VERBOSE`                            | `false`     |
 
-All variables are optional — workflows use these defaults when the variable is not set.
-
-### Branch Protection
-
-**Settings → Rules → Rulesets → New ruleset:**
-
-1. **Name:** `main protection`
-1. **Target:** Include default branch
-1. **Bypass list:**
-   1. Click **+ Add bypass**
-   1. Select **Repository admin** (Role) and set the bypass mode to **Always**
-   1. This allows the prerelease and release workflows (which authenticate via `RELEASE_PAT` as the repo admin) to push the
-      changelog commit and tag directly to `main`
-1. Enable rules:
-
-   | Rule                                              | Setting                                      |
-   | :------------------------------------------------ | :------------------------------------------- |
-   | Require a pull request before merging             | 1 approval, dismiss stale reviews            |
-   | Require status checks to pass                     | Add the CI job checks (see note below)       |
-   | Require up-to-date branches                       | Enabled                                      |
-   | Require linear history                            | Enabled                                      |
-   | Require conversation resolution before merging    | Enabled                                      |
-   | Restrict force pushes                             | Enabled                                      |
-   | Restrict deletions                                | Enabled                                      |
-
-> [!Note] **Only add checks for jobs the repo actually runs** (e.g., skip `Run performance benchmarks`
-> if the repo has no benchmark projects). The check names follow the pattern
-> `Run {consumer-workflow-name} / {job-name}` — search for them in the status checks dialog after
-> running CI at least once.
-> GitHub only shows checks that have run at least once — create a test PR first to populate the list.
+All variables are optional — workflows use these defaults when the variable is not set. You may also want to add the GitHub
+Actions standard `ACTIONS_RUNNER_DEBUG` and `ACTIONS_STEP_DEBUG` variables for debugging purposes.
 
 ### Copilot Code Review
 

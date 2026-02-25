@@ -167,13 +167,14 @@ declare -rx audit
 # Main
 # ------------------------------------------------------------------
 
-source "${script_dir}/repo-setup.functions.sh"
-
 if [[ "$audit" == true ]]; then
+    source "${script_dir}/repo-setup.audit.sh"
     info "Audit mode — reading current settings for ${repo}..."
     audit_repo
     exit 0
 fi
+
+source "${script_dir}/repo-setup.functions.sh"
 
 if [[ "$configure_only" != true ]]; then
     # Ensure git initialized
