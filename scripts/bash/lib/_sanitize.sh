@@ -226,18 +226,16 @@ function is_safe_json_array()
     result="$(jq -e --arg default_array "$default_array" '
                 if type == "boolean" or type == "number" or type == "object" then
                     error("The value must be a JSON array of non-empty strings or a JSON string.")
-                elif type == "null" or (type == "string" and length == 0) then
-                    ($default_array | fromjson)
-                elif type == "string" and length > 0 then
+                elif type == "string" and (. | tostring | trim | length > 0) then
                     [.]
                 elif type == "array" and (length==0 or (length > 0 and all(type == "string") and all( . | tostring | trim | length > 0 ))) then
                     map( . | tostring | trim )
                 else
-                    error("The value must be a JSON array of non-empty strings or a JSON string.")
+                    ($default_array | fromjson)
                 end
     ' <<< "$array" 2>&1)" ||
     {
-        error "$result"
+        error "'$result' is invalid. The value must be a JSON array of non-empty strings or a JSON string."
         return 1
     }
 
