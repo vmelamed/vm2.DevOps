@@ -227,12 +227,16 @@ function is_safe_json_array()
                 if type == "boolean" or type == "number" or type == "object" then
                     error("The value must be a JSON array of non-empty strings or a JSON string.")
                 elif type == "null" or (type == "string" and length == 0) then
+                    trace "Input is null or empty string, using default value."
                     ($default_array | fromjson)
                 elif type == "string" and length > 0
+                    trace "Input is a non-empty string, converting to single-item array."
                     then [.]
                 elif type == "array" and (length==0 or (length > 0 and all(type == "string") and all( . | tostring | trim | length > 0 ))) then
+                    trace "Input is a JSON array of non-empty strings, trimming whitespace from each item."
                     map( . | tostring | trim )
                 else
+                    trace "Input is of type \(type), which is not valid."
                     error("The value must be a JSON array of non-empty strings or a JSON string.")
                 end
     ' <<< "$array" 2>&1)" ||
