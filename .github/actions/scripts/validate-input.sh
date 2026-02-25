@@ -55,6 +55,11 @@ if ! command -v -p jq &> "$_ignore"; then
         error "GitHub CLI 'jq' was not found and could not install it. Please have 'jq' installed."
         exit 1
     fi
+else
+    jq -V | to_stdout | grep -Eo 'jq-1\.8\.[0-9]+' || {
+        error "GitHub CLI 'jq' version 1.8.x is required. Please update 'jq' to version 1.8.x."
+        exit 1
+    }
 fi
 if ! command -v -p gh 2>&1 "$_ignore"; then
     if execute sudo apt-get update && sudo apt-get install -y gh; then
