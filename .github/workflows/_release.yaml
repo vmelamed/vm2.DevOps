@@ -13,7 +13,7 @@ on:
           JSON array of project/solution paths to package and publish, e.g. '["src/Project1/Project1.csproj", "src/Project2/Project2.csproj"]'.
           If empty array, auto-detects root .sln or .csproj files.
         type: string
-        required: true
+        default: '[]'
 
       preprocessor-symbols:
         description: Preprocessor symbols to pass to the compiler

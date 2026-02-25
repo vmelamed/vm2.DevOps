@@ -8,8 +8,7 @@ on:
           JSON array of project/solution paths to package and publish, e.g. '["src/Project1/Project1.csproj", "src/Project2/Project2.csproj"]'.
           If empty array, dotnet CLI will auto-detect root .sln, .slnx, or .csproj files.
         type: string
-        required: false
-        default: '[""]'
+        default: '[]'
 
       dotnet-version:
         description: Version of .NET SDK to use (cannot be null or empty string, default 10.0.x)
