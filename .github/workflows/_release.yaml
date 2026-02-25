@@ -15,6 +15,11 @@ on:
         type: string
         default: '[]'
 
+      package-projects-len:
+        description: Length of the JSON array of project/solution paths to package and publish.
+        type: string
+        default: '0'
+
       preprocessor-symbols:
         description: Preprocessor symbols to pass to the compiler
         type: string
@@ -186,6 +191,7 @@ jobs:
       fail-fast: false
       matrix:
         project: ${{ fromJSON(inputs.package-projects) }}
+    if: fromJSON(inputs.package-projects-len) > 0
     steps:
       - name: Checkout release tag (full history)
         uses: actions/checkout@v6

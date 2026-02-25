@@ -189,15 +189,16 @@ function is_safe_existing_file()
     return 0
 }
 
-declare -xr jq_empty='. == null or . == "" or . == []'
+declare -xr jq_empty='. == null or . == "" or length == 0'
 declare -xr jq_array_strings='type == "array" and all(type == "string")'
 declare -xr jq_array_strings_has_empty="any(. == \"\")"
 declare -xr jq_array_strings_nonempty='type == "array" and length > 0 and all(type == "string") and all(length > 0)'
 
 #-------------------------------------------------------------------------------
-# Summary: Validates a JSON array of strings and checks each item's safety using provided validator function.
+# Summary: Validates and normalizes a JSON array of strings or a single JSON string to a JSON array of non-empty, trimmed strings.
+#   Also, checks each item's safety using the provided validator function.
 # Parameters:
-#   1 - array (nameref!) - name of variable containing JSON array
+#   1 - array (nameref!) - name of variable containing JSON array or a single string (will be converted to single-item array)
 #   2 - default_array - default value if variable is unbound or empty
 #   3 - is_safe_item - name of function to validate each array item
 # Returns:
@@ -220,40 +221,43 @@ function is_safe_json_array()
     local -n array="$1"
     local default_array="$2"
     local is_safe_item=$3
+    local result
 
-    if [[ -z "$array" ]]; then
-        warning_var "$1" "The value of '$1' is unbound or empty string." "$default_array"
-        return 0
-    fi
-
-    local jq_output
-
-    # Allow empty arrays — they signal "skip this job" via zero matrix combinations
-    jq_output="$(jq -e "$jq_empty" 2>&1 <<< "$array")"
-    if [[ "$jq_output" == "true" ]]; then
-        return 0
-    fi
-
-    # Validate that the first parameter is a JSON string containing a non-empty array of non-empty strings
-    jq_output="$(jq -e "$jq_array_strings_nonempty" 2>&1 <<< "$array")"
-    if [[ $? -gt 1 ]]; then
-        error "Error  querying JSON (jq): $jq_output"
-        return 2
-    fi
-    if [[ $jq_output != true ]]; then
-        error "The value of '$1'='$array' must be a string containing a JSON array of non-empty strings, or an empty array '[]'."
+    result="$(jq -e --arg default_array "$default_array" '
+                if type == "boolean" or type == "number" or type == "object" then
+                    error("The value must be a JSON array of non-empty strings or a JSON string.")
+                elif type == "null" or (type == "string" and length == 0) then
+                    ($default_array | fromjson)
+                elif type == "string" and length > 0
+                    then [.]
+                elif type == "array" and (length==0 or (length > 0 and all(type == "string") and all( . | tostring | trim | length > 0 ))) then
+                    map( . | tostring | trim )
+                else
+                    error("The value must be a JSON array of non-empty strings or a JSON string.")
+                end
+    ' <<< "$array" 2>&1)" ||
+    {
+        error "$result"
         return 1
-    fi
+    }
+
+    [[ "$result" != "null" ]] && array="$result" || array="$default_array"
+    local length=0
+
+    length=$(jq -r 'length' 2>"$_ignore" <<< "$array")
 
     # Validate each item of the array for safety
-    return_value=0
+    local return_value=0
 
-    while IFS= read -r item; do
-        if [[ -n "$item" ]] && ! $is_safe_item "$item"; then
-            return_value=1 # check all paths before returning
-        fi
-    done < <(jq -r '.[]' 2>"$_ignore" <<< "$array" || true)
+    if (( length > 0 )); then
+        while IFS= read -r item; do
+            if ! $is_safe_item "$item"; then
+                return_value=1 # check all paths before returning
+            fi
+        done < <(jq -r '.[]' 2>"$_ignore" <<< "$array" || true)
+    fi
 
+    echo "$length"
     return "$return_value"
 }
 

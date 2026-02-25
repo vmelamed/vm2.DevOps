@@ -65,11 +65,21 @@ if ! command -v -p gh 2>&1 "$_ignore"; then
     fi
 fi
 
-is_safe_json_array "build_projects" "$defaultBuildProjects" is_safe_existing_file || true
-is_safe_json_array "test_projects" "$defaultTestProjects" is_safe_existing_file || true
-is_safe_json_array "benchmark_projects" "$defaultBenchmarkProjects" is_safe_existing_file || true
-is_safe_json_array "package_projects" "$defaultPackageProjects" is_safe_existing_file || true
-is_safe_json_array "runners_os" "$defaultRunnersOs" is_safe_runner_os || true
+# shellcheck disable=SC2034 # build_projects_len is assigned but never used, it's output for github_output
+build_projects_len=$(is_safe_json_array "build_projects" "$defaultBuildProjects" is_safe_existing_file) || true
+
+# shellcheck disable=SC2034 # test_projects_len is assigned but never used, it's output for github_output
+test_projects_len=$(is_safe_json_array "test_projects" "$defaultTestProjects" is_safe_existing_file) || true
+
+# shellcheck disable=SC2034 # benchmark_projects_len is assigned but never used, it's output for github_output
+benchmark_projects_len=$(is_safe_json_array "benchmark_projects" "$defaultBenchmarkProjects" is_safe_existing_file) || true
+
+# shellcheck disable=SC2034 # package_projects_len is assigned but never used, it's output for github_output
+package_projects_len=$(is_safe_json_array "package_projects" "$defaultPackageProjects" is_safe_existing_file) || true
+
+# shellcheck disable=SC2034 # runners_os_len is assigned but never used, it's output for github_output
+runners_os_len=$(is_safe_json_array "runners_os" "$defaultRunnersOs" is_safe_runner_os) || true
+
 is_safe_dotnet_version "$dotnet_version" || true
 is_safe_configuration "$configuration" || true
 validate_preprocessor_symbols preprocessor_symbols || true
@@ -111,6 +121,11 @@ args_to_github_output \
     benchmark_projects \
     package_projects \
     runners_os \
+    build_projects_len \
+    test_projects_len \
+    benchmark_projects_len \
+    package_projects_len \
+    runners_os_len \
     dotnet_version \
     configuration \
     preprocessor_symbols \

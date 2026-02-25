@@ -47,6 +47,8 @@ prerelease_prefix="${minver_prerelease_id%.[0-9]*}"
 declare -xr prerelease_prefix
 trace "Prerelease prefix: $prerelease_prefix (from minver_prerelease_id: $minver_prerelease_id)"
 
+git fetch --tags --force
+
 # detect if the head is already tagged
 head_tag=$(git tag --points-at HEAD)
 if [[ -n $head_tag ]]; then

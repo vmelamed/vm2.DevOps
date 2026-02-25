@@ -95,6 +95,11 @@ jobs:
       benchmark-projects: ${{ steps.validate.outputs.benchmark-projects }}
       package-projects: ${{ steps.validate.outputs.package-projects }}
       runners-os: ${{ steps.validate.outputs.runners-os }}
+      build-projects-len: ${{ steps.validate.outputs.build-projects-len }}
+      test-projects-len: ${{ steps.validate.outputs.test-projects-len }}
+      benchmark-projects-len: ${{ steps.validate.outputs.benchmark-projects-len }}
+      package-projects-len: ${{ steps.validate.outputs.package-projects-len }}
+      runners-os-len: ${{ steps.validate.outputs.runners-os-len }}
       dotnet-version: ${{ steps.validate.outputs.dotnet-version }}
       configuration: ${{ steps.validate.outputs.configuration }}
       preprocessor-symbols: ${{ steps.validate.outputs.preprocessor-symbols }}
@@ -156,6 +161,7 @@ jobs:
       matrix:
         build-project: ${{ fromJSON(needs.validate-input.outputs.build-projects) }}
         runner-os: ${{ fromJSON(needs.validate-input.outputs.runners-os) }}
+    if: fromJSON(needs.validate-input.outputs.build-projects-len) > 0
     uses: vmelamed/vm2.DevOps/.github/workflows/_build.yaml@main
     with:
       build-project: ${{ matrix.build-project }}
@@ -178,6 +184,7 @@ jobs:
         runner-os: ${{ fromJSON(needs.validate-input.outputs.runners-os) }}
         # Note that here we run ALL tests on a single runner, to get a all code coverage reports and avoid spreading them across
         # multiple test runners. It makes it easier to work with, without a need for additional aggregation job and min. coverage validation.
+    if: fromJSON(needs.validate-input.outputs.test-projects-len) > 0
     uses: vmelamed/vm2.DevOps/.github/workflows/_test.yaml@main
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
@@ -209,7 +216,8 @@ jobs:
         benchmark-project: ${{ fromJSON(needs.validate-input.outputs.benchmark-projects) }}
     # Honor [skip bm] on pushes
     if: >-
-      github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip bm]')
+      fromJSON(needs.validate-input.outputs.benchmark-projects-len) > 0 &&
+      (github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip bm]'))
     uses: vmelamed/vm2.DevOps/.github/workflows/_benchmarks.yaml@main
     secrets:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
@@ -238,6 +246,7 @@ jobs:
       matrix:
         runner-os: ${{ fromJSON(needs.validate-input.outputs.runners-os) }}
         package-project: ${{ fromJSON(needs.validate-input.outputs.package-projects) }}
+    if: fromJSON(needs.validate-input.outputs.package-projects-len) > 0
     uses: vmelamed/vm2.DevOps/.github/workflows/_pack.yaml@main
     with:
       package-project: ${{ matrix.package-project }}

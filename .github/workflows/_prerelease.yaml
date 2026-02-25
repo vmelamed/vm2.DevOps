@@ -10,6 +10,11 @@ on:
         type: string
         default: '[]'
 
+      package-projects-len:
+        description: Length of the JSON array of project/solution paths to package and publish.
+        type: string
+        default: '0'
+
       dotnet-version:
         description: Version of .NET SDK to use (cannot be null or empty string, default 10.0.x)
         type: string
@@ -121,7 +126,6 @@ jobs:
         id: version
         shell: bash
         run: |
-          git fetch --tags --force
           compute-prerelease-version.sh \
               --minver-tag-prefix '${{ inputs.minver-tag-prefix }}' \
               --minver-prerelease-id '${{ inputs.minver-prerelease-id }}' \
@@ -185,6 +189,7 @@ jobs:
       fail-fast: false
       matrix:
         project: ${{ fromJSON(inputs.package-projects) }}
+    if: fromJSON(inputs.package-projects-len) > 0
     env:
       ARTIFACTS_DIR: artifacts/pack
     steps:
