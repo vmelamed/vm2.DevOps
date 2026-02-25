@@ -229,9 +229,9 @@ function is_safe_json_array()
                 elif type == "null" or (type == "string" and length == 0) then
                     trace "Input is null or empty string, using default value."
                     ($default_array | fromjson)
-                elif type == "string" and length > 0
+                elif type == "string" and length > 0 then
                     trace "Input is a non-empty string, converting to single-item array."
-                    then [.]
+                    [.]
                 elif type == "array" and (length==0 or (length > 0 and all(type == "string") and all( . | tostring | trim | length > 0 ))) then
                     trace "Input is a JSON array of non-empty strings, trimming whitespace from each item."
                     map( . | tostring | trim )
