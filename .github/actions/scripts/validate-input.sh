@@ -57,8 +57,13 @@ if ! command -v -p jq &> "$_ignore"; then
     fi
 else
     jq -V | to_stdout | grep -Eo 'jq-1\.8\.[0-9]+' || {
-        error "GitHub CLI 'jq' version 1.8.x is required. Please update 'jq' to version 1.8.x."
-        exit 1
+        warning "GitHub CLI 'jq' version 1.8.x is required. Upgrading 'jq' to version 1.8.1..."
+        curl -sLo /tmp/jq https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-linux-amd64
+        sudo install /tmp/jq /usr/local/bin/jq
+        jq -V | to_stdout | grep -Eo 'jq-1\.8\.[0-9]+' || {
+            error "GitHub CLI 'jq' version 1.8.x is required. Please update 'jq' to version 1.8.x."
+            exit 2
+        }
     }
 fi
 if ! command -v -p gh 2>&1 "$_ignore"; then
@@ -66,7 +71,7 @@ if ! command -v -p gh 2>&1 "$_ignore"; then
         info "GitHub CLI 'gh' successfully installed."
     else
         error "GitHub CLI 'gh' was not found and could not install it. Please have 'gh' installed."
-        exit 1
+        exit 2
     fi
 fi
 
