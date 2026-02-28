@@ -93,7 +93,7 @@ function to_trace_out()
 {
     local line
     while IFS= read -r line; do
-        echo "$line"
+        echo "$line" >&2
         if [[ $github_actions == true && $trace_to_summary == true ]]; then
             echo "$line" >> "$github_step_summary"
         fi
@@ -210,7 +210,7 @@ function to_github_output()
               "the name of the variable to output and optionally the name to use in GitHub Actions output."
         return 2
     fi
-    declare -n var="$1"
+    local -n var=$1
 
     local m
     [[ $# -eq 2 ]] && m="$2" || m="${1//_/-}"
@@ -244,7 +244,7 @@ function args_to_github_output()
 
     {
         for v in "$@"; do
-            declare -n var=$v
+            local -n var=$v
             local m="${v//_/-}"
             echo "$m=$var"
         done

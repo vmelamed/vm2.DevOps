@@ -17,6 +17,7 @@ declare -x configure_only
 declare -x skip_secrets
 declare -x skip_variables
 declare -x audit
+declare -x main_protection_rs_name
 
 # shellcheck disable=SC2154 # verbose is referenced but not assigned.
 function get_arguments()
@@ -56,6 +57,11 @@ function get_arguments()
             --git-repos|-r )
                 [[ $# -ge 1 ]] || { usage false "Missing path after '$option'."; exit 2; }
                 git_repos="$1"; shift
+                ;;
+
+            --main-protection-name|--ruleset-name|-m )
+                [[ $# -ge 1 ]] || { usage false "Missing the name of the ruleset for protecting main after '$option'."; exit 2; }
+                main_protection_rs_name="$1"; shift
                 ;;
 
             --configure-only )

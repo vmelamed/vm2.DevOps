@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034 # build_projects_len is assigned but never used, it's output for github_output
+
 set -euo pipefail
 
 script_name=$(basename "${BASH_SOURCE[0]}")
@@ -75,20 +77,20 @@ if ! command -v -p gh 2>&1 "$_ignore"; then
     fi
 fi
 
-# shellcheck disable=SC2034 # build_projects_len is assigned but never used, it's output for github_output
 build_projects_len=$(is_safe_json_array "build_projects" "$defaultBuildProjects" is_safe_existing_file) || true
+build_projects_len=$(jq length <<< "$build_projects")
 
-# shellcheck disable=SC2034 # test_projects_len is assigned but never used, it's output for github_output
 test_projects_len=$(is_safe_json_array "test_projects" "$defaultTestProjects" is_safe_existing_file) || true
+test_projects_len=$(jq length <<< "$test_projects")
 
-# shellcheck disable=SC2034 # benchmark_projects_len is assigned but never used, it's output for github_output
 benchmark_projects_len=$(is_safe_json_array "benchmark_projects" "$defaultBenchmarkProjects" is_safe_existing_file) || true
+benchmark_projects_len=$(jq length <<< "$benchmark_projects")
 
-# shellcheck disable=SC2034 # package_projects_len is assigned but never used, it's output for github_output
 package_projects_len=$(is_safe_json_array "package_projects" "$defaultPackageProjects" is_safe_existing_file) || true
+package_projects_len=$(jq length <<< "$package_projects")
 
-# shellcheck disable=SC2034 # runners_os_len is assigned but never used, it's output for github_output
 runners_os_len=$(is_safe_json_array "runners_os" "$defaultRunnersOs" is_safe_runner_os) || true
+runners_os_len=$(jq length <<< "$runners_os")
 
 is_safe_dotnet_version "$dotnet_version" || true
 is_safe_configuration "$configuration" || true
@@ -107,10 +109,15 @@ is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 dump_vars --quiet --force --markdown \
     -h "Validated Parameters" \
     build_projects \
+    build_projects_len \
     test_projects \
+    test_projects_len \
     benchmark_projects \
+    benchmark_projects_len \
     package_projects \
+    package_projects_len \
     runners_os \
+    runners_os_len \
     dotnet_version \
     configuration \
     preprocessor_symbols \
@@ -127,10 +134,13 @@ info "✅ All parameters validated successfully"
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 args_to_github_output \
     build_projects \
+    build_projects_len \
     test_projects \
+    test_projects_len \
     benchmark_projects \
+    benchmark_projects_len \
     package_projects \
-    runners_os \
+    package_projects_len \
     build_projects_len \
     test_projects_len \
     benchmark_projects_len \

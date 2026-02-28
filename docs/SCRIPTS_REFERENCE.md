@@ -20,7 +20,7 @@
   - [compute-prerelease-version.sh](#compute-prerelease-versionsh)
   - [changelog-and-tag.sh](#changelog-and-tagsh)
   - [download-artifact.sh](#download-artifactsh)
-  - [bootstrap-new-package.sh](#bootstrap-new-packagesh)
+  - [repo-setup.sh](#bootstrap-new-packagesh)
 
 <!-- /TOC -->
 
@@ -346,7 +346,7 @@ Workflow lookup priority: `--wf-name` > `--wf-path` > `--wf-id` (or the correspo
 
 ---
 
-### bootstrap-new-package.sh
+### repo-setup.sh
 
 Bootstraps and configures a vm2 package repository using the GitHub CLI. Creates the repo,
 sets secrets/variables, configures repo settings, Actions permissions, and branch protection.

@@ -90,6 +90,7 @@ function list_of_files()
     fi
 
     # remember the current settings of the nullglob and globstar options
+    local restoreGlobstar restoreNullglob
     restoreGlobstar=$(shopt -p globstar)
     restoreNullglob=$(shopt -p nullglob)
 

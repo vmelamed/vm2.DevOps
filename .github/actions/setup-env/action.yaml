@@ -1,0 +1,21 @@
+name: "DevOps Scripts"
+description: "Provides access to vm2.DevOps bash scripts for CI/CD workflows"
+author: "Val Melamed"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout vm2.DevOps scripts
+      if: github.repository != 'vmelamed/vm2.DevOps'
+      uses: actions/checkout@v6
+      with:
+        repository: vmelamed/vm2.DevOps
+        path: vm2-devops
+        persist-credentials: false
+        sparse-checkout: |+
+          scripts/bash/lib
+          .github/scripts
+
+    - name: Setup DevOps scripts
+      shell: bash
+      run: ${{ github.action_path }}/setup-env.sh

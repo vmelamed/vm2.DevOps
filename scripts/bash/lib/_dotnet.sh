@@ -30,6 +30,7 @@ declare -x package_version=''
 #-------------------------------------------------------------------------------
 function summarizeDotnetBuild()
 {
+    local restoreShopt
     restoreShopt=$(shopt -p nocasematch)
     shopt -s nocasematch
 

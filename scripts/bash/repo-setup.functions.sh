@@ -3,6 +3,7 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
+declare -x _ignore
 declare -xr script_name
 declare -xr lib_dir
 
@@ -16,25 +17,12 @@ declare -xr skip_secrets
 declare -xr skip_variables
 declare -xr audit
 declare -xr force_defaults
-declare -xa required_checks
-
-# default values for GitHub vars
-declare -xr DEFAULT_DOTNET_VERSION="10.0.x"
-declare -xr DEFAULT_CONFIGURATION="Release"
-declare -xr DEFAULT_MAX_REGRESSION_PCT=20
-declare -xr DEFAULT_MIN_COVERAGE_PCT=80
-declare -xr DEFAULT_MINVERTAGPREFIX="v"
-declare -xr DEFAULT_MINVERDEFAULTPRERELEASEIDENTIFIERS="preview.0"
-declare -xr DEFAULT_NUGET_SERVER="github"
-declare -xr DEFAULT_ACTIONS_RUNNER_DEBUG=false
-declare -xr DEFAULT_ACTIONS_STEP_DEBUG=false
-declare -xr DEFAULT_SAVE_PACKAGE_ARTIFACTS=false
-declare -xr DEFAULT_VERBOSE=false
+declare -xr main_protection_rs_name
 
 declare -xr ci_yaml
 declare -xr _ci_yaml
 
-declare -rA repo_settings=(
+declare -xrA repo_settings=(
     ["delete_branch_on_merge"]="true"
     ["allow_squash_merge"]="false"
     ["allow_merge_commit"]="true"
@@ -44,7 +32,25 @@ declare -rA repo_settings=(
     ["has_projects"]="false"
 )
 
-declare -ra expected_secrets=(
+declare -xrA repo_permissions=(
+    ["default_workflow_permissions"]="read"
+    ["can_approve_pull_request_reviews"]="false"
+)
+
+declare -xrA vars_defaults=(
+    ["DOTNET_VERSION"]="10.0.x"
+    ["CONFIGURATION"]="Release"
+    ["MAX_REGRESSION_PCT"]="20"
+    ["MIN_COVERAGE_PCT"]="80"
+    ["MINVERTAGPREFIX"]="v"
+    ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="preview.0"
+    ["NUGET_SERVER"]="github"
+    ["ACTIONS_RUNNER_DEBUG"]="false"
+    ["ACTIONS_STEP_DEBUG"]="false"
+    ["SAVE_PACKAGE_ARTIFACTS"]="false"
+)
+
+declare -xra expected_secrets=(
     CODECOV_TOKEN
     BENCHER_API_TOKEN
     REPORTGENERATOR_LICENSE
@@ -54,44 +60,40 @@ declare -ra expected_secrets=(
     NUGET_API_KEY
 )
 
-declare -rA default_vars=(
-    ["DOTNET_VERSION"]="${DEFAULT_DOTNET_VERSION}"
-    ["CONFIGURATION"]="${DEFAULT_CONFIGURATION}"
-    ["MAX_REGRESSION_PCT"]="${DEFAULT_MAX_REGRESSION_PCT}"
-    ["MIN_COVERAGE_PCT"]="${DEFAULT_MIN_COVERAGE_PCT}"
-    ["MINVERTAGPREFIX"]="${DEFAULT_MINVERTAGPREFIX}"
-    ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="${DEFAULT_MINVERDEFAULTPRERELEASEIDENTIFIERS}"
-    ["NUGET_SERVER"]="${DEFAULT_NUGET_SERVER}"
-    ["ACTIONS_RUNNER_DEBUG"]="${DEFAULT_ACTIONS_RUNNER_DEBUG}"
-    ["ACTIONS_STEP_DEBUG"]="${DEFAULT_ACTIONS_STEP_DEBUG}"
-    ["SAVE_PACKAGE_ARTIFACTS"]="${DEFAULT_SAVE_PACKAGE_ARTIFACTS}"
-    ["VERBOSE"]="${DEFAULT_VERBOSE}"
+declare -xrA projects_jobs=(
+    ["BUILD_PROJECTS"]="build"
+    ["TEST_PROJECTS"]="test"
+    ["BENCHMARK_PROJECTS"]="benchmarks"
+    ["PACKAGE_PROJECTS"]="pack"
 )
+
+declare -xa required_checks
 
 # ------------------------------------------------------------------
 # Functions
 # ------------------------------------------------------------------
 function detect_required_checks()
 {
-# shellcheck disable=SC2154 # _ignore is referenced but not assigned.
-    check_top=$(yq -r .jobs.call-ci.name "$ci_yaml" 2>"$_ignore" || {
+    local check_top build_source projects
+
+    check_top=$(yq -r .jobs.call-ci.name "$ci_yaml" || {
+        error "Failed to parse CI.yaml workflow file to detect required checks. Make sure the file exists and is valid YAML." >&2;
+    })
+    build_source=$(yq -r .jobs.build.name "$_ci_yaml" || {
         error "Failed to parse CI.yaml workflow file to detect required checks. Make sure the file exists and is valid YAML." >&2;
     })
 
-    build_source=$(yq -r .jobs.build.name "$_ci_yaml" 2>"$_ignore" || {
-        error "Failed to parse CI.yaml workflow file to detect required checks. Make sure the file exists and is valid YAML." >&2;
-    })
+    exit_if_has_errors
+
     required_checks+=("${check_top} / ${build_source}")
 
-    local projects
-    for job_key in "TEST_PROJECTS:test" "BENCHMARK_PROJECTS:benchmarks" "PACKAGE_PROJECTS:pack"; do
-        local env_key="${job_key%%:*}"
-        local job_name="${job_key#*:}"
-        projects=$(yq -r ".env.${env_key} // \"\"" "$ci_yaml" 2>"$_ignore")
+    for projects_key in "${!projects_jobs[@]}"; do
+        local job_name="${projects_jobs[$projects_key]}"
+        projects=$(yq -r ".env.${projects_key} // \"\"" "$ci_yaml") || error "Failed to parse CI.yaml for env key '${projects_key}'." >&2
         if [[ -n "$projects" && "$projects" != "null" && "$projects" != "[]" ]]; then
             local source_name
-            source_name=$(yq -r ".jobs.${job_name}.name" "$_ci_yaml" 2>"$_ignore") || {
-                error "Failed to parse _ci.yaml for job '${job_name}'." >&2
+            source_name=$(yq -r ".jobs.${job_name}.name" "$_ci_yaml") || {
+                warning "Failed to parse _ci.yaml for job '${job_name}'." >&2
             }
             required_checks+=("${check_top} / ${source_name}")
         fi
@@ -226,8 +228,8 @@ function configure_variables()
     done < <(gh variable list -R "$repo" --json name,value -q '.[] | "\(.name)=\(.value)"')
 
     local skipped=0
-    for name in "${!default_vars[@]}"; do
-        local default_value="${default_vars[$name]}"
+    for name in "${!vars_defaults[@]}"; do
+        local default_value="${vars_defaults[$name]}"
 
         if [[ -v "existing_vars[$name]" ]]; then
             if [[ "${existing_vars[$name]}" != "$default_value" && "$force_defaults" != true ]]; then

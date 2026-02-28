@@ -26,13 +26,16 @@ declare -xr default_skip_secrets=false
 declare -xr default_skip_variables=false
 declare -xr default_force_defaults=false
 declare -xr default_audit=false
+declare -xr default_main_protection_rs_name="main protection"
+
+declare -xri admin_role=5
 
 # start with defaults
 repo_path="$(pwd)"
 repo_path="${repo_path#"${HOME}"/}" # get the name of the current directory as the default repo path
 
 declare -x repo_path
-declare -x git_repos="${GIT_REPOS:-}"
+declare -x git_repos="${GIT_REPOS:-repos}"
 declare -x repo_name=""
 declare -x owner=${ORGANIZATION:-$default_owner}
 declare -x repo=""
@@ -43,6 +46,8 @@ declare -x skip_secrets=${default_skip_secrets}
 declare -x skip_variables=${default_skip_variables}
 declare -x force_defaults=${default_force_defaults}
 declare -x audit=${default_audit}
+declare -x main_protection_rs_name=${default_main_protection_rs_name}
+
 
 # required checks enforced by branch protection; extended dynamically
 declare -xa required_checks=()
@@ -54,9 +59,11 @@ get_arguments "$@"
 dump_vars --quiet \
     --header "Inputs" \
     repo_path \
+    git_repos \
     owner \
     visibility \
     branch \
+    main_protection_rs_name \
     configure_only \
     skip_secrets \
     skip_variables \
@@ -163,6 +170,9 @@ declare -rx skip_variables
 declare -rx force_defaults
 declare -rx audit
 
+detect_required_checks
+declare -xra required_checks
+
 # ------------------------------------------------------------------
 # Main
 # ------------------------------------------------------------------
@@ -198,8 +208,6 @@ if [[ "$configure_only" != true ]]; then
     execute git -C "$repo_path" remote set-url origin "git@github.com:${repo}.git"
     execute git -C "$repo_path" push -u origin "${branch}"
 fi
-
-detect_required_checks
 
 if [[ "$skip_secrets" != true ]]; then
     configure_secrets

@@ -278,7 +278,7 @@ secrets:
 
 ## Repository Setup via UI
 
-The `bootstrap-new-package.sh` script automates the steps below. If you prefer to configure
+The `repo-setup.sh` script automates the steps below. If you prefer to configure
 manually, or need to verify/adjust settings on an existing repo, follow these steps.
 
 ### Repository Settings
@@ -300,7 +300,7 @@ manually, or need to verify/adjust settings on an existing repo, follow these st
 
 **Settings → Rules → Rulesets → New ruleset:**
 
-1. **Ruleset Name:** e.g. `main protection`
+1. **Ruleset Name:** `main protection` (the name is mandatory - expected by the audit option of `repo-setup.sh`)
 1. **Enforcement status:** Active
 1. **Bypass list:** click **+ Add bypass** and choose:
 

@@ -29,6 +29,48 @@ declare -xra allowed_runners_os=(
 
 declare -xr nugetServersRegex="^(nuget|github|https?://[-a-zA-Z0-9._/]+)$";
 
+#--------------------------------------------------------------------------------
+# Summary: Trims leading and trailing whitespace from a string.
+# Parameters:
+#   1 - The string to trim
+# Returns:
+#   The trimmed string
+# Usage: trimmed=$(trim "  some string  ")
+#-------------------------------------------------------------------------------
+function ltrim() {
+    local var="$*"
+    # remove leading whitespace characters
+    var="${var#"${var%%[![:space:]]*}"}"
+    printf '%s' "$var"
+}
+
+#--------------------------------------------------------------------------------
+# Summary: Trims leading and trailing whitespace from a string.
+# Parameters:
+#   1 - The string to trim
+# Returns:
+#   The trimmed string
+# Usage: trimmed=$(trim "  some string  ")
+#-------------------------------------------------------------------------------
+function rtrim() {
+    local var="$*"
+    # remove trailing whitespace characters
+    var="${var%"${var##*[![:space:]]}"}"
+    printf '%s' "$var"
+}
+
+#--------------------------------------------------------------------------------
+# Summary: Trims leading and trailing whitespace from a string.
+# Parameters:
+#   1 - The string to trim
+# Returns:
+#   The trimmed string
+# Usage: trimmed=$(trim "  some string  ")
+#-------------------------------------------------------------------------------
+function trim() {
+    printf '%s' "$(rtrim "$(ltrim "$*")")"
+}
+
 #-------------------------------------------------------------------------------
 # Summary: Tests if user input is safe by checking for potentially dangerous characters.
 # Parameters:
@@ -195,68 +237,66 @@ declare -xr jq_array_strings_has_empty="any(. == \"\")"
 declare -xr jq_array_strings_nonempty='type == "array" and length > 0 and all(type == "string") and all(length > 0)'
 
 #-------------------------------------------------------------------------------
-# Summary: Validates and normalizes a JSON array of strings or a single JSON string to a JSON array of non-empty, trimmed strings.
+# Summary: Validates and normalizes a JSON array of strings or a single JSON
+#   string to a JSON array of non-empty, trimmed strings.
 #   Also, checks each item's safety using the provided validator function.
 # Parameters:
-#   1 - array (nameref!) - name of variable containing JSON array or a single string (will be converted to single-item array)
-#   2 - default_array - default value if variable is unbound or empty
+#   1 - JSON array or a single string (will be converted to single-item JSON array)
+#   2 - default_array - default value if $1 is empty string or empty array
 #   3 - is_safe_item - name of function to validate each array item
 # Returns:
-#   Exit code: 0 if valid and all items safe, 1 if invalid or items unsafe, 2 on invalid arguments or jq errors
+#   Exit code: 0 if valid and all items safe, 1 if invalid or items unsafe, 2 on
+#     invalid arguments or jq errors
+#   stdout: the normalized JSON array: all unnecessary spaces from the array and
+#     the elements trimmed
 # Dependencies: jq, warning_var
-# Side Effects: Sets array variable to default if unbound or empty
-# Usage: if is_safe_json_array <array_var_name> <default> <validator_function>; then ... fi
-# Example: is_safe_json_array runners '["ubuntu-latest"]' is_safe_runner_os
+# Usage: if array=$(is_safe_json_array <array> <default> <validator_function>); then ... fi
+# Example: runners=$(is_safe_json_array runners '["ubuntu-latest"]' is_safe_runner_os)
 #-------------------------------------------------------------------------------
 function is_safe_json_array()
 {
     if [[ $# -ne 3 ]]; then
         error "${FUNCNAME[0]}() requires exactly three parameters:"$'\n' \
-              "  \$1: the name of the variable containing the JSON array"$'\n' \
+              "  \$1: the JSON"$'\n' \
               "  \$2: the default value to use if the variable is unbound or empty, and"$'\n' \
               "  \$3: the name of the function to validate each item in the array."
         return 2
     fi
 
-    local -n array="$1"
-    local default_array="$2"
-    local is_safe_item=$3
-    local result
+    local default="$2"
+    local is_safe_item_fn=$3
 
-    result="$(jq -e --arg default_array "$default_array" '
-                if type == "boolean" or type == "number" or type == "object" then
-                    error("The value must be a JSON array of non-empty strings or a JSON string.")
-                elif type == "string" and (. | tostring | trim | length > 0) then
-                    [.]
-                elif type == "array" and (length==0 or (length > 0 and all(type == "string") and all( . | tostring | trim | length > 0 ))) then
-                    map( . | tostring | trim )
-                else
-                    ($default_array | fromjson)
-                end
-    ' <<< "$array" 2>&1)" ||
-    {
-        error "'$result' is invalid. The value must be a JSON array of non-empty strings or a JSON string."
-        return 1
-    }
+    local output
+    output="$(trim "$1")"
 
-    [[ "$result" != "null" ]] && array="$result" || array="$default_array"
-    local length=0
-
-    length=$(jq -r 'length' 2>"$_ignore" <<< "$array")
-
-    # Validate each item of the array for safety
-    local return_value=0
-
-    if (( length > 0 )); then
-        while IFS= read -r item; do
-            if ! $is_safe_item "$item"; then
-                return_value=1 # check all paths before returning
-            fi
-        done < <(jq -r '.[]' 2>"$_ignore" <<< "$array" || true)
+    if [[ -z "$output" ]]; then
+        output=$default
     fi
 
-    echo "$length"
-    return "$return_value"
+    # validate and normalize JSON
+    output="$(
+        jq '
+            if type == "boolean" or type == "number" or type == "object" then
+                error("The input cannot be boolean, number, object, or null. It must be a JSON array of non-empty strings or a JSON string.")
+            elif type == "null" then
+                []
+            elif type == "string" and (. | tostring | trim | length > 0) then
+                [ . | tostring | trim ]
+            elif type=="array" and all(type=="string") and all(. | trim | length > 0) then
+                map( . | tostring | trim )
+            else
+                error("The input must be a JSON array of non-empty strings or a JSON string.")
+            end ' <<< "$output"
+    )" ||
+    { error "Invalid JSON: '$1'"; return 2; }
+
+    # validate each item in the array
+    while read -r item; do
+        $is_safe_item_fn "$item" || return 1
+    done < <(jq -r '.[]' <<< "$output")
+
+    echo "$output"
+    return 0
 }
 
 #-------------------------------------------------------------------------------
@@ -345,7 +385,7 @@ function is_safe_nuget_server()
         error "${FUNCNAME[0]}() requires exactly one parameter: the NuGet server to test."
         return 2
     fi
-    [[ ! "$1" =~ $nugetServersRegex ]]
+    [[ "$1" =~ $nugetServersRegex ]]
 }
 
 #-------------------------------------------------------------------------------
@@ -431,7 +471,7 @@ function validate_preprocessor_symbols()
     fi
     [[ -z $1 ]] && return 0
 
-    local -n symbols="$1"
+    local -n symbols=$1
     local -a symbol_array=()
 
     IFS=' ,:;' read -ra symbol_array <<< "$symbols"
@@ -527,7 +567,7 @@ function is_safe_minverPrereleaseId()
         return 2
     fi
 
-    [[ ! "$1" =~ $minverPrereleaseIdRegex ]]
+    [[ "$1" =~ $minverPrereleaseIdRegex ]]
 }
 
 # The dotnet-version input supports following syntax:
@@ -559,9 +599,5 @@ function is_safe_dotnet_version()
         return 2
     fi
 
-    if [[ ! "$1" =~ $dotnet_regex ]]; then
-        error "The .NET version '$1' is not valid. Expected formats: semver 2.0.0, A, A.x, A.B, A.B.x, A.B.Cxx."
-        return 1
-    fi
-    return 0
+    [[ "$1" =~ $dotnet_regex ]]
 }

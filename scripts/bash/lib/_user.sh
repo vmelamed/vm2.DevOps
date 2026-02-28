@@ -155,7 +155,7 @@ function print_sequence()
     close_paren=""
     quote="'"
     separator=","
-    local arg
+    local arg open_paren close_paren quote separator
     for arg in "$@"; do
         case $arg in
             --quote=*|-q=* )
@@ -170,7 +170,7 @@ function print_sequence()
                     * ) ;;
                 esac
                 ;;
-            --paren=*|--parenthesis=*|-p=* )
+            --parenthesis=*|--paren=*|-p=* )
                 local paren_val="${arg#*=}"
                 case "$paren_val" in
                     \(|\)|\(\) )

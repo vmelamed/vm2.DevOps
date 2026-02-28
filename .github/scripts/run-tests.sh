@@ -176,11 +176,19 @@ fi
 
 # shellcheck disable=SC2154 # ci is referenced but not assigned.
 if [[ "$ci" == true ]]; then
+    # Set outputs for merged coverage
+    repo_name=$(basename "$(git rev-parse --show-toplevel)")
+
+    to_github_output "${repo_name}" "proj-name"
+    to_github_output "${tests_artifacts_dir}" "artifacts-dir"
+    to_github_output "${coverage_source_path}" "coverage-source-path"
+    to_github_output "${coverage_reports_dir}" "coverage-reports-dir"
+
     trace "Running in CI environment, skipping coverage report generation - will be generated later by an action."
     exit 0
 fi
 
-trace "Generating coverage reports..."
+trace "Generating coverage reports outside CI/CD..."
 
 uninstall_reportgenerator=false
 if ! execute dotnet tool list dotnet-reportgenerator-globaltool --global > "$_ignore"; then

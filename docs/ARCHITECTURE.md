@@ -256,7 +256,7 @@ Development-time scripts not used in CI:
 | :-------------------------- | :----------------------------------------- |
 | `diff-common.sh`            | Diff shared files across vm2 repos         |
 | `move-commits-to-branch.sh` | Move commits from one branch to another    |
-| `bootstrap-new-package.sh`  | Bootstrap and configure a new GitHub repo  |
+| `repo-setup.sh`  | Bootstrap and configure a new GitHub repo  |
 | `add-spdx.sh`               | Add SPDX license headers to source files   |
 | `retag.sh`                  | Recreate a Git tag at a different commit   |
 | `restore-force-eval.sh`     | Force re-evaluation of NuGet restore       |

@@ -115,22 +115,11 @@ jobs:
 
       # Clone only the scripts from vm2.DevOps, so that we can run the composite
       # action .github/actions/scripts/action.yaml for both local and external calls
-      - name: Checkout vm2.DevOps repository scripts
-        if: github.repository != 'vmelamed/vm2.DevOps'
-        uses: actions/checkout@v6
-        with:
-          repository: vmelamed/vm2.DevOps
-          path: vm2-devops
-          persist-credentials: false
-          sparse-checkout: |+
-            scripts/bash/lib
-            .github/actions/scripts
-      - name: Ensure the workflows can access scripts from within vm2.DevOps
-        if: github.repository == 'vmelamed/vm2.DevOps'
-        uses: ./.github/actions/scripts
-      - name: Ensure the workflows can access scripts from outside vm2.DevOps
-        if: github.repository != 'vmelamed/vm2.DevOps'
-        uses: ./vm2-devops/.github/actions/scripts
+      - name: Setup DevOps
+        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
+
+      - name: Setup jq
+        uses: vmelamed/vm2.DevOps/.github/actions/setup-jq@main
 
       # Run validation script to verify and normalize all inputs (inputs, env, vars, secrets, etc.)
       - name: Validate and normalize all inputs

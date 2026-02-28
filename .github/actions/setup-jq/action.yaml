@@ -1,0 +1,22 @@
+name: "Setup jq"
+description: "Installs jq 1.8.x (latest) to replace the default jq on the runner"
+author: "Val Melamed"
+
+inputs:
+  version:
+    description: "jq version to install"
+    required: false
+    default: "1.8.1"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install jq ${{ inputs.version }}
+      shell: bash
+      run: |
+        if ! command -v jq >/dev/null 2>&1 || [[ "$(jq --version)" != "jq-${{ inputs.version }}" ]]; then
+            curl -sLo /tmp/jq "https://github.com/jqlang/jq/releases/download/jq-${{ inputs.version }}/jq-linux-amd64"
+            sudo install /tmp/jq /usr/local/bin/jq
+            rm -f /tmp/jq
+            echo "✅ jq $(jq --version) installed"
+        fi

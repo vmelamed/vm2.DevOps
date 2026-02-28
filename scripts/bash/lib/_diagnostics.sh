@@ -42,7 +42,7 @@ function to_trace_out()
     local line
     {
         while IFS= read -r line; do
-            echo "$line"
+            echo "$line" >&2
         done
     }
 }
@@ -82,19 +82,18 @@ function to_stderr()
 #-------------------------------------------------------------------------------
 function error()
 {
+    local bash_source=${BASH_SOURCE[1]:-}
+    local bash_lineno=${BASH_LINENO[0]:-}
+
     {
         if [[ $# -gt 0 ]]; then
-            local bash_source=${BASH_SOURCE[2]:-}
-            local bash_lineno=${BASH_LINENO[1]:-}
-            echo "❌  ERROR: ${bash_source}:${bash_lineno}: $*"
+            echo "❌  ERROR: ${bash_source} (${bash_lineno}): $*"
         else
             local line
             local first=true
             while IFS= read -r line; do
                 if [[ "$first" == true ]]; then
-                    local bash_source=${BASH_SOURCE[1]:-}
-                    local bash_lineno=${BASH_LINENO[1]:-}
-                    echo "❌  ERROR: ${bash_source}:${bash_lineno}: $line"
+                    echo "❌  ERROR: ${bash_source} (${bash_lineno}): $line"
                     first=false
                 else
                     # prevent leading new line
@@ -162,7 +161,7 @@ function warning_var()
         return 1
     fi
     warning "$2" "Assuming the default value of '$3'."
-    local -n var="$1";
+    local -n var=$1;
     # shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
     var="$3"
     return 0
@@ -309,14 +308,14 @@ function on_exit()
 #-------------------------------------------------------------------------------
 function show_stack()
 {
-    local bash_source, funcname, bash_lineno
+    local bash_source funcname bash_lineno
     bash_source=${BASH_SOURCE[-1]:-}
     echo "${bash_source} stack trace:"
     local i
-    for ((i=0; i<${#FUNCNAME[@]}-1; i++)); do
+    for (( i=0; i<${#FUNCNAME[@]}-1; i++ )); do
         bash_source=${BASH_SOURCE[i+1]:-}
         funcname=${FUNCNAME[i]:-}
         bash_lineno=${BASH_LINENO[i]:-}
-        echo "$i: ${funcname} called from ${bash_source}:${bash_lineno}"
+        printf "%4d: %-20s: %4d: %-32s\n" "$i" "$funcname" "${bash_lineno}" "${bash_source}"
     done
 }
