@@ -151,11 +151,10 @@ function choose()
 #-------------------------------------------------------------------------------
 function print_sequence()
 {
-    open_paren=""
-    close_paren=""
-    quote="'"
-    separator=","
-    local arg open_paren close_paren quote separator
+    local open_paren=""
+    local close_paren=""
+    local quote="'"
+    local separator=","
     for arg in "$@"; do
         case $arg in
             --quote=*|-q=* )
