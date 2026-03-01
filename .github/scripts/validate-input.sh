@@ -5,7 +5,8 @@ set -euo pipefail
 
 script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
-lib_dir=$(realpath -e "$script_dir/../../../scripts/bash/lib")
+lib_dir=$(realpath -e "$script_dir/../../scripts/bash/lib")
+
 declare -r script_name
 declare -r script_dir
 declare -r lib_dir
