@@ -77,20 +77,20 @@ if ! command -v -p gh 2>&1 "$_ignore"; then
     fi
 fi
 
-build_projects_len=$(is_safe_json_array "$build_projects" "$defaultBuildProjects" is_safe_existing_file) || true
-build_projects_len=$(jq length <<< "$build_projects")
+build_projects=$(is_safe_json_array "$build_projects" "$defaultBuildProjects" is_safe_existing_file) || true
+build_projects_len=$(jq 'length // 0' <<< "$build_projects")
 
-test_projects_len=$(is_safe_json_array "$test_projects" "$defaultTestProjects" is_safe_existing_file) || true
-test_projects_len=$(jq length <<< "$test_projects")
+test_projects=$(is_safe_json_array "$test_projects" "$defaultTestProjects" is_safe_existing_file) || true
+test_projects_len=$(jq 'length // 0' <<< "$test_projects")
 
-benchmark_projects_len=$(is_safe_json_array "$benchmark_projects" "$defaultBenchmarkProjects" is_safe_existing_file) || true
-benchmark_projects_len=$(jq length <<< "$benchmark_projects")
+benchmark_projects=$(is_safe_json_array "$benchmark_projects" "$defaultBenchmarkProjects" is_safe_existing_file) || true
+benchmark_projects_len=$(jq 'length // 0' <<< "$benchmark_projects")
 
-package_projects_len=$(is_safe_json_array "$package_projects" "$defaultPackageProjects" is_safe_existing_file) || true
-package_projects_len=$(jq length <<< "$package_projects")
+package_projects=$(is_safe_json_array "$package_projects" "$defaultPackageProjects" is_safe_existing_file) || true
+package_projects_len=$(jq 'length // 0' <<< "$package_projects")
 
-runners_os_len=$(is_safe_json_array "$runners_os" "$defaultRunnersOs" is_safe_runner_os) || true
-runners_os_len=$(jq length <<< "$runners_os")
+runners_os=$(is_safe_json_array "$runners_os" "$defaultRunnersOs" is_safe_runner_os) || true
+runners_os_len=$(jq 'length // 0' <<< "$runners_os")
 
 is_safe_dotnet_version "$dotnet_version" || true
 is_safe_configuration "$configuration" || true
@@ -106,7 +106,7 @@ fi
 validate_minverTagPrefix "$minver_tag_prefix" || true
 is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 
-dump_vars --quiet --force --markdown \
+dump_vars --quiet --force \
     -h "Validated Parameters" \
     build_projects \
     build_projects_len \
