@@ -274,7 +274,7 @@ function is_safe_json_array()
 
     # validate and normalize JSON
     output="$(
-        jq '
+        jq -c '
             if type == "boolean" or type == "number" or type == "object" then
                 error("The input cannot be boolean, number, object, or null. It must be a JSON array of non-empty strings or a JSON string.")
             elif type == "null" then
