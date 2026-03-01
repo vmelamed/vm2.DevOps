@@ -168,7 +168,6 @@ function is_safe_existing_path()
 
     ! is_safe_path "$1" && return 1
 
-
     if [[ ! -e "$1" ]]; then
         error "The path '$1' does not exist."
         return 1
@@ -241,7 +240,7 @@ declare -xr jq_array_strings_nonempty='type == "array" and length > 0 and all(ty
 #   string to a JSON array of non-empty, trimmed strings.
 #   Also, checks each item's safety using the provided validator function.
 # Parameters:
-#   1 - JSON array or a single string (will be converted to single-item JSON array)
+#   1 - JSON array or a single string (the string will be converted to single-item JSON array)
 #   2 - default_array - default value if $1 is empty string or empty array
 #   3 - is_safe_item - name of function to validate each array item
 # Returns:
@@ -250,8 +249,8 @@ declare -xr jq_array_strings_nonempty='type == "array" and length > 0 and all(ty
 #   stdout: the normalized JSON array: all unnecessary spaces from the array and
 #     the elements trimmed
 # Dependencies: jq, warning_var
-# Usage: if array=$(is_safe_json_array <array> <default> <validator_function>); then ... fi
-# Example: runners=$(is_safe_json_array runners '["ubuntu-latest"]' is_safe_runner_os)
+# Usage: if array=$(is_safe_json_array "$array" '[]' is_safe_existing_file); then ... fi
+# Example: runners=$(is_safe_json_array "$runners" '["ubuntu-latest"]' is_safe_runner_os)
 #-------------------------------------------------------------------------------
 function is_safe_json_array()
 {
@@ -288,7 +287,7 @@ function is_safe_json_array()
                 error("The input must be a JSON array of non-empty strings or a JSON string.")
             end ' <<< "$input"
     )" ||
-    { error "'$input' is not valid JSON: '$1'"; return 2; }
+    { error "'$input' is not a valid JSON: '$1'"; return 2; }
 
     # validate each item in the array
     while read -r item; do

@@ -77,19 +77,19 @@ if ! command -v -p gh 2>&1 "$_ignore"; then
     fi
 fi
 
-build_projects_len=$(is_safe_json_array "build_projects" "$defaultBuildProjects" is_safe_existing_file) || true
+build_projects_len=$(is_safe_json_array "$build_projects" "$defaultBuildProjects" is_safe_existing_file) || true
 build_projects_len=$(jq length <<< "$build_projects")
 
-test_projects_len=$(is_safe_json_array "test_projects" "$defaultTestProjects" is_safe_existing_file) || true
+test_projects_len=$(is_safe_json_array "$test_projects" "$defaultTestProjects" is_safe_existing_file) || true
 test_projects_len=$(jq length <<< "$test_projects")
 
-benchmark_projects_len=$(is_safe_json_array "benchmark_projects" "$defaultBenchmarkProjects" is_safe_existing_file) || true
+benchmark_projects_len=$(is_safe_json_array "$benchmark_projects" "$defaultBenchmarkProjects" is_safe_existing_file) || true
 benchmark_projects_len=$(jq length <<< "$benchmark_projects")
 
-package_projects_len=$(is_safe_json_array "package_projects" "$defaultPackageProjects" is_safe_existing_file) || true
+package_projects_len=$(is_safe_json_array "$package_projects" "$defaultPackageProjects" is_safe_existing_file) || true
 package_projects_len=$(jq length <<< "$package_projects")
 
-runners_os_len=$(is_safe_json_array "runners_os" "$defaultRunnersOs" is_safe_runner_os) || true
+runners_os_len=$(is_safe_json_array "$runners_os" "$defaultRunnersOs" is_safe_runner_os) || true
 runners_os_len=$(jq length <<< "$runners_os")
 
 is_safe_dotnet_version "$dotnet_version" || true
