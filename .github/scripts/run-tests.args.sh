@@ -66,7 +66,7 @@ function get_arguments()
         min_coverage_pct \
         minver_tag_prefix \
         minver_prerelease_id \
-        test_artifacts_dir \
+        tests_artifacts_dir \
         --header "other:" \
         ci
 }

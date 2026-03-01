@@ -145,4 +145,5 @@ if [[ $dry_run != "true" ]]; then
     } | to_summary
 fi
 
-to_github_output results_dir
+args_to_github_output \
+    results_dir

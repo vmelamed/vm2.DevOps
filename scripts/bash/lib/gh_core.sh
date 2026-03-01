@@ -187,19 +187,18 @@ function to_output()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Outputs a variable to GitHub Actions output, converting underscores
-#   to hyphens in the key name.
+# Summary: Outputs a key and a variable's value to GitHub Actions GITHUB_OUTPUT file.
 # Parameters:
-#   1 - variable_name (nameref!) - name of the variable to output
-#   2 - output_name - custom name for output key (optional, defaults to
-#       variable_name with _ → -)
+#   1 - variable_name (nameref!) - the name of the variable that contains the GITHUB_OUTPUT value
+#   2 - output_key - the GITHUB_OUTPUT key
+#       Optional, defaults to the name of the variable in $1, but underscores are replaced by hiphens)
 # Returns:
 #   Outputs to $github_output via to_output
 #   Exit code: 0 on success, 2 on invalid arguments
-# Usage: to_github_output <variable_name> [output_name]
+# Usage: to_github_output <variable_name> [<output-key>]
 # Example:
 #   build_version="1.2.3"
-#   to_github_output build_version  # outputs: build-version=1.2.3
+#   to_github_output build_version             # outputs: build-version=1.2.3
 #   to_github_output build_version custom-key  # outputs: custom-key=1.2.3
 #-------------------------------------------------------------------------------
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
@@ -210,12 +209,12 @@ function to_github_output()
               "the name of the variable to output and optionally the name to use in GitHub Actions output."
         return 2
     fi
-    local -n var=$1
 
-    local m
-    [[ $# -eq 2 ]] && m="$2" || m="${1//_/-}"
+    local k
+    [[ $# -eq 2 ]] && k="$2" || k="${1//_/-}"
 
-    echo "$m=$var" | to_output
+    local -n v=$1
+    echo "$k=$v" | to_output
 }
 
 #-------------------------------------------------------------------------------
@@ -244,9 +243,9 @@ function args_to_github_output()
 
     {
         for var in "$@"; do
-            local m="${var//_/-}"
+            local k="${var//_/-}"
             local -n v=$var
-            echo "$m=$v"
+            echo "$k=$v"
         done
     } | to_output
 }

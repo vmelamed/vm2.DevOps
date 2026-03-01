@@ -14,7 +14,7 @@ source "$lib_dir/gh_core.sh"
 declare -xr default_configuration="Release"
 declare -xr default_minver_tag_prefix='v'
 declare -xr default_minver_prerelease_id="preview.0"
-declare -xr default_test_artifacts_dir="TestResults"
+declare -xr default_tests_artifacts_dir="./TestResults"
 declare -ixr default_min_coverage_pct=80
 
 declare -x test_project=${TEST_PROJECT:-}
@@ -22,7 +22,7 @@ declare -x configuration=${CONFIGURATION:="${default_configuration}"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"${default_minver_tag_prefix}"}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"${default_minver_prerelease_id}"}
-declare -x tests_artifacts_dir=${TEST_ARTIFACTS_DIR:-}
+declare -x tests_artifacts_dir=${TEST_ARTIFACTS_DIR:-"${default_tests_artifacts_dir}"}
 declare -ix min_coverage_pct=${MIN_COVERAGE_PCT:-"${default_min_coverage_pct}"}
 
 source "$script_dir/run-tests.usage.sh"
@@ -40,13 +40,17 @@ validate_minverTagPrefix "$minver_tag_prefix" || true
 is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 is_safe_path "$tests_artifacts_dir" || true
 
-repo_root=$(git rev-parse --show-toplevel)
+while IFS='=' read -r key value; do
+    case "$key" in
+        root ) repo_root="$value" ;;
+        name ) repo_name="$value" ;;
+        *    ) ;;
+    esac
+done < <(gh_repo_info "$test_dir")
+
 test_config_path="${repo_root}/testconfig.json"
 coverage_settings_path="${repo_root}/coverage.settings.xml"                     # path to coverage settings file                ~/repos/vm2.Glob/coverage.settings.xml
 
-if [[ -z "$tests_artifacts_dir" ]]; then
-    tests_artifacts_dir="${repo_root}/${default_test_artifacts_dir}"
-fi
 if [[ ! -s "$test_config_path" ]]; then
     error "Test config file not found at: $test_config_path"
 fi
@@ -56,12 +60,15 @@ fi
 
 exit_if_has_errors
 
-test_dir=$(realpath -e "${test_dir}")
-                                       # the directory of the test project
-artifacts_dir=$(realpath -m "${tests_artifacts_dir}/${test_name}" 2> "$_ignore")                   # the directory for test results and reports (resolved to an absolute path, if it was relative)
-renamed_artifacts_dir="$artifacts_dir-$(date -u +"%Y%m%dT%H%M%S")"
+test_dir=$(realpath -e "${test_dir}")                                           # the directory of the test project
+tests_artifacts_dir=$(realpath -m "${tests_artifacts_dir}")
+artifacts_dir="${tests_artifacts_dir}/${test_name}"                              # the directory for test results and reports (resolved to an absolute path, if it was relative)
+coverage_source_path="${artifacts_dir}/coverage.cobertura.xml"                  # path to the raw coverage file                 ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/coverage.cobertura.xml
+coverage_reports_dir="${artifacts_dir}/reports"                                 # directory for coverage reports                ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/reports
+coverage_files="$tests_artifacts_dir/*/coverage.cobertura.xml"
 
 # Freeze the variables
+declare -xr repo_name
 declare -xr test_project
 declare -xr configuration
 declare -xr preprocessor_symbols
@@ -73,7 +80,9 @@ declare -xr test_dir
 declare -xr repo_root
 declare -xr test_config_path
 declare -xr artifacts_dir
-declare -xr renamed_artifacts_dir
+declare -xr coverage_source_path
+declare -xr coverage_settings_path
+declare -xr coverage_files
 
 if [[ -d "$artifacts_dir" && -n "$(ls -A "$artifacts_dir")" ]]; then
     if [[ -n "${CI:-}" ]]; then
@@ -81,6 +90,7 @@ if [[ -d "$artifacts_dir" && -n "$(ls -A "$artifacts_dir")" ]]; then
         echo "Deleting existing artifacts directory (running in CI)..."
         execute rm -rf "$artifacts_dir"
     else
+        renamed_artifacts_dir="$artifacts_dir-$(date -u +"%Y%m%dT%H%M%S")"
         choice=$(choose \
                     "The test results directory '$artifacts_dir' already exists. What do you want to do?" \
                         "Delete the directory and continue" \
@@ -104,14 +114,6 @@ if [[ -d "$artifacts_dir" && -n "$(ls -A "$artifacts_dir")" ]]; then
         esac
     fi
 fi
-
-# ${artifacts_dir}                                                              # abs.path to test results and reports          ~/repos/vm2.Glob/TestResults
-coverage_source_path="${artifacts_dir}/coverage.cobertura.xml"                  # path to the raw coverage file                 ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/coverage.cobertura.xml
-coverage_reports_dir="${artifacts_dir}/reports"                                 # directory for coverage reports                ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/reports
-
-# shellcheck disable=SC2034 # coverage_reports_dir appears unused. Verify use (or export if used externally). Used in args_to_github_output below
-declare -xr coverage_source_path
-declare -xr coverage_settings_path
 
 test_base_dir="${test_dir}/bin/${configuration}/net10.0"
 test_exec_path="${test_base_dir}/${test_name}"
@@ -139,11 +141,10 @@ if [[ ! -s "${test_exec_path}" && "$dry_run" != "true" ]]; then
     fi
 fi
 
-
 trace "Running tests from ${test_project}..."
 
-# Build coverage command arguments
-coverage_args=(
+# Build test and coverage command arguments
+test_args=(
     --config-file "$test_config_path"
     --results-directory "${artifacts_dir}"
     --coverage-settings "${coverage_settings_path}"
@@ -156,7 +157,7 @@ coverage_args=(
 ##########################################
 ### Run the tests with coverage collection
 ##########################################
-if ! execute "${test_exec_path}" "${coverage_args[@]}"; then
+if ! execute "${test_exec_path}" "${test_args[@]}"; then
     error "Tests failed in project '$test_project'."
     exit 2
 fi
@@ -171,12 +172,12 @@ fi
 # shellcheck disable=SC2154 # ci is referenced but not assigned.
 if [[ "$ci" == true ]]; then
     # Set outputs for merged coverage
-    repo_name=$(basename "$(git rev-parse --show-toplevel)")
-
-    to_github_output "${repo_name}" "proj-name"
-    to_github_output "${tests_artifacts_dir}" "artifacts-dir"
-    to_github_output "${coverage_source_path}" "coverage-source-path"
-    to_github_output "${coverage_reports_dir}" "coverage-reports-dir"
+    # shellcheck disable=SC2034 # proj_name appears unused. Verify use (or export if used externally).
+    args_to_github_output \
+        "repo_name" \
+        "tests_artifacts_dir" \
+        "coverage_source_path" \
+        "coverage_reports_dir"
 
     trace "Running in CI environment, skipping coverage report generation - will be generated later by an action."
     exit 0

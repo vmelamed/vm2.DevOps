@@ -148,15 +148,6 @@ jobs:
                 # e.g. ./TestResults/<test-project-name>/*
           done
 
-          # Set outputs for merged coverage
-          repo_name=$(basename "$(git rev-parse --show-toplevel)")
-          {
-              echo "proj-name=${repo_name}"
-              echo "artifacts-dir=$tests_artifacts_dir"
-              echo "coverage-source-path=$tests_artifacts_dir/*/coverage.cobertura.xml"
-              echo "coverage-reports-dir=$tests_artifacts_dir/reports"
-          } >> $GITHUB_OUTPUT
-
       - name: Generate coverage report
         uses: danielpalme/ReportGenerator-GitHub-Action@5.5.1
         env:
@@ -181,7 +172,7 @@ jobs:
         uses: actions/upload-artifact@v6
         id: upload-coverage
         with:
-          name: coverage-${{ steps.run-tests.outputs.proj-name }}-${{ inputs.runner-os }}
+          name: coverage-${{ steps.run-tests.outputs.repo-name }}-${{ inputs.runner-os }}
           path: ${{ steps.run-tests.outputs.coverage-reports-dir }}
           if-no-files-found: error
           overwrite: true
@@ -199,8 +190,8 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ${{ steps.run-tests.outputs.coverage-source-path }}
-          flags: ${{ steps.run-tests.outputs.proj-name }}-${{ inputs.runner-os }}
-          name: ${{ steps.run-tests.outputs.proj-name }}-${{ inputs.runner-os }}
+          flags: ${{ steps.run-tests.outputs.repo-name }}-${{ inputs.runner-os }}
+          name: ${{ steps.run-tests.outputs.repo-name }}-${{ inputs.runner-os }}
           fail_ci_if_error: false
           verbose: true
 

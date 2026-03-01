@@ -60,16 +60,16 @@ function find_repo_root()
 #   1 - dir - absolute path to the root of a Git repository work tree
 # Returns:
 #   stdout: key=value pairs (one per line):
-#     Root=<absolute path to the repo root>
-#     Url=<origin remote URL>
-#     Owner=<GitHub owner/organization name>
-#     Name=<GitHub repository name>
+#     root=<absolute path to the repo root>
+#     url=<origin remote URL>
+#     owner=<GitHub owner/organization name>
+#     name=<GitHub repository name>
 #   Exit code: 0 on success, 2 if the directory is not a Git repo root or the origin remote is not a GitHub SSH URL
 # Dependencies: git
 # Usage:
 #   declare -A info
 #   while IFS='=' read -r key value; do info["$key"]="$value"; done < <(gh_repo_info "/path/to/repo")
-#   echo "${info[Owner]}/${info[Name]}"
+#   echo "${info[$owner]}/${info[$name]}"
 # Example:
 #   gh_repo_info "/home/valo/repos/vm2.Glob"
 #   # Output:
