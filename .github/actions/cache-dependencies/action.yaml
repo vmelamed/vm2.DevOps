@@ -1,0 +1,62 @@
+name: Cache .NET Packages
+description: Caches .NET packages to speed up build times
+inputs:
+  dotnet-version:
+    description: .NET SDK version to install
+    required: true
+
+  runner-os:
+    description: Runner OS for cache key scoping
+    required: true
+    default: ${{ runner.os }}
+
+  github-actor:
+    description: GitHub actor for authenticating with GitHub Packages
+    required: true
+
+  github-token:
+    description: GitHub token for authenticating with GitHub Packages
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+      # Generate a weekly cache key to automatically rotate NuGet cache
+      - name: Get cache timestamp (weekly rotation)
+        id: cache-timestamp
+        shell: bash
+        run: |
+          # Generate cache key based on calendar week
+          CACHE_WEEK=$(date +%Y-W%V)
+          echo "week=$CACHE_WEEK" >> $GITHUB_OUTPUT
+          echo "ℹ️  INFO: Cache rotation key: $CACHE_WEEK"
+
+      # Install .NET SDK with built-in NuGet package caching
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+          dotnet-quality: 'ga'
+          cache: true
+          cache-dependency-path: |
+            **/packages.lock.json
+            **/*.csproj
+
+      # Additional explicit cache layer with time-based rotation for NuGet packages
+      - name: Cache NuGet packages (weekly rotation)
+        uses: actions/cache@v5
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ steps.cache-timestamp.outputs.week }}-${{ hashFiles('**/packages.lock.json') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-${{ steps.cache-timestamp.outputs.week }}-
+            nuget-${{ runner.os }}-
+
+      # Authenticate with GitHub Packages for NuGet restore
+      - name: Authenticate with GitHub Packages
+        shell: bash
+        run: |
+          dotnet nuget update source github.vm2 \
+            --username ${{ inputs.github-actor }} \
+            --password ${{ inputs.github-token }} \
+            --store-password-in-clear-text

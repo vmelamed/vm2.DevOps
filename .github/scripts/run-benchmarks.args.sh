@@ -55,10 +55,6 @@ function get_arguments()
                 ;;
         esac
     done
-}
-
-dump_all_variables()
-{
     dump_vars --force --quiet --markdown \
         --header "Script Arguments:" \
         dry_run \
@@ -72,11 +68,5 @@ dump_all_variables()
         minver_prerelease_id \
         artifacts_dir \
         --header "other:" \
-        ci \
-        lib_dir \
-        --blank \
-        solution_dir \
-        results_dir \
-        summaries_dir \
-        baseline_dir
+        ci
 }

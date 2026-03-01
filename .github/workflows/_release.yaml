@@ -105,11 +105,7 @@ jobs:
           fetch-depth: 0
           filter: tree:0
 
-      # Clone only the scripts from vm2.DevOps, so that we can run the composite
-      # action .github/actions/scripts/action.yaml for both local and external calls
-      # Clone only the scripts from vm2.DevOps, so that we can run the composite
-      # action .github/actions/scripts/action.yaml for both local and external calls
-      - name: Setup DevOps
+      - name: Setup DevOps environment variables
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
 
       - name: Validate and compute release version
@@ -134,9 +130,7 @@ jobs:
           filter: tree:0
           token: ${{ secrets.RELEASE_PAT }}
 
-      # Clone only the scripts from vm2.DevOps, so that we can run the composite
-      # action .github/actions/scripts/action.yaml for both local and external calls
-      - name: Setup DevOps
+      - name: Setup DevOps environment variables
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
 
       - name: Install git-cliff
@@ -173,29 +167,16 @@ jobs:
           fetch-depth: 0
           filter: tree:0
 
-      # Clone only the scripts from vm2.DevOps, so that we can run the composite
-      # action .github/actions/scripts/action.yaml for both local and external calls
-      - name: Setup DevOps
+      - name: Setup DevOps environment variables
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+      - name: Setup .NET and the dependencies cache
+        uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@main
         with:
-          dotnet-version: ${{ inputs.dotnet-version || '10.0.x' }}
-          dotnet-quality: 'ga'
-          cache: true
-          cache-dependency-path: |+
-            **/packages.lock.json
-            **/*.csproj
-
-      # Authenticate with GitHub Packages for NuGet restore
-      - name: Authenticate with GitHub Packages
-        shell: bash
-        run: |
-          dotnet nuget update source github.vm2 \
-            --username ${{ github.actor }} \
-            --password ${{ secrets.GITHUB_TOKEN }} \
-            --store-password-in-clear-text
+          dotnet-version: ${{ inputs.dotnet-version }}
+          runner-os: ubuntu-latest
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-actor: ${{ github.actor }}
 
       - name: Build, Package and Publish release to NuGet server
         shell: bash

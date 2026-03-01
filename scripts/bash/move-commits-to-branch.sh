@@ -15,7 +15,7 @@ declare -x commit_sha=""
 declare -x new_branch=""
 declare -x check_out_new_branch=false
 
-source "${lib_dir}/move-commits-to-branch.utils.sh"
+source "${lib_dir}/move-commits-to-branch.args.sh"
 source "${lib_dir}/move-commits-to-branch.usage.sh"
 
 get_arguments "$@"

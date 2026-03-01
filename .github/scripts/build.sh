@@ -27,28 +27,18 @@ declare -x nuget_username=${GITHUB_ACTOR:-""}
 declare -x nuget_password=${GITHUB_TOKEN:-""}
 
 source "$script_dir/build.usage.sh"
-source "$script_dir/build.utils.sh"
+source "$script_dir/build.args.sh"
 
 get_arguments "$@"
 
-dump_vars --quiet \
-    --header "Inputs" \
-    build_project \
-    configuration \
-    preprocessor_symbols \
-    minver_tag_prefix \
-    minver_prerelease_id \
-    nuget_username
-
 # sanitize inputs
-validate_minverTagPrefix "$minver_tag_prefix" || true
-is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 is_safe_path "$build_project" || true
 is_safe_configuration "$configuration" || true
 validate_preprocessor_symbols preprocessor_symbols || true
+validate_minverTagPrefix "$minver_tag_prefix" || true
+is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 is_safe_input "$nuget_username" || true
 
-dump_all_variables
 exit_if_has_errors
 
 # freeze the parameters
@@ -63,10 +53,10 @@ declare -xr nuget_password
 # Configure NuGet source with GitHub Packages authentication
 if [[ -n "$nuget_username" && -n "$nuget_password" ]]; then
     execute dotnet nuget update source github.vm2 \
-        --username "$nuget_username" \
-        --password "$nuget_password" \
-        --store-password-in-clear-text \
-        --configfile NuGet.config
+                --username "$nuget_username" \
+                --password "$nuget_password" \
+                --store-password-in-clear-text \
+                --configfile NuGet.config
 fi
 
 # Restore dependencies

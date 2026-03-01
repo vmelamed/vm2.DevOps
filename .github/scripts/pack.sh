@@ -25,7 +25,7 @@ declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}
 
 source "$script_dir/pack.usage.sh"
-source "$script_dir/pack.utils.sh"
+source "$script_dir/pack.args.sh"
 
 get_arguments "$@"
 
@@ -44,7 +44,6 @@ validate_preprocessor_symbols preprocessor_symbols || true
 validate_minverTagPrefix "$minver_tag_prefix" || true
 is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 
-dump_all_variables
 exit_if_has_errors
 
 # create a temporary output directory for packed packages

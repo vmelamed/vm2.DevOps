@@ -16,39 +16,56 @@ function get_arguments()
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
-            --release-tag|-t )
+            --build-project|-bp )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
-                release_tag="$1"; shift
+                if [[ -n $build_project ]]; then
+                    usage false "The script accepts 0 or 1 project or solution."
+                fi
+                build_project="$1"; shift
                 ;;
 
-            --minver-tag-prefix|-p )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+            --configuration|-c )
+                configuration="$1"; shift
+                ;;
+
+            --define|-d )
+                preprocessor_symbols="$1"; shift
+                ;;
+
+            --minver-tag-prefix|-mp )
                 minver_tag_prefix="$1"; shift
                 ;;
 
-            --reason|-r )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
-                reason="$1"; shift
+            --minver-prerelease-id|-mi )
+                minver_prerelease_id="$1"; shift
+                ;;
+
+            --nuget-username )
+                nuget_username="$1"; shift
+                ;;
+
+            --nuget-password )
+                nuget_password="$1"; shift
                 ;;
 
             * )
-                usage false "Unknown option: $option"
+                usage false "Unknown argument: $option"
                 ;;
         esac
     done
-}
-
-dump_all_variables()
-{
-    dump_vars --force --quiet --markdown \
+    dump_vars --force --quiet \
         --header "Script Arguments:" \
         dry_run \
         verbose \
         quiet \
         --blank \
-        release_tag \
+        build_project \
+        configuration \
+        preprocessor_symbols \
         minver_tag_prefix \
-        reason \
+        minver_prerelease_id \
+        nuget_username \
+        nuget_password \
         --header "other:" \
         ci
 }

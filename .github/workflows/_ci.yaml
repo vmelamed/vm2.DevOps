@@ -91,14 +91,14 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       build-projects: ${{ steps.validate.outputs.build-projects }}
-      test-projects: ${{ steps.validate.outputs.test-projects }}
-      benchmark-projects: ${{ steps.validate.outputs.benchmark-projects }}
-      package-projects: ${{ steps.validate.outputs.package-projects }}
-      runners-os: ${{ steps.validate.outputs.runners-os }}
       build-projects-len: ${{ steps.validate.outputs.build-projects-len }}
+      test-projects: ${{ steps.validate.outputs.test-projects }}
       test-projects-len: ${{ steps.validate.outputs.test-projects-len }}
+      benchmark-projects: ${{ steps.validate.outputs.benchmark-projects }}
       benchmark-projects-len: ${{ steps.validate.outputs.benchmark-projects-len }}
+      package-projects: ${{ steps.validate.outputs.package-projects }}
       package-projects-len: ${{ steps.validate.outputs.package-projects-len }}
+      runners-os: ${{ steps.validate.outputs.runners-os }}
       runners-os-len: ${{ steps.validate.outputs.runners-os-len }}
       dotnet-version: ${{ steps.validate.outputs.dotnet-version }}
       configuration: ${{ steps.validate.outputs.configuration }}
@@ -113,8 +113,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      # Clone only the scripts from vm2.DevOps, so that we can run the composite
-      # action .github/actions/scripts/action.yaml for both local and external calls
       - name: Setup DevOps
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
 

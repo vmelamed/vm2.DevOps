@@ -123,6 +123,7 @@ function _write_title()
 # Summary: Internal function to write a variable name and value line in the dump table.
 # Parameters:
 #   1 - variable_name - name of the variable to display (passed as nameref)
+#   2 - secret - if "true", the value will be masked
 # Returns:
 #   stdout: formatted variable line showing name and value
 #   Exit code: 0 always
@@ -132,6 +133,7 @@ function _write_title()
 function _write_line()
 {
     local -n v=$1
+    local secret=${2:-false}
     local value
 
     if is_defined_associative_array "$1"; then
@@ -151,14 +153,14 @@ function _write_line()
         value="$1()"
     elif is_defined_variable "$1"; then
         case $1 in
-            verbose      ) value=$save_verbose ;;
-            quiet        ) value=$save_quiet ;;
-            table_format ) value=$save_table_format ;;
-            _ignore      ) value=$save_ignore ;;
-            *            ) value="$v" ;;
+            verbose      )  value=$save_verbose ;;
+            quiet        )  value=$save_quiet ;;
+            table_format )  value=$save_table_format ;;
+            _ignore      )  value=$save_ignore ;;
+            *            )  [[ $secret != true ]] && value="$v" || value="••••••" ;;
         esac
     else
-        value="****** unbound, undefined, or invalid"
+        value="❌ unbound, undefined, or invalid"
     fi
 
     local -n table
@@ -198,7 +200,10 @@ function dump_vars()
 
     # save some current state - to be restored before returning from the function
     push_state
-    _ignore=/dev/null
+    # shellcheck disable=SC2154 # ci is referenced but not assigned.
+    if [[ "$ci" == true ]]; then
+        set_table_format "markdown"
+    fi
     set +x
     for v in "$@"; do
         case ${v,,} in
@@ -245,6 +250,14 @@ function dump_vars()
             -l|--line )
                 echo "${table["line"]}"
                 top=false
+                ;;
+            -s|--secret )
+                v=$1
+                shift
+                if [[ ! $v =~ ^-.* ]]; then
+                    _write_line "$v" "true";
+                    top=false
+                fi
                 ;;
             *)
                 if [[ ! $v =~ ^-.* ]]; then

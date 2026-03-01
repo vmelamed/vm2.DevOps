@@ -22,7 +22,7 @@ declare -x target_dir=""
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-'v'}
 declare -xa file_regexes=()
 
-source "${script_dir}/diff-common.utils.sh"
+source "${script_dir}/diff-common.args.sh"
 source "${script_dir}/diff-common.usage.sh"
 source "${script_dir}/diff-common.functions.sh"
 

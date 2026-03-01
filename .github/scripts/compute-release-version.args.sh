@@ -30,10 +30,6 @@ function get_arguments()
                 ;;
         esac
     done
-}
-
-dump_all_variables()
-{
     dump_vars --force --quiet --markdown \
         --header "Script Arguments:" \
         dry_run \

@@ -54,42 +54,19 @@ function get_arguments()
                 ;;
         esac
     done
-}
-
-dump_inputs()
-{
-    dump_vars "$@" \
-        --header "Inputs:" \
-        test_project \
-        configuration \
-        preprocessor_symbols \
-        min_coverage_pct \
-        minver_tag_prefix \
-        minver_prerelease_id \
-        tests_artifacts_dir
-}
-
-dump_all_variables()
-{
-    dump_vars "$@" \
+    dump_vars --force --quiet \
         --header "Script Arguments:" \
         dry_run \
         verbose \
         quiet \
-        ci \
-        lib_dir \
         --blank \
-        repo_root \
         test_project \
-        test_name \
-        test_dir \
         configuration \
         preprocessor_symbols \
         min_coverage_pct \
         minver_tag_prefix \
         minver_prerelease_id \
-        artifacts_dir \
-        coverage_settings_path \
-        coverage_source_path \
-        coverage_reports_dir
+        test_artifacts_dir \
+        --header "other:" \
+        ci
 }

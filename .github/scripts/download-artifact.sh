@@ -18,19 +18,10 @@ declare -x workflow_id=${WORKFLOW_ID:-}
 declare -x workflow_name=${WORKFLOW_NAME:-}
 declare -x workflow_path=${WORKFLOW_PATH:-}
 
-source "$script_dir/download-artifact.utils.sh"
+source "$script_dir/download-artifact.args.sh"
 source "$script_dir/download-artifact.usage.sh"
 
 get_arguments "$@"
-
-dump_vars --quiet \
-    --header "Inputs" \
-    artifact_name \
-    artifacts_dir \
-    repository \
-    workflow_id \
-    workflow_name \
-    workflow_path
 
 is_safe_input "$artifact_name"
 if [[ -z "$artifact_name" ]]; then
@@ -45,7 +36,6 @@ if [[ -n "$workflow_id" && ! "$workflow_id" =~ ^[0-9]+$ ]]; then
     error "The specified workflow identifier '$workflow_id' is not valid." || true
 fi
 
-dump_all_variables
 exit_if_has_errors
 
 # freeze the variables
@@ -130,8 +120,6 @@ if [[ -z $workflow_id ]]; then
     fi
     exit_if_has_errors
 fi
-
-dump_all_variables
 
 # get the IDs of the last 1000 successful runs of the specified workflow
 mapfile -t runs < <(gh run list \

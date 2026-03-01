@@ -19,15 +19,9 @@ declare -x release_tag=${RELEASE_TAG:-}
 declare -x reason=${REASON:-}
 
 source "$script_dir/changelog-and-tag.usage.sh"
-source "$script_dir/changelog-and-tag.utils.sh"
+source "$script_dir/changelog-and-tag.args.sh"
 
 get_arguments "$@"
-
-dump_vars --quiet \
-    --header "Inputs" \
-    minver_tag_prefix \
-    release_tag \
-    reason
 
 # Sanitize inputs
 validate_minverTagPrefix "$minver_tag_prefix" || true
@@ -53,7 +47,6 @@ declare -xr minver_tag_prefix
 declare -xr is_release
 declare -xr is_prerelease
 
-dump_all_variables
 exit_if_has_errors
 
 # Configure git for CI

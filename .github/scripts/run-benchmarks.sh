@@ -24,18 +24,9 @@ declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"${default
 declare -x artifacts_dir=${ARTIFACTS_DIR:-"${BENCHMARK_PROJECT%/*}/BenchmarkArtifacts"}
 
 source "$script_dir/run-benchmarks.usage.sh"
-source "$script_dir/run-benchmarks.utils.sh"
+source "$script_dir/run-benchmarks.args.sh"
 
 get_arguments "$@"
-
-dump_vars --quiet \
-    --header "Inputs" \
-    benchmark_project \
-    configuration \
-    preprocessor_symbols \
-    minver_tag_prefix \
-    minver_prerelease_id \
-    artifacts_dir
 
 is_safe_existing_path "$benchmark_project" || true
 is_safe_configuration "$configuration" || true
@@ -43,6 +34,8 @@ validate_preprocessor_symbols preprocessor_symbols || true
 validate_minverTagPrefix "$minver_tag_prefix" || true
 is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 is_safe_path "$artifacts_dir" || true
+
+exit_if_has_errors
 
 benchmark_name=$(basename "${benchmark_project%.*}")            # the base name of the benchmark project (without the path and file extension)
 benchmark_dir=$(realpath -e "$(dirname "$benchmark_project")")  # the directory of the benchmark project
@@ -92,14 +85,10 @@ if [[ -d "$artifacts_dir" && -n "$(ls -A "$artifacts_dir")" ]]; then
     fi
 fi
 
-dump_all_variables
-exit_if_has_errors
-
-# Create artifacts directory
-trace "Creating directory(s)..."
+trace "Creating artifacts directory(s)..."
 execute mkdir -p "$results_dir"
 
-# Determine the benchmark executable paths
+# Determine the benchmark executable paths. TODO: determine RID and use it to find the correct path
 benchmark_executables_pathname="${benchmark_dir}/bin/${configuration}/net10.0/${benchmark_name}"
 os_name="$(uname -s)"
 if [[ "$os_name" == "Windows_NT" || "$os_name" == *MINGW* || "$os_name" == *MSYS* ]]; then

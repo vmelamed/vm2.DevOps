@@ -52,7 +52,7 @@ declare -x main_protection_rs_name=${default_main_protection_rs_name}
 # required checks enforced by branch protection; extended dynamically
 declare -xa required_checks=()
 
-source "${script_dir}/repo-setup.utils.sh"
+source "${script_dir}/repo-setup.args.sh"
 source "${script_dir}/repo-setup.usage.sh"
 
 get_arguments "$@"

@@ -26,22 +26,19 @@ declare -x tests_artifacts_dir=${TEST_ARTIFACTS_DIR:-}
 declare -ix min_coverage_pct=${MIN_COVERAGE_PCT:-"${default_min_coverage_pct}"}
 
 source "$script_dir/run-tests.usage.sh"
-source "$script_dir/run-tests.utils.sh"
+source "$script_dir/run-tests.args.sh"
 
 get_arguments "$@"
-# shellcheck disable=SC2119 # Use dump_all_variables "$@" if function's $1 should mean script's $1.
-dump_inputs --quiet
 
 is_safe_existing_file "$test_project" || true
 test_name=$(basename "${test_project%.*}")                                      # the base name of the test project (without the path and file extension)
 test_dir=$(dirname "$test_project")                                             # the directory of the test project
-is_safe_input "$test_name" || true
 is_safe_configuration "$configuration" || true
 validate_preprocessor_symbols preprocessor_symbols || true
+is_safe_min_coverage_pct "$min_coverage_pct" || true
 validate_minverTagPrefix "$minver_tag_prefix" || true
 is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 is_safe_path "$tests_artifacts_dir" || true
-is_safe_min_coverage_pct "$min_coverage_pct" || true
 
 repo_root=$(git rev-parse --show-toplevel)
 test_config_path="${repo_root}/testconfig.json"
@@ -115,9 +112,6 @@ coverage_reports_dir="${artifacts_dir}/reports"                                 
 # shellcheck disable=SC2034 # coverage_reports_dir appears unused. Verify use (or export if used externally). Used in args_to_github_output below
 declare -xr coverage_source_path
 declare -xr coverage_settings_path
-
-# shellcheck disable=SC2119 # Use dump_all_variables "$@" if function's $1 should mean script's $1.
-dump_all_variables --quiet # --force
 
 test_base_dir="${test_dir}/bin/${configuration}/net10.0"
 test_exec_path="${test_base_dir}/${test_name}"

@@ -92,40 +92,16 @@ jobs:
           fetch-depth: 0
           filter: tree:0
 
-      # Clone only the scripts from vm2.DevOps, so that we can run the composite
-      # action .github/actions/scripts/action.yaml for both local and external calls
-      - name: Setup DevOps
+      - name: Setup DevOps environment variables
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
 
-      # Generate a weekly cache key to automatically rotate NuGet cache
-      - name: Get cache timestamp (weekly rotation)
-        id: cache-timestamp
-        shell: bash
-        run: |
-          CACHE_WEEK=$(date +%Y-W%V)
-          echo "week=$CACHE_WEEK" >> $GITHUB_OUTPUT
-          echo "Cache rotation key: $CACHE_WEEK"
-
-      # Install .NET SDK with built-in NuGet package caching
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+      - name: Setup .NET and the dependencies cache
+        uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@main
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
-          dotnet-quality: 'ga'
-          cache: true
-          cache-dependency-path: |
-            **/packages.lock.json
-            **/*.csproj
-
-      # Additional explicit cache layer with time-based rotation
-      - name: Cache NuGet packages (weekly rotation)
-        uses: actions/cache@v5
-        with:
-          path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-${{ steps.cache-timestamp.outputs.week }}-${{ hashFiles('**/packages.lock.json') }}
-          restore-keys: |
-            nuget-${{ runner.os }}-${{ steps.cache-timestamp.outputs.week }}-
-            nuget-${{ runner.os }}-
+          runner-os: ${{ inputs.runner-os }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-actor: ${{ github.actor }}
 
       # Retrieve compiled binaries from the build job
       - name: Restore build artifacts from cache

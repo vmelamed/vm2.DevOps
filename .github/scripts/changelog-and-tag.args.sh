@@ -15,53 +15,36 @@ function get_arguments()
             # do not use the common options - they were already processed by get_common_arg:
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
-            --build-project|-bp )
+
+            --release-tag|-t )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
-                if [[ -n $build_project ]]; then
-                    usage false "The script accepts 0 or 1 project or solution."
-                fi
-                build_project="$1"; shift
+                release_tag="$1"; shift
                 ;;
-            --configuration|-c )
-                configuration="$1"; shift
-                ;;
-            --define|-d )
-                preprocessor_symbols="$1"; shift
-                ;;
-            --minver-tag-prefix|-mp )
+
+            --minver-tag-prefix|-p )
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 minver_tag_prefix="$1"; shift
                 ;;
-            --minver-prerelease-id|-mi )
-                minver_prerelease_id="$1"; shift
+
+            --reason|-r )
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                reason="$1"; shift
                 ;;
-            --nuget-username )
-                nuget_username="$1"; shift
-                ;;
-            --nuget-password )
-                nuget_password="$1"; shift
-                ;;
+
             * )
-                usage false "Unknown argument: $option"
+                usage false "Unknown option: $option"
                 ;;
         esac
     done
-    return 0
-}
-
-dump_all_variables()
-{
     dump_vars --force --quiet --markdown \
         --header "Script Arguments:" \
         dry_run \
         verbose \
         quiet \
         --blank \
-        build_project \
-        configuration \
-        preprocessor_symbols \
+        release_tag \
         minver_tag_prefix \
-        minver_prerelease_id \
-        nuget_username \
+        reason \
         --header "other:" \
         ci
 }

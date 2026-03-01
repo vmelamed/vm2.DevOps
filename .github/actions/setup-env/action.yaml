@@ -1,11 +1,11 @@
-name: "DevOps Scripts"
+name: "Setup DevOps Environment"
 description: "Provides access to vm2.DevOps bash scripts for CI/CD workflows"
-author: "Val Melamed"
 
 runs:
   using: "composite"
   steps:
     - name: Checkout vm2.DevOps scripts
+      # Clone only the scripts from vm2.DevOps and invoke functions from scripts/bash/lib
       if: github.repository != 'vmelamed/vm2.DevOps'
       uses: actions/checkout@v6
       with:
@@ -17,5 +17,6 @@ runs:
           .github/scripts
 
     - name: Setup DevOps scripts
+      # action .github/actions/setup-env/action.yaml to set-up environment variables in runner for both cases: vm2.DevOps local and external - non-vm2.DevOps calls
       shell: bash
       run: ${{ github.action_path }}/setup-env.sh

@@ -222,7 +222,7 @@ function to_github_output()
 # Summary: Outputs multiple variables to GitHub Actions output, converting
 #   underscores to hyphens in key names.
 # Parameters:
-#   1+ - variable_names - names of variables to output
+#   1+ - variable_names - name refs of variables to output
 # Returns:
 #   Outputs to $github_output via to_output
 #   Exit code: 0 on success, 2 on invalid arguments
@@ -243,10 +243,10 @@ function args_to_github_output()
     fi
 
     {
-        for v in "$@"; do
-            local -n var=$v
-            local m="${v//_/-}"
-            echo "$m=$var"
+        for var in "$@"; do
+            local m="${var//_/-}"
+            local -n v=$var
+            echo "$m=$v"
         done
     } | to_output
 }

@@ -9,17 +9,16 @@ declare -x GITHUB_PATH
 declare -x GITHUB_ENV
 
 if [[ -d "${GITHUB_WORKSPACE}/vm2-devops" ]]; then
+    # We're running inside vm2.DevOps
     base="${GITHUB_WORKSPACE}/vm2-devops"
 else
-    # We're inside vm2.DevOps itself
+    # We're running outside vm2.DevOps itself
     base="$(realpath "$(dirname "${BASH_SOURCE[0]}")/../../../")"
 fi
 
+# we need the scripts in these two directories:
 scripts_dir="${base}/.github/scripts"
 lib_dir="${base}/scripts/bash/lib"
-
-# shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
-source "$lib_dir/gh_core.sh"
 
 {
     echo "$scripts_dir"
@@ -30,5 +29,9 @@ source "$lib_dir/gh_core.sh"
     echo "DEVOPS_SCRIPTS_DIR=$scripts_dir"
     echo "DEVOPS_LIB_DIR=$lib_dir"
 } >> "$GITHUB_ENV"
+
+# shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
+# source the gh_core.sh script but we still cannot use GITHUB_PATH and GITHUB_ENV, so we use the direct $lib_dir
+source "$lib_dir/gh_core.sh"
 
 info "DevOps scripts and libraries are now available in PATH"

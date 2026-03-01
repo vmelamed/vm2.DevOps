@@ -22,15 +22,9 @@ declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_
 declare -x reason=${REASON:-"$default_reason"}
 
 source "$script_dir/compute-prerelease-version.usage.sh"
-source "$script_dir/compute-prerelease-version.utils.sh"
+source "$script_dir/compute-prerelease-version.args.sh"
 
 get_arguments "$@"
-
-dump_vars --quiet \
-    --header "Inputs" \
-    minver_tag_prefix \
-    minver_prerelease_id \
-    reason
 
 # Sanitize inputs
 validate_minverTagPrefix "$minver_tag_prefix" || true
@@ -55,7 +49,6 @@ if [[ -n $head_tag ]]; then
     error "The HEAD is already tagged with '$head_tag'. A prerelease requires at least one new commit on main." || true
 fi
 
-dump_all_variables
 exit_if_has_errors
 
 # ============================================================================

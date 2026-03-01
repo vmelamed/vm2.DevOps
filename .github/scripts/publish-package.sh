@@ -29,21 +29,9 @@ declare -x artifacts_saved=${ARTIFACTS_SAVED:-false}
 declare -x artifacts_dir=${ARTIFACTS_DIR:-artifacts/pack}
 
 source "$script_dir/publish-package.usage.sh"
-source "$script_dir/publish-package.utils.sh"
+source "$script_dir/publish-package.args.sh"
 
 get_arguments "$@"
-
-dump_vars --quiet \
-    --header "Inputs" \
-    package_project \
-    preprocessor_symbols \
-    minver_tag_prefix \
-    minver_prerelease_id \
-    reason \
-    nuget_server \
-    repo_owner \
-    artifacts_saved \
-    artifacts_dir
 
 is_safe_path "$package_project" || true
 validate_preprocessor_symbols preprocessor_symbols || true
@@ -80,7 +68,6 @@ if [[ -z "${server_api_key}" ]]; then
     error "No API key provided for server '$server_name'"
 fi
 
-dump_all_variables
 exit_if_has_errors
 
 # restore dependencies

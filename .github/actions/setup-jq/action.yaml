@@ -1,6 +1,5 @@
 name: "Setup jq"
 description: "Installs jq 1.8.x (latest) to replace the default jq on the runner"
-author: "Val Melamed"
 
 inputs:
   version:

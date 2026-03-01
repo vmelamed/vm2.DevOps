@@ -20,14 +20,9 @@ declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x reason=${REASON:-"$default_reason"}
 
 source "$script_dir/compute-release-version.usage.sh"
-source "$script_dir/compute-release-version.utils.sh"
+source "$script_dir/compute-release-version.args.sh"
 
 get_arguments "$@"
-
-dump_vars --quiet \
-    --header "Inputs" \
-    minver_tag_prefix \
-    reason
 
 # Sanitize inputs to prevent injection attacks
 validate_minverTagPrefix "$minver_tag_prefix" || true
@@ -43,7 +38,6 @@ if [[ -n $head_tag ]]; then
     error "The HEAD is already tagged with '$head_tag'. Possible remedy: delete the tag, or branch 'main' again, do a new PR, and release with a new, higher version number." || true
 fi
 
-dump_all_variables
 exit_if_has_errors
 
 # Find latest stable like v1.2.3

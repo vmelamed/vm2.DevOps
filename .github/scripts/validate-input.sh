@@ -43,10 +43,9 @@ declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-${defaultM
 declare -x verbose=${VERBOSE:-${defaultVerbose}}
 
 source "$script_dir/validate-input.usage.sh"
-source "$script_dir/validate-input.utils.sh"
+source "$script_dir/validate-input.args.sh"
 
 get_arguments "$@"
-dump_all_variables
 
 # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
 # Check for required dependencies (jq and gh) and attempt to install them if not found
@@ -124,10 +123,9 @@ dump_vars --quiet --force --markdown \
     min_coverage_pct \
     max_regression_pct \
     minver_tag_prefix \
-    minver_prerelease_id | to_stdout
+    minver_prerelease_id | to_summary
 
 exit_if_has_errors
-
 info "✅ All parameters validated successfully"
 
 # Output all variables to github_output for use in subsequent jobs
@@ -141,10 +139,7 @@ args_to_github_output \
     benchmark_projects_len \
     package_projects \
     package_projects_len \
-    build_projects_len \
-    test_projects_len \
-    benchmark_projects_len \
-    package_projects_len \
+    runners_os \
     runners_os_len \
     dotnet_version \
     configuration \
@@ -153,4 +148,3 @@ args_to_github_output \
     max_regression_pct \
     minver_tag_prefix \
     minver_prerelease_id
-    # add more variables above this line
