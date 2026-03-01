@@ -266,11 +266,11 @@ function is_safe_json_array()
     local default="$2"
     local is_safe_item_fn=$3
 
-    local output
-    output="$(trim "$1")"
+    local input output
+    input="$(trim "$1")"
 
-    if [[ -z "$output" ]]; then
-        output=$default
+    if [[ -z "$input" ]]; then
+        input=$default
     fi
 
     # validate and normalize JSON
@@ -286,9 +286,9 @@ function is_safe_json_array()
                 map( . | tostring | trim )
             else
                 error("The input must be a JSON array of non-empty strings or a JSON string.")
-            end ' <<< "$output"
+            end ' <<< "$input"
     )" ||
-    { error "Invalid JSON: '$1'"; return 2; }
+    { error "'$input' is not valid JSON: '$1'"; return 2; }
 
     # validate each item in the array
     while read -r item; do
