@@ -102,10 +102,6 @@ function gh_repo_info()
         error "The provided directory '$1' is not from a Git repository work tree." >&2
         return 2
     fi
-    if [[ "$root" != "$1" ]]; then
-        error "The provided directory '$1' is not a root of a Git repository work tree." >&2
-        return 2
-    fi
 
     # Origin remote URL
     local remoteUrl
