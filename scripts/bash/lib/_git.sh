@@ -81,8 +81,8 @@ function find_repo_root()
 repo_owner_rex='[a-zA-Z0-9]([a-zA-Z0-9-]{0,37}[a-zA-Z0-9])'
 repo_name_rex='[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}'
 
-repo_owner_regex="^${repo_owner_regex}$"
-repo_name_regex="^${repo_name_regex}$"
+repo_owner_regex="^${repo_owner_rex}$"
+repo_name_regex="^${repo_name_rex}$"
 
 github_url_regex="^(git@github.com:|https://github.com/)(${repo_owner_rex})/(${repo_name_rex})(\.git)?$"
 
