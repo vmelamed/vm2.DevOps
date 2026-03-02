@@ -78,10 +78,16 @@ function find_repo_root()
 #   # owner=vmelamed
 #   # name=vm2.Glob
 #-------------------------------------------------------------------------------
-repo_owner_regex='[a-zA-Z0-9]([a-zA-Z0-9-]{0,37}[a-zA-Z0-9])'
-repo_name_regex='^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}$'
-github_url_regex="^(git@github.com:|https://github.com/)(${repo_owner_regex})/(${repo_name_regex})(\.git)?$"
+repo_owner_rex='[a-zA-Z0-9]([a-zA-Z0-9-]{0,37}[a-zA-Z0-9])'
+repo_name_rex='[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}'
 
+repo_owner_regex="^${repo_owner_regex}$"
+repo_name_regex="^${repo_name_regex}$"
+
+github_url_regex="^(git@github.com:|https://github.com/)(${repo_owner_rex})/(${repo_name_rex})(\.git)?$"
+
+declare -xr repo_owner_rex
+declare -xr repo_name_rex
 declare -xr repo_owner_regex
 declare -xr repo_name_regex
 declare -xr github_url_regex
