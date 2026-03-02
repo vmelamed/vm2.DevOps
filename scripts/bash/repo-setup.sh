@@ -89,13 +89,12 @@ else
 fi
 
 # if we are here, repo_path is set to the root of the repo/project or the specified path
-is_inside_work_tree "$repo_path" && is_repo=true || is_repo=false
-if $is_repo; then
+if is_inside_work_tree "$repo_path"; then
     # if we are inside the repo tree make sure we are at the root of the repo
-    repo_path=$(git -C "$repo_path" rev-parse --show-toplevel 2>"$_ignore")
     # extract the name and the owner from the git metadata
     while IFS='=' read -r key value; do
         case "$key" in
+            root ) repo_path=$value ;;
             name ) repo_name="$value" ;;
             owner) owner="$value" ;;
             *    ) ;;

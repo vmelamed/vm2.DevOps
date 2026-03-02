@@ -94,12 +94,15 @@ function gh_repo_info()
     fi
 
     # Root of the git repo tree
-    local root
+    local root rc
 
     root=$(git -C "$1" rev-parse --show-toplevel 2>"$_ignore")
-    local rc
     rc=$?
-    if [[ "$rc" -ne 0 || "$root" != "$1" ]]; then
+    if [[ "$rc" -ne 0 ]]; then
+        error "The provided directory '$1' is not from a Git repository work tree." >&2
+        return 2
+    fi
+    if [[ "$root" != "$1" ]]; then
         error "The provided directory '$1' is not a root of a Git repository work tree." >&2
         return 2
     fi
