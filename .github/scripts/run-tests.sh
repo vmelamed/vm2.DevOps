@@ -40,7 +40,14 @@ validate_minverTagPrefix "$minver_tag_prefix" || true
 is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 is_safe_path "$tests_artifacts_dir" || true
 
+dump_vars --quiet --force \
+    test_project \
+    test_name \
+    test_dir \
+    tests_artifacts_dir
+
 while IFS='=' read -r key value; do
+    trace "$key=>$value"
     case "$key" in
         root ) repo_root="$value" ;;
         name ) repo_name="$value" ;;
