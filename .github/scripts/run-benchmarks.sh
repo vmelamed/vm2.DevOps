@@ -137,8 +137,7 @@ if [[ $dry_run != "true" ]]; then
     fi
 
     {
-        echo "✅ Benchmark tests completed successfully"
-        echo "✅ Benchmark results generated:"
+        echo "✅ Benchmark tests completed successfully. Generated benchmark results:"
         for file in "${json_files[@]}"; do
             echo "   - $(basename "$file")"
         done

@@ -138,7 +138,7 @@ jobs:
               --artifacts "${{ env.ARTIFACTS_DIR }}"
 
           # Calculate thresholds as decimals (e.g., 10% -> LOWER_THRESHOLD=0.90, 10% -> UPPER_THRESHOLD=0.10)
-          LOWER_THRESHOLD=$(echo "scale=4; 1 - ${{ inputs.max-regression-pct }} / 100" | bc)
+          LOWER_THRESHOLD=$(echo "scale=4; ${{ inputs.max-regression-pct }} / 100" | bc)
           UPPER_THRESHOLD=$(echo "scale=4; ${{ inputs.max-regression-pct }} / 100" | bc)
 
           # Compute Bencher project slug from repository name, e.g., vmelamed/vm2.DevOps -> vm2-devops
@@ -152,23 +152,25 @@ jobs:
               --project "$BENCHER_SLUG"
               --token "$BENCHER_API_TOKEN"
               --github-actions "$GITHUB_TOKEN"
+              --testbed "${{ inputs.runner-os }}"
+              --branch "${{ github.ref_name }}"
+              --adapter c_sharp_dot_net
               --iter 1
               --fold median
-              --branch "${{ github.ref_name }}"
               --branch-start-point main
-              --testbed "${{ inputs.runner-os }}"
+              --err
+
               --threshold-measure latency
               --threshold-test percentage
               --threshold-max-sample-size 64
               --threshold-lower-boundary _
               --threshold-upper-boundary "$UPPER_THRESHOLD"
+
               --threshold-measure throughput
               --threshold-test percentage
               --threshold-max-sample-size 64
               --threshold-lower-boundary "$LOWER_THRESHOLD"
               --threshold-upper-boundary _
-              --err
-              --adapter c_sharp_dot_net
           )
 
           # Only add start-point-hash for PRs
@@ -196,9 +198,9 @@ jobs:
 
           trace "Running command: bencher run ${BENCHER_ARGS[*]}"
           if bencher_output=$(bencher run "${BENCHER_ARGS[@]}"); then
-              info "Upload to Bencher succeeded." "bencher_output" | to_summary
+              info "Upload to Bencher succeeded." "$bencher_output" | to_summary
           else
-              error "Upload to Bencher failed." "bencher_output" | to_summary
+              error "Upload to Bencher failed." "$bencher_output" | to_summary
               exit 1
           fi
           trace "$bencher_output" | to_trace_out
