@@ -151,10 +151,8 @@ jobs:
           BENCHER_ARGS=(
               --project "$BENCHER_SLUG"
               --token "$BENCHER_API_TOKEN"
-              --github-actions "$GITHUB_TOKEN"
               --testbed "${{ inputs.runner-os }}"
               --branch "${{ github.ref_name }}"
-              --ci-number "$GITHUB_RUN_NUMBER"
               --adapter c_sharp_dot_net
               --iter 1
               --fold median
@@ -174,10 +172,14 @@ jobs:
               --threshold-upper-boundary _
           )
 
-          # Only add start-point-hash for PRs
-          pr_base_sha="${{ github.event.pull_request.base.sha }}"
-          if [[ -n "$pr_base_sha" ]]; then
-              BENCHER_ARGS+=(--branch-start-point-hash "$pr_base_sha")
+          # if on PR - add PR data
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+              pr_base_sha="${{ github.event.pull_request.base.sha }}"
+              BENCHER_ARGS+=(
+                --ci-number "$GITHUB_RUN_NUMBER"
+                --github-actions "$GITHUB_TOKEN"
+                --branch-start-point-hash "$pr_base_sha"
+              )
           fi
 
           # Only reset thresholds when explicitly requested
@@ -186,10 +188,10 @@ jobs:
               BENCHER_ARGS+=(--thresholds-reset)
           fi
 
+          # Add all benchmark result files
           trace "Looking for benchmark result files matching: ${{ env.ARTIFACTS_DIR }}/results/*-report.json:"
           trace "$(ls -l ${{ env.ARTIFACTS_DIR }}/results/*-report.json)"
 
-          # Add all benchmark result files
           for file in ${{ env.ARTIFACTS_DIR }}/results/*-report.json; do
               if [[ -s "$file" ]]; then
                   trace "Adding benchmark result file: $file"
@@ -199,9 +201,9 @@ jobs:
 
           trace "Running command: bencher run ${BENCHER_ARGS[*]}"
           if bencher_output=$(bencher run "${BENCHER_ARGS[@]}"); then
-              info "Upload to Bencher succeeded." "$bencher_output" | to_summary
+              info "Upload to Bencher succeeded." "$bencher_output" | to_stdout
           else
-              error "Upload to Bencher failed." "$bencher_output" | to_summary
+              error "Upload to Bencher failed." "$bencher_output" | to_stdout
               exit 1
           fi
           trace "$bencher_output" | to_trace_out
