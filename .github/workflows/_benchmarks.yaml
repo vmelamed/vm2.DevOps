@@ -154,6 +154,7 @@ jobs:
               --github-actions "$GITHUB_TOKEN"
               --testbed "${{ inputs.runner-os }}"
               --branch "${{ github.ref_name }}"
+              --ci-number "$GITHUB_RUN_NUMBER"
               --adapter c_sharp_dot_net
               --iter 1
               --fold median

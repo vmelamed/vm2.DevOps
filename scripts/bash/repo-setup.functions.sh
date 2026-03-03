@@ -48,6 +48,7 @@ declare -xrA vars_defaults=(
     ["ACTIONS_RUNNER_DEBUG"]="false"
     ["ACTIONS_STEP_DEBUG"]="false"
     ["SAVE_PACKAGE_ARTIFACTS"]="false"
+    ["RESET_BENCHMARK_THRESHOLDS"]="false"
 )
 
 declare -xra expected_secrets=(

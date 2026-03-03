@@ -55,6 +55,7 @@ via the `${{ vars.NAME || '<default>' }}` pattern.
 | `MINVERTAGPREFIX`                    | `v`           | CI, Prerelease, Release    | MinVer tag prefix                              |
 | `MIN_COVERAGE_PCT`                   | `80`          | CI                         | Minimum code coverage percentage (50–100)      |
 | `NUGET_SERVER`                       | `github`      | Prerelease, Release        | NuGet server: `github`, `nuget`, or URI        |
+| `RESET_BENCHMARK_THRESHOLDS`         | `false`       | CI                         | Whether to reset Bencher thresholds            |
 | `SAVE_PACKAGE_ARTIFACTS`             | `false`       | Prerelease                 | Upload packages as workflow artifacts          |
 | `VERBOSE`                            | `false`       | All                        | Enable verbose logging in scripts              |
 
@@ -378,6 +379,7 @@ Click **Create** or **Save changes** to save the ruleset.
 | `MINVERTAGPREFIX`                    | `v`         |
 | `MIN_COVERAGE_PCT`                   | `80`        |
 | `NUGET_SERVER`                       | `github`    |
+| `RESET_BENCHMARK_THRESHOLDS`         | `false`     |
 | `SAVE_PACKAGE_ARTIFACTS`             | `false`     |
 | `VERBOSE`                            | `false`     |
 
