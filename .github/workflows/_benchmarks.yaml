@@ -200,10 +200,10 @@ jobs:
           done
 
           trace "Running command: bencher run ${BENCHER_ARGS[*]}"
-          if bencher_output=$(bencher run "${BENCHER_ARGS[@]}"); then
-              info "Upload to Bencher succeeded." "$bencher_output" | to_stdout
+          if bencher run "${BENCHER_ARGS[@]}"; then
+              info "Upload to Bencher succeeded." | to_summary
           else
-              error "Upload to Bencher failed." "$bencher_output" | to_stdout
+              error "Upload to Bencher failed." | to_summary
               exit 1
           fi
           trace "$bencher_output" | to_trace_out
