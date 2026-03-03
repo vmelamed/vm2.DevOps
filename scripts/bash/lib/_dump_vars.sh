@@ -133,7 +133,6 @@ function _write_title()
 function _write_line()
 {
     local -n v=$1
-    local secret=${2:-false}
     local value
 
     if is_defined_associative_array "$1"; then
@@ -157,7 +156,8 @@ function _write_line()
             quiet        )  value=$save_quiet ;;
             table_format )  value=$save_table_format ;;
             _ignore      )  value=$save_ignore ;;
-            *            )  [[ $secret != true ]] && value="$v" || value="••••••" ;;
+            *            )  local secret=${2:-false}
+                            [[ $secret == true ]] && value="••••••" || value="$v" ;;
         esac
     else
         value="❌ unbound, undefined, or invalid"

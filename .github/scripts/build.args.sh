@@ -65,7 +65,7 @@ function get_arguments()
         minver_tag_prefix \
         minver_prerelease_id \
         nuget_username \
-        nuget_password \
+        --secret nuget_password \
         --header "other:" \
         ci
 }

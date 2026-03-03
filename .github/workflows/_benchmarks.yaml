@@ -200,7 +200,7 @@ jobs:
           done
 
           trace "Running command: bencher run ${BENCHER_ARGS[*]}"
-          if bencher run "${BENCHER_ARGS[@]}"; then
+          if bencher run "${BENCHER_ARGS[@]}" &> "$_ignore"; then
               info "Upload to Bencher succeeded." | to_summary
           else
               error "Upload to Bencher failed." | to_summary
