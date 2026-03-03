@@ -39,7 +39,6 @@ exit_if_has_errors
 
 benchmark_name=$(basename "${benchmark_project%.*}")            # the base name of the benchmark project (without the path and file extension)
 benchmark_dir=$(realpath -e "$(dirname "$benchmark_project")")  # the directory of the benchmark project
-artifacts_dir="${artifacts_dir:-"$benchmark_dir/BenchmarkArtifacts"}"
 results_dir="$artifacts_dir/results"
 renamed_artifacts_dir="$artifacts_dir-$(date -u +"%Y%m%dT%H%M%S")"
 
@@ -88,8 +87,28 @@ fi
 trace "Creating artifacts directory(s)..."
 execute mkdir -p "$results_dir"
 
+# shellcheck disable=SC2154 # _ignore is referenced but not assigned.
+repo_root=$(git rev-parse --show-toplevel 2>"$_ignore") || {
+    error "Failed to determine the repository root from $(pwd)."
+    exit 2
+}
+
+# find-out the TFM
+if ! tfm=$(grep -oPm1 '(?<=<TargetFramework>)[^<]+' "$benchmark_project" 2>"$_ignore")               &&
+   ! tfm=$(grep -oPm1 '(?<=<TargetFrameworks>)[^<]+' "$benchmark_project" 2>"$_ignore")              &&
+   ! tfm=$(grep -oPm1 '(?<=<TargetFramework>)[^<]+' "$repo_root/Directory.Build.props" 2>"$_ignore") &&
+   ! tfm=$(grep -oPm1 '(?<=<TargetFrameworks>)[^<]+' "$repo_root/Directory.Build.props" 2>"$_ignore"); then
+    warning "Failed to determine the Target Framework Moniker (TFM) from $benchmark_project or $repo_root/Directory.Build.props." | to_summary
+    tfm="net10.0"
+else
+    if [[ "$tfm" == *";"* ]]; then
+        warning "Multiple Target Framework Monikers (TFMs) found. Using the last one: '${tfm##*;}'." | to_summary
+        tfm="${tfm##*;}"
+    fi
+fi
+
 # Determine the benchmark executable paths. TODO: determine RID and use it to find the correct path
-benchmark_executables_pathname="${benchmark_dir}/bin/${configuration}/net10.0/${benchmark_name}"
+benchmark_executables_pathname="${benchmark_dir}/bin/${configuration}/${tfm}/${benchmark_name}"
 os_name="$(uname -s)"
 if [[ "$os_name" == "Windows_NT" || "$os_name" == *MINGW* || "$os_name" == *MSYS* ]]; then
     benchmark_exe_path="${benchmark_executables_pathname}.exe"
