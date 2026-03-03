@@ -42,6 +42,7 @@ declare -x max_regression_pct=${MAX_REGRESSION_PCT:-${defaultMaxRegressionPct}}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-${defaultMinverTagPrefix}}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-${defaultMinverPrereleaseId}}
 declare -x verbose=${VERBOSE:-${defaultVerbose}}
+declare -x reset_benchmark_thresholds=${RESET_BENCHMARK_THRESHOLDS:-false}
 
 source "$script_dir/validate-input.usage.sh"
 source "$script_dir/validate-input.args.sh"
@@ -105,6 +106,7 @@ if (( max_regression_pct < 0 || max_regression_pct > 50 )); then
 fi
 validate_minverTagPrefix "$minver_tag_prefix" || true
 is_safe_minverPrereleaseId "$minver_prerelease_id" || true
+is_safe_boolean "$reset_benchmark_thresholds" || true
 
 dump_vars --quiet --force \
     -h "Validated Parameters" \
@@ -124,7 +126,8 @@ dump_vars --quiet --force \
     min_coverage_pct \
     max_regression_pct \
     minver_tag_prefix \
-    minver_prerelease_id | to_summary
+    minver_prerelease_id \
+    reset_benchmark_thresholds | to_summary
 
 exit_if_has_errors
 info "✅ All parameters validated successfully"
@@ -148,4 +151,5 @@ args_to_github_output \
     min_coverage_pct \
     max_regression_pct \
     minver_tag_prefix \
-    minver_prerelease_id
+    minver_prerelease_id \
+    reset_benchmark_thresholds

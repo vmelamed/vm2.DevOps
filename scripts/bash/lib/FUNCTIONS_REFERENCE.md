@@ -306,6 +306,14 @@ Tests if user input is safe by checking for potentially dangerous characters.
 
 Validates file paths to prevent directory traversal and dangerous patterns.
 
+### is_safe_boolean()
+
+Validates that the input is a boolean value (true or false).
+
+### is_safe_integer()
+
+Validates that the input is an integer value.
+
 ### is_safe_existing_path()
 
 Validates that a path is safe and exists.

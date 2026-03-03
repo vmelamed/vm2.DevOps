@@ -76,6 +76,11 @@ function get_arguments()
                 minver_prerelease_id="$1"; shift
                 ;;
 
+            --reset-benchmark-thresholds|-r )
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                reset_benchmark_thresholds="$1"; shift;
+                ;;
+
             * )
                 usage false "Unknown option: $option"
                 ;;
@@ -99,6 +104,7 @@ function get_arguments()
         max_regression_pct \
         minver_tag_prefix \
         minver_prerelease_id \
+        reset_benchmark_thresholds \
         --header "other:" \
         ci
 }

@@ -110,11 +110,63 @@ function is_safe_input()
 }
 
 #-------------------------------------------------------------------------------
+# Summary: Validates that the input is a boolean value (true or false).
+# Parameters:
+#   1 - The input string to test
+# Returns:
+#   Exit code: 0 if input is a valid boolean, 1 if not, 2 on invalid arguments
+# Usage: if is_safe_boolean "$input"; then ... fi
+# Example: if is_safe_boolean "$reset_flag"; then echo "Valid boolean"; fi
+#-------------------------------------------------------------------------------
+function is_safe_boolean()
+{
+    if [[ $# -ne 1 ]]; then
+        error "${FUNCNAME[0]}() requires exactly one parameter: the boolean value to test."
+        return 2
+    fi
+
+    local input="$1"
+
+    if [[ "$input" != "true" && "$input" != "false" ]]; then
+        error "${FUNCNAME[0]}(): The input '$input' is not a valid boolean. Expected 'true' or 'false'."
+        return 1
+    fi
+
+    return 0
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Validates that the input is an integer value.
+# Parameters:
+#   1 - The input string to test
+# Returns:
+#   Exit code: 0 if input is a valid integer, 1 if not, 2 on invalid arguments
+# Usage: if is_safe_integer "$input"; then ... fi
+# Example: if is_safe_integer "$count"; then echo "Valid integer"; fi
+#-------------------------------------------------------------------------------
+function is_safe_integer()
+{
+    if [[ $# -ne 1 ]]; then
+        error "${FUNCNAME[0]}() requires exactly one parameter: the integer value to test."
+        return 2
+    fi
+
+    local input="$1"
+
+    if ! is_integer "$input"; then
+        error "${FUNCNAME[0]}(): The input '$input' is not a valid integer."
+        return 1
+    fi
+
+    return 0
+}
+
+#-------------------------------------------------------------------------------
 # Summary: Validates file paths to prevent directory traversal and dangerous patterns.
 # Parameters:
 #   1 - path - the file path to test (should be relative)
 # Returns:
-#   Exit code: 0 if safe path, 1 if contains dangerous patterns, 2 on invalid arguments
+#   Exit code: 0 if safe path, 1 if contains unsafe characters, 2 on invalid arguments
 # Usage: if is_safe_path <path>; then ... fi
 # Example: if is_safe_path "config/settings.json"; then echo "Safe path"; fi
 # Notes: Rejects paths with: .. (traversal), leading / (absolute), and $ ` ; characters.

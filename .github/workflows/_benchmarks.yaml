@@ -43,6 +43,11 @@ on:
         type: number
         default: 20 # percent
 
+      reset-benchmark-thresholds:
+        description: Whether to reset Bencher thresholds if some degradation is expected
+        type: boolean
+        default: false
+
     secrets:
       BENCHER_API_TOKEN:
         description: Bencher.dev API token for authentication
@@ -67,9 +72,9 @@ jobs:
     runs-on: ${{ inputs.runner-os }}
     steps:
       # Install Bencher CLI (install early so if it fails, we fail fast before doing extra work)
-      - name: Compute Bencher cache week key
+      - name: Compute Bencher cache daily key
         id: cache-date
-        run: echo "week=$(date +%Y-W%V)" >> "$GITHUB_OUTPUT"
+        run: echo "day=$(date +%Y%m%d)" >> "$GITHUB_OUTPUT"
         shell: bash
 
       - name: Cache Bencher CLI
@@ -77,9 +82,9 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/.cargo/bin/bencher
-          key: bencher-cli-${{ runner.os }}-${{ steps.cache-date.outputs.week }}
+          key: bencher-cli-${{ runner.os }}-${{ steps.cache-date.outputs.day }}
           restore-keys: |
-            bencher-cli-${{ runner.os }}-latest-
+            bencher-cli-${{ runner.os }}-
 
       - name: Install Bencher CLI
         if: steps.cache-bencher.outputs.cache-hit != 'true'
@@ -140,6 +145,8 @@ jobs:
           REPO_NAME="${{ github.repository }}"
           BENCHER_SLUG=$(echo "${REPO_NAME#*/}" | tr '[:upper:]' '[:lower:]' | tr '.' '-')
 
+          reset_benchmark_thresholds="${{ inputs.reset-benchmark-thresholds }}"
+
           # Build bencher run command
           BENCHER_ARGS=(
               --project "$BENCHER_SLUG"
@@ -148,6 +155,7 @@ jobs:
               --iter 1
               --fold median
               --branch "${{ github.ref_name }}"
+              --branch-start-point main
               --testbed "${{ inputs.runner-os }}"
               --threshold-measure latency
               --threshold-test percentage
@@ -159,10 +167,21 @@ jobs:
               --threshold-max-sample-size 64
               --threshold-lower-boundary "$LOWER_THRESHOLD"
               --threshold-upper-boundary _
-              --thresholds-reset
               --err
               --adapter c_sharp_dot_net
           )
+
+          # Only add start-point-hash for PRs
+          pr_base_sha="${{ github.event.pull_request.base.sha }}"
+          if [[ -n "$pr_base_sha" ]]; then
+              BENCHER_ARGS+=(--branch-start-point-hash "$pr_base_sha")
+          fi
+
+          # Only reset thresholds when explicitly requested
+          if [[ "$reset_benchmark_thresholds" == "true" ]]; then
+              trace "Resetting Bencher thresholds (reset_thresholds=true)"
+              BENCHER_ARGS+=(--thresholds-reset)
+          fi
 
           trace "Looking for benchmark result files matching: ${{ env.ARTIFACTS_DIR }}/results/*-report.json:"
           trace "$(ls -l ${{ env.ARTIFACTS_DIR }}/results/*-report.json)"
@@ -177,9 +196,10 @@ jobs:
 
           trace "Running command: bencher run ${BENCHER_ARGS[*]}"
           if bencher_output=$(bencher run "${BENCHER_ARGS[@]}"); then
-              info "Upload to Bencher succeeded."
+              info "Upload to Bencher succeeded." "bencher_output" | to_summary
           else
-              error "Upload to Bencher failed."
+              error "Upload to Bencher failed." "bencher_output" | to_summary
+              exit 1
           fi
           trace "$bencher_output" | to_trace_out
 

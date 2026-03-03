@@ -56,6 +56,9 @@ Options:
                                 Initial value from \$MINVERTAGPREFIX environment variable or 'v'
   -mi, --minver-prerelease-id   Default semver pre-release identifiers for MinVer (e.g., 'preview.0', 'alpha', 'beta', 'rc1', etc.)
                                 Initial value from \$MINVERDEFAULTPRERELEASEIDENTIFIERS environment variable or 'preview.0'
+  -r, --reset-benchmark-thresholds
+                                Whether to reset Bencher thresholds if some degradation is expected. Expected 'true' or 'false'
+                                Initial value from \$RESET_BENCHMARK_THRESHOLDS or default 'false'
 
 $std_switches
 Environment Variables:
@@ -72,6 +75,8 @@ Environment Variables:
     MINVERTAGPREFIX             Prefix for MinVer version git tags
     MINVERDEFAULTPRERELEASEIDENTIFIERS
                                 Default semver pre-release identifiers for MinVer
+    RESET_BENCHMARK_THRESHOLDS  Whether to reset Bencher thresholds if some degradation is expected
+
 $std_vars
 Outputs (to GITHUB_OUTPUT):
     build-projects              JSON array of paths to projects to build
@@ -86,6 +91,7 @@ Outputs (to GITHUB_OUTPUT):
     max-regression-pct          Maximum acceptable performance regression percentage
     minver-tag-prefix           Prefix for MinVer version git tags
     minver-prerelease-id        Default semver pre-release identifiers for MinVer
+    reset-benchmark-thresholds  Whether to reset Bencher thresholds if some degradation is expected
 
 EOF
 }

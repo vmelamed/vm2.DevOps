@@ -64,6 +64,11 @@ on:
         type: string
         default: preview.0
 
+      reset-benchmark-thresholds:
+        description: Set to "true" to reset Bencher thresholds if some degradation is expected.
+        type: boolean
+        default: false
+
     secrets:
       CODECOV_TOKEN:
         description: Codecov API token for uploading coverage reports
@@ -107,6 +112,7 @@ jobs:
       max-regression-pct: ${{ steps.validate.outputs.max-regression-pct }}
       minver-tag-prefix: ${{ steps.validate.outputs.minver-tag-prefix }}
       minver-prerelease-id: ${{ steps.validate.outputs.minver-prerelease-id }}
+      reset-benchmark-thresholds: ${{ steps.validate.outputs.reset-benchmark-thresholds }}
 
     steps:
       # Clone the repository to access validation scripts
@@ -125,18 +131,19 @@ jobs:
         shell: bash
         run: |
           validate-input.sh \
-              --build-projects       '${{ inputs.build-projects }}' \
-              --test-projects        '${{ inputs.test-projects }}' \
-              --benchmark-projects   '${{ inputs.benchmark-projects }}' \
-              --package-projects     '${{ inputs.package-projects }}' \
-              --runners-os           '${{ inputs.runners-os }}' \
-              --dotnet-version       '${{ inputs.dotnet-version }}' \
-              --configuration        '${{ inputs.configuration }}' \
-              --define               '${{ inputs.preprocessor-symbols }}' \
-              --min-coverage-pct     '${{ inputs.min-coverage-pct }}' \
-              --max-regression-pct   '${{ inputs.max-regression-pct }}' \
-              --minver-tag-prefix    '${{ inputs.minver-tag-prefix }}' \
-              --minver-prerelease-id '${{ inputs.minver-prerelease-id }}'
+              --build-projects              '${{ inputs.build-projects }}' \
+              --test-projects               '${{ inputs.test-projects }}' \
+              --benchmark-projects          '${{ inputs.benchmark-projects }}' \
+              --package-projects            '${{ inputs.package-projects }}' \
+              --runners-os                  '${{ inputs.runners-os }}' \
+              --dotnet-version              '${{ inputs.dotnet-version }}' \
+              --configuration               '${{ inputs.configuration }}' \
+              --define                      '${{ inputs.preprocessor-symbols }}' \
+              --min-coverage-pct            '${{ inputs.min-coverage-pct }}' \
+              --max-regression-pct          '${{ inputs.max-regression-pct }}' \
+              --minver-tag-prefix           '${{ inputs.minver-tag-prefix }}' \
+              --minver-prerelease-id        '${{ inputs.minver-prerelease-id }}' \
+              --reset-benchmark-thresholds  '${{ inputs.reset-benchmark-thresholds }}'
 
   # Build the project and cache artifacts for downstream test/benchmark jobs
   build:
@@ -221,6 +228,7 @@ jobs:
       minver-tag-prefix: ${{ needs.validate-input.outputs.minver-tag-prefix }}
       minver-prerelease-id: ${{ needs.validate-input.outputs.minver-prerelease-id }}
       max-regression-pct: ${{ fromJSON(needs.validate-input.outputs.max-regression-pct) }}
+      reset-benchmark-thresholds: ${{ fromJSON(needs.validate-input.outputs.reset-benchmark-thresholds) }}
 
   # Validate that projects can be packed into NuGet packages
   pack:

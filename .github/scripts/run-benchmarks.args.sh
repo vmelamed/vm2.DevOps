@@ -34,7 +34,7 @@ function get_arguments()
                 minver_tag_prefix="$1"; shift
                 ;;
 
-            --minver-prerelease-id|-i )
+            --minver-prerelease-id|-mi )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 minver_prerelease_id="$1"; shift
                 ;;
