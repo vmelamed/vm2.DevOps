@@ -7,6 +7,21 @@
 # error counter
 declare -ix errors=0
 
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║ IMPORTANT: The to_* functions are designed to be used on the RIGHT side   ║
+# ║ of a pipe. Never pipe a function that SETS VARIABLES into a to_* function.║
+# ║ The left side of a pipe runs in a subshell — all variable assignments are ║
+# ║ lost. Use two separate lines instead.                                     ║
+# ║                                                                           ║
+# ║   NO: warning_var x "msg" "default" | to_stdout  # assigns "default" to x ║
+# ║                                                  # in a subshell. The side║
+# ║                                                  # efect is lost on the   ║
+# ║                                                  # next line.             ║
+# ║                                                                           ║
+# ║  YES: x="default"                                                         ║
+# ║       warning "msg" | to_stdout                                           ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+
 #-------------------------------------------------------------------------------
 # Summary: Logs messages to stdout, allowing override in other scripts for alternate destinations.
 # Parameters: none (reads from stdin)

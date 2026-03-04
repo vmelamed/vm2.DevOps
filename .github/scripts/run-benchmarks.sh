@@ -98,11 +98,11 @@ if ! tfm=$(grep -oPm1 '(?<=<TargetFramework>)[^<]+' "$benchmark_project" 2>"$_ig
    ! tfm=$(grep -oPm1 '(?<=<TargetFrameworks>)[^<]+' "$benchmark_project" 2>"$_ignore")              &&
    ! tfm=$(grep -oPm1 '(?<=<TargetFramework>)[^<]+' "$repo_root/Directory.Build.props" 2>"$_ignore") &&
    ! tfm=$(grep -oPm1 '(?<=<TargetFrameworks>)[^<]+' "$repo_root/Directory.Build.props" 2>"$_ignore"); then
-    warning "Failed to determine the Target Framework Moniker (TFM) from $benchmark_project or $repo_root/Directory.Build.props." | to_summary
+    warning "Failed to determine the Target Framework Moniker (TFM) from $benchmark_project or $repo_root/Directory.Build.props." | to_stdout
     tfm="net10.0"
 else
     if [[ "$tfm" == *";"* ]]; then
-        warning "Multiple Target Framework Monikers (TFMs) found. Using the last one: '${tfm##*;}'." | to_summary
+        warning "Multiple Target Framework Monikers (TFMs) found. Using the last one: '${tfm##*;}'." | to_stdout
         tfm="${tfm##*;}"
     fi
 fi

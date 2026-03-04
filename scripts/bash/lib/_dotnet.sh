@@ -25,7 +25,7 @@ declare -x package_version=''
 # Dependencies: dump_vars
 # Usage: dotnet build -v d ... | summarizeDotnetBuild
 # Example:
-#   dotnet build -v d MyProject.csproj | summarizeDotnetBuild | to_summary
+#   dotnet build -v d MyProject.csproj | summarizeDotnetBuild | to_stdout
 # Notes: Requires detailed verbosity (-v d) to extract version information. Globals persist until next call.
 #-------------------------------------------------------------------------------
 function summarizeDotnetBuild()

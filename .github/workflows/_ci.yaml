@@ -228,7 +228,7 @@ jobs:
       minver-tag-prefix: ${{ needs.validate-input.outputs.minver-tag-prefix }}
       minver-prerelease-id: ${{ needs.validate-input.outputs.minver-prerelease-id }}
       max-regression-pct: ${{ fromJSON(needs.validate-input.outputs.max-regression-pct) }}
-      reset-benchmark-thresholds: ${{ fromJSON(needs.validate-input.outputs.reset-benchmark-thresholds) }}
+      reset-benchmark-thresholds: ${{ fromJSON(needs.validate-input.outputs.reset-benchmark-thresholds) || 'false' }}
 
   # Validate that projects can be packed into NuGet packages
   pack:
