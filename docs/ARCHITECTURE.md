@@ -199,7 +199,7 @@ Each CI script follows a **three-file pattern**:
 | :------------------ | :------------------------------- |
 | `script.sh`         | Entry point — sources lib, runs  |
 | `script.usage.sh`   | `--help` text                    |
-| `script.utils.sh`   | Argument parsing and validation  |
+| `script.args.sh`    | Argument parsing and validation  |
 
 The CI scripts:
 

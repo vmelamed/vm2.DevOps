@@ -63,7 +63,7 @@ and `_release.yaml` handle package publishing.
 
 **Layer 3 — Bash scripts** (in `vm2.DevOps/.github/actions/scripts/`):
 Each script follows a three-file convention: `script.sh` (main), `script.usage.sh` (help text),
-`script.utils.sh` (argument parsing). Scripts source the shared library from
+`script.args.sh` (argument parsing). Scripts source the shared library from
 `scripts/bash/lib/` for common behavior.
 
 ## Getting Started
