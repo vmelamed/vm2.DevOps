@@ -199,11 +199,20 @@ jobs:
               fi
           done
 
+          # create a temporary directory for error output
+          temp_err_dir=$(mktemp -d)
+          trap 'rm -rf "$temp_err_dir"' EXIT
+
+          # create a temporary file to redirect stderr to
+          temp_err_out=$(mktemp)
+          trap 'rm -f "$temp_err_out"; rm -rf "$temp_err_dir"' EXIT
+
           trace "Running command: bencher run ${BENCHER_ARGS[*]}"
-          if bencher run "${BENCHER_ARGS[@]}" &> "$_ignore"; then
+          if bencher run "${BENCHER_ARGS[@]}" 2> "$temp_err_out" 1> "$_ignore"; then
               info "Upload to Bencher succeeded." | to_summary
           else
               error "Upload to Bencher failed." | to_summary
+              cat "$temp_err_out" | to_stdout
               exit 1
           fi
           trace "$bencher_output" | to_trace_out
