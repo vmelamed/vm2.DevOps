@@ -149,7 +149,7 @@ jobs:
           done < <(echo "$test_projects" | jq -r '.[]')
 
       - name: Generate coverage report
-        uses: danielpalme/ReportGenerator-GitHub-Action@5.5.1
+        uses: danielpalme/ReportGenerator-GitHub-Action@5.5.3
         env:
           REPORTGENERATOR_LICENSE: ${{ secrets.REPORTGENERATOR_LICENSE }}
         with:
