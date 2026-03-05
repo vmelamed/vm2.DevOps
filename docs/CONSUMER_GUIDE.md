@@ -1,5 +1,27 @@
 # Consumer Guide
 
+<!-- TOC tocDepth:2..3 chapterDepth:2..6 -->
+
+- [Prerequisites](#prerequisites)
+- [Three Setup Paths](#three-setup-paths)
+  - [Option A: `dotnet new` Template (Recommended)](#option-a-dotnet-new-template-recommended)
+  - [Option B: `diff-common.sh` Script](#option-b-diff-commonsh-script)
+  - [Option C: GitHub Workflow Templates + Manual Setup](#option-c-github-workflow-templates-manual-setup)
+- [Required Directory Structure](#required-directory-structure)
+- [Customizing Configuration Files](#customizing-configuration-files)
+  - [Directory.Build.props](#directorybuildprops)
+  - [Directory.Packages.props](#directorypackagesprops)
+  - [global.json](#globaljson)
+  - [NuGet.config](#nugetconfig)
+  - [codecov.yaml](#codecovyaml)
+- [.NET Conventions](#net-conventions)
+- [Workflow Customization](#workflow-customization)
+  - [Quick Example (CI.yaml)](#quick-example-ciyaml)
+- [Troubleshooting](#troubleshooting)
+- [Further Reading](#further-reading)
+
+<!-- /TOC -->
+
 How to set up a new .NET repository to use vm2.DevOps CI/CD automation.
 
 ## Prerequisites
@@ -7,9 +29,10 @@ How to set up a new .NET repository to use vm2.DevOps CI/CD automation.
 - A .NET solution in `.slnx` format (migrate .sln files with `dotnet solution migrate` if needed)
 - GitHub repository with Actions enabled
 - Repository variables and secrets configured (see [CONFIGURATION.md](CONFIGURATION.md#github-repository-secrets))
-- A `RELEASE_PAT` secret for prerelease and stable release workflows (fine-grained PAT with `contents: write`) — see [CONFIGURATION.md](CONFIGURATION.md#github-repository-secrets)
+- A `RELEASE_PAT` secret for prerelease and stable release workflows (fine-grained PAT with `contents: write`) — see
+  [CONFIGURATION.md](CONFIGURATION.md#github-repository-secrets)
 
-## Two Setup Paths
+## Three Setup Paths
 
 ### Option A: `dotnet new` Template (Recommended)
 
@@ -50,11 +73,9 @@ updates.
    ```bash
    mkdir -p .github/workflows
    for wf in CI Prerelease Release ClearCache; do
-       curl -o .github/workflows/${wf}.yaml \
-           https://raw.githubusercontent.com/vmelamed/.github/main/workflow-templates/${wf}.yaml
+       curl -o .github/workflows/${wf}.yaml https://raw.githubusercontent.com/vmelamed/.github/main/workflow-templates/${wf}.yaml
    done
-   curl -o .github/dependabot.yml \
-    <https://raw.githubusercontent.com/vmelamed/vm2.DevOps/main/.github/dependabot.yml>
+   curl -o .github/dependabot.yml https://raw.githubusercontent.com/vmelamed/vm2.DevOps/main/.github/dependabot.yml
    ```
 
 1. **Copy configuration files** from vm2.DevOps `solution/` directory:

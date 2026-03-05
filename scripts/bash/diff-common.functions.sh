@@ -2,20 +2,32 @@
 # Copyright (c) 2025 Val Melamed
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
+# shellcheck disable=SC2154 # _ignore is referenced but not assigned.
 
 declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
 declare -x git_repos
-declare -xa file_regexes
-
 declare -xr config_file="${script_dir}/diff-common.config.json"
+declare -x custom_config=""
 
-declare -ar valid_actions=("ignore" "merge or copy" "ask to merge" "merge" "ask to copy" "copy")
+declare -xr action_ignore="ignore"
+declare -xr action_merge_or_copy="merge or copy"
+declare -xr action_ask_to_merge="ask to merge"
+declare -xr action_merge="merge"
+declare -xr action_ask_to_copy="ask to copy"
+declare -xr action_copy="copy"
+
+declare -axr valid_actions=(
+    "$action_ignore"
+    "$action_merge_or_copy"
+    "$action_ask_to_merge"
+    "$action_merge"
+    "$action_ask_to_copy"
+    "$action_copy")
 
 all_actions_str=$(print_sequence -s=', ' -q='"' "${valid_actions[@]}")
-
 declare -xr all_actions_str
 
 declare LOCAL=""
@@ -48,22 +60,26 @@ declare -rA merge_commands=(
     ["vimdiff"]="vimdiff \"\$LOCAL\" \"\$REMOTE\""
 )
 
-## Validates that the given repository exists under the git_repos directory,
-## is a git repository, and its HEAD is on or after the latest stable tag.
-## Usage: validate_source_repo <repo-name>
+## Validates that the given directory is a root of a repository working tree, and its HEAD is on or after the latest stable tag.
+## Otherwise confirm with the user that they want to continue
+## Usage: validate_source_repo <root-repo>
 function validate_source_repo()
 {
     local repo_name=$1
 
     if [[ ! -d "${git_repos}/${repo_name}" ]]; then
         error "The '${repo_name}' repository was not cloned or is not under ${git_repos}."
+        exit 2
     fi
-    if ! is_inside_work_tree "${git_repos}/${repo_name}"; then
-        error "The ${repo_name} repository at '${git_repos}/${repo_name}' is not a git repository."
-    fi
-    # shellcheck disable=SC2154 # semverTagReleaseRegex is referenced but not assigned.
-    if ! is_on_or_after_latest_stable_tag "${git_repos}/${repo_name}" "$semverTagReleaseRegex"; then
-        error "The HEAD of the '${repo_name}' repository is before the latest stable tag."
+
+    if is_inside_work_tree "${git_repos}/${repo_name}"; then
+        is_on_or_after_latest_stable_tag "${git_repos}/${repo_name}" "$semverTagReleaseRegex" || {
+            error "The HEAD of the '${repo_name}' repository is before the latest stable tag."
+            exit 2
+        }
+    else
+        confirm "The ${repo_name} repository at '${git_repos}/${repo_name}' is not a git repository." "n" ||
+            exit 2
     fi
 }
 
@@ -119,7 +135,7 @@ function configure()
         error "The configuration file $config_file was not found or is empty." || return 2
     fi
     # Validate JSON
-    if ! jq empty "$config_file" 2>/dev/null; then
+    if ! jq empty "$config_file" 2>"$_ignore"; then
         error "The configuration file $config_file contains invalid JSON." || return 2
     fi
     exit_if_has_errors
@@ -150,7 +166,7 @@ function configure()
         target_files[i]="$target_file"
         file_actions["$source_file"]="$action"
         i=$((i+1))
-    done < <(jq -r '.[] | .sourceFile + "=" + .targetFile + "=" + .action' "$config_file")
+    done < <(jq -r '.files[] | .sourceFile + "=" + .targetFile + "=" + .action' "$config_file")
 
     trace "Loaded ${#source_files[@]} source files"
     trace "Loaded ${#target_files[@]} target files"
@@ -161,16 +177,15 @@ function configure()
 
 ## Loads custom file actions from JSON file
 ## Reads ${target_path}/diff-common.custom.json and overrides file_actions
-# shellcheck disable=SC2154 # _ignore is referenced but not assigned.
 function customize()
 {
-    local custom_config="${target_path}/diff-common.custom.json"
+    custom_config="${target_path}/diff-common.custom.json"
 
     if [[ ! -s "$custom_config" ]]; then
         trace "The custom configuration file $custom_config was not found or is empty."
     else
         trace "Loading tools and actions from the custom configuration file $custom_config."
-        if ! jq empty "$custom_config" 2>/dev/null; then
+        if ! jq empty "$custom_config" 2>"$_ignore"; then
             error "The custom configuration file $custom_config contains invalid JSON."
             return 1
         fi
@@ -217,61 +232,72 @@ function customize()
         done < <(jq -r '.action_overrides | to_entries | .[] | .key+"="+.value' "$custom_config" 2>"$_ignore") # convert JSON object to key=value pairs
 
         info "$script_name was customized successfully with ${changed_actions} modified actions."
+    fi
+}
 
-        { IFS=$'\n' read -r diff_tool && IFS=$'\n' read -r diff_command; } < <(jq -r '.diff.tool, .diff.command' "$custom_config" 2>"$_ignore")
-        { IFS=$'\n' read -r merge_tool && IFS=$'\n' read -r merge_command; } < <(jq -r '.merge.tool, .merge.command' "$custom_config" 2>"$_ignore")
+function get_diff_tool()
+{
+    { IFS=$'\n' read -r diff_tool && IFS=$'\n' read -r diff_command; } < <(jq -r '.diff.tool, .diff.command' "$config_file" 2>"$_ignore")
+    # overridden by
+    [[ -s $custom_config ]] && { IFS=$'\n' read -r diff_tool && IFS=$'\n' read -r diff_command; } < <(jq -r '.diff.tool, .diff.command' "$custom_config" 2>"$_ignore")
+    # if the diff tool has been defined in the config file(s) - we're done
+    [[ -n $diff_tool && -n $diff_command ]] &&
+    (command -p -v "$diff_tool" || which "$diff_tool" &>"$_ignore") &&
+    trace "Diff with '$diff_tool': $diff_command" &&
+    return 0
+
+    # get it from git, BUT VSCode and meld are not good for this script!
+    diff_tool=$(git config --global --get diff.tool 2>"$_ignore") && \
+    diff_command=$(git config --global --get "diff.$diff_tool.cmd" 2>"$_ignore" || true)
+
+    [[ -n "$diff_tool" && -n "$diff_command" && ! $diff_tool =~ (vs)?code|meld ]] &&
+    (command -v -p "$diff_tool" > "$_ignore" || which "$diff_tool" &>"$_ignore") &&
+    trace "Diff with '$diff_tool': $diff_command" &&
+    return 0
+
+    trace "There is no diff tool configured in git, it is inaccessible, or the configured tool is VS Code, or meld."
+
+    if command  -p -v "$default_diff_tool" > "$_ignore" || which "$default_diff_tool" &>"$_ignore"; then
+        trace "Falling back to hard-coded default '$default_diff_tool'."
+        diff_tool="$default_diff_tool"
+    else
+        trace "Falling back to good old 'diff'."
+        diff_tool='diff'
+    fi
+    diff_command=${diff_commands[$diff_tool]}
+}
+
+function get_merge_tool()
+{
+    { IFS=$'\n' read -r merge_tool && IFS=$'\n' read -r merge_command; } < <(jq -r '.merge.tool, .merge.command' "$config_file" 2>"$_ignore")
+    # overridden by
+    [[ -s $custom_config ]] && { IFS=$'\n' read -r merge_tool && IFS=$'\n' read -r merge_command; } < <(jq -r '.merge.tool, .merge.command' "$custom_config" 2>"$_ignore")
+    # if the merge tool has been defined in the config file(s) - we're done
+    [[ -n $merge_tool && -n $merge_command ]] &&
+    (command -p -v "$merge_tool" || which "$merge_tool" &>"$_ignore") &&
+    trace "Merge with '$merge_tool': $merge_command" &&
+    return 0
+
+    merge_tool=$(git config --global --get merge.tool 2>"$_ignore") || true
+    merge_command=$(git config --global --get "mergetool.$merge_tool.cmd" 2>"$_ignore" || true)
+    if [[ -n $merge_tool ]] && is_in "$merge_tool" "${!merge_commands[@]}"; then
+        # our merge commands work better in this script than the ones configured in git
+        merge_command=${merge_commands[$merge_tool]}
     fi
 
-    # Which diff tool to use:
-    if [[ -z $diff_tool || -z $diff_command ]] || ! (command -p -v "$diff_tool" || which "$diff_tool" &>"$_ignore"); then
-        # If we didn't get a diff tool from the config file, get it from git, BUT VSCode and meld are not good for this script:
-        diff_tool=$(git config --global --get diff.tool 2>/dev/null) && \
-        diff_command=$(git config --global --get "diff.$diff_tool.cmd" 2>/dev/null || true)
+    [[ -n "$merge_tool" && -n "$merge_command" ]] &&
+    (command -v -p "$merge_tool" > "$_ignore" || which "$merge_tool" &>"$_ignore") &&
+    trace "Merge with '$merge_tool': $merge_command" &&
+    return 0
 
-        if [[ -z "$diff_tool" || $diff_tool =~ (vs)?code|meld ]] || \
-              ! (command -v -p "$diff_tool" > "$_ignore" || which "$diff_tool" &>"$_ignore"); then
-            trace "There is no diff tool configured in git, it is inaccessible, or the configured tool is VS Code, or meld."
-
-            if command  -p -v "$default_diff_tool" > "$_ignore" || which "$default_diff_tool" &>"$_ignore"; then
-                diff_tool="$default_diff_tool"
-            else
-                trace "Falling back to good old 'diff'."
-                diff_tool='diff'
-            fi
-            diff_command=${diff_commands[$diff_tool]}
-        fi
-    fi
-    if [[ -n "$diff_tool" && -n "$diff_command" ]]; then
-        trace "Diff with '$diff_tool': $diff_command"
-    fi
-
-    # Which merge tool to use:
-    if [[ -z $merge_tool || -z $merge_command ]] || ! (command -p -v "$merge_tool" || which "$merge_tool" &>"$_ignore"); then
-        # If we didn't get a merge tool from the config file, get it from git:
-        merge_tool=$(git config --global --get merge.tool 2>/dev/null)
-        if is_in "$merge_tool" "${!merge_commands[@]}"; then
-            # our merge commands work better in this script than the configured in git ones
-            merge_command=${merge_commands[$merge_tool]}
-        else
-            # we don't know it - get the git configured command
-            merge_command=$(git config --global --get "mergetool.$merge_tool.cmd" 2>/dev/null || true)
-        fi
-        if [[ -z "$merge_tool" ]] || \
-              ! (command -v -p "$merge_tool" > "$_ignore" || which "$merge_tool" &>"$_ignore"); then
-            trace "There is no merge tool configured in git, or it is inaccessible. Will try the default $default_merge_tool."
-
-            if command  -p -v "$default_merge_tool" > "$_ignore" || which "$default_merge_tool" &>"$_ignore"; then
-                # try the default merge tool
-                trace "Falling back to '$default_merge_tool'."
-                merge_tool="$default_merge_tool"
-                merge_command=${merge_commands[$merge_tool]}
-            else
-                error "Could not find a merge tool in the configuration, or configured in git, and the default tool $default_merge_tool is not installed."
-            fi
-        fi
-    fi
-    if [[ -n "$merge_tool" && -n "$merge_command" ]]; then
-        trace "Merge with '$merge_tool': $merge_command"
+    trace "There is no merge tool configured in git or it is inaccessible."
+    if command  -p -v "$default_merge_tool" > "$_ignore" || which "$default_merge_tool" &>"$_ignore"; then
+        # try the default merge tool
+        trace "Falling back to hard-coded default '$default_merge_tool'."
+        merge_tool="$default_merge_tool"
+        merge_command=${merge_commands[$merge_tool]}
+    else
+        error "Could not find a merge tool in the configuration, or configured in git, and the default tool $default_merge_tool is not installed."
     fi
 }
 
@@ -286,10 +312,12 @@ function are_different()
 
     # compare fast, return fast, if no significant diffs; otherwise continue with the fancy diff tool of choice
     if diff -q -w -B "$LOCAL" "$REMOTE" > "$_ignore"; then
-        echo "${LOCAL} <--- Identical ---> ${REMOTE}"
+        printf "%-70s <--- Identical ---> %-s\n" "$LOCAL" "$REMOTE"
+        # echo "${LOCAL} <--- Identical ---> ${REMOTE}"
         return 1
     fi
-    echo "${LOCAL} <--- Different ---> ${REMOTE}"
+    printf "%-70s <--- Different ---> %-s\n" "$LOCAL" "$REMOTE"
+    # echo "${LOCAL} <--- Different ---> ${REMOTE}"
     if [[ "$display_diff" != true ]]; then
         return 0
     fi
@@ -327,5 +355,6 @@ function copy_file()
         execute mkdir -p "$dest_dir"
     fi
     execute cp "$src_file" "$dest_file"
-    echo -e "\n${source_file} <--- Copied to ---> ${target_file}"
+    printf "%-70s <--- Copied to ---> %-s\n" "$src_file" "$dest_file"
+    # echo -e "\n${source_file} <--- Copied to ---> ${target_file}"
 }

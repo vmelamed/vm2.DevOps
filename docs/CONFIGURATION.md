@@ -131,7 +131,7 @@ The CI workflow template adjusts its behavior based on the trigger:
 | `push` to main       | Full CI with default parameters                                       |
 | `push` to branch     | Adds `SHORT_RUN` preprocessor symbol; skipped if an open PR exists    |
 | `pull_request`       | Full CI with default parameters                                       |
-| `pull_request_review`| Runs only on `approved` reviews                                       |
+| `pull_request_review`| Configured at the GitHub repo level (Copilot review)                  |
 | `workflow_dispatch`  | Accepts manual overrides for `runners-os` and `preprocessor-symbols`  |
 
 Commit message keywords:

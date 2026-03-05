@@ -6,10 +6,11 @@
 - [Version Source: MinVer](#version-source-minver)
 - [Two Publishing Flows](#two-publishing-flows)
 - [Prerelease Flow](#prerelease-flow)
+  - [Prerelease Version Calculation Algorithm](#prerelease-version-calculation-algorithm)
+    - [Example Walkthrough](#example-walkthrough)
+  - [Changelog and Tagging](#changelog-and-tagging)
 - [Stable Release Flow](#stable-release-flow)
   - [Release Version Calculation Algorithm](#release-version-calculation-algorithm)
-  - [Prerelease Version Calculation Algorithm](#prerelease-version-calculation-algorithm)
-  - [Changelog and Tagging](#changelog-and-tagging)
 - [Changelog Strategy](#changelog-strategy)
 - [Initial Bootstrapping](#initial-bootstrapping)
 - [NuGet Server Selection](#nuget-server-selection)
@@ -32,7 +33,8 @@ The vm2 repositories follow **trunk-based development** with **continuous delive
 - **Manual stable release** — a human decides *when* to promote to a stable release via `workflow_dispatch`; the *what* (version
   number) is computed automatically from conventional commits
 
-This is a **library release model** layered on trunk-based development: every merge produces a consumable prerelease artifact, and stable releases are batched by human decision.
+This is a **library release model** layered on trunk-based development: every merge produces a consumable prerelease artifact,
+and stable releases are batched by human decision.
 
 ## Version Source: MinVer
 
@@ -112,11 +114,12 @@ PR merged → push to main → CI workflow runs
 
 ```yaml
 if: |
-  github.event_name == 'workflow_dispatch' ||
-  ( github.event_name == 'workflow_run' &&
-    github.event.workflow_run.conclusion == 'success' &&
-    github.event.workflow_run.event == 'push' &&
-    github.event.workflow_run.head_branch == 'main' )
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      ( github.event_name == 'workflow_run' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.conclusion == 'success' &&
+        !contains(github.event.workflow_run.head_commit.message, '[skip ci]') )
 ```
 
 This ensures prereleases only fire after a successful CI run on `main` (i.e. merged PRs), never from CI runs on feature branches.
@@ -132,10 +135,61 @@ to bypass branch protection.
 **Manual trigger**: The prerelease workflow also supports `workflow_dispatch` with a custom `minver-prerelease-id` input (e.g.
 `alpha`, `beta`, `rc1`).
 
+### Prerelease Version Calculation Algorithm
+
+The `compute-prerelease-version.sh` script determines the next prerelease version:
+
+1. **Find latest stable and prerelease tags** — both are needed to determine the base version and counter.
+1. **Scan conventional commits** since the last stable tag — same bump logic as the release algorithm.
+1. **SemVer floor**: same `1.0.0` minimum.
+1. **Compute the prerelease counter**:
+   - If the latest prerelease has the same base version → increment the counter (`preview.N+1`)
+   - If the base version changed (e.g. new `feat:` appeared) → reset counter to `1`
+   - If no previous prerelease exists → start at `1`
+1. **Duplicate guard**: same as release.
+
+Example: latest stable `v1.2.3`, latest prerelease `v1.3.0-preview.2`, new commit is `fix: typo`:
+
+- Commits since `v1.2.3` include a `feat:` → minor bump → base `1.3.0`
+- Same base as latest prerelease → counter = 2 + 1 = **3**
+- Result: `v1.3.0-preview.3`
+
+#### Example Walkthrough
+
+Given latest stable tag `v1.2.3` and these commits since then:
+
+  > - fix: correct boundary check
+  > - feat(parser): add alternation support
+  > - docs: update README
+
+- No `BREAKING CHANGE:` or `!:` → not major
+- `feat(parser):` matches → **minor bump**
+- Result: `v1.3.0`
+
+If there were also a `refactor(core)!: rewrite engine`:
+
+- `!:` detected → **major bump**
+- Result: `v2.0.0`
+
+### Changelog and Tagging
+
+The `changelog-and-tag.sh` script is shared by both flows:
+
+1. **Detects the tag type** (release or prerelease) and selects the appropriate git-cliff config:
+   - Stable release → `cliff.release-header.toml` (outputs "See prereleases below.")
+   - Prerelease → `cliff.prerelease.toml` (outputs a full commit-level changelog entry)
+2. **Determines the commit range**:
+   - Stable release → from last stable tag to HEAD
+   - Prerelease → from last tag (any type) to HEAD
+3. Commits and pushes the changelog update directly to `main`.
+4. Creates an annotated tag and pushes it.
+
+The publish job then checks out this tag so MinVer resolves the exact version.
+
 ## Stable Release Flow
 
 ```text
-Manual workflow_dispatch (with reason)
+Manual workflow_dispatch (with manually entered and logged reason for release)
            │
            ↓
   ┌────────────────────┐
@@ -176,62 +230,23 @@ The `compute-release-version.sh` script determines the next stable version:
 
 1. **Find latest stable tag** — filter `v*` tags matching the release regex (`vX.Y.Z` with no hyphen), sort semantically, take
    the highest.
+1. If `HEAD` is already tagged, the script errors out.
+1. Collect all commit subjects since the latest stable tag:
+1. Scan the subjects for version-bump keywords:
 
-2. **Scan conventional commits** since that tag:
-
-   | Commit Pattern                              | Bump  | Example                              |
+   | Commit Regex                                | Bump  | Example                              |
    | :------------------------------------------ | :---- | :----------------------------------- |
-   | `^[a-z]+(\(.+\))?!:` or `BREAKING CHANGE:`  | Major | `feat!: redesign API`                |
+   | `^[a-z]+(\(.+\))?!:` or `BREAKING CHANGE:`  | Major | `refactor(core)!: redesign API`      |
    | `^feat(\(.+\))?:`                           | Minor | `feat(parser): add glob negation`    |
    | Everything else                             | Patch | `fix: handle null input`             |
 
-3. **SemVer floor**: if the computed major is `0`, the version is raised to `1.0.0` (SemVer 2.0.0 requires major ≥ 1 for
+1. **SemVer floor**: if the computed major is `0`, the version is raised to `1.0.0` (SemVer 2.0.0 requires major ≥ 1 for
    releases).
-
-4. **Prerelease guard**: if the latest prerelease tag (e.g. `v2.0.0-preview.3`) is *higher* than the computed release version,
+1. **Prerelease guard**: if the latest prerelease tag (e.g. `v2.0.0-preview.3`) is *higher* than the computed release version,
    the release version adopts the prerelease's major.minor.patch. This prevents publishing a stable version lower than an
    existing prerelease.
-
-5. **Duplicate guard**: if `HEAD` is already tagged or the computed tag already exists, the script fails with an error and
+1. **Duplicate guard**: if `HEAD` is already tagged or the computed tag already exists, the script fails with an error and
    suggests remediation.
-
-### Prerelease Version Calculation Algorithm
-
-The `compute-prerelease-version.sh` script determines the next prerelease version:
-
-1. **Find latest stable and prerelease tags** — both are needed to determine the base version and counter.
-
-2. **Scan conventional commits** since the last stable tag — same bump logic as the release algorithm.
-
-3. **SemVer floor**: same `1.0.0` minimum.
-
-4. **Compute the prerelease counter**:
-   - If the latest prerelease has the same base version → increment the counter (`preview.N+1`)
-   - If the base version changed (e.g. new `feat:` appeared) → reset counter to `1`
-   - If no previous prerelease exists → start at `1`
-
-5. **Duplicate guard**: same as release.
-
-Example: latest stable `v1.2.3`, latest prerelease `v1.3.0-preview.2`, new commit is `fix: typo`:
-
-- Commits since `v1.2.3` include a `feat:` → minor bump → base `1.3.0`
-- Same base as latest prerelease → counter = 2 + 1 = **3**
-- Result: `v1.3.0-preview.3`
-
-### Changelog and Tagging
-
-The `changelog-and-tag.sh` script is shared by both flows:
-
-1. **Detects the tag type** (release or prerelease) and selects the appropriate git-cliff config:
-   - Stable release → `cliff.release-header.toml` (outputs "See prereleases below.")
-   - Prerelease → `cliff.prerelease.toml` (outputs a full commit-level changelog entry)
-2. **Determines the commit range**:
-   - Stable release → from last stable tag to HEAD
-   - Prerelease → from last tag (any type) to HEAD
-3. Commits and pushes the changelog update directly to `main`.
-4. Creates an annotated tag and pushes it.
-
-The publish job then checks out this tag so MinVer resolves the exact version.
 
 ## Changelog Strategy
 

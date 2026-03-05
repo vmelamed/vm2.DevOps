@@ -8,6 +8,7 @@
 - [2. Utility Scripts](#2-utility-scripts)
   - [diff-common.sh](#diff-commonsh)
   - [move-commits-to-branch.sh](#move-commits-to-branchsh)
+  - [rename-branch.sh](#rename-branchsh)
   - [Other Utilities](#other-utilities)
 - [3. CI Scripts](#3-ci-scripts)
   - [validate-input.sh](#validate-inputsh)
@@ -20,7 +21,7 @@
   - [compute-prerelease-version.sh](#compute-prerelease-versionsh)
   - [changelog-and-tag.sh](#changelog-and-tagsh)
   - [download-artifact.sh](#download-artifactsh)
-  - [repo-setup.sh](#bootstrap-new-packagesh)
+  - [repo-setup.sh](#repo-setupsh)
 
 <!-- /TOC -->
 
@@ -97,15 +98,111 @@ They follow the same three-file pattern where applicable.
 
 ### diff-common.sh
 
-Compares pre-defined shared set of files between source-of-truth repos (vm2.DevOps, .github) and a target project. Useful for
-keeping common configuration files in sync across repos.
+Compares pre-defined set of files from the "source-of-truth" directories (from the repositories `vm2.DevOps` and `.github`) with
+the corresponding files in a target directory. Useful for keeping common files (config, settings, `Directory.*.props`, workflow
+files, etc.) in-sync across repositories. The script assumes that the repositories `vm2.DevOps` and `.github` are in the same
+directory which may be defined by the environment variable `$GIT_REPOS` or given by the option `--git-repos`
+
+The tool comprises of the following files, expected to be in the same directory:
+
+- `diff-common.sh` - the main script
+- `diff-common.args.sh` - script arguments parsing (sourced)
+- `diff-common.usage.sh` - script usage information (sourced)
+- `diff-common.functions.sh` - script with reusable bash functions (sourced)
+- `diff-common.config.json` - mandatory global configuration file
+
+The script compares one by one the source and the target files using a configurable comparison (`diff`-like) tool. If the target
+file is not found, or there are differences between the files, the tool takes an action depending on the configured, per-file
+default action. Here is the list of available action names and the resulting behaviors:
+
+| Action          | If the target file is different from the source: | If the target file does not exist: |
+|-----------------|--------------------------------------------------|------------------------------------|
+| `ignore`        | does nothing                                     | does nothing                       |
+| `merge or copy` | asks to copy, merge, or ignore                   | asks to copy or ignore             |
+| `ask to merge`  | asks to merge or ignore                          | asks to copy or ignore             |
+| `merge`         | merges source into target                        | copies the file                    |
+| `ask to copy`   | asks to copy or ignore                           | asks to copy or ignore             |
+| `copy`          | copies the file                                  | copies the file                    |
+
+The script uses two configuration files with two different JSON formats:
+
+- a **mandatory** global configuration file `diff-common.config.json` from the directory of the the script files. It defines
+  the two sets of files and the corresponding action if they differ, e.g.:
+
+      ```json
+      {
+        "diff": {
+          "tool": "delta",
+          "command": "delta --side-by-side --line-numbers --paging never \"$LOCAL\" \"$REMOTE\""
+        },
+        "merge": {
+          "tool": "code",
+          "command": "code --new-window --wait --diff \"$REMOTE\" \"$LOCAL\" \"$REMOTE\" \"$LOCAL\""
+        },
+        "files": [
+          {
+            "sourceFile": "${git_repos}/vm2.DevOps/solution/.editorconfig",
+            "targetFile": "${target_path}/.editorconfig",
+            "action": "copy"
+          },
+          {
+            "sourceFile": "${git_repos}/vm2.DevOps/solution/.gitignore",
+            "targetFile": "${target_path}/.gitignore",
+            "action": "copy"
+          },
+          ...
+        ]
+      }
+      ```
+
+- an **optional** configuration file `diff-common.custom.json` from the directory of the target files, e.g.:
+
+      ```json
+      {
+        "diff": {
+          "tool": "delta",
+          "command": "delta --side-by-side --line-numbers --paging never \"$LOCAL\" \"$REMOTE\""
+        },
+        "merge": {
+          "tool": "code",
+          "command": "code --new-window --wait --diff \"$REMOTE\" \"$LOCAL\" \"$REMOTE\" \"$LOCAL\""
+        },
+        "action_overrides": {
+          ".editorconfig": "copy",
+          ".gitattributes": "copy",
+          ...
+        }
+      }
+      ```
+
+As you can see the custom config file allows overriding the actions in the `diff-common.config.json` file for specific file
+names.
+
+Both files optionally define a comparison (`diff`-like) tool and a `merge`-like tool. If they are not specified explicitly the
+tools picks the tools configured in the Git global configuration (e.g. `git config --global --get diff.tool`). If they are not
+configured the tool assumes some default actions. The tools are picked in a priority order from highest to lowest:
+
+1. Defined in `diff-common.custom.json` from the target directory
+1. Defined in `diff-common.config.json` from the directory of the `diff-common.sh` script
+1. Git global configuration
+1. Default tools (diff: `delta` if installed or `diff`, merge: `Visual Studio Code`)
+
+> [!NOTE] The tools `Visual Studio Code` and `meld` do not behave well for the purpose of the compare operation in this script,
+> therefore they are ignored. But they can be used for merge.
+
+> [!TIP] For comparison we recommend the `delta` tool.
+
+The property `files` in the mandatory `diff-common.config.json` file defines the set of source files, and corresponding target
+files and actions to take if the source and the target are different.
+
+**Command Line Options:**
 
 | Option                      | Short | Default      | Description                              |
 | :-------------------------- | :---- | :----------- | :--------------------------------------- |
 | `<repository-name-or-path>` |       | current dir  | Positional: repo name or path to compare |
-| `--repos`                   | `-r`  | `$GIT_REPOS` | Parent directory of all repos            |
+| `--git-repos`               | `-r`  | `$GIT_REPOS` | Parent directory of all repos            |
+| `--files`                   | `-f`  | all          | Comma-separated list of files or regex   |
 | `--minver-tag-prefix`       | `-mp` | `v`          | Tag prefix for detecting stable versions |
-| `--files`                   | `-f`  | all          | Comma-separated list or regex of files   |
 
 ### move-commits-to-branch.sh
 
@@ -116,6 +213,15 @@ Moves commits from a specified SHA onward to a new branch, resetting main to the
 | `--commit-sha`    | `-c`  | SHA from which to move commits          |
 | `--branch`        | `-b`  | New branch name                         |
 | `--check-out-new` | `-n`  | Check out the new branch after the move |
+
+### rename-branch.sh
+
+Renames a branch in the Git repository and in the remote origin.
+
+| Parameter:              | Description                       |
+|-------------------------|-----------------------------------|
+| `<current branch name>` | Positional 1: Current branch name |
+| `<new branch name>`     | Positional 2: New branch name     |
 
 ### Other Utilities
 

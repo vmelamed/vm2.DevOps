@@ -125,6 +125,27 @@ function gh_repo_info()
 }
 
 #-------------------------------------------------------------------------------
+# Summary: Retrieves the root of the Git repository work tree for the specified
+#          or the current directory.
+# Parameters:
+#   1 - directory - optional path to a directory inside a Git repository work tree
+# Returns:
+#   stdout: absolute path to the root of the Git repository work tree
+#   Exit code: 0 on success, non-zero on failure
+# Dependencies: git
+# Usage: root_working_tree <directory>
+# Example: root_working_tree "$PWD"
+#-------------------------------------------------------------------------------
+function root_working_tree()
+{
+    if [[ -d $1 ]]; then
+        git -C "$1" rev-parse --show-toplevel 2>"$_ignore"
+    else
+        git rev-parse --show-toplevel
+    fi
+}
+
+#-------------------------------------------------------------------------------
 # Summary: Tests if the specified directory is inside a Git repository (inside a git work tree).
 # Parameters:
 #   1 - directory - path to directory to test

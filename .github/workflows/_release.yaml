@@ -53,8 +53,8 @@ on:
     secrets:
       RELEASE_PAT:
         description: >-
-          Personal Access Token with repo scope for pushing commits and tags back to the repository.
-          If the default GITHUB_TOKEN does not have sufficient permissions, this token can be used instead.
+          PAT for a user listed as a bypass actor (e.g. Admin) in the branch ruleset protecting main.
+          Required to push changelog commits and version tags directly to main.
         required: true
 
       NUGET_API_GITHUB_KEY:

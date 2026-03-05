@@ -17,13 +17,13 @@ $common_switches"
     fi
 
     cat << EOF
-Usage: ${script_name} [<repository-name>] | [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
+Usage: ${script_name} [<directory-name>] | [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
 Compares a pre-defined set of files from the source-of-truth repositories with the corresponding files in the specified project.
 This is opinionated tool that requires certain file structure of  the repository and the project directory. See the README.md
 file for more details
 
 Arguments:
-  <repository-name>             Determines the target directory for the operation. It can be:
+  <directory-name>              Determines the target directory for the operation. It can be:
                                 1) not specified - the current working directory is used
                                 2) just the name of the project's repository (assumed under \$GIT_REPOS)
                                 3) the full path to the project's directory that is either the root of the working tree or

@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025 Val Melamed
 
-
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
 # export variables to hold the results
@@ -30,6 +29,16 @@ declare -x package_version=''
 #-------------------------------------------------------------------------------
 function summarizeDotnetBuild()
 {
+    # reset the globals
+    build_result="Unknown"
+    warnings_count=''
+    errors_count=''
+    assembly_version=''
+    file_version=''
+    informational_version=''
+    version=''
+    package_version=''
+
     local restoreShopt
     restoreShopt=$(shopt -p nocasematch)
     shopt -s nocasematch

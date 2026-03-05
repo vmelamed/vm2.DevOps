@@ -17,7 +17,7 @@ declare -xr lib_dir
 source "$lib_dir/core.sh"
 
 # arguments
-declare -x git_repos="${GIT_REPOS:-$HOME/repos}"
+declare -x git_repos="${GIT_REPOS:-}"
 declare -x target_dir=""
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-'v'}
 declare -xa file_regexes=()
@@ -28,7 +28,23 @@ source "${script_dir}/diff-common.functions.sh"
 
 get_arguments "$@"
 
-git_repos=$(realpath -e "$git_repos")
+git_repos=$(realpath -e "$git_repos") || {
+    warning "Neither --git-repos option nor GIT_REPOS environment variable is set or valid."
+}
+
+# Validate environment:
+if [[ -z "$git_repos" ]] || ! git_repos=$(realpath -e "$git_repos"); then
+    # git_repos was not set from option or env.var: try from the directory of the script's repo or from ($script_dir/../..)
+    if ! r=$(root_working_tree "$script_dir") &&
+       ! r=$(realpath -e "$(dirname "$script_dir/../..")"); then
+        error "The common directory of the source repositories was not specified. Specify either the --git-repos option or export GIT_REPOS environment variable."
+        exit 2
+    fi
+    git_repos=$(realpath -e "$(dirname "$r")") || {
+        error "Could not determine the common directory of the source repositories. Specify either the --git-repos option or export GIT_REPOS environment variable."
+        exit 2
+    }
+fi
 
 # freeze the arguments
 declare -xr git_repos
@@ -47,21 +63,13 @@ declare -a source_files
 declare -a target_files
 declare -A file_actions
 
-# Validate environment:
-if [[ -z "$git_repos" ]]; then
-    error "The common directory of the source repositories was not specified (export GIT_REPOS env. variable or use --git-repos option)."
-    exit 2
-fi
+# make sure we are seeing .github and vm2.DevOps properly through git_repos
 validate_source_repo ".github"
 validate_source_repo "vm2.DevOps"
 trace "All source repositories are in '$git_repos'"
 
-# Resolve the project path
-target_path=$(find_repo_root "$target_dir" true) || {
-    error "Could not find a directory inside a working tree related to the parameter '$target_dir'."
-    exit 2
-}
-
+# Resolve the target path
+target_path=$(realpath "$target_dir")
 if is_in "$target_path" "${git_repos}/vm2.DevOps" "${git_repos}/.github" ; then
     error "The target project cannot be '${git_repos}/vm2.DevOps' or '${git_repos}/.github'."
     exit 2
@@ -70,7 +78,7 @@ trace "The target project is in '$target_path'"
 
 ask=false
 if [[ ! -d "$target_path/.github/workflows" ]]; then
-    warning "The target directory '$target_path' does not contain a directory '.github/workflows'."
+    warning "The target directory '$target_path' does not contain a directory '.github/workflows' - it will be created."
     ask=true
 fi
 if [[ ! -d "$target_path/src" ]]; then
@@ -84,16 +92,20 @@ fi
 # freeze target_path too
 declare -xr target_path
 
-# Load file configurations from JSON
+# Load files and actions from the global config JSON
 configure
 
-# Modify the actions from JSON custom config if it exists
+# Modify the actions from custom config JSON if it exists
 customize
-
 if [[ ${#source_files[@]} -ne ${#target_files[@]} ]] || [[ ${#source_files[@]} -ne ${#file_actions[@]} ]]; then
     error "The data in the tables do not match."
 fi
+
 exit_if_has_errors
+
+# get the diff and merge tools
+get_diff_tool
+get_merge_tool
 
 declare -i i=0
 
@@ -120,17 +132,27 @@ while [[ $i -lt ${#source_files[@]} ]]; do
     trace -e "\n${source_file} <--- Comparing ---> ${target_file}"
 
     if [[ ! -s "$target_file" ]]; then
-        if [[ "$actions" != "ignore" ]]; then
-            confirm "Target file '${target_file}' does not exist. Do you want to copy it from '${source_file}'?" "y" && \
-            copy_file "$source_file" "$target_file"
-        else
-            warning "Target file '${target_file}' does not exist or is empty."
-        fi
+        case $actions in
+            "$action_ignore" )
+                continue
+                ;;
+            "$action_merge_or_copy" | "$action_ask_to_merge" | "$action_ask_to_copy")
+                confirm "Target file '${target_file}' does not exist. Do you want to copy it from '${source_file}'?" "y" && \
+                copy_file "$source_file" "$target_file"
+                ;;
+            "$action_merge" | "$action_copy" )
+                copy_file "$source_file" "$target_file"
+                ;;
+            *)
+                error "Unknown action '$actions' for files '${source_file}' and '${target_file}'." || 0
+                press_any_key
+                ;;
+        esac
         continue
     fi
 
     show_diff=true
-    if is_in "$actions" "ignore" "merge" "copy"; then
+    if is_in "$actions" "$action_ignore" "$action_merge" "$action_copy"; then
         show_diff=false
     fi
 
@@ -139,10 +161,10 @@ while [[ $i -lt ${#source_files[@]} ]]; do
         # shellcheck disable=SC2154
         if [[ "$quiet" != true ]]; then
             case $actions in
-                "ignore")
+                "$action_ignore")
                     continue
                     ;;
-                "merge or copy")
+                "$action_merge_or_copy")
                     case $(choose "What do you want to do?" \
                                   "Do nothing - continue" \
                                   "Merge the files" \
@@ -153,18 +175,18 @@ while [[ $i -lt ${#source_files[@]} ]]; do
                         *) ;;
                     esac
                     ;;
-                "ask to merge")
+                "$action_ask_to_merge")
                     confirm "Do you want to merge '${source_file}' to file '${target_file}'?" "n" && \
                     merge "$target_file" "$source_file" || true
                     ;;
-                "merge")
+                "$action_merge")
                     merge "$target_file" "$source_file" || true
                     ;;
-                "ask to copy")
+                "$action_ask_to_copy")
                     confirm "Do you want to copy '${source_file}' to file '${target_file}'?" "n" && \
                     copy_file "$source_file" "$target_file"
                     ;;
-                "copy")
+                "$action_copy")
                     copy_file "$source_file" "$target_file"
                     ;;
                 *)

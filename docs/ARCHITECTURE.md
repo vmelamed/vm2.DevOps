@@ -142,25 +142,7 @@ Manual dispatch. Three sequential jobs:
 1. **compute-version** — Calls `compute-release-version.sh` to determine the stable version from conventional commits.
 2. **changelog-and-tag** — Calls `changelog-and-tag.sh` to update the changelog using `cliff.release-header.toml` and create the
    release Git tag.
-3. **release** — Checks out the release tag, then calls `publish-package.sh` to build, pack, and push.
-
-##### Algorithm for Calculating Release Version
-
-1. Find the latest stable tag matching `{prefix}MAJOR.MINOR.PATCH` (e.g., `v1.2.3`).
-1. If `HEAD` is already tagged, the script errors out.
-1. Collect all commit subjects between that tag and `HEAD`.
-1. Scan the subjects for version-bump keywords:
-
-   | Commit Pattern                                 | Bump      | Example Subject                         | Regex (case-insensitive) |
-   | :--------------------------------------------- | :-------- | :---------------------------------------|--------------------------|
-   | **`BREAKING CHANGE:`** anywhere in subject     | **Major** | `BREAKING CHANGE: remove legacy API`    | ^BREAKING CHANGE:        |
-   | **`type(scope)!:`** (trailing `!` on any type) | **Major** | `feat(api)!: redesign endpoint contract`| ^[a-z]+(\(.+\))?!:       |
-   | **`feat:`** or **`feat(scope):`**              | **Minor** | `feat(glob): add recursive matching`    | ^feat(\(.+\))?:          |
-
-1. If the resulting version would be `0.x.x`, it is adjusted to `1.0.0` (SemVer requires major >= 1 for releases).
-1. If the computed version is **lower** than the latest prerelease tag, the major/minor/patch from that prerelease tag is
-   adopted instead (so a release is never older than its prereleases).
-1. If the computed tag already exists, the script errors out.
+3. **release** — Checks out the release tag, then calls `publish-package.sh` to build, pack, and push. (see [Release Process](RELEASE_PROCESS.md#release-process))
 
 ##### Example Walkthrough
 

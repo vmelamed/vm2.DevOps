@@ -58,7 +58,7 @@ dump_all_variables()
         verbose \
         quiet \
         --blank \
-        repos \
+        git_repos \
         minver_tag_prefix \
         target_dir \
         file_regexes \

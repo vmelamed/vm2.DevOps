@@ -253,6 +253,56 @@ Computes a prerelease version, updates the changelog, tags, and publishes a prer
 | `NUGET_API_NUGET_KEY`  | no       | nuget.org API key                                    |
 | `RELEASE_PAT`          | **yes**  | PAT with `contents:write` for pushing to main        |
 
+### ⚠️ `RELEASE_PAT` — Special Setup Required
+
+`RELEASE_PAT` is not a regular secret. It requires **both** secret creation **and** branch ruleset
+bypass configuration to function correctly.
+
+#### Why it's needed
+
+The `_prerelease.yaml` and `_release.yaml` workflows push commits and tags directly to `main`
+(e.g., changelog updates, version tags). Branch protection rules block direct pushes — including
+from GitHub Actions using the default `GITHUB_TOKEN`. `RELEASE_PAT` is a Personal Access Token
+that belongs to a user (e.g. Admin) configured as a **bypass actor** in the branch ruleset.
+
+#### Setup steps
+
+1. **Create a fine-grained PAT** for the repository owner with these permissions:
+   - `Contents: Read and write` (push commits and tags)
+   - `Metadata: Read-only`
+
+2. **Add as a repository secret:**
+   - Go to *Settings → Secrets and variables → Actions*
+   - Create secret named `RELEASE_PAT`
+
+3. **Configure branch ruleset bypass** (this is the step most people miss):
+   - Go to *Settings → Rules → Rulesets*
+   - Edit the ruleset protecting `main`
+   - Under *Bypass list*, add the PAT owner as a bypass actor
+   - The actor must have **"Always"** bypass permission (not "Pull requests only")
+
+4. **Verify** by running a manual `workflow_dispatch` of the Prerelease workflow.
+
+#### What happens if this is misconfigured
+
+| Symptom                                                                | Cause                                     |
+|------------------------------------------------------------------------|-------------------------------------------|
+| `_prerelease.yaml` fails with "push declined"                          | PAT owner not in bypass list              |
+| `_prerelease.yaml` fails with "Resource not accessible by integration" | PAT lacks `Contents: write` permission    |
+| `_release.yaml` creates tag but changelog push fails                   | PAT expired or revoked                    |
+| Everything works on `workflow_dispatch` but fails on auto-trigger      | Wrong PAT scope (classic vs fine-grained) |
+
+#### ⚠️ Security considerations
+
+- The PAT owner can push directly to `main`, bypassing all branch protections
+- If the PAT leaks, an attacker can push arbitrary code to `main`
+- **Mitigation:** Use fine-grained PATs (scoped to single repo), set short expiration,
+  rotate regularly
+- Monitor the repository *Settings → Security log* for unexpected pushes
+
+> **Cross-reference:** See [ERROR_RECOVERY.md](ERROR_RECOVERY.md#branch-protection-bypass) for
+> recovery procedures if release pushes fail due to PAT issues.
+
 ### Permissions
 
     contents: write
@@ -301,6 +351,56 @@ Computes a stable release version, updates the changelog, tags, and publishes.
 | `NUGET_API_GITHUB_KEY` | no       | GitHub Packages API key                              |
 | `NUGET_API_NUGET_KEY`  | no       | nuget.org API key                                    |
 | `RELEASE_PAT`          | **yes**  | PAT with `contents:write` for pushing to main        |
+
+### ⚠️ `RELEASE_PAT` — Special Setup Required
+
+`RELEASE_PAT` is not a regular secret. It requires **both** secret creation **and** branch ruleset
+bypass configuration to function correctly.
+
+#### Why it's needed
+
+The `_prerelease.yaml` and `_release.yaml` workflows push commits and tags directly to `main`
+(e.g., changelog updates, version tags). Branch protection rules block direct pushes — including
+from GitHub Actions using the default `GITHUB_TOKEN`. `RELEASE_PAT` is a Personal Access Token
+that belongs to a user (e.g. Admin) configured as a **bypass actor** in the branch ruleset.
+
+#### Setup steps
+
+1. **Create a fine-grained PAT** for the repository owner with these permissions:
+   - `Contents: Read and write` (push commits and tags)
+   - `Metadata: Read-only`
+
+2. **Add as a repository secret:**
+   - Go to *Settings → Secrets and variables → Actions*
+   - Create secret named `RELEASE_PAT`
+
+3. **Configure branch ruleset bypass** (this is the step most people miss):
+   - Go to *Settings → Rules → Rulesets*
+   - Edit the ruleset protecting `main`
+   - Under *Bypass list*, add the PAT owner as a bypass actor
+   - The actor must have **"Always"** bypass permission (not "Pull requests only")
+
+4. **Verify** by running a manual `workflow_dispatch` of the Prerelease workflow.
+
+#### What happens if this is misconfigured
+
+| Symptom                                                                | Cause                                     |
+|------------------------------------------------------------------------|-------------------------------------------|
+| `_prerelease.yaml` fails with "push declined"                          | PAT owner not in bypass list              |
+| `_prerelease.yaml` fails with "Resource not accessible by integration" | PAT lacks `Contents: write` permission    |
+| `_release.yaml` creates tag but changelog push fails                   | PAT expired or revoked                    |
+| Everything works on `workflow_dispatch` but fails on auto-trigger      | Wrong PAT scope (classic vs fine-grained) |
+
+#### ⚠️ Security considerations
+
+- The PAT owner can push directly to `main`, bypassing all branch protections
+- If the PAT leaks, an attacker can push arbitrary code to `main`
+- **Mitigation:** Use fine-grained PATs (scoped to single repo), set short expiration,
+  rotate regularly
+- Monitor the repository *Settings → Security log* for unexpected pushes
+
+> **Cross-reference:** See [ERROR_RECOVERY.md](ERROR_RECOVERY.md#branch-protection-bypass) for
+> recovery procedures if release pushes fail due to PAT issues.
 
 ### Permissions
 
