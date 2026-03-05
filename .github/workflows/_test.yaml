@@ -133,7 +133,7 @@ jobs:
 
           tests_artifacts_dir="./TestResults"
           test_projects='${{ inputs.test-projects }}'
-          echo "$test_projects" | jq -r '.[]' | while read -r test_project; do
+          while read -r test_project; do
             trace "Running tests for: $test_project"
             run-tests.sh \
                 "$test_project" \
@@ -146,14 +146,14 @@ jobs:
 
                 # This is the root artifacts directory. The script will create a subdirectory for each test project,
                 # e.g. ./TestResults/<test-project-name>/*
-          done
+          done < <(echo "$test_projects" | jq -r '.[]')
 
       - name: Generate coverage report
         uses: danielpalme/ReportGenerator-GitHub-Action@5.5.1
         env:
           REPORTGENERATOR_LICENSE: ${{ secrets.REPORTGENERATOR_LICENSE }}
         with:
-          reports: ${{ steps.run-tests.outputs.coverage-source-path }}
+          reports: ${{ steps.run-tests.outputs.coverage-files }}
           targetdir: ${{ steps.run-tests.outputs.coverage-reports-dir }}
           reporttypes: MarkdownSummaryGithub
           customSettings: >
@@ -172,7 +172,7 @@ jobs:
         uses: actions/upload-artifact@v6
         id: upload-coverage
         with:
-          name: coverage-${{ steps.run-tests.outputs.repo-name }}-${{ inputs.runner-os }}
+          name: coverage-${{ github.event.repository.name }}-${{ inputs.runner-os }}
           path: ${{ steps.run-tests.outputs.coverage-reports-dir }}
           if-no-files-found: error
           overwrite: true
@@ -189,9 +189,9 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ${{ steps.run-tests.outputs.coverage-source-path }}
-          flags: ${{ steps.run-tests.outputs.repo-name }}-${{ inputs.runner-os }}
-          name: ${{ steps.run-tests.outputs.repo-name }}-${{ inputs.runner-os }}
+          files: ${{ steps.run-tests.outputs.coverage-files }}
+          flags: ${{ github.event.repository.name }}-${{ inputs.runner-os }}
+          name: ${{ github.event.repository.name }}-${{ inputs.runner-os }}
           fail_ci_if_error: false
           verbose: true
 

@@ -42,11 +42,9 @@ is_safe_path "$tests_artifacts_dir" || true
 
 while IFS='=' read -r key value; do
     trace "$key=>$value"
-    case "$key" in
-        root ) repo_root="$value" ;;
-        name ) repo_name="$value" ;;
-        *    ) ;;
-    esac
+    if [[ "$key" == "root" ]]; then
+        repo_root="$value"
+    fi
 done < <(gh_repo_info "$test_dir")
 
 test_config_path="${repo_root}/testconfig.json"
@@ -65,11 +63,10 @@ test_dir=$(realpath -e "${test_dir}")                                           
 tests_artifacts_dir=$(realpath -m "${tests_artifacts_dir}")
 artifacts_dir="${tests_artifacts_dir}/${test_name}"                              # the directory for test results and reports (resolved to an absolute path, if it was relative)
 coverage_source_path="${artifacts_dir}/coverage.cobertura.xml"                  # path to the raw coverage file                 ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/coverage.cobertura.xml
-coverage_reports_dir="${artifacts_dir}/reports"                                 # directory for coverage reports                ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/reports
 coverage_files="$tests_artifacts_dir/*/coverage.cobertura.xml"
+coverage_reports_dir="${artifacts_dir}/reports"                                 # directory for coverage reports                ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/reports
 
 # Freeze the variables
-declare -xr repo_name
 declare -xr test_project
 declare -xr configuration
 declare -xr preprocessor_symbols
@@ -78,12 +75,12 @@ declare -xr minver_tag_prefix
 declare -xr minver_prerelease_id
 declare -xr test_name
 declare -xr test_dir
-declare -xr repo_root
 declare -xr test_config_path
 declare -xr artifacts_dir
 declare -xr coverage_source_path
 declare -xr coverage_settings_path
 declare -xr coverage_files
+declare -xr coverage_reports_dir
 
 if [[ -d "$artifacts_dir" && -n "$(ls -A "$artifacts_dir")" ]]; then
     if [[ -n "${CI:-}" ]]; then
@@ -175,9 +172,7 @@ if [[ "$ci" == true ]]; then
     # Set outputs for merged coverage
     # shellcheck disable=SC2034 # proj_name appears unused. Verify use (or export if used externally).
     args_to_github_output \
-        "repo_name" \
-        "tests_artifacts_dir" \
-        "coverage_source_path" \
+        "coverage_files" \
         "coverage_reports_dir"
 
     trace "Running in CI environment, skipping coverage report generation - will be generated later by an action."
@@ -200,10 +195,10 @@ execute reportgenerator \
     -reports:"$coverage_source_path" \
     -targetdir:"$coverage_reports_dir" \
     -reporttypes:TextSummary,html_dark,MarkdownSummaryGithub,Badges \
-    minimumCoverageThresholds:lineCoverage=80 \
-    minimumCoverageThresholds:branchCoverage=80 \
-    minimumCoverageThresholds:methodCoverage=80 \
-    minimumCoverageThresholds:fullMethodCoverage=80
+    minimumCoverageThresholds:lineCoverage="$min_coverage_pct" \
+    minimumCoverageThresholds:branchCoverage="$min_coverage_pct" \
+    minimumCoverageThresholds:methodCoverage="$min_coverage_pct" \
+    minimumCoverageThresholds:fullMethodCoverage="$min_coverage_pct"
 
 if [[ "$uninstall_reportgenerator" = "true" ]]; then
     trace "Uninstalling the tool 'reportgenerator'..."
