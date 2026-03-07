@@ -9,7 +9,7 @@
         <DefineConstants Condition="'$(OS)' == 'WINDOWS_NT'">$(DefineConstants);WINDOWS</DefineConstants>
         <DefineConstants Condition="'$(OS)' != 'WINDOWS_NT'">$(DefineConstants);UNIX</DefineConstants>
 
-        <!-- Use to define custom preprocessor symbols, e.g. "dotnet build -p:preprocessor_symbols="SHORT_RUN FEATURE_A FEATURE_B" ...",
+        <!-- Use to define custom preprocessor symbols as a semicolon-separated list, e.g. dotnet build -p:preprocessor_symbols="SHORT_RUN;FEATURE_A;FEATURE_B"
              without overriding the rest of the symbols like DEBUG, TRACE, etc. -->
         <DefineConstants Condition="'$([System.String]::IsNullOrWhiteSpace($(preprocessor_symbols)))' != 'true'">$(preprocessor_symbols);$(DefineConstants)</DefineConstants>
 
