@@ -34,7 +34,7 @@ lib_dir="${base}/scripts/bash/lib"
 # source the gh_core.sh script but we still cannot use GITHUB_PATH and GITHUB_ENV, so we use the direct $lib_dir
 source "$lib_dir/gh_core.sh"
 
-info "DevOps scripts and libraries are now available in PATH:" \
+trace "DevOps scripts and libraries are now available from the environment:" \
     "DEVOPS_SCRIPTS_DIR=${scripts_dir}" \
     "DEVOPS_LIB_DIR=${lib_dir}" \
     "GITHUB_PATH=${GITHUB_PATH}"

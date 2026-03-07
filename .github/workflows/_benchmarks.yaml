@@ -176,9 +176,9 @@ jobs:
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
               pr_base_sha="${{ github.event.pull_request.base.sha || '' }}"
               BENCHER_ARGS+=(
-                --ci-number "$GITHUB_RUN_NUMBER"
                 --github-actions "$GITHUB_TOKEN"
-                --branch-start-point-hash "$pr_base_sha"
+                --branch "${{ github.head_ref }}"
+                --ci-number "${{ github.event.pull_request.number }}"
               )
           fi
 
