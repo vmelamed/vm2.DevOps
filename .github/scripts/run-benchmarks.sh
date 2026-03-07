@@ -130,19 +130,12 @@ fi
 
 # Run benchmarks with JSON export for Bencher
 trace "Running benchmark tests in project '$benchmark_project' with build configuration '$configuration'..."
-if ! execute dotnet run \
-        --project "$benchmark_project" \
-        --configuration "$configuration" \
-        --no-build \
-        -p:preprocessor_symbols="CI;$preprocessor_symbols" \
-        -p:MinVerTagPrefix="$minver_tag_prefix" \
-        -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" \
+if ! execute "${benchmark_exe_path}" \
         --filter '*' \
         --memory \
         --exporters JSON \
         --join \
-        --artifacts "$artifacts_dir" \
-        --disable-optimizations-validator; then
+        --artifacts "$artifacts_dir"; then
     error "Benchmarks failed in project '$benchmark_project'."
     exit 2
 fi
