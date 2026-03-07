@@ -13,9 +13,13 @@ runs:
     - name: Install jq ${{ inputs.version }}
       shell: bash
       run: |
-        if ! command -v jq >/dev/null 2>&1 || [[ "$(jq --version)" != "jq-${{ inputs.version }}" ]]; then
+        ver=$(jq --version 2>/dev/null | cut -d- -f2)
+        if ! command -v jq >/dev/null 2>&1 || [[ $ver != '${{ inputs.version }}' ]]; then
             curl -sLo /tmp/jq "https://github.com/jqlang/jq/releases/download/jq-${{ inputs.version }}/jq-linux-amd64"
             sudo install /tmp/jq /usr/local/bin/jq
             rm -f /tmp/jq
-            info "jq $(jq --version) installed"
+            ver=$(jq --version 2>/dev/null | cut -d- -f2)
+            echo "✅ jq $ver installed" >> $GITHUB_STEP_SUMMARY
+        else
+            echo "✅ jq $ver already installed" >> $GITHUB_STEP_SUMMARY
         fi
