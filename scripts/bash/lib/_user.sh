@@ -98,7 +98,6 @@ function choose()
         return 2;
     fi
 
-    local -i selection=1
 
     if [[ "$quiet" != true ]]; then
         # print the menu
@@ -118,16 +117,23 @@ function choose()
         done
 
         # read the choice
+        local selection=1
         while true; do
-            read -rp "Enter choice [1-${#options[@]}]: " selection
+            read -r -p "Enter choice [1-${#options[@]}]: " selection
+            trace "User selected option: $selection"
+            if [[ -n $selection && ! $selection =~ ^[1-9][0-9]*$ ]]; then
+                warning "Invalid choice: $selection" >&2
+                continue
+            fi
             selection=${selection:-1}
-            [[ $selection -eq 0 ]] && selection=1 # the default
+            trace "Adjusted to: $selection"
+            [[ $selection -eq 0 ]] && selection="1" # the default
             [[ $selection =~ ^[1-9][0-9]*$ && $selection -ge 1 && $selection -le ${#options[@]} ]] && break
             warning "Invalid choice: $selection" >&2
         done
+        printf '%d' "$selection"
     fi
 
-    printf '%d' "$selection"
     return 0
 }
 

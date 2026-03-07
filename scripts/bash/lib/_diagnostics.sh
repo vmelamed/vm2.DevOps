@@ -160,7 +160,7 @@ function warning()
             done
 
         fi
-        show_stack 3 5
+        show_stack 2 10
     } | to_stderr
 
     return 0

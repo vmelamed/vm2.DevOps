@@ -31,6 +31,7 @@ get_arguments "$@"
 git_repos=$(realpath -e "$git_repos") || {
     warning "Neither --git-repos option nor GIT_REPOS environment variable is set or valid."
 }
+target_dir=${target_dir:-$(pwd)}
 
 # Validate environment:
 if [[ -z "$git_repos" ]] || ! git_repos=$(realpath -e "$git_repos"); then
@@ -69,7 +70,11 @@ validate_source_repo "vm2.DevOps"
 trace "All source repositories are in '$git_repos'"
 
 # Resolve the target path
-target_path=$(realpath "$target_dir")
+if ! target_path=$(realpath -e "$target_dir") &&
+   ! target_path=$(realpath -e "$git_repos/$target_dir"); then
+     error "Could not find the target directory '$target_dir' neither under the current working directory nor under '$GIT_REPOS'."
+     exit 2
+fi
 if is_in "$target_path" "${git_repos}/vm2.DevOps" "${git_repos}/.github" ; then
     error "The target project cannot be '${git_repos}/vm2.DevOps' or '${git_repos}/.github'."
     exit 2
