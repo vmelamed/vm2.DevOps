@@ -217,6 +217,7 @@ jobs:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
     permissions:
       contents: read
+      packages: read # Required for downloading dependencies and tools
       pull-requests: write # Required to comment on PRs
       checks: write # Required to create GitHub Checks
     with:

@@ -55,8 +55,9 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write # Required for Bencher to comment on PRs
+  packages: read # Required for downloading dependencies and tools
   checks: write # Required for Bencher to create GitHub Checks
+  pull-requests: write # Required for Bencher to comment on PRs
 
 env:
   ARTIFACTS_DIR: ./BenchmarkArtifacts
@@ -69,6 +70,7 @@ jobs:
     name: Benchmarks (${{ inputs.runner-os }})
     permissions:
       checks: write # Required for Bencher to create GitHub Checks
+      pull-requests: write # Required for Bencher to comment on PRs
     runs-on: ${{ inputs.runner-os }}
     steps:
       # Install Bencher CLI (install early so if it fails, we fail fast before doing extra work)
@@ -247,4 +249,4 @@ jobs:
               echo "Threshold: **±${{ inputs.max-regression-pct }}%**"
               echo ""
               echo "🌐 [View detailed results on Bencher](https://bencher.dev/console/projects/${BENCHER_SLUG})"
-          } >> to_summary
+          } | to_summary
