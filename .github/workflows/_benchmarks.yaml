@@ -209,13 +209,13 @@ jobs:
 
           trace "Running command: bencher run ${BENCHER_ARGS[*]}"
           if bencher run "${BENCHER_ARGS[@]}" 2> "$temp_err_out" 1> "$_ignore"; then
-              info "Upload to Bencher succeeded." | to_summary
+              info "Upload to Bencher succeeded."
           else
-              error "Upload to Bencher failed." | to_summary
+              error "Upload to Bencher failed."
               cat "$temp_err_out" | to_stdout
               exit 1
           fi
-          trace "$bencher_output" | to_trace_out
+          trace "$bencher_output"
 
       # Upload benchmark results as workflow artifacts for manual inspection
       - name: Upload benchmark results artifact
@@ -244,4 +244,4 @@ jobs:
               echo "Threshold: **±${{ inputs.max-regression-pct }}%**"
               echo ""
               echo "🌐 [View detailed results on Bencher](https://bencher.dev/console/projects/${BENCHER_SLUG})"
-          } >> $GITHUB_STEP_SUMMARY
+          } >> to_summary

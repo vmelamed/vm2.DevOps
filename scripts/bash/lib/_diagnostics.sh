@@ -1,11 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025 Val Melamed
 
-
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
-
-# error counter
-declare -ix errors=0
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
 # ║ IMPORTANT: The to_* functions are designed to be used on the RIGHT side   ║
@@ -35,18 +31,17 @@ declare -ix errors=0
 function to_stdout()
 {
     local line
-    {
-        while IFS= read -r line; do
-            echo "$line"
-        done
-    }
+
+    while IFS= read -r line; do
+        echo "$line"
+    done
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Logs trace messages to stdout, allowing override in other scripts for alternate destinations.
+# Summary: Logs trace messages to stderr, allowing override in other scripts for alternate destinations.
 # Parameters: none (reads from stdin)
 # Returns:
-#   stdout: each line read from stdin
+#   stderr: each line read from stdin
 #   Exit code: 0 always
 # Usage: echo "message" | to_trace_out
 # Example: echo "Processing file: $file" | to_trace_out
@@ -55,11 +50,10 @@ function to_stdout()
 function to_trace_out()
 {
     local line
-    {
-        while IFS= read -r line; do
-            echo "$line" >&2
-        done
-    }
+
+    while IFS= read -r line; do
+        echo "$line" >&2
+    done
 }
 
 #-------------------------------------------------------------------------------
@@ -75,12 +69,14 @@ function to_trace_out()
 function to_stderr()
 {
     local line
-    {
-        while IFS= read -r line; do
-            echo "$line" >&2
-        done
-    }
+
+    while IFS= read -r line; do
+        echo "$line" >&2
+    done
 }
+
+# global error counter
+declare -ix errors=0
 
 #-------------------------------------------------------------------------------
 # Summary: Logs error messages to stderr and increments the global error counter.
@@ -99,24 +95,29 @@ function error()
 {
     local bash_source=${BASH_SOURCE[1]:-}
     local bash_lineno=${BASH_LINENO[0]:-}
-
+    local line
+    local first=true
     {
         if [[ $# -gt 0 ]]; then
-            echo "❌  ERROR: ${bash_source} (${bash_lineno}): $*"
+            for line in "$@"; do
+                if [[ "$first" == true ]]; then
+                    printf "❌  ERROR: %s (%s): " "${bash_source}" "${bash_lineno}"
+                    first=false
+                fi
+                echo "$line"
+            done
         else
-            local line
-            local first=true
             while IFS= read -r line; do
                 if [[ "$first" == true ]]; then
-                    echo "❌  ERROR: ${bash_source} (${bash_lineno}): $line"
+                    printf "❌  ERROR: %s (%s): " "${bash_source}" "${bash_lineno}"
                     first=false
-                else
-                    # prevent leading new line
-                    echo "$line"
                 fi
+                echo "$line"
             done
         fi
+        show_stack 2 10 true
     } | to_stderr
+
     (( ++errors ))
     return 0
 }
@@ -135,24 +136,33 @@ function error()
 #-------------------------------------------------------------------------------
 function warning()
 {
+    local bash_source=${BASH_SOURCE[1]:-}
+    local bash_lineno=${BASH_LINENO[0]:-}
+    local line
+    local first=true
+
     {
         if [[ $# -gt 0 ]]; then
-            echo "⚠️  WARNING: $*"
+            for line in "$@"; do
+                if [[ "$first" == true ]]; then
+                    printf "⚠️  WARNING: "
+                    first=false
+                fi
+                echo "$line"
+            done
         else
-            local line
-            local first=true
             while IFS= read -r line; do
                 if [[ "$first" == true ]]; then
-                    echo "⚠️  WARNING: $line"
+                    printf "⚠️  WARNING: "
                     first=false
-                else
-                    # prevent leading new line
-                    echo "$line"
                 fi
+                echo "$line"
             done
 
         fi
+        show_stack 3 5
     } | to_stderr
+
     return 0
 }
 
@@ -168,6 +178,9 @@ function warning()
 # Side Effects: Sets the named variable to the default value
 # Usage: warning_var <variable_name> <warning_message> <default_value>
 # Example: warning_var timeout "Timeout not specified." 30
+# WARNING: This function uses nameref to set the variable by name. DO NOT PIPE
+#   this function into to_stdout or similar, as it will run in a subshell and
+#   the variable assignment will be lost.
 #-------------------------------------------------------------------------------
 function warning_var()
 {
@@ -176,6 +189,7 @@ function warning_var()
         return 1
     fi
     warning "$2" "Assuming the default value of '$3'."
+
     local -n var=$1;
     # shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
     var="$3"
@@ -187,7 +201,7 @@ function warning_var()
 # Parameters:
 #   1+ - message - informational message parts (optional, if not provided reads from stdin)
 # Returns:
-#   stdout: formatted info message with ℹ️ prefix via to_stdout
+#   stdout: formatted info message with "ℹ️  INFO: " prefix via to_stdout
 #   Exit code: 0 always
 # Usage: info <message1> [message2...]
 # Example:
@@ -196,23 +210,29 @@ function warning_var()
 #-------------------------------------------------------------------------------
 function info()
 {
+    local first=true
+    local line
+
     {
         if [[ $# -gt 0 ]]; then
-            echo "ℹ️  INFO: $*"
+            for line in "$@"; do
+                if [[ "$first" == true ]]; then
+                    printf "ℹ️  INFO: "
+                    first=false
+                fi
+                echo "$line"
+            done
         else
-            local line
-            local first=true
             while IFS= read -r line; do
                 if [[ "$first" == true ]]; then
-                    echo "ℹ️  INFO: $line"
+                    printf "ℹ️  INFO: "
                     first=false
-                else
-                    # prevent leading new line
-                    echo "$line"
                 fi
+                echo "$line"
             done
         fi
     } | to_stdout
+
     return 0
 }
 
@@ -235,20 +255,24 @@ function trace()
     # shellcheck disable=SC2154 # variable is referenced but not assigned.
     [[ "$verbose" != true ]] && return 0
 
+    local line
+    local first=true
     {
         if [[ $# -gt 0 ]]; then
-            echo "🐾 TRACE: $*"
+            for line in "$@"; do
+                if [[ "$first" == true ]]; then
+                    printf "🐾 TRACE: "
+                    first=false
+                fi
+                echo "$line"
+            done
         else
-            local line
-            local first=true
             while IFS= read -r line; do
                 if [[ "$first" == true ]]; then
-                    echo "🐾 TRACE: $line"
+                    printf "🐾 TRACE: "
                     first=false
-                else
-                    # prevent leading new line
-                    echo "$line"
                 fi
+                echo "$line"
             done
         fi
     } | to_trace_out
@@ -311,11 +335,16 @@ function on_exit()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Displays the current call stack when verbose mode is enabled.
-# Parameters: none
+# Summary: Displays the current call stack to stdout (consider redirecting to stderr)
+# Parameters:
+#   1 - skip (optional) - how many stack frames to skip; defaults to 0
+#   2 - take (optional) - how many stack frames to show; defaults to 1
+#   3 - verbose (optional) - if true, outputs the stack trace; if false, does nothing;
+#       defaults to the value of the global $verbose variable
 # Returns:
 #   stdout: formatted stack trace showing function names, files, and line numbers
-#   Exit code: 0 always
+#           (consider redirecting to stderr)
+#   Exit code: always 0
 # Env. Vars:
 #   verbose - when true, displays stack trace; when false, does nothing
 # Usage: show_stack
@@ -323,14 +352,22 @@ function on_exit()
 #-------------------------------------------------------------------------------
 function show_stack()
 {
-    local bash_source funcname bash_lineno
-    bash_source=${BASH_SOURCE[-1]:-}
-    echo "${bash_source} stack trace:"
+    local v=${3:-"${verbose:-false}"}
+
+    [[ "$v" != true ]] && return 0
+
+    local skip=${1:-1}
+    local max_take=$(( ${#FUNCNAME[@]} - skip ))
+    local take=$(( ${2:-$max_take} < max_take ? ${2:-$max_take} : max_take ))
+    local end=$(( skip + take ))
     local i
-    for (( i=0; i<${#FUNCNAME[@]}-1; i++ )); do
-        bash_source=${BASH_SOURCE[i+1]:-}
-        funcname=${FUNCNAME[i]:-}
-        bash_lineno=${BASH_LINENO[i]:-}
-        printf "%4d: %-20s: %4d: %-32s\n" "$i" "$funcname" "${bash_lineno}" "${bash_source}"
+
+    for (( i=skip; i<end; i++ )); do
+        local func_name=${FUNCNAME[i]:-}
+        local bash_source=${BASH_SOURCE[i+1]:-}
+        local bash_lineno=${BASH_LINENO[i]:-}
+        printf "    - %-12s (%s: %d)\n" "$func_name" "${bash_source}" "${bash_lineno}"
     done
+
+    return 0
 }

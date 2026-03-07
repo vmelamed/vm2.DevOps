@@ -17,5 +17,5 @@ runs:
             curl -sLo /tmp/jq "https://github.com/jqlang/jq/releases/download/jq-${{ inputs.version }}/jq-linux-amd64"
             sudo install /tmp/jq /usr/local/bin/jq
             rm -f /tmp/jq
-            echo "✅ jq $(jq --version) installed"
+            info "jq $(jq --version) installed"
         fi

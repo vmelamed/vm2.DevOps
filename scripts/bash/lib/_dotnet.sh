@@ -22,7 +22,8 @@ declare -x package_version=''
 # Side Effects: Sets global exported variables: $build_result, $warnings_count, $errors_count,
 #               $assembly_version, $file_version, $informational_version, $version, $package_version
 # Dependencies: dump_vars
-# Usage: dotnet build -v d ... | summarizeDotnetBuild
+# Usage: dotnet build -v d ... | summarizeDotnetBuild    # the vars are lost due to the pipe, but the formatted summary is printed to stdout, OR
+#        dotnet build -v d ... > >(summarizeDotnetBuild) # the vars are set in the current shell and the formatted summary is printed to stdout
 # Example:
 #   dotnet build -v d MyProject.csproj | summarizeDotnetBuild | to_stdout
 # Notes: Requires detailed verbosity (-v d) to extract version information. Globals persist until next call.
@@ -74,7 +75,7 @@ function summarizeDotnetBuild()
 
     # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
     eval "$restoreShopt" &> "$_ignore"
-
+    echo "Build Results"
     dump_vars --force --quiet \
         --header "Dotnet Build Summary:" \
         build_result \

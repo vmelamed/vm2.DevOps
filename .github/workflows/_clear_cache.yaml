@@ -25,6 +25,9 @@ jobs:
     name: Clear NuGet Cache
     runs-on: ubuntu-latest
     steps:
+      - name: Setup DevOps
+        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
+
       - name: Delete matching caches
         shell: bash
         env:
@@ -33,6 +36,8 @@ jobs:
           REASON: ${{ inputs.reason }}
         run: |
           set -euo pipefail  # Enable strict error handling
+
+          source $DEVOPS_LIB_DIR/gh_core.sh
 
           echo "🗑️ Clearing caches matching pattern: ${CACHE_PATTERN}*"
           echo "📝 Reason: ${REASON}"
@@ -43,7 +48,7 @@ jobs:
               nuget-|build-artifacts-|bencher-cli-)
                   ;; # allowed prefixes
               * )
-                  echo "❌ Cache pattern '$CACHE_PATTERN' is not in the allowlist (nuget-, build-artifacts-, bencher-cli-)";
+                  error "❌ Cache pattern '$CACHE_PATTERN' is not in the allowlist (nuget-, build-artifacts-, bencher-cli-)";
                   exit 2;
                   ;;
           esac
@@ -65,7 +70,7 @@ jobs:
           matched_caches=$(gh cache list --limit 1000 2>&1 | grep "^${CACHE_PATTERN}" || true)
 
           if [[ -z "$matched_caches" ]]; then
-              echo "ℹ️  No caches found matching pattern '${CACHE_PATTERN}*'"
+              info "No caches found matching pattern '${CACHE_PATTERN}*'"
           else
               echo ""
               while IFS=$'\t' read -r cache_id cache_key rest; do
@@ -82,17 +87,13 @@ jobs:
           fi
 
           echo ""
-          echo "✅ Cleanup complete: ${deleted_count} cache(s) deleted"
+          info "Cleanup complete: ${deleted_count} cache(s) deleted"
 
           # Output to step summary
           {
               echo "## 🗑️ Cache Cleanup Complete"
-              echo ""
               echo "**Pattern:** \`${CACHE_PATTERN}*\`"
-              echo ""
               echo "**Reason:** ${REASON}"
-              echo ""
               echo "### Remaining Caches"
-              echo ""
               gh cache list --limit 20 || echo "No caches remaining"
-          } >> "$GITHUB_STEP_SUMMARY"
+          } >> to_summary

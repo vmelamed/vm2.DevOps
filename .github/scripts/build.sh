@@ -66,14 +66,15 @@ execute dotnet restore --locked-mode
 temp_output=$(mktemp)
 trap 'rm -f "$temp_output"' EXIT
 
-build_exit=0
+rc=0
 execute dotnet build "$build_project" \
             --verbosity detailed \
             --configuration "$configuration" \
             -p:preprocessor_symbols="$preprocessor_symbols" \
             -p:MinVerTagPrefix="$minver_tag_prefix" \
-            -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" > "$temp_output" 2>&1 || build_exit=$?
+            -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" > "$temp_output" 2>&1 || rc=$?
 
 # shellcheck disable=SC2005 # the echo is not useless - too much complexity in the pipeline
 echo "$(summarizeDotnetBuild < "$temp_output")" | to_summary
-exit "$build_exit"
+
+exit "$rc"

@@ -134,10 +134,9 @@ if ! execute dotnet run \
         --project "$benchmark_project" \
         --configuration "$configuration" \
         --no-build \
-        -p:preprocessor_symbols="$preprocessor_symbols;CI" \
+        -p:preprocessor_symbols="CI;$preprocessor_symbols" \
         -p:MinVerTagPrefix="$minver_tag_prefix" \
         -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" \
-        -- \
         --filter '*' \
         --memory \
         --exporters JSON \

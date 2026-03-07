@@ -48,13 +48,12 @@ unset -f to_stdout
 unset -f to_stderr
 
 #-------------------------------------------------------------------------------
-# Summary: Sends input to stdout and, if in GitHub Actions, also appends to the
-#   GitHub step summary.
+# Summary: Sends the input to stdout AND, if in GitHub Actions, to GitHub step summary.
 # Parameters: none (reads from stdin)
 # Returns:
 #   stdout: each line read from stdin
-#   Exit code: 0 always
-# Side Effects: Appends to $github_step_summary file when $github_actions is
+#   Exit code: 0
+# Side Effects: Appends also to $github_step_summary file when $github_actions is
 #   true
 # Env. Vars:
 #   github_actions - when true, indicates running in GitHub Actions environment
@@ -75,12 +74,12 @@ function to_stdout()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Sends trace output to stdout and optionally to GitHub step summary.
+# Summary: Sends the input to stderr AND, if in GitHub Actions, to GitHub step summary.
 # Parameters: none (reads from stdin)
 # Returns:
-#   stdout: each line read from stdin
-#   Exit code: 0 always
-# Side Effects: Appends to $github_step_summary file when both $github_actions
+#   stderr: each line read from stdin
+#   Exit code: 0
+# Side Effects: Appends also to $github_step_summary file when both $github_actions
 #   and $trace_to_summary are true
 # Env. Vars:
 #   github_actions - when true, indicates running in GitHub Actions environment
@@ -101,13 +100,12 @@ function to_trace_out()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Sends input to stderr and, if in GitHub Actions, also appends to the
-#   GitHub step summary.
+# Summary: Sends the input to stderr AND, if in GitHub Actions, to GitHub step summary.
 # Parameters: none (reads from stdin)
 # Returns:
 #   stderr: each line read from stdin
-#   Exit code: 0 always
-# Side Effects: Appends to $github_step_summary file when $github_actions is
+#   Exit code: 0
+# Side Effects: Appends also to $github_step_summary file when $github_actions is
 #   true
 # Env. Vars:
 #   github_actions - when true, indicates running in GitHub Actions environment
@@ -127,8 +125,8 @@ function to_stderr()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Logs a summary message with markdown heading to stdout and GitHub
-#   step summary.
+# Summary: Logs a summary message(s) with markdown heading to stdout AND, if in
+#   GitHub Actions, to GitHub step summary.
 # Parameters:
 #   1+ - message - summary message parts (optional, if not provided reads from
 #       stdin)
@@ -142,27 +140,34 @@ function to_stderr()
 #-------------------------------------------------------------------------------
 function to_summary()
 {
-    if [[ $# -gt 0 ]]; then
-        echo "## Summary:"$'\n'"$*" | to_stdout
-    else
-        {
-            local line
-            local first=true
+    local line
+    local first=true
+
+    {
+        if [[ $# -gt 0 ]]; then
+            for line in "$@"; do
+                if [[ $first == "true" ]]; then
+                    echo "## Summary"
+                    first=false
+                fi
+                echo "$line"
+            done
+        else
             while IFS= read -r line; do
                 if [[ $first == true ]]; then
-                    echo "## Summary:"$'\n'"$line"
+                    echo "## Summary"
                     first=false
-                else
-                    echo "$line"
                 fi
+                echo "$line"
             done
-        } | to_stdout
-    fi
+        fi
+    } | to_stdout
+
     return 0
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Sends input to stdout and, if in GitHub Actions, also appends to the
+# Summary: Sends input to stdout AND, if in GitHub Actions, also appends to the
 #   GitHub output file.
 # Parameters: none (reads from stdin)
 # Returns:
@@ -187,11 +192,11 @@ function to_output()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Outputs a key and a variable's value to GitHub Actions GITHUB_OUTPUT file.
+# Summary: Outputs a key and value of a variable to GitHub Actions GITHUB_OUTPUT file.
 # Parameters:
 #   1 - variable_name (nameref!) - the name of the variable that contains the GITHUB_OUTPUT value
 #   2 - output_key - the GITHUB_OUTPUT key
-#       Optional, defaults to the name of the variable in $1, but underscores are replaced by hiphens)
+#       Optional, defaults to the name of the variable in $1, but underscores are replaced by hyphens)
 # Returns:
 #   Outputs to $github_output via to_output
 #   Exit code: 0 on success, 2 on invalid arguments
@@ -218,8 +223,9 @@ function to_github_output()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Outputs multiple variables to GitHub Actions output, converting
-#   underscores to hyphens in key names.
+# Summary: Outputs a key=value pair for each of the input variable names.
+#   The key is synthesised from the name by replacing the underscores with
+#   hyphens. The value is the value of the variable with that name.
 # Parameters:
 #   1+ - variable_names - name refs of variables to output
 # Returns:
