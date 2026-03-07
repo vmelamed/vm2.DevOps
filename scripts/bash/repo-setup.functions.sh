@@ -75,30 +75,23 @@ declare -xa required_checks
 # ------------------------------------------------------------------
 function detect_required_checks()
 {
-    local check_top build_source projects
+    # With reusable workflows + matrix strategies, GitHub Actions check names include the
+    # workflow name prefix, matrix params, inner job names, and event suffixes — making them
+    # impossible to predict for branch protection rules. Instead, each CI.yaml has a lightweight
+    # "ci-gate" job (name: "CI") that depends on all other jobs and reports a single, stable
+    # check name: "{workflow_name} / CI".
+    local workflow_name gate_name
 
-    check_top=$(yq -r .jobs.call-ci.name "$ci_yaml" || {
-        error "Failed to parse CI.yaml workflow file to detect required checks. Make sure the file exists and is valid YAML." >&2;
-    })
-    build_source=$(yq -r .jobs.build.name "$_ci_yaml" || {
-        error "Failed to parse CI.yaml workflow file to detect required checks. Make sure the file exists and is valid YAML." >&2;
-    })
+    workflow_name=$(yq -r .name "$ci_yaml") || {
+        error "Failed to parse workflow name from CI.yaml. Make sure the file exists and is valid YAML." >&2
+    }
+    gate_name=$(yq -r '.jobs.ci-gate.name // "CI"' "$ci_yaml") || {
+        error "Failed to parse ci-gate job name from CI.yaml." >&2
+    }
 
     exit_if_has_errors
 
-    required_checks+=("${check_top} / ${build_source}")
-
-    for projects_key in "${!projects_jobs[@]}"; do
-        local job_name="${projects_jobs[$projects_key]}"
-        projects=$(yq -r ".env.${projects_key} // \"\"" "$ci_yaml") || error "Failed to parse CI.yaml for env key '${projects_key}'." >&2
-        if [[ -n "$projects" && "$projects" != "null" && "$projects" != "[]" ]]; then
-            local source_name
-            source_name=$(yq -r ".jobs.${job_name}.name" "$_ci_yaml") || {
-                warning "Failed to parse _ci.yaml for job '${job_name}'." >&2
-            }
-            required_checks+=("${check_top} / ${source_name}")
-        fi
-    done
+    required_checks+=("${workflow_name} / ${gate_name}")
     trace "Required checks: ${required_checks[*]}"
 }
 
