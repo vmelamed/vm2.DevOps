@@ -517,7 +517,7 @@ function is_safe_configuration()
 function validate_preprocessor_symbols()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires one parameter: the NAME of the preprocessor symbol parameter to test."
+        error "${FUNCNAME[0]}() requires one parameter: the NAME of the variable containing the preprocessor symbols to test."
         return 2
     fi
     [[ -z $1 ]] && return 0

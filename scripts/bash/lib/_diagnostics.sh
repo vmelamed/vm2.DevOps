@@ -145,7 +145,7 @@ function warning()
         if [[ $# -gt 0 ]]; then
             for line in "$@"; do
                 if [[ "$first" == true ]]; then
-                    printf "⚠️  WARNING: "
+                    printf "⚠️  WARNING: %s (%s): " "${bash_source}" "${bash_lineno}"
                     first=false
                 fi
                 echo "$line"
@@ -153,12 +153,11 @@ function warning()
         else
             while IFS= read -r line; do
                 if [[ "$first" == true ]]; then
-                    printf "⚠️  WARNING: "
+                    printf "⚠️  WARNING: %s (%s): " "${bash_source}" "${bash_lineno}"
                     first=false
                 fi
                 echo "$line"
             done
-
         fi
         show_stack 2 10
     } | to_stderr
