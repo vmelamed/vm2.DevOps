@@ -180,7 +180,6 @@ jobs:
                 --ci-number "${{ github.event.pull_request.number }}"
               )
           else
-          then
               BENCHER_ARGS+=(
                 --branch "${{ github.ref_name }}"
               )
