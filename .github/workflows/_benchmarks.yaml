@@ -237,6 +237,8 @@ jobs:
         if: always()
         shell: bash
         run: |
+          source "$DEVOPS_LIB_DIR/gh_core.sh"
+
           REPO_NAME="${{ github.repository }}"
           BENCHER_SLUG=$(echo "${REPO_NAME#*/}" | tr '[:upper:]' '[:lower:]' | tr '.' '-')
 
