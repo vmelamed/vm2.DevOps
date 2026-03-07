@@ -59,11 +59,11 @@ if ! command -v -p jq &> "$_ignore"; then
         exit 1
     fi
 else
-    jq -V | to_stdout | grep -Eo 'jq-1\.8\.[0-9]+' || {
+    jq -V | to_stdout | grep -Eo 'jq-1\.8\.[0-9]+' &> "$_ignore" || {
         warning "GitHub CLI 'jq' version 1.8.x is required. Upgrading 'jq' to version 1.8.1..."
         curl -sLo /tmp/jq https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-linux-amd64
         sudo install /tmp/jq /usr/local/bin/jq
-        jq -V | to_stdout | grep -Eo 'jq-1\.8\.[0-9]+' || {
+        jq -V | to_stdout | grep -Eo 'jq-1\.8\.[0-9]+' &> "$_ignore" || {
             error "GitHub CLI 'jq' version 1.8.x is required. Please update 'jq' to version 1.8.x."
             exit 2
         }
