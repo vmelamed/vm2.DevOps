@@ -69,6 +69,16 @@
             "action": "copy"
         },
         {
+            "sourceFile": "${git_repos}/vm2.DevOps/changelog/cliff.prerelease.toml",
+            "targetFile": "${target_path}/changelog/cliff.prerelease.toml",
+            "action": "copy"
+        },
+        {
+            "sourceFile": "${git_repos}/vm2.DevOps/changelog/cliff.release-header.toml",
+            "targetFile": "${target_path}/changelog/cliff.release-header.toml",
+            "action": "copy"
+        },
+        {
             "sourceFile": "${git_repos}/.github/workflow-templates/ClearCache.yaml",
             "targetFile": "${target_path}/.github/workflows/ClearCache.yaml",
             "action": "copy"

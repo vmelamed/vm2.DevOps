@@ -1,0 +1,31 @@
+[changelog]
+header = """# Changelog\n\n"""
+body = """
+{% if tag is defined %}{% set current_tag = tag %}{% elif version is defined %}{% set current_tag = version %}{% else %}{% set current_tag = "Unreleased" %}{% endif %}
+{% if timestamp is defined %}{% set current_date = timestamp | date(format="%Y-%m-%d") %}{% else %}{% set current_date = now() | date(format="%Y-%m-%d") %}{% endif %}
+## {{ current_tag }} - {{ current_date }}
+See prereleases below.
+"""
+trim = true
+footer = ""
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+tag_pattern = "v[0-9].*"
+protect_breaking_commits = true
+commit_parsers = [
+    { message = "^chore: update changelog", skip = true },
+    { message = "^ci", skip = true },
+    { message = "^build", skip = true },
+    { message = "^feat", group = "Added" },
+    { message = "^fix", group = "Fixed" },
+    { message = "^perf", group = "Performance" },
+    { message = "^refactor", group = "Internal" },
+    { message = "^docs", group = "Internal" },
+    { message = "^style", group = "Internal" },
+    { message = "^test", group = "Internal" },
+    { message = "^chore", group = "Internal" },
+    { message = "^revert", group = "Removed" },
+    { message = "^security", group = "Security" },
+]
