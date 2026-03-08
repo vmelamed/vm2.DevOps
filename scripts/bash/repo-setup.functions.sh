@@ -78,15 +78,18 @@ function detect_required_checks()
     # With reusable workflows + matrix strategies, GitHub Actions check names include the
     # workflow name prefix, matrix params, inner job names, and event suffixes — making them
     # impossible to predict for branch protection rules. Instead, each CI.yaml has a lightweight
-    # "ci-gate" job (name: "CI") that depends on all other jobs and reports a single, stable
-    # check name: "{workflow_name} / CI".
-    local workflow_name gate_name
+    # gate job that depends on all other jobs and reports a single, stable check name.
+    # Note: the "(push)" / "(pull_request)" suffixes visible in the UI are cosmetic only —
+    # the actual check run name has no suffix. The required check must use the bare name.
+    local workflow_name gate_name gate_job
 
     workflow_name=$(yq -r .name "$ci_yaml") || {
         error "Failed to parse workflow name from CI.yaml. Make sure the file exists and is valid YAML." >&2
     }
-    gate_name=$(yq -r '.jobs.ci-gate.name // "CI"' "$ci_yaml") || {
-        error "Failed to parse ci-gate job name from CI.yaml." >&2
+    # Find the gate job: look for postrun-ci first, fall back to ci-gate
+    gate_job=$(yq -r '.jobs | keys[] | select(test("postrun|ci-gate"))' "$ci_yaml" | head -1) || true
+    gate_name=$(yq -r ".jobs.${gate_job:-postrun-ci}.name // \"Postrun-CI\"" "$ci_yaml") || {
+        error "Failed to parse gate job name from CI.yaml." >&2
     }
 
     exit_if_has_errors
@@ -184,9 +187,6 @@ function configure_branch_protection()
                 "strict_required_status_checks_policy": true,
                 "required_status_checks": [${status_checks_json}]
             }
-        },
-        {
-            "type": "required_linear_history"
         },
         {
             "type": "non_fast_forward"
