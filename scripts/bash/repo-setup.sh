@@ -218,6 +218,7 @@ fi
 
 configure_repo_settings
 configure_actions_permissions
+resolve_github_actions_app_id
 configure_branch_protection
 
 info "Repository ready: https://github.com/${repo}"

@@ -69,23 +69,34 @@ declare -xrA projects_jobs=(
 )
 
 declare -xa required_checks
+declare -xi github_actions_app_id
 
 # ------------------------------------------------------------------
 # Functions
 # ------------------------------------------------------------------
+function resolve_github_actions_app_id()
+{
+    # Resolve the GitHub Actions app ID dynamically via the API.
+    # Used to pin required status checks to GitHub Actions specifically.
+    github_actions_app_id=$(gh api apps/github-actions --jq '.id' 2>"$_ignore") || {
+        error "Failed to resolve GitHub Actions app ID from the API." >&2
+    }
+    exit_if_has_errors
+    trace "GitHub Actions app ID: ${github_actions_app_id}"
+}
+
 function detect_required_checks()
 {
-    # With reusable workflows + matrix strategies, GitHub Actions check names include the
-    # workflow name prefix, matrix params, inner job names, and event suffixes — making them
-    # impossible to predict for branch protection rules. Instead, each CI.yaml has a lightweight
-    # gate job that depends on all other jobs and reports a single, stable check name.
-    # Note: the "(push)" / "(pull_request)" suffixes visible in the UI are cosmetic only —
-    # the actual check run name has no suffix. The required check must use the bare name.
-    local workflow_name gate_name gate_job
+    # With reusable workflows + matrix strategies, GitHub Actions produces check names that
+    # include the workflow prefix, matrix params, inner job names, and event suffixes — making
+    # them impossible to predict for branch protection rules. Instead, each CI.yaml has a
+    # lightweight gate job that depends on all other jobs and reports a single, stable check name.
+    #
+    # The GitHub UI decorates check names as "Workflow / JobName (event)" but the check-runs
+    # API returns bare names and ruleset matching uses the bare check-run name field.
+    # So we extract just the gate job's `name:` property from CI.yaml.
+    local gate_name gate_job
 
-    workflow_name=$(yq -r .name "$ci_yaml") || {
-        error "Failed to parse workflow name from CI.yaml. Make sure the file exists and is valid YAML." >&2
-    }
     # Find the gate job: look for postrun-ci first, fall back to ci-gate
     gate_job=$(yq -r '.jobs | keys[] | select(test("postrun|ci-gate"))' "$ci_yaml" | head -1) || true
     gate_name=$(yq -r ".jobs.${gate_job:-postrun-ci}.name // \"Postrun-CI\"" "$ci_yaml") || {
@@ -94,7 +105,7 @@ function detect_required_checks()
 
     exit_if_has_errors
 
-    required_checks+=("${workflow_name} / ${gate_name}")
+    required_checks+=("${gate_name}")
     trace "Required checks: ${required_checks[*]}"
 }
 
@@ -131,7 +142,7 @@ function configure_branch_protection()
     if [[ ${#required_checks[@]} -gt 0 ]]; then
         local entries=()
         for check in "${required_checks[@]}"; do
-            entries+=("{\"context\":\"${check}\",\"integration_id\":null}")
+            entries+=("{\"context\":\"${check}\",\"integration_id\":${github_actions_app_id}}")
         done
         local IFS=','
         status_checks_json="${entries[*]}"
