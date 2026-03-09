@@ -64,18 +64,18 @@
             "action": "copy"
         },
         {
-            "sourceFile": "${git_repos}/vm2.DevOps/.github/dependabot.yml",
-            "targetFile": "${target_path}/.github/dependabot.yml",
-            "action": "copy"
-        },
-        {
-            "sourceFile": "${git_repos}/vm2.DevOps/changelog/cliff.prerelease.toml",
+            "sourceFile": "${git_repos}/vm2.DevOps/solution/changelog/cliff.prerelease.toml",
             "targetFile": "${target_path}/changelog/cliff.prerelease.toml",
             "action": "copy"
         },
         {
-            "sourceFile": "${git_repos}/vm2.DevOps/changelog/cliff.release-header.toml",
+            "sourceFile": "${git_repos}/vm2.DevOps/solution/changelog/cliff.release-header.toml",
             "targetFile": "${target_path}/changelog/cliff.release-header.toml",
+            "action": "copy"
+        },
+        {
+            "sourceFile": "${git_repos}/vm2.DevOps/.github/dependabot.yml",
+            "targetFile": "${target_path}/.github/dependabot.yml",
             "action": "copy"
         },
         {
