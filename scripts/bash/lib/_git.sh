@@ -169,7 +169,7 @@ function is_inside_work_tree()
         return 2
     fi
 
-    [[ -d $1 ]] && git -C "$1" rev-parse --is-inside-work-tree &> "$_ignore"
+    [[ -d $1 ]] && git -C rev-parse "$1" --is-inside-work-tree &> "$_ignore"
 }
 
 #-------------------------------------------------------------------------------
