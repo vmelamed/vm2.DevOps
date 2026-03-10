@@ -13,11 +13,12 @@ function usage_text()
     fi
 
     cat << EOF
-Usage: ${script_name} [--repo <repoName>] [options]
+Usage: ${script_name} [<repo-directory>] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
 
-Bootstrap and configure a repository for a vm2 project. This script assumes that the project has already been created locally,
-e.g. using 'dotnet new vm2.NewPkg' and has all the conventianal files, including GitHub Actions worflow *.yaml files. The script
-will create a Git repo and the corresponding GitHub repository, push the code, and set up CI/CD workflows and branch protection.
+Bootstrap and configure a repository for a vm2 package project. This script assumes that the project has already been created
+locally, e.g. using 'dotnet new vm2.NewPkg' and has all the common files, including the edited GitHub Actions workflow *.yaml
+files in place. The script will create a Git repo and the corresponding GitHub repository, push the code, and set up CI/CD
+workflows and main branch protections.
 
 The script is idempotent and can be safely re-run to update settings or fix issues. The --configure-only switch allows skipping
 the repo creation step, which is useful for configuring an existing repository or when the local repo is already initialized and
@@ -35,7 +36,7 @@ This script will:
   - Set up default branch ("main") protection with required status checks
 
 Options:
-  --path <path>                 Path to the local project's root directory, e.g. the directory where the solution file is
+  <repo-directory>              Path to the local project's root directory, e.g. the directory where the solution file is
                                 located. The repo name and other settings will be inferred from the name and contents of this
                                 directory.
                                 Default: the current working directory.

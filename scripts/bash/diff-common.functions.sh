@@ -65,20 +65,26 @@ declare -rA merge_commands=(
 ## Usage: validate_source_repo <root-repo>
 function validate_source_repo()
 {
-    local repo_name=$1
+    if [[ $# -lt 1 ]]; then
+        error "${FUNCNAME[0]}() requires at least 1 argument: the name of a repository." >&2
+        return 2
+    fi
 
-    if [[ ! -d "${git_repos}/${repo_name}" ]]; then
+    local repo_name=$1
+    local dir="${git_repos}/${repo_name}"
+
+    if [[ ! -d "${dir}" ]]; then
         error "The '${repo_name}' repository was not cloned or is not under ${git_repos}."
         exit 2
     fi
 
-    if is_inside_work_tree "${git_repos}/${repo_name}"; then
-        is_on_or_after_latest_stable_tag "${git_repos}/${repo_name}" "$semverTagReleaseRegex" || {
-            error "The HEAD of the '${repo_name}' repository is before the latest stable tag."
+    if [[ "$dir" == $(root_working_tree "$dir") ]]; then
+        is_on_or_after_latest_stable_tag "$dir" "$semverTagReleaseRegex" || {
+            error "The HEAD of the '${repo_name}' repository is before the latest stable tag. Please synchronize."
             exit 2
         }
     else
-        confirm "The ${repo_name} repository at '${git_repos}/${repo_name}' is not a git repository." "n" ||
+        confirm "The ${repo_name} repository at '$dir' is not a git repository. Do you want to continue?" "n" ||
             exit 2
     fi
 }
@@ -313,7 +319,6 @@ function are_different()
     # compare fast, return fast, if no significant diffs; otherwise continue with the fancy diff tool of choice
     if diff -q -w -B "$LOCAL" "$REMOTE" > "$_ignore"; then
         printf "%-70s <--- Identical ---> %-s\n" "$LOCAL" "$REMOTE"
-        # echo "${LOCAL} <--- Identical ---> ${REMOTE}"
         return 1
     fi
     printf "%-70s <--- Different ---> %-s\n" "$LOCAL" "$REMOTE"

@@ -9,6 +9,31 @@
     },
     "files": [
         {
+            "sourceFile": "${git_repos}/.github/workflow-templates/ClearCache.yaml",
+            "targetFile": "${target_path}/.github/workflows/ClearCache.yaml",
+            "action": "copy"
+        },
+        {
+            "sourceFile": "${git_repos}/.github/workflow-templates/CI.yaml",
+            "targetFile": "${target_path}/.github/workflows/CI.yaml",
+            "action": "ask to merge"
+        },
+        {
+            "sourceFile": "${git_repos}/.github/workflow-templates/Prerelease.yaml",
+            "targetFile": "${target_path}/.github/workflows/Prerelease.yaml",
+            "action": "ask to merge"
+        },
+        {
+            "sourceFile": "${git_repos}/.github/workflow-templates/Release.yaml",
+            "targetFile": "${target_path}/.github/workflows/Release.yaml",
+            "action": "ask to merge"
+        },
+        {
+            "sourceFile": "${git_repos}/.github/dependabot.yml",
+            "targetFile": "${target_path}/.github/dependabot.yml",
+            "action": "copy"
+        },
+        {
             "sourceFile": "${git_repos}/vm2.DevOps/solution/.editorconfig",
             "targetFile": "${target_path}/.editorconfig",
             "action": "copy"
@@ -72,31 +97,6 @@
             "sourceFile": "${git_repos}/vm2.DevOps/solution/changelog/cliff.release-header.toml",
             "targetFile": "${target_path}/changelog/cliff.release-header.toml",
             "action": "copy"
-        },
-        {
-            "sourceFile": "${git_repos}/vm2.DevOps/.github/dependabot.yml",
-            "targetFile": "${target_path}/.github/dependabot.yml",
-            "action": "copy"
-        },
-        {
-            "sourceFile": "${git_repos}/.github/workflow-templates/ClearCache.yaml",
-            "targetFile": "${target_path}/.github/workflows/ClearCache.yaml",
-            "action": "copy"
-        },
-        {
-            "sourceFile": "${git_repos}/.github/workflow-templates/CI.yaml",
-            "targetFile": "${target_path}/.github/workflows/CI.yaml",
-            "action": "ask to merge"
-        },
-        {
-            "sourceFile": "${git_repos}/.github/workflow-templates/Prerelease.yaml",
-            "targetFile": "${target_path}/.github/workflows/Prerelease.yaml",
-            "action": "ask to merge"
-        },
-        {
-            "sourceFile": "${git_repos}/.github/workflow-templates/Release.yaml",
-            "targetFile": "${target_path}/.github/workflows/Release.yaml",
-            "action": "ask to merge"
         }
     ]
 }

@@ -98,7 +98,7 @@ They follow the same three-file pattern where applicable.
 
 ### diff-common.sh
 
-Compares pre-defined set of files from the "source-of-truth" directories (from the repositories `vm2.DevOps` and `.github`) with
+Compares pre-defined set of files from the "source-of-truth" directories (cloned repositories `vm2.DevOps` and `.github`) with
 the corresponding files in a target directory. Useful for keeping common files (config, settings, `Directory.*.props`, workflow
 files, etc.) in-sync across repositories. The script assumes that the repositories `vm2.DevOps` and `.github` are in the same
 directory which may be defined by the environment variable `$GIT_REPOS` or given by the option `--git-repos`

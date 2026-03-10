@@ -4,23 +4,23 @@
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
 declare -x _ignore
-declare -xr script_name
-declare -xr lib_dir
+declare -x script_name
+declare -x lib_dir
 
-declare -xr repo_name
-declare -xr owner
-declare -xr repo
-declare -xr visibility
-declare -xr branch
-declare -xr configure_only
-declare -xr skip_secrets
-declare -xr skip_variables
-declare -xr audit
-declare -xr force_defaults
-declare -xr main_protection_rs_name
+declare -x repo_name
+declare -x owner
+declare -x repo
+declare -x visibility
+declare -x branch
+declare -x configure_only
+declare -x skip_secrets
+declare -x skip_variables
+declare -x audit
+declare -x force_defaults
+declare -x main_protection_rs_name
 
-declare -xr ci_yaml
-declare -xr _ci_yaml
+declare -x ci_yaml
+declare -x _ci_yaml
 
 declare -xrA repo_settings=(
     ["delete_branch_on_merge"]="true"
@@ -74,6 +74,37 @@ declare -xi github_actions_app_id
 # ------------------------------------------------------------------
 # Functions
 # ------------------------------------------------------------------
+
+## Validates that the given directory is a root of a repository working tree, and its HEAD is on or after the latest stable tag.
+## Otherwise confirm with the user that they want to continue
+## Usage: validate_source_repo <root-repo>
+# shellcheck disable=SC2154 # variable is referenced but not assigned.
+function validate_source_repo()
+{
+    if [[ $# -lt 1 ]]; then
+        error "${FUNCNAME[0]}() requires at least 1 argument: the name of a repository." >&2
+        return 2
+    fi
+
+    local repo_name=$1
+    local dir="${git_repos}/${repo_name}"
+
+    if [[ ! -d "${dir}" ]]; then
+        error "The '${repo_name}' repository was not cloned or is not under ${git_repos}."
+        exit 2
+    fi
+
+    if [[ "$dir" == $(root_working_tree "$dir") ]]; then
+        is_on_or_after_latest_stable_tag "$dir" "$semverTagReleaseRegex" || {
+            error "The HEAD of the '${repo_name}' repository is before the latest stable tag. Please synchronize."
+            exit 2
+        }
+    else
+        confirm "The ${repo_name} repository at '$dir' is not a git repository. Do you want to continue?" "n" ||
+            exit 2
+    fi
+}
+
 function resolve_github_actions_app_id()
 {
     # Resolve the GitHub Actions app ID dynamically via the API.

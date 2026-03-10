@@ -319,10 +319,7 @@ function is_safe_json_array()
 
     local input output
     input="$(trim "$1")"
-
-    if [[ -z "$input" ]]; then
-        input=$default
-    fi
+    [[ -n "$input" ]] || input=$default
 
     # validate and normalize JSON
     output="$(

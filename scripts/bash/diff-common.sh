@@ -17,8 +17,8 @@ declare -xr lib_dir
 source "$lib_dir/core.sh"
 
 # arguments
-declare -x git_repos="${GIT_REPOS:-}"
 declare -x target_dir=""
+declare -x git_repos="${GIT_REPOS:-}"
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-'v'}
 declare -xa file_regexes=()
 
@@ -28,51 +28,33 @@ source "${script_dir}/diff-common.functions.sh"
 
 get_arguments "$@"
 
-git_repos=$(realpath -e "$git_repos") || {
-    warning "Neither --git-repos option nor GIT_REPOS environment variable is set or valid."
-}
-target_dir=${target_dir:-$(pwd)}
-
-# Validate environment:
-if [[ -z "$git_repos" ]] || ! git_repos=$(realpath -e "$git_repos"); then
-    # git_repos was not set from option or env.var: try from the directory of the script's repo or from ($script_dir/../..)
-    if ! r=$(root_working_tree "$script_dir") &&
-       ! r=$(realpath -e "$(dirname "$script_dir/../..")"); then
-        error "The common directory of the source repositories was not specified. Specify either the --git-repos option or export GIT_REPOS environment variable."
+#===============================
+# Validate and adjust git_repos:
+#===============================
+if [[ -z "$git_repos" ]] || ! git_repos=$(realpath -e "$git_repos" 2> "$_ignore"); then
+    trace "Neither the \$GIT_REPOS environment variable nor the --git-repos option is specified. Will assume that the source-of-truth repositories are located in the same parent directory."
+    # use this script's path to find the git_repos
+    if r=$(root_working_tree "$script_dir") ||
+       r=$(realpath -e "$(dirname "$script_dir/../..")"); then
+        git_repos=$(realpath -e "$(dirname "$r")")
+    else
+        error "The source directories are not located under the same parent directory. Specify the path of their parent directory either either with \$GIT_REPOS environment variable or the --git-repos option."
         exit 2
     fi
-    git_repos=$(realpath -e "$(dirname "$r")") || {
-        error "Could not determine the common directory of the source repositories. Specify either the --git-repos option or export GIT_REPOS environment variable."
-        exit 2
-    }
 fi
-
-# freeze the arguments
-declare -xr git_repos
-declare -xr target_dir
-declare -xr minver_tag_prefix
-
-validate_minverTagPrefix "$minver_tag_prefix"
-
-# shellcheck disable=SC2154
-declare -xr semverTagReleaseRegex
-
-# shellcheck disable=SC2119 # Use dump_all_variables "$@" if function's $1 should mean script's $1.
-dump_all_variables
-
-declare -a source_files
-declare -a target_files
-declare -A file_actions
-
 # make sure we are seeing .github and vm2.DevOps properly through git_repos
 validate_source_repo ".github"
 validate_source_repo "vm2.DevOps"
 trace "All source repositories are in '$git_repos'"
 
-# Resolve the target path
-if ! target_path=$(realpath -e "$target_dir") &&
-   ! target_path=$(realpath -e "$git_repos/$target_dir"); then
-     error "Could not find the target directory '$target_dir' neither under the current working directory nor under '$GIT_REPOS'."
+#=================================================
+# Validate and adjust target_path from target_dir:
+#=================================================
+[[ -n $target_dir ]] || target_dir=$(pwd)
+
+if  ! target_path=$(realpath -e "$target_dir" 2> "$_ignore") &&
+    ! target_path=$(realpath -e "$git_repos/$target_dir" 2> "$_ignore"); then
+     error "Could not find the target directory '$target_dir' neither in the current working directory nor in '$GIT_REPOS'."
      exit 2
 fi
 if is_in "$target_path" "${git_repos}/vm2.DevOps" "${git_repos}/.github" ; then
@@ -81,29 +63,36 @@ if is_in "$target_path" "${git_repos}/vm2.DevOps" "${git_repos}/.github" ; then
 fi
 trace "The target project is in '$target_path'"
 
-ask=false
-if [[ ! -d "$target_path/.github/workflows" ]]; then
-    warning "The target directory '$target_path' does not contain a directory '.github/workflows' - it will be created."
-    ask=true
-fi
-if [[ ! -d "$target_path/src" ]]; then
-    warning "The target directory '$target_path' does not contain a directory 'src'."
-    ask=true
-fi
-if [[ $ask == true ]] && ! confirm "Are you sure that your project is in $target_path?" "n"; then
-    return 2
-fi
+[[ ! -d "$target_path/.github/workflows" ]] &&
+warning "The target directory '$target_path' does not contain the expected directory '.github/workflows' - it will be created. Continue? " &&
+! confirm "Are you sure that your project is in $target_path?" "n" &&
+exit 2
 
-# freeze target_path too
+# freeze the arguments
+declare -xr git_repos
+declare -xr target_dir
 declare -xr target_path
+declare -xr minver_tag_prefix
+
+validate_minverTagPrefix "$minver_tag_prefix"
+
+# shellcheck disable=SC2154
+declare -xr semverTagReleaseRegex
+
+dump_all_variables
+
+declare -a source_files
+declare -a target_files
+declare -A file_actions
 
 # Load files and actions from the global config JSON
 configure
-
 # Modify the actions from custom config JSON if it exists
 customize
-if [[ ${#source_files[@]} -ne ${#target_files[@]} ]] || [[ ${#source_files[@]} -ne ${#file_actions[@]} ]]; then
-    error "The data in the tables do not match."
+# validate the configuration
+if [[ ${#source_files[@]} -ne ${#target_files[@]} ]] ||
+   [[ ${#source_files[@]} -ne ${#file_actions[@]} ]]; then
+    error "The data in the config tables do not match."
 fi
 
 exit_if_has_errors
@@ -118,7 +107,7 @@ while [[ $i -lt ${#source_files[@]} ]]; do
     source_file="${source_files[i]}"
     target_file="${target_files[i]}"
     actions="${file_actions[$source_file]}"
-    i=$((i+1))
+    (( ++i ))
 
     if [[ ${#file_regexes[@]} -gt 0 ]]; then
         matched=false

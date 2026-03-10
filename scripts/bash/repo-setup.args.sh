@@ -34,11 +34,6 @@ function get_arguments()
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
-            --path )
-                [[ $# -ge 1 ]] || { usage false "Missing path after '$option'."; exit 2; }
-                repo_path="$1"; shift
-                ;;
-
             --owner )
                 [[ $# -ge 1 ]] || { usage false "Missing owner after '$option'."; exit 2; }
                 owner="$1"; shift
@@ -80,9 +75,28 @@ function get_arguments()
                 audit=true
                 ;;
 
-            * )
-                usage false "Unknown argument '$option'."
+            * ) if [[ -z "$repo_path" ]]; then
+                    repo_path="$option"
+                else
+                    usage false "Too many positional arguments (project directory or repository name): ${option}"
+                fi
                 ;;
         esac
     done
+    dump_vars --quiet \
+        --header "Inputs" \
+        repo_path \
+        git_repos \
+        owner \
+        visibility \
+        branch \
+        main_protection_rs_name \
+        configure_only \
+        skip_secrets \
+        skip_variables \
+        audit \
+        --blank \
+        dry_run \
+        verbose \
+        quiet
 }

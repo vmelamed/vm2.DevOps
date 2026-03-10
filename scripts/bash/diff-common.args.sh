@@ -43,16 +43,17 @@ function get_arguments()
             * ) if [[ -z "$target_dir" ]]; then
                     target_dir="$option"
                 else
-                    usage false "Too many positional arguments: ${option}"
+                    usage false "Too many positional arguments (project directory or repository name): ${option}"
                 fi
                 ;;
         esac
     done
+    dump_all_variables
 }
 
 dump_all_variables()
 {
-    dump_vars "$@" -q \
+    dump_vars --quiet \
         --header "Script Arguments:" \
         dry_run \
         verbose \
@@ -61,6 +62,6 @@ dump_all_variables()
         git_repos \
         minver_tag_prefix \
         target_dir \
-        file_regexes \
+        file_regexes
         # add var names above this line
 }

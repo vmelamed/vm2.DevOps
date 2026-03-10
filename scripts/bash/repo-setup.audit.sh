@@ -3,33 +3,47 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr script_name
-declare -xr lib_dir
+declare -x script_name
+declare -x lib_dir
 
-declare -xr repo_name
-declare -xr owner
-declare -xr repo
-declare -xr visibility
-declare -xr branch
-declare -xr configure_only
-declare -xr skip_secrets
-declare -xr skip_variables
-declare -xr audit
-declare -xr force_defaults
-declare -xa required_checks
+declare -x repo_name
+declare -x owner
+declare -x repo
+declare -x visibility
+declare -x branch
+declare -x configure_only
+declare -x skip_secrets
+declare -x skip_variables
+declare -x audit
+declare -x force_defaults
+declare -x required_checks
 
-declare -xr ci_yaml
-declare -xr _ci_yaml
+declare -x ci_yaml
+declare -x _ci_yaml
 
-declare -xrA repo_settings
-declare -xra vars_defaults
-declare -xra expected_secrets
-declare -xrA vars_defaults
+declare -xA repo_settings
+declare -xa expected_secrets
+declare -xA vars_defaults
 
 declare -x errors
 
 declare -xr jq_transform_default='to_entries[] | "\(.key)=\(.value)"'
 
+#-------------------------------------------------------------------------------
+# Summary: Fetches the current settings from GitHub API and compares them to the expected settings, reporting matches,
+#   mismatches, and missing values (errors).
+# Parameters:
+#   $1: name of the associative array variable containing expected key-value pairs, e.g. repo_settings or repo_permissions
+#   $2: GitHub API path to fetch the current settings, e.g. "repos/${repo}" or "repos/${repo}/actions/permissions/workflow"
+#   $3: (optional) name of the function to transform the JSON response into key=value pairs, default is jq_transform_default
+#       which just outputs the top-level keys and values of the JSON object
+# Returns:
+#   Exit code: 0 on success, 2 - failed to read the settings
+#   stdout: the number of matches, mismatches, and errors in the format: <matches> <mismatches> <errors>
+# Dependencies: gh CLI, jq
+# Usage:
+# Example:
+#-------------------------------------------------------------------------------
 function compare_settings()
 {
     local -n expecteds="$1"
@@ -38,7 +52,7 @@ function compare_settings()
     local json
     if ! json=$(gh api "$hq_path"); then
         error "Failed to fetch data from GitHub API: $hq_path"
-        return 1
+        return 2
     fi
 
     local -A actuals
@@ -54,7 +68,7 @@ function compare_settings()
         actual="${actuals[$key]}"
         if [[ ! -v actuals[$key] ]]; then
             error "'${key}' is missing (expected: '${expected}')"
-            (( errors--, ++errs ))  # unchanged the global errors count
+            (( errors--, ++errs ))  # un-change the global errors count, too
         else
             if [[ "$actual" != "$expected" ]]; then
                 warning "'${key}' => '${actual}' (expected: '${expected}')"

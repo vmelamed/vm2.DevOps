@@ -5,53 +5,53 @@
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 
 #-------------------------------------------------------------------------------
-# Summary: Finds the root directory (by default) of a Git repository by searching for a
-#   directory with the given name under $HOME.
+# Summary: Finds the root directory of a Git repository working tree by searching for a directory with the given name under a
+#  specified parent directory.
 # Parameters:
-#   1 - dir - directory name or relative path to search for (optional, default: current directory)
-#   2 - not_root_only - if "true", accept any directory inside a Git work tree;
-#       otherwise only accept directories that are the root of a Git work tree (optional)
+#  1 - dir - directory name or relative path to search for (optional, default: current directory)
+#  2 - root_only - if "true", only accept directories that are the root of a Git work tree (required for repo setup audit);
+#      if "false", accept any directory inside a Git work tree (optional, default: "true")
+#  3 - repos_parent - parent directory under which to search for the specified directory (optional, default: $GIT_REPOS or $HOME)
 # Returns:
-#   stdout: the absolute path to the Git repository root
-#   Exit code: 0 if exactly one matching root is found, 1 if none or multiple found, 2 on invalid arguments
+#  stdout: the absolute path to the Git repository root
+#  Exit code: 0 if exactly one matching root is found, 1 if none or multiple found, 2 on invalid arguments
 # Dependencies: git, find
-# Usage: root=$(find_repo_root <directory-name> [not-root-only])
+# Usage: root=$(find_repo_root <directory-name> [root-only] [repos-parent])
 # Example: root=$(find_repo_root "vm2.Glob") # Finds the root of the Git repository containing a directory named "vm2.Glob"
-#   under $HOME
+#  under $HOME
 # Example: root=$(find_repo_root "vm2.Templates/templates/AddNewPackage/content" "true") # Finds the directory path
-#   "vm2.Templates/templates/AddNewPackage/content" that is inside a Git repository work tree
+#  "vm2.Templates/templates/AddNewPackage/content" that is inside a Git repository work tree
 #-------------------------------------------------------------------------------
 function find_repo_root()
 {
-    local dir=${1:-"$(pwd)"}
-    dir=${dir#/}
-    dir=${dir%/}
-    local -a roots=()
+    local dir_path=${1:-"$(pwd)"}
+    dir_path=${dir_path#/*/} # remove leading path components to be able to match the directory name with "*/$dir_path" in find
+                             # this allows the caller to specify either a directory name or a relative path, e.g. "vm2.Glob" or "vm2.Glob/subdir"
+    local root_only=${2:-"true"}
+    local repos_parent="${3:-${GIT_REPOS:-$HOME}}"
+    # dir_path=${dir_path%/}
+    local root=""
+    local found_roots=0
     local d
     local e
 
-    # find all directories with the same name under $HOME
+    # find a directory with the same sub-path under $repos_parent and check if it is a git work tree root (if root_only is true)
+    # or inside a git work tree (if root_only is false)
     while IFS= read -r d; do
-        if [[ "$2" == "true" ]] && is_inside_work_tree "$d"; then
-            roots+=("$d")
-        else
+        if [[ "$root_only" == "true" ]]; then
             e="$(git -C "$d" rev-parse --show-toplevel 2>"$_ignore")" || continue
-            if [[ "$e" == "$d" ]] && ! is_in "$e" "${roots[@]}"; then
-                roots+=("$e")
-            fi
+            root="$e"
+            ((++found_roots))
+        elif is_inside_work_tree "$d"; then
+            root="$d"
+            ((++found_roots))
         fi
-    done < <(find "$HOME" -type d -path "*/$dir" 2>"$_ignore")
+    done < <(find "$repos_parent" -type d -path "*/$dir_path" 2>"$_ignore")
 
-    if [[ ${#roots[@]} -eq 1 ]]; then
-        echo "${roots[0]}"
-        return 0
-    elif [[ ${#roots[@]} -eq 0 ]]; then
-        error "No directory named '$dir' was found that is a root of a Git repository work tree." >&2
-        return 1
-    else
-        error "Multiple directories named '$dir' were found that are roots of Git repository work trees." >&2
-        return 1
-    fi
+    (( found_roots == 1 )) && { echo "${root}"; return 0; }
+    (( found_roots == 0 )) && error "No directory named '$dir_path' was found that is a root of a Git repository work tree." >&2
+    (( found_roots  > 1 )) && error "Multiple directories named '$dir_path' were found that are roots of Git repository work trees." >&2
+    return 1
 }
 
 #-------------------------------------------------------------------------------
@@ -78,19 +78,23 @@ function find_repo_root()
 #   # owner=vmelamed
 #   # name=vm2.Glob
 #-------------------------------------------------------------------------------
-repo_owner_rex='[a-zA-Z0-9]([a-zA-Z0-9-]{0,37}[a-zA-Z0-9])'
-repo_name_rex='[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}'
+repo_owner_rex='[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,37}[a-zA-Z0-9])'
+repo_name_rex='[a-zA-Z0-9][a-zA-Z0-9._-]{0,99})' # GitHub repository names can be up to 100 characters, cannot end with .git, and can contain letters, digits, dots, underscores, and hyphens, but must start with a letter or digit. See https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user for details.
 
 repo_owner_regex="^${repo_owner_rex}$"
 repo_name_regex="^${repo_name_rex}$"
 
-github_url_regex="^(git@github.com:|https://github.com/)(${repo_owner_rex})/(${repo_name_rex})(\.git)?$"
+github_url_regex="^(git@github\.com:|https://github\.com/)(${repo_owner_rex})/(${repo_name_rex})$"
 
 declare -xr repo_owner_rex
 declare -xr repo_name_rex
 declare -xr repo_owner_regex
 declare -xr repo_name_regex
 declare -xr github_url_regex
+
+declare -xi url_host=1
+declare -xi url_owner=2
+declare -xi url_name=4
 
 function gh_repo_info()
 {
@@ -117,10 +121,13 @@ function gh_repo_info()
         return 2
     fi
 
+    local owner name
+    owner="${BASH_REMATCH[$url_owner]}"
+    name="${BASH_REMATCH[$url_name]}"
     echo "root=$root"
     echo "url=$remoteUrl"
-    echo "owner=${BASH_REMATCH[2]}"
-    echo "name=${BASH_REMATCH[4]}"
+    echo "owner=$owner"
+    echo "name=${name%.git}" # remove .git suffix if present
     return 0
 }
 
@@ -139,9 +146,9 @@ function gh_repo_info()
 function root_working_tree()
 {
     if [[ -d $1 ]]; then
-        git -C "$1" rev-parse --show-toplevel 2>"$_ignore"
+        git -C "$1" rev-parse --show-toplevel 2> "$_ignore"
     else
-        git rev-parse --show-toplevel
+        git rev-parse --show-toplevel 2> "$_ignore"
     fi
 }
 
