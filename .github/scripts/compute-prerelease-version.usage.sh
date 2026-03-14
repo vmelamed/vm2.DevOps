@@ -3,14 +3,14 @@
 # shellcheck disable=SC2154 # variable is referenced but not assigned
 function usage_text()
 {
-    local std_switches=""
-    local std_vars=""
+    local switches=""
+    local vars=""
 
     if [[ $1 == true ]]; then
-        std_switches="
+        switches="
 Switches:
 $common_switches"
-        std_vars=$common_vars
+        vars=$common_vars
     fi
 
     cat << EOF
@@ -32,16 +32,16 @@ Options:
                                 Initial value from \$MINVERDEFAULTPRERELEASEIDENTIFIERS or default 'preview.0'
   -r, --reason                  Reason for prerelease (e.g., "pre-release", "manual prerelease", etc.)
                                 Initial value from \$REASON or default "pre-release"
-$std_switches
+$switches
 Environment Variables:
-    MINVERTAGPREFIX             Git tag prefix to be recognized by MinVer
+  MINVERTAGPREFIX               Git tag prefix to be recognized by MinVer
                                 (default: 'v')
-    MINVERDEFAULTPRERELEASEIDENTIFIERS
+  MINVERDEFAULTPRERELEASEIDENTIFIERS
                                 MinVer default pre-release identifiers
                                 (default: 'preview.0')
-    REASON                      Reason for the prerelease build
+  REASON                        Reason for the prerelease build
                                 (default: 'pre-release')
-$std_vars
+$vars
 Outputs (to GITHUB_OUTPUT):
   prerelease-version            The computed version (e.g., '1.2.3-preview.1')
   prerelease-tag                The full tag (e.g., 'v1.2.3-preview.1')

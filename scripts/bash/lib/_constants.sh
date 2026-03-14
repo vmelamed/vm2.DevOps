@@ -44,3 +44,4 @@ else
     declare -xr BOLDBLUE=''
     declare -xr NC='' # No Color (reset)
 fi
+declare -xr masked="••••••"

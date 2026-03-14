@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-script_name="$(basename "${BASH_SOURCE[-1]}")"
-script_dir="$(dirname "$(realpath -e "${BASH_SOURCE[-1]}")")"
-lib_dir="$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
+script_name=$(basename "${BASH_SOURCE[0]}")
+script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
+lib_dir=$(realpath -e "$script_dir/lib")
+
 
 declare -xr script_name
 declare -xr script_dir
@@ -15,8 +16,8 @@ declare -x commit_sha=""
 declare -x new_branch=""
 declare -x check_out_new_branch=false
 
-source "${lib_dir}/move-commits-to-branch.args.sh"
-source "${lib_dir}/move-commits-to-branch.usage.sh"
+source "${script_dir}/move-commits-to-branch.args.sh"
+source "${script_dir}/move-commits-to-branch.usage.sh"
 
 get_arguments "$@"
 
@@ -26,29 +27,30 @@ declare -rx new_branch
 declare -rx check_out_new_branch
 
 if [[ -z "$commit_sha" || -z "$new_branch" ]]; then
-    usage false "The options '--commit-sha' and '--branch' are mandatory and cannot be null or empty" >&2
+    usage false "The options '--commit-sha' and '--branch' are mandatory and cannot be null or empty"
 fi
 
 if [[ ! "$commit_sha" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
-    usage false "The commit SHA must be a valid 7 to 40 hexadecimal digits string" >&2
+    usage false "The commit SHA must be a valid 7 to 40 hexadecimal digits string"
 fi
 
 if [[ "$new_branch" == "main" ]]; then
-    usage false "The new branch name cannot be 'main'" >&2
+    usage false "The new branch name cannot be 'main'"
 fi
 # Verify we're on main branch
 current_branch=$(git branch --show-current)
 if [[ "$current_branch" != "main" ]]; then
-    usage false "You must be on the 'main' branch. Currently on '$current_branch'" >&2
+    usage false "You must be on the 'main' branch. Currently on '$current_branch'"
 fi
 # Check for uncommitted changes
 if ! git diff-index --quiet HEAD --; then
-    usage false "You have uncommitted changes. Please commit or stash them first." >&2
+    usage false "You have uncommitted changes. Please commit or stash them first."
     git status --short
 fi
 # Verify the commit exists
-if ! git cat-file -e "$commit_sha^{commit}" 2>/dev/null; then
-    usage false "Commit '$commit_sha' does not exist" >&2
+# shellcheck disable=SC2154
+if ! git cat-file -e "$commit_sha^{commit}" 2>"$_ignore"; then
+    usage false "Commit '$commit_sha' does not exist"
 fi
 
 # Show the commits that will be moved

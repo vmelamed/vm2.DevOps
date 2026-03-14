@@ -11,10 +11,6 @@ declare -x check_out_new_branch
 # shellcheck disable=SC2154 # verbose is referenced but not assigned.
 function get_arguments()
 {
-    if [[ $# -lt 2 ]]; then
-        usage false "This script requires two options: '--commit-sha <commit-sha>' and '--branch <new-branch-name>'."
-    fi
-
     local option
 
     while [[ $# -gt 0 ]]; do

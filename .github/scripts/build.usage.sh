@@ -6,14 +6,14 @@
 ## Usage: usage_text
 function usage_text()
 {
-    local std_switches=""
-    local std_vars=""
+    local switches=""
+    local vars=""
 
     if [[ $1 == true ]]; then
-        std_switches="
+        switches="
 Switches:
 $common_switches"
-        std_vars=$common_vars
+        vars=$common_vars
     fi
 
     cat << EOF
@@ -36,7 +36,7 @@ Options:
                                 Initial value from \$GITHUB_ACTOR or ''
   --nuget-password              Password or token for authenticating with the NuGet repository if needed
                                 Initial value from \$GITHUB_TOKEN or ''
-$std_switches
+$switches
 Environment Variables:
   BUILD_PROJECT                 Path to the solution/project to build
   CONFIGURATION                 Build configuration ('Release' or 'Debug')
@@ -47,7 +47,7 @@ Environment Variables:
   GITHUB_ACTOR                  Username for authenticating with the NuGet repository if needed
   GITHUB_TOKEN                  Password or token for authenticating with the NuGet repository if needed
   GITHUB_STEP_SUMMARY           Path to the file to which step summary is written
-$std_vars
+$vars
 EOF
 }
 

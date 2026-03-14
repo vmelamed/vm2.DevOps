@@ -18,6 +18,9 @@ declare -x skip_secrets
 declare -x skip_variables
 declare -x audit
 declare -x main_protection_rs_name
+declare -x description
+declare -x use_ssh
+declare -x use_https
 
 # shellcheck disable=SC2154 # verbose is referenced but not assigned.
 function get_arguments()
@@ -34,33 +37,53 @@ function get_arguments()
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
-            --owner )
-                [[ $# -ge 1 ]] || { usage false "Missing owner after '$option'."; exit 2; }
+            --owner|-o )
+                [[ $# -ge 1 ]] || usage false "Missing owner after '$option'."
                 owner="$1"; shift
                 ;;
 
+            --name|-n )
+                [[ $# -ge 1 ]] || usage false "Missing repository name after '$option'."
+                repo_name="$1"; shift
+                ;;
+
             --visibility )
-                [[ $# -ge 1 ]] || { usage false "Missing visibility after '$option'."; exit 2; }
+                [[ $# -ge 1 ]] || usage false "Missing visibility after '$option'."
                 visibility="$1"; shift
                 ;;
 
             --branch|-b )
-                [[ $# -ge 1 ]] || { usage false "Missing branch name after '$option'."; exit 2; }
+                [[ $# -ge 1 ]] || usage false "Missing branch name after '$option'."
                 branch="$1"; shift
                 ;;
 
-            --git-repos|-r )
-                [[ $# -ge 1 ]] || { usage false "Missing path after '$option'."; exit 2; }
+            --git-repos|-gr )
+                [[ $# -ge 1 ]] || usage false "Missing path after '$option'."
                 git_repos="$1"; shift
                 ;;
 
-            --main-protection-name|--ruleset-name|-m )
-                [[ $# -ge 1 ]] || { usage false "Missing the name of the ruleset for protecting main after '$option'."; exit 2; }
+            --ruleset-name|-rs )
+                [[ $# -ge 1 ]] || usage false "Missing the name of the ruleset for protecting the default branch after '$option'."
                 main_protection_rs_name="$1"; shift
+                ;;
+
+            --description )
+                [[ $# -ge 1 ]] || usage false "Missing description after '$option'."
+                description="$1"; shift
                 ;;
 
             --configure-only )
                 configure_only=true
+                ;;
+
+            --ssh )
+                use_ssh=true
+                use_https=false
+                ;;
+
+            --https )
+                use_ssh=false
+                use_https=true
                 ;;
 
             --skip-secrets )
@@ -83,18 +106,27 @@ function get_arguments()
                 ;;
         esac
     done
+    #dump_args
+}
+
+function dump_args()
+{
     dump_vars --quiet \
         --header "Inputs" \
-        repo_path \
         git_repos \
-        owner \
+        repo_path \
+        repo_owner \
+        repo_name \
         visibility \
         branch \
         main_protection_rs_name \
+        description \
+        use_ssh \
+        use_https \
+        audit \
         configure_only \
         skip_secrets \
         skip_variables \
-        audit \
         --blank \
         dry_run \
         verbose \

@@ -60,7 +60,7 @@ declare -xi tag_regexes_initialized=1
 function validate_minverTagPrefix()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires exactly 1 argument: the semver tag prefix used by MinVer. Did you pass a nameref by mistake?"
+        error 3 "${FUNCNAME[0]}() requires exactly 1 argument: the semver tag prefix used by MinVer. Did you pass a nameref by mistake?"
         return 2
     fi
 
@@ -119,7 +119,7 @@ function compare_semver()
     local -i e=0
 
     if [[ $# -ne 2 ]]; then
-        error "${FUNCNAME[0]}() requires at exactly 2 arguments: version1 and version2." >&2
+        error 3 "${FUNCNAME[0]}() requires at exactly 2 arguments: version1 and version2."
         e=$((e + 1))
     fi
 
@@ -129,7 +129,7 @@ function compare_semver()
         local -i patch1=${BASH_REMATCH[$semver_patch]}
         local prerelease1=${BASH_REMATCH[$semver_prerelease]#-}
     else
-        error "${FUNCNAME[0]}() requires the version1 argument to be a valid [Semantic Versioning 2.0.0](https://semver.org/) string." >&2
+        error 3 "${FUNCNAME[0]}() requires the version1 argument to be a valid [Semantic Versioning 2.0.0](https://semver.org/) string."
         e=$((e + 1))
     fi
     # local build1=${BASH_REMATCH[semver_build]#-} does not participate in comparison by spec
@@ -140,7 +140,7 @@ function compare_semver()
         local -i patch2=${BASH_REMATCH[$semver_patch]}
         local prerelease2=${BASH_REMATCH[$semver_prerelease]#-}
     else
-        error "${FUNCNAME[0]}() requires the version2 argument to be a valid [Semantic Versioning 2.0.0](https://semver.org/) string." >&2
+        error 3 "${FUNCNAME[0]}() requires the version2 argument to be a valid [Semantic Versioning 2.0.0](https://semver.org/) string."
         e=$((e + 1))
     fi
     # local build2=${BASH_REMATCH[semver_build]#-} does not participate in comparison by spec
@@ -176,8 +176,8 @@ function compare_semver()
     while (( i < min_len )); do
         p1=${pre1[i]}
         p2=${pre2[i]}
-        if [[ $p1 =~ ^[0-9]+$ ]]; then
-            if [[ $p2 =~ ^[0-9]+$ ]]; then
+        if is_natural "$p1"; then
+            if is_natural "$p2"; then
                 local -i n1=$p1 n2=$p2
                 if (( n1 != n2 )); then
                     if (( n1 > n2 )); then return "$isGt"; else return "$isLt"; fi
@@ -186,7 +186,7 @@ function compare_semver()
                 return "$isLt"
             fi
         else
-            if [[ $p2 =~ ^[0-9]+$ ]]; then return "$isGt"; fi
+            if is_natural "$p2"; then return "$isGt"; fi
         fi
         if [[ "$p1" != "$p2" ]]; then
             if [[ "$p1" > "$p2" ]]; then return "$isGt"; else return "$isLt"; fi
@@ -219,7 +219,7 @@ function compare_semver()
 function is_semver()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires exactly 1 argument: the version."
+        error 3 "${FUNCNAME[0]}() requires exactly 1 argument: the version."
         return 2
     fi
     [[ "$1" =~ $semverRegex ]]
@@ -241,7 +241,7 @@ function is_semver()
 function is_semverTag()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires exactly 1 argument: the semver tag."
+        error 3 "${FUNCNAME[0]}() requires exactly 1 argument: the semver tag."
         return 2
     fi
     [[ "$1" =~ $semverTagRegex ]]
@@ -260,7 +260,7 @@ function is_semverTag()
 function is_semverPrerelease()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires exactly 1 argument: the semver prerelease."
+        error 3 "${FUNCNAME[0]}() requires exactly 1 argument: the semver prerelease."
         return 2
     fi
     [[ "$1" =~ $semverPrereleaseRegex ]]
@@ -282,7 +282,7 @@ function is_semverPrerelease()
 function is_semverPrereleaseTag()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires exactly 1 argument: the semver prerelease tag."
+        error 3 "${FUNCNAME[0]}() requires exactly 1 argument: the semver prerelease tag."
         return 2
     fi
     [[ "$1" =~ $semverTagPrereleaseRegex ]]
@@ -301,7 +301,7 @@ function is_semverPrereleaseTag()
 function is_semverRelease()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires exactly 1 argument: the version."
+        error 3 "${FUNCNAME[0]}() requires exactly 1 argument: the version."
         return 2
     fi
     [[ "$1" =~ $semverReleaseRegex ]]
@@ -323,7 +323,7 @@ function is_semverRelease()
 function is_semverReleaseTag()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires exactly 1 argument: the semver release tag."
+        error 3 "${FUNCNAME[0]}() requires exactly 1 argument: the semver release tag."
         return 2
     fi
     [[ "$1" =~ $semverTagReleaseRegex ]]

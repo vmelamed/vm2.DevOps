@@ -40,12 +40,11 @@ validate_minverTagPrefix "$minver_tag_prefix" || true
 is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 is_safe_path "$tests_artifacts_dir" || true
 
-while IFS='=' read -r key value; do
-    trace "$key=>$value"
-    if [[ "$key" == "root" ]]; then
-        repo_root="$value"
-    fi
-done < <(gh_repo_info "$test_dir")
+declare -A repo_state
+
+get_repo_state "$test_dir" repo_state
+
+repo_root="${repo_state[$key_root]}"
 
 test_config_path="${repo_root}/testconfig.json"
 coverage_settings_path="${repo_root}/coverage.settings.xml"                     # path to coverage settings file                ~/repos/vm2.Glob/coverage.settings.xml
@@ -126,7 +125,7 @@ declare -x _ignore
 declare -rx dry_run
 
 # Verify artifacts exist, if not - rebuild the project (mostly for local runs)
-if [[ ! -s "${test_exec_path}" && "$dry_run" != "true" ]]; then
+if [[ ! -s "${test_exec_path}" && "$dry_run" != true ]]; then
     warning "Cached test executable '${test_exec_path}' was not found. Rebuilding the test project"
     execute dotnet clean "$test_project" --configuration "$configuration" || true
     if ! execute dotnet build "$test_project" \
@@ -160,7 +159,7 @@ if ! execute "${test_exec_path}" "${test_args[@]}"; then
     exit 2
 fi
 
-if [[ $dry_run != "true" ]]; then
+if [[ $dry_run != true ]]; then
     if [[ ! -s "$coverage_source_path" ]]; then
         error "Coverage file '$coverage_source_path' not found or is empty."
         exit 2
@@ -200,7 +199,7 @@ execute reportgenerator \
     minimumCoverageThresholds:methodCoverage="$min_coverage_pct" \
     minimumCoverageThresholds:fullMethodCoverage="$min_coverage_pct"
 
-if [[ "$uninstall_reportgenerator" = "true" ]]; then
+if [[ "$uninstall_reportgenerator" = true ]]; then
     trace "Uninstalling the tool 'reportgenerator'..."
     execute dotnet tool uninstall dotnet-reportgenerator-globaltool --global
 fi

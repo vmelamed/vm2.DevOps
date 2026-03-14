@@ -126,7 +126,7 @@ execute dotnet nuget push "$artifacts_dir"/*.nupkg \
         echo "  - $(basename "$f")"
     done
     echo ""
-    [[ "$artifacts_saved" == "true" ]] && echo "Will be saved as workflow artifacts to $artifacts_dir."
+    [[ "$artifacts_saved" == true ]] && echo "Will be saved as workflow artifacts to $artifacts_dir."
     echo ""
     echo "| ${summary_header} |                |"
     echo "|:------------------|:---------------|"

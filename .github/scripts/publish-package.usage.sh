@@ -3,14 +3,14 @@
 # shellcheck disable=SC2154 # variable is referenced but not assigned
 function usage_text()
 {
-    local std_switches=""
-    local std_vars=""
+    local switches=""
+    local vars=""
 
     if [[ $1 == true ]]; then
-        std_switches="
+        switches="
 Switches:
 $common_switches"
-        std_vars=$common_vars
+        vars=$common_vars
     fi
 
     cat << EOF
@@ -30,7 +30,7 @@ Options:
                                 release note in the package metadata
                                 Initial value from \$REASON or default "release build"
   -a, --artifacts-saved         Whether the package(s) should be uploaded as workflow artifacts as well
-                                Initial value from \$ARTIFACTS_SAVED or default "false"
+                                Initial value from \$ARTIFACTS_SAVED or default false
   -ad, --artifacts-dir          Directory where artifacts will be saved, if --artifacts-saved is true
                                 Initial value from \$ARTIFACTS_DIR or default "artifacts/pack"
   -n, --nuget-server            NuGet server to push packages to. Valid values are "github" for  GitHub. Packages, "nuget" for
@@ -44,7 +44,7 @@ Options:
                                 \$GITHUB_REPOSITORY_OWNER environment variable. Required only if publishing to GitHub Packages
                                 Initial value from the \$GITHUB_REPOSITORY_OWNER environment variable or "vmelamed"
 
-$std_switches
+$switches
 Environment Variables:
   PROJECT                       Project/solution paths to package and publish
   PREPROCESSOR_SYMBOLS          Pre-processor symbols for compilation
@@ -61,7 +61,7 @@ Environment Variables:
   GITHUB_REPOSITORY_OWNER       The owner of the GitHub repository
                                 (default: 'vmelamed')
   ARTIFACTS_SAVED               Whether the package(s) will be uploaded as workflow artifacts as well
-                                Initial value from \$ARTIFACTS_SAVED or default "false"
+                                Initial value from \$ARTIFACTS_SAVED or default false
   ARTIFACTS_DIR                 Directory where artifacts will be saved if --artifacts-saved is true
                                 Initial value from \$ARTIFACTS_DIR or default "artifacts/pack"
   NUGET_API_GITHUB_KEY or       Required NuGet API key for GitHub Packages
@@ -69,7 +69,7 @@ Environment Variables:
   NUGET_API_NUGET_KEY or        Required NuGet API key for NuGet.org
   NUGET_API_KEY
   NUGET_API_KEY                 Required NuGet API key for a custom NuGet server
-$std_vars
+$vars
 EOF
 }
 

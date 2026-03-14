@@ -18,6 +18,8 @@
 # ║       warning "msg" | to_stdout                                           ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 
+# shellcheck disable=SC2154 # variable is referenced but not assigned.
+
 #-------------------------------------------------------------------------------
 # Summary: Logs messages to stdout, allowing override in other scripts for alternate destinations.
 # Parameters: none (reads from stdin)
@@ -79,43 +81,116 @@ function to_stderr()
 declare -ix errors=0
 
 #-------------------------------------------------------------------------------
+# Summary: Checks if the global error counter has any errors.
+# Parameters: none
+# Returns:
+#   Exit code: 0 if no errors, 1 if errors exist
+# Env. Vars:
+#   errors - global error counter
+# Usage: if has_errors; then ...; fi
+# Example:
+#   if has_errors; then
+#     echo "Errors were encountered."
+#   else
+#     echo "No errors."
+#   fi
+#-------------------------------------------------------------------------------
+function has_errors()
+{
+    # shellcheck disable=SC2154 # errors is referenced but not assigned.
+    (( errors > 0 )) && return 0 || return 1
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Tests the global error counter and exits if errors were encountered.
+# Parameters:
+# Returns:
+#   Exit code: 2 if errors exist, 0 otherwise
+# Env. Vars:
+#   errors - global error counter
+# Usage: exit_if_has_errors
+# Example:
+#   exit_if_has_errors  # exits with code 2 if errors exist
+#-------------------------------------------------------------------------------
+function exit_if_has_errors()
+{
+    # shellcheck disable=SC2154 # errors is referenced but not assigned.
+    has_errors && usage false "$errors error(s) encountered. Please fix the above issues and try again."
+    return 0
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Resets the global error counter to zero.
+# Parameters: none
+# Returns:
+#   Exit code: 0 always
+# Env. Vars:
+#   errors - global error counter
+# Usage: reset_errors
+# Example:
+#   reset_errors  # sets the global error counter to zero
+#-------------------------------------------------------------------------------
+function reset_errors()
+{
+    # shellcheck disable=SC2154 # errors is referenced but not assigned.
+    errors=0
+}
+
+declare -r no_parameters="function called without message parameters and there are none in the pipe. Provide message parameters or pipe them into the function."
+
+#-------------------------------------------------------------------------------
 # Summary: Logs error messages to stderr and increments the global error counter.
 # Parameters:
 #   1+ - message - error message parts (optional, if not provided reads from stdin)
+#   Note that if the first parameter is a number - it will be treated as the depth of the stack to dump.
 # Returns:
 #   stderr: formatted error message with ❌ prefix via to_stderr
 #   Exit code: 0 always
 # Side Effects: Increments the global $errors counter
-# Usage: error <message1> [message2...]
+# Usage: error [<depth>] [message2...]
 # Example:
 #   error "File not found: $filename"
-#   echo "Build failed" | error
+#   echo "Build failed" | error 3
 #-------------------------------------------------------------------------------
 function error()
 {
-    local bash_source=${BASH_SOURCE[1]:-}
-    local bash_lineno=${BASH_LINENO[0]:-}
-    local line
+    local -i depth=0
+
+    is_natural "${1:-}" && depth=$1 && shift
+
+    if [[ $# -eq 0 && -t 0 ]]; then
+        error 4 "error() $no_parameters"
+        return 2
+    fi
+
+    local source=${BASH_SOURCE[1]:-}
+    local lineno=${BASH_LINENO[0]:-}
     local first=true
+    local line
+
+    # shellcheck disable=SC2031 # line was modified in a subshell but the f-n is called in the same subshell, so it works as intended.
+    function __print_line()
     {
-        if [[ $# -gt 0 ]]; then
+        if $first; then
+            (( depth == 0 )) && printf "❌  ERROR: %s\n" "$line" || printf "❌  ERROR: %s (%s): %s\n" "${source}" "${lineno}" "$line"
+            first=false
+        else
+            echo "           $line"
+        fi
+    }
+
+    {
+        # shellcheck disable=SC2030 # line was modified in a subshell but the f-n is called in the same subshell, so it works as intended.
+        if (( $# > 0 )); then
             for line in "$@"; do
-                if [[ "$first" == true ]]; then
-                    printf "❌  ERROR: %s (%s): " "${bash_source}" "${bash_lineno}"
-                    first=false
-                fi
-                echo "$line"
+                __print_line
             done
         else
             while IFS= read -r line; do
-                if [[ "$first" == true ]]; then
-                    printf "❌  ERROR: %s (%s): " "${bash_source}" "${bash_lineno}"
-                    first=false
-                fi
-                echo "$line"
+                __print_line
             done
         fi
-        show_stack 2 10 true
+        show_stack 2 "$depth" true
     } | to_stderr
 
     (( ++errors ))
@@ -126,40 +201,54 @@ function error()
 # Summary: Logs warning messages to stderr.
 # Parameters:
 #   1+ - message - warning message parts (optional, if not provided reads from stdin)
+#   Note that if the first parameter is a number - it will be treated as the depth of the stack to dump.
 # Returns:
 #   stderr: formatted warning message with ⚠️ prefix via to_stderr
 #   Exit code: 0 always
 # Usage: warning <message1> [message2...]
 # Example:
-#   warning "Deprecated option used"
-#   echo "Missing optional configuration" | warning
+#   warning "The option is deprecated"
+#   echo "Missing optional configuration" | warning 3
 #-------------------------------------------------------------------------------
 function warning()
 {
-    local bash_source=${BASH_SOURCE[1]:-}
-    local bash_lineno=${BASH_LINENO[0]:-}
-    local line
+    local -i depth=0
+
+    is_natural "${1:-}" && depth=$1 && shift
+
+    if [[ $# -eq 0 && -t 0 ]]; then
+        error 4 "warning() $no_parameters"
+        return 2
+    fi
+
+    local source=${BASH_SOURCE[1]:-}
+    local lineno=${BASH_LINENO[0]:-}
     local first=true
+    local line
+
+    # shellcheck disable=SC2031 # line was modified in a subshell but the f-n is called in the same subshell, so it works as intended.
+    function __print_line()
+    {
+        if $first; then
+            (( depth == 0 )) && printf "⚠️  WARNING: %s\n" "$line" || printf "⚠️  WARNING: %s (%s): %s\n" "${source}" "${lineno}" "$line"
+            first=false
+        else
+            echo "             $line"
+        fi
+    }
 
     {
-        if [[ $# -gt 0 ]]; then
+        # shellcheck disable=SC2030 # line was modified in a subshell but the f-n is called in the same subshell, so it works as intended.
+        if (( $# > 0 )); then
             for line in "$@"; do
-                if [[ "$first" == true ]]; then
-                    printf "⚠️  WARNING: %s (%s): " "${bash_source}" "${bash_lineno}"
-                    first=false
-                fi
-                echo "$line"
+                __print_line
             done
         else
             while IFS= read -r line; do
-                if [[ "$first" == true ]]; then
-                    printf "⚠️  WARNING: %s (%s): " "${bash_source}" "${bash_lineno}"
-                    first=false
-                fi
-                echo "$line"
+                __print_line
             done
         fi
-        show_stack 2 10
+        show_stack 2 "$depth" true
     } | to_stderr
 
     return 0
@@ -184,7 +273,7 @@ function warning()
 function warning_var()
 {
     if [[ $# -ne 3 || -z "$1" || -z "$2" ]]; then
-        error "${FUNCNAME[0]}() requires three parameters: variable name, warning message, and default value."
+        error 3 "${FUNCNAME[0]}() requires three parameters: variable name, warning message, and default value."
         return 1
     fi
     warning "$2" "Assuming the default value of '$3'."
@@ -212,22 +301,31 @@ function info()
     local first=true
     local line
 
+    if [[ $# -eq 0 && -t 0 ]]; then
+        error 4 "info() $no_parameters"
+        return 2
+    fi
+
+    # shellcheck disable=SC2031 # line was modified in a subshell but the f-n is called in the same subshell, so it works as intended.
+    function __print_line()
     {
-        if [[ $# -gt 0 ]]; then
+        if $first; then
+            printf "ℹ️  INFO: %s\n" "$line"
+            first=false
+        else
+            echo "           $line"
+        fi
+    }
+
+    {
+        # shellcheck disable=SC2030 # line was modified in a subshell but the f-n is called in the same subshell, so it works as intended.
+        if (( $# > 0 )); then
             for line in "$@"; do
-                if [[ "$first" == true ]]; then
-                    printf "ℹ️  INFO: "
-                    first=false
-                fi
-                echo "$line"
+                __print_line
             done
         else
             while IFS= read -r line; do
-                if [[ "$first" == true ]]; then
-                    printf "ℹ️  INFO: "
-                    first=false
-                fi
-                echo "$line"
+                __print_line
             done
         fi
     } | to_stdout
@@ -251,29 +349,45 @@ function info()
 #-------------------------------------------------------------------------------
 function trace()
 {
-    # shellcheck disable=SC2154 # variable is referenced but not assigned.
-    [[ "$verbose" != true ]] && return 0
+    ! $verbose && return 0
 
-    local line
+    local -i depth=0
+
+    is_natural "${1:-}" && depth=$1 && shift
+
+    if [[ $# -eq 0 && -t 0 ]]; then
+        error 4 "trace() $no_parameters"
+        return 2
+    fi
+
+    local source=${BASH_SOURCE[1]:-}
+    local lineno=${BASH_LINENO[0]:-}
     local first=true
+    local line=''
+
+    # shellcheck disable=SC2031 # line was modified in a subshell but the f-n is called in the same subshell, so it works as intended.
+    function __print_line()
     {
-        if [[ $# -gt 0 ]]; then
+        if $first; then
+            (( depth == 0 )) && printf "🐾 TRACE: %s\n" "$line" || printf "🐾 TRACE: %s (%s): %s\n" "${source}" "${lineno}" "$line"
+            first=false
+        else
+            echo "          $line"
+        fi
+    }
+
+    # shellcheck disable=SC2030 # line was modified in a subshell but the f-n is called in the same subshell, so it works as intended.
+    {
+        if (( $# > 0 )); then
             for line in "$@"; do
-                if [[ "$first" == true ]]; then
-                    printf "🐾 TRACE: "
-                    first=false
-                fi
-                echo "$line"
+                __print_line
             done
         else
             while IFS= read -r line; do
-                if [[ "$first" == true ]]; then
-                    printf "🐾 TRACE: "
-                    first=false
-                fi
-                echo "$line"
+                __print_line
             done
         fi
+        show_stack 2 "$depth" true
     } | to_trace_out
     return 0
 }
@@ -353,19 +467,26 @@ function show_stack()
 {
     local v=${3:-"${verbose:-false}"}
 
-    [[ "$v" != true ]] && return 0
+    ! $v && return 0
 
-    local skip=${1:-1}
-    local max_take=$(( ${#FUNCNAME[@]} - skip ))
-    local take=$(( ${2:-$max_take} < max_take ? ${2:-$max_take} : max_take ))
-    local end=$(( skip + take ))
+    local skip=${1:-1}                              # by default skip this call
+    local max_take=$(( ${#FUNCNAME[@]} - skip ))    # take no more than the remaining stack frames
+    local take=${2:-$max_take}
+    take=$(( take < max_take ? take : max_take ))   # adjust take if it exceeds the available stack frames
+
+    (( take <= 0 )) && return 0
+
+    local func
+    local source
+    local lineno
+
     local i
-
+    local end=$(( skip + take ))
     for (( i=skip; i<end; i++ )); do
-        local func_name=${FUNCNAME[i]:-}
-        local bash_source=${BASH_SOURCE[i+1]:-}
-        local bash_lineno=${BASH_LINENO[i]:-}
-        printf "    - %-12s (%s: %d)\n" "$func_name" "${bash_source}" "${bash_lineno}"
+        func=${FUNCNAME[i]:-}
+        source=${BASH_SOURCE[i+1]:-}
+        lineno=${BASH_LINENO[i]:-}
+        printf "    - %-12s (%s: %d)\n" "$func" "${source}" "${lineno}"
     done
 
     return 0

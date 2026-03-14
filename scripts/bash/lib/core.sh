@@ -58,7 +58,7 @@ declare -x dry_run=${DRY_RUN:-false}
 function execute()
 {
     if [[ $# -eq 0 ]]; then
-        error "${FUNCNAME[0]}() requires at least one argument: the command to execute."
+        error 3 "${FUNCNAME[0]}() requires at least one argument: the command to execute."
         return 2
     fi
     if [[ "$dry_run" == true ]]; then
@@ -85,7 +85,7 @@ function execute()
 function list_of_files()
 {
     if [[ $# -lt 1 ]]; then
-        error "${FUNCNAME[0]}() requires at least one parameter: the file pattern."
+        error 3 "${FUNCNAME[0]}() requires at least one parameter: the file pattern."
         return 2
     fi
 

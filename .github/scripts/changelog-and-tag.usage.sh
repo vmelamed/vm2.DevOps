@@ -3,14 +3,14 @@
 # shellcheck disable=SC2154 # variable is referenced but not assigned
 function usage_text()
 {
-    local std_switches=""
-    local std_vars=""
+    local switches=""
+    local vars=""
 
     if [[ $1 == true ]]; then
-        std_switches="
+        switches="
 Switches:
 $common_switches"
-        std_vars=$common_vars
+        vars=$common_vars
     fi
 
     cat << EOF
@@ -33,12 +33,12 @@ Options:
                                 Initial value from \$MINVERTAGPREFIX or default 'v'
   -r, --reason                  Specifies the reason for the release (included in tag annotation)
                                 Initial value from \$REASON or default based on tag type
-$std_switches
+$switches
 Environment Variables:
   RELEASE_TAG                   The tag to create (e.g., 'v1.2.3' or 'v1.2.3-preview.1')
   MINVERTAGPREFIX               Tag prefix (default: 'v')
   REASON                        Release reason (default: auto-detected from tag type)
-$std_vars
+$vars
 EOF
 }
 

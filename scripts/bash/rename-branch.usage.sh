@@ -6,10 +6,10 @@
 # shellcheck disable=SC2154 # common_switches is referenced but not assigned
 function usage_text()
 {
-    local std_switches=""
+    local switches=""
 
     if [[ $1 == true ]]; then
-        std_switches="
+        switches="
 Switches:
 $common_switches"
     fi
@@ -21,8 +21,8 @@ Renames a Git branch both locally and remotely.
 Arguments:
   <old_branch_name>             The name of the existing branch to be renamed. If not specified, the current branch is used.
   <new_branch_name>             The new name for the branch. This must be a valid Git branch name and must not already exist.
+$switches
 
-$std_switches
 EOF
 }
 

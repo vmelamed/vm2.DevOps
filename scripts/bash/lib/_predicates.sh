@@ -23,10 +23,10 @@ fi
 function is_defined_variable()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires exactly one argument: the name of the variable to test."
+        error 3 "${FUNCNAME[0]}() requires exactly one argument: the name of the variable to test."
         return 2
     fi
-    declare -p "$1" > "$_ignore" 2>&1
+    [[ -v "$1" ]] && declare -p "$1" &> "$_ignore"
 }
 
 #-------------------------------------------------------------------------------
@@ -43,22 +43,19 @@ function is_defined_variable()
 function is_defined_array()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires exactly one argument: the name of the array variable to test."
+        error 3 "${FUNCNAME[0]}() requires exactly one argument: the name of the array variable to test."
         return 2
     fi
 
     restoreShopt=$(shopt -p nocasematch)
-    shopt -u nocasematch
+    shopt -u nocasematch # set case sensitive matching
 
-    local decl ret=1
+    local decl rc=1
 
-    if is_defined_variable "$1"; then
-        decl=$(declare -p "$1" 2>"$_ignore")
-        [[ $decl =~ ^declare\ -a ]] && ret=0
-    fi
+    decl=$(declare -p "$1" 2>"$_ignore") && [[ $decl =~ ^declare\ -a ]] && rc=0
 
-    eval "$restoreShopt" &> "$_ignore"
-    return "$ret"
+    eval "$restoreShopt" &> "$_ignore" || true # restore original shopt state
+    return "$rc"
 }
 
 #-------------------------------------------------------------------------------
@@ -75,22 +72,20 @@ function is_defined_array()
 function is_defined_associative_array()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires exactly one argument: the name of the associative array variable to test."
+        error 3 "${FUNCNAME[0]}() requires exactly one argument: the name of the associative array variable to test."
         return 2
     fi
 
     restoreShopt=$(shopt -p nocasematch)
-    shopt -u nocasematch
+    shopt -u nocasematch # set case sensitive matching
 
-    local decl ret=1
+    local decl
+    local rc=1
 
-    if is_defined_variable "$1"; then
-        decl=$(declare -p "$1" 2>"$_ignore")
-        [[ $decl =~ ^declare\ -A ]] && ret=0
-    fi
+    decl=$(declare -p "$1" 2>"$_ignore") && [[ $decl =~ ^declare\ -A ]] && rc=0
 
-    eval "$restoreShopt" &> "$_ignore"
-    return "$ret"
+    eval "$restoreShopt" &> "$_ignore" || true # restore original shopt state
+    return "$rc"
 }
 
 #-------------------------------------------------------------------------------
@@ -107,10 +102,38 @@ function is_defined_associative_array()
 function is_defined_function()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires exactly one argument: the name of the function to test."
+        error 3 "${FUNCNAME[0]}() requires exactly one argument: the name of the function to test."
         return 2
     fi
     declare -pF "$1" > "$_ignore" 2>&1
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Tests if the parameter represents a valid boolean - 'true' or 'false'
+# Parameters:
+#   1 - boolean - string to test
+# Returns:
+#   Exit code: 0 if boolean, non-zero otherwise
+# Usage: if is_boolean <var>; then ... fi
+# Example: if is_natural "$apples"; then echo "apples is valid"; fi
+#-------------------------------------------------------------------------------
+function is_boolean()
+{
+    [[ "$1" =~ ^(true|false)$ ]]
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Tests if the parameter represents a valid natural number (0, 1, 2, 3, ...).
+# Parameters:
+#   1 - number - string to test
+# Returns:
+#   Exit code: 0 if natural, non-zero otherwise
+# Usage: if is_natural <number>; then ... fi
+# Example: if is_natural "$apples"; then echo "apples is valid"; fi
+#-------------------------------------------------------------------------------
+function is_natural()
+{
+    [[ "$1" =~ ^[0-9]+$ ]]
 }
 
 #-------------------------------------------------------------------------------
@@ -210,7 +233,7 @@ function is_decimal()
 function is_in()
 {
     if [[ $# -lt 1 ]]; then
-        error "${FUNCNAME[0]}() requires at least 1 argument: the value to test."
+        error 3 "${FUNCNAME[0]}() requires at least 1 argument: the value to test."
         return 2
     fi
     if [[ $# -eq 1 ]]; then

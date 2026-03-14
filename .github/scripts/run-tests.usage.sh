@@ -3,14 +3,14 @@
 # shellcheck disable=SC2154 # var is referenced but not assigned
 function usage_text()
 {
-    local std_switches=""
-    local std_vars=""
+    local switches=""
+    local vars=""
 
     if [[ $1 == true ]]; then
-        std_switches="
+        switches="
 Switches:
 $common_switches"
-        std_vars=$common_vars
+        vars=$common_vars
     fi
 
     cat << EOF
@@ -38,14 +38,14 @@ Options:
                                 script's artifacts: summaries, report files, etc. The artifacts will be in a subdirectory of the
                                 artifacts root directory named after the test project, e.g. <artifacts-root>/<test-project-name>/*
                                 Initial value from \$TEST_ARTIFACTS_DIR environment variable or '<solution-root>/TestArtifacts'
-$std_switches
+$switches
 Environment Variables:
   TEST_PROJECT                  Path to the test project file
   TEST_ARTIFACTS_DIR            Directory relative to the repository root where to create the script's artifacts
   CONFIGURATION                 Build configuration ('Release' or 'Debug')
   PREPROCESSOR_SYMBOLS          Pre-processor symbols to define when building the test project
   MIN_COVERAGE_PCT              Minimum acceptable code coverage percentage
-$std_vars
+$vars
 Outputs (to GITHUB_OUTPUT):
   results-dir                   The directory where test results are stored
 EOF

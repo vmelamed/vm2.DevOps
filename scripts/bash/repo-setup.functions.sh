@@ -23,18 +23,18 @@ declare -x ci_yaml
 declare -x _ci_yaml
 
 declare -xrA repo_settings=(
-    ["delete_branch_on_merge"]="true"
-    ["allow_squash_merge"]="false"
-    ["allow_merge_commit"]="true"
-    ["allow_rebase_merge"]="false"
-    ["allow_auto_merge"]="true"
-    ["has_wiki"]="false"
-    ["has_projects"]="false"
+    ["delete_branch_on_merge"]=true
+    ["allow_squash_merge"]=false
+    ["allow_merge_commit"]=true
+    ["allow_rebase_merge"]=false
+    ["allow_auto_merge"]=true
+    ["has_wiki"]=false
+    ["has_projects"]=false
 )
 
 declare -xrA repo_permissions=(
     ["default_workflow_permissions"]="read"
-    ["can_approve_pull_request_reviews"]="false"
+    ["can_approve_pull_request_reviews"]=false
 )
 
 declare -xrA vars_defaults=(
@@ -45,20 +45,21 @@ declare -xrA vars_defaults=(
     ["MINVERTAGPREFIX"]="v"
     ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="preview.0"
     ["NUGET_SERVER"]="github"
-    ["ACTIONS_RUNNER_DEBUG"]="false"
-    ["ACTIONS_STEP_DEBUG"]="false"
-    ["SAVE_PACKAGE_ARTIFACTS"]="false"
-    ["RESET_BENCHMARK_THRESHOLDS"]="false"
+    ["ACTIONS_RUNNER_DEBUG"]=false
+    ["ACTIONS_STEP_DEBUG"]=false
+    ["SAVE_PACKAGE_ARTIFACTS"]=false
+    ["RESET_BENCHMARK_THRESHOLDS"]=false
 )
 
-declare -xra expected_secrets=(
-    CODECOV_TOKEN
-    BENCHER_API_TOKEN
-    REPORTGENERATOR_LICENSE
-    RELEASE_PAT
-    NUGET_API_GITHUB_KEY
-    NUGET_API_NUGET_KEY
-    NUGET_API_KEY
+# shellcheck disable=SC2154
+declare -xrA expected_secrets=(
+    ["CODECOV_TOKEN"]="$masked"
+    ["BENCHER_API_TOKEN"]="$masked"
+    ["REPORTGENERATOR_LICENSE"]="$masked"
+    ["RELEASE_PAT"]="$masked"
+    ["NUGET_API_GITHUB_KEY"]="$masked"
+    ["NUGET_API_NUGET_KEY"]="$masked"
+    ["NUGET_API_KEY"]="$masked"
 )
 
 declare -xrA projects_jobs=(
@@ -70,10 +71,73 @@ declare -xrA projects_jobs=(
 
 declare -xa required_checks
 declare -xi github_actions_app_id
+declare -xri admin_role_id=5
+declare -xr required_status_check_context="Postrun-CI"
 
-# ------------------------------------------------------------------
-# Functions
-# ------------------------------------------------------------------
+declare -xr github_url_regex
+declare -xri url_authority
+declare -xri url_owner
+declare -xri url_name
+
+#-------------------------------------------------------------------------------
+# Summary: Fetches the current settings from GitHub API and compares them to the expected settings, reporting matches,
+#   mismatches, and missing values (errors).
+# Parameters:
+#   $1: name of the associative array variable containing expected key-value pairs, e.g. repo_settings or repo_permissions
+#   $2: GitHub API path to fetch the current settings, e.g. "repos/${repo}" or "repos/${repo}/actions/permissions/workflow"
+#   $3: jq query to transform the JSON response into key=value pairs
+#   $4: name of the variable to output the results to (optional, default: 'output')
+# Returns:
+#   Exit code: 0 on success, 2 - failed to read the settings
+#   stdout: the number of matches, mismatches, and errors in the format: <matches> <mismatches> <errors>
+# Dependencies: gh CLI, jq
+# Usage:
+# Example:
+#-------------------------------------------------------------------------------
+function compare_settings()
+{
+    if [[ $# -ne 4 ]]; then
+        error 3 "${FUNCNAME[0]}() requires exactly 4 arguments: <expected_nameref_array> <api_path> <jq_transform_query> <output_nameref_variable>"
+        return 2
+    fi
+    local -n expecteds="$1"
+    local hq_path="$2"
+    local jq_transform=$3
+    local -n output=$4
+    local json
+    if ! json=$(gh api "$hq_path"); then
+        error "Failed to fetch data from GitHub API: $hq_path"
+        return 2
+    fi
+
+    local -A actuals
+    local key actual expected
+    local -i pass=0 miss=0 errs=0
+
+    while IFS='=' read -r key actual; do
+        actuals["$key"]="$actual"
+    done < <(jq -r "$jq_transform" <<< "$json")
+
+    for key in "${!expecteds[@]}"; do
+        expected="${expecteds[$key]}"
+        if [[ ! -v actuals[$key] ]]; then
+            printf "      ❌  %-32s => missing (expected: '%s')\n" "$key" "$expected"
+            (( ++errs ))
+        else
+            actual="${actuals[$key]}"
+            if [[ "$actual" != "$expected" ]]; then
+                printf "      ❔  %-32s => %s (expected: '%s')\n" "$key" "$actual" "$expected"
+                (( ++miss ))
+            else
+                printf "      ✅  %-32s => %s\n" "$key" "$actual"
+                (( ++pass ))
+            fi
+        fi
+    done
+    # shellcheck disable=SC2034
+    output="$pass $miss $errs"
+    return 0
+}
 
 ## Validates that the given directory is a root of a repository working tree, and its HEAD is on or after the latest stable tag.
 ## Otherwise confirm with the user that they want to continue
@@ -82,26 +146,21 @@ declare -xi github_actions_app_id
 function validate_source_repo()
 {
     if [[ $# -lt 1 ]]; then
-        error "${FUNCNAME[0]}() requires at least 1 argument: the name of a repository." >&2
+        error 3 "${FUNCNAME[0]}() requires at least 1 argument: the name of a repository."
         return 2
     fi
 
     local repo_name=$1
     local dir="${git_repos}/${repo_name}"
 
-    if [[ ! -d "${dir}" ]]; then
-        error "The '${repo_name}' repository was not cloned or is not under ${git_repos}."
-        exit 2
-    fi
+    [[ -d "${dir}" ]] || error "The '${repo_name}' repository was not cloned or is not under ${git_repos}."
 
     if [[ "$dir" == $(root_working_tree "$dir") ]]; then
-        is_on_or_after_latest_stable_tag "$dir" "$semverTagReleaseRegex" || {
+        is_on_or_after_latest_stable_tag "$dir" "$semverTagReleaseRegex" ||
             error "The HEAD of the '${repo_name}' repository is before the latest stable tag. Please synchronize."
-            exit 2
-        }
     else
         confirm "The ${repo_name} repository at '$dir' is not a git repository. Do you want to continue?" "n" ||
-            exit 2
+            error "The ${repo_name} repository at '$dir' is not a git repository."
     fi
 }
 
@@ -109,31 +168,26 @@ function resolve_github_actions_app_id()
 {
     # Resolve the GitHub Actions app ID dynamically via the API.
     # Used to pin required status checks to GitHub Actions specifically.
-    github_actions_app_id=$(gh api apps/github-actions --jq '.id' 2>"$_ignore") || {
-        error "Failed to resolve GitHub Actions app ID from the API." >&2
-    }
+    github_actions_app_id=$(gh api apps/github-actions --jq '.id' 2>"$_ignore") || error "Failed to resolve GitHub Actions app ID from the API."
     exit_if_has_errors
     trace "GitHub Actions app ID: ${github_actions_app_id}"
+    [[ "$github_actions_app_id" == "15368" ]] || warning "Unexpected GitHub Actions app ID: ${github_actions_app_id} (expected 15368). Required status check matching may not work correctly."
 }
 
 function detect_required_checks()
 {
-    # With reusable workflows + matrix strategies, GitHub Actions produces check names that
-    # include the workflow prefix, matrix params, inner job names, and event suffixes — making
-    # them impossible to predict for branch protection rules. Instead, each CI.yaml has a
-    # lightweight gate job that depends on all other jobs and reports a single, stable check name.
+    # With reusable workflows + matrix strategies, GitHub Actions produces check names that include the workflow prefix, matrix
+    # params, inner job names, and event suffixes — making them impossible to predict for branch protection rules. Instead, each
+    # CI.yaml has a lightweight gate job that depends on all other jobs and reports a single, stable check name.
     #
-    # The GitHub UI decorates check names as "Workflow / JobName (event)" but the check-runs
-    # API returns bare names and ruleset matching uses the bare check-run name field.
-    # So we extract just the gate job's `name:` property from CI.yaml.
-    local gate_name gate_job
+    # The GitHub UI decorates check names as "Workflow / JobName (event)" but the check-runs API returns bare names and ruleset
+    # matching uses the bare check-run name field. So we extract just the gate job's `name:` property from CI.yaml.
+    local gate_job
+    local gate_name
 
     # Find the gate job: look for postrun-ci first, fall back to ci-gate
-    gate_job=$(yq -r '.jobs | keys[] | select(test("postrun|ci-gate"))' "$ci_yaml" | head -1) || true
-    gate_name=$(yq -r ".jobs.${gate_job:-postrun-ci}.name // \"Postrun-CI\"" "$ci_yaml") || {
-        error "Failed to parse gate job name from CI.yaml." >&2
-    }
-
+    gate_job=$(yq -r '.jobs | keys[] | select(test("postrun|ci-gate"))' "$ci_yaml" | head -1) || error "Failed to parse gate job from CI.yaml."
+    gate_name=$(yq -r ".jobs.${gate_job:-postrun-ci}.name" "$ci_yaml") || error "Failed to parse gate job name from CI.yaml."
     exit_if_has_errors
 
     required_checks+=("${gate_name}")

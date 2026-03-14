@@ -26,7 +26,6 @@ declare -r defaultMinCoveragePct=80
 declare -r defaultMaxRegressionPct=20
 declare -r defaultMinverTagPrefix='v'
 declare -r defaultMinverPrereleaseId='preview.0'
-declare -r defaultVerbose=false
 
 # CI Variables that will be passed as environment variables
 declare -x build_projects=${BUILD_PROJECTS:-${defaultBuildProjects}}
@@ -41,7 +40,6 @@ declare -x min_coverage_pct=${MIN_COVERAGE_PCT:-${defaultMinCoveragePct}}
 declare -x max_regression_pct=${MAX_REGRESSION_PCT:-${defaultMaxRegressionPct}}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-${defaultMinverTagPrefix}}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-${defaultMinverPrereleaseId}}
-declare -x verbose=${VERBOSE:-${defaultVerbose}}
 declare -x reset_benchmark_thresholds=${RESET_BENCHMARK_THRESHOLDS:-false}
 
 source "$script_dir/validate-input.usage.sh"

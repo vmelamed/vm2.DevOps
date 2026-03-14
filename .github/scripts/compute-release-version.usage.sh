@@ -3,14 +3,14 @@
 # shellcheck disable=SC2154 # variable is referenced but not assigned
 function usage_text()
 {
-    local std_switches=""
-    local std_vars=""
+    local switches=""
+    local vars=""
 
     if [[ $1 == true ]]; then
-        std_switches="
+        switches="
 Switches:
 $common_switches"
-        std_vars=$common_vars
+        vars=$common_vars
     fi
 
     cat << EOF
@@ -26,13 +26,13 @@ Options:
                                 Initial value from \$MINVERTAGPREFIX or default 'v'
   -r, --reason                  Reason for release (e.g., "stable release", "hotfix", etc.)
                                 Initial value from \$REASON or default "release build"
-$std_switches
+$switches
 Environment Variables:
-    MINVERTAGPREFIX             Git tag prefix to be recognized by MinVer
+  MINVERTAGPREFIX               Git tag prefix to be recognized by MinVer
                                 (default: 'v')
-    REASON                      Reason for the release build and possibly overriding the natural versioning
+  REASON                        Reason for the release build and possibly overriding the natural versioning
                                 (default: 'release build')
-$std_vars
+$vars
 Outputs (to GITHUB_OUTPUT):
   release-version               The computed version (e.g., '1.2.3')
   release-tag                   The full tag (e.g., 'v1.2.3')

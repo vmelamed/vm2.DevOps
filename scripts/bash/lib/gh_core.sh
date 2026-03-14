@@ -31,13 +31,13 @@ declare -x github_actions=${GITHUB_ACTIONS:-false}
 # same workflow. If GITHUB_OUTPUT is not defined (e.g. running locally), it
 # defaults to $_ignore (usually '/dev/null') to not duplicate the output to
 # stdout.
-declare -x github_output=${GITHUB_OUTPUT:-"$_ignore"}
+declare -x github_output=${GITHUB_OUTPUT:-"/dev/null"}
 
 # In CI mode '$github_step_summary' is equal to the $GITHUB_STEP_SUMMARY file
 # which is used to add custom Markdown content to the workflow run summary.
 # Defaults to $_ignore (usually '/dev/null') - so that the output to $_ignore to
 # not duplicate the output to stdout.
-declare -x github_step_summary=${GITHUB_STEP_SUMMARY:-"$_ignore"}
+declare -x github_step_summary=${GITHUB_STEP_SUMMARY:-"/dev/null"}
 
 # Whether to trace messages to /dev/stdout only or to GitHub Actions step
 # summary (GITHUB_STEP_SUMMARY) as well.
@@ -143,22 +143,23 @@ function to_summary()
     local line
     local first=true
 
+    function __print_line()
+    {
+        if $first; then
+            echo "## Summary"
+            first=false
+        fi
+        echo "$line"
+    }
+
     {
         if [[ $# -gt 0 ]]; then
             for line in "$@"; do
-                if [[ $first == "true" ]]; then
-                    echo "## Summary"
-                    first=false
-                fi
-                echo "$line"
+                __print_line
             done
         else
             while IFS= read -r line; do
-                if [[ $first == true ]]; then
-                    echo "## Summary"
-                    first=false
-                fi
-                echo "$line"
+                __print_line
             done
         fi
     } | to_stdout
@@ -210,7 +211,7 @@ function to_output()
 function to_github_output()
 {
     if [[ $# -eq 0 || $# -ge 3 ]]; then
-        error "${FUNCNAME[0]}() requires one or two arguments: " \
+        error 3 "${FUNCNAME[0]}() requires one or two arguments: " \
               "the name of the variable to output and optionally the name to use in GitHub Actions output."
         return 2
     fi
@@ -243,14 +244,17 @@ function to_github_output()
 function args_to_github_output()
 {
     if [[ $# -eq 0 ]]; then
-        error "${FUNCNAME[0]}() requires one or more arguments: the names of the variables to output."
+        error 3 "${FUNCNAME[0]}() requires one or more arguments: the names of the variables to output."
         return 2
     fi
 
     {
+        local var
+        local k
+        local -n v
         for var in "$@"; do
-            local k="${var//_/-}"
-            local -n v=$var
+            k="${var//_/-}"
+            v=$var
             echo "$k=$v"
         done
     } | to_output

@@ -2,14 +2,14 @@
 # Copyright (c) 2025 Val Melamed
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
-
 # shellcheck disable=SC2154 # variables referenced but not assigned here
+
 function usage_text()
 {
-    local std_switches=""
+    local cmn_switches=""
 
-    if [[ $1 == true ]]; then
-        std_switches="$common_switches"
+    if $1; then
+        cmn_switches="$common_switches"
     fi
 
     cat << EOF
@@ -40,31 +40,45 @@ Options:
                                 located. The repo name and other settings will be inferred from the name and contents of this
                                 directory.
                                 Default: the current working directory.
-  --owner <owner>               GitHub user or organization that will own the repository
-                                From environment variable: ORGANIZATION or default: vmelamed
-  --visibility <public|private> Repository visibility
+  -gr, --git-repos <path>       The parent directory where the .github workflow templates, vm2.DevOps, and other vm2 project
+                                repositories are cloned. Initial from the GIT_REPOS environment variable or '~/repos'
+  -o, --owner <owner>           GitHub user or organization that will own the repository
+                                From environment variable: ORGANIZATION or default: vmelamed.
+                                Used only during repository initialization.
+  -n, --name <GH repo name>     Name of the repository to create on GitHub. If not specified, the name will be inferred from the
+                                name of the repo directory. Used only during repository initialization.
+  --visibility <public|private> Repository visibility. Used only during repository initialization.
                                 Default: public
-  --branch <branch>             Branch to protect
+  -b, --branch <branch>         GitHub default branch name. Used only during repository initialization.
                                 Default: main
+  -d, --description <text>      Short description for the repository (max 350 chars). Ignored if --audit or --configure-only is
+                                used. Used only during repository initialization.
+  -rs, --ruleset-name <name>    The name of the ruleset for protecting the default branch. Used only during repository
+                                configuration.
+                                Default: "<GitHub default branch name> protection" - usually 'main protection'
 
 Switches:
+  --audit                       Read-only: report current vs expected settings without changes, ignores all other options
   --configure-only              Skip repo creation; configure an existing repo only
   --skip-secrets                Skip setting repository secrets
   --skip-variables              Skip setting repository variables
-  --audit                       Read-only: report current vs expected settings without changes
-$std_switches
+  --ssh                         Use SSH URL for the remote origin
+  --https                       Use HTTPS URL for the remote origin
+
+Note: If multiple '--ssh' and/or '--https' are specified - the last on the command line wins.
+$cmn_switches
 Examples:
-  ${script_name} --repo vmelamed/vm2.Glob
-  ${script_name} --repo vmelamed/vm2.Glob --configure-only
-  ${script_name} --repo vmelamed/vm2.Glob --configure-only --skip-secrets --dry-run
-  ${script_name} --repo myorg/vm2.MyPackage --visibility private
+  ${script_name} vm2.Glob --audit
+  ${script_name} ~/repos/vm2.Glob --configure-only
+  ${script_name} \$GIT_REPOS/vm2.Glob --configure-only --skip-secrets --dry-run
+  ${script_name} myorg/vm2.MyPackage --visibility private
 EOF
 }
 
 function usage()
 {
     local long_help=false
-    if [[ $# -gt 0 && ($1 == true || $1 == false) ]]; then
+    if [[ $# -gt 0 && $1 =~ ^(true|false)$ ]]; then
         long_help=$1
         shift
     fi

@@ -3,8 +3,8 @@
 
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
-
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
+
 if ! declare -pF "error" > "$_ignore"; then
     semver_dir="$(dirname "${BASH_SOURCE[0]}")"
     source "$semver_dir/_diagnostics.sh"
@@ -23,8 +23,8 @@ fi
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 function press_any_key()
 {
-    if [[ "$quiet" != true ]]; then
-        read -n 1 -rsp 'Press any key to continue...' >&2
+    if ! $quiet; then
+        read -n 1 -rsp 'Press any key to continue...'
         echo
     fi
     return 0
@@ -49,7 +49,7 @@ function press_any_key()
 function confirm()
 {
     if [[ $# -eq 0 || $# -gt 2 || -z "$1" ]]; then
-        error "${FUNCNAME[0]}() requires at least one parameter: the prompt and a second, optional parameter -default response."
+        error 3 "${FUNCNAME[0]}() requires at least one parameter: the prompt and a second, optional parameter -default response."
         return 2
     fi
 
@@ -57,7 +57,7 @@ function confirm()
     [[ $# -eq 2 ]] && default=${2,,} || default="y"
 
     local response=$default
-    if [[ "$quiet" != true ]]; then
+    if ! $quiet; then
         local prompt="$1"
         local suffix
         [[ "$default" == y ]] && suffix="[Y/n]" || suffix="[y/N]"
@@ -65,11 +65,90 @@ function confirm()
         while true; do
             read -rp "$prompt $suffix: " response
             [[ -z "$response" || "$response" =~ ^[ynYN]$ ]] && break
-            warning "Please enter one of y/Y/n/N." >&2
+            warning "Please enter one of y/Y/n/N."
         done
     fi
     response=${response:-$default}
     [[ ${response,,} == "y" ]]
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Displays a prompt and asks the user to enter a value
+# Parameters:
+#   1 - prompt - the prompt will be appended with ' [<default>]: ' if
+#       <is_secret> is false, and the default value is not empty. Otherwise,
+#       it will be appended with ': '. Can be empty and the prompt will be just
+#       ': ' or ' [<default>]: '. (optional, default '')
+#   2 - default - the default value to output to stdout if the user presses the
+#       [Enter] key without entering any values (optional, default: '').
+#   3 - is_secret, boolean: suppresses echoing the input to the terminal. Use
+#       for passwords, keys, etc. (optional, default false)
+#   4 - validation function name: if provided, the function will be called with
+#       the entered value, and should return 0 if the value is valid, or
+#       non-zero if invalid. The user will be re-prompted until a valid value is
+#       entered. (optional, default: true, which means no validation, all values
+#       are accepted)
+# Note:
+#   - If any of the parameters are given the discard value of "_" (i.e. an
+#     underscore), they will be treated as if they were not provided, and the
+#     default value will be used for that parameter.
+#   - If the environment variable 'quiet' is set to true, the function will skip
+#     prompting and immediately return the default value (or an empty string if
+#     the default is not provided).
+# Returns:
+#   stdout: the entered value, or the default value if the user entered nothing
+#   Exit code: 0 if the input parameters are valid, 2 on invalid arguments
+# Usage: value=$(enter_value <prompt> [default] [is_secret] [validate_fn])
+# Example:
+#   password=$("Enter your password" _ true)
+#   password=$("Enter description (up to 350 characters)" "test" _ validate_no_longer_than_350)
+#-------------------------------------------------------------------------------
+function enter_value()
+{
+    local prompt=''
+    local default=''
+    local is_secret=false
+    local validate_fn=true
+
+    (( $# <= 4 )) || {
+        error 3 "${FUNCNAME[0]}() accepts no more than 4 arguments: a prompt, optional default value, an optional boolean to suppress the echo of the input to the terminal, and the optional name of a validation function."
+        return 2
+    }
+
+    [[ $# -ge 1 && "$1" != "_" ]] && prompt="$1"
+    [[ $# -ge 2 && "$2" != "_" ]] && default="$2"
+    [[ $# -ge 3 && "$3" != "_" ]] && is_secret="$3"
+    [[ $# -ge 4 && "$4" != "_" ]] && validate_fn="$4"
+
+    if [[ -n $validate_fn && -n $default ]] && $validate_fn "$default"; then
+        error "The provided default value '$default' does not pass the provided validation function '$validate_fn'."
+        return 2
+    fi
+    is_boolean "$is_secret" || {
+        error "The \$3 parameter of ${FUNCNAME[0]}() (is_secret) must be a boolean value (true or false), indicating whether the input is a secret that should not be echoed to the terminal."
+        return 2
+    }
+    is_quiet && { echo "$default"; return 0; }
+
+    [[ -n "$default" ]] && ! $is_secret &&
+        prompt="$prompt [$default]: " ||
+        prompt="$prompt: "
+    while true; do
+        local input
+        local errs=$errors
+        if $is_secret; then
+            read -r -s -p "$prompt" input
+            echo ""
+        else
+            read -r    -p "$prompt" input
+        fi
+        if $validate_fn "$input"; then
+            errors="$errs"
+            break;
+        fi
+    done
+
+    echo "${input:-$default}"
 }
 
 #-------------------------------------------------------------------------------
@@ -93,13 +172,15 @@ function confirm()
 #-------------------------------------------------------------------------------
 function choose()
 {
-    if [[ $# -lt 3 ]]; then
-        error "${FUNCNAME[0]}() requires 3 or more arguments: a prompt and at least two choices." >&2;
+    [[ $# -ge 3 ]] || {
+        error 3 "${FUNCNAME[0]}() requires 3 or more arguments: a prompt and at least two choices."
         return 2;
-    fi
+    }
 
-
-    if [[ "$quiet" != true ]]; then
+    if $quiet; then
+        # just return the default choice (1)
+        printf '1'
+    else
         # print the menu
         local prompt=$1; shift
         local options=("$@")
@@ -120,16 +201,14 @@ function choose()
         local selection=1
         while true; do
             read -r -p "Enter choice [1-${#options[@]}]: " selection
-            trace "User selected option: $selection"
-            if [[ -n $selection && ! $selection =~ ^[1-9][0-9]*$ ]]; then
-                warning "Invalid choice: $selection" >&2
+            selection=${selection:-1}
+            if ! is_natural "$selection"; then # it is not from this world! :)
+                warning "Invalid choice: $selection"
                 continue
             fi
-            selection=${selection:-1}
-            trace "Adjusted to: $selection"
-            [[ $selection -eq 0 ]] && selection="1" # the default
-            [[ $selection =~ ^[1-9][0-9]*$ && $selection -ge 1 && $selection -le ${#options[@]} ]] && break
-            warning "Invalid choice: $selection" >&2
+            (( selection == 0 )) && selection=1 # the default
+            (( selection >= 1 && selection <= ${#options[@]} )) && break
+            warning "Invalid choice: $selection"
         done
         printf '%d' "$selection"
     fi
@@ -144,6 +223,7 @@ function choose()
 #     --quote=<char>|-q=<char> - quote character (default: '). Use '' for no quotes
 #     --separator=<char>|-s=<char> - separator (default: ,). Special: 'nl', 'tab', ''
 #     --paren=<type>|-p=<type> - parentheses type: (), [], {}, nl, or none (default: none)
+#     --json-array|--json|-j - shorthand for --quote='"' --separator=', ' --paren='[]'
 #   Positional parameters:
 #     1+ - values - values to include in sequence
 # Returns:
@@ -163,6 +243,12 @@ function print_sequence()
     local separator=","
     for arg in "$@"; do
         case $arg in
+            --json-array|--json|--jq-array|-j )
+                quote='"'
+                separator=", "
+                open_paren="["
+                close_paren="]"
+                ;;
             --quote=*|-q=* )
                 quote="${arg#*=}"
                 ;;
@@ -170,23 +256,23 @@ function print_sequence()
                 separator="${arg#*=}"
                 # Handle special values
                 case "$separator" in
-                    nl) separator=$'\n' ;;
-                    tab) separator=$'\t' ;;
-                    * ) ;;
+                    nl  ) separator=$'\n' ;;
+                    tab ) separator=$'\t' ;;
+                    *   ) ;;
                 esac
                 ;;
             --parenthesis=*|--paren=*|-p=* )
                 local paren_val="${arg#*=}"
                 case "$paren_val" in
-                    \(|\)|\(\) )
+                    \(|\)|\(\) ) # (|)|()
                         open_paren="("
                         close_paren=")"
                         ;;
-                    \[|\]|\[\] )
+                    \[|\]|\[\] ) # [|]|[]
                         open_paren="["
                         close_paren="]"
                         ;;
-                    \{|\}|\{\} )
+                    \{|\}|\{\} ) # {|}|{}
                         open_paren="{"
                         close_paren="}"
                         ;;

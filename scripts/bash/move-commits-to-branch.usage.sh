@@ -3,10 +3,10 @@
 # shellcheck disable=SC2154 # solution_dir is referenced but not assigned
 function usage_text()
 {
-    local std_switches=""
+    local switches=""
 
     if [[ $1 == true ]]; then
-        std_switches="$common_switches"
+        switches="$common_switches"
     fi
 
     cat << EOF
@@ -25,7 +25,7 @@ Options:
 
 Switches:
   -n, --check-out-new           After moving the commits, check out the new branch.
-$std_switches
+$switches
 Examples:
   ${script_name} --commit-sha ff5c2d182c0d3a01c1f1dfd66c9267f0569d9802 --branch feature/my-feature
   ${script_name} -c ff5c2d1 -b feature/my-feature -n

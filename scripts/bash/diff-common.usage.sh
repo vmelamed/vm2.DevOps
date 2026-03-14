@@ -6,12 +6,17 @@
 # shellcheck disable=SC2154 # solution_dir is referenced but not assigned
 function usage_text()
 {
-    local cmn_switches=""
-    local cmn_vars=""
+    local switches=""
+    local vars=""
 
     if [[ $1 == true ]]; then
-        cmn_vars=$common_vars
-        cmn_switches="
+        vars="Environment Variables:
+  GIT_REPOS                     The parent directory where the .github workflow templates, vm2.DevOps, and project repositories
+                                are cloned
+  MINVERTAGPREFIX               The prefix used for MinVer version tags in the repositories
+$common_vars"
+
+        switches="
 Switches:
 $common_switches"
     fi
@@ -51,13 +56,8 @@ Options:
                                 defined files, only the specified files from the full list are processed. The file names can be
                                 regular expressions.
                                 Example: -f '.*ya?ml$' or --files 'Dockerfile,Directory.*'
-
-$cmn_switches
-Environment Variables:
-  GIT_REPOS                     The parent directory where the .github workflow templates, vm2.DevOps, and project repositories
-                                are cloned
-  MINVERTAGPREFIX               The prefix used for MinVer version tags in the repositories
-$cmn_vars
+$switches
+$vars
 Configuration Files:
     The script uses a configuration file 'diff-common.actions.json' located in the project's directory to customize the actions
     taken when differences are found. (See the README.md file for more details.)

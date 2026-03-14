@@ -66,7 +66,7 @@ declare -rA merge_commands=(
 function validate_source_repo()
 {
     if [[ $# -lt 1 ]]; then
-        error "${FUNCNAME[0]}() requires at least 1 argument: the name of a repository." >&2
+        error 3 "${FUNCNAME[0]}() requires at least 1 argument: the name of a repository."
         return 2
     fi
 
@@ -171,7 +171,7 @@ function configure()
         source_files[i]="$source_file"
         target_files[i]="$target_file"
         file_actions["$source_file"]="$action"
-        i=$((i+1))
+        ((++i))
     done < <(jq -r '.files[] | .sourceFile + "=" + .targetFile + "=" + .action' "$config_file")
 
     trace "Loaded ${#source_files[@]} source files"
@@ -234,7 +234,7 @@ function customize()
 
             # Override the action
             file_actions["$source_file"]="$action"
-            changed_actions=$((changed_actions + 1))
+            (( ++changed_actions ))
         done < <(jq -r '.action_overrides | to_entries | .[] | .key+"="+.value' "$custom_config" 2>"$_ignore") # convert JSON object to key=value pairs
 
         info "$script_name was customized successfully with ${changed_actions} modified actions."

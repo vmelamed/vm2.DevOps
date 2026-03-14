@@ -4,14 +4,14 @@
 
 function usage_text()
 {
-    local std_switches=""
-    local std_vars=""
+    local switches=""
+    local vars=""
 
     if [[ $1 == true ]]; then
-        std_switches="
+        switches="
 Switches:
 $common_switches"
-        std_vars=$common_vars
+        vars=$common_vars
     fi
 
     cat << EOF
@@ -59,39 +59,37 @@ Options:
   -r, --reset-benchmark-thresholds
                                 Whether to reset Bencher thresholds if some degradation is expected. Expected 'true' or 'false'
                                 Initial value from \$RESET_BENCHMARK_THRESHOLDS or default 'false'
-
-$std_switches
+$switches
 Environment Variables:
-    BUILD_PROJECTS              JSON array of paths to projects to build
-    TEST_PROJECTS               JSON array of paths to test projects to run
-    BENCHMARK_PROJECTS          JSON array of paths to benchmark projects to run
-    PACKAGE_PROJECTS            JSON array of paths to projects to pack
-    RUNNERS_OS                  JSON array of target OS-es
-    DOTNET_VERSION              Version of .NET SDK to use
-    CONFIGURATION               Build configuration ('Release' or 'Debug')
-    PREPROCESSOR_SYMBOLS        Pre-processor symbols for compilation
-    MIN_COVERAGE_PCT            Minimum acceptable code coverage percentage
-    MAX_REGRESSION_PCT          Maximum acceptable performance regression percentage
-    MINVERTAGPREFIX             Prefix for MinVer version git tags
-    MINVERDEFAULTPRERELEASEIDENTIFIERS
+  BUILD_PROJECTS                JSON array of paths to projects to build
+  TEST_PROJECTS                 JSON array of paths to test projects to run
+  BENCHMARK_PROJECTS            JSON array of paths to benchmark projects to run
+  PACKAGE_PROJECTS              JSON array of paths to projects to pack
+  RUNNERS_OS                    JSON array of target OS-es
+  DOTNET_VERSION                Version of .NET SDK to use
+  CONFIGURATION                 Build configuration ('Release' or 'Debug')
+  PREPROCESSOR_SYMBOLS          Pre-processor symbols for compilation
+  MIN_COVERAGE_PCT              Minimum acceptable code coverage percentage
+  MAX_REGRESSION_PCT            Maximum acceptable performance regression percentage
+  MINVERTAGPREFIX               Prefix for MinVer version git tags
+  MINVERDEFAULTPRERELEASEIDENTIFIERS
                                 Default semver pre-release identifiers for MinVer
-    RESET_BENCHMARK_THRESHOLDS  Whether to reset Bencher thresholds if some degradation is expected
-
-$std_vars
+  RESET_BENCHMARK_THRESHOLDS    Whether to reset Bencher thresholds if some degradation is expected
+$vars
 Outputs (to GITHUB_OUTPUT):
-    build-projects              JSON array of paths to projects to build
-    test-projects               JSON array of paths to test projects to run
-    benchmark-projects          JSON array of paths to benchmark projects to run
-    package-projects            JSON array of paths to projects to pack
-    runners-os                  JSON array of target OS-es
-    dotnet-version              Version of .NET SDK to use
-    configuration               Build configuration ('Release' or 'Debug')
-    preprocessor-symbols        Pre-processor symbols for compilation
-    min-coverage-pct            Minimum acceptable code coverage percentage
-    max-regression-pct          Maximum acceptable performance regression percentage
-    minver-tag-prefix           Prefix for MinVer version git tags
-    minver-prerelease-id        Default semver pre-release identifiers for MinVer
-    reset-benchmark-thresholds  Whether to reset Bencher thresholds if some degradation is expected
+  build-projects                JSON array of paths to projects to build
+  test-projects                 JSON array of paths to test projects to run
+  benchmark-projects            JSON array of paths to benchmark projects to run
+  package-projects              JSON array of paths to projects to pack
+  runners-os                    JSON array of target OS-es
+  dotnet-version                Version of .NET SDK to use
+  configuration                 Build configuration ('Release' or 'Debug')
+  preprocessor-symbols          Pre-processor symbols for compilation
+  min-coverage-pct              Minimum acceptable code coverage percentage
+  max-regression-pct            Maximum acceptable performance regression percentage
+  minver-tag-prefix             Prefix for MinVer version git tags
+  minver-prerelease-id          Default semver pre-release identifiers for MinVer
+  reset-benchmark-thresholds    Whether to reset Bencher thresholds if some degradation is expected
 
 EOF
 }

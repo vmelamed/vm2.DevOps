@@ -21,7 +21,7 @@ declare -x configuration=${CONFIGURATION:-"${default_configuration}"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"${default_minver_tag_prefix}"}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"${default_minver_prerelease_id}"}
-declare -x artifacts_dir=${ARTIFACTS_DIR:-"${BENCHMARK_PROJECT%/*}/BenchmarkArtifacts"}
+declare -x artifacts_dir=${ARTIFACTS_DIR:-"./BenchmarkArtifacts"}
 
 source "$script_dir/run-benchmarks.usage.sh"
 source "$script_dir/run-benchmarks.args.sh"
@@ -123,7 +123,7 @@ declare -r benchmark_exe_path
 
 # Verify executables exist
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
-if [[ (! -f "${benchmark_exe_path}" || ! -f "${benchmark_dll_path}") && "$dry_run" != "true" ]]; then
+if [[ (! -f "${benchmark_exe_path}" || ! -f "${benchmark_dll_path}") && "$dry_run" != true ]]; then
     error "Cached benchmark executables '${benchmark_exe_path}' or '${benchmark_dll_path}' were not found."
     exit 2
 fi
@@ -142,7 +142,7 @@ fi
 
 # Verify JSON results were created
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
-if [[ $dry_run != "true" ]]; then
+if [[ $dry_run != true ]]; then
     json_files=("$results_dir"/*-report.json)
     if [[ ! -f "${json_files[0]}" ]]; then
         error "No JSON benchmark reports found in $results_dir"

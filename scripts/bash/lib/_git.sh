@@ -4,13 +4,257 @@
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 
+declare -xr gh_ssh_authority='git@github.com'                           # OK, it is actually the URI schema only, but we only support GitHub SSH URLs for now, so we can hardcode the authority and just call it that. This is the part of the URL before the owner/name, e.g. "git@github.com"
+declare -xr gh_https_authority='https://github.com'                     # OK, it is actually the URI schema + authority, but we only support GitHub HTTPS URLs for now, so we can hardcode the authority and just call it that. This is the part of the URL before the owner/name, e.g. "https://github.com"
+
+declare -xr repo_authority_rex='git@github\.com|https://github\.com'    # OK. it is actually the URI schema + authority, but we only support GitHub URLs for now, so we can hardcode the authority and just call it that. This is the part of the URL before the owner/name, e.g. "git@github.com" or "https://github.com"
+declare -xr repo_owner_rex='[a-zA-Z0-9][a-zA-Z0-9-]{0,37}[a-zA-Z0-9]'   # GitHub owner/organization names can be up to 39 characters, must start and end with a letter or digit, and can contain letters, digits, and hyphens. See https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user for details.
+declare -xr repo_name_rex='[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}'             # GitHub repository names can be up to 100 characters, cannot end with .git, and can contain letters, digits, dots, underscores, and hyphens, but must start with a letter or digit. See https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user for details.
+
+declare -xr repo_owner_regex="^${repo_owner_rex}$"
+declare -xr repo_name_regex="^${repo_name_rex}$"
+declare -xr repo_regex="^${repo_owner_rex}/${repo_name_rex}$"
+
+declare -xr github_url_regex="^(${repo_authority_rex})[:/](${repo_owner_rex})/(${repo_name_rex})$"
+
+# BASH_REMATCH indexes after matching a URL with $github_url_regex:
+declare -xri url_authority=1
+declare -xri url_owner=2
+declare -xri url_name=3
+
+#-------------------------------------------------------------------------------
+# With the following constants and fuctions we define the repository state: it is an associative array with predefined keys.
+# The following constants define the predefined keys of a repo state:
+#-------------------------------------------------------------------------------
+declare -xr key_root='root'
+declare -xr key_url='url'
+declare -xr key_authority='authority'
+declare -xr key_owner='owner'
+declare -xr key_name='name'
+declare -xr key_repo='repo'
+declare -xr key_repo_id='repo_id'
+declare -xr key_default_branch='default_branch'
+
+#-------------------------------------------------------------------------------
+# The following list contains the predefined keys of a repo state:
+#-------------------------------------------------------------------------------
+declare -xar repo_state_keys=(
+    "$key_root"
+    "$key_url"
+    "$key_authority"
+    "$key_owner"
+    "$key_name"
+    "$key_repo"
+    "$key_repo_id"
+    "$key_default_branch"
+)
+
+#-------------------------------------------------------------------------------
+# Summary: initializes a repo state to an initial state where it contains all predefined keys with values - empty strings
+# Parameters:
+#   1 - nameref: the name of an associative array variable to be initialized as repo state.
+#-------------------------------------------------------------------------------
+function initialize_repo_state()
+{
+    if [[ $# != 1 ]] || ! is_defined_associative_array "$1"; then
+        error 3 "${FUNCNAME[0]}() requires exactly 1 nameref argument - the name of an associative array variable."
+        return 2
+    fi
+    local -n state="$1"
+    local key
+    state=()
+    for key in "${repo_state_keys[@]}"; do
+        state+=(["$key"]='')
+    done
+    return 0
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Retrieves the Git repository state for a specified directory by finding the Git repository root and parsing the
+#   origin remote URL if it exists and is a GitHub URL.
+# Parameters:
+#   1 - dir - path to a directory inside a Git repository work tree
+#   2 - nameref: the name of an associative array variable - to receive the repo state
+#   3 - full_info - if false, only retrieve the local Git repository state without trying to get GitHub API data (optional, default: true)
+# Returns:
+#   Exit code: 0 on success,
+#              1 if the directory is not inside a Git repository work tree
+#              2 if the directory if the GitHub API returns inconsistent data for the repository.
+# Dependencies: git, gh
+# Usage: git_repo_state <directory>
+# Example: git_repo_state "/home/valo/repos/vm2.Glob"
+#-------------------------------------------------------------------------------
+# shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string - it's a nameref
+# shellcheck disable=SC2004 # $/${} is unnecessary on arithmetic variables - state is assoc.array
+function get_repo_state()
+{
+    if [[ $# -lt 2 || $# -gt 3 || ! -d "$1" ]] || ! is_defined_associative_array "$2"; then
+        error 3 "${FUNCNAME[0]}() requires 2 or 3 arguments:
+1) the existing path to the root of the git repo working tree
+2) nameref: the name of an associative array variable - to receive the repo state
+3) full_info (optional, default: true) - if false, only retrieve the local Git repository state without trying to get GitHub API data."
+        return 2
+    fi
+
+    local full_info=true
+
+    [[ $# == 3 ]] && is_boolean "$3" && full_info=$3
+
+    local -n state="$2" # associative array variable to receive the repo state, passed by nameref
+    initialize_repo_state "$2" # make sure we have all fields
+
+    state[$key_root]=$(git -C "$1" rev-parse --show-toplevel 2>"$_ignore") || return 0 # no local git repo - return
+    state[$key_has_local_repo]=true
+    url=$(git -C "$1" remote get-url origin 2>"$_ignore")                  || return 0 # no origin remote - return
+
+    [[ -n $url && $url =~ $github_url_regex ]]                             || return 0 # origin remote is not a GitHub URL - return
+
+    state[$key_has_remote]=true
+    state[$key_url]="$url"
+    state[$key_authority]="${BASH_REMATCH[$url_authority]}"
+    state[$key_owner]="${BASH_REMATCH[$url_owner]}"
+    state[$key_name]="${BASH_REMATCH[$url_name]%.git}"
+    state[$key_repo]="${state[$key_owner]}/${state[$key_name]}"
+
+    $full_info                                                             || return 0 # caller does not want full info - return with what we have from git, without trying to get GitHub API data
+
+    local gh_repo_id, gh_default_branch, gh_owner gh_name gh_repo gh_ssh_url gh_url
+
+    {
+        IFS= read -r gh_repo_id
+        IFS= read -r gh_default_branch
+        IFS= read -r gh_owner
+        IFS= read -r gh_name
+        IFS= read -r gh_repo
+        IFS= read -r gh_ssh_url
+        IFS= read -r gh_url
+    } < <(gh repo view \
+                --json id,defaultBranchRef,owner,name,sshUrl,url \
+                --jq '.id,.defaultBranchRef.name,.owner.login,.name,.nameWithOwner,.sshUrl,.url' \
+                "$owner/$name" 2>"$_ignore")                               || return 0 # gh command failed, e.g. due to API error or authentication issue - return with what we have from git, without GitHub API data
+
+    local -i err=$errors
+    local -i rc=0
+
+    # these are real logical problems that can occur if the git remote is misconfigured or the API is returning unexpected data,
+    # so we check them all and report all mismatches rather than bailing on the first one
+    [[ "$gh_ssh_url" == "${state[$key_remote_url]}" ||
+       "$gh_url" == "${state[$key_remote_url]}" ]]      || error "GitHub API returned URLs '$gh_ssh_url' and '$gh_url' that do not match the git remote URL '${state[$key_remote_url]}'."
+    [[ "$gh_owner" == "${state[$key_owner]}" ]]         || error "GitHub API returned owner '$gh_owner' that does not match the git remote owner '${state[$key_owner]}'."
+    [[ "$gh_name" == "${state[$key_name]}" ]]           || error "GitHub API returned name '$gh_name' that does not match the git remote name '${state[$key_name]}'."
+    [[ "$gh_repo" == "${state[$key_repo]}" ]]           || error "GitHub API returned repo '$gh_repo' that does not match the expected repo '${state[$key_repo]}'."
+    [[ -n "$gh_repo_id" ]]                              || error "GitHub API did not return a repo ID for '$gh_repo'."
+
+    (( rc = err < errors ? 1 : 0 ))
+
+    state[$key_has_gh_repo]=true
+    state[$key_repo_id]="$gh_repo_id"
+    state[$key_default_branch]="$gh_default_branch"
+
+    return "$rc"
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Tests if the specified repo state has a local Git repository, i.e. if the "root" key is set to a non-empty value.
+# Parameters:
+#   1 - nameref: the name of an associative array variable - the repo state.
+#-------------------------------------------------------------------------------
+function has_local_repo()
+{
+    if [[ $# != 1 ]] || ! is_defined_associative_array "$1"; then
+        error 3 "${FUNCNAME[0]}() requires exactly 1 nameref argument - the name of an associative array variable."
+        return 2
+    fi
+    # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string. It's a nameref to an associative array.
+    local -n state="$1"
+    [[ -v state["$key_root"] && -n ${state["$key_root"]} ]]
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Tests if the specified repo state has a remote Git repository, i.e. if the "url" key is set to a non-empty value.
+# Parameters:
+#   1 - nameref: the name of an associative array variable - the repo state.
+#-------------------------------------------------------------------------------
+function has_remote_repo()
+{
+    if [[ $# != 1 ]] || ! is_defined_associative_array "$1"; then
+        error 3 "${FUNCNAME[0]}() requires exactly 1 nameref argument - the name of an associative array variable."
+        return 2
+    fi
+    # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string. It's a nameref to an associative array.
+    local -n state="$1"
+    [[ -v state["$key_url"] && -n ${state["$key_url"]} ]]
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Tests if the specified repo state has a remote GitHub repository, i.e. if the "repo_id" key is set to a non-empty value.
+# Parameters:
+#   1 - nameref: the name of an associative array variable - the repo state.
+#-------------------------------------------------------------------------------
+function has_github_remote()
+{
+    if [[ $# != 1 ]] || ! is_defined_associative_array "$1"; then
+        error 3 "${FUNCNAME[0]}() requires exactly 1 nameref argument - the name of an associative array variable."
+        return 2
+    fi
+    # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string. It's a nameref to an associative array.
+    local -n state="$1"
+    [[ -v state["$key_repo_id"] && -n ${state["$key_repo_id"]} ]]
+}
+
+
+#-------------------------------------------------------------------------------
+# Summary: Writes (serializes) a repo state to stdout. If a repo state key is missing, it is written as the missing key with
+#   empty string value. Unknown keys are not writen.
+# Parameters:
+#   1 - nameref: the name of an associative array variable - the repo state to be serialized.
+#-------------------------------------------------------------------------------
+function write_repo_state()
+{
+    if [[ $# != 1 ]] || ! is_defined_associative_array "$1"; then
+        error 3 "${FUNCNAME[0]}() requires exactly 1 nameref argument - the name of an associative array variable to write to stdout."
+        return 2
+    fi
+    # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string. It's a nameref to an associative array.
+    local -n state="$1"
+    local key
+    for key in "${repo_state_keys[@]}"; do
+        [[ -v ${state[$key]} ]] && echo "$key=${state[$key]}" || echo "$key="
+    done
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Reads (deserializes) a repo state from stdin. If a repo state key is missing in stdin, it is still added but with
+#   empty string value. Unknown keys are writen as they are (but you may get a trace warning).
+# Parameters:
+#   1 - nameref: the name of an associative array variable - the repo state to be serialized.
+#-------------------------------------------------------------------------------
+function read_repo_state()
+{
+    if [[ $# != 1 ]] || ! is_defined_associative_array "$1"; then
+        error 3 "${FUNCNAME[0]}() requires exactly 1 nameref argument - the name of an associative array variable to read from to stdin."
+        return 2
+    fi
+    initialize_repo_state "$1"
+    # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string - it's a nameref to an associative array
+    local -n state="$1"
+    local key value
+    while IFS='=' read -r key value; do
+        # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true - trace always returns true
+        is_in "$key" "${repo_state_keys[@]}" &&
+            trace "read_repo_state: '$key'='$value'" ||
+            trace "⚠️  WARNING: Unexpected key '$key' in the repo state input."
+        state["$key"]="$value"
+    done
+}
+
 #-------------------------------------------------------------------------------
 # Summary: Finds the root directory of a Git repository working tree by searching for a directory with the given name under a
 #  specified parent directory.
 # Parameters:
 #  1 - dir - directory name or relative path to search for (optional, default: current directory)
-#  2 - root_only - if "true", only accept directories that are the root of a Git work tree (required for repo setup audit);
-#      if "false", accept any directory inside a Git work tree (optional, default: "true")
+#  2 - root_only - if true, only accept directories that are the root of a Git work tree (required for repo setup audit);
+#      if false, accept any directory inside a Git work tree (optional, default: true)
 #  3 - repos_parent - parent directory under which to search for the specified directory (optional, default: $GIT_REPOS or $HOME)
 # Returns:
 #  stdout: the absolute path to the Git repository root
@@ -19,7 +263,7 @@
 # Usage: root=$(find_repo_root <directory-name> [root-only] [repos-parent])
 # Example: root=$(find_repo_root "vm2.Glob") # Finds the root of the Git repository containing a directory named "vm2.Glob"
 #  under $HOME
-# Example: root=$(find_repo_root "vm2.Templates/templates/AddNewPackage/content" "true") # Finds the directory path
+# Example: root=$(find_repo_root "vm2.Templates/templates/AddNewPackage/content" true) # Finds the directory path
 #  "vm2.Templates/templates/AddNewPackage/content" that is inside a Git repository work tree
 #-------------------------------------------------------------------------------
 function find_repo_root()
@@ -27,7 +271,7 @@ function find_repo_root()
     local dir_path=${1:-"$(pwd)"}
     dir_path=${dir_path#/*/} # remove leading path components to be able to match the directory name with "*/$dir_path" in find
                              # this allows the caller to specify either a directory name or a relative path, e.g. "vm2.Glob" or "vm2.Glob/subdir"
-    local root_only=${2:-"true"}
+    local root_only=${2:-true}
     local repos_parent="${3:-${GIT_REPOS:-$HOME}}"
     # dir_path=${dir_path%/}
     local root=""
@@ -38,7 +282,7 @@ function find_repo_root()
     # find a directory with the same sub-path under $repos_parent and check if it is a git work tree root (if root_only is true)
     # or inside a git work tree (if root_only is false)
     while IFS= read -r d; do
-        if [[ "$root_only" == "true" ]]; then
+        if [[ "$root_only" == true ]]; then
             e="$(git -C "$d" rev-parse --show-toplevel 2>"$_ignore")" || continue
             root="$e"
             ((++found_roots))
@@ -48,87 +292,11 @@ function find_repo_root()
         fi
     done < <(find "$repos_parent" -type d -path "*/$dir_path" 2>"$_ignore")
 
-    (( found_roots == 1 )) && { echo "${root}"; return 0; }
-    (( found_roots == 0 )) && error "No directory named '$dir_path' was found that is a root of a Git repository work tree." >&2
-    (( found_roots  > 1 )) && error "Multiple directories named '$dir_path' were found that are roots of Git repository work trees." >&2
-    return 1
-}
-
-#-------------------------------------------------------------------------------
-# Summary: Retrieves GitHub repository information from a local Git repository root directory by parsing the origin remote URL.
-# Parameters:
-#   1 - dir - absolute path to the root of a Git repository work tree
-# Returns:
-#   stdout: key=value pairs (one per line):
-#     root=<absolute path to the repo root>
-#     url=<origin remote URL>
-#     owner=<GitHub owner/organization name>
-#     name=<GitHub repository name>
-#   Exit code: 0 on success, 2 if the directory is not a Git repo root or the origin remote is not a GitHub SSH URL
-# Dependencies: git
-# Usage:
-#   declare -A info
-#   while IFS='=' read -r key value; do info["$key"]="$value"; done < <(gh_repo_info "/path/to/repo")
-#   echo "${info[$owner]}/${info[$name]}"
-# Example:
-#   gh_repo_info "/home/valo/repos/vm2.Glob"
-#   # Output:
-#   # root=/home/valo/repos/vm2.Glob
-#   # url=git@github.com:vmelamed/vm2.Glob.git
-#   # owner=vmelamed
-#   # name=vm2.Glob
-#-------------------------------------------------------------------------------
-repo_owner_rex='[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,37}[a-zA-Z0-9])'
-repo_name_rex='[a-zA-Z0-9][a-zA-Z0-9._-]{0,99})' # GitHub repository names can be up to 100 characters, cannot end with .git, and can contain letters, digits, dots, underscores, and hyphens, but must start with a letter or digit. See https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user for details.
-
-repo_owner_regex="^${repo_owner_rex}$"
-repo_name_regex="^${repo_name_rex}$"
-
-github_url_regex="^(git@github\.com:|https://github\.com/)(${repo_owner_rex})/(${repo_name_rex})$"
-
-declare -xr repo_owner_rex
-declare -xr repo_name_rex
-declare -xr repo_owner_regex
-declare -xr repo_name_regex
-declare -xr github_url_regex
-
-declare -xi url_host=1
-declare -xi url_owner=2
-declare -xi url_name=4
-
-function gh_repo_info()
-{
-    if [[ $# -lt 1 ]]; then
-        error "${FUNCNAME[0]}() requires at least 1 argument: the root of a Git repository work tree." >&2
-        return 2
-    fi
-
-    # Root of the git repo tree
-    local root rc
-
-    root=$(git -C "$1" rev-parse --show-toplevel 2>"$_ignore")
-    rc=$?
-    if [[ "$rc" -ne 0 ]]; then
-        error "The provided directory '$1' is not from a Git repository work tree." >&2
-        return 2
-    fi
-
-    # Origin remote URL
-    local remoteUrl
-    remoteUrl=$(git -C "$root" remote get-url origin 2>"$_ignore")
-    if [[ ! $remoteUrl =~ $github_url_regex ]]; then
-        error "The repository at '$root' does not have an 'origin' remote or '$remoteUrl' is not a GitHub repository." >&2
-        return 2
-    fi
-
-    local owner name
-    owner="${BASH_REMATCH[$url_owner]}"
-    name="${BASH_REMATCH[$url_name]}"
-    echo "root=$root"
-    echo "url=$remoteUrl"
-    echo "owner=$owner"
-    echo "name=${name%.git}" # remove .git suffix if present
-    return 0
+    local rc=0
+    (( found_roots == 0 )) && { rc=1; error "No directory named '$dir_path' was found that is a root of a Git repository work tree."; }
+    (( found_roots  > 1 )) && { rc=1; error "Multiple directories named '$dir_path' were found that are roots of Git repository work trees."; }
+    echo "${root}"
+    return "$rc"
 }
 
 #-------------------------------------------------------------------------------
@@ -165,11 +333,11 @@ function root_working_tree()
 function is_inside_work_tree()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires exactly one argument: the directory to test."
+        error 3 "${FUNCNAME[0]}() requires exactly one argument: the directory to test."
         return 2
     fi
 
-    [[ -d $1 ]] && git -C rev-parse "$1" --is-inside-work-tree &> "$_ignore"
+    [[ -d $1 ]] && git -C "$1" rev-parse --is-inside-work-tree &> "$_ignore"
 }
 
 #-------------------------------------------------------------------------------
@@ -177,7 +345,7 @@ function is_inside_work_tree()
 # Parameters:
 #   1 - directory - path to Git repository
 #   2 - stable_tag_regex - regular expression for matching stable tags
-#   3 - skip_fetch - if "true", skip fetching from remote (optional, default: fetch from remote)
+#   3 - skip_fetch - if true, skip fetching from remote (optional, default: fetch from remote)
 # Returns:
 #   Exit code: 0 if on latest stable tag, 1 if not, 2 on invalid arguments or errors
 # Dependencies: git
@@ -187,7 +355,7 @@ function is_inside_work_tree()
 function is_on_latest_stable_tag()
 {
     if [[ $# -lt 2 || $# -gt 3 ]]; then
-        error "${FUNCNAME[0]}() takes 2 arguments: directory and regular expression for stable tag." \
+        error 3 "${FUNCNAME[0]}() takes 2 arguments: directory and regular expression for stable tag." \
               "A third argument may be specified to fetch the latest changes in main from remote."
     fi
     if [[ ! -d "$1" ]]; then
@@ -201,7 +369,7 @@ function is_on_latest_stable_tag()
     local latest_tag current_commit tag_commit
 
     is_inside_work_tree "$1" || return 2
-    if [[ $# -lt 3 || "$3" != "true" ]]; then
+    if [[ $# -lt 3 || "$3" != true ]]; then
         git -C "$1" fetch origin main --quiet
     fi
 
@@ -221,7 +389,7 @@ function is_on_latest_stable_tag()
 # Parameters:
 #   1 - directory - path to Git repository
 #   2 - stable_tag_regex - regular expression for matching stable tags
-#   3 - skip_fetch - if "true", skip fetching from remote (optional, default: fetch from remote)
+#   3 - skip_fetch - if true, skip fetching from remote (optional, default: fetch from remote)
 # Returns:
 #   Exit code: 0 if after latest stable tag, 1 if not, 2 on invalid arguments or errors
 # Dependencies: git
@@ -231,7 +399,7 @@ function is_on_latest_stable_tag()
 function is_after_latest_stable_tag()
 {
     if [[ $# -lt 2 || $# -gt 3 ]]; then
-        error "${FUNCNAME[0]}() takes 2 arguments: directory and regular expression for stable tag." \
+        error 3 "${FUNCNAME[0]}() takes 2 arguments: directory and regular expression for stable tag." \
               "A third argument may be specified to fetch the latest changes in main from remote."
     fi
     if [[ ! -d "$1" ]]; then
@@ -245,7 +413,7 @@ function is_after_latest_stable_tag()
     local latest_tag tag_commit commits_after
 
     is_inside_work_tree "$1" || return 2
-    if [[ $# -lt 3 || "$3" != "true" ]]; then
+    if [[ $# -lt 3 || "$3" != true ]]; then
         git -C "$1" fetch origin main --quiet
     fi
 
@@ -265,7 +433,7 @@ function is_after_latest_stable_tag()
 # Parameters:
 #   1 - directory - path to Git repository
 #   2 - stable_tag_regex - regular expression for matching stable tags
-#   3 - skip_fetch - if "true", skip fetching from remote (optional, default: fetch from remote)
+#   3 - skip_fetch - if true, skip fetching from remote (optional, default: fetch from remote)
 # Returns:
 #   Exit code: 0 if on or after latest stable tag, 1 if before, 2 on invalid arguments or errors
 # Dependencies: git
@@ -275,7 +443,7 @@ function is_after_latest_stable_tag()
 function is_on_or_after_latest_stable_tag()
 {
     if [[ $# -lt 2 || $# -gt 3 ]]; then
-        error "${FUNCNAME[0]}() takes 2 arguments: directory and regular expression for stable tag." \
+        error 3 "${FUNCNAME[0]}() takes 2 arguments: directory and regular expression for stable tag." \
               "A third argument may be specified to fetch the latest changes in main from remote."
     fi
     if [[ ! -d "$1" ]]; then
@@ -289,7 +457,7 @@ function is_on_or_after_latest_stable_tag()
     local latest_tag tag_commit
 
     is_inside_work_tree "$1" || return 2
-    if [[ $# -lt 3 || "$3" != "true" ]]; then
+    if [[ $# -lt 3 || "$3" != true ]]; then
         git -C "$1" fetch origin main --quiet
     fi
 

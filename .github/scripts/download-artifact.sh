@@ -25,16 +25,15 @@ get_arguments "$@"
 
 is_safe_input "$artifact_name"
 if [[ -z "$artifact_name" ]]; then
-    error "The name of the artifact to download must be specified." >&2
+    error "The name of the artifact to download must be specified."
 fi
 is_safe_path "$artifacts_dir" || true
 is_safe_input "$repository" || true
 is_safe_input "$workflow_id" || true
 is_safe_input "$workflow_name" || true
 is_safe_path "$workflow_path" || true
-if [[ -n "$workflow_id" && ! "$workflow_id" =~ ^[0-9]+$ ]]; then
-    error "The specified workflow identifier '$workflow_id' is not valid." || true
-fi
+is_natural "$workflow_id" || error "The specified workflow identifier '$workflow_id' is not valid."
+
 
 exit_if_has_errors
 
@@ -111,7 +110,7 @@ if [[ "$dry_run" == true ]]; then
 fi
 
 if [[ -z $workflow_id ]]; then
-    if [[ -n "$workflow_id" && ! "$workflow_id" =~ ^[0-9]+$ ]]; then
+    if ! is_natural "$workflow_id"; then
         error "The specified workflow identifier '$workflow_id' is not valid."
     elif [[ -n "$workflow_path" ]]; then
         error "The specified workflow path '$workflow_path' does not exist in the repository '$repository'."
@@ -143,7 +142,7 @@ for run in "${runs[@]}"; do
     i=$((i + 1))
     trace "Checking run $run for the artifact '$artifact_name'..."
     query="any(.artifacts[]; .name==\"$artifact_name\")"
-    if [[ ! $(gh api "repos/$repository/actions/runs/$run/artifacts" --jq "$query") == "true" ]]; then
+    if [[ $(gh api "repos/$repository/actions/runs/$run/artifacts" --jq "$query") != true ]]; then
         # shellcheck disable=SC2154 # variable is referenced but not assigned.
         echo "The artifact '$artifact_name' not found in run $run." >> "$github_step_summary"
         continue

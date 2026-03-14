@@ -75,7 +75,7 @@ function trim() {
 # Summary: Tests if user input is safe by checking for potentially dangerous characters.
 # Parameters:
 #   1 - input - the input string to test
-#   2 - allow_spaces - if "true", allows spaces in input (optional, default: "false")
+#   2 - allow_spaces - if true, allows spaces in input (optional, default: false)
 # Returns:
 #   Exit code: 0 if input is safe, 1 if contains unsafe characters, 2 on invalid arguments
 # Usage: if is_safe_input <input> [allow_spaces]; then ... fi
@@ -85,7 +85,7 @@ function trim() {
 function is_safe_input()
 {
     if [[ $# -lt 1 || $# -gt 2 ]]; then
-        error "${FUNCNAME[0]}() requires one or two parameters: the input string to sanitize and an optional flag to allow spaces."
+        error 3 "${FUNCNAME[0]}() requires one or two parameters: the input string to sanitize and an optional flag to allow spaces."
         return 2
     fi
 
@@ -99,10 +99,10 @@ function is_safe_input()
 
     # Dangerous characters that could enable command injection
     local dangerous_chars
-    [[ "$allow_spaces" != "true" ]] && dangerous_chars=$'[;|&$`\\\\<>(){}\n\r ]' || dangerous_chars=$'[;|&$`\\\\<>(){}\n\r]'
+    [[ "$allow_spaces" != true ]] && dangerous_chars=$'[;|&$`\\\\<>(){}\n\r ]' || dangerous_chars=$'[;|&$`\\\\<>(){}\n\r]'
 
     if [[ "$input" =~ $dangerous_chars ]]; then
-        error "${FUNCNAME[0]}(): The input '$input' contains one or more of the unsafe characters '$dangerous_chars'."
+        error 3 "${FUNCNAME[0]}(): The input '$input' contains one or more of the unsafe characters '$dangerous_chars'."
         return 1
     fi
 
@@ -121,14 +121,12 @@ function is_safe_input()
 function is_safe_boolean()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires exactly one parameter: the boolean value to test."
+        error 3 "${FUNCNAME[0]}() requires exactly one parameter: the boolean value to test."
         return 2
     fi
 
-    local input="$1"
-
-    if [[ "$input" != "true" && "$input" != "false" ]]; then
-        error "${FUNCNAME[0]}(): The input '$input' is not a valid boolean. Expected 'true' or 'false'."
+    if ! is_boolean "$1"; then
+        error 3 "${FUNCNAME[0]}(): The input '$1' is not a valid boolean. Expected 'true' or 'false'."
         return 1
     fi
 
@@ -147,14 +145,12 @@ function is_safe_boolean()
 function is_safe_integer()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires exactly one parameter: the integer value to test."
+        error 3 "${FUNCNAME[0]}() requires exactly one parameter: the integer value to test."
         return 2
     fi
 
-    local input="$1"
-
-    if ! is_integer "$input"; then
-        error "${FUNCNAME[0]}(): The input '$input' is not a valid integer."
+    if ! is_integer "$1"; then
+        error 3 "${FUNCNAME[0]}(): The input '$1' is not a valid integer."
         return 1
     fi
 
@@ -174,7 +170,7 @@ function is_safe_integer()
 function is_safe_path()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires exactly one parameter: the file path to test."
+        error 3 "${FUNCNAME[0]}() requires exactly one parameter: the file path to test."
         return 2
     fi
 
@@ -214,7 +210,7 @@ function is_safe_path()
 function is_safe_existing_path()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires exactly one parameter: the file path to test."
+        error 3 "${FUNCNAME[0]}() requires exactly one parameter: the file path to test."
         return 2
     fi
 
@@ -241,7 +237,7 @@ function is_safe_existing_path()
 function is_safe_existing_directory()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires exactly one parameter: the directory path to test."
+        error 3 "${FUNCNAME[0]}() requires exactly one parameter: the directory path to test."
         return 2
     fi
 
@@ -268,7 +264,7 @@ function is_safe_existing_directory()
 function is_safe_existing_file()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires exactly one parameter: the file path to test."
+        error 3 "${FUNCNAME[0]}() requires exactly one parameter: the file path to test."
         return 2
     fi
 
@@ -307,7 +303,7 @@ declare -xr jq_array_strings_nonempty='type == "array" and length > 0 and all(ty
 function is_safe_json_array()
 {
     if [[ $# -ne 3 ]]; then
-        error "${FUNCNAME[0]}() requires exactly three parameters:"$'\n' \
+        error 3 "${FUNCNAME[0]}() requires exactly three parameters:"$'\n' \
               "  \$1: the JSON"$'\n' \
               "  \$2: the default value to use if the variable is unbound or empty, and"$'\n' \
               "  \$3: the name of the function to validate each item in the array."
@@ -360,7 +356,7 @@ function is_safe_json_array()
 function is_safe_runner_os()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires exactly one parameter: the runner OS to test."
+        error 3 "${FUNCNAME[0]}() requires exactly one parameter: the runner OS to test."
         return 2
     fi
 
@@ -391,7 +387,7 @@ function is_safe_runner_os()
 function is_safe_reason()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires exactly one parameter: the reason text to test."
+        error 3 "${FUNCNAME[0]}() requires exactly one parameter: the reason text to test."
         return 2
     fi
 
@@ -430,7 +426,7 @@ function is_safe_reason()
 function is_safe_nuget_server()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires exactly one parameter: the NuGet server to test."
+        error 3 "${FUNCNAME[0]}() requires exactly one parameter: the NuGet server to test."
         return 2
     fi
     [[ "$1" =~ $nugetServersRegex ]]
@@ -451,7 +447,7 @@ function is_safe_nuget_server()
 function validate_nuget_server()
 {
     if [[ $# -lt 1 || $# -gt 2 ]]; then
-        error "${FUNCNAME[0]}() requires at least one or two parameters: the NAME OF THE VARIABLE containing the NuGet server to validate and an optional default value for the NuGet server."
+        error 3 "${FUNCNAME[0]}() requires at least one or two parameters: the NAME OF THE VARIABLE containing the NuGet server to validate and an optional default value for the NuGet server."
         return 2
     fi
 
@@ -489,7 +485,7 @@ function validate_nuget_server()
 function is_safe_configuration()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires one parameter: the NAME of the configuration variable to test."
+        error 3 "${FUNCNAME[0]}() requires one parameter: the NAME of the configuration variable to test."
         return 2
     fi
     [[ $1 =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] && return 0
@@ -514,7 +510,7 @@ function is_safe_configuration()
 function validate_preprocessor_symbols()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires one parameter: the NAME of the variable containing the preprocessor symbols to test."
+        error 3 "${FUNCNAME[0]}() requires one parameter: the NAME of the variable containing the preprocessor symbols to test."
         return 2
     fi
     [[ -z $1 ]] && return 0
@@ -534,7 +530,7 @@ function validate_preprocessor_symbols()
             [[ -z $s ]] && s="$symbol" || s="$s;$symbol"
         fi
     done
-    [[ "$bad" == "true" ]] && return 1
+    [[ "$bad" == true ]] && return 1
 
     symbols=$s
     return 0
@@ -551,22 +547,11 @@ function validate_preprocessor_symbols()
 # Notes: Must be an integer between 0 and 100.
 function is_safe_min_coverage_pct()
 {
-    if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires one parameter: the min coverage percentage to test."
-        return 2
-    fi
-
-    if ! [[ "$1" =~ ^[0-9]+$ ]]; then
-        error "The min coverage percentage '$1' is not a valid integer."
+    # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true - good!
+    is_natural "$1" && (( $1 >= 0 && $1 <= 100 )) || {
+        error "The min coverage percentage '$1' must be an integer number between 0 and 100."
         return 1
-    fi
-
-    if (( $1 < 0 || $1 > 100 )); then
-        error "The min coverage percentage '$1' must be between 0 and 100."
-        return 1
-    fi
-
-    return 0
+    }
 }
 
 #-------------------------------------------------------------------------------
@@ -580,22 +565,11 @@ function is_safe_min_coverage_pct()
 # Notes: Must be an integer between 0 and 100.
 function is_safe_max_regression_pct()
 {
-    if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires one parameter: the max regression percentage to test."
-        return 2
-    fi
-
-    if ! [[ "$1" =~ ^[0-9]+$ ]]; then
-        error "The max regression percentage '$1' is not a valid integer."
-        return 1
-    fi
-
-    if (( $1 < 0 || $1 > 100 )); then
+    # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true - good!
+    is_natural "$1" && (( $1 >= 0 && $1 <= 100 )) || {
         error "The max regression percentage '$1' must be between 0 and 100."
         return 1
-    fi
-
-    return 0
+    }
 }
 
 #-------------------------------------------------------------------------------
@@ -611,7 +585,7 @@ function is_safe_max_regression_pct()
 function is_safe_minverPrereleaseId()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires one parameter: the MinVer prerelease ID to test."
+        error 3 "${FUNCNAME[0]}() requires one parameter: the MinVer prerelease ID to test."
         return 2
     fi
 
@@ -643,7 +617,7 @@ declare -xr dotnet_regex="^([0-9]+\\.[0-9]+(\\.x)?)|([0-9]+(\\.x)?)|([0-9]+\\.[0
 function is_safe_dotnet_version()
 {
     if [[ $# -ne 1 ]]; then
-        error "${FUNCNAME[0]}() requires one parameter: the .NET version to test."
+        error 3 "${FUNCNAME[0]}() requires one parameter: the .NET version to test."
         return 2
     fi
 

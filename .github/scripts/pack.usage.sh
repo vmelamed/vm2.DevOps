@@ -4,14 +4,14 @@
 
 function usage_text()
 {
-    local std_switches=""
-    local std_vars=""
+    local switches=""
+    local vars=""
 
     if [[ $1 == true ]]; then
-        std_switches="
+        switches="
 Switches:
 $common_switches"
-        std_vars=$common_vars
+        vars=$common_vars
     fi
 
     cat << EOF
@@ -30,7 +30,7 @@ Options:
   -mi, --minver-prerelease-id   Default semver pre-release identifiers for MinVer (e.g., 'preview.0')
                                 Initial value from \$MINVERDEFAULTPRERELEASEIDENTIFIERS environment variable or 'preview.0'
 
-$std_switches
+$switches
 Environment Variables:
   PACKAGE_PROJECT               Path to the project to pack
   CONFIGURATION                 Build configuration ('Release' or 'Debug')
@@ -42,7 +42,7 @@ Environment Variables:
   MINVERDEFAULTPRERELEASEIDENTIFIERS
                                 Default semver pre-release identifiers for MinVer
                                 (default: 'preview.0')
-$std_vars
+$vars
 EOF
 }
 

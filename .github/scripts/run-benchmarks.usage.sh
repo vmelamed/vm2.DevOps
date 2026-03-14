@@ -3,12 +3,12 @@
 # shellcheck disable=SC2154 # variable is referenced but not assigned
 function usage_text()
 {
-    local std_switches=""
-    local std_vars=""
+    local switches=""
+    local vars=""
 
     if [[ $1 == true ]]; then
-        std_switches=$common_switches
-        std_vars=$common_vars
+        switches=$common_switches
+        vars=$common_vars
     fi
 
     cat << EOF
@@ -39,7 +39,7 @@ Options:
                                 Initial value: '<solution root>/BenchmarkArtifacts'
 
 Switches:
-$std_switches
+$switches
 Environment Variables:
   BENCHMARK_PROJECT             Path to the benchmark project file
   ARTIFACTS_DIR                 Directory where benchmark artifacts will be created
@@ -49,7 +49,7 @@ Environment Variables:
   MINVERTAGPREFIX               Git tag prefix used by MinVer (e.g., 'v')
   MINVERDEFAULTPRERELEASEIDENTIFIERS
                                 Default semver pre-release identifiers for MinVer
-$std_vars
+$vars
 Outputs (to GITHUB_OUTPUT):
   results-dir                   The directory where benchmark results are stored
 EOF

@@ -3,15 +3,16 @@
 
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
+# shellcheck disable=SC2089
+# shellcheck disable=SC2090
 
 # default values for the common flags below
 declare -xr default__ignore=/dev/null
 declare -xr default_quiet=false
 declare -xr default_verbose=false
 declare -xr default_dry_run=false
-
+declare -xr default_debugger=false
 declare -xr default_ci=false
-
 declare -xr default_table_format="graphical"
 
 declare -axr table_formats=("graphical" "markdown")
@@ -23,24 +24,22 @@ declare -x verbose=${VERBOSE:-$default_verbose}     # enables detailed output
 declare -x dry_run=${DRY_RUN:-$default_dry_run}     # simulates commands without executing them
                                                     # the function `dump_vars`: graphical ASCII characters or markdown.
                                                     # See also the available values in the array `table_formats` above
-
-declare -x ci=$default_ci                           # indicates whether the script is running in CI/CD environment.
-                                                    # MUST NOT BE OVERRIDDEN BY TOP-LEVEL SWITCHES AND OPTIONS
+ci=${CI:-${GITHUB_ACTIONS:-${TF_BUILD:-$default_ci}}}
+declare -rx ci                                      # Indicates whether the script is running in CI/CD environment.
+                                                    # SHOPULD NOT BE OVERRIDDEN BY TOP-LEVEL SWITCHES AND OPTIONS!
                                                     # their values should be based only on environment variables defined by the
-                                                    # CI/CD system, e.g. GitHub Actions, Azure DevOps, etc.
+                                                    # CI/CD system, e.g. GitHub Actions, Azure DevOps, etc. Usually env.var. $CI
 
 [[ -n "${_Dbg_DEBUGGER_LEVEL:-}" || -n "${BASHDB_HOME:-}" ]] && debugger=true || debugger=false
-declare -xr debugger                                # indicates whether the script is running under a debugger, e.g. bashdb
+declare -xr debugger                                # Indicates whether the script is running under a debugger, e.g. bashdb.
+                                                    # SHOULD NOT BE OVERRIDDEN BY TOP-LEVEL SWITCHES AND OPTIONS!
 
-if [[ "${GITHUB_ACTIONS:-}" == "true" || "${TF_BUILD:-}" == "True" || "${CI:-}" == "true" ]]; then # CI is usually defined by most CI/CD systems. Set from the env. variable CI.
-    ci=true
+if [[ "${ci}" == true ]]; then # CI is usually defined by most CI/CD systems. Set from the env. variable CI.
     table_format=${DUMP_FORMAT:-markdown}           # in CI/CD environments, default to markdown format unless overridden by DUMP_FORMAT
     quiet=true                                      # in CI/CD environments, default to quiet mode
 else
-    ci=false
     table_format=${DUMP_FORMAT:-graphical}          # on terminal, default to graphical format unless overridden by DUMP_FORMAT
 fi
-declare -rx ci                                      # freeze the value of ci after setting it above
 
 #-------------------------------------------------------------------------------
 # Summary: Sets the script to quiet mode, suppressing user prompts.
@@ -58,6 +57,35 @@ function set_quiet()
 }
 
 #-------------------------------------------------------------------------------
+# Summary: Sets the script to non-quiet mode, enabling user prompts.
+# Parameters: none
+# Returns:
+#   Exit code: 0 always
+# Side Effects: Sets global variable $quiet to false
+# Usage: clear_quiet
+# Example: clear_quiet  # typically called explicitly to disable quiet mode, allowing user prompts
+#-------------------------------------------------------------------------------
+function clear_quiet()
+{
+    quiet=false
+    return 0
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Returns whether the script is in quiet mode.
+# Parameters: none
+# Returns:
+#   stdout: true if in quiet mode, false otherwise
+#   Exit code: 0 if quiet mode is on and 1 if it is off
+# Usage: if is_quiet; then ...
+# Example: if is_quiet; then echo "Quiet mode is on"; else echo "Quiet mode is off"; fi
+#-------------------------------------------------------------------------------
+function is_quiet()
+{
+    $quiet
+}
+
+#-------------------------------------------------------------------------------
 # Summary: Sets the script to verbose mode, enabling detailed output.
 # Parameters: none
 # Returns:
@@ -70,6 +98,35 @@ function set_verbose()
 {
     verbose=true
     return 0
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Clears the script's verbose mode, disabling detailed output.
+# Parameters: none
+# Returns:
+#   Exit code: 0 always
+# Side Effects: Sets global variable $verbose to false
+# Usage: clear_verbose
+# Example: clear_verbose  # typically called explicitly to disable verbose mode, allowing less detailed output
+#-------------------------------------------------------------------------------
+function clear_verbose()
+{
+    verbose=false
+    return 0
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Returns whether the script is in verbose mode.
+# Parameters: none
+# Returns:
+#   stdout: true if in verbose mode, false otherwise
+#   Exit code: 0 if verbose mode is on and 1 if it is off
+# Usage: if is_verbose; then ...
+# Example: if is_verbose; then echo "Verbose mode is on"; else echo "Verbose mode is off"; fi
+#-------------------------------------------------------------------------------
+function is_verbose()
+{
+    $verbose
 }
 
 #-------------------------------------------------------------------------------
@@ -94,7 +151,7 @@ function set_dry_run()
 #   Exit code: 0 always
 # Side Effects:
 #   - Sets global variable $verbose to true
-#   - Sets global variable $_ignore to /dev/stdout
+#   - Sets global variable $_ignore to /dev/stderr
 #   - Enables bash trace mode (set -x)
 # Usage: set_trace_enabled
 # Example: set_trace_enabled  # typically called when --trace flag is passed
@@ -102,8 +159,28 @@ function set_dry_run()
 function set_trace_enabled()
 {
     verbose=true
-    _ignore=/dev/stdout
+    _ignore=/dev/stderr
     set -x
+    return 0
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Disables trace mode for debugging by clearing verbose, redirecting output, and disabling bash tracing.
+# Parameters: none
+# Returns:
+#   Exit code: 0 always
+# Side Effects:
+#   - Sets global variable $verbose to false
+#   - Sets global variable $_ignore to /dev/null
+#   - Disables bash trace mode (set +x)
+# Usage: clear_trace_enabled
+# Example: clear_trace_enabled  # typically called explicitly to disable trace mode, allowing less detailed output
+#-------------------------------------------------------------------------------
+function clear_trace_enabled()
+{
+    verbose=false
+    _ignore=/dev/null
+    set +x
     return 0
 }
 
@@ -124,7 +201,7 @@ function is_in() { return 0; }
 function set_table_format()
 {
     if [[ $# -ne 1 || -z "$1" ]]; then
-        error "${FUNCNAME[0]}() requires one parameter - the table format"
+        error 3 "${FUNCNAME[0]}() requires one parameter - the table format"
         return 2
     fi
     local f="${1,,}"
@@ -203,30 +280,27 @@ function get_common_arg()
 function display_usage_msg()
 {
     if [[ $# -eq 0 || -z "$1" ]]; then
-        error "${FUNCNAME[0]}() requires at least one parameter - the usage text" >&2
+        error 3 "${FUNCNAME[0]}() requires at least one parameter - the usage text"
         exit 2
     fi
 
     # save the tracing state and disable tracing
     local set_tracing_on=0
-    if [[ $- =~ .*x.* ]]; then
-        set_tracing_on=1
-    fi
+    [[ $- =~ .*x.* ]] && set_tracing_on=true || set_tracing_on=false
     set +x
 
-    echo "$1
-"
+    usage_txt=$1
     shift
     if [[ $# -gt 0 && -n "$1" ]]; then
-        error "$*" || true
+        error "$*"
         echo ""
         exit 2
     fi
+    echo "$usage_txt
+"
 
     # restore the tracing state
-    if ((set_tracing_on == 1)); then
-        set -x
-    fi
+    $set_tracing_on && set -x
     return 0
 }
 
@@ -246,61 +320,37 @@ function usage()
     display_usage_msg "$common_switches" "OVERRIDE THE FUNCTION usage() IN THE CALLING SCRIPT TO PROVIDE CUSTOM USAGE INFORMATION."
 }
 
-#-------------------------------------------------------------------------------
-# Summary: Tests the global error counter and exits if errors were encountered.
-# Parameters:
-#   1 - flag - optional parameter; if any value is provided, forces call to exit 2
-# Returns:
-#   Exit code: 2 if errors exist, 0 otherwise
-# Env. Vars:
-#   errors - global error counter
-# Usage: exit_if_has_errors
-# Example:
-#   exit_if_has_errors  # exits with code 2 if errors exist
-#-------------------------------------------------------------------------------
-function exit_if_has_errors()
-{
-    # shellcheck disable=SC2154 # errors is referenced but not assigned.
-    if ((errors > 0)); then
-        usage false "$errors error(s) encountered. Please fix the above issues and try again."
-        exit 2
-    fi
-    return 0
-}
-
-declare -rx common_switches="  -v, --verbose                 Enables verbose output:
-                                1) displays the commands that will change some state, e.g. 'mkdir', 'git', 'dotnet', etc
-                                2) all output to '/dev/null' is redirected to '/dev/stdout'
-                                3) enables all tracing and dump outputs
+declare -rx common_switches="  -v, --verbose                 Enables verbose output from tracing and variables dumps, e.g. in the 'dump_vars' function
                                 Initial value from \$VERBOSE or 'false'
-  -x, --trace                   Sets the switch '--verbose' and also redirects all suppressed output from '/dev/null' to
-                                '/dev/stdout', sets the Bash trace option 'set -x'
-  -y, --dry-run                 Does not execute commands that can change environments, e.g. 'mkdir', 'git', 'dotnet', etc
-                                Displays what would have been executed
+  -x, --trace                   1) Sets the switch '--verbose'
+                                2) Redirects all suppressed output from '/dev/null' to '/dev/stderr'
+                                3) Sets the Bash trace option 'set -x'
+  -y, --dry-run                 Suppresses the execution of commands wrapped in 'execute' function and displays what would have
+                                normally been executed. These commands usually change some external state, e.g. 'mkdir', 'git',
+                                'dotnet', etc.)
                                 Initial value from \$DRY_RUN or 'false'
   -q, --quiet                   Suppresses all user prompts, assuming the default answers
                                 Initial value from \$QUIET or 'false'
   -gr, --graphical              Sets the output dump table format to graphical
-                                Initial value from \$DUMP_FORMAT or 'graphical'
+                                Initial value from \$DUMP_FORMAT or 'graphical' in terminal environments
   -md, --markdown               Sets the output dump table format to markdown
-                                Initial value from \$DUMP_FORMAT or 'graphical'
+                                Initial value from \$DUMP_FORMAT or 'markdown' in CI environments
   --help                        Displays longer version of the usage text - including all common flags
   -h | -?                       Displays shorter version of the usage text - without common flags
-
 "
 
 declare -rx common_vars="  VERBOSE                       Enables verbose output (see --verbose)
   DRY_RUN                       Does not execute commands that can change environments. (see --dry-run)
-  QUIET                         Suppresses all user prompts, assuming the default answers
+  QUIET                         Suppresses all user prompts, assuming the default answers (see --quiet)
   DUMP_FORMAT                   Sets the output dump table format. Must be 'graphical' or 'markdown'
-
+                                (see --graphical and --markdown)
 "
 
 # Override the default or environment values of common flags based on other flags upon sourcing.
 # Make sure that the other set_* functions are honoring the ci flag.
 if [[ $ci == true ]]; then
     # guard CI from quiet off
-    _ignore=/dev/null
+    _ignore=$default__ignore
     set_quiet
     set_table_format markdown
     set +x
@@ -309,7 +359,7 @@ fi
 # By default all scripts trap DEBUG and EXIT to provide better error handling.
 # However, when running under a debugger, e.g. 'bashdb', trapping these signals
 # interferes with the debugging session.
-if [[ $debugger != "true" ]]; then
+if [[ $debugger != true ]]; then
     # set the traps to see the last faulted command. However, they get in the way of debugging.
     trap on_debug DEBUG
     trap on_exit EXIT

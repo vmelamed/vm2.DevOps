@@ -123,7 +123,7 @@ function _write_title()
 # Summary: Internal function to write a variable name and value line in the dump table.
 # Parameters:
 #   1 - variable_name - name of the variable to display (passed as nameref)
-#   2 - secret - if "true", the value will be masked
+#   2 - secret - if true, the value will be masked
 # Returns:
 #   stdout: formatted variable line showing name and value
 #   Exit code: 0 always
@@ -151,16 +151,17 @@ function _write_line()
     elif is_defined_function "$1"; then
         value="$1()"
     elif is_defined_variable "$1"; then
+        # shellcheck disable=SC2154
         case $1 in
             verbose      )  value=$save_verbose ;;
             quiet        )  value=$save_quiet ;;
             table_format )  value=$save_table_format ;;
             _ignore      )  value=$save_ignore ;;
             *            )  local secret=${2:-false}
-                            [[ $secret == true ]] && value="••••••" || value="$v" ;;
+                            [[ $secret == true ]] && value="$masked" || value="$v" ;;
         esac
     else
-        value="❌ unbound, undefined, or invalid"
+        value="❌ '$1' is unbound, undefined, or invalid"
     fi
 
     local -n table
@@ -205,6 +206,7 @@ function dump_vars()
         set_table_format "markdown"
     fi
     set +x
+    local v
     for v in "$@"; do
         case ${v,,} in
             -q|--quiet) quiet=true ;;
@@ -255,11 +257,11 @@ function dump_vars()
                 v=$1
                 shift
                 if [[ ! $v =~ ^-.* ]]; then
-                    _write_line "$v" "true";
+                    _write_line "$v" true;
                     top=false
                 fi
                 ;;
-            *)
+            * )
                 if [[ ! $v =~ ^-.* ]]; then
                     _write_line "$v";
                     top=false
