@@ -34,7 +34,7 @@
 
 vm2.DevOps provides CI/CD automation for .NET NuGet packages through a three-layer architecture.
 
-## Layers
+## 1. Layers
 
 ```text
 ┌─────────────────────────────────────────────────────────┐
@@ -55,7 +55,7 @@ vm2.DevOps provides CI/CD automation for .NET NuGet packages through a three-lay
 └─────────────────────────────────────────────────────────┘
 ```
 
-### Layer 1: Consumer Workflows
+### 1.1. Layer 1: Consumer Workflows
 
 Stored in **`vmelamed/.github/workflow-templates/`**, these are the thin, per-repo entry points.
 Each consumer workflow sets repo-specific parameters (project paths, coverage thresholds, etc.)
@@ -69,11 +69,25 @@ and delegates to a reusable workflow via GitHub Actions property
 | `Release.yaml`       | Manual `workflow_dispatch`                       | `_release`     |
 | `ClearCache.yaml`    | Manual `workflow_dispatch`                       | `_clear_cache` |
 
-### Layer 2: Reusable Workflows
+#### 1.1.1. Push De-dupe Logic
+
+When a branch has an open pull request, both `push` and `pull_request` events fire on every commit. To avoid duplicate CI runs,
+each consumer `CI.yaml` includes de-dupe logic in the `prerun-ci` job:
+
+1. For pushes to non-main branches, the workflow queries `gh pr list` for open PRs matching the
+   branch.
+2. If an open PR exists, the push-triggered run sets `skip-push=true` and the `run-ci` job is
+   skipped (the PR-triggered run handles CI).
+3. If no open PR exists, the push-triggered run proceeds but adds the `SHORT_RUN` preprocessor
+   symbol for faster benchmarks.
+
+This ensures each commit runs CI exactly once regardless of event type.
+
+### 1.2. Layer 2: Reusable Workflows
 
 Located in **`vm2.DevOps/.github/workflows/`**. All are `workflow_call` triggered.
 
-#### CI Pipeline (`_ci.yaml`)
+#### 1.2.1. CI Pipeline (`_ci.yaml`)
 
 Orchestrates the full CI process. Accepts JSON arrays of project paths and fans out via matrix strategy.
 
@@ -84,7 +98,10 @@ validate-input ──► build ──┬──► test
 ```
 
 - **validate-input** — Normalizes and validates all inputs through `validate-input.sh`. Uses a `["__skip__"]` sentinel for
-  optional stages (test, benchmarks, pack).
+  optional stages (test, benchmarks, pack).  This is a workaround for GitHub Actions not supporting conditional `uses:` in
+  matrix jobs — the matrix must always have at least one item, and `fromJSON('[]')` would fail. The sentinel ensures a valid
+  non-empty array, and each downstream job checks `if: fromJSON(needs.validate-input.outputs.test-projects-len) > 0` to skip
+  execution when no real projects are present.
 - **build** — Compiles via `_build.yaml`. Matrices over `runners-os × build-projects`.
 - **test** — Runs via `_test.yaml`. Matrices over `runners-os`. Skipped when `test-projects` is the sentinel.
 - **benchmarks** — Runs via `_benchmarks.yaml`. Matrices over `runners-os × benchmark-projects`. Also skipped on push commits
@@ -93,14 +110,52 @@ validate-input ──► build ──┬──► test
 
 Concurrency group `ci-${{ github.workflow_ref }}` cancels in-progress runs on new pushes.
 
-#### Build (`_build.yaml`)
+#### 1.2.2. Build (`_build.yaml`)
 
 1. Checks out repository with full history (`fetch-depth: 0`) for MinVer version calculation.
 2. Restores NuGet packages (dual-layer cache — see [Caching Strategy](#caching-strategy)).
 3. Calls `build.sh` to compile the project.
 4. Saves build artifacts to cache with key `build-artifacts-{os}-{sha}-{configuration}-{run_id}`.
 
-#### Test (`_test.yaml`)
+#### 1.2.3. Gate Job Pattern (`postrun-ci`)
+
+With reusable workflows and matrix strategies, GitHub Actions produces check names that include the
+workflow prefix, matrix parameters, inner job names, and event suffixes — making them impossible to
+predict for branch-protection required checks. For example, a single test matrix job might appear as
+`Run CI: Build, Test, Benchmark, Pack / Run tests (ubuntu-latest) (pull_request)`.
+
+To solve this, each consumer `CI.yaml` includes a lightweight **gate job** that depends on all other
+jobs and reports a single, stable check name:
+
+```text
+prerun-ci ──► run-ci (calls _ci.yaml) ──► postrun-ci
+```
+
+```yaml
+postrun-ci:
+  name: Postrun-CI        # ← this is the only required check in the branch ruleset
+  needs: [prerun-ci, run-ci]
+  if: always()            # ← must run even if dependencies fail or are cancelled
+  runs-on: ubuntu-latest
+  steps:
+    - name: Evaluate CI result
+      run: |
+        if [[ "${{ needs.prerun-ci.result }}" == "failure" || ... ]]; then exit 1; fi
+        if [[ "${{ needs.run-ci.result }}" == "failure" || ... ]]; then exit 1; fi
+        echo "✅ CI completed"
+```
+
+**Key design points**:
+
+- `if: always()` is mandatory — without it, if a dependency fails, the gate job is silently skipped and the branch-protection
+  check stays in "Waiting" state forever.
+- `needs` covers all upstream jobs so any failure is caught
+- Branch rulesets match against the bare check-run name (Postrun-CI), not the UI-decorated form
+  (CI: Build, Test, Benchmark, Pack / Postrun-CI (pull_request))
+- The gate job name is extracted by `repo-setup.sh` → `detect_required_checks()` which parses the consumer's CI.yaml for the
+  gate job's name: property and registers it in the branch ruleset
+
+#### 1.2.4. Test (`_test.yaml`)
 
 1. Restores build artifacts from the build cache.
 2. Iterates test projects (parsed from the JSON array via `jq`).
@@ -110,7 +165,7 @@ Concurrency group `ci-${{ github.workflow_ref }}` cancels in-progress runs on ne
 6. Posts a PR comment with test results and coverage details.
 7. Publishes GitHub Check annotations via `dorny/test-reporter`.
 
-#### Benchmarks (`_benchmarks.yaml`)
+#### 1.2.5. Benchmarks (`_benchmarks.yaml`)
 
 1. Restores build artifacts from the build cache.
 2. Caches the Bencher CLI binary.
@@ -118,12 +173,12 @@ Concurrency group `ci-${{ github.workflow_ref }}` cancels in-progress runs on ne
 4. Tracks results via `bencher run` using a percentage threshold test (`max-regression-pct`, default 20%).
 5. Posts a PR comment with benchmark results.
 
-#### Pack (`_pack.yaml`)
+#### 1.2.6. Pack (`_pack.yaml`)
 
 1. Restores build artifacts from the build cache.
 2. Calls `pack.sh` to validate NuGet packaging succeeds.
 
-#### Prerelease (`_prerelease.yaml`)
+#### 1.2.7. Prerelease (`_prerelease.yaml`)
 
 Triggered automatically when CI succeeds after a PR merge to main (a workflow_run on the CI workflow, gated to push events on
 main with conclusion == 'success'). Can also be triggered manually via workflow_dispatch. Three sequential jobs:
@@ -135,7 +190,7 @@ main with conclusion == 'success'). Can also be triggered manually via workflow_
 1. **package-and-publish** — Checks out the prerelease tag, then calls `publish-package.sh` to build, pack, and push the
    prerelease package to the configured NuGet server.
 
-#### Release (`_release.yaml`)
+#### 1.2.8. Release (`_release.yaml`)
 
 Manual dispatch. Three sequential jobs:
 
@@ -144,7 +199,7 @@ Manual dispatch. Three sequential jobs:
    release Git tag.
 3. **release** — Checks out the release tag, then calls `publish-package.sh` to build, pack, and push. (see [Release Process](RELEASE_PROCESS.md#release-process))
 
-##### Example Walkthrough
+##### 1.2.8.1. Example Walkthrough
 
 Given latest stable tag `v1.2.3` and these commits since then:
 
@@ -161,19 +216,19 @@ If there were also a `refactor(core)!: rewrite engine`:
 - `!:` detected → **major bump**
 - Result: `v2.0.0`
 
-##### Prerelease Guard
+##### 1.2.8.2. Prerelease Guard
 
 If the latest prerelease tag is `v1.5.0-preview.3` but the commit-based calculation yields
 `v1.3.0`, the script adopts `1.5.0` from the prerelease instead. This prevents publishing a
 stable version with a lower number than an already-published prerelease.
 
-#### Clear Cache (`_clear_cache.yaml`)
+#### 1.2.9. Clear Cache (`_clear_cache.yaml`)
 
 Emergency cleanup. Deletes caches matching an allowlisted prefix (`nuget-`, `build-artifacts-`, or `bencher-cli-`).
 
-### Layer 3: Bash Scripts
+### 1.3. Layer 3: Bash Scripts
 
-#### CI Scripts (`/.github/actions/scripts/`)
+#### 1.3.1. CI Scripts (`/.github/actions/scripts/`)
 
 Each CI script follows a **three-file pattern**:
 
@@ -198,7 +253,7 @@ The CI scripts:
 | `changelog-and-tag.sh`          | `_prerelease`, `_release`     | Update changelog and create Git tag           |
 | `download-artifact.sh`          | (utility)                     | Download and extract remote artifacts         |
 
-#### Composite Action (`action.yaml`)
+#### 1.3.2. Composite Action (`action.yaml`)
 
 The file `.github/actions/scripts/action.yaml` is a composite action that adds both the scripts
 directory and the bash library directory to `$PATH`, and exports `$DEVOPS_SCRIPTS_DIR` and
@@ -208,7 +263,7 @@ Every workflow checks out the vm2.DevOps repo (sparse-checkout of `scripts/bash/
 `.github/actions/scripts`) and then invokes this action, making all scripts and library functions
 available for the rest of the job.
 
-#### Bash Library (`/scripts/bash/lib/`)
+#### 1.3.3. Bash Library (`/scripts/bash/lib/`)
 
 A shared function library sourced by scripts at startup.
 
@@ -230,7 +285,7 @@ A shared function library sourced by scripts at startup.
 Scripts source the GitHub Actions helpers `gh_core.sh` (which chains into `core.sh`) and then source additional `_*.sh` modules
 as needed.
 
-#### Utility Scripts (`/scripts/bash/`)
+#### 1.3.4. Utility Scripts (`/scripts/bash/`)
 
 Development-time scripts not used in CI:
 
@@ -245,11 +300,11 @@ Development-time scripts not used in CI:
 
 These also follow the three-file pattern where applicable.
 
-## Caching Strategy
+## 2. Caching Strategy
 
 The build pipeline uses a dual-layer NuGet cache and a build artifact cache.
 
-### NuGet Package Cache (dual-layer)
+### 2.1. NuGet Package Cache (dual-layer)
 
 1. **`setup-dotnet` built-in cache** — Keyed on `packages.lock.json` and `*.csproj` hashes.
 2. **Explicit `actions/cache`** — Weekly rotation via a `YYYY-WVV` calendar-week key, with
@@ -261,18 +316,18 @@ The build pipeline uses a dual-layer NuGet cache and a build artifact cache.
     nuget-{os}-                          (any week)
     ```
 
-### Build Artifact Cache
+### 2.2. Build Artifact Cache
 
 The build job saves compiled outputs (`**/bin/{config}` and `**/obj`) under key
 `build-artifacts-{os}-{sha}-{configuration}-{run_id}`. Downstream jobs (test, benchmarks, pack) restore from this cache to avoid
 rebuilding.
 
-### Cache Cleanup
+### 2.3. Cache Cleanup
 
 The `_clear_cache.yaml` workflow provides emergency cleanup. It restricts deletions to three allowlisted prefixes: `nuget-`,
 `build-artifacts-`, and `bencher-cli-`.
 
-## Script Distribution
+## 3. Script Distribution
 
 When a consumer repo (e.g., vm2.Glob) runs a workflow:
 
@@ -282,7 +337,7 @@ When a consumer repo (e.g., vm2.Glob) runs a workflow:
 4. For workflows running inside vm2.DevOps itself, the local checkout is used instead
    (`if: github.repository == 'vmelamed/vm2.DevOps'`).
 
-## NuGet Authentication
+## 4. NuGet Authentication
 
 All workflows that restore NuGet packages authenticate with GitHub Packages:
 
@@ -295,7 +350,7 @@ dotnet nuget update source github.vm2 \
 
 The `github.vm2` source is configured in each repo's `NuGet.config`.
 
-## Secrets
+## 5. Secrets
 
 | Secret                       | Used by                       | Purpose                                                                           |
 | :--------------------------- | :---------------------------- | :-------------------------------------------------------------------------------- |
@@ -307,7 +362,7 @@ The `github.vm2` source is configured in each repo's `NuGet.config`.
 | `REPORTGENERATOR_LICENSE`    | `_ci` → `_test`               | ReportGenerator license key                                                       |
 | `RELEASE_PAT`                | `_prerelease`, `_release`     | Fine-grained PAT (`contents: write`) for pushing to `main` past branch protection |
 
-## Naming Conventions
+## 6. Naming Conventions
 
 Consistent naming transforms flow across the layers:
 
@@ -317,3 +372,35 @@ Consistent naming transforms flow across the layers:
 | Workflow inputs            | `lower-kebab-case`        | `max-regression-pct`    |
 | Script parameters          | `--lower-kebab-case`      | `--max-regression-pct`  |
 | Script variables           | `lower_snake_case`        | `max_regression_pct`    |
+
+### 6.1. `args_to_github_output` — Automatic Name Translation
+
+The `args_to_github_output` function (defined in `gh_core.sh`) bridges the naming gap between bash scripts and GitHub Actions.
+It takes a list of bash variable names in `snake_case`, converts each to `kebab-case` (replacing `_` with `-`), and writes them
+to `$GITHUB_OUTPUT`.
+
+Every consumer workflow's `gather-params` step uses this function:
+
+```bash
+source $DEVOPS_LIB_DIR/gh_core.sh
+
+build_projects='...'
+test_projects='...'
+runners_os='...'
+
+args_to_github_output \
+    build_projects \
+    test_projects \
+    runners_os
+```
+
+This outputs:
+
+```text
+build-projects=...
+test-projects=...
+runners-os=...
+```
+
+These kebab-case keys are then referenced in the workflow's outputs: map and passed to reusable workflows as with: inputs. This
+function is used in every consumer workflow template (CI, Prerelease, Release).

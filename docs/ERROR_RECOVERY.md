@@ -9,6 +9,8 @@
   - [NuGet Push Failed](#nuget-push-failed)
   - [Changelog PR Creation Blocked](#changelog-pr-creation-blocked)
 - [Stable Release Failures](#stable-release-failures)
+- [Branch Protection Bypass Failures](#branch-protection-bypass-failures)
+  - [`RELEASE_PAT` Push Rejected](#release_pat-push-rejected)
   - [Version Computation Failed](#version-computation-failed)
   - [Changelog Committed But Tag Not Created](#changelog-committed-but-tag-not-created)
   - [Tag Created But NuGet Push Failed](#tag-created-but-nuget-push-failed)
@@ -70,6 +72,33 @@ CHANGELOG.md manually.
 
 The release workflow runs three sequential jobs: `compute-version` → `changelog-and-tag` → `package-and-publish`. Failure at
 each stage has different recovery procedures.
+
+## Branch Protection Bypass Failures
+
+### `RELEASE_PAT` Push Rejected
+
+The prerelease or release workflow fails with "push declined" or similar permission errors.
+
+**Diagnosis:**
+
+1. Verify the PAT is not expired: check the token's expiration date in *GitHub → Settings → Developer
+   settings → Fine-grained personal access tokens*
+2. Verify the PAT owner is in the ruleset bypass list: *Repo → Settings → Rules → Rulesets → main
+   protection → Bypass list*
+3. Verify bypass mode is **"Always"** (not "Pull requests only")
+4. Verify PAT permissions include `Contents: Read and write`
+
+**Recovery:**
+
+```bash
+# If the changelog was committed but the tag push failed:
+git checkout main && git pull
+git revert HEAD --no-edit
+git push origin main
+# Fix the PAT/bypass configuration, then re-run the workflow
+```
+
+See WORKFLOWS_REFERENCE.md for full setup instructions.
 
 ### Version Computation Failed
 

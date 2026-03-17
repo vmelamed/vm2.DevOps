@@ -291,9 +291,9 @@ manually, or need to verify/adjust settings on an existing repo, follow these st
 
 **Settings → General → Pull Requests:**
 
-1. ✔️ **Allow merge commits**
+1. ❌ **Allow merge commits**
 1. ❌ **Allow squash merging** (default merge strategy)
-1. ❌ **Allow rebase merging**
+1. ✔️ **Allow rebase merging**
 1. ✔️ **Allow auto-merge**
 1. ✔️ **Automatically delete head branches**
 
@@ -318,13 +318,13 @@ manually, or need to verify/adjust settings on an existing repo, follow these st
    - ✔️ Restrict deletions
    - ✔️ Require linear history
    - ✔️ Require a pull request before merging (🔽 show additional settings)
-     - Required approvals - **1**
+     - Required approvals - **0** (for single maintainer repos, increase as needed)
      - ✔️ Dismiss stale pull request approvals when new commits are pushed
      - ✔️ Require conversation resolution before merging
      - 🔽 Allowed merge methods
-       - ✔️ Merge  (required for proper work of git-cliff)
+       - ❌ Merge  (required for proper work of git-cliff)
        - ❌ Squash
-       - ❌ Rebase
+       - ✔️ Rebase
    - Require status checks to pass 🔽 Select CI jobs* (see note below)
      - ✔️ Require up-to-date branches
    - ✔️ Block force pushes
@@ -332,17 +332,7 @@ manually, or need to verify/adjust settings on an existing repo, follow these st
      - ✔️ Review new pushes
      - ✔️ Review draft pull requests (Optional)
 
-> [!NOTE] **Only add checks for jobs the repo actually runs** (e.g., skip `Run performance benchmarks`
-> if the repo has no benchmark projects). The check names follow the pattern `Run CI: Build, Test, Benchmark, Pack / {job-name}`.
-> Search for check names in the status checks dialog after running CI at least once. E.g. search for "build", then you should be
-> able to see and check things like:
->
-> - `Run CI: Build, Test, Benchmark, Pack / Build the source code` if you have build projects configured.
-> - `Run CI: Build, Test, Benchmark, Pack / Run unit and integration tests` if you have test projects configured.
-> - `Run CI: Build, Test, Benchmark, Pack / Run performance benchmarks` if you have benchmark projects configured.
-> - `Run CI: Build, Test, Benchmark, Pack / Validate NuGet packaging` if you have packable projects configured.
->
-> GitHub only shows checks that have run at least once — create a test PR first to populate the list.
+Unfortunately, only the script `repo-setup.sh` can automatically configure the required status checks for branch protection rules using the GitHub API and parameters that are otherwise not exposed in the GitHub UI. The idea is that there is one final "dummy" job "Postrun-CI" that depends on all other jobs and reports a single, stable check name that can be used in the branch protection rules. However in certain PR scenarios it registers a false negative which is incorrect and the script fixes that by using UI-unexposed parameter(s).
 
 Click **Create** or **Save changes** to save the ruleset.
 

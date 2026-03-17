@@ -459,17 +459,20 @@ sets secrets/variables, configures repo settings, Actions permissions, and branc
 
 **Requires:** `gh` (authenticated), `jq`
 
-| Option             | Short | Default     | Description                                         |
-| :----------------- | :---- | :---------- | :-------------------------------------------------- |
-| `--repo`           | `-r`  | —           | Full repo name (`owner/repo`)                       |
-| `--name`           | `-n`  | —           | Package name (repo becomes `<org>/vm2.<name>`)      |
-| `--org`            | `-o`  | `vmelamed`  | GitHub owner/org (used with `--name`)               |
-| `--visibility`     |       | `public`    | `public` or `private`                               |
-| `--branch`         | `-b`  | `main`      | Branch to protect                                   |
-| `--configure-only` |       | —           | Skip repo creation; configure existing repo only    |
-| `--skip-secrets`   |       | —           | Skip setting repository secrets                     |
-| `--skip-variables` |       | —           | Skip setting repository variables                   |
-| `--audit`          |       | —           | Read-only: report current vs expected settings      |
+| Option             | Short | Default     | Description                                                        |
+| :----------------- | :---- | :---------- | :----------------------------------------------------------------- |
+| parameter          |       | current dir | Path to the git repository root of working tree                    |
+| `--vm2-repos`      |       | `$VM2_REPOS`| Path to the directory containing all vm2 repositories              |
+| `--owner`          | `-o`  | `vmelamed`  | GitHub owner/org (used with `--name`)                              |
+| `--repo-name`      | `-n`  |             | The name of the GitHub repository                                  |
+| `--branch`         | `-b`  | `main`      | GitHub default branch                                              |
+| `--visibility`     |       | `public`    | `public` or `private`                                              |
+| `--ruleset-name`   | `-rs` |             | The name of the ruleset for protecting the default branch          |
+| `--description`    | `-d`  |             | Short description for the GitHub repository (max 350 chars)        |
+| `--ssh`            | `-s`  | true        | Use SSH URL for the remote origin                                  |
+| `--https`          | `-t`  | false       | Use HTTPS URL for the remote origin                                |
+| `--force-defaults` | `-f`  | false       | If the value of a repository variable is different from the default, assign it the default, without prompting for confirmation |
+| `--audit`          |       | —           | Read-only: report current vs expected settings, variables, secrets |
 
 Either `--repo` or `--name` is required (but not both).
 

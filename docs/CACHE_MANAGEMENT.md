@@ -14,6 +14,7 @@ The pipeline uses a **multi-layer caching approach** to balance build speed with
 | Manual cache clear         | `_clear_cache` workflow for emergency invalidation          | Done    |
 | Cache age monitoring       | Warn when cached packages are older than a threshold        | Planned |
 | Scheduled cache cleanup    | Automatic deletion of caches older than N days              | Planned |
+| Bencher CLI daily rotation | Daily date key in cache forces Bencher CLI refresh daily    | Done    |
 
 ## How It Works
 
@@ -62,12 +63,32 @@ in [CONSUMER_GUIDE.md](CONSUMER_GUIDE.md).
 
 ### Bencher CLI Cache
 
-The `_benchmarks` workflow separately caches the Bencher CLI binary at `~/.cargo/bin/bencher`,
-also rotated weekly:
+The `_benchmarks` workflow separately caches the Bencher CLI binary at `~/.cargo/bin/bencher`.
+Unlike the NuGet cache which uses weekly rotation (`YYYY-WVV`), the Bencher CLI uses **daily
+rotation**:
 
 ```yaml
-key: bencher-cli-{os}-{week}
+- name: Compute Bencher cache daily key
+  id: cache-date
+  run: echo "day=$(date +%Y%m%d)" >> "$GITHUB_OUTPUT"
+
+- name: Cache Bencher CLI
+  uses: actions/cache@v5
+  with:
+    path: ~/.cargo/bin/bencher
+    key: bencher-cli-${{ runner.os }}-${{ steps.cache-date.outputs.day }}
+    restore-keys: |
+      bencher-cli-${{ runner.os }}-
 ```
+
+The daily key ensures the CLI stays current (Bencher releases frequently) while still benefiting from cache hits within a single
+day. The restore-keys fallback allows a stale cache to be used if the daily key isn't found, avoiding a full download on every
+CI run.
+
+| Key                                | Matches                                |
+| ---------------------------------- | -------------------------------------- |
+|bencher-cli-{os}-{YYYYMMDD} (exact) | Same day, same OS                      |
+|bencher-cli-{os}- (fallback)        | Any day, same OS — reuses stale binary |
 
 ## Manual Cache Clear
 
