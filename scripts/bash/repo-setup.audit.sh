@@ -12,9 +12,6 @@ declare -x owner
 declare -x repo
 declare -x visibility
 declare -x branch
-declare -x configure_only
-declare -x skip_secrets
-declare -x skip_variables
 declare -x audit
 declare -x force_defaults
 declare -x required_checks
@@ -40,8 +37,6 @@ def count_rules(type): [.rules[] | select(.type == type)] | is_present;
 def count_pr_param(check): [.rules[] | select(.type == "pull_request" and check)] | is_present;
 
 {
-    ruleset:                                "\"'"$main_protection_rs_name"'\"",
-    id:                                     .id,
     enforcement:                            .enforcement // "disabled",
     repository_admin_bypass:                [.bypass_actors[] | select(.actor_id == '"$admin_role_id"' and .actor_type == "RepositoryRole")] | is_present,
     deletion:                               count_rules("deletion"),
@@ -168,33 +163,33 @@ function audit_repo()
 {
     local -i pass=0 diff=0 errs=0
     local -i p=0 m=0 e=0
-    local compare_settings_results=""
+    local compare_results=""
 
     echo "ℹ️  Audit"
 
     # --- Repo settings ---
     echo "  ℹ️  Repository settings:"
 
-    compare_settings "repos/${repo}" "$jq_transform_entries" default_repo_settings true compare_settings_results
-    read -r p m e <<< "$compare_settings_results"
+    compare_settings "repos/${repo}" "$jq_transform_entries" default_repo_settings true compare_results default_repo_settings_order
+    read -r p m e <<< "$compare_results"
     (( pass += p, diff += m, errs += e, 1 ))
 
     # --- Actions permissions ---
     echo "  ℹ️  Actions permissions:"
-    compare_settings "repos/${repo}/actions/permissions/workflow" "$jq_transform_entries" default_repo_permissions true compare_settings_results
-    read -r p m e <<< "$compare_settings_results"
+    compare_settings "repos/${repo}/actions/permissions/workflow" "$jq_transform_entries" default_repo_permissions true compare_results
+    read -r p m e <<< "$compare_results"
     (( pass += p, diff += m, errs += e, 1 ))
 
     # --- Secrets ---
     echo "  ℹ️  Secrets:"
-    compare_settings "repos/${repo}/actions/secrets" "$jq_transform_secrets" expected_secrets false compare_settings_results
-    read -r p m e <<< "$compare_settings_results"
+    compare_settings "repos/${repo}/actions/secrets" "$jq_transform_secrets" expected_secrets false compare_results
+    read -r p m e <<< "$compare_results"
     (( pass += p, diff += m, errs += e, 1 ))
 
     # --- Variables ---
     echo "  ℹ️  Variables:"
-    compare_settings "repos/${repo}/actions/variables" "$jq_transform_vars" default_vars false compare_settings_results
-    read -r p m e <<< "$compare_settings_results"
+    compare_settings "repos/${repo}/actions/variables" "$jq_transform_vars" default_vars false compare_results
+    read -r p m e <<< "$compare_results"
     (( pass += p, diff += m, errs += e, 1 ))
 
     # --- Branch ruleset ---
@@ -216,8 +211,8 @@ function audit_repo()
 
     echo "  ℹ️  Ruleset '$main_protection_rs_name' for branch '${branch}' (id: $ruleset_id):"
 
-    compare_settings "repos/${repo}/rulesets/${ruleset_id}" "$jq_ruleset_rules" default_ruleset true compare_settings_results
-    read -r p m e <<< "$compare_settings_results"
+    compare_settings "repos/${repo}/rulesets/${ruleset_id}" "$jq_ruleset_rules" default_ruleset true compare_results default_ruleset_order
+    read -r p m e <<< "$compare_results"
     (( pass += p, diff += m, errs += e, 1 ))
 
     # --- Summary ---
@@ -229,7 +224,7 @@ function audit_repo()
     ❌  missing:   %3d\n" "$pass" "$diff" "$errs"
     if (( errs > 0 )); then
         echo
-        echo "⚠️  TODO: Run with '--configure-only' and '--skip-secrets' to fix discrepancies."
+        echo "⚠️  TODO: Run without '--audit' to fix discrepancies."
     fi
     return 0
 }

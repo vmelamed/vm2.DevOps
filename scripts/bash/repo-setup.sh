@@ -22,9 +22,6 @@ declare -xr default_vm2_repos="$HOME/repos/vm2"
 declare -xr default_owner="vmelamed"
 declare -xr default_visibility="public"
 declare -xr default_branch="main"
-declare -xr default_configure_only=false
-declare -xr default_skip_secrets=false
-declare -xr default_skip_variables=false
 declare -xr default_force_defaults=false
 declare -xr default_audit=false
 
@@ -33,14 +30,11 @@ declare -x vm2_repos="${VM2_REPOS:-$default_vm2_repos}"
 declare -x repo_path=""
 declare -x visibility=${default_visibility}
 declare -x branch=${default_branch}
-declare -x configure_only=${default_configure_only}
-declare -x skip_secrets=${default_skip_secrets}
-declare -x skip_variables=${default_skip_variables}
 declare -x force_defaults=${default_force_defaults}
 declare -x audit=${default_audit}
 declare -x main_protection_rs_name=""
 declare -x description=""
-declare -x use_ssh=false
+declare -x use_ssh=true
 declare -x use_https=false
 declare -x repo_owner=${ORGANIZATION:-$default_owner}
 
@@ -371,10 +365,6 @@ fi
 configure_default_repo_settings
 configure_actions_permissions
 configure_branch_protection
-$skip_secrets   || configure_secrets
-$skip_variables || configure_variables
 
 info "Repository ready: https://github.com/${repo}"
-if [[ "$skip_secrets" != true ]]; then
-    warning "All secrets have placeholder values — update them with real values."
-fi
+warning "All added secrets have placeholder values — update them with real values."

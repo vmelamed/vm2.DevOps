@@ -12,9 +12,6 @@ declare -x owner
 declare -x repo
 declare -x visibility
 declare -x branch
-declare -x configure_only
-declare -x skip_secrets
-declare -x skip_variables
 declare -x audit
 declare -x force_defaults
 declare -x main_protection_rs_name
@@ -99,13 +96,33 @@ function detect_required_checks()
 }
 
 declare -xrA default_repo_settings=(
+    ["default_branch"]="main"
     ["delete_branch_on_merge"]=true
     ["allow_squash_merge"]=false
     ["allow_merge_commit"]=false
     ["allow_rebase_merge"]=true
     ["allow_auto_merge"]=true
+    ["has_issues"]=true
     ["has_wiki"]=false
     ["has_projects"]=false
+    ["has_pull_requests"]=true
+    ["pull_request_creation_policy"]="all"
+    ["visibility"]="public"
+)
+
+declare -xra default_repo_settings_order=(
+    "default_branch"
+    "has_wiki"
+    "has_issues"
+    "has_projects"
+    "has_pull_requests"
+    "pull_request_creation_policy"
+    "allow_merge_commit"
+    "allow_squash_merge"
+    "allow_rebase_merge"
+    "allow_auto_merge"
+    "delete_branch_on_merge"
+    "visibility"
 )
 
 function configure_default_repo_settings()
@@ -151,13 +168,25 @@ declare -xrA expected_secrets=(
 
 function configure_secrets()
 {
+    # get the names of the existing secrets
+    local -a existing_secrets
+    while IFS='=' read -r name; do
+        existing_secrets+=("$name")
+    done < <(gh api "repos/${repo}/actions/secrets" -q '.secrets[] | .name')
+
+    local all_secrets="${existing_secrets[*]}"
+    local set_secrets=0
     info "Configuring repository secrets..."
 
     for entry in "${!expected_secrets[@]}"; do
+        [[ "$all_secrets" =~ ${entry} ]] && continue
         execute gh secret set "$entry" --body "$secret_placeholder" -R "$repo" >"$_ignore"
         trace "Set secret: ${entry}"
+        (( ++set_secrets ))
     done
-    warning "Secrets configured with placeholder values — you must update them with real values."
+    if (( set_secrets > 0 )); then
+        warning "Secrets configured with placeholder values — you must update them with real values."
+    fi
 }
 
 declare -xrA default_vars=(
@@ -172,6 +201,7 @@ declare -xrA default_vars=(
     ["RESET_BENCHMARK_THRESHOLDS"]=false
     ["ACTIONS_RUNNER_DEBUG"]=false
     ["ACTIONS_STEP_DEBUG"]=false
+    ["VERBOSE"]=false
 )
 
 function configure_variables()
@@ -180,6 +210,7 @@ function configure_variables()
 
     # Get existing variables as name=value pairs
     declare -A existing_vars
+
     while IFS='=' read -r name value; do
         existing_vars["$name"]="$value"
     done < <(gh variable list -R "$repo" --json name,value -q '.[] | "\(.name)=\(.value)"')
@@ -188,13 +219,11 @@ function configure_variables()
     for name in "${!default_vars[@]}"; do
         local default_value="${default_vars[$name]}"
 
-        if [[ -v "existing_vars[$name]" ]]; then
-            if [[ "${existing_vars[$name]}" != "$default_value" && "$force_defaults" != true ]]; then
-                info "Skipping variable '${name}' — already set to '${existing_vars[$name]}' (differs from the default '${default_value}')."
-                (( ++skipped ))
-                continue
-            fi
-        fi
+        [[ -v "existing_vars[$name]" && "${existing_vars[$name]}" != "$default_value" && "$force_defaults" != true ]] &&
+        ! confirm "Variable '${name}' — already set to '${existing_vars[$name]}' (differs from the default '${default_value}'). Do you want to set it to the default?" "n" && {
+            (( ++skipped ))
+            continue
+        }
 
         execute gh variable set "$name" --body "$default_value" -R "$repo" >"$_ignore"
         trace "Set variable: ${name}=${default_value}"
@@ -207,9 +236,7 @@ function configure_variables()
 }
 
 declare -xrA default_ruleset=(
-    ["ruleset"]="present"
-    ["id"]="present"
-    ["enforcement"]="present"
+    ["enforcement"]="active"
     ["repository_admin_bypass"]="present"
     ["deletion"]="present"
     ["non_fast_forward"]="present"
@@ -225,6 +252,25 @@ declare -xrA default_ruleset=(
     ["allowed_merge_methods"]="present"
     ["strict_required_status_checks_policy"]="present"
     ["required_status_check_context"]="present"
+)
+
+declare -xra default_ruleset_order=(            # UI: Order in which rules appear in the GitHub UI "Rulesets/main protection"
+    "enforcement"                               # Enforcement status: Active/Disabled ▾
+    "repository_admin_bypass"                   # Bypass actors section
+    "deletion"                                  # Restrict deletions
+    "required_linear_history"                   # Require linear history
+    "pull_request"                              # Require a pull request ▾
+    "required_approving_review_count"           #   ↳ Required approvals
+    "dismiss_stale_reviews_on_push"             #   ↳ Dismiss stale reviews
+    "require_code_owner_review"                 #   ↳ Require Code Owners review
+    "require_last_push_approval"                #   ↳ Require last push approval
+    "required_review_thread_resolution"         #   ↳ Require conversation resolution
+    "required_reviewers"                        #   ↳ Reviewers list
+    "allowed_merge_methods"                     #   ↳ Allowed merge methods
+    "required_status_checks"                    # Require status checks ▾
+    "strict_required_status_checks_policy"      #   ↳ Require up-to-date branches
+    "required_status_check_context"             #   ↳ Check names
+    "non_fast_forward"                          # Block force pushes
 )
 
 function configure_branch_protection()

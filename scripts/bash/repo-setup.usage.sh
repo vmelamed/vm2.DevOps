@@ -43,31 +43,32 @@ Parameters:
                                 directory cannot be the same as the vm2.DevOps or the .github workflow templates directories.
 
 Options:
-  -gr, --vm2-repos <path>       The parent directory where the '.github' workflow templates, 'vm2.DevOps', and other vm2
-                                repositories are cloned.
-                                Initial from the \$VM2_REPOS environment variable or '\$HOME/repos/vm2'.
+  --vm2-repos <path>            The parent directory where the '.github' workflow templates, 'vm2.DevOps', and other vm2
+                                repositories are cloned
+                                Initial from the \$VM2_REPOS environment variable or '\$HOME/repos/vm2'
+  -f, --force-defaults          If the value of a repository variable is different from the default, assign it the default,
+                                without prompting for confirmation. Used during repository creation and configuration
   -o, --owner <owner>           GitHub user or organization that will own the repository
                                 From environment variable: ORGANIZATION or default: vmelamed.
-                                Used only during repository creation.
+                                Used only during repository creation
   -n, --repo-name <name>        Name of the GitHub repository to create. If not specified, the name will be inferred from the
-                                name of the repo directory. Used only during repository creation.
-  --visibility <public|private> Repository visibility. Used only during repository creation.
+                                name of the repo directory. Used only during repository creation
+  --visibility [public|private] Repository visibility. Used only during repository creation
                                 Default: public
-  -b, --branch <branch>         GitHub default branch name. Used only during repository creation.
+  -b, --branch <branch>         GitHub default branch name. Used only during repository creation
                                 Default: main
   -d, --description <text>      Short description for the GitHub repository (max 350 chars). Used only during repository
-                                creation.
-  -rs, --ruleset-name <name>    The name of the ruleset for protecting the default branch. Used only during repository
-                                configuration.
+                                creation
+  -rs, --ruleset-name <name>    The name of the ruleset for protecting the default branch (main). Used only during repository
+                                creation
                                 Default: "<GitHub default branch name> protection" - usually 'main protection'
 
 Switches:
-  --audit                       Read-only: report current vs expected settings without changes, ignores all other options
-  --configure-only              Skip repo creation; configure an existing repo only
-  --skip-secrets                Skip setting repository secrets
-  --skip-variables              Skip setting repository variables
-  --ssh                         Use SSH URL for the remote origin
-  --https                       Use HTTPS URL for the remote origin
+  -s, --ssh                     Use SSH URL for the remote origin. Used only during repository creation
+  -t, --https                   Use HTTPS URL for the remote origin. Used only during repository creation
+  -f, --force-defaults          If the value of a repository variable is different from the default, assign it the default,
+                                without prompting for confirmation.
+  -a, --audit                   Read-only: report current vs expected settings without changes, ignores all other options
 
 Note: If multiple '--ssh' and/or '--https' are specified - the last on the command line wins.
 $cmn_switches

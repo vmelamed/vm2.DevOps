@@ -13,9 +13,7 @@ declare -x owner
 declare -x repo
 declare -x visibility
 declare -x branch
-declare -x configure_only
-declare -x skip_secrets
-declare -x skip_variables
+declare -x force_defaults
 declare -x audit
 declare -x main_protection_rs_name
 declare -x description
@@ -37,7 +35,7 @@ function get_arguments()
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
-            --vm2-repos|-gr )
+            --vm2-repos )
                 [[ $# -ge 1 ]] || usage false "Missing path after '$option'."
                 vm2_repos="$1"; shift
                 ;;
@@ -72,26 +70,18 @@ function get_arguments()
                 description="$1"; shift
                 ;;
 
-            --configure-only )
-                configure_only=true
-                ;;
-
-            --ssh )
+            --ssh|-s )
                 use_ssh=true
                 use_https=false
                 ;;
 
-            --https )
+            --https|-t )
                 use_ssh=false
                 use_https=true
                 ;;
 
-            --skip-secrets )
-                skip_secrets=true
-                ;;
-
-            --skip-variables )
-                skip_variables=true
+            --force-defaults|-f )
+                force_defaults=true
                 ;;
 
             --audit )
@@ -124,9 +114,6 @@ function dump_args()
         use_ssh \
         use_https \
         audit \
-        configure_only \
-        skip_secrets \
-        skip_variables \
         --blank \
         dry_run \
         verbose \
