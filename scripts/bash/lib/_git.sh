@@ -22,8 +22,99 @@ declare -xri url_authority=1
 declare -xri url_owner=2
 declare -xri url_name=3
 
+function validate_repo_owner()
+{
+    if [[ $# -ne 1 ]]; then
+        error 3 "${FUNCNAME[0]}() requires exactly one argument: the repository owner to validate."
+        return 2
+    fi
+    [[ -z "$1" || "$1" =~ $repo_owner_regex ]] || {
+        # repo owner can be empty (for user-level repos) or must match the regex for GitHub owner/organization names
+        error "Invalid repository owner. $valid_repo_owners"
+        return 1
+    }
+}
+
+declare -r valid_repo_names="GitHub repository names can be up to 100 characters, cannot end with .git, and can contain letters, digits, dots, underscores, and hyphens, but must start with a letter or digit.
+See https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user for details."
+
 #-------------------------------------------------------------------------------
-# With the following constants and fuctions we define the repository state: it is an associative array with predefined keys.
+# Summary: Validates that the specified repository name is valid according to
+#   GitHub naming rules, i.e. it matches the regular expression for GitHub
+#   repository names and does not end with ".git".
+# Parameters:
+#   1 - repository name to validate
+# Returns:
+#   Exit code: 0 if the repository name is valid, 1 if it is invalid
+# Examples:
+#   if validate_repo_name "my-repo"; then echo "Valid repo name"; fi
+#   repo_name=$(enter_value "GitHub Repository name" "$default_repo_name" false validate_repo_name)
+# See also: https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user for details on GitHub repository naming rules.
+#-------------------------------------------------------------------------------
+function validate_repo_name()
+{
+    if [[ $# -ne 1 ]]; then
+        error 3 "${FUNCNAME[0]}() requires exactly one argument: the repository name to validate."
+        return 2
+    fi
+    [[ -n "$1" && "$1" != *.git && "$1" =~ $repo_name_regex ]] || {
+        # repo name cannot be empty, cannot end with .git, and must match the regex for GitHub repository names above
+        error "Invalid repository name. $valid_repo_names"
+        return 1
+    }
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Validates that the specified repository description is valid according to
+#   GitHub naming rules, i.e. it is between 3 and 350 characters long.
+# Parameters:
+#   1 - repository description to validate
+# Returns:
+#   Exit code: 0 if the repository description is valid, 1 if it is invalid
+# Examples:
+#   if validate_repo_description "This is my repo"; then echo "Valid repo description"; fi
+#   repo_description=$(enter_value "GitHub Repository description" "$default_repo_description" false validate_repo_description)
+# See also: https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user for details on GitHub repository description rules.
+#--------------------------------------------------------------------------------
+function validate_repo_description()
+{
+    if [[ $# -ne 1 ]]; then
+        error 3 "${FUNCNAME[0]}() requires exactly one argument: the repository description to validate."
+        return 2
+    fi
+    (( ${#1} >= 3 && ${#1} <= 350 )) || {
+        # GitHub repository descriptions must be between 3 and 350 characters long.
+        error "Repository description must be between 3 and 350 characters long"
+        return 1
+    }
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Validates that the specified repository branch name is valid according to
+#   git branch naming rules, i.e. it is a valid git ref name.
+# Parameters:
+#   1 - repository branch name to validate
+# Returns:
+#   Exit code: 0 if the repository branch name is valid, 1 if it is invalid
+# Examples:
+#   if validate_repo_branch "main"; then echo "Valid branch name"; fi
+#   branch_name=$(enter_value "Default branch name" "$default_branch" false validate_repo_branch)
+# See also: https://git-scm.com/docs/git-check-ref-format for details on valid git ref names
+#--------------------------------------------------------------------------------
+function validate_repo_branch()
+{
+    if [[ $# -ne 1 ]]; then
+        error 3 "${FUNCNAME[0]}() requires exactly one argument: the repository branch name to validate."
+        return 2
+    fi
+    git check-ref-format --branch "$1" &> "$_ignore" || {
+        error "Invalid branch name '$1'. Branch names must be valid git ref names. See https://git-scm.com/docs/git-check-ref-format for details."
+        return 1
+    }
+}
+
+#-------------------------------------------------------------------------------
+# With the following constants and functions we define the repository state: it is an associative array with predefined keys.
 # The following constants define the predefined keys of a repo state:
 #-------------------------------------------------------------------------------
 declare -xr key_root='root'
@@ -104,21 +195,24 @@ function get_repo_state()
     initialize_repo_state "$2" # make sure we have all fields
 
     state[$key_root]=$(git -C "$1" rev-parse --show-toplevel 2>"$_ignore") || return 0 # no local git repo - return
-    state[$key_has_local_repo]=true
     url=$(git -C "$1" remote get-url origin 2>"$_ignore")                  || return 0 # no origin remote - return
 
     [[ -n $url && $url =~ $github_url_regex ]]                             || return 0 # origin remote is not a GitHub URL - return
 
-    state[$key_has_remote]=true
+    local authority="${BASH_REMATCH[$url_authority]}"
+    local owner="${BASH_REMATCH[$url_owner]}"
+    local name="${BASH_REMATCH[$url_name]}"
+    name="${name%.git}"
+
     state[$key_url]="$url"
-    state[$key_authority]="${BASH_REMATCH[$url_authority]}"
-    state[$key_owner]="${BASH_REMATCH[$url_owner]}"
-    state[$key_name]="${BASH_REMATCH[$url_name]%.git}"
-    state[$key_repo]="${state[$key_owner]}/${state[$key_name]}"
+    state[$key_authority]="${authority}"
+    state[$key_owner]="${owner}"
+    state[$key_name]="${name}"
+    state[$key_repo]="${owner}/${name}"
 
     $full_info                                                             || return 0 # caller does not want full info - return with what we have from git, without trying to get GitHub API data
 
-    local gh_repo_id, gh_default_branch, gh_owner gh_name gh_repo gh_ssh_url gh_url
+    local gh_repo_id gh_default_branch gh_owner gh_name gh_repo gh_ssh_url gh_url
 
     {
         IFS= read -r gh_repo_id
@@ -129,25 +223,24 @@ function get_repo_state()
         IFS= read -r gh_ssh_url
         IFS= read -r gh_url
     } < <(gh repo view \
-                --json id,defaultBranchRef,owner,name,sshUrl,url \
+                --json id,defaultBranchRef,owner,name,nameWithOwner,sshUrl,url \
                 --jq '.id,.defaultBranchRef.name,.owner.login,.name,.nameWithOwner,.sshUrl,.url' \
                 "$owner/$name" 2>"$_ignore")                               || return 0 # gh command failed, e.g. due to API error or authentication issue - return with what we have from git, without GitHub API data
 
-    local -i err=$errors
+    local -i errs=$errors
     local -i rc=0
 
     # these are real logical problems that can occur if the git remote is misconfigured or the API is returning unexpected data,
     # so we check them all and report all mismatches rather than bailing on the first one
-    [[ "$gh_ssh_url" == "${state[$key_remote_url]}" ||
-       "$gh_url" == "${state[$key_remote_url]}" ]]      || error "GitHub API returned URLs '$gh_ssh_url' and '$gh_url' that do not match the git remote URL '${state[$key_remote_url]}'."
+    [[ "$gh_ssh_url" == "${state[$key_url]}"            ||
+       "$gh_url" == "${state[$key_url]}" ]]             || error "GitHub API returned URLs '$gh_ssh_url' and '$gh_url' that do not match the git remote URL '${state[$key_remote_url]}'."
     [[ "$gh_owner" == "${state[$key_owner]}" ]]         || error "GitHub API returned owner '$gh_owner' that does not match the git remote owner '${state[$key_owner]}'."
     [[ "$gh_name" == "${state[$key_name]}" ]]           || error "GitHub API returned name '$gh_name' that does not match the git remote name '${state[$key_name]}'."
     [[ "$gh_repo" == "${state[$key_repo]}" ]]           || error "GitHub API returned repo '$gh_repo' that does not match the expected repo '${state[$key_repo]}'."
     [[ -n "$gh_repo_id" ]]                              || error "GitHub API did not return a repo ID for '$gh_repo'."
 
-    (( rc = err < errors ? 1 : 0 ))
+    rc=$(( errs < errors ? 1 : 0 ))
 
-    state[$key_has_gh_repo]=true
     state[$key_repo_id]="$gh_repo_id"
     state[$key_default_branch]="$gh_default_branch"
 
@@ -205,27 +298,36 @@ function has_github_remote()
 
 #-------------------------------------------------------------------------------
 # Summary: Writes (serializes) a repo state to stdout. If a repo state key is missing, it is written as the missing key with
-#   empty string value. Unknown keys are not writen.
+#   empty string value. Unknown keys are not written.
 # Parameters:
 #   1 - nameref: the name of an associative array variable - the repo state to be serialized.
 #-------------------------------------------------------------------------------
-function write_repo_state()
+function dump_repo_state()
 {
+    $verbose || return 0
+
     if [[ $# != 1 ]] || ! is_defined_associative_array "$1"; then
         error 3 "${FUNCNAME[0]}() requires exactly 1 nameref argument - the name of an associative array variable to write to stdout."
         return 2
     fi
+
     # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string. It's a nameref to an associative array.
-    local -n state="$1"
+    local -n __state="$1"
     local key
-    for key in "${repo_state_keys[@]}"; do
-        [[ -v ${state[$key]} ]] && echo "$key=${state[$key]}" || echo "$key="
-    done
+
+    {
+        echo "Repository state '$1':"
+        for key in "${repo_state_keys[@]}"; do
+            [[ -v __state[$key] ]] && printf "  %-15s → '%s'\n" "$key" "${__state[$key]}" || printf "  %-15s ✗ not set\n" "$key"
+        done
+    } | trace
+
+    return 0
 }
 
 #-------------------------------------------------------------------------------
 # Summary: Reads (deserializes) a repo state from stdin. If a repo state key is missing in stdin, it is still added but with
-#   empty string value. Unknown keys are writen as they are (but you may get a trace warning).
+#   empty string value. Unknown keys are written as they are (but you may get a trace warning).
 # Parameters:
 #   1 - nameref: the name of an associative array variable - the repo state to be serialized.
 #-------------------------------------------------------------------------------
@@ -248,14 +350,29 @@ function read_repo_state()
     done
 }
 
+function print_repo_state()
+{
+    if [[ $# != 1 ]] || ! is_defined_associative_array "$1"; then
+        error 3 "${FUNCNAME[0]}() requires exactly 1 nameref argument - the name of an associative array variable to print."
+        return 2
+    fi
+    # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string - it's a nameref to an associative array.
+    local -n state="$1"
+    local key
+    echo "Repository state:"
+    for key in "${repo_state_keys[@]}"; do
+        [[ -v state["$key"] ]] && echo "  $key: ${state[$key]}" || echo "  $key: "
+    done
+}
+
 #-------------------------------------------------------------------------------
 # Summary: Finds the root directory of a Git repository working tree by searching for a directory with the given name under a
-#  specified parent directory.
+# specified parent directory.
 # Parameters:
 #  1 - dir - directory name or relative path to search for (optional, default: current directory)
-#  2 - root_only - if true, only accept directories that are the root of a Git work tree (required for repo setup audit);
-#      if false, accept any directory inside a Git work tree (optional, default: true)
-#  3 - repos_parent - parent directory under which to search for the specified directory (optional, default: $GIT_REPOS or $HOME)
+#  2 - root_only - if true, only accept directories that are the root of a Git repository working tree
+#      if false, accept any directory inside a Git repository working tree (optional, default: true)
+#  3 - repos_parent - parent directory under which to search for the specified directory (optional, default: $VM2_REPOS or $HOME)
 # Returns:
 #  stdout: the absolute path to the Git repository root
 #  Exit code: 0 if exactly one matching root is found, 1 if none or multiple found, 2 on invalid arguments
@@ -272,7 +389,7 @@ function find_repo_root()
     dir_path=${dir_path#/*/} # remove leading path components to be able to match the directory name with "*/$dir_path" in find
                              # this allows the caller to specify either a directory name or a relative path, e.g. "vm2.Glob" or "vm2.Glob/subdir"
     local root_only=${2:-true}
-    local repos_parent="${3:-${GIT_REPOS:-$HOME}}"
+    local repos_parent="${3:-${VM2_REPOS:-$HOME}}"
     # dir_path=${dir_path%/}
     local root=""
     local found_roots=0
@@ -293,19 +410,22 @@ function find_repo_root()
     done < <(find "$repos_parent" -type d -path "*/$dir_path" 2>"$_ignore")
 
     local rc=0
-    (( found_roots == 0 )) && { rc=1; error "No directory named '$dir_path' was found that is a root of a Git repository work tree."; }
-    (( found_roots  > 1 )) && { rc=1; error "Multiple directories named '$dir_path' were found that are roots of Git repository work trees."; }
+    (( found_roots == 1 )) && rc=0 || rc=1
+    (( found_roots  > 1 )) && { rc=2; root=""; error "Multiple directories named '$dir_path' were found that are roots of Git repository work trees."; }
+
+    # send the root to stdout
     echo "${root}"
+
     return "$rc"
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Retrieves the root of the Git repository work tree for the specified
-#          or the current directory.
+# Summary: Retrieves the root of the Git repository working tree for the specified
+#          directory or the current directory.
 # Parameters:
-#   1 - directory - optional path to a directory inside a Git repository work tree
+#   1 - directory - optional path to a directory inside a Git repository working tree
 # Returns:
-#   stdout: absolute path to the root of the Git repository work tree
+#   stdout: absolute path to the root of the Git repository working tree
 #   Exit code: 0 on success, non-zero on failure
 # Dependencies: git
 # Usage: root_working_tree <directory>
@@ -321,11 +441,11 @@ function root_working_tree()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Tests if the specified directory is inside a Git repository (inside a git work tree).
+# Summary: Tests if the specified directory is inside a Git repository (inside a git working tree).
 # Parameters:
 #   1 - directory - path to directory to test
 # Returns:
-#   Exit code: 0 if directory is inside a Git work tree, non-zero otherwise, 2 on invalid arguments
+#   Exit code: 0 if directory is inside a Git working tree, non-zero otherwise, 2 on invalid arguments
 # Dependencies: git
 # Usage: if is_inside_work_tree <directory>; then ... fi
 # Example: if is_inside_work_tree "$PWD"; then echo "Inside Git repo"; fi

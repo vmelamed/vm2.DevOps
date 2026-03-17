@@ -12,7 +12,7 @@ declare -x script_name
 # The directory of the top-level calling script
 declare -x script_dir
 # The directory of my core library for shell scripts - usually
-# "$GIT_REPOS/vm2.DevOps/scripts/bash/lib"
+# "$VM2_REPOS/vm2.DevOps/scripts/bash/lib"
 declare -x lib_dir
 
 [[ ! -v script_name || -z "$script_name" ]] && script_name=$(basename "${BASH_SOURCE[-1]}")
@@ -85,10 +85,10 @@ function to_stdout()
 #   github_actions - when true, indicates running in GitHub Actions environment
 #   trace_to_summary - when true, also writes to step summary
 #   github_step_summary - path to GitHub Actions step summary file
-# Usage: echo "message" | to_trace_out
-# Example: echo "Debug info: $variable" | to_trace_out
+# Usage: echo "message" | to_traceout
+# Example: echo "Debug info: $variable" | to_traceout
 #-------------------------------------------------------------------------------
-function to_trace_out()
+function to_traceout()
 {
     local line
     while IFS= read -r line; do

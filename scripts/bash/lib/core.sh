@@ -61,10 +61,12 @@ function execute()
         error 3 "${FUNCNAME[0]}() requires at least one argument: the command to execute."
         return 2
     fi
+
     if [[ "$dry_run" == true ]]; then
         echo "dry-run$ $*"
         return 0
     fi
+
     trace "$*"
     "$@"
 }
@@ -85,7 +87,7 @@ function execute()
 function list_of_files()
 {
     if [[ $# -lt 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires at least one parameter: the file pattern."
+        error 3 "${FUNCNAME[0]}() requires at least one argument: the file pattern."
         return 2
     fi
 

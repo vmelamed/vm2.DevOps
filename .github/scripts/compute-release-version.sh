@@ -35,7 +35,7 @@ declare -xr reason
 # detect if the head is already tagged
 head_tag=$(git tag --points-at HEAD)
 if [[ -n $head_tag ]]; then
-    error "The HEAD is already tagged with '$head_tag'. Possible remedy: delete the tag, or branch 'main' again, do a new PR, and release with a new, higher version number." || true
+    error "The HEAD is already tagged with '$head_tag'. Possible remedy: delete the tag, or branch 'main' again, do a new PR, and release with a new, higher version number."
 fi
 
 exit_if_has_errors

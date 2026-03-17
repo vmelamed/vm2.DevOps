@@ -18,7 +18,7 @@ source "$lib_dir/core.sh"
 
 # arguments
 declare -x target_dir=""
-declare -x git_repos="${GIT_REPOS:-}"
+declare -x vm2_repos="${VM2_REPOS:-}"
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-'v'}
 declare -xa file_regexes=()
 
@@ -29,23 +29,23 @@ source "${script_dir}/diff-common.functions.sh"
 get_arguments "$@"
 
 #===============================
-# Validate and adjust git_repos:
+# Validate and adjust vm2_repos:
 #===============================
-if [[ -z "$git_repos" ]] || ! git_repos=$(realpath -e "$git_repos" 2> "$_ignore"); then
-    trace "Neither the \$GIT_REPOS environment variable nor the --git-repos option is specified. Will assume that the source-of-truth repositories are located in the same parent directory."
-    # use this script's path to find the git_repos
+if [[ -z "$vm2_repos" ]] || ! vm2_repos=$(realpath -e "$vm2_repos" 2> "$_ignore"); then
+    trace "Neither the \$VM2_REPOS environment variable nor the --vm2-repos option is specified. Will assume that the source-of-truth repositories are located in the same parent directory."
+    # use this script's path to find the vm2_repos
     if r=$(root_working_tree "$script_dir") ||
        r=$(realpath -e "$(dirname "$script_dir/../..")"); then
-        git_repos=$(realpath -e "$(dirname "$r")")
+        vm2_repos=$(realpath -e "$(dirname "$r")")
     else
-        error "The source directories are not located under the same parent directory. Specify the path of their parent directory either either with \$GIT_REPOS environment variable or the --git-repos option."
+        error "The source directories are not located under the same parent directory. Specify the path of their parent directory either either with \$VM2_REPOS environment variable or the --vm2-repos option."
         exit 2
     fi
 fi
-# make sure we are seeing .github and vm2.DevOps properly through git_repos
+# make sure we are seeing .github and vm2.DevOps properly through vm2_repos
 validate_source_repo ".github"
 validate_source_repo "vm2.DevOps"
-trace "All source repositories are in '$git_repos'"
+trace "All source repositories are in '$vm2_repos'"
 
 #=================================================
 # Validate and adjust target_path from target_dir:
@@ -53,12 +53,12 @@ trace "All source repositories are in '$git_repos'"
 [[ -n $target_dir ]] || target_dir=$(pwd)
 
 if  ! target_path=$(realpath -e "$target_dir" 2> "$_ignore") &&
-    ! target_path=$(realpath -e "$git_repos/$target_dir" 2> "$_ignore"); then
-     error "Could not find the target directory '$target_dir' neither in the current working directory nor in '$GIT_REPOS'."
+    ! target_path=$(realpath -e "$vm2_repos/$target_dir" 2> "$_ignore"); then
+     error "Could not find the target directory '$target_dir' neither in the current working directory nor in '$VM2_REPOS'."
      exit 2
 fi
-if is_in "$target_path" "${git_repos}/vm2.DevOps" "${git_repos}/.github" ; then
-    error "The target project cannot be '${git_repos}/vm2.DevOps' or '${git_repos}/.github'."
+if is_in "$target_path" "${vm2_repos}/vm2.DevOps" "${vm2_repos}/.github" ; then
+    error "The target project cannot be '${vm2_repos}/vm2.DevOps' or '${vm2_repos}/.github'."
     exit 2
 fi
 trace "The target project is in '$target_path'"
@@ -69,7 +69,7 @@ warning "The target directory '$target_path' does not contain the expected direc
 exit 2
 
 # freeze the arguments
-declare -xr git_repos
+declare -xr vm2_repos
 declare -xr target_dir
 declare -xr target_path
 declare -xr minver_tag_prefix
@@ -138,7 +138,7 @@ while [[ $i -lt ${#source_files[@]} ]]; do
                 copy_file "$source_file" "$target_file"
                 ;;
             *)
-                error "Unknown action '$actions' for files '${source_file}' and '${target_file}'." || 0
+                error "Unknown action '$actions' for files '${source_file}' and '${target_file}'."
                 press_any_key
                 ;;
         esac
@@ -184,7 +184,7 @@ while [[ $i -lt ${#source_files[@]} ]]; do
                     copy_file "$source_file" "$target_file"
                     ;;
                 *)
-                    error "Unknown action '$actions' for files '${source_file}' and '${target_file}'." || 0
+                    error "Unknown action '$actions' for files '${source_file}' and '${target_file}'."
                     press_any_key
                     ;;
             esac

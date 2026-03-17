@@ -8,7 +8,7 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
-declare -x git_repos
+declare -x vm2_repos
 declare -xr config_file="${script_dir}/diff-common.config.json"
 declare -x custom_config=""
 
@@ -71,10 +71,10 @@ function validate_source_repo()
     fi
 
     local repo_name=$1
-    local dir="${git_repos}/${repo_name}"
+    local dir="${vm2_repos}/${repo_name}"
 
     if [[ ! -d "${dir}" ]]; then
-        error "The '${repo_name}' repository was not cloned or is not under ${git_repos}."
+        error "The '${repo_name}' repository was not cloned or is not under ${vm2_repos}."
         exit 2
     fi
 
@@ -94,9 +94,9 @@ function find_target_path()
     dir=${1:-"$(pwd)"}
 
     if [[ ! -d "$dir" ]]; then
-        # if it is not a directory - try under $git_repos
+        # if it is not a directory - try under $vm2_repos
         trace "'$dir' is not a directory."
-        dir=${git_repos%/}/${dir}
+        dir=${vm2_repos%/}/${dir}
         if [[ ! -d "$dir" ]]; then
             # still not a directory - return false
             error "Could not find directory '$1' or '$dir'."
@@ -119,8 +119,8 @@ function find_target_path()
         return 1
     fi
 
-    # try under $git_repos
-    dir=${git_repos%/}/${dir}
+    # try under $vm2_repos
+    dir=${vm2_repos%/}/${dir}
     trace "New candidate: '$dir'."
     if [[ -d $dir ]] && is_inside_work_tree "$dir"; then
         # if it is inside a tree - this is it, return true
@@ -138,11 +138,11 @@ function find_target_path()
 function configure()
 {
     if [[ ! -s "$config_file" ]]; then
-        error "The configuration file $config_file was not found or is empty." || return 2
+        error "The configuration file $config_file was not found or is empty."
     fi
     # Validate JSON
     if ! jq empty "$config_file" 2>"$_ignore"; then
-        error "The configuration file $config_file contains invalid JSON." || return 2
+        error "The configuration file $config_file contains invalid JSON."
     fi
     exit_if_has_errors
 
@@ -151,16 +151,16 @@ function configure()
     local source_file target_file action
     while IFS='=' read -r source_file target_file action; do
         if [[ -z "$source_file" ]]; then
-            error "Empty source file path found in $config_file." || true
+            error "Empty source file path found in $config_file."
         fi
         if [[ -z "$target_file" ]]; then
-            error "Empty target file path found in $config_file." || true
+            error "Empty target file path found in $config_file."
         fi
         if [[ -z "$action" ]]; then
-            error "Empty action found in $config_file." || true
+            error "Empty action found in $config_file."
         fi
         if ! is_in "$action" "${valid_actions[@]}"; then
-            error "$action is not a valid action. Must be one of: $all_actions_str." || true
+            error "$action is not a valid action. Must be one of: $all_actions_str."
         fi
         exit_if_has_errors
 

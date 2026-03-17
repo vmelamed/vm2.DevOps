@@ -46,7 +46,7 @@ git fetch --tags --force
 # detect if the head is already tagged
 head_tag=$(git tag --points-at HEAD)
 if [[ -n $head_tag ]]; then
-    error "The HEAD is already tagged with '$head_tag'. A prerelease requires at least one new commit on main." || true
+    error "The HEAD is already tagged with '$head_tag'. A prerelease requires at least one new commit on main."
 fi
 
 exit_if_has_errors

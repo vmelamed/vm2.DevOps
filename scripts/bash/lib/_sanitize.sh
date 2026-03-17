@@ -85,7 +85,7 @@ function trim() {
 function is_safe_input()
 {
     if [[ $# -lt 1 || $# -gt 2 ]]; then
-        error 3 "${FUNCNAME[0]}() requires one or two parameters: the input string to sanitize and an optional flag to allow spaces."
+        error 3 "${FUNCNAME[0]}() requires one or two arguments: the input string to sanitize and an optional flag to allow spaces."
         return 2
     fi
 
@@ -121,7 +121,7 @@ function is_safe_input()
 function is_safe_boolean()
 {
     if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly one parameter: the boolean value to test."
+        error 3 "${FUNCNAME[0]}() requires exactly one argument: the boolean value to test."
         return 2
     fi
 
@@ -145,7 +145,7 @@ function is_safe_boolean()
 function is_safe_integer()
 {
     if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly one parameter: the integer value to test."
+        error 3 "${FUNCNAME[0]}() requires exactly one argument: the integer value to test."
         return 2
     fi
 
@@ -170,7 +170,7 @@ function is_safe_integer()
 function is_safe_path()
 {
     if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly one parameter: the file path to test."
+        error 3 "${FUNCNAME[0]}() requires exactly one argument: the file path to test."
         return 2
     fi
 
@@ -210,7 +210,7 @@ function is_safe_path()
 function is_safe_existing_path()
 {
     if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly one parameter: the file path to test."
+        error 3 "${FUNCNAME[0]}() requires exactly one argument: the file path to test."
         return 2
     fi
 
@@ -237,7 +237,7 @@ function is_safe_existing_path()
 function is_safe_existing_directory()
 {
     if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly one parameter: the directory path to test."
+        error 3 "${FUNCNAME[0]}() requires exactly one argument: the directory path to test."
         return 2
     fi
 
@@ -264,7 +264,7 @@ function is_safe_existing_directory()
 function is_safe_existing_file()
 {
     if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly one parameter: the file path to test."
+        error 3 "${FUNCNAME[0]}() requires exactly one argument: the file path to test."
         return 2
     fi
 
@@ -303,7 +303,7 @@ declare -xr jq_array_strings_nonempty='type == "array" and length > 0 and all(ty
 function is_safe_json_array()
 {
     if [[ $# -ne 3 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly three parameters:"$'\n' \
+        error 3 "${FUNCNAME[0]}() requires exactly three arguments:"$'\n' \
               "  \$1: the JSON"$'\n' \
               "  \$2: the default value to use if the variable is unbound or empty, and"$'\n' \
               "  \$3: the name of the function to validate each item in the array."
@@ -356,7 +356,7 @@ function is_safe_json_array()
 function is_safe_runner_os()
 {
     if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly one parameter: the runner OS to test."
+        error 3 "${FUNCNAME[0]}() requires exactly one argument: the runner OS to test."
         return 2
     fi
 
@@ -387,7 +387,7 @@ function is_safe_runner_os()
 function is_safe_reason()
 {
     if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly one parameter: the reason text to test."
+        error 3 "${FUNCNAME[0]}() requires exactly one argument: the reason text to test."
         return 2
     fi
 
@@ -426,7 +426,7 @@ function is_safe_reason()
 function is_safe_nuget_server()
 {
     if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly one parameter: the NuGet server to test."
+        error 3 "${FUNCNAME[0]}() requires exactly one argument: the NuGet server to test."
         return 2
     fi
     [[ "$1" =~ $nugetServersRegex ]]
@@ -447,7 +447,7 @@ function is_safe_nuget_server()
 function validate_nuget_server()
 {
     if [[ $# -lt 1 || $# -gt 2 ]]; then
-        error 3 "${FUNCNAME[0]}() requires at least one or two parameters: the NAME OF THE VARIABLE containing the NuGet server to validate and an optional default value for the NuGet server."
+        error 3 "${FUNCNAME[0]}() requires at least one or two arguments: the NAME OF THE VARIABLE containing the NuGet server to validate and an optional default value for the NuGet server."
         return 2
     fi
 
@@ -485,7 +485,7 @@ function validate_nuget_server()
 function is_safe_configuration()
 {
     if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires one parameter: the NAME of the configuration variable to test."
+        error 3 "${FUNCNAME[0]}() requires one argument: the NAME of the configuration variable to test."
         return 2
     fi
     [[ $1 =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] && return 0
@@ -510,7 +510,7 @@ function is_safe_configuration()
 function validate_preprocessor_symbols()
 {
     if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires one parameter: the NAME of the variable containing the preprocessor symbols to test."
+        error 3 "${FUNCNAME[0]}() requires one argument: the NAME of the variable containing the preprocessor symbols to test."
         return 2
     fi
     [[ -z $1 ]] && return 0
@@ -585,7 +585,7 @@ function is_safe_max_regression_pct()
 function is_safe_minverPrereleaseId()
 {
     if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires one parameter: the MinVer prerelease ID to test."
+        error 3 "${FUNCNAME[0]}() requires one argument: the MinVer prerelease ID to test."
         return 2
     fi
 
@@ -617,7 +617,7 @@ declare -xr dotnet_regex="^([0-9]+\\.[0-9]+(\\.x)?)|([0-9]+(\\.x)?)|([0-9]+\\.[0
 function is_safe_dotnet_version()
 {
     if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires one parameter: the .NET version to test."
+        error 3 "${FUNCNAME[0]}() requires one argument: the .NET version to test."
         return 2
     fi
 

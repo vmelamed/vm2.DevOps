@@ -62,10 +62,10 @@ function set_quiet()
 # Returns:
 #   Exit code: 0 always
 # Side Effects: Sets global variable $quiet to false
-# Usage: clear_quiet
-# Example: clear_quiet  # typically called explicitly to disable quiet mode, allowing user prompts
+# Usage: unset_quiet
+# Example: unset_quiet  # typically called explicitly to disable quiet mode, allowing user prompts
 #-------------------------------------------------------------------------------
-function clear_quiet()
+function unset_quiet()
 {
     quiet=false
     return 0
@@ -106,10 +106,10 @@ function set_verbose()
 # Returns:
 #   Exit code: 0 always
 # Side Effects: Sets global variable $verbose to false
-# Usage: clear_verbose
-# Example: clear_verbose  # typically called explicitly to disable verbose mode, allowing less detailed output
+# Usage: unset_verbose
+# Example: unset_verbose  # typically called explicitly to disable verbose mode, allowing less detailed output
 #-------------------------------------------------------------------------------
-function clear_verbose()
+function unset_verbose()
 {
     verbose=false
     return 0
@@ -145,6 +145,35 @@ function set_dry_run()
 }
 
 #-------------------------------------------------------------------------------
+# Summary: Clears the script's dry-run mode, disabling simulation of commands.
+# Parameters: none
+# Returns:
+#   Exit code: 0 always
+# Side Effects: Sets global variable $dry_run to false
+# Usage: unset_dry_run
+# Example: unset_dry_run  # typically called explicitly to disable dry-run mode, allowing actual command execution
+#-------------------------------------------------------------------------------
+function unset_dry_run()
+{
+    dry_run=false
+    return 0
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Returns whether the script is in dry-run mode.
+# Parameters: none
+# Returns:
+#   stdout: true if in dry-run mode, false otherwise
+#   Exit code: 0 if dry-run mode is on and 1 if it is off
+# Usage: if is_dry_run; then ...
+# Example: if is_dry_run; then echo "Dry-run mode is on"; else echo "Dry-run mode is off"; fi
+#-------------------------------------------------------------------------------
+function is_dry_run()
+{
+    $dry_run
+}
+
+#-------------------------------------------------------------------------------
 # Summary: Enables trace mode for debugging by setting verbose, redirecting output, and enabling bash tracing.
 # Parameters: none
 # Returns:
@@ -173,10 +202,10 @@ function set_trace_enabled()
 #   - Sets global variable $verbose to false
 #   - Sets global variable $_ignore to /dev/null
 #   - Disables bash trace mode (set +x)
-# Usage: clear_trace_enabled
-# Example: clear_trace_enabled  # typically called explicitly to disable trace mode, allowing less detailed output
+# Usage: unset_trace_enabled
+# Example: unset_trace_enabled  # typically called explicitly to disable trace mode, allowing less detailed output
 #-------------------------------------------------------------------------------
-function clear_trace_enabled()
+function unset_trace_enabled()
 {
     verbose=false
     _ignore=/dev/null
@@ -250,9 +279,11 @@ function get_common_arg()
     fi
     # the calling scripts should not use short options:
     # --help|-h|-\?|-v|--verbose|-q|--quiet|-x|--trace|-y|--dry-run
+    run_short_usage=false
+    run_long_usage=false
     case "${1,,}" in
-        --help          ) usage true; exit 0 ;;
-        -h|-\?          ) usage false; exit 0 ;;
+        --help          ) run_long_usage=true; run_short_usage=false ;;
+        -h|-\?          ) run_long_usage=false; run_short_usage=true ;;
         -v|--verbose    ) set_verbose ;;
         -q|--quiet      ) set_quiet ;;
         -x|--trace      ) set_trace_enabled ;;
@@ -261,6 +292,8 @@ function get_common_arg()
         -md|--markdown  ) set_table_format "markdown" ;;
         * ) return 1 ;;  # not a common argument
     esac
+    $run_long_usage && usage true
+    $run_short_usage && usage false
     return 0 # it was a common argument and was processed
 }
 
@@ -277,6 +310,8 @@ function get_common_arg()
 # Example: display_usage_msg "$usage_text" "Invalid parameter: $param"
 # Notes: Temporarily disables tracing during display. Override usage() in calling scripts for custom help.
 #-------------------------------------------------------------------------------
+declare -x allow_on_exit
+
 function display_usage_msg()
 {
     if [[ $# -eq 0 || -z "$1" ]]; then
@@ -284,24 +319,27 @@ function display_usage_msg()
         exit 2
     fi
 
+    local ec=0
+
     # save the tracing state and disable tracing
-    local set_tracing_on=0
+    local set_tracing_on
     [[ $- =~ .*x.* ]] && set_tracing_on=true || set_tracing_on=false
     set +x
 
     usage_txt=$1
     shift
     if [[ $# -gt 0 && -n "$1" ]]; then
-        error "$*"
-        echo ""
-        exit 2
+        error 5 "$*"
+        ec=2
     fi
-    echo "$usage_txt
+    echo "
+$usage_txt
 "
 
     # restore the tracing state
     $set_tracing_on && set -x
-    return 0
+    allow_on_exit=false
+    exit "$ec"
 }
 
 #-------------------------------------------------------------------------------
@@ -337,6 +375,7 @@ declare -rx common_switches="  -v, --verbose                 Enables verbose out
                                 Initial value from \$DUMP_FORMAT or 'markdown' in CI environments
   --help                        Displays longer version of the usage text - including all common flags
   -h | -?                       Displays shorter version of the usage text - without common flags
+                                If you have both --help and -h|-? in your script, the last one wins.
 "
 
 declare -rx common_vars="  VERBOSE                       Enables verbose output (see --verbose)

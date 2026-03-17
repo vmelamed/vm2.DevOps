@@ -11,8 +11,8 @@ function usage_text()
 
     if [[ $1 == true ]]; then
         vars="Environment Variables:
-  GIT_REPOS                     The parent directory where the .github workflow templates, vm2.DevOps, and project repositories
-                                are cloned
+  VM2_REPOS                     The parent directory where the .github workflow templates, vm2.DevOps, and other vm2.* project
+                                repositories are cloned
   MINVERTAGPREFIX               The prefix used for MinVer version tags in the repositories
 $common_vars"
 
@@ -30,25 +30,25 @@ need to be the root of the repository working tree but deeper. This may be usefu
 that contains a dotnet template project.
 
 The root directories of the source-of-truth repositories are expected to be found under the same parent directory, specified
-either by the environment variable \$GIT_REPOS or the --git-repos option.
+either by the environment variable \$VM2_REPOS or the --vm2-repos option.
 
 The <repo-directory> will be determined in the following order:
   - If not specified, the current working directory is used as the target directory and then
   - The target directory is sought in the current working directory, otherwise
-  - It is sought under the directory specified by the \$GIT_REPOS environment variable or the --git-repos option.
+  - It is sought under the directory specified by the \$VM2_REPOS environment variable or the --vm2-repos option.
 
 See the README.md file for more details.
 
 Arguments:
   <repo-directory>              Determines the target directory for the operation. It can be:
                                 1) not specified - the current working directory is used
-                                2) just the name of the project's repository (assumed under \$GIT_REPOS)
+                                2) just the name of the project's repository (assumed under \$VM2_REPOS)
                                 3) the full path to the project's directory that is either the root of the working tree or
                                    inside it (useful for dotnet template projects)
 
 Options:
-  -r, --git-repos               The parent directory where the .github workflow templates and vm2.DevOps are cloned
-                                Initial from the GIT_REPOS environment variable or '~/repos'
+  -r, --vm2-repos               The parent directory where the .github workflow templates and vm2.DevOps are cloned
+                                Initial from the VM2_REPOS environment variable or '~/repos'
   -mp, --minver-tag-prefix      The prefix used for MinVer version tags in the repositories. Used to detect the latest stable
                                 version tag of the source repositories 'vm2.DevOps' and '.github'
                                 Initial from the \$MINVERTAGPREFIX environment variable or 'v'

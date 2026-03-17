@@ -35,24 +35,28 @@ This script will:
   - Configure Actions workflow permissions (GITHUB_TOKEN default=read)
   - Set up default branch ("main") protection with required status checks
 
+Parameters:
+  <repo-directory>              Path to the project's local repository root directory, e.g. the directory where the solution
+                                file is located. If not specified, the script will try the current working directory. If it is
+                                not an absolute path, the script will try to resolve it relative to the vm2 repositories (see
+                                below '--vm2-repos') and finally relative to the current working directory. The repository
+                                directory cannot be the same as the vm2.DevOps or the .github workflow templates directories.
+
 Options:
-  <repo-directory>              Path to the local project's root directory, e.g. the directory where the solution file is
-                                located. The repo name and other settings will be inferred from the name and contents of this
-                                directory.
-                                Default: the current working directory.
-  -gr, --git-repos <path>       The parent directory where the .github workflow templates, vm2.DevOps, and other vm2 project
-                                repositories are cloned. Initial from the GIT_REPOS environment variable or '~/repos'
+  -gr, --vm2-repos <path>       The parent directory where the '.github' workflow templates, 'vm2.DevOps', and other vm2
+                                repositories are cloned.
+                                Initial from the \$VM2_REPOS environment variable or '\$HOME/repos/vm2'.
   -o, --owner <owner>           GitHub user or organization that will own the repository
                                 From environment variable: ORGANIZATION or default: vmelamed.
-                                Used only during repository initialization.
-  -n, --name <GH repo name>     Name of the repository to create on GitHub. If not specified, the name will be inferred from the
-                                name of the repo directory. Used only during repository initialization.
-  --visibility <public|private> Repository visibility. Used only during repository initialization.
+                                Used only during repository creation.
+  -n, --repo-name <name>        Name of the GitHub repository to create. If not specified, the name will be inferred from the
+                                name of the repo directory. Used only during repository creation.
+  --visibility <public|private> Repository visibility. Used only during repository creation.
                                 Default: public
-  -b, --branch <branch>         GitHub default branch name. Used only during repository initialization.
+  -b, --branch <branch>         GitHub default branch name. Used only during repository creation.
                                 Default: main
-  -d, --description <text>      Short description for the repository (max 350 chars). Ignored if --audit or --configure-only is
-                                used. Used only during repository initialization.
+  -d, --description <text>      Short description for the GitHub repository (max 350 chars). Used only during repository
+                                creation.
   -rs, --ruleset-name <name>    The name of the ruleset for protecting the default branch. Used only during repository
                                 configuration.
                                 Default: "<GitHub default branch name> protection" - usually 'main protection'
@@ -70,8 +74,8 @@ $cmn_switches
 Examples:
   ${script_name} vm2.Glob --audit
   ${script_name} ~/repos/vm2.Glob --configure-only
-  ${script_name} \$GIT_REPOS/vm2.Glob --configure-only --skip-secrets --dry-run
-  ${script_name} myorg/vm2.MyPackage --visibility private
+  ${script_name} \$VM2_REPOS/vm2.Glob --configure-only --skip-secrets --dry-run
+  ${script_name} vmelamed/vm2.MyPackage --visibility private
 EOF
 }
 

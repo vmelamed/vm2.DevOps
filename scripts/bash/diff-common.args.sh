@@ -3,7 +3,7 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -x git_repos
+declare -x vm2_repos
 declare -x minver_tag_prefix
 declare -xa file_regexes
 declare -x target_dir
@@ -24,9 +24,9 @@ function get_arguments()
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
-            --git-repos|-r )
+            --vm2-repos|-r )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
-                git_repos="$1"; shift
+                vm2_repos="$1"; shift
                 ;;
 
             --minver-tag-prefix|-mp )
@@ -59,7 +59,7 @@ dump_all_variables()
         verbose \
         quiet \
         --blank \
-        git_repos \
+        vm2_repos \
         minver_tag_prefix \
         target_dir \
         file_regexes

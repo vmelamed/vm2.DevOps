@@ -123,7 +123,7 @@ function _write_title()
 # Summary: Internal function to write a variable name and value line in the dump table.
 # Parameters:
 #   1 - variable_name - name of the variable to display (passed as nameref)
-#   2 - secret - if true, the value will be masked
+#   2 - secret - if true, the value will be masked: ••••••
 # Returns:
 #   stdout: formatted variable line showing name and value
 #   Exit code: 0 always
@@ -158,7 +158,7 @@ function _write_line()
             table_format )  value=$save_table_format ;;
             _ignore      )  value=$save_ignore ;;
             *            )  local secret=${2:-false}
-                            [[ $secret == true ]] && value="$masked" || value="$v" ;;
+                            [[ $secret == true ]] && value="$secret_str" || value="$v" ;;
         esac
     else
         value="❌ '$1' is unbound, undefined, or invalid"

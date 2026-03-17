@@ -36,7 +36,7 @@ elif is_semverPrereleaseTag "$release_tag"; then
     is_prerelease=true
     reason=${reason:-"pre-release"}
 else
-    error "Tag '$release_tag' is not a valid semver release or prerelease tag." || true
+    error "Tag '$release_tag' is not a valid semver release or prerelease tag."
 fi
 
 is_safe_reason "$reason" || true

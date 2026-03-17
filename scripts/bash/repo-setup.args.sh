@@ -6,7 +6,7 @@
 declare -xr script_name
 declare -xr lib_dir
 
-declare -x git_repos
+declare -x vm2_repos
 declare -x repo_name
 declare -x repo_path
 declare -x owner
@@ -37,19 +37,19 @@ function get_arguments()
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
+            --vm2-repos|-gr )
+                [[ $# -ge 1 ]] || usage false "Missing path after '$option'."
+                vm2_repos="$1"; shift
+                ;;
+
             --owner|-o )
                 [[ $# -ge 1 ]] || usage false "Missing owner after '$option'."
                 owner="$1"; shift
                 ;;
 
-            --name|-n )
+            --repo-name|-n )
                 [[ $# -ge 1 ]] || usage false "Missing repository name after '$option'."
                 repo_name="$1"; shift
-                ;;
-
-            --visibility )
-                [[ $# -ge 1 ]] || usage false "Missing visibility after '$option'."
-                visibility="$1"; shift
                 ;;
 
             --branch|-b )
@@ -57,9 +57,9 @@ function get_arguments()
                 branch="$1"; shift
                 ;;
 
-            --git-repos|-gr )
-                [[ $# -ge 1 ]] || usage false "Missing path after '$option'."
-                git_repos="$1"; shift
+            --visibility )
+                [[ $# -ge 1 ]] || usage false "Missing visibility after '$option'."
+                visibility="$1"; shift
                 ;;
 
             --ruleset-name|-rs )
@@ -113,7 +113,7 @@ function dump_args()
 {
     dump_vars --quiet \
         --header "Inputs" \
-        git_repos \
+        vm2_repos \
         repo_path \
         repo_owner \
         repo_name \

@@ -49,7 +49,7 @@ function press_any_key()
 function confirm()
 {
     if [[ $# -eq 0 || $# -gt 2 || -z "$1" ]]; then
-        error 3 "${FUNCNAME[0]}() requires at least one parameter: the prompt and a second, optional parameter -default response."
+        error 3 "${FUNCNAME[0]}() requires at least one parameter: the prompt and a second, optional argument -default response."
         return 2
     fi
 
@@ -120,35 +120,33 @@ function enter_value()
     [[ $# -ge 3 && "$3" != "_" ]] && is_secret="$3"
     [[ $# -ge 4 && "$4" != "_" ]] && validate_fn="$4"
 
-    if [[ -n $validate_fn && -n $default ]] && $validate_fn "$default"; then
+    if [[ -n $validate_fn && -n $default ]] && ! $validate_fn "$default"; then
         error "The provided default value '$default' does not pass the provided validation function '$validate_fn'."
         return 2
     fi
     is_boolean "$is_secret" || {
-        error "The \$3 parameter of ${FUNCNAME[0]}() (is_secret) must be a boolean value (true or false), indicating whether the input is a secret that should not be echoed to the terminal."
+        error "The \$3 argument of ${FUNCNAME[0]}() (is_secret) must be a boolean value (true or false), indicating whether the input is a secret that should not be echoed to the terminal."
         return 2
     }
     is_quiet && { echo "$default"; return 0; }
 
-    [[ -n "$default" ]] && ! $is_secret &&
-        prompt="$prompt [$default]: " ||
-        prompt="$prompt: "
+    local errs=$errors
+    local input
+
+    [[ -n "$default" ]] && ! $is_secret && prompt="$prompt [$default]: " || prompt="$prompt: "
     while true; do
-        local input
-        local errs=$errors
         if $is_secret; then
             read -r -s -p "$prompt" input
-            echo ""
         else
             read -r    -p "$prompt" input
         fi
-        if $validate_fn "$input"; then
-            errors="$errs"
-            break;
-        fi
+        [[  -n "$input" ]] || input="$default"
+        $validate_fn "$input" && break;
     done
+    # all good here! restore any errors that may have been overwritten by the validation function
+    errors=$errs
 
-    echo "${input:-$default}"
+    echo "$input"
 }
 
 #-------------------------------------------------------------------------------

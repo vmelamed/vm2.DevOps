@@ -22,53 +22,6 @@ declare -x main_protection_rs_name
 declare -x ci_yaml
 declare -x _ci_yaml
 
-declare -xrA repo_settings=(
-    ["delete_branch_on_merge"]=true
-    ["allow_squash_merge"]=false
-    ["allow_merge_commit"]=true
-    ["allow_rebase_merge"]=false
-    ["allow_auto_merge"]=true
-    ["has_wiki"]=false
-    ["has_projects"]=false
-)
-
-declare -xrA repo_permissions=(
-    ["default_workflow_permissions"]="read"
-    ["can_approve_pull_request_reviews"]=false
-)
-
-declare -xrA vars_defaults=(
-    ["DOTNET_VERSION"]="10.0.x"
-    ["CONFIGURATION"]="Release"
-    ["MAX_REGRESSION_PCT"]="20"
-    ["MIN_COVERAGE_PCT"]="80"
-    ["MINVERTAGPREFIX"]="v"
-    ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="preview.0"
-    ["NUGET_SERVER"]="github"
-    ["ACTIONS_RUNNER_DEBUG"]=false
-    ["ACTIONS_STEP_DEBUG"]=false
-    ["SAVE_PACKAGE_ARTIFACTS"]=false
-    ["RESET_BENCHMARK_THRESHOLDS"]=false
-)
-
-# shellcheck disable=SC2154
-declare -xrA expected_secrets=(
-    ["CODECOV_TOKEN"]="$masked"
-    ["BENCHER_API_TOKEN"]="$masked"
-    ["REPORTGENERATOR_LICENSE"]="$masked"
-    ["RELEASE_PAT"]="$masked"
-    ["NUGET_API_GITHUB_KEY"]="$masked"
-    ["NUGET_API_NUGET_KEY"]="$masked"
-    ["NUGET_API_KEY"]="$masked"
-)
-
-declare -xrA projects_jobs=(
-    ["BUILD_PROJECTS"]="build"
-    ["TEST_PROJECTS"]="test"
-    ["BENCHMARK_PROJECTS"]="benchmarks"
-    ["PACKAGE_PROJECTS"]="pack"
-)
-
 declare -xa required_checks
 declare -xi github_actions_app_id
 declare -xri admin_role_id=5
@@ -80,68 +33,21 @@ declare -xri url_owner
 declare -xri url_name
 
 #-------------------------------------------------------------------------------
-# Summary: Fetches the current settings from GitHub API and compares them to the expected settings, reporting matches,
-#   mismatches, and missing values (errors).
+# Summary: Validates that the specified repository exists, it is a git repository, and is at or ahead of the latest stable tag.
 # Parameters:
-#   $1: name of the associative array variable containing expected key-value pairs, e.g. repo_settings or repo_permissions
-#   $2: GitHub API path to fetch the current settings, e.g. "repos/${repo}" or "repos/${repo}/actions/permissions/workflow"
-#   $3: jq query to transform the JSON response into key=value pairs
-#   $4: name of the variable to output the results to (optional, default: 'output')
+#   $1: repository name (e.g. "vm2.DevOps")
 # Returns:
-#   Exit code: 0 on success, 2 - failed to read the settings
-#   stdout: the number of matches, mismatches, and errors in the format: <matches> <mismatches> <errors>
-# Dependencies: gh CLI, jq
+#   Exit code:
+#     0 - if the repository exists and meets the above criteria, or
+#     2 - if the repository is invalid or does not meet the criteria
+# Environment variables:
+#   vm2_repos:
+#     the parent directory where the repository is expected to have been cloned to, e.g. $VM2_REPOS or "$HOME/repos/vm2"
+# Dependencies:
+#   git CLI (functions root_working_tree, is_on_or_after_latest_stable_tag)
 # Usage:
-# Example:
+#   validate_source_repo "vm2.DevOps"
 #-------------------------------------------------------------------------------
-function compare_settings()
-{
-    if [[ $# -ne 4 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly 4 arguments: <expected_nameref_array> <api_path> <jq_transform_query> <output_nameref_variable>"
-        return 2
-    fi
-    local -n expecteds="$1"
-    local hq_path="$2"
-    local jq_transform=$3
-    local -n output=$4
-    local json
-    if ! json=$(gh api "$hq_path"); then
-        error "Failed to fetch data from GitHub API: $hq_path"
-        return 2
-    fi
-
-    local -A actuals
-    local key actual expected
-    local -i pass=0 miss=0 errs=0
-
-    while IFS='=' read -r key actual; do
-        actuals["$key"]="$actual"
-    done < <(jq -r "$jq_transform" <<< "$json")
-
-    for key in "${!expecteds[@]}"; do
-        expected="${expecteds[$key]}"
-        if [[ ! -v actuals[$key] ]]; then
-            printf "      ❌  %-32s => missing (expected: '%s')\n" "$key" "$expected"
-            (( ++errs ))
-        else
-            actual="${actuals[$key]}"
-            if [[ "$actual" != "$expected" ]]; then
-                printf "      ❔  %-32s => %s (expected: '%s')\n" "$key" "$actual" "$expected"
-                (( ++miss ))
-            else
-                printf "      ✅  %-32s => %s\n" "$key" "$actual"
-                (( ++pass ))
-            fi
-        fi
-    done
-    # shellcheck disable=SC2034
-    output="$pass $miss $errs"
-    return 0
-}
-
-## Validates that the given directory is a root of a repository working tree, and its HEAD is on or after the latest stable tag.
-## Otherwise confirm with the user that they want to continue
-## Usage: validate_source_repo <root-repo>
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 function validate_source_repo()
 {
@@ -151,16 +57,14 @@ function validate_source_repo()
     fi
 
     local repo_name=$1
-    local dir="${git_repos}/${repo_name}"
+    local dir="${vm2_repos}/${repo_name}"
 
-    [[ -d "${dir}" ]] || error "The '${repo_name}' repository was not cloned or is not under ${git_repos}."
+    [[ -d "${dir}" ]] || error "The '${repo_name}' repository was not cloned or is not under ${vm2_repos}."
 
     if [[ "$dir" == $(root_working_tree "$dir") ]]; then
-        is_on_or_after_latest_stable_tag "$dir" "$semverTagReleaseRegex" ||
-            error "The HEAD of the '${repo_name}' repository is before the latest stable tag. Please synchronize."
+        is_on_or_after_latest_stable_tag "$dir" "$semverTagReleaseRegex" || error "The HEAD of the '${repo_name}' repository is before the latest stable tag. Please synchronize."
     else
-        confirm "The ${repo_name} repository at '$dir' is not a git repository. Do you want to continue?" "n" ||
-            error "The ${repo_name} repository at '$dir' is not a git repository."
+        confirm "The ${repo_name} repository at '$dir' is not a git repository. Do you want to continue?" "n" || error "The ${repo_name} repository at '$dir' is not a git repository."
     fi
 }
 
@@ -186,30 +90,44 @@ function detect_required_checks()
     local gate_name
 
     # Find the gate job: look for postrun-ci first, fall back to ci-gate
-    gate_job=$(yq -r '.jobs | keys[] | select(test("postrun|ci-gate"))' "$ci_yaml" | head -1) || error "Failed to parse gate job from CI.yaml."
-    gate_name=$(yq -r ".jobs.${gate_job:-postrun-ci}.name" "$ci_yaml") || error "Failed to parse gate job name from CI.yaml."
+    gate_job=$(yq -r '.jobs | keys[] | select(test("postrun|ci-gate"))' "$ci_yaml" | head -n 1) || error "Failed to parse gate job from CI.yaml."
+    gate_name=$(yq -r ".jobs.${gate_job:-postrun-ci}.name" "$ci_yaml")                          || error "Failed to parse gate job name from CI.yaml."
     exit_if_has_errors
 
     required_checks+=("${gate_name}")
     trace "Required checks: ${required_checks[*]}"
 }
 
-function configure_repo_settings()
+declare -xrA default_repo_settings=(
+    ["delete_branch_on_merge"]=true
+    ["allow_squash_merge"]=false
+    ["allow_merge_commit"]=false
+    ["allow_rebase_merge"]=true
+    ["allow_auto_merge"]=true
+    ["has_wiki"]=false
+    ["has_projects"]=false
+)
+
+function configure_default_repo_settings()
 {
     info "Configuring repository settings..."
     local -a rs
-    for key in "${!repo_settings[@]}"; do
-        rs+=("-f ${key}=${repo_settings[$key]}")
+    for key in "${!default_repo_settings[@]}"; do
+        rs+=("-f ${key}=${default_repo_settings[$key]}")
     done
     execute gh api -X PATCH "repos/${repo}" "${rs[@]}" >"$_ignore"
     info "Repository settings configured."
 }
 
+declare -xrA default_repo_permissions=(
+    ["default_workflow_permissions"]="read"
+    ["can_approve_pull_request_reviews"]=false
+)
+
 function configure_actions_permissions()
 {
     info "Configuring Actions workflow permissions..."
-    if execute gh api -X PUT "repos/${repo}/actions/permissions/workflow" \
-        -H "Accept: application/vnd.github+json" \
+    if execute gh api -X PUT "repos/${repo}/actions/permissions/workflow" -H "Accept: application/vnd.github+json" \
         -f default_workflow_permissions=read \
         >"$_ignore"; then
         info "Configured Actions workflow permissions (GITHUB_TOKEN default=read)."
@@ -217,6 +135,97 @@ function configure_actions_permissions()
         warning "Could not configure Actions workflow permissions (possibly restricted by owner policy)."
     fi
 }
+
+declare -xr secret_placeholder="UPDATE_ME"
+
+# shellcheck disable=SC2154
+declare -xrA expected_secrets=(
+    ["CODECOV_TOKEN"]="$secret_placeholder"
+    ["BENCHER_API_TOKEN"]="$secret_placeholder"
+    ["REPORTGENERATOR_LICENSE"]="$secret_placeholder"
+    ["RELEASE_PAT"]="$secret_placeholder"
+    ["NUGET_API_GITHUB_KEY"]="$secret_placeholder"
+    ["NUGET_API_NUGET_KEY"]="$secret_placeholder"
+    ["NUGET_API_KEY"]="$secret_placeholder"
+)
+
+function configure_secrets()
+{
+    info "Configuring repository secrets..."
+
+    for entry in "${!expected_secrets[@]}"; do
+        execute gh secret set "$entry" --body "$secret_placeholder" -R "$repo" >"$_ignore"
+        trace "Set secret: ${entry}"
+    done
+    warning "Secrets configured with placeholder values — you must update them with real values."
+}
+
+declare -xrA default_vars=(
+    ["DOTNET_VERSION"]="10.0.x"
+    ["CONFIGURATION"]="Release"
+    ["MAX_REGRESSION_PCT"]="20"
+    ["MIN_COVERAGE_PCT"]="80"
+    ["MINVERTAGPREFIX"]="v"
+    ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="preview.0"
+    ["NUGET_SERVER"]="github"
+    ["SAVE_PACKAGE_ARTIFACTS"]=false
+    ["RESET_BENCHMARK_THRESHOLDS"]=false
+    ["ACTIONS_RUNNER_DEBUG"]=false
+    ["ACTIONS_STEP_DEBUG"]=false
+)
+
+function configure_variables()
+{
+    info "Configuring repository variables..."
+
+    # Get existing variables as name=value pairs
+    declare -A existing_vars
+    while IFS='=' read -r name value; do
+        existing_vars["$name"]="$value"
+    done < <(gh variable list -R "$repo" --json name,value -q '.[] | "\(.name)=\(.value)"')
+
+    local skipped=0
+    for name in "${!default_vars[@]}"; do
+        local default_value="${default_vars[$name]}"
+
+        if [[ -v "existing_vars[$name]" ]]; then
+            if [[ "${existing_vars[$name]}" != "$default_value" && "$force_defaults" != true ]]; then
+                info "Skipping variable '${name}' — already set to '${existing_vars[$name]}' (differs from the default '${default_value}')."
+                (( ++skipped ))
+                continue
+            fi
+        fi
+
+        execute gh variable set "$name" --body "$default_value" -R "$repo" >"$_ignore"
+        trace "Set variable: ${name}=${default_value}"
+    done
+
+    if (( skipped > 0 )); then
+        warning "${skipped} variable(s) skipped — already set to non-default values. Use '--force-defaults' to overwrite."
+    fi
+    info "Variables configured."
+}
+
+declare -xrA default_ruleset=(
+    ["ruleset"]="present"
+    ["id"]="present"
+    ["enforcement"]="present"
+    ["repository_admin_bypass"]="present"
+    ["deletion"]="present"
+    ["non_fast_forward"]="present"
+    ["required_status_checks"]="present"
+    ["required_linear_history"]="present"
+    ["pull_request"]="present"
+    ["dismiss_stale_reviews_on_push"]="present"
+    ["required_approving_review_count"]="present"
+    ["required_reviewers"]="present"
+    ["require_code_owner_review"]="present"
+    ["require_last_push_approval"]="present"
+    ["required_review_thread_resolution"]="present"
+    ["allowed_merge_methods"]="present"
+    ["strict_required_status_checks_policy"]="present"
+    ["required_status_check_context"]="present"
+)
 
 function configure_branch_protection()
 {
@@ -236,7 +245,7 @@ function configure_branch_protection()
     # Check if a ruleset named "main protection" already exists
     local existing_id
     existing_id=$(gh api "repos/${repo}/rulesets" 2>"$_ignore" \
-        | jq -r '.[] | select(.name == "main protection") | .id // empty' 2>"$_ignore" || true)
+        | jq -r '.[] | select(.name == "'"${main_protection_rs_name}"'") | .id // empty' 2>"$_ignore" || true)
 
     local method="POST"
     local endpoint="repos/${repo}/rulesets"
@@ -271,10 +280,11 @@ function configure_branch_protection()
             "type": "pull_request",
             "parameters": {
                 "required_approving_review_count": 0,
-                "dismiss_stale_reviews_on_push": true,
                 "require_code_owner_review": false,
+                "dismiss_stale_reviews_on_push": true,
                 "require_last_push_approval": false,
-                "required_review_thread_resolution": true
+                "required_review_thread_resolution": true,
+                "allowed_merge_methods": ["rebase"]
             }
         },
         {
@@ -283,6 +293,9 @@ function configure_branch_protection()
                 "strict_required_status_checks_policy": true,
                 "required_status_checks": [${status_checks_json}]
             }
+        },
+        {
+            "type": "required_linear_history"
         },
         {
             "type": "non_fast_forward"
@@ -294,47 +307,4 @@ function configure_branch_protection()
 }
 JSON
     info "Branch ruleset configured."
-}
-
-function configure_secrets()
-{
-    info "Configuring repository secrets..."
-
-    for entry in "${expected_secrets[@]}"; do
-        execute gh secret set "$entry" --body "UPDATE-ME" -R "$repo" >"$_ignore"
-        trace "Set secret: ${entry}"
-    done
-    warning "Secrets configured with placeholder values — you must update them with real values."
-}
-
-function configure_variables()
-{
-    info "Configuring repository variables..."
-
-    # Get existing variables as name=value pairs
-    declare -A existing_vars
-    while IFS='=' read -r name value; do
-        existing_vars["$name"]="$value"
-    done < <(gh variable list -R "$repo" --json name,value -q '.[] | "\(.name)=\(.value)"')
-
-    local skipped=0
-    for name in "${!vars_defaults[@]}"; do
-        local default_value="${vars_defaults[$name]}"
-
-        if [[ -v "existing_vars[$name]" ]]; then
-            if [[ "${existing_vars[$name]}" != "$default_value" && "$force_defaults" != true ]]; then
-                info "Skipping variable '${name}' — already set to '${existing_vars[$name]}' (differs from the default '${default_value}')."
-                (( ++skipped ))
-                continue
-            fi
-        fi
-
-        execute gh variable set "$name" --body "$default_value" -R "$repo" >"$_ignore"
-        trace "Set variable: ${name}=${default_value}"
-    done
-
-    if (( skipped > 0 )); then
-        warning "${skipped} variable(s) skipped — already set to non-default values. Use '--force-defaults' to overwrite."
-    fi
-    info "Variables configured."
 }

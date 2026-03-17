@@ -18,6 +18,7 @@ declare -xr lib_dir
 source "${lib_dir}/core.sh"
 
 # defaults
+declare -xr default_vm2_repos="$HOME/repos/vm2"
 declare -xr default_owner="vmelamed"
 declare -xr default_visibility="public"
 declare -xr default_branch="main"
@@ -26,11 +27,10 @@ declare -xr default_skip_secrets=false
 declare -xr default_skip_variables=false
 declare -xr default_force_defaults=false
 declare -xr default_audit=false
-declare -xr default_main_protection_rs_name="main protection"
 
 # start with default input
+declare -x vm2_repos="${VM2_REPOS:-$default_vm2_repos}"
 declare -x repo_path=""
-declare -x git_repos="${GIT_REPOS:-}"
 declare -x visibility=${default_visibility}
 declare -x branch=${default_branch}
 declare -x configure_only=${default_configure_only}
@@ -38,7 +38,7 @@ declare -x skip_secrets=${default_skip_secrets}
 declare -x skip_variables=${default_skip_variables}
 declare -x force_defaults=${default_force_defaults}
 declare -x audit=${default_audit}
-declare -x main_protection_rs_name=${default_main_protection_rs_name}
+declare -x main_protection_rs_name=""
 declare -x description=""
 declare -x use_ssh=false
 declare -x use_https=false
@@ -58,8 +58,6 @@ source "${script_dir}/repo-setup.functions.sh"
 
 get_arguments "$@"
 
-declare -xr expects_git_repo="${script_name} expects that the vm2* repositories are located in one parent directory specified with \$GIT_REPOS environment variable or --git-repos option."
-
 #-------------------------------------------------------------------------------
 # Check the prerequisites
 #-------------------------------------------------------------------------------
@@ -73,93 +71,121 @@ gh auth status &> "$_ignore"                                || error "'gh' is no
 exit_if_has_errors
 
 #-------------------------------------------------------------------------------
-# Validate and adjust git_repos:
+# Validate and adjust vm2_repos:
 #-------------------------------------------------------------------------------
 
-trace "GIT_REPOS='$GIT_REPOS'"
-trace "git_repos='$git_repos'"
+trace "VM2_REPOS='$VM2_REPOS'"
+trace "vm2_repos='$vm2_repos'"
 
-if [[ -n "$git_repos" && -d "$git_repos" ]]; then
-   git_repos=$(realpath -e "$git_repos" 2> "$_ignore") || usage false "The path specified with \$GIT_REPOS environment variable or --git-repos option - '$git_repos' - is invalid."
+declare -xr expects_git_repo="${script_name} expects that the vm2.* repositories are located in one parent directory specified by the '--vm2-repos' option, or the '\$VM2_REPOS' environment variable, or in the default '\$HOME/repos/vm2'."
+
+# try to resolve vm2_repos from the environment variable VM2_REPOS, if not $HOME/repos/vm2, and finally from the command line option --vm2-repos.
+if [[ -n "$vm2_repos" && -d "$vm2_repos" ]]; then
+    # looks good so far - ensure $vm2_repos is absolute path and exists.
+    vm2_repos=$(realpath -e "$vm2_repos" 2> "$_ignore") ||
+        usage false "The path specified by the '--vm2-repos' option, or the '\$VM2_REPOS' environment variable, or the default '\$HOME/repos/vm2' - '$vm2_repos' - is invalid."
+    trace "vm2_repos='$vm2_repos' from '--vm2-repos option', or \$VM2_REPOS, or '\$HOME/repos/vm2'"
 else
-    confirm "${expects_git_repo} Do you want to proceed and try to determine it heuristically?" "n" || exit 2
+    # Try from the current working directory:
+    r=$(root_working_tree "$(pwd)") ||
+        confirm "${expects_git_repo} Could not determine the path of the parent directory of the vm2.* repositories. Do you want to proceed and try to determine it heuristically?" "n" ||
+        usage false "${expects_git_repo} Could not determine the path of the parent directory of the vm2.* repositories."
+
+    # or try heuristics:
+    # suppose this script is from a cloned vm2.DevOps repository - use git to find the root of the repository and then use its parent directory as vm2_repos
     r=$(root_working_tree "$script_dir") ||
-    r=$(realpath -e "$(dirname "$script_dir/../..")") || usage false "Could not get the parent directory of this script's repository. ${expects_git_repo}"
-    git_repos=$(realpath -e "$(dirname "$r")")
-    trace "git_repos='$git_repos' from root_working_tree || realpath() heuristics"
+
+    ## let's not do this - we don't know where this script is located - it could be in any directory.
+    ##
+    ## or try to start from the directory of this script which is usually in vm2.DevOps/scripts/bash and find the grand-parent directory - vm2.DevOps
+    ## we expect that this should give us the directory of the vm2.DevOps repo:
+    #r=$(realpath -e "$script_dir/../..") ||
+
+    # all failed - exit with error and usage.
+    usage false "Could not get the parent directory of this script's repository. ${expects_git_repo}"
+
+    # get the parent of vm2.DevOps as vm2_repos
+    vm2_repos="$(dirname "$r")"
+
+    trace "vm2_repos='$vm2_repos' from heuristics"
 fi
 
-# make sure we are seeing .github and vm2.DevOps properly through git_repos
+# now make sure that we are seeing .github and vm2.DevOps properly through vm2_repos
 validate_source_repo ".github"
 validate_source_repo "vm2.DevOps"
-_ci_yaml="$git_repos/vm2.DevOps/.github/workflows/_ci.yaml"
-[[ -s "$_ci_yaml" ]] || error "Could not find _ci.yaml workflow file in ${git_repos}."
+
+declare -x _ci_yaml=''
+
+_ci_yaml="$vm2_repos/vm2.DevOps/.github/workflows/_ci.yaml"
+[[ -s "$_ci_yaml" ]] ||
+    error "Could not find _ci.yaml GitHub Actions reusable workflow file in ${vm2_repos}."
 
 exit_if_has_errors
 
 declare -xr _ci_yaml
 
-info "vm2* repositories path         => $git_repos"
+info "vm2.* repositories path        => $vm2_repos"
 
 #-------------------------------------------------------------------------------
 # Validate and adjust repo_path:
 #-------------------------------------------------------------------------------
 
-[[ -n $repo_path ]] || repo_path=$(pwd)
+[[ -n "$repo_path" ]] ||  repo_path="$(pwd)"
 
+# try to resolve repo_path from the parameter or from the current working directory
 r=$(realpath -e "$repo_path" 2> "$_ignore") ||
-r=$(realpath -e "$git_repos/$repo_path" 2> "$_ignore") || usage false "Could not find the repository directory '$repo_path' neither in the current working directory, nor in '$git_repos'."
+# try to resolve repo_path relative to vm2_repos
+r=$(realpath -e "$vm2_repos/${repo_path#/*}" 2> "$_ignore") ||
+    usage false "Could not find the repository directory '$repo_path' neither in the current working directory, nor in '$vm2_repos'."
 repo_path=$r
-trace "repo_path='$repo_path' from realpath"
-! is_in "$repo_path" "${git_repos}/vm2.DevOps" "${git_repos}/.github" || usage false "The repository directory cannot be '${git_repos}/vm2.DevOps' or '${git_repos}/.github'."
+! is_in "$repo_path" "${vm2_repos}/vm2.DevOps" "${vm2_repos}/.github" ||
+    usage false "The repository directory cannot be '${vm2_repos}/vm2.DevOps' or '${vm2_repos}/.github'."
+trace "repo_path='$repo_path' from parameter, \$(pwd), or vm2_repos with realpath"
 
-if r=$(find_repo_root "$repo_path" false "$git_repos") ||
+# we found some directory, let's see if it is from within a git repository (works when repo_path is the pwd) - and if yes - get the root of it
+if r=$(find_repo_root "$repo_path" false "$vm2_repos") ||
    r=$(find_repo_root "$repo_path" false "$HOME"); then
     repo_path=$r
-    trace "repo_path='$repo_path' from find_repo_root"
+    trace "repo_path='$repo_path' from find_repo_root in vm2_repos or \$HOME"
 else
-    ! $audit || usage false "Could not find an existing repository root for audit."
+    reset_errors
     # we cannot be here for audit. Audit requires that the specified repo is already initialized and configured.
+    ! $audit ||
+        usage false "Could not find an existing repository root for audit."
+
     # For initializing and configuring a new repo we require that the the user provides the path to the root of the new repo's
-    # work tree. We'll initialize it there and create the repo in GitHub based on it. If the user doesn't provide the full path,
-    # we'll try to find an existing directory with the expected name in $git_repos or $HOME and use it as the root of the
-    # new repository. We will not create a new directory for the repo, but we will initialize it as a git repository and link it
-    # to GitHub.
-    found_roots=0
-    while IFS= read -r d; do
-        [[ -d "$d/.github/workflows" ]] || continue
-        repo_path="$d"
-        (( ++found_roots ))
-        trace "repo_path='$repo_path' from find in git_repos"
-    done < <(find "$git_repos" -type d -path "*/${repo_path#/}" 2>"$_ignore")
-    if (( found_roots == 0 )); then
-        while IFS= read -r d; do
-            [[ -d "$d/.github/workflows" ]] || continue
-            repo_path="$d"
-            (( ++found_roots ))
-            trace "repo_path='$repo_path' from find in HOME"
-        done < <(find "$HOME" -type d -path "*/${repo_path#/}" 2>"$_ignore")
-    fi
-    (( found_roots != 0 )) || usage false "Could not find a directory '${repo_path}' in \$GIT_REPOS or \$HOME. Please specify a valid path to the root of the solution."
-    (( found_roots == 1 )) || usage false "Multiple directories named '${repo_path}' found in \$GIT_REPOS or \$HOME. Please specify a more specific path to the root of the solution."
+    # work tree. It should be created using `dotnet new vm2.NewPkg` and should have the .github/workflows/CI.yaml file in place.
+    # If we cannot find the .github/workflows/CI.yaml file in the specified path, we bail out.
+    [[ -s "$repo_path/.github/workflows/CI.yaml" ]] ||
+        usage false "Could not find .github/workflows/CI.yaml in '$repo_path'. Please use 'dotnet new vm2.NewPkg' to create a valid project directory structure, or specify the correct path to the root of the project/repository using '--path <path>'."
+
+    trace "repo_path='$repo_path' has .github/workflows/CI.yaml, but is not inside a git repository. Will initialize a new repository here."
 fi
-trace "Repository path is probably '$repo_path'"
+trace "Repository path: '$repo_path'"
 
 #-------------------------------------------------------------------------------
 # Get the repo state
 #-------------------------------------------------------------------------------
 
-declare -xA repo_state
-declare suggest_repo_name=''
+declare -A repo_state=()
+declare -x suggest_repo_name=''
+declare -x ci_yaml=''
 
-get_repo_state "$repo_path" repo_state || true
+get_repo_state "$repo_path" repo_state
+dump_repo_state repo_state
 
 if has_local_repo repo_state; then
-    repo_path="${repo_state[$key_root]}"
 
-    declare -xr repo_path
-
+    if [[ "$repo_path" != "${repo_state[$key_root]}" ]]; then
+        warning "The repository path '$repo_path' is different from the repository root '${repo_state[$key_root]}' detected by git. Adjusting to the git-detected repository root."
+        repo_path="${repo_state[$key_root]}"
+        [[ -s "$repo_path/.github/workflows/CI.yaml" ]] ||
+            usage false "The git-detected repository path '$repo_path' is missing .github/workflows/CI.yaml. Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2.NewPkg' to create a valid directory structure."
+        trace "repo_path='$repo_path' from git-detected repository root"
+    fi
     info "Repository path                => $repo_path"
+
+    declare -r repo_path
 
     if has_remote_repo repo_state; then
         repo_url="${repo_state[$key_url]}"
@@ -172,39 +198,43 @@ if has_local_repo repo_state; then
         declare -xr repo_name
         declare -rx repo
 
-        info "Repository                     => $repo"
-        info "Repository URL                 => $repo_url"
+        info "GitHub Repository              => $repo"
+        info "GitHub Repository URL          => $repo_url"
 
         if has_github_remote repo_state; then
             repo_id="${repo_state[$key_repo_id]}"
+            branch="${repo_state[$key_default_branch]}"
+            main_protection_rs_name="${branch} protection"
 
-            declare -xr ci_yaml
-
-            info "Repository Id                  => $repo_id"
+            info "GitHub Repository Id           => $repo_id"
+            info "GitHub Default Branch          => $branch"
         fi
     fi
-else
+fi
+
+if ! has_local_repo repo_state || ! has_remote_repo repo_state; then
     suggest_repo_name=$(basename "$repo_path")
+    trace "Will suggest '$suggest_repo_name' from basename repo_path as a repo name and repo description during repo creation if needed."
 
-    declare -r suggest_repo_name
-
-    trace "suggest_repo_name='$suggest_repo_name' from basename repo_path"
+    declare -rx suggest_repo_name
 fi
 
 ci_yaml="${repo_path}/.github/workflows/CI.yaml"
 trace "ci_yaml='$ci_yaml' from \$repo_path"
 
+declare -xr ci_yaml
+
 #-------------------------------------------------------------------------------
 # Final validation of the inputs and assumptions before we start making any changes or API calls:
 #-------------------------------------------------------------------------------
 
+visibility="${visibility,,}"
+
 [[ -s "$ci_yaml" ]]                                      || error "The specified path '${repo_path}' is not a valid project/repository root (missing .github/workflows/CI.yaml). Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2pkg <name>' to create a valid directory."
 [[ -z $repo_name || $repo_name =~ $repo_name_regex ]]    || error "Could not determine repository name from the specified path '${repo_path}' or the name is invalid. Please specify a valid path to the root of the project/repository using '--path <path>'."
 [[ -z $repo_owner || $repo_owner =~ $repo_owner_regex ]] || error "Could not determine repository owner from the specified path '${repo_path}', or from the environment variable ORGANIZATION, or the owner name is invalid. Please specify a valid owner of the project/repository using '--owner <owner>' or set the ORGANIZATION environment variable."
-git check-ref-format --branch "$branch" &> "$_ignore"    || error "Invalid branch name '${branch}'. Please specify a valid branch name using '--branch <branch>'."
-[[ $branch == "${repo_state[$key_default_branch]}" ]]    || error "The specified branch '$branch' is different from the GitHub default branch '${repo_state[$key_default_branch]}' in the existing repository. Please specify the valid branch name using '--branch <branch>'."
-visibility="${visibility,,}"
-is_in "$visibility" "public" "private" "internal"        || error "Invalid visibility '${visibility}'. Valid options are 'public', 'private', or 'internal'. Please specify a valid visibility using '--visibility <public|private|internal>'."
+validate_repo_branch "$branch" &> "$_ignore"             || error "Invalid branch name '${branch}'. Please specify a valid branch name using '--branch <branch>'."
+is_in "$visibility" "public" "private"                   || error "Invalid visibility '${visibility}'. Valid options are 'public', 'private', or 'internal'. Please specify a valid visibility using '--visibility <public|private|internal>'."
 
 exit_if_has_errors
 
@@ -230,47 +260,44 @@ fi
 # Initialize and configure the repository
 # ------------------------------------------------------------------
 
+# list of undos to perform in case of failure or when the script finishes - e.g. to delete the created repository, or undo any changes to the local repository. The undos must be executed in a LIFO order.
 declare -a undos=()
-declare -A repo_state=()
 
-declare -r valid_repo_names="GitHub repository names can be up to 100 characters, cannot end with .git, and can contain letters, digits, dots, underscores, and hyphens, but must start with a letter or digit.
-See https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user for details."
-
-if ! $has_local_repo repo_state; then
+if ! has_local_repo repo_state; then
 
     # -------------------------------------------------------------------
     # We need to initialize the local repository.
     # -------------------------------------------------------------------
+    info "Initializing local git repository in '$repo_path'..."
+
+    [[ -n "$branch" ]] ||
+        branch=$(enter_value "Default branch name" "$default_branch" false validate_branch_name)
 
     if execute git -C "$repo_path" init; then
-        trace "Repository initialized in '$repo_path'."
         undos+=("rm -rf '$repo_path/.git'")
     fi
 
+    info "...creating and checking out the default branch '${branch}';"
     execute git -C "$repo_path" checkout -b "${branch}"                 && trace "'${branch}' branch checked out"
+
+    info "...staging and committing existing files in '$repo_path';"
     execute git -C "$repo_path" add .                                   && trace "Staged all existing files in '$repo_path' for commit."
     if ! git -C "$repo_path" diff --cached --quiet; then
         execute git -C "$repo_path" commit -m "chore: initial scaffold" && trace "Committed staged files to '$repo_path'."
     fi
 
+    info "...initialized a new git repository in '$repo_path' in the default branch '${branch}'."
     repo_state["$key_root"]="$repo_path"
 fi
 
-if ! $has_remote_repo repo_state; then
+if ! has_remote_repo repo_state; then
 
-    function validate_repo_name()
-    {
-        [[ "$1" =~ $repo_name_rex && "$1" != *.git ]] || {
-            error "Invalid repository name. $valid_repo_names"
-            return 1
-        }
-    }
+    info "Creating GitHub repository..."
 
-    [[ -n $repo_name ]] || repo_name=$(enter_value "GitHub Repository name" "$suggest_repo_name" _ validate_repo_name)
+    [[ -n $repo_name ]] || repo_name=$(enter_value "GitHub Repository name" "$suggest_repo_name" false validate_repo_name)
     repo="$repo_owner/$repo_name"
     repo=${repo#/} # remove leading slash if repo_owner is empty
 
-    info "Creating GitHub repository ${repo}..."
     create_repo_params=(
         "$repo"
         "--${visibility}"
@@ -279,14 +306,6 @@ if ! $has_remote_repo repo_state; then
         "--push"
         "--disable-wiki"
     )
-
-    function validate_repo_description()
-    {
-        (( ${#1} >= 3 && ${#1} <= 350 )) || {
-            error "Repository description must be between 3 and 350 characters long"
-            return 1
-        }
-    }
 
     [[ -n "$description" ]] || description=$(enter_value "GitHub repository description (3-350 characters)" "$repo_name" _ validate_repo_description)
     [[ -n "$description" ]] && create_repo_params+=("--description" "$description")
@@ -301,20 +320,43 @@ if ! $has_remote_repo repo_state; then
         esac
     fi
 
+    info "...creating repository '$repo' with $visibility visibility and default branch '$branch'. Description: '$description'. parameters;"
     execute gh repo create "${create_repo_params[@]}"
     undos+=("gh repo delete '$repo' --yes")
 
+    info "...setting the remote origin URL to '$repo_url';"
     execute git -C "$repo_path" remote set-url origin "${repo_url}"
     undos+=("git -C '$repo_path' remote remove origin")
 
+    info "...pushing the default branch '${branch}' to GitHub;"
     execute git -C "$repo_path" push -u origin "${branch}"
+    undos+=("git -C '$repo_path' push -u origin --delete '${branch}'")
 
-    # get the repo state again that will have more real git information in it.
-    get_repo_state "$repo_path" repo_state || error "Failed to get repository state after creation. The repository may have been created successfully, but the script cannot continue with configuration. Please check the repository at $repo_path"
+    info "...repository '$repo' created and linked to the local repository in '$repo_path'."
+    {
+        echo "To undo the above changes, run the following commands:"
+        for (( i=${#undos[@]}-1; i>=0; i-- )); do
+            echo "  ${undos[i]}"
+        done
+    } | info
 
-    repo_path="${repo_state[$key_root]}"
+    # Checks: get the repo state again that will have more real git information in it.
+    get_repo_state "$repo_path" repo_state; rc=$?
+    dump_repo_state repo_state
+
+    if [[ $rc -ne 0 ]]; then
+        error "Failed to get repository state after creation. The repository may have been created successfully, but the script cannot continue with configuration. Please check the repository at $repo_path"
+        exit 1
+    fi
+
     repo_url="${repo_state[$key_url]}"
     repo_id="${repo_state[$key_repo_id]}"
+
+    [[ -n "$repo_url" && -n "$repo_id" ]] ||
+        usage false "The repository does not appear to be initialized and/or linked to the remote. Run the script again without the switch --configure-only or troubleshoot the problem."
+
+    branch="${repo_state[$key_default_branch]}"
+    main_protection_rs_name="${branch} protection"
 
     [[ -n "$repo_url"  ]] &&
     info "Repository URL                 => $repo_url"
@@ -322,13 +364,11 @@ if ! $has_remote_repo repo_state; then
     info "Repository Id                  => $repo_id"
 fi
 
-[[ -n "$repo_url" && -n "$repo_id" ]] || usage false "The repository does not appear to be initialized and/or linked to the remote. Run the script again without the switch --configure-only or troubleshoot the problem."
-
 # ----------------------------------------------------------------------------
 # Configure the remote repository on GitHub, and push initial commit to GitHub
 # ----------------------------------------------------------------------------
 
-configure_repo_settings
+configure_default_repo_settings
 configure_actions_permissions
 configure_branch_protection
 $skip_secrets   || configure_secrets

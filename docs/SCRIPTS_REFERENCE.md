@@ -101,7 +101,7 @@ They follow the same three-file pattern where applicable.
 Compares pre-defined set of files from the "source-of-truth" directories (cloned repositories `vm2.DevOps` and `.github`) with
 the corresponding files in a target directory. Useful for keeping common files (config, settings, `Directory.*.props`, workflow
 files, etc.) in-sync across repositories. The script assumes that the repositories `vm2.DevOps` and `.github` are in the same
-directory which may be defined by the environment variable `$GIT_REPOS` or given by the option `--git-repos`
+directory which may be defined by the environment variable `$VM2_REPOS` or given by the option `--vm2-repos`
 
 The tool comprises of the following files, expected to be in the same directory:
 
@@ -141,12 +141,12 @@ The script uses two configuration files with two different JSON formats:
         },
         "files": [
           {
-            "sourceFile": "${git_repos}/vm2.DevOps/solution/.editorconfig",
+            "sourceFile": "${vm2_repos}/vm2.DevOps/solution/.editorconfig",
             "targetFile": "${target_path}/.editorconfig",
             "action": "copy"
           },
           {
-            "sourceFile": "${git_repos}/vm2.DevOps/solution/.gitignore",
+            "sourceFile": "${vm2_repos}/vm2.DevOps/solution/.gitignore",
             "targetFile": "${target_path}/.gitignore",
             "action": "copy"
           },
@@ -200,7 +200,7 @@ files and actions to take if the source and the target are different.
 | Option                      | Short | Default      | Description                              |
 | :-------------------------- | :---- | :----------- | :--------------------------------------- |
 | `<repository-name-or-path>` |       | current dir  | Positional: repo name or path to compare |
-| `--git-repos`               | `-r`  | `$GIT_REPOS` | Parent directory of all repos            |
+| `--vm2-repos`               | `-r`  | `$VM2_REPOS` | Parent directory of all repos            |
 | `--files`                   | `-f`  | all          | Comma-separated list of files or regex   |
 | `--minver-tag-prefix`       | `-mp` | `v`          | Tag prefix for detecting stable versions |
 

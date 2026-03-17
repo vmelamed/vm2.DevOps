@@ -22,139 +22,214 @@ declare -x required_checks
 declare -x ci_yaml
 declare -x _ci_yaml
 
-declare -xrA repo_settings
+declare -xrA default_repo_settings
+declare -xrA default_repo_permissions
 declare -xrA expected_secrets
-declare -xrA vars_defaults
+declare -xrA default_vars
+declare -xrA default_ruleset
 
 declare -x errors
 
 declare -r jq_transform_entries='to_entries[] | "\(.key)=\(.value)"'
-declare -r jq_transform_secrets=".secrets[] | \"\(.name)=$masked\""
+declare -r jq_transform_secrets='.secrets[] | "\(.name)=<set>"'
 declare -r jq_transform_vars='.variables[] | "\(.name)=\(.value)"'
 declare -r jq_ruleset_id='.[] | select(.name == "'"$main_protection_rs_name"'") | .id // empty'
-declare -r jq_has_admin_bypass_rule='[.bypass_actors[] | select(.actor_id == '"$admin_role_id"' and .actor_type == "RepositoryRole")] | length'
-declare -r jq_rulest_checks='{
-        pull_request:                         [.rules[] | select(.type == "pull_request")]            | length,
-        required_status_checks:               [.rules[] | select(.type == "required_status_checks")]  | length,
-        required_linear_history:              [.rules[] | select(.type == "required_linear_history")] | length,
-        non_fast_forward:                     [.rules[] | select(.type == "non_fast_forward")]        | length,
-        deletion:                             [.rules[] | select(.type == "deletion")]                | length,
-        dismiss_stale_reviews_on_push:        [.rules[] | select(.type == "pull_request" and
-                                                                 .parameters.dismiss_stale_reviews_on_push)] | length,
-        required_status_check_context:        [.rules[] | select(.type == "required_status_checks") |
-                                                                 .parameters.required_status_checks[] |
-                                                                    select(
-                                                                        .context == "'"$required_status_check_context"'" and
-                                                                        .integration_id == '"$github_actions_app_id"')] | length
+declare -r jq_ruleset_rules='
+def is_present: if isempty(.) then "missing" else "present" end;
+def count_rules(type): [.rules[] | select(.type == type)] | is_present;
+def count_pr_param(check): [.rules[] | select(.type == "pull_request" and check)] | is_present;
+
+{
+    ruleset:                                "\"'"$main_protection_rs_name"'\"",
+    id:                                     .id,
+    enforcement:                            .enforcement // "disabled",
+    repository_admin_bypass:                [.bypass_actors[] | select(.actor_id == '"$admin_role_id"' and .actor_type == "RepositoryRole")] | is_present,
+    deletion:                               count_rules("deletion"),
+    non_fast_forward:                       count_rules("non_fast_forward"),
+    required_status_checks:                 count_rules("required_status_checks"),
+    required_linear_history:                count_rules("required_linear_history"),
+    pull_request:                           count_rules("pull_request"),
+    dismiss_stale_reviews_on_push:          count_pr_param(.parameters.dismiss_stale_reviews_on_push),
+    required_approving_review_count:        count_pr_param(.parameters.required_approving_review_count == 0),
+    required_reviewers:                     count_pr_param((.parameters.required_reviewers | length == 0)),
+    require_code_owner_review:              count_pr_param(.parameters.require_code_owner_review | not),
+    require_last_push_approval:             count_pr_param(.parameters.require_last_push_approval | not),
+    required_review_thread_resolution:      count_pr_param(.parameters.required_review_thread_resolution),
+    allowed_merge_methods:                  count_pr_param((.parameters.allowed_merge_methods | length == 1) and .parameters.allowed_merge_methods[0] == "rebase"),
+    strict_required_status_checks_policy:   count_pr_param(.parameters.strict_required_status_checks_policy == false),
+    required_status_check_context:          [.rules[] | select(.type == "required_status_checks") |
+                                                           .parameters.required_status_checks[] | select(
+                                                              .context == "'"$required_status_check_context"'" and
+                                                              .integration_id == '"$github_actions_app_id"')
+                                            ] | is_present,
 } | to_entries[] | "\(.key)=\(.value)"'
+
+#-------------------------------------------------------------------------------
+# Summary: Fetches the current settings from GitHub API and compares them to the expected settings, reporting equalities, differences,
+#   and missing values (errors).
+# Parameters:
+#   $1: <hq_path> GitHub API path to fetch the settings from, e.g. "repos/${repo}" or "repos/${repo}/actions/permissions/workflow"
+#   $2: <jq_transform> jq query to transform the JSON response into key=value pairs
+#   $3: <expecteds> name of the associative array variable containing expected key-value pairs, e.g. default_repo_settings or default_repo_permissions
+#   $4: <modify_keys> boolean flag specifying that the keys of the expected settings should be displayed sentence-capitalized and with spaces instead of underscores (for better readability), e.g. "allow_squash_merge" => "Allow squash merge"
+#   $5: <keys_in_order> name of an array variable containing the display order of settings (optional, default: sorted alphabetically)
+# Returns:
+#   Exit code: 0 on success, 2 - failed to read the settings
+#   stdout: the number of matches, differences from expected, and errors - not found: <matches> <differences> <errors>
+# Dependencies: gh CLI, jq
+# Usage:
+# Example:
+#-------------------------------------------------------------------------------
+function compare_settings()
+{
+    local hq_path="$1"
+    local jq_transform=$2
+    local -n expecteds="$3"
+    # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
+    local modify_keys="$4"
+    local -n results="$5"
+
+    [[ $# -eq 5 || $# -eq 6 ]] ||
+        error 3 "${FUNCNAME[0]}() requires 4 or 5 arguments: <hq_path> <jq_transform> <expected_nameref_array> <mod_keys_flag> [<settings_order>]"
+    [[ -n "$hq_path" ]] ||
+        error 3 "Argument 1 to ${FUNCNAME[0]}() must be a non-empty string specifying the GitHub API path to fetch the settings from, e.g. 'repos/\${repo}' or 'repos/\${repo}/actions/permissions/workflow'.";
+    [[ -n "$jq_transform" ]] ||
+        error 3 "Argument 2 to ${FUNCNAME[0]}() must be a non-empty string specifying the jq query to transform the JSON response into key=value pairs.";
+    is_defined_associative_array "$3" ||
+        error 3 "Argument 3 to ${FUNCNAME[0]}() must be the name of an associative array variable containing expected key-value pairs, e.g. default_repo_settings or default_repo_permissions."
+    is_boolean "$modify_keys" ||
+        error 3 "Argument 4 to ${FUNCNAME[0]}() must be a boolean flag specifying that the keys of the expected settings should be capitalized and displayed with spaces instead of underscores (for better readability)."
+    [[ $# -lt 6 ]] || is_defined_array "$6" ||
+        error 3 "Argument 5 to ${FUNCNAME[0]}() is optional. If provided, it must be the name of an array variable containing the names of settings in order to compare and display."
+
+    # query the GitHub API and transform the JSON response into key=value pairs using the provided jq query, then...
+    local json
+
+    if ! json=$(gh api "$hq_path"); then
+        error "Failed to fetch data from GitHub API: $hq_path"
+        return 2
+    fi
+
+    # read the key=value pairs into actuals
+    local -A actuals=()
+    local key='' actual=''
+
+    while IFS='=' read -r key actual; do
+        is_in "$key" "${!expecteds[@]}" &&
+            actuals["$key"]="$actual"
+    done < <(jq -r "$jq_transform" <<< "$json")
+
+    # put the keys in the array in display order
+    local -a keys
+    if [[ $# -eq 6 ]]; then
+        local -n keys_in_order="$6"
+        keys=("${keys_in_order[@]}")
+    else
+        mapfile -t keys < <(printf '%s\n' "${!expecteds[@]}" | sort)
+    fi
+
+    local expected actual
+    local -i pass=0 diff=0 errs=0
+
+    for key in "${keys[@]}"; do
+        expected="${expecteds[$key]:-"<not defined>"}"
+
+        [[ "$expected" == "$secret_placeholder" ]] && expected="<set>"
+
+        actual="${actuals[$key]:-"<missing>"}"
+
+        [[  "$modify_keys" == true ]] &&
+            key=${key//_/ } && key=${key^} # Replace underscores with spaces and capitalize first letter for better display
+
+        if [[ "$actual" == "<missing>" ]]; then
+            printf "      ❌  %-34s => %s (default: '%s')\n" "$key" "$actual" "$expected"
+            (( ++errs ))
+        elif [[ "$expected" == "<not defined>" ]]; then
+            printf "      ❓  %-34s => %s (default: '%s')\n" "$key" "$actual" "$expected"
+            (( ++diff ))
+        elif [[ "$actual" != "$expected" ]]; then
+            printf "      ❓  %-34s => %s (default: '%s')\n" "$key" "$actual" "$expected"
+            (( ++diff ))
+        elif [[ "$actual" == "<set>" ]]; then
+            printf "      🆗  %-34s => %s\n" "$key" "$actual"
+            (( ++pass ))
+        else
+            printf "      ✅  %-34s => %s\n" "$key" "$actual"
+            (( ++pass ))
+        fi
+    done
+
+    # shellcheck disable=SC2034 # it's a nameref
+    results="$pass $diff $errs"
+    return 0
+}
 
 function audit_repo()
 {
-    local -i pass=0 miss=0 errs=0
+    local -i pass=0 diff=0 errs=0
     local -i p=0 m=0 e=0
     local compare_settings_results=""
 
-    echo "ℹ️ Audit"
+    echo "ℹ️  Audit"
 
     # --- Repo settings ---
-    echo "  Repository settings:"
-    compare_settings repo_settings "repos/${repo}" "$jq_transform_entries" compare_settings_results
+    echo "  ℹ️  Repository settings:"
+
+    compare_settings "repos/${repo}" "$jq_transform_entries" default_repo_settings true compare_settings_results
     read -r p m e <<< "$compare_settings_results"
-    (( pass += p, miss += m, errs += e, 1 ))
+    (( pass += p, diff += m, errs += e, 1 ))
 
     # --- Actions permissions ---
-    echo "  ℹ️ Actions permissions:"
-    compare_settings repo_permissions "repos/${repo}/actions/permissions/workflow" "$jq_transform_entries" compare_settings_results
+    echo "  ℹ️  Actions permissions:"
+    compare_settings "repos/${repo}/actions/permissions/workflow" "$jq_transform_entries" default_repo_permissions true compare_settings_results
     read -r p m e <<< "$compare_settings_results"
-    (( pass += p, miss += m, errs += e, 1 ))
+    (( pass += p, diff += m, errs += e, 1 ))
 
     # --- Secrets ---
-    echo "  ℹ️ Secrets:"
-    compare_settings expected_secrets "repos/${repo}/actions/secrets" "$jq_transform_secrets" compare_settings_results
+    echo "  ℹ️  Secrets:"
+    compare_settings "repos/${repo}/actions/secrets" "$jq_transform_secrets" expected_secrets false compare_settings_results
     read -r p m e <<< "$compare_settings_results"
-    (( pass += p, miss += m, errs += e, 1 ))
+    (( pass += p, diff += m, errs += e, 1 ))
 
     # --- Variables ---
-    echo "  ℹ️ Variables:"
-    compare_settings vars_defaults "repos/${repo}/actions/variables" "$jq_transform_vars" compare_settings_results
+    echo "  ℹ️  Variables:"
+    compare_settings "repos/${repo}/actions/variables" "$jq_transform_vars" default_vars false compare_settings_results
     read -r p m e <<< "$compare_settings_results"
-    (( pass += p, miss += m, errs += e, 1 ))
+    (( pass += p, diff += m, errs += e, 1 ))
 
     # --- Branch ruleset ---
-    echo "  ℹ️ Ruleset for branch '${branch}':"
     local rulesets_json
-    rulesets_json=$(gh api "repos/${repo}/rulesets") || { warning "Could not read the rulesets."; (( ++fail )); }
+    rulesets_json=$(gh api "repos/${repo}/rulesets") || true
 
     if [[ -z "${rulesets_json:-}" ]]; then
-        error "Could not read the repository rulesets."
-        (( ++errs ))
+        echo "  ❌  Ruleset '$main_protection_rs_name' for branch '${branch}' is missing"
         exit 1
     fi
 
     local ruleset_id
     ruleset_id=$(jq -r "$jq_ruleset_id" <<< "$rulesets_json" 2>"$_ignore")
 
-    [[ -z "$ruleset_id" ]] && { error "No ruleset named '$main_protection_rs_name' found."; exit 1; }
-
-    printf "      ✅  %-32s => %s\n" "Ruleset" "'$main_protection_rs_name' exists (id: ${ruleset_id})"
-    (( ++pass ))
-
-    # Fetch full ruleset details
-    local ruleset_json
-    ruleset_json=$(gh api "repos/${repo}/rulesets/${ruleset_id}") || {
-        error "Could not read the ruleset details."
-        exit 2
+    [[ -z "$ruleset_id" ]] && {
+        echo "  ❌  Ruleset '$main_protection_rs_name' for branch '${branch}' is invalid"
+        exit 1;
     }
 
-    # Check enforcement
-    local enforcement
-    enforcement=$(jq -r '.enforcement // "disabled"' <<< "$ruleset_json")
-    if [[ "$enforcement" == "active" ]]; then
-        printf "      ✅  %-32s => %s\n" "Enforcement" "$enforcement"
-        (( ++pass ))
-    else
-        printf "      ❌  %-32s => %s (expected: active)\n" "Enforcement" "$enforcement"
-        (( ++errs ))
-    fi
+    echo "  ℹ️  Ruleset '$main_protection_rs_name' for branch '${branch}' (id: $ruleset_id):"
 
-    # Check bypass actors include Repository Admin (actor_id 5)
-    local has_admin_bypass
-    has_admin_bypass=$(jq "$jq_has_admin_bypass_rule" <<< "$ruleset_json" 2>"$_ignore" || echo "0")
-    if [[ "$has_admin_bypass" -ge 1 ]]; then
-        printf "      ✅  %-32s => %s\n" "Repository admin bypass" "configured"
-        (( ++pass ))
-    else
-        printf "      ❌  %-32s => %s\n" "Repository admin bypass" "missing"
-        (( ++errs ))
-    fi
-
-    # Check if rules exist
-    local -A rule_checks
-    while IFS='=' read -r rule count; do
-        rule_checks["$rule"]="$count"
-    done < <(jq -r "$jq_rulest_checks" <<< "$ruleset_json")
-
-    local rule
-    for rule in "${!rule_checks[@]}"; do
-        if [[ "${rule_checks["${rule}"]}" -ge 1 ]]; then
-            printf "      ✅  %-32s => %s\n" "${rule}" "exists"
-            (( ++pass ))
-        else
-            printf "      ❌  %-32s => %s\n" "${rule}'" "missing"
-            (( ++errs ))
-        fi
-    done
+    compare_settings "repos/${repo}/rulesets/${ruleset_id}" "$jq_ruleset_rules" default_ruleset true compare_settings_results
+    read -r p m e <<< "$compare_settings_results"
+    (( pass += p, diff += m, errs += e, 1 ))
 
     # --- Summary ---
     printf "
 ──────────────────────
 ℹ️  Audit complete:
     ✅  passed:    %3d
-    ❔  different: %3d
-    ❌  missing:   %3d\n" "$pass" "$miss" "$errs"
+    ❓  different: %3d
+    ❌  missing:   %3d\n" "$pass" "$diff" "$errs"
     if (( errs > 0 )); then
         echo
-        echo "❌  Run with '--configure-only' and '--skip-secrets' to fix discrepancies."
+        echo "⚠️  TODO: Run with '--configure-only' and '--skip-secrets' to fix discrepancies."
     fi
     return 0
 }
