@@ -22,6 +22,18 @@ declare -xri url_authority=1
 declare -xri url_owner=2
 declare -xri url_name=3
 
+#-------------------------------------------------------------------------------
+# Summary: Validates that the specified repository owner is valid according to
+#   GitHub naming rules, i.e. it matches the regular expression for GitHub
+#   owner/organization names.
+# Parameters:
+#   1 - repository owner to validate
+# Returns:
+#   Exit code: 0 if the repository owner is valid, 1 if it is invalid
+# Examples:
+#   if validate_repo_owner "my-org"; then echo "Valid repo owner"; fi
+# See also: https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user for details on GitHub repository owner naming rules.
+#-------------------------------------------------------------------------------
 function validate_repo_owner()
 {
     if [[ $# -ne 1 ]]; then
@@ -112,6 +124,30 @@ function validate_repo_branch()
         return 1
     }
 }
+
+#-------------------------------------------------------------------------------
+# Summary: Validates that the specified secret value is valid according to
+#   GitHub secret rules, i.e. it is base64 encoded.
+# Parameters:
+#   1 - secret value to validate
+# Returns:
+#   Exit code: 0 if the secret value is valid, 1 if it is invalid
+# Examples:
+#   if validate_secret "c2VjcmV0VmFsdWU="; then echo "Valid secret"; fi
+# See also: https://docs.github.com/en/actions/security-guides/encrypted-secrets for details on GitHub secrets
+#-------------------------------------------------------------------------------
+function validate_secret()
+{
+    if [[ $# -ne 1 ]]; then
+        error 3 "${FUNCNAME[0]}() requires exactly one argument: the secret value to validate."
+        return 2
+    fi
+    [[ -z "$1" ]] || is_base64 "$1" || {
+        error "Invalid secret value. Secrets must be base64 encoded or empty."
+        return 1
+    }
+}
+
 
 #-------------------------------------------------------------------------------
 # With the following constants and functions we define the repository state: it is an associative array with predefined keys.

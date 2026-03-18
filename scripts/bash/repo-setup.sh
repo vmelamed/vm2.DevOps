@@ -24,6 +24,7 @@ declare -xr default_visibility="public"
 declare -xr default_branch="main"
 declare -xr default_force_defaults=false
 declare -xr default_audit=false
+declare -xr default_enter_secrets=false
 
 # start with default input
 declare -x vm2_repos="${VM2_REPOS:-$default_vm2_repos}"
@@ -31,6 +32,7 @@ declare -x repo_path=""
 declare -x visibility=${default_visibility}
 declare -x branch=${default_branch}
 declare -x force_defaults=${default_force_defaults}
+declare -x enter_secrets=${default_enter_secrets}
 declare -x audit=${default_audit}
 declare -x main_protection_rs_name=""
 declare -x description=""
@@ -48,6 +50,7 @@ declare -xa required_checks=()
 
 source "${script_dir}/repo-setup.args.sh"
 source "${script_dir}/repo-setup.usage.sh"
+source "${script_dir}/repo-setup.defaults.sh"
 source "${script_dir}/repo-setup.functions.sh"
 
 get_arguments "$@"
@@ -364,7 +367,9 @@ fi
 
 configure_default_repo_settings
 configure_actions_permissions
+configure_variables
+configure_secrets
 configure_branch_protection
 
+
 info "Repository ready: https://github.com/${repo}"
-warning "All added secrets have placeholder values — update them with real values."

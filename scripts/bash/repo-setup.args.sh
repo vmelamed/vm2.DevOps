@@ -14,6 +14,7 @@ declare -x repo
 declare -x visibility
 declare -x branch
 declare -x force_defaults
+declare -x enter_secrets
 declare -x audit
 declare -x main_protection_rs_name
 declare -x description
@@ -84,6 +85,11 @@ function get_arguments()
                 force_defaults=true
                 ;;
 
+            --enter-secrets|-e )
+                enter_secrets=true
+                ;;
+
+
             --audit )
                 audit=true
                 ;;
@@ -113,6 +119,8 @@ function dump_args()
         description \
         use_ssh \
         use_https \
+        force_defaults \
+        enter_secrets \
         audit \
         --blank \
         dry_run \

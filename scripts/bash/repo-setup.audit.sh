@@ -32,32 +32,42 @@ declare -r jq_transform_secrets='.secrets[] | "\(.name)=<set>"'
 declare -r jq_transform_vars='.variables[] | "\(.name)=\(.value)"'
 declare -r jq_ruleset_id='.[] | select(.name == "'"$main_protection_rs_name"'") | .id // empty'
 declare -r jq_ruleset_rules='
-def is_present: if isempty(.) then "missing" else "present" end;
+def is_present: if any then "present" else "missing" end;
 def count_rules(type): [.rules[] | select(.type == type)] | is_present;
 def count_pr_param(check): [.rules[] | select(.type == "pull_request" and check)] | is_present;
+def count_pr_checks_param(check): [.rules[] | select(.type == "required_status_checks" and check)] | is_present;
 
 {
     enforcement:                            .enforcement // "disabled",
-    repository_admin_bypass:                [.bypass_actors[] | select(.actor_id == '"$admin_role_id"' and .actor_type == "RepositoryRole")] | is_present,
+    repository_admin_bypass:                [.bypass_actors[] | select(.actor_id == '"$admin_role_id"' and
+                                                                       .actor_type == "RepositoryRole" and
+                                                                       .bypass_mode == "always")] | is_present,
     deletion:                               count_rules("deletion"),
-    non_fast_forward:                       count_rules("non_fast_forward"),
-    required_status_checks:                 count_rules("required_status_checks"),
     required_linear_history:                count_rules("required_linear_history"),
     pull_request:                           count_rules("pull_request"),
-    dismiss_stale_reviews_on_push:          count_pr_param(.parameters.dismiss_stale_reviews_on_push),
     required_approving_review_count:        count_pr_param(.parameters.required_approving_review_count == 0),
-    required_reviewers:                     count_pr_param((.parameters.required_reviewers | length == 0)),
+    dismiss_stale_reviews_on_push:          count_pr_param(.parameters.dismiss_stale_reviews_on_push),
     require_code_owner_review:              count_pr_param(.parameters.require_code_owner_review | not),
     require_last_push_approval:             count_pr_param(.parameters.require_last_push_approval | not),
     required_review_thread_resolution:      count_pr_param(.parameters.required_review_thread_resolution),
-    allowed_merge_methods:                  count_pr_param((.parameters.allowed_merge_methods | length == 1) and .parameters.allowed_merge_methods[0] == "rebase"),
-    strict_required_status_checks_policy:   count_pr_param(.parameters.strict_required_status_checks_policy == false),
-    required_status_check_context:          [.rules[] | select(.type == "required_status_checks") |
-                                                           .parameters.required_status_checks[] | select(
-                                                              .context == "'"$required_status_check_context"'" and
-                                                              .integration_id == '"$github_actions_app_id"')
-                                            ] | is_present,
+    required_reviewers:                     count_pr_param((.parameters.required_reviewers | length == 0)),
+    allowed_merge_methods:                  count_pr_param((.parameters.allowed_merge_methods | length == 1) and
+                                                            .parameters.allowed_merge_methods[0] == "rebase"),
+    do_not_enforce_on_create:               count_pr_checks_param(.parameters.do_not_enforce_on_create == true),
+    strict_required_status_checks_policy:   count_pr_checks_param(.parameters.strict_required_status_checks_policy == true),
+    required_status_checks:                 [.rules[] | select(.type == "required_status_checks") |
+                                                                            .parameters.required_status_checks[] |
+                                                                            select(.integration_id == '"$github_actions_app_id"') |
+                                                                            length >= '"${#required_checks[@]}"' ] | is_present,
+    non_fast_forward:                       count_rules("non_fast_forward"),
 } | to_entries[] | "\(.key)=\(.value)"'
+
+declare -r jq_status_checks='
+.rules[] |
+select(.type == "required_status_checks") |
+.parameters.required_status_checks[] |
+select(.integration_id == '"$github_actions_app_id"') |
+.context'
 
 #-------------------------------------------------------------------------------
 # Summary: Fetches the current settings from GitHub API and compares them to the expected settings, reporting equalities, differences,
@@ -137,19 +147,19 @@ function compare_settings()
             key=${key//_/ } && key=${key^} # Replace underscores with spaces and capitalize first letter for better display
 
         if [[ "$actual" == "<missing>" ]]; then
-            printf "      ❌  %-34s => %s (default: '%s')\n" "$key" "$actual" "$expected"
+            printf "      ❌  %-36s => %s (default: '%s')\n" "$key" "$actual" "$expected"
             (( ++errs ))
         elif [[ "$expected" == "<not defined>" ]]; then
-            printf "      ❓  %-34s => %s (default: '%s')\n" "$key" "$actual" "$expected"
+            printf "      ❓  %-36s => %s (default: '%s')\n" "$key" "$actual" "$expected"
             (( ++diff ))
         elif [[ "$actual" != "$expected" ]]; then
-            printf "      ❓  %-34s => %s (default: '%s')\n" "$key" "$actual" "$expected"
+            printf "      ❓  %-36s => %s (default: '%s')\n" "$key" "$actual" "$expected"
             (( ++diff ))
         elif [[ "$actual" == "<set>" ]]; then
-            printf "      🆗  %-34s => %s\n" "$key" "$actual"
+            printf "      🆗  %-36s => %s\n" "$key" "$actual"
             (( ++pass ))
         else
-            printf "      ✅  %-34s => %s\n" "$key" "$actual"
+            printf "      ✅  %-36s => %s\n" "$key" "$actual"
             (( ++pass ))
         fi
     done
@@ -182,7 +192,7 @@ function audit_repo()
 
     # --- Secrets ---
     echo "  ℹ️  Secrets:"
-    compare_settings "repos/${repo}/actions/secrets" "$jq_transform_secrets" expected_secrets false compare_results
+    compare_settings "repos/${repo}/actions/secrets" "$jq_transform_secrets" default_secrets false compare_results
     read -r p m e <<< "$compare_results"
     (( pass += p, diff += m, errs += e, 1 ))
 
@@ -214,6 +224,29 @@ function audit_repo()
     compare_settings "repos/${repo}/rulesets/${ruleset_id}" "$jq_ruleset_rules" default_ruleset true compare_results default_ruleset_order
     read -r p m e <<< "$compare_results"
     (( pass += p, diff += m, errs += e, 1 ))
+
+    echo "      ℹ️  Required status checks list:"
+    local json
+    json=$(gh api "repos/${repo}/rulesets/${ruleset_id}") || {
+        error "Failed to fetch data from GitHub API: repos/${repo}/rulesets/${ruleset_id}"
+        return 2
+    }
+    local -a present_checks=()
+    local check
+
+    while read -r check; do
+        present_checks+=("$check")
+    done < <(jq -r "$jq_status_checks" <<< "$json")
+
+    for check in "${required_checks[@]}"; do
+        if is_in "$check" "${present_checks[@]}"; then
+            echo "          ✅  $check - present"
+            (( ++pass ))
+        else
+            echo "          ❌  $check - missing"
+            (( ++errs ))
+        fi
+    done
 
     # --- Summary ---
     printf "

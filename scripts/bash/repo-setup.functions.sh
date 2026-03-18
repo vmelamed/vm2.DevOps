@@ -16,13 +16,21 @@ declare -x audit
 declare -x force_defaults
 declare -x main_protection_rs_name
 
+declare -xri admin_role_id
+declare -xr secret_placeholder
+declare -xrA default_repo_settings
+declare -xra default_repo_settings_order
+declare -xrA default_secrets
+declare -xrA default_vars
+declare -xrA default_ruleset
+declare -xra default_ruleset_order
+
 declare -x ci_yaml
 declare -x _ci_yaml
 
 declare -xa required_checks
 declare -xi github_actions_app_id
-declare -xri admin_role_id=5
-declare -xr required_status_check_context="Postrun-CI"
+declare -x enter_secrets
 
 declare -xr github_url_regex
 declare -xri url_authority
@@ -91,39 +99,14 @@ function detect_required_checks()
     gate_name=$(yq -r ".jobs.${gate_job:-postrun-ci}.name" "$ci_yaml")                          || error "Failed to parse gate job name from CI.yaml."
     exit_if_has_errors
 
-    required_checks+=("${gate_name}")
+    required_checks+=(
+        "${gate_name}"
+    )
+
+    declare -xra required_checks
+
     trace "Required checks: ${required_checks[*]}"
 }
-
-declare -xrA default_repo_settings=(
-    ["default_branch"]="main"
-    ["delete_branch_on_merge"]=true
-    ["allow_squash_merge"]=false
-    ["allow_merge_commit"]=false
-    ["allow_rebase_merge"]=true
-    ["allow_auto_merge"]=true
-    ["has_issues"]=true
-    ["has_wiki"]=false
-    ["has_projects"]=false
-    ["has_pull_requests"]=true
-    ["pull_request_creation_policy"]="all"
-    ["visibility"]="public"
-)
-
-declare -xra default_repo_settings_order=(
-    "default_branch"
-    "has_wiki"
-    "has_issues"
-    "has_projects"
-    "has_pull_requests"
-    "pull_request_creation_policy"
-    "allow_merge_commit"
-    "allow_squash_merge"
-    "allow_rebase_merge"
-    "allow_auto_merge"
-    "delete_branch_on_merge"
-    "visibility"
-)
 
 function configure_default_repo_settings()
 {
@@ -153,19 +136,6 @@ function configure_actions_permissions()
     fi
 }
 
-declare -xr secret_placeholder="UPDATE_ME"
-
-# shellcheck disable=SC2154
-declare -xrA expected_secrets=(
-    ["CODECOV_TOKEN"]="$secret_placeholder"
-    ["BENCHER_API_TOKEN"]="$secret_placeholder"
-    ["REPORTGENERATOR_LICENSE"]="$secret_placeholder"
-    ["RELEASE_PAT"]="$secret_placeholder"
-    ["NUGET_API_GITHUB_KEY"]="$secret_placeholder"
-    ["NUGET_API_NUGET_KEY"]="$secret_placeholder"
-    ["NUGET_API_KEY"]="$secret_placeholder"
-)
-
 function configure_secrets()
 {
     # get the names of the existing secrets
@@ -174,104 +144,77 @@ function configure_secrets()
         existing_secrets+=("$name")
     done < <(gh api "repos/${repo}/actions/secrets" -q '.secrets[] | .name')
 
-    local all_secrets="${existing_secrets[*]}"
-    local set_secrets=0
     info "Configuring repository secrets..."
+    local placeholders=0    # number of secrets configured with placeholder values
+    local name      # of a secret
+    local value     # of a secret
+    local exists    # whether the $name secret already exists on GitHub
+    for name in "${!default_secrets[@]}"; do
+        is_in "$name" "${existing_secrets[@]}" && exists=true || exists=false
+        $exists && ! "$enter_secrets" && continue # name exists and we are not entering secrets - continue with the next secret
 
-    for entry in "${!expected_secrets[@]}"; do
-        [[ "$all_secrets" =~ ${entry} ]] && continue
-        execute gh secret set "$entry" --body "$secret_placeholder" -R "$repo" >"$_ignore"
-        trace "Set secret: ${entry}"
-        (( ++set_secrets ))
+        # get the value for the secret or use the placeholder if we are not entering secrets
+        $enter_secrets && value=$(enter_value "Enter value for secret ${name}: " secret_placeholder true validate_secret) ||
+                          value=$secret_placeholder
+
+        if [[ $value != "$secret_placeholder" ]] || ! $exists; then
+            # send the new value to GitHub if it is not a placeholder or if it does not exist yet (50% likely - with default placeholder)
+            execute gh secret set "$name" --body "$value" -R "$repo" >"$_ignore"
+            trace "Set secret: ${name}"
+            [[ $value == "$secret_placeholder" ]] && (( ++placeholders ))
+        fi
     done
-    if (( set_secrets > 0 )); then
-        warning "Secrets configured with placeholder values — you must update them with real values."
+
+    if (( placeholders > 0 )); then
+        warning "${placeholders} secrets configured with placeholder values — you must update them with real values."
     fi
 }
-
-declare -xrA default_vars=(
-    ["DOTNET_VERSION"]="10.0.x"
-    ["CONFIGURATION"]="Release"
-    ["MAX_REGRESSION_PCT"]="20"
-    ["MIN_COVERAGE_PCT"]="80"
-    ["MINVERTAGPREFIX"]="v"
-    ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="preview.0"
-    ["NUGET_SERVER"]="github"
-    ["SAVE_PACKAGE_ARTIFACTS"]=false
-    ["RESET_BENCHMARK_THRESHOLDS"]=false
-    ["ACTIONS_RUNNER_DEBUG"]=false
-    ["ACTIONS_STEP_DEBUG"]=false
-    ["VERBOSE"]=false
-)
 
 function configure_variables()
 {
     info "Configuring repository variables..."
 
     # Get existing variables as name=value pairs
-    declare -A existing_vars
+    local -A existing_vars
+    local name value
 
     while IFS='=' read -r name value; do
         existing_vars["$name"]="$value"
     done < <(gh variable list -R "$repo" --json name,value -q '.[] | "\(.name)=\(.value)"')
 
+    local default_value=""
     local skipped=0
+    local added=0
+    local exists
     for name in "${!default_vars[@]}"; do
-        local default_value="${default_vars[$name]}"
+        default_value="${default_vars[$name]}"
+        is_in "$name" "${!existing_vars[@]}" && exists=true || exists=false
 
-        [[ -v "existing_vars[$name]" && "${existing_vars[$name]}" != "$default_value" && "$force_defaults" != true ]] &&
-        ! confirm "Variable '${name}' — already set to '${existing_vars[$name]}' (differs from the default '${default_value}'). Do you want to set it to the default?" "n" && {
-            (( ++skipped ))
-            continue
-        }
-
-        execute gh variable set "$name" --body "$default_value" -R "$repo" >"$_ignore"
-        trace "Set variable: ${name}=${default_value}"
+        if "$exists"; then
+            value="${existing_vars[$name]}"
+            [[ $value == "$default_value" ]] && continue
+            if "$force_defaults"; then
+                if ! confirm "Variable '${name}' — already set to '${existing_vars[$name]}' (differs from the default '${default_value}'). Do you want to set it to the default?" "n"; then
+                    (( ++skipped ))
+                    continue
+                fi
+            else
+                (( ++skipped ))
+                continue
+            fi
+        else
+            (( ++added ))
+        fi
+        value="$default_value"
+        execute gh variable set "$name" --body "$value" -R "$repo" >"$_ignore"
+        trace "Set variable: ${name}=${value}"
     done
 
     if (( skipped > 0 )); then
-        warning "${skipped} variable(s) skipped — already set to non-default values. Use '--force-defaults' to overwrite."
+        warning "${skipped} variable(s) set to non-default value."
     fi
-    info "Variables configured."
+    info "Added ${added} variables."
 }
-
-declare -xrA default_ruleset=(
-    ["enforcement"]="active"
-    ["repository_admin_bypass"]="present"
-    ["deletion"]="present"
-    ["non_fast_forward"]="present"
-    ["required_status_checks"]="present"
-    ["required_linear_history"]="present"
-    ["pull_request"]="present"
-    ["dismiss_stale_reviews_on_push"]="present"
-    ["required_approving_review_count"]="present"
-    ["required_reviewers"]="present"
-    ["require_code_owner_review"]="present"
-    ["require_last_push_approval"]="present"
-    ["required_review_thread_resolution"]="present"
-    ["allowed_merge_methods"]="present"
-    ["strict_required_status_checks_policy"]="present"
-    ["required_status_check_context"]="present"
-)
-
-declare -xra default_ruleset_order=(            # UI: Order in which rules appear in the GitHub UI "Rulesets/main protection"
-    "enforcement"                               # Enforcement status: Active/Disabled ▾
-    "repository_admin_bypass"                   # Bypass actors section
-    "deletion"                                  # Restrict deletions
-    "required_linear_history"                   # Require linear history
-    "pull_request"                              # Require a pull request ▾
-    "required_approving_review_count"           #   ↳ Required approvals
-    "dismiss_stale_reviews_on_push"             #   ↳ Dismiss stale reviews
-    "require_code_owner_review"                 #   ↳ Require Code Owners review
-    "require_last_push_approval"                #   ↳ Require last push approval
-    "required_review_thread_resolution"         #   ↳ Require conversation resolution
-    "required_reviewers"                        #   ↳ Reviewers list
-    "allowed_merge_methods"                     #   ↳ Allowed merge methods
-    "required_status_checks"                    # Require status checks ▾
-    "strict_required_status_checks_policy"      #   ↳ Require up-to-date branches
-    "required_status_check_context"             #   ↳ Check names
-    "non_fast_forward"                          # Block force pushes
-)
 
 function configure_branch_protection()
 {
@@ -286,6 +229,7 @@ function configure_branch_protection()
         done
         local IFS=','
         status_checks_json="${entries[*]}"
+        status_checks_json="[$status_checks_json]"
     fi
 
     # Check if a ruleset named "main protection" already exists
@@ -305,7 +249,7 @@ function configure_branch_protection()
         -H "Accept: application/vnd.github+json" \
         --input - >"$_ignore" <<JSON
 {
-    "name": "main protection",
+    "name": "$main_protection_rs_name",
     "target": "branch",
     "enforcement": "active",
     "conditions": {
@@ -323,31 +267,35 @@ function configure_branch_protection()
     ],
     "rules": [
         {
-            "type": "pull_request",
-            "parameters": {
-                "required_approving_review_count": 0,
-                "require_code_owner_review": false,
-                "dismiss_stale_reviews_on_push": true,
-                "require_last_push_approval": false,
-                "required_review_thread_resolution": true,
-                "allowed_merge_methods": ["rebase"]
-            }
-        },
-        {
-            "type": "required_status_checks",
-            "parameters": {
-                "strict_required_status_checks_policy": true,
-                "required_status_checks": [${status_checks_json}]
-            }
-        },
-        {
-            "type": "required_linear_history"
+            "type": "deletion"
         },
         {
             "type": "non_fast_forward"
         },
         {
-            "type": "deletion"
+            "type": "pull_request",
+            "parameters": {
+                "allowed_merge_methods": [
+                    "rebase"
+                ],
+                "dismiss_stale_reviews_on_push": true,
+                "required_approving_review_count": 0,
+                "required_reviewers": [],
+                "require_code_owner_review": false,
+                "require_last_push_approval": false,
+                "required_review_thread_resolution": true
+            }
+        },
+        {
+            "type": "required_status_checks",
+            "parameters": {
+                "do_not_enforce_on_create": true,
+                "strict_required_status_checks_policy": true,
+                "required_status_checks": ${status_checks_json}
+            }
+        },
+        {
+            "type": "required_linear_history"
         }
     ]
 }
