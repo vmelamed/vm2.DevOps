@@ -95,13 +95,18 @@ function confirm()
 #   - If the environment variable 'quiet' is set to true, the function will skip
 #     prompting and immediately return the default value (or an empty string if
 #     the default is not provided).
+#   - If the third parameter is true, the input will not be echoed to the
+#     terminal (useful for secrets). However, the input will still be returned
+#     to stdout. After reading the input, a newline will NOT be printed to the
+#     terminal and probably the caller would like to do that themselves, as in
+#     the example below.
 # Returns:
 #   stdout: the entered value, or the default value if the user entered nothing
 #   Exit code: 0 if the input parameters are valid, 2 on invalid arguments
 # Usage: value=$(enter_value <prompt> [default] [is_secret] [validate_fn])
 # Example:
-#   password=$("Enter your password" _ true)
-#   password=$("Enter description (up to 350 characters)" "test" _ validate_no_longer_than_350)
+#   password=$("Enter description (up to 350 characters)" "test" false validate_no_longer_than_350)
+#   password=$("Enter your password" _ true) && echo ""
 #-------------------------------------------------------------------------------
 function enter_value()
 {
@@ -121,7 +126,7 @@ function enter_value()
     [[ $# -ge 4 && "$4" != "_" ]] && validate_fn="$4"
 
     if [[ -n $validate_fn && -n $default ]] && ! $validate_fn "$default"; then
-        error "The provided default value '$default' does not pass the provided validation function '$validate_fn'."
+        error "The default value '$default' does not pass the validation function '$validate_fn'."
         return 2
     fi
     is_boolean "$is_secret" || {
@@ -132,20 +137,30 @@ function enter_value()
 
     local errs=$errors
     local input
+    local valid=false
+    local first=true
 
     [[ -n "$default" ]] && ! $is_secret && prompt="$prompt [$default]: " || prompt="$prompt: "
-    while true; do
+
+    while ! $valid; do
         if $is_secret; then
             read -r -s -p "$prompt" input
         else
             read -r    -p "$prompt" input
         fi
+
         [[  -n "$input" ]] || input="$default"
-        $validate_fn "$input" && break;
+        $validate_fn "$input" && valid=true || valid=false
+
+        if $first && $is_secret && ! $valid; then
+            # prefix the prompt with a newline to separate the new prompts with new lines in secret mode
+            prompt=$'\n'"$prompt"
+            first=false
+        fi
     done
+
     # all good here! restore any errors that may have been overwritten by the validation function
     errors=$errs
-
     echo "$input"
 }
 

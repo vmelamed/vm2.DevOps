@@ -46,8 +46,6 @@ Options:
   --vm2-repos <path>            The parent directory where the '.github' workflow templates, 'vm2.DevOps', and other vm2
                                 repositories are cloned
                                 Initial from the \$VM2_REPOS environment variable or '\$HOME/repos/vm2'
-  -f, --force-defaults          If the value of a repository variable is different from the default, assign it the default,
-                                without prompting for confirmation. Used during repository creation and configuration
   -o, --owner <owner>           GitHub user or organization that will own the repository
                                 From environment variable: ORGANIZATION or default: vmelamed.
                                 Used only during repository creation
@@ -64,18 +62,19 @@ Options:
                                 Default: "<GitHub default branch name> protection" - usually 'main protection'
 
 Switches:
+  -a, --audit                   Read-only: report current vs expected settings and values without any changes, ignores all other
+                                options
   -s, --ssh                     Use SSH URL for the remote origin. Used only during repository creation
   -t, --https                   Use HTTPS URL for the remote origin. Used only during repository creation
-  -f, --force-defaults          If the value of a repository variable is different from the default, assign it the default,
-                                without prompting for confirmation.
-  -a, --audit                   Read-only: report current vs expected settings without changes, ignores all other options
+  -iv, --interactive-vars       Prompts the user to enter the values of the repository variables interactively.
+  -is, --interactive-secrets    Prompts the user to enter the values of the repository secrets interactively.
 
 Note: If multiple '--ssh' and/or '--https' are specified - the last on the command line wins.
 $cmn_switches
 Examples:
   ${script_name} vm2.Glob --audit
-  ${script_name} ~/repos/vm2.Glob --configure-only
-  ${script_name} \$VM2_REPOS/vm2.Glob --configure-only --skip-secrets --dry-run
+  ${script_name} ~/repos/vm2.Glob
+  ${script_name} \$VM2_REPOS/vm2.Glob --interactive-secrets --verbose
   ${script_name} vmelamed/vm2.MyPackage --visibility private
 EOF
 }

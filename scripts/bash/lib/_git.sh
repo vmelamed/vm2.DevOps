@@ -148,7 +148,6 @@ function validate_secret()
     }
 }
 
-
 #-------------------------------------------------------------------------------
 # With the following constants and functions we define the repository state: it is an associative array with predefined keys.
 # The following constants define the predefined keys of a repo state:

@@ -13,8 +13,8 @@ declare -x owner
 declare -x repo
 declare -x visibility
 declare -x branch
-declare -x force_defaults
-declare -x enter_secrets
+declare -x interactive_vars
+declare -x interactive_secrets
 declare -x audit
 declare -x main_protection_rs_name
 declare -x description
@@ -81,14 +81,13 @@ function get_arguments()
                 use_https=true
                 ;;
 
-            --force-defaults|-f )
-                force_defaults=true
+            --interactive-vars|-iv )
+                interactive_vars=true
                 ;;
 
-            --enter-secrets|-e )
-                enter_secrets=true
+            --interactive-secrets|-is )
+                interactive_secrets=true
                 ;;
-
 
             --audit )
                 audit=true
@@ -119,8 +118,8 @@ function dump_args()
         description \
         use_ssh \
         use_https \
-        force_defaults \
-        enter_secrets \
+        interactive_vas \
+        interactive_secrets \
         audit \
         --blank \
         dry_run \

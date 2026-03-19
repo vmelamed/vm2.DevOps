@@ -38,28 +38,13 @@ declare -xra default_repo_settings_order=(
 )
 
 declare -xrA default_secrets=(
-    ["CODECOV_TOKEN"]="$secret_placeholder"
     ["BENCHER_API_TOKEN"]="$secret_placeholder"
-    ["REPORTGENERATOR_LICENSE"]="$secret_placeholder"
+    ["CODECOV_TOKEN"]="$secret_placeholder"
     ["RELEASE_PAT"]="$secret_placeholder"
+    ["REPORTGENERATOR_LICENSE"]="$secret_placeholder"
     ["NUGET_API_GITHUB_KEY"]="$secret_placeholder"
-    ["NUGET_API_NUGET_KEY"]="$secret_placeholder"
     ["NUGET_API_KEY"]="$secret_placeholder"
-)
-
-declare -xrA default_vars=(
-    ["DOTNET_VERSION"]="10.0.x"
-    ["CONFIGURATION"]="Release"
-    ["MAX_REGRESSION_PCT"]="20"
-    ["MIN_COVERAGE_PCT"]="80"
-    ["MINVERTAGPREFIX"]="v"
-    ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="preview.0"
-    ["NUGET_SERVER"]="github"
-    ["SAVE_PACKAGE_ARTIFACTS"]=false
-    ["RESET_BENCHMARK_THRESHOLDS"]=false
-    ["ACTIONS_RUNNER_DEBUG"]=false
-    ["ACTIONS_STEP_DEBUG"]=false
-    ["VERBOSE"]=false
+    ["NUGET_API_NUGET_KEY"]="$secret_placeholder"
 )
 
 declare -xrA default_ruleset=(
@@ -98,4 +83,34 @@ declare -xra default_ruleset_order=(            # UI: Order in which rules appea
     "do_not_enforce_on_create"                  #   ↳ Do not enforce on create
     "strict_required_status_checks_policy"      #   ↳ Require up-to-date branches
     "non_fast_forward"                          # Block force pushes
+)
+
+declare -xrA default_vars=(
+    ["ACTIONS_RUNNER_DEBUG"]=false
+    ["ACTIONS_STEP_DEBUG"]=false
+    ["CONFIGURATION"]="Release"
+    ["DOTNET_VERSION"]="10.0.x"
+    ["MAX_REGRESSION_PCT"]="20"
+    ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="preview.0"
+    ["MINVERTAGPREFIX"]="v"
+    ["MIN_COVERAGE_PCT"]="80"
+    ["NUGET_SERVER"]="github"
+    ["RESET_BENCHMARK_THRESHOLDS"]=false
+    ["SAVE_PACKAGE_ARTIFACTS"]=false
+    ["VERBOSE"]=false
+)
+
+declare -xrA var_validators=(
+    ["ACTIONS_RUNNER_DEBUG"]="validate_boolean"
+    ["ACTIONS_STEP_DEBUG"]="validate_boolean"
+    ["CONFIGURATION"]="is_valid_configuration"
+    ["DOTNET_VERSION"]="is_valid_dotnet_version"
+    ["MAX_REGRESSION_PCT"]="is_valid_percentage"
+    ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="is_valid_minverPrereleaseId"
+    ["MINVERTAGPREFIX"]="validate_minverTagPrefix"
+    ["MIN_COVERAGE_PCT"]="is_valid_percentage"
+    ["NUGET_SERVER"]="is_valid_nuget_server"
+    ["RESET_BENCHMARK_THRESHOLDS"]="validate_boolean"
+    ["SAVE_PACKAGE_ARTIFACTS"]="validate_boolean"
+    ["VERBOSE"]="validate_boolean"
 )

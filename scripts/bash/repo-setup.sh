@@ -16,25 +16,27 @@ declare -xr lib_dir
 
 # shellcheck disable=SC1091
 source "${lib_dir}/core.sh"
+# shellcheck disable=SC1091
+source "${lib_dir}/_sanitize.sh"
 
 # defaults
 declare -xr default_vm2_repos="$HOME/repos/vm2"
 declare -xr default_owner="vmelamed"
 declare -xr default_visibility="public"
 declare -xr default_branch="main"
-declare -xr default_force_defaults=false
+declare -xr default_interactive=false
 declare -xr default_audit=false
-declare -xr default_enter_secrets=false
 
 # start with default input
 declare -x vm2_repos="${VM2_REPOS:-$default_vm2_repos}"
 declare -x repo_path=""
 declare -x visibility=${default_visibility}
 declare -x branch=${default_branch}
-declare -x force_defaults=${default_force_defaults}
-declare -x enter_secrets=${default_enter_secrets}
+declare -x interactive_vars=${default_interactive}
+declare -x interactive_secrets=${default_interactive}
 declare -x audit=${default_audit}
 declare -x main_protection_rs_name=""
+declare -xi main_protection_rs_id=0
 declare -x description=""
 declare -x use_ssh=true
 declare -x use_https=false
@@ -45,13 +47,29 @@ declare -x repo=""
 declare -x repo_url=""
 declare -x repo_id=""
 
-# required checks enforced by branch protection; extended dynamically
+declare -x path_vars
+declare -x path_repo
+declare -x path_permissions
+declare -x path_secrets
+declare -x path_vars
+declare -x path_rulesets
+declare -x path_main_protection_ruleset
+
+declare -x jq_entries
+declare -x jq_secrets
+declare -x jq_vars
+declare -x jq_ruleset_id
+declare -x jq_ruleset_rules
+declare -x jq_status_checks
+
 declare -xa required_checks=()
+declare -xi github_actions_app_id=0
 
 source "${script_dir}/repo-setup.args.sh"
 source "${script_dir}/repo-setup.usage.sh"
 source "${script_dir}/repo-setup.defaults.sh"
 source "${script_dir}/repo-setup.functions.sh"
+source "${script_dir}/repo-setup.audit.sh"
 
 get_arguments "$@"
 
@@ -146,9 +164,6 @@ if r=$(find_repo_root "$repo_path" false "$vm2_repos") ||
     trace "repo_path='$repo_path' from find_repo_root in vm2_repos or \$HOME"
 else
     reset_errors
-    # we cannot be here for audit. Audit requires that the specified repo is already initialized and configured.
-    ! $audit ||
-        usage false "Could not find an existing repository root for audit."
 
     # For initializing and configuring a new repo we require that the the user provides the path to the root of the new repo's
     # work tree. It should be created using `dotnet new vm2.NewPkg` and should have the .github/workflows/CI.yaml file in place.
@@ -196,16 +211,17 @@ if has_local_repo repo_state; then
         declare -rx repo
 
         info "GitHub Repository              => $repo"
-        info "GitHub Repository URL          => $repo_url"
 
         if has_github_remote repo_state; then
             repo_id="${repo_state[$key_repo_id]}"
             branch="${repo_state[$key_default_branch]}"
-            main_protection_rs_name="${branch} protection"
+            main_protection_rs_name="${main_protection_rs_name:-${branch} protection}"
 
             info "GitHub Repository Id           => $repo_id"
             info "GitHub Default Branch          => $branch"
         fi
+
+        info "GitHub Repository URL          => $repo_url"
     fi
 fi
 
@@ -221,6 +237,15 @@ trace "ci_yaml='$ci_yaml' from \$repo_path"
 
 declare -xr ci_yaml
 
+resolve_github_actions_app_id
+detect_required_checks
+
+if has_github_remote repo_state; then
+    initialize_gh_paths
+    initialize_jq_queries
+    initialize_main_protection_rs_id || true
+fi
+
 #-------------------------------------------------------------------------------
 # Final validation of the inputs and assumptions before we start making any changes or API calls:
 #-------------------------------------------------------------------------------
@@ -235,20 +260,11 @@ is_in "$visibility" "public" "private"                   || error "Invalid visib
 
 exit_if_has_errors
 
-resolve_github_actions_app_id
-detect_required_checks
-
-declare -xr github_actions_app_id
-declare -xra required_checks
-
 # ------------------------------------------------------------------
 # Audit
 # ------------------------------------------------------------------
 
-if $audit; then
-    has_remote_repo repo_state || usage false "The specified repository does not appear to be initialized or linked to a remote repository on GitHub. Audit cannot proceed. Please specify a valid path to the root of the project/repository using '--path <path>' that is linked to a GitHub repository, or initialize and link the repository to GitHub first."
-    source "${script_dir}/repo-setup.audit.sh"
-    echo
+if $audit && ! $interactive_secrets && ! $interactive_vars && has_github_remote repo_state; then
     audit_repo
     exit 0
 fi
@@ -274,10 +290,10 @@ if ! has_local_repo repo_state; then
         undos+=("rm -rf '$repo_path/.git'")
     fi
 
-    info "...creating and checking out the default branch '${branch}';"
+    info "  ...creating and checking out the default branch '${branch}';"
     execute git -C "$repo_path" checkout -b "${branch}"                 && trace "'${branch}' branch checked out"
 
-    info "...staging and committing existing files in '$repo_path';"
+    info "  ...staging and committing existing files in '$repo_path';"
     execute git -C "$repo_path" add .                                   && trace "Staged all existing files in '$repo_path' for commit."
     if ! git -C "$repo_path" diff --cached --quiet; then
         execute git -C "$repo_path" commit -m "chore: initial scaffold" && trace "Committed staged files to '$repo_path'."
@@ -317,15 +333,15 @@ if ! has_remote_repo repo_state; then
         esac
     fi
 
-    info "...creating repository '$repo' with $visibility visibility and default branch '$branch'. Description: '$description'. parameters;"
+    info "  ...creating repository '$repo' with $visibility visibility and default branch '$branch'. Description: '$description'. parameters;"
     execute gh repo create "${create_repo_params[@]}"
     undos+=("gh repo delete '$repo' --yes")
 
-    info "...setting the remote origin URL to '$repo_url';"
+    info "  ...setting the remote origin URL to '$repo_url';"
     execute git -C "$repo_path" remote set-url origin "${repo_url}"
     undos+=("git -C '$repo_path' remote remove origin")
 
-    info "...pushing the default branch '${branch}' to GitHub;"
+    info "  ...pushing the default branch '${branch}' to GitHub;"
     execute git -C "$repo_path" push -u origin "${branch}"
     undos+=("git -C '$repo_path' push -u origin --delete '${branch}'")
 
@@ -353,7 +369,7 @@ if ! has_remote_repo repo_state; then
         usage false "The repository does not appear to be initialized and/or linked to the remote. Run the script again without the switch --configure-only or troubleshoot the problem."
 
     branch="${repo_state[$key_default_branch]}"
-    main_protection_rs_name="${branch} protection"
+    main_protection_rs_name="${main_protection_rs_name:-${branch} protection}"
 
     [[ -n "$repo_url"  ]] &&
     info "Repository URL                 => $repo_url"
@@ -365,11 +381,14 @@ fi
 # Configure the remote repository on GitHub, and push initial commit to GitHub
 # ----------------------------------------------------------------------------
 
+initialize_gh_paths
+initialize_jq_queries
+initialize_main_protection_rs_id || true
+
 configure_default_repo_settings
 configure_actions_permissions
 configure_variables
 configure_secrets
 configure_branch_protection
-
-
-info "Repository ready: https://github.com/${repo}"
+echo
+$audit && audit_repo

@@ -115,6 +115,24 @@ function is_safe_input()
 #   1 - The input string to test
 # Returns:
 #   Exit code: 0 if input is a valid boolean, 1 if not, 2 on invalid arguments
+# Usage: if validate_boolean "$input"; then ... fi
+# Example: if validate_boolean "$reset_flag"; then echo "Valid boolean"; fi
+#-------------------------------------------------------------------------------
+function validate_boolean()
+{
+    if [[ $# -ne 1 ]]; then
+        error 3 "${FUNCNAME[0]}() requires exactly one argument: the boolean value to validate."
+        return 2
+    fi
+    is_boolean "$1"
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Validates that the input is a boolean value (true or false).
+# Parameters:
+#   1 - The input string to test
+# Returns:
+#   Exit code: 0 if input is a valid boolean, 1 if not, 2 on invalid arguments
 # Usage: if is_safe_boolean "$input"; then ... fi
 # Example: if is_safe_boolean "$reset_flag"; then echo "Valid boolean"; fi
 #-------------------------------------------------------------------------------
@@ -125,7 +143,7 @@ function is_safe_boolean()
         return 2
     fi
 
-    if ! is_boolean "$1"; then
+    if ! validate_boolean "$1"; then
         error 3 "${FUNCNAME[0]}(): The input '$1' is not a valid boolean. Expected 'true' or 'false'."
         return 1
     fi
@@ -419,17 +437,32 @@ function is_safe_reason()
 #   1 - server - NuGet server URL or name to validate
 # Returns:
 #   Exit code: 0 if valid, 1 if invalid, 2 on invalid arguments
-# Usage: if is_safe_nuget_server <server>; then ... fi
-# Example: if is_safe_nuget_server "nuget"; then echo "Valid server"; fi
+# Usage: if is_valid_nuget_server <server>; then ... fi
+# Example: if is_valid_nuget_server "nuget"; then echo "Valid server"; fi
 # Notes: Accepts "nuget", "github", or valid http(s) URLs matching $nugetServersRegex.
 #-------------------------------------------------------------------------------
-function is_safe_nuget_server()
+function is_valid_nuget_server()
 {
     if [[ $# -ne 1 ]]; then
         error 3 "${FUNCNAME[0]}() requires exactly one argument: the NuGet server to test."
         return 2
     fi
     [[ "$1" =~ $nugetServersRegex ]]
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Validates NuGet server URL or known server name.
+# Parameters:
+#   1 - server - NuGet server URL or name to validate
+# Returns:
+#   Exit code: 0 if valid, 1 if invalid, 2 on invalid arguments
+# Usage: if is_safe_nuget_server <server>; then ... fi
+# Example: if is_safe_nuget_server "nuget"; then echo "Valid server"; fi
+# Notes: Accepts "nuget", "github", or valid http(s) URLs matching $nugetServersRegex.
+#-------------------------------------------------------------------------------
+function is_safe_nuget_server()
+{
+    is_valid_nuget_server "$@"
 }
 
 #-------------------------------------------------------------------------------
@@ -477,7 +510,26 @@ function validate_nuget_server()
 # Parameters:
 #   1 - configuration - configuration name to validate
 # Returns:
-#   Exit code: 0 if valid identifier or empty, 1 if invalid, 2 on invalid arguments
+#   Exit code: 0 if valid configuration name, 1 if invalid, 2 if invalid number of arguments
+# Usage: if is_valid_configuration <config_name>; then ... fi
+# Example: if is_valid_configuration "$build_config"; then echo "Valid config"; fi
+# Notes: Must match pattern [A-Za-z_][A-Za-z0-9_]* (valid C-style identifier).
+#-------------------------------------------------------------------------------
+function is_valid_configuration()
+{
+    if [[ $# -ne 1 ]]; then
+        error 3 "${FUNCNAME[0]}() requires one argument: the NAME of the configuration variable to test."
+        return 2
+    fi
+    [[ $1 =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Validates that a configuration name is a valid identifier.
+# Parameters:
+#   1 - configuration - configuration name to validate
+# Returns:
+#   Exit code: 0 if valid configuration name, 1 if invalid, 2 if invalid number of arguments
 # Usage: if is_safe_configuration <config_name>; then ... fi
 # Example: if is_safe_configuration "$build_config"; then echo "Valid config"; fi
 # Notes: Must match pattern [A-Za-z_][A-Za-z0-9_]* (valid C-style identifier).
@@ -488,7 +540,7 @@ function is_safe_configuration()
         error 3 "${FUNCNAME[0]}() requires one argument: the NAME of the configuration variable to test."
         return 2
     fi
-    [[ $1 =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] && return 0
+    is_valid_configuration "$1" && return 0
     error "The configuration '$1' is not valid."
     return 1
 }
@@ -537,6 +589,25 @@ function validate_preprocessor_symbols()
 }
 
 #-------------------------------------------------------------------------------
+# Summary: Validates that a given value is a valid percentage (0-100).
+# Parameters:
+#   1 - percentage - the percentage to validate
+# Returns:
+#   Exit code: 0 if valid percentage, 1 if invalid, 2 on invalid arguments
+# Usage: if is_valid_percentage <percentage>; then ... fi
+# Example: if is_valid_percentage "50"; then echo "Valid percentage"; fi
+# Notes: Must be an integer between 0 and 100.
+#-------------------------------------------------------------------------------
+function is_valid_percentage()
+{
+    if [[ $# -ne 1 ]]; then
+        error 3 "${FUNCNAME[0]}() requires one argument: the percentage to test."
+        return 2
+    fi
+    is_natural "$1" && (( $1 >= 0 && $1 <= 100 ))
+}
+
+#-------------------------------------------------------------------------------
 # Summary: Validates minimum coverage percentage input.
 # Parameters:
 #   1 - min_coverage_pct - minimum coverage percentage to validate
@@ -545,10 +616,11 @@ function validate_preprocessor_symbols()
 # Usage: if is_safe_min_coverage_pct <min_coverage_pct>; then ... fi
 # Example: if is_safe_min_coverage_pct "80"; then echo "Valid coverage percentage"; fi
 # Notes: Must be an integer between 0 and 100.
+#-------------------------------------------------------------------------------
 function is_safe_min_coverage_pct()
 {
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true - good!
-    is_natural "$1" && (( $1 >= 0 && $1 <= 100 )) || {
+    is_valid_percentage "$@" || {
         error "The min coverage percentage '$1' must be an integer number between 0 and 100."
         return 1
     }
@@ -566,10 +638,30 @@ function is_safe_min_coverage_pct()
 function is_safe_max_regression_pct()
 {
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true - good!
-    is_natural "$1" && (( $1 >= 0 && $1 <= 100 )) || {
+    is_valid_percentage "$@" || {
         error "The max regression percentage '$1' must be between 0 and 100."
         return 1
     }
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Validates MinVer prerelease identifier format.
+# Parameters:
+#   1 - prerelease_id - MinVer prerelease ID to validate
+# Returns:
+#   Exit code: 0 if valid, 1 if invalid, 2 on invalid arguments
+# Usage: if is_valid_minverPrereleaseId <id>; then ... fi
+# Example: if is_valid_minverPrereleaseId "alpha.1"; then echo "Valid prerelease ID"; fi
+# Notes: Must match $minverPrereleaseIdRegex (same as semver prerelease label format).
+#-------------------------------------------------------------------------------
+function is_valid_minverPrereleaseId()
+{
+    if [[ $# -ne 1 ]]; then
+        error 3 "${FUNCNAME[0]}() requires one argument: the MinVer prerelease ID to test."
+        return 2
+    fi
+
+    [[ "$1" =~ $minverPrereleaseIdRegex ]]
 }
 
 #-------------------------------------------------------------------------------
@@ -584,12 +676,7 @@ function is_safe_max_regression_pct()
 #-------------------------------------------------------------------------------
 function is_safe_minverPrereleaseId()
 {
-    if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires one argument: the MinVer prerelease ID to test."
-        return 2
-    fi
-
-    [[ "$1" =~ $minverPrereleaseIdRegex ]]
+    is_valid_minverPrereleaseId "$@"
 }
 
 # The dotnet-version input supports following syntax:
@@ -599,6 +686,30 @@ function is_safe_minverPrereleaseId()
 # A.B or A.B.x (e.g. 8.0, 8.0.x) - the latest patch version of the specific .NET SDK, including prerelease versions (preview, rc)
 # A.B.Cxx (e.g. 8.0.4xx) - the latest version of the specific SDK release, including prerelease versions (preview, rc).
 declare -xr dotnet_regex="^([0-9]+\\.[0-9]+(\\.x)?)|([0-9]+(\\.x)?)|([0-9]+\\.[0-9]+\\.[0-9]xx)|($semverRegex)$"
+
+#-------------------------------------------------------------------------------
+# Summary: Validates .NET version input format.
+# Parameters:
+#   1 - version - .NET version string to validate
+# Returns:
+#   Exit code: 0 if valid, 1 if invalid, 2 on invalid arguments
+# Usage: if is_valid_dotnet_version <version>; then ... fi
+# Example: if is_valid_dotnet_version "10.0.100-preview.1.25120.13"; then echo "Valid .NET version"; fi
+# Notes: Must match $dotnet_regex. The dotnet-version input supports the following syntax (from [actions/setup-dotnet](https://github.com/actions/setup-dotnet)):
+#   - A.B.C (e.g 9.0.308, 10.0.100-preview.1.25120.13) - installs the exact version of .NET SDK semver 2.0 format
+#   - A or A.x (e.g. 8, 8.x) - the latest minor version of the specific .NET SDK, including prerelease versions (preview, rc)
+#   - A.B or A.B.x (e.g. 8.0, 8.0.x) - the latest patch version of the specific .NET SDK, including prerelease versions (preview, rc)
+#   - A.B.Cxx (e.g. 8.0.4xx) - the latest version of the specific SDK release, including prerelease versions (preview, rc).
+#-------------------------------------------------------------------------------
+function is_valid_dotnet_version()
+{
+    if [[ $# -ne 1 ]]; then
+        error 3 "${FUNCNAME[0]}() requires one argument: the .NET version to test."
+        return 2
+    fi
+
+    [[ "$1" =~ $dotnet_regex ]]
+}
 
 #-------------------------------------------------------------------------------
 # Summary: Validates .NET version input format.
@@ -616,10 +727,5 @@ declare -xr dotnet_regex="^([0-9]+\\.[0-9]+(\\.x)?)|([0-9]+(\\.x)?)|([0-9]+\\.[0
 #-------------------------------------------------------------------------------
 function is_safe_dotnet_version()
 {
-    if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires one argument: the .NET version to test."
-        return 2
-    fi
-
-    [[ "$1" =~ $dotnet_regex ]]
+    is_valid_dotnet_version "$@"
 }
