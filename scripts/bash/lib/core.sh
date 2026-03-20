@@ -72,6 +72,63 @@ function execute()
 }
 
 #-------------------------------------------------------------------------------
+# Summary: Execute a command with retry logic for transient failures
+# Parameters:
+#   1 - max_attempts - maximum number of attempts (default: 3)
+#   2 - delay - delay in seconds between retries (default: 2)
+#   3 - ignore output - if the third parameter is boolean and is true it
+#       indicates that the standard output of the command should be forwarded to
+#       $_ignore (usually /dev/null)
+#   3+ (or 4+ if $3 is boolean) - command and arguments to execute
+# Returns:
+#   Exit code: 0 on success, command's exit code after final failure
+# Env. Vars:
+#   dry_run - when true, displays command without executing it
+# Usage: execute_with_retry <max_attempts> <delay> [<ignore output>] <command> [args...]
+# Example: execute_with_retry 3 2 true gh api repos/owner/repo
+#-------------------------------------------------------------------------------
+function execute_with_retry()
+{
+    if [[ $# -lt 3 ]]; then
+        error 3 "${FUNCNAME[0]}() requires at least three arguments: <max_attempts> <delay> <command> [args...]"
+        return 2
+    fi
+
+    local max_attempts=$1; shift
+    local delay=$1; shift
+    local output="/dev/stdout"
+
+    # shellcheck disable=SC2086
+    is_boolean $1 && $1 && output="$_ignore" && shift
+
+    if [[ $# -lt 1 ]]; then
+        error 3 "${FUNCNAME[0]}() requires at least four arguments: <max_attempts> <delay> <ignore output> <command> [args...]"
+        return 2
+    fi
+
+    local attempt=0
+    local exit_code=0
+
+    if [[ "$dry_run" == true ]]; then
+        echo "dry-run$ $*" >&2
+        return 0
+    fi
+
+    trace "Executing with retry: $*"
+    until "$@" 1>"$output"; do
+        exit_code=$?
+        attempt=$((attempt + 1))
+        if [[ $attempt -ge $max_attempts ]]; then
+            return "$exit_code"
+        fi
+        warning "Command failed (attempt $attempt/$max_attempts). Retrying in ${delay}s."
+        sleep "$delay"
+    done
+
+    return 0
+}
+
+#-------------------------------------------------------------------------------
 # Summary: Tests if parameter is a valid file pattern and returns matching files, recursing into subdirectories.
 # Parameters:
 #   1 - file_pattern - glob pattern to match files (supports ** for recursive matching)

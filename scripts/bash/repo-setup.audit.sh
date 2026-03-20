@@ -229,7 +229,7 @@ function audit_repo()
     ❌  missing:   %3d\n" "$pass" "$diff" "$errs"
 
     (( errs > 0 )) && echo "⚠️  TODO: Run without '--audit' to fix discrepancies."
-    echo
+    echo ""
 
     info "Audit of https://github.com/${repo} completed."
     return 0

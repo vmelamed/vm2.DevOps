@@ -101,11 +101,12 @@ function get_arguments()
                 ;;
         esac
     done
-    #dump_args
+    dump_args
 }
 
 function dump_args()
 {
+    is_verbose || return 0
     dump_vars --quiet \
         --header "Inputs" \
         vm2_repos \
@@ -118,7 +119,7 @@ function dump_args()
         description \
         use_ssh \
         use_https \
-        interactive_vas \
+        interactive_vars \
         interactive_secrets \
         audit \
         --blank \

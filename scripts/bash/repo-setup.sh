@@ -55,13 +55,6 @@ declare -x path_vars
 declare -x path_rulesets
 declare -x path_main_protection_ruleset
 
-declare -x jq_entries
-declare -x jq_secrets
-declare -x jq_vars
-declare -x jq_ruleset_id
-declare -x jq_ruleset_rules
-declare -x jq_status_checks
-
 declare -xa required_checks=()
 declare -xi github_actions_app_id=0
 
@@ -72,6 +65,8 @@ source "${script_dir}/repo-setup.functions.sh"
 source "${script_dir}/repo-setup.audit.sh"
 
 get_arguments "$@"
+
+is_verbose && _ignore="/dev/stderr"
 
 #-------------------------------------------------------------------------------
 # Check the prerequisites
@@ -276,6 +271,15 @@ fi
 # list of undos to perform in case of failure or when the script finishes - e.g. to delete the created repository, or undo any changes to the local repository. The undos must be executed in a LIFO order.
 declare -a undos=()
 
+function undo_changes()
+{
+    echo "To undo the changes above, you can run the following commands:"
+    for (( i=${#undos[@]}-1; i>=0; i-- )); do
+        echo "    ${undos[i]}"
+    done
+    echo "and then run the script again."
+}
+
 if ! has_local_repo repo_state; then
 
     # -------------------------------------------------------------------
@@ -286,17 +290,17 @@ if ! has_local_repo repo_state; then
     [[ -n "$branch" ]] ||
         branch=$(enter_value "Default branch name" "$default_branch" false validate_branch_name)
 
-    if execute git -C "$repo_path" init; then
+    if execute git -C "$repo_path" init >"$_ignore"; then
         undos+=("rm -rf '$repo_path/.git'")
     fi
 
     info "  ...creating and checking out the default branch '${branch}';"
-    execute git -C "$repo_path" checkout -b "${branch}"                 && trace "'${branch}' branch checked out"
+    execute git -C "$repo_path" checkout -b "${branch}" >"$$_ignore" 2>&1           && trace "'${branch}' branch checked out"
 
     info "  ...staging and committing existing files in '$repo_path';"
-    execute git -C "$repo_path" add .                                   && trace "Staged all existing files in '$repo_path' for commit."
+    execute git -C "$repo_path" add . >"$$_ignore"                                  && trace "Staged all existing files in '$repo_path' for commit."
     if ! git -C "$repo_path" diff --cached --quiet; then
-        execute git -C "$repo_path" commit -m "chore: initial scaffold" && trace "Committed staged files to '$repo_path'."
+        execute git -C "$repo_path" commit -m "chore: initial scaffold" >"$_ignore" && trace "Committed staged files to '$repo_path'."
     fi
 
     info "...initialized a new git repository in '$repo_path' in the default branch '${branch}'."
@@ -316,7 +320,6 @@ if ! has_remote_repo repo_state; then
         "--${visibility}"
         "--source" "$repo_path"
         "--remote" "origin"
-        "--push"
         "--disable-wiki"
     )
 
@@ -334,26 +337,20 @@ if ! has_remote_repo repo_state; then
     fi
 
     info "  ...creating repository '$repo' with $visibility visibility and default branch '$branch'. Description: '$description'. parameters;"
-    execute gh repo create "${create_repo_params[@]}"
+    execute_with_retry 3 2 true gh repo create "${create_repo_params[@]}" >"$_ignore"
     undos+=("gh repo delete '$repo' --yes")
 
     info "  ...setting the remote origin URL to '$repo_url';"
-    execute git -C "$repo_path" remote set-url origin "${repo_url}"
+    execute git -C "$repo_path" remote set-url origin "${repo_url}" >"$_ignore"
     undos+=("git -C '$repo_path' remote remove origin")
 
     info "  ...pushing the default branch '${branch}' to GitHub;"
-    execute git -C "$repo_path" push -u origin "${branch}"
+    execute_with_retry 3 2 true git -C "$repo_path" push -u origin "${branch}"
     undos+=("git -C '$repo_path' push -u origin --delete '${branch}'")
 
-    info "...repository '$repo' created and linked to the local repository in '$repo_path'."
-    {
-        echo "To undo the above changes, run the following commands:"
-        for (( i=${#undos[@]}-1; i>=0; i-- )); do
-            echo "  ${undos[i]}"
-        done
-    } | info
+    info "...GitHub repository '$repo' created and linked to the local repository in '$repo_path'."
 
-    # Checks: get the repo state again that will have more real git information in it.
+    # Checks: get the repo state again that will have more real git and github information in it.
     get_repo_state "$repo_path" repo_state; rc=$?
     dump_repo_state repo_state
 
@@ -390,5 +387,9 @@ configure_actions_permissions
 configure_variables
 configure_secrets
 configure_branch_protection
-echo
+echo ""
 $audit && audit_repo
+if [[ ${#undos[@]} -gt 0 ]]; then
+    echo ""
+    undo_changes | info
+fi

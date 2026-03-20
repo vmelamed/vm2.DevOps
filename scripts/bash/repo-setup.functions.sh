@@ -141,6 +141,7 @@ function initialize_gh_paths()
     path_permissions="${path_repo}/actions/permissions/workflow"
     path_rulesets="${path_repo}/rulesets"
 
+    # freeze the paths now
     declare -xr path_vars
     declare -xr path_repo
     declare -xr path_permissions
@@ -197,6 +198,7 @@ def count_pr_checks_param(check): [.rules[] | select(.type == "required_status_c
                       .parameters.required_status_checks[] | select(.integration_id == '"$github_actions_app_id"') |
                       .context'
 
+    # freeze the queries now
     declare -xr jq_entries
     declare -xr jq_secrets
     declare -xr jq_secret_names
@@ -208,13 +210,20 @@ def count_pr_checks_param(check): [.rules[] | select(.type == "required_status_c
 
 function initialize_main_protection_rs_id()
 {
+    # main_protection_rs_id is not 0 - already initialized
     (( main_protection_rs_id > 0 )) && return 0
 
     [[ -n $main_protection_rs_name ]] || error "The 'main_protection_rs_name' variable is not set. Cannot initialize main protection ruleset ID."
-    [[ -n $path_rulesets ]] || error "The 'path_rulesets' variable is not set. Cannot initialize main protection ruleset ID."
+    [[ -n $path_rulesets ]] || error "The 'path_rulesets' variable is not set. Run initialize_gh_paths() first. Cannot initialize main protection ruleset ID."
 
-    main_protection_rs_id=$(gh api --paginate "$path_rulesets" |
+    # try to get the main_protection_rs_id
+    main_protection_rs_id=$(execute_with_retry 3 2 true gh api --paginate "$path_rulesets" |
                             jq -r "$jq_ruleset_id" 2>"$_ignore") || return 1
+
+    # if we couldn't get it, return with failure
+    (( main_protection_rs_id > 0 )) || return 1
+
+    trace "Initialized main protection ruleset ID: $main_protection_rs_id"
 
     path_main_protection_ruleset="${path_rulesets}/${main_protection_rs_id}"
 
@@ -229,9 +238,16 @@ function configure_default_repo_settings()
     info "Configuring repository settings..."
     local -a rs
     for key in "${!default_repo_settings[@]}"; do
-        rs+=("-f ${key}=${default_repo_settings[$key]}")
+        local value="${default_repo_settings[$key]}"
+        # Use -F for booleans to send as JSON instead of strings
+        if [[ "$value" == "true" || "$value" == "false" ]]; then
+            rs+=(-F "${key}=${value}")
+        else
+            rs+=(-f "${key}=${value}")
+        fi
+        trace "Setting repository setting: ${key}=${value}"
     done
-    execute gh api -X PATCH "${path_repo}" "${rs[@]}" >"$_ignore"
+    execute_with_retry 3 2 true gh api -X PATCH "${path_repo}" "${rs[@]}"
 }
 
 declare -xrA default_repo_permissions=(
@@ -242,12 +258,10 @@ declare -xrA default_repo_permissions=(
 function configure_actions_permissions()
 {
     info "Configuring Actions workflow permissions..."
-    if ! execute gh api -X PUT "$path_permissions" \
+    execute_with_retry 3 2 true gh api -X PUT "$path_permissions" \
             -H "Accept: application/vnd.github+json" \
-            -f default_workflow_permissions=read \
-            >"$_ignore"; then
+            -f default_workflow_permissions=read ||
         warning "Could not configure Actions workflow permissions (possibly restricted by owner policy)."
-    fi
 }
 
 function configure_variables()
@@ -260,8 +274,7 @@ function configure_variables()
 
     while IFS='=' read -r name value; do
         existing_vars["$name"]="$value"
-    done < <(gh api --paginate "$path_vars" -q "$jq_vars")
-
+    done < <(execute_with_retry 3 2 gh api --paginate "$path_vars" -q "$jq_vars")
 
     local new_value=""
     local default_value=""
@@ -273,24 +286,34 @@ function configure_variables()
     for name in "${ordered_names[@]}"; do
         is_in "$name" "${!existing_vars[@]}" && exists=true || exists=false
 
+        # the variable exists in GH but we are not in interactive mode and we cannot modify it, so skip it
         $exists && ! $interactive_vars && (( ++skipped )) && continue
 
+        # the variable does not exist in GH (we have to create it) or it exists and we are in interactive (the user might want to change it):
+        # get the variable's value (to know if it is different from the default)
         $exists && value="${existing_vars[$name]}" || value=""
         default_value="${default_vars[$name]}"
 
         if $interactive_vars; then
+            # prompt the user for a new value while showing them the current value (if it exists) and the default value
             $exists && new_value=$(enter_value "            Enter value for variable ${name} (current: '${value}')" "$default_value" false "${var_validators["$name"]}") ||
                        new_value=$(enter_value "            Enter value for variable ${name}" "$default_value" false "${var_validators["$name"]}")
+        else
+            # if we are here the var does not exist and we are not in interactive mode, so we just will use the default value
+            new_value="$default_value"
         fi
 
-        $exists && [[ $value == "$new_value" ]] && (( ++skipped )) && continue # nothing to do if the new value is the prev. value
+        $exists && [[ $value == "$new_value" ]] && (( ++skipped )) && continue # nothing to do if the new value is the same as the previous value
 
-        execute gh variable set "$name" --body "$new_value" -R "$repo" >"$_ignore"
+        execute_with_retry 3 2 true gh variable set "$name" --body "$new_value" -R "$repo"
         trace "Set variable: ${name}=${new_value}"
+
+        # increment counters based on whether the new value is the default or a new value for the summary in the end of the function
         # shellcheck disable=SC2015
         [[ $new_value == "$default_value" ]] && (( ++set_default )) || (( ++set_new ))
     done
 
+    # display the summary
     (( set_new > 0 ))     && info "    ${set_new} variable(s) set to new value(s)."             || true
     (( set_default > 0 )) && info "    ${set_default} variable(s) set to default value(s)."     || true
     (( skipped > 0 ))     && info "    ${skipped} variable(s) - not modified."                  || true
@@ -298,7 +321,7 @@ function configure_variables()
 
 function is_valid_secret()
 {
-    [[ "$1" =~ ^[a-zA-Z0-9_+=/@.-]+$ ]]
+    [[ ! "$1" =~ [[:cntrl:]] ]]
 }
 
 function configure_secrets()
@@ -318,25 +341,28 @@ function configure_secrets()
 
     mapfile -t ordered_names < <(printf '%s\n' "${!default_secrets[@]}" | sort)
 
+    # remember the current verbose and tracing settings so we can restore them after setting the secret(s)
     local set_verbose_on
     local set_tracing_on
-    is_verbose && set_verbose_on=true || set_verbose_on=false
+    is_verbose        && set_verbose_on=true || set_verbose_on=false
     [[ $- =~ .*x.* ]] && set_tracing_on=true || set_tracing_on=false
 
     for name in "${ordered_names[@]}"; do
 
+        # the secret exists in GH but we are not in interactive mode and we cannot modify it, so skip it
         is_in "$name" "${existing_secrets[@]}" && exists=true || exists=false
 
         $exists && ! "$interactive_secrets" && (( ++skipped )) && continue # secret exists and we are not entering secrets - continue with the next secret
 
         # get the value for the secret or use the placeholder if we are not entering secrets
         if $interactive_secrets; then
-            $first && {
-                warning "  If you just press the Enter key, a PLACEHOLDER value will be used!"
-                first=false
-            }
+            # prompt the user for a new value, while warning them that pressing Enter will use the placeholder value, which of course is not a real secret
+            $first && warning "  If you press the Enter key, a PLACEHOLDER value will be used!" && first=false
             value=$(enter_value "            Enter value for secret ${name} [PLACEHOLDER]" "$secret_placeholder" true is_valid_secret)
             echo ""
+        else
+            # if we are here the secret does not exist and we are not in interactive mode, so we will just use the place holder
+            value="$secret_placeholder"
         fi
 
         trace "gh secret set $name --body <secret> -R $repo"
@@ -346,17 +372,18 @@ function configure_secrets()
         set +x
 
         # set the secret on GitHub
-        execute gh secret set "$name" --body "$value" -R "$repo" >"$_ignore"
+        execute_with_retry 3 2 true gh secret set "$name" --body "$value" -R "$repo"
 
         # restore all tracing
         # shellcheck disable=SC2015
         $set_verbose_on && set_verbose || unset_verbose
-        $set_tracing_on && set -x || true
+        $set_tracing_on && set -x      || true
 
         trace "Set secret: ${name}"
         # shellcheck disable=SC2015
         if [[ $value == "$secret_placeholder" ]]; then
             (( ++set_default ))
+            warning "          Replace the placeholder value of secret ${name} with an actual value."
         else
             (( ++set_new ))
         fi
@@ -365,7 +392,7 @@ function configure_secrets()
     (( set_new > 0 ))     && info "    ${set_new} secret(s) set to new value(s)."               || true
     (( set_default > 0 )) && info "    ${set_default} secret(s) set to placeholder value(s)."   || true
     (( skipped > 0 ))     && info "    ${skipped} secrets(s) were not modified."                || true
-    (( set_default > 0 )) && warning "  Replace placeholder secrets with actual values."        || true
+    (( set_default > 0 )) && warning "  Do not forget to later replace placeholder values of secrets with actual values."  || true
 }
 
 function configure_branch_protection()
@@ -398,7 +425,7 @@ function configure_branch_protection()
         status_checks_json="[$status_checks_json]"
     fi
 
-    execute gh api -X "${method}" "${endpoint}" \
+    execute_with_retry 3 2 true gh api -X "${method}" "${endpoint}" \
         -H "Accept: application/vnd.github+json" \
         --input - >"$_ignore" <<JSON
 {
