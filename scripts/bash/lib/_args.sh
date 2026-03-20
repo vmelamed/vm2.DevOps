@@ -7,7 +7,6 @@
 # shellcheck disable=SC2090
 
 # default values for the common flags below
-declare -xr default__ignore=/dev/null
 declare -xr default_quiet=false
 declare -xr default_verbose=false
 declare -xr default_dry_run=false
@@ -18,7 +17,8 @@ declare -xr default_table_format="graphical"
 declare -axr table_formats=("graphical" "markdown")
 
 # common flags exported for use by the top-level scripts with CLI switches, options and by other means. Prefer the set_* functions below to set them.
-declare -x _ignore=$default__ignore                 # the file to redirect unwanted output to, changing the value may be useful for debugging, e.g. to redirect to /dev/stdout
+declare -x _ignore                                  # the file to redirect unwanted output to, changing the value may be useful for debugging, e.g. to redirect to /dev/stdout
+
 declare -x quiet=${QUIET:-$default_quiet}           # suppresses user prompts, assuming default answers
 declare -x verbose=${VERBOSE:-$default_verbose}     # enables detailed output
 declare -x dry_run=${DRY_RUN:-$default_dry_run}     # simulates commands without executing them
@@ -31,7 +31,7 @@ declare -rx ci                                      # Indicates whether the scri
                                                     # CI/CD system, e.g. GitHub Actions, Azure DevOps, etc. Usually env.var. $CI
 
 [[ -n "${_Dbg_DEBUGGER_LEVEL:-}" || -n "${BASHDB_HOME:-}" ]] && debugger=true || debugger=false
-declare -xr debugger                                # Indicates whether the script is running under a debugger, e.g. bashdb.
+declare -xr debugger                                # Indicates whether the script is running under a debugger, e.g. BashDb.
                                                     # SHOULD NOT BE OVERRIDDEN BY TOP-LEVEL SWITCHES AND OPTIONS!
 
 if [[ "${ci}" == true ]]; then # CI is usually defined by most CI/CD systems. Set from the env. variable CI.

@@ -295,7 +295,7 @@ function has_local_repo()
     fi
     # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string. It's a nameref to an associative array.
     local -n state="$1"
-    [[ -v state["$key_root"] && -n ${state["$key_root"]} ]]
+    [[ -v state["$key_root"] && -n ${state["$key_root"]} && -d ${state["$key_root"]} ]]
 }
 
 #-------------------------------------------------------------------------------

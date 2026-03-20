@@ -41,6 +41,50 @@ source "${lib_dir}/_semver.sh"
 source "${lib_dir}/_user.sh"
 source "${lib_dir}/_git.sh"
 
+declare -xr default__ignore=/dev/null
+
+declare -x _ignore=$default__ignore                 # the file to redirect unwanted output to, changing the value may be useful for debugging, e.g. to redirect to /dev/stdout
+
+# Use $_ignore to redirect unwanted output, e.g. errors from commands or tools, to avoid cluttering the terminal or logs. When
+# you need to see the output for debugging purposes, you can redirect $_ignore to /dev/stderr, but NEVER redirect it to /dev/stdout!
+# If it is redirected to stdout AND the output of the whole command is captured or redirected, it will interfere with the
+# expected output of the command, leading to incorrect results or unexpected behavior. Therefore NEVER assign a file to $_ignore
+# directly. Use the functions below to manipulate it.
+
+#-------------------------------------------------------------------------------
+# Summary: Redirects the ignored output to the specified file.
+# Parameters:
+#   1 - file name to redirect the ignored output to (optional, default: /dev/stderr)
+# Returns:
+#   Exit code: 0 on success, 2 on invalid arguments
+# Usage: show_ignored_output [file]
+# Example: show_ignored_output /dev/stdout
+#-------------------------------------------------------------------------------
+function show_ignored_output()
+{
+    if [[ $# -gt 1 ]]; then
+        error 3 "${FUNCNAME[0]}() accepts at most one argument: the file name to redirect the ignored output to."
+        return 2
+    fi
+
+    (( $# == 0 )) && _ignore=/dev/stderr && return 0
+
+    if [[ $1 =~ ^(/dev/stdout|/dev/fd/1|/proc/self/fd/1)$ ]]; then
+        warning "Redirecting ignored output to /dev/stdout may lead to unpredictable results if the output of the commands using \$_ignore is captured or redirected!"
+    fi
+
+    _ignore=$1
+    return 0
+}
+
+#-------------------------------------------------------------------------------
+# Summary: restores the ignored output to /dev/null
+#-------------------------------------------------------------------------------
+function hide_ignored_output()
+{
+    _ignore=/dev/null
+}
+
 #-------------------------------------------------------------------------------
 # Summary: Depending on the value of $dry_run, either executes or displays what would have been executed.
 # Parameters:
