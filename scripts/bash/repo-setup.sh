@@ -232,15 +232,6 @@ trace "ci_yaml='$ci_yaml' from \$repo_path"
 
 declare -xr ci_yaml
 
-resolve_github_actions_app_id
-detect_required_checks
-
-if has_github_remote repo_state; then
-    initialize_gh_paths
-    initialize_jq_queries
-    initialize_main_protection_rs_id || true
-fi
-
 #-------------------------------------------------------------------------------
 # Final validation of the inputs and assumptions before we start making any changes or API calls:
 #-------------------------------------------------------------------------------
@@ -255,11 +246,17 @@ is_in "$visibility" "public" "private"                   || error "Invalid visib
 
 exit_if_has_errors
 
+resolve_github_actions_app_id
+list_required_checks
+
 # ------------------------------------------------------------------
 # Audit
 # ------------------------------------------------------------------
 
 if $audit && ! $interactive_secrets && ! $interactive_vars && has_github_remote repo_state; then
+    initialize_gh_paths
+    initialize_jq_queries
+    initialize_main_protection_rs_id || true
     audit_repo
     exit 0
 fi
@@ -273,12 +270,16 @@ declare -a undos=()
 
 function undo_changes()
 {
+    (( ${#undos[@]} == 0 )) && return 0
+
     echo "To undo the changes above, you can run the following commands:"
     for (( i=${#undos[@]}-1; i>=0; i-- )); do
         echo "    ${undos[i]}"
     done
     echo "and then run the script again."
 }
+
+trap undo_changes EXIT
 
 if ! has_local_repo repo_state; then
 
@@ -295,10 +296,10 @@ if ! has_local_repo repo_state; then
     fi
 
     info "  ...creating and checking out the default branch '${branch}';"
-    execute git -C "$repo_path" checkout -b "${branch}" >"$$_ignore" 2>&1           && trace "'${branch}' branch checked out"
+    execute git -C "$repo_path" checkout -b "${branch}" >"$_ignore" 2>&1            && trace "'${branch}' branch checked out"
 
     info "  ...staging and committing existing files in '$repo_path';"
-    execute git -C "$repo_path" add . >"$$_ignore"                                  && trace "Staged all existing files in '$repo_path' for commit."
+    execute git -C "$repo_path" add . >"$_ignore"                                   && trace "Staged all existing files in '$repo_path' for commit."
     if ! git -C "$repo_path" diff --cached --quiet; then
         execute git -C "$repo_path" commit -m "chore: initial scaffold" >"$_ignore" && trace "Committed staged files to '$repo_path'."
     fi
@@ -309,6 +310,9 @@ fi
 
 if ! has_remote_repo repo_state; then
 
+    #----------------------------------------------------------------------
+    # Create and link remote GitHub repository
+    #----------------------------------------------------------------------
     info "Creating GitHub repository..."
 
     [[ -n $repo_name ]] || repo_name=$(enter_value "GitHub Repository name" "$suggest_repo_name" false validate_repo_name)
@@ -375,7 +379,7 @@ if ! has_remote_repo repo_state; then
 fi
 
 # ----------------------------------------------------------------------------
-# Configure the remote repository on GitHub, and push initial commit to GitHub
+# Configure the remote repository on GitHub
 # ----------------------------------------------------------------------------
 
 initialize_gh_paths
@@ -384,9 +388,9 @@ initialize_main_protection_rs_id || true
 
 configure_default_repo_settings
 configure_actions_permissions
+configure_branch_protection
 configure_variables
 configure_secrets
-configure_branch_protection
 echo ""
 audit_repo
 if [[ ${#undos[@]} -gt 0 ]]; then

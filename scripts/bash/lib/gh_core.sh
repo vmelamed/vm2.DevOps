@@ -225,7 +225,7 @@ function to_github_output()
 
 #-------------------------------------------------------------------------------
 # Summary: Outputs a key=value pair for each of the input variable names.
-#   The key is synthesised from the name by replacing the underscores with
+#   The key is synthesized from the name by replacing the underscores with
 #   hyphens. The value is the value of the variable with that name.
 # Parameters:
 #   1+ - variable_names - name refs of variables to output

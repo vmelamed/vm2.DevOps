@@ -31,6 +31,10 @@ declare -rx script_name
 declare -rx script_dir
 declare -rx lib_dir
 
+declare -xr default__ignore=/dev/null
+
+declare -x _ignore=$default__ignore                 # the file to redirect unwanted output to, changing the value may be useful for debugging, e.g. to redirect to /dev/stdout
+
 # source the components of the core library
 source "${lib_dir}/_constants.sh"
 source "${lib_dir}/_diagnostics.sh"
@@ -40,10 +44,6 @@ source "${lib_dir}/_dump_vars.sh"
 source "${lib_dir}/_semver.sh"
 source "${lib_dir}/_user.sh"
 source "${lib_dir}/_git.sh"
-
-declare -xr default__ignore=/dev/null
-
-declare -x _ignore=$default__ignore                 # the file to redirect unwanted output to, changing the value may be useful for debugging, e.g. to redirect to /dev/stdout
 
 # Use $_ignore to redirect unwanted output, e.g. errors from commands or tools, to avoid cluttering the terminal or logs. When
 # you need to see the output for debugging purposes, you can redirect $_ignore to /dev/stderr, but NEVER redirect it to /dev/stdout!
@@ -111,7 +111,8 @@ function execute()
         return 0
     fi
 
-    trace "$*"
+    local IFS=" "
+    trace "Executing (${BASH_SOURCE[1]:-} ${BASH_LINENO[0]:-}): $*"
     "$@"
 }
 
@@ -158,7 +159,8 @@ function execute_with_retry()
         return 0
     fi
 
-    trace "Executing with retry: $*"
+    local IFS=" "
+    trace "Executing with retry (${BASH_SOURCE[1]:-} ${BASH_LINENO[0]:-}): $*"
     until "$@" 1>"$output"; do
         exit_code=$?
         attempt=$((attempt + 1))

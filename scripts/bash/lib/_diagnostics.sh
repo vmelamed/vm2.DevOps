@@ -138,7 +138,7 @@ function reset_errors()
 
 declare -r no_arguments="Function called without message parameters and there are none in the pipe. Provide message parameters or pipe them into the function."
 
-function message_out()
+function message()
 {
     local prefix="$1"
     shift
@@ -202,7 +202,7 @@ function error()
 {
     local -i rc=0
 
-    message_out "$error_prefix" "$@" > >(to_stderr)
+    message "$error_prefix" "$@" > >(to_stderr)
     rc=$?
     (( rc == 0 )) && (( ++errors ))
     return "$rc"
@@ -225,7 +225,7 @@ declare -xr warning_prefix="⚠️  WARN: "
 
 function warning()
 {
-    message_out "$warning_prefix" "$@" > >(to_stderr)
+    message "$warning_prefix" "$@" > >(to_stderr)
 }
 
 #-------------------------------------------------------------------------------
@@ -244,7 +244,7 @@ declare -xr info_prefix="ℹ️  INFO: "
 
 function info()
 {
-    message_out "$info_prefix" "$@" > >(to_stdout)
+    message "$info_prefix" "$@" > >(to_stdout)
 }
 
 #-------------------------------------------------------------------------------
@@ -266,7 +266,7 @@ declare -xr trace_prefix="🐾  TRACE: "
 function trace()
 {
     ! $verbose && return 0
-    message_out "$trace_prefix" "$@" > >(to_traceout)
+    message "$trace_prefix" "$@" > >(to_traceout)
 }
 
 #-------------------------------------------------------------------------------

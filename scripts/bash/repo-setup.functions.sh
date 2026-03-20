@@ -54,44 +54,6 @@ declare -x jq_ruleset_id
 declare -x jq_ruleset_rules
 declare -x jq_status_checks
 
-function resolve_github_actions_app_id()
-{
-    # Resolve the GitHub Actions app ID dynamically via the API.
-    # Used to pin required status checks to GitHub Actions specifically.
-    # this function cannot be called before initialize_gh_paths() because the latter relies on the github_actions_app_id variable being set - circular dependency
-    github_actions_app_id=$(gh api --paginate apps/github-actions --jq '.id' 2>"$_ignore") || error "Failed to resolve GitHub Actions app ID from the API."
-    exit_if_has_errors
-    trace "GitHub Actions app ID: ${github_actions_app_id}"
-    [[ "$github_actions_app_id" == "15368" ]] || warning "Unexpected GitHub Actions app ID: ${github_actions_app_id} (expected 15368). Required status check matching may not work correctly."
-
-    declare -xr github_actions_app_id
-}
-
-function detect_required_checks()
-{
-    # With reusable workflows + matrix strategies, GitHub Actions produces check names that include the workflow prefix, matrix
-    # params, inner job names, and event suffixes — making them impossible to predict for branch protection rules. Instead, each
-    # CI.yaml has a lightweight gate job that depends on all other jobs and reports a single, stable check name.
-    #
-    # The GitHub UI decorates check names as "Workflow / JobName (event)" but the check-runs API returns bare names and ruleset
-    # matching uses the bare check-run name field. So we extract just the gate job's `name:` property from CI.yaml.
-    local gate_job
-    local gate_name
-
-    # Find the gate job: look for postrun-ci first, fall back to ci-gate
-    gate_job=$(yq -r '.jobs | keys[] | select(test("postrun|ci-gate"))' "$ci_yaml" | head -n 1) || error "Failed to parse gate job from CI.yaml."
-    gate_name=$(yq -r ".jobs.${gate_job:-postrun-ci}.name" "$ci_yaml")                          || error "Failed to parse gate job name from CI.yaml."
-    exit_if_has_errors
-
-    required_checks+=(
-        "${gate_name}"
-    )
-
-    declare -xra required_checks
-
-    trace "Required checks: ${required_checks[*]}"
-}
-
 #-------------------------------------------------------------------------------
 # Summary: Validates that the specified repository exists, it is a git repository, and is at or ahead of the latest stable tag.
 # Parameters:
@@ -126,6 +88,44 @@ function validate_source_repo()
     else
         confirm "The ${repo_name} repository at '$dir' is not a git repository. Do you want to continue?" "n" || error "The ${repo_name} repository at '$dir' is not a git repository."
     fi
+}
+
+function resolve_github_actions_app_id()
+{
+    # Resolve the GitHub Actions app ID dynamically via the API.
+    # Used to pin required status checks to GitHub Actions specifically.
+    # this function cannot be called before initialize_gh_paths() because the latter relies on the github_actions_app_id variable being set - circular dependency
+    github_actions_app_id=$(gh api --paginate apps/github-actions --jq '.id' 2>"$_ignore") || error "Failed to resolve GitHub Actions app ID from the API."
+    exit_if_has_errors
+    trace "GitHub Actions app ID: ${github_actions_app_id}"
+    [[ "$github_actions_app_id" == "15368" ]] || warning "Unexpected GitHub Actions app ID: ${github_actions_app_id} (expected 15368). Required status check matching may not work correctly."
+
+    declare -xr github_actions_app_id
+}
+
+function list_required_checks()
+{
+    # With reusable workflows + matrix strategies, GitHub Actions produces check names that include the workflow prefix, matrix
+    # params, inner job names, and event suffixes — making them impossible to predict for branch protection rules. Instead, each
+    # CI.yaml has a lightweight gate job that depends on all other jobs and reports a single, stable check name.
+    #
+    # The GitHub UI decorates check names as "Workflow / JobName (event)" but the check-runs API returns bare names and ruleset
+    # matching uses the bare check-run name field. So we extract just the gate job's `name:` property from CI.yaml.
+    local gate_job
+    local gate_name
+
+    # Find the gate job: look for postrun-ci first, fall back to ci-gate
+    gate_job=$(yq -r '.jobs | keys[] | select(test("postrun|ci-gate"))' "$ci_yaml" | head -n 1) || error "Failed to parse gate job from CI.yaml."
+    gate_name=$(yq -r ".jobs.${gate_job:-postrun-ci}.name" "$ci_yaml")                          || error "Failed to parse gate job name from CI.yaml."
+    exit_if_has_errors
+
+    required_checks+=(
+        "${gate_name}"
+    )
+
+    declare -xra required_checks
+
+    trace "Required checks: ${required_checks[*]}"
 }
 
 # shellcheck disable=SC2089 # Quotes/backslashes will be treated literally. Use an array.
@@ -163,6 +163,8 @@ function initialize_jq_queries()
     jq_secret_names='.secrets[] | .name'
     jq_vars='.variables[] | "\(.name)=\(.value)"'
     jq_ruleset_id='.[] | select(.name == "'"$main_protection_rs_name"'") | .id // empty'
+    jq_status_checks='.rules[] | select(.type == "required_status_checks") |
+                      .parameters.required_status_checks[] | select(.integration_id == '"$github_actions_app_id"') | .context'
     jq_ruleset_rules='
 def is_present: if any then "present" else "missing" end;
 def count_rules(type): [.rules[] | select(.type == type)] | is_present;
@@ -193,10 +195,6 @@ def count_pr_checks_param(check): [.rules[] | select(.type == "required_status_c
                                                                             length >= '"${#required_checks[@]}"' ] | is_present,
     non_fast_forward:                       count_rules("non_fast_forward"),
 } | to_entries[] | "\(.key)=\(.value)"'
-
-    jq_status_checks='.rules[] | select(.type == "required_status_checks") |
-                      .parameters.required_status_checks[] | select(.integration_id == '"$github_actions_app_id"') |
-                      .context'
 
     # freeze the queries now
     declare -xr jq_entries
@@ -240,14 +238,17 @@ function configure_default_repo_settings()
     for key in "${!default_repo_settings[@]}"; do
         local value="${default_repo_settings[$key]}"
         # Use -F for booleans to send as JSON instead of strings
-        if [[ "$value" == "true" || "$value" == "false" ]]; then
+        if is_boolean "$value"; then
             rs+=(-F "${key}=${value}")
         else
             rs+=(-f "${key}=${value}")
         fi
         trace "Setting repository setting: ${key}=${value}"
     done
-    execute_with_retry 3 2 true gh api -X PATCH "${path_repo}" "${rs[@]}"
+    # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
+    execute_with_retry 3 2 true gh api -X PATCH "${path_repo}" "${rs[@]}" &&
+        info "...repository settings configured." ||
+        warning "Could not configure repository settings. Run the script with '--verbose' to see more details and troubleshoot."
 }
 
 declare -xrA default_repo_permissions=(
@@ -258,10 +259,22 @@ declare -xrA default_repo_permissions=(
 function configure_actions_permissions()
 {
     info "Configuring Actions workflow permissions..."
-    execute_with_retry 3 2 true gh api -X PUT "$path_permissions" \
-            -H "Accept: application/vnd.github+json" \
-            -f default_workflow_permissions=read ||
-        warning "Could not configure Actions workflow permissions (possibly restricted by owner policy)."
+
+    local -a rs
+    for key in "${!default_repo_permissions[@]}"; do
+        local value="${default_repo_permissions[$key]}"
+        # Use -F for booleans to send as JSON instead of strings
+        if is_boolean "$value"; then
+            rs+=(-F "${key}=${value}")
+        else
+            rs+=(-f "${key}=${value}")
+        fi
+        trace "Setting repository setting: ${key}=${value}"
+    done
+    # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
+    execute_with_retry 3 2 true gh api -X PUT "${path_permissions}" -H "Accept: application/vnd.github+json" "${rs[@]}" &&
+        info "...actions workflow permissions configured." ||
+        warning "Could not configure Actions workflow permissions. Run the script with '--verbose' to see more details and troubleshoot."
 }
 
 function configure_variables()
@@ -316,7 +329,7 @@ function configure_variables()
     # display the summary
     (( set_new > 0 ))     && info "    ${set_new} variable(s) set to new value(s)."             || true
     (( set_default > 0 )) && info "    ${set_default} variable(s) set to default value(s)."     || true
-    (( skipped > 0 ))     && info "    ${skipped} variable(s) - not modified."                  || true
+    (( skipped > 0 ))     && info "    ${skipped} variable(s) were not modified."               || true
 }
 
 function is_valid_secret()
@@ -425,8 +438,7 @@ function configure_branch_protection()
         status_checks_json="[$status_checks_json]"
     fi
 
-    execute_with_retry 3 2 true gh api -X "${method}" "${endpoint}" \
-        -H "Accept: application/vnd.github+json" \
+    execute_with_retry 3 2 true gh api -X "${method}" "${endpoint}" -H "Accept: application/vnd.github+json" \
         --input - >"$_ignore" <<JSON
 {
     "name": "$main_protection_rs_name",
@@ -481,7 +493,5 @@ function configure_branch_protection()
 }
 JSON
 
-    if (( main_protection_rs_id == 0 )); then
-        initialize_main_protection_rs_id
-    fi
+    initialize_main_protection_rs_id
 }
