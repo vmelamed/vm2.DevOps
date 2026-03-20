@@ -21,6 +21,7 @@ declare -xri admin_role_id
 declare -xr secret_placeholder
 declare -xrA default_repo_settings
 declare -xra default_repo_settings_order
+declare -xrA default_repo_permissions
 declare -xrA default_secrets
 declare -xrA default_vars
 declare -xrA var_validators
@@ -215,11 +216,8 @@ function initialize_main_protection_rs_id()
     [[ -n $path_rulesets ]] || error "The 'path_rulesets' variable is not set. Run initialize_gh_paths() first. Cannot initialize main protection ruleset ID."
 
     # try to get the main_protection_rs_id
-    main_protection_rs_id=$(execute_with_retry 3 2 true gh api --paginate "$path_rulesets" |
-                            jq -r "$jq_ruleset_id" 2>"$_ignore") || return 1
-
-    # if we couldn't get it, return with failure
-    (( main_protection_rs_id > 0 )) || return 1
+    main_protection_rs_id=$(execute_with_retry 3 2 gh api --paginate "$path_rulesets" -q "$jq_ruleset_id" 2>"$_ignore") ||
+        return 1
 
     trace "Initialized main protection ruleset ID: $main_protection_rs_id"
 
@@ -234,47 +232,77 @@ function initialize_main_protection_rs_id()
 function configure_default_repo_settings()
 {
     info "Configuring repository settings..."
-    local -a rs
+
+    # get existing repository settings
+    local -A existing
+    while IFS='=' read -r key value; do
+        existing["$key"]="$value"
+    done < <(execute_with_retry 3 2 gh api "$path_repo" -q "$jq_entries")
+
+    local -a rs=()
+    local actual
+    local expected
     for key in "${!default_repo_settings[@]}"; do
-        local value="${default_repo_settings[$key]}"
-        # Use -F for booleans to send as JSON instead of strings
-        if is_boolean "$value"; then
-            rs+=(-F "${key}=${value}")
+        [[ -n ${existing[$key]+_} ]] && actual="${existing[$key]}" || actual=""
+        expected="${default_repo_settings[$key]}"
+        if [[ "$actual" != "$expected" ]]; then
+            # Use -F for booleans to send as JSON instead of strings
+            if is_boolean "$value"; then
+                rs+=(-F "${key}=${expected}")
+            else
+                rs+=(-f "${key}=${expected}")
+            fi
+            trace "Setting repository setting: ${key}=${expected}"
         else
-            rs+=(-f "${key}=${value}")
+            trace "Repository setting is already set: ${key}=${actual}, skipping."
         fi
-        trace "Setting repository setting: ${key}=${value}"
     done
+
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-    execute_with_retry 3 2 true gh api -X PATCH "${path_repo}" "${rs[@]}" &&
+    if [[ ${#rs[@]} -gt 0 ]]; then
+        execute_with_retry 3 2 true gh api -X PATCH "${path_repo}" "${rs[@]}" &&
         info "...repository settings configured." ||
         warning "Could not configure repository settings. Run the script with '--verbose' to see more details and troubleshoot."
+    else
+        info "...repository settings configured."
+    fi
 }
-
-declare -xrA default_repo_permissions=(
-    ["default_workflow_permissions"]="read"
-    ["can_approve_pull_request_reviews"]=false
-)
 
 function configure_actions_permissions()
 {
     info "Configuring Actions workflow permissions..."
 
-    local -a rs
+    # get existing repository permissions
+    local -A existing
+    while IFS='=' read -r key value; do
+        existing["$key"]="$value"
+    done < <(execute_with_retry 3 2 gh api "$path_permissions" -q "$jq_entries")
+
+
+    local -a rs=()
+    local actual
+    local expected
     for key in "${!default_repo_permissions[@]}"; do
-        local value="${default_repo_permissions[$key]}"
+        [[ -n ${existing[$key]+_} ]] && actual="${existing[$key]}" || actual=""
+        expected="${default_repo_permissions[$key]}"
+
         # Use -F for booleans to send as JSON instead of strings
-        if is_boolean "$value"; then
-            rs+=(-F "${key}=${value}")
+        if is_boolean "$expected"; then
+            rs+=(-F "${key}=${expected}")
         else
-            rs+=(-f "${key}=${value}")
+            rs+=(-f "${key}=${expected}")
         fi
-        trace "Setting repository setting: ${key}=${value}"
+        trace "Setting repository setting: ${key}=${expected}"
     done
+
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-    execute_with_retry 3 2 true gh api -X PUT "${path_permissions}" -H "Accept: application/vnd.github+json" "${rs[@]}" &&
+    if [[ ${#rs[@]} -gt 0 ]]; then
+        execute_with_retry 3 2 true gh api -X PUT "${path_permissions}" -H "Accept: application/vnd.github+json" "${rs[@]}" &&
         info "...actions workflow permissions configured." ||
         warning "Could not configure Actions workflow permissions. Run the script with '--verbose' to see more details and troubleshoot."
+    else
+        info "...actions workflow permissions configured."
+    fi
 }
 
 function configure_variables()
@@ -282,11 +310,11 @@ function configure_variables()
     info "Configuring repository variables..."
 
     # Get existing variables as name=value pairs
-    local -A existing_vars
+    local -A existing
     local name value exists # about the current variable
 
     while IFS='=' read -r name value; do
-        existing_vars["$name"]="$value"
+        existing["$name"]="$value"
     done < <(execute_with_retry 3 2 gh api --paginate "$path_vars" -q "$jq_vars")
 
     local new_value=""
@@ -297,14 +325,14 @@ function configure_variables()
     mapfile -t ordered_names < <(printf '%s\n' "${!default_vars[@]}" | sort)
 
     for name in "${ordered_names[@]}"; do
-        is_in "$name" "${!existing_vars[@]}" && exists=true || exists=false
+        is_in "$name" "${!existing[@]}" && exists=true || exists=false
 
         # the variable exists in GH but we are not in interactive mode and we cannot modify it, so skip it
         $exists && ! $interactive_vars && (( ++skipped )) && continue
 
         # the variable does not exist in GH (we have to create it) or it exists and we are in interactive (the user might want to change it):
         # get the variable's value (to know if it is different from the default)
-        $exists && value="${existing_vars[$name]}" || value=""
+        $exists && value="${existing[$name]}" || value=""
         default_value="${default_vars[$name]}"
 
         if $interactive_vars; then
@@ -340,9 +368,10 @@ function is_valid_secret()
 function configure_secrets()
 {
     # get the names of the existing secrets
-    local -a existing_secrets
+    local -a existing
     while IFS='=' read -r name; do
-        existing_secrets+=("$name")
+        # shellcheck disable=SC2190 # this is not associative array
+        existing+=("$name")
     done < <(gh api --paginate "$path_secrets" -q "$jq_secret_names")
 
     info "Configuring repository secrets..."
@@ -363,7 +392,7 @@ function configure_secrets()
     for name in "${ordered_names[@]}"; do
 
         # the secret exists in GH but we are not in interactive mode and we cannot modify it, so skip it
-        is_in "$name" "${existing_secrets[@]}" && exists=true || exists=false
+        is_in "$name" "${existing[@]}" && exists=true || exists=false
 
         $exists && ! "$interactive_secrets" && (( ++skipped )) && continue # secret exists and we are not entering secrets - continue with the next secret
 
@@ -439,7 +468,7 @@ function configure_branch_protection()
     fi
 
     execute_with_retry 3 2 true gh api -X "${method}" "${endpoint}" -H "Accept: application/vnd.github+json" \
-        --input - >"$_ignore" <<JSON
+        --input - >"$_ignore" << JSON
 {
     "name": "$main_protection_rs_name",
     "target": "branch",

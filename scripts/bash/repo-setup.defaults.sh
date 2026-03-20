@@ -37,14 +37,9 @@ declare -xra default_repo_settings_order=(
     "visibility"
 )
 
-declare -xrA default_secrets=(
-    ["BENCHER_API_TOKEN"]="$secret_placeholder"
-    ["CODECOV_TOKEN"]="$secret_placeholder"
-    ["RELEASE_PAT"]="$secret_placeholder"
-    ["REPORTGENERATOR_LICENSE"]="$secret_placeholder"
-    ["NUGET_API_GITHUB_KEY"]="$secret_placeholder"
-    ["NUGET_API_KEY"]="$secret_placeholder"
-    ["NUGET_API_NUGET_KEY"]="$secret_placeholder"
+declare -xrA default_repo_permissions=(
+    ["default_workflow_permissions"]="read"
+    ["can_approve_pull_request_reviews"]=false
 )
 
 declare -xrA default_ruleset=(
@@ -83,6 +78,16 @@ declare -xra default_ruleset_order=(            # UI: Order in which rules appea
     "do_not_enforce_on_create"                  #   ↳ Do not enforce on create
     "strict_required_status_checks_policy"      #   ↳ Require up-to-date branches
     "non_fast_forward"                          # Block force pushes
+)
+
+declare -xrA default_secrets=(
+    ["BENCHER_API_TOKEN"]="$secret_placeholder"
+    ["CODECOV_TOKEN"]="$secret_placeholder"
+    ["RELEASE_PAT"]="$secret_placeholder"
+    ["REPORTGENERATOR_LICENSE"]="$secret_placeholder"
+    ["NUGET_API_GITHUB_KEY"]="$secret_placeholder"
+    ["NUGET_API_KEY"]="$secret_placeholder"
+    ["NUGET_API_NUGET_KEY"]="$secret_placeholder"
 )
 
 declare -xrA default_vars=(

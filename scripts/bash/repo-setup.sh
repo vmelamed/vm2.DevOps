@@ -254,9 +254,9 @@ list_required_checks
 # ------------------------------------------------------------------
 
 if $audit && ! $interactive_secrets && ! $interactive_vars && has_github_remote repo_state; then
-    initialize_gh_paths
     initialize_jq_queries
-    initialize_main_protection_rs_id || true
+    initialize_gh_paths
+    initialize_main_protection_rs_id
     audit_repo
     exit 0
 fi
