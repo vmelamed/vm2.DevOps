@@ -66,7 +66,7 @@ source "${script_dir}/repo-setup.audit.sh"
 
 get_arguments "$@"
 
-is_verbose && _ignore="/dev/stderr"
+is_verbose && show_ignored_output
 
 #-------------------------------------------------------------------------------
 # Check the prerequisites
@@ -388,7 +388,7 @@ configure_variables
 configure_secrets
 configure_branch_protection
 echo ""
-$audit && audit_repo
+audit_repo
 if [[ ${#undos[@]} -gt 0 ]]; then
     echo ""
     undo_changes | info

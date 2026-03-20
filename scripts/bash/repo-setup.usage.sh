@@ -62,12 +62,15 @@ Options:
                                 Default: "<GitHub default branch name> protection" - usually 'main protection'
 
 Switches:
-  -a, --audit                   Read-only: report current vs expected settings and values without any changes, ignores all other
-                                options
   -s, --ssh                     Use SSH URL for the remote origin. Used only during repository creation
   -t, --https                   Use HTTPS URL for the remote origin. Used only during repository creation
   -iv, --interactive-vars       Prompts the user to enter the values of the repository variables interactively.
   -is, --interactive-secrets    Prompts the user to enter the values of the repository secrets interactively.
+  -a, --audit                   Use this option when you want to see a report of current vs expected state of the repository:
+                                variables, secrets, settings and policies. Use this option when the repository already exists
+                                and is linked to a GitHub repository and none of the --interactive-* options are specified. In
+                                any other case, the script will run its normal course and will display the audit at the end
+                                anyway.
 
 Note: If multiple '--ssh' and/or '--https' are specified - the last on the command line wins.
 $cmn_switches
