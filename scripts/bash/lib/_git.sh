@@ -31,10 +31,10 @@ declare -xri url_name=3
 # Returns:
 #   Exit code: 0 if the repository owner is valid, 1 if it is invalid
 # Examples:
-#   if validate_repo_owner "my-org"; then echo "Valid repo owner"; fi
+#   if validate_gh_repo_owner "my-org"; then echo "Valid repo owner"; fi
 # See also: https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user for details on GitHub repository owner naming rules.
 #-------------------------------------------------------------------------------
-function validate_repo_owner()
+function validate_gh_repo_owner()
 {
     if [[ $# -ne 1 ]]; then
         error 3 "${FUNCNAME[0]}() requires exactly one argument: the repository owner to validate."
@@ -59,11 +59,11 @@ See https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-auth
 # Returns:
 #   Exit code: 0 if the repository name is valid, 1 if it is invalid
 # Examples:
-#   if validate_repo_name "my-repo"; then echo "Valid repo name"; fi
-#   repo_name=$(enter_value "GitHub Repository name" "$default_repo_name" false validate_repo_name)
+#   if validate_gh_repo_name "my-repo"; then echo "Valid repo name"; fi
+#   repo_name=$(enter_value "GitHub Repository name" "$default_repo_name" false validate_gh_repo_name)
 # See also: https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user for details on GitHub repository naming rules.
 #-------------------------------------------------------------------------------
-function validate_repo_name()
+function validate_gh_repo_name()
 {
     if [[ $# -ne 1 ]]; then
         error 3 "${FUNCNAME[0]}() requires exactly one argument: the repository name to validate."
@@ -84,11 +84,11 @@ function validate_repo_name()
 # Returns:
 #   Exit code: 0 if the repository description is valid, 1 if it is invalid
 # Examples:
-#   if validate_repo_description "This is my repo"; then echo "Valid repo description"; fi
-#   repo_description=$(enter_value "GitHub Repository description" "$default_repo_description" false validate_repo_description)
+#   if validate_gh_repo_description "This is my repo"; then echo "Valid repo description"; fi
+#   repo_description=$(enter_value "GitHub Repository description" "$default_repo_description" false validate_gh_repo_description)
 # See also: https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user for details on GitHub repository description rules.
 #--------------------------------------------------------------------------------
-function validate_repo_description()
+function validate_gh_repo_description()
 {
     if [[ $# -ne 1 ]]; then
         error 3 "${FUNCNAME[0]}() requires exactly one argument: the repository description to validate."
@@ -109,11 +109,11 @@ function validate_repo_description()
 # Returns:
 #   Exit code: 0 if the repository branch name is valid, 1 if it is invalid
 # Examples:
-#   if validate_repo_branch "main"; then echo "Valid branch name"; fi
-#   branch_name=$(enter_value "Default branch name" "$default_branch" false validate_repo_branch)
+#   if validate_gh_repo_branch "main"; then echo "Valid branch name"; fi
+#   branch_name=$(enter_value "Default branch name" "$default_branch" false validate_gh_repo_branch)
 # See also: https://git-scm.com/docs/git-check-ref-format for details on valid git ref names
 #--------------------------------------------------------------------------------
-function validate_repo_branch()
+function validate_gh_repo_branch()
 {
     if [[ $# -ne 1 ]]; then
         error 3 "${FUNCNAME[0]}() requires exactly one argument: the repository branch name to validate."
@@ -133,19 +133,196 @@ function validate_repo_branch()
 # Returns:
 #   Exit code: 0 if the secret value is valid, 1 if it is invalid
 # Examples:
-#   if validate_secret "c2VjcmV0VmFsdWU="; then echo "Valid secret"; fi
+#   if validate_gh_secret "c2VjcmV0VmFsdWU="; then echo "Valid secret"; fi
 # See also: https://docs.github.com/en/actions/security-guides/encrypted-secrets for details on GitHub secrets
 #-------------------------------------------------------------------------------
-function validate_secret()
+function validate_gh_secret()
 {
     if [[ $# -ne 1 ]]; then
         error 3 "${FUNCNAME[0]}() requires exactly one argument: the secret value to validate."
         return 2
     fi
-    [[ -z "$1" ]] || is_base64 "$1" || {
+    [[ -z "$1" ]] || [[ ! "$1" =~ [[:cntrl:]] ]] || {
         error "Invalid secret value. Secrets must be base64 encoded or empty."
         return 1
     }
+}
+#-------------------------------------------------------------------------------
+# Summary: Executes a GitHub CLI command with retry logic for transient failures.
+# Parameters:
+#   1 - max_attempts: Maximum number of attempts
+#   2 - delay: Delay between attempts in seconds
+#   3, if boolean - ignore_output: indicates whether to suppress output (true) or not (false)
+#   3 or 4... - gh command parameters: subcommand, flags, etc...
+# Returns:
+#   Exit code: 0 if the command succeeds, non-zero if it fails after all attempts
+# Examples:
+#   execute_gh_with_retry 3 5 repo create my-repo --public
+#   execute_gh_with_retry 3 2 true repo delete owner/repo --yes
+#-------------------------------------------------------------------------------
+function execute_gh_with_retry()
+{
+    if [[ $# -lt 3 ]]; then
+        error 3 "${FUNCNAME[0]}() requires at least three arguments: <max_attempts> <delay> <gh-command> [args...]"
+        return 2
+    fi
+    if ! is_natural "$1"; then
+        error 3 "${FUNCNAME[0]}() requires the first argument to be a natural number: <max_attempts>"
+        return 2
+    fi
+    if ! is_natural "$2"; then
+        error 3 "${FUNCNAME[0]}() requires the second argument to be a natural number: <delay> in seconds"
+        return 2
+    fi
+
+    # get the first two and the third optional boolean parameter: ignore_output
+    local max_attempts=$1; shift
+    local delay=$1; shift
+    local output
+    is_boolean "$1" && $1 && shift && output="$_ignore" || output="/dev/stdout"
+
+    if [[ $# -lt 1 ]]; then
+        error 3 "${FUNCNAME[0]}() requires at least one gh command argument: the gh subcommand and its arguments"
+        return 2
+    fi
+
+    if [[ "$dry_run" == true ]]; then
+        echo "dry-run$ gh $*" >&2
+        return 0
+    fi
+
+    # stderr goes for now in a temp.file, so we can process it. In the end it should be redirected to stderr, and then the temp. file will be deleted.
+    local stderr_file
+    stderr_file=$(mktemp)
+    # shellcheck disable=SC2064 # Use single quotes, otherwise this expands now rather than when signalled - yup, this is intentional
+    trap "rm -f '$stderr_file'" RETURN
+
+    local attempt=0
+    local rc=0
+    local response="" message=""
+    trace "Executing with retry (${BASH_SOURCE[1]:-} ${BASH_LINENO[0]:-}): 'gh $*'"
+
+    until response=$(gh "$@"  2>"$stderr_file"); do
+        rc=$?
+
+        message=$(cat "$stderr_file")
+        # Check if error is transient - retry
+        if [[ ! "$message" =~ (rate.limit|server.error|timeout|temporarily.unavailable|try.again|502|503|504|connection.refused|network.error) ]]; then
+            # Permanent error (invalid args, not found, permissions, etc.) - don't retry
+           break
+        fi
+
+        # Retry
+        if (( ++attempt >= max_attempts )); then
+            break
+        fi
+        message=$(head -n1 <<< "$message")
+        warning "'gh' command failed: $message (attempt $attempt/$max_attempts). Retrying in ${delay}s."
+        sleep "$delay"
+    done
+
+    cat "$stderr_file" >>&2
+    echo "$response" >> "$output"
+    return "$rc"
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Executes a GitHub API command with retry logic.
+# Parameters:
+#   1 - max_attempts: Maximum number of attempts
+#   2 - delay: Delay between attempts in seconds
+#   3, if boolean - ignore_output: indicates whether to suppress output (true) or not (false)
+#   3 or 4... - gh api parameters: route, etc...
+# Returns:
+#   Exit code: 0 if the command succeeds, non-zero if it fails after all attempts
+# Examples:
+#   execute_gh_api_with_retry 3 5 gh api repos/vmelamed/my-repo
+#-------------------------------------------------------------------------------
+
+function execute_gh_api_with_retry()
+{
+    if [[ $# -lt 3 ]]; then
+        error 3 "${FUNCNAME[0]}() requires at least three arguments: <max_attempts> <delay> <command> [args...]"
+        return 2
+    fi
+    if ! is_natural "$1"; then
+        error 3 "${FUNCNAME[0]}() requires the first argument to be a natural number: <max_attempts>"
+        return 2
+    fi
+    if ! is_natural "$2"; then
+        error 3 "${FUNCNAME[0]}() requires the second argument to be a natural number: <delay> in seconds"
+        return 2
+    fi
+
+    # get the first two and the third optional boolean parameter: ignore_output
+    local max_attempts=$1; shift
+    local delay=$1; shift
+    local output
+    is_boolean "$1" && $1 && shift && output="$_ignore" || output="/dev/stdout"
+
+    if [[ $# -lt 1 ]]; then
+        error 3 "${FUNCNAME[0]}() requires at least one argument: the path to the GitHub API endpoint."
+        return 2
+    fi
+
+    if [[ "$dry_run" == true ]]; then
+        echo "dry-run$ gh api $*" >&2
+        return 0
+    fi
+
+    # stderr goes for now in a temp.file, so we can process it. In the end it should be redirected to stderr, and then the temp. file will be deleted.
+    local stderr_file
+    stderr_file=$(mktemp)
+    # shellcheck disable=SC2064
+    trap "rm -f '$stderr_file'" RETURN
+
+    local attempt=0
+    local rc=0
+    local response="" message="" status=""
+    trace "Executing with retry (${BASH_SOURCE[1]:-} ${BASH_LINENO[0]:-}): gh api $*"
+
+    until response=$(gh api "$@" 2>"$stderr_file"); do
+        rc=$?
+        status=$(jq -r '.status' <<< "$response") || true
+
+        # If no JSON status, check stderr for network/auth errors
+        if [[ -z "$status" || "$status" == "null" ]]; then
+            message=$(cat "$stderr_file")
+
+            # If it's a not a transient error in stderr - break(return), otherwise - retry
+            if [[ ! "$message" =~ (authentication|network|timeout|dns|connection) ]]; then
+                break
+            fi
+        else
+            # Normal JSON error/HTTP status handling
+            case $status in
+                425|429|500|502|503|504 )           # transient error HTTP status codes from 'gh api' - retry may fix it
+                    message=$(jq -r '.message' <<< "$response")
+                    ;;
+
+                1*|2*|3* )
+                    rc=0
+                    break ;;                        # 1xx, 2xx, and 3xx HTTP status codes are considered successful
+
+                * ) echo "$response" >> "$output"   # everything else is a bad outcome that will not be fixed by retrying
+                    rc=1
+                    break
+                    ;;
+            esac
+            message="HTTP status $status: $message"
+        fi
+
+        # transient error - retry
+        if (( ++attempt >= max_attempts )); then
+            break
+        fi
+        warning "'gh api' command failed: $message" "(attempt $attempt/$max_attempts). Retrying in ${delay}s."
+        sleep "$delay"
+    done
+
+    cat "$stderr_file" >>&2
+    echo "$response" >> "$output"
+    return "$rc"
 }
 
 #-------------------------------------------------------------------------------
