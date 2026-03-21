@@ -89,7 +89,7 @@ function get_arguments()
                 interactive_secrets=true
                 ;;
 
-            --audit )
+            --audit|-a )
                 audit=true
                 ;;
 
