@@ -143,7 +143,7 @@ function validate_gh_secret()
         return 2
     fi
     [[ -z "$1" ]] || [[ ! "$1" =~ [[:cntrl:]] ]] || {
-        error "Invalid secret value. Secrets must be base64 encoded or empty."
+        error "Invalid secret value. Secrets cannot have control characters or be empty."
         return 1
     }
 }
@@ -175,23 +175,24 @@ function execute_gh_with_retry()
         return 2
     fi
 
-    # get the first two and the third optional boolean parameter: ignore_output
+    # get the first two and the optional third (ignore_output) boolean parameter
+    local output="/dev/stdout"
+    local ignore_output=false
     local max_attempts=$1; shift
     local delay=$1; shift
-    local output
-    is_boolean "$1" && $1 && shift && output="$_ignore" || output="/dev/stdout"
+    is_boolean "$1" && ignore_output=$1 && shift    # otherwise ignore_output remains false
+    $ignore_output && output="$_ignore"             # otherwise output remains /dev/stdout
 
     if [[ $# -lt 1 ]]; then
         error 3 "${FUNCNAME[0]}() requires at least one gh command argument: the gh subcommand and its arguments"
         return 2
     fi
-
     if [[ "$dry_run" == true ]]; then
         echo "dry-run$ gh $*" >&2
         return 0
     fi
 
-    # stderr goes for now in a temp.file, so we can process it. In the end it should be redirected to stderr, and then the temp. file will be deleted.
+    # stderr goes to a temp file to preserve output fidelity (especially newlines), yet still allow us to process them separately
     local stderr_file
     stderr_file=$(mktemp)
     # shellcheck disable=SC2064 # Use single quotes, otherwise this expands now rather than when signalled - yup, this is intentional
@@ -199,30 +200,30 @@ function execute_gh_with_retry()
 
     local attempt=0
     local rc=0
-    local response="" message=""
-    trace "Executing with retry (${BASH_SOURCE[1]:-} ${BASH_LINENO[0]:-}): 'gh $*'"
+    local message=""
+    trace "Executing with retry from (${BASH_SOURCE[1]:-} ${BASH_LINENO[0]:-}): 'gh $*'"
 
-    until response=$(gh "$@"  2>"$stderr_file"); do
+    until gh "$@" >"$output" 2>"$stderr_file"; do
         rc=$?
 
         message=$(cat "$stderr_file")
+
         # Check if error is transient - retry
         if [[ ! "$message" =~ (rate.limit|server.error|timeout|temporarily.unavailable|try.again|502|503|504|connection.refused|network.error) ]]; then
             # Permanent error (invalid args, not found, permissions, etc.) - don't retry
            break
         fi
 
-        # Retry
+        # Retry or give up
         if (( ++attempt >= max_attempts )); then
+            error "After $attempt attempts, the 'gh' command is still failing."
             break
         fi
-        message=$(head -n1 <<< "$message")
-        warning "'gh' command failed: $message (attempt $attempt/$max_attempts). Retrying in ${delay}s."
+        warning "'gh' command failed. Attempt $attempt/$max_attempts. Retrying in ${delay}s."
+        cat "$stderr_file" >&2
         sleep "$delay"
     done
-
-    cat "$stderr_file" >>&2
-    echo "$response" >> "$output"
+    cat "$stderr_file" >&2
     return "$rc"
 }
 
@@ -254,41 +255,44 @@ function execute_gh_api_with_retry()
         return 2
     fi
 
-    # get the first two and the third optional boolean parameter: ignore_output
+    # get the first two and the optional third (ignore_output) boolean parameter
+    local output="/dev/stdout"
+    local ignore_output=false
     local max_attempts=$1; shift
     local delay=$1; shift
-    local output
-    is_boolean "$1" && $1 && shift && output="$_ignore" || output="/dev/stdout"
+    is_boolean "$1" && ignore_output=$1 && shift    # otherwise ignore_output remains false
+    $ignore_output && output="$_ignore"             # otherwise output remains /dev/stdout
 
     if [[ $# -lt 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires at least one argument: the path to the GitHub API endpoint."
+        error 3 "${FUNCNAME[0]}() requires at least one gh command argument: the gh subcommand and its arguments"
         return 2
     fi
-
     if [[ "$dry_run" == true ]]; then
-        echo "dry-run$ gh api $*" >&2
+        echo "dry-run$ gh $*" >&2
         return 0
     fi
 
-    # stderr goes for now in a temp.file, so we can process it. In the end it should be redirected to stderr, and then the temp. file will be deleted.
-    local stderr_file
+    # stderr and stdout go to temp files to preserve output fidelity (especially newlines), yet still allow us to process them separately
+    local stderr_file stdout_file
     stderr_file=$(mktemp)
+    stdout_file=$(mktemp)
     # shellcheck disable=SC2064
-    trap "rm -f '$stderr_file'" RETURN
+    trap "rm -f '$stderr_file' '$stdout_file'" RETURN
 
     local attempt=0
     local rc=0
     local response="" message="" status=""
-    trace "Executing with retry (${BASH_SOURCE[1]:-} ${BASH_LINENO[0]:-}): gh api $*"
+    trace "Executing with retry @ (${BASH_SOURCE[1]:-} ${BASH_LINENO[0]:-}): gh api $*"
 
-    until response=$(gh api "$@" 2>"$stderr_file"); do
+    until gh api "$@" >"$stdout_file" 2>"$stderr_file"; do
         rc=$?
+
+        response=$(cat "$stdout_file")
         status=$(jq -r '.status' <<< "$response") || true
 
         # If no JSON status, check stderr for network/auth errors
         if [[ -z "$status" || "$status" == "null" ]]; then
             message=$(cat "$stderr_file")
-
             # If it's a not a transient error in stderr - break(return), otherwise - retry
             if [[ ! "$message" =~ (authentication|network|timeout|dns|connection) ]]; then
                 break
@@ -297,31 +301,32 @@ function execute_gh_api_with_retry()
             # Normal JSON error/HTTP status handling
             case $status in
                 425|429|500|502|503|504 )           # transient error HTTP status codes from 'gh api' - retry may fix it
-                    message=$(jq -r '.message' <<< "$response")
                     ;;
 
                 1*|2*|3* )
                     rc=0
-                    break ;;                        # 1xx, 2xx, and 3xx HTTP status codes are considered successful
+                    break                           # 1xx, 2xx, and 3xx HTTP status codes are considered successful
+                    ;;
 
-                * ) echo "$response" >> "$output"   # everything else is a bad outcome that will not be fixed by retrying
-                    rc=1
+                * ) rc=1                            # everything else is a bad outcome that will not be fixed by retrying
                     break
                     ;;
             esac
-            message="HTTP status $status: $message"
         fi
 
         # transient error - retry
         if (( ++attempt >= max_attempts )); then
+            error "After $attempt attempts, the 'gh api' command is still failing."
             break
         fi
-        warning "'gh api' command failed: $message" "(attempt $attempt/$max_attempts). Retrying in ${delay}s."
+        warning "'gh api' command failed. Attempt $attempt/$max_attempts. Retrying in ${delay}s."
+        cat "$stderr_file" >&2
+        cat "$stdout_file" >> "$output"
         sleep "$delay"
     done
 
-    cat "$stderr_file" >>&2
-    echo "$response" >> "$output"
+    cat "$stderr_file" >&2
+    cat "$stdout_file" >> "$output"
     return "$rc"
 }
 
@@ -331,6 +336,7 @@ function execute_gh_api_with_retry()
 #-------------------------------------------------------------------------------
 declare -xr key_root='root'
 declare -xr key_url='url'
+declare -xr key_ssh_url='ssh_url'
 declare -xr key_authority='authority'
 declare -xr key_owner='owner'
 declare -xr key_name='name'
@@ -351,6 +357,18 @@ declare -xar repo_state_keys=(
     "$key_repo_id"
     "$key_default_branch"
 )
+
+declare -x query_gh_repo_state="
+{
+    $key_repo_id: .id,
+    $key_owner: .owner.login,
+    $key_default_branch: .default_branch,
+    $key_url: .html_url,
+    $key_ssh_url: .ssh_url,
+    $key_name: .name,
+    $key_repo: .full_name
+} | to_entries[] | \"\\(.key)=\\(.value)\""
+
 
 #-------------------------------------------------------------------------------
 # Summary: initializes a repo state to an initial state where it contains all predefined keys with values - empty strings
@@ -407,6 +425,7 @@ function get_repo_state()
     initialize_repo_state "$2" # make sure we have all fields
 
     state[$key_root]=$(git -C "$1" rev-parse --show-toplevel 2>"$_ignore") || return 0 # no local git repo - return
+    local url
     url=$(git -C "$1" remote get-url origin 2>"$_ignore")                  || return 0 # no origin remote - return
 
     [[ -n $url && $url =~ $github_url_regex ]]                             || return 0 # origin remote is not a GitHub URL - return
@@ -424,37 +443,29 @@ function get_repo_state()
 
     $full_info                                                             || return 0 # caller does not want full info - return with what we have from git, without trying to get GitHub API data
 
-    local gh_repo_id gh_default_branch gh_owner gh_name gh_repo gh_ssh_url gh_url
+    local -A gh_state
 
-    {
-        IFS= read -r gh_repo_id
-        IFS= read -r gh_default_branch
-        IFS= read -r gh_owner
-        IFS= read -r gh_name
-        IFS= read -r gh_repo
-        IFS= read -r gh_ssh_url
-        IFS= read -r gh_url
-    } < <(gh repo view \
-                --json id,defaultBranchRef,owner,name,nameWithOwner,sshUrl,url \
-                --jq '.id,.defaultBranchRef.name,.owner.login,.name,.nameWithOwner,.sshUrl,.url' \
-                "$owner/$name" 2>"$_ignore")                               || return 0 # gh command failed, e.g. due to API error or authentication issue - return with what we have from git, without GitHub API data
+    while IFS='=' read -r name value; do
+        trace "gh_state[$name]=$value"
+        gh_state["$name"]="$value"
+    done < <(execute_gh_api_with_retry 3 2 --paginate "repos/$owner/$name" -q "$query_gh_repo_state")
 
     local -i errs=$errors
     local -i rc=0
 
     # these are real logical problems that can occur if the git remote is misconfigured or the API is returning unexpected data,
     # so we check them all and report all mismatches rather than bailing on the first one
-    [[ "$gh_ssh_url" == "${state[$key_url]}"            ||
-       "$gh_url" == "${state[$key_url]}" ]]             || error "GitHub API returned URLs '$gh_ssh_url' and '$gh_url' that do not match the git remote URL '${state[$key_remote_url]}'."
-    [[ "$gh_owner" == "${state[$key_owner]}" ]]         || error "GitHub API returned owner '$gh_owner' that does not match the git remote owner '${state[$key_owner]}'."
-    [[ "$gh_name" == "${state[$key_name]}" ]]           || error "GitHub API returned name '$gh_name' that does not match the git remote name '${state[$key_name]}'."
-    [[ "$gh_repo" == "${state[$key_repo]}" ]]           || error "GitHub API returned repo '$gh_repo' that does not match the expected repo '${state[$key_repo]}'."
-    [[ -n "$gh_repo_id" ]]                              || error "GitHub API did not return a repo ID for '$gh_repo'."
+    [[ ${gh_state["$key_ssh_url"]} == "${state[$key_url]}"      ||
+       ${gh_state["$key_url"]}     == "${state[$key_url]}" ]]   || error "GitHub API returned URLs '${gh_state["$key_ssh_url"]}' and '${gh_state["$key_url"]}' that do not match the git remote URL '${state[$key_url]}'."
+    [[ ${gh_state["$key_owner"]}   == "${state[$key_owner]}" ]] || error "GitHub API returned owner '${gh_state["$key_owner"]}' that does not match the git remote owner '${state[$key_owner]}'."
+    [[ ${gh_state["$key_name"]}    == "${state[$key_name]}" ]]  || error "GitHub API returned name '${gh_state["$key_name"]}' that does not match the git remote name '${state[$key_name]}'."
+    [[ ${gh_state["$key_repo"]}    == "${state[$key_repo]}" ]]  || error "GitHub API returned repo '${gh_state["$key_repo"]}' that does not match the expected repo '${state[$key_repo]}'."
+    [[ -n ${gh_state["$key_repo_id"]} ]]                        || error "GitHub API did not return a repo ID for '${gh_state["$key_repo"]}'."
 
     rc=$(( errs < errors ? 1 : 0 ))
 
-    state[$key_repo_id]="$gh_repo_id"
-    state[$key_default_branch]="$gh_default_branch"
+    state[$key_repo_id]="${gh_state["$key_repo_id"]}"
+    state[$key_default_branch]="${gh_state["$key_default_branch"]}"
 
     return "$rc"
 }
