@@ -387,7 +387,7 @@ function is_safe_runner_os()
         return 0
     fi
 
-    error "The runner OS '$runner_os' is not in the list of allowed GitHub Actions runner OS names: ${allowed_runners_os[*]}."
+    error "The runner OS '$runner_os' is not allowed. Valid options: ${allowed_runners_os[*]}."
     return 1
 }
 
@@ -425,7 +425,7 @@ function is_safe_reason()
 
     # Reject if it looks like a command (starts with -, /, .)
     if [[ "$reason" =~ ^[-/.] ]]; then
-        error "The reason '$reason' appears to be a command or unsafe input (contains one or more unsafe characters)."
+        error "The reason '$reason' appears to be a command or contains unsafe characters."
         return 1
     fi
     return 0
@@ -488,7 +488,7 @@ function validate_nuget_server()
     local default_server=${2:-"nuget"}
 
     if [[ ! $default_server =~ $nugetServersRegex ]]; then
-        error "Invalid default NuGet server: $default_server"
+        error "Invalid default NuGet server: $default_server."
         return 2
     fi
 
@@ -498,7 +498,7 @@ function validate_nuget_server()
     fi
 
     if [[ ! "$server" =~ $nugetServersRegex ]]; then
-        error "Invalid NuGet server: $server"
+        error "Invalid NuGet server: $server."
         return 1
     fi
 

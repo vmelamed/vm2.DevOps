@@ -352,7 +352,7 @@ function on_exit()
     if $allow_on_exit; then
         if [[ $x -ne 0 ]]; then
             if ! [[ $last_command =~ exit\ .+ ]]; then
-                error "on_exit: '$last_command' command failed with exit code $x"
+                error "on_exit: '$last_command' command failed with exit code $x."
             else
                 trace "on_exit: last_command='$last_command', exit_code=$x, allow_on_exit=$allow_on_exit"
             fi

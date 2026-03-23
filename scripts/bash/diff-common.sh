@@ -38,7 +38,7 @@ if [[ -z "$vm2_repos" ]] || ! vm2_repos=$(realpath -e "$vm2_repos" 2> "$_ignore"
        r=$(realpath -e "$(dirname "$script_dir/../..")"); then
         vm2_repos=$(realpath -e "$(dirname "$r")")
     else
-        error "The source directories are not located under the same parent directory. Specify the path of their parent directory either either with \$VM2_REPOS environment variable or the --vm2-repos option."
+        error "The source directories are not located under the same parent directory. Specify the path of their parent directory either with the \$VM2_REPOS environment variable or the --vm2-repos option."
         exit 2
     fi
 fi
@@ -54,7 +54,7 @@ trace "All source repositories are in '$vm2_repos'"
 
 if  ! target_path=$(realpath -e "$target_dir" 2> "$_ignore") &&
     ! target_path=$(realpath -e "$vm2_repos/$target_dir" 2> "$_ignore"); then
-     error "Could not find the target directory '$target_dir' neither in the current working directory nor in '$VM2_REPOS'."
+     error "Could not find the target directory '$target_dir' in the current working directory or in '$VM2_REPOS'."
      exit 2
 fi
 if is_in "$target_path" "${vm2_repos}/vm2.DevOps" "${vm2_repos}/.github" ; then
@@ -92,7 +92,7 @@ customize
 # validate the configuration
 if [[ ${#source_files[@]} -ne ${#target_files[@]} ]] ||
    [[ ${#source_files[@]} -ne ${#file_actions[@]} ]]; then
-    error "The data in the config tables do not match."
+    error "The data in the config tables does not match."
 fi
 
 exit_if_has_errors

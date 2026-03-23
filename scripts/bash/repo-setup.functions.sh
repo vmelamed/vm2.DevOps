@@ -82,10 +82,10 @@ function validate_source_repo()
     local repo_name=$1
     local dir="${vm2_repos}/${repo_name}"
 
-    [[ -d "${dir}" ]] || error "The '${repo_name}' repository was not cloned or is not under ${vm2_repos}."
+    [[ -d "${dir}" ]] || error "The '${repo_name}' repository is not found under ${vm2_repos}."
 
     if [[ "$dir" == $(root_working_tree "$dir") ]]; then
-        is_on_or_after_latest_stable_tag "$dir" "$semverTagReleaseRegex" || error "The HEAD of the '${repo_name}' repository is before the latest stable tag. Please synchronize."
+        is_on_or_after_latest_stable_tag "$dir" "$semverTagReleaseRegex" || error "The '${repo_name}' repository is behind the latest stable tag. Please synchronize."
     else
         confirm "The ${repo_name} repository at '$dir' is not a git repository. Do you want to continue?" "n" || error "The ${repo_name} repository at '$dir' is not a git repository."
     fi
@@ -216,17 +216,22 @@ function initialize_main_protection_rs_id()
     [[ -n $path_rulesets ]] || error "The 'path_rulesets' variable is not set. Run initialize_gh_paths() first. Cannot initialize main protection ruleset ID."
 
     # try to get the main_protection_rs_id
-    main_protection_rs_id=$(execute_with_retry 3 2 gh api --paginate "$path_rulesets" -q "$jq_ruleset_id" 2>"$_ignore") ||
+    main_protection_rs_id=$(execute_gh_api_with_retry 3 2 --paginate "$path_rulesets" -q "$jq_ruleset_id" 2>"$_ignore") ||
         return 1
 
-    trace "Initialized main protection ruleset ID: $main_protection_rs_id"
+    if (( main_protection_rs_id > 0 )); then
+        trace "Initialized main protection ruleset ID: $main_protection_rs_id"
 
-    path_main_protection_ruleset="${path_rulesets}/${main_protection_rs_id}"
+        path_main_protection_ruleset="${path_rulesets}/${main_protection_rs_id}"
 
-    declare -xir main_protection_rs_id
-    declare -xr path_main_protection_ruleset
+        declare -xir main_protection_rs_id
+        declare -xr path_main_protection_ruleset
+        return 0
+    else
+        trace "Failed to initialize main protection ruleset ID."
+        return 1
+    fi
 
-    return 0
 }
 
 function configure_default_repo_settings()
@@ -237,7 +242,7 @@ function configure_default_repo_settings()
     local -A existing
     while IFS='=' read -r key value; do
         existing["$key"]="$value"
-    done < <(execute_with_retry 3 2 gh api "$path_repo" -q "$jq_entries")
+    done < <(execute_gh_api_with_retry 3 2 "$path_repo" -q "$jq_entries")
 
     local -a rs=()
     local actual
@@ -247,10 +252,10 @@ function configure_default_repo_settings()
         expected="${default_repo_settings[$key]}"
         if [[ "$actual" != "$expected" ]]; then
             # Use -F for booleans to send as JSON instead of strings
-            if is_boolean "$value"; then
-                rs+=(-F "${key}=${expected}")
+            if is_boolean "$expected"; then
+                rs+=("-F" "${key}=${expected}")
             else
-                rs+=(-f "${key}=${expected}")
+                rs+=("-f" "${key}=${expected}")
             fi
             trace "Setting repository setting: ${key}=${expected}"
         else
@@ -260,7 +265,7 @@ function configure_default_repo_settings()
 
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     if [[ ${#rs[@]} -gt 0 ]]; then
-        execute_with_retry 3 2 true gh api -X PATCH "${path_repo}" "${rs[@]}" &&
+        execute_gh_api_with_retry 3 2 true -X PATCH "${path_repo}" "${rs[@]}" &&
         info "...repository settings configured." ||
         warning "Could not configure repository settings. Run the script with '--verbose' to see more details and troubleshoot."
     else
@@ -276,7 +281,7 @@ function configure_actions_permissions()
     local -A existing
     while IFS='=' read -r key value; do
         existing["$key"]="$value"
-    done < <(execute_with_retry 3 2 gh api "$path_permissions" -q "$jq_entries")
+    done < <(execute_gh_api_with_retry 3 2 "$path_permissions" -q "$jq_entries")
 
 
     local -a rs=()
@@ -288,16 +293,16 @@ function configure_actions_permissions()
 
         # Use -F for booleans to send as JSON instead of strings
         if is_boolean "$expected"; then
-            rs+=(-F "${key}=${expected}")
+            rs+=("-F" "${key}=${expected}")
         else
-            rs+=(-f "${key}=${expected}")
+            rs+=("-f" "${key}=${expected}")
         fi
         trace "Setting repository setting: ${key}=${expected}"
     done
 
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     if [[ ${#rs[@]} -gt 0 ]]; then
-        execute_with_retry 3 2 true gh api -X PUT "${path_permissions}" -H "Accept: application/vnd.github+json" "${rs[@]}" &&
+        execute_gh_api_with_retry 3 2 true -X PUT "${path_permissions}" -H "Accept: application/vnd.github+json" "${rs[@]}" &&
         info "...actions workflow permissions configured." ||
         warning "Could not configure Actions workflow permissions. Run the script with '--verbose' to see more details and troubleshoot."
     else
@@ -315,7 +320,7 @@ function configure_variables()
 
     while IFS='=' read -r name value; do
         existing["$name"]="$value"
-    done < <(execute_with_retry 3 2 gh api --paginate "$path_vars" -q "$jq_vars")
+    done < <(execute_gh_api_with_retry 3 2 --paginate "$path_vars" -q "$jq_vars")
 
     local new_value=""
     local default_value=""
@@ -337,8 +342,8 @@ function configure_variables()
 
         if $interactive_vars; then
             # prompt the user for a new value while showing them the current value (if it exists) and the default value
-            $exists && new_value=$(enter_value "            Enter value for variable ${name} (current: '${value}')" "$default_value" false "${var_validators["$name"]}") ||
-                       new_value=$(enter_value "            Enter value for variable ${name}" "$default_value" false "${var_validators["$name"]}")
+            $exists && new_value=$(enter_value "        Enter value for variable ${name} (current: '${value}')" "$default_value" false "${var_validators["$name"]}") ||
+                       new_value=$(enter_value "        Enter value for variable ${name}" "$default_value" false "${var_validators["$name"]}")
         else
             # if we are here the var does not exist and we are not in interactive mode, so we just will use the default value
             new_value="$default_value"
@@ -346,7 +351,7 @@ function configure_variables()
 
         $exists && [[ $value == "$new_value" ]] && (( ++skipped )) && continue # nothing to do if the new value is the same as the previous value
 
-        execute_with_retry 3 2 true gh variable set "$name" --body "$new_value" -R "$repo"
+        execute_gh_with_retry 3 2 true variable set "$name" --body "$new_value" -R "$repo"
         trace "Set variable: ${name}=${new_value}"
 
         # increment counters based on whether the new value is the default or a new value for the summary in the end of the function
@@ -400,7 +405,7 @@ function configure_secrets()
         if $interactive_secrets; then
             # prompt the user for a new value, while warning them that pressing Enter will use the placeholder value, which of course is not a real secret
             $first && warning "  If you press the Enter key, a PLACEHOLDER value will be used!" && first=false
-            value=$(enter_value "            Enter value for secret ${name} [PLACEHOLDER]" "$secret_placeholder" true is_valid_secret)
+            value=$(enter_value "        Enter value for secret ${name} [PLACEHOLDER]" "$secret_placeholder" true validate_gh_secret)
             echo ""
         else
             # if we are here the secret does not exist and we are not in interactive mode, so we will just use the place holder
@@ -414,7 +419,7 @@ function configure_secrets()
         set +x
 
         # set the secret on GitHub
-        execute_with_retry 3 2 true gh secret set "$name" --body "$value" -R "$repo"
+        execute_gh_with_retry 3 2 true secret set "$name" --body "$value" -R "$repo"
 
         # restore all tracing
         # shellcheck disable=SC2015
@@ -425,7 +430,7 @@ function configure_secrets()
         # shellcheck disable=SC2015
         if [[ $value == "$secret_placeholder" ]]; then
             (( ++set_default ))
-            warning "          Replace the placeholder value of secret ${name} with an actual value."
+            warning "      Replace the placeholder value of secret ${name} with an actual value."
         else
             (( ++set_new ))
         fi
@@ -433,8 +438,8 @@ function configure_secrets()
 
     (( set_new > 0 ))     && info "    ${set_new} secret(s) set to new value(s)."               || true
     (( set_default > 0 )) && info "    ${set_default} secret(s) set to placeholder value(s)."   || true
-    (( skipped > 0 ))     && info "    ${skipped} secrets(s) were not modified."                || true
-    (( set_default > 0 )) && warning "  Do not forget to later replace placeholder values of secrets with actual values."  || true
+    (( skipped > 0 ))     && info "    ${skipped} secret(s) were not modified."                 || true
+    (( set_default > 0 )) && warning "  Remember to replace placeholder secret values with actual values." || true
 }
 
 function configure_branch_protection()
@@ -467,7 +472,7 @@ function configure_branch_protection()
         status_checks_json="[$status_checks_json]"
     fi
 
-    execute_with_retry 3 2 true gh api -X "${method}" "${endpoint}" -H "Accept: application/vnd.github+json" \
+    execute_gh_api_with_retry 3 2 true -X "${method}" "${endpoint}" -H "Accept: application/vnd.github+json" \
         --input - >"$_ignore" << JSON
 {
     "name": "$main_protection_rs_name",

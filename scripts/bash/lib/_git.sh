@@ -42,7 +42,7 @@ function validate_gh_repo_owner()
     fi
     [[ -z "$1" || "$1" =~ $repo_owner_regex ]] || {
         # repo owner can be empty (for user-level repos) or must match the regex for GitHub owner/organization names
-        error "Invalid repository owner. $valid_repo_owners"
+        error "Invalid repository owner. $valid_repo_owners."
         return 1
     }
 }
@@ -71,7 +71,7 @@ function validate_gh_repo_name()
     fi
     [[ -n "$1" && "$1" != *.git && "$1" =~ $repo_name_regex ]] || {
         # repo name cannot be empty, cannot end with .git, and must match the regex for GitHub repository names above
-        error "Invalid repository name. $valid_repo_names"
+        error "Invalid repository name. $valid_repo_names."
         return 1
     }
 }
@@ -96,7 +96,7 @@ function validate_gh_repo_description()
     fi
     (( ${#1} >= 3 && ${#1} <= 350 )) || {
         # GitHub repository descriptions must be between 3 and 350 characters long.
-        error "Repository description must be between 3 and 350 characters long"
+        error "Repository description must be between 3 and 350 characters long."
         return 1
     }
 }
@@ -177,9 +177,9 @@ function execute_gh_with_retry()
 
     # get the first two and the optional third (ignore_output) boolean parameter
     local output="/dev/stdout"
-    local ignore_output=false
     local max_attempts=$1; shift
     local delay=$1; shift
+    local ignore_output=false
     is_boolean "$1" && ignore_output=$1 && shift    # otherwise ignore_output remains false
     $ignore_output && output="$_ignore"             # otherwise output remains /dev/stdout
 
@@ -194,9 +194,9 @@ function execute_gh_with_retry()
 
     # stderr goes to a temp file to preserve output fidelity (especially newlines), yet still allow us to process them separately
     local stderr_file
+    local stdout_file
     stderr_file=$(mktemp)
-    # shellcheck disable=SC2064 # Use single quotes, otherwise this expands now rather than when signalled - yup, this is intentional
-    trap "rm -f '$stderr_file'" RETURN
+    stdout_file=$(mktemp)
 
     local attempt=0
     local rc=0
@@ -206,7 +206,7 @@ function execute_gh_with_retry()
     until gh "$@" >"$output" 2>"$stderr_file"; do
         rc=$?
 
-        message=$(cat "$stderr_file")
+        message=$(cat "$stderr_file") || true
 
         # Check if error is transient - retry
         if [[ ! "$message" =~ (rate.limit|server.error|timeout|temporarily.unavailable|try.again|502|503|504|connection.refused|network.error) ]]; then
@@ -224,6 +224,8 @@ function execute_gh_with_retry()
         sleep "$delay"
     done
     cat "$stderr_file" >&2
+    cat "$stdout_file" >> "$output"
+    rm -f "$stderr_file" "$stdout_file"
     return "$rc"
 }
 
@@ -257,9 +259,9 @@ function execute_gh_api_with_retry()
 
     # get the first two and the optional third (ignore_output) boolean parameter
     local output="/dev/stdout"
-    local ignore_output=false
     local max_attempts=$1; shift
     local delay=$1; shift
+    local ignore_output=false
     is_boolean "$1" && ignore_output=$1 && shift    # otherwise ignore_output remains false
     $ignore_output && output="$_ignore"             # otherwise output remains /dev/stdout
 
@@ -276,8 +278,6 @@ function execute_gh_api_with_retry()
     local stderr_file stdout_file
     stderr_file=$(mktemp)
     stdout_file=$(mktemp)
-    # shellcheck disable=SC2064
-    trap "rm -f '$stderr_file' '$stdout_file'" RETURN
 
     local attempt=0
     local rc=0
@@ -287,12 +287,12 @@ function execute_gh_api_with_retry()
     until gh api "$@" >"$stdout_file" 2>"$stderr_file"; do
         rc=$?
 
-        response=$(cat "$stdout_file")
+        response=$(cat "$stdout_file")            || true
         status=$(jq -r '.status' <<< "$response") || true
 
         # If no JSON status, check stderr for network/auth errors
         if [[ -z "$status" || "$status" == "null" ]]; then
-            message=$(cat "$stderr_file")
+            message=$(cat "$stderr_file") || true
             # If it's a not a transient error in stderr - break(return), otherwise - retry
             if [[ ! "$message" =~ (authentication|network|timeout|dns|connection) ]]; then
                 break
@@ -304,8 +304,8 @@ function execute_gh_api_with_retry()
                     ;;
 
                 1*|2*|3* )
-                    rc=0
-                    break                           # 1xx, 2xx, and 3xx HTTP status codes are considered successful
+                    rc=0                            # 1xx, 2xx, and 3xx HTTP status codes are considered successful
+                    break
                     ;;
 
                 * ) rc=1                            # everything else is a bad outcome that will not be fixed by retrying
@@ -321,12 +321,12 @@ function execute_gh_api_with_retry()
         fi
         warning "'gh api' command failed. Attempt $attempt/$max_attempts. Retrying in ${delay}s."
         cat "$stderr_file" >&2
-        cat "$stdout_file" >> "$output"
         sleep "$delay"
     done
 
     cat "$stderr_file" >&2
     cat "$stdout_file" >> "$output"
+    rm -f "$stderr_file" "$stdout_file" 2> "$_ignore"
     return "$rc"
 }
 
@@ -358,15 +358,14 @@ declare -xar repo_state_keys=(
     "$key_default_branch"
 )
 
-declare -x query_gh_repo_state="
-{
-    $key_repo_id: .id,
-    $key_owner: .owner.login,
-    $key_default_branch: .default_branch,
+declare -xr jq_gh_repo_state="{
     $key_url: .html_url,
     $key_ssh_url: .ssh_url,
+    $key_owner: .owner.login,
     $key_name: .name,
-    $key_repo: .full_name
+    $key_repo: .full_name,
+    $key_repo_id: .id,
+    $key_default_branch: .default_branch,
 } | to_entries[] | \"\\(.key)=\\(.value)\""
 
 
@@ -432,23 +431,22 @@ function get_repo_state()
 
     local authority="${BASH_REMATCH[$url_authority]}"
     local owner="${BASH_REMATCH[$url_owner]}"
-    local name="${BASH_REMATCH[$url_name]}"
-    name="${name%.git}"
+    local name="${BASH_REMATCH[$url_name]}"; name="${name%.git}"
+    local repo=${owner}/${name}
 
     state[$key_url]="$url"
     state[$key_authority]="${authority}"
     state[$key_owner]="${owner}"
     state[$key_name]="${name}"
-    state[$key_repo]="${owner}/${name}"
+    state[$key_repo]="${repo}"
 
     $full_info                                                             || return 0 # caller does not want full info - return with what we have from git, without trying to get GitHub API data
 
     local -A gh_state
 
     while IFS='=' read -r name value; do
-        trace "gh_state[$name]=$value"
         gh_state["$name"]="$value"
-    done < <(execute_gh_api_with_retry 3 2 --paginate "repos/$owner/$name" -q "$query_gh_repo_state")
+    done < <(execute_gh_api_with_retry 3 2 --paginate "repos/$owner/$name" -q "$jq_gh_repo_state")
 
     local -i errs=$errors
     local -i rc=0
@@ -634,7 +632,7 @@ function find_repo_root()
 
     local rc=0
     (( found_roots == 1 )) && rc=0 || rc=1
-    (( found_roots  > 1 )) && { rc=2; root=""; error "Multiple directories named '$dir_path' were found that are roots of Git repository work trees."; }
+    (( found_roots  > 1 )) && { rc=2; root=""; error "Multiple Git repository roots named '$dir_path' were found."; }
 
     # send the root to stdout
     echo "${root}"

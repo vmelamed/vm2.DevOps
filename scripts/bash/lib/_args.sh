@@ -235,7 +235,7 @@ function set_table_format()
     fi
     local f="${1,,}"
     if ! is_in "$f" "${table_formats[@]}"; then
-        error "Invalid table format: $1"
+        error "Invalid table format: $1."
         return 2
     fi
     table_format="$f"

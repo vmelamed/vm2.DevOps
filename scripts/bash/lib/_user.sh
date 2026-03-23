@@ -216,7 +216,7 @@ function choose()
             read -r -p "Enter choice [1-${#options[@]}]: " selection
             selection=${selection:-1}
             if ! is_natural "$selection"; then # it is not from this world! :)
-                warning "Invalid choice: $selection"
+                warning "Invalid choice: $selection."
                 continue
             fi
             (( selection == 0 )) && selection=1 # the default

@@ -74,13 +74,13 @@ function validate_source_repo()
     local dir="${vm2_repos}/${repo_name}"
 
     if [[ ! -d "${dir}" ]]; then
-        error "The '${repo_name}' repository was not cloned or is not under ${vm2_repos}."
+        error "The '${repo_name}' repository is not found under ${vm2_repos}."
         exit 2
     fi
 
     if [[ "$dir" == $(root_working_tree "$dir") ]]; then
         is_on_or_after_latest_stable_tag "$dir" "$semverTagReleaseRegex" || {
-            error "The HEAD of the '${repo_name}' repository is before the latest stable tag. Please synchronize."
+            error "The '${repo_name}' repository is behind the latest stable tag. Please synchronize."
             exit 2
         }
     else

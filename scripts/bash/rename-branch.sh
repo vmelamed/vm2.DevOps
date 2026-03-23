@@ -61,12 +61,12 @@ git check-ref-format --branch "$new_branch_name" &>"$_ignore" || {
 }
 # Make sure that a local branch with the new name does not already exist:
 git show-ref --verify --quiet "refs/heads/$new_branch_name" &>"$_ignore" && {
-    error "Branch '$new_branch_name' already exists locally"
+    error "Branch '$new_branch_name' already exists locally."
     exit 1
 }
 # Check if a remote branch with the new name already exists:
 git show-ref --verify --quiet "refs/remotes/origin/$new_branch_name" &>"$_ignore" && {
-    error "Branch '$new_branch_name' already exists on remote"
+    error "Branch '$new_branch_name' already exists on remote."
     exit 1
 }
 
@@ -77,12 +77,12 @@ git check-ref-format --branch "$old_branch_name" &>"$_ignore" || {
 }
 # Check if the old branch exists locally:
 git show-ref --verify --quiet "refs/heads/$old_branch_name" &>"$_ignore" || {
-    error "Branch '$old_branch_name' does not exist locally"
+    error "Branch '$old_branch_name' does not exist locally."
     exit 1
 }
 # Check if the old branch exists remotely:
 git show-ref --verify --quiet "refs/remotes/origin/$old_branch_name" &>"$_ignore" || {
-    error "Branch '$old_branch_name' does not exist remotely"
+    error "Branch '$old_branch_name' does not exist remotely."
     exit 1
 }
 
@@ -102,7 +102,7 @@ git push origin "$new_branch_name" &> "$_ignore" || {
 }
 # 4. Delete the old branch on remote
 git push origin --delete "$old_branch_name" &> "$_ignore" ||
-    warning "Failed to delete old branch '$old_branch_name' on remote. Please, clean-up manually, otherwise both branches will coexist and that may lead to confusion."
+    warning "Failed to delete old branch '$old_branch_name' on remote. Please clean up manually; otherwise both branches will coexist and that may lead to confusion."
 
 
 # 5. Reset the upstream tracking

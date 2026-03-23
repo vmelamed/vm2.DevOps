@@ -7,6 +7,16 @@ declare -xri admin_role_id=5
 
 declare -xr secret_placeholder="UPDATE+ME/==" # valid base64 placeholder
 
+declare -xrA repo_state_queries=(
+    ["key_repo_id"]=".id"
+    ["key_owner"]=".owner.login"
+    ["key_default_branch"]=".default_branch"
+    ["key_url"]=".html_url"
+    ["key_ssh_url"]=".ssh_url"
+    ["key_name"]=".name"
+    ["key_repo"]=".full_name"
+)
+
 declare -xrA default_repo_settings=(
     ["default_branch"]="main"
     ["delete_branch_on_merge"]=true

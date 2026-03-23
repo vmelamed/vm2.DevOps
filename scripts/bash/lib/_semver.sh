@@ -67,7 +67,7 @@ function validate_minverTagPrefix()
     local prefix="$1"
 
     if [[ ! "$prefix" =~ $minverTagPrefixRegex ]]; then
-        error "The semver tag prefix used by MinVer ('$prefix') is not valid. It must match the regex: $minverTagPrefixRegex"
+        error "The semver tag prefix used by MinVer ('$prefix') is not valid. It must match the regex: $minverTagPrefixRegex."
         return 1
     fi
 

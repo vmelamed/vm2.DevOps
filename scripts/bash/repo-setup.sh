@@ -81,7 +81,7 @@ gh auth status &> "$_ignore"                                || error "'gh' is no
 exit_if_has_errors
 
 #-------------------------------------------------------------------------------
-# Validate and adjust vm2_repos:
+# Resolve and validate vm2_repos:
 #-------------------------------------------------------------------------------
 
 trace "VM2_REPOS='$VM2_REPOS'"
@@ -137,7 +137,7 @@ declare -xr _ci_yaml
 info "vm2.* repositories path        => $vm2_repos"
 
 #-------------------------------------------------------------------------------
-# Validate and adjust repo_path:
+# Resolve and validate repo_path:
 #-------------------------------------------------------------------------------
 
 [[ -n "$repo_path" ]] ||  repo_path="$(pwd)"
@@ -190,7 +190,7 @@ if has_local_repo repo_state; then
             usage false "The git-detected repository path '$repo_path' is missing .github/workflows/CI.yaml. Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2.NewPkg' to create a valid directory structure."
         trace "repo_path='$repo_path' from git-detected repository root"
     fi
-    info "Repository path                => $repo_path"
+    info "Git repository path            => $repo_path"
 
     declare -r repo_path
 
@@ -205,18 +205,18 @@ if has_local_repo repo_state; then
         declare -xr repo_name
         declare -rx repo
 
-        info "GitHub Repository              => $repo"
+        info "GitHub repository              => $repo"
 
         if has_github_remote repo_state; then
             repo_id="${repo_state[$key_repo_id]}"
             branch="${repo_state[$key_default_branch]}"
             main_protection_rs_name="${main_protection_rs_name:-${branch} protection}"
 
-            info "GitHub Repository Id           => $repo_id"
-            info "GitHub Default Branch          => $branch"
+            info "GitHub repository Id           => $repo_id"
+            info "GitHub default Branch          => $branch"
         fi
 
-        info "GitHub Repository URL          => $repo_url"
+        info "GitHub repository URL          => $repo_url"
     fi
 fi
 
@@ -241,7 +241,7 @@ visibility="${visibility,,}"
 [[ -s "$ci_yaml" ]]                                      || error "The specified path '${repo_path}' is not a valid project/repository root (missing .github/workflows/CI.yaml). Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2pkg <name>' to create a valid directory."
 [[ -z $repo_name || $repo_name =~ $repo_name_regex ]]    || error "Could not determine repository name from the specified path '${repo_path}' or the name is invalid. Please specify a valid path to the root of the project/repository using '--path <path>'."
 [[ -z $repo_owner || $repo_owner =~ $repo_owner_regex ]] || error "Could not determine repository owner from the specified path '${repo_path}', or from the environment variable ORGANIZATION, or the owner name is invalid. Please specify a valid owner of the project/repository using '--owner <owner>' or set the ORGANIZATION environment variable."
-validate_repo_branch "$branch" &> "$_ignore"             || error "Invalid branch name '${branch}'. Please specify a valid branch name using '--branch <branch>'."
+validate_gh_repo_branch "$branch" &> "$_ignore"          || error "Invalid branch name '${branch}'. Please specify a valid branch name using '--branch <branch>'."
 is_in "$visibility" "public" "private"                   || error "Invalid visibility '${visibility}'. Valid options are 'public', 'private', or 'internal'. Please specify a valid visibility using '--visibility <public|private|internal>'."
 
 exit_if_has_errors
@@ -256,7 +256,7 @@ list_required_checks
 if $audit && ! $interactive_secrets && ! $interactive_vars && has_github_remote repo_state; then
     initialize_jq_queries
     initialize_gh_paths
-    initialize_main_protection_rs_id
+    initialize_main_protection_rs_id || true
     audit_repo
     exit 0
 fi
@@ -315,7 +315,7 @@ if ! has_remote_repo repo_state; then
     #----------------------------------------------------------------------
     info "Creating GitHub repository..."
 
-    [[ -n $repo_name ]] || repo_name=$(enter_value "GitHub Repository name" "$suggest_repo_name" false validate_repo_name)
+    [[ -n $repo_name ]] || repo_name=$(enter_value "GitHub Repository name" "$suggest_repo_name" false validate_gh_repo_name)
     repo="$repo_owner/$repo_name"
     repo=${repo#/} # remove leading slash if repo_owner is empty
 
@@ -327,7 +327,7 @@ if ! has_remote_repo repo_state; then
         "--disable-wiki"
     )
 
-    [[ -n "$description" ]] || description=$(enter_value "GitHub repository description (3-350 characters)" "$repo_name" _ validate_repo_description)
+    [[ -n "$description" ]] || description=$(enter_value "GitHub repository description (3-350 characters)" "$repo_name" _ validate_gh_repo_description)
     [[ -n "$description" ]] && create_repo_params+=("--description" "$description")
 
     if $use_ssh || $use_https; then
@@ -341,7 +341,7 @@ if ! has_remote_repo repo_state; then
     fi
 
     info "  ...creating repository '$repo' with $visibility visibility and default branch '$branch'. Description: '$description'. parameters;"
-    execute_with_retry 3 2 true gh repo create "${create_repo_params[@]}" >"$_ignore"
+    execute_gh_with_retry 3 2 true  repo create "${create_repo_params[@]}"
     undos+=("gh repo delete '$repo' --yes")
 
     info "  ...setting the remote origin URL to '$repo_url';"
@@ -359,7 +359,7 @@ if ! has_remote_repo repo_state; then
     dump_repo_state repo_state
 
     if [[ $rc -ne 0 ]]; then
-        error "Failed to get repository state after creation. The repository may have been created successfully, but the script cannot continue with configuration. Please check the repository at $repo_path"
+        error "Failed to get repository state after creation. The repository may have been created successfully, but the script cannot continue with configuration. Please check the repository at $repo_path."
         exit 1
     fi
 

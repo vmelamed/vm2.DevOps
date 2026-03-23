@@ -83,7 +83,7 @@ function compare_settings()
     local json
 
     if ! json=$(gh api --paginate "$hq_path"); then
-        error "Failed to fetch data from GitHub API: $hq_path"
+        error "Failed to fetch data from GitHub API: $hq_path."
         return 2
     fi
 
@@ -176,7 +176,7 @@ function audit_repo()
 
     # --- Branch ruleset ---
     local rulesets_json
-    rulesets_json=$(gh api --paginate "$path_rulesets") || true
+    rulesets_json=$(execute_gh_api_with_retry 3 2 --paginate "$path_rulesets") || true
 
     if [[ -z "${rulesets_json:-}" ]]; then
         echo "  ❌  Ruleset '$main_protection_rs_name' for branch '${branch}' is missing"
@@ -187,7 +187,7 @@ function audit_repo()
     ruleset_id=$(jq -r "$jq_ruleset_id" <<< "$rulesets_json" 2>"$_ignore")
 
     [[ -z "$ruleset_id" ]] && {
-        echo "  ❌  Ruleset '$main_protection_rs_name' for branch '${branch}' is invalid"
+        echo "  ❌  Ruleset '$main_protection_rs_name' for branch '${branch}' does not exist"
         exit 1;
     }
 
@@ -200,7 +200,7 @@ function audit_repo()
     echo "      ℹ️  Required status checks list:"
     local json
     json=$(gh api --paginate "$path_main_protection_ruleset") || {
-        error "Failed to fetch data from GitHub API: $path_main_protection_ruleset"
+        error "Failed to fetch data from GitHub API: $path_main_protection_ruleset."
         return 2
     }
     local -a present_checks=()
