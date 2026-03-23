@@ -109,14 +109,14 @@ is_safe_boolean "$reset_benchmark_thresholds" || true
 dump_vars --quiet --force \
     -h "Validated Parameters" \
     build_projects \
-    build_projects_len \
     test_projects \
-    test_projects_len \
     benchmark_projects \
-    benchmark_projects_len \
     package_projects \
-    package_projects_len \
     runners_os \
+    build_projects_len \
+    test_projects_len \
+    benchmark_projects_len \
+    package_projects_len \
     runners_os_len \
     dotnet_version \
     configuration \
@@ -134,14 +134,14 @@ info "✅ All parameters validated successfully"
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 args_to_github_output \
     build_projects \
-    build_projects_len \
     test_projects \
-    test_projects_len \
     benchmark_projects \
-    benchmark_projects_len \
     package_projects \
-    package_projects_len \
     runners_os \
+    build_projects_len \
+    test_projects_len \
+    benchmark_projects_len \
+    package_projects_len \
     runners_os_len \
     dotnet_version \
     configuration \
