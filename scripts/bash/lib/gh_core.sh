@@ -251,11 +251,9 @@ function args_to_github_output()
     {
         local var
         local k
-        local -n v
         for var in "$@"; do
             k="${var//_/-}"
-            v=$var
-            echo "$k=$v"
+            echo "$k=${!var}"
         done
     } | to_output
 }
