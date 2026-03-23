@@ -92,6 +92,7 @@ declare -xra default_ruleset_order=(            # UI: Order in which rules appea
 
 declare -xrA default_secrets=(
     ["BENCHER_API_TOKEN"]="$secret_placeholder"
+    ["GH_PACKAGES_TOKEN"]="$secret_placeholder"
     ["CODECOV_TOKEN"]="$secret_placeholder"
     ["RELEASE_PAT"]="$secret_placeholder"
     ["REPORTGENERATOR_LICENSE"]="$secret_placeholder"

@@ -29,6 +29,11 @@
             "action": "ask to merge"
         },
         {
+            "sourceFile": "${vm2_repos}/.github/workflow-templates/AutoMerge.yaml",
+            "targetFile": "${target_path}/.github/workflows/AutoMerge.yaml",
+            "action": "copy"
+        },
+        {
             "sourceFile": "${vm2_repos}/.github/dependabot.yml",
             "targetFile": "${target_path}/.github/dependabot.yml",
             "action": "copy"
