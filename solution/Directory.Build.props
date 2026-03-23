@@ -40,6 +40,10 @@
         <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
         <MinVerTagPrefix>v</MinVerTagPrefix>
         <MinVerDefaultPreReleaseIdentifiers>preview</MinVerDefaultPreReleaseIdentifiers>
+        <!-- Fallback defaults for MinVer variables (e.g., Dependabot runs without git tags) -->
+        <MinVerMajor Condition="'$(MinVerMajor)' == ''">0</MinVerMajor>
+        <MinVerMinor Condition="'$(MinVerMinor)' == ''">0</MinVerMinor>
+        <MinVerPatch Condition="'$(MinVerPatch)' == ''">1</MinVerPatch>
         <AssemblyVersion>$(MinVerMajor).$(MinVerMinor).$(GITHUB_RUN_NUMBER).$(MinVerPatch)</AssemblyVersion>
         <FileVersion>$(MinVerMajor).$(MinVerMinor).$(MinVerPatch).$(GITHUB_RUN_NUMBER)</FileVersion>
     </PropertyGroup>
