@@ -20,7 +20,8 @@ declare -x _ci_yaml
 
 declare -xrA default_repo_settings
 declare -xrA default_repo_permissions
-declare -xrA default_secrets
+declare -xrA default_actions_secrets
+declare -xrA default_dependabot_secrets
 declare -xrA default_vars
 declare -xrA default_ruleset
 
@@ -29,7 +30,8 @@ declare -x errors
 declare -x path_vars
 declare -x path_repo
 declare -x path_permissions
-declare -x path_secrets
+declare -x path_actions_secrets
+declare -x path_dependabot_secrets
 declare -x path_vars
 declare -x path_rulesets
 declare -x path_main_protection_ruleset
@@ -163,8 +165,14 @@ function audit_repo()
     (( pass += p, diff += m, errs += e, 1 ))
 
     # --- Secrets ---
-    echo "  ℹ️  Secrets:"
-    compare_settings "$path_secrets" "$jq_secrets" default_secrets false compare_results
+    echo "  ℹ️  Actions Secrets:"
+    compare_settings "$path_actions_secrets" "$jq_secrets" default_actions_secrets false compare_results
+    read -r p m e <<< "$compare_results"
+    (( pass += p, diff += m, errs += e, 1 ))
+
+    # --- Secrets ---
+    echo "  ℹ️  Dependabot Secrets:"
+    compare_settings "$path_dependabot_secrets" "$jq_secrets" default_dependabot_secrets false compare_results
     read -r p m e <<< "$compare_results"
     (( pass += p, diff += m, errs += e, 1 ))
 

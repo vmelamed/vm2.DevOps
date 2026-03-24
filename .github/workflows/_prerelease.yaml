@@ -8,12 +8,12 @@ on:
           JSON array of project/solution paths to package and publish, e.g. '["src/Project1/Project1.csproj", "src/Project2/Project2.csproj"]'.
           If empty array, dotnet CLI will auto-detect root .sln, .slnx, or .csproj files.
         type: string
-        default: '[]'
+        default: "[]"
 
       package-projects-len:
         description: Length of the JSON array of project/solution paths to package and publish.
         type: string
-        default: '0'
+        default: "0"
 
       dotnet-version:
         description: Version of .NET SDK to use (cannot be null or empty string, default 10.0.x)
@@ -57,23 +57,9 @@ on:
           Required to push changelog commits and version tags directly to main.
         required: true
 
-      NUGET_API_GITHUB_KEY:
-        description: >-
-          Token for authentication to the GitHub NuGet server - must be for the GitHub Packages server.
-          If GitHub Packages server is not used, this secret can be left empty.
-        required: false
-
-      NUGET_API_NUGET_KEY:
-        description: >-
-          Token for authentication to the nuget.org NuGet server - must be for the nuget.org server.
-          If nuget.org server is not used, this secret can be left empty.
-        required: false
-
       NUGET_API_KEY:
         description: >-
-          Token for authentication to a custom NuGet server - must be for the selected nuget-server.
-          Also used as the default token if nuget-server is 'nuget' or 'github'.
-          If a custom NuGet server is not used, this secret can be left empty.
+          Token for authentication to the selected NuGet server - must be issued by the selected nuget-server.
         required: false
 
 concurrency:
@@ -187,8 +173,6 @@ jobs:
         id: publish
         env:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
-          NUGET_API_GITHUB_KEY: ${{ secrets.NUGET_API_GITHUB_KEY }}
-          NUGET_API_NUGET_KEY: ${{ secrets.NUGET_API_NUGET_KEY }}
         run: |
           publish-package.sh \
               --package-project "${{ matrix.project }}" \

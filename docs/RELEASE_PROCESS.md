@@ -273,11 +273,9 @@ The `NUGET_SERVER` variable (or `nuget-server` input) determines where packages 
 
 | Value      | Server                                             | API Key Secret           |
 | :--------- | :------------------------------------------------- | :----------------------- |
-| `github`   | `https://nuget.pkg.github.com/{owner}/index.json`  | `NUGET_API_GITHUB_KEY`   |
-| `nuget`    | `https://api.nuget.org/v3/index.json`              | `NUGET_API_NUGET_KEY`    |
+| `github`   | `https://nuget.pkg.github.com/{owner}/index.json`  | `NUGET_API_KEY`          |
+| `nuget`    | `https://api.nuget.org/v3/index.json`              | `NUGET_API_KEY`          |
 | Custom URL | The URL as provided                                | `NUGET_API_KEY`          |
-
-`NUGET_API_KEY` is also the fallback if the server-specific secret is not defined.
 
 ## Quick Reference
 
@@ -299,7 +297,7 @@ The `NUGET_SERVER` variable (or `nuget-server` input) determines where packages 
 | Prerelease not created after PR      | CI didn't succeed           | Check CI workflow run; fix failures                                            |
 | Wrong bump type (patch vs minor)     | Commit messages don't match | Use conventional commit format: `feat:` for minor, `fix:` for patch            |
 | Tag already exists error             | Duplicate release attempt   | Delete the tag, or release with a higher version                               |
-| NuGet push fails (401/403)           | Invalid or missing API key  | Verify the `NUGET_API_*` secret matches the configured `NUGET_SERVER`          |
+| NuGet push fails (401/403)           | Invalid or missing API key  | Verify the `NUGET_API_KEY` secret is issued by the configured `NUGET_SERVER`   |
 | Package version already exists       | Immutable NuGet versions    | Increment version; deprecate old package via NuGet.org UI                      |
 
 ### Branch Protection Bypass
@@ -308,5 +306,5 @@ Both the prerelease and release workflows push changelog commits and tags direct
 repository rulesets requiring status checks, workflows must authenticate with a fine-grained Personal Access Token (`RELEASE_PAT`
 secret) rather than the default `GITHUB_TOKEN`.
 
-The PAT owner must be listed as a **Repository Admin** bypass actor in the ruleset. Create the PAT
-with `contents: write` scope, scoped to the relevant repositories.
+The PAT owner must be listed as a **Repository Admin** bypass actor in the ruleset. Create the PAT with `contents: write` scope,
+scoped to the relevant repositories.

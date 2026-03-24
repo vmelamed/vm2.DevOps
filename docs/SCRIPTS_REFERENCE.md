@@ -368,14 +368,6 @@ Builds, packs, and pushes a NuGet package to the specified server.
 | `--artifacts-dir`        | `-ad` | `artifacts/pack`           | Directory for saved artifacts                  |
 | `--repo-owner`           | `-o`  | `$GITHUB_REPOSITORY_OWNER` | Repo owner (for GitHub Packages)               |
 
-**NuGet API key resolution:**
-
-| Server   | Primary env var          | Fallback         |
-| :------- | :----------------------- | :--------------- |
-| `github` | `$NUGET_API_GITHUB_KEY`  | `$NUGET_API_KEY` |
-| `nuget`  | `$NUGET_API_NUGET_KEY`   | `$NUGET_API_KEY` |
-| custom   | `$NUGET_API_KEY`         | —                |
-
 ---
 
 ### compute-release-version.sh

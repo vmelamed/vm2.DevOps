@@ -48,22 +48,21 @@ case "${nuget_server}" in
     github )
         server_name="GitHub Packages"
         server_url="https://nuget.pkg.github.com/${repo_owner}/index.json"
-        server_api_key="${NUGET_API_GITHUB_KEY:-"${NUGET_API_KEY}"}"
         ;;
     nuget )
         server_name="NuGet.org"
         server_url="https://api.nuget.org/v3/index.json"
-        server_api_key="${NUGET_API_NUGET_KEY:-"${NUGET_API_KEY}"}"
         ;;
     "https?://.+" )
         server_name="$nuget_server"
         server_url="$nuget_server"
-        server_api_key="${NUGET_API_KEY}"
         ;;
 
     * ) error "Invalid NuGet server: $nuget_server"
         ;;
 esac
+# shellcheck disable=SC2154
+server_api_key="${NUGET_API_KEY}"
 if [[ -z "${server_api_key}" ]]; then
     error "No API key provided for server '$server_name'"
 fi

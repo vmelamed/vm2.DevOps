@@ -166,7 +166,7 @@ gh run rerun <run-id> --failed
 gh secret list
 
 # Regenerate on NuGet.org and update
-gh secret set NUGET_API_NUGET_KEY
+gh secret set NUGET_API_KEY
 ```
 
 ### Cache-Related Build Failures

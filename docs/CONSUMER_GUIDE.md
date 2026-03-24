@@ -100,6 +100,7 @@ YourRepo/
 ├── .github
 │   ├── dependabot.yml
 │   └── workflows/
+│       ├── AutoMerge.yaml
 │       ├── CI.yaml
 │       ├── Prerelease.yaml
 │       ├── Release.yaml
@@ -265,7 +266,7 @@ Review results in the workflow summary. If the regression is expected (e.g., new
 with known cost), the new baseline will be established on the next main branch run.
 
 **NuGet push fails with authentication error:**
-Verify the appropriate `NUGET_API_*` secret is set for your configured `NUGET_SERVER`.
+Verify the appropriate `NUGET_API_KEY` secret is set for your configured `NUGET_SERVER`.
 
 ## Further Reading
 

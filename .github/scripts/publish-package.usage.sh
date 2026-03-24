@@ -36,10 +36,8 @@ Options:
   -n, --nuget-server            NuGet server to push packages to. Valid values are "github" for  GitHub. Packages, "nuget" for
                                 NuGet.org, or a custom server URL for pushing to
                                 Initial value from the \$NUGET_SERVER environment variable or "github"
-                                NOTE: a corresponding API key environment variable must be set for authentication:
-                                - github - \$NUGET_API_GITHUB_KEY or \$NUGET_API_KEY for GitHub Packages
-                                - nuget  - \$NUGET_API_NUGET_KEY or \$NUGET_API_KEY for NuGet.org
-                                - custom - \$NUGET_API_KEY for a custom NuGet server
+                                NOTE: the corresponding API key environment variable must be set for authentication in the NuGet
+                                API key: \$NUGET_API_KEY.
   -o, --repo-owner              Repository owner. When run on a GitHub runner, this is automatically set from the
                                 \$GITHUB_REPOSITORY_OWNER environment variable. Required only if publishing to GitHub Packages
                                 Initial value from the \$GITHUB_REPOSITORY_OWNER environment variable or "vmelamed"
@@ -64,11 +62,7 @@ Environment Variables:
                                 Initial value from \$ARTIFACTS_SAVED or default false
   ARTIFACTS_DIR                 Directory where artifacts will be saved if --artifacts-saved is true
                                 Initial value from \$ARTIFACTS_DIR or default "artifacts/pack"
-  NUGET_API_GITHUB_KEY or       Required NuGet API key for GitHub Packages
-  NUGET_API_KEY
-  NUGET_API_NUGET_KEY or        Required NuGet API key for NuGet.org
-  NUGET_API_KEY
-  NUGET_API_KEY                 Required NuGet API key for a custom NuGet server
+  NUGET_API_KEY                 The NuGet API key for the selected NuGet server
 $vars
 EOF
 }

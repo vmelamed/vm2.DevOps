@@ -50,7 +50,7 @@ declare -x repo_id=""
 declare -x path_vars
 declare -x path_repo
 declare -x path_permissions
-declare -x path_secrets
+declare -x path_actions_secrets
 declare -x path_vars
 declare -x path_rulesets
 declare -x path_main_protection_ruleset
@@ -390,7 +390,8 @@ configure_default_repo_settings
 configure_actions_permissions
 configure_branch_protection
 configure_variables
-configure_secrets
+configure_secrets "actions"
+configure_secrets "dependabot"
 echo ""
 audit_repo
 if [[ ${#undos[@]} -gt 0 ]]; then

@@ -90,15 +90,16 @@ declare -xra default_ruleset_order=(            # UI: Order in which rules appea
     "non_fast_forward"                          # Block force pushes
 )
 
-declare -xrA default_secrets=(
+declare -xrA default_actions_secrets=(
     ["BENCHER_API_TOKEN"]="$secret_placeholder"
-    ["GH_PACKAGES_TOKEN"]="$secret_placeholder"
     ["CODECOV_TOKEN"]="$secret_placeholder"
     ["RELEASE_PAT"]="$secret_placeholder"
     ["REPORTGENERATOR_LICENSE"]="$secret_placeholder"
-    ["NUGET_API_GITHUB_KEY"]="$secret_placeholder"
     ["NUGET_API_KEY"]="$secret_placeholder"
-    ["NUGET_API_NUGET_KEY"]="$secret_placeholder"
+)
+
+declare -xrA default_dependabot_secrets=(
+    ["GH_PACKAGES_TOKEN"]="$secret_placeholder"
 )
 
 declare -xrA default_vars=(

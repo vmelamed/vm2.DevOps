@@ -57,23 +57,9 @@ on:
           Required to push changelog commits and version tags directly to main.
         required: true
 
-      NUGET_API_GITHUB_KEY:
-        description: >-
-          Token for authentication to the GitHub NuGet server - must be for the GitHub Packages server.
-          If GitHub Packages server is not used, this secret can be left empty.
-        required: false
-
-      NUGET_API_NUGET_KEY:
-        description: >-
-          Token for authentication to the nuget.org NuGet server - must be for the nuget.org server.
-          If nuget.org server is not used, this secret can be left empty.
-        required: false
-
       NUGET_API_KEY:
         description: >-
-          Token for authentication to a custom NuGet server - must be for the selected nuget-server.
-          Also used as the default token if nuget-server is 'nuget' or 'github'.
-          If a custom NuGet server is not used, this secret can be left empty.
+          Token for authentication to the NuGet server - must be issued by the selected nuget-server.
         required: false
 
 concurrency:
@@ -182,8 +168,6 @@ jobs:
         shell: bash
         env:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
-          NUGET_API_GITHUB_KEY: ${{ secrets.NUGET_API_GITHUB_KEY }}
-          NUGET_API_NUGET_KEY: ${{ secrets.NUGET_API_NUGET_KEY }}
         run: |
           publish-package.sh \
               --package-project "${{ matrix.project }}" \

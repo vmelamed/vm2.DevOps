@@ -76,9 +76,9 @@ each consumer `CI.yaml` includes de-dupe logic in the `prerun-ci` job:
 
 1. For pushes to non-main branches, the workflow queries `gh pr list` for open PRs matching the
    branch.
-2. If an open PR exists, the push-triggered run sets `skip-push=true` and the `run-ci` job is
+1. If an open PR exists, the push-triggered run sets `skip-push=true` and the `run-ci` job is
    skipped (the PR-triggered run handles CI).
-3. If no open PR exists, the push-triggered run proceeds but adds the `SHORT_RUN` preprocessor
+1. If no open PR exists, the push-triggered run proceeds but adds the `SHORT_RUN` preprocessor
    symbol for faster benchmarks.
 
 This ensures each commit runs CI exactly once regardless of event type.
@@ -113,9 +113,9 @@ Concurrency group `ci-${{ github.workflow_ref }}` cancels in-progress runs on ne
 #### 1.2.2. Build (`_build.yaml`)
 
 1. Checks out repository with full history (`fetch-depth: 0`) for MinVer version calculation.
-2. Restores NuGet packages (dual-layer cache — see [Caching Strategy](#caching-strategy)).
-3. Calls `build.sh` to compile the project.
-4. Saves build artifacts to cache with key `build-artifacts-{os}-{sha}-{configuration}-{run_id}`.
+1. Restores NuGet packages (dual-layer cache — see [Caching Strategy](#caching-strategy)).
+1. Calls `build.sh` to compile the project.
+1. Saves build artifacts to cache with key `build-artifacts-{os}-{sha}-{configuration}-{run_id}`.
 
 #### 1.2.3. Gate Job Pattern (`postrun-ci`)
 
@@ -158,25 +158,25 @@ postrun-ci:
 #### 1.2.4. Test (`_test.yaml`)
 
 1. Restores build artifacts from the build cache.
-2. Iterates test projects (parsed from the JSON array via `jq`).
-3. Calls `run-tests.sh` for each project.
-4. Generates coverage reports with ReportGenerator.
-5. Uploads coverage to Codecov.
-6. Posts a PR comment with test results and coverage details.
-7. Publishes GitHub Check annotations via `dorny/test-reporter`.
+1. Iterates test projects (parsed from the JSON array via `jq`).
+1. Calls `run-tests.sh` for each project.
+1. Generates coverage reports with ReportGenerator.
+1. Uploads coverage to Codecov.
+1. Posts a PR comment with test results and coverage details.
+1. Publishes GitHub Check annotations via `dorny/test-reporter`.
 
 #### 1.2.5. Benchmarks (`_benchmarks.yaml`)
 
 1. Restores build artifacts from the build cache.
-2. Caches the Bencher CLI binary.
-3. Calls `run-benchmarks.sh` (BenchmarkDotNet).
-4. Tracks results via `bencher run` using a percentage threshold test (`max-regression-pct`, default 20%).
-5. Posts a PR comment with benchmark results.
+1. Caches the Bencher CLI binary.
+1. Calls `run-benchmarks.sh` (BenchmarkDotNet).
+1. Tracks results via `bencher run` using a percentage threshold test (`max-regression-pct`, default 20%).
+1. Posts a PR comment with benchmark results.
 
 #### 1.2.6. Pack (`_pack.yaml`)
 
 1. Restores build artifacts from the build cache.
-2. Calls `pack.sh` to validate NuGet packaging succeeds.
+1. Calls `pack.sh` to validate NuGet packaging succeeds.
 
 #### 1.2.7. Prerelease (`_prerelease.yaml`)
 
@@ -195,9 +195,9 @@ main with conclusion == 'success'). Can also be triggered manually via workflow_
 Manual dispatch. Three sequential jobs:
 
 1. **compute-version** — Calls `compute-release-version.sh` to determine the stable version from conventional commits.
-2. **changelog-and-tag** — Calls `changelog-and-tag.sh` to update the changelog using `cliff.release-header.toml` and create the
+1. **changelog-and-tag** — Calls `changelog-and-tag.sh` to update the changelog using `cliff.release-header.toml` and create the
    release Git tag.
-3. **release** — Checks out the release tag, then calls `publish-package.sh` to build, pack, and push. (see [Release Process](RELEASE_PROCESS.md#release-process))
+1. **release** — Checks out the release tag, then calls `publish-package.sh` to build, pack, and push. (see [Release Process](RELEASE_PROCESS.md#release-process))
 
 ##### 1.2.8.1. Example Walkthrough
 
@@ -307,7 +307,7 @@ The build pipeline uses a dual-layer NuGet cache and a build artifact cache.
 ### 2.1. NuGet Package Cache (dual-layer)
 
 1. **`setup-dotnet` built-in cache** — Keyed on `packages.lock.json` and `*.csproj` hashes.
-2. **Explicit `actions/cache`** — Weekly rotation via a `YYYY-WVV` calendar-week key, with
+1. **Explicit `actions/cache`** — Weekly rotation via a `YYYY-WVV` calendar-week key, with
    progressive fallback:
 
     ```text
@@ -332,9 +332,9 @@ The `_clear_cache.yaml` workflow provides emergency cleanup. It restricts deleti
 When a consumer repo (e.g., vm2.Glob) runs a workflow:
 
 1. The workflow checks out the consumer repo.
-2. A second checkout sparse-clones `vm2.DevOps` — fetching only `scripts/bash/lib/` and `.github/actions/scripts/`.
-3. The composite `action.yaml` adds these directories to `$PATH` and sets `$DEVOPS_LIB_DIR`.
-4. For workflows running inside vm2.DevOps itself, the local checkout is used instead
+1. A second checkout sparse-clones `vm2.DevOps` — fetching only `scripts/bash/lib/` and `.github/actions/scripts/`.
+1. The composite `action.yaml` adds these directories to `$PATH` and sets `$DEVOPS_LIB_DIR`.
+1. For workflows running inside vm2.DevOps itself, the local checkout is used instead
    (`if: github.repository == 'vmelamed/vm2.DevOps'`).
 
 ## 4. NuGet Authentication
@@ -350,19 +350,23 @@ dotnet nuget update source github.vm2 \
 
 The `github.vm2` source is configured in each repo's `NuGet.config`.
 
-## 5. Secrets
+## 5. Actions Secrets
 
 | Secret                       | Used by                       | Purpose                                                                           |
 | :--------------------------- | :---------------------------- | :-------------------------------------------------------------------------------- |
-| `NUGET_API_GITHUB_KEY`       | `_prerelease`, `_release`     | GitHub Packages API key                                                           |
-| `NUGET_API_NUGET_KEY`        | `_prerelease`, `_release`     | nuget.org API key                                                                 |
-| `NUGET_API_KEY`              | `_prerelease`, `_release`     | Custom NuGet server API key                                                       |
+| `NUGET_API_KEY`              | `_prerelease`, `_release`     | The NuGet API key for the selected NuGet server                                     |
 | `CODECOV_TOKEN`              | `_ci` → `_test`               | Codecov upload token                                                              |
 | `BENCHER_API_TOKEN`          | `_ci` → `_benchmarks`         | Bencher.dev tracking token                                                        |
 | `REPORTGENERATOR_LICENSE`    | `_ci` → `_test`               | ReportGenerator license key                                                       |
 | `RELEASE_PAT`                | `_prerelease`, `_release`     | Fine-grained PAT (`contents: write`) for pushing to `main` past branch protection |
 
-## 6. Naming Conventions
+## 6. Dependabot Secrets
+
+| Secret                       | Used by                       | Purpose                                                                           |
+| :--------------------------- | :---------------------------- | :-------------------------------------------------------------------------------- |
+| `GH_PACKAGES_TOKEN`          | `Dependabot`                  | The GitHub Packages token used by Dependabot to authenticate with GitHub Packages |
+
+## 7. Naming Conventions
 
 Consistent naming transforms flow across the layers:
 
@@ -373,7 +377,7 @@ Consistent naming transforms flow across the layers:
 | Script parameters          | `--lower-kebab-case`      | `--max-regression-pct`  |
 | Script variables           | `lower_snake_case`        | `max_regression_pct`    |
 
-### 6.1. `args_to_github_output` — Automatic Name Translation
+### 7.1. `args_to_github_output` — Automatic Name Translation
 
 The `args_to_github_output` function (defined in `gh_core.sh`) bridges the naming gap between bash scripts and GitHub Actions.
 It takes a list of bash variable names in `snake_case`, converts each to `kebab-case` (replacing `_` with `-`), and writes them

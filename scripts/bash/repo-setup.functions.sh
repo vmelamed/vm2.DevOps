@@ -22,7 +22,8 @@ declare -xr secret_placeholder
 declare -xrA default_repo_settings
 declare -xra default_repo_settings_order
 declare -xrA default_repo_permissions
-declare -xrA default_secrets
+declare -xrA default_actions_secrets
+declare -xrA default_dependabot_secrets
 declare -xrA default_vars
 declare -xrA var_validators
 declare -xrA default_ruleset
@@ -42,8 +43,9 @@ declare -xri url_name
 declare -x path_vars
 declare -x path_repo
 declare -x path_permissions
-declare -x path_secrets
-declare -x path_vars
+declare -x path_permissions
+declare -x path_actions_secrets
+declare -x path_dependabot_secrets
 declare -x path_rulesets
 declare -x path_main_protection_ruleset
 
@@ -137,17 +139,18 @@ function initialize_gh_paths()
     [[ -n $main_protection_rs_name ]] || error "The 'main_protection_rs_name' variable is not set. Cannot initialize GitHub paths."
 
     path_repo="repos/${repo}"
-    path_vars="${path_repo}/actions/variables"
-    path_secrets="${path_repo}/actions/secrets"
     path_permissions="${path_repo}/actions/permissions/workflow"
+    path_vars="${path_repo}/actions/variables"
+    path_actions_secrets="${path_repo}/actions/secrets"
+    path_dependabot_secrets="${path_repo}/dependabot/secrets"
     path_rulesets="${path_repo}/rulesets"
 
     # freeze the paths now
-    declare -xr path_vars
     declare -xr path_repo
     declare -xr path_permissions
-    declare -xr path_secrets
     declare -xr path_vars
+    declare -xr path_actions_secrets
+    declare -xr path_dependabot_secrets
     declare -xr path_rulesets
 }
 
@@ -372,27 +375,37 @@ function is_valid_secret()
 
 function configure_secrets()
 {
+    if [[ $# -lt 1 ]] || ! is_in "$1" "actions" "dependabot"; then  # we do not use "codespaces"
+        error 3 "${FUNCNAME[0]}() requires exactly one argument: the application type: 'actions' or 'dependabot'."
+        return 2
+    fi
+
+    local app="$1"
+    local path_secrets
+    [[ $app == "actions" ]] && path_secrets="$path_actions_secrets" || path_secrets="$path_dependabot_secrets"
+
     # get the names of the existing secrets
     local -a existing
     while IFS='=' read -r name; do
         # shellcheck disable=SC2190 # this is not associative array
         existing+=("$name")
-    done < <(gh api --paginate "$path_secrets" -q "$jq_secret_names")
+    done < <(execute_gh_api_with_retry 3 2 --paginate "$path_secrets" -q "$jq_secret_names")
 
-    info "Configuring repository secrets..."
-
-    local skipped=0 set_new=0 set_default=0
-    local name value exists         # about the current secret
-    local first=true
-    local -a ordered_names
-
-    mapfile -t ordered_names < <(printf '%s\n' "${!default_secrets[@]}" | sort)
+    info "Configuring repository ${app^^} secrets..."
 
     # remember the current verbose and tracing settings so we can restore them after setting the secret(s)
     local set_verbose_on
     local set_tracing_on
     is_verbose        && set_verbose_on=true || set_verbose_on=false
     [[ $- =~ .*x.* ]] && set_tracing_on=true || set_tracing_on=false
+
+    local skipped=0 set_new=0 set_default=0
+    local name value exists         # about the current secret
+
+    local -n default_secrets
+    [[ $app == "actions" ]] && default_secrets="default_actions_secrets" || default_secrets="default_dependabot_secrets"
+    local -a ordered_names
+    mapfile -t ordered_names < <(printf '%s\n' "${!default_secrets[@]}" | sort)
 
     for name in "${ordered_names[@]}"; do
 
@@ -404,35 +417,38 @@ function configure_secrets()
         # get the value for the secret or use the placeholder if we are not entering secrets
         if $interactive_secrets; then
             # prompt the user for a new value, while warning them that pressing Enter will use the placeholder value, which of course is not a real secret
-            $first && warning "  If you press the Enter key, a PLACEHOLDER value will be used!" && first=false
-            value=$(enter_value "        Enter value for secret ${name} [PLACEHOLDER]" "$secret_placeholder" true validate_gh_secret)
+            local on_enter
+            $exists && on_enter="Existing" || on_enter="PLACEHOLDER"
+            value=$(enter_value "        Enter value for secret ${name} [$on_enter]" "$on_enter" true validate_gh_secret)
             echo ""
         else
             # if we are here the secret does not exist and we are not in interactive mode, so we will just use the place holder
             value="$secret_placeholder"
         fi
 
-        trace "gh secret set $name --body <secret> -R $repo"
+        if [[ $value == "$secret_placeholder" || $value != "Existing" ]]; then
+            trace "gh secret set $name --body <secret> --app $app --repo $repo"
 
-        # suppress all tracing to avoid revealing the secret value
-        unset_verbose
-        set +x
+            # suppress all tracing to avoid revealing the secret value
+            unset_verbose
+            set +x
 
-        # set the secret on GitHub
-        execute_gh_with_retry 3 2 true secret set "$name" --body "$value" -R "$repo"
+            # set the secret on GitHub
+            execute_gh_with_retry 3 2 true secret set "$name" --body "$value" --app "$app" --repo "$repo"
 
-        # restore all tracing
-        # shellcheck disable=SC2015
-        $set_verbose_on && set_verbose || unset_verbose
-        $set_tracing_on && set -x      || true
+            # restore all tracing
+            # shellcheck disable=SC2015
+            $set_verbose_on && set_verbose || unset_verbose
+            $set_tracing_on && set -x      || true
 
-        trace "Set secret: ${name}"
-        # shellcheck disable=SC2015
-        if [[ $value == "$secret_placeholder" ]]; then
-            (( ++set_default ))
-            warning "      Replace the placeholder value of secret ${name} with an actual value."
-        else
-            (( ++set_new ))
+            trace "Set secret: ${name}"
+            # shellcheck disable=SC2015
+            if [[ $value == "$secret_placeholder" ]]; then
+                (( ++set_default ))
+                warning "      Replace the placeholder value of secret ${name} with an actual value."
+            else
+                (( ++set_new ))
+            fi
         fi
     done
 

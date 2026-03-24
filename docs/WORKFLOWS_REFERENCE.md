@@ -248,15 +248,13 @@ Computes a prerelease version, updates the changelog, tags, and publishes a prer
 
 | Secret                 | Required | Description                                          |
 | :--------------------- | :------- | :--------------------------------------------------- |
-| `NUGET_API_KEY`        | no       | Default/custom NuGet server API key                  |
-| `NUGET_API_GITHUB_KEY` | no       | GitHub Packages API key                              |
-| `NUGET_API_NUGET_KEY`  | no       | nuget.org API key                                    |
+| `NUGET_API_KEY`        | no       | NuGet server API key for pushing packages.           |
 | `RELEASE_PAT`          | **yes**  | PAT with `contents:write` for pushing to main        |
 
 ### ⚠️ `RELEASE_PAT` — Special Setup Required
 
-`RELEASE_PAT` is not a regular secret. It requires **both** secret creation **and** branch ruleset
-bypass configuration to function correctly.
+`RELEASE_PAT` is not a regular secret. It requires **both** secret creation **and** branch ruleset bypass configuration to
+function correctly.
 
 #### Why it's needed
 
@@ -347,9 +345,7 @@ Computes a stable release version, updates the changelog, tags, and publishes.
 
 | Secret                 | Required | Description                                          |
 | :--------------------- | :------- | :--------------------------------------------------- |
-| `NUGET_API_KEY`        | no       | Default/custom NuGet server API key                  |
-| `NUGET_API_GITHUB_KEY` | no       | GitHub Packages API key                              |
-| `NUGET_API_NUGET_KEY`  | no       | nuget.org API key                                    |
+| `NUGET_API_KEY`        | no       | NuGet server API key for pushing packages.           |
 | `RELEASE_PAT`          | **yes**  | PAT with `contents:write` for pushing to main        |
 
 ### ⚠️ `RELEASE_PAT` — Special Setup Required

@@ -64,25 +64,25 @@ repository variables.
 
 ## GitHub Repository Secrets
 
+### Actions Secrets
+
 Set in repo Settings → Secrets and variables → Actions → Secrets.
 
 | Secret                     | Required by         | Description                                              |
 | :------------------------- | :------------------ | :------------------------------------------------------- |
 | `BENCHER_API_TOKEN`        | CI (benchmarks)     | Bencher.dev API token for benchmark tracking             |
 | `CODECOV_TOKEN`            | CI (test)           | Codecov API token for coverage uploads                   |
-| `NUGET_API_GITHUB_KEY`     | Prerelease, Release | GitHub Packages API key                                  |
-| `NUGET_API_KEY`            | Prerelease, Release | Default NuGet API key (fallback for any server)          |
-| `NUGET_API_NUGET_KEY`      | Prerelease, Release | nuget.org API key                                        |
+| `NUGET_API_KEY`            | Prerelease, Release | The NuGet API key for the selected NuGet server          |
 | `REPORTGENERATOR_LICENSE`  | CI (test)           | ReportGenerator license key (optional, for Pro features) |
 | `RELEASE_PAT`              | Prerelease, Release | Fine-grained PAT with `contents: write` — required to push the changelog commit and tag to `main` (bypasses branch protection rulesets) |
 
-For NuGet publishing, the key used depends on the `NUGET_SERVER` value:
+### Dependabot Secrets
 
-| Server   | Primary secret           | Fallback          |
-| :------- | :----------------------- | :---------------- |
-| `github` | `NUGET_API_GITHUB_KEY`   | `NUGET_API_KEY`   |
-| `nuget`  | `NUGET_API_NUGET_KEY`    | `NUGET_API_KEY`   |
-| custom   | `NUGET_API_KEY`          | —                 |
+Set in repo Settings → Secrets and variables → Dependabot → Secrets.
+
+| Secret                       | Used by                       | Purpose                                                                           |
+| :--------------------------- | :---------------------------- | :-------------------------------------------------------------------------------- |
+| `GH_PACKAGES_TOKEN`          | `Dependabot`                  | The GitHub Packages token used by Dependabot to authenticate with GitHub Packages |
 
 ## Per-Repo Configuration Files
 
@@ -245,9 +245,7 @@ env:
 
 ```yaml
 secrets:
-  NUGET_API_GITHUB_KEY: ${{ secrets.NUGET_API_GITHUB_KEY }}
   NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
-  NUGET_API_NUGET_KEY: ${{ secrets.NUGET_API_NUGET_KEY }}
 ```
 
 ### Release.yaml
@@ -272,9 +270,7 @@ env:
 ```yaml
 secrets:
   RELEASE_PAT: ${{ secrets.RELEASE_PAT }}
-  NUGET_API_GITHUB_KEY: ${{ secrets.NUGET_API_GITHUB_KEY }}
   NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
-  NUGET_API_NUGET_KEY: ${{ secrets.NUGET_API_NUGET_KEY }}
 ```
 
 ## Repository Setup via UI
@@ -350,9 +346,7 @@ Click **Create** or **Save changes** to save the ruleset.
 | :------------------------ | :------------------------------------------------ |
 | `BENCHER_API_TOKEN`       | From [bencher.dev](https://bencher.dev) dashboard |
 | `CODECOV_TOKEN`           | From [codecov.io](https://codecov.io) dashboard   |
-| `NUGET_API_GITHUB_KEY`    | GitHub PAT with `packages:write`                  |
-| `NUGET_API_KEY`           | Fallback key (optional)                           |
-| `NUGET_API_NUGET_KEY`     | From [nuget.org](https://nuget.org) API keys      |
+| `NUGET_API_KEY`           | The NuGet API key for the selected NuGet server   |
 | `RELEASE_PAT`             | Fine-grained PAT with `contents:write` — owner must be added as bypass actor in branch ruleset |
 | `REPORTGENERATOR_LICENSE` | ReportGenerator Pro license key (optional)        |
 
