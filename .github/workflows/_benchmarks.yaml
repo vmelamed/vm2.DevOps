@@ -107,7 +107,7 @@ jobs:
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
           runner-os: ${{ inputs.runner-os }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ github.token }}
           github-actor: ${{ github.actor }}
 
       # Retrieve compiled binaries from the build job
@@ -126,7 +126,7 @@ jobs:
         shell: bash
         env:
           BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
-          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           source "$DEVOPS_LIB_DIR/gh_core.sh"
 
@@ -178,7 +178,7 @@ jobs:
               pr_base_sha="${{ github.event.pull_request.base.sha || '' }}"
               BENCHER_ARGS+=(
                 --branch "${{ github.head_ref }}"
-                --github-actions "$GITHUB_TOKEN"
+                --github-actions "$GH_TOKEN"
                 --ci-number "${{ github.event.pull_request.number }}"
               )
           else

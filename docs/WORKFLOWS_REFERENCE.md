@@ -260,7 +260,7 @@ function correctly.
 
 The `_prerelease.yaml` and `_release.yaml` workflows push commits and tags directly to `main`
 (e.g., changelog updates, version tags). Branch protection rules block direct pushes — including
-from GitHub Actions using the default `GITHUB_TOKEN`. `RELEASE_PAT` is a Personal Access Token
+from GitHub Actions using the default `github.token`. `RELEASE_PAT` is a Personal Access Token
 that belongs to a user (e.g. Admin) configured as a **bypass actor** in the branch ruleset.
 
 #### Setup steps

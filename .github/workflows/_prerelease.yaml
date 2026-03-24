@@ -165,7 +165,7 @@ jobs:
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
           runner-os: ubuntu-latest
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ github.token }}
           github-actor: ${{ github.actor }}
 
       - name: Publish package (prerelease) to NuGet server

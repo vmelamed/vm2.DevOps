@@ -304,7 +304,7 @@ The `NUGET_SERVER` variable (or `nuget-server` input) determines where packages 
 
 Both the prerelease and release workflows push changelog commits and tags directly to `main`. Since `main` is protected by
 repository rulesets requiring status checks, workflows must authenticate with a fine-grained Personal Access Token (`RELEASE_PAT`
-secret) rather than the default `GITHUB_TOKEN`.
+secret) rather than the default `github.token`.
 
 The PAT owner must be listed as a **Repository Admin** bypass actor in the ruleset. Create the PAT with `contents: write` scope,
 scoped to the relevant repositories.

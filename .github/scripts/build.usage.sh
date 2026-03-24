@@ -33,9 +33,9 @@ Options:
   -mi, --minver-prerelease-id   Default semver pre-release identifiers used by MinVer (e.g., 'preview.0')
                                 Initial value from \$MINVERDEFAULTPRERELEASEIDENTIFIERS or 'preview.0'
   --nuget-username              Username for authenticating with the NuGet repository if needed
-                                Initial value from \$GITHUB_ACTOR or ''
+                                Initial value from \$GH_ACTOR or ''
   --nuget-password              Password or token for authenticating with the NuGet repository if needed
-                                Initial value from \$GITHUB_TOKEN or ''
+                                Initial value from \$GH_TOKEN or ''
 $switches
 Environment Variables:
   BUILD_PROJECT                 Path to the solution/project to build
@@ -44,8 +44,8 @@ Environment Variables:
   MINVERTAGPREFIX               Prefix for MinVer version git tags
   MINVERDEFAULTPRERELEASEIDENTIFIERS
                                 Default semver pre-release identifiers for MinVer
-  GITHUB_ACTOR                  Username for authenticating with the NuGet repository if needed
-  GITHUB_TOKEN                  Password or token for authenticating with the NuGet repository if needed
+  GH_ACTOR                      Username for authenticating with the NuGet repository if needed
+  GH_TOKEN                      Password or token for authenticating with the NuGet repository if needed
   GITHUB_STEP_SUMMARY           Path to the file to which step summary is written
 $vars
 EOF

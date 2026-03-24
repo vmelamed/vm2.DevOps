@@ -23,8 +23,8 @@ declare -x configuration=${CONFIGURATION:-"$default_configuration"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-""}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}
-declare -x nuget_username=${GITHUB_ACTOR:-""}
-declare -x nuget_password=${GITHUB_TOKEN:-""}
+declare -x gh_nuget_username=${GH_ACTOR:-""}
+declare -x gh_nuget_password=${GH_TOKEN:-""}
 
 source "$script_dir/build.usage.sh"
 source "$script_dir/build.args.sh"
@@ -37,7 +37,7 @@ is_safe_configuration "$configuration" || true
 validate_preprocessor_symbols preprocessor_symbols || true
 validate_minverTagPrefix "$minver_tag_prefix" || true
 is_safe_minverPrereleaseId "$minver_prerelease_id" || true
-is_safe_input "$nuget_username" || true
+is_safe_input "$gh_nuget_username" || true
 
 exit_if_has_errors
 
@@ -47,14 +47,14 @@ declare -xr configuration
 declare -xr preprocessor_symbols
 declare -xr minver_tag_prefix
 declare -xr minver_prerelease_id
-declare -xr nuget_username
-declare -xr nuget_password
+declare -xr gh_nuget_username
+declare -xr gh_nuget_password
 
-# Configure NuGet source with GitHub Packages authentication
-if [[ -n "$nuget_username" && -n "$nuget_password" ]]; then
+# Configure GitHub Packages NuGet source with GitHub authentication
+if [[ -n "$gh_nuget_username" && -n "$gh_nuget_password" ]]; then
     execute dotnet nuget update source github.vm2 \
-                --username "$nuget_username" \
-                --password "$nuget_password" \
+                --username "$gh_nuget_username" \
+                --password "$gh_nuget_password" \
                 --store-password-in-clear-text \
                 --configfile NuGet.config
 fi

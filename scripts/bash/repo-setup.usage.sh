@@ -24,7 +24,7 @@ files in place. The script will:
   - Link the local repository to the GitHub repository
   - Push the initial commit to the GitHub repository
   - Configure repository settings (rebase merge, auto-delete branches, etc.)
-  - Configure Actions workflow permissions (GITHUB_TOKEN default=read)
+  - Configure Actions workflow permissions (uses the token from 'gh auth login', default=read)
   - Set required secrets and variables for use by the CI/CD workflows
   - Create a ruleset for the repository that protects the default branch ("main") with required status checks
 

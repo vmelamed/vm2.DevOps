@@ -73,7 +73,7 @@ jobs:
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
           runner-os: ${{ inputs.runner-os }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ github.token }}
           github-actor: ${{ github.actor }}
 
       # Restore build artifacts from the build job cache

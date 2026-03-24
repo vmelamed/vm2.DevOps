@@ -40,9 +40,10 @@ validate_minverTagPrefix "$minver_tag_prefix" || true
 is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 is_safe_path "$tests_artifacts_dir" || true
 
-declare -A repo_state
+declare -A repo_state=()
+declare -xr key_root
 
-get_repo_state "$test_dir" repo_state
+get_repo_state "$test_dir" repo_state false # all we need is the root of the repo, so don't go to gh
 
 repo_root="${repo_state[$key_root]}"
 

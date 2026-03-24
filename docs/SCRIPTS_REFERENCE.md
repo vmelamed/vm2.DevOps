@@ -286,8 +286,8 @@ Compiles a .NET project or solution.
 | `--define`               | `-d`  | `""`            | Preprocessor symbols           |
 | `--minver-tag-prefix`    | `-mp` | `v`             | MinVer tag prefix              |
 | `--minver-prerelease-id` | `-mi` | `preview.0`     | MinVer pre-release identifiers |
-| `--nuget-username`       |       | `$GITHUB_ACTOR` | NuGet auth username            |
-| `--nuget-password`       |       | `$GITHUB_TOKEN` | NuGet auth token               |
+| `--nuget-username`       |       | `$GH_ACTOR`     | NuGet auth username            |
+| `--nuget-password`       |       | `$GH_TOKEN`     | NuGet auth token               |
 
 ---
 

@@ -94,7 +94,7 @@ jobs:
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
           runner-os: ${{ inputs.runner-os }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ github.token }}
           github-actor: ${{ github.actor }}
 
       # Retrieve compiled binaries from the build job to avoid recompilation
@@ -181,7 +181,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: gh pr comment $PR_NUMBER --edit-last --create-if-none --body-file ${{ steps.run-tests.outputs.coverage-reports-dir }}/SummaryGithub.md # Adjust path and filename if necessary
         env:
-            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            GH_TOKEN: ${{ github.token }}
             PR_NUMBER: ${{ github.event.number }}
 
       # Upload coverage to Codecov for historical tracking and PR integration

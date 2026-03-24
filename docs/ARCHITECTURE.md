@@ -344,7 +344,7 @@ All workflows that restore NuGet packages authenticate with GitHub Packages:
 ```bash
 dotnet nuget update source github.vm2 \
     --username ${{ github.actor }} \
-    --password ${{ secrets.GITHUB_TOKEN }} \
+    --password ${{ github.token }} \
     --store-password-in-clear-text
 ```
 
