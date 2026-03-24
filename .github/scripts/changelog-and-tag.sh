@@ -17,6 +17,7 @@ declare -xr default_minver_tag_prefix='v'
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x release_tag=${RELEASE_TAG:-}
 declare -x reason=${REASON:-}
+declare -x needs_empty_commit=${NEEDS_EMPTY_COMMIT:-false}
 
 source "$script_dir/changelog-and-tag.usage.sh"
 source "$script_dir/changelog-and-tag.args.sh"
@@ -46,6 +47,7 @@ declare -xr reason
 declare -xr minver_tag_prefix
 declare -xr is_release
 declare -xr is_prerelease
+declare -xr needs_empty_commit
 
 exit_if_has_errors
 
@@ -54,6 +56,16 @@ exit_if_has_errors
 if [[ "$ci" == true ]]; then
     execute git config user.name "github-actions[bot]"
     execute git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+fi
+
+# ============================================================================
+# STEP 0: Empty commit to advance HEAD past a prerelease tag (if needed)
+# ============================================================================
+
+if [[ "$needs_empty_commit" == true ]]; then
+    execute git commit --allow-empty -m "chore: promote to stable $release_tag [skip ci]"
+    execute git push
+    info "✅ Empty commit created to advance HEAD past prerelease tag"
 fi
 
 # ============================================================================

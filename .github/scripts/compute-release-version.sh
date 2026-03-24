@@ -34,8 +34,17 @@ declare -xr reason
 
 # detect if the head is already tagged
 head_tag=$(git tag --points-at HEAD)
+needs_empty_commit=false
+
 if [[ -n $head_tag ]]; then
-    error "The HEAD is already tagged with '$head_tag'. Possible remedy: delete the tag, or branch 'main' again, do a new PR, and release with a new, higher version number."
+    if is_semverReleaseTag "$head_tag"; then
+        error "The HEAD is already tagged with stable tag '$head_tag'. Possible remedy: branch 'main' again, do a new PR, and release with a new, higher version number."
+    elif is_semverPrereleaseTag "$head_tag"; then
+        trace "HEAD is tagged with prerelease tag '$head_tag'; will promote to stable release."
+        needs_empty_commit=true
+    else
+        error "The HEAD is already tagged with '$head_tag' (not a recognized semver tag). Possible remedy: delete the tag, or branch 'main' again, do a new PR, and release with a new, higher version number."
+    fi
 fi
 
 exit_if_has_errors
@@ -118,8 +127,19 @@ info "Finalized new release version: $release_version [$bump_type]"
 
 release_tag="${minver_tag_prefix}${release_version}"
 
+# If HEAD is already tagged with a prerelease, verify the stable version is strictly greater
+if [[ "$needs_empty_commit" == true && -n "$head_tag" ]]; then
+    result=0
+    compare_semver "$release_version" "${head_tag#"$minver_tag_prefix"}" || result=$?
+    # shellcheck disable=SC2154 # isGt is referenced but not assigned.
+    if (( result != isGt )); then
+        error "Computed stable version '$release_version' is not greater than the prerelease tag '$head_tag' on HEAD. Possible remedy: branch 'main' again, do a new PR with commits that bump the version higher, then release."
+    fi
+fi
+
 declare -xr release_version
 declare -xr release_tag
+declare -xr needs_empty_commit
 
 # Check if tag already exists
 if git rev-parse "$release_tag" >"$_ignore" 2>&1; then
@@ -132,11 +152,15 @@ exit_if_has_errors
 args_to_github_output \
   release_version \
   release_tag \
-  reason
+  reason \
+  needs_empty_commit
 
 # Summary
 {
     echo "## 🎯 Release Version: **$release_version**"
     echo "- Git Tag: \`$release_tag\`"
     echo "- Reason: ${reason}"
+    if [[ "$needs_empty_commit" == true ]]; then
+        echo "- Promoting prerelease \`$head_tag\` → stable (empty commit will advance HEAD)"
+    fi
 } | to_summary

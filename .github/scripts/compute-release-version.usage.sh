@@ -38,6 +38,8 @@ Outputs (to GITHUB_OUTPUT):
   release-tag                   The full tag (e.g., 'v1.2.3')
   reason                        The reason for the release build and possibly overriding the natural versioning
                                 (default: 'release build')
+  needs-empty-commit            'true' if HEAD is tagged with a prerelease and an empty commit is needed
+                                to advance HEAD before creating the stable tag; 'false' otherwise
 EOF
 }
 

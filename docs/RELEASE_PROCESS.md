@@ -230,7 +230,11 @@ The `compute-release-version.sh` script determines the next stable version:
 
 1. **Find latest stable tag** — filter `v*` tags matching the release regex (`vX.Y.Z` with no hyphen), sort semantically, take
    the highest.
-1. If `HEAD` is already tagged, the script errors out.
+1. **HEAD tag check**:
+   - If `HEAD` is tagged with a **stable** tag → error (cannot re-release the same commit).
+   - If `HEAD` is tagged with a **prerelease** tag → allow promotion to stable; an empty commit will be created later to
+     advance HEAD past the prerelease tag.
+   - If `HEAD` is tagged with an unrecognized tag → error.
 1. Collect all commit subjects since the latest stable tag:
 1. Scan the subjects for version-bump keywords:
 
@@ -245,7 +249,9 @@ The `compute-release-version.sh` script determines the next stable version:
 1. **Prerelease guard**: if the latest prerelease tag (e.g. `v2.0.0-preview.3`) is *higher* than the computed release version,
    the release version adopts the prerelease's major.minor.patch. This prevents publishing a stable version lower than an
    existing prerelease.
-1. **Duplicate guard**: if `HEAD` is already tagged or the computed tag already exists, the script fails with an error and
+1. **Promotion guard**: if HEAD is tagged with a prerelease, the computed stable version must be strictly greater (per SemVer
+   precedence) than that prerelease tag. If not, the script errors out.
+1. **Duplicate guard**: if the computed tag already exists, the script fails with an error and
    suggests remediation.
 
 ## Changelog Strategy
@@ -297,6 +303,8 @@ The `NUGET_SERVER` variable (or `nuget-server` input) determines where packages 
 | Prerelease not created after PR      | CI didn't succeed           | Check CI workflow run; fix failures                                            |
 | Wrong bump type (patch vs minor)     | Commit messages don't match | Use conventional commit format: `feat:` for minor, `fix:` for patch            |
 | Tag already exists error             | Duplicate release attempt   | Delete the tag, or release with a higher version                               |
+| HEAD already tagged (stable)         | Trying to re-release        | Branch `main` again, do a new PR, and release with a higher version            |
+| HEAD already tagged (prerelease)     | Promoting prerelease        | Handled automatically — an empty commit advances HEAD past the prerelease tag  |
 | NuGet push fails (401/403)           | Invalid or missing API key  | Verify the `NUGET_API_KEY` secret is issued by the configured `NUGET_SERVER`   |
 | Package version already exists       | Immutable NuGet versions    | Increment version; deprecate old package via NuGet.org UI                      |
 

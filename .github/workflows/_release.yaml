@@ -84,6 +84,7 @@ jobs:
       release-version: ${{ steps.version.outputs.release-version }}
       release-tag: ${{ steps.version.outputs.release-tag }}
       reason: ${{ steps.version.outputs.reason }}
+      needs-empty-commit: ${{ steps.version.outputs.needs-empty-commit }}
     steps:
       - name: Checkout (full history)
         uses: actions/checkout@v6
@@ -130,7 +131,8 @@ jobs:
           changelog-and-tag.sh \
               --release-tag "${{ needs.compute-version.outputs.release-tag }}" \
               --reason "${{ inputs.reason }}" \
-              --minver-tag-prefix "${{ inputs.minver-tag-prefix }}"
+              --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
+              --needs-empty-commit "${{ needs.compute-version.outputs.needs-empty-commit }}"
 
   release:
     name: Build and Publish Release

@@ -33,11 +33,15 @@ Options:
                                 Initial value from \$MINVERTAGPREFIX or default 'v'
   -r, --reason                  Specifies the reason for the release (included in tag annotation)
                                 Initial value from \$REASON or default based on tag type
+      --needs-empty-commit      'true' to create an empty commit before changelog/tag (used when
+                                promoting a prerelease-tagged HEAD to stable). Default: 'false'
+                                Initial value from \$NEEDS_EMPTY_COMMIT
 $switches
 Environment Variables:
   RELEASE_TAG                   The tag to create (e.g., 'v1.2.3' or 'v1.2.3-preview.1')
   MINVERTAGPREFIX               Tag prefix (default: 'v')
   REASON                        Release reason (default: auto-detected from tag type)
+  NEEDS_EMPTY_COMMIT            'true' or 'false' (default: 'false')
 $vars
 EOF
 }

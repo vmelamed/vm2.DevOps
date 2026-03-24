@@ -31,6 +31,11 @@ function get_arguments()
                 reason="$1"; shift
                 ;;
 
+            --needs-empty-commit )
+                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                needs_empty_commit="$1"; shift
+                ;;
+
             * )
                 usage false "Unknown option: $option"
                 ;;
@@ -45,6 +50,7 @@ function get_arguments()
         release_tag \
         minver_tag_prefix \
         reason \
+        needs_empty_commit \
         --header "other:" \
         ci
 }

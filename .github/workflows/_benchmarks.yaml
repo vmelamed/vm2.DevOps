@@ -63,7 +63,7 @@ env:
   ARTIFACTS_DIR: ./BenchmarkArtifacts
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
-  VERBOSE: ${{ vars.VERBOSE || false }}
+  VERBOSE: ${{ vars.VERBOSE }}
 
 jobs:
   benchmarks:
