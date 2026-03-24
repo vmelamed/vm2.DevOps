@@ -41,11 +41,11 @@ function get_arguments()
                 ;;
 
             --nuget-username )
-                nuget_username="$1"; shift
+                gh_nuget_username="$1"; shift
                 ;;
 
             --nuget-password )
-                nuget_password="$1"; shift
+                gh_nuget_password="$1"; shift
                 ;;
 
             * )
