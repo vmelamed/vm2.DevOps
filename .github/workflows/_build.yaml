@@ -46,6 +46,8 @@ env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   VERBOSE: ${{ vars.VERBOSE }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GITHUB_ACTOR: ${{ github.actor }}
 
 jobs:
   # Compile the project and optionally cache the build artifacts
