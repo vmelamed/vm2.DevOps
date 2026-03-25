@@ -318,10 +318,10 @@ function are_different()
 
     # compare fast, return fast, if no significant diffs; otherwise continue with the fancy diff tool of choice
     if diff -q -w -B "$LOCAL" "$REMOTE" > "$_ignore"; then
-        printf "%-70s <--- Identical ---> %-s\n" "$LOCAL" "$REMOTE"
+        printf "%-84s <--- Identical ---> %-s\n" "$LOCAL" "$REMOTE"
         return 1
     fi
-    printf "%-70s <--- Different ---> %-s\n" "$LOCAL" "$REMOTE"
+    printf "%-84s <--- Different ---> %-s\n" "$LOCAL" "$REMOTE"
     # echo "${LOCAL} <--- Different ---> ${REMOTE}"
     if [[ "$display_diff" != true ]]; then
         return 0
@@ -360,6 +360,6 @@ function copy_file()
         execute mkdir -p "$dest_dir"
     fi
     execute cp "$src_file" "$dest_file"
-    printf "%-70s <--- Copied to ---> %-s\n" "$src_file" "$dest_file"
+    printf "%-84s <--- Copied to ---> %-s\n" "$src_file" "$dest_file"
     # echo -e "\n${source_file} <--- Copied to ---> ${target_file}"
 }

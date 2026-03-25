@@ -123,7 +123,11 @@ while [[ $i -lt ${#source_files[@]} ]]; do
         fi
     fi
 
-    trace -e "\n${source_file} <--- Comparing ---> ${target_file}"
+    # shellcheck disable=SC2154
+    if $verbose; then
+        trace_msg=$(printf "\n%-84s <--- Comparing ---> %-s\n" "$source_file" "$target_file")
+        trace "$trace_msg"
+    fi
 
     if [[ ! -s "$target_file" ]]; then
         case $actions in
