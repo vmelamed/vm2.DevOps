@@ -14,21 +14,18 @@ declare -x version=''
 declare -x package_version=''
 
 #-------------------------------------------------------------------------------
-# Summary: Summarizes the output of a 'dotnet build -v d' command, extracting version info and results.
+# Summary: Extracts build information from the output of a 'dotnet build -v d' command.
 # Parameters: none (reads from stdin)
 # Returns:
-#   stdout: formatted table of build summary via dump_vars
+#   stdout: key=value pairs of build information
 #   Exit code: 0 always
 # Side Effects: Sets global exported variables: $build_result, $warnings_count, $errors_count,
 #               $assembly_version, $file_version, $informational_version, $version, $package_version
-# Dependencies: dump_vars
-# Usage: dotnet build -v d ... | summarizeDotnetBuild    # the vars are lost due to the pipe, but the formatted summary is printed to stdout, OR
-#        dotnet build -v d ... > >(summarizeDotnetBuild) # the vars are set in the current shell and the formatted summary is printed to stdout
-# Example:
-#   dotnet build -v d MyProject.csproj | summarizeDotnetBuild | to_stdout
-# Notes: Requires detailed verbosity (-v d) to extract version information. Globals persist until next call.
+# Caution: The values of the global variables are only valid after this function has been called and the input has been fully
+#          read if and only if it is ran in the current shell context not piped or in a subshell.
 #-------------------------------------------------------------------------------
-function summarizeDotnetBuild()
+
+function extractDotnetBuildInfo()
 {
     # reset the globals
     build_result="Unknown"
@@ -65,6 +62,9 @@ function summarizeDotnetBuild()
         fi
     done
 
+    # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
+    eval "$restoreShopt" &> "$_ignore"
+
     if [[ $build_result == FAILED ]]; then
         assembly_version='N/A'
         file_version='N/A'
@@ -73,8 +73,70 @@ function summarizeDotnetBuild()
         package_version='N/A'
     fi
 
-    # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
-    eval "$restoreShopt" &> "$_ignore"
+    echo "build_result=$build_result"
+    echo "warnings_count=$warnings_count"
+    echo "errors_count=$errors_count"
+    echo "assembly_version=$assembly_version"
+    echo "file_version=$file_version"
+    echo "informational_version=$informational_version"
+    echo "version=$version"
+    echo "package_version=$package_version"
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Displays a formatted summary of the build information extracted by extractDotnetBuildInfo.
+# Parameters: none (reads from stdin)
+# Returns:
+#   stdout: formatted table of build summary via dump_vars
+#   Exit code: 0 always
+# Side Effects: Sets global exported variables: $build_result, $warnings_count, $errors_count,
+#               $assembly_version, $file_version, $informational_version, $version, $package_version
+#-------------------------------------------------------------------------------
+function displayDotnetBuildSummary()
+{
+    local build_result="Unknown"
+    local warnings_count=''
+    local errors_count=''
+    local assembly_version=''
+    local file_version=''
+    local informational_version=''
+    local version=''
+    local package_version=''
+
+    local var value
+    while IFS='=' read -r var value; do
+        case $var in
+            build_result )
+                build_result="$value"
+                ;;
+            warnings_count )
+                warnings_count="$value"
+                ;;
+            errors_count )
+                errors_count="$value"
+                ;;
+            assembly_version )
+                assembly_version="$value"
+                ;;
+            file_version )
+                file_version="$value"
+                ;;
+            informational_version )
+                informational_version="$value"
+                ;;
+            version )
+                version="$value"
+                ;;
+            package_version )
+                package_version="$value"
+                ;;
+            * )
+                warning "Unrecognized variable: $var"
+                ;;
+
+        esac
+    done
+
     echo "Build Results"
     dump_vars --force --quiet \
         --header "Dotnet Build Summary:" \

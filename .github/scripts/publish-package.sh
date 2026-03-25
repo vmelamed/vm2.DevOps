@@ -90,19 +90,12 @@ execute dotnet pack \
     "-p:MinVerPrereleaseIdentifiers=$minver_prerelease_id" \
     "-p:PackageReleaseNotes=\"$reason\"" > "$temp_output" 2>&1 || build_exit=$?
 
-# shellcheck disable=SC2005 # Useless echo? Instead of 'echo $(cmd)', just use 'cmd'.
-echo "$(summarizeDotnetBuild < "$temp_output")" | to_stdout
-[[ $build_exit -eq 0 ]] || exit "$build_exit"
+# Populated by extractDotnetBuildInfo from the dotnet pack log.
+declare -x version=''
+declare -x package_version=''
 
-# the build/pack
-declare -x build_result
-declare -x warnings_count
-declare -x errors_count
-declare -x assembly_version
-declare -x file_version
-declare -x informational_version
-declare -x version
-declare -x package_version
+extractDotnetBuildInfo < "$temp_output" > >(displayDotnetBuildSummary | to_summary)
+[[ $build_exit -eq 0 ]] || exit "$build_exit"
 
 if is_semverRelease "$version"; then
     summary_header="Release Summary"

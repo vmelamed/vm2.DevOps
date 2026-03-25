@@ -368,15 +368,19 @@ Validates .NET version input format.
 
 .NET build tooling support.
 
-### summarizeDotnetBuild()
+### extractDotnetBuildInfo()
 
-Summarizes the output of a 'dotnet build -v d' command, extracting version info and results.
+Parses detailed dotnet build/pack output from stdin, sets global version/result variables, and emits `key=value` pairs to stdout.
+
+### displayDotnetBuildSummary()
+
+Reads `key=value` build info from stdin and prints a formatted summary table via `dump_vars`.
 
 ---
 
 ## Summary
 
-### Total Functions: 76
+### Total Functions: 77
 
 - _diagnostics.sh: 11 functions
 - _args.sh: 10 functions
@@ -388,7 +392,7 @@ Summarizes the output of a 'dotnet build -v d' command, extracting version info 
 - core.sh: 2 functions
 - gh_core.sh: 7 functions
 - _sanitize.sh: 14 functions (13 validators + 1 formatter)
-- _dotnet.sh: 1 function
+- _dotnet.sh: 2 functions
 
 ### Usage Pattern
 
