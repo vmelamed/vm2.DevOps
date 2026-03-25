@@ -82,6 +82,13 @@ fi
 if [[ ! -s "$cliff_config" ]]; then
     warning "Missing $cliff_config; skipping changelog update."
 else
+    # Fail fast: changelog bootstrapping should be explicit in repo setup.
+    if [[ ! -f CHANGELOG.md ]]; then
+        error "Missing CHANGELOG.md in repo root. git-cliff uses --prepend and requires an existing file."
+        error "Create CHANGELOG.md (can be an empty file) and rerun."
+        exit 2
+    fi
+
     # Determine the commit range
     # shellcheck disable=SC2154 # semverTagReleaseRegex is referenced but not assigned.
     if [[ "$is_release" == true ]]; then
