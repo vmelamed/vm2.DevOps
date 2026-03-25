@@ -252,3 +252,4 @@ jobs:
       preprocessor-symbols: ${{ needs.validate-input.outputs.preprocessor-symbols }}
       minver-tag-prefix: ${{ needs.validate-input.outputs.minver-tag-prefix }}
       minver-prerelease-id: ${{ needs.validate-input.outputs.minver-prerelease-id }}
+      skip-build-cache: ${{ fromJSON(needs.validate-input.outputs.build-projects-len) == 0 }}

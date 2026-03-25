@@ -41,6 +41,10 @@ function get_arguments()
                 minver_prerelease_id="$1"; shift
                 ;;
 
+            --build|-b )
+                build=true
+                ;;
+
             * )
                 usage false "Unknown option: $option"
                 ;;
@@ -57,6 +61,7 @@ function get_arguments()
         preprocessor_symbols \
         minver_tag_prefix \
         minver_prerelease_id \
+        build \
         --header "other:" \
         ci
 }

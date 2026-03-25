@@ -38,6 +38,13 @@ on:
         type: string
         default: preview.0
 
+      skip-build-cache:
+        description: >-
+          Skip restoring build artifacts from cache and build during pack instead.
+          Use for projects that don't require a separate build step (e.g., template packages).
+        type: boolean
+        default: false
+
 permissions:
   contents: read
   packages: read
@@ -78,6 +85,7 @@ jobs:
 
       # Restore build artifacts from the build job cache
       - name: Restore build artifacts from cache
+        if: ${{ !inputs.skip-build-cache }}
         uses: actions/cache/restore@v5
         with:
           key: build-artifacts-${{ runner.os }}-${{ github.sha }}-${{ inputs.configuration }}-${{ github.run_id }}
@@ -95,4 +103,5 @@ jobs:
               --configuration "${{ inputs.configuration }}" \
               --define "${{ inputs.preprocessor-symbols }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
-              --minver-prerelease-id "${{ inputs.minver-prerelease-id }}"
+              --minver-prerelease-id "${{ inputs.minver-prerelease-id }}" \
+              ${{ inputs.skip-build-cache && '--build' || '' }}

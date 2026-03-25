@@ -29,6 +29,9 @@ Options:
                                 Initial value from \$MINVERTAGPREFIX environment variable or 'v'
   -mi, --minver-prerelease-id   Default semver pre-release identifiers for MinVer (e.g., 'preview.0')
                                 Initial value from \$MINVERDEFAULTPRERELEASEIDENTIFIERS environment variable or 'preview.0'
+  -b, --build                   Build the project before packing (default: use pre-built artifacts).
+                                Use when no prior build job cached the artifacts (e.g., template projects).
+                                Initial value from \$BUILD or default 'false'
 
 $switches
 Environment Variables:
@@ -42,6 +45,8 @@ Environment Variables:
   MINVERDEFAULTPRERELEASEIDENTIFIERS
                                 Default semver pre-release identifiers for MinVer
                                 (default: 'preview.0')
+  BUILD                         When 'true', build the project before packing
+                                (default: 'false')
 $vars
 EOF
 }

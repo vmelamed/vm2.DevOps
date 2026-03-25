@@ -23,6 +23,7 @@ declare -x configuration=${CONFIGURATION:-"$default_configuration"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-""}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}
+declare -x build=${BUILD:-false}
 
 source "$script_dir/pack.usage.sh"
 source "$script_dir/pack.args.sh"
@@ -35,7 +36,8 @@ dump_vars --quiet \
     configuration \
     preprocessor_symbols \
     minver_tag_prefix \
-    minver_prerelease_id
+    minver_prerelease_id \
+    build
 
 # sanitize inputs
 is_safe_path "$package_project" || true
@@ -54,16 +56,21 @@ trap 'rm -rf "$pack_output_dir"' EXIT
 temp_output=$(mktemp)
 trap 'rm -f "$temp_output"; rm -rf "$pack_output_dir"' EXIT
 
+pack_args=(
+    "${package_project}"
+    --configuration "$configuration"
+    --output "$pack_output_dir"
+    "-p:preprocessor_symbols=$preprocessor_symbols"
+    "-p:MinVerTagPrefix=$minver_tag_prefix"
+    "-p:MinVerPrereleaseIdentifiers=$minver_prerelease_id"
+)
+
+if [[ "$build" != true ]]; then
+    pack_args+=(--no-build --no-restore)
+fi
+
 pack_exit=0
-execute dotnet pack \
-    "${package_project}" \
-    --configuration "$configuration" \
-    --output "$pack_output_dir" \
-    --no-build \
-    --no-restore \
-    "-p:preprocessor_symbols=$preprocessor_symbols" \
-    "-p:MinVerTagPrefix=$minver_tag_prefix" \
-    "-p:MinVerPrereleaseIdentifiers=$minver_prerelease_id" > "$temp_output" 2>&1 || pack_exit=$?
+execute dotnet pack "${pack_args[@]}" > "$temp_output" 2>&1 || pack_exit=$?
 
 extractDotnetBuildInfo < "$temp_output" > >(displayDotnetBuildSummary | to_summary)
 
