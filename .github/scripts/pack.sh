@@ -69,6 +69,7 @@ if ! $build; then
     pack_args+=(--no-build)
 fi
 
+execute dotnet restore "${package_project}"
 pack_exit=0
 execute dotnet pack "${pack_args[@]}" > "$temp_output" 2>&1 || pack_exit=$?
 
