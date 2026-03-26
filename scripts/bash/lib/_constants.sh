@@ -19,30 +19,30 @@
 #===============================================================================
 
 if [[ -t 1 ]]; then
-    declare -xr BOLD='\033[1m'
-    declare -xr RESET='\033[0m'
+    declare -xr bold='\033[1m'
+    declare -xr reset='\033[0m'
 
-    declare -xr RED='\033[0;31m'
-    declare -xr GREEN='\033[0;32m'
-    declare -xr YELLOW='\033[1;33m'
-    declare -xr BLUE='\033[0;34m'
-    declare -xr BOLDRED='\033[1;31m'
-    declare -xr BOLDGREEN='\033[1;32m'
-    declare -xr BOLDYELLOW='\033[1;33m'
-    declare -xr BOLDBLUE='\033[1;34m'
-    declare -xr NC='\033[0m' # No Color (reset)
+    declare -xr red='\033[0;31m'
+    declare -xr green='\033[0;32m'
+    declare -xr yellow='\033[1;33m'
+    declare -xr blue='\033[0;34m'
+    declare -xr bold_red='\033[1;31m'
+    declare -xr bold_green='\033[1;32m'
+    declare -xr bold_yellow='\033[1;33m'
+    declare -xr bold_blue='\033[1;34m'
+    declare -xr nc='\033[0m' # no color (reset)
 else
-    declare -xr BOLD=''
-    declare -xr RESET=''
-    declare -xr RED=''
-    declare -xr GREEN=''
-    declare -xr YELLOW=''
-    declare -xr BLUE=''
-    declare -xr BOLDRED=''
-    declare -xr BOLDGREEN=''
-    declare -xr BOLDYELLOW=''
-    declare -xr BOLDBLUE=''
-    declare -xr NC='' # No Color (reset)
+    declare -xr bold=''
+    declare -xr reset=''
+    declare -xr red=''
+    declare -xr green=''
+    declare -xr yellow=''
+    declare -xr blue=''
+    declare -xr bold_red=''
+    declare -xr bold_green=''
+    declare -xr bold_yellow=''
+    declare -xr bold_blue=''
+    declare -xr nc='' # no color (reset)
 fi
 
 # characters

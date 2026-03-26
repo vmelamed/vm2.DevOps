@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025 Val Melamed
+
+# shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
+
+# shellcheck disable=SC2154 # var is referenced but not assigned
+function usage_text()
+{
+    local vars=""
+    local switches=""
+
+    if [[ $1 == true ]]; then
+
+        switches="
+Switches:
+$common_switches"
+
+        vars="
+Environment Variables:
+$common_vars"
+
+    fi
+
+    cat << EOF
+Usage:
+  ${script_name} --base-ref <ref> [options]
+
+Description:
+  Validates that all commit messages between <base-ref> and HEAD follow the Conventional Commits specification
+  (https://www.conventionalcommits.org). Merge commits are automatically skipped. Commit message format:
+
+  type ::= <style|build|feat|test|fix|refactor|perf|security|docs|chore|revert|remove|ci|devops>
+  scope ::= <noun>
+  description ::= <string>
+  commit message ::= <type>[(scope)][!]: <description>
+
+  Message type:       Required, one of: style build feat test fix refactor perf security docs chore revert remove ci devops
+  Scope:              Optional. A noun describing the section of the codebase affected by the change (e.g., 'api', 'ui', 'docs')
+  Breaking Change:    Optional. '!' indicates a BREAKING CHANGE
+  Description:        Required. A short description of the change
+
+  Examples:
+    feat(api)!: change the 'getUserData' method of the API endpoint for user data
+    fix(ui):    correct button alignment on homepage
+    chore(ci):  update GitHub Actions workflow
+
+Options:
+  -b, --base-ref <ref>          Required. Git ref to compare against (e.g. origin/main, a SHA, or a tag).
+$switches$vars
+Examples:
+    ${script_name} --base-ref origin/main
+    ${script_name} --base-ref v1.0.0 --verbose
+EOF
+}
+
+function usage()
+{
+    local long_help=true
+    if [[ $# -gt 0 && ($1 == true || $1 == false) ]]; then
+        long_help=$1
+        shift
+    fi
+    display_usage_msg "$(usage_text "$long_help")" "$@"
+}

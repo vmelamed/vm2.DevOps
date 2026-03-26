@@ -11,6 +11,7 @@
   - [rename-branch.sh](#rename-branchsh)
   - [Other Utilities](#other-utilities)
 - [3. CI Scripts](#3-ci-scripts)
+  - [validate-commits.sh](#validate-commitssh)
   - [validate-input.sh](#validate-inputsh)
   - [build.sh](#buildsh)
   - [run-tests.sh](#run-testssh)
@@ -244,6 +245,23 @@ Each CI script follows a **three-file pattern**:
 | `script.sh`        | Entry point — sources lib, runs |
 | `script.usage.sh`  | `--help` text                   |
 | `script.args.sh`   | Argument parsing                |
+
+---
+
+### validate-commits.sh
+
+Validates that all commit messages in a PR follow the [Conventional Commits](https://www.conventionalcommits.org/) format.
+Only runs on `pull_request` events.
+
+**Called by:** `_ci.yaml`
+
+| Option         | Short | Default | Description                              |
+| :------------- | :---- | :------ | :--------------------------------------- |
+| `--base-ref`   | `-b`  | —       | Git ref to compare against (e.g. `origin/main`) |
+
+**Allowed types:** `feat` `fix` `perf` `refactor` `docs` `style` `test` `chore` `revert` `security` `build` `ci`
+
+Merge commits and `Revert` commits are automatically skipped.
 
 ---
 

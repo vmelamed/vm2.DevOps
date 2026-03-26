@@ -376,6 +376,32 @@ if ! has_remote_repo repo_state; then
     info "Repository URL                 => $repo_url"
     [[ -n "$repo_id"   ]] &&
     info "Repository Id                  => $repo_id"
+
+    # ----------------------------------------------------------------------------
+    # Configure local git settings
+    # ----------------------------------------------------------------------------
+
+    info "Configuring local git settings..."
+
+    declare -xr hooks_path="${vm2_repos}/vm2.DevOps/scripts/githooks"
+    declare -xr commit_template="${hooks_path}/.gitmessage"
+
+    info "  ...setting core.hooksPath to '${hooks_path}';"
+    execute git -C "$repo_path" config --local core.hooksPath "$hooks_path"             && trace "core.hooksPath set to '${hooks_path}'."
+
+    info "  ...setting commit.template to '${commit_template}';"
+    execute git -C "$repo_path" config --local commit.template "$commit_template"       && trace "commit.template set to '${commit_template}'."
+
+    info "  ...setting pull.rebase to 'true';"
+    execute git -C "$repo_path" config --local pull.rebase true                         && trace "pull.rebase set to 'true'."
+
+    info "  ...setting fetch.prune to 'true';"
+    execute git -C "$repo_path" config --local fetch.prune true                         && trace "fetch.prune set to 'true'."
+
+    info "  ...setting push.autoSetupRemote to 'true';"
+    execute git -C "$repo_path" config --local push.autoSetupRemote true                && trace "push.autoSetupRemote set to 'true'."
+
+    info "...local git settings configured."
 fi
 
 # ----------------------------------------------------------------------------

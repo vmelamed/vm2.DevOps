@@ -90,6 +90,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Validate commit messages follow Conventional Commits format (PR only)
+  validate-commits:
+    name: Validate commit messages
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout (full history for commit range)
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          filter: tree:0
+
+      - name: Setup DevOps
+        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
+
+      - name: Validate Conventional Commits
+        shell: bash
+        run: |
+          validate-commits.sh \
+              --base-ref "origin/${{ github.base_ref }}"
+
   # Validate all input parameters and prepare them for downstream jobs
   validate-input:
     name: Parameters validation

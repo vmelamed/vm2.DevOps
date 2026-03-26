@@ -122,6 +122,33 @@ Test runner (usually xUnit) configuration. Controls parallelism, culture, diagno
 | `changelog/cliff.prerelease.toml`     | git-cliff config for prerelease runs |
 | `changelog/cliff.release-header.toml` | git-cliff config for stable releases |
 
+### Git Hooks
+
+| File                                          | Purpose                                               |
+| :-------------------------------------------- | :---------------------------------------------------- |
+| `vm2.DevOps/scripts/githooks/commit-msg`      | Validates Conventional Commits format at commit time  |
+| `vm2.DevOps/scripts/githooks/.gitmessage`     | Commit message template with allowed types            |
+
+### Local Git Settings
+
+Run once per clone to configure local git settings via `git config --local`:
+
+| Setting                  | Value  | Purpose                                                    |
+| :----------------------- | :----- | :--------------------------------------------------------- |
+| `core.hooksPath`         | (path) | Points to shared commit-msg hook in vm2.DevOps             |
+| `commit.template`        | (path) | Commit message template with allowed types                 |
+| `pull.rebase`            | `true` | `git pull` rebases instead of creating merge commits       |
+| `fetch.prune`            | `true` | Auto-removes stale remote-tracking branches on fetch/pull  |
+| `push.autoSetupRemote`   | `true` | First push of a new branch auto-sets upstream tracking     |
+
+```bash
+git config --local core.hooksPath ~/repos/vm2/vm2.DevOps/scripts/githooks
+git config --local commit.template ~/repos/vm2/vm2.DevOps/scripts/githooks/.gitmessage
+git config --local pull.rebase true
+git config --local fetch.prune true
+git config --local push.autoSetupRemote true
+```
+
 ## CI Behavior by Event Type
 
 The CI workflow template adjusts its behavior based on the trigger:

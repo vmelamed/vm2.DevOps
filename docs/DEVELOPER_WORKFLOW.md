@@ -12,6 +12,9 @@
   - [Commit Message Format](#commit-message-format)
   - [How Commits Drive Automation](#how-commits-drive-automation)
   - [Good Commit Messages](#good-commit-messages)
+  - [Commit Message Enforcement](#commit-message-enforcement)
+  - [Commit Message Template](#commit-message-template)
+  - [Fixing Bad Commit Messages](#fixing-bad-commit-messages)
 - [Pull Request Workflow](#pull-request-workflow)
   - [Creating a PR](#creating-a-pr)
   - [CI Checks](#ci-checks)
@@ -183,6 +186,104 @@ Each commit message appears **verbatim** in the changelog. Write them as if they
 > will not trigger a release or affect the changelog. You can even use `git rebase -i origin/main` (interactive rebase) to
 > squash or reorder your WIP commits before merging.
 
+### Commit Message Enforcement
+
+Conventional Commits are enforced at two levels:
+
+1. **Local git hook** — fast feedback at `git commit` time. To enable, run once per clone:
+
+   ```bash
+   git config core.hooksPath ~/repos/vm2/vm2.DevOps/scripts/githooks
+   ```
+
+   The hook rejects commits whose subject line doesn't match the Conventional Commits format.
+   You may try to bypass it with `git commit --no-verify`, but CI will still catch it.
+
+2. **CI check** — the `validate-commits` job in `_ci.yaml` validates all commit messages in the
+   PR range. This is the hard gate — it cannot be bypassed.
+
+### Commit Message Template
+
+A commit message template shows the allowed types and format in your editor every time you run
+`git commit`. To enable, run once per clone:
+
+```bash
+git config commit.template ~/repos/vm2/vm2.DevOps/scripts/githooks/.gitmessage
+```
+
+> [!NOTE] `repo-setup.sh` configures both settings automatically via `git config --local` on the first run of the script. You
+> only need to run the commands below if you are setting up a clone manually.
+
+Both settings (hook + template) can be set in one go:
+
+```bash
+git config --local core.hooksPath ~/repos/vm2/vm2.DevOps/scripts/githooks
+git config --local commit.template ~/repos/vm2/vm2.DevOps/scripts/githooks/.gitmessage
+```
+
+### Fixing Bad Commit Messages
+
+If a commit slips through with the wrong message (e.g. you used `--no-verify`, or the hook
+wasn't configured yet), here's how to fix it depending on when you catch it.
+
+#### Last commit, not yet pushed
+
+The simplest case — `--amend` rewrites only the most recent commit:
+
+```bash
+git commit --amend -m "fix: corrected message"
+```
+
+Git opens your editor (or accepts `-m` inline), replaces the commit with a new one that has
+the corrected message and the same code changes. The commit gets a new SHA.
+
+#### Older commit, not yet pushed
+
+Use interactive rebase to rewrite any commit in your branch:
+
+```bash
+git rebase -i origin/main
+```
+
+Git opens your editor with the list of commits on your branch:
+
+```text
+pick a1b2c3d feat: add widget
+pick d4e5f6a bad message here         <-- this one needs fixing
+pick f7g8h9i fix: handle null input
+```
+
+Change `pick` to `reword` on the bad line:
+
+```text
+pick a1b2c3d feat: add widget
+reword d4e5f6a bad message here       <-- git will pause here
+pick f7g8h9i fix: handle null input
+```
+
+Save and close. Git replays the commits in order, pausing at each `reword` to let you type the
+corrected message. The reworded commit (and every commit after it) gets a new SHA because
+history changed.
+
+> [!NOTE] Other useful interactive rebase commands: `edit` (pause to change code + message),
+> `squash` (fold into previous commit, keep both messages), `fixup` (fold into previous, discard
+> message), `drop` (delete the commit entirely).
+
+#### Already pushed to a PR branch
+
+Same as above, then force-push:
+
+```bash
+git push --force-with-lease
+```
+
+`--force-with-lease` is the safe variant of `--force`: it checks that the remote branch hasn't
+moved since your last fetch. If someone else pushed in the meantime, it refuses instead of
+silently overwriting their work. Since you're a solo developer this is just a safety habit, but
+a good one.
+
+CI re-runs automatically after the force-push and `validate-commits` will pass.
+
 ## Pull Request Workflow
 
 ### Creating a PR
@@ -204,6 +305,7 @@ When you open a PR, the CI pipeline runs automatically:
 ```text
 prerun-ci (gather parameters)
     ├── run-ci (_ci.yaml)
+    │       ├── validate-commits (PR only: Conventional Commits check)
     │       ├── validate-input
     │       ├── build (compile)
     │       ├── test (unit tests + coverage)
