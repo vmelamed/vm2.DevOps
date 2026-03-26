@@ -52,7 +52,7 @@ exit_if_has_errors
 pack_output_dir=$(mktemp -d)
 trap 'rm -rf "$pack_output_dir"' EXIT
 
-# pack the project (validation only — no restore, no build)
+# pack the project (validation only — no build, restore as needed)
 temp_output=$(mktemp)
 trap 'rm -f "$temp_output"; rm -rf "$pack_output_dir"' EXIT
 
@@ -65,14 +65,12 @@ pack_args=(
     "-p:MinVerPrereleaseIdentifiers=$minver_prerelease_id"
 )
 
-if [[ "$build" != true ]]; then
-    pack_args+=(--no-build --no-restore)
+if ! $build; then
+    pack_args+=(--no-build)
 fi
 
 pack_exit=0
 execute dotnet pack "${pack_args[@]}" > "$temp_output" 2>&1 || pack_exit=$?
-
-cat "$temp_output"
 
 extractDotnetBuildInfo < "$temp_output" > >(displayDotnetBuildSummary | to_summary)
 
