@@ -75,7 +75,7 @@ pack_exit=0
 execute dotnet pack "${pack_args[@]}" > "$temp_output" 2>&1 || pack_exit=$?
 
 echo "$pack_exit"
-extractDotnetBuildInfo < "$temp_output" > >(displayDotnetBuildSummary)
+extractDotnetBuildInfo < "$temp_output" # > >(displayDotnetBuildSummary)
 
 # shellcheck disable=SC2154
 if [[ $pack_exit -eq 0 ]]; then
