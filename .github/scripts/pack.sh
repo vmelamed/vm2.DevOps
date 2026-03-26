@@ -58,6 +58,7 @@ trap 'rm -f "$temp_output"; rm -rf "$pack_output_dir"' EXIT
 
 pack_args=(
     "${package_project}"
+    --verbosity detailed
     --configuration "$configuration"
     --output "$pack_output_dir"
     "-p:preprocessor_symbols=$preprocessor_symbols"
