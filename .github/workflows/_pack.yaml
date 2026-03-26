@@ -103,5 +103,4 @@ jobs:
               --configuration "${{ inputs.configuration }}" \
               --define "${{ inputs.preprocessor-symbols }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
-              --minver-prerelease-id "${{ inputs.minver-prerelease-id }}" \
-              ${{ inputs.skip-build-cache && '--build' || '' }}
+              --minver-prerelease-id "${{ inputs.minver-prerelease-id }}"
