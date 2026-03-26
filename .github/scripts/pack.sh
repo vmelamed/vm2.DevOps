@@ -75,14 +75,16 @@ pack_exit=0
 execute dotnet pack "${pack_args[@]}" > "$temp_output" 2>&1 || pack_exit=$?
 
 echo "$pack_exit"
-extractDotnetBuildInfo < "$temp_output" #> >(displayDotnetBuildSummary | to_summary)
+extractDotnetBuildInfo < "$temp_output" > >(displayDotnetBuildSummary)
 
+# shellcheck disable=SC2154
 if [[ $pack_exit -eq 0 ]]; then
     nupkg_count=$(find "$pack_output_dir" -name "*.nupkg" | wc -l)
     {
         echo "### ✅ Pack Validation Passed"
         echo ""
         echo "Project: **${package_project}**"
+        echo "Pack result: **${build_result}**"
         echo "Packages produced: **${nupkg_count}**"
         echo ""
         for f in "$pack_output_dir"/*.nupkg; do
