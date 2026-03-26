@@ -71,6 +71,7 @@ function to_stdout()
             echo "$line" >> "$github_step_summary"
         fi
     done
+    return 0
 }
 
 #-------------------------------------------------------------------------------
@@ -97,6 +98,7 @@ function to_traceout()
             echo "$line" >> "$github_step_summary"
         fi
     done
+    return 0
 }
 
 #-------------------------------------------------------------------------------
@@ -122,6 +124,7 @@ function to_stderr()
             echo "$line" >> "$github_step_summary"
         fi
     done
+    return 0
 }
 
 #-------------------------------------------------------------------------------

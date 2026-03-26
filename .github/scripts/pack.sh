@@ -48,13 +48,9 @@ is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 
 exit_if_has_errors
 
-execute dotnet restore "${package_project}"
-
-# create a temporary output directory for packed packages
+# create a temporary output directory and file to capture the output of the dotnet pack command
 pack_output_dir=$(mktemp -d)
 trap 'rm -rf "$pack_output_dir"' EXIT
-
-# pack the project (validation only — no build, restore as needed)
 temp_output=$(mktemp)
 trap 'rm -f "$temp_output"; rm -rf "$pack_output_dir"' EXIT
 
@@ -71,33 +67,12 @@ pack_args=(
 if ! $build; then
     pack_args+=("--no-build")
 fi
-trace "before packing"
-pack_exit=0
-execute dotnet pack "${pack_args[@]}" > "$temp_output" 2>&1 || pack_exit=$?
-trace "after packing"
 
-cat "$temp_output"
-trace "pack_exit=$pack_exit"
+execute dotnet restore "${package_project}"
+execute dotnet pack "${pack_args[@]}" > "$temp_output" 2>&1
+pack_exit=$?
 
-declare -x build_result
-declare -x warnings_count
-declare -x errors_count
-declare -x assembly_version
-declare -x file_version
-declare -x informational_version
-declare -x version
-declare -x package_version
-
-extractDotnetBuildInfo < "$temp_output" # > >(displayDotnetBuildSummary)
-
-trace "build_result=$build_result"
-trace "warnings_count=$warnings_count"
-trace "errors_count=$errors_count"
-trace "assembly_version=$assembly_version"
-trace "file_version=$file_version"
-trace "informational_version=$informational_version"
-trace "version=$version"
-trace "package_version=$package_version"
+extractDotnetBuildInfo < "$temp_output" > >(displayDotnetBuildSummary)
 
 if [[ $pack_exit -eq 0 ]]; then
     nupkg_count=$(find "$pack_output_dir" -name "*.nupkg" | wc -l)
@@ -105,7 +80,6 @@ if [[ $pack_exit -eq 0 ]]; then
         echo "### ✅ Pack Validation Passed"
         echo ""
         echo "Project: **${package_project}**"
-        echo "Pack result: **${build_result}**"
         echo "Packages produced: **${nupkg_count}**"
         echo ""
         for f in "$pack_output_dir"/*.nupkg; do

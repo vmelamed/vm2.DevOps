@@ -196,8 +196,8 @@ function list_of_files()
 
     # remember the current settings of the nullglob and globstar options
     local restoreGlobstar restoreNullglob
-    restoreGlobstar=$(shopt -p globstar)
-    restoreNullglob=$(shopt -p nullglob)
+    restoreGlobstar=$(shopt -p globstar) || true
+    restoreNullglob=$(shopt -p nullglob) || true
 
     # if a glob pattern does not match any files - expand to an empty string
     # enable globstar to allow **/ pattern to match directories and subdirectories recursively

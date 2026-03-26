@@ -47,7 +47,7 @@ function is_defined_array()
         return 2
     fi
 
-    restoreShopt=$(shopt -p nocasematch)
+    restoreShopt=$(shopt -p nocasematch) || true
     shopt -u nocasematch # set case sensitive matching
 
     local decl rc=1
@@ -76,7 +76,7 @@ function is_defined_associative_array()
         return 2
     fi
 
-    restoreShopt=$(shopt -p nocasematch)
+    restoreShopt=$(shopt -p nocasematch) || true
     shopt -u nocasematch # set case sensitive matching
 
     local decl

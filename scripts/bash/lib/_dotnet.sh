@@ -24,7 +24,6 @@ declare -x package_version=''
 # Caution: The values of the global variables are only valid after this function has been called and the input has been fully
 #          read if and only if it is ran in the current shell context not piped or in a subshell.
 #-------------------------------------------------------------------------------
-
 function extractDotnetBuildInfo()
 {
     # reset the globals
@@ -38,13 +37,14 @@ function extractDotnetBuildInfo()
     package_version=''
 
     local restoreShopt
-    restoreShopt=$(shopt -p nocasematch)
+    restoreShopt=$(shopt -p nocasematch) || true
     shopt -s nocasematch
 
     local line
     while IFS= read -r line; do
-        if [[ $line =~ Build\ (succeeded)|(FAILED) ]]; then
-            build_result="${BASH_REMATCH[1]}${BASH_REMATCH[2]}"
+        echo "$line"
+        if [[ $line =~ Build\ (succeeded|FAILED) ]]; then
+            build_result="${BASH_REMATCH[1]}"
         elif [[ -z $warnings_count && $line =~ ([0-9]+)\ Warning ]]; then
             warnings_count=${BASH_REMATCH[1]}
         elif [[ -z $errors_count && $line =~ ([0-9]+)\ Error ]]; then
@@ -59,6 +59,10 @@ function extractDotnetBuildInfo()
             version=${BASH_REMATCH[1]}
         elif [[ -z $package_version && $line =~ PackageVersion:\ ([[:alnum:][:punct:]]+) ]]; then
             package_version=${BASH_REMATCH[1]}
+        fi
+        rc=$?
+        if [[ $rc -ne 0 ]]; then
+            build_result="FAILED"
         fi
     done
 
