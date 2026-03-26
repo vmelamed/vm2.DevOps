@@ -60,20 +60,24 @@ trap 'rm -f "$temp_output"; rm -rf "$pack_output_dir"' EXIT
 
 pack_args=(
     "${package_project}"
-    --no-restore
-    --verbosity detailed
-    --configuration "$configuration"
-    --output "$pack_output_dir"
+    "--no-restore"
+    "--verbosity" "detailed"
+    "--configuration" "$configuration"
+    "--output" "$pack_output_dir"
     "-p:preprocessor_symbols=$preprocessor_symbols"
     "-p:MinVerTagPrefix=$minver_tag_prefix"
     "-p:MinVerPrereleaseIdentifiers=$minver_prerelease_id"
 )
 if ! $build; then
-    pack_args+=(--no-build)
+    pack_args+=("--no-build")
 fi
-
+trace "before packing"
 pack_exit=0
 execute dotnet pack "${pack_args[@]}" > "$temp_output" 2>&1 || pack_exit=$?
+trace "after packing"
+
+cat "$temp_output"
+trace "pack_exit=$pack_exit"
 
 declare -x build_result
 declare -x warnings_count
@@ -85,16 +89,15 @@ declare -x version
 declare -x package_version
 
 extractDotnetBuildInfo < "$temp_output" # > >(displayDotnetBuildSummary)
-echo "pack_exit=$pack_exit"
 
-echo "build_result=$build_result"
-echo "warnings_count=$warnings_count"
-echo "errors_count=$errors_count"
-echo "assembly_version=$assembly_version"
-echo "file_version=$file_version"
-echo "informational_version=$informational_version"
-echo "version=$version"
-echo "package_version=$package_version"
+trace "build_result=$build_result"
+trace "warnings_count=$warnings_count"
+trace "errors_count=$errors_count"
+trace "assembly_version=$assembly_version"
+trace "file_version=$file_version"
+trace "informational_version=$informational_version"
+trace "version=$version"
+trace "package_version=$package_version"
 
 if [[ $pack_exit -eq 0 ]]; then
     nupkg_count=$(find "$pack_output_dir" -name "*.nupkg" | wc -l)
