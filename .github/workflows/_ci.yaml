@@ -168,7 +168,7 @@ jobs:
 
   # Run unit tests with code coverage analysis
   test:
-    name: Run unit and integration tests
+    name: Unit/Integration tests
     needs:
       - validate-input
       - build
@@ -199,7 +199,7 @@ jobs:
 
   # Run performance benchmarks and compare against baseline (if enabled and benchmark project specified)
   benchmarks:
-    name: Run performance benchmarks
+    name: Benchmarks
     needs:
       - validate-input
       - build
@@ -233,7 +233,7 @@ jobs:
 
   # Validate that projects can be packed into NuGet packages
   pack:
-    name: Validate NuGet packaging
+    name: Packaging
     needs:
       - validate-input
       - build

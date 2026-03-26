@@ -48,6 +48,8 @@ is_safe_minverPrereleaseId "$minver_prerelease_id" || true
 
 exit_if_has_errors
 
+execute dotnet restore "${package_project}"
+
 # create a temporary output directory for packed packages
 pack_output_dir=$(mktemp -d)
 trap 'rm -rf "$pack_output_dir"' EXIT
@@ -58,6 +60,7 @@ trap 'rm -f "$temp_output"; rm -rf "$pack_output_dir"' EXIT
 
 pack_args=(
     "${package_project}"
+    --no-restore
     --verbosity detailed
     --configuration "$configuration"
     --output "$pack_output_dir"
@@ -65,19 +68,34 @@ pack_args=(
     "-p:MinVerTagPrefix=$minver_tag_prefix"
     "-p:MinVerPrereleaseIdentifiers=$minver_prerelease_id"
 )
-
 if ! $build; then
     pack_args+=(--no-build)
 fi
 
-execute dotnet restore "${package_project}"
 pack_exit=0
 execute dotnet pack "${pack_args[@]}" > "$temp_output" 2>&1 || pack_exit=$?
+
+declare -x build_result
+declare -x warnings_count
+declare -x errors_count
+declare -x assembly_version
+declare -x file_version
+declare -x informational_version
+declare -x version
+declare -x package_version
 
 echo "$pack_exit"
 extractDotnetBuildInfo < "$temp_output" # > >(displayDotnetBuildSummary)
 
-# shellcheck disable=SC2154
+echo "build_result=$build_result"
+echo "warnings_count=$warnings_count"
+echo "errors_count=$errors_count"
+echo "assembly_version=$assembly_version"
+echo "file_version=$file_version"
+echo "informational_version=$informational_version"
+echo "version=$version"
+echo "package_version=$package_version"
+
 if [[ $pack_exit -eq 0 ]]; then
     nupkg_count=$(find "$pack_output_dir" -name "*.nupkg" | wc -l)
     {
