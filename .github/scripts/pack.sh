@@ -72,6 +72,8 @@ fi
 pack_exit=0
 execute dotnet pack "${pack_args[@]}" > "$temp_output" 2>&1 || pack_exit=$?
 
+cat "$temp_output"
+
 extractDotnetBuildInfo < "$temp_output" > >(displayDotnetBuildSummary | to_summary)
 
 if [[ $pack_exit -eq 0 ]]; then
