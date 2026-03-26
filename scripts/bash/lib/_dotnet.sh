@@ -62,9 +62,6 @@ function extractDotnetBuildInfo()
         fi
     done
 
-    # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
-    eval "$restoreShopt" &> "$_ignore"
-
     if [[ $build_result == FAILED ]]; then
         assembly_version='N/A'
         file_version='N/A'
@@ -81,6 +78,9 @@ function extractDotnetBuildInfo()
     echo "informational_version=$informational_version"
     echo "version=$version"
     echo "package_version=$package_version"
+
+    # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
+    eval "$restoreShopt" &> "$_ignore"
 }
 
 #-------------------------------------------------------------------------------
