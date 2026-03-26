@@ -84,8 +84,8 @@ declare -x informational_version
 declare -x version
 declare -x package_version
 
-echo "$pack_exit"
 extractDotnetBuildInfo < "$temp_output" # > >(displayDotnetBuildSummary)
+echo "pack_exit=$pack_exit"
 
 echo "build_result=$build_result"
 echo "warnings_count=$warnings_count"
