@@ -242,7 +242,10 @@ jobs:
       matrix:
         runner-os: ${{ fromJSON(needs.validate-input.outputs.runners-os) }}
         package-project: ${{ fromJSON(needs.validate-input.outputs.package-projects) }}
-    if: fromJSON(needs.validate-input.outputs.package-projects-len) > 0
+    if: >-
+      always() &&
+      fromJSON(needs.validate-input.outputs.package-projects-len) > 0 &&
+      (needs.build.result == 'success' || needs.build.result == 'skipped')
     uses: vmelamed/vm2.DevOps/.github/workflows/_pack.yaml@main
     with:
       package-project: ${{ matrix.package-project }}
