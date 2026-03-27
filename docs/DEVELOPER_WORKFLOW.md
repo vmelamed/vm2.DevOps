@@ -121,32 +121,57 @@ and focused. With merge, you get all conflicts at once.
 
 ### Commit Message Format
 
-All vm2 repositories use [Conventional Commits](https://www.conventionalcommits.org/):
+All vm2 repositories use [Conventional Commits](https://www.conventionalcommits.org/). The format of the commit messages can be
+described with the following grammar:
+
+```ebnf
+commit-message = subject, [ LF, body ] ;
+subject        = type, [ "(", scope, ")" ], [ "!" ], ": ", description ;
+type           = "style" | "build" | "feat" | "test" | "fix" | "refactor"
+               | "perf" | "security" | "docs" | "chore" | "revert"
+               | "remove" | "ci" | "devops" ;
+scope          = noun ;
+description    = non-empty string ;
+body           = free-form text ;
+```
+
+Where:
+
+- Message type:       Required, one of: style build feat test fix refactor perf security docs chore revert remove ci devops
+- Scope:              Optional. A noun describing the section of the codebase affected by the change (e.g., 'api', 'ui', 'docs')
+- Breaking Change:    Optional. '!' before ':' signals a breaking change
+- Description:        Required. A short description of the change
+
+Examples:
 
 ```text
-<type>[optional scope][!]: <description>
-
-[optional body]
-
-[optional footer(s)]
+feat(api)!: change the 'getUserData' method of the API endpoint for user data
+fix(ui):    correct button alignment on homepage
+chore(ci):  update GitHub Actions workflow
 ```
 
 | Type       | Triggers       | Use when                                              |
 | :--------- | :------------- | :---------------------------------------------------- |
-| `feat`     | **minor** bump | Adding new functionality                              |
-| `fix`      | **patch** bump | Fixing a bug                                          |
+| !          | **major bump** | creates backwards compatibility breaking changes      |
+| `style`    | no bump        | Code style changes (whitespace, formatting, etc.)     |
+| `build`    | no bump        | Changes that affect the build system or dependencies  |
+| `feat`     | **minor bump** | Adding new functionality                              |
+| `test`     | no bump        | Adding or updating tests                              |
+| `fix`      | **patch bump** | Fixing a bug                                          |
+| `refactor` | no bump        | Code restructuring without behavior change            |
+| `perf`     | no bump        | Performance improvement                               |
+| `security` | no bump        | Security fixes                                        |
 | `docs`     | no bump        | Documentation changes only                            |
 | `chore`    | no bump        | Build, CI, tooling, dependency updates                |
-| `refactor` | no bump        | Code restructuring without behavior change            |
-| `test`     | no bump        | Adding or updating tests                              |
-| `perf`     | no bump        | Performance improvement                               |
+| `revert`   | no bump        | Reverting a previous commit                           |
+| `remove`   | no bump        | Removing code or functionality                        |
+| `ci`       | no bump        | Continuous Integration related changes                |
+| `devops`   | no bump        | DevOps related changes                                |
 
 **Breaking changes** trigger a **major** bump. Mark them with `!` after the type/scope:
 
 ```text
 refactor(core)!: rewrite matching engine
-
-BREAKING CHANGE: The GlobPattern constructor now requires a GlobOptions parameter.
 ```
 
 ### How Commits Drive Automation
@@ -171,7 +196,7 @@ refactor!: rewrite engine              →  major version bump  →  v2.0.0-prev
 ✅ feat(glob): add support for character class negation [^abc]
 ✅ fix: prevent stack overflow on deeply nested patterns
 ✅ docs: add DEVELOPER_WORKFLOW.md
-✅ chore: update BenchmarkDotNet to 0.14.0
+✅ build(nuget): update BenchmarkDotNet to 0.14.0
 
 ❌ update stuff
 ❌ fix bug

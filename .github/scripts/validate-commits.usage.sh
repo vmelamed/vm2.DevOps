@@ -30,14 +30,17 @@ Description:
   Validates that all commit messages between <base-ref> and HEAD follow the Conventional Commits specification
   (https://www.conventionalcommits.org). Merge commits are automatically skipped. Commit message format:
 
-  type ::= <style|build|feat|test|fix|refactor|perf|security|docs|chore|revert|remove|ci|devops>
-  scope ::= <noun>
-  description ::= <string>
-  commit message ::= <type>[(scope)][!]: <description>
+  commit-message = subject, [ LF, body ] ;
+  subject        = type, [ "(", scope, ")" ], [ "!" ], ": ", description ;
+  type           = "style" | "build" | "feat" | "test" | "fix" | "refactor" | "perf" | "security" | "docs" | "chore"
+                   | "revert" | "remove" | "ci" | "devops" ;
+  scope          = noun ;
+  description    = non-empty string ;
+  body           = free-form text ;
 
   Message type:       Required, one of: style build feat test fix refactor perf security docs chore revert remove ci devops
   Scope:              Optional. A noun describing the section of the codebase affected by the change (e.g., 'api', 'ui', 'docs')
-  Breaking Change:    Optional. '!' indicates a BREAKING CHANGE
+  Breaking Change:    Optional. '!' before ':' signals a breaking change
   Description:        Required. A short description of the change
 
   Examples:

@@ -75,7 +75,7 @@ last_tag="${latest_stable:-$(git rev-list --max-parents=0 HEAD)}"
 # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
 commits=$(git log "$last_tag"..HEAD --pretty=format:"%s" 2>"$_ignore" || echo "")
 
-if echo "$commits" | grep -qiE '^[a-z]+(\(.+\))?!:|BREAKING CHANGE:'; then
+if echo "$commits" | grep -qiE '^[a-z]+(\(.+\))?!:'; then
     # Major bump
     major=$((major + 1))
     minor=0

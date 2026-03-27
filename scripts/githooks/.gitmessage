@@ -27,7 +27,6 @@
 #   feat(api)!: change return type
 #
 # Footers:
-#   BREAKING CHANGE: <description of what changed>
 #   Fixes #123
 #   Refs #456
 #

@@ -207,7 +207,7 @@ Given latest stable tag `v1.2.3` and these commits since then:
   > - feat(parser): add alternation support
   > - docs: update README
 
-- No `BREAKING CHANGE:` or `!:` → not major
+- No `!:` → not major
 - `feat(parser):` matches → **minor bump**
 - Result: `v1.3.0`
 

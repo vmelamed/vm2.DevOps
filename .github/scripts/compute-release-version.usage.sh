@@ -17,7 +17,7 @@ $common_switches"
 Usage: ${script_name} [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
 Computes the next release version based on conventional commits or manual input. Analyzes commit messages since the last
 stable tag to determine the appropriate semantic version bump:
-  - BREAKING CHANGE or feat! -> major bump
+  - <type>! (e.g. feat!, refactor!) -> major bump
   - feat: -> minor bump
   - fix: or other -> patch bump
 

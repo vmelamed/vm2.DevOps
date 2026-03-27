@@ -162,7 +162,7 @@ Given latest stable tag `v1.2.3` and these commits since then:
   > - feat(parser): add alternation support
   > - docs: update README
 
-- No `BREAKING CHANGE:` or `!:` → not major
+- No `!:` → not major
 - `feat(parser):` matches → **minor bump**
 - Result: `v1.3.0`
 
@@ -240,7 +240,7 @@ The `compute-release-version.sh` script determines the next stable version:
 
    | Commit Regex                                | Bump  | Example                              |
    | :------------------------------------------ | :---- | :----------------------------------- |
-   | `^[a-z]+(\(.+\))?!:` or `BREAKING CHANGE:`  | Major | `refactor(core)!: redesign API`      |
+   | `^[a-z]+(\(.+\))?!:`                         | Major | `refactor(core)!: redesign API`      |
    | `^feat(\(.+\))?:`                           | Minor | `feat(parser): add glob negation`    |
    | Everything else                             | Patch | `fix: handle null input`             |
 

@@ -17,7 +17,7 @@ $common_switches"
 Usage: ${script_name} [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
 Computes the next prerelease version based on conventional commits. Analyzes commit messages since the last stable tag to
 determine the appropriate semantic version bump, then appends a prerelease suffix:
-  - BREAKING CHANGE or feat! -> major bump
+  - <type>! (e.g. feat!, refactor!) -> major bump
   - feat: -> minor bump
   - fix: or other -> patch bump
 
