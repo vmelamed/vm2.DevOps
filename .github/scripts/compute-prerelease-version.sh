@@ -27,8 +27,7 @@ source "$script_dir/compute-prerelease-version.args.sh"
 get_arguments "$@"
 
 # Sanitize inputs
-validate_minverTagPrefix "$minver_tag_prefix" || true
-is_safe_minverPrereleaseId "$minver_prerelease_id" || true
+validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
 is_safe_reason "$reason" || true
 
 # freeze the parameters
@@ -132,10 +131,7 @@ if [[ -n "$latest_prerelease" ]] && is_semverPrereleaseTag "$latest_prerelease";
 
     trace "Latest prerelease base: $lp_base, prerelease id: $lp_prerelease"
 
-    result=0
-    compare_semver "$base_version" "$lp_base" || result=$?
-    # shellcheck disable=SC2154 # isEq is referenced but not assigned.
-    if (( result == isEq )); then
+    if semver_isEqual "$base_version" "$lp_base"; then
         # Same base version — increment the prerelease counter
         # Extract the numeric suffix from the prerelease identifier (e.g., "-preview.3" → 3)
         if [[ "$lp_prerelease" =~ \.([0-9]+)$ ]]; then

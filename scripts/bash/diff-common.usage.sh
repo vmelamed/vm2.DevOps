@@ -10,15 +10,14 @@ function usage_text()
     local vars=""
 
     if [[ $1 == true ]]; then
-        vars="Environment Variables:
-  VM2_REPOS                     The parent directory where the .github workflow templates, vm2.DevOps, and other vm2.* project
-                                repositories are cloned
-  MINVERTAGPREFIX               The prefix used for MinVer version tags in the repositories
-$common_vars"
-
         switches="
 Switches:
 $common_switches"
+
+        vars="Environment Variables:
+  VM2_REPOS                     The parent directory where the .github workflow templates, vm2.DevOps, and other vm2.* project
+                                repositories are cloned
+$common_vars"
     fi
 
     cat << EOF
@@ -49,9 +48,6 @@ Arguments:
 Options:
   -r, --vm2-repos               The parent directory where the .github workflow templates and vm2.DevOps are cloned
                                 Initial from the VM2_REPOS environment variable or '~/repos'
-  -mp, --minver-tag-prefix      The prefix used for MinVer version tags in the repositories. Used to detect the latest stable
-                                version tag of the source repositories 'vm2.DevOps' and '.github'
-                                Initial from the \$MINVERTAGPREFIX environment variable or 'v'
   -f, --files                   A comma-separated list of files to compare/copy/merge. Instead of going through all the pre-
                                 defined files, only the specified files from the full list are processed. The file names can be
                                 regular expressions.

@@ -43,8 +43,7 @@ dump_vars --quiet \
 is_safe_path "$package_project" || true
 is_safe_configuration "$configuration" || true
 validate_preprocessor_symbols preprocessor_symbols || true
-validate_minverTagPrefix "$minver_tag_prefix" || true
-is_safe_minverPrereleaseId "$minver_prerelease_id" || true
+validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
 
 exit_if_has_errors
 

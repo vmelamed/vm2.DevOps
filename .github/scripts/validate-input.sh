@@ -102,8 +102,7 @@ is_safe_max_regression_pct "$max_regression_pct" || true
 if (( max_regression_pct < 0 || max_regression_pct > 50 )); then
     warning_var max_regression_pct "max-regression-pct must be between 0-50." "$defaultMaxRegressionPct"
 fi
-validate_minverTagPrefix "$minver_tag_prefix" || true
-is_safe_minverPrereleaseId "$minver_prerelease_id" || true
+validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
 is_safe_boolean "$reset_benchmark_thresholds" || true
 
 dump_vars --quiet --force \

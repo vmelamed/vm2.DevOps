@@ -4,7 +4,6 @@
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
 declare -x vm2_repos
-declare -x minver_tag_prefix
 declare -xa file_regexes
 declare -x target_dir
 
@@ -27,11 +26,6 @@ function get_arguments()
             --vm2-repos|-r )
                 [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
                 vm2_repos="$1"; shift
-                ;;
-
-            --minver-tag-prefix|-mp )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
-                minver_tag_prefix="$1"; shift
                 ;;
 
             --files|-f )
@@ -60,7 +54,6 @@ dump_all_variables()
         quiet \
         --blank \
         vm2_repos \
-        minver_tag_prefix \
         target_dir \
         file_regexes
         # add var names above this line

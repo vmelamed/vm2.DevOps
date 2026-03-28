@@ -19,7 +19,6 @@ source "$lib_dir/core.sh"
 # arguments
 declare -x target_dir=""
 declare -x vm2_repos="${VM2_REPOS:-}"
-declare -x minver_tag_prefix=${MINVERTAGPREFIX:-'v'}
 declare -xa file_regexes=()
 
 source "${script_dir}/diff-common.args.sh"
@@ -72,9 +71,6 @@ exit 2
 declare -xr vm2_repos
 declare -xr target_dir
 declare -xr target_path
-declare -xr minver_tag_prefix
-
-validate_minverTagPrefix "$minver_tag_prefix"
 
 # shellcheck disable=SC2154
 declare -xr semverTagReleaseRegex

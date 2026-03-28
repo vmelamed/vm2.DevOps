@@ -194,13 +194,33 @@ Tests if the current commit in the specified directory is on or after the latest
 
 ## _semver.sh
 
-### validate_minverTagPrefix()
+### validate_semverTagComponents()
 
 Validates MinVer tag prefix and creates tag validation regular expressions.
 
 ### compare_semver()
 
 Compares two semantic versions according to semver 2.0.0 specification.
+
+### semver_isEqual()
+
+Tests if the first semantic version is equal to the second.
+
+### semver_lessThan()
+
+Tests if the first semantic version is less than the second.
+
+### semver_lessThanOrEqual()
+
+Tests if the first semantic version is less than or equal to the second.
+
+### semver_greaterThan()
+
+Tests if the first semantic version is greater than the second.
+
+### semver_greaterThanOrEqual()
+
+Tests if the first semantic version is greater than or equal to the second.
 
 ### is_semver()
 

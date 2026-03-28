@@ -25,7 +25,7 @@ source "$script_dir/compute-release-version.args.sh"
 get_arguments "$@"
 
 # Sanitize inputs to prevent injection attacks
-validate_minverTagPrefix "$minver_tag_prefix" || true
+validate_semverTagComponents "$minver_tag_prefix" || true
 is_safe_reason "$reason" || true
 
 # freeze the parameters
@@ -107,10 +107,7 @@ trace "Calculated release version from commit messages: $release_version [$bump_
 latest_prerelease_tag=$(git tag --list "${minver_tag_prefix}*" | grep -E "$semverTagPrereleaseRegex" | sort -V | tail -n1 || echo "")
 
 if [[ -n "$latest_prerelease_tag" ]]; then
-    result=0
-    compare_semver "$release_version" "${latest_prerelease_tag#"$minver_tag_prefix"}" || result=$?
-    # shellcheck disable=SC2154 # isLt is referenced but not assigned.
-    if (( result == isLt )); then
+    if semver_lessThan "$release_version" "${latest_prerelease_tag#"$minver_tag_prefix"}"; then
         # the computed release version is less than the latest prerelease version,
         # so adopt the major, minor, and patch from the latest prerelease version and make it a release version
         trace "Latest prerelease tag '$latest_prerelease_tag' is greater than computed release version '$release_version'; adjusting release version."
@@ -129,10 +126,7 @@ release_tag="${minver_tag_prefix}${release_version}"
 
 # If HEAD is already tagged with a prerelease, verify the stable version is strictly greater
 if [[ "$needs_empty_commit" == true && -n "$head_tag" ]]; then
-    result=0
-    compare_semver "$release_version" "${head_tag#"$minver_tag_prefix"}" || result=$?
-    # shellcheck disable=SC2154 # isGt is referenced but not assigned.
-    if (( result != isGt )); then
+    if ! semver_greaterThan "$release_version" "${head_tag#"$minver_tag_prefix"}"; then
         error "Computed stable version '$release_version' is not greater than the prerelease tag '$head_tag' on HEAD. Possible remedy: branch 'main' again, do a new PR with commits that bump the version higher, then release."
     fi
 fi

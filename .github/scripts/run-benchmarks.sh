@@ -31,8 +31,7 @@ get_arguments "$@"
 is_safe_existing_path "$benchmark_project" || true
 is_safe_configuration "$configuration" || true
 validate_preprocessor_symbols preprocessor_symbols || true
-validate_minverTagPrefix "$minver_tag_prefix" || true
-is_safe_minverPrereleaseId "$minver_prerelease_id" || true
+validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
 is_safe_path "$artifacts_dir" || true
 
 exit_if_has_errors

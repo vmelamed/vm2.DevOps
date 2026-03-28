@@ -25,7 +25,7 @@ source "$script_dir/changelog-and-tag.args.sh"
 get_arguments "$@"
 
 # Sanitize inputs
-validate_minverTagPrefix "$minver_tag_prefix" || true
+validate_semverTagComponents "$minver_tag_prefix" || true
 
 # Determine tag type: release or prerelease
 is_release=false

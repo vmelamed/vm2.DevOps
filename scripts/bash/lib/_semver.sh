@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025 Val Melamed
 
-
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
 if [[ ! -v lib_dir || -z "$lib_dir" ]]; then
@@ -29,56 +28,77 @@ declare -xr semverRegex="^$semverRex$"
 declare -xr semverReleaseRegex="^$semverReleaseRex$"
 declare -xr semverPrereleaseRegex="^$semverPrereleaseRex$"
 
-# Regular expressions that test if a string is a safe MinVer tag prefix and MinVerDefaultPrereleaseIds (MinverPrereleaseId)
+# Regular expressions that test if a string contains a MinVer tag prefix and MinVerDefaultPrereleaseIds (MinverPrereleaseId)
 declare -xr minverTagPrefixRex='[0-9A-Za-z_]([-0-9A-Za-z._/]*[-A-Za-z_])?'
-declare -xr minverTagPrefixRegex="^$minverTagPrefixRex$"
-
 declare -xr minverPrereleaseIdRex=$prereleaseLabelRex
-declare -xr minverPrereleaseIdRegex="^$minverPrereleaseIdRex$"
 
-# Regular expressions that test if a string is exactly a git tag with semantic version (e.g. v1.2.3)
-declare -x semverTagRegex
-declare -x semverTagReleaseRegex
-declare -x semverTagPrereleaseRegex
+# Regular expressions that test if a string is a MinVer tag prefix and MinVerDefaultPrereleaseIds (MinverPrereleaseId)
+declare -xr minverTagPrefixRegex="^${minverTagPrefixRex}$"
+declare -xr minverPrereleaseIdRegex="^${minverPrereleaseIdRex}$"
+
+# Regular expressions that test if a string contains a git tag with semantic version and MinVer prefix (e.g. v1.2.3-alpha.3)
+declare -rx semverTagRex="${minverTagPrefixRex}${semverRex}"
+declare -rx semverTagPrereleaseRex="${minverTagPrefixRex}${semverPrereleaseRex}"
+declare -rx semverTagReleaseRex="${minverTagPrefixRex}${semverReleaseRex}"
+
+# Regular expressions that test if a string is a git tag with semantic version (e.g. v1.2.3-alpha.3)
+declare -rx semverTagRegex="^${minverTagPrefixRex}${semverRex}$"
+declare -rx semverTagPrereleaseRegex="^${minverTagPrefixRex}${semverPrereleaseRex}$"
+declare -rx semverTagReleaseRegex="^${minverTagPrefixRex}${semverReleaseRex}$"
 
 ## Flag indicating whether the tag regexes have been initialized with default value for the tag prefix or with actual parameter
 ## 0 - actual, 1 - default
 declare -xi tag_regexes_initialized=1
 
+function print_semver_regexes()
+{
+    dump_vars --quiet --force \
+    --header "Semantic Version Components" \
+    majorLabelRex \
+    minorLabelRex \
+    patchLabelRex \
+    prereleaseLabelRex \
+    buildLabelRex \
+    --header "Semantic Versions" \
+    semverPrereleaseRex \
+    semverReleaseRex \
+    semverRex \
+    --header "Semantic Version/MinVer Tags" \
+    semverTagRegex \
+    semverTagReleaseRegex \
+    semverTagPrereleaseRegex \
+
+}
+
+declare -x latest_stable
+declare -x latest_prerelease
+
 #-------------------------------------------------------------------------------
 # Summary: Validates MinVer tag prefix and creates tag validation regular expressions.
 # Parameters:
 #   1 - minver_tag_prefix (NOT nameref!) - the MinVer tag prefix (e.g., "v", "ver.", "release-")
+#   2 - optional minver_prerelease_id (NOT nameref!) - the MinVer default prerelease identifier template (e.g., "preview.0") as in 1.2.3-preview.11
 # Returns:
 #   Exit code: 0 if valid prefix, 1 if invalid format, 2 on invalid arguments
 # Side Effects: Sets global regex variables $semverTagRegex, $semverTagReleaseRegex, $semverTagPrereleaseRegex
-# Usage: validate_minverTagPrefix <minver_tag_prefix>
-# Example: validate_minverTagPrefix "v"  # creates regexes for tags like v1.2.3
+# Usage: validate_semverTagComponents <minver_tag_prefix> <minver_prerelease_id_template>
+# Example: validate_semverTagComponents "v" "preview.0"  # creates regexes for tags like v1.2.3-preview.0
 # Notes: Call once when tag prefix is known. Sets tag_regexes_initialized=0 to indicate custom prefix. In contrast to other
 # validate_* functions, this one takes a value not a nameref.
 #-------------------------------------------------------------------------------
-function validate_minverTagPrefix()
+function validate_semverTagComponents()
 {
-    if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly 1 argument: the semver tag prefix used by MinVer. Did you pass a nameref by mistake?"
+    if [[ $# -eq 1 || $# -eq 2 ]]; then
+        error 3 "${FUNCNAME[0]}() requires 1 or 2 arguments: the semver tag prefix used by MinVer and the optional default prerelease identifier template."
         return 2
     fi
 
-    local prefix="$1"
+    local errs=$errors
 
-    if [[ ! "$prefix" =~ $minverTagPrefixRegex ]]; then
-        error "The semver tag prefix used by MinVer ('$prefix') is not valid. It must match the regex: $minverTagPrefixRegex."
-        return 1
-    fi
-
-    semverTagRegex="^${prefix}${semverRex}$"
-    semverTagReleaseRegex="^${prefix}${semverReleaseRex}$"
-    semverTagPrereleaseRegex="^${prefix}${semverPrereleaseRex}$"
+    [[ "$1" =~ $minverTagPrefixRegex ]]                     || error "The semver tag prefix used by MinVer ('$1') is not valid. It must match the regex: $minverTagPrefixRegex. Did you pass a nameref by mistake?"
+    [[ $# -eq 1 || "$2" =~ $minverPrereleaseIdRegex ]]      || error "The semver prerelease identifier template used by MinVer ('$2') is not valid. It must match the regex: $minverPrereleaseIdRegex. Did you pass a nameref by mistake?"
+    (( errors == errs ))
 }
-
-# create the regexes with environment var prefix from $MINVERTAGPREFIX or the default 'v' for now, they should be re-created
-# later by calling validate_minverTagPrefix with a different prefix
-validate_minverTagPrefix "${MINVERTAGPREFIX:-"v"}"
 
 # semver components indexes in BASH_REMATCH
 declare -irx semver_major=1
@@ -202,6 +222,111 @@ function compare_semver()
 }
 
 #-------------------------------------------------------------------------------
+# Summary: Tests if two semantic versions are equal.
+# Parameters:
+#   1 - version1 - first semantic version string
+#   2 - version2 - second semantic version string
+# Returns:
+#   Exit code: 0 if version1 == version2, non-zero otherwise, 2 on invalid arguments
+# Usage: if semver_equals <version1> <version2>; then ... fi
+# Example:
+#   if semver_equals "1.2.3" "1.2.3"; then echo "Versions are equal"; fi
+#-------------------------------------------------------------------------------
+function semver_equals()
+{
+    if [[ $# -ne 2 ]]; then
+        error 3 "${FUNCNAME[0]}() requires exactly 2 arguments: version1 and version2."
+        return 2
+    fi
+    semver_compare "$1" "$2"
+    [[ $? -eq "$isEq" ]]
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Tests if the first semantic version is greater than the second.
+# Parameters:
+#   1 - version1 - first semantic version string
+#   2 - version2 - second semantic version string
+# Returns:
+#   Exit code: 0 if version1 > version2, non-zero otherwise, 2 on invalid arguments
+# Usage: if semver_greaterThan <version1> <version2>; then ... fi
+# Example:
+#   if semver_greaterThan "1.2.3" "1.2.2"; then echo "Version 1 is greater"; fi
+#-------------------------------------------------------------------------------
+function semver_greaterThan()
+{
+    if [[ $# -ne 2 ]]; then
+        error 3 "${FUNCNAME[0]}() requires exactly 2 arguments: version1 and version2."
+        return 2
+    fi
+    semver_compare "$1" "$2"
+    [[ $? -eq "$isGt" ]]
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Tests if the first semantic version is greater than or equal to the second.
+# Parameters:
+#   1 - version1 - first semantic version string
+#   2 - version2 - second semantic version string
+# Returns:
+#   Exit code: 0 if version1 >= version2, non-zero otherwise, 2 on invalid arguments
+# Usage: if semver_greaterThanOrEqual <version1> <version2>; then ... fi
+# Example:
+#   if semver_greaterThanOrEqual "1.2.3" "1.2.2"; then echo "Version 1 is greater or equal"; fi
+#-------------------------------------------------------------------------------
+function semver_greaterThanOrEqual()
+{
+    if [[ $# -ne 2 ]]; then
+        error 3 "${FUNCNAME[0]}() requires exactly 2 arguments: version1 and version2."
+        return 2
+    fi
+    semver_compare "$1" "$2"
+    [[ $? -eq "$isGt" || $? -eq "$isEq" ]]
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Tests if the first semantic version is less than the second.
+# Parameters:
+#   1 - version1 - first semantic version string
+#   2 - version2 - second semantic version string
+# Returns:
+#   Exit code: 0 if version1 < version2, non-zero otherwise, 2 on invalid arguments
+# Usage: if semver_lessThan <version1> <version2>; then ... fi
+# Example:
+#   if semver_lessThan "1.2.3" "1.2.4"; then echo "Version 1 is less"; fi
+#-------------------------------------------------------------------------------
+function semver_lessThan()
+{
+    if [[ $# -ne 2 ]]; then
+        error 3 "${FUNCNAME[0]}() requires exactly 2 arguments: version1 and version2."
+        return 2
+    fi
+    semver_compare "$1" "$2"
+    [[ $? -eq "$isLt" ]]
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Tests if the first semantic version is less than or equal to the second.
+# Parameters:
+#   1 - version1 - first semantic version string
+#   2 - version2 - second semantic version string
+# Returns:
+#   Exit code: 0 if version1 <= version2, non-zero otherwise, 2 on invalid arguments
+# Usage: if semver_lessThanOrEqual <version1> <version2>; then ... fi
+# Example:
+#   if semver_lessThanOrEqual "1.2.3" "1.2.4"; then echo "Version 1 is less or equal"; fi
+#-------------------------------------------------------------------------------
+function semver_lessThanOrEqual()
+{
+    if [[ $# -ne 2 ]]; then
+        error 3 "${FUNCNAME[0]}() requires exactly 2 arguments: version1 and version2."
+        return 2
+    fi
+    semver_compare "$1" "$2"
+    [[ $? -eq "$isLt" || $? -eq "$isEq" ]]
+}
+
+#-------------------------------------------------------------------------------
 # Summary: Tests if the parameter is a valid semantic version (semver 2.0.0 format).
 # Parameters:
 #   1 - version - string to test
@@ -234,9 +359,9 @@ function is_semver()
 # Side Effects: On success, sets BASH_REMATCH array with captured groups
 # Usage: if is_semverTag <tag>; then ... fi
 # Example:
-#   validate_minverTagPrefix "v"
+#   validate_semverTagComponents "v"
 #   if is_semverTag "v1.2.3"; then echo "Valid tag"; fi
-# Notes: Requires validate_minverTagPrefix to be called first to set $semverTagRegex.
+# Notes: Requires validate_semverTagComponents to be called first to set $semverTagRegex.
 #-------------------------------------------------------------------------------
 function is_semverTag()
 {
@@ -275,9 +400,9 @@ function is_semverPrerelease()
 # Side Effects: On success, sets BASH_REMATCH array with captured groups
 # Usage: if is_semverPrereleaseTag <tag>; then ... fi
 # Example:
-#   validate_minverTagPrefix "v"
+#   validate_semverTagComponents "v"
 #   if is_semverPrereleaseTag "v1.2.3-beta.2"; then echo "Valid prerelease tag"; fi
-# Notes: Requires validate_minverTagPrefix to be called first to set $semverTagPrereleaseRegex.
+# Notes: Requires validate_semverTagComponents to be called first to set $semverTagPrereleaseRegex.
 #-------------------------------------------------------------------------------
 function is_semverPrereleaseTag()
 {
@@ -316,9 +441,9 @@ function is_semverRelease()
 # Side Effects: On success, sets BASH_REMATCH array with captured groups
 # Usage: if is_semverReleaseTag <tag>; then ... fi
 # Example:
-#   validate_minverTagPrefix "v"
+#   validate_semverTagComponents "v"
 #   if is_semverReleaseTag "v1.2.3"; then echo "Valid release tag"; fi
-# Notes: Requires validate_minverTagPrefix to be called first to set $semverTagReleaseRegex.
+# Notes: Requires validate_semverTagComponents to be called first to set $semverTagReleaseRegex.
 #-------------------------------------------------------------------------------
 function is_semverReleaseTag()
 {

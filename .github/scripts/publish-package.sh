@@ -35,8 +35,7 @@ get_arguments "$@"
 
 is_safe_path "$package_project" || true
 validate_preprocessor_symbols preprocessor_symbols || true
-validate_minverTagPrefix "$minver_tag_prefix" || true
-is_safe_minverPrereleaseId "$minver_prerelease_id" || true
+validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
 is_safe_reason "$reason" || true
 validate_nuget_server "nuget_server" || true
 is_safe_input "$repo_owner" || true

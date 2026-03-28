@@ -36,8 +36,7 @@ test_dir=$(dirname "$test_project")                                             
 is_safe_configuration "$configuration" || true
 validate_preprocessor_symbols preprocessor_symbols || true
 is_safe_min_coverage_pct "$min_coverage_pct" || true
-validate_minverTagPrefix "$minver_tag_prefix" || true
-is_safe_minverPrereleaseId "$minver_prerelease_id" || true
+validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
 is_safe_path "$tests_artifacts_dir" || true
 
 declare -A repo_state=()
