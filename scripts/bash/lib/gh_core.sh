@@ -7,6 +7,10 @@
 # functions typical for the GitHub Actions environment. For the functions to be
 # invocable by other scripts, this script needs to be sourced.
 
+# Circular include guard
+(( ${__VM2_LIB_GH_CORE_SH_LOADED:-0} == 1 )) && return 0
+declare -gr __VM2_LIB_GH_CORE_SH_LOADED=1
+
 # The name of the top-level calling script name without the path
 declare -x script_name
 # The directory of the top-level calling script

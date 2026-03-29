@@ -3,6 +3,10 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
+# Circular include guard
+(( ${__VM2_LIB_DUMP_VARS_SH_LOADED:-0} == 1 )) && return 0
+declare -gr __VM2_LIB_DUMP_VARS_SH_LOADED=1
+
 declare -rxi success
 
 gth="┌────────────────────────────────────────────────────────────────────────────"
@@ -200,7 +204,7 @@ function dump_vars()
 
     # save some current state - to be restored before returning from the function
     push_state
-    
+
     # shellcheck disable=SC2154 # ci is referenced but not assigned.
     "$ci" && set_table_format "markdown"
     set +x

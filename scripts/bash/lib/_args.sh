@@ -6,6 +6,10 @@
 # shellcheck disable=SC2089
 # shellcheck disable=SC2090
 
+# Circular include guard
+(( ${__VM2_LIB_ARGS_SH_LOADED:-0} == 1 )) && return 0
+declare -gr __VM2_LIB_ARGS_SH_LOADED=1
+
 declare -rxi success
 declare -rxi failure
 declare -rxi positive

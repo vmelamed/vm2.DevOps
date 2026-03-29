@@ -20,6 +20,10 @@
 
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 
+# Circular include guard
+(( ${__VM2_LIB_DIAGNOSTICS_SH_LOADED:-0} == 1 )) && return 0
+declare -gr __VM2_LIB_DIAGNOSTICS_SH_LOADED=1
+
 declare -rxi success
 declare -rxi failure
 declare -rxi positive
