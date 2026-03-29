@@ -14,6 +14,19 @@ declare -rxi err_not_found
 declare -rxi err_not_file
 declare -rxi err_not_directory
 
+if [[ ! -v lib_dir || -z "$lib_dir" ]]; then
+    lib_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
+fi
+
+# shellcheck disable=SC2154 # _ignore is referenced but not assigned.
+if ! declare -pF "error" > "$_ignore"; then
+    source "${lib_dir}/_diagnostics.sh"
+fi
+# shellcheck disable=SC2154 # _ignore is referenced but not assigned.
+if [[ ! -v "minverTagPrefixRegex" || ! -v "minverPrereleaseIdRegex" ]]; then
+    source "${lib_dir}/_semver.sh"
+fi
+
 declare -xra allowed_runners_os=(
     "ubuntu-latest"
     "ubuntu-22.04"

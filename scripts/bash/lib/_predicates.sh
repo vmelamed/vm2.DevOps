@@ -13,6 +13,12 @@ declare -rxi err_argument_value
 
 declare -x _ignore
 
+# shellcheck disable=SC2154 # variable is referenced but not assigned.
+if ! declare -pF "error" > "$_ignore"; then
+    diag_dir="$(dirname "${BASH_SOURCE[0]}")"
+    source "$diag_dir/_diagnostics.sh"
+fi
+
 #-------------------------------------------------------------------------------
 # Summary: Tests if a variable is defined.
 # Parameters:

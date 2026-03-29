@@ -22,9 +22,13 @@
 
 declare -rxi success
 declare -rxi failure
-
 declare -rxi positive
 declare -rxi negative
+
+declare -x verbose
+
+# global error counter
+declare -ix errors=0
 
 declare -rxi err_invalid_arguments
 
@@ -85,9 +89,6 @@ function to_stderr()
     done
 }
 
-# global error counter
-declare -ix errors=0
-
 #-------------------------------------------------------------------------------
 # Summary: Checks if the global error counter has any errors.
 # Parameters: none
@@ -107,6 +108,15 @@ function has_errors()
 {
     # shellcheck disable=SC2154 # errors is referenced but not assigned.
     return $(( errors > 0 ? positive : negative ))
+}
+
+
+## Should be overridden in the top level script by sourcing _args.sh, akin to forward declaration in C/C++
+# Local implementation of usage() to avoid circular dependency with _args.sh
+function usage()
+{
+    error 3 "$@"
+    exit "$failure";
 }
 
 #-------------------------------------------------------------------------------
@@ -146,6 +156,16 @@ function reset_errors()
 
 declare -r no_arguments="Function called without message parameters and there are none in the pipe. Provide message parameters or pipe them into the function."
 
+#-------------------------------------------------------------------------------
+# Summary: Internal. logs messages with a given prefix and optional stack depth.
+# Parameters:
+#   1 - prefix - the prefix to prepend to each message line
+#   2 - depth - optional stack depth to display (default: 0)
+#   3+ - message - message parts (optional, if not provided reads from stdin)
+# Returns:
+#   stdout: formatted message with prefix
+#   Exit code: 0 always
+#-------------------------------------------------------------------------------
 function message()
 {
     local prefix="$1"
@@ -153,7 +173,8 @@ function message()
 
     local -i depth=0
 
-    is_natural "${1:-}" && depth=$1 && shift
+    # implement in place is_natural to avoid sourcing _predicates.sh and creating circular dependency
+    [[ "${1:-}" =~ ^[0-9]+$ ]] && depth=$1 && shift
 
     if [[ $# -eq 0 && -t 0 ]]; then
         # no message arguments were passed and nothing is being piped in on stdin

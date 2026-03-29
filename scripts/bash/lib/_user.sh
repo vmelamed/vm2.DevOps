@@ -6,14 +6,16 @@
 
 declare -rxi success
 declare -rxi failure
-# boolean return codes:
 declare -rxi positive
 declare -rxi negative
-
-# RETURN CODES THAT SHOULD NOT BE REUSED FOR OTHER PURPOSES:
 declare -rxi err_invalid_arguments
 declare -rxi err_argument_type
 declare -rxi err_argument_value
+
+if ! declare -pF "error" > "$_ignore"; then
+    semver_dir="$(dirname "${BASH_SOURCE[0]}")"
+    source "$semver_dir/_diagnostics.sh"
+fi
 
 #-------------------------------------------------------------------------------
 # Summary: Displays a prompt and waits for user to press any key before continuing.

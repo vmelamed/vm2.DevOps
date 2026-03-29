@@ -11,6 +11,15 @@ declare -rxi err_invalid_arguments
 declare -rxi err_argument_type
 declare -rxi err_argument_value
 
+if [[ ! -v lib_dir || -z "$lib_dir" ]]; then
+    lib_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
+fi
+
+# shellcheck disable=SC2154 # _ignore is referenced but not assigned.
+if ! declare -pF "error" > "$_ignore"; then
+    source "${lib_dir}/_diagnostics.sh"
+fi
+
 # Regular expressions that test if a string contains a semantic version:
 declare -xr majorLabelRex='[0-9]+'
 declare -xr minorLabelRex='[0-9]+'
