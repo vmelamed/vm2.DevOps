@@ -8,8 +8,8 @@
 
 declare -rxi success
 declare -rxi failure
-declare -rxi positive=0
-declare -rxi negative=1
+declare -rxi positive
+declare -rxi negative
 declare -rxi err_invalid_arguments
 declare -rxi err_argument_type
 declare -rxi err_argument_value
