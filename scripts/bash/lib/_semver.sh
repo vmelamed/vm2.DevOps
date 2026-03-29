@@ -88,7 +88,7 @@ declare -x latest_prerelease
 #-------------------------------------------------------------------------------
 function validate_semverTagComponents()
 {
-    [[ $# -eq 1 || $# -eq 2 ]] || {
+    (( $# == 1 || $# == 2 )) || {
         error 3 "${FUNCNAME[0]}() requires 1 or 2 arguments: the semver tag prefix used by MinVer and the optional default prerelease identifier template."
         return 2
     }
