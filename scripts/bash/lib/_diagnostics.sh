@@ -20,6 +20,14 @@
 
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 
+declare -rxi success
+declare -rxi failure
+
+declare -rxi positive
+declare -rxi negative
+
+declare -rxi err_invalid_arguments
+
 #-------------------------------------------------------------------------------
 # Summary: Logs messages to stdout, allowing override in other scripts for alternate destinations.
 # Parameters: none (reads from stdin)
@@ -98,7 +106,7 @@ declare -ix errors=0
 function has_errors()
 {
     # shellcheck disable=SC2154 # errors is referenced but not assigned.
-    return $(( errors > 0 ? 0 : 1 ))
+    return $(( errors > 0 ? positive : negative ))
 }
 
 #-------------------------------------------------------------------------------
@@ -116,7 +124,7 @@ function exit_if_has_errors()
 {
     # shellcheck disable=SC2154 # errors is referenced but not assigned.
     has_errors && usage false "$errors error(s) encountered. Please fix the above issues and try again."
-    return 0
+    return "$success"
 }
 
 #-------------------------------------------------------------------------------
@@ -148,8 +156,9 @@ function message()
     is_natural "${1:-}" && depth=$1 && shift
 
     if [[ $# -eq 0 && -t 0 ]]; then
+        # no message arguments were passed and nothing is being piped in on stdin
         error 4 "$no_arguments"
-        return 2
+        return "$err_invalid_arguments"
     fi
 
     local first=true
@@ -179,7 +188,8 @@ function message()
         fi
         (( depth > 0 )) && show_stack 3 "$depth" true # skips the frames of show_stack, message_out, and the message_out caller function - basically show where the error or trace was called from.
     }
-    return 0
+
+    return "$success"
 }
 
 #-------------------------------------------------------------------------------
@@ -204,7 +214,7 @@ function error()
 
     message "$error_prefix" "$@" > >(to_stderr)
     rc=$?
-    (( rc == 0 )) && (( ++errors ))
+    (( ++errors ))
     return "$rc"
 }
 
@@ -265,7 +275,7 @@ declare -xr trace_prefix="🐾  TRACE: "
 
 function trace()
 {
-    ! $verbose && return 0
+    ! $verbose && return "$success"
     message "$trace_prefix" "$@" > >(to_traceout)
 }
 
@@ -287,16 +297,20 @@ function trace()
 #-------------------------------------------------------------------------------
 function warning_var()
 {
-    if [[ $# -ne 3 || -z "$1" || -z "$2" ]]; then
+    (( $# == 3 )) || {
+        error 3 "${FUNCNAME[0]}() requires three arguments ($# provided): variable name, warning message, and default value."
+        return "$err_invalid_arguments"
+    }
+    [[ -n "$1" && -n "$2" ]] || {
         error 3 "${FUNCNAME[0]}() requires three arguments: variable name, warning message, and default value."
-        return 2
-    fi
+        return "$err_argument_value"
+    }
     warning "$2" "Assuming the default value of '$3'."
 
     local -n var=$1;
     # shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
     var="$3"
-    return 0
+    return "$success"
 }
 
 # When on_debug is specified as a handler of the DEBUG trap, remembers the last invoked bash command in $last_command.
@@ -318,9 +332,12 @@ declare current_command="$BASH_COMMAND"
 #-------------------------------------------------------------------------------
 function on_debug()
 {
+    local rc=$?
     # keep track of the last executed command
     last_command="$current_command"
     current_command="$BASH_COMMAND"
+
+    return "$rc"
 }
 
 #-------------------------------------------------------------------------------
@@ -328,6 +345,9 @@ function on_debug()
 #-------------------------------------------------------------------------------
 initial_dir=$(pwd)
 declare -rx initial_dir
+declare -x allow_on_exit=true
+declare -xr explicit_exit_regex='^exit([[:space:]]+.*)?$'
+
 
 #-------------------------------------------------------------------------------
 # Summary: EXIT trap handler that displays failed commands, restores directory, and disables tracing.
@@ -343,23 +363,20 @@ declare -rx initial_dir
 # Usage: trap on_exit EXIT
 # Notes: Works cooperatively with on_debug for error handling. Automatically set by core.sh.
 #-------------------------------------------------------------------------------
-declare -x allow_on_exit=true
 function on_exit()
 {
     # echo an error message before exiting
-    local x=$?
+    local ec=$?
 
-    if $allow_on_exit; then
-        if [[ $x -ne 0 ]]; then
-            if ! [[ $last_command =~ exit\ .+ ]]; then
-                error "on_exit: '$last_command' command failed with exit code $x."
-            else
-                trace "on_exit: last_command='$last_command', exit_code=$x, allow_on_exit=$allow_on_exit"
-            fi
-        fi
-    fi
-    cd "$initial_dir" || true
     set +x
+
+    if (( ec != 0 )) && $allow_on_exit && [[ ! ${last_command:-} =~ $explicit_exit_regex ]]; then
+        printf "❌  ERROR: on-exit: the command '%s' failed with exit code %d\n" "${last_command:-'<unknown>'}" "$ec" >&2
+    fi
+
+    cd "$initial_dir" 2>/dev/null || true
+
+    return "$ec"
 }
 
 #-------------------------------------------------------------------------------
@@ -368,7 +385,7 @@ function on_exit()
 #   1 - skip (optional) - how many stack frames to skip; defaults to 0
 #   2 - take (optional) - how many stack frames to show; defaults to 1
 #   3 - verbose (optional) - if true, outputs the stack trace; if false, does nothing;
-#       defaults to the value of the global $verbose variable
+#       defaults to the value of the global $verbose variable or false if not set
 # Returns:
 #   stdout: formatted stack trace showing function names, files, and line numbers
 #           (consider redirecting to stderr)
@@ -382,13 +399,13 @@ function show_stack()
 {
     local v=${3:-"${verbose:-false}"}
 
-    ! $v && return 0
+    ! $v && return "$success"
 
     local skip=${1:-1}                              # by default skip this call
     local max_take=$(( ${#FUNCNAME[@]} - skip ))    # take no more than the remaining stack frames
     local take=${2:-$max_take}
     (( take = take < max_take ? take : max_take ))   # adjust take if it exceeds the available stack frames
-    (( take <= 0 )) && return 0
+    (( take <= 0 )) && return "$success"
 
     local func
     local source
@@ -403,5 +420,5 @@ function show_stack()
         printf "    - %-20s (%s: %d)\n" "$func" "${source}" "${lineno}"
     done
 
-    return 0
+    return "$success"
 }

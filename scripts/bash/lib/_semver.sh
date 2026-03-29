@@ -3,14 +3,13 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-if [[ ! -v lib_dir || -z "$lib_dir" ]]; then
-    lib_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
-fi
-
-# shellcheck disable=SC2154 # _ignore is referenced but not assigned.
-if ! declare -pF "error" > "$_ignore"; then
-    source "${lib_dir}/_diagnostics.sh"
-fi
+declare -rxi success
+declare -rxi failure
+declare -rxi positive
+declare -rxi negative
+declare -rxi err_invalid_arguments
+declare -rxi err_argument_type
+declare -rxi err_argument_value
 
 # Regular expressions that test if a string contains a semantic version:
 declare -xr majorLabelRex='[0-9]+'
@@ -73,6 +72,8 @@ function print_semver_regexes()
 declare -x latest_stable
 declare -x latest_prerelease
 
+declare -x errors
+
 #-------------------------------------------------------------------------------
 # Summary: Validates MinVer tag prefix and creates tag validation regular expressions.
 # Parameters:
@@ -89,8 +90,8 @@ declare -x latest_prerelease
 function validate_semverTagComponents()
 {
     (( $# == 1 || $# == 2 )) || {
-        error 3 "${FUNCNAME[0]}() requires 1 or 2 arguments (not $#): the semver tag prefix used by MinVer and the optional default prerelease identifier template."
-        return 2
+        error 3 "${FUNCNAME[0]}() requires 1 or 2 arguments ($# provided): the semver tag prefix used by MinVer and the optional default prerelease identifier template."
+        return "$err_invalid_arguments"
     }
 
     local errs=$errors
@@ -143,10 +144,11 @@ declare -irx rc_less_than=65
 #-------------------------------------------------------------------------------
 function compare_semver()
 {
-    local -i e=$errors
+    local -i errs=$errors
 
-    [[ $# -eq 2 ]] || {
-        error 3 "${FUNCNAME[0]}() requires at exactly 2 arguments: version1 and version2."
+    (( $# == 2 )) || {
+        error 3 "${FUNCNAME[0]}() requires at exactly 2 arguments (provided $#): version1 and version2."
+        return "$err_invalid_arguments"
     }
 
     if [[ "$1" =~ $semverRegex ]]; then
@@ -169,9 +171,7 @@ function compare_semver()
     fi
     # local build2=${BASH_REMATCH[semver_build]#-} does not participate in comparison by spec
 
-    if (( errors > e )); then
-        return "$err_invalid_arguments"
-    fi
+    (( errors == errs )) || return "$err_argument_value"
 
     if (( major1 != major2 )); then
         if (( major1 > major2 )); then return "$rc_greater_than"; else return "$rc_less_than"; fi
@@ -238,12 +238,12 @@ function compare_semver()
 #-------------------------------------------------------------------------------
 function semver_equals()
 {
-    [[ $# -eq 2 ]] || {
-        error 3 "${FUNCNAME[0]}() requires exactly 2 arguments: version1 and version2."
+    (( $# == 2 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
         return "$err_invalid_arguments"
     }
     semver_compare "$1" "$2"
-    [[ $? -eq "$rc_equal" ]]
+    (( $? == rc_equal ))
 }
 
 #-------------------------------------------------------------------------------
@@ -259,12 +259,12 @@ function semver_equals()
 #-------------------------------------------------------------------------------
 function semver_greaterThan()
 {
-    [[ $# -eq 2 ]] || {
-        error 3 "${FUNCNAME[0]}() requires exactly 2 arguments: version1 and version2."
+    (( $# == 2 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
         return "$err_invalid_arguments"
     }
     semver_compare "$1" "$2"
-    [[ $? -eq "$rc_greater_than" ]]
+    (( $? == rc_greater_than ))
 }
 
 #-------------------------------------------------------------------------------
@@ -280,13 +280,13 @@ function semver_greaterThan()
 #-------------------------------------------------------------------------------
 function semver_greaterThanOrEqual()
 {
-    [[ $# -eq 2 ]] || {
-        error 3 "${FUNCNAME[0]}() requires exactly 2 arguments: version1 and version2."
+    (( $# == 2 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
         return "$err_invalid_arguments"
     }
     semver_compare "$1" "$2"
     rc=$?
-    [[ $rc -eq "$rc_greater_than" || $rc -eq "$rc_equal" ]]
+    (( rc == rc_greater_than || rc == rc_equal ))
 }
 
 #-------------------------------------------------------------------------------
@@ -302,12 +302,12 @@ function semver_greaterThanOrEqual()
 #-------------------------------------------------------------------------------
 function semver_lessThan()
 {
-    [[ $# -eq 2 ]] || {
-        error 3 "${FUNCNAME[0]}() requires exactly 2 arguments: version1 and version2."
+    (( $# == 2 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
         return "$err_invalid_arguments"
     }
     semver_compare "$1" "$2"
-    [[ $? -eq "$rc_less_than" ]]
+    (( $? == rc_less_than ))
 }
 
 #-------------------------------------------------------------------------------
@@ -323,13 +323,13 @@ function semver_lessThan()
 #-------------------------------------------------------------------------------
 function semver_lessThanOrEqual()
 {
-    [[ $# -eq 2 ]] || {
-        error 3 "${FUNCNAME[0]}() requires exactly 2 arguments: version1 and version2."
+    (( $# == 2 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
         return "$err_invalid_arguments"
     }
     semver_compare "$1" "$2"
     rc=$?
-    [[ $rc -eq "$rc_less_than" || $rc -eq "$rc_equal" ]]
+    (( rc == rc_less_than || rc == rc_equal ))
 }
 
 #-------------------------------------------------------------------------------
@@ -349,8 +349,8 @@ function semver_lessThanOrEqual()
 #-------------------------------------------------------------------------------
 function is_semver()
 {
-    [[ $# -eq 1 ]] || {
-        error 3 "${FUNCNAME[0]}() requires exactly 1 argument: the version."
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): the version."
         return "$err_invalid_arguments"
     }
     [[ "$1" =~ $semverRegex ]]
@@ -371,8 +371,8 @@ function is_semver()
 #-------------------------------------------------------------------------------
 function is_semverTag()
 {
-    [[ $# -eq 1 ]] || {
-        error 3 "${FUNCNAME[0]}() requires exactly 1 argument: the semver tag."
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): the semver tag."
         return "$err_invalid_arguments"
     }
     [[ "$1" =~ $semverTagRegex ]]
@@ -390,8 +390,8 @@ function is_semverTag()
 #-------------------------------------------------------------------------------
 function is_semverPrerelease()
 {
-    [[ $# -eq 1 ]] || {
-        error 3 "${FUNCNAME[0]}() requires exactly 1 argument: the semver prerelease."
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): the semver prerelease."
         return "$err_invalid_arguments"
     }
     [[ "$1" =~ $semverPrereleaseRegex ]]
@@ -412,8 +412,8 @@ function is_semverPrerelease()
 #-------------------------------------------------------------------------------
 function is_semverPrereleaseTag()
 {
-    [[ $# -eq 1 ]] || {
-        error 3 "${FUNCNAME[0]}() requires exactly 1 argument: the semver prerelease tag."
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): the semver prerelease tag."
         return "$err_invalid_arguments"
     }
     [[ "$1" =~ $semverTagPrereleaseRegex ]]
@@ -431,8 +431,8 @@ function is_semverPrereleaseTag()
 #-------------------------------------------------------------------------------
 function is_semverRelease()
 {
-    [[ $# -eq 1 ]] || {
-        error 3 "${FUNCNAME[0]}() requires exactly 1 argument: the version."
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): the version."
         return "$err_invalid_arguments"
     }
     [[ "$1" =~ $semverReleaseRegex ]]
@@ -453,7 +453,7 @@ function is_semverRelease()
 #-------------------------------------------------------------------------------
 function is_semverReleaseTag()
 {
-    [[ $# -eq 1 ]] || {
+    (( $# == 1 )) || {
         error 3 "${FUNCNAME[0]}() requires exactly 1 argument: the semver release tag."
         return "$err_invalid_arguments"
     }

@@ -3,18 +3,16 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-if [[ ! -v lib_dir || -z "$lib_dir" ]]; then
-    lib_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
-fi
-
-# shellcheck disable=SC2154 # _ignore is referenced but not assigned.
-if ! declare -pF "error" > "$_ignore"; then
-    source "${lib_dir}/_diagnostics.sh"
-fi
-# shellcheck disable=SC2154 # _ignore is referenced but not assigned.
-if [[ ! -v "minverTagPrefixRegex" || ! -v "minverPrereleaseIdRegex" ]]; then
-    source "${lib_dir}/_semver.sh"
-fi
+declare -rxi success
+declare -rxi failure
+declare -rxi positive
+declare -rxi negative
+declare -rxi err_invalid_arguments
+declare -rxi err_argument_type
+declare -rxi err_argument_value
+declare -rxi err_not_found
+declare -rxi err_not_file
+declare -rxi err_not_directory
 
 declare -xra allowed_runners_os=(
     "ubuntu-latest"
@@ -37,9 +35,14 @@ declare -xr nugetServersRegex="^(nuget|github|https?://[-a-zA-Z0-9._/]+)$";
 #   The trimmed string
 # Usage: trimmed=$(trim "  some string  ")
 #-------------------------------------------------------------------------------
-function ltrim() {
-    local var="$*"
-    # remove leading whitespace characters
+function ltrim()
+{
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to trim spaces from the left."
+        return "$err_invalid_arguments"
+    }
+
+    local var="$1"
     var="${var#"${var%%[![:space:]]*}"}"
     printf '%s' "$var"
 }
@@ -52,9 +55,14 @@ function ltrim() {
 #   The trimmed string
 # Usage: trimmed=$(trim "  some string  ")
 #-------------------------------------------------------------------------------
-function rtrim() {
-    local var="$*"
-    # remove trailing whitespace characters
+function rtrim()
+{
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to trim spaces from the right."
+        return "$err_invalid_arguments"
+    }
+
+    local var="$1"
     var="${var%"${var##*[![:space:]]}"}"
     printf '%s' "$var"
 }
@@ -67,8 +75,14 @@ function rtrim() {
 #   The trimmed string
 # Usage: trimmed=$(trim "  some string  ")
 #-------------------------------------------------------------------------------
-function trim() {
-    printf '%s' "$(rtrim "$(ltrim "$*")")"
+function trim()
+{
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to trim spaces from the left and from the right."
+        return "$err_invalid_arguments"
+    }
+
+    printf '%s' "$(rtrim "$(ltrim "$1")")"
 }
 
 #-------------------------------------------------------------------------------
@@ -84,29 +98,30 @@ function trim() {
 #-------------------------------------------------------------------------------
 function is_safe_input()
 {
-    if [[ $# -lt 1 || $# -gt 2 ]]; then
-        error 3 "${FUNCNAME[0]}() requires one or two arguments: the input string to sanitize and an optional flag to allow spaces."
-        return 2
-    fi
+    (( $# == 1 || $# == 2 )) || {
+        error 3 "${FUNCNAME[0]}() requires one or two arguments (provided $#): the input string to sanitize and an optional flag to allow spaces."
+        return "$err_invalid_arguments"
+    }
 
     local input="$1"
     local allow_spaces="${2:-false}"
 
     # Empty input is considered safe
     if [[ -z "$input" ]]; then
-        return 0
+        return "$positive"
     fi
 
     # Dangerous characters that could enable command injection
     local dangerous_chars
-    [[ "$allow_spaces" != true ]] && dangerous_chars=$'[;|&$`\\\\<>(){}\n\r ]' || dangerous_chars=$'[;|&$`\\\\<>(){}\n\r]'
+
+    $allow_spaces && dangerous_chars=$'[;|&$`\\\\<>(){}\n\r ]' || dangerous_chars=$'[;|&$`\\\\<>(){}\n\r]'
 
     if [[ "$input" =~ $dangerous_chars ]]; then
         error 3 "${FUNCNAME[0]}(): The input '$input' contains one or more of the unsafe characters '$dangerous_chars'."
-        return 1
+        return "$negative"
     fi
 
-    return 0
+    return "$positive"
 }
 
 #-------------------------------------------------------------------------------
@@ -120,10 +135,11 @@ function is_safe_input()
 #-------------------------------------------------------------------------------
 function validate_boolean()
 {
-    if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly one argument: the boolean value to validate."
-        return 2
-    fi
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the boolean value to validate."
+        return "$err_invalid_arguments"
+    }
+
     is_boolean "$1"
 }
 
@@ -138,17 +154,16 @@ function validate_boolean()
 #-------------------------------------------------------------------------------
 function is_safe_boolean()
 {
-    if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly one argument: the boolean value to test."
-        return 2
-    fi
-
-    if ! validate_boolean "$1"; then
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the boolean value to test."
+        return "$err_invalid_arguments"
+    }
+    validate_boolean "$1" || {
         error 3 "${FUNCNAME[0]}(): The input '$1' is not a valid boolean. Expected 'true' or 'false'."
-        return 1
-    fi
+        return "$negative"
+    }
 
-    return 0
+    return "$positive"
 }
 
 #-------------------------------------------------------------------------------
@@ -162,17 +177,16 @@ function is_safe_boolean()
 #-------------------------------------------------------------------------------
 function is_safe_integer()
 {
-    if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly one argument: the integer value to test."
-        return 2
-    fi
-
-    if ! is_integer "$1"; then
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the integer value to test."
+        return "$err_invalid_arguments"
+    }
+    validate_integer "$1" || {
         error 3 "${FUNCNAME[0]}(): The input '$1' is not a valid integer."
-        return 1
-    fi
+        return "$negative"
+    }
 
-    return 0
+    return "$positive"
 }
 
 #-------------------------------------------------------------------------------
@@ -187,32 +201,32 @@ function is_safe_integer()
 #-------------------------------------------------------------------------------
 function is_safe_path()
 {
-    if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly one argument: the file path to test."
-        return 2
-    fi
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the file path to test."
+        return "$err_invalid_arguments"
+    }
 
     local path="$1"
 
     # Reject paths with directory traversal
-    if [[ "$path" =~ \.\. ]]; then
+    [[ ! "$path" =~ \.\. ]] || {
         error "The path '$path' contains directory traversal sequences."
-        return 1
-    fi
+        return "$negative"
+    }
 
     # Reject absolute paths starting with /
-    if [[ "$path" =~ ^/ ]]; then
+    [[ ! "$path" =~ ^/ ]] || {
         error "The path '$path' is an absolute path, which is not allowed."
-        return 1
-    fi
+        return "$negative"
+    }
 
     # Reject paths with dangerous characters
-    if [[ "$path" =~ [\$\`\;] ]]; then
+    [[ ! "$path" =~ [\$\`\;] ]] || {
         error "The path '$path' contains one or more unsafe characters: \$, \`, ;"
-        return 1
-    fi
+        return "$negative"
+    }
 
-    return 0
+    return "$positive"
 }
 
 #-------------------------------------------------------------------------------
@@ -227,19 +241,19 @@ function is_safe_path()
 #-------------------------------------------------------------------------------
 function is_safe_existing_path()
 {
-    if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly one argument: the file path to test."
-        return 2
-    fi
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the file path to test."
+        return "$err_invalid_arguments"
+    }
 
-    ! is_safe_path "$1" && return 1
+    is_safe_path "$1" || return "$negative"
 
-    if [[ ! -e "$1" ]]; then
+    [[ -e "$1" ]] || {
         error "The path '$1' does not exist."
-        return 1
-    fi
+        return "$negative"
+    }
 
-    return 0
+    return "$positive"
 }
 
 #-------------------------------------------------------------------------------
@@ -254,19 +268,19 @@ function is_safe_existing_path()
 #-------------------------------------------------------------------------------
 function is_safe_existing_directory()
 {
-    if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly one argument: the directory path to test."
-        return 2
-    fi
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the directory path to test."
+        return "$err_invalid_arguments"
+    }
 
-    ! is_safe_existing_path "$1" && return 1
+    is_safe_existing_path "$1" || return "$negative"
 
-    if [[ ! -d "$1" ]]; then
+    [[ -d "$1" ]] || {
         error "The path '$1' is not a directory."
-        return 1
-    fi
+        return "$negative"
+    }
 
-    return 0
+    return "$positive"
 }
 
 #-------------------------------------------------------------------------------
@@ -281,19 +295,19 @@ function is_safe_existing_directory()
 #-------------------------------------------------------------------------------
 function is_safe_existing_file()
 {
-    if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly one argument: the file path to test."
-        return 2
-    fi
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the file path to test."
+        return "$err_invalid_arguments"
+    }
 
-    ! is_safe_existing_path "$1" && return 1
+    is_safe_existing_path "$1" || return "$negative"
 
-    if [[ ! -s "$1" ]]; then
+    [[ -s "$1" ]] || {
         error "The path '$1' is not a file or is empty."
-        return 1
-    fi
+        return "$negative"
+    }
 
-    return 0
+    return "$positive"
 }
 
 declare -xr jq_empty='. == null or . == "" or length == 0'
@@ -320,13 +334,13 @@ declare -xr jq_array_strings_nonempty='type == "array" and length > 0 and all(ty
 #-------------------------------------------------------------------------------
 function is_safe_json_array()
 {
-    if [[ $# -ne 3 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly three arguments:"$'\n' \
+    (( $# == 3 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly three arguments (provided $#):"$'\n' \
               "  \$1: the JSON"$'\n' \
               "  \$2: the default value to use if the variable is unbound or empty, and"$'\n' \
               "  \$3: the name of the function to validate each item in the array."
-        return 2
-    fi
+        return "$err_invalid_arguments"
+    }
 
     local default="$2"
     local is_safe_item_fn=$3
@@ -349,16 +363,18 @@ function is_safe_json_array()
             else
                 error("The input must be a JSON array of non-empty strings or a JSON string.")
             end ' <<< "$input"
-    )" ||
-    { error "'$input' is not a valid JSON: '$1'"; return 2; }
+    )" || {
+        error "'$input' is not a valid JSON: '$1'"
+        return "$err_invalid_arguments"
+    }
 
     # validate each item in the array
     while read -r item; do
-        $is_safe_item_fn "$item" || return 1
+        $is_safe_item_fn "$item" || return "$negative"
     done < <(jq -r '.[]' <<< "$output")
 
     echo "$output"
-    return 0
+    return "$positive"
 }
 
 #-------------------------------------------------------------------------------
@@ -373,22 +389,23 @@ function is_safe_json_array()
 #-------------------------------------------------------------------------------
 function is_safe_runner_os()
 {
-    if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly one argument: the runner OS to test."
-        return 2
-    fi
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the runner OS to test."
+        return "$err_invalid_arguments"
+    }
 
     local runner_os="$1"
-    if [[ -z "$runner_os" ]]; then
-        error "The runner OS name is empty."
-        return 2
-    fi
-    if is_in "$runner_os" "${allowed_runners_os[@]}"; then
-        return 0
-    fi
 
-    error "The runner OS '$runner_os' is not allowed. Valid options: ${allowed_runners_os[*]}."
-    return 1
+    [[ -n "$runner_os" ]] || {
+        error "The runner OS name is empty."
+        return "$err_invalid_arguments"
+    }
+    is_in "$runner_os" "${allowed_runners_os[@]}" || {
+        error "The runner OS '$runner_os' is not allowed. Valid options: ${allowed_runners_os[*]}."
+        return "$negative"
+    }
+
+    return "$positive"
 }
 
 #-------------------------------------------------------------------------------
@@ -404,31 +421,32 @@ function is_safe_runner_os()
 #-------------------------------------------------------------------------------
 function is_safe_reason()
 {
-    if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly one argument: the reason text to test."
-        return 2
-    fi
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the reason text to test."
+        return "$err_invalid_arguments"
+    }
 
     local reason="$1"
     local max_length=200
 
     # Check length
-    if [[ ${#reason} -gt $max_length ]]; then
+    (( ${#reason} <= max_length )) || {
         error "The reason is too long. Maximum length is $max_length characters."
-        return 1
-    fi
+        return "$negative"
+    }
 
     # Allow spaces but reject dangerous shell meta-characters
-    if ! is_safe_input "$reason" true; then
-        return 1
-    fi
+    is_safe_input "$reason" true || {
+        return "$negative"
+    }
 
     # Reject if it looks like a command (starts with -, /, .)
-    if [[ "$reason" =~ ^[-/.] ]]; then
+    [[ "$reason" =~ ^[-/.] ]] && {
         error "The reason '$reason' appears to be a command or contains unsafe characters."
-        return 1
-    fi
-    return 0
+        return "$negative"
+    }
+
+    return "$positive"
 }
 
 #-------------------------------------------------------------------------------
@@ -443,10 +461,11 @@ function is_safe_reason()
 #-------------------------------------------------------------------------------
 function is_valid_nuget_server()
 {
-    if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly one argument: the NuGet server to test."
-        return 2
-    fi
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the NuGet server to test."
+        return "$err_invalid_arguments"
+    }
+
     [[ "$1" =~ $nugetServersRegex ]]
 }
 
@@ -479,30 +498,30 @@ function is_safe_nuget_server()
 #-------------------------------------------------------------------------------
 function validate_nuget_server()
 {
-    if [[ $# -lt 1 || $# -gt 2 ]]; then
-        error 3 "${FUNCNAME[0]}() requires at least one or two arguments: the NAME OF THE VARIABLE containing the NuGet server to validate and an optional default value for the NuGet server."
-        return 2
-    fi
+    (( $# >= 1 && $# <= 2 )) || {
+        error 3 "${FUNCNAME[0]}() requires at least one or two arguments (provided $#): the NAME OF THE VARIABLE containing the NuGet server to validate and an optional default value for the NuGet server."
+        return "$err_invalid_arguments"
+    }
 
     local -n server=$1
     local default_server=${2:-"nuget"}
 
-    if [[ ! $default_server =~ $nugetServersRegex ]]; then
+    [[ $default_server =~ $nugetServersRegex ]] || {
         error "Invalid default NuGet server: $default_server."
-        return 2
-    fi
+        return "$err_invalid_arguments"
+    }
 
-    if [[ -z "$server" ]]; then
+    [[ -n "$server" ]] || {
         warning_var "server" "No NuGet server configured." "$default_server"
-        return 0
-    fi
+        return "$positive"
+    }
 
-    if [[ ! "$server" =~ $nugetServersRegex ]]; then
+    [[ "$server" =~ $nugetServersRegex ]] || {
         error "Invalid NuGet server: $server."
-        return 1
-    fi
+        return "$negative"
+    }
 
-    return 0
+    return "$positive"
 }
 
 #-------------------------------------------------------------------------------
@@ -517,10 +536,11 @@ function validate_nuget_server()
 #-------------------------------------------------------------------------------
 function is_valid_configuration()
 {
-    if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires one argument: the NAME of the configuration variable to test."
-        return 2
-    fi
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires one argument (provided $#): the NAME of the configuration variable to test."
+        return "$err_invalid_arguments"
+    }
+
     [[ $1 =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]
 }
 
@@ -536,13 +556,17 @@ function is_valid_configuration()
 #-------------------------------------------------------------------------------
 function is_safe_configuration()
 {
-    if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires one argument: the NAME of the configuration variable to test."
-        return 2
-    fi
-    is_valid_configuration "$1" && return 0
-    error "The configuration '$1' is not valid."
-    return 1
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires one argument (provided $#): the NAME of the configuration variable to test."
+        return "$err_invalid_arguments"
+    }
+
+    is_valid_configuration "$1" || {
+        error "The configuration '$1' is not valid."
+        return "$negative"
+    }
+
+    return "$positive"
 }
 
 #-------------------------------------------------------------------------------
@@ -561,31 +585,34 @@ function is_safe_configuration()
 #-------------------------------------------------------------------------------
 function validate_preprocessor_symbols()
 {
-    if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires one argument: the NAME of the variable containing the preprocessor symbols to test."
-        return 2
-    fi
-    [[ -z $1 ]] && return 0
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires one argument (provided $#): the NAME of the variable containing the preprocessor symbols to test."
+        return "$err_invalid_arguments"
+    }
+
+    [[ -z $1 ]] && return "$positive"
 
     local -n symbols=$1
     local -a symbol_array=()
 
     IFS=' ,:;' read -ra symbol_array <<< "$symbols"
+
     local bad=false
     local s=''
     for symbol in "${symbol_array[@]}"; do
         [[ -z $symbol ]] && continue
-        if ! [[ "$symbol" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+        if [[ "$symbol" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+            [[ -z $s ]] && s="$symbol" || s="$s;$symbol"
+        else
             error "The pre-processor symbol '$symbol' is not valid."
             bad=true
-        else
-            [[ -z $s ]] && s="$symbol" || s="$s;$symbol"
         fi
     done
-    [[ "$bad" == true ]] && return 1
+
+    "$bad" && return "$negative"
 
     symbols=$s
-    return 0
+    return "$positive"
 }
 
 #-------------------------------------------------------------------------------
@@ -600,10 +627,11 @@ function validate_preprocessor_symbols()
 #-------------------------------------------------------------------------------
 function is_valid_percentage()
 {
-    if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires one argument: the percentage to test."
-        return 2
-    fi
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires one argument (provided $#): the percentage to test."
+        return "$err_invalid_arguments"
+    }
+
     is_natural "$1" && (( $1 >= 0 && $1 <= 100 ))
 }
 
@@ -622,8 +650,10 @@ function is_safe_min_coverage_pct()
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true - good!
     is_valid_percentage "$@" || {
         error "The min coverage percentage '$1' must be an integer number between 0 and 100."
-        return 1
+        return "$negative"
     }
+
+    return "$positive"
 }
 
 #-------------------------------------------------------------------------------
@@ -640,9 +670,14 @@ function is_safe_max_regression_pct()
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true - good!
     is_valid_percentage "$@" || {
         error "The max regression percentage '$1' must be between 0 and 100."
-        return 1
+        return "$negative"
     }
+
+    return "$positive"
 }
+
+declare -x minverPrereleaseIdRegex
+declare -x semverRegex
 
 #-------------------------------------------------------------------------------
 # Summary: Validates MinVer prerelease identifier format.
@@ -656,10 +691,10 @@ function is_safe_max_regression_pct()
 #-------------------------------------------------------------------------------
 function is_valid_minverPrereleaseId()
 {
-    if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires one argument: the MinVer prerelease ID to test."
-        return 2
-    fi
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires one argument (provided $#): the MinVer prerelease ID to test."
+        return "$err_invalid_arguments"
+    }
 
     [[ "$1" =~ $minverPrereleaseIdRegex ]]
 }
@@ -703,10 +738,10 @@ declare -xr dotnet_regex="^([0-9]+\\.[0-9]+(\\.x)?)|([0-9]+(\\.x)?)|([0-9]+\\.[0
 #-------------------------------------------------------------------------------
 function is_valid_dotnet_version()
 {
-    if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires one argument: the .NET version to test."
-        return 2
-    fi
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires one argument (provided $#): the .NET version to test."
+        return "$err_invalid_arguments"
+    }
 
     [[ "$1" =~ $dotnet_regex ]]
 }

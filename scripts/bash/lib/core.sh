@@ -35,7 +35,7 @@ declare -xr default__ignore=/dev/null
 declare -x _ignore=$default__ignore                 # the file to redirect unwanted output to, changing the value may be useful for debugging, e.g. to redirect to /dev/stdout
 
 # source the components of the core library
-source "${lib_dir}/_return_codes.sh"
+source "${lib_dir}/_error_codes.sh"
 source "${lib_dir}/_constants.sh"
 source "${lib_dir}/_diagnostics.sh"
 source "${lib_dir}/_args.sh"
@@ -62,10 +62,10 @@ source "${lib_dir}/_git.sh"
 #-------------------------------------------------------------------------------
 function show_ignored_output()
 {
-    if [[ $# -gt 1 ]]; then
-        error 3 "${FUNCNAME[0]}() accepts at most one argument: the file name to redirect the ignored output to."
-        return 2
-    fi
+    (( $# <= 1 )) || {
+        error 3 "${FUNCNAME[0]}() accepts at most one argument (provided $#): the file name to redirect the ignored output to."
+        return "$err_invalid_arguments"
+    }
 
     (( $# == 0 )) && _ignore=/dev/stderr && return 0
 
@@ -101,10 +101,10 @@ declare -x dry_run=${DRY_RUN:-false}
 
 function execute()
 {
-    if [[ $# -eq 0 ]]; then
-        error 3 "${FUNCNAME[0]}() requires at least one argument: the command to execute."
-        return 2
-    fi
+    (( $# > 0 )) || {
+        error 3 "${FUNCNAME[0]}() requires at least one argument (provided $#): the command to execute."
+        return "$err_invalid_arguments"
+    }
 
     if [[ "$dry_run" == true ]]; then
         echo "dry-run$ $*"
@@ -134,29 +134,30 @@ function execute()
 #-------------------------------------------------------------------------------
 function execute_with_retry()
 {
-    if [[ $# -lt 3 ]]; then
-        error 3 "${FUNCNAME[0]}() requires at least three arguments: <max_attempts> <delay> <command> [args...]"
-        return 2
-    fi
+    (( $# >= 3 )) || {
+        error 3 "${FUNCNAME[0]}() requires at least three arguments (provided $#): <max_attempts> <delay> <command> [args...]"
+        return "$err_invalid_arguments"
+    }
 
     local max_attempts=$1; shift
     local delay=$1; shift
     local output="/dev/stdout"
 
     # shellcheck disable=SC2086
-    is_boolean $1 && $1 && output="$_ignore" && shift
+    is_boolean "$1" && $1 && output="$_ignore"
+    is_boolean "$1" && shift
 
-    if [[ $# -lt 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires at least four arguments: <max_attempts> <delay> <ignore output> <command> [args...]"
-        return 2
-    fi
+    (( $# >= 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires at least four arguments (provided $#): <max_attempts> <delay> <ignore output> <command> [args...]"
+        return "$err_invalid_arguments"
+    }
 
     local attempt=0
     local exit_code=0
 
     if [[ "$dry_run" == true ]]; then
         echo "dry-run$ $*" >&2
-        return 0
+        return "$success"
     fi
 
     local IFS=" "
@@ -171,7 +172,7 @@ function execute_with_retry()
         sleep "$delay"
     done
 
-    return 0
+    return "$success"
 }
 
 #-------------------------------------------------------------------------------
@@ -189,10 +190,10 @@ function execute_with_retry()
 #-------------------------------------------------------------------------------
 function list_of_files()
 {
-    if [[ $# -lt 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires at least one argument: the file pattern."
-        return 2
-    fi
+    (( $# >= 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires at least one argument (provided $#): the file pattern."
+        return "$err_invalid_arguments"
+    }
 
     # remember the current settings of the nullglob and globstar options
     local restoreGlobstar restoreNullglob
@@ -211,5 +212,5 @@ function list_of_files()
     eval "$restoreGlobstar"
 
     printf "%s" "${list[*]}"
-    return 0
+    return "$success"
 }

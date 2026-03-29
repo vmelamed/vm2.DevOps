@@ -44,44 +44,47 @@ declare -xr default_vm2_repos="$HOME/repos/vm2"
 #-------------------------------------------------------------------------------
 function resolve_vm2_repos()
 {
-    if [[ $# -gt 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly 1 or no arguments: the directory to use as a parent to all vm2 repositories."
+    (( $# == 0 || $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires 1 or no arguments ($# provided): the directory to use as a parent to all vm2 repositories."
         return "$err_invalid_arguments"
-    fi
+    }
 
     # $VM2_REPOS always overrides the default value $HOME/repos/vm2 (last resort!)
-    local vm2="${VM2_REPOS:-$default_vm2_repos}"
+    local vm2_repos="${VM2_REPOS:-$default_vm2_repos}"
 
     # the parameter always overrides the environment variable $VM2_REPOS and the default value $HOME/repos/vm2 (last resort!)
-    [[ $# -eq 1 ]] && vm2="$1"
+    (( $# == 1 )) && vm2_repos="$1"
 
     # try to resolve vm2 from the
     #   1) argument (usually from the command line option --vm2-repos)
     #   2) environment variable $VM2_REPOS
     #   3) $HOME/repos/vm2
-    if [[ -n "$vm2" && -d "$vm2" ]]; then
-        # looks good so far - ensure $vm2 is an absolute path.
-        vm2=$(realpath -e "$vm2" 2> "$_ignore")
-        trace "vm2_repos='$vm2' resolved from argument, or \$VM2_REPOS, or '$default_vm2_repos'."
-        echo "$vm2"
+    if [[ -n "$vm2_repos" && -d "$vm2_repos" ]]; then
+        # looks good so far - ensure $vm2_repos is an absolute path.
+        vm2_repos=$(realpath -e "$vm2_repos" 2> "$_ignore")
+        trace "vm2_repos='$vm2_repos' resolved from argument, or \$VM2_REPOS, or '$default_vm2_repos'."
+        echo "$vm2_repos"
         return "$success"
     fi
 
     # if the first argument is provided but is not a directory, return an error - no heuristics in this case
-    [[ $# -eq 1 ]] && error 3 "The argument '$1' is not a directory." && return "$err_not_directory"
+    (( $# == 1 )) && {
+        error 3 "The argument '$1' is not a directory."
+        return "$err_not_directory"
+    }
 
     # continue with the heuristic search for the vm2 directory:
     # 1) try from the current working directory:
-    if vm2=$(root_working_tree) && vm2=$(dirname "$vm2" 2> "$_ignore"); then
-        trace "vm2_repos='$vm2' resolved from the current working directory."
-        echo "$vm2"
+    if vm2_repos=$(root_working_tree) && vm2_repos=$(dirname "$vm2_repos" 2> "$_ignore"); then
+        trace "vm2_repos='$vm2_repos' resolved from the current working directory."
+        echo "$vm2_repos"
         return "$success"
     fi
 
     # 2) try from the calling script's directory, e.g. ~/repos/vm2/vm2.DevOps/scripts/bash/diff-common.sh:
-    if vm2=$(root_working_tree "$script_dir") && vm2=$(dirname "$vm2" 2> "$_ignore"); then
-        trace "vm2_repos='$vm2' resolved from the script directory."
-        echo "$vm2"
+    if vm2_repos=$(root_working_tree "$script_dir") && vm2_repos=$(dirname "$vm2_repos" 2> "$_ignore"); then
+        trace "vm2_repos='$vm2_repos' resolved from the script directory."
+        echo "$vm2_repos"
         return "$success"
     fi
 
@@ -93,12 +96,13 @@ function resolve_vm2_repos()
 # Summary: Validates that
 #     1) the specified directory exists
 #     2) it is a git repository
-#     3) it is not one of the special directories '${vm2_repos}/vm2.DevOps' or '${vm2_repos}/.github'
+#     3) it is not one of the special directories '${vm2_repos}/vm2.DevOps' or '${vm2_repos}/.github' (unless the $3 is true)
 #     4) it is at or ahead of the latest stable tag.
 # Parameters:
 #   $1: repository name (e.g. "vm2.DevOps")
 #   $2: parent directory of all vm2 repositories where the repository is expected to be located as well
 #       (e.g. $VM2_REPOS or "$HOME/repos/vm2"). Use `resolve_vm2_repos` to determine the parent directory of all vm2 repositories.
+#   $3: optional boolean flag indicating whether to allow the special directories '${vm2_repos}/vm2.DevOps' or '${vm2_repos}/.github' (default: false)
 # Returns:
 #   stdout: the resolved repository absolute path if found
 #   Exit code:
@@ -116,13 +120,15 @@ function resolve_vm2_repos()
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 function validate_repo()
 {
-    if [[ $# -ne 2 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly 2 arguments: the name of a repository and the directory where the repository is expected to be located (e.g. $VM2_REPOS or $default_vm2_repos)."
+    (( $# == 2 || $# == 3 )) || {
+        error 3 "${FUNCNAME[0]}() requires 2 or 3 arguments ($# provided): the name of a repository, the directory where the repository is expected to be located (e.g. $VM2_REPOS or $default_vm2_repos)," \
+                " and an optional boolean flag indicating whether to allow the special directories '${vm2_repos}/vm2.DevOps' or '${vm2_repos}/.github' (default: false)."
         return "$err_invalid_arguments"
-    fi
+    }
 
     local repo_name=$1
     local vm2_repos=$2
+    local allow_special_dirs=${3:-false}
     local r
 
     # try to resolve the repository path from the parameter alone (i.e., the current working directory or the absolute path provided as the first argument)
@@ -134,7 +140,7 @@ function validate_repo()
     }
 
     repo_path=$r
-    ! is_in "$repo_path" "${vm2_repos}/vm2.DevOps" "${vm2_repos}/.github" || {
+    ! is_in "$repo_path" "${vm2_repos}/vm2.DevOps" "${vm2_repos}/.github" || "$allow_special_dirs" || {
         error 3 "The repository directory cannot be '${vm2_repos}/vm2.DevOps' or '${vm2_repos}/.github'."
         return "$err_invalid_repo"
     }
@@ -144,19 +150,19 @@ function validate_repo()
     local dir="${vm2_repos:-.}/${repo_name}"
 
     if [[ ! -d "${dir}" ]]; then
-        error 3 "The '${repo_name}' repository is not found under ${vm2_repos}."
+        error 3 "The '${repo_name}' git repository directory is not found under ${vm2_repos}."
         return "$err_not_directory"
     fi
 
     if [[ "$dir" != $(root_working_tree "$dir") ]]; then
-        error 3 "The ${repo_name} repository at '$dir' is not a git repository."
+        error 3 "The ${repo_name} repository at '$dir' is not a git repository directory."
         return "$err_not_git_repository"
     fi
 
-    if ! is_on_or_after_latest_stable_tag "$dir" "$semverTagReleaseRegex"; then
+    is_on_or_after_latest_stable_tag "$dir" "$semverTagReleaseRegex" || {
         error 3 "The '${repo_name}' repository is behind the latest stable tag. Please synchronize."
         return "$err_behind_latest_stable_tag"
-    fi
+    }
 
     return "$success"
 }
@@ -180,7 +186,7 @@ function validate_repo()
 function resolve_repo_root()
 {
     (( $# <= 2 )) || {
-        error 3 "${FUNCNAME[0]}() requires no more than 2 arguments: the directory where the repository is located and the parent directory under which to search for the repository."
+        error 3 "${FUNCNAME[0]}() requires no more than 2 arguments ($# provided): the directory where the repository is located and the parent directory under which to search for the repository."
         return "$err_invalid_arguments"
     }
 

@@ -3,6 +3,8 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
+declare -rxi success
+
 # export variables to hold the results
 declare -x build_result="Unknown"
 declare -x warnings_count=''
@@ -155,5 +157,5 @@ function displayDotnetBuildSummary()
         package_version \
         informational_version
 
-    return 0
+    return "$success"
 }

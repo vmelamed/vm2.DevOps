@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025 Val Melamed
 
-
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
+
+declare -rxi success
 
 gth="┌────────────────────────────────────────────────────────────────────────────"
 
@@ -75,7 +76,7 @@ function push_state()
     save_table_format=$(get_table_format)
     save_ignore=$_ignore
     [[ $- =~ .*x.* ]] && set_tracing_on=1 || set_tracing_on=0
-    return 0
+    return "$success"
 }
 
 #-------------------------------------------------------------------------------
@@ -96,7 +97,7 @@ function pop_state()
     if ((set_tracing_on == 1)); then
         set -x
     fi
-    return 0
+    return "$success"
 }
 
 #-------------------------------------------------------------------------------
@@ -116,7 +117,7 @@ function _write_title()
 
     # shellcheck disable=SC2059 # Don't use variables in the printf format string. Use printf "..%s.." "$foo".
     printf "${table["header_format"]}" "$1"
-    return 0
+    return "$success"
 }
 
 #-------------------------------------------------------------------------------
@@ -169,7 +170,7 @@ function _write_line()
 
     # shellcheck disable=SC2059 # Don't use variables in the printf format string. Use printf "..%s.." "$foo".
     printf "${table["value_format"]}" "$1" "$value"
-    return 0
+    return "$success"
 }
 
 #-------------------------------------------------------------------------------
@@ -195,16 +196,13 @@ function _write_line()
 #-------------------------------------------------------------------------------
 function dump_vars()
 {
-    if (( $# == 0 )); then
-        return 0
-    fi
+    (( $# == 0 )) && return "$success"
 
     # save some current state - to be restored before returning from the function
     push_state
+    
     # shellcheck disable=SC2154 # ci is referenced but not assigned.
-    if [[ "$ci" == true ]]; then
-        set_table_format "markdown"
-    fi
+    "$ci" && set_table_format "markdown"
     set +x
     local v
     for v in "$@"; do
@@ -217,10 +215,7 @@ function dump_vars()
         esac
     done
 
-    if [[ $verbose == false ]]; then
-        pop_state
-        return 0
-    fi
+    ! $verbose && pop_state && return "$success"
 
     # for the proper behavior of this function change some global flags (to be restored before returning from the function)
     local -n table
@@ -275,5 +270,5 @@ function dump_vars()
 
     press_any_key
     pop_state
-    return 0
+    return "$success"
 }

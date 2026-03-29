@@ -3,11 +3,15 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-# shellcheck disable=SC2154 # variable is referenced but not assigned.
-if ! declare -pF "error" > "$_ignore"; then
-    diag_dir="$(dirname "${BASH_SOURCE[0]}")"
-    source "$diag_dir/_diagnostics.sh"
-fi
+declare -rxi success
+declare -rxi failure
+declare -rxi positive
+declare -rxi negative
+declare -rxi err_invalid_arguments
+declare -rxi err_argument_type
+declare -rxi err_argument_value
+
+declare -x _ignore
 
 #-------------------------------------------------------------------------------
 # Summary: Tests if a variable is defined.
@@ -22,10 +26,11 @@ fi
 #-------------------------------------------------------------------------------
 function is_defined_variable()
 {
-    if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly one argument: the name of the variable to test."
-        return 2
-    fi
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the variable to test."
+        return "$err_invalid_arguments"
+    }
+
     [[ -v "$1" ]] && declare -p "$1" &> "$_ignore"
 }
 
@@ -42,17 +47,19 @@ function is_defined_variable()
 #-------------------------------------------------------------------------------
 function is_defined_array()
 {
-    if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly one argument: the name of the array variable to test."
-        return 2
-    fi
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the variable to test."
+        return "$err_invalid_arguments"
+    }
 
     restoreShopt=$(shopt -p nocasematch) || true
     shopt -u nocasematch # set case sensitive matching
 
-    local decl rc=1
+    local decl rc="$negative"
 
-    decl=$(declare -p "$1" 2>"$_ignore") && [[ $decl =~ ^declare\ -a ]] && rc=0
+    decl=$(declare -p "$1" 2>"$_ignore") &&
+        [[ $decl =~ ^declare\ -a ]] &&
+            rc="$positive"
 
     eval "$restoreShopt" &> "$_ignore" || true # restore original shopt state
     return "$rc"
@@ -71,18 +78,20 @@ function is_defined_array()
 #-------------------------------------------------------------------------------
 function is_defined_associative_array()
 {
-    if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly one argument: the name of the associative array variable to test."
-        return 2
-    fi
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the associative array variable to test."
+        return "$err_invalid_arguments"
+    }
 
     restoreShopt=$(shopt -p nocasematch) || true
     shopt -u nocasematch # set case sensitive matching
 
     local decl
-    local rc=1
+    local rc="$negative"
 
-    decl=$(declare -p "$1" 2>"$_ignore") && [[ $decl =~ ^declare\ -A ]] && rc=0
+    decl=$(declare -p "$1" 2>"$_ignore") &&
+        [[ $decl =~ ^declare\ -A ]] &&
+            rc="$positive"
 
     eval "$restoreShopt" &> "$_ignore" || true # restore original shopt state
     return "$rc"
@@ -101,10 +110,11 @@ function is_defined_associative_array()
 #-------------------------------------------------------------------------------
 function is_defined_function()
 {
-    if [[ $# -ne 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires exactly one argument: the name of the function to test."
-        return 2
-    fi
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the function to test."
+        return "$err_invalid_arguments"
+    }
+
     declare -pF "$1" > "$_ignore" 2>&1
 }
 
@@ -119,6 +129,11 @@ function is_defined_function()
 #-------------------------------------------------------------------------------
 function is_boolean()
 {
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
+        return "$err_invalid_arguments"
+    }
+
     [[ "$1" =~ ^(true|false)$ ]]
 }
 
@@ -133,6 +148,11 @@ function is_boolean()
 #-------------------------------------------------------------------------------
 function is_natural()
 {
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
+        return "$err_invalid_arguments"
+    }
+
     [[ "$1" =~ ^[0-9]+$ ]]
 }
 
@@ -147,6 +167,11 @@ function is_natural()
 #-------------------------------------------------------------------------------
 function is_positive()
 {
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
+        return "$err_invalid_arguments"
+    }
+
     [[ "$1" =~ ^[+]?[0-9]+$  && ! "$1" =~ ^[+]?0+$ ]]
 }
 
@@ -161,6 +186,11 @@ function is_positive()
 #-------------------------------------------------------------------------------
 function is_non_negative()
 {
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
+        return "$err_invalid_arguments"
+    }
+
     [[ "$1" =~ ^[+]?[0-9]+$ ]]
 }
 
@@ -175,6 +205,11 @@ function is_non_negative()
 #-------------------------------------------------------------------------------
 function is_non_positive()
 {
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
+        return "$err_invalid_arguments"
+    }
+
     [[ "$1" =~ ^-[0-9]+$ || "$1" =~ ^[-]?0+$ ]]
 }
 
@@ -189,6 +224,11 @@ function is_non_positive()
 #-------------------------------------------------------------------------------
 function is_negative()
 {
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
+        return "$err_invalid_arguments"
+    }
+
     [[ $1 =~ ^-[0-9]+$ && ! "$1" =~ ^[-]?0+$ ]]
 }
 
@@ -203,6 +243,11 @@ function is_negative()
 #-------------------------------------------------------------------------------
 function is_integer()
 {
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
+        return "$err_invalid_arguments"
+    }
+
     [[ "$1" =~ ^[-+]?[0-9]+$ ]]
 }
 
@@ -217,6 +262,11 @@ function is_integer()
 #-------------------------------------------------------------------------------
 function is_decimal()
 {
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
+        return "$err_invalid_arguments"
+    }
+
     [[ "$1" =~ ^[-+]?[0-9]*(\.[0-9]*)?$ ]]
 }
 
@@ -232,24 +282,30 @@ function is_decimal()
 #-------------------------------------------------------------------------------
 function is_in()
 {
-    if [[ $# -lt 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires at least 1 argument: the value to test."
-        return 2
-    fi
-    if [[ $# -eq 1 ]]; then
-        # testing against an empty set of options is always false
-        return 1
-    fi
+    (( $# >= 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires at least 1 argument: the value to test and zero or more options to compare against."
+        return "$err_invalid_arguments"
+    }
+
+    # testing against an empty set of options is always false
+    (( $# == 1 )) && return "$negative"
 
     local sought="$1"; shift
     local v
+
     for v in "$@"; do
-        [[ "$sought" == "$v" ]] && return 0
+        [[ "$sought" == "$v" ]] && return "$positive"
     done
-    return 1
+
+    return "$negative"
 }
 
 function is_base64()
 {
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
+        return "$err_invalid_arguments"
+    }
+
     [[ "$1" =~ ^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$ ]]
 }

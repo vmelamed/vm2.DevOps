@@ -1,14 +1,19 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025 Val Melamed
 
-
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 
-if ! declare -pF "error" > "$_ignore"; then
-    semver_dir="$(dirname "${BASH_SOURCE[0]}")"
-    source "$semver_dir/_diagnostics.sh"
-fi
+declare -rxi success
+declare -rxi failure
+# boolean return codes:
+declare -rxi positive
+declare -rxi negative
+
+# RETURN CODES THAT SHOULD NOT BE REUSED FOR OTHER PURPOSES:
+declare -rxi err_invalid_arguments
+declare -rxi err_argument_type
+declare -rxi err_argument_value
 
 #-------------------------------------------------------------------------------
 # Summary: Displays a prompt and waits for user to press any key before continuing.
@@ -23,11 +28,11 @@ fi
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 function press_any_key()
 {
-    if ! $quiet; then
+    $quiet || {
         read -n 1 -rsp 'Press any key to continue...'
         echo
-    fi
-    return 0
+    }
+    return "$success"
 }
 
 #-------------------------------------------------------------------------------
@@ -48,16 +53,26 @@ function press_any_key()
 #-------------------------------------------------------------------------------
 function confirm()
 {
-    if [[ $# -eq 0 || $# -gt 2 || -z "$1" ]]; then
-        error 3 "${FUNCNAME[0]}() requires at least one parameter: the prompt and a second, optional argument -default response."
-        return 2
-    fi
+    (( $# == 1 || $# == 2 )) || {
+        error 3 "${FUNCNAME[0]}() requires at least one parameter (provided $#): the prompt and a second, optional argument -default response."
+        return "$err_invalid_arguments"
+    }
+    [[ -n "$1" ]] || {
+        error 3 "${FUNCNAME[0]}() requires that the \$1 parameter is not empty."
+        return "$err_argument_value"
+    }
 
-    local default
-    [[ $# -eq 2 ]] && default=${2,,} || default="y"
+    local default="y"
+    (( $# == 1 )) || {
+        default=${2,,}
+        [[ "$default" =~ ^[yn]$ ]] || {
+            error 3 "${FUNCNAME[0]}() requires that the \$2 parameter is either 'y' or 'n' (case insensitive)."
+            return "$err_argument_value"
+        }
+    }
 
     local response=$default
-    if ! $quiet; then
+    $quiet || {
         local prompt="$1"
         local suffix
         [[ "$default" == y ]] && suffix="[Y/n]" || suffix="[y/N]"
@@ -65,9 +80,9 @@ function confirm()
         while true; do
             read -rp "$prompt $suffix: " response
             [[ -z "$response" || "$response" =~ ^[ynYN]$ ]] && break
-            warning "Please enter one of y/Y/n/N."
+            warning "Please enter one of Y or N (case insensitive)."
         done
-    fi
+    }
     response=${response:-$default}
     [[ ${response,,} == "y" ]]
 }
@@ -110,30 +125,37 @@ function confirm()
 #-------------------------------------------------------------------------------
 function enter_value()
 {
+    (( $# <= 4 )) || {
+        error 3 "${FUNCNAME[0]}() accepts no more than 4 arguments (provided $#):
+    1) a prompt
+    2) an optional default value
+    3) an optional boolean to suppress the echo of the input to the terminal
+    4) the optional name of a validation function."
+        return "$err_invalid_arguments"
+    }
+
     local prompt=''
     local default=''
     local is_secret=false
     local validate_fn=true
-
-    (( $# <= 4 )) || {
-        error 3 "${FUNCNAME[0]}() accepts no more than 4 arguments: a prompt, optional default value, an optional boolean to suppress the echo of the input to the terminal, and the optional name of a validation function."
-        return 2
-    }
 
     [[ $# -ge 1 && "$1" != "_" ]] && prompt="$1"
     [[ $# -ge 2 && "$2" != "_" ]] && default="$2"
     [[ $# -ge 3 && "$3" != "_" ]] && is_secret="$3"
     [[ $# -ge 4 && "$4" != "_" ]] && validate_fn="$4"
 
-    if [[ -n $validate_fn && -n $default ]] && ! $validate_fn "$default"; then
+    [[ -z $validate_fn || -z $default ]] || $validate_fn "$default" || {
         error "The default value '$default' does not pass the validation function '$validate_fn'."
-        return 2
-    fi
+        return "$err_argument_value"
+    }
     is_boolean "$is_secret" || {
         error "The \$3 argument of ${FUNCNAME[0]}() (is_secret) must be a boolean value (true or false), indicating whether the input is a secret that should not be echoed to the terminal."
-        return 2
+        return "$err_argument_value"
     }
-    is_quiet && { echo "$default"; return 0; }
+    is_quiet && {
+        echo "$default"
+        return "$success"
+    }
 
     local errs=$errors
     local input
@@ -152,11 +174,11 @@ function enter_value()
         [[  -n "$input" ]] || input="$default"
         $validate_fn "$input" && valid=true || valid=false
 
-        if $first && $is_secret && ! $valid; then
+        ! $valid && $is_secret && $first && {
             # prefix the prompt with a newline to separate the new prompts with new lines in secret mode
             prompt=$'\n'"$prompt"
             first=false
-        fi
+        }
     done
 
     # all good here! restore any errors that may have been overwritten by the validation function
@@ -185,48 +207,47 @@ function enter_value()
 #-------------------------------------------------------------------------------
 function choose()
 {
-    [[ $# -ge 3 ]] || {
-        error 3 "${FUNCNAME[0]}() requires 3 or more arguments: a prompt and at least two choices."
-        return 2;
+    (( $# >= 3 )) || {
+        error 3 "${FUNCNAME[0]}() requires 3 or more arguments ($# provided): a prompt and at least two choices."
+        return "$err_invalid_arguments";
     }
 
-    if $quiet; then
+    $quiet && {
         # just return the default choice (1)
         printf '1'
-    else
-        # print the menu
-        local prompt=$1; shift
-        local options=("$@")
+        return "$success"
+    }
 
-        echo "$prompt" >&2
+    # print the menu
+    local prompt=$1; shift
+    local options=("$@")
 
-        local -i i=1
-        for o in "${options[@]}"; do
-            if [[ $i -eq 1 ]]; then
-                echo "  $i) $o (default)" >&2
-            else
-                echo "  $i) $o" >&2
-            fi
-            i=$((i+1))
-        done
+    echo "$prompt" >&2
 
-        # read the choice
-        local selection=1
-        while true; do
-            read -r -p "Enter choice [1-${#options[@]}]: " selection
-            selection=${selection:-1}
-            if ! is_natural "$selection"; then # it is not from this world! :)
-                warning "Invalid choice: $selection."
-                continue
-            fi
-            (( selection == 0 )) && selection=1 # the default
-            (( selection >= 1 && selection <= ${#options[@]} )) && break
-            warning "Invalid choice: $selection"
-        done
-        printf '%d' "$selection"
-    fi
+    local -i i=1
+    for o in "${options[@]}"; do
+        (( i == 1 )) &&
+            echo "  $i) $o (default)" >&2 ||
+            echo "  $i) $o" >&2
+        (( ++i ))
+    done
 
-    return 0
+    # read the choice
+    local selection=1
+    while true; do
+        read -r -p "Enter choice [1-${#options[@]}]: " selection
+        selection=${selection:-1}
+        if ! is_natural "$selection"; then # it is not from this world;)
+            warning "Invalid choice: $selection."
+            continue
+        fi
+        (( selection == 0 )) && selection=1 && break
+        (( selection >= 1 && selection <= ${#options[@]} )) && break
+        warning "Invalid choice: $selection"
+    done
+    printf '%d' "$selection"
+
+    return "$success"
 }
 
 #-------------------------------------------------------------------------------

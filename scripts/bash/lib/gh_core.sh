@@ -67,11 +67,9 @@ function to_stdout()
     local line
     while IFS= read -r line; do
         echo "$line"
-        if [[ $github_actions == true ]]; then
-            echo "$line" >> "$github_step_summary"
-        fi
+        $github_actions && echo "$line" >> "$github_step_summary"
     done
-    return 0
+    return "$success"
 }
 
 #-------------------------------------------------------------------------------
@@ -94,11 +92,9 @@ function to_traceout()
     local line
     while IFS= read -r line; do
         echo "$line" >&2
-        if [[ $github_actions == true && $trace_to_summary == true ]]; then
-            echo "$line" >> "$github_step_summary"
-        fi
+        $github_actions && $trace_to_summary && echo "$line" >> "$github_step_summary"
     done
-    return 0
+    return "$success"
 }
 
 #-------------------------------------------------------------------------------
@@ -120,11 +116,9 @@ function to_stderr()
     local line
     while IFS= read -r line; do
         echo "$line" >&2
-        if [[ $github_actions == true ]]; then
-            echo "$line" >> "$github_step_summary"
-        fi
+        $github_actions && echo "$line" >> "$github_step_summary"
     done
-    return 0
+    return "$success"
 }
 
 #-------------------------------------------------------------------------------
@@ -148,10 +142,7 @@ function to_summary()
 
     function __print_line()
     {
-        if $first; then
-            echo "## Summary"
-            first=false
-        fi
+        $first && echo "## Summary" && first=false
         echo "$line"
     }
 
@@ -167,7 +158,7 @@ function to_summary()
         fi
     } | to_stdout
 
-    return 0
+    return "$success"
 }
 
 #-------------------------------------------------------------------------------
@@ -189,9 +180,7 @@ function to_output()
     local line
     while IFS= read -r line; do
         echo "$line"
-        if [[ $github_actions == true ]]; then
-            echo "$line" >> "$github_output"
-        fi
+        $github_actions && echo "$line" >> "$github_output"
     done
 }
 
@@ -213,14 +202,16 @@ function to_output()
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 function to_github_output()
 {
-    if [[ $# -eq 0 || $# -ge 3 ]]; then
-        error 3 "${FUNCNAME[0]}() requires one or two arguments: " \
+    (( $# == 1 || $# == 2 )) || {
+        error 3 "${FUNCNAME[0]}() requires one or two arguments (provided $#): " \
               "the name of the variable to output and optionally the name to use in GitHub Actions output."
-        return 2
-    fi
+        return "$err_invalid_arguments"
+    }
 
     local k
-    [[ $# -eq 2 ]] && k="$2" || k="${1//_/-}"
+    # get the key from the second argument if provided,
+    # otherwise transform the var name to a key by replacing underscores with hyphens
+    (( $# == 2 )) && k="$2" || k="${1//_/-}"
 
     local -n v=$1
     echo "$k=$v" | to_output
@@ -246,15 +237,16 @@ function to_github_output()
 #-------------------------------------------------------------------------------
 function args_to_github_output()
 {
-    if [[ $# -eq 0 ]]; then
-        error 3 "${FUNCNAME[0]}() requires one or more arguments: the names of the variables to output."
-        return 2
-    fi
+    (( $# > 0 )) || {
+        error 3 "${FUNCNAME[0]}() requires one or more arguments (provided $#): the names of the variables to output."
+        return "$err_invalid_arguments"
+    }
 
     {
         local var
         local k
         for var in "$@"; do
+            # transform the var name to a key by replacing underscores with hyphens
             k="${var//_/-}"
             echo "$k=${!var}"
         done

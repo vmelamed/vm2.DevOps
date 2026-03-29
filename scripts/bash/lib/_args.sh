@@ -6,6 +6,14 @@
 # shellcheck disable=SC2089
 # shellcheck disable=SC2090
 
+declare -rxi success
+declare -rxi failure
+declare -rxi positive=0
+declare -rxi negative=1
+declare -rxi err_invalid_arguments
+declare -rxi err_argument_type
+declare -rxi err_argument_value
+
 # default values for the common flags below
 declare -xr default_quiet=false
 declare -xr default_verbose=false
@@ -17,6 +25,7 @@ declare -xr default_table_format="graphical"
 declare -axr table_formats=("graphical" "markdown")
 
 # common flags exported for use by the top-level scripts with CLI switches, options and by other means. Prefer the set_* functions below to set them.
+declare -xr default__ignore
 declare -x _ignore                                  # the file to redirect unwanted output to, changing the value may be useful for debugging, e.g. to redirect to /dev/stdout
 
 declare -x quiet=${QUIET:-$default_quiet}           # suppresses user prompts, assuming default answers
@@ -34,7 +43,7 @@ declare -rx ci                                      # Indicates whether the scri
 declare -xr debugger                                # Indicates whether the script is running under a debugger, e.g. BashDb.
                                                     # SHOULD NOT BE OVERRIDDEN BY TOP-LEVEL SWITCHES AND OPTIONS!
 
-if [[ "${ci}" == true ]]; then # CI is usually defined by most CI/CD systems. Set from the env. variable CI.
+if "$ci"; then                                      # CI is usually defined by most CI/CD systems. Set from the env. variable CI.
     table_format=${DUMP_FORMAT:-markdown}           # in CI/CD environments, default to markdown format unless overridden by DUMP_FORMAT
     quiet=true                                      # in CI/CD environments, default to quiet mode
 else
@@ -53,7 +62,7 @@ fi
 function set_quiet()
 {
     quiet=true
-    return 0
+    return "$success"
 }
 
 #-------------------------------------------------------------------------------
@@ -68,7 +77,7 @@ function set_quiet()
 function unset_quiet()
 {
     quiet=false
-    return 0
+    return "$success"
 }
 
 #-------------------------------------------------------------------------------
@@ -97,7 +106,7 @@ function is_quiet()
 function set_verbose()
 {
     verbose=true
-    return 0
+    return "$success"
 }
 
 #-------------------------------------------------------------------------------
@@ -112,7 +121,7 @@ function set_verbose()
 function unset_verbose()
 {
     verbose=false
-    return 0
+    return "$success"
 }
 
 #-------------------------------------------------------------------------------
@@ -141,7 +150,7 @@ function is_verbose()
 function set_dry_run()
 {
     dry_run=true
-    return 0
+    return "$success"
 }
 
 #-------------------------------------------------------------------------------
@@ -156,7 +165,7 @@ function set_dry_run()
 function unset_dry_run()
 {
     dry_run=false
-    return 0
+    return "$success"
 }
 
 #-------------------------------------------------------------------------------
@@ -190,7 +199,7 @@ function set_trace_enabled()
     verbose=true
     _ignore=/dev/stderr
     set -x
-    return 0
+    return "$success"
 }
 
 #-------------------------------------------------------------------------------
@@ -210,11 +219,15 @@ function unset_trace_enabled()
     verbose=false
     _ignore=/dev/null
     set +x
-    return 0
+    return "$success"
 }
 
 ## Will be overridden in _predicates.sh, akin to forward declaration in C/C++
-function is_in() { return 0; }
+function is_in()
+{
+    error 3 "${FUNCNAME[0]}() is not implemented yet - source _predicates.sh to override."
+    return "$failure";
+}
 
 #-------------------------------------------------------------------------------
 # Summary: Sets the table format for variable dumps to either graphical or markdown.
@@ -229,17 +242,20 @@ function is_in() { return 0; }
 #-------------------------------------------------------------------------------
 function set_table_format()
 {
-    if [[ $# -ne 1 || -z "$1" ]]; then
-        error 3 "${FUNCNAME[0]}() requires one parameter - the table format"
-        return 2
-    fi
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires one parameter ($# provided) - the table format, one of ${table_formats[*]}"
+        return "$err_invalid_arguments"
+    }
+
     local f="${1,,}"
-    if ! is_in "$f" "${table_formats[@]}"; then
-        error "Invalid table format: $1."
-        return 2
-    fi
+    # shellcheck disable=SC2015
+    [[ -n "$1" ]] && is_in "$f" "${table_formats[@]}" || {
+        error "Invalid table format: '$1'. Must be one of ${table_formats[*]}."
+        return "$err_argument_value"
+    }
+
     table_format="$f"
-    return 0
+    return "$success"
 }
 
 #-------------------------------------------------------------------------------
@@ -254,7 +270,7 @@ function set_table_format()
 function get_table_format()
 {
     printf "%s" "$table_format"
-    return 0
+    return "$success"
 }
 
 #-------------------------------------------------------------------------------
@@ -274,13 +290,16 @@ function get_table_format()
 # shellcheck disable=SC2034 # variable appears unused. Verify it or export it
 function get_common_arg()
 {
-    if [[ $# -eq 0 ]]; then
-        return 2
-    fi
+    (( $# == 1 )) && {
+        error 3 "${FUNCNAME[0]}() requires one parameter ($# provided): the command-line argument to process"
+        return "$err_invalid_arguments"
+    }
+
     # the calling scripts should not use short options:
     # --help|-h|-\?|-v|--verbose|-q|--quiet|-x|--trace|-y|--dry-run
     run_short_usage=false
     run_long_usage=false
+
     case "${1,,}" in
         --help          ) run_long_usage=true; run_short_usage=false ;;
         -h|-\?          ) run_long_usage=false; run_short_usage=true ;;
@@ -290,11 +309,12 @@ function get_common_arg()
         -y|--dry-run    ) set_dry_run ;;
         -gr|--graphical ) set_table_format "graphical" ;;
         -md|--markdown  ) set_table_format "markdown" ;;
-        * ) return 1 ;;  # not a common argument
+        *               ) return "$negative" ;;  # not a common argument
     esac
+
     $run_long_usage && usage true
     $run_short_usage && usage false
-    return 0 # it was a common argument and was processed
+    return "$positive" # it was a common argument and was processed
 }
 
 #-------------------------------------------------------------------------------
@@ -314,10 +334,14 @@ declare -x allow_on_exit
 
 function display_usage_msg()
 {
-    if [[ $# -eq 0 || -z "$1" ]]; then
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires at least one parameter ($# provided): the usage text"
+        exit "$err_invalid_arguments"
+    }
+    [[ -n "$1" ]] || {
         error 3 "${FUNCNAME[0]}() requires at least one parameter - the usage text"
-        exit 2
-    fi
+        exit "$err_argument_value"
+    }
 
     local ec=0
 
@@ -330,7 +354,7 @@ function display_usage_msg()
     shift
     if [[ $# -gt 0 && -n "$1" ]]; then
         error 5 "$*"
-        ec=2
+        ec="$err_invalid_arguments"
     fi
     echo "
 $usage_txt
@@ -387,7 +411,7 @@ declare -rx common_vars="  VERBOSE                       Enables verbose output 
 
 # Override the default or environment values of common flags based on other flags upon sourcing.
 # Make sure that the other set_* functions are honoring the ci flag.
-if [[ $ci == true ]]; then
+if $ci; then
     # guard CI from quiet off
     _ignore=$default__ignore
     set_quiet
@@ -398,7 +422,7 @@ fi
 # By default all scripts trap DEBUG and EXIT to provide better error handling.
 # However, when running under a debugger, e.g. 'bashdb', trapping these signals
 # interferes with the debugging session.
-if [[ $debugger != true ]]; then
+if ! $debugger; then
     # set the traps to see the last faulted command. However, they get in the way of debugging.
     trap on_debug DEBUG
     trap on_exit EXIT
