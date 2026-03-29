@@ -39,7 +39,7 @@ How to set up a new .NET repository to use vm2.DevOps CI/CD automation.
 The vm2.Templates package scaffolds a ready-to-use repository:
 
 ```bash
-dotnet new vm2 -n MyProject
+dotnet new vm2pkg -n MyProject
 ```
 
 This generates the full directory structure, workflows, and configuration files — no manual

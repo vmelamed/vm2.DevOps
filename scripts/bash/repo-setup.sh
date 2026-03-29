@@ -15,12 +15,13 @@ declare -xr script_dir
 declare -xr lib_dir
 
 # shellcheck disable=SC1091
-source "${lib_dir}/core.sh"
-# shellcheck disable=SC1091
-source "${lib_dir}/_sanitize.sh"
+{
+    source "$lib_dir/core.sh"
+    source "$lib_dir/_sanitize.sh"
+    source "$lib_dir/_git_vm2.sh"
+}
 
 # defaults
-declare -xr default_vm2_repos="$HOME/repos/vm2"
 declare -xr default_owner="vmelamed"
 declare -xr default_visibility="public"
 declare -xr default_branch="main"
@@ -28,7 +29,6 @@ declare -xr default_interactive=false
 declare -xr default_audit=false
 
 # start with default input
-declare -x vm2_repos="${VM2_REPOS:-$default_vm2_repos}"
 declare -x repo_path=""
 declare -x visibility=${default_visibility}
 declare -x branch=${default_branch}
@@ -42,6 +42,7 @@ declare -x use_ssh=true
 declare -x use_https=false
 declare -x repo_owner=${ORGANIZATION:-$default_owner}
 
+declare -x vm2_repos=""
 declare -x repo_name=""
 declare -x repo=""
 declare -x repo_url=""
@@ -57,6 +58,8 @@ declare -x path_main_protection_ruleset
 
 declare -xa required_checks=()
 declare -xi github_actions_app_id=0
+
+declare -x vm2=""
 
 source "${script_dir}/repo-setup.args.sh"
 source "${script_dir}/repo-setup.usage.sh"
@@ -84,51 +87,33 @@ exit_if_has_errors
 # Resolve and validate vm2_repos:
 #-------------------------------------------------------------------------------
 
-trace "VM2_REPOS='$VM2_REPOS'"
-trace "vm2_repos='$vm2_repos'"
+trace "VM2_REPOS='${VM2_REPOS:-}'"
 
-declare -xr expects_git_repo="${script_name} expects that the vm2.* repositories are located in one parent directory specified by the '--vm2-repos' option, or the '\$VM2_REPOS' environment variable, or in the default '\$HOME/repos/vm2'."
+declare -xr expects_git_repo="${script_name} expects that the vm2.* repositories are located in one parent directory specified by the '--vm2-repos' option, or the '\$VM2_REPOS' environment variable, or in the default '$default_vm2_repos'."
 
-# try to resolve vm2_repos from the environment variable VM2_REPOS, if not $HOME/repos/vm2, and finally from the command line option --vm2-repos.
-if [[ -n "$vm2_repos" && -d "$vm2_repos" ]]; then
-    # looks good so far - ensure $vm2_repos is absolute path and exists.
-    vm2_repos=$(realpath -e "$vm2_repos" 2> "$_ignore") ||
-        usage false "The path specified by the '--vm2-repos' option, or the '\$VM2_REPOS' environment variable, or the default '\$HOME/repos/vm2' - '$vm2_repos' - is invalid."
-    trace "vm2_repos='$vm2_repos' from '--vm2-repos option', or \$VM2_REPOS, or '\$HOME/repos/vm2'"
+#===============================
+# Find and validate vm2_repos:
+#===============================
+if [[ -z "$vm2_repos" ]]; then
+    vm2_repos=$(resolve_vm2_repos)
+    rc=$?
 else
-    # Try from the current working directory:
-    r=$(root_working_tree "$(pwd)") ||
-        confirm "${expects_git_repo} Could not determine the path of the parent directory of the vm2.* repositories. Do you want to proceed and try to determine it heuristically?" "n" ||
-        usage false "${expects_git_repo} Could not determine the path of the parent directory of the vm2.* repositories."
-
-    # or try heuristics:
-    # suppose this script is from a cloned vm2.DevOps repository - use git to find the root of the repository and then use its parent directory as vm2_repos
-    r=$(root_working_tree "$script_dir") ||
-
-    ## let's not do this - we don't know where this script is located - it could be in any directory.
-    ##
-    ## or try to start from the directory of this script which is usually in vm2.DevOps/scripts/bash and find the grand-parent directory - vm2.DevOps
-    ## we expect that this should give us the directory of the vm2.DevOps repo:
-    #r=$(realpath -e "$script_dir/../..") ||
-
-    # all failed - exit with error and usage.
-    usage false "Could not get the parent directory of this script's repository. ${expects_git_repo}"
-
-    # get the parent of vm2.DevOps as vm2_repos
-    vm2_repos="$(dirname "$r")"
-
-    trace "vm2_repos='$vm2_repos' from heuristics"
+    vm2_repos=$(resolve_vm2_repos "$vm2_repos")
+    rc=$?
 fi
+(( rc == success ))  ||  exit "$rc"
 
-# now make sure that we are seeing .github and vm2.DevOps properly through vm2_repos
-validate_source_repo ".github"
-validate_source_repo "vm2.DevOps"
+# make sure we are seeing .github and vm2.DevOps properly through vm2_repos
+validate_repo ".github" "$vm2_repos"
+validate_repo "vm2.DevOps" "$vm2_repos"
+exit_if_has_errors
+
+trace "All vm2 repositories are expected in '$vm2_repos'"
 
 declare -x _ci_yaml=''
 
 _ci_yaml="$vm2_repos/vm2.DevOps/.github/workflows/_ci.yaml"
-[[ -s "$_ci_yaml" ]] ||
-    error "Could not find _ci.yaml GitHub Actions reusable workflow file in ${vm2_repos}."
+[[ -s "$_ci_yaml" ]] || error "Could not find _ci.yaml GitHub Actions reusable workflow file in ${vm2_repos}."
 
 exit_if_has_errors
 
@@ -139,35 +124,22 @@ info "vm2.* repositories path        => $vm2_repos"
 #-------------------------------------------------------------------------------
 # Resolve and validate repo_path:
 #-------------------------------------------------------------------------------
+repo_path=$(resolve_repo_root "$repo_root" "$vm2_repos")
+rc=$?
+(( rc == success || rc == err_not_git_repository )) ||
+    usage false "Could not resolve the repository root for '$repo_root' within '$vm2_repos'."
 
-[[ -n "$repo_path" ]] ||  repo_path="$(pwd)"
+reset_errors
 
-# try to resolve repo_path from the parameter or from the current working directory
-r=$(realpath -e "$repo_path" 2> "$_ignore") ||
-# try to resolve repo_path relative to vm2_repos
-r=$(realpath -e "$vm2_repos/${repo_path#/*}" 2> "$_ignore") ||
-    usage false "Could not find the repository directory '$repo_path' neither in the current working directory, nor in '$vm2_repos'."
-repo_path=$r
-! is_in "$repo_path" "${vm2_repos}/vm2.DevOps" "${vm2_repos}/.github" ||
-    usage false "The repository directory cannot be '${vm2_repos}/vm2.DevOps' or '${vm2_repos}/.github'."
-trace "repo_path='$repo_path' from parameter, \$(pwd), or vm2_repos with realpath"
+# For initializing and configuring a new repo we require that the the user provides the path to the root of the new repo's
+# work tree. It should be created using `dotnet new vm2.NewPkg` and should have the .github/workflows/CI.yaml file in place.
+# If we cannot find the .github/workflows/CI.yaml file in the specified path, we bail out.
+[[ -s "$repo_path/.github/workflows/CI.yaml" ]] ||
+    usage false "Could not find .github/workflows/CI.yaml in '$repo_path'. Please use 'dotnet new vm2.NewPkg' to create a valid project directory structure, or specify the correct path to the root of the project/repository using '--path <path>'."
 
-# we found some directory, let's see if it is from within a git repository (works when repo_path is the pwd) - and if yes - get the root of it
-if r=$(find_repo_root "$repo_path" false "$vm2_repos") ||
-   r=$(find_repo_root "$repo_path" false "$HOME"); then
-    repo_path=$r
-    trace "repo_path='$repo_path' from find_repo_root in vm2_repos or \$HOME"
-else
-    reset_errors
-
-    # For initializing and configuring a new repo we require that the the user provides the path to the root of the new repo's
-    # work tree. It should be created using `dotnet new vm2.NewPkg` and should have the .github/workflows/CI.yaml file in place.
-    # If we cannot find the .github/workflows/CI.yaml file in the specified path, we bail out.
-    [[ -s "$repo_path/.github/workflows/CI.yaml" ]] ||
-        usage false "Could not find .github/workflows/CI.yaml in '$repo_path'. Please use 'dotnet new vm2.NewPkg' to create a valid project directory structure, or specify the correct path to the root of the project/repository using '--path <path>'."
-
+(( rc == err_not_git_repository )) &&
     trace "repo_path='$repo_path' has .github/workflows/CI.yaml, but is not inside a git repository. Will initialize a new repository here."
-fi
+
 trace "Repository path: '$repo_path'"
 
 #-------------------------------------------------------------------------------

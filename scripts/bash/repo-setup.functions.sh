@@ -57,42 +57,6 @@ declare -x jq_ruleset_id
 declare -x jq_ruleset_rules
 declare -x jq_status_checks
 
-#-------------------------------------------------------------------------------
-# Summary: Validates that the specified repository exists, it is a git repository, and is at or ahead of the latest stable tag.
-# Parameters:
-#   $1: repository name (e.g. "vm2.DevOps")
-# Returns:
-#   Exit code:
-#     0 - if the repository exists and meets the above criteria, or
-#     2 - if the repository is invalid or does not meet the criteria
-# Environment variables:
-#   vm2_repos:
-#     the parent directory where the repository is expected to have been cloned to, e.g. $VM2_REPOS or "$HOME/repos/vm2"
-# Dependencies:
-#   git CLI (functions root_working_tree, is_on_or_after_latest_stable_tag)
-# Usage:
-#   validate_source_repo "vm2.DevOps"
-#-------------------------------------------------------------------------------
-# shellcheck disable=SC2154 # variable is referenced but not assigned.
-function validate_source_repo()
-{
-    if [[ $# -lt 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires at least 1 argument: the name of a repository."
-        return 2
-    fi
-
-    local repo_name=$1
-    local dir="${vm2_repos}/${repo_name}"
-
-    [[ -d "${dir}" ]] || error "The '${repo_name}' repository is not found under ${vm2_repos}."
-
-    if [[ "$dir" == $(root_working_tree "$dir") ]]; then
-        is_on_or_after_latest_stable_tag "$dir" "$semverTagReleaseRegex" || error "The '${repo_name}' repository is behind the latest stable tag. Please synchronize."
-    else
-        confirm "The ${repo_name} repository at '$dir' is not a git repository. Do you want to continue?" "n" || error "The ${repo_name} repository at '$dir' is not a git repository."
-    fi
-}
-
 function resolve_github_actions_app_id()
 {
     # Resolve the GitHub Actions app ID dynamically via the API.

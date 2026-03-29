@@ -30,6 +30,7 @@ declare -axr valid_actions=(
 all_actions_str=$(print_sequence -s=', ' -q='"' "${valid_actions[@]}")
 declare -xr all_actions_str
 
+# follow the git diff and merge commands parameters naming convention
 declare LOCAL=""
 declare REMOTE=""
 
@@ -59,35 +60,6 @@ declare -rA merge_commands=(
     ["kdiff3"]="kdiff3 \"\$LOCAL\" \"\$REMOTE\""
     ["vimdiff"]="vimdiff \"\$LOCAL\" \"\$REMOTE\""
 )
-
-## Validates that the given directory is a root of a repository working tree, and its HEAD is on or after the latest stable tag.
-## Otherwise confirm with the user that they want to continue
-## Usage: validate_source_repo <root-repo>
-function validate_source_repo()
-{
-    if [[ $# -lt 1 ]]; then
-        error 3 "${FUNCNAME[0]}() requires at least 1 argument: the name of a repository."
-        return 2
-    fi
-
-    local repo_name=$1
-    local dir="${vm2_repos}/${repo_name}"
-
-    if [[ ! -d "${dir}" ]]; then
-        error "The '${repo_name}' repository is not found under ${vm2_repos}."
-        exit 2
-    fi
-
-    if [[ "$dir" == $(root_working_tree "$dir") ]]; then
-        is_on_or_after_latest_stable_tag "$dir" "$semverTagReleaseRegex" || {
-            error "The '${repo_name}' repository is behind the latest stable tag. Please synchronize."
-            exit 2
-        }
-    else
-        confirm "The ${repo_name} repository at '$dir' is not a git repository. Do you want to continue?" "n" ||
-            exit 2
-    fi
-}
 
 function find_target_path()
 {
@@ -313,6 +285,7 @@ function are_different()
 {
     local display_diff=${3:-true}
 
+    # follow the git diff command parameters naming convention, so the eval command can use them correctly
     LOCAL=$1
     REMOTE=$2
 
@@ -336,6 +309,7 @@ function are_different()
 # shellcheck disable=SC2034 # BASE appears unused. Verify use (or export if used externally).
 function merge()
 {
+    # follow the git merge command parameters naming convention, so the eval command can use them correctly
     REMOTE=$2
     LOCAL=$1
     BASE=$2
