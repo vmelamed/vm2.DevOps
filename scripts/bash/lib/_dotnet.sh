@@ -8,6 +8,8 @@
 declare -gr __VM2_LIB_DOTNET_SH_LOADED=1
 
 declare -rxi success
+declare -rxi failure
+declare -rxi err_invalid_arguments
 
 # export variables to hold the results
 declare -x build_result="Unknown"
@@ -161,5 +163,45 @@ function displayDotnetBuildSummary()
         package_version \
         informational_version
 
+    return "$success"
+}
+
+function get_build_info()
+{
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): the name of the build information variable to retrieve."
+        return "$err_invalid_arguments"
+    }
+
+    case $1 in
+        build_result )
+            echo "$build_result"
+            ;;
+        warnings_count )
+            echo "$warnings_count"
+            ;;
+        errors_count )
+            echo "$errors_count"
+            ;;
+        assembly_version )
+            echo "$assembly_version"
+            ;;
+        file_version )
+            echo "$file_version"
+            ;;
+        informational_version )
+            echo "$informational_version"
+            ;;
+        version )
+            echo "$version"
+            ;;
+        package_version )
+            echo "$package_version"
+            ;;
+        * )
+            error "Unrecognized variable: $var"
+            return "$failure"
+            ;;
+    esac
     return "$success"
 }

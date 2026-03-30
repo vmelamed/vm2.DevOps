@@ -29,11 +29,7 @@ declare -rxi failure
 declare -rxi positive
 declare -rxi negative
 
-declare -x verbose
-
 # global error counter
-declare -ix errors=0
-
 declare -rxi err_invalid_arguments
 
 #-------------------------------------------------------------------------------
@@ -94,6 +90,27 @@ function to_stderr()
 }
 
 #-------------------------------------------------------------------------------
+# Summary: Returns the current value of the global error counter.
+# Parameters: none
+# Returns:
+#   Exit code: the current value of the global error counter
+# Env. Vars:
+#   errors - global error counter
+# Usage: if [[ $(get_errors) -gt 0 ]]; then ...; fi
+# Example:
+#   if [[ $(get_errors) -gt 0 ]]; then
+#     echo "Errors were encountered."
+#   else
+#     echo "No errors."
+#   fi
+#-------------------------------------------------------------------------------
+function get_errors()
+{
+    echo "$errors"
+    return "$success"
+}
+
+#-------------------------------------------------------------------------------
 # Summary: Checks if the global error counter has any errors.
 # Parameters: none
 # Returns:
@@ -113,7 +130,6 @@ function has_errors()
     # shellcheck disable=SC2154 # errors is referenced but not assigned.
     return $(( errors > 0 ? positive : negative ))
 }
-
 
 ## Should be overridden in the top level script by sourcing _args.sh, akin to forward declaration in C/C++
 # Local implementation of usage() to avoid circular dependency with _args.sh

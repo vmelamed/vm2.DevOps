@@ -96,7 +96,7 @@ declare -x package_version=''
 extractDotnetBuildInfo < "$temp_output" > >(displayDotnetBuildSummary | to_summary)
 [[ $build_exit -eq 0 ]] || exit "$build_exit"
 
-if is_semverRelease "$version"; then
+if is_semverRelease "$(get_build_info version)"; then
     summary_header="Release Summary"
     reason="${reason:="stable release"}"
 else

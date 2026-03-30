@@ -85,8 +85,6 @@ function print_semver_regexes()
 declare -x latest_stable
 declare -x latest_prerelease
 
-declare -x errors
-
 #-------------------------------------------------------------------------------
 # Summary: Validates MinVer tag prefix and creates tag validation regular expressions.
 # Parameters:
@@ -107,11 +105,12 @@ function validate_semverTagComponents()
         return "$err_invalid_arguments"
     }
 
-    local errs=$errors
+    local errs
+    errs=$(get_errors)
 
     [[ "$1" =~ $minverTagPrefixRegex ]]                     || error "The semver tag prefix used by MinVer ('$1') is not valid. It must match the regex: $minverTagPrefixRegex. Did you pass a nameref by mistake?"
     [[ $# -eq 1 || "$2" =~ $minverPrereleaseIdRegex ]]      || error "The semver prerelease identifier template used by MinVer ('$2') is not valid. It must match the regex: $minverPrereleaseIdRegex. Did you pass a nameref by mistake?"
-    (( errors == errs ))
+    (( $(get_errors) == errs ))
 }
 
 # semver components indexes in BASH_REMATCH
@@ -157,7 +156,8 @@ declare -irx rc_less_than=65
 #-------------------------------------------------------------------------------
 function compare_semver()
 {
-    local -i errs=$errors
+    local -i errs
+    errs=$(get_errors)
 
     (( $# == 2 )) || {
         error 3 "${FUNCNAME[0]}() requires at exactly 2 arguments (provided $#): version1 and version2."
@@ -184,7 +184,7 @@ function compare_semver()
     fi
     # local build2=${BASH_REMATCH[semver_build]#-} does not participate in comparison by spec
 
-    (( errors == errs )) || return "$err_argument_value"
+    (( $(get_errors) == errs )) || return "$err_argument_value"
 
     if (( major1 != major2 )); then
         if (( major1 > major2 )); then return "$rc_greater_than"; else return "$rc_less_than"; fi

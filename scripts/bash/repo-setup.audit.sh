@@ -25,8 +25,6 @@ declare -xrA default_dependabot_secrets
 declare -xrA default_vars
 declare -xrA default_ruleset
 
-declare -x errors
-
 declare -x path_vars
 declare -x path_repo
 declare -x path_permissions

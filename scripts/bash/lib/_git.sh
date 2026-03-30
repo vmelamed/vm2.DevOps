@@ -490,8 +490,9 @@ function get_repo_state()
         gh_state["$name"]="$value"
     done < <(execute_gh_api_with_retry 3 2 --paginate "repos/$owner/$name" -q "$jq_gh_repo_state")
 
-    local -i errs=$errors
     local -i rc=0
+    local -i errs
+    errs=$(get_errors)
 
     # these are real logical problems that can occur if the git remote is misconfigured or the API is returning unexpected data,
     # so we check them all and report all mismatches rather than bailing on the first one
@@ -502,7 +503,7 @@ function get_repo_state()
     [[ ${gh_state["$key_repo"]}    == "${state[$key_repo]}" ]]  || error "GitHub API returned repo '${gh_state["$key_repo"]}' that does not match the expected repo '${state[$key_repo]}'."
     [[ -n ${gh_state["$key_repo_id"]} ]]                        || error "GitHub API did not return a repo ID for '${gh_state["$key_repo"]}'."
 
-    rc=$(( errs < errors ? failure : success ))
+    rc=$(( errs < $(get_errors) ? failure : success ))
 
     state[$key_repo_id]="${gh_state["$key_repo_id"]}"
     state[$key_default_branch]="${gh_state["$key_default_branch"]}"

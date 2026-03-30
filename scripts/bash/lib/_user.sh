@@ -163,7 +163,6 @@ function enter_value()
         return "$success"
     }
 
-    local errs=$errors
     local input
     local valid=false
     local first=true
@@ -187,8 +186,8 @@ function enter_value()
         }
     done
 
-    # all good here! restore any errors that may have been overwritten by the validation function
-    errors=$errs
+    # all good here! reset any errors that may have been set by the validation function
+    reset_errors
     echo "$input"
 }
 
