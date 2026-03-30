@@ -41,6 +41,10 @@ declare -x jq_ruleset_id
 declare -x jq_ruleset_rules
 declare -x jq_status_checks
 
+declare -rxi err_invalid_nameref
+
+declare -rx varNameRegex
+
 #-------------------------------------------------------------------------------
 # Summary: Fetches the current settings from GitHub API and compares them to the expected settings, reporting equalities, differences,
 #   and missing values (errors).
@@ -59,25 +63,27 @@ declare -x jq_status_checks
 #-------------------------------------------------------------------------------
 function compare_settings()
 {
+    [[ $# -eq 5 || $# -eq 6 ]] ||
+        error 3 "${FUNCNAME[0]}() requires 4 or 5 arguments: <hq_path> <jq_transform> <expected_nameref_array> <mod_keys_flag> [<settings_order>]"
+    [[ -n "$1" ]] ||
+        error 3 "Argument 1 to ${FUNCNAME[0]}() must be a non-empty string specifying the GitHub API path to fetch the settings from, e.g. 'repos/\${repo}' or 'repos/\${repo}/actions/permissions/workflow'.";
+    [[ -n "$2" ]] ||
+        error 3 "Argument 2 to ${FUNCNAME[0]}() must be a non-empty string specifying the jq query to transform the JSON response into key=value pairs.";
+    is_defined_associative_array "$3" ||
+        error 3 "Argument 3 to ${FUNCNAME[0]}() must be the name of an associative array variable containing expected key-value pairs, e.g. default_repo_settings or default_repo_permissions."
+    is_boolean "$4" ||
+        error 3 "Argument 4 to ${FUNCNAME[0]}() must be a boolean flag specifying that the keys of the expected settings should be capitalized and displayed with spaces instead of underscores (for better readability)."
+    [[ $# -lt 6 ]] || is_defined_array "$6" ||
+        error 3 "Argument 5 to ${FUNCNAME[0]}() is optional. If provided, it must be the name of an array variable containing the names of settings in order to compare and display."
+
+    ! has_errors || return "$err_invalid_arguments"
+
     local hq_path="$1"
     local jq_transform=$2
     local -n expecteds="$3"
     # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
     local modify_keys="$4"
     local -n results="$5"
-
-    [[ $# -eq 5 || $# -eq 6 ]] ||
-        error 3 "${FUNCNAME[0]}() requires 4 or 5 arguments: <hq_path> <jq_transform> <expected_nameref_array> <mod_keys_flag> [<settings_order>]"
-    [[ -n "$hq_path" ]] ||
-        error 3 "Argument 1 to ${FUNCNAME[0]}() must be a non-empty string specifying the GitHub API path to fetch the settings from, e.g. 'repos/\${repo}' or 'repos/\${repo}/actions/permissions/workflow'.";
-    [[ -n "$jq_transform" ]] ||
-        error 3 "Argument 2 to ${FUNCNAME[0]}() must be a non-empty string specifying the jq query to transform the JSON response into key=value pairs.";
-    is_defined_associative_array "$3" ||
-        error 3 "Argument 3 to ${FUNCNAME[0]}() must be the name of an associative array variable containing expected key-value pairs, e.g. default_repo_settings or default_repo_permissions."
-    is_boolean "$modify_keys" ||
-        error 3 "Argument 4 to ${FUNCNAME[0]}() must be a boolean flag specifying that the keys of the expected settings should be capitalized and displayed with spaces instead of underscores (for better readability)."
-    [[ $# -lt 6 ]] || is_defined_array "$6" ||
-        error 3 "Argument 5 to ${FUNCNAME[0]}() is optional. If provided, it must be the name of an array variable containing the names of settings in order to compare and display."
 
     # query the GitHub API and transform the JSON response into key=value pairs using the provided jq query, then...
     local json

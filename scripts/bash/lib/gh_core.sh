@@ -24,7 +24,6 @@ declare -x lib_dir
 [[ ! -v lib_dir || -z "$lib_dir" ]] && lib_dir=$(realpath -e "$(dirname "${BASH_SOURCE[0]}")")
 
 source "${lib_dir}/core.sh"
-source "${lib_dir}/_sanitize.sh"
 source "${lib_dir}/_dotnet.sh"
 
 ## In CI mode, indicates whether the script is running within GitHub Actions.
@@ -50,6 +49,10 @@ declare -x trace_to_summary=${TRACE_TO_SUMMARY:-false}
 # redefined functions in GitHub actions context:
 unset -f to_stdout
 unset -f to_stderr
+
+declare -rxi err_invalid_nameref
+
+declare -rx varNameRegex
 
 #-------------------------------------------------------------------------------
 # Summary: Sends the input to stdout AND, if in GitHub Actions, to GitHub step summary.
@@ -210,6 +213,10 @@ function to_github_output()
         error 3 "${FUNCNAME[0]}() requires one or two arguments (provided $#): " \
               "the name of the variable to output and optionally the name to use in GitHub Actions output."
         return "$err_invalid_arguments"
+    }
+     [[ $1 =~ $varNameRegex ]] || {
+        error 3 "${FUNCNAME[0]}() requires a non-empty variable name as argument."
+        return "$err_invalid_nameref"
     }
 
     local k

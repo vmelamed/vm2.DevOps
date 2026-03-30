@@ -7,7 +7,10 @@
 (( ${__VM2_LIB_DUMP_VARS_SH_LOADED:-0} == 1 )) && return 0
 declare -gr __VM2_LIB_DUMP_VARS_SH_LOADED=1
 
+declare -rx varNameRegex
+
 declare -rxi success
+declare -rxi err_invalid_nameref
 
 gth="┌────────────────────────────────────────────────────────────────────────────"
 
@@ -58,52 +61,6 @@ declare -A markdown=(
     ["bottom"]=""
 )
 
-declare save_quiet
-declare save_verbose
-declare save_table_format
-declare save_ignore
-declare set_tracing_on
-
-#-------------------------------------------------------------------------------
-# Summary: Saves current state of global flags to be restored later by pop_state.
-# Parameters: none
-# Returns:
-#   Exit code: 0 always
-# Usage: push_state
-# Example: push_state  # typically called at beginning of dump_vars
-# Notes: Internally used by dump_vars. Do not use, as it may change in the future. Works cooperatively with pop_state to ensure no side effects in dump_vars.
-#-------------------------------------------------------------------------------
-function push_state()
-{
-    save_quiet=$quiet
-    save_verbose=$verbose
-    save_table_format=$(get_table_format)
-    save_ignore=$_ignore
-    [[ $- =~ .*x.* ]] && set_tracing_on=1 || set_tracing_on=0
-    return "$success"
-}
-
-#-------------------------------------------------------------------------------
-# Summary: Restores state of global flags previously saved by push_state.
-# Parameters: none
-# Returns:
-#   Exit code: 0 always
-# Usage: pop_state
-# Example: pop_state  # typically called at end of dump_vars
-# Notes: Internally used by dump_vars. Do not use, as it may change in the future. Works cooperatively with push_state to ensure no side effects in dump_vars.
-#-------------------------------------------------------------------------------
-function pop_state()
-{
-    quiet=$save_quiet
-    verbose=$save_verbose
-    set_table_format "$save_table_format"
-    _ignore=$save_ignore
-    if ((set_tracing_on == 1)); then
-        set -x
-    fi
-    return "$success"
-}
-
 #-------------------------------------------------------------------------------
 # Summary: Internal function to write a header title in the variable dump table.
 # Parameters:
@@ -137,6 +94,11 @@ function _write_title()
 #-------------------------------------------------------------------------------
 function _write_line()
 {
+     [[ $1 =~ $varNameRegex ]] || {
+        error 3 "${FUNCNAME[0]}() requires a non-empty variable name as argument."
+        return "$err_invalid_nameref"
+    }
+
     local -n v=$1
     local value
 
@@ -203,7 +165,7 @@ function dump_vars()
     (( $# == 0 )) && return "$success"
 
     # save some current state - to be restored before returning from the function
-    push_state
+    save_state
 
     # shellcheck disable=SC2154 # ci is referenced but not assigned.
     "$ci" && set_table_format "markdown"
@@ -211,15 +173,15 @@ function dump_vars()
     local v
     for v in "$@"; do
         case ${v,,} in
-            -q|--quiet) quiet=true ;;
-            -f|--force) verbose=true ;;
+            -q|--quiet) set_quiet ;;
+            -f|--force) set_verbose ;;
             -m|--markdown) set_table_format "markdown" ;;
             -g|--graphical) set_table_format "graphical" ;;
             * ) ;;
         esac
     done
 
-    ! $verbose && pop_state && return "$success"
+    ! is_verbose && restore_state && return "$success"
 
     # for the proper behavior of this function change some global flags (to be restored before returning from the function)
     local -n table
@@ -273,6 +235,6 @@ function dump_vars()
     sync
 
     press_any_key
-    pop_state
+    restore_state
     return "$success"
 }

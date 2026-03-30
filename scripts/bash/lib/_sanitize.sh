@@ -12,24 +12,14 @@ declare -rxi failure
 declare -rxi positive
 declare -rxi negative
 declare -rxi err_invalid_arguments
+declare -rxi err_invalid_nameref
 declare -rxi err_argument_type
 declare -rxi err_argument_value
 declare -rxi err_not_found
 declare -rxi err_not_file
 declare -rxi err_not_directory
 
-if [[ ! -v lib_dir || -z "$lib_dir" ]]; then
-    lib_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
-fi
-
-# shellcheck disable=SC2154 # _ignore is referenced but not assigned.
-if ! declare -pF "error" > "$_ignore"; then
-    source "${lib_dir}/_diagnostics.sh"
-fi
-# shellcheck disable=SC2154 # _ignore is referenced but not assigned.
-if [[ ! -v "minverTagPrefixRegex" || ! -v "minverPrereleaseIdRegex" ]]; then
-    source "${lib_dir}/_semver.sh"
-fi
+declare -rx varNameRegex
 
 declare -xra allowed_runners_os=(
     "ubuntu-latest"
@@ -42,7 +32,8 @@ declare -xra allowed_runners_os=(
     "macos-12"
     "macos-11")
 
-declare -xr nugetServersRegex="^(nuget|github|https?://[-a-zA-Z0-9._/]+)$";
+declare -xr nugetServersRegex
+declare -xr varNameRegex
 
 #--------------------------------------------------------------------------------
 # Summary: Trims leading and trailing whitespace from a string.
@@ -131,7 +122,7 @@ function is_safe_input()
     # Dangerous characters that could enable command injection
     local dangerous_chars
 
-    $allow_spaces && dangerous_chars=$'[;|&$`\\\\<>(){}\n\r ]' || dangerous_chars=$'[;|&$`\\\\<>(){}\n\r]'
+    $allow_spaces && dangerous_chars=$'[;|&$`\\\\<>(){}\n\r]' || dangerous_chars=$'[;|&$`\\\\<>(){}\n\r ]'
 
     if [[ "$input" =~ $dangerous_chars ]]; then
         error 3 "${FUNCNAME[0]}(): The input '$input' contains one or more of the unsafe characters '$dangerous_chars'."
@@ -519,6 +510,10 @@ function validate_nuget_server()
         error 3 "${FUNCNAME[0]}() requires at least one or two arguments (provided $#): the NAME OF THE VARIABLE containing the NuGet server to validate and an optional default value for the NuGet server."
         return "$err_invalid_arguments"
     }
+     [[ $1 =~ $varNameRegex ]] || {
+        error 3 "${FUNCNAME[0]}() requires a non-empty variable name as argument."
+        return "$err_invalid_nameref"
+    }
 
     local -n server=$1
     local default_server=${2:-"nuget"}
@@ -606,11 +601,15 @@ function validate_preprocessor_symbols()
         error 3 "${FUNCNAME[0]}() requires one argument (provided $#): the NAME of the variable containing the preprocessor symbols to test."
         return "$err_invalid_arguments"
     }
-
-    [[ -z $1 ]] && return "$positive"
+    [[ $1 =~ $varNameRegex ]] || {
+        error 3 "${FUNCNAME[0]}() requires a non-empty variable name as argument."
+        return "$err_invalid_nameref"
+    }
 
     local -n symbols=$1
     local -a symbol_array=()
+
+    [[ -z $symbols ]] && return "$positive"
 
     IFS=' ,:;' read -ra symbol_array <<< "$symbols"
 
@@ -618,7 +617,7 @@ function validate_preprocessor_symbols()
     local s=''
     for symbol in "${symbol_array[@]}"; do
         [[ -z $symbol ]] && continue
-        if [[ "$symbol" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+        if [[ "$symbol" =~ $varNameRegex ]]; then
             [[ -z $s ]] && s="$symbol" || s="$s;$symbol"
         else
             error "The pre-processor symbol '$symbol' is not valid."
@@ -693,8 +692,8 @@ function is_safe_max_regression_pct()
     return "$positive"
 }
 
-declare -x minverPrereleaseIdRegex
-declare -x semverRegex
+declare -xr minverPrereleaseIdRegex
+declare -xr semverRex
 
 #-------------------------------------------------------------------------------
 # Summary: Validates MinVer prerelease identifier format.
@@ -737,7 +736,7 @@ function is_safe_minverPrereleaseId()
 # A or A.x (e.g. 8, 8.x) - the latest minor version of the specific .NET SDK, including prerelease versions (preview, rc)
 # A.B or A.B.x (e.g. 8.0, 8.0.x) - the latest patch version of the specific .NET SDK, including prerelease versions (preview, rc)
 # A.B.Cxx (e.g. 8.0.4xx) - the latest version of the specific SDK release, including prerelease versions (preview, rc).
-declare -xr dotnet_regex="^([0-9]+\\.[0-9]+(\\.x)?)|([0-9]+(\\.x)?)|([0-9]+\\.[0-9]+\\.[0-9]xx)|($semverRegex)$"
+declare -xr dotnet_regex="^([0-9]+\\.[0-9]+(\\.x)?)|([0-9]+(\\.x)?)|([0-9]+\\.[0-9]+\\.[0-9]xx)|($semverRex)$"
 
 #-------------------------------------------------------------------------------
 # Summary: Validates .NET version input format.

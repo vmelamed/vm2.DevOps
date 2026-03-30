@@ -155,7 +155,7 @@ while [[ $i -lt ${#source_files[@]} ]]; do
     if are_different "${source_file}" "${target_file}" "$show_diff"; then
         echo "File '${source_file}' is different from '${target_file}'."
         # shellcheck disable=SC2154
-        if [[ "$quiet" != true ]]; then
+        if ! is_quiet; then
             case $actions in
                 "$action_ignore" )
                     continue

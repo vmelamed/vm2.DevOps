@@ -14,14 +14,11 @@ declare -rxi negative
 declare -rxi err_invalid_arguments
 declare -rxi err_argument_type
 declare -rxi err_argument_value
+declare -rxi err_invalid_nameref
+
+declare -rx varNameRegex
 
 declare -x _ignore
-
-# shellcheck disable=SC2154 # variable is referenced but not assigned.
-if ! declare -pF "error" > "$_ignore"; then
-    diag_dir="$(dirname "${BASH_SOURCE[0]}")"
-    source "$diag_dir/_diagnostics.sh"
-fi
 
 #-------------------------------------------------------------------------------
 # Summary: Tests if a variable is defined.
@@ -61,6 +58,10 @@ function is_defined_array()
         error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the variable to test."
         return "$err_invalid_arguments"
     }
+    [[ $1 =~ $varNameRegex ]] || {
+        error 3 "${FUNCNAME[0]}() requires a non-empty variable name as argument."
+        return "$err_invalid_nameref"
+    }
 
     restoreShopt=$(shopt -p nocasematch) || true
     shopt -u nocasematch # set case sensitive matching
@@ -91,6 +92,10 @@ function is_defined_associative_array()
     (( $# == 1 )) || {
         error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the associative array variable to test."
         return "$err_invalid_arguments"
+    }
+     [[ $1 =~ $varNameRegex ]] || {
+        error 3 "${FUNCNAME[0]}() requires a non-empty variable name as argument."
+        return "$err_invalid_nameref"
     }
 
     restoreShopt=$(shopt -p nocasematch) || true

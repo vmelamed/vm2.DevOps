@@ -8,7 +8,6 @@
 (( ${__VM2_LIB_GIT_SH_LOADED:-0} == 1 )) && return 0
 declare -gr __VM2_LIB_GIT_SH_LOADED=1
 
-
 declare -rxi success
 declare -rxi failure
 declare -rxi positive
@@ -172,7 +171,6 @@ function validate_gh_secret()
         error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the secret value to validate."
         return "$err_invalid_arguments"
     fi
-
     [[ -z "$1" || ! "$1" =~ [[:cntrl:]] ]] || {
         error "Invalid secret value. Secrets cannot have control characters or be empty."
         return "$err_argument_value"

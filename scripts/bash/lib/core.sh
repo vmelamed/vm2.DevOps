@@ -48,12 +48,33 @@ source "${lib_dir}/_dump_vars.sh"
 source "${lib_dir}/_semver.sh"
 source "${lib_dir}/_user.sh"
 source "${lib_dir}/_git.sh"
+source "${lib_dir}/_sanitize.sh"
 
 # Use $_ignore to redirect unwanted output, e.g. errors from commands or tools, to avoid cluttering the terminal or logs. When
 # you need to see the output for debugging purposes, you can redirect $_ignore to /dev/stderr, but NEVER redirect it to /dev/stdout!
 # If it is redirected to stdout AND the output of the whole command is captured or redirected, it will interfere with the
 # expected output of the command, leading to incorrect results or unexpected behavior. Therefore NEVER assign a file to $_ignore
 # directly. Use the functions below to manipulate it.
+
+
+# Override the default or environment values of common flags based on other flags upon sourcing.
+# Make sure that the other set_* functions are honoring the ci flag.
+if $ci; then
+    # guard CI from quiet off
+    _ignore=$default__ignore
+    set_quiet
+    set_table_format markdown
+    set +x
+fi
+
+# By default all scripts trap DEBUG and EXIT to provide better error handling.
+# However, when running under a debugger, e.g. 'bashdb', trapping these signals
+# interferes with the debugging session.
+if ! $debugger; then
+    # set the traps to see the last faulted command. However, they get in the way of debugging.
+    trap on_debug DEBUG
+    trap on_exit EXIT
+fi
 
 #-------------------------------------------------------------------------------
 # Summary: Redirects the ignored output to the specified file.
@@ -101,8 +122,6 @@ function hide_ignored_output()
 # Usage: execute <command> [args...]
 # Example: execute git commit -m "Initial commit"
 #-------------------------------------------------------------------------------
-declare -x dry_run=${DRY_RUN:-false}
-
 function execute()
 {
     (( $# > 0 )) || {
@@ -110,7 +129,7 @@ function execute()
         return "$err_invalid_arguments"
     }
 
-    if [[ "$dry_run" == true ]]; then
+    if is_dry_run; then
         echo "dry-run$ $*"
         return 0
     fi
@@ -218,3 +237,10 @@ function list_of_files()
     printf "%s" "${list[*]}"
     return "$success"
 }
+
+if $ci; then                                        # CI is usually defined by most CI/CD systems. Set from the env. variable CI.
+    set_table_format "${DUMP_FORMAT:-markdown}"       # in CI/CD environments, default to markdown format unless overridden by DUMP_FORMAT
+    set_quiet                                       # in CI/CD environments, default to quiet mode
+else
+    set_table_format "${DUMP_FORMAT:-graphical}"      # on terminal, default to graphical format unless overridden by DUMP_FORMAT
+fi

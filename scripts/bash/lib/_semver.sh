@@ -58,10 +58,6 @@ declare -rx semverTagRegex="^${minverTagPrefixRex}${semverRex}$"
 declare -rx semverTagPrereleaseRegex="^${minverTagPrefixRex}${semverPrereleaseRex}$"
 declare -rx semverTagReleaseRegex="^${minverTagPrefixRex}${semverReleaseRex}$"
 
-## Flag indicating whether the tag regexes have been initialized with default value for the tag prefix or with actual parameter
-## 0 - actual, 1 - default
-declare -xi tag_regexes_initialized=1
-
 function print_semver_regexes()
 {
     dump_vars --quiet --force \
@@ -82,9 +78,6 @@ function print_semver_regexes()
 
 }
 
-declare -x latest_stable
-declare -x latest_prerelease
-
 #-------------------------------------------------------------------------------
 # Summary: Validates MinVer tag prefix and creates tag validation regular expressions.
 # Parameters:
@@ -95,7 +88,6 @@ declare -x latest_prerelease
 # Side Effects: Sets global regex variables $semverTagRegex, $semverTagReleaseRegex, $semverTagPrereleaseRegex
 # Usage: validate_semverTagComponents <minver_tag_prefix> <minver_prerelease_id_template>
 # Example: validate_semverTagComponents "v" "preview.0"  # creates regexes for tags like v1.2.3-preview.0
-# Notes: Call once when tag prefix is known. Sets tag_regexes_initialized=0 to indicate custom prefix. In contrast to other
 # validate_* functions, this one takes a value not a nameref.
 #-------------------------------------------------------------------------------
 function validate_semverTagComponents()

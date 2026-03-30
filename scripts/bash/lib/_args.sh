@@ -34,6 +34,7 @@ declare -x _ignore                                  # the file to redirect unwan
 
 declare -x quiet=${QUIET:-$default_quiet}           # suppresses user prompts, assuming default answers
 declare -x verbose=${VERBOSE:-$default_verbose}     # enables detailed output
+declare -x table_format=${TABLE_FORMAT:-$default_table_format}  # the format to use for the function `dump_vars`: graphical ASCII characters or markdown.
 declare -x dry_run=${DRY_RUN:-$default_dry_run}     # simulates commands without executing them
                                                     # the function `dump_vars`: graphical ASCII characters or markdown.
                                                     # See also the available values in the array `table_formats` above
@@ -47,12 +48,85 @@ declare -rx ci                                      # Indicates whether the scri
 declare -xr debugger                                # Indicates whether the script is running under a debugger, e.g. BashDb.
                                                     # SHOULD NOT BE OVERRIDDEN BY TOP-LEVEL SWITCHES AND OPTIONS!
 
-if "$ci"; then                                      # CI is usually defined by most CI/CD systems. Set from the env. variable CI.
-    table_format=${DUMP_FORMAT:-markdown}           # in CI/CD environments, default to markdown format unless overridden by DUMP_FORMAT
-    quiet=true                                      # in CI/CD environments, default to quiet mode
-else
-    table_format=${DUMP_FORMAT:-graphical}          # on terminal, default to graphical format unless overridden by DUMP_FORMAT
-fi
+declare __save_quiet
+declare __save_verbose
+declare __save_table_format
+declare __save_dry_run
+declare __save_ignore
+declare __set_tracing_on
+
+declare -gi __state_saved_pid=0
+declare -gi __state_saved_subshell=-1
+
+#-------------------------------------------------------------------------------
+# Summary: Saves current state of global flags to be restored later by restore_state.
+# Parameters: none
+# Returns:
+#   Exit code: 0 always
+# Usage: save_state
+# Example: save_state  # typically called at beginning of dump_vars
+# Notes: Internally used by dump_vars. Do not use, as it may change in the future. Works cooperatively with restore_state to ensure no side effects in dump_vars.
+#-------------------------------------------------------------------------------
+function save_state()
+{
+    if (( __state_saved_pid != 0 )); then
+        error "${FUNCNAME[0]}() called while state is already saved." >&2
+        return "$failure"
+    fi
+
+    __state_saved_pid=$BASHPID
+    __state_saved_subshell=${BASH_SUBSHELL:-0}
+
+    __save_quiet=is_quiet
+    __save_verbose=is_verbose
+    __save_dry_run=is_dry_run
+    __save_ignore=$_ignore
+    __save_table_format=$(get_table_format)
+    [[ $- =~ .*x.* ]] && __set_tracing_on=true || __set_tracing_on=false
+
+    return "$success"
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Restores state of global flags previously saved by save_state.
+# Parameters: none
+# Returns:
+#   Exit code: 0 always
+# Usage: restore_state
+# Example: restore_state  # typically called at end of dump_vars
+# Notes: Internally used by dump_vars. Do not use, as it may change in the future. Works cooperatively with save_state to ensure no side effects in dump_vars.
+#-------------------------------------------------------------------------------
+# shellcheck disable=SC2015
+function restore_state()
+{
+    local bad_call=false
+
+    (( __state_saved_pid != 0 )) || {
+        error "${FUNCNAME[0]}() called before save_state." >&2
+        bad_call=true
+    }
+    (( __state_saved_pid == BASHPID )) || {
+        error "${FUNCNAME[0]}() must run in same shell: saved pid=$__state_saved_pid current pid=$BASHPID." >&2
+        bad_call=true
+    }
+    (( __state_saved_subshell == ${BASH_SUBSHELL:-0} )) || {
+        error "${FUNCNAME[0]}() called from different subshell level." >&2
+        bad_call=true
+    }
+    __state_saved_pid=0
+    __state_saved_subshell=-1
+    ! bad_call || return "$failure"
+
+    set_table_format "$__save_table_format" || { error "${FUNCNAME[0]}() failed to restore table format." >&2; return "$failure"; }
+    $__save_quiet   && set_quiet   || unset_quiet
+    $__save_verbose && set_verbose || unset_verbose
+    $__save_dry_run && set_dry_run || unset_dry_run
+    _ignore=$__save_ignore
+    if $__set_tracing_on; then
+        set -x
+    fi
+    return "$success"
+}
 
 #-------------------------------------------------------------------------------
 # Summary: Sets the script to quiet mode, suppressing user prompts.
@@ -226,13 +300,6 @@ function unset_trace_enabled()
     return "$success"
 }
 
-## Will be overridden in _predicates.sh, akin to forward declaration in C/C++
-function is_in()
-{
-    error 6 "${FUNCNAME[0]}() is not implemented yet - source _predicates.sh to override."
-    return "$failure";
-}
-
 #-------------------------------------------------------------------------------
 # Summary: Sets the table format for variable dumps to either graphical or markdown.
 # Parameters:
@@ -252,14 +319,16 @@ function set_table_format()
     }
 
     local f="${1,,}"
-    # shellcheck disable=SC2015
-    [[ -n "$1" ]] && is_in "$f" "${table_formats[@]}" || {
-        error "Invalid table format: '$1'. Must be one of ${table_formats[*]}."
-        return "$err_argument_value"
-    }
 
-    table_format="$f"
-    return "$success"
+    for tf in "${table_formats[@]}"; do
+        if [[ "$f" == "$tf" ]]; then
+            table_format="$f"
+            return "$success"
+        fi
+    done
+
+    error "Invalid table format: '$1'. Must be one of ${table_formats[*]}."
+    return "$err_argument_value"
 }
 
 #-------------------------------------------------------------------------------
@@ -294,7 +363,7 @@ function get_table_format()
 # shellcheck disable=SC2034 # variable appears unused. Verify it or export it
 function get_common_arg()
 {
-    (( $# == 1 )) && {
+    (( $# == 1 )) || {
         error 3 "${FUNCNAME[0]}() requires one parameter ($# provided): the command-line argument to process"
         return "$err_invalid_arguments"
     }
@@ -334,16 +403,14 @@ function get_common_arg()
 # Example: display_usage_msg "$usage_text" "Invalid parameter: $param"
 # Notes: Temporarily disables tracing during display. Override usage() in calling scripts for custom help.
 #-------------------------------------------------------------------------------
-declare -x allow_on_exit
-
 function display_usage_msg()
 {
-    (( $# == 1 )) || {
+    (( $# >= 1 )) || {
         error 3 "${FUNCNAME[0]}() requires at least one parameter ($# provided): the usage text"
         exit "$err_invalid_arguments"
     }
     [[ -n "$1" ]] || {
-        error 3 "${FUNCNAME[0]}() requires at least one parameter - the usage text"
+        error 3 "${FUNCNAME[0]}() requires at least one non-empty parameter - the usage text"
         exit "$err_argument_value"
     }
 
@@ -366,7 +433,6 @@ $usage_txt
 
     # restore the tracing state
     $set_tracing_on && set -x
-    allow_on_exit=false
     exit "$ec"
 }
 
@@ -412,22 +478,3 @@ declare -rx common_vars="  VERBOSE                       Enables verbose output 
   DUMP_FORMAT                   Sets the output dump table format. Must be 'graphical' or 'markdown'
                                 (see --graphical and --markdown)
 "
-
-# Override the default or environment values of common flags based on other flags upon sourcing.
-# Make sure that the other set_* functions are honoring the ci flag.
-if $ci; then
-    # guard CI from quiet off
-    _ignore=$default__ignore
-    set_quiet
-    set_table_format markdown
-    set +x
-fi
-
-# By default all scripts trap DEBUG and EXIT to provide better error handling.
-# However, when running under a debugger, e.g. 'bashdb', trapping these signals
-# interferes with the debugging session.
-if ! $debugger; then
-    # set the traps to see the last faulted command. However, they get in the way of debugging.
-    trap on_debug DEBUG
-    trap on_exit EXIT
-fi

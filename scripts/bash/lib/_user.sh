@@ -16,11 +16,6 @@ declare -rxi err_invalid_arguments
 declare -rxi err_argument_type
 declare -rxi err_argument_value
 
-if ! declare -pF "error" > "$_ignore"; then
-    semver_dir="$(dirname "${BASH_SOURCE[0]}")"
-    source "$semver_dir/_diagnostics.sh"
-fi
-
 #-------------------------------------------------------------------------------
 # Summary: Displays a prompt and waits for user to press any key before continuing.
 # Parameters: none
@@ -34,7 +29,7 @@ fi
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 function press_any_key()
 {
-    $quiet || {
+    is_quiet || {
         read -n 1 -rsp 'Press any key to continue...'
         echo
     }
@@ -69,6 +64,8 @@ function confirm()
     }
 
     local default="y"
+    local errs
+
     (( $# == 1 )) || {
         default=${2,,}
         [[ "$default" =~ ^[yn]$ ]] || {
@@ -78,7 +75,7 @@ function confirm()
     }
 
     local response=$default
-    $quiet || {
+    is_quiet || {
         local prompt="$1"
         local suffix
         [[ "$default" == y ]] && suffix="[Y/n]" || suffix="[y/N]"
@@ -89,6 +86,7 @@ function confirm()
             warning "Please enter one of Y or N (case insensitive)."
         done
     }
+
     response=${response:-$default}
     [[ ${response,,} == "y" ]]
 }
@@ -166,6 +164,8 @@ function enter_value()
     local input
     local valid=false
     local first=true
+    local errs
+    errs=$(get_errors)
 
     [[ -n "$default" ]] && ! $is_secret && prompt="$prompt [$default]: " || prompt="$prompt: "
 
@@ -186,8 +186,8 @@ function enter_value()
         }
     done
 
-    # all good here! reset any errors that may have been set by the validation function
-    reset_errors
+    # all good here! reset the global error counter back to the value it had before the loop with the validation function
+    set_errors "$errs"
     echo "$input"
 }
 
@@ -217,7 +217,7 @@ function choose()
         return "$err_invalid_arguments";
     }
 
-    $quiet && {
+    is_quiet && {
         # just return the default choice (1)
         printf '1'
         return "$success"

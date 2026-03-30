@@ -18,6 +18,13 @@
 #   - NC (No Color) - alias for RESET
 #===============================================================================
 
+# Circular include guard
+(( ${__VM2_LIB_CONSTANTS_SH_LOADED:-0} == 1 )) && return 0
+declare -gr __VM2_LIB_CONSTANTS_SH_LOADED=1
+
+declare -rx varNameRegex="^[A-Za-z_][A-Za-z0-9_]*$"
+declare -rx nugetServersRegex="^(nuget|github|https?://[-a-zA-Z0-9._/]+)$";
+
 if [[ -t 1 ]]; then
     declare -xr bold='\033[1m'
     declare -xr reset='\033[0m'

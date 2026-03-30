@@ -158,6 +158,32 @@ function exit_if_has_errors()
 }
 
 #-------------------------------------------------------------------------------
+# Summary: Sets the global error counter.
+# Parameters: the new value for the global error counter
+# Returns:
+#   Exit code: 0 always
+# Env. Vars:
+#   errors - global error counter
+# Usage: set_errors <value>
+# Example:
+#   set_errors 0  # sets the global error counter to zero
+#-------------------------------------------------------------------------------
+function set_errors()
+{
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires one argument ($# provided): the new value for the global error counter."
+        return "$err_invalid_arguments"
+    }
+    [[ $1 =~ ^[0-9]+$ ]] || {
+        error 3 "${FUNCNAME[0]}() requires a numeric argument: the new value for the global error counter."
+        return "$err_argument_type"
+    }
+
+    # shellcheck disable=SC2154 # errors is referenced but not assigned.
+    errors=$1
+}
+
+#-------------------------------------------------------------------------------
 # Summary: Resets the global error counter to zero.
 # Parameters: none
 # Returns:
@@ -346,6 +372,10 @@ function warning_var()
         error 3 "${FUNCNAME[0]}() requires three arguments: variable name, warning message, and default value."
         return "$err_argument_value"
     }
+    [[ $1 =~ $varNameRegex ]] || {
+        error 3 "${FUNCNAME[0]}() requires a non-empty variable name as argument."
+        return "$err_invalid_nameref"
+    }
     warning "$2" "Assuming the default value of '$3'."
 
     local -n var=$1;
@@ -385,10 +415,9 @@ function on_debug()
 # Assuming that the sourcing script didn't change directory, remember the current directory as the "initial".
 #-------------------------------------------------------------------------------
 initial_dir=$(pwd)
-declare -rx initial_dir
-declare -x allow_on_exit=true
-declare -xr explicit_exit_regex='^exit([[:space:]]+.*)?$'
 
+declare -rx initial_dir
+declare -xr explicit_exit_regex='^exit([[:space:]]+.*)?$'
 
 #-------------------------------------------------------------------------------
 # Summary: EXIT trap handler that displays failed commands, restores directory, and disables tracing.
@@ -411,7 +440,7 @@ function on_exit()
 
     set +x
 
-    if (( ec != 0 )) && $allow_on_exit && [[ ! ${last_command:-} =~ $explicit_exit_regex ]]; then
+    if (( ec != 0 )) && [[ ! ${last_command:-} =~ $explicit_exit_regex ]]; then
         printf "❌  ERROR: on-exit: the command '%s' failed with exit code %d\n" "${last_command:-'<unknown>'}" "$ec" >&2
     fi
 
