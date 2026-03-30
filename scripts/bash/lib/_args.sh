@@ -229,7 +229,7 @@ function unset_trace_enabled()
 ## Will be overridden in _predicates.sh, akin to forward declaration in C/C++
 function is_in()
 {
-    error 3 "${FUNCNAME[0]}() is not implemented yet - source _predicates.sh to override."
+    error 6 "${FUNCNAME[0]}() is not implemented yet - source _predicates.sh to override."
     return "$failure";
 }
 
