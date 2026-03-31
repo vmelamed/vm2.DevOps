@@ -1,0 +1,16 @@
+external-sources=true
+source-path=$VM2_REPOS/vm2.DevOps/scripts/bash
+source-path=$VM2_REPOS/vm2.DevOps/scripts/bash/lib
+source-path=$VM2_REPOS/vm2.DevOps/.github/scripts
+enable=quote-safe-variables
+enable=check-unassigned-uppercase
+enable=double-quote
+enable=add-default-case
+enable=check-sourced
+enable=avoid-nullary-conditions
+enable=check-unassigned-uppercase
+enable=require-double-brackets
+enable=useless-use-of-cat
+disable=SC1017  # Literal carriage return. Run script through `tr -d '\r'`.
+disable=SC2015  # Note that A && B || C is not if-then-else. C may run when A is true.
+disable=SC2178  # Variable was used as an array but is now assigned a string.

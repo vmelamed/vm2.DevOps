@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-# Copyright (c) 2025 Val Melamed
+# Copyright (c) 2025-2026 Val Melamed
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
@@ -28,8 +28,10 @@ declare -rxi err_not_found=5            # file, directory, or something else cou
 declare -rxi err_not_file=6             # parameter value is not a file
 declare -rxi err_not_directory=7        # parameter value is not a directory
 
-declare -rxi err_not_git_directory=80  # the specified directory is not a directory from a Git repository working tree
+declare -rxi err_not_git_directory=80   # the specified directory is not a directory from a Git repository working tree
 declare -rxi err_not_git_repository=81  # the specified directory is not a git repository
 declare -rxi err_behind_latest_stable_tag=82 # the repository is behind the latest stable tag
 declare -rxi err_invalid_repo=83        # the specified repository is not valid
 declare -rxi err_found_more_than_one=84 # found more than one item matching the criteria
+declare -rxi err_repo_has_no_ci=85      # the specified repository does not have a CI configuration in repo/.github/workflows
+declare -rxi err_dir_has_no_ci=86       # the specified directory is not a repository and does not have a CI configuration in dir/.github/workflows

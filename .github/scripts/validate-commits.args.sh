@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
-# Copyright (c) 2025 Val Melamed
+# Copyright (c) 2025-2026 Val Melamed
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 

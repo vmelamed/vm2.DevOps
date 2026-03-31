@@ -1,7 +1,15 @@
 #!/usr/bin/env bash
 
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
-# shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
+
+declare -x build_project
+declare -x configuration
+declare -x preprocessor_symbols
+declare -x minver_tag_prefix
+declare -x minver_prerelease_id
+declare -x gh_nuget_username
+declare -x gh_nuget_password
+
 function get_arguments()
 {
     local option

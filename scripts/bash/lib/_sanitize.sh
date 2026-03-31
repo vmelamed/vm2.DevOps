@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-# Copyright (c) 2025 Val Melamed
+# Copyright (c) 2025-2026 Val Melamed
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
@@ -663,7 +663,6 @@ function is_valid_percentage()
 #-------------------------------------------------------------------------------
 function is_safe_min_coverage_pct()
 {
-    # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true - good!
     is_valid_percentage "$@" || {
         error "The min coverage percentage '$1' must be an integer number between 0 and 100."
         return "$negative"
@@ -683,7 +682,6 @@ function is_safe_min_coverage_pct()
 # Notes: Must be an integer between 0 and 100.
 function is_safe_max_regression_pct()
 {
-    # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true - good!
     is_valid_percentage "$@" || {
         error "The max regression percentage '$1' must be between 0 and 100."
         return "$negative"

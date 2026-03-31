@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
-# Copyright (c) 2025 Val Melamed
+# Copyright (c) 2025-2026 Val Melamed
 
 # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
 
@@ -43,9 +43,11 @@ trace "Repository path: '$repo_path'"
 
 
 # make sure we are seeing .github and vm2.DevOps properly through vm2_repos
-validate_repo ".github" "$vm2_repos"
-validate_repo "vm2.DevOps" "$vm2_repos"
+validate_repo ".github" "$vm2_repos" true
+validate_repo "vm2.DevOps" "$vm2_repos" true
 exit_if_has_errors
+ensure_fresh_git_state ".github"
+ensure_fresh_git_state "vm2.DevOps"
 
 declare -xr hooks_path="${vm2_repos}/vm2.DevOps/scripts/githooks"
 declare -xr commit_template="${hooks_path}/.gitmessage"

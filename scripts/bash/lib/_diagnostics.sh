@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-# Copyright (c) 2025 Val Melamed
+# Copyright (c) 2025-2026 Val Melamed
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
@@ -31,6 +31,8 @@ declare -rxi negative
 
 # global error counter
 declare -rxi err_invalid_arguments
+
+declare -xi errors=0
 
 #-------------------------------------------------------------------------------
 # Summary: Logs messages to stdout, allowing override in other scripts for alternate destinations.
@@ -127,7 +129,7 @@ function get_errors()
 #-------------------------------------------------------------------------------
 function has_errors()
 {
-    # shellcheck disable=SC2154 # errors is referenced but not assigned.
+
     return $(( errors > 0 ? positive : negative ))
 }
 
@@ -382,71 +384,6 @@ function warning_var()
     # shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
     var="$3"
     return "$success"
-}
-
-# When on_debug is specified as a handler of the DEBUG trap, remembers the last invoked bash command in $last_command.
-# on_debug and on_exit are trying to cooperatively do error handling when exit is invoked. To be effective, after
-# sourcing this script, set these signal traps:
-#   trap on_debug DEBUG
-#   trap on_exit EXIT
-declare last_command=""
-declare current_command="$BASH_COMMAND"
-
-#-------------------------------------------------------------------------------
-# Summary: DEBUG trap handler that tracks the last executed command for error reporting.
-# Parameters: none
-# Returns:
-#   Exit code: 0 always
-# Side Effects: Updates global variables $last_command and $current_command
-# Usage: trap on_debug DEBUG
-# Notes: Works cooperatively with on_exit for error handling. Automatically set by core.sh.
-#-------------------------------------------------------------------------------
-function on_debug()
-{
-    local rc=$?
-    # keep track of the last executed command
-    last_command="$current_command"
-    current_command="$BASH_COMMAND"
-
-    return "$rc"
-}
-
-#-------------------------------------------------------------------------------
-# Assuming that the sourcing script didn't change directory, remember the current directory as the "initial".
-#-------------------------------------------------------------------------------
-initial_dir=$(pwd)
-
-declare -rx initial_dir
-declare -xr explicit_exit_regex='^exit([[:space:]]+.*)?$'
-
-#-------------------------------------------------------------------------------
-# Summary: EXIT trap handler that displays failed commands, restores directory, and disables tracing.
-# Parameters: none
-# Returns:
-#   stderr: error message if exit code is non-zero and not from explicit exit command
-#   Exit code: inherits from the exiting command
-# Side Effects:
-#   - Changes directory to $initial_dir
-#   - Disables trace mode (set +x)
-# Env. Vars:
-#   initial_dir - directory to restore on exit
-# Usage: trap on_exit EXIT
-# Notes: Works cooperatively with on_debug for error handling. Automatically set by core.sh.
-#-------------------------------------------------------------------------------
-function on_exit()
-{
-    # echo an error message before exiting
-    local ec=$?
-
-    set +x
-
-    if (( ec != 0 )) && [[ ! ${last_command:-} =~ $explicit_exit_regex ]]; then
-        printf "❌  ERROR: on-exit: the command '%s' failed with exit code %d\n" "${last_command:-'<unknown>'}" "$ec" >&2
-    fi
-
-    cd "$initial_dir" 2>/dev/null || true
-
-    return "$ec"
 }
 
 #-------------------------------------------------------------------------------

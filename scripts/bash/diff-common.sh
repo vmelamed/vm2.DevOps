@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # SPDX-License-Identifier: MIT
-# Copyright (c) 2025 Val Melamed
+# Copyright (c) 2025-2026 Val Melamed
 
 set -euo pipefail
 
@@ -43,6 +43,8 @@ declare -rxi err_argument_type
 declare -rxi err_argument_value
 declare -rxi err_not_found
 
+declare -xr semverTagReleaseRegex
+
 #===============================
 # Find and validate vm2_repos:
 #===============================
@@ -54,9 +56,12 @@ fi
 (( $? == success ))  ||  exit "$rc"
 
 # make sure we are seeing .github and vm2.DevOps properly through vm2_repos
-validate_repo ".github" "$vm2_repos"
-validate_repo "vm2.DevOps" "$vm2_repos"
+validate_repo ".github" "$vm2_repos" true
+validate_repo "vm2.DevOps" "$vm2_repos" true
 exit_if_has_errors
+ensure_fresh_git_state ".github"
+ensure_fresh_git_state "vm2.DevOps"
+
 
 trace "All vm2 repositories are expected in '$vm2_repos'"
 
@@ -74,9 +79,6 @@ trace "The target project is in '$target_path'"
 declare -xr vm2_repos
 declare -xr target_dir
 declare -xr target_path
-
-# shellcheck disable=SC2154
-declare -xr semverTagReleaseRegex
 
 dump_all_variables
 
@@ -121,8 +123,7 @@ while [[ $i -lt ${#source_files[@]} ]]; do
         fi
     fi
 
-    # shellcheck disable=SC2154
-    if $verbose; then
+    if is_verbose; then
         trace_msg=$(printf "\n%-84s <--- Comparing ---> %-s\n" "$source_file" "$target_file")
         trace "$trace_msg"
     fi
@@ -154,7 +155,6 @@ while [[ $i -lt ${#source_files[@]} ]]; do
 
     if are_different "${source_file}" "${target_file}" "$show_diff"; then
         echo "File '${source_file}' is different from '${target_file}'."
-        # shellcheck disable=SC2154
         if ! is_quiet; then
             case $actions in
                 "$action_ignore" )

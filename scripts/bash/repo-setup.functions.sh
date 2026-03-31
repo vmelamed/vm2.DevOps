@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-# Copyright (c) 2025 Val Melamed
+# Copyright (c) 2025-2026 Val Melamed
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
@@ -230,7 +230,6 @@ function configure_default_repo_settings()
         fi
     done
 
-    # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     if [[ ${#rs[@]} -gt 0 ]]; then
         execute_gh_api_with_retry 3 2 true -X PATCH "${path_repo}" "${rs[@]}" &&
         info "...repository settings configured." ||
@@ -267,7 +266,6 @@ function configure_actions_permissions()
         trace "Setting repository setting: ${key}=${expected}"
     done
 
-    # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     if [[ ${#rs[@]} -gt 0 ]]; then
         execute_gh_api_with_retry 3 2 true -X PUT "${path_permissions}" -H "Accept: application/vnd.github+json" "${rs[@]}" &&
         info "...actions workflow permissions configured." ||
@@ -322,7 +320,6 @@ function configure_variables()
         trace "Set variable: ${name}=${new_value}"
 
         # increment counters based on whether the new value is the default or a new value for the summary in the end of the function
-        # shellcheck disable=SC2015
         [[ $new_value == "$default_value" ]] && (( ++set_default )) || (( ++set_new ))
     done
 
@@ -401,12 +398,10 @@ function configure_secrets()
             execute_gh_with_retry 3 2 true secret set "$name" --body "$value" --app "$app" --repo "$repo"
 
             # restore all tracing
-            # shellcheck disable=SC2015
             $set_verbose_on && set_verbose || unset_verbose
             $set_tracing_on && set -x      || true
 
             trace "Set secret: ${name}"
-            # shellcheck disable=SC2015
             if [[ $value == "$secret_placeholder" ]]; then
                 (( ++set_default ))
                 warning "      Replace the placeholder value of secret ${name} with an actual value."

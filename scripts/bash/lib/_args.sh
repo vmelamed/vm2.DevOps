@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-# Copyright (c) 2025 Val Melamed
+# Copyright (c) 2025-2026 Val Melamed
 
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
@@ -96,7 +96,6 @@ function save_state()
 # Example: restore_state  # typically called at end of dump_vars
 # Notes: Internally used by dump_vars. Do not use, as it may change in the future. Works cooperatively with save_state to ensure no side effects in dump_vars.
 #-------------------------------------------------------------------------------
-# shellcheck disable=SC2015
 function restore_state()
 {
     local bad_call=false

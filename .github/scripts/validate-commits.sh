@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
-# Copyright (c) 2025 Val Melamed
+# Copyright (c) 2025-2026 Val Melamed
 
 # Validates that all commit messages in a range follow Conventional Commits format.
 # Used in CI to enforce commit message discipline.

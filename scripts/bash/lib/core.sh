@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: MIT
-# Copyright (c) 2025 Val Melamed
+# Copyright (c) 2025-2026 Val Melamed
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-# This script defines a number of general purpose functions.
+# This script defines a number of general purpose functions by means of sourcing other scripts in the same directory.
 # For the functions to be invocable by other scripts, this script needs to be sourced.
 # When fatal parameter errors are detected, the script invokes exit, which leads to exiting the current shell.
 
@@ -18,6 +18,7 @@ declare -gr __VM2_LIB_CORE_SH_LOADED=1
 declare -x script_name
 declare -x script_dir
 declare -x lib_dir
+declare -x initial_dir
 
 if [[ ! -v script_name || -z "$script_name" ]]; then
     script_name=$(basename "${BASH_SOURCE[-1]}")
@@ -28,11 +29,13 @@ fi
 if [[ ! -v lib_dir || -z "$lib_dir" ]]; then
     lib_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 fi
+initial_dir=$(pwd)
 
 # variables commonly used for diagnostics
 declare -rx script_name
 declare -rx script_dir
 declare -rx lib_dir
+declare -rx initial_dir
 
 declare -xr default__ignore=/dev/null
 
@@ -56,7 +59,7 @@ source "${lib_dir}/_sanitize.sh"
 # expected output of the command, leading to incorrect results or unexpected behavior. Therefore NEVER assign a file to $_ignore
 # directly. Use the functions below to manipulate it.
 
-
+trace "We are running in CI mode: $ci"
 # Override the default or environment values of common flags based on other flags upon sourcing.
 # Make sure that the other set_* functions are honoring the ci flag.
 if $ci; then
@@ -65,7 +68,68 @@ if $ci; then
     set_quiet
     set_table_format markdown
     set +x
+else
+    set_table_format "${DUMP_FORMAT:-graphical}"      # on terminal, default to graphical format unless overridden by DUMP_FORMAT
 fi
+
+# When on_debug is specified as a handler of the DEBUG trap, remembers the last invoked bash command in $last_command.
+# on_debug and on_exit are trying to cooperatively do error handling when exit is invoked.
+declare last_command=""
+declare current_command="$BASH_COMMAND"
+
+#-------------------------------------------------------------------------------
+# Summary: DEBUG trap handler that tracks the last executed command for error reporting.
+# Parameters: none
+# Returns:
+#   Exit code: 0 always
+# Side Effects: Updates global variables $last_command and $current_command
+# Usage: trap on_debug DEBUG
+# Notes: Works cooperatively with on_exit for error handling. Automatically set by core.sh.
+#-------------------------------------------------------------------------------
+function on_debug()
+{
+    local rc=$?
+    # keep track of the last executed command
+    last_command="$current_command"
+    current_command="$BASH_COMMAND"
+
+    return "$rc"
+}
+
+#-------------------------------------------------------------------------------
+# Assuming that the sourcing script didn't change directory, remember the current directory as the "initial".
+#-------------------------------------------------------------------------------
+declare -xr explicit_exit_regex='^exit([[:space:]]+.*)?$'
+
+#-------------------------------------------------------------------------------
+# Summary: EXIT trap handler that displays failed commands, restores directory, and disables tracing.
+# Parameters: none
+# Returns:
+#   stderr: error message if exit code is non-zero and not from explicit exit command
+#   Exit code: inherits from the exiting command
+# Side Effects:
+#   - Changes directory to $initial_dir
+#   - Disables trace mode (set +x)
+# Env. Vars:
+#   initial_dir - directory to restore on exit
+# Usage: trap on_exit EXIT
+# Notes: Works cooperatively with on_debug for error handling. Automatically set by core.sh.
+#-------------------------------------------------------------------------------
+function on_exit()
+{
+    # echo an error message before exiting
+    local ec=$?
+
+    set +x
+
+    #if (( ec != 0 )) && [[ ! ${last_command:-} =~ $explicit_exit_regex ]]; then
+        printf "❌  ERROR: on-exit: the command '%s' failed with exit code %d\n" "${last_command:-'<unknown>'}" "$ec" >&2
+    #fi
+
+    cd "$initial_dir" 2>/dev/null || true
+
+    return "$ec"
+}
 
 # By default all scripts trap DEBUG and EXIT to provide better error handling.
 # However, when running under a debugger, e.g. 'bashdb', trapping these signals
@@ -237,10 +301,3 @@ function list_of_files()
     printf "%s" "${list[*]}"
     return "$success"
 }
-
-if $ci; then                                        # CI is usually defined by most CI/CD systems. Set from the env. variable CI.
-    set_table_format "${DUMP_FORMAT:-markdown}"       # in CI/CD environments, default to markdown format unless overridden by DUMP_FORMAT
-    set_quiet                                       # in CI/CD environments, default to quiet mode
-else
-    set_table_format "${DUMP_FORMAT:-graphical}"      # on terminal, default to graphical format unless overridden by DUMP_FORMAT
-fi

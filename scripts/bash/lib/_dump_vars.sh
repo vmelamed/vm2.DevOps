@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-# Copyright (c) 2025 Val Melamed
+# Copyright (c) 2025-2026 Val Melamed
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
@@ -120,10 +120,10 @@ function _write_line()
     elif is_defined_variable "$1"; then
         # shellcheck disable=SC2154
         case $1 in
-            verbose      )  value=$save_verbose ;;
-            quiet        )  value=$save_quiet ;;
-            table_format )  value=$save_table_format ;;
-            _ignore      )  value=$save_ignore ;;
+            verbose      )  value=$__save_verbose ;;
+            quiet        )  value=$__save_quiet ;;
+            table_format )  value=$__save_table_format ;;
+            _ignore      )  value=$__save_ignore ;;
             *            )  local secret=${2:-false}
                             [[ $secret == true ]] && value="$secret_str" || value="$v" ;;
         esac
@@ -168,7 +168,7 @@ function dump_vars()
     save_state
 
     # shellcheck disable=SC2154 # ci is referenced but not assigned.
-    "$ci" && set_table_format "markdown"
+    $ci && set_table_format "markdown"
     set +x
     local v
     for v in "$@"; do

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-# Copyright (c) 2025 Val Melamed
+# Copyright (c) 2025-2026 Val Melamed
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
@@ -434,7 +434,6 @@ function initialize_repo_state()
 # Usage: git_repo_state <directory>
 # Example: git_repo_state "/home/valo/repos/vm2.Glob"
 #-------------------------------------------------------------------------------
-# shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string - it's a nameref
 # shellcheck disable=SC2004 # $/${} is unnecessary on arithmetic variables - state is assoc.array
 function get_repo_state()
 {
@@ -525,7 +524,6 @@ function has_local_repo()
         return "$err_argument_type"
     }
 
-    # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string. It's a nameref to an associative array.
     local -n state="$1"
     [[ -v state["$key_root"] && -n ${state["$key_root"]} && -d ${state["$key_root"]} ]]
 }
@@ -546,7 +544,6 @@ function has_remote_repo()
         return "$err_argument_type"
     }
 
-    # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string. It's a nameref to an associative array.
     local -n state="$1"
     [[ -v state["$key_url"] && -n ${state["$key_url"]} ]]
 }
@@ -567,7 +564,6 @@ function has_github_remote()
         return "$err_argument_type"
     }
 
-    # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string. It's a nameref to an associative array.
     local -n state="$1"
     [[ -v state["$key_repo_id"] && -n ${state["$key_repo_id"]} ]]
 }
@@ -592,7 +588,6 @@ function dump_repo_state()
 
     $verbose || return "$success"
 
-    # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string. It's a nameref to an associative array.
     local -n __state="$1"
     local key
 
@@ -625,11 +620,9 @@ function read_repo_state()
 
     initialize_repo_state "$1"
 
-    # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string - it's a nameref to an associative array
     local -n state="$1"
     local key value
     while IFS='=' read -r key value; do
-        # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true - trace always returns true
         is_in "$key" "${repo_state_keys[@]}" &&
             trace "read_repo_state: '$key'='$value'" ||
             trace "⚠️  WARNING: Unexpected key '$key' in the repo state input."
@@ -653,7 +646,6 @@ function print_repo_state()
         return "$err_argument_type"
     }
 
-    # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string - it's a nameref to an associative array.
     local -n state="$1"
     local key
     echo "Repository state:"
@@ -674,7 +666,6 @@ function print_repo_state()
 # Usage: root_working_tree <directory>
 # Example: root_working_tree "$PWD"
 #-------------------------------------------------------------------------------
-# shellcheck disable=SC2015
 function root_working_tree()
 {
     (( $# == 0 || $# == 1 )) || {
@@ -718,10 +709,86 @@ function is_inside_work_tree()
 }
 
 #-------------------------------------------------------------------------------
+# Summary: Tests whether local Git metadata is stale enough to justify fetching
+#   before evaluating latest-stable-tag predicates.
+# Parameters:
+#   1 - directory - optional path to Git repository (default: current directory)
+#   2 - branch - optional, the branch to compare against (default: main)
+# Returns:
+#   Exit code: 0 if fetch is recommended, 1 if local metadata appears fresh,
+#     2 on invalid arguments
+# Dependencies: git
+# Usage: if should_fetch_for_latest_stable_tag <directory>; then git fetch ...; fi
+# Example: should_fetch_for_latest_stable_tag "$repo_dir" && git -C "$repo_dir" fetch origin --tags --quiet
+# Notes:
+#   - Conservative by design: uncertain states return 0 (fetch recommended).
+#   - Compares local vs remote main tip and latest stable release tag name.
+#-------------------------------------------------------------------------------
+function should_fetch_for_latest_stable_tag()
+{
+    (( $# <= 2 )) || {
+        error 3 "${FUNCNAME[0]}() requires no more than 2 arguments (provided $#): path to a Git repository and an optional branch name."
+        return "$err_invalid_arguments"
+    }
+    (( $# == 1 )) && [[ -d "$1" ]] || {
+        error 3 "${FUNCNAME[0]}() the parameter \$1 must be a path to an existing directory."
+        return "$err_not_directory"
+    }
+    (( $# == 2 )) && validate_gh_repo_branch "$2" || {
+        error 3 "${FUNCNAME[0]}() the parameter \$2 must be a valid branch name."
+        return "$err_invalid_arguments"
+    }
+
+    local dir=${1:-.}
+    local branch=${2:-main}
+
+    is_inside_work_tree "$dir" || {
+        error 3 "${FUNCNAME[0]}() the parameter \$1 or current directory must be inside a Git work tree."
+        return "$err_not_git_directory"
+    }
+
+    # Shallow repositories can miss history or tags needed by release predicates.
+    [[ $(git -C "$dir" rev-parse --is-shallow-repository 2>"$_ignore") != true ]] || return "$positive"
+
+    local local_sha remote_sha
+    local_sha=$(git -C "$dir" rev-parse --verify refs/remotes/origin/"$branch" 2>"$_ignore") || return "$positive"
+    remote_sha=$(git -C "$dir" ls-remote --heads origin "$branch" 2>"$_ignore" | awk 'NR==1 {print $1}')
+    [[ -z "$remote_sha" ]] && return "$positive"
+    [[ "$local_sha" != "$remote_sha" ]] && return "$positive"
+
+    local local_stable_tag remote_stable_tag
+
+    local_stable_tag=$(git -C "$dir" tag | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1)
+    [[ -n "$local_stable_tag" ]] || return "$positive"
+
+    remote_stable_tag=$(git -C "$dir" ls-remote --tags --refs origin 2>"$_ignore" | awk '{print $2}' | sed 's#refs/tags/##' | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1)
+    [[ -n "$remote_stable_tag" ]] || return "$positive"
+    [[ "$local_stable_tag" == "$remote_stable_tag" ]] || return "$positive"
+
+    return "$negative"
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Ensures that the Git repository in the specified directory has fresh metadata by fetching from the remote if needed.
+# Parameters:
+#   1 - directory - optional path to Git repository (default: current directory)
+#   2 - branch - optional, the branch to compare against (default: main)
+# Returns:
+#   None
+# Dependencies: git
+# Usage: ensure_fresh_git_state <directory>
+#-------------------------------------------------------------------------------
+function ensure_fresh_git_state()
+{
+    should_fetch_for_latest_stable_tag "$@" &&
+    git -C "$1" fetch origin "${2:-main}" --quiet
+}
+
+#-------------------------------------------------------------------------------
 # Summary: Gets the commit hash of the latest stable tag in the specified Git repository.
 # Parameters:
 #   1 - directory - path to Git repository
-#   2 - should_fetch - optional, if true, fetch the latest changes from remote (default: true)
+#   2 - should_fetch - optional, if true, fetch the latest changes from remote (default: false)
 # Returns:
 #   The commit hash of the latest stable tag, or 1 if no stable tags are found
 # Dependencies: git
@@ -742,13 +809,13 @@ function get_latest_stable_tag_hash()
         error 3 "The specified directory '$1' is not a Git work tree."
         return "$err_not_git_directory"
     }
-    (( $# == 2 )) || is_boolean "$2" || {
+    (( $# == 2 )) && is_boolean "$2" || {
         error 3 "The second argument to ${FUNCNAME[0]}() must be a boolean (true/false)."
         return "$err_invalid_arguments"
     }
 
     local dir=${1:-.}
-    local should_fetch=${2:-true}
+    local should_fetch=${2:-false}
 
     # fetch latest changes from remote if not skipped
     $should_fetch && git -C "$dir" fetch origin main --quiet
@@ -768,7 +835,7 @@ function get_latest_stable_tag_hash()
 # Summary: Tests if the current commit in the specified directory is on the latest stable tag.
 # Parameters:
 #   1 - directory - path to Git repository
-#   2 - optional, should_fetch - if true (the default), fetch the latest changes from remote (optional, default: true)
+#   2 - optional, should_fetch - if true, fetch the latest changes from remote (optional, default: false)
 # Returns:
 #   Exit code: 0 if on latest stable tag, 1 if not, 2 on invalid arguments or errors
 # Dependencies: git
@@ -793,7 +860,7 @@ function is_on_latest_stable_tag()
 # Summary: Tests if the current commit in the specified directory is after the latest stable tag.
 # Parameters:
 #   1 - directory - path to Git repository
-#   2 - optional, should_fetch - if true (the default), fetch the latest changes from remote (optional, default: true)
+#   2 - optional, should_fetch - if true, fetch the latest changes from remote (optional, default: false)
 # Returns:
 #   Exit code: 0 if after latest stable tag, 1 if not, 2 on invalid arguments or errors
 # Dependencies: git
@@ -818,7 +885,7 @@ function is_after_latest_stable_tag()
 # Summary: Tests if the current commit in the specified directory is on or after the latest stable tag.
 # Parameters:
 #   1 - directory - path to Git repository
-#   2 - should_fetch - if true (the default), fetch the latest changes from remote (optional, default: true)
+#   2 - should_fetch - if true, fetch the latest changes from remote (optional, default: false)
 # Returns:
 #   Exit code: 0 if on or after latest stable tag, 1 if before, 2 on invalid arguments or errors
 # Dependencies: git

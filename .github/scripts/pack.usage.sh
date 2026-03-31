@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-# shellcheck disable=SC2154 # variable is referenced but not assigned
+declare -xr common_switches
+declare -xr common_vars
+declare -xr script_name
 
 function usage_text()
 {

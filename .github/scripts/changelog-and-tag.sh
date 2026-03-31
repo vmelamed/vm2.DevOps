@@ -53,7 +53,7 @@ exit_if_has_errors
 
 # Configure git for CI
 # shellcheck disable=SC2154 # ci is referenced but not assigned.
-if [[ "$ci" == true ]]; then
+if $ci; then
     execute git config user.name "github-actions[bot]"
     execute git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 fi

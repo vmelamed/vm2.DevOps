@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 set -euo pipefail
 
 script_name=$(basename "${BASH_SOURCE[0]}")

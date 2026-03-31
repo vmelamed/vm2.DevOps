@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-# Copyright (c) 2025 Val Melamed
+# Copyright (c) 2025-2026 Val Melamed
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 # shellcheck disable=SC2154
@@ -81,7 +81,6 @@ function compare_settings()
     local hq_path="$1"
     local jq_transform=$2
     local -n expecteds="$3"
-    # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
     local modify_keys="$4"
     local -n results="$5"
 

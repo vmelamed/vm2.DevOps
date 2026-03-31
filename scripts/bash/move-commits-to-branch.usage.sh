@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 
-# shellcheck disable=SC2154 # solution_dir is referenced but not assigned
+declare -xr common_switches
+declare -xr common_vars
+declare -xr script_name
+
 function usage_text()
 {
     local switches=""

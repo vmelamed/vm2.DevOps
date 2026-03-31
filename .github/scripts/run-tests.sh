@@ -167,7 +167,7 @@ if [[ $dry_run != true ]]; then
 fi
 
 # shellcheck disable=SC2154 # ci is referenced but not assigned.
-if [[ "$ci" == true ]]; then
+if $ci; then
     # Set outputs for merged coverage
     # shellcheck disable=SC2034 # proj_name appears unused. Verify use (or export if used externally).
     args_to_github_output \

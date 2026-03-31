@@ -1,9 +1,12 @@
 # SPDX-License-Identifier: MIT
-# Copyright (c) 2025 Val Melamed
+# Copyright (c) 2025-2026 Val Melamed
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-# shellcheck disable=SC2154 # common_switches is referenced but not assigned
+declare -xr common_switches
+declare -xr common_vars
+declare -xr script_name
+
 function usage_text()
 {
     local switches=""
