@@ -42,7 +42,7 @@ done
 root=$(cd "$dir" && pwd)
 
 cs_header="// SPDX-License-Identifier: $license
-// Copyright (c) 2025 Val Melamed
+// Copyright (c) 2025-2026 Val Melamed
 
 "
 

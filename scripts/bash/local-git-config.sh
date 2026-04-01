@@ -43,8 +43,8 @@ trace "Repository path: '$repo_path'"
 
 
 # make sure we are seeing .github and vm2.DevOps properly through vm2_repos
-validate_repo ".github" "$vm2_repos" true
-validate_repo "vm2.DevOps" "$vm2_repos" true
+validate_repo ".github" "$vm2_repos"
+validate_repo "vm2.DevOps" "$vm2_repos"
 exit_if_has_errors
 ensure_fresh_git_state ".github"
 ensure_fresh_git_state "vm2.DevOps"

@@ -6,14 +6,13 @@ declare -xr script_name
 
 function usage_text()
 {
+    local long_text=$1
     local switches=""
     local vars=""
 
-    if [[ $1 == true ]]; then
-        switches="
-Switches:
-$common_switches"
-        vars=$common_vars
+    if $long_text; then
+        switches=$'\n'"Switches:"$'\n'"$common_switches"
+        vars="$common_vars"
     fi
 
     cat << EOF
@@ -52,14 +51,4 @@ Environment Variables:
   WORKFLOW_PATH                 Path to the workflow file
 $vars
 EOF
-}
-
-function usage()
-{
-    local long_help=true
-    if [[ $# -gt 0 && ($1 == true || $1 == false) ]]; then
-        long_help=$1
-        shift
-    fi
-    display_usage_msg "$(usage_text "$long_help")" "$@"
 }

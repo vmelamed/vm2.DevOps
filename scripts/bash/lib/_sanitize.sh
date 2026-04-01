@@ -3,6 +3,11 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
+#-------------------------------------------------------------------------------
+# This script defines functions for sanitizing and validating user input, esp. in GitHub Actions workflows.
+# It includes functions for trimming whitespace and checking for safe input.
+#-------------------------------------------------------------------------------
+
 # Circular include guard
 (( ${__VM2_LIB_SANITIZE_SH_LOADED:-0} == 1 )) && return 0
 declare -gr __VM2_LIB_SANITIZE_SH_LOADED=1

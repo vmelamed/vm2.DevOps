@@ -42,38 +42,63 @@ declare -rxi err_invalid_arguments
 declare -rxi err_argument_type
 declare -rxi err_argument_value
 declare -rxi err_not_found
+declare -rxi err_not_file
+declare -rxi err_not_directory
+declare -rxi err_not_git_repository
+declare -rxi err_behind_latest_stable_tag
+declare -rxi err_invalid_repo
+declare -rxi err_invalid_repo
+declare -rxi err_found_more_than_one
+declare -rxi err_repo_has_no_ci
+declare -rxi err_dir_has_no_ci
+declare -rxi err_not_git_directory
 
 declare -xr semverTagReleaseRegex
+
+declare target_repo_root
+declare -xi rc=0
 
 #===============================
 # Find and validate vm2_repos:
 #===============================
-if [[ -z "$vm2_repos" ]]; then
-    vm2_repos=$(resolve_vm2_repos)
-else
-    vm2_repos=$(resolve_vm2_repos "$vm2_repos")
-fi
-(( $? == success ))  ||  exit "$rc"
+vm2_repos=$(resolve_vm2_repos "$vm2_repos")
+(( $? == success )) ||
+    exit "$rc"
+
+[[ -d "$vm2_repos/.github" && -d "$vm2_repos/vm2.DevOps" ]] ||
+    usage  "The GitHub Actions workflow templates directory .github and/or the vm2.DevOps directory is missing in '$vm2_repos'."
+
 
 # make sure we are seeing .github and vm2.DevOps properly through vm2_repos
-validate_repo ".github" "$vm2_repos" true
-validate_repo "vm2.DevOps" "$vm2_repos" true
+validate_repo ".github" "$vm2_repos"
+rc=$?
+(( rc == err_behind_latest_stable_tag )) && { ensure_fresh_git_state "$vm2_repos/.github"; rc=$?; }
+(( rc != success )) && exit "$rc"
+
+validate_repo "vm2.DevOps" "$vm2_repos"
+rc=$?
+(( rc == err_behind_latest_stable_tag )) && { ensure_fresh_git_state "$vm2_repos/vm2.DevOps"; rc=$?; }
+(( rc != success )) && exit "$rc"
+
 exit_if_has_errors
-ensure_fresh_git_state ".github"
-ensure_fresh_git_state "vm2.DevOps"
 
-
-trace "All vm2 repositories are expected in '$vm2_repos'"
+trace "All vm2 repositories are expected generally in '$vm2_repos'"
 
 #=================================================
 # Validate and adjust target_path from target_dir:
 #=================================================
-target_path=$(resolve_repo_root "$target_dir" "$vm2_repos")
-if [[ $? -ne $success ]]; then
-    error "Could not resolve the root directory of the target repository '$target_dir'."
-    exit "$err_not_found"
-fi
-trace "The target project is in '$target_path'"
+output=$(resolve_repo_root "$target_dir" "$vm2_repos")
+rc=$?
+# here we can only work with git repos and directories that have CI configured:
+(( rc == success ||
+   rc == err_not_git_directory )) || exit "$rc"
+
+{ read -r target_repo_root; read -r target_path; } <<< "$output"
+
+((  rc == success )) &&
+    ensure_fresh_git_state "$target_repo_root"
+
+trace "The target project is in '$target_path' with root directory '$target_repo_root'."
 
 # freeze the arguments
 declare -xr vm2_repos

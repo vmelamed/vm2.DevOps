@@ -9,10 +9,13 @@ declare -xr script_name
 
 function usage_text()
 {
-    local cmn_switches=""
+    local long_text=$1
+    local switches=""
+    local vars=""
 
-    if $1; then
-        cmn_switches="$common_switches"
+    if $long_text; then
+        switches="$common_switches"
+        vars="Environment Variables:$common_vars"
     fi
 
     cat << EOF
@@ -83,22 +86,12 @@ Switches:
                                 and policies. Use this option alone when the repository already exists and is linked to a GitHub
                                 repository and none of the --interactive-* options are specified. In any other case, the script
                                 will run its normal course and will display the audit at the end anyway.
-
-$cmn_switches
+$switches
+$vars
 Examples:
   ${script_name} ~/repos/vm2.Glob
   ${script_name} \$VM2_REPOS/vm2.Glob --interactive-secrets --verbose
   ${script_name} vmelamed/vm2.MyPackage --visibility private --ssh
   ${script_name} vm2.Glob --audit
 EOF
-}
-
-function usage()
-{
-    local long_help=false
-    if [[ $# -gt 0 && $1 =~ ^(true|false)$ ]]; then
-        long_help=$1
-        shift
-    fi
-    display_usage_msg "$(usage_text "$long_help")" "$@"
 }

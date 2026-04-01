@@ -3,6 +3,11 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
+#-------------------------------------------------------------------------------
+# This script defines diagnostic functions for logging messages to stdout, stderr, and trace output.
+# It also defines a global error counter and functions to manipulate it.
+#-------------------------------------------------------------------------------
+
 # ╔═══════════════════════════════════════════════════════════════════════════╗
 # ║ IMPORTANT: The to_* functions are designed to be used on the RIGHT side   ║
 # ║ of a pipe. Never pipe a function that SETS VARIABLES into a to_* function.║
@@ -155,7 +160,7 @@ function usage()
 function exit_if_has_errors()
 {
     # shellcheck disable=SC2154 # errors is referenced but not assigned.
-    has_errors && usage false "$errors error(s) encountered. Please fix the above issues and try again."
+    has_errors && usage false "$failure" "$errors error(s) encountered. Please fix the above issues and try again."
     return "$success"
 }
 

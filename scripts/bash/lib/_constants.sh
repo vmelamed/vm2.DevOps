@@ -1,22 +1,22 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025-2026 Val Melamed
 
-
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-#===============================================================================
-# Terminal Color and Formatting Constants
+#-------------------------------------------------------------------------------
+# This script defines constants for:
 #
-# This script defines ANSI escape codes for terminal text formatting and colors.
-# When stdout is connected to a terminal (tty), color codes are enabled.
-# When stdout is redirected to a file or pipe, codes are set to empty strings.
+# Terminal Color and Formatting Constants ANSI escape codes for terminal text formatting and colors:
+#   Available constants:
+#       - Text formatting: BOLD, RESET
+#       - Basic colors: RED, GREEN, YELLOW, BLUE
+#       - Bold colors: BOLDRED, BOLDGREEN, BOLDYELLOW, BOLDBLUE
+#       - NC (No Color) - alias for RESET
+#   Note that when stdout is connected to a terminal (tty), color codes are enabled, otherwise they are set to empty strings.
 #
-# Available constants:
-#   - Text formatting: BOLD, RESET
-#   - Basic colors: RED, GREEN, YELLOW, BLUE
-#   - Bold colors: BOLDRED, BOLDGREEN, BOLDYELLOW, BOLDBLUE
-#   - NC (No Color) - alias for RESET
-#===============================================================================
+# Regular Expression constants.
+# A few graphical characters and emojis used for output formatting.
+#-------------------------------------------------------------------------------
 
 # Circular include guard
 (( ${__VM2_LIB_CONSTANTS_SH_LOADED:-0} == 1 )) && return 0

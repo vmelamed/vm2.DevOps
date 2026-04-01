@@ -4,6 +4,12 @@
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 
+#-------------------------------------------------------------------------------
+# This script defines functions for working with Git and GitHub repositories.
+# It includes functions for validating GitHub repository owners and names, parsing GitHub URLs, and other Git-related utilities.
+#-------------------------------------------------------------------------------
+
+
 # Circular include guard
 (( ${__VM2_LIB_GIT_SH_LOADED:-0} == 1 )) && return 0
 declare -gr __VM2_LIB_GIT_SH_LOADED=1
@@ -743,7 +749,7 @@ function should_fetch_for_latest_stable_tag()
     local branch=${2:-main}
 
     is_inside_work_tree "$dir" || {
-        error 3 "${FUNCNAME[0]}() the parameter \$1 or current directory must be inside a Git work tree."
+        error 3 "${FUNCNAME[0]}() the parameter \$1 or the current directory must be inside a Git work tree."
         return "$err_not_git_directory"
     }
 
@@ -751,8 +757,10 @@ function should_fetch_for_latest_stable_tag()
     [[ $(git -C "$dir" rev-parse --is-shallow-repository 2>"$_ignore") != true ]] || return "$positive"
 
     local local_sha remote_sha
+
     local_sha=$(git -C "$dir" rev-parse --verify refs/remotes/origin/"$branch" 2>"$_ignore") || return "$positive"
     remote_sha=$(git -C "$dir" ls-remote --heads origin "$branch" 2>"$_ignore" | awk 'NR==1 {print $1}')
+
     [[ -z "$remote_sha" ]] && return "$positive"
     [[ "$local_sha" != "$remote_sha" ]] && return "$positive"
 

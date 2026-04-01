@@ -3,6 +3,11 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
+#-------------------------------------------------------------------------------
+# This script defines functions and regular expressions for working with semantic versions (SemVer) and MinVer tags.
+# It includes functions for validating and comparing semantic versions, parsing version components.
+#-------------------------------------------------------------------------------
+
 # Circular include guard
 (( ${__VM2_LIB_SEMVER_SH_LOADED:-0} == 1 )) && return 0
 declare -gr __VM2_LIB_SEMVER_SH_LOADED=1

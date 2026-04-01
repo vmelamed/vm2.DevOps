@@ -6,13 +6,12 @@ declare -xr script_name
 
 function usage_text()
 {
+    local long_text=$1
     local switches=""
     local vars=""
 
-    if [[ $1 == true ]]; then
-        switches="
-Switches:
-$common_switches"
+    if $long_text; then
+        switches=$'\n'"Switches:"$'\n'"$common_switches"
         vars=$common_vars
     fi
 
@@ -34,7 +33,6 @@ Options:
   -b, --build                   Build the project before packing (default: use pre-built artifacts).
                                 Use when no prior build job cached the artifacts (e.g., template projects).
                                 Initial value from \$BUILD or default 'false'
-
 $switches
 Environment Variables:
   PACKAGE_PROJECT               Path to the project to pack
@@ -51,14 +49,4 @@ Environment Variables:
                                 (default: 'false')
 $vars
 EOF
-}
-
-function usage()
-{
-    local long_help=true
-    if [[ $# -gt 0 && ($1 == true || $1 == false) ]]; then
-        long_help=$1
-        shift
-    fi
-    display_usage_msg "$(usage_text "$long_help")" "$@"
 }

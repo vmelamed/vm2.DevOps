@@ -6,13 +6,12 @@ declare -xr script_name
 
 function usage_text()
 {
+    local long_text=$1
     local switches=""
     local vars=""
 
-    if [[ $1 == true ]]; then
-        switches="
-Switches:
-$common_switches"
+    if $long_text; then
+        switches=$'\n'"Switches:"$'\n'"$common_switches"
         vars=$common_vars
     fi
 
@@ -44,7 +43,6 @@ Options:
   -o, --repo-owner              Repository owner. When run on a GitHub runner, this is automatically set from the
                                 \$GITHUB_REPOSITORY_OWNER environment variable. Required only if publishing to GitHub Packages
                                 Initial value from the \$GITHUB_REPOSITORY_OWNER environment variable or "vmelamed"
-
 $switches
 Environment Variables:
   PROJECT                       Project/solution paths to package and publish
@@ -68,14 +66,4 @@ Environment Variables:
   NUGET_API_KEY                 The NuGet API key for the selected NuGet server
 $vars
 EOF
-}
-
-function usage()
-{
-    local long_help=true
-    if [[ $# -gt 0 && ($1 == true || $1 == false) ]]; then
-        long_help=$1
-        shift
-    fi
-    display_usage_msg "$(usage_text "$long_help")" "$@"
 }

@@ -3,6 +3,11 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
+#-------------------------------------------------------------------------------
+# This script defines functions for extracting build information from the output of a 'dotnet build -v d' command.
+# It sets global exported variables with the extracted information.
+#-------------------------------------------------------------------------------
+
 # Circular include guard
 (( ${__VM2_LIB_DOTNET_SH_LOADED:-0} == 1 )) && return 0
 declare -gr __VM2_LIB_DOTNET_SH_LOADED=1

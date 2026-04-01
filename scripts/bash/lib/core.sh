@@ -3,13 +3,15 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-# This script defines a number of general purpose functions by means of sourcing other scripts in the same directory.
-# For the functions to be invocable by other scripts, this script needs to be sourced.
+#-------------------------------------------------------------------------------
+# This script defines a number of general purpose functions by means of sourcing other scripts from the same directory.
+# For the functions to be invocable by other scripts, this script must be sourced.
 # When fatal parameter errors are detected, the script invokes exit, which leads to exiting the current shell.
+#-------------------------------------------------------------------------------
 
-#--------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # Common scripts variables and environment initialization
-#--------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 
 # Circular include guard
 (( ${__VM2_LIB_CORE_SH_LOADED:-0} == 1 )) && return 0
@@ -122,9 +124,9 @@ function on_exit()
 
     set +x
 
-    #if (( ec != 0 )) && [[ ! ${last_command:-} =~ $explicit_exit_regex ]]; then
+    if (( ec != 0 )) && [[ ! ${last_command:-} =~ $explicit_exit_regex ]]; then
         printf "❌  ERROR: on-exit: the command '%s' failed with exit code %d\n" "${last_command:-'<unknown>'}" "$ec" >&2
-    #fi
+    fi
 
     cd "$initial_dir" 2>/dev/null || true
 

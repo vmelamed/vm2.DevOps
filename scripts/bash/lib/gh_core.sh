@@ -3,9 +3,12 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
+#-------------------------------------------------------------------------------
 # This script defines several GitHub specific constants, variables, and helper
-# functions typical for the GitHub Actions environment. For the functions to be
-# invocable by other scripts, this script needs to be sourced.
+# functions typical for the GitHub Actions environment. The script sources
+# core.sh and _dotnet.sh from the same directory. For the functions to be
+# invocable by other scripts, this script must be sourced.
+#-------------------------------------------------------------------------------
 
 # Circular include guard
 (( ${__VM2_LIB_GH_CORE_SH_LOADED:-0} == 1 )) && return 0

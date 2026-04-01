@@ -3,6 +3,11 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
+#-------------------------------------------------------------------------------
+# This script defines functions for dumping variable names and values in a formatted table.
+# It supports different table formats (graphical, markdown) and handles scalars, arrays, associative arrays, functions, and undefined variables.
+#-------------------------------------------------------------------------------
+
 # Circular include guard
 (( ${__VM2_LIB_DUMP_VARS_SH_LOADED:-0} == 1 )) && return 0
 declare -gr __VM2_LIB_DUMP_VARS_SH_LOADED=1

@@ -6,13 +6,12 @@ declare -xr script_name
 
 function usage_text()
 {
+    local long_text=$1
     local switches=""
     local vars=""
 
-    if [[ $1 == true ]]; then
-        switches="
-Switches:
-$common_switches"
+    if $long_text; then
+        switches="Switches:"$'\n'"$common_switches"
         vars=$common_vars
     fi
 
@@ -35,6 +34,7 @@ Options:
                                 Initial value from \$MINVERDEFAULTPRERELEASEIDENTIFIERS or default 'preview.0'
   -r, --reason                  Reason for prerelease (e.g., "pre-release", "manual prerelease", etc.)
                                 Initial value from \$REASON or default "pre-release"
+
 $switches
 Environment Variables:
   MINVERTAGPREFIX               Git tag prefix to be recognized by MinVer
@@ -50,16 +50,4 @@ Outputs (to GITHUB_OUTPUT):
   prerelease-tag                The full tag (e.g., 'v1.2.3-preview.1')
   reason                        The reason for the prerelease build
 EOF
-}
-
-## Displays a usage message with the provided text (above)
-## Usage: display_usage_msg "<usage text>" "[<additional info>]"
-function usage()
-{
-    local long_help=true
-    if [[ $# -gt 0 && ($1 == true || $1 == false) ]]; then
-        long_help=$1
-        shift
-    fi
-    display_usage_msg "$(usage_text "$long_help")" "$@"
 }

@@ -6,10 +6,13 @@ declare -xr script_name
 
 function usage_text()
 {
+    local long_text=$1
     local switches=""
+    local vars=""
 
-    if [[ $1 == true ]]; then
+    if $long_text; then
         switches="$common_switches"
+        vars=$'\n'"Environment Variables:"$'\n'"$common_vars"
     fi
 
     cat << EOF
@@ -28,20 +31,10 @@ Options:
 
 Switches:
   -n, --check-out-new           After moving the commits, check out the new branch.
-$switches
+$switches$vars
 Examples:
   ${script_name} --commit-sha ff5c2d182c0d3a01c1f1dfd66c9267f0569d9802 --branch feature/my-feature
   ${script_name} -c ff5c2d1 -b feature/my-feature -n
 EOF
 
-}
-
-function usage()
-{
-    local long_help=false
-    if [[ $# -gt 0 && ($1 == true || $1 == false) ]]; then
-        long_help=$1
-        shift
-    fi
-    display_usage_msg "$(usage_text "$long_help")" "$@"
 }

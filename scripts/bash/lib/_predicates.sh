@@ -3,6 +3,12 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
+#-------------------------------------------------------------------------------
+# This script defines predicate functions for testing the existence and type of variables.
+# It includes functions for checking if a variable, array, or associative array is defined.
+# Includes a function (is_in) for testing if a the value of a variable is included in a set of values, e.g. array.
+#-------------------------------------------------------------------------------
+
 # Circular include guard
 (( ${__VM2_LIB_PREDICATES_SH_LOADED:-0} == 1 )) && return 0
 declare -gr __VM2_LIB_PREDICATES_SH_LOADED=1
@@ -191,7 +197,7 @@ function is_positive()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Tests if the parameter represents a valid non-negative integer (0, 1, 2, 3, ...).
+# Summary: Tests if the parameter represents a valid non-negative integer (0, 1, 2, 3, ...) - the same as is_natural().
 # Parameters:
 #   1 - number - string to test
 # Returns:

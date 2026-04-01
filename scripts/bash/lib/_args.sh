@@ -1,14 +1,21 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025-2026 Val Melamed
 
-
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
-# shellcheck disable=SC2089
-# shellcheck disable=SC2090
+# shellcheck disable=SC2089,SC2090
+
+#-------------------------------------------------------------------------------
+# This script defines the common arguments for the vm2 bash scripts: quiet, verbose, table_format, dry_run, debugger, and ci.
+# It also defines functions for parsing from command line arguments, managing, validating, saving, and restoring the state of
+# these arguments.
+# It defines helpers that should be used by the top-level scripts's usage function.
+#-------------------------------------------------------------------------------
 
 # Circular include guard
 (( ${__VM2_LIB_ARGS_SH_LOADED:-0} == 1 )) && return 0
 declare -gr __VM2_LIB_ARGS_SH_LOADED=1
+
+declare -rx script_name
 
 declare -rxi success
 declare -rxi failure
@@ -17,6 +24,7 @@ declare -rxi negative
 declare -rxi err_invalid_arguments
 declare -rxi err_argument_type
 declare -rxi err_argument_value
+declare -rxi err_not_overridden
 
 # default values for the common flags below
 declare -xr default_quiet=false
@@ -114,7 +122,7 @@ function restore_state()
     }
     __state_saved_pid=0
     __state_saved_subshell=-1
-    ! bad_call || return "$failure"
+    ! $bad_call || return "$failure"
 
     set_table_format "$__save_table_format" || { error "${FUNCNAME[0]}() failed to restore table format." >&2; return "$failure"; }
     $__save_quiet   && set_quiet   || unset_quiet
@@ -373,8 +381,8 @@ function get_common_arg()
     run_long_usage=false
 
     case "${1,,}" in
-        --help          ) run_long_usage=true; run_short_usage=false ;;
-        -h|-\?          ) run_long_usage=false; run_short_usage=true ;;
+        --help          ) usage true "$success" ;;
+        -h|-\?          ) usage false "$success" ;;
         -v|--verbose    ) set_verbose ;;
         -q|--quiet      ) set_quiet ;;
         -x|--trace      ) set_trace_enabled ;;
@@ -384,74 +392,60 @@ function get_common_arg()
         *               ) return "$negative" ;;  # not a common argument
     esac
 
-    $run_long_usage && usage true
-    $run_short_usage && usage false
     return "$positive" # it was a common argument and was processed
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Displays a usage message and optionally additional error messages, exiting with code 2 if error messages are present.
+# Summary:
+#       1) displays optional exit error message
+#       2) displays optionally long or short usage message
+#       3) exits the script with
+#               - optional exit code
+#               - 0 ($success) if no error messages are present
+#               - 1 ($failure) if error messages are present
 # Parameters:
-#   1 - usage_text - the usage text to display
-#   2+ - additional_message - optional error messages to display (optional)
-# Returns:
-#   stdout: usage text
-#   stderr: error messages if provided
-#   Exit code: exits with 2 if additional messages provided, otherwise returns to caller
-# Usage: display_usage_msg <usage_text> [additional_message...]
-# Example: display_usage_msg "$usage_text" "Invalid parameter: $param"
-# Notes: Temporarily disables tracing during display. Override usage() in calling scripts for custom help.
-#-------------------------------------------------------------------------------
-function display_usage_msg()
-{
-    (( $# >= 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires at least one parameter ($# provided): the usage text"
-        exit "$err_invalid_arguments"
-    }
-    [[ -n "$1" ]] || {
-        error 3 "${FUNCNAME[0]}() requires at least one non-empty parameter - the usage text"
-        exit "$err_argument_value"
-    }
-
-    local ec=0
-
-    # save the tracing state and disable tracing
-    local set_tracing_on
-    [[ $- =~ .*x.* ]] && set_tracing_on=true || set_tracing_on=false
-    set +x
-
-    usage_txt=$1
-    shift
-    if [[ $# -gt 0 && -n "$1" ]]; then
-        error 5 "$*"
-        ec="$err_invalid_arguments"
-    fi
-    echo "
-$usage_txt
-"
-
-    # restore the tracing state
-    $set_tracing_on && set -x
-    exit "$ec"
-}
-
-#-------------------------------------------------------------------------------
-# Summary: Displays the usage message; MUST be overridden in calling scripts for custom usage information.
-# Parameters: varies by implementation in calling script
+#   1 - long_help - boolean flag indicating whether to display the long (if true) or the short (if false) version of the usage text.
+#       The long version includes the standard parameters like verbose, quiet, etc.
+#       (optional, boolean, default: false)
+#   2 - exit_code - the exit code to use when exiting
+#       (optional, non-negative integer, less than 256, default 1 - if error messages are present, otherwise 0)
+#   3+ - error_message(s) - additional error messages to display at the top
+#       (optional, default - no message)
+#
 # Returns:
 #   Exit code: depends on implementation
-# Usage: Override this function in your script
+#     - provided exit code
+#     - 1 ($failure) if error messages are present
+#     - 0 ($success) if no error messages are present
+# Usage: usage [<long_help>] [<exit_code>] [<error_message>]*
 # Example:
-#   function usage() {
-#     display_usage_msg "Usage: $script_name [options]" "$@"
-#   }
+#     usage true
+#     usage $err_invalid_argument_value "Invalid argument value for the option <option_name>"
 #-------------------------------------------------------------------------------
 function usage()
 {
-    display_usage_msg "$common_switches" "OVERRIDE THE FUNCTION usage() IN THE CALLING SCRIPT TO PROVIDE CUSTOM USAGE INFORMATION."
+    local long=false
+    (( $# > 0 )) && is_boolean "$1" && long=$1 && shift
+
+    local -i exit_code=$success
+    (( $# > 0 )) && is_natural "$1" && exit_code=$1 && shift
+
+    # save the tracing state and disable tracing
+    local set_tracing_on=false
+    [[ $- =~ .*x.* ]] && set_tracing_on=true
+    set +x
+
+    (( $# > 0 )) && error "$@"
+    usage_text "$long"
+
+    # restore the tracing state
+    $set_tracing_on && set -x
+
+    exit "$exit_code"
 }
 
-declare -rx common_switches="  -v, --verbose                 Enables verbose output from tracing and variables dumps, e.g. in the 'dump_vars' function
+declare -rx common_switches=\
+"  -v, --verbose                 Enables verbose output from tracing and variables dumps, e.g. in the 'dump_vars' function
                                 Initial value from \$VERBOSE or 'false'
   -x, --trace                   1) Sets the switch '--verbose'
                                 2) Redirects all suppressed output from '/dev/null' to '/dev/stderr'
@@ -467,13 +461,39 @@ declare -rx common_switches="  -v, --verbose                 Enables verbose out
   -md, --markdown               Sets the output dump table format to markdown
                                 Initial value from \$DUMP_FORMAT or 'markdown' in CI environments
   --help                        Displays longer version of the usage text - including all common flags
-  -h | -?                       Displays shorter version of the usage text - without common flags
+  -h | -?                       Displays shorter version of the usage text - without the common flags
                                 If you have both --help and -h|-? in your script, the last one wins.
 "
 
-declare -rx common_vars="  VERBOSE                       Enables verbose output (see --verbose)
+declare -rx common_vars=\
+"  VERBOSE                       Enables verbose output (see --verbose)
   DRY_RUN                       Does not execute commands that can change environments. (see --dry-run)
   QUIET                         Suppresses all user prompts, assuming the default answers (see --quiet)
   DUMP_FORMAT                   Sets the output dump table format. Must be 'graphical' or 'markdown'
                                 (see --graphical and --markdown)
 "
+
+#-------------------------------------------------------------------------------
+# Summary: Displays the usage text for the script. Override in each top-level script to show different usage text.
+# Parameters:
+#   1 - long_help - boolean flag indicating whether to display the long (if true) or the short (if false) version of the usage text.
+#       The long version includes the standard parameters like verbose, quiet, etc.
+#       (optional, boolean, default: false)
+#-------------------------------------------------------------------------------
+function usage_text()
+{
+    local long_text=$1
+    local switches=""
+    local vars=""
+
+    if $long_text; then
+        switches="Switches:"$'\n'"$common_switches"
+        vars="Environment Variables:"$'\n'"$common_vars"
+    fi
+
+    cat << EOF
+OVERRIDE THE FUNCTION usage_text() IN THE CALLING SCRIPT ${script_name} TO PROVIDE CUSTOM USAGE INFORMATION.
+$switches
+$vars
+EOF
+}

@@ -6,11 +6,12 @@ declare -xr script_name
 
 function usage_text()
 {
+    local long_text=$1
     local switches=""
     local vars=""
 
-    if [[ $1 == true ]]; then
-        switches=$common_switches
+    if $long_text; then
+        switches=$'\n'"Switches:"$'\n'"$common_switches"
         vars=$common_vars
     fi
 
@@ -40,8 +41,6 @@ Options:
   -a, --artifacts               Specifies the directory where to create the benchmark artifacts: results, summaries, base lines,
                                 etc.
                                 Initial value: '<solution root>/BenchmarkArtifacts'
-
-Switches:
 $switches
 Environment Variables:
   BENCHMARK_PROJECT             Path to the benchmark project file
@@ -56,14 +55,4 @@ $vars
 Outputs (to GITHUB_OUTPUT):
   results-dir                   The directory where benchmark results are stored
 EOF
-}
-
-function usage()
-{
-    local long_help=true
-    if [[ $# -gt 0 && ($1 == true || $1 == false) ]]; then
-        long_help=$1
-        shift
-    fi
-    display_usage_msg "$(usage_text "$long_help")" "$@"
 }

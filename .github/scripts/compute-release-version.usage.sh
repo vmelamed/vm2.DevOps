@@ -6,10 +6,11 @@ declare -xr script_name
 
 function usage_text()
 {
+    local long_text=$1
     local switches=""
     local vars=""
 
-    if [[ $1 == true ]]; then
+    if $long_text; then
         switches="
 Switches:
 $common_switches"
@@ -44,16 +45,4 @@ Outputs (to GITHUB_OUTPUT):
   needs-empty-commit            'true' if HEAD is tagged with a prerelease and an empty commit is needed
                                 to advance HEAD before creating the stable tag; 'false' otherwise
 EOF
-}
-
-## Displays a usage message with the provided text (above)
-## Usage: display_usage_msg "<usage text>" "[<additional info>]"
-function usage()
-{
-    local long_help=true
-    if [[ $# -gt 0 && ($1 == true || $1 == false) ]]; then
-        long_help=$1
-        shift
-    fi
-    display_usage_msg "$(usage_text "$long_help")" "$@"
 }

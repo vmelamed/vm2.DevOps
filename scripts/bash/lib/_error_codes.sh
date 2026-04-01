@@ -3,8 +3,11 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-# Note: these are the standard return codes used by vm2 scripts. Return codes 0 and 1 are used for success and general failure, respectively.
-# The other return codes are used for specific argument errors but also can be reused by some modules for other purposes.
+#-------------------------------------------------------------------------------
+# This script defines standard error codes used by vm2 scripts.
+# Return codes 0 and 1 are used for success and general failure, respectively.
+# Other return codes are used for specific argument errors but the error codes can also be reused by some modules for other purposes.
+#-------------------------------------------------------------------------------
 
 # Circular include guard
 (( ${__VM2_LIB_ERROR_CODES_SH_LOADED:-0} == 1 )) && return 0
@@ -22,6 +25,7 @@ declare -rxi err_invalid_arguments=2    # the number of the arguments is invalid
 declare -rxi err_argument_type=3        # an argument is of the wrong type (types: string, integer, boolean, array, associative array, etc.)
 declare -rxi err_argument_value=4       # an argument has an invalid value (out of range, not in allowed set. E.g. expected non-negative integer but got negative value)
 declare -rxi err_invalid_nameref=5      # an argument has an invalid nameref (e.g., expected a valid variable name reference but got an invalid one)
+declare -rxi err_not_overridden=64      # a function that should be overridden in the calling script (e.g. usage) was not overridden
 
 # RETURN CODES THAT CAN BE REUSED FOR OTHER PURPOSES:
 declare -rxi err_not_found=5            # file, directory, or something else could not be found
