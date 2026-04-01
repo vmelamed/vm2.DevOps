@@ -66,7 +66,7 @@ vm2_repos=$(resolve_vm2_repos "$vm2_repos")
     exit "$rc"
 
 [[ -d "$vm2_repos/.github" && -d "$vm2_repos/vm2.DevOps" ]] ||
-    usage  "The GitHub Actions workflow templates directory .github and/or the vm2.DevOps directory is missing in '$vm2_repos'."
+    usage "$err_not_found" "The GitHub Actions workflow templates directory .github and/or the vm2.DevOps directory is missing in '$vm2_repos'."
 
 
 # make sure we are seeing .github and vm2.DevOps properly through vm2_repos

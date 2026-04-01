@@ -37,7 +37,7 @@ fi
 repo_path=$(resolve_repo_root "$repo_root" "$vm2_repos")
 rc=$?
 (( rc == success )) ||
-    usage false "Could not resolve the repository root for '$repo_root' within '$vm2_repos'."
+    usage "$err_not_found" "Could not resolve the repository root for '$repo_root' within '$vm2_repos'."
 
 trace "Repository path: '$repo_path'"
 

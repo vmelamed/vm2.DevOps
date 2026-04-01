@@ -1,4 +1,14 @@
-#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
+# shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
+
+declare -xr script_name
+declare -xr lib_dir
+
+declare -rxi err_missing_argument
+declare -rxi err_more_than_one_argument
+declare -rxi err_unknown_argument
 
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 # shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
@@ -17,72 +27,72 @@ function get_arguments()
                 ;;
 
             --build-projects|-bp )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
                 build_projects="$1"; shift
                 ;;
 
             --test-projects|-tp )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
                 test_projects="$1"; shift
                 ;;
 
             --benchmark-projects|-bmp )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
                 benchmark_projects="$1"; shift
                 ;;
 
             --package-projects|-pp )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
                 package_projects="$1"; shift
                 ;;
 
             --runners-os|-os )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
                 runners_os="$1"; shift
                 ;;
 
             --dotnet-version|-dn )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
                 dotnet_version="$1"; shift
                 ;;
 
             --configuration|-c )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
                 configuration="$1"; shift
                 ;;
 
             --define|-d )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
                 preprocessor_symbols="$1"; shift
                 ;;
 
             --min-coverage-pct|-min )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
                 min_coverage_pct="$1"; shift
                 ;;
 
             --max-regression-pct|-max )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
                 max_regression_pct="$1"; shift
                 ;;
 
             --minver-tag-prefix|-mp )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
                 minver_tag_prefix="$1"; shift
                 ;;
 
             --minver-prerelease-id|-mi )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
                 minver_prerelease_id="$1"; shift
                 ;;
 
             --reset-benchmark-thresholds|-r )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
                 reset_benchmark_thresholds="$1"; shift;
                 ;;
 
             * )
-                usage false "Unknown option: $option"
+                usage "$err_unknown_argument" "Unknown argument: $option"
                 ;;
         esac
     done

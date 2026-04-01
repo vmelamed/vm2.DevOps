@@ -129,7 +129,7 @@ info "vm2.* repositories path        => $vm2_repos"
 repo_path=$(resolve_repo_root "$repo_root" "$vm2_repos")
 rc=$?
 (( rc == success || rc == err_not_git_repository )) ||
-    usage false "Could not resolve the repository root for '$repo_root' within '$vm2_repos'."
+    usage "$err_argument_value" "Could not resolve the repository root for '$repo_root' within '$vm2_repos'."
 
 reset_errors
 
@@ -137,7 +137,7 @@ reset_errors
 # work tree. It should be created using `dotnet new vm2.NewPkg` and should have the .github/workflows/CI.yaml file in place.
 # If we cannot find the .github/workflows/CI.yaml file in the specified path, we bail out.
 [[ -s "$repo_path/.github/workflows/CI.yaml" ]] ||
-    usage false "Could not find .github/workflows/CI.yaml in '$repo_path'. Please use 'dotnet new vm2.NewPkg' to create a valid project directory structure, or specify the correct path to the root of the project/repository using '--path <path>'."
+    usage "$err_argument_value" "Could not find .github/workflows/CI.yaml in '$repo_path'. Please use 'dotnet new vm2.NewPkg' to create a valid project directory structure, or specify the correct path to the root of the project/repository using '--path <path>'."
 
 (( rc == err_not_git_repository )) &&
     trace "repo_path='$repo_path' has .github/workflows/CI.yaml, but is not inside a git repository. Will initialize a new repository here."
@@ -161,7 +161,7 @@ if has_local_repo repo_state; then
         warning "The repository path '$repo_path' is different from the repository root '${repo_state[$key_root]}' detected by git. Adjusting to the git-detected repository root."
         repo_path="${repo_state[$key_root]}"
         [[ -s "$repo_path/.github/workflows/CI.yaml" ]] ||
-            usage false "The git-detected repository path '$repo_path' is missing .github/workflows/CI.yaml. Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2.NewPkg' to create a valid directory structure."
+            usage "$err_repo_has_no_ci" "The git-detected repository path '$repo_path' is missing .github/workflows/CI.yaml. Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2.NewPkg' to create a valid directory structure."
         trace "repo_path='$repo_path' from git-detected repository root"
     fi
     info "Git repository path            => $repo_path"
@@ -341,7 +341,7 @@ if ! has_remote_repo repo_state; then
     repo_id="${repo_state[$key_repo_id]}"
 
     [[ -n "$repo_url" && -n "$repo_id" ]] ||
-        usage false "The repository does not appear to be initialized and/or linked to the remote. Run the script again without the switch --configure-only or troubleshoot the problem."
+        usage "$err_not_git_directory" "The repository does not appear to be initialized and/or linked to the remote."
 
     branch="${repo_state[$key_default_branch]}"
     main_protection_rs_name="${main_protection_rs_name:-${branch} protection}"

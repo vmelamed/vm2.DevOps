@@ -160,7 +160,7 @@ function usage()
 function exit_if_has_errors()
 {
     # shellcheck disable=SC2154 # errors is referenced but not assigned.
-    has_errors && usage false "$failure" "$errors error(s) encountered. Please fix the above issues and try again."
+    has_errors && usage "$failure" "$errors error(s) encountered. Please fix the above issues and try again."
     return "$success"
 }
 

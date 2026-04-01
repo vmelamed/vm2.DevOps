@@ -1,4 +1,14 @@
-#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
+# shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
+
+declare -xr script_name
+declare -xr lib_dir
+
+declare -rxi err_missing_argument
+declare -rxi err_more_than_one_argument
+declare -rxi err_unknown_argument
 
 # shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
 function get_arguments()
@@ -19,33 +29,33 @@ function get_arguments()
                 ;;
 
             --configuration|-c )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
                 configuration=$1; shift
                 ;;
 
             --define|-d    )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
                 preprocessor_symbols=$1; shift
                 ;;
 
             --min-coverage-pct|-min )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
                 min_coverage_pct=$1; shift
                 min_coverage_pct=$((min_coverage_pct + 0))  # ensure it's an integer
                 ;;
 
             --minver-tag-prefix|-mp )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
                 minver_tag_prefix="$1"; shift
                 ;;
 
             --minver-prerelease-id|-mi )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
                 minver_prerelease_id="$1"; shift
                 ;;
 
             --artifacts|-a )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
                 tests_artifacts_dir=$1; shift
                 ;;
 

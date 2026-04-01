@@ -3,6 +3,13 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
+declare -xr script_name
+declare -xr lib_dir
+
+declare -rxi err_missing_argument
+declare -rxi err_more_than_one_argument
+declare -rxi err_unknown_argument
+
 function get_arguments()
 {
     local option
@@ -23,7 +30,7 @@ function get_arguments()
                     old_branch_name="$new_branch_name"
                     new_branch_name="$option"
                 else
-                    usage false "Too many positional arguments: ${option}"
+                    usage "$err_more_than_one_argument" "Too many positional arguments: ${option}"
                 fi
                 ;;
         esac

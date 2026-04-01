@@ -99,11 +99,6 @@ function on_debug()
 }
 
 #-------------------------------------------------------------------------------
-# Assuming that the sourcing script didn't change directory, remember the current directory as the "initial".
-#-------------------------------------------------------------------------------
-declare -xr explicit_exit_regex='^exit([[:space:]]+.*)?$'
-
-#-------------------------------------------------------------------------------
 # Summary: EXIT trap handler that displays failed commands, restores directory, and disables tracing.
 # Parameters: none
 # Returns:
@@ -117,6 +112,7 @@ declare -xr explicit_exit_regex='^exit([[:space:]]+.*)?$'
 # Usage: trap on_exit EXIT
 # Notes: Works cooperatively with on_debug for error handling. Automatically set by core.sh.
 #-------------------------------------------------------------------------------
+declare -xr explicit_exit_regex='^(exit([[:space:]]+.*)?|source[[:space:]]+.*)$'
 function on_exit()
 {
     # echo an error message before exiting

@@ -382,7 +382,7 @@ function get_common_arg()
 
     case "${1,,}" in
         --help          ) usage true "$success" ;;
-        -h|-\?          ) usage false "$success" ;;
+        -h|-\?          ) usage "$success" ;;
         -v|--verbose    ) set_verbose ;;
         -q|--quiet      ) set_quiet ;;
         -x|--trace      ) set_trace_enabled ;;
@@ -429,6 +429,8 @@ function usage()
 
     local -i exit_code=$success
     (( $# > 0 )) && is_natural "$1" && exit_code=$1 && shift
+
+    (( $# > 0 && exit_code == success )) && exit_code=$failure
 
     # save the tracing state and disable tracing
     local set_tracing_on=false

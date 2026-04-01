@@ -25,6 +25,10 @@ declare -rxi err_invalid_arguments=2    # the number of the arguments is invalid
 declare -rxi err_argument_type=3        # an argument is of the wrong type (types: string, integer, boolean, array, associative array, etc.)
 declare -rxi err_argument_value=4       # an argument has an invalid value (out of range, not in allowed set. E.g. expected non-negative integer but got negative value)
 declare -rxi err_invalid_nameref=5      # an argument has an invalid nameref (e.g., expected a valid variable name reference but got an invalid one)
+declare -rxi err_missing_argument=6      # a required argument is missing
+declare -rxi err_more_than_one_argument=7      # more than one argument was provided when only one is allowed
+declare -rxi err_unknown_argument=8      # an unknown argument was provided
+
 declare -rxi err_not_overridden=64      # a function that should be overridden in the calling script (e.g. usage) was not overridden
 
 # RETURN CODES THAT CAN BE REUSED FOR OTHER PURPOSES:

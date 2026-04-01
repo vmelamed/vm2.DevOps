@@ -3,6 +3,13 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
+declare -xr script_name
+declare -xr lib_dir
+
+declare -rxi err_missing_argument
+declare -rxi err_more_than_one_argument
+declare -rxi err_unknown_argument
+
 declare -x vm2_repos
 declare -xa file_regexes
 declare -x target_dir
@@ -24,12 +31,12 @@ function get_arguments()
                 ;;
 
             --vm2-repos|-r )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
                 vm2_repos="$1"; shift
                 ;;
 
             --files|-f )
-                [[ $# -ge 1 ]] || usage false "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
                 IFS=',' read -r -a file_regexes <<< "$1"
                 shift
                 ;;
@@ -37,7 +44,7 @@ function get_arguments()
             * ) if [[ -z "$target_dir" ]]; then
                     target_dir="$option"
                 else
-                    usage false "Too many positional arguments (project directory or repository name): ${option}"
+                    usage "$err_more_than_one_argument" "Too many positional arguments (project directory or repository name): ${option}"
                 fi
                 ;;
         esac
