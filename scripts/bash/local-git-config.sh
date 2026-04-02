@@ -25,26 +25,41 @@ info "Configuring local git settings..."
 #===============================
 # Find and validate vm2_repos:
 #===============================
-if [[ -z "$vm2_repos" ]]; then
-    vm2_repos=$(resolve_vm2_repos)
-    rc=$?
-else
-    vm2_repos=$(resolve_vm2_repos "$vm2_repos")
-    rc=$?
-fi
-(( rc == success ))  ||  exit "$rc"
+vm2_repos=$(resolve_vm2_repos "$vm2_repos") ||
+    usage "$rc" "Could not find the parent directory for the vm2 repositories." \
+          "Please, set the VM2_REPOS environment variable or provide the path as an argument with '--vm2-repos' option."
 
-repo_path=$(resolve_repo_root "$repo_root" "$vm2_repos")
-rc=$?
-(( rc == success )) ||
-    usage "$err_not_found" "Could not resolve the repository root for '$repo_root' within '$vm2_repos'."
+trace "All vm2 repositories are expected in '$vm2_repos'"
+
+# make sure we are seeing .github and vm2.DevOps properly through vm2_repos
+[[ -d "$vm2_repos/.github" && -d "$vm2_repos/vm2.DevOps" ]] ||
+    usage "$err_not_found" "The GitHub Actions workflow templates directory .github and/or the vm2.DevOps directory is missing in '$vm2_repos', Please clone the repositories into '$vm2_repos'."
+
+validate_repo_root "$vm2_repos/.github" "$vm2_repos" "main" || rc=$?
+(( rc == err_behind_latest_stable_tag )) &&
+    error "The repository in '$vm2_repos/.github' is behind the latest stable tag. Please update it to the latest commit on the main branch."
+
+rc="$success"
+validate_repo_root "$vm2_repos/vm2.DevOps" "$vm2_repos" "main" || rc=$?
+(( rc == err_behind_latest_stable_tag )) &&
+    error "The repository in '$vm2_repos/vm2.DevOps' is behind the latest stable tag. Please update it to the latest commit on the main branch."
+
+declare -x _ci_yaml=''
+
+_ci_yaml="$vm2_repos/vm2.DevOps/.github/workflows/_ci.yaml"
+[[ -s "$_ci_yaml" ]] || error "Could not find _ci.yaml GitHub Actions reusable workflow file in ${vm2_repos}."
+
+declare -xr _ci_yaml
+
+exit_if_has_errors
+
 
 trace "Repository path: '$repo_path'"
 
 
 # make sure we are seeing .github and vm2.DevOps properly through vm2_repos
-validate_repo ".github" "$vm2_repos"
-validate_repo "vm2.DevOps" "$vm2_repos"
+validate_repo_root ".github" "$vm2_repos" "main"
+validate_repo_root "vm2.DevOps" "$vm2_repos" "main"
 exit_if_has_errors
 ensure_fresh_git_state ".github"
 ensure_fresh_git_state "vm2.DevOps"

@@ -56,11 +56,11 @@ declare -rx ci                                      # Indicates whether the scri
 declare -xr debugger                                # Indicates whether the script is running under a debugger, e.g. BashDb.
                                                     # SHOULD NOT BE OVERRIDDEN BY TOP-LEVEL SWITCHES AND OPTIONS!
 
-declare __save_quiet
-declare __save_verbose
-declare __save_table_format
-declare __save_dry_run
-declare __save_ignore
+declare __saved_quiet
+declare __saved_verbose
+declare __saved_table_format
+declare __saved_dry_run
+declare __saved_ignore
 declare __set_tracing_on
 
 declare -gi __state_saved_pid=0
@@ -85,11 +85,11 @@ function save_state()
     __state_saved_pid=$BASHPID
     __state_saved_subshell=${BASH_SUBSHELL:-0}
 
-    __save_quiet=is_quiet
-    __save_verbose=is_verbose
-    __save_dry_run=is_dry_run
-    __save_ignore=$_ignore
-    __save_table_format=$(get_table_format)
+    is_quiet   && __saved_quiet=true   || __saved_quiet=false
+    is_verbose && __saved_verbose=true || __saved_verbose=false
+    is_dry_run && __saved_dry_run=true || __saved_dry_run=false
+    __saved_ignore=$_ignore
+    __saved_table_format=$(get_table_format)
     [[ $- =~ .*x.* ]] && __set_tracing_on=true || __set_tracing_on=false
 
     return "$success"
@@ -124,11 +124,11 @@ function restore_state()
     __state_saved_subshell=-1
     ! $bad_call || return "$failure"
 
-    set_table_format "$__save_table_format" || { error "${FUNCNAME[0]}() failed to restore table format." >&2; return "$failure"; }
-    $__save_quiet   && set_quiet   || unset_quiet
-    $__save_verbose && set_verbose || unset_verbose
-    $__save_dry_run && set_dry_run || unset_dry_run
-    _ignore=$__save_ignore
+    set_table_format "$__saved_table_format" || { error "${FUNCNAME[0]}() failed to restore table format." >&2; return "$failure"; }
+    $__saved_quiet   && set_quiet   || unset_quiet
+    $__saved_verbose && set_verbose || unset_verbose
+    $__saved_dry_run && set_dry_run || unset_dry_run
+    _ignore=$__saved_ignore
     if $__set_tracing_on; then
         set -x
     fi
@@ -176,7 +176,7 @@ function unset_quiet()
 #-------------------------------------------------------------------------------
 function is_quiet()
 {
-    $quiet
+    "$quiet"
 }
 
 #-------------------------------------------------------------------------------
@@ -220,7 +220,7 @@ function unset_verbose()
 #-------------------------------------------------------------------------------
 function is_verbose()
 {
-    $verbose
+    "$verbose"
 }
 
 #-------------------------------------------------------------------------------
@@ -264,7 +264,7 @@ function unset_dry_run()
 #-------------------------------------------------------------------------------
 function is_dry_run()
 {
-    $dry_run
+    "$dry_run"
 }
 
 #-------------------------------------------------------------------------------

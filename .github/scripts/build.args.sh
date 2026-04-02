@@ -7,7 +7,7 @@ declare -xr script_name
 declare -xr lib_dir
 
 declare -rxi err_missing_argument
-declare -rxi err_more_than_one_argument
+declare -rxi err_too_many_arguments
 declare -rxi err_unknown_argument
 
 declare -x build_project
@@ -35,7 +35,7 @@ function get_arguments()
             --build-project|-bp )
                 (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${option,,}"
                 if [[ -n $build_project ]]; then
-                    usage "$err_more_than_one_argument" "The script accepts 0 or 1 project or solution."
+                    usage "$err_too_many_arguments" "The script accepts 0 or 1 project or solution."
                 fi
                 build_project="$1"; shift
                 ;;

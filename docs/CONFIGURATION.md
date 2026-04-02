@@ -2,30 +2,38 @@
 
 <!-- TOC tocDepth:2..5 chapterDepth:2..6 -->
 
-- [Configuration Layers](#configuration-layers)
-- [GitHub Repository Variables](#github-repository-variables)
-- [GitHub Repository Secrets](#github-repository-secrets)
-- [Per-Repo Configuration Files](#per-repo-configuration-files)
-  - [NuGet.config](#nugetconfig)
-  - [codecov.yaml](#codecovyaml)
-  - [coverage.settings.xml](#coveragesettingsxml)
-  - [testconfig.json](#testconfigjson)
-  - [Changelog Configuration](#changelog-configuration)
-- [CI Behavior by Event Type](#ci-behavior-by-event-type)
-- [PR Gates and Checks](#pr-gates-and-checks)
-  - [GitHub Check Names](#github-check-names)
-  - [Setting Up Branch Protection](#setting-up-branch-protection)
-  - [Required Permissions](#required-permissions)
-- [Consumer Workflow Customization](#consumer-workflow-customization)
-  - [CI.yaml](#ciyaml)
-  - [Prerelease.yaml](#prereleaseyaml)
-  - [Release.yaml](#releaseyaml)
-- [Repository Setup via UI](#repository-setup-via-ui)
-  - [Repository Settings](#repository-settings)
-  - [Actions Permissions](#actions-permissions)
-  - [Secrets](#secrets)
-  - [Variables](#variables)
-  - [Branch Protection](#branch-protection)
+- [Configuration](#configuration)
+  - [Configuration Layers](#configuration-layers)
+  - [GitHub Repository Variables](#github-repository-variables)
+  - [GitHub Repository Secrets](#github-repository-secrets)
+    - [Actions Secrets](#actions-secrets)
+    - [Dependabot Secrets](#dependabot-secrets)
+  - [Per-Repo Configuration Files](#per-repo-configuration-files)
+    - [NuGet.config](#nugetconfig)
+    - [codecov.yaml](#codecovyaml)
+    - [coverage.settings.xml](#coveragesettingsxml)
+    - [testconfig.json](#testconfigjson)
+    - [Changelog Configuration](#changelog-configuration)
+    - [Git Hooks](#git-hooks)
+    - [Local Git Settings](#local-git-settings)
+  - [CI Behavior by Event Type](#ci-behavior-by-event-type)
+  - [PR Gates and Checks](#pr-gates-and-checks)
+    - [GitHub Check Names](#github-check-names)
+    - [Setting Up Branch Protection](#setting-up-branch-protection)
+    - [Required Permissions](#required-permissions)
+  - [Consumer Workflow Customization](#consumer-workflow-customization)
+    - [CI.yaml](#ciyaml)
+    - [Prerelease.yaml](#prereleaseyaml)
+    - [Release.yaml](#releaseyaml)
+  - [Repository Setup via UI](#repository-setup-via-ui)
+    - [Repository Settings](#repository-settings)
+    - [Branch Protection](#branch-protection)
+    - [Actions Permissions](#actions-permissions)
+    - [Secrets](#secrets)
+    - [Variables](#variables)
+    - [Copilot Code Review](#copilot-code-review)
+  - [Repository Setup using `repo-setup.sh`](#repository-setup-using-repo-setupsh)
+  - [Running the Script `local-git-config.sh`](#running-the-script-local-git-configsh)
 
 <!-- /TOC -->
 
@@ -155,8 +163,8 @@ The CI workflow template adjusts its behavior based on the trigger:
 
 | Event                | Behavior                                                              |
 | :------------------- | :-------------------------------------------------------------------- |
-| `push` to main       | Full CI with default parameters                                       |
 | `push` to branch     | Adds `SHORT_RUN` preprocessor symbol; skipped if an open PR exists    |
+| `push` to main       | Full CI with default parameters                                       |
 | `pull_request`       | Full CI with default parameters                                       |
 | `pull_request_review`| Configured at the GitHub repo level (Copilot review)                  |
 | `workflow_dispatch`  | Accepts manual overrides for `runners-os` and `preprocessor-symbols`  |
@@ -211,7 +219,7 @@ in two ways:
 1. **GitHub workflow templates** (from `vmelamed/.github/workflow-templates/`) — The templates contain `# *TODO*` markers at the
    usual customization points. The user must edit these before the workflow is usable.
 1. **`dotnet new` project template** (from vm2.Templates) — The template engine substitutes project-specific values during
-   instantiation. The generated workflows are ready to use without manual editing.
+   instantiation. The generated workflows are ready to use without manual editing, although a review is recommended to understand and customize the configuration.
 
 ### CI.yaml
 
@@ -229,7 +237,7 @@ env:
     [ "src/MyProject/MyProject.csproj" ]
   RUNNERS_OS: >                         # JSON array of runner OS monikers
     [ "ubuntu-latest" ]
-  PREPROCESSOR_SYMBOLS: ""              # Semicolon-separated preprocessor symbols
+  PREPROCESSOR_SYMBOLS: ""              # Space/Colon/Semicolon-separated preprocessor symbols
 ```
 
 > [!NOTE] If any of the project arrays are empty, not set, or contains `["__skip__"]`, the corresponding CI steps will be skipped.
@@ -302,7 +310,7 @@ secrets:
 
 ## Repository Setup via UI
 
-The `repo-setup.sh` script automates the steps below. If you prefer to configure
+The `repo-setup.sh` script automates the steps below. If you prefer to configure it
 manually, or need to verify/adjust settings on an existing repo, follow these steps.
 
 ### Repository Settings
@@ -355,7 +363,11 @@ manually, or need to verify/adjust settings on an existing repo, follow these st
      - ✔️ Review new pushes
      - ✔️ Review draft pull requests (Optional)
 
-Unfortunately, only the script `repo-setup.sh` can automatically configure the required status checks for branch protection rules using the GitHub API and parameters that are otherwise not exposed in the GitHub UI. The idea is that there is one final "dummy" job "Postrun-CI" that depends on all other jobs and reports a single, stable check name that can be used in the branch protection rules. However in certain PR scenarios it registers a false negative which is incorrect and the script fixes that by using UI-unexposed parameter(s).
+Unfortunately, only the script `repo-setup.sh` can automatically configure the required status checks for branch
+protection rules using the GitHub API and parameters that are otherwise not exposed in the GitHub UI. The idea is that
+there is one final "dummy" job "Postrun-CI" that depends on all other jobs and reports a single, stable check name that
+can be used in the branch protection rules. However in certain PR scenarios it registers a false negative which is
+incorrect and the script fixes that by using UI-unexposed parameter(s).
 
 Click **Create** or **Save changes** to save the ruleset.
 
@@ -403,3 +415,104 @@ Actions standard `ACTIONS_RUNNER_DEBUG` and `ACTIONS_STEP_DEBUG` variables for d
 
 1. Enable ✔️ **Copilot code review** to automatically review pull requests
 2. This is advisory only — it does not block merging
+
+## Repository Setup using `repo-setup.sh`
+
+The `repo-setup.sh` script automates the repository setup steps outlined above, including:
+
+- Checking prerequisites (GitHub CLI, API access, etc.)
+- Initializing a new repository if the specified path is not already a git repository but contains a valid `CI.yaml`
+- Creating or updating the GitHub repository with the correct settings and permissions
+- Configuring branch protection rules with the correct status checks
+- Verifying the presence of required secrets and variables
+
+In the end the script does an audit of all settings and provides remediation steps for any manual configuration that is still required.
+It can be safely re-run to fix any drift or misconfiguration that may occur over time. At the writing of this document the audit result may look like this:
+
+```text
+❯ repo-setup.sh vm2.SemVer -a
+ℹ️  INFO: Git repository path            => /home/valo/repos/vm2/vm2.SemVer
+ℹ️  INFO: GitHub repository              => vmelamed/vm2.SemVer
+ℹ️  INFO: GitHub repository Id           => 1199917173
+ℹ️  INFO: GitHub default Branch          => main
+ℹ️  INFO: GitHub repository URL          => git@github.com:vmelamed/vm2.SemVer.git
+ℹ️  Audit
+  ℹ️  Repository settings:
+      ✅  Default branch                       => main
+      ✅  Has wiki                             => false
+      ✅  Has issues                           => true
+      ✅  Has projects                         => false
+      ✅  Has pull requests                    => true
+      ✅  Pull request creation policy         => all
+      ✅  Allow merge commit                   => false
+      ✅  Allow squash merge                   => false
+      ✅  Allow rebase merge                   => true
+      ✅  Allow auto merge                     => true
+      ✅  Delete branch on merge               => true
+      ✅  Visibility                           => public
+  ℹ️  Actions permissions:
+      ✅  Can approve pull request reviews     => false
+      ✅  Default workflow permissions         => read
+  ℹ️  Actions Secrets:
+      🆗  BENCHER_API_TOKEN                    => <set>
+      🆗  CODECOV_TOKEN                        => <set>
+      🆗  NUGET_API_KEY                        => <set>
+      🆗  RELEASE_PAT                          => <set>
+      🆗  REPORTGENERATOR_LICENSE              => <set>
+  ℹ️  Dependabot Secrets:
+      🆗  GH_PACKAGES_TOKEN                    => <set>
+  ℹ️  Variables:
+      ✅  ACTIONS_RUNNER_DEBUG                 => false
+      ✅  ACTIONS_STEP_DEBUG                   => false
+      ✅  CONFIGURATION                        => Release
+      ✅  DOTNET_VERSION                       => 10.0.x
+      ✅  MAX_REGRESSION_PCT                   => 20
+      ✅  MIN_COVERAGE_PCT                     => 80
+      ✅  MINVERDEFAULTPRERELEASEIDENTIFIERS   => preview.0
+      ✅  MINVERTAGPREFIX                      => v
+      ✅  NUGET_SERVER                         => github
+      ✅  RESET_BENCHMARK_THRESHOLDS           => false
+      ✅  SAVE_PACKAGE_ARTIFACTS               => false
+      ✅  VERBOSE                              => false
+  ℹ️  Ruleset 'main protection' for branch 'main' (id: 14653967):
+      ✅  Enforcement                          => active
+      ✅  Repository admin bypass              => present
+      ✅  Deletion                             => present
+      ✅  Required linear history              => present
+      ✅  Pull request                         => present
+      ✅  Required approving review count      => present
+      ✅  Dismiss stale reviews on push        => present
+      ✅  Require code owner review            => present
+      ✅  Require last push approval           => present
+      ✅  Required review thread resolution    => present
+      ✅  Required reviewers                   => present
+      ✅  Allowed merge methods                => present
+      ✅  Required status checks               => present
+      ✅  Do not enforce on create             => present
+      ✅  Strict required status checks policy => present
+      ✅  Non fast forward                     => present
+      ℹ️  Required status checks list:
+          ✅  Postrun-CI - present
+
+──────────────────────
+ℹ️  Totals:
+    ✅  passed:     49
+    ❓  different:   0
+    ❌  missing:     0
+
+ℹ️  INFO: Audit of https://github.com/vmelamed/vm2.SemVer completed.
+```
+
+## Running the Script `local-git-config.sh`
+
+This is a one-time setup script that configures local git settings for the repository, such as hooks and pull
+behavior.  It configures the repository with optional but highly recommended settings for a smooth development
+experience, including:
+
+| Setting                  | Value  | Purpose                                                    |
+| :----------------------- | :----- | :--------------------------------------------------------- |
+| `core.hooksPath`         | (path) | Points to shared commit-msg hook in vm2.DevOps             |
+| `commit.template`        | (path) | Commit message template with allowed types                 |
+| `pull.rebase`            | `true` | `git pull` rebases instead of creating merge commits       |
+| `fetch.prune`            | `true` | Auto-removes stale remote-tracking branches on fetch/pull  |
+| `push.autoSetupRemote`   | `true` | First push of a new branch auto-sets upstream tracking     |

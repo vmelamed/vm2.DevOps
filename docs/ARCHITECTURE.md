@@ -2,37 +2,41 @@
 
 <!-- TOC tocDepth:2..5 chapterDepth:2..6 -->
 
-- [Layers](#layers)
-  - [Layer 1: Consumer Workflows](#layer-1-consumer-workflows)
-  - [Layer 2: Reusable Workflows](#layer-2-reusable-workflows)
-    - [CI Pipeline (`_ci.yaml`)](#ci-pipeline-_ciyaml)
-    - [Build (`_build.yaml`)](#build-_buildyaml)
-    - [Test (`_test.yaml`)](#test-_testyaml)
-    - [Benchmarks (`_benchmarks.yaml`)](#benchmarks-_benchmarksyaml)
-    - [Pack (`_pack.yaml`)](#pack-_packyaml)
-    - [Prerelease (`_prerelease.yaml`)](#prerelease-_prereleaseyaml)
-    - [Release (`_release.yaml`)](#release-_releaseyaml)
-      - [Algorithm for Calculating Release Version](#algorithm-for-calculating-release-version)
-      - [Example Walkthrough](#example-walkthrough)
-      - [Prerelease Guard](#prerelease-guard)
-    - [Clear Cache (`_clear_cache.yaml`)](#clear-cache-_clear_cacheyaml)
-  - [Layer 3: Bash Scripts](#layer-3-bash-scripts)
-    - [CI Scripts (`/.github/actions/scripts/`)](#ci-scripts-githubactionsscripts)
-    - [Composite Action (`action.yaml`)](#composite-action-actionyaml)
-    - [Bash Library (`/scripts/bash/lib/`)](#bash-library-scriptsbashlib)
-    - [Utility Scripts (`/scripts/bash/`)](#utility-scripts-scriptsbash)
-- [Caching Strategy](#caching-strategy)
-  - [NuGet Package Cache (dual-layer)](#nuget-package-cache-dual-layer)
-  - [Build Artifact Cache](#build-artifact-cache)
-  - [Cache Cleanup](#cache-cleanup)
-- [Script Distribution](#script-distribution)
-- [NuGet Authentication](#nuget-authentication)
-- [Secrets](#secrets)
-- [Naming Conventions](#naming-conventions)
+- [Architecture](#architecture)
+  - [1. Layers](#1-layers)
+    - [1.1. Layer 1: Consumer Workflows](#11-layer-1-consumer-workflows)
+      - [1.1.1. Push De-dupe Logic](#111-push-de-dupe-logic)
+    - [1.2. Layer 2: Reusable Workflows](#12-layer-2-reusable-workflows)
+      - [1.2.1. CI Pipeline (`_ci.yaml`)](#121-ci-pipeline-_ciyaml)
+      - [1.2.2. Build (`_build.yaml`)](#122-build-_buildyaml)
+      - [1.2.3. Gate Job Pattern (`postrun-ci`)](#123-gate-job-pattern-postrun-ci)
+      - [1.2.4. Test (`_test.yaml`)](#124-test-_testyaml)
+      - [1.2.5. Benchmarks (`_benchmarks.yaml`)](#125-benchmarks-_benchmarksyaml)
+      - [1.2.6. Pack (`_pack.yaml`)](#126-pack-_packyaml)
+      - [1.2.7. Prerelease (`_prerelease.yaml`)](#127-prerelease-_prereleaseyaml)
+      - [1.2.8. Release (`_release.yaml`)](#128-release-_releaseyaml)
+        - [1.2.8.1. Example Walkthrough](#1281-example-walkthrough)
+        - [1.2.8.2. Prerelease Guard](#1282-prerelease-guard)
+      - [1.2.9. Clear Cache (`_clear_cache.yaml`)](#129-clear-cache-_clear_cacheyaml)
+    - [1.3. Layer 3: Bash Scripts](#13-layer-3-bash-scripts)
+      - [1.3.1. CI Scripts (`/.github/actions/scripts/`)](#131-ci-scripts-githubactionsscripts)
+      - [1.3.2. Composite Action (`action.yaml`)](#132-composite-action-actionyaml)
+      - [1.3.3. Bash Library (`/scripts/bash/lib/`)](#133-bash-library-scriptsbashlib)
+      - [1.3.4. Utility Scripts (`/scripts/bash/`)](#134-utility-scripts-scriptsbash)
+  - [2. Caching Strategy](#2-caching-strategy)
+    - [2.1. NuGet Package Cache (dual-layer)](#21-nuget-package-cache-dual-layer)
+    - [2.2. Build Artifact Cache](#22-build-artifact-cache)
+    - [2.3. Cache Cleanup](#23-cache-cleanup)
+  - [3. Script Distribution](#3-script-distribution)
+  - [4. NuGet Authentication](#4-nuget-authentication)
+  - [5. Actions Secrets](#5-actions-secrets)
+  - [6. Dependabot Secrets](#6-dependabot-secrets)
+  - [7. Naming Conventions](#7-naming-conventions)
+    - [7.1. `args_to_github_output` — Automatic Name Translation](#71-args_to_github_output--automatic-name-translation)
 
 <!-- /TOC -->
 
-vm2.DevOps provides CI/CD automation for .NET NuGet packages through a three-layer architecture.
+fourvm2.DevOps provides CI/CD automation for .NET NuGet packages through a four-layer architecture.
 
 ## 1. Layers
 
@@ -68,6 +72,7 @@ and delegates to a reusable workflow via GitHub Actions property
 | `Prerelease.yaml`    | workflow_run (after CI succeeds on main)         | `_prerelease`  |
 | `Release.yaml`       | Manual `workflow_dispatch`                       | `_release`     |
 | `ClearCache.yaml`    | Manual `workflow_dispatch`                       | `_clear_cache` |
+| `AutoMerge.yaml`     | `pull_request` targeting main label "auto-merge" | N/A            |
 
 #### 1.1.1. Push De-dupe Logic
 
@@ -78,8 +83,8 @@ each consumer `CI.yaml` includes de-dupe logic in the `prerun-ci` job:
    branch.
 1. If an open PR exists, the push-triggered run sets `skip-push=true` and the `run-ci` job is
    skipped (the PR-triggered run handles CI).
-1. If no open PR exists, the push-triggered run proceeds but adds the `SHORT_RUN` preprocessor
-   symbol for faster benchmarks.
+1. If no open PR exists, the push-triggered run proceeds and adds the `SHORT_RUN` preprocessor
+   symbol for faster (albeit less comprehensive) benchmarks.
 
 This ensures each commit runs CI exactly once regardless of event type.
 
@@ -192,7 +197,9 @@ main with conclusion == 'success'). Can also be triggered manually via workflow_
 
 #### 1.2.8. Release (`_release.yaml`)
 
-Manual dispatch. Three sequential jobs:
+> [!IMPORTANT] Manual dispatch.
+
+Three sequential jobs:
 
 1. **compute-version** — Calls `compute-release-version.sh` to determine the stable version from conventional commits.
 1. **changelog-and-tag** — Calls `changelog-and-tag.sh` to update the changelog using `cliff.release-header.toml` and create the
@@ -230,7 +237,8 @@ Emergency cleanup. Deletes caches matching an allowlisted prefix (`nuget-`, `bui
 
 #### 1.3.1. CI Scripts (`/.github/actions/scripts/`)
 
-Each CI script follows a **three-file pattern**:
+Each CI script follows a **three-file pattern** for consistency and separation of concerns the files may be even more
+than three if the script has more complex logical separation needs:
 
 | File                | Purpose                          |
 | :------------------ | :------------------------------- |
@@ -242,6 +250,7 @@ The CI scripts:
 
 | Script                          | Called by                     | Purpose                                       |
 | :------------------------------ | :---------------------------- | :-------------------------------------------- |
+| `validate-commits.sh`           | `_ci`                         | Validate commit messages Conventional Commits |
 | `validate-input.sh`             | `_ci`                         | Validate and normalize workflow inputs        |
 | `build.sh`                      | `_build`                      | Compile .NET projects                         |
 | `run-tests.sh`                  | `_test`                       | Run tests and collect coverage                |
@@ -251,7 +260,7 @@ The CI scripts:
 | `compute-prerelease-version.sh` | `_prerelease`                 | Determine prerelease version from commits     |
 | `compute-release-version.sh`    | `_release`                    | Determine stable release version from commits |
 | `changelog-and-tag.sh`          | `_prerelease`, `_release`     | Update changelog and create Git tag           |
-| `download-artifact.sh`          | (utility)                     | Download and extract remote artifacts         |
+| `download-artifact.sh`          | (not used in CI)              | Download and extract remote artifacts         |
 
 #### 1.3.2. Composite Action (`action.yaml`)
 
@@ -276,6 +285,8 @@ A shared function library sourced by scripts at startup.
 | `_diagnostics.sh`  | Debug and diagnostic output                                              |
 | `_dotnet.sh`       | .NET SDK helpers                                                         |
 | `_dump_vars.sh`    | Variable dump for debugging                                              |
+| `_error_codes.sh`  | Standardized error codes for CI scripts                                  |
+| `_git_vm2.sh`      | Git repository helpers specific to vm2 repos                             |
 | `_git.sh`          | Git repository helpers                                                   |
 | `_predicates.sh`   | Boolean test functions                                                   |
 | `_sanitize.sh`     | Input sanitization                                                       |
@@ -291,9 +302,10 @@ Development-time scripts not used in CI:
 
 | Script                      | Purpose                                    |
 | :-------------------------- | :----------------------------------------- |
-| `diff-common.sh`            | Diff shared files across vm2 repos         |
+| `diff-shared.sh`            | Diff common files across vm2 repos         |
+| `local-git-config.sh`       | Bootstrap local Git config for vm2 work    |
 | `move-commits-to-branch.sh` | Move commits from one branch to another    |
-| `repo-setup.sh`  | Bootstrap and configure a new GitHub repo  |
+| `repo-setup.sh`             | Bootstrap and configure a new GitHub repo  |
 | `add-spdx.sh`               | Add SPDX license headers to source files   |
 | `retag.sh`                  | Recreate a Git tag at a different commit   |
 | `restore-force-eval.sh`     | Force re-evaluation of NuGet restore       |

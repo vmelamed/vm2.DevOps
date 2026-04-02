@@ -7,12 +7,13 @@ declare -xr script_name
 declare -xr lib_dir
 
 declare -rxi err_missing_argument
-declare -rxi err_more_than_one_argument
+declare -rxi err_too_many_arguments
 declare -rxi err_unknown_argument
 
 declare -x vm2_repos
 declare -xa file_regexes
 declare -x target_dir
+declare -x target_branch
 
 # shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
@@ -44,15 +45,15 @@ function get_arguments()
             * ) if [[ -z "$target_dir" ]]; then
                     target_dir="$option"
                 else
-                    usage "$err_more_than_one_argument" "Too many positional arguments (project directory or repository name): ${option}"
+                    usage "$err_too_many_arguments" "Too many positional arguments (project directory or repository name): ${option}"
                 fi
                 ;;
         esac
     done
-    dump_all_variables
+    dump_args
 }
 
-dump_all_variables()
+dump_args()
 {
     dump_vars --quiet \
         --header "Script Arguments:" \

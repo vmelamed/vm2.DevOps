@@ -7,7 +7,7 @@ declare -xr script_name
 declare -xr lib_dir
 
 declare -rxi err_missing_argument
-declare -rxi err_more_than_one_argument
+declare -rxi err_too_many_arguments
 declare -rxi err_unknown_argument
 
 declare -x vm2_repos
@@ -100,7 +100,7 @@ function get_arguments()
             * ) if [[ -z "$repo_path" ]]; then
                     repo_path="$option"
                 else
-                    usage "$err_more_than_one_argument" "Too many positional arguments (project directory or repository name): ${option}"
+                    usage "$err_too_many_arguments" "Too many positional arguments (project directory or repository name): ${option}"
                 fi
                 ;;
         esac

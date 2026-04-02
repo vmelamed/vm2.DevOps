@@ -25,7 +25,7 @@ declare -rxi err_not_found
 declare -rxi err_not_file
 declare -rxi err_not_directory
 declare -rxi err_not_git_directory
-declare -rxi err_not_git_repository
+declare -rxi err_not_git_root
 
 declare -xr gh_ssh_authority='git@github.com'                           # OK, it is actually the URI schema only, but we only support GitHub SSH URLs for now, so we can hardcode the authority and just call it that. This is the part of the URL before the owner/name, e.g. "git@github.com"
 declare -xr gh_https_authority='https://github.com'                     # OK, it is actually the URI schema + authority, but we only support GitHub HTTPS URLs for now, so we can hardcode the authority and just call it that. This is the part of the URL before the owner/name, e.g. "https://github.com"
@@ -141,11 +141,11 @@ function validate_gh_repo_description()
 # Returns:
 #   Exit code: 0 if the repository branch name is valid, 1 if it is invalid
 # Examples:
-#   if validate_gh_repo_branch "main"; then echo "Valid branch name"; fi
-#   branch_name=$(enter_value "Default branch name" "$default_branch" false validate_gh_repo_branch)
+#   if validate_branch_name "main"; then echo "Valid branch name"; fi
+#   branch_name=$(enter_value "Default branch name" "$default_branch" false validate_branch_name)
 # See also: https://git-scm.com/docs/git-check-ref-format for details on valid git ref names
 #--------------------------------------------------------------------------------
-function validate_gh_repo_branch()
+function validate_branch_name()
 {
     (( $# == 1 )) || {
         error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the repository branch name to validate."
@@ -230,8 +230,8 @@ function execute_gh_with_retry()
     stdout_file=$(mktemp)
 
     local attempt=0
-    local rc=0
     local message=""
+    local -i rc=0
     trace "Executing with retry from (${BASH_SOURCE[1]:-} ${BASH_LINENO[0]:-}): 'gh $*'"
 
     until gh "$@" >"$output" 2>"$stderr_file"; do
@@ -308,8 +308,8 @@ function execute_gh_api_with_retry()
     stdout_file=$(mktemp)
 
     local attempt=0
-    local rc=0
     local response="" message="" status=""
+    local -i rc=0
     trace "Executing with retry @ (${BASH_SOURCE[1]:-} ${BASH_LINENO[0]:-}): gh api $*"
 
     until gh api "$@" >"$stdout_file" 2>"$stderr_file"; do
@@ -661,36 +661,6 @@ function print_repo_state()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Retrieves the root of the Git repository working tree for the specified
-#          directory or the current directory.
-# Parameters:
-#   1 - directory - optional path to a directory inside a Git repository working tree
-# Returns:
-#   stdout: absolute path to the root of the Git repository working tree
-#   Exit code: 0 on success, non-zero on failure
-# Dependencies: git
-# Usage: root_working_tree <directory>
-# Example: root_working_tree "$PWD"
-#-------------------------------------------------------------------------------
-function root_working_tree()
-{
-    (( $# == 0 || $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires 0 or 1 argument (provided $#): path to a directory inside a Git repository working tree."
-        return "$err_invalid_arguments"
-    }
-    (( $# == 0 )) || [[ -d $1 ]] || {
-        error 3 "${FUNCNAME[0]}() the parameter \$1 must be a path to a directory inside a Git repository working tree."
-        return "$err_not_directory"
-    }
-    is_inside_work_tree "${1:-.}" || {
-        error 3 "${FUNCNAME[0]}() the parameter \$1 or the current directory must be a path to a directory inside a Git repository working tree."
-        return "$err_not_git_directory"
-    }
-
-    git -C "${1:-.}" rev-parse --show-toplevel 2> "$_ignore"
-}
-
-#-------------------------------------------------------------------------------
 # Summary: Tests if the current or the specified directory is inside a git working tree.
 # Parameters:
 #   1 - directory - path to directory to test
@@ -715,14 +685,38 @@ function is_inside_work_tree()
 }
 
 #-------------------------------------------------------------------------------
+# Summary: Retrieves the root of the Git repository working tree for the specified
+#          directory or the current directory.
+# Parameters:
+#   1 - directory - optional path to a directory inside a Git repository working tree
+# Returns:
+#   stdout: absolute path to the root of the Git repository working tree
+#   Exit code: 0 on success, non-zero on failure
+# Dependencies: git
+# Usage: root_working_tree <directory>
+# Example: root_working_tree "$PWD"
+#-------------------------------------------------------------------------------
+function root_working_tree()
+{
+    is_inside_work_tree "${1:-.}" || {
+        error 3 "${FUNCNAME[0]}() the parameter \$1 or the current directory must be a path to a directory inside a Git repository working tree."
+        return "$err_not_git_directory"
+    }
+
+    git -C "${1:-.}" rev-parse --show-toplevel 2> "$_ignore"
+}
+
+#-------------------------------------------------------------------------------
 # Summary: Tests whether local Git metadata is stale enough to justify fetching
 #   before evaluating latest-stable-tag predicates.
 # Parameters:
 #   1 - directory - optional path to Git repository (default: current directory)
 #   2 - branch - optional, the branch to compare against (default: main)
 # Returns:
-#   Exit code: 0 if fetch is recommended, 1 if local metadata appears fresh,
-#     2 on invalid arguments
+#   Exit code:
+#     0 - if fetch is recommended
+#     1 - if local metadata appears fresh
+#     anything else - if an error occurs (e.g. not a git repository, invalid branch, etc.)
 # Dependencies: git
 # Usage: if should_fetch_for_latest_stable_tag <directory>; then git fetch ...; fi
 # Example: should_fetch_for_latest_stable_tag "$repo_dir" && git -C "$repo_dir" fetch origin --tags --quiet
@@ -736,11 +730,11 @@ function should_fetch_for_latest_stable_tag()
         error 3 "${FUNCNAME[0]}() requires no more than 2 arguments (provided $#): path to a Git repository and an optional branch name."
         return "$err_invalid_arguments"
     }
-    (( $# == 1 )) && [[ -d "$1" ]] || {
+    (( $# >= 1 )) && [[ -d "$1" ]] || {
         error 3 "${FUNCNAME[0]}() the parameter \$1 must be a path to an existing directory."
         return "$err_not_directory"
     }
-    (( $# == 2 )) && validate_gh_repo_branch "$2" || {
+    (( $# >= 2 )) && validate_branch_name "$2" || {
         error 3 "${FUNCNAME[0]}() the parameter \$2 must be a valid branch name."
         return "$err_invalid_arguments"
     }
@@ -771,6 +765,7 @@ function should_fetch_for_latest_stable_tag()
 
     remote_stable_tag=$(git -C "$dir" ls-remote --tags --refs origin 2>"$_ignore" | awk '{print $2}' | sed 's#refs/tags/##' | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1)
     [[ -n "$remote_stable_tag" ]] || return "$positive"
+
     [[ "$local_stable_tag" == "$remote_stable_tag" ]] || return "$positive"
 
     return "$negative"
@@ -788,15 +783,34 @@ function should_fetch_for_latest_stable_tag()
 #-------------------------------------------------------------------------------
 function ensure_fresh_git_state()
 {
-    should_fetch_for_latest_stable_tag "$@" &&
-    git -C "$1" fetch origin "${2:-main}" --quiet
+    local -i rc
+
+    should_fetch_for_latest_stable_tag "$@"; rc=$?
+
+    case $rc in
+        "$positive" )
+            trace "Git metadata appears stale or repository is shallow. Fetching from remote is recommended."
+            git -C "$1" fetch origin "${2:-main}" --quiet 2> "$_ignore" || {
+                rc=$?
+                error "Failed to fetch from remote repository: $rc"
+            }
+            ;;
+        "$negative" )
+            trace "Git metadata appears fresh. No fetch needed."
+            rc="$success"
+            ;;
+        * )
+            trace "Error while checking if Git metadata is fresh: $rc"
+            ;;
+    esac
+
+    return "$rc"
 }
 
 #-------------------------------------------------------------------------------
 # Summary: Gets the commit hash of the latest stable tag in the specified Git repository.
 # Parameters:
 #   1 - directory - path to Git repository
-#   2 - should_fetch - optional, if true, fetch the latest changes from remote (default: false)
 # Returns:
 #   The commit hash of the latest stable tag, or 1 if no stable tags are found
 # Dependencies: git
@@ -817,16 +831,8 @@ function get_latest_stable_tag_hash()
         error 3 "The specified directory '$1' is not a Git work tree."
         return "$err_not_git_directory"
     }
-    (( $# == 2 )) && is_boolean "$2" || {
-        error 3 "The second argument to ${FUNCNAME[0]}() must be a boolean (true/false)."
-        return "$err_invalid_arguments"
-    }
 
     local dir=${1:-.}
-    local should_fetch=${2:-false}
-
-    # fetch latest changes from remote if not skipped
-    $should_fetch && git -C "$dir" fetch origin main --quiet
 
     local latest_stable_tag latest_stable_hash
 
@@ -852,7 +858,8 @@ function get_latest_stable_tag_hash()
 #-------------------------------------------------------------------------------
 function is_on_latest_stable_tag()
 {
-    local rc latest_stable_hash commits_after_latest_stable
+    local latest_stable_hash commits_after_latest_stable
+    local -i rc
 
     # get commit of the latest stable tag
     latest_stable_hash=$(get_latest_stable_tag_hash "$@")
@@ -877,7 +884,8 @@ function is_on_latest_stable_tag()
 #-------------------------------------------------------------------------------
 function is_after_latest_stable_tag()
 {
-    local rc latest_stable_hash commits_after_latest_stable
+    local latest_stable_hash commits_after_latest_stable
+    local -i rc
 
     # get commit of the latest stable tag
     latest_stable_hash=$(get_latest_stable_tag_hash "$@")
@@ -893,7 +901,6 @@ function is_after_latest_stable_tag()
 # Summary: Tests if the current commit in the specified directory is on or after the latest stable tag.
 # Parameters:
 #   1 - directory - path to Git repository
-#   2 - should_fetch - if true, fetch the latest changes from remote (optional, default: false)
 # Returns:
 #   Exit code: 0 if on or after latest stable tag, 1 if before, 2 on invalid arguments or errors
 # Dependencies: git
@@ -902,7 +909,8 @@ function is_after_latest_stable_tag()
 #-------------------------------------------------------------------------------
 function is_on_or_after_latest_stable_tag()
 {
-    local rc latest_stable_hash commits_after_latest_stable
+    local latest_stable_hash commits_after_latest_stable
+    local -i rc
 
     # get commit of the latest stable tag
     latest_stable_hash=$(get_latest_stable_tag_hash "$@")

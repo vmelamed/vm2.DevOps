@@ -24,13 +24,14 @@ declare -rxi err_argument_value
 declare -rxi err_not_found
 declare -rxi err_not_file
 declare -rxi err_not_directory
-declare -rxi err_not_git_repository
+declare -rxi err_not_git_root
 declare -rxi err_behind_latest_stable_tag
 declare -rxi err_invalid_repo
 declare -rxi err_invalid_repo
-declare -rxi err_found_more_than_one
-declare -rxi err_repo_has_no_ci
-declare -rxi err_dir_has_no_ci
+declare -rxi err_found_too_many
+declare -rxi err_repo_with_no_ci
+declare -rxi err_dir_with_ci
+declare -rxi err_dir_with_no_ci
 declare -rxi err_not_git_directory
 
 declare -xr default_vm2_repos="$HOME/repos/vm2"
@@ -89,7 +90,7 @@ function resolve_vm2_repos()
         return "$success"
     fi
 
-    # 2) try from the calling script's directory, e.g. ~/repos/vm2/vm2.DevOps/scripts/bash/diff-common.sh:
+    # 2) try from the calling script's directory, e.g. ~/repos/vm2/vm2.DevOps/scripts/bash/diff-shared.sh:
     if r=$(root_working_tree "$script_dir") && vm2_repos=$(dirname "$r" 2> "$_ignore"); then
         trace "vm2_repos='$vm2_repos' resolved from the script directory."
         echo "$vm2_repos"
@@ -108,40 +109,44 @@ function resolve_vm2_repos()
 #-------------------------------------------------------------------------------
 # Summary: Validates that
 #     1) the specified directory exists
-#     2) it is a git repository
-#     3) it does contain a .github/workflows directory (unless you validate .github which by definition does not have that directory)
-#     3) it is at or ahead of the latest stable tag. Use 'ensure_fresh_git_state()' to ensure that in the local repository there is fresh data.
+#     2) it is a root of the working directory of the git repository
+#     3) it has GitHub Actions workflows in the .github/workflows directory (unless it is the .github repository itself)
+#     4) it is on the specified branch (or the currently checked out branch if not specified)
+#     5) it is at or ahead of the latest stable tag of the specified branch.
 # Parameters:
 #   $1: $repo_name: repository name or absolute, or relative path to the repository, e.g. "vm2.DevOps" or "./my_repos/vm2_packages/DevOps".
 #   $2: $vm2_repos: the parent directory of all vm2 repositories where the repository $1 can be located as well, if it is specified by name only.
 #                   (optional, default: $VM2_REPOS or "$HOME/repos/vm2"). You can use also `$(resolve_vm2_repos)` to determine the parent directory of all vm2 repositories.
+#   $3: $branch: the branch to check against the latest stable tag (optional, default: the currently checked out branch)
 # Returns:
-#   stdout: the resolved repository absolute path if found
+#   stdout: the absoluter path to the working tree root of the resolved repository
 #   Exit code:
 #     $success - if the repository directory exists and meets the above criteria, or
 #     $err_invalid_arguments - invalid number of arguments
 #     $err_not_found - could not find the repository directory path from $repo_name and $vm2_repos parameters
 #     $err_not_directory - the repository directory does not exist
-#     $err_not_git_repository - the directory exists but it is not a git repository
-#     $err_repo_has_no_ci - the repository does not have GitHub Actions workflows in '$repo_path/.github/workflows'
-#     $err_behind_latest_stable_tag - the directory exists and it is a git repository, but the repository is behind the latest stable tag
+#     $err_not_git_root - the directory exists but it is not a git repository
+#     $err_repo_with_no_ci - the repository does not have GitHub Actions workflows in '$repo_path/.github/workflows'
+#     $err_behind_latest_stable_tag - the directory exists and it is a git repository, but the repository is behind the latest stable tag of the specified branch
 # Dependencies:
 #   git CLI (functions root_working_tree, is_on_or_after_latest_stable_tag)
 # Usage:
-#   validate_repo "vm2.Glob" "$vm2_repos"
+#   validate_repo_root "vm2.Glob" "$vm2_repos"
 #-------------------------------------------------------------------------------
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
-function validate_repo()
+function validate_repo_root()
 {
-    (( $# == 1 || $# == 2 )) || {
-        error 3 "${FUNCNAME[0]}() requires 1 or 2 arguments ($# provided): the name of a repository, the optionally the directory where the repository is expected to be located " \
-                "(e.g. $VM2_REPOS or $default_vm2_repos)."
+    (( $# >= 1 && $# <= 3 )) || {
+        error 3 "${FUNCNAME[0]}() requires 1 to 3 arguments ($# provided): the name of a repository, the optionally the directory where the repository is expected to be located " \
+                "(e.g. $VM2_REPOS or $default_vm2_repos), and the branch to check against the latest stable tag (optional, default: the currently checked out branch)."
         return "$err_invalid_arguments"
     }
 
     local repo_name=$1
     local vm2_repos="${2:-${VM2_REPOS:-$default_vm2_repos}}"
+    local branch="${3}"
     local r
+    local -i rc
 
     # try to resolve the repository path from the parameter alone (i.e., the current working directory or the absolute path provided as the first argument)
     r=$(realpath -e "$repo_name" 2> "$_ignore") ||
@@ -150,30 +155,52 @@ function validate_repo()
        error 3 "Could not find the repository directory for '$repo_name' neither in the current working directory, nor in '$vm2_repos'."
        return "$err_not_found"
     }
-    repo_path=$r
+    local repo_path=$r
 
     trace "repo_path='$repo_path' from parameter, \$(pwd), or vm2_repos with realpath"
 
-    if [[ ! -d "${repo_path}" ]]; then
+    # 1) the specified directory exists
+    [[ -d "${repo_path}" ]] || {
         error 3 "The '${repo_name}' git repository directory is not found under ${vm2_repos}."
         return "$err_not_directory"
-    fi
+    }
 
-    if [[ "$repo_path" != $(root_working_tree "$repo_path") ]]; then
-        error 3 "The ${repo_name} repository at '$repo_path' is not a git repository directory."
-        return "$err_not_git_repository"
-    fi
+    # 2) it is a root of the working directory of the git repository
+    r=$(root_working_tree "$repo_path" 2> "$_ignore") || {
+        rc=$?
+        error 3 "The '${repo_name}' repository at '$repo_path' is not a git repository. $(error_message "$rc")."
+        return "$err_not_git_directory"
+    }
+    [[ "$repo_path" == "$r" ]] || {
+        error 3 "The ${repo_name} repository at '$repo_path' is not the root of the git repository working tree."
+        return "$err_not_git_root"
+    }
 
+    # 3) it has GitHub Actions workflows in the .github/workflows directory (unless it is the .github repository itself)
     if [[ ${repo_path##*/} != ".github" && ! -d "$repo_path/.github/workflows" ]]; then
         error 3 "The '${repo_name}' repository does not have GitHub Actions workflows in '$repo_path/.github/workflows'."
-        return "$err_repo_has_no_ci"
+        return "$err_repo_with_no_ci"
     fi
 
-    is_on_or_after_latest_stable_tag "$repo_path" && return "$success" || return "$err_behind_latest_stable_tag"
+    # 4) it is on the specified branch (or the currently checked out branch if not specified)
+    if [[ -z "$branch" ]]; then
+        branch=$(git -C "$repo_path" branch --show-current 2>"$_ignore")
+    else
+        [[ "$branch" == $(git -C "$repo_path" branch --show-current 2>"$_ignore") ]] || {
+            error 3 "The '${repo_name}' repository at '$repo_path' is not on the expected branch '$branch'."
+            return "$err_invalid_branch"
+        }
+    fi
+
+    # 5) it is at or ahead of the latest stable tag of the specified branch.
+    ensure_fresh_git_state "$repo_path" "$branch" || return $?
+    is_on_or_after_latest_stable_tag "$repo_path" || return $?
+
+    return "$success"
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Searches for a directory with the given name under a specified parent directory.
+# Summary: Internal, used by resolve_repo_root. Searches for a directory with the given name under a specified parent directory.
 # Parameters:
 #   1 - $look_for - directory name or relative path to search for
 #   2 - $start_from - parent directory under which to search for the specified directory
@@ -182,7 +209,7 @@ function validate_repo()
 #   Exit codes:
 #     $success - exactly one matching directory with a Git repository is found
 #     $err_not_git_directory - exactly one matching directory is found, but it is not a Git repository
-#     $err_found_more_than_one - multiple matching directories are found
+#     $err_found_too_many - multiple matching directories are found
 #     $err_not_found - no matching directory is found
 # Dependencies: find
 # Usage: dir=$(search_repo_dir <directory-name> <start-from>)
@@ -237,7 +264,7 @@ function search_repo_dir()
     (( found_repo_dirs == 1 ))                    && echo "$repo_dir" && return "$success"
     (( found_repo_dirs == 0 && found_dirs == 1 )) && echo "$dir"      && return "$err_not_git_directory"
 
-    return "$err_found_more_than_one"
+    return "$err_found_too_many"
 }
 
 #-------------------------------------------------------------------------------
@@ -255,18 +282,18 @@ function search_repo_dir()
 #     If the found directory is not a Git repository, the first value will be the directory itself - equal to the second value.
 #   Exit code:
 #     $success - exactly one matching directory with a Git repository is found
-#     $err_repo_has_no_ci - exactly one matching directory with a Git repository is found, but it has no CI configuration
+#     $err_repo_with_no_ci - exactly one matching directory with a Git repository is found, but it has no CI configuration
 #     $err_not_git_directory - exactly one matching directory with CI configuration is found, but it is not a Git repository
-#     $err_dir_has_no_ci - exactly one matching directory is found, but it is not a Git repository and has no CI configuration
-#     $err_found_more_than_one - multiple matching directories are found
+#     $err_dir_with_no_ci - exactly one matching directory is found, but it is not a Git repository and has no CI configuration
+#     $err_found_too_many - multiple matching directories are found
 #     $err_not_found - no matching directory was found
-#           $err_not_found and $err_found_more_than_one are the fatal errors
+#           $err_not_found and $err_found_too_many are the fatal errors
 # Dependencies: git, find
 # Usage: resolve_repo_root <directory-name> [repos-parent]
 # Example:
 #       output=$(resolve_repo_root "$repo_root" "$vm2_repos")
 #       rc=$?
-#       (( rc == success || rc == err_repo_has_no_ci || rc == err_not_git_directory || rc == err_dir_has_no_ci )) || exit "$rc"
+#       (( rc == success || rc == err_repo_with_no_ci || rc == err_not_git_directory || rc == err_dir_with_no_ci )) || exit "$rc"
 #       { read -r root; read -r resolved_dir; } <<< "$output"
 #-------------------------------------------------------------------------------
 function resolve_repo_root()
@@ -291,6 +318,7 @@ function resolve_repo_root()
     local dir=""
     local root=""
     local d
+    local -i rc
 
     # find a directory with the same sub-path under $vm2_repos and check if it is a git work tree root (if root_only is true)
     trace "Searching for '$dir_path' under '\$vm2_repos=$vm2_repos'..."
@@ -302,33 +330,53 @@ function resolve_repo_root()
         d=$(search_repo_dir "$dir_path" "$HOME")
         rc=$?
     fi
-    (( rc != err_not_found && rc != err_found_more_than_one ))              || return "$rc"
+
+    # if rc is one of the fatal errors from the above searches - return
+    is_in "$rc" "$err_not_found" "$err_found_too_many" && return "$rc"
 
     if (( rc == success )); then
-        # we found one: get its root
+        # we found repo directory, find the root of the repository and check if it has CI configuration
         repo_dir=$d
-        root=$(root_working_tree "$repo_dir")                               || return "$err_invalid_repo"
-        echo "${repo_dir}"
-        echo "${root}"
-        [[ -d "$root/.github/workflows" ]]                                  || return "$err_repo_has_no_ci"
+        root=$(root_working_tree "$repo_dir") || return "$err_invalid_repo"
+        [[ -d "$root/.github/workflows" ]] || rc="$err_repo_with_no_ci"
     elif (( rc == err_not_git_directory )); then
         # the directory exists but is not a git repository
         dir=$d
         # walk the path up until we find a CI configuration
+        rc="$err_dir_with_ci"
         while [[ ! -d "$d/.github/workflows" ]]; do
             d=$(dirname "$d")
-            [[ $d == "$HOME" ]] && rc="$err_dir_has_no_ci" && break
+            [[ $d == "$HOME" ]] && rc="$err_dir_with_no_ci" && break
         done
 
-        (( rc == err_dir_has_no_ci )) && {
-            echo "${dir}"
-            echo "${dir}"
-        } || {
-            # err_not_git_directory
-            echo "${dir}"
-            echo "${d}" # the return code should tell them that this is probably not the true root
-        }
+        case "$rc" in
+            "$err_dir_with_ci" )
+                # we found a CI configuration, return
+                #   - the directory with the CI configuration as the repo root, but
+                #   - the found directory as the resolved path and
+                #   - with the error code indicating that it is not a git repository
+                # the root can be initialized as a repository
+                repo_dir="$dir"
+                root="$d"
+                ;;
+            "$err_dir_with_no_ci" )
+                # we didn't find CI configuration, return
+                #   - the found directory as the repo root (it may not be a repository, but at least it is the closest we got to the provided path)
+                #   - the found directory also as the resolved path and
+                #   - with the error code indicating that it's a directory with no CI configuration
+                repo_dir="$dir"
+                root="$dir"
+                ;;
+            * )
+                error "Unexpected error code '$rc' caught in ${FUNCNAME[0]}() function."
+                return "$rc"
+        esac
+    else
+        error "Unexpected error code '$rc' returned from search_repo_dir() function."
+        return "$rc"
     fi
 
+    echo "${root}"
+    echo "${repo_dir}"
     return "$rc"
 }

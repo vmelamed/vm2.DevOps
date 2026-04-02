@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025-2026 Val Melamed
 
@@ -69,7 +70,7 @@ source "${script_dir}/repo-setup.audit.sh"
 
 get_arguments "$@"
 
-is_verbose && show_ignored_output
+repo_path="${repo_path:-$(pwd)}"
 
 #-------------------------------------------------------------------------------
 # Check the prerequisites
@@ -83,64 +84,54 @@ gh auth status &> "$_ignore"                                || error "'gh' is no
 
 exit_if_has_errors
 
-#-------------------------------------------------------------------------------
-# Resolve and validate vm2_repos:
-#-------------------------------------------------------------------------------
-
-trace "VM2_REPOS='${VM2_REPOS:-}'"
-
-declare -xr expects_git_repo="${script_name} expects that the vm2.* repositories are located in one parent directory specified by the '--vm2-repos' option, or the '\$VM2_REPOS' environment variable, or in the default '$default_vm2_repos'."
+declare -xi rc="$success"
 
 #===============================
 # Find and validate vm2_repos:
 #===============================
-if [[ -z "$vm2_repos" ]]; then
-    vm2_repos=$(resolve_vm2_repos)
-    rc=$?
-else
-    vm2_repos=$(resolve_vm2_repos "$vm2_repos")
-    rc=$?
-fi
-(( rc == success ))  ||  exit "$rc"
-
-# make sure we are seeing .github and vm2.DevOps properly through vm2_repos
-validate_repo ".github" "$vm2_repos"
-validate_repo "vm2.DevOps" "$vm2_repos"
-exit_if_has_errors
-ensure_fresh_git_state ".github"
-ensure_fresh_git_state "vm2.DevOps"
+vm2_repos=$(resolve_vm2_repos "$vm2_repos") ||
+    usage "$rc" "Could not find the parent directory for the vm2 repositories." \
+                "Please, set the VM2_REPOS environment variable or provide the path as an argument with '--vm2-repos' option."
 
 trace "All vm2 repositories are expected in '$vm2_repos'"
+
+# make sure we are seeing .github and vm2.DevOps properly through vm2_repos
+[[ -d "$vm2_repos/.github" && -d "$vm2_repos/vm2.DevOps" ]] ||
+    usage "$err_not_found" "The GitHub Actions workflow templates directory .github and/or the vm2.DevOps directory is missing in '$vm2_repos', Please clone the repositories into '$vm2_repos'."
+
+validate_repo_root "$vm2_repos/.github" "$vm2_repos" "main" || rc=$?
+(( rc == err_behind_latest_stable_tag )) &&
+    error "The repository in '$vm2_repos/.github' is behind the latest stable tag. Please update it to the latest commit on the main branch."
+
+rc="$success"
+validate_repo_root "$vm2_repos/vm2.DevOps" "$vm2_repos" "main" || rc=$?
+(( rc == err_behind_latest_stable_tag )) &&
+    error "The repository in '$vm2_repos/vm2.DevOps' is behind the latest stable tag. Please update it to the latest commit on the main branch."
 
 declare -x _ci_yaml=''
 
 _ci_yaml="$vm2_repos/vm2.DevOps/.github/workflows/_ci.yaml"
 [[ -s "$_ci_yaml" ]] || error "Could not find _ci.yaml GitHub Actions reusable workflow file in ${vm2_repos}."
 
-exit_if_has_errors
-
 declare -xr _ci_yaml
 
-info "vm2.* repositories path        => $vm2_repos"
+exit_if_has_errors
 
 #-------------------------------------------------------------------------------
 # Resolve and validate repo_path:
 #-------------------------------------------------------------------------------
-repo_path=$(resolve_repo_root "$repo_root" "$vm2_repos")
-rc=$?
-(( rc == success || rc == err_not_git_repository )) ||
-    usage "$err_argument_value" "Could not resolve the repository root for '$repo_root' within '$vm2_repos'."
+rc="$success"
+output=$(resolve_repo_root "$repo_path" "$vm2_repos") || rc=$?
+
+is_in "$rc" "$success" "$err_dir_with_ci" ||
+    usage "$err_argument_value" "Could not resolve the '$repo_path' within '$vm2_repos' to a Git initialized or not working tree root with configured CI. $(error_message "$rc")"
 
 reset_errors
 
-# For initializing and configuring a new repo we require that the the user provides the path to the root of the new repo's
-# work tree. It should be created using `dotnet new vm2.NewPkg` and should have the .github/workflows/CI.yaml file in place.
-# If we cannot find the .github/workflows/CI.yaml file in the specified path, we bail out.
-[[ -s "$repo_path/.github/workflows/CI.yaml" ]] ||
-    usage "$err_argument_value" "Could not find .github/workflows/CI.yaml in '$repo_path'. Please use 'dotnet new vm2.NewPkg' to create a valid project directory structure, or specify the correct path to the root of the project/repository using '--path <path>'."
+{ IFS= read -r repo_path; IFS= read -r _; } <<< "$output"
 
-(( rc == err_not_git_repository )) &&
-    trace "repo_path='$repo_path' has .github/workflows/CI.yaml, but is not inside a git repository. Will initialize a new repository here."
+(( rc == err_dir_with_ci )) &&
+    info "There is '$repo_path/.github/workflows/CI.yaml'. Will initialize a new repository in '$repo_path'."
 
 trace "Repository path: '$repo_path'"
 
@@ -161,7 +152,7 @@ if has_local_repo repo_state; then
         warning "The repository path '$repo_path' is different from the repository root '${repo_state[$key_root]}' detected by git. Adjusting to the git-detected repository root."
         repo_path="${repo_state[$key_root]}"
         [[ -s "$repo_path/.github/workflows/CI.yaml" ]] ||
-            usage "$err_repo_has_no_ci" "The git-detected repository path '$repo_path' is missing .github/workflows/CI.yaml. Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2.NewPkg' to create a valid directory structure."
+            usage "$err_repo_with_no_ci" "The git-detected repository path '$repo_path' is missing .github/workflows/CI.yaml. Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2.NewPkg' to create a valid directory structure."
         trace "repo_path='$repo_path' from git-detected repository root"
     fi
     info "Git repository path            => $repo_path"
@@ -215,7 +206,7 @@ visibility="${visibility,,}"
 [[ -s "$ci_yaml" ]]                                      || error "The specified path '${repo_path}' is not a valid project/repository root (missing .github/workflows/CI.yaml). Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2pkg <name>' to create a valid directory."
 [[ -z $repo_name || $repo_name =~ $repo_name_regex ]]    || error "Could not determine repository name from the specified path '${repo_path}' or the name is invalid. Please specify a valid path to the root of the project/repository using '--path <path>'."
 [[ -z $repo_owner || $repo_owner =~ $repo_owner_regex ]] || error "Could not determine repository owner from the specified path '${repo_path}', or from the environment variable ORGANIZATION, or the owner name is invalid. Please specify a valid owner of the project/repository using '--owner <owner>' or set the ORGANIZATION environment variable."
-validate_gh_repo_branch "$branch" &> "$_ignore"          || error "Invalid branch name '${branch}'. Please specify a valid branch name using '--branch <branch>'."
+validate_branch_name "$branch" &> "$_ignore"             || error "Invalid branch name '${branch}'. Please specify a valid branch name using '--branch <branch>'."
 is_in "$visibility" "public" "private"                   || error "Invalid visibility '${visibility}'. Valid options are 'public', 'private', or 'internal'. Please specify a valid visibility using '--visibility <public|private|internal>'."
 
 exit_if_has_errors

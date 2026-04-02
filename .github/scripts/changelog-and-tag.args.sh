@@ -7,7 +7,7 @@ declare -xr script_name
 declare -xr lib_dir
 
 declare -rxi err_missing_argument
-declare -rxi err_more_than_one_argument
+declare -rxi err_too_many_arguments
 declare -rxi err_unknown_argument
 
 # shellcheck disable=SC2154 # variable is referenced but not assigned.

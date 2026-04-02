@@ -125,10 +125,10 @@ function _write_line()
     elif is_defined_variable "$1"; then
         # shellcheck disable=SC2154
         case $1 in
-            verbose      )  value=$__save_verbose ;;
-            quiet        )  value=$__save_quiet ;;
-            table_format )  value=$__save_table_format ;;
-            _ignore      )  value=$__save_ignore ;;
+            verbose      )  value=$__saved_verbose ;;
+            quiet        )  value=$__saved_quiet ;;
+            table_format )  value=$__saved_table_format ;;
+            _ignore      )  value=$__saved_ignore ;;
             *            )  local secret=${2:-false}
                             [[ $secret == true ]] && value="$secret_str" || value="$v" ;;
         esac

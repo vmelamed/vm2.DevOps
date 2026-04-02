@@ -9,11 +9,6 @@
     },
     "files": [
         {
-            "sourceFile": "${vm2_repos}/.github/workflow-templates/ClearCache.yaml",
-            "targetFile": "${target_path}/.github/workflows/ClearCache.yaml",
-            "action": "copy"
-        },
-        {
             "sourceFile": "${vm2_repos}/.github/workflow-templates/CI.yaml",
             "targetFile": "${target_path}/.github/workflows/CI.yaml",
             "action": "ask to merge"
@@ -27,6 +22,11 @@
             "sourceFile": "${vm2_repos}/.github/workflow-templates/Release.yaml",
             "targetFile": "${target_path}/.github/workflows/Release.yaml",
             "action": "ask to merge"
+        },
+        {
+            "sourceFile": "${vm2_repos}/.github/workflow-templates/ClearCache.yaml",
+            "targetFile": "${target_path}/.github/workflows/ClearCache.yaml",
+            "action": "copy"
         },
         {
             "sourceFile": "${vm2_repos}/.github/workflow-templates/AutoMerge.yaml",

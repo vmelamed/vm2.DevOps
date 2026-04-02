@@ -171,7 +171,7 @@ function is_safe_boolean()
         error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the boolean value to test."
         return "$err_invalid_arguments"
     }
-    validate_boolean "$1" || {
+    is_boolean "$1" || {
         error 3 "${FUNCNAME[0]}(): The input '$1' is not a valid boolean. Expected 'true' or 'false'."
         return "$negative"
     }
@@ -194,7 +194,7 @@ function is_safe_integer()
         error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the integer value to test."
         return "$err_invalid_arguments"
     }
-    validate_integer "$1" || {
+    is_integer "$1" || {
         error 3 "${FUNCNAME[0]}(): The input '$1' is not a valid integer."
         return "$negative"
     }
@@ -637,7 +637,7 @@ function validate_preprocessor_symbols()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Validates that a given value is a valid percentage (0-100).
+# Summary: Validates that a given value is a valid percentage (±0-100).
 # Parameters:
 #   1 - percentage - the percentage to validate
 # Returns:
@@ -653,7 +653,7 @@ function is_valid_percentage()
         return "$err_invalid_arguments"
     }
 
-    is_natural "$1" && (( $1 >= 0 && $1 <= 100 ))
+    is_integer "$1" && (( $1 >= 0 && $1 <= 100 ))
 }
 
 #-------------------------------------------------------------------------------

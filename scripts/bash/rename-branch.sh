@@ -21,7 +21,7 @@ declare -rxi err_argument_type
 declare -rxi err_argument_value
 declare -rxi err_invalid_nameref
 declare -rxi err_missing_argument
-declare -rxi err_more_than_one_argument
+declare -rxi err_too_many_arguments
 declare -rxi err_unknown_argument
 
 # shellcheck disable=SC1091

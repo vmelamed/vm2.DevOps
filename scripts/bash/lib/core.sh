@@ -74,30 +74,6 @@ else
     set_table_format "${DUMP_FORMAT:-graphical}"      # on terminal, default to graphical format unless overridden by DUMP_FORMAT
 fi
 
-# When on_debug is specified as a handler of the DEBUG trap, remembers the last invoked bash command in $last_command.
-# on_debug and on_exit are trying to cooperatively do error handling when exit is invoked.
-declare last_command=""
-declare current_command="$BASH_COMMAND"
-
-#-------------------------------------------------------------------------------
-# Summary: DEBUG trap handler that tracks the last executed command for error reporting.
-# Parameters: none
-# Returns:
-#   Exit code: 0 always
-# Side Effects: Updates global variables $last_command and $current_command
-# Usage: trap on_debug DEBUG
-# Notes: Works cooperatively with on_exit for error handling. Automatically set by core.sh.
-#-------------------------------------------------------------------------------
-function on_debug()
-{
-    local rc=$?
-    # keep track of the last executed command
-    last_command="$current_command"
-    current_command="$BASH_COMMAND"
-
-    return "$rc"
-}
-
 #-------------------------------------------------------------------------------
 # Summary: EXIT trap handler that displays failed commands, restores directory, and disables tracing.
 # Parameters: none
@@ -115,18 +91,24 @@ function on_debug()
 declare -xr explicit_exit_regex='^(exit([[:space:]]+.*)?|source[[:space:]]+.*)$'
 function on_exit()
 {
-    # echo an error message before exiting
     local ec=$?
 
     set +x
-
-    if (( ec != 0 )) && [[ ! ${last_command:-} =~ $explicit_exit_regex ]]; then
-        printf "❌  ERROR: on-exit: the command '%s' failed with exit code %d\n" "${last_command:-'<unknown>'}" "$ec" >&2
+    if (( ec != "$success" )) && [[ ! ${BASH_COMMAND:-} =~ $explicit_exit_regex ]]; then
+        printf "❌  EXIT: the command '%s' failed with exit code %d\n" "${BASH_COMMAND:-<unknown>}" "$ec" >&2
     fi
 
     cd "$initial_dir" 2>/dev/null || true
-
     return "$ec"
+}
+
+function on_err()
+{
+    local rc=$?
+
+    echo "❌  ERR: rc=$rc cmd='$BASH_COMMAND' stack:" >&2
+    show_stack 2 12 true >&2
+    return "$rc"
 }
 
 # By default all scripts trap DEBUG and EXIT to provide better error handling.
@@ -134,7 +116,7 @@ function on_exit()
 # interferes with the debugging session.
 if ! $debugger; then
     # set the traps to see the last faulted command. However, they get in the way of debugging.
-    trap on_debug DEBUG
+    trap on_err ERR
     trap on_exit EXIT
 fi
 

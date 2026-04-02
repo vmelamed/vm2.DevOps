@@ -9,7 +9,7 @@ declare -xr script_dir
 declare -xr lib_dir
 
 declare -x vm2_repos
-declare -xr config_file="${script_dir}/diff-common.config.json"
+declare -xr config_file="${script_dir}/diff-shared.config.json"
 declare -x custom_config=""
 
 declare -xr action_ignore="ignore"
@@ -106,7 +106,7 @@ function find_target_path()
 }
 
 ## Loads all file actions from JSON configuration file
-## Reads ${lib_dir}/diff-common.config.json and populates arrays
+## Reads ${lib_dir}/diff-shared.config.json and populates arrays
 function configure()
 {
     if [[ ! -s "$config_file" ]]; then
@@ -154,10 +154,10 @@ function configure()
 }
 
 ## Loads custom file actions from JSON file
-## Reads ${target_path}/diff-common.custom.json and overrides file_actions
+## Reads ${target_path}/diff-shared.custom.json and overrides file_actions
 function customize()
 {
-    custom_config="${target_path}/diff-common.custom.json"
+    custom_config="${target_path}/diff-shared.custom.json"
 
     if [[ ! -s "$custom_config" ]]; then
         trace "The custom configuration file $custom_config was not found or is empty."

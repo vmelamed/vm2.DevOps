@@ -2,23 +2,24 @@
 
 <!-- TOC tocDepth:2..3 chapterDepth:2..6 -->
 
-- [Prerequisites](#prerequisites)
-- [Three Setup Paths](#three-setup-paths)
-  - [Option A: `dotnet new` Template (Recommended)](#option-a-dotnet-new-template-recommended)
-  - [Option B: `diff-common.sh` Script](#option-b-diff-commonsh-script)
-  - [Option C: GitHub Workflow Templates + Manual Setup](#option-c-github-workflow-templates-manual-setup)
-- [Required Directory Structure](#required-directory-structure)
-- [Customizing Configuration Files](#customizing-configuration-files)
-  - [Directory.Build.props](#directorybuildprops)
-  - [Directory.Packages.props](#directorypackagesprops)
-  - [global.json](#globaljson)
-  - [NuGet.config](#nugetconfig)
-  - [codecov.yaml](#codecovyaml)
-- [.NET Conventions](#net-conventions)
-- [Workflow Customization](#workflow-customization)
-  - [Quick Example (CI.yaml)](#quick-example-ciyaml)
-- [Troubleshooting](#troubleshooting)
-- [Further Reading](#further-reading)
+- [Consumer Guide](#consumer-guide)
+  - [Prerequisites](#prerequisites)
+  - [Three Setup Paths](#three-setup-paths)
+    - [Option A: `dotnet new` Template (Recommended)](#option-a-dotnet-new-template-recommended)
+    - [Option B: `diff-shared.sh` Script](#option-b-diff-sharedsh-script)
+    - [Option C: GitHub Workflow Templates + Manual Setup](#option-c-github-workflow-templates--manual-setup)
+  - [Required Directory Structure](#required-directory-structure)
+  - [Customizing Configuration Files](#customizing-configuration-files)
+    - [Directory.Build.props](#directorybuildprops)
+    - [Directory.Packages.props](#directorypackagesprops)
+    - [global.json](#globaljson)
+    - [NuGet.config](#nugetconfig)
+    - [codecov.yaml](#codecovyaml)
+  - [.NET Conventions](#net-conventions)
+  - [Workflow Customization](#workflow-customization)
+    - [Quick Example (CI.yaml)](#quick-example-ciyaml)
+  - [Troubleshooting](#troubleshooting)
+  - [Further Reading](#further-reading)
 
 <!-- /TOC -->
 
@@ -45,19 +46,19 @@ dotnet new vm2pkg -n MyProject
 This generates the full directory structure, workflows, and configuration files — no manual
 customization needed.
 
-Still it is very useful to familiarize yourself with the `scripts/bash/diff-common.sh` script and its usage to streamline the
+Still it is very useful to familiarize yourself with the `scripts/bash/diff-shared.sh` script and its usage to streamline the
 process of your subsequent updates of common files.
 
-### Option B: `diff-common.sh` Script
+### Option B: `diff-shared.sh` Script
 
-Clone the .github and vm2.DevOps repositories and run the `scripts/bash/diff-common.sh` script to copy all required files from
+Clone the .github and vm2.DevOps repositories and run the `scripts/bash/diff-shared.sh` script to copy all required files from
 
 - the `workflow-templates/` directory of the `vmelamed/.github` repository
 - the `.github/dependabot.yml` from the `vmelamed/vm2.DevOps` repository
 - the `solution/` directory of the `vmelamed/vm2.DevOps` repository
 
 > [!Tip]
-> The `diff-common.sh` script automates the process of copying the common files, ensuring consistency and saving time. It would
+> The `diff-shared.sh` script automates the process of copying the common files, ensuring consistency and saving time. It would
 be a good idea to familiarize yourself with the script and its usage to streamline the process of your setup and subsequent
 updates.
 
@@ -138,7 +139,7 @@ The `src/`, `test/`, and `benchmarks/` folder conventions are mandatory — the 
 
 Most of the files in the root are required for the workflows to function correctly. Once created they rarely need changes. And
 that's why we recommend using the `dotnet new vm2` template which generates them all correctly from the start or at least manually
-copying. If you choose to set up manually use the `diff-common.sh` script to do this for you. The files in the `solution/`
+copying. If you choose to set up manually use the `diff-shared.sh` script to do this for you. The files in the `solution/`
 directory of this repository are the canonical versions that you can copy from.
 
 ## Customizing Configuration Files

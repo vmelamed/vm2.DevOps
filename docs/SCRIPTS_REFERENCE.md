@@ -6,7 +6,7 @@
   - [Common Switches](#common-switches)
 - [1. Bash Library](#1-bash-library)
 - [2. Utility Scripts](#2-utility-scripts)
-  - [diff-common.sh](#diff-commonsh)
+  - [diff-shared.sh](#diff-sharedsh)
   - [move-commits-to-branch.sh](#move-commits-to-branchsh)
   - [rename-branch.sh](#rename-branchsh)
   - [Other Utilities](#other-utilities)
@@ -97,7 +97,7 @@ Located in **`scripts/bash/`**. Developer-facing tools for one-off chores. These
 
 They follow the same three-file pattern where applicable.
 
-### diff-common.sh
+### diff-shared.sh
 
 Compares pre-defined set of files from the "source-of-truth" directories (cloned repositories `vm2.DevOps` and `.github`) with
 the corresponding files in a target directory. Useful for keeping common files (config, settings, `Directory.*.props`, workflow
@@ -106,11 +106,11 @@ directory which may be defined by the environment variable `$VM2_REPOS` or given
 
 The tool comprises of the following files, expected to be in the same directory:
 
-- `diff-common.sh` - the main script
-- `diff-common.args.sh` - script arguments parsing (sourced)
-- `diff-common.usage.sh` - script usage information (sourced)
-- `diff-common.functions.sh` - script with reusable bash functions (sourced)
-- `diff-common.config.json` - mandatory global configuration file
+- `diff-shared.sh` - the main script
+- `diff-shared.args.sh` - script arguments parsing (sourced)
+- `diff-shared.usage.sh` - script usage information (sourced)
+- `diff-shared.functions.sh` - script with reusable bash functions (sourced)
+- `diff-shared.config.json` - mandatory global configuration file
 
 The script compares one by one the source and the target files using a configurable comparison (`diff`-like) tool. If the target
 file is not found, or there are differences between the files, the tool takes an action depending on the configured, per-file
@@ -127,7 +127,7 @@ default action. Here is the list of available action names and the resulting beh
 
 The script uses two configuration files with two different JSON formats:
 
-- a **mandatory** global configuration file `diff-common.config.json` from the directory of the the script files. It defines
+- a **mandatory** global configuration file `diff-shared.config.json` from the directory of the the script files. It defines
   the two sets of files and the corresponding action if they differ, e.g.:
 
       ```json
@@ -156,7 +156,7 @@ The script uses two configuration files with two different JSON formats:
       }
       ```
 
-- an **optional** configuration file `diff-common.custom.json` from the directory of the target files, e.g.:
+- an **optional** configuration file `diff-shared.custom.json` from the directory of the target files, e.g.:
 
       ```json
       {
@@ -176,15 +176,15 @@ The script uses two configuration files with two different JSON formats:
       }
       ```
 
-As you can see the custom config file allows overriding the actions in the `diff-common.config.json` file for specific file
+As you can see the custom config file allows overriding the actions in the `diff-shared.config.json` file for specific file
 names.
 
 Both files optionally define a comparison (`diff`-like) tool and a `merge`-like tool. If they are not specified explicitly the
 tools picks the tools configured in the Git global configuration (e.g. `git config --global --get diff.tool`). If they are not
 configured the tool assumes some default actions. The tools are picked in a priority order from highest to lowest:
 
-1. Defined in `diff-common.custom.json` from the target directory
-1. Defined in `diff-common.config.json` from the directory of the `diff-common.sh` script
+1. Defined in `diff-shared.custom.json` from the target directory
+1. Defined in `diff-shared.config.json` from the directory of the `diff-shared.sh` script
 1. Git global configuration
 1. Default tools (diff: `delta` if installed or `diff`, merge: `Visual Studio Code`)
 
@@ -193,7 +193,7 @@ configured the tool assumes some default actions. The tools are picked in a prio
 
 > [!TIP] For comparison we recommend the `delta` tool.
 
-The property `files` in the mandatory `diff-common.config.json` file defines the set of source files, and corresponding target
+The property `files` in the mandatory `diff-shared.config.json` file defines the set of source files, and corresponding target
 files and actions to take if the source and the target are different.
 
 **Command Line Options:**

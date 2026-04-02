@@ -28,9 +28,9 @@ declare -x target_dir=""
 declare -x vm2_repos=""
 declare -xa file_regexes=()
 
-source "${script_dir}/diff-common.args.sh"
-source "${script_dir}/diff-common.usage.sh"
-source "${script_dir}/diff-common.functions.sh"
+source "${script_dir}/diff-shared.args.sh"
+source "${script_dir}/diff-shared.usage.sh"
+source "${script_dir}/diff-shared.functions.sh"
 
 get_arguments "$@"
 
@@ -44,68 +44,78 @@ declare -rxi err_argument_value
 declare -rxi err_not_found
 declare -rxi err_not_file
 declare -rxi err_not_directory
-declare -rxi err_not_git_repository
+declare -rxi err_not_git_root
 declare -rxi err_behind_latest_stable_tag
 declare -rxi err_invalid_repo
 declare -rxi err_invalid_repo
-declare -rxi err_found_more_than_one
-declare -rxi err_repo_has_no_ci
-declare -rxi err_dir_has_no_ci
+declare -rxi err_found_too_many
+declare -rxi err_repo_with_no_ci
+declare -rxi err_dir_with_no_ci
 declare -rxi err_not_git_directory
 
 declare -xr semverTagReleaseRegex
 
 declare target_repo_root
-declare -xi rc=0
+declare -xi rc="$success"
 
 #===============================
 # Find and validate vm2_repos:
 #===============================
-vm2_repos=$(resolve_vm2_repos "$vm2_repos")
-(( $? == success )) ||
-    exit "$rc"
+vm2_repos=$(resolve_vm2_repos "$vm2_repos") ||
+    usage "$rc" "Could not find the parent directory for the vm2 repositories. Please, set the VM2_REPOS environment variable or provide the path as an argument with '--vm2-repos' option."
 
-[[ -d "$vm2_repos/.github" && -d "$vm2_repos/vm2.DevOps" ]] ||
-    usage "$err_not_found" "The GitHub Actions workflow templates directory .github and/or the vm2.DevOps directory is missing in '$vm2_repos'."
-
+trace "All vm2 repositories are expected in '$vm2_repos'"
 
 # make sure we are seeing .github and vm2.DevOps properly through vm2_repos
-validate_repo ".github" "$vm2_repos"
-rc=$?
-(( rc == err_behind_latest_stable_tag )) && { ensure_fresh_git_state "$vm2_repos/.github"; rc=$?; }
-(( rc != success )) && exit "$rc"
+[[ -d "$vm2_repos/.github" && -d "$vm2_repos/vm2.DevOps" ]] ||
+    usage "$err_not_found" "The GitHub Actions workflow templates directory .github and/or the vm2.DevOps directory is missing in '$vm2_repos', Please clone the repositories into '$vm2_repos'."
 
-validate_repo "vm2.DevOps" "$vm2_repos"
-rc=$?
-(( rc == err_behind_latest_stable_tag )) && { ensure_fresh_git_state "$vm2_repos/vm2.DevOps"; rc=$?; }
-(( rc != success )) && exit "$rc"
+validate_repo_root "$vm2_repos/.github" "$vm2_repos" "main" || rc=$?
+(( rc == err_behind_latest_stable_tag )) &&
+    error "The repository in '$vm2_repos/.github' is behind the latest stable tag. Please update it to the latest commit on the main branch."
+
+rc="$success"
+validate_repo_root "$vm2_repos/vm2.DevOps" "$vm2_repos" "main" || rc=$?
+(( rc == err_behind_latest_stable_tag )) &&
+    error "The repository in '$vm2_repos/vm2.DevOps' is behind the latest stable tag. Please update it to the latest commit on the main branch."
 
 exit_if_has_errors
-
-trace "All vm2 repositories are expected generally in '$vm2_repos'"
 
 #=================================================
 # Validate and adjust target_path from target_dir:
 #=================================================
-output=$(resolve_repo_root "$target_dir" "$vm2_repos")
-rc=$?
+rc="$success"
+output=$(resolve_repo_root "$target_dir" "$vm2_repos") || rc=$?
+
 # here we can only work with git repos and directories that have CI configured:
-(( rc == success ||
-   rc == err_not_git_directory )) || exit "$rc"
+(( rc == success || rc == err_not_git_directory )) ||
+    usage "$rc" "The specified target directory '$target_dir' is invalid. It should have CI configured in '$target_dir/.github/workflows'."
 
-{ read -r target_repo_root; read -r target_path; } <<< "$output"
+{ IFS= read -r target_repo_root; IFS= read -r target_path; } <<< "$output"
 
-((  rc == success )) &&
-    ensure_fresh_git_state "$target_repo_root"
+# if it is a git repo then make sure it is in a clean state:
+if (( rc == success )); then
+    branch="$(git -C "$target_repo_root" branch --show-current 2>"$_ignore")" || {
+        rc=$?
+        error "The repository in the specified target directory '$target_dir' appears corrupted.";
+    }
+    (( rc == success )) && ensure_fresh_git_state "$target_repo_root" "$branch" ||
+        error "The specified target repository at '$target_repo_root' on branch '$branch' is not in a clean state. " \
+              "Please, commit or stash your changes and make sure you are on the expected branch before running the script again."
+else
+    branch="<not a git repository>"
+fi
 
-trace "The target project is in '$target_path' with root directory '$target_repo_root'."
+exit_if_has_errors
+
+trace "The target project is in '$target_path' with working tree directory root '$target_repo_root', on branch '$branch'."
 
 # freeze the arguments
 declare -xr vm2_repos
 declare -xr target_dir
 declare -xr target_path
 
-dump_all_variables
+dump_args
 
 declare -a source_files
 declare -a target_files

@@ -159,7 +159,7 @@ function is_boolean()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Tests if the parameter represents a valid natural number (0, 1, 2, 3, ...).
+# Summary: Tests if the parameter represents a valid natural number (0, 1, 2, 3, ...) without a sign.
 # Parameters:
 #   1 - number - string to test
 # Returns:
