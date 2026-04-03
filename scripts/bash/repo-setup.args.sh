@@ -19,6 +19,7 @@ declare -x visibility
 declare -x branch
 declare -x interactive_vars
 declare -x interactive_secrets
+declare -x configure_local
 declare -x audit
 declare -x main_protection_rs_name
 declare -x description
@@ -91,6 +92,10 @@ function get_arguments()
 
             --interactive-secrets|-is )
                 interactive_secrets=true
+                ;;
+
+            --skip-local-config|-slc )
+                configure_local=false
                 ;;
 
             --audit|-a )

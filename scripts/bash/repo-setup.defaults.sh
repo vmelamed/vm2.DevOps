@@ -131,3 +131,31 @@ declare -xrA var_validators=(
     ["SAVE_PACKAGE_ARTIFACTS"]="validate_boolean"
     ["VERBOSE"]="validate_boolean"
 )
+
+declare -xa default_local_git_settings_order=(
+    "core.hooksPath"
+    "commit.template"
+    "fetch.prune"
+    "pull.rebase"
+    "push.autoSetupRemote"
+)
+
+declare -xr VM2_REPOS
+
+declare -xA default_local_git_settings=(
+    ["core.hooksPath"]="$VM2_REPOS/vm2.DevOps/scripts/githooks"
+    ["commit.template"]="$VM2_REPOS/vm2.DevOps/scripts/githooks/.gitmessage"
+    ["pull.rebase"]=true
+    ["fetch.prune"]=true
+    ["push.autoSetupRemote"]=true
+)
+
+function init_default_local_git_settings()
+{
+    if [[ $# -ne 1 || -z "$1" ]]; then
+        error 3 "${FUNCNAME[0]}() requires exactly 1 non-empty argument: the path to the parent directory where vm2.DevOps is cloned, e.g. the value of \$VM2_REPOS."
+    fi
+    default_local_git_settings["core.hooksPath"]="$1/vm2.DevOps/scripts/githooks"
+    default_local_git_settings["commit.template"]="$1/vm2.DevOps/scripts/githooks/.gitmessage"
+    declare -xrA default_local_git_settings
+}

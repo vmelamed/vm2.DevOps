@@ -15,10 +15,7 @@ function usage_text()
 
     if $long_text; then
         switches="Switches:"$'\n'"$common_switches"
-        vars=$'\n'"Environment Variables:
-  VM2_REPOS                     The parent directory where the .github workflow templates, vm2.DevOps, and other vm2.* project
-                                repositories are cloned
-$common_vars"
+        vars="$common_vars"
     fi
 
     cat << EOF
@@ -53,7 +50,11 @@ Options:
                                 defined files, only the specified files from the full list are processed. The file names can be
                                 regular expressions.
                                 Example: -f '.*ya?ml$' or --files 'Dockerfile,Directory.*'
-$switches$vars
+$switches
+Environment Variables:
+  VM2_REPOS                     The parent directory where the .github workflow templates, vm2.DevOps, and other vm2.* project
+                                repositories are cloned
+$vars
 Configuration Files:
     The script uses a configuration file 'diff-shared.actions.json' located in the project's directory to customize the actions
     taken when differences are found. (See the README.md file for more details.)

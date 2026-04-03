@@ -5,22 +5,22 @@
 #
 # [optional footer(s)]
 #
-# ┌─ Types ─────────────────────────────────────────────────┐
-# │  feat      New feature                    (minor bump)  │
-# │  fix       Bug fix                        (patch bump)  │
-# │  perf      Performance improvement                      │
-# │  security  Security fix or hardening                    │
-# │  refactor  Code restructuring (no behavior change)      │
-# │  docs      Documentation only                           │
-# │  style     Formatting, whitespace (no code change)      │
-# │  test      Adding or updating tests                     │
-# │  chore     Build, CI, tooling, dependencies             │
-# │  revert    Revert a previous commit                     │
-# │  remove    Remove feature or code                       │
-# │  build     Build system changes (skipped in changelog)  │
-# │  ci        CI configuration (skipped in changelog)      │
-# │  devops    DevOps changes (synonym for ci)              │
-# └─────────────────────────────────────────────────────────┘
+# ┌── Types: ────────────────────────────────────────────────┐
+# │   feat      New feature                    (minor bump)  │
+# │   fix       Bug fix                        (patch bump)  │
+# │   perf      Performance improvement                      │
+# │   security  Security fix or hardening                    │
+# │   refactor  Code restructuring (no behavior change)      │
+# │   docs      Documentation only                           │
+# │   style     Formatting, whitespace (no code change)      │
+# │   test      Adding or updating tests                     │
+# │   chore     Build, CI, tooling, dependencies             │
+# │   revert    Revert a previous commit                     │
+# │   remove    Remove feature or code                       │
+# │   build     Build system changes (skipped in changelog)  │
+# │   ci        CI configuration (skipped in changelog)      │
+# │   devops    DevOps changes (synonym for ci)              │
+# └──────────────────────────────────────────────────────────┘
 #
 # Breaking changes: add ! after the type/scope:
 #   refactor!: rewrite matching engine
@@ -28,6 +28,7 @@
 #
 # Footers:
 #   Fixes #123
+#   Closes #123
 #   Refs #456
 #
 # Examples:

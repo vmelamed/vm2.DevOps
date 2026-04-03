@@ -48,6 +48,7 @@ declare -rxi err_dir_with_no_ci=87      # The specified directory does not have 
 declare -rxA error_codes=(
     [$success]="The command completed successfully."
     [$failure]="A general, unspecified error occurred."
+
     [$err_invalid_arguments]="The number of arguments is invalid or more than one type of parameter error code is present."
     [$err_argument_type]="An argument is of the wrong type (types: string, integer, boolean, array, associative array, etc.)."
     [$err_argument_value]="An argument has an invalid value (out of range, not in allowed set. E.g. expected non-negative integer but got negative value)."
@@ -57,9 +58,12 @@ declare -rxA error_codes=(
     [$err_unknown_argument]="An unknown argument was provided."
     [$err_not_found]="Could not find an item matching the criteria."
     [$err_found_too_many]="Found too many items matching the criteria."
+
     [$err_not_file]="Parameter value is not a file."
     [$err_not_directory]="Parameter value is not a directory."
+
     [$err_not_overridden]="A function that should be overridden in the calling script (e.g. usage_text()) was not overridden."
+
     [$err_not_git_directory]="The specified directory is not a directory from a Git repository working tree."
     [$err_not_git_root]="The specified directory is not a root directory of a Git repository working tree."
     [$err_behind_latest_stable_tag]="The repository is behind the latest stable tag."

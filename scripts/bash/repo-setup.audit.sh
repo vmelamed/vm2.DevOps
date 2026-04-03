@@ -223,11 +223,30 @@ function audit_repo()
 
     for check in "${required_checks[@]}"; do
         if is_in "$check" "${present_checks[@]}"; then
-            echo "          ✅  $check - present"
+            printf "          ✅  %-32s => present\n" "$check"
             (( ++pass ))
         else
-            echo "          ❌  $check - missing"
+            printf "          ❌  %-32s => missing\n" "$check"
             (( ++errs ))
+        fi
+    done
+
+    # --- Local Git Settings ---
+    echo "  ℹ️  Local Git Settings:"
+
+    local key expected actual rc=0
+    for key in "${default_local_git_settings_order[@]}"; do
+        expected="${default_local_git_settings[$key]}"
+        actual=$(git -C "$repo_path" config --local --get "$key" 2>"$_ignore") || rc=$?
+        if [[ $rc -ne "$success" ]]; then
+            printf "      ❌  %-36s => %s (default: '%s')\n" "$key" "$actual" "$expected"
+            (( ++errs ))
+        elif [[ "$actual" != "$expected" ]]; then
+            printf "      ❓  %-36s => %s (default: '%s')\n" "$key" "$actual" "$expected"
+            (( ++diff ))
+        else
+            printf "      ✅  %-36s => %s\n" "$key" "$actual"
+            (( ++pass ))
         fi
     done
 

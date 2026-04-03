@@ -82,6 +82,7 @@ Switches:
                                 the default values. Can be used at anytime
   -is, --interactive-secrets    Prompts the user to enter the values of the repository secrets interactively, instead of
                                 creating them automatically with placeholder values. Can be used at anytime anytime
+  -slc, --skip-local-config     Skips the local configuration of the repository. Can be used at anytime
   -a, --audit                   Displays a report of current vs expected state of the repository: variables, secrets, settings
                                 and policies. Use this option alone when the repository already exists and is linked to a GitHub
                                 repository and none of the --interactive-* options are specified. In any other case, the script
@@ -93,5 +94,18 @@ Examples:
   ${script_name} \$VM2_REPOS/vm2.Glob --interactive-secrets --verbose
   ${script_name} vmelamed/vm2.MyPackage --visibility private --ssh
   ${script_name} vm2.Glob --audit
+
+Configured local Git settings:
+  core.hooksPath                Set to '\$VM2_REPOS/vm2.DevOps/scripts/githooks'
+                                Tells Git where to find repository hook scripts (e.g. pre-commit, commit-msg).
+  commit.template               Set to '\$VM2_REPOS/vm2.DevOps/scripts/githooks/.gitmessage'
+                                Specifies the default commit message template shown when creating commits.
+  pull.rebase                   Set to 'true'
+                                Makes 'git pull' rebase local commits on top of upstream changes instead of merging.
+  fetch.prune                   Set to 'true'
+                                Automatically removes stale remote-tracking branches deleted on the remote.
+  push.autoSetupRemote          Set to 'true'
+                                Auto-sets upstream tracking when pushing a new local branch for the first time.
+
 EOF
 }
