@@ -12,6 +12,9 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
+# shellcheck disable=SC1091
+source "${lib_dir}/core.sh"
+
 declare -rxi success
 declare -rxi failure
 declare -rxi positive
@@ -23,9 +26,6 @@ declare -rxi err_invalid_nameref
 declare -rxi err_missing_argument
 declare -rxi err_too_many_arguments
 declare -rxi err_unknown_argument
-
-# shellcheck disable=SC1091
-source "${lib_dir}/core.sh"
 
 # Save the current head
 

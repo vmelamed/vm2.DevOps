@@ -97,11 +97,10 @@ output=$(resolve_repo_root "$target_dir" "$vm2_repos") || rc=$?
 if (( rc == success )); then
     branch="$(git -C "$target_repo_root" branch --show-current 2>"$_ignore")" || {
         rc=$?
-        error "The repository in the specified target directory '$target_dir' appears corrupted.";
+        error "The repository in the specified target directory '$target_dir' appears corrupted."
     }
     (( rc == success )) && ensure_fresh_git_state "$target_repo_root" "$branch" ||
-        error "The specified target repository at '$target_repo_root' on branch '$branch' is not in a clean state. " \
-              "Please, commit or stash your changes and make sure you are on the expected branch before running the script again."
+        error "The specified target repository at '$target_repo_root' on branch '$branch' is not in a clean state. Please, commit or stash your changes."
 else
     branch="<not a git repository>"
 fi
@@ -158,10 +157,7 @@ while [[ $i -lt ${#source_files[@]} ]]; do
         fi
     fi
 
-    if is_verbose; then
-        trace_msg=$(printf "\n%-84s <--- Comparing ---> %-s\n" "$source_file" "$target_file")
-        trace "$trace_msg"
-    fi
+    is_verbose && trace < <(printf "\n%-84s ---- Comparing ---- %-s\n" "$source_file" "$target_file")
 
     if [[ ! -s "$target_file" ]]; then
         case $actions in
@@ -189,7 +185,6 @@ while [[ $i -lt ${#source_files[@]} ]]; do
     fi
 
     if are_different "${source_file}" "${target_file}" "$show_diff"; then
-        echo "File '${source_file}' is different from '${target_file}'."
         if ! is_quiet; then
             case $actions in
                 "$action_ignore" )
@@ -197,6 +192,7 @@ while [[ $i -lt ${#source_files[@]} ]]; do
                     ;;
 
                 "$action_merge_or_copy" )
+                    echo "File '${source_file}' is different from '${target_file}'."
                     case $(choose "What do you want to do?" \
                                   "Do nothing - continue" \
                                   "Merge the files" \
@@ -210,6 +206,7 @@ while [[ $i -lt ${#source_files[@]} ]]; do
                     ;;
 
                 "$action_ask_to_merge" )
+                    echo "File '${source_file}' is different from '${target_file}'."
                     confirm "Do you want to merge '${source_file}' to file '${target_file}'?" "n" && \
                     merge "$target_file" "$source_file" || true
                     ;;
@@ -219,6 +216,7 @@ while [[ $i -lt ${#source_files[@]} ]]; do
                     ;;
 
                 "$action_ask_to_copy" )
+                    echo "File '${source_file}' is different from '${target_file}'."
                     confirm "Do you want to copy '${source_file}' to file '${target_file}'?" "n" && \
                     copy_file "$source_file" "$target_file"
                     ;;

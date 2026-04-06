@@ -109,31 +109,18 @@ function find_target_path()
 ## Reads ${lib_dir}/diff-shared.config.json and populates arrays
 function configure()
 {
-    if [[ ! -s "$config_file" ]]; then
-        error "The configuration file $config_file was not found or is empty."
-    fi
-    # Validate JSON
-    if ! jq empty "$config_file" 2>"$_ignore"; then
-        error "The configuration file $config_file contains invalid JSON."
-    fi
+    [[ -s "$config_file" ]]                      || error "The configuration file $config_file was not found or is empty."
+    jq empty "$config_file" 2>"$_ignore"         || error "The configuration file $config_file contains invalid JSON."
     exit_if_has_errors
 
     # Populate the arrays
     local -i i=0
     local source_file target_file action
     while IFS='=' read -r source_file target_file action; do
-        if [[ -z "$source_file" ]]; then
-            error "Empty source file path found in $config_file."
-        fi
-        if [[ -z "$target_file" ]]; then
-            error "Empty target file path found in $config_file."
-        fi
-        if [[ -z "$action" ]]; then
-            error "Empty action found in $config_file."
-        fi
-        if ! is_in "$action" "${valid_actions[@]}"; then
-            error "$action is not a valid action. Must be one of: $all_actions_str."
-        fi
+        [[ -n "$source_file" ]]                 || error "Empty source file path found in $config_file."
+        [[ -n "$target_file" ]]                 || error "Empty target file path found in $config_file."
+        [[ -n "$action" ]]                      || error "Empty action found in $config_file."
+        is_in "$action" "${valid_actions[@]}"   || error "$action is not a valid action. Must be one of: $all_actions_str."
         exit_if_has_errors
 
         # Expand variables in paths
@@ -163,10 +150,10 @@ function customize()
         trace "The custom configuration file $custom_config was not found or is empty."
     else
         trace "Loading tools and actions from the custom configuration file $custom_config."
-        if ! jq empty "$custom_config" 2>"$_ignore"; then
-            error "The custom configuration file $custom_config contains invalid JSON."
-            return 1
-        fi
+        jq empty "$custom_config" 2>"$_ignore" || {
+            error "The custom configuration file $custom_config contains invalid JSON.";
+            return 1;
+        }
     fi
 
     local -i changed_actions=0
@@ -176,15 +163,15 @@ function customize()
         local  relative_path action
         while IFS='=' read -r relative_path action; do
             # Validate action
-            if ! is_in "$action" "${valid_actions[@]}"; then
+            is_in "$action" "${valid_actions[@]}" || {
                 warning "Invalid action '$action' for '$relative_path' in $custom_config - must be one of: $all_actions_str."
                 continue
-            fi
+            }
             # Validate the path
-            if [[ -z "$relative_path" ]]; then
+            [[ -n "$relative_path" ]] || {
                 warning "Empty relative path in $custom_config."
                 continue
-            fi
+            }
 
             # Find corresponding target file and source file
             local target_file="${target_path}/${relative_path}"
@@ -199,10 +186,10 @@ function customize()
                 fi
             done
 
-            if [[ "$found" == false ]]; then
+            [[ "$found" == true ]] || {
                 warning "Path '$relative_path' from $custom_config does not match any known target relative path."
                 continue
-            fi
+            }
 
             # Override the action
             file_actions["$source_file"]="$action"
@@ -218,6 +205,7 @@ function get_diff_tool()
     { IFS=$'\n' read -r diff_tool && IFS=$'\n' read -r diff_command; } < <(jq -r '.diff.tool, .diff.command' "$config_file" 2>"$_ignore")
     # overridden by
     [[ -s $custom_config ]] && { IFS=$'\n' read -r diff_tool && IFS=$'\n' read -r diff_command; } < <(jq -r '.diff.tool, .diff.command' "$custom_config" 2>"$_ignore")
+
     # if the diff tool has been defined in the config file(s) - we're done
     [[ -n $diff_tool && -n $diff_command ]] &&
     (command -p -v "$diff_tool" || which "$diff_tool" &>"$_ignore") &&
@@ -225,7 +213,7 @@ function get_diff_tool()
     return 0
 
     # get it from git, BUT VSCode and meld are not good for this script!
-    diff_tool=$(git config --global --get diff.tool 2>"$_ignore") && \
+    diff_tool=$(git config --global --get diff.tool 2>"$_ignore") &&
     diff_command=$(git config --global --get "diff.$diff_tool.cmd" 2>"$_ignore" || true)
 
     [[ -n "$diff_tool" && -n "$diff_command" && ! $diff_tool =~ (vs)?code|meld ]] &&
@@ -291,11 +279,10 @@ function are_different()
 
     # compare fast, return fast, if no significant diffs; otherwise continue with the fancy diff tool of choice
     if diff -q -w -B "$LOCAL" "$REMOTE" > "$_ignore"; then
-        printf "%-84s <--- Identical ---> %-s\n" "$LOCAL" "$REMOTE"
+        printf "%-84s ==== Identical ==== %-s\n" "$LOCAL" "$REMOTE"
         return 1
     fi
-    printf "%-84s <--- Different ---> %-s\n" "$LOCAL" "$REMOTE"
-    # echo "${LOCAL} <--- Different ---> ${REMOTE}"
+    printf "%-84s ≠≠≠≠ Different ≠≠≠≠ %-s\n" "$LOCAL" "$REMOTE"
     if [[ "$display_diff" != true ]]; then
         return 0
     fi
@@ -334,6 +321,5 @@ function copy_file()
         execute mkdir -p "$dest_dir"
     fi
     execute cp "$src_file" "$dest_file"
-    printf "%-84s <--- Copied to ---> %-s\n" "$src_file" "$dest_file"
-    # echo -e "\n${source_file} <--- Copied to ---> ${target_file}"
+    printf "%-84s ⇒⇒⇒⇒ Copied to ⇒⇒⇒⇒ %-s\n" "$src_file" "$dest_file"
 }
