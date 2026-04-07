@@ -132,7 +132,6 @@ trace "Running benchmark tests in project '$benchmark_project' with build config
 if ! execute "${benchmark_exe_path}" \
         --filter '*' \
         --join \
-        --memory \
         --artifacts "$artifacts_dir"; then
     error "Benchmarks failed in project '$benchmark_project'."
     exit 2
