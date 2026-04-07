@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-# Copyright (c) 2025 Val Melamed
+# Copyright (c) 2025-2026 Val Melamed
 
 <#
 .SYNOPSIS
@@ -41,7 +41,7 @@ param(
 
 $header = @"
 // SPDX-License-Identifier: $License
-// Copyright (c) 2025 Val Melamed
+// Copyright (c) 2025-2026 Val Melamed
 
 
 "@
