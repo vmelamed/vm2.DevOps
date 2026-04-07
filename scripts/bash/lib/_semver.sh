@@ -229,7 +229,7 @@ function compare_semver()
     done
 
     if (( len1 != len2 )); then
-        if (( len1 > len2 )); then return "$rc_greater_than"; else return "$rc_less_than"; fi
+        if (( len1 > len2 )); then return "$rc_less_than"; else return "$rc_greater_than"; fi
     fi
 
     return "$rc_equal"
