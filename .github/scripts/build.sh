@@ -62,12 +62,8 @@ fi
 # Restore dependencies
 execute dotnet restore --locked-mode
 
-# Build the project
-temp_output=$(mktemp)
-trap 'rm -f "$temp_output"' EXIT
-
-rc=0
-execute dotnet build "$build_project" \
+# shellcheck disable=SC2119
+if ! execute dotnet build "$build_project" \
             --verbosity detailed \
             --configuration "$configuration" \
             -p:preprocessor_symbols="$preprocessor_symbols" \
@@ -75,6 +71,7 @@ execute dotnet build "$build_project" \
             -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" 2>&1 |
             extractDotnetBuildInfo |
             displayDotnetBuildSummary |
-            to_summary || rc=$?
-
-exit "$rc"
+            to_summary; then
+    :
+fi
+exit "${PIPESTATUS[0]}" # exit with the exit code of the dotnet build command, not the summary processing
