@@ -142,7 +142,7 @@ fi
 # Verify JSON results were created
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 if [[ $dry_run != true ]]; then
-    json_files=("$results_dir"/*-report.json)dir
+    json_files=("$results_dir"/*-report-full-compressed.json)
     if [[ ! -f "${json_files[0]}" ]]; then
         error "No JSON benchmark reports found in $results_dir"
         exit 2
