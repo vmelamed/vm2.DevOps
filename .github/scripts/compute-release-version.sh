@@ -126,7 +126,11 @@ release_tag="${minver_tag_prefix}${release_version}"
 
 # If HEAD is already tagged with a prerelease, verify the stable version is strictly greater
 if [[ "$needs_empty_commit" == true && -n "$head_tag" ]]; then
-    if ! semver_greaterThan "$release_version" "${head_tag#"$minver_tag_prefix"}"; then
+    head_ver=${head_tag#"$minver_tag_prefix"}
+    semver_greaterThan "$release_version" "$head_ver"
+    rc=$?
+    # shellcheck disable=SC2154
+    if (( rc != rc_greater_than )); then
         error "Computed stable version '$release_version' is not greater than the prerelease tag '$head_tag' on HEAD. Possible remedy: branch 'main' again, do a new PR with commits that bump the version higher, then release."
     fi
 fi
