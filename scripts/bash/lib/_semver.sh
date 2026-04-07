@@ -162,11 +162,9 @@ function compare_semver()
     }
 
     if [[ "$1" == "$2" ]]; then
-        trace "Versions '$1' and '$2' are identical strings; returning equal."
         return "$rc_equal"
     fi
 
-    trace "Comparing versions '$1' and '$2' according to Semantic Versioning 2.0.0 rules."
     if [[ "$1" =~ $semverRegex ]]; then
         local -i major1=${BASH_REMATCH[$semver_major]}
         local -i minor1=${BASH_REMATCH[$semver_minor]}
@@ -191,36 +189,27 @@ function compare_semver()
 
     if (( major1 != major2 )); then
         if (( major1 > major2 )); then
-            trace "Version '$1' is greater than '$2' because its major version ($major1) is greater than major version of '$2' ($major2)."
             return "$rc_greater_than"
         else
-            trace "Version '$1' is less than '$2' because its major version ($major1) is less than major version of '$2' ($major2)."
             return "$rc_less_than"
         fi
     elif (( minor1 != minor2 )); then
         if (( minor1 > minor2 )); then
-            trace "Version '$1' is greater than '$2' because its minor version ($minor1) is greater than minor version of '$2' ($minor2)."
             return "$rc_greater_than"
         else
-            trace "Version '$1' is less than '$2' because its minor version ($minor1) is less than minor version of '$2' ($minor2)."
             return "$rc_less_than"
         fi
     elif (( patch1 != patch2 )); then
         if (( patch1 > patch2 )); then
-            trace "Version '$1' is greater than '$2' because its patch version ($patch1) is greater than patch version of '$2' ($patch2)."
             return "$rc_greater_than"
         else
-            trace "Version '$1' is less than '$2' because its patch version ($patch1) is less than patch version of '$2' ($patch2)."
             return "$rc_less_than"
         fi
     elif [[ -z "$prerelease1" && -n "$prerelease2" ]]; then
-        trace "Version '$1' is greater than '$2' because it is a release version while '$2' is a prerelease version."
         return "$rc_greater_than"
     elif [[ -n "$prerelease1" && -z "$prerelease2" ]]; then
-        trace "Version '$1' is less than '$2' because it is a prerelease version while '$2' is a release version."
         return "$rc_less_than"
     elif [[ -z "$prerelease1" && -z "$prerelease2" ]]; then
-        trace "Version '$1' is equal to '$2' because both are release versions."
         return "$rc_equal"
     fi
 
