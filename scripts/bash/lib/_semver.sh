@@ -127,8 +127,8 @@ declare -rxi err_argument_value
 
 # comparison result constants
 declare -irx rc_equal=$success
-declare -irx rc_greater_than=64
-declare -irx rc_less_than=65
+declare -irx rc_greater_than=1
+declare -irx rc_less_than=128
 
 #-------------------------------------------------------------------------------
 # Summary: Compares two semantic versions according to semver 2.0.0 specification.
@@ -138,8 +138,8 @@ declare -irx rc_less_than=65
 # Returns:
 #   Exit code:
 #     $rc_equal (0) if version1 == version2
-#     $rc_greater_than (64) if version1 > version2
-#     $rc_less_than (65) if version1 < version2
+#     $rc_greater_than (1) if version1 > version2
+#     $rc_less_than (128) if version1 < version2
 #     $err_invalid_arguments (2) on invalid arguments
 # Usage: compare_semver <version1> <version2>
 # Example:
