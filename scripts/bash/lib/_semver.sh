@@ -252,7 +252,7 @@ function semver_equals()
         error 3 "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
         return "$err_invalid_arguments"
     }
-    semver_compare "$1" "$2"
+    compare_semver "$1" "$2"
     (( $? == rc_equal ))
 }
 
@@ -273,7 +273,7 @@ function semver_greaterThan()
         error 3 "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
         return "$err_invalid_arguments"
     }
-    semver_compare "$1" "$2"
+    compare_semver "$1" "$2"
     (( $? == rc_greater_than ))
 }
 
@@ -294,7 +294,7 @@ function semver_greaterThanOrEqual()
         error 3 "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
         return "$err_invalid_arguments"
     }
-    semver_compare "$1" "$2"
+    compare_semver "$1" "$2"
     rc=$?
     (( rc == rc_greater_than || rc == rc_equal ))
 }
@@ -316,7 +316,7 @@ function semver_lessThan()
         error 3 "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
         return "$err_invalid_arguments"
     }
-    semver_compare "$1" "$2"
+    compare_semver "$1" "$2"
     (( $? == rc_less_than ))
 }
 
@@ -337,7 +337,7 @@ function semver_lessThanOrEqual()
         error 3 "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
         return "$err_invalid_arguments"
     }
-    semver_compare "$1" "$2"
+    compare_semver "$1" "$2"
     rc=$?
     (( rc == rc_less_than || rc == rc_equal ))
 }
