@@ -194,10 +194,10 @@ jobs:
           fi
 
           # Add all benchmark result files
-          trace "Looking for benchmark result files matching: ${{ env.ARTIFACTS_DIR }}/results/*-report.json:"
-          trace "$(ls -l ${{ env.ARTIFACTS_DIR }}/results/*-report.json)"
+          trace "Looking for benchmark result files matching: ${{ env.ARTIFACTS_DIR }}/results/*-report-full-compressed.json:"
+          trace "$(ls -l ${{ env.ARTIFACTS_DIR }}/results/*-report-full-compressed.json)"
 
-          for file in ${{ env.ARTIFACTS_DIR }}/results/*-report.json; do
+          for file in ${{ env.ARTIFACTS_DIR }}/results/*-report-full-compressed.json; do
               if [[ -s "$file" ]]; then
                   trace "Adding benchmark result file: $file"
                   BENCHER_ARGS+=(--file "$file")
