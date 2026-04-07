@@ -72,8 +72,9 @@ execute dotnet build "$build_project" \
             --configuration "$configuration" \
             -p:preprocessor_symbols="$preprocessor_symbols" \
             -p:MinVerTagPrefix="$minver_tag_prefix" \
-            -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" > "$temp_output" 2>&1 || rc=$?
-
-extractDotnetBuildInfo < "$temp_output" > >(displayDotnetBuildSummary | to_summary)
+            -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" 2>&1 |
+            extractDotnetBuildInfo |
+            displayDotnetBuildSummary |
+            to_summary || rc=$?
 
 exit "$rc"

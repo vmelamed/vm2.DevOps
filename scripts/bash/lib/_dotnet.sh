@@ -55,7 +55,6 @@ function extractDotnetBuildInfo()
 
     local line
     while IFS= read -r line; do
-        echo "$line"
         if [[ $line =~ Build\ (succeeded|FAILED) ]]; then
             build_result="${BASH_REMATCH[1]}"
         elif [[ -z $warnings_count && $line =~ ([0-9]+)\ Warning ]]; then
@@ -74,7 +73,7 @@ function extractDotnetBuildInfo()
             package_version=${BASH_REMATCH[1]}
         fi
         rc=$?
-        if [[ $rc -ne 0 ]]; then
+        if (( rc != 0 )); then
             build_result="FAILED"
         fi
     done
@@ -148,7 +147,6 @@ function displayDotnetBuildSummary()
                 package_version="$value"
                 ;;
             * )
-                warning "Unrecognized variable: $var"
                 ;;
 
         esac
