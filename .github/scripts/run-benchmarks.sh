@@ -133,7 +133,6 @@ if ! execute "${benchmark_exe_path}" \
         --filter '*' \
         --join \
         --memory \
-        --exporters json markdown \
         --artifacts "$artifacts_dir"; then
     error "Benchmarks failed in project '$benchmark_project'."
     exit 2
@@ -142,7 +141,7 @@ fi
 # Verify JSON results were created
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 if [[ $dry_run != true ]]; then
-    json_files=("$results_dir"/**/*-report.json)dir
+    json_files=("$results_dir"/*-report.json)dir
     if [[ ! -f "${json_files[0]}" ]]; then
         error "No JSON benchmark reports found in $results_dir"
         exit 2
@@ -156,7 +155,7 @@ if [[ $dry_run != true ]]; then
     } | to_summary
 
     # Append markdown benchmark tables to the step summary
-    md_files=("$results_dir"/**/*-report-github.md)
+    md_files=("$results_dir"/*-report-github.md)
     if [[ -f "${md_files[0]}" ]]; then
         {
             for file in "${md_files[@]}"; do
