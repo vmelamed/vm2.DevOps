@@ -128,7 +128,7 @@ declare -rxi err_argument_value
 # comparison result constants
 declare -irx rc_equal=$success
 declare -irx rc_greater_than=1
-declare -irx rc_less_than=128
+declare -irx rc_less_than=255
 
 #-------------------------------------------------------------------------------
 # Summary: Compares two semantic versions according to semver 2.0.0 specification.
