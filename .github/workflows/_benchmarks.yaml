@@ -177,6 +177,18 @@ jobs:
               --threshold-max-sample-size 64
               --threshold-lower-boundary _
               --threshold-upper-boundary "$UPPER_THRESHOLD"
+
+              --threshold-measure gen1-collects
+              --threshold-test percentage
+              --threshold-max-sample-size 64
+              --threshold-lower-boundary _
+              --threshold-upper-boundary "$UPPER_THRESHOLD"
+
+              --threshold-measure gen2-collects
+              --threshold-test percentage
+              --threshold-max-sample-size 64
+              --threshold-lower-boundary _
+              --threshold-upper-boundary "$UPPER_THRESHOLD"
           )
 
           # if on PR - add PR data
