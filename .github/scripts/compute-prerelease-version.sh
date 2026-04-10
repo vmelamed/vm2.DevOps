@@ -138,7 +138,7 @@ if [[ -n "$latest_prerelease_ver" ]] && is_semverPrerelease "$latest_prerelease_
 
     trace "Latest prerelease base: $lp_base, prerelease id: $lp_prerelease"
 
-    if semver_isEqual "$base_version" "$lp_base"; then
+    if semver_equal "$base_version" "$lp_base"; then
         # Same base version — increment the prerelease counter
         # Extract the numeric suffix from the prerelease identifier (e.g., "-preview.3" → 3)
         if [[ "$lp_prerelease" =~ \.([0-9]+)$ ]]; then

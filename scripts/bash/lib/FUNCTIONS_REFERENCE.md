@@ -202,7 +202,7 @@ Validates MinVer tag prefix and creates tag validation regular expressions.
 
 Compares two semantic versions according to semver 2.0.0 specification.
 
-### semver_isEqual()
+### semver_equal()
 
 Tests if the first semantic version is equal to the second.
 

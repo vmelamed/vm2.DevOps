@@ -281,11 +281,11 @@ function compare_semver()
 #   2 - version2 - second semantic version string
 # Returns:
 #   Exit code: 0 if version1 == version2, 1 - otherwise, 2 on invalid arguments
-# Usage: if semver_equals <version1> <version2>; then ... fi
+# Usage: if semver_equal <version1> <version2>; then ... fi
 # Example:
-#   if semver_equals "1.2.3" "1.2.3"; then echo "Versions are equal"; fi
+#   if semver_equal "1.2.3" "1.2.3"; then echo "Versions are equal"; fi
 #-------------------------------------------------------------------------------
-function semver_equals()
+function semver_equal()
 {
     (( $# == 2 )) || {
         error 3 "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
