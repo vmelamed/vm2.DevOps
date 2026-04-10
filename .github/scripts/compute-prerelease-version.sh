@@ -157,17 +157,11 @@ prerelease_tag="${minver_tag_prefix}${prerelease_version}"
 
 info "Computed prerelease version: $prerelease_version [$bump_type]"
 
-if [[ "$bump_type" == *"none"* ]]; then
-    info "No code changes since last prerelease; skipping."
-    # output empty version so downstream jobs skip
-    exit 0
-fi
-
 # ============================================================================
 # Duplicate guard
 # ============================================================================
 
-if git rev-parse "$prerelease_tag" >"$_ignore" 2>&1; then
+if [[ "$bump_type" != *"none"* ]] && git rev-parse "$prerelease_tag" >"$_ignore" 2>&1; then
     error "Tag '$prerelease_tag' already exists. Possible remedy: delete the tag, or merge another PR first."
 fi
 
