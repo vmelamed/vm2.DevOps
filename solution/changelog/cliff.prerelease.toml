@@ -3,11 +3,12 @@ header = """# Changelog\n\n"""
 body = """
 {% if tag is defined %}{% set current_tag = tag %}{% elif version is defined %}{% set current_tag = version %}{% else %}{% set current_tag = "Unreleased" %}{% endif -%}
 {% if timestamp is defined %}{% set current_date = timestamp | date(format="%Y-%m-%d") %}{% else %}{% set current_date = now() | date(format="%Y-%m-%d") %}{% endif %}
-{%- if groups %}
+{%- set grouped = commits | group_by(attribute="group") -%}
+{%- if grouped | length > 0 %}
 ## {{ current_tag }} - {{ current_date }}
-{% for group in groups %}
-### {{ group.title }}
-{% for commit in group.commits -%}
+{% for group, commits in grouped %}
+### {{ group }}
+{% for commit in commits -%}
 - {% if commit.breaking %}**BREAKING:** {% endif %}{{ commit.message | trim }}
 {% endfor %}
 {% endfor -%}

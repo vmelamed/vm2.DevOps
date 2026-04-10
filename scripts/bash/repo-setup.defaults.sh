@@ -136,6 +136,7 @@ declare -xa default_local_git_settings_order=(
     "core.hooksPath"
     "commit.template"
     "fetch.prune"
+    "merge.ff"
     "pull.rebase"
     "push.autoSetupRemote"
 )
@@ -148,6 +149,7 @@ declare -xA default_local_git_settings=(
     ["pull.rebase"]=true
     ["fetch.prune"]=true
     ["push.autoSetupRemote"]=true
+    ["merge.ff"]="only" # Enforce fast-forward merges to maintain linear history, which is required by the branch protection rules. If you need to merge a PR with a merge commit, you can do so locally with 'git merge --no-ff'
 )
 
 function init_default_local_git_settings()

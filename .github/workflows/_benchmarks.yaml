@@ -180,6 +180,7 @@ jobs:
                 --branch "${{ github.head_ref }}"
                 --github-actions "$GH_TOKEN"
                 --ci-number "${{ github.event.pull_request.number }}"
+                --ci-only-thresholds
               )
           else
               BENCHER_ARGS+=(
