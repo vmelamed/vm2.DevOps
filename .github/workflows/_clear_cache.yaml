@@ -14,7 +14,7 @@ on:
         type: string
         default: "nuget-"
 env:
-  VERBOSE: ${{ vars.VERBOSE }}
+  VERBOSE: ${{ vars.VERBOSE || false }}
 
 permissions:
   actions: write

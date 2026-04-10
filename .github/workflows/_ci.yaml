@@ -83,7 +83,7 @@ on:
         required: false
 
 env:
-  VERBOSE: ${{ vars.VERBOSE }}
+  VERBOSE: ${{ vars.VERBOSE || false }}
 
 concurrency:
   group: ci-${{ github.workflow_ref }}

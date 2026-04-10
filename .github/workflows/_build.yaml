@@ -47,7 +47,7 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   GH_TOKEN: ${{ github.token }}
   GH_ACTOR: ${{ github.actor }}
-  VERBOSE: ${{ vars.VERBOSE }}
+  VERBOSE: ${{ vars.VERBOSE || false }}
 
 jobs:
   # Compile the project and optionally cache the build artifacts

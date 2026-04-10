@@ -63,7 +63,7 @@ env:
   ARTIFACTS_DIR: ./BenchmarkArtifacts
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
-  VERBOSE: ${{ vars.VERBOSE }}
+  VERBOSE: ${{ vars.VERBOSE || false }}
 
 jobs:
   benchmarks:
@@ -90,7 +90,7 @@ jobs:
 
       - name: Install Bencher CLI
         if: steps.cache-bencher.outputs.cache-hit != 'true'
-        uses: bencherdev/bencher@v0.5.10
+        uses: bencherdev/bencher@v0.6.2
 
       # Clone the repository with full Git history
       - name: Checkout
