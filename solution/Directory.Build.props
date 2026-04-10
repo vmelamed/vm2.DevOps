@@ -2,9 +2,6 @@
     <PropertyGroup>
         <GITHUB_RUN_NUMBER Condition="'$(GITHUB_RUN_NUMBER)' == ''">0</GITHUB_RUN_NUMBER>
 
-        <!-- NuGet sources -->
-        <RestoreSources>https://api.nuget.org/v3/index.json;https://nuget.pkg.github.com/vmelamed/index.json</RestoreSources>
-
         <!-- To use if there are OS-specific differences in the public .NET APIs -->
         <DefineConstants Condition="'$(OS)' == 'WINDOWS_NT'">$(DefineConstants);WINDOWS</DefineConstants>
         <DefineConstants Condition="'$(OS)' != 'WINDOWS_NT'">$(DefineConstants);UNIX</DefineConstants>
@@ -33,7 +30,6 @@
         <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
         <IsTrimmable>true</IsTrimmable>
         <TieredPGO>true</TieredPGO>
-        <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
         <RestoreLockedMode Condition="'$(CI)' == 'true'">true</RestoreLockedMode>
@@ -84,12 +80,12 @@
         <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
         <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection"/>
-        <PackageReference Include="Microsoft.Extensions.Hosting"/>
-        <PackageReference Include="Microsoft.Extensions.Logging"/>
-        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"/>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" />
+        <PackageReference Include="Microsoft.Extensions.Logging" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
         <PackageReference Include="Microsoft.Extensions.Logging.Configuration" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Console"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Console" />
         <PackageReference Include="Microsoft.SourceLink.GitHub">
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
@@ -127,12 +123,16 @@
             IDE0021;IDE0022;IDE0039;IDE0065;IDE1006;IDE2000;IDE2002;IDE0058;IDE0290
         </NoWarn>
         <!-- Enable MTP v2 For more information on Microsoft Testing Platform support in xUnit.net, visit: https://xunit.net/docs/getting-started/v3/microsoft-testing-platform -->
-        <UseMicrosoftTestingPlatform>true</UseMicrosoftTestingPlatform>
         <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
 
-        <!-- MTP v2: Configure coverage with coverage.settings.xml -->
-        <!-- This ensures VS Code Test Explorer uses the same coverage exclusions as command-line runs -->
-        <TestingPlatformCommandLineArguments>$(TestingPlatformCommandLineArguments) --coverage --coverage-output-format cobertura --coverage-settings "$(RepoRoot)coverage.settings.xml"</TestingPlatformCommandLineArguments>
+        <!-- Workaround: VS 2026 Test Explorer continuously re-evaluates projects with
+             TestingPlatformServer/TestContainer capabilities, causing an infinite project
+             reload loop (Solution Explorer flickering).  Disabling the server capability
+             stops the loop.  Tests still run from CLI and VS Build+Run (Ctrl+R,A). -->
+        <DisableTestingPlatformServerCapability>true</DisableTestingPlatformServerCapability>
+
+        <!-- MTP v2: Configure coverage with coverage.settings.xml (only outside VS — VS has its own coverage tools) -->
+        <TestingPlatformCommandLineArguments Condition="'$(BuildingInsideVisualStudio)' != 'true'">$(TestingPlatformCommandLineArguments) --coverage --coverage-output-format cobertura --coverage-settings "$(RepoRoot)coverage.settings.xml"</TestingPlatformCommandLineArguments>
     </PropertyGroup>
 
     <ItemGroup Condition="$(IsTestProject) == 'true'">
@@ -210,7 +210,7 @@
     </PropertyGroup>
 
     <PropertyGroup Condition="$(IsInBenchmarksFolder) == 'true'">
-        <!-- Test projects settings -->
+        <!-- Benchmark projects settings -->
         <OutputType>Exe</OutputType>
         <IsPackable>false</IsPackable>
         <IncludeSymbols>False</IncludeSymbols>
@@ -223,7 +223,7 @@
         </NoWarn>
         <TieredPGO>false</TieredPGO>
         <!-- To show up in the VS test explorer, see also below in the package references:
-        <RestorePackagesWithLockFile Condition="$(BuildingInsideVisualStudio) == 'true')">false</RestorePackagesWithLockFile>
+        <RestorePackagesWithLockFile Condition="'$(BuildingInsideVisualStudio)' == 'true'">false</RestorePackagesWithLockFile>
         -->
     </PropertyGroup>
 
@@ -272,5 +272,10 @@
     </PropertyGroup>
 
     <!-- Add project-specific properties and packages here -->
+    <ItemGroup>
+        <!-- e.g.
+        <PackageReference Include="Newtonsoft.Json" />
+        -->
+    </ItemGroup>
 
 </Project>

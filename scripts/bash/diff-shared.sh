@@ -52,6 +52,7 @@ declare -rxi err_found_too_many
 declare -rxi err_repo_with_no_ci
 declare -rxi err_dir_with_no_ci
 declare -rxi err_not_git_directory
+declare -rxi err_dir_with_ci
 
 declare -xr semverTagReleaseRegex
 
@@ -85,10 +86,10 @@ exit_if_has_errors
 # Validate and adjust target_path from target_dir:
 #=================================================
 rc="$success"
-output=$(resolve_repo_root "$target_dir" "$vm2_repos") || rc=$?
+output=$(resolve_repo_root "$target_dir" "$vm2_repos" 2>"$_ignore") || rc=$?
 
 # here we can only work with git repos and directories that have CI configured:
-(( rc == success || rc == err_not_git_directory )) ||
+(( rc == success || rc == err_dir_with_ci )) ||
     usage "$rc" "The specified target directory '$target_dir' is invalid. It should have CI configured in '$target_dir/.github/workflows'."
 
 { IFS= read -r target_repo_root; IFS= read -r target_path; } <<< "$output"
@@ -157,7 +158,7 @@ while [[ $i -lt ${#source_files[@]} ]]; do
         fi
     fi
 
-    is_verbose && trace < <(printf "\n%-84s ---- Comparing ---- %-s\n" "$source_file" "$target_file")
+    is_verbose && trace < <(printf "\n%-73s ---- Comparing ---- %-s\n" "$source_file" "$target_file")
 
     if [[ ! -s "$target_file" ]]; then
         case $actions in
