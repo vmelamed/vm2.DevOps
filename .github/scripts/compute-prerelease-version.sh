@@ -64,7 +64,7 @@ trace "Latest stable tag: ${latest_stable_tag:-<none>}"
 trace "Latest prerelease tag: ${latest_prerelease_tag:-<none>}"
 
 latest_stable_ver="${latest_stable_tag#"$minver_tag_prefix"}"
-latest_prerelease_ver="${latest_stable_tag#"$minver_tag_prefix"}"
+latest_prerelease_ver="${latest_prerelease_tag#"$minver_tag_prefix"}"
 
 # ============================================================================
 # Scan commits since the last stable tag to determine the bump type
@@ -102,9 +102,12 @@ elif echo "$commits" | grep -qiE '^feat(\(.+\))?:'; then
     minor=$((minor + 1))
     patch=0
     bump_type="minor (new features detected)"
-else
+elif echo "$commits" | grep -qiE '^(fix|perf|security|refactor|remove|revert)(\(.+\))?:'; then
     patch=$((patch + 1))
-    bump_type="patch (fixes or other changes)"
+    bump_type="patch (fixes or other changes detected)"
+else
+    # no bump — docs, ci, devops, chore, style, build, test
+    bump_type="none (non-code changes only)"
 fi
 
 # SemVer floor: major version must be at least 1
@@ -153,6 +156,12 @@ prerelease_version="${base_version}-${prerelease_prefix}.${prerelease_counter}"
 prerelease_tag="${minver_tag_prefix}${prerelease_version}"
 
 info "Computed prerelease version: $prerelease_version [$bump_type]"
+
+if [[ "$bump_type" == *"none"* ]]; then
+    info "No code changes since last prerelease; skipping."
+    # output empty version so downstream jobs skip
+    exit 0
+fi
 
 # ============================================================================
 # Duplicate guard
