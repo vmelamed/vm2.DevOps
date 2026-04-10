@@ -8,6 +8,7 @@ body = """
 ## {{ current_tag }} - {{ current_date }}
 {% for group, commits in grouped %}
 ### {{ group }}
+
 {% for commit in commits -%}
 - {% if commit.breaking %}**BREAKING:** {% endif %}{{ commit.message | trim }}
 {% endfor %}
