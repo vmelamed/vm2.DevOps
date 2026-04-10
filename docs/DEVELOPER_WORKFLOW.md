@@ -369,6 +369,30 @@ After your PR is rebased onto `main`:
    - Creates a prerelease Git tag
    - Publishes a prerelease NuGet package
 3. The prerelease package is available for testing immediately
+4. **Review the generated changelog entry** (see below)
+
+### Reviewing the Changelog
+
+After each prerelease, `git-cliff` generates a changelog entry from your commit messages and pushes it to `main`. This is the
+best moment to review and curate the entry — before a stable release bakes it in permanently.
+
+If the generated entry needs cleanup (e.g., rewording, grouping related items, adding context for breaking changes):
+
+```bash
+# Create a short-lived branch off the latest main (which now has the prerelease tag)
+git checkout main && git pull
+git checkout -b fix/changelog
+
+# Edit CHANGELOG.md
+# ... review, curate, and save ...
+
+git add CHANGELOG.md
+git commit -m "docs: curate changelog for vX.Y.Z-preview.N"
+git push -u origin fix/changelog
+gh pr create --fill
+```
+
+This lightweight PR merges quickly and ensures the changelog is accurate before any stable promotion.
 
 **Stable releases** are triggered **manually only** when ready — see
 [RELEASE_PROCESS.md](RELEASE_PROCESS.md).

@@ -261,6 +261,26 @@ Each prerelease gets its own entry in `CHANGELOG.md` — a detailed, commit-leve
 When a stable release is cut, `cliff.release-header.toml` adds a header entry that says "See prereleases below." This works
 because the prerelease entries immediately below it already contain everything. No information is duplicated.
 
+### Reviewing and Curating Entries
+
+The best time to review and curate the changelog is **right after a prerelease completes**. At that point the workflow has
+pushed the git-cliff-generated entry to `main` with `[skip ci]`. Since the stable release workflow only promotes the version
+(it does not regenerate the changelog), whatever is on `main` at release time is what ships.
+
+If an entry needs cleanup — rewording, adding context for breaking changes, collapsing noisy CI commits — create a short-lived
+branch off `main`, edit `CHANGELOG.md`, and PR it back:
+
+```bash
+git checkout main && git pull
+git checkout -b fix/changelog
+# ... edit CHANGELOG.md ...
+git commit -am "docs: curate changelog for vX.Y.Z-preview.N"
+git push -u origin fix/changelog
+gh pr create --fill
+```
+
+Doing this after prerelease (rather than during stable release) gives you the most time and avoids last-minute scrambles.
+
 ## Initial Bootstrapping
 
 If no stable tag exists yet:
