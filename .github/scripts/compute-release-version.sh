@@ -51,27 +51,32 @@ exit_if_has_errors
 
 # Find latest stable like v1.2.3
 # shellcheck disable=SC2154 # semverTagReleaseRegex is referenced but not assigned.
-latest_stable=$(git tag --list "${minver_tag_prefix}*" | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1 || echo "")
+latest_stable_tag=$(git tag --list "${minver_tag_prefix}*" | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1 || echo "")
+# shellcheck disable=SC2154 # semverTagPrereleaseRegex is referenced but not assigned.
+latest_prerelease_tag=$(git tag --list "${minver_tag_prefix}*" | grep -E "$semverTagPrereleaseRegex" | sort -V | tail -n1 || echo "")
+
+latest_stable_ver="${latest_stable_tag#"$minver_tag_prefix"}"
+latest_prerelease_ver="${latest_prerelease_tag#"$minver_tag_prefix"}"
 
 declare -i major=0
 declare -i minor=0
 declare -i patch=0
 
-if is_semverReleaseTag "$latest_stable"; then
+if is_semverRelease "$latest_stable_ver"; then
     major=${BASH_REMATCH[$semver_major]}
     minor=${BASH_REMATCH[$semver_minor]}
     patch=${BASH_REMATCH[$semver_patch]}
     if ((major <= 0 || minor < 0 || patch < 0)); then
-        error "Invalid version numbers in latest stable tag '$latest_stable': $major.$minor.$patch. Major must be > 0, minor and patch must be >= 0."
+        error "Invalid version numbers in latest stable tag '$latest_stable_tag': $major.$minor.$patch. Major must be > 0, minor and patch must be >= 0."
         exit 2
     fi
-    trace "Latest stable release: $latest_stable ($major.$minor.$patch)"
+    trace "Latest stable release: $latest_stable_tag ($major.$minor.$patch)"
 else
     trace "No previous stable release found; starting at 0.0.0"
 fi
 
 # Auto-detect next stable version from conventional commits
-last_tag="${latest_stable:-$(git rev-list --max-parents=0 HEAD)}"
+last_tag="${latest_stable_tag:-$(git rev-list --max-parents=0 HEAD)}"
 # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
 commits=$(git log "$last_tag"..HEAD --pretty=format:"%s" 2>"$_ignore" || echo "")
 
@@ -103,15 +108,14 @@ release_version="$major.$minor.$patch"
 trace "Calculated release version from commit messages: $release_version [$bump_type]"
 
 # make sure the computed version is not lower than the latest prerelease
-# shellcheck disable=SC2154 # semverTagPrereleaseRegex is referenced but not assigned.
-latest_prerelease_tag=$(git tag --list "${minver_tag_prefix}*" | grep -E "$semverTagPrereleaseRegex" | sort -V | tail -n1 || echo "")
 
 if [[ -n "$latest_prerelease_tag" ]]; then
-    if semver_lessThan "$release_version" "${latest_prerelease_tag#"$minver_tag_prefix"}"; then
+    if semver_lessThan "$release_version" "$latest_prerelease_ver"; then
         # the computed release version is less than the latest prerelease version,
         # so adopt the major, minor, and patch from the latest prerelease version and make it a release version
         trace "Latest prerelease tag '$latest_prerelease_tag' is greater than computed release version '$release_version'; adjusting release version."
-        [[ "$latest_prerelease_tag" =~ $semverTagPrereleaseRegex ]]
+        # shellcheck disable=SC2154
+        [[ "$latest_prerelease_ver" =~ $semverPrereleaseRegex ]]
         major=${BASH_REMATCH[$semver_major]}
         minor=${BASH_REMATCH[$semver_minor]}
         patch=${BASH_REMATCH[$semver_patch]}

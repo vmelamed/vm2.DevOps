@@ -55,13 +55,16 @@ exit_if_has_errors
 # ============================================================================
 
 # shellcheck disable=SC2154 # semverTagReleaseRegex is referenced but not assigned.
-latest_stable=$(git tag --list "${minver_tag_prefix}*" | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1 || echo "")
+latest_stable_tag=$(git tag --list "${minver_tag_prefix}*" | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1 || echo "")
 
 # shellcheck disable=SC2154 # semverTagPrereleaseRegex is referenced but not assigned.
-latest_prerelease=$(git tag --list "${minver_tag_prefix}*" | grep -E "$semverTagPrereleaseRegex" | sort -V | tail -n1 || echo "")
+latest_prerelease_tag=$(git tag --list "${minver_tag_prefix}*" | grep -E "$semverTagPrereleaseRegex" | sort -V | tail -n1 || echo "")
 
-trace "Latest stable tag: ${latest_stable:-<none>}"
-trace "Latest prerelease tag: ${latest_prerelease:-<none>}"
+trace "Latest stable tag: ${latest_stable_tag:-<none>}"
+trace "Latest prerelease tag: ${latest_prerelease_tag:-<none>}"
+
+latest_stable_ver="${latest_stable_tag#"$minver_tag_prefix"}"
+latest_prerelease_ver="${latest_stable_tag#"$minver_tag_prefix"}"
 
 # ============================================================================
 # Scan commits since the last stable tag to determine the bump type
@@ -72,12 +75,12 @@ declare -i minor=0
 declare -i patch=0
 
 # Start from the latest stable version if one exists
-if is_semverReleaseTag "$latest_stable"; then
+if is_semverRelease "$latest_stable_ver"; then
     major=${BASH_REMATCH[$semver_major]}
     minor=${BASH_REMATCH[$semver_minor]}
     patch=${BASH_REMATCH[$semver_patch]}
     if ((major <= 0 || minor < 0 || patch < 0)); then
-        error "Invalid version numbers in latest stable tag '$latest_stable': $major.$minor.$patch"
+        error "Invalid version numbers in latest stable tag '$latest_stable_ver': $major.$minor.$patch"
         exit 2
     fi
     trace "Base version from latest stable: $major.$minor.$patch"
@@ -85,7 +88,7 @@ else
     trace "No previous stable release found; starting at 0.0.0"
 fi
 
-last_stable_ref="${latest_stable:-$(git rev-list --max-parents=0 HEAD)}"
+last_stable_ref="${latest_stable_tag:-$(git rev-list --max-parents=0 HEAD)}"
 # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
 commits=$(git log "$last_stable_ref"..HEAD --pretty=format:"%s%n%b" 2>"$_ignore" || echo "")
 
@@ -121,7 +124,8 @@ trace "Base version from commits: $base_version [$bump_type]"
 
 prerelease_counter=1
 
-if [[ -n "$latest_prerelease" ]] && is_semverPrereleaseTag "$latest_prerelease"; then
+
+if [[ -n "$latest_prerelease_ver" ]] && is_semverPrerelease "$latest_prerelease_ver"; then
     # Extract the base version from the latest prerelease tag
     lp_major=${BASH_REMATCH[$semver_major]}
     lp_minor=${BASH_REMATCH[$semver_minor]}
