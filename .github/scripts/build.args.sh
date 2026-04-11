@@ -80,8 +80,8 @@ function get_arguments()
         preprocessor_symbols \
         minver_tag_prefix \
         minver_prerelease_id \
-        nuget_username \
-        --secret nuget_password \
+        gh_nuget_username \
+        --secret gh_nuget_password \
         --header "other:" \
         ci
 }
