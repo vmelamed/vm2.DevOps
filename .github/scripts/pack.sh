@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+
+# shellcheck disable=SC2119
+
 set -euo pipefail
 
 script_name=$(basename "${BASH_SOURCE[0]}")
@@ -30,20 +33,12 @@ source "$script_dir/pack.args.sh"
 
 get_arguments "$@"
 
-dump_vars --quiet \
-    --header "Inputs" \
-    package_project \
-    configuration \
-    preprocessor_symbols \
-    minver_tag_prefix \
-    minver_prerelease_id \
-    build
-
 # sanitize inputs
 is_safe_path "$package_project" || true
 is_safe_configuration "$configuration" || true
 validate_preprocessor_symbols preprocessor_symbols || true
 validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
+is_safe_boolean "$build" || true
 
 exit_if_has_errors
 
@@ -52,6 +47,9 @@ pack_output_dir=$(mktemp -d)
 trap 'rm -rf "$pack_output_dir"' EXIT
 temp_output=$(mktemp)
 trap 'rm -f "$temp_output"; rm -rf "$pack_output_dir"' EXIT
+
+execute dotnet restore "${package_project}"
+
 
 pack_args=(
     "${package_project}"
@@ -67,24 +65,26 @@ if ! $build; then
     pack_args+=("--no-build")
 fi
 
-execute dotnet restore "${package_project}"
-execute dotnet pack "${pack_args[@]}" > "$temp_output" 2>&1
-pack_exit=$?
+execute dotnet pack "${pack_args[@]}" 2>&1 |
+            extractDotnetBuildInfo |
+            displayDotnetBuildSummary |
+            to_summary || true # prevent pipefail from exiting before we can capture the exit code
+rc="${PIPESTATUS[0]}"
 
-extractDotnetBuildInfo < "$temp_output" > >(displayDotnetBuildSummary)
-
-if [[ $pack_exit -eq 0 ]]; then
-    nupkg_count=$(find "$pack_output_dir" -name "*.nupkg" | wc -l)
-    {
+nupkg_count=$(find "$pack_output_dir" -name "*.nupkg" | wc -l)
+{
+    if $rc; then
         echo "### ✅ Pack Validation Passed"
-        echo ""
-        echo "Project: **${package_project}**"
-        echo "Packages produced: **${nupkg_count}**"
-        echo ""
-        for f in "$pack_output_dir"/*.nupkg; do
-            [[ -f "$f" ]] && echo "  - $(basename "$f")"
-        done
-    } | to_summary
-fi
+    else
+        echo "### ❌ Pack Validation Failed"
+    fi
+    echo ""
+    echo "Project: **${package_project}**"
+    echo "Packages produced: **${nupkg_count}**"
+    echo ""
+    for f in "$pack_output_dir"/*.nupkg; do
+        [[ -f "$f" ]] && echo "  - $(basename "$f")"
+    done
+} | to_summary
 
-exit "$pack_exit"
+exit "$rc"

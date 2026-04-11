@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+
+# shellcheck disable=SC2119
+
 set -euo pipefail
 
 script_name=$(basename "${BASH_SOURCE[0]}")
@@ -128,14 +131,17 @@ declare -rx dry_run
 if [[ ! -s "${test_exec_path}" && "$dry_run" != true ]]; then
     warning "Cached test executable '${test_exec_path}' was not found. Rebuilding the test project"
     execute dotnet clean "$test_project" --configuration "$configuration" || true
-    if ! execute dotnet build "$test_project" \
+    execute dotnet build "$test_project" \
             --configuration "$configuration" \
             -p:preprocessor_symbols="$preprocessor_symbols" \
             -p:MinVerTagPrefix="$minver_tag_prefix" \
-            -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id"; then
-        error "Building $test_project failed."
-        exit_if_has_errors
-    fi
+            -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" 2>&1 |
+            extractDotnetBuildInfo |
+            displayDotnetBuildSummary |
+            to_summary || true # prevent pipefail from exiting before we can capture the exit code
+    rc=${PIPESTATUS[0]}
+    $rc || error "Building '$test_project' failed."
+    exit_if_has_errors
 fi
 
 trace "Running tests from ${test_project}..."

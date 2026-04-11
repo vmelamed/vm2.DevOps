@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# shellcheck disable=SC2119
+
 set -euo pipefail
 
 script_name=$(basename "${BASH_SOURCE[0]}")
@@ -62,8 +64,7 @@ fi
 # Restore dependencies
 execute dotnet restore --locked-mode
 
-# shellcheck disable=SC2119
-if ! execute dotnet build "$build_project" \
+execute dotnet build "$build_project" \
             --verbosity detailed \
             --configuration "$configuration" \
             -p:preprocessor_symbols="$preprocessor_symbols" \
@@ -71,7 +72,7 @@ if ! execute dotnet build "$build_project" \
             -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" 2>&1 |
             extractDotnetBuildInfo |
             displayDotnetBuildSummary |
-            to_summary; then
-    :
-fi
-exit "${PIPESTATUS[0]}" # exit with the exit code of the dotnet build command, not the summary processing
+            to_summary || true # prevent pipefail from exiting before we can capture the exit code
+rc=${PIPESTATUS[0]}
+$rc || error "Building '$build_project' failed." | to_summary
+exit "$rc"

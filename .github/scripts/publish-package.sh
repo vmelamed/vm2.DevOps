@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+
+# shellcheck disable=SC2119
+
 set -euo pipefail
 
 script_name=$(basename "${BASH_SOURCE[0]}")
@@ -78,7 +81,6 @@ execute mkdir -p "$artifacts_dir"
 temp_output=$(mktemp)
 trap 'rm -f "$temp_output"' EXIT
 
-build_exit=0
 execute dotnet pack \
     "${package_project}" \
     --configuration Release \
@@ -87,14 +89,17 @@ execute dotnet pack \
     "-p:preprocessor_symbols=$preprocessor_symbols" \
     "-p:MinVerTagPrefix=$minver_tag_prefix" \
     "-p:MinVerPrereleaseIdentifiers=$minver_prerelease_id" \
-    "-p:PackageReleaseNotes=\"$reason\"" > "$temp_output" 2>&1 || build_exit=$?
+    "-p:PackageReleaseNotes=\"$reason\"" 2>&1 |
+            extractDotnetBuildInfo |
+            displayDotnetBuildSummary |
+            to_summary || true # prevent pipefail from exiting before we can capture the exit code
+rc=${PIPESTATUS[0]}
+$rc || error "Packing '$package_project' failed."
+exit_if_has_errors
 
 # Populated by extractDotnetBuildInfo from the dotnet pack log.
 declare -x version=''
 declare -x package_version=''
-
-extractDotnetBuildInfo < "$temp_output" > >(displayDotnetBuildSummary | to_summary)
-[[ $build_exit -eq 0 ]] || exit "$build_exit"
 
 if is_semverRelease "$(get_build_info version)"; then
     summary_header="Release Summary"
