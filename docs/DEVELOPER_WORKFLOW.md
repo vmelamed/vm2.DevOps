@@ -2,32 +2,37 @@
 
 <!-- TOC tocDepth:2..3 chapterDepth:2..6 -->
 
-- [Overview](#overview)
-- [Branching Model](#branching-model)
-- [Linear History and Rebase](#linear-history-and-rebase)
-  - [Why Linear History](#why-linear-history)
-  - [How to Rebase](#how-to-rebase)
-  - [Resolving Conflicts](#resolving-conflicts)
-- [Conventional Commits](#conventional-commits)
-  - [Commit Message Format](#commit-message-format)
-  - [How Commits Drive Automation](#how-commits-drive-automation)
-  - [Good Commit Messages](#good-commit-messages)
-  - [Commit Message Enforcement](#commit-message-enforcement)
-  - [Commit Message Template](#commit-message-template)
-  - [Fixing Bad Commit Messages](#fixing-bad-commit-messages)
-- [Pull Request Workflow](#pull-request-workflow)
-  - [Creating a PR](#creating-a-pr)
-  - [CI Checks](#ci-checks)
-  - [Addressing Feedback](#addressing-feedback)
-  - [Merging](#merging)
-- [What Happens After Merge](#what-happens-after-merge)
-- [Common Scenarios](#common-scenarios)
-  - [Starting a New Feature](#starting-a-new-feature)
-  - [Fixing a Bug](#fixing-a-bug)
-  - [Updating Dependencies](#updating-dependencies)
-  - [Running CI Locally](#running-ci-locally)
-- [Working with Multiple Developers](#working-with-multiple-developers)
-- [Quick Reference](#quick-reference)
+- [Developer Workflow Guide](#developer-workflow-guide)
+  - [Overview](#overview)
+  - [Branching Model](#branching-model)
+  - [Linear History and Rebase](#linear-history-and-rebase)
+    - [Why Linear History](#why-linear-history)
+    - [How to Rebase](#how-to-rebase)
+    - [Resolving Conflicts](#resolving-conflicts)
+  - [Conventional Commits](#conventional-commits)
+    - [Commit Message Format](#commit-message-format)
+    - [How Commits Drive Automation](#how-commits-drive-automation)
+    - [Good Commit Messages](#good-commit-messages)
+    - [Commit Message Enforcement](#commit-message-enforcement)
+    - [Commit Message Template](#commit-message-template)
+    - [Fixing Bad Commit Messages](#fixing-bad-commit-messages)
+      - [Last commit, not yet pushed](#last-commit-not-yet-pushed)
+      - [Older commit, not yet pushed](#older-commit-not-yet-pushed)
+      - [Already pushed to a PR branch](#already-pushed-to-a-pr-branch)
+  - [Pull Request Workflow](#pull-request-workflow)
+    - [Creating a PR](#creating-a-pr)
+    - [CI Checks](#ci-checks)
+    - [Addressing Feedback](#addressing-feedback)
+    - [Merging](#merging)
+  - [What Happens After Merge](#what-happens-after-merge)
+    - [Reviewing the Changelog](#reviewing-the-changelog)
+  - [Common Scenarios](#common-scenarios)
+    - [Starting a New Feature](#starting-a-new-feature)
+    - [Fixing a Bug](#fixing-a-bug)
+    - [Updating Dependencies](#updating-dependencies)
+    - [Running CI Locally](#running-ci-locally)
+  - [Working with Multiple Developers](#working-with-multiple-developers)
+  - [Quick Reference](#quick-reference)
 
 <!-- /TOC -->
 
@@ -128,7 +133,7 @@ described with the following grammar:
 commit-message = subject, [ LF, body ] ;
 subject        = type, [ "(", scope, ")" ], [ "!" ], ": ", description ;
 type           = "style" | "build" | "feat" | "test" | "fix" | "refactor"
-               | "perf" | "security" | "docs" | "chore" | "revert"
+               | "perf" | "security" | "docs" | "chore" | "revert" | "remove"
                | "remove" | "ci" | "devops" ;
 scope          = noun ;
 description    = non-empty string ;

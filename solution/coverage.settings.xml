@@ -28,7 +28,7 @@
 
                 <!-- Compiler-generated -->
                 <Source>.*\\&lt;&gt;c.*\.cs$</Source>
-                <Source>*.MoveNext.*</Source>
+                <Source>.*MoveNext.*</Source>
                 <Source>.*\\d__.*\.cs$</Source>
 
                 <!-- Test files -->

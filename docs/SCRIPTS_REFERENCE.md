@@ -260,7 +260,7 @@ Only runs on `pull_request` events.
 | :------------- | :---- | :------ | :--------------------------------------- |
 | `--base-ref`   | `-b`  | —       | Git ref to compare against (e.g. `origin/main`) |
 
-**Allowed types:** `feat` `fix` `perf` `refactor` `docs` `style` `test` `chore` `revert` `security` `build` `ci`
+**Allowed types:** `feat` `fix` `perf` `refactor` `docs` `style` `test` `chore` `revert` `remove` `security` `build` `ci`
 
 Merge commits and `Revert` commits are automatically skipped.
 

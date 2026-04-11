@@ -2,18 +2,25 @@
 
 <!-- TOC tocDepth:2..5 chapterDepth:2..6 -->
 
-- [General Principles](#general-principles)
-- [Prerelease Failures](#prerelease-failures)
-  - [Version Computation Failed](#version-computation-failed)
-  - [Changelog Committed But Tag Not Created](#changelog-committed-but-tag-not-created)
-  - [NuGet Push Failed](#nuget-push-failed)
-  - [Changelog PR Creation Blocked](#changelog-pr-creation-blocked)
-- [Stable Release Failures](#stable-release-failures)
-- [Branch Protection Bypass Failures](#branch-protection-bypass-failures)
-  - [`RELEASE_PAT` Push Rejected](#release_pat-push-rejected)
-  - [Version Computation Failed](#version-computation-failed)
-  - [Changelog Committed But Tag Not Created](#changelog-committed-but-tag-not-created)
-  - [Tag Created But NuGet Push Failed](#tag-created-but-nuget-push-failed)
+- [Error Recovery](#error-recovery)
+  - [General Principles](#general-principles)
+  - [Prerelease Failures](#prerelease-failures)
+    - [Version Computation Failed](#version-computation-failed)
+    - [Changelog Committed But Tag Not Created](#changelog-committed-but-tag-not-created)
+    - [NuGet Push Failed](#nuget-push-failed)
+    - [Changelog PR Creation Blocked](#changelog-pr-creation-blocked)
+  - [Stable Release Failures](#stable-release-failures)
+  - [Branch Protection Bypass Failures](#branch-protection-bypass-failures)
+    - [`RELEASE_PAT` Push Rejected](#release_pat-push-rejected)
+    - [Version Computation Failed](#version-computation-failed-1)
+    - [Changelog Committed But Tag Not Created](#changelog-committed-but-tag-not-created-1)
+    - [Tag Created But NuGet Push Failed](#tag-created-but-nuget-push-failed)
+  - [Infrastructure Failures](#infrastructure-failures)
+    - [NuGet Server Down](#nuget-server-down)
+    - [Invalid or Expired API Key](#invalid-or-expired-api-key)
+    - [Cache-Related Build Failures](#cache-related-build-failures)
+  - [Useful Commands](#useful-commands)
+  - [Further Reading](#further-reading)
 
 <!-- /TOC -->
 
