@@ -119,10 +119,10 @@ function validate_gh_repo_name()
 #--------------------------------------------------------------------------------
 function validate_gh_repo_description()
 {
-    if [[ $# -ne 1 ]]; then
+    (( $# == 1 )) || {
         error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the repository description to validate."
         return "$err_invalid_arguments"
-    fi
+    }
 
     (( ${#1} >= 3 && ${#1} <= 350 )) || {
         # GitHub repository descriptions must be between 3 and 350 characters long.
@@ -173,10 +173,10 @@ function validate_branch_name()
 #-------------------------------------------------------------------------------
 function validate_gh_secret()
 {
-    if [[ $# -ne 1 ]]; then
+    (( $# == 1 )) || {
         error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the secret value to validate."
         return "$err_invalid_arguments"
-    fi
+    }
     [[ -z "$1" || ! "$1" =~ [[:cntrl:]] ]] || {
         error "Invalid secret value. Secrets cannot have control characters or be empty."
         return "$err_argument_value"
