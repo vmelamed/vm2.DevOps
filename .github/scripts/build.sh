@@ -74,5 +74,5 @@ execute dotnet build "$build_project" \
             displayDotnetBuildSummary |
             to_summary || true # prevent pipefail from exiting before we can capture the exit code
 rc=${PIPESTATUS[0]}
-$rc || error "Building '$build_project' failed." | to_summary
+[[ $rc == "$success" ]] || error "Building '$build_project' failed." | to_summary
 exit "$rc"

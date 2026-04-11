@@ -94,7 +94,7 @@ execute dotnet pack \
             displayDotnetBuildSummary |
             to_summary || true # prevent pipefail from exiting before we can capture the exit code
 rc=${PIPESTATUS[0]}
-$rc || error "Packing '$package_project' failed."
+[[ $rc == "$success" ]] || error "Packing '$package_project' failed."
 exit_if_has_errors
 
 # Populated by extractDotnetBuildInfo from the dotnet pack log.

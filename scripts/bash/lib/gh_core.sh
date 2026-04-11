@@ -102,7 +102,9 @@ function to_traceout()
     local line
     while IFS= read -r line; do
         echo "$line" >&2
-        $github_actions && $trace_to_summary && echo "$line" >> "$github_step_summary"
+        $github_actions &&
+        $trace_to_summary &&
+        echo "$line" >> "$github_step_summary"
     done
     return "$success"
 }

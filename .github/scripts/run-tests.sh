@@ -140,7 +140,7 @@ if [[ ! -s "${test_exec_path}" && "$dry_run" != true ]]; then
             displayDotnetBuildSummary |
             to_summary || true # prevent pipefail from exiting before we can capture the exit code
     rc=${PIPESTATUS[0]}
-    $rc || error "Building '$test_project' failed."
+    [[ $rc == "$success" ]] || error "Building '$test_project' failed."
     exit_if_has_errors
 fi
 

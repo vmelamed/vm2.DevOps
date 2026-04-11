@@ -15,6 +15,9 @@ declare -r lib_dir
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
 source "$lib_dir/gh_core.sh"
 
+declare -xir success
+declare -xir failure
+
 # default values for parameters
 declare -xr default_configuration="Release"
 declare -xr default_minver_tag_prefix='v'
@@ -50,7 +53,6 @@ trap 'rm -f "$temp_output"; rm -rf "$pack_output_dir"' EXIT
 
 execute dotnet restore "${package_project}"
 
-
 pack_args=(
     "${package_project}"
     "--no-restore"
@@ -73,7 +75,7 @@ rc="${PIPESTATUS[0]}"
 
 nupkg_count=$(find "$pack_output_dir" -name "*.nupkg" | wc -l)
 {
-    if $rc; then
+    if [[ $rc == "$success" ]]; then
         echo "### ✅ Pack Validation Passed"
     else
         echo "### ❌ Pack Validation Failed"
