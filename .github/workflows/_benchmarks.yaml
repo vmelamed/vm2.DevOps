@@ -232,7 +232,8 @@ jobs:
           trap 'rm -f "$temp_err_out"; rm -rf "$temp_err_dir"' EXIT
 
           trace "Running command: bencher run ${BENCHER_ARGS[*]}"
-          if bencher run "${BENCHER_ARGS[@]}" 2> "$temp_err_out" 1> "$_ignore"; then
+          # if bencher run "${BENCHER_ARGS[@]}" 2> "$temp_err_out" 1> "$_ignore"; then
+          if bencher run "${BENCHER_ARGS[@]}"; then
               info "Upload to Bencher succeeded."
           else
               error "Upload to Bencher failed."
