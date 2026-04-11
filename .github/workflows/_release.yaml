@@ -129,7 +129,7 @@ jobs:
         shell: bash
         run: |
           changelog-and-tag.sh \
-              --release-tag "${{ needs.compute-version.outputs.release-tag }}" \
+              --tag "${{ needs.compute-version.outputs.release-tag }}" \
               --reason "${{ inputs.reason }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
               --needs-empty-commit "${{ needs.compute-version.outputs.needs-empty-commit }}"

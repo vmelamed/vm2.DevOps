@@ -29,8 +29,8 @@ Requirements:
   - The appropriate cliff config file should exist (optional, will warn if missing)
 
 Options:
-  -t, --release-tag             Specifies the tag to create (required, e.g., 'v1.2.3' or 'v1.2.3-preview.1')
-                                Initial value from \$RELEASE_TAG
+  -t, --tag                     Specifies the tag (pre-release or stable) to create (required, e.g., 'v1.2.3' or 'v1.2.3-preview.1')
+                                Initial value from \$TAG
   -p, --minver-tag-prefix       Specifies the tag prefix used by MinVer (e.g., 'v')
                                 Initial value from \$MINVERTAGPREFIX or default 'v'
   -r, --reason                  Specifies the reason for the release (included in tag annotation)

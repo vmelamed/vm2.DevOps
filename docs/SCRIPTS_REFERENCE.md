@@ -2,27 +2,28 @@
 
 <!-- TOC tocDepth:2..5 chapterDepth:2..6 -->
 
-- [Sourcing Chains](#sourcing-chains)
-  - [Common Switches](#common-switches)
-- [1. Bash Library](#1-bash-library)
-- [2. Utility Scripts](#2-utility-scripts)
-  - [diff-shared.sh](#diff-sharedsh)
-  - [move-commits-to-branch.sh](#move-commits-to-branchsh)
-  - [rename-branch.sh](#rename-branchsh)
-  - [Other Utilities](#other-utilities)
-- [3. CI Scripts](#3-ci-scripts)
-  - [validate-commits.sh](#validate-commitssh)
-  - [validate-input.sh](#validate-inputsh)
-  - [build.sh](#buildsh)
-  - [run-tests.sh](#run-testssh)
-  - [run-benchmarks.sh](#run-benchmarkssh)
-  - [pack.sh](#packsh)
-  - [publish-package.sh](#publish-packagesh)
-  - [compute-release-version.sh](#compute-release-versionsh)
-  - [compute-prerelease-version.sh](#compute-prerelease-versionsh)
-  - [changelog-and-tag.sh](#changelog-and-tagsh)
-  - [download-artifact.sh](#download-artifactsh)
-  - [repo-setup.sh](#repo-setupsh)
+- [Scripts Reference](#scripts-reference)
+  - [Sourcing Chains](#sourcing-chains)
+    - [Common Switches](#common-switches)
+  - [1. Bash Library](#1-bash-library)
+  - [2. Utility Scripts](#2-utility-scripts)
+    - [diff-shared.sh](#diff-sharedsh)
+    - [move-commits-to-branch.sh](#move-commits-to-branchsh)
+    - [rename-branch.sh](#rename-branchsh)
+    - [Other Utilities](#other-utilities)
+  - [3. CI Scripts](#3-ci-scripts)
+    - [validate-commits.sh](#validate-commitssh)
+    - [validate-input.sh](#validate-inputsh)
+    - [build.sh](#buildsh)
+    - [run-tests.sh](#run-testssh)
+    - [run-benchmarks.sh](#run-benchmarkssh)
+    - [pack.sh](#packsh)
+    - [publish-package.sh](#publish-packagesh)
+    - [compute-release-version.sh](#compute-release-versionsh)
+    - [compute-prerelease-version.sh](#compute-prerelease-versionsh)
+    - [changelog-and-tag.sh](#changelog-and-tagsh)
+    - [download-artifact.sh](#download-artifactsh)
+    - [repo-setup.sh](#repo-setupsh)
 
 <!-- /TOC -->
 
@@ -437,7 +438,7 @@ on the tag type.
 
 | Option                | Short | Default          | Description                                                      |
 | :-------------------- | :---- | :--------------- | :--------------------------------------------------------------- |
-| `--release-tag`       | `-t`  | —                | Tag to create (e.g., `v1.2.3` or `v1.3.0-preview.1`)             |
+| `--tag`               | `-t`  | —                | Tag to create (e.g., `v1.2.3` or `v1.3.0-preview.1`)             |
 | `--minver-tag-prefix` | `-p`  | `v`              | MinVer tag prefix                                                |
 | `--reason`            | `-r`  | auto-detected    | Reason (included in tag annotation); defaults based on tag type  |
 

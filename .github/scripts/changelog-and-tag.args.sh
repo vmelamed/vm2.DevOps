@@ -10,8 +10,13 @@ declare -rxi err_missing_argument
 declare -rxi err_too_many_arguments
 declare -rxi err_unknown_argument
 
+declare -x tag
+declare -x minver_tag_prefix
+declare -x reason
+declare -x needs_empty_commit
+
+
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
-# shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
 function get_arguments()
 {
     local option
@@ -26,9 +31,9 @@ function get_arguments()
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
-            --release-tag|-t )
+            --tag|-t )
                 [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
-                release_tag="$1"; shift
+                tag="$1"; shift
                 ;;
 
             --minver-tag-prefix|-p )
@@ -57,7 +62,7 @@ function get_arguments()
         verbose \
         quiet \
         --blank \
-        release_tag \
+        tag \
         minver_tag_prefix \
         reason \
         needs_empty_commit \

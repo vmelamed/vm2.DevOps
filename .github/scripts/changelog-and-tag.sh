@@ -15,7 +15,7 @@ source "$lib_dir/gh_core.sh"
 declare -xr default_minver_tag_prefix='v'
 
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
-declare -x release_tag=${RELEASE_TAG:-}
+declare -x tag=${TAG:-}
 declare -x reason=${REASON:-}
 declare -x needs_empty_commit=${NEEDS_EMPTY_COMMIT:-false}
 
@@ -30,19 +30,19 @@ validate_semverTagComponents "$minver_tag_prefix" || true
 # Determine tag type: release or prerelease
 is_release=false
 is_prerelease=false
-if is_semverReleaseTag "$release_tag"; then
+if is_semverReleaseTag "$tag"; then
     is_release=true
     reason=${reason:-"stable release"}
-elif is_semverPrereleaseTag "$release_tag"; then
+elif is_semverPrereleaseTag "$tag"; then
     is_prerelease=true
     reason=${reason:-"pre-release"}
 else
-    error "Tag '$release_tag' is not a valid semver release or prerelease tag."
+    error "Tag '$tag' is not a valid semver release or prerelease tag."
 fi
 
 is_safe_reason "$reason" || true
 
-declare -xr release_tag
+declare -xr tag
 declare -xr reason
 declare -xr minver_tag_prefix
 declare -xr is_release
@@ -63,7 +63,7 @@ fi
 # ============================================================================
 
 if [[ "$needs_empty_commit" == true ]]; then
-    execute git commit --allow-empty -m "chore: promote to stable $release_tag [skip ci]"
+    execute git commit --allow-empty -m "chore: promote to stable $tag [skip ci]"
     execute git push
     info "✅ Empty commit created to advance HEAD past prerelease tag"
 fi
@@ -105,23 +105,23 @@ else
         range=""
     fi
 
-    echo "Generating changelog for $release_tag (range: ${range:-all commits})"
+    echo "Generating changelog for $tag (range: ${range:-all commits})"
 
     if [[ -n "$range" ]]; then
         execute git-cliff -c "$cliff_config" \
-            --tag "$release_tag" \
+            --tag "$tag" \
             --prepend CHANGELOG.md \
             "$range"
     else
         execute git-cliff -c "$cliff_config" \
-            --tag "$release_tag" \
+            --tag "$tag" \
             --unreleased \
             --prepend CHANGELOG.md
     fi
 
     if git status --porcelain -- CHANGELOG.md | grep -q .; then
         execute git add CHANGELOG.md
-        execute git commit -m "chore: update changelog for $release_tag [skip ci]"
+        execute git commit -m "chore: update changelog for $tag [skip ci]"
         execute git push
         info "✅ CHANGELOG updated and pushed"
     else
@@ -133,16 +133,16 @@ fi
 # STEP 2: Create and push tag
 # ============================================================================
 
-tag_message="Release $release_tag"
+tag_message="Release $tag"
 if [[ "$is_prerelease" == true ]]; then
-    tag_message="Prerelease $release_tag"
+    tag_message="Prerelease $tag"
 fi
 
-if ! execute git tag -a "$release_tag" -m "$tag_message" -m "Reason: $reason"; then
-    error "Failed to create tag $release_tag (does it already exist?)"
+if ! execute git tag -a "$tag" -m "$tag_message" -m "Reason: $reason"; then
+    error "Failed to create tag $tag (does it already exist?)"
     exit 2
 fi
 
-execute git push origin "$release_tag"
+execute git push origin "$tag"
 
-info "✅ Tag $release_tag created and pushed"
+info "✅ Tag $tag created and pushed"

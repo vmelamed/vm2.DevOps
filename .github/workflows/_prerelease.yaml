@@ -128,7 +128,7 @@ jobs:
         shell: bash
         run: |
           changelog-and-tag.sh \
-              --release-tag "${{ needs.compute-version.outputs.prerelease-tag }}" \
+              --tag "${{ needs.compute-version.outputs.prerelease-tag }}" \
               --reason "${{ needs.compute-version.outputs.reason }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}"
 
