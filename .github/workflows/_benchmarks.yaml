@@ -223,24 +223,23 @@ jobs:
               fi
           done
 
-          # create a temporary directory for error output
-          temp_err_dir=$(mktemp -d)
-          trap 'rm -rf "$temp_err_dir"' EXIT
-
-          # create a temporary file to redirect stderr to
-          temp_err_out=$(mktemp)
-          trap 'rm -f "$temp_err_out"; rm -rf "$temp_err_dir"' EXIT
+          # Capture Bencher output so we can distinguish threshold alerts from transport failures.
+          temp_bencher_out=$(mktemp)
+          trap 'rm -f "$temp_bencher_out"' EXIT
 
           trace "Running command: bencher run ${BENCHER_ARGS[*]}"
-          # if bencher run "${BENCHER_ARGS[@]}" 2> "$temp_err_out" 1> "$_ignore"; then
-          if bencher run "${BENCHER_ARGS[@]}"; then
+          if bencher run "${BENCHER_ARGS[@]}" 2>&1 | tee "$temp_bencher_out"; then
               info "Upload to Bencher succeeded."
           else
-              error "Upload to Bencher failed."
-              cat "$temp_err_out" | to_stdout
-              exit 1
+              bencher_rc=${PIPESTATUS[0]}
+              if grep -q "Alerts detected" "$temp_bencher_out"; then
+                  warning "Bencher uploaded results but detected threshold alerts."
+              else
+                  error "Bencher run failed before completing successfully."
+              fi
+              cat "$temp_bencher_out" | to_stdout
+              exit "$bencher_rc"
           fi
-          trace "$bencher_output"
 
       # Upload benchmark results as workflow artifacts for manual inspection
       - name: Upload benchmark results artifact
@@ -261,12 +260,13 @@ jobs:
 
           REPO_NAME="${{ github.repository }}"
           BENCHER_SLUG=$(echo "${REPO_NAME#*/}" | tr '[:upper:]' '[:lower:]' | tr '.' '-')
+            BENCHER_BRANCH="${{ github.head_ref || github.ref_name }}"
 
           {
               echo "### 📊 Benchmark Results"
               echo ""
               echo "Project: **${{ github.repository }}**"
-              echo "Branch: **${{ github.ref_name }}**"
+              echo "Branch: **${BENCHER_BRANCH}**"
               echo "Testbed: **${{ inputs.runner-os }}**"
               echo "Threshold: **±${{ inputs.max-regression-pct }}%**"
               echo ""
