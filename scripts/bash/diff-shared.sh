@@ -158,21 +158,21 @@ while [[ $i -lt ${#source_files[@]} ]]; do
         fi
     fi
 
-    is_verbose && trace < <(printf "\n%-73s ---- Comparing ---- %-s\n" "$source_file" "$target_file")
+    is_verbose && trace < <(printf "\n%-73s ---- Comparing ---- %-s\n" "${source_file#"$vm2_repos"/}" "${target_file#"$vm2_repos"/}")
 
     if [[ ! -s "$target_file" ]]; then
         case $actions in
             "$action_ignore" )
                 continue
                 ;;
-            "$action_merge_or_copy" | "$action_ask_to_merge" | "$action_ask_to_copy")
+            "$action_merge_or_copy" | "$action_ask_to_merge" | "$action_ask_to_copy" )
                 confirm "Target file '${target_file}' does not exist. Do you want to copy it from '${source_file}'?" "y" && \
                 copy_file "$source_file" "$target_file"
                 ;;
             "$action_merge" | "$action_copy" )
                 copy_file "$source_file" "$target_file"
                 ;;
-            *)
+            * )
                 error "Unknown action '$actions' for files '${source_file}' and '${target_file}'."
                 press_any_key
                 ;;

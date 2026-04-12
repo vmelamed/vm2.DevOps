@@ -51,11 +51,12 @@ process of your subsequent updates of common files.
 
 ### Option B: `diff-shared.sh` Script
 
-Clone the .github and vm2.DevOps repositories and run the `scripts/bash/diff-shared.sh` script to copy all required files from
+Clone the vm2.Templates and vm2.DevOps repositories and run the `scripts/bash/diff-shared.sh` script to copy all required
+files from
 
-- the `workflow-templates/` directory of the `vmelamed/.github` repository
-- the `.github/dependabot.yml` from the `vmelamed/vm2.DevOps` repository
-- the `solution/` directory of the `vmelamed/vm2.DevOps` repository
+- `vm2.Templates/templates/AddNewPackage/content/.github/workflows/`
+- `vm2.Templates/templates/AddNewPackage/content/.github/dependabot.yml`
+- `vm2.Templates/templates/AddNewPackage/content/` for baseline config files
 
 > [!Tip]
 > The `diff-shared.sh` script automates the process of copying the common files, ensuring consistency and saving time. It would
@@ -74,19 +75,19 @@ updates.
    ```bash
    mkdir -p .github/workflows
    for wf in CI Prerelease Release ClearCache; do
-       curl -o .github/workflows/${wf}.yaml https://raw.githubusercontent.com/vmelamed/.github/main/workflow-templates/${wf}.yaml
+       curl -o .github/workflows/${wf}.yaml https://raw.githubusercontent.com/vmelamed/vm2.Templates/main/templates/AddNewPackage/content/.github/workflows/${wf}.yaml
    done
-   curl -o .github/dependabot.yml https://raw.githubusercontent.com/vmelamed/vm2.DevOps/main/.github/dependabot.yml
+     curl -o .github/dependabot.yml https://raw.githubusercontent.com/vmelamed/vm2.Templates/main/templates/AddNewPackage/content/.github/dependabot.yml
    ```
 
-1. **Copy configuration files** from vm2.DevOps `solution/` directory:
+1. **Copy configuration files** from vm2.Templates `templates/AddNewPackage/content/` directory:
 
    ```bash
    for f in Directory.Build.props Directory.Packages.props global.json \
             .editorconfig .gitignore .gitattributes NuGet.config \
             codecov.yaml coverage.settings.xml testconfig.json LICENSE; do
        curl -o "$f" \
-           https://raw.githubusercontent.com/vmelamed/vm2.DevOps/main/solution/${f}
+       https://raw.githubusercontent.com/vmelamed/vm2.Templates/main/templates/AddNewPackage/content/${f}
    done
    ```
 

@@ -216,7 +216,7 @@ permissions:
 Each consumer workflow has customizable `env:` variables, `inputs:`, and `secrets:` sections. Consumer workflows can be created
 in two ways:
 
-1. **GitHub workflow templates** (from `vmelamed/.github/workflow-templates/`) — The templates contain `# *TODO*` markers at the
+1. **GitHub workflow templates** (from `vm2.Templates/templates/AddNewPackage/content/.github/workflows/`) — The templates contain `# *TODO*` markers at the
    usual customization points. The user must edit these before the workflow is usable.
 1. **`dotnet new` project template** (from vm2.Templates) — The template engine substitutes project-specific values during
    instantiation. The generated workflows are ready to use without manual editing, although a review is recommended to understand and customize the configuration.

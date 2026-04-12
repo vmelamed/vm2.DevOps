@@ -11,15 +11,11 @@ vm2.DevOps provides a complete CI/CD automation toolkit for .NET solutions:
 1. **Bash script library** — 67 functions for local development and CI pipelines
 1. **Workflow templates** — starter workflows for consumer repositories
 
-### Relationship with the `.github` Repository
+### Relationship with vm2.Templates
 
-GitHub requires that organization-level workflow templates live in a repository named
-[`.github`](https://github.com/vmelamed/.github). Because of this constraint, the consumer-facing
-**workflow templates** (CI, Prerelease, Release, ClearCache, dependabot) are maintained in
-[vmelamed/.github/workflow-templates](https://github.com/vmelamed/.github/tree/main/workflow-templates),
-while the **reusable workflows** and **scripts** they call live here in vm2.DevOps. Logically, these
-two repositories form a single system — `.github` is the distribution surface, vm2.DevOps is the
-implementation.
+Consumer-facing files (workflow stubs and repo baseline config files) are maintained in
+[vm2.Templates/templates/AddNewPackage/content](https://github.com/vmelamed/vm2.Templates/tree/main/templates/AddNewPackage/content).
+The reusable workflows and scripts they call live in vm2.DevOps.
 
 ## Architecture
 
@@ -52,7 +48,7 @@ workflow that gathers inputs and delegates to the reusable layer:
                      _clear_cache.yaml
 
 **Layer 1 — Consumer workflows** (in each repo's `.github/workflows/`):
-Created from [workflow templates](https://github.com/vmelamed/.github/tree/main/workflow-templates)
+Created from [workflow templates](https://github.com/vmelamed/vm2.Templates/tree/main/templates/AddNewPackage/content/.github/workflows)
 or via `dotnet new vm2pkg`. These gather inputs from repository variables, secrets, and
 `workflow_dispatch` UI, then pass them to Layer 2.
 
@@ -75,7 +71,7 @@ For detailed setup instructions, see the [Consumer Guide](docs/CONSUMER_GUIDE.md
 1. Create a new repository for your .NET project
 1. Configure repository [variables and secrets](docs/CONFIGURATION.md)
 1. Copy workflow templates from
-   [vmelamed/.github/workflow-templates](https://github.com/vmelamed/.github/tree/main/workflow-templates)
+     [vm2.Templates content/.github/workflows](https://github.com/vmelamed/vm2.Templates/tree/main/templates/AddNewPackage/content/.github/workflows)
 1. Customize the workflows for your project structure
 
 Or use the dotnet template:
@@ -109,6 +105,7 @@ Inputs flow through layers with consistent name transformations:
 | [Release Process](docs/RELEASE_PROCESS.md)                         | Versioning with MinVer, prerelease and stable release flows   |
 | [Cache Management](docs/CACHE_MANAGEMENT.md)                       | NuGet dependency caching strategy                             |
 | [Error Recovery](docs/ERROR_RECOVERY.md)                           | Runbook for common failure scenarios                          |
+| [Hardening Roadmap](docs/HARDENING.md)                             | Improving discipline and safety of vm2.DevOps itself          |
 
 ## Additional Notes
 

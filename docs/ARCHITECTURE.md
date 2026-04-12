@@ -42,7 +42,7 @@ fourvm2.DevOps provides CI/CD automation for .NET NuGet packages through a four-
 
 ```text
 ┌─────────────────────────────────────────────────────────┐
-│  Consumer Workflows  (vmelamed/.github templates)       │
+│  Consumer Workflows  (vm2.Templates content)            │
 │  CI.yaml · Prerelease.yaml · Release.yaml · …           │
 ├─────────────────────────────────────────────────────────┤
 │  Reusable Workflows  (vm2.DevOps/.github/workflows/)    │
@@ -61,7 +61,7 @@ fourvm2.DevOps provides CI/CD automation for .NET NuGet packages through a four-
 
 ### 1.1. Layer 1: Consumer Workflows
 
-Stored in **`vmelamed/.github/workflow-templates/`**, these are the thin, per-repo entry points.
+Stored in **`vm2.Templates/templates/AddNewPackage/content/.github/workflows/`**, these are the thin, per-repo entry points.
 Each consumer workflow sets repo-specific parameters (project paths, coverage thresholds, etc.)
 and delegates to a reusable workflow via GitHub Actions property
 `uses: vmelamed/vm2.DevOps/.github/workflows/_*.yaml@main`.
