@@ -9,6 +9,8 @@
     - [Why Linear History](#why-linear-history)
     - [How to Rebase](#how-to-rebase)
     - [Resolving Conflicts](#resolving-conflicts)
+      - [The CHANGELOG.md conflict](#the-changelogmd-conflict)
+      - [PR has a merge commit instead of being rebased](#pr-has-a-merge-commit-instead-of-being-rebased)
   - [Conventional Commits](#conventional-commits)
     - [Commit Message Format](#commit-message-format)
     - [How Commits Drive Automation](#how-commits-drive-automation)
@@ -121,6 +123,50 @@ git rebase --abort
 
 The advantage over merge conflicts: you resolve one commit at a time, so each conflict is small
 and focused. With merge, you get all conflicts at once.
+
+#### The CHANGELOG.md conflict
+
+`CHANGELOG.md` is the **most common conflict** in vm2 rebases, and it always resolves the same way.
+
+**Why it happens:** CI auto-commits the changelog to `main` via `[skip ci]` commits every time a
+branch merges. Your branch was cut before that commit, so git sees two diverging versions of
+`CHANGELOG.md`: main's (authoritative, CI-generated) and your branch's (stale copy from when you
+branched).
+
+**The rule:** Always take `--ours` (the `HEAD`/main version). Your branch must never modify
+`CHANGELOG.md` manually — CI owns that file.
+
+```bash
+# When rebase stops with a CHANGELOG conflict:
+git checkout --ours CHANGELOG.md   # take the CI-generated version
+git add CHANGELOG.md
+git rebase --continue
+```
+
+#### PR has a merge commit instead of being rebased
+
+GitHub's "This branch is out of date" button does a **merge**, not a rebase. This creates a merge
+commit on your branch, which GitHub then refuses to rebase-merge. The fix:
+
+```bash
+# 1. Commit or stash any local, unstaged changes first
+git stash   # if you have any
+
+# 2. Rebase (this replays your commits on top of main, discarding the merge commit)
+git fetch origin
+git rebase origin/main
+# Resolve any conflicts (CHANGELOG → always --ours, see above)
+
+# 3. Verify the graph is linear — no merge commits
+git log --oneline --graph -8
+# Should show a straight line: * * * * (no branches/merges)
+
+# 4. Force-push to update the PR
+git push --force-with-lease origin <your-branch>
+
+# 5. Restore stashed changes if any
+git stash pop
+```
 
 ## Conventional Commits
 
