@@ -13,6 +13,7 @@
 *.cs text diff=csharp
 *.csproj text
 *.sln text
+*.slnx text
 *.md text
 *.json text
 *.yaml text

@@ -67,18 +67,21 @@ vm2_repos=$(resolve_vm2_repos "$vm2_repos") ||
 
 trace "All vm2 repositories are expected in '$vm2_repos'"
 
-# make sure we are seeing .github and vm2.DevOps properly through vm2_repos
-[[ -d "$vm2_repos/.github" && -d "$vm2_repos/vm2.DevOps" ]] ||
-    usage "$err_not_found" "The GitHub Actions workflow templates directory .github and/or the vm2.DevOps directory is missing in '$vm2_repos', Please clone the repositories into '$vm2_repos'."
-
-validate_repo_root "$vm2_repos/.github" "$vm2_repos" "main" || rc=$?
-(( rc == err_behind_latest_stable_tag )) &&
-    error "The repository in '$vm2_repos/.github' is behind the latest stable tag. Please update it to the latest commit on the main branch."
+# make sure we are seeing SoT and vm2.DevOps properly through vm2_repos
+# shellcheck disable=SC2154
+[[ -d "$vm2_repos/$vm2_sot_shared" && -d "$vm2_repos/$vm2_devops" ]] ||
+    usage "$err_not_found" "The GitHub Actions workflow templates directory '$vm2_repos/$vm2_sot_shared' and/or the '$vm2_devops' directory are missing from '$vm2_repos'. Please clone the repositories into '$vm2_repos' or correct the parameter/environment variable."
 
 rc="$success"
-validate_repo_root "$vm2_repos/vm2.DevOps" "$vm2_repos" "main" || rc=$?
+validate_repo_root "$vm2_repos/$vm2_devops" "$vm2_repos" "main" || rc=$?
 (( rc == err_behind_latest_stable_tag )) &&
-    error "The repository in '$vm2_repos/vm2.DevOps' is behind the latest stable tag. Please update it to the latest commit on the main branch."
+    error "The repository in '$vm2_repos/$vm2_devops' is behind the latest stable tag. Please update it to the latest version of the main branch."
+
+rc="$success"
+# shellcheck disable=SC2154
+validate_repo_root "$vm2_repos/$vm2_sot_repo" "$vm2_repos" "main" || rc=$?
+(( rc == err_behind_latest_stable_tag )) &&
+    error "The repository in '$vm2_repos/$vm2_sot_shared' is behind the latest stable tag. Please update it to the latest version of the main branch."
 
 exit_if_has_errors
 

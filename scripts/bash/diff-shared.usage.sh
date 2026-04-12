@@ -2,6 +2,7 @@
 # Copyright (c) 2025-2026 Val Melamed
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
+# shellcheck disable=SC2154 # variables sourced from diff-shared.sh
 
 declare -xr common_switches
 declare -xr common_vars
@@ -22,9 +23,9 @@ function usage_text()
 Usage: ${script_name} [<repo-directory>] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
 
 Compares a pre-defined set of common files (e.g. .editorconfig, .gitignore, etc.) from the specified <repo-directory> with the
-corresponding set of files from source-of-truth repositories (.github and vm2.DevOps). Note that the <repo-directory> doesn't
-need to be the root of the repository working tree but deeper. This may be useful for multi-solution repository or repository
-that contains a dotnet template project.
+corresponding set of files from the source-of-truth repository '$vm2_sot_shared'.
+Note that the <repo-directory> doesn't need to be the root of the repository working tree but deeper. This may be useful for
+multi-solution repository or repository that contains a dotnet template project.
 
 The root directories of the source-of-truth repositories are expected to be found under the same parent directory, specified
 either by the environment variable \$VM2_REPOS or the --vm2-repos option.
@@ -44,16 +45,15 @@ Arguments:
                                    inside it (useful for dotnet template projects)
 
 Options:
-  -r, --vm2-repos               The parent directory where the .github workflow templates and vm2.DevOps are cloned
-                                Initial from the VM2_REPOS environment variable or '~/repos'
+  -r, --vm2-repos               The parent directory of the vm2 templates and shared files '$vm2_sot_shared' are
+                                cloned. Initial from the VM2_REPOS environment variable or '\$HOME/repos/vm2'
   -f, --files                   A comma-separated list of files to compare/copy/merge. Instead of going through all the pre-
                                 defined files, only the specified files from the full list are processed. The file names can be
                                 regular expressions.
                                 Example: -f '.*ya?ml$' or --files 'Dockerfile,Directory.*'
 $switches
 Environment Variables:
-  VM2_REPOS                     The parent directory where the .github workflow templates, vm2.DevOps, and other vm2.* project
-                                repositories are cloned
+  VM2_REPOS                     The parent directory of '$vm2_sot_shared' and the other vm2.* project repositories are cloned.
 $vars
 Configuration Files:
     The script uses a configuration file 'diff-shared.actions.json' located in the project's directory to customize the actions

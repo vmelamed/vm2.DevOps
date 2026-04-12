@@ -5,7 +5,7 @@ packaging, and releasing .NET NuGet packages.
 
 ## Overview
 
-vm2.DevOps provides a complete CI/CD automation toolkit for .NET solutions:
+vm2.DevOps (a.k.a. in scripts as $vm2_repos/$vm2_devops) provides a complete CI/CD automation toolkit for .NET solutions:
 
 1. **Reusable GitHub Actions workflows** — build, test, benchmark, pack, prerelease, and release
 1. **Bash script library** — 67 functions for local development and CI pipelines
@@ -15,7 +15,7 @@ vm2.DevOps provides a complete CI/CD automation toolkit for .NET solutions:
 
 Consumer-facing files (workflow stubs and repo baseline config files) are maintained in
 [vm2.Templates/templates/AddNewPackage/content](https://github.com/vmelamed/vm2.Templates/tree/main/templates/AddNewPackage/content).
-The reusable workflows and scripts they call live in vm2.DevOps.
+The reusable workflows and scripts they call live in vm2.DevOps (a.k.a. $vm2_repos/$vm2_devops).
 
 ## Architecture
 

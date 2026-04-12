@@ -2,6 +2,7 @@
 # Copyright (c) 2025-2026 Val Melamed
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
+# shellcheck disable=SC2154
 
 declare -xr common_switches
 declare -xr common_vars
@@ -47,7 +48,7 @@ Parameters:
                                 templates directories. If not specified, the script will try the current working directory
 
 Options:
-  --vm2-repos <path>            The parent directory where the 'vm2.DevOps' and other vm2 repositories exist (cloned). The value
+  --vm2-repos <path>            The parent directory where the 'vm2.DevOps' and other vm2 repositories are cloned. The value
                                 comes from:
                                 1) the explicit path specified on the command line with this option, or
                                 2) the value of the \$VM2_REPOS environment variable, or
@@ -96,9 +97,9 @@ Examples:
   ${script_name} vm2.Glob --audit
 
 Configured local Git settings:
-  core.hooksPath                Set to '\$VM2_REPOS/vm2.DevOps/scripts/githooks'
+  core.hooksPath                Set to '\$VM2_REPOS/$vm2_devops/scripts/githooks'
                                 Tells Git where to find repository hook scripts (e.g. pre-commit, commit-msg).
-  commit.template               Set to '\$VM2_REPOS/vm2.DevOps/scripts/githooks/.gitmessage'
+  commit.template               Set to '\$VM2_REPOS/$vm2_sot_shared/.gitmessage'
                                 Specifies the default commit message template shown when creating commits.
   pull.rebase                   Set to 'true'
                                 Makes 'git pull' rebase local commits on top of upstream changes instead of merging.

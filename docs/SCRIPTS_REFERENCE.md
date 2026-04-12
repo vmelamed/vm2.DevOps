@@ -143,12 +143,12 @@ The script uses two configuration files with two different JSON formats:
         },
         "files": [
           {
-            "sourceFile": "${vm2_repos}/vm2.Templates/templates/AddNewPackage/content/.editorconfig",
+            "sourceFile": "${vm2_repos}/$vm2_sot_shared/.editorconfig",
             "targetFile": "${target_path}/.editorconfig",
             "action": "copy"
           },
           {
-            "sourceFile": "${vm2_repos}/vm2.Templates/templates/AddNewPackage/content/.gitignore",
+            "sourceFile": "${vm2_repos}/$vm2_sot_shared/.gitignore",
             "targetFile": "${target_path}/.gitignore",
             "action": "copy"
           },

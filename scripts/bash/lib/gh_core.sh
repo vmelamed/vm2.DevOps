@@ -19,7 +19,7 @@ declare -x script_name
 # The directory of the top-level calling script
 declare -x script_dir
 # The directory of my core library for shell scripts - usually
-# "$VM2_REPOS/vm2.DevOps/scripts/bash/lib"
+# "$VM2_REPOS/$vm2_devops/scripts/bash/lib"
 declare -x lib_dir
 
 [[ ! -v script_name || -z "$script_name" ]] && script_name=$(basename "${BASH_SOURCE[-1]}")

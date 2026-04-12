@@ -109,8 +109,8 @@ function find_target_path()
 ## Reads ${lib_dir}/diff-shared.config.json and populates arrays
 function configure()
 {
-    [[ -s "$config_file" ]]                      || error "The configuration file $config_file was not found or is empty."
-    jq empty "$config_file" 2>"$_ignore"         || error "The configuration file $config_file contains invalid JSON."
+    [[ -s "$config_file" ]]                     || error "The configuration file $config_file was not found or is empty."
+    jq empty "$config_file" 2>"$_ignore"        || error "The configuration file $config_file contains invalid JSON."
     exit_if_has_errors
 
     # Populate the arrays

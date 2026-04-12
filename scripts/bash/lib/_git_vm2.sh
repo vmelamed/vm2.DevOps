@@ -90,7 +90,7 @@ function resolve_vm2_repos()
         return "$success"
     fi
 
-    # 2) try from the calling script's directory, e.g. ~/repos/vm2/vm2.DevOps/scripts/bash/diff-shared.sh:
+    # 2) try from the calling script's directory, e.g. ~/repos/vm2/$vm2_devops/scripts/bash/diff-shared.sh:
     if r=$(root_working_tree "$script_dir") && vm2_repos=$(dirname "$r" 2> "$_ignore"); then
         trace "vm2_repos='$vm2_repos' resolved from the script directory."
         echo "$vm2_repos"
@@ -114,7 +114,7 @@ function resolve_vm2_repos()
 #     4) it is on the specified branch (or the currently checked out branch if not specified)
 #     5) it is at or ahead of the latest stable tag of the specified branch.
 # Parameters:
-#   $1: $repo_name: repository name or absolute, or relative path to the repository, e.g. "vm2.DevOps" or "./my_repos/vm2_packages/DevOps".
+#   $1: $repo_name: repository name or absolute, or relative path to the repository, e.g. "vm2.DevOps" or "./my_repos/vm2_packages/vm2.DevOps".
 #   $2: $vm2_repos: the parent directory of all vm2 repositories where the repository $1 can be located as well, if it is specified by name only.
 #                   (optional, default: $VM2_REPOS or "$HOME/repos/vm2"). You can use also `$(resolve_vm2_repos)` to determine the parent directory of all vm2 repositories.
 #   $3: $branch: the branch to check against the latest stable tag (optional, default: the currently checked out branch)

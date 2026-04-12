@@ -9,107 +9,107 @@
     },
     "files": [
         {
-            "sourceFile": "${vm2_repos}/vm2.Templates/templates/AddNewPackage/content/.github/workflows/CI.yaml",
+            "sourceFile": "${vm2_repos}/vm2_sot_shared/.github/workflows/CI.yaml",
             "targetFile": "${target_path}/.github/workflows/CI.yaml",
             "action": "ask to merge"
         },
         {
-            "sourceFile": "${vm2_repos}/vm2.Templates/templates/AddNewPackage/content/.github/workflows/Prerelease.yaml",
+            "sourceFile": "${vm2_repos}/$vm2_sot_shared/.github/workflows/Prerelease.yaml",
             "targetFile": "${target_path}/.github/workflows/Prerelease.yaml",
             "action": "ask to merge"
         },
         {
-            "sourceFile": "${vm2_repos}/vm2.Templates/templates/AddNewPackage/content/.github/workflows/Release.yaml",
+            "sourceFile": "${vm2_repos}/$vm2_sot_shared/.github/workflows/Release.yaml",
             "targetFile": "${target_path}/.github/workflows/Release.yaml",
             "action": "ask to merge"
         },
         {
-            "sourceFile": "${vm2_repos}/vm2.Templates/templates/AddNewPackage/content/.github/workflows/ClearCache.yaml",
+            "sourceFile": "${vm2_repos}/$vm2_sot_shared/.github/workflows/ClearCache.yaml",
             "targetFile": "${target_path}/.github/workflows/ClearCache.yaml",
             "action": "copy"
         },
         {
-            "sourceFile": "${vm2_repos}/vm2.Templates/templates/AddNewPackage/content/.github/workflows/AutoMerge.yaml",
+            "sourceFile": "${vm2_repos}/$vm2_sot_shared/.github/workflows/AutoMerge.yaml",
             "targetFile": "${target_path}/.github/workflows/AutoMerge.yaml",
             "action": "copy"
         },
         {
-            "sourceFile": "${vm2_repos}/vm2.Templates/templates/AddNewPackage/content/.github/dependabot.yml",
+            "sourceFile": "${vm2_repos}/$vm2_sot_shared/.github/dependabot.yml",
             "targetFile": "${target_path}/.github/dependabot.yml",
             "action": "copy"
         },
         {
-            "sourceFile": "${vm2_repos}/vm2.Templates/templates/AddNewPackage/content/.github/PULL_REQUEST_TEMPLATE.md",
+            "sourceFile": "${vm2_repos}/$vm2_sot_shared/.github/PULL_REQUEST_TEMPLATE.md",
             "targetFile": "${target_path}/.github/PULL_REQUEST_TEMPLATE.md",
             "action": "copy"
         },
         {
-            "sourceFile": "${vm2_repos}/vm2.Templates/templates/AddNewPackage/content/.editorconfig",
+            "sourceFile": "${vm2_repos}/$vm2_sot_shared/.editorconfig",
             "targetFile": "${target_path}/.editorconfig",
             "action": "copy"
         },
         {
-            "sourceFile": "${vm2_repos}/vm2.Templates/templates/AddNewPackage/content/.gitattributes",
+            "sourceFile": "${vm2_repos}/$vm2_sot_shared/.gitattributes",
             "targetFile": "${target_path}/.gitattributes",
             "action": "copy"
         },
         {
-            "sourceFile": "${vm2_repos}/vm2.Templates/templates/AddNewPackage/content/.gitignore",
+            "sourceFile": "${vm2_repos}/$vm2_sot_shared/.gitignore",
             "targetFile": "${target_path}/.gitignore",
             "action": "copy"
         },
         {
-            "sourceFile": "${vm2_repos}/vm2.Templates/templates/AddNewPackage/content/.gitmessage",
+            "sourceFile": "${vm2_repos}/$vm2_sot_shared/.gitmessage",
             "targetFile": "${target_path}/.gitmessage",
             "action": "copy"
         },
         {
-            "sourceFile": "${vm2_repos}/vm2.Templates/templates/AddNewPackage/content/codecov.yaml",
+            "sourceFile": "${vm2_repos}/$vm2_sot_shared/codecov.yaml",
             "targetFile": "${target_path}/codecov.yaml",
             "action": "copy"
         },
         {
-            "sourceFile": "${vm2_repos}/vm2.Templates/templates/AddNewPackage/content/coverage.settings.xml",
+            "sourceFile": "${vm2_repos}/$vm2_sot_shared/coverage.settings.xml",
             "targetFile": "${target_path}/coverage.settings.xml",
             "action": "copy"
         },
         {
-            "sourceFile": "${vm2_repos}/vm2.Templates/templates/AddNewPackage/content/Directory.Build.props",
+            "sourceFile": "${vm2_repos}/$vm2_sot_shared/Directory.Build.props",
             "targetFile": "${target_path}/Directory.Build.props",
             "action": "merge or copy"
         },
         {
-            "sourceFile": "${vm2_repos}/vm2.Templates/templates/AddNewPackage/content/Directory.Packages.props",
+            "sourceFile": "${vm2_repos}/$vm2_sot_shared/Directory.Packages.props",
             "targetFile": "${target_path}/Directory.Packages.props",
             "action": "merge or copy"
         },
         {
-            "sourceFile": "${vm2_repos}/vm2.Templates/templates/AddNewPackage/content/global.json",
+            "sourceFile": "${vm2_repos}/$vm2_sot_shared/global.json",
             "targetFile": "${target_path}/global.json",
             "action": "copy"
         },
         {
-            "sourceFile": "${vm2_repos}/vm2.Templates/templates/AddNewPackage/content/LICENSE",
+            "sourceFile": "${vm2_repos}/$vm2_sot_shared/LICENSE",
             "targetFile": "${target_path}/LICENSE",
             "action": "copy"
         },
         {
-            "sourceFile": "${vm2_repos}/vm2.Templates/templates/AddNewPackage/content/NuGet.config",
+            "sourceFile": "${vm2_repos}/$vm2_sot_shared/NuGet.config",
             "targetFile": "${target_path}/NuGet.config",
             "action": "copy"
         },
         {
-            "sourceFile": "${vm2_repos}/vm2.Templates/templates/AddNewPackage/content/testconfig.json",
+            "sourceFile": "${vm2_repos}/$vm2_sot_shared/testconfig.json",
             "targetFile": "${target_path}/testconfig.json",
             "action": "copy"
         },
         {
-            "sourceFile": "${vm2_repos}/vm2.Templates/templates/AddNewPackage/content/changelog/cliff.prerelease.toml",
+            "sourceFile": "${vm2_repos}/$vm2_sot_shared/changelog/cliff.prerelease.toml",
             "targetFile": "${target_path}/changelog/cliff.prerelease.toml",
             "action": "copy"
         },
         {
-            "sourceFile": "${vm2_repos}/vm2.Templates/templates/AddNewPackage/content/changelog/cliff.release-header.toml",
+            "sourceFile": "${vm2_repos}/$vm2_sot_shared/changelog/cliff.release-header.toml",
             "targetFile": "${target_path}/changelog/cliff.release-header.toml",
             "action": "copy"
         }

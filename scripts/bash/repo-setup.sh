@@ -98,22 +98,23 @@ vm2_repos=$(resolve_vm2_repos "$vm2_repos") ||
 trace "All vm2 repositories are expected in '$vm2_repos'"
 init_default_local_git_settings "$vm2_repos"
 
-# make sure we are seeing .github and vm2.DevOps properly through vm2_repos
-[[ -d "$vm2_repos/.github" && -d "$vm2_repos/vm2.DevOps" ]] ||
-    usage "$err_not_found" "The GitHub Actions workflow templates directory .github and/or the vm2.DevOps directory is missing in '$vm2_repos', Please clone the repositories into '$vm2_repos'."
-
-validate_repo_root "$vm2_repos/.github" "$vm2_repos" "main" || rc=$?
-(( rc == err_behind_latest_stable_tag )) &&
-    error "The repository in '$vm2_repos/.github' is behind the latest stable tag. Please update it to the latest commit on the main branch."
+# make sure we are seeing the templates and vm2.DevOps properly through vm2_repos
+[[ -d "$vm2_repos/$vm2_sot_shared" && -d "$vm2_repos/$vm2_devops" ]] ||
+    usage "$err_not_found" "The GitHub Actions workflow templates directory .github and/or the '$vm2_devops' directory is missing in '$vm2_repos', Please clone the repositories into '$vm2_repos'."
 
 rc="$success"
-validate_repo_root "$vm2_repos/vm2.DevOps" "$vm2_repos" "main" || rc=$?
+validate_repo_root "$vm2_repos/$vm2_devops" "$vm2_repos" "main" || rc=$?
 (( rc == err_behind_latest_stable_tag )) &&
-    error "The repository in '$vm2_repos/vm2.DevOps' is behind the latest stable tag. Please update it to the latest commit on the main branch."
+    error "The repository in '$vm2_repos/$vm2_devops' is behind the latest stable tag. Please update it to the latest commit on the main branch."
+
+rc="$success"
+validate_repo_root "$vm2_repos/$vm2_sot_repo" "$vm2_repos" "main" || rc=$?
+(( rc == err_behind_latest_stable_tag )) &&
+    error "The repository in '$vm2_repos/$vm2_sot_shared' is behind the latest stable tag. Please update it to the latest commit on the main branch."
 
 declare -x _ci_yaml=''
 
-_ci_yaml="$vm2_repos/vm2.DevOps/.github/workflows/_ci.yaml"
+_ci_yaml="$vm2_repos/$vm2_devops/.github/workflows/_ci.yaml"
 [[ -s "$_ci_yaml" ]] || error "Could not find _ci.yaml GitHub Actions reusable workflow file in ${vm2_repos}."
 
 declare -xr _ci_yaml
