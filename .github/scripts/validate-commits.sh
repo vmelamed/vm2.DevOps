@@ -22,7 +22,7 @@ source "$script_dir/validate-commits.usage.sh"
 source "$script_dir/validate-commits.args.sh"
 
 # Allowed commit types — keep in sync with changelog/cliff.prerelease.toml commit_parsers
-readonly -a allowed_types=(style build feat test fix refactor perf security docs chore revert remove ci devops)
+readonly -a allowed_types=(style build feat test fix refactor perf security doc docs chore revert remove ci devops)
 
 declare -x base_ref=${BASE_REF:-}
 

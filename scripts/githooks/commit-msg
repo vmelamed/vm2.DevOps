@@ -8,7 +8,7 @@
 set -euo pipefail
 
 # Allowed commit types — keep in sync with changelog/cliff.prerelease.toml commit_parsers
-readonly -a allowed_types=(style build feat test fix refactor perf security docs chore revert remove ci devops)
+readonly -a allowed_types=(style build feat test fix refactor perf security doc docs chore revert remove ci devops)
 
 # Read the commit message (first line only for format validation)
 subject=$(head -1 "$1")

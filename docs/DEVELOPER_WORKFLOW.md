@@ -28,6 +28,7 @@
     - [Merging](#merging)
   - [What Happens After Merge](#what-happens-after-merge)
     - [Reviewing the Changelog](#reviewing-the-changelog)
+      - [Changelog-Only Cleanup PR](#changelog-only-cleanup-pr)
   - [Common Scenarios](#common-scenarios)
     - [Starting a New Feature](#starting-a-new-feature)
     - [Fixing a Bug](#fixing-a-bug)
@@ -179,7 +180,7 @@ described with the following grammar:
 commit-message = subject, [ LF, body ] ;
 subject        = type, [ "(", scope, ")" ], [ "!" ], ": ", description ;
 type           = "style" | "build" | "feat" | "test" | "fix" | "refactor"
-               | "perf" | "security" | "docs" | "chore" | "revert" | "remove"
+               | "perf" | "security" | "doc" | "docs" | "chore" | "revert" | "remove"
                | "remove" | "ci" | "devops" ;
 scope          = noun ;
 description    = non-empty string ;
@@ -188,7 +189,7 @@ body           = free-form text ;
 
 Where:
 
-- Message type:       Required, one of: style build feat test fix refactor perf security docs chore revert remove ci devops
+- Message type:       Required, one of: style build feat test fix refactor perf security doc docs chore revert remove ci devops
 - Scope:              Optional. A noun describing the section of the codebase affected by the change (e.g., 'api', 'ui', 'docs')
 - Breaking Change:    Optional. '!' before ':' signals a breaking change
 - Description:        Required. A short description of the change
@@ -212,6 +213,7 @@ chore(ci):  update GitHub Actions workflow
 | `refactor` | no bump        | Code restructuring without behavior change            |
 | `perf`     | no bump        | Performance improvement                               |
 | `security` | no bump        | Security fixes                                        |
+| `doc`      | no bump        | Documentation changes only                            |
 | `docs`     | no bump        | Documentation changes only                            |
 | `chore`    | no bump        | Build, CI, tooling, dependency updates                |
 | `revert`   | no bump        | Reverting a previous commit                           |
@@ -444,6 +446,39 @@ gh pr create --fill
 ```
 
 This lightweight PR merges quickly and ensures the changelog is accurate before any stable promotion.
+
+#### Changelog-Only Cleanup PR
+
+Treat changelog cleanup as a tiny, focused PR. Do not bundle it with code, CI, or dependency changes.
+This is the best place for an OCD-friendly formatting/consistency pass.
+
+**Why:** Small PRs are easier to review, safer to rebase, and far less likely to create conflict churn at
+the top of `CHANGELOG.md`.
+
+Use this checklist:
+
+1. Branch from latest `main`
+2. Edit only `CHANGELOG.md`
+3. Verify scope before commit:
+
+```bash
+git fetch origin
+git diff --name-only origin/main...HEAD
+```
+
+Expected output: `CHANGELOG.md` only.
+
+If you see extra files, reset them before committing:
+
+```bash
+git restore --source=origin/main -- <file>
+```
+
+Recommended commit message:
+
+```text
+docs: curate changelog for vX.Y.Z-preview.N
+```
 
 **Stable releases** are triggered **manually only** when ready — see
 [RELEASE_PROCESS.md](RELEASE_PROCESS.md).
