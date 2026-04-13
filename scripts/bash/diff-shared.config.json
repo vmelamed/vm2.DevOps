@@ -9,7 +9,7 @@
     },
     "files": [
         {
-            "sourceFile": "${vm2_repos}/vm2_sot_shared/.github/workflows/CI.yaml",
+            "sourceFile": "${vm2_repos}/$vm2_sot_shared/.github/workflows/CI.yaml",
             "targetFile": "${target_path}/.github/workflows/CI.yaml",
             "action": "ask to merge"
         },
