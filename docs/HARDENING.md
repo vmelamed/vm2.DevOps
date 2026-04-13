@@ -165,6 +165,53 @@ that can silently diverge.
 
 ---
 
+## 8. Focused PR + CHANGELOG Guardrails  *(high)*
+
+The recurring failure mode is broad PRs that mix code/config changes with changelog edits.
+This creates avoidable rebase conflicts, especially at the top of `CHANGELOG.md`.
+
+**Target operating model:**
+
+- Feature/infra PRs are code/config only.
+- Changelog curation happens in tiny dedicated PRs.
+- Release flows allow changelog changes but validate structure/quality.
+
+**Implementation plan:**
+
+1. Add a PR scope guard in CI (deny mode for normal PRs).
+
+- Fail `pull_request` runs when `CHANGELOG.md` is changed unexpectedly.
+- Allow via explicit signal only (for example PR label/title convention such as `release` or `changelog`).
+
+1. Add changelog quality checks (allow mode for prerelease/release).
+
+- Detect duplicate top-level version headings.
+- Detect malformed basic structure.
+- Fail with actionable output.
+
+1. Add a pre-PR local sanity command.
+
+- One command to list changed files and fail fast when `CHANGELOG.md` appears unexpectedly.
+- Provide as reusable script + optional VS Code task.
+
+1. Harden branch policy.
+
+- Keep force-push disabled on `main`.
+- Require status checks, up-to-date branch, and approval.
+
+1. Roll out incrementally.
+
+- Start in one repo (vm2.TestUtilities), then copy the same guardrails to vm2.SemVer, vm2.Ulid,
+    vm2.Glob, vm2.Linq.Expressions, and vm2.Templates.
+
+**Expected impact:**
+
+- Smaller, easier-to-review PRs.
+- Fewer rebase conflicts around `CHANGELOG.md`.
+- Less reliance on memory and manual discipline.
+
+---
+
 ## Summary Table
 
 | # | Item | Risk if ignored | Effort |
@@ -176,3 +223,4 @@ that can silently diverge.
 | 5 | Breaking change process | Consumers surprised by interface changes | Low – documentation + PR template |
 | 6 | git-cliff for own CHANGELOG | Inconsistent release notes | Low – copy config from templates |
 | 7 | Retire `vmelamed/.github` | Duplicate drift in workflow templates | Low – delete + redirect |
+| 8 | Focused PR + CHANGELOG guardrails | Rebase churn and accidental changelog regressions | Medium – CI checks + small script + policy |
