@@ -456,16 +456,16 @@ refactor(core)!: rewrite matching engine
 Your commit messages directly control what happens when code reaches `main`:
 
 ```text
-feat(parser): add alternation support  →  minor version bump  →  v1.3.0-preview.1
-fix: correct boundary check            →  patch version bump  →  v1.2.4-preview.1
-refactor!: rewrite engine              →  major version bump  →  v2.0.0-preview.1
+feat(parser): add alternation support:  minor version bump:  v1.3.0-preview.N  →  v1.3.1-preview.1
+fix: correct boundary check          :  patch version bump:  v1.2.4-preview.N  →  v1.2.5-preview.1
+refactor!: rewrite engine            :  major version bump:  v1.2.5-preview.N  →  v2.0.0-preview.1
 ```
 
 1. **git-cliff** parses commit messages to generate `CHANGELOG.md` entries
 2. **MinVer** + version computation scripts determine the next version from the highest-impact
    commit type since the last tag
 3. **Prerelease** publishes automatically after CI succeeds on `main`
-4. **Stable release** is triggered manually via `workflow_dispatch`
+4. **Stable release** is triggered **manually** via `workflow_dispatch`
 
 ### Good Commit Messages
 
