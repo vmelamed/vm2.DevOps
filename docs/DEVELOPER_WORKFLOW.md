@@ -35,6 +35,9 @@
     - [A Merge Commit Appeared on Your Branch](#a-merge-commit-appeared-on-your-branch)
   - [Recovery Scenarios](#recovery-scenarios)
     - [Fixing a Bad Commit Message](#fixing-a-bad-commit-message)
+      - [Last Commit, Not Yet Pushed](#last-commit-not-yet-pushed)
+      - [Older Commit, Not Yet Pushed](#older-commit-not-yet-pushed)
+      - [Already Pushed to a PR Branch](#already-pushed-to-a-pr-branch)
     - [Undo the Last Commit (Not Yet Pushed)](#undo-the-last-commit-not-yet-pushed)
     - [Revert a Pushed Commit](#revert-a-pushed-commit)
     - [You Pushed to Main by Accident](#you-pushed-to-main-by-accident)
@@ -44,6 +47,9 @@
   - [Working with Multiple Developers](#working-with-multiple-developers)
   - [Quick Reference](#quick-reference)
     - [Settings to Enable First](#settings-to-enable-first)
+    - [The Happy Path](#the-happy-path)
+    - [Recovery Commands](#recovery-commands)
+    - [Key Rules](#key-rules)
 
 <!-- /TOC -->
 
@@ -75,7 +81,7 @@ main ─────●─────●─────●─────●─
 - Create short-lived feature branches for each change
 - Open a pull request to `main`
 - Merge via **rebase** (the only allowed merge method)
-- Delete the branch after merge (automatic)
+- Delete the branch after merge (automatic on remote, clean-up yourself locally)
 
 **Branch naming** is free-form, but these conventions help:
 
@@ -100,6 +106,9 @@ review comments), this is all you need.
 Start every task from a clean, up-to-date `main`:
 
 ```bash
+git fetch origin            # optional — git pull does a fetch internally,
+                            # but an explicit fetch also updates tags and
+                            # remote-tracking branches for other branches
 git checkout main
 git pull
 ```
@@ -306,7 +315,6 @@ git branch -d feat/my-feature
 
 </details>
 
-
 ---
 
 ## What Happens After Merge
@@ -350,7 +358,7 @@ Treat changelog cleanup as a tiny, focused PR. Do not bundle it with code, CI, o
 Use this checklist:
 
 1. Branch from latest `main`
-2. Edit only `CHANGELOG.md`
+2. Edit **only** `CHANGELOG.md`
 3. Verify scope before commit:
 
 ```bash
@@ -404,35 +412,36 @@ body           = free-form text ;
 
 Where:
 
-- **Type**: Required. One of: style build feat test fix refactor perf security doc docs chore revert remove ci devops
+- **Type**: Required. One of the keywords: `style` `build` `feat` `test` `fix` `refactor` `perf` `security` `doc` `docs` `chore`
+  `revert` `remove` `ci` `devops`
 - **Scope**: Optional. A noun describing the section of the codebase (e.g. `api`, `ui`, `docs`)
-- **Breaking Change**: Optional. `!` before `:` signals a breaking change
+- **Breaking Change**: Optional. **`!`** before `:` signals a breaking change
 - **Description**: Required. A short description of the change
 
 Examples:
 
 ```text
-feat(api)!: change the 'getUserData' method of the API endpoint for user data
+feat(api)!: change the 'getUserData' method of the API endpoint for user data. The change is not backwards compatible!
 fix(ui):    correct button alignment on homepage
 chore(ci):  update GitHub Actions workflow
 ```
 
 | Type       | Triggers       | Use when                                              |
 | :--------- | :------------- | :---------------------------------------------------- |
-| !          | **major bump** | Creates backwards-incompatible changes                |
+| `!`        | **major bump** | Creates backwards-incompatible changes                |
+| `feat`     | **minor bump** | Adding new functionality                              |
+| `fix`      | **patch bump** | Fixing a bug                                          |
+| `perf`     | **patch bump** | Performance improvement                               |
+| `security` | **patch bump** | Security fixes                                        |
+| `remove`   | **patch bump** | Removing code or functionality                        |
+| `revert`   | **patch bump** | Reverting a previous commit                           |
+| `refactor` | no bump        | Code restructuring without behavior change            |
 | `style`    | no bump        | Code style changes (whitespace, formatting, etc.)     |
 | `build`    | no bump        | Changes that affect the build system or dependencies  |
-| `feat`     | **minor bump** | Adding new functionality                              |
 | `test`     | no bump        | Adding or updating tests                              |
-| `fix`      | **patch bump** | Fixing a bug                                          |
-| `refactor` | no bump        | Code restructuring without behavior change            |
-| `perf`     | no bump        | Performance improvement                               |
-| `security` | no bump        | Security fixes                                        |
 | `doc`      | no bump        | Documentation changes only                            |
 | `docs`     | no bump        | Documentation changes only                            |
 | `chore`    | no bump        | Build, CI, tooling, dependency updates                |
-| `revert`   | no bump        | Reverting a previous commit                           |
-| `remove`   | no bump        | Removing code or functionality                        |
 | `ci`       | no bump        | Continuous Integration related changes                |
 | `devops`   | no bump        | DevOps related changes                                |
 
@@ -512,7 +521,6 @@ Both settings in one go:
 git config --local core.hooksPath ~/repos/vm2/vm2.DevOps/scripts/githooks
 git config --local commit.template ~/repos/vm2/vm2.DevOps/scripts/githooks/.gitmessage
 ```
-
 
 ---
 
@@ -643,10 +651,12 @@ terminal:
 
 1. Open the integrated terminal (`Ctrl+`` `).
 2. Run:
+
    ```bash
    git fetch origin main
    git rebase origin/main
    ```
+
 3. If conflicts arise, VS Code highlights them in the editor with inline merge markers.
    Resolve each file, stage it (`+`), then run `git rebase --continue` in the terminal.
 4. Push: `···` menu → **Pull, Push** → **Push (Force With Lease)**.
@@ -786,7 +796,6 @@ commands above (or Visual Studio's rebase-onto feature under **Manage Branches**
 avoid any "merge" or "update branch" action that creates a merge commit.
 
 </details>
-
 
 ---
 

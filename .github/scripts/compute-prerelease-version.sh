@@ -102,11 +102,11 @@ elif echo "$commits" | grep -qiE '^feat(\(.+\))?:'; then
     minor=$((minor + 1))
     patch=0
     bump_type="minor (new features detected)"
-elif echo "$commits" | grep -qiE '^(fix|perf|security|refactor|remove|revert)(\(.+\))?:'; then
+elif echo "$commits" | grep -qiE '^(fix|perf|security|remove|revert)(\(.+\))?:'; then
     patch=$((patch + 1))
     bump_type="patch (fixes or other changes detected)"
 else
-    # no bump — docs, ci, devops, chore, style, build, test
+    # no bump — refactor, docs, ci, devops, chore, style, build, test
     bump_type="none (non-code changes only)"
 fi
 
