@@ -157,7 +157,6 @@ jobs:
               --adapter c_sharp_dot_net
               --iter 1
               --fold median
-              --branch-start-point main
               --err
 
               --threshold-measure latency
@@ -196,13 +195,19 @@ jobs:
               pr_base_sha="${{ github.event.pull_request.base.sha || '' }}"
               BENCHER_ARGS+=(
                 --branch "${{ github.head_ref }}"
+                --branch-start-point main
                 --github-actions "$GH_TOKEN"
                 --ci-number "${{ github.event.pull_request.number }}"
                 --ci-only-thresholds
               )
-          else
+          elif [[ "${{ github.ref_name }}" != "main" ]]; then
               BENCHER_ARGS+=(
                 --branch "${{ github.ref_name }}"
+                --branch-start-point main
+              )
+          else
+              BENCHER_ARGS+=(
+                --branch main
               )
           fi
 
