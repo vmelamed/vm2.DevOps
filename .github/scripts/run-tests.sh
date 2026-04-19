@@ -3,6 +3,7 @@
 # shellcheck disable=SC2119
 
 set -euo pipefail
+declare -x TZ="${TZ:-America/New_York}"
 
 script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(realpath -e "$(dirname "${BASH_SOURCE[0]}")")

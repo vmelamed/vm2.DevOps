@@ -73,6 +73,8 @@ jobs:
   test:
     name: Test on ${{ inputs.runner-os }}
     runs-on: ${{ inputs.runner-os }}
+    env:
+      TZ: America/New_York
     steps:
       # Clone the repository with full Git history
       - name: Checkout
