@@ -218,15 +218,29 @@ jobs:
           fi
 
           # Add all benchmark result files
-          trace "Looking for benchmark result files matching: ${{ env.ARTIFACTS_DIR }}/results/*-report-full-compressed.json:"
-          trace "$(ls -l ${{ env.ARTIFACTS_DIR }}/results/*-report-full-compressed.json)"
-
           for file in ${{ env.ARTIFACTS_DIR }}/results/*-report-full-compressed.json; do
               if [[ -s "$file" ]]; then
                   trace "Adding benchmark result file: $file"
                   BENCHER_ARGS+=(--file "$file")
               fi
           done
+
+          if [[ $verbose == "true" ]]; then
+              trace "Looking for benchmark result files matching: ${{ env.ARTIFACTS_DIR }}/results/*-report-full-compressed.json:"
+              trace "$(ls -l ${{ env.ARTIFACTS_DIR }}/results/*-report-full-compressed.json)"
+
+              sanitized_bencher_args=("${BENCHER_ARGS[@]}")
+              for i in "${!sanitized_bencher_args[@]}"; do
+                  if [[ "${sanitized_bencher_args[$i]}" == "--token" ]] && (( i + 1 < ${#sanitized_bencher_args[@]} )); then
+                      sanitized_bencher_args[$((i + 1))]="$secret_str"
+                  fi
+              done
+              trace "Running command: bencher run ${sanitized_bencher_args[*]}"
+          fi
+
+          # Capture Bencher output so we can distinguish threshold alerts from transport failures.
+          temp_bencher_out=$(mktemp)
+          trap 'rm -f "$temp_bencher_out"' EXIT
 
           if [[ $verbose == "true" ]]; then
               sanitized_bencher_args=("${BENCHER_ARGS[@]}")
