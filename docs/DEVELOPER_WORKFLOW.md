@@ -4,6 +4,7 @@
 
 - [Developer Workflow Guide](#developer-workflow-guide)
   - [Overview](#overview)
+  - [Git Playbook](#git-playbook)
   - [Branching Model](#branching-model)
   - [The Standard Workflow](#the-standard-workflow)
     - [Step 1: Update Your Local Main](#step-1-update-your-local-main)
@@ -67,6 +68,11 @@ Every step that involves Git or GitHub shows three ways to do it:
 
 The usual happy-path workflow comes first. Recovery scenarios and edge cases follow in their own
 sections — refer to them only when something goes wrong.
+
+## Git Playbook
+
+For a compact, rebase-first daily checklist, conflict protocol, and safe Git configuration,
+see [Git Playbook](./GIT_PLAYBOOK.md).
 
 ## Branching Model
 
