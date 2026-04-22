@@ -121,6 +121,16 @@ fi
 base_version="$major.$minor.$patch"
 trace "Base version from commits: $base_version [$bump_type]"
 
+# A prerelease base must strictly exceed the last stable release.
+# bump_type="none" leaves base_version == latest_stable_ver, producing
+# an invalid tag (e.g. 1.0.0-preview.N after 1.0.0 was already released).
+if [[ -n "$latest_stable_ver" ]] && ! semver_greaterThan "$base_version" "$latest_stable_ver"; then
+    patch=$((patch + 1))
+    base_version="$major.$minor.$patch"
+    [[ "$bump_type" == *"none"* ]] && bump_type="patch (minimum bump: no code changes since stable $latest_stable_ver)"
+    trace "Adjusted base version to $base_version (must exceed last stable $latest_stable_ver)"
+fi
+
 # ============================================================================
 # Determine the prerelease counter
 # ============================================================================

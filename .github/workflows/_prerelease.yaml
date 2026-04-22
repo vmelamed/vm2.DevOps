@@ -50,6 +50,16 @@ on:
         type: boolean
         default: false
 
+      sha:
+        description: >-
+          Exact git SHA to compute the version from and tag. When triggered automatically via
+          workflow_run, pass github.event.workflow_run.head_sha to pin the prerelease to the
+          CI-validated commit and prevent tagging an untested commit if another PR merges
+          in the window between CI completing and this workflow running.
+          Defaults to HEAD when empty (safe for manual workflow_dispatch triggers).
+        type: string
+        default: ""
+
     secrets:
       RELEASE_PAT:
         description: >-
@@ -86,6 +96,7 @@ jobs:
       - name: Checkout (full history)
         uses: actions/checkout@v6
         with:
+          ref: ${{ inputs.sha || github.sha }}
           fetch-depth: 0
           filter: tree:0
 
@@ -118,6 +129,18 @@ jobs:
 
       - name: Setup DevOps environment variables
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
+
+      - name: Verify HEAD matches the CI-validated SHA
+        if: inputs.sha != ''
+        shell: bash
+        run: |
+          source "$DEVOPS_LIB_DIR/gh_core.sh"
+          actual_sha=$(git rev-parse HEAD)
+          if [[ "$actual_sha" != "${{ inputs.sha }}" ]]; then
+              error "Race condition detected: HEAD is $actual_sha but expected ${{ inputs.sha }}."
+              error "Another commit was pushed to main after CI completed. Re-run the Prerelease workflow."
+              exit 1
+          fi
 
       - name: Install git-cliff
         uses: taiki-e/install-action@v2

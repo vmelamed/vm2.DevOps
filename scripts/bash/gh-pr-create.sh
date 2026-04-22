@@ -29,6 +29,7 @@ for t in .github/PULL_REQUEST_TEMPLATE.md .github/pull_request_template.md; do
 done
 
 if [[ -z "$template" ]]; then
+    echo "⚠️  WARNING: No PR template found in .github/PULL_REQUEST_TEMPLATE.md. Using hard-coded, fallback template." >&2
     # Fallback: inline template
     template="# Summary
 

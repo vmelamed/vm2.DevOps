@@ -44,6 +44,11 @@
             "action": "copy"
         },
         {
+            "sourceFile": "${vm2_repos}/$vm2_sot_shared/.github/CONVENTIONS.md",
+            "targetFile": "${target_path}/.github/CONVENTIONS.md",
+            "action": "copy"
+        },
+        {
             "sourceFile": "${vm2_repos}/$vm2_sot_shared/.editorconfig",
             "targetFile": "${target_path}/.editorconfig",
             "action": "copy"
