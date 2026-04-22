@@ -229,9 +229,8 @@ jobs:
               trace "Looking for benchmark result files matching: ${{ env.ARTIFACTS_DIR }}/results/*-report-full-compressed.json:"
               trace "$(ls -l ${{ env.ARTIFACTS_DIR }}/results/*-report-full-compressed.json)"
 
-              local -a sanitized_bencher_args
+              declare -a sanitized_bencher_args=("${BENCHER_ARGS[@]}")
 
-              sanitized_bencher_args=("${BENCHER_ARGS[@]}")
               for i in "${!sanitized_bencher_args[@]}"; do
                   if [[ "${sanitized_bencher_args[$i]}" == "--token" ]] && (( i + 1 < ${#sanitized_bencher_args[@]} )); then
                       sanitized_bencher_args[$((i + 1))]="$secret_str"
