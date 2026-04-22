@@ -212,13 +212,11 @@ jobs:
                 --branch main
               )
           fi
-
           # Only reset thresholds when explicitly requested
           if [[ "$reset_benchmark_thresholds" == "true" ]]; then
               trace "Resetting Bencher thresholds (reset_thresholds=true)"
               BENCHER_ARGS+=(--thresholds-reset)
           fi
-
           # Add all benchmark result files
           for file in ${{ env.ARTIFACTS_DIR }}/results/*-report-full-compressed.json; do
               if [[ -s "$file" ]]; then
@@ -231,12 +229,15 @@ jobs:
               trace "Looking for benchmark result files matching: ${{ env.ARTIFACTS_DIR }}/results/*-report-full-compressed.json:"
               trace "$(ls -l ${{ env.ARTIFACTS_DIR }}/results/*-report-full-compressed.json)"
 
+              local -a sanitized_bencher_args
+
               sanitized_bencher_args=("${BENCHER_ARGS[@]}")
               for i in "${!sanitized_bencher_args[@]}"; do
                   if [[ "${sanitized_bencher_args[$i]}" == "--token" ]] && (( i + 1 < ${#sanitized_bencher_args[@]} )); then
                       sanitized_bencher_args[$((i + 1))]="$secret_str"
                   fi
               done
+
               trace "Running command: bencher run ${sanitized_bencher_args[*]}"
           fi
 
@@ -244,69 +245,16 @@ jobs:
           temp_bencher_out=$(mktemp)
           trap 'rm -f "$temp_bencher_out"' EXIT
 
-          if [[ $verbose == "true" ]]; then
-              sanitized_bencher_args=("${BENCHER_ARGS[@]}")
-              for i in "${!sanitized_bencher_args[@]}"; do
-                  if [[ "${sanitized_bencher_args[$i]}" == "--token" ]] && (( i + 1 < ${#sanitized_bencher_args[@]} )); then
-                      sanitized_bencher_args[$((i + 1))]="$secret_str"
-                  fi
-              done
-              trace "Running command: bencher run ${sanitized_bencher_args[*]}"
-          fi
-
-          # Capture Bencher output so we can distinguish threshold alerts from transport failures.
-          temp_bencher_out=$(mktemp)
-          trap 'rm -f "$temp_bencher_out"' EXIT
           if bencher run "${BENCHER_ARGS[@]}" 2>&1 | tee "$temp_bencher_out"; then
               info "Upload to Bencher succeeded."
           else
               bencher_rc=${PIPESTATUS[0]}
-              if grep -qi "branch head is null" "$temp_bencher_out" && [[ " ${BENCHER_ARGS[*]} " == *" --branch-start-point "* ]]; then
-                  warning "Bencher failed with 'branch head is null'. Retrying once without --branch-start-point."
-
-                  retry_args=()
-                  skip_next="false"
-                  for arg in "${BENCHER_ARGS[@]}"; do
-                      if [[ "$skip_next" == "true" ]]; then
-                          skip_next="false"
-                          continue
-                      fi
-
-                      if [[ "$arg" == "--branch-start-point" ]]; then
-                          skip_next="true"
-                          continue
-                      fi
-
-                      retry_args+=("$arg")
-                  done
-                  BENCHER_ARGS=("${retry_args[@]}")
-
-                  : > "$temp_bencher_out"
-                  if [[ $verbose == "true" ]]; then
-                      sanitized_bencher_args=("${BENCHER_ARGS[@]}")
-                      for i in "${!sanitized_bencher_args[@]}"; do
-                          if [[ "${sanitized_bencher_args[$i]}" == "--token" ]] && (( i + 1 < ${#sanitized_bencher_args[@]} )); then
-                              sanitized_bencher_args[$((i + 1))]="$secret_str"
-                          fi
-                      done
-                      trace "Retrying command: bencher run ${sanitized_bencher_args[*]}"
-                  fi
-
-                  if bencher run "${BENCHER_ARGS[@]}" 2>&1 | tee "$temp_bencher_out"; then
-                      bencher_rc=0
-                      info "Upload to Bencher succeeded after retry without --branch-start-point."
-                  else
-                      bencher_rc=${PIPESTATUS[0]}
-                  fi
-              fi
-
               if [[ "$bencher_rc" -ne 0 ]]; then
                   if grep -q "Alerts detected" "$temp_bencher_out"; then
                       warning "Bencher uploaded results but detected threshold alerts."
                   else
                       error "Bencher run failed before completing successfully."
                   fi
-                  cat "$temp_bencher_out" | to_stdout
                   exit "$bencher_rc"
               fi
           fi
