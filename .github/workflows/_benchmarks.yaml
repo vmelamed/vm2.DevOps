@@ -139,6 +139,8 @@ jobs:
               --minver-prerelease-id "${{ inputs.minver-prerelease-id }}" \
               --artifacts "${{ env.ARTIFACTS_DIR }}"
 
+          trace "Benchmarks completed. Preparing to upload results to Bencher.dev with max regression threshold of ±${{ inputs.max-regression-pct }}%."
+
           # Calculate thresholds as decimals (e.g., 10% -> LOWER_THRESHOLD=0.90, 10% -> UPPER_THRESHOLD=0.10)
           LOWER_THRESHOLD=$(echo "scale=4; ${{ inputs.max-regression-pct }} / 100" | bc)
           UPPER_THRESHOLD=$(echo "scale=4; ${{ inputs.max-regression-pct }} / 100" | bc)
@@ -328,7 +330,7 @@ jobs:
 
           REPO_NAME="${{ github.repository }}"
           BENCHER_SLUG=$(echo "${REPO_NAME#*/}" | tr '[:upper:]' '[:lower:]' | tr '.' '-')
-            BENCHER_BRANCH="${{ github.head_ref || github.ref_name }}"
+          BENCHER_BRANCH="${{ github.head_ref || github.ref_name }}"
 
           {
               echo "### 📊 Benchmark Results"

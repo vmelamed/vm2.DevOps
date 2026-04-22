@@ -148,6 +148,8 @@ if [[ $dry_run != true ]]; then
         exit 2
     fi
 
+    trace "Benchmark tests completed successfully. Found JSON benchmark results."
+    # shellcheck disable=SC2119
     {
         echo "✅ Benchmark tests completed successfully. Generated benchmark results:"
         for file in "${json_files[@]}"; do
@@ -155,9 +157,11 @@ if [[ $dry_run != true ]]; then
         done
     } | to_summary
 
+    trace "Processing benchmark results for Bencher.dev upload and GitHub summary report generation..."
     # Append markdown benchmark tables to the step summary
     md_files=("$results_dir"/*-report-github.md)
     if [[ -f "${md_files[0]}" ]]; then
+        # shellcheck disable=SC2119
         {
             for file in "${md_files[@]}"; do
                 echo ""
