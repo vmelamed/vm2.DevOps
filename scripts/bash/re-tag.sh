@@ -56,8 +56,10 @@ delete_tag()
 {
     local tag="$1"
     execute git tag -d "$tag"
+    trace "Deleted local tag '$tag'."
     if git ls-remote --tags origin "$tag" | grep -q "$tag"; then
         execute git push origin ":refs/tags/$tag"
+        trace "Deleted remote tag 'origin/$tag'."
     else
         warning "Tag '$tag' not found on origin — skipping remote deletion."
     fi
@@ -70,7 +72,12 @@ if [[ "$delete_mode" == true ]]; then
     info "Deleted '$del_tag'."
 else
     delete_tag "$old_tag"
+
     execute git tag "$new_tag" "$commit"
+    trace "Created new tag '$new_tag' → commit ${commit:0:12}."
+
     execute git push origin "$new_tag"
+    trace "Pushed new tag 'origin/$new_tag'."
+
     info "Renamed '$old_tag' → '$new_tag' at ${commit:0:12}."
 fi
