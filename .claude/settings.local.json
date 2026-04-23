@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod +x *)",
+      "Bash(git -C /home/valo/repos/vm2/vm2.Linq.Expressions fetch --tags --force)",
+      "Bash(git -C /home/valo/repos/vm2/vm2.Linq.Expressions for-each-ref --sort=creatordate --format='%\\(creatordate:iso-strict\\) %\\(refname:short\\)' refs/tags)",
+      "Bash(/home/valo/repos/vm2/vm2.DevOps/scripts/bash/re-tag.sh --delete v1.1.0-preview.5)",
+      "Bash(/home/valo/repos/vm2/vm2.DevOps/scripts/bash/re-tag.sh --delete v1.1.0-preview.6)",
+      "Bash(/home/valo/repos/vm2/vm2.DevOps/scripts/bash/re-tag.sh --delete v1.0.0-preview.2)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(dotnet test *)"
+    ]
+  }
+}
