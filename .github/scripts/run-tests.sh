@@ -20,6 +20,7 @@ declare -xr default_minver_tag_prefix='v'
 declare -xr default_minver_prerelease_id="preview.0"
 declare -xr default_tests_artifacts_dir="./TestResults"
 declare -ixr default_min_coverage_pct=80
+declare -ixr default_min_branch_coverage_pct=80
 
 declare -x test_project=${TEST_PROJECT:-}
 declare -x configuration=${CONFIGURATION:="${default_configuration}"}
@@ -28,6 +29,7 @@ declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"${default_minver_tag_prefix}"}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"${default_minver_prerelease_id}"}
 declare -x tests_artifacts_dir=${TEST_ARTIFACTS_DIR:-"${default_tests_artifacts_dir}"}
 declare -ix min_coverage_pct=${MIN_COVERAGE_PCT:-"${default_min_coverage_pct}"}
+declare -ix min_branch_coverage_pct=${MIN_BRANCH_COVERAGE_PCT:-"${default_min_branch_coverage_pct}"}
 
 source "$script_dir/run-tests.usage.sh"
 source "$script_dir/run-tests.args.sh"
@@ -202,9 +204,9 @@ execute reportgenerator \
     -targetdir:"$coverage_reports_dir" \
     -reporttypes:TextSummary,html_dark,MarkdownSummaryGithub,Badges \
     minimumCoverageThresholds:lineCoverage="$min_coverage_pct" \
-    minimumCoverageThresholds:branchCoverage="$min_coverage_pct" \
+    minimumCoverageThresholds:branchCoverage="$min_branch_coverage_pct" \
     minimumCoverageThresholds:methodCoverage="$min_coverage_pct" \
-    minimumCoverageThresholds:fullMethodCoverage="$min_coverage_pct"
+    minimumCoverageThresholds:fullMethodCoverage="$min_branch_coverage_pct"
 
 if [[ "$uninstall_reportgenerator" = true ]]; then
     trace "Uninstalling the tool 'reportgenerator'..."
