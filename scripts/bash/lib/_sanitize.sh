@@ -783,3 +783,22 @@ function is_safe_dotnet_version()
 {
     is_valid_dotnet_version "$@"
 }
+
+#-------------------------------------------------------------------------------
+# Summary: Escapes special characters in a string for use in extended regular expressions (ERE).
+# Parameters:
+#   1 - The string to escape
+# Returns:
+#   The escaped string, with special regex characters prefixed by a backslash
+# Usage: escaped=$(escape_ere "some string with special chars.*")
+# Notes: Escapes characters that have special meaning in ERE: [](){}.^$*+?|\
+#-------------------------------------------------------------------------------
+function escape_ere()
+{
+    (( $# == 1 )) || {
+        error 3 "${FUNCNAME[0]}() requires one argument (provided $#): the string that needs its special ERE characters to be escaped."
+        return "$err_invalid_arguments"
+    }
+
+    printf '%s' "$1" | sed 's/[][(){}.^$*+?|\\]/\\&/g'
+}

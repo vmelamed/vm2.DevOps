@@ -43,6 +43,20 @@ declare -xr default__ignore=/dev/null
 
 declare -x _ignore=$default__ignore                 # the file to redirect unwanted output to, changing the value may be useful for debugging, e.g. to redirect to /dev/stdout
 
+# add below all projects that are considered part of the vm2 family and are expected to be present in the same repository as the
+# scripts using this core library, so that they can be easily referenced by the scripts without needing to detect them
+# dynamically. This is useful for scripts that do work across all vm2 projects, e.g. diff-shared and change-ver-string.sh.
+# vm2.DevOps is intentionally not included in this list, to avoid accidentally introducing dependencies on it from the other
+# projects.
+declare -rxa vm2_projects=(
+    "vm2.Templates"
+    "vm2.TestUtilities"
+    "vm2.Glob"
+    "vm2.SemVer"
+    "vm2.Ulid"
+    "vm2.LinqExpressions")
+
+
 # source the components of the core library
 source "${lib_dir}/_error_codes.sh"
 source "${lib_dir}/_constants.sh"
