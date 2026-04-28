@@ -100,18 +100,17 @@ They follow the same three-file pattern where applicable.
 
 ### diff-shared.sh
 
-Compares pre-defined set of files from the "source-of-truth" directories (cloned repositories `vm2.DevOps` and `.github`) with
-the corresponding files in a target directory. Useful for keeping common files (config, settings, `Directory.*.props`, workflow
-files, etc.) in-sync across repositories. The script assumes that the repositories `vm2.DevOps` and `.github` are in the same
-directory which may be defined by the environment variable `$VM2_REPOS` or given by the option `--vm2-repos`
+Compares a set of files from the repo `vm2.Templates` (the "source of truth") with the corresponding files in a target repository, and takes actions to keep them in sync based on the configuration or CLI parameters. Useful for keeping commonly shared files (config, settings, `Directory.*.props`, workflow files, etc.) in-sync across repositories provided the "source-of-truth" is up to data. The script assumes that the directories of the repositories `vm2.Templates` and the target repository are cloned under the same directory which may be defined by the environment variable `$VM2_REPOS` or given by the option `--vm2-repos`.
 
-The tool comprises of the following files, expected to be in the same directory:
+By default all files defined in the mandatory configuration file `diff-shared.config.json` are compared, but the user can modify that behavior by having an optional configuration file `diff-shared.custom.json` in the target repository or by providing CLI parameters to specify a subset of files and specific actions to compare.
+
+The tool comprises of the following bash script files, expected to be in the same directory (usually `$VM2_REPOS/vm2.DevOps/scripts/bash/`):
 
 - `diff-shared.sh` - the main script
-- `diff-shared.args.sh` - script arguments parsing (sourced)
-- `diff-shared.usage.sh` - script usage information (sourced)
+- `diff-shared.args.sh` - implements parsing of the script arguments (sourced)
+- `diff-shared.usage.sh` - provides the usage information (sourced)
 - `diff-shared.functions.sh` - script with reusable bash functions (sourced)
-- `diff-shared.config.json` - mandatory global configuration file
+- `diff-shared.config.json` - the mandatory global configuration file (rarely and centrally edited)
 
 The script compares one by one the source and the target files using a configurable comparison (`diff`-like) tool. If the target
 file is not found, or there are differences between the files, the tool takes an action depending on the configured, per-file

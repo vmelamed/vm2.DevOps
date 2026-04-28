@@ -3,42 +3,43 @@
 <!-- TOC tocDepth:2..5 chapterDepth:2..6 -->
 
 - [Architecture](#architecture)
-  - [1. Layers](#1-layers)
-    - [1.1. Layer 1: Consumer Workflows](#11-layer-1-consumer-workflows)
-      - [1.1.1. Push De-dupe Logic](#111-push-de-dupe-logic)
-    - [1.2. Layer 2: Reusable Workflows](#12-layer-2-reusable-workflows)
-      - [1.2.1. CI Pipeline (`_ci.yaml`)](#121-ci-pipeline-_ciyaml)
-      - [1.2.2. Build (`_build.yaml`)](#122-build-_buildyaml)
-      - [1.2.3. Gate Job Pattern (`postrun-ci`)](#123-gate-job-pattern-postrun-ci)
-      - [1.2.4. Test (`_test.yaml`)](#124-test-_testyaml)
-      - [1.2.5. Benchmarks (`_benchmarks.yaml`)](#125-benchmarks-_benchmarksyaml)
-      - [1.2.6. Pack (`_pack.yaml`)](#126-pack-_packyaml)
-      - [1.2.7. Prerelease (`_prerelease.yaml`)](#127-prerelease-_prereleaseyaml)
-      - [1.2.8. Release (`_release.yaml`)](#128-release-_releaseyaml)
-        - [1.2.8.1. Example Walkthrough](#1281-example-walkthrough)
-        - [1.2.8.2. Prerelease Guard](#1282-prerelease-guard)
-      - [1.2.9. Clear Cache (`_clear_cache.yaml`)](#129-clear-cache-_clear_cacheyaml)
-    - [1.3. Layer 3: Bash Scripts](#13-layer-3-bash-scripts)
-      - [1.3.1. CI Scripts (`/.github/actions/scripts/`)](#131-ci-scripts-githubactionsscripts)
-      - [1.3.2. Composite Action (`action.yaml`)](#132-composite-action-actionyaml)
-      - [1.3.3. Bash Library (`/scripts/bash/lib/`)](#133-bash-library-scriptsbashlib)
-      - [1.3.4. Utility Scripts (`/scripts/bash/`)](#134-utility-scripts-scriptsbash)
-  - [2. Caching Strategy](#2-caching-strategy)
-    - [2.1. NuGet Package Cache (dual-layer)](#21-nuget-package-cache-dual-layer)
-    - [2.2. Build Artifact Cache](#22-build-artifact-cache)
-    - [2.3. Cache Cleanup](#23-cache-cleanup)
-  - [3. Script Distribution](#3-script-distribution)
-  - [4. NuGet Authentication](#4-nuget-authentication)
-  - [5. Actions Secrets](#5-actions-secrets)
-  - [6. Dependabot Secrets](#6-dependabot-secrets)
-  - [7. Naming Conventions](#7-naming-conventions)
-    - [7.1. `args_to_github_output` — Automatic Name Translation](#71-args_to_github_output--automatic-name-translation)
+  - [Layers](#layers)
+    - [Layer 1: Consumer Workflows](#layer-1-consumer-workflows)
+      - [Push De-dupe Logic](#push-de-dupe-logic)
+      - [Gathering Inputs](#gathering-inputs)
+    - [Layer 2: Reusable Workflows](#layer-2-reusable-workflows)
+      - [CI Pipeline (`_ci.yaml`)](#ci-pipeline-_ciyaml)
+      - [Build (`_build.yaml`)](#build-_buildyaml)
+      - [Gate Job Pattern (`postrun-ci`)](#gate-job-pattern-postrun-ci)
+      - [Test (`_test.yaml`)](#test-_testyaml)
+      - [Benchmarks (`_benchmarks.yaml`)](#benchmarks-_benchmarksyaml)
+      - [Pack (`_pack.yaml`)](#pack-_packyaml)
+      - [Prerelease (`_prerelease.yaml`)](#prerelease-_prereleaseyaml)
+      - [Release (`_release.yaml`)](#release-_releaseyaml)
+        - [Example Walkthrough](#example-walkthrough)
+        - [Prerelease Guard](#prerelease-guard)
+      - [Clear Cache (`_clear_cache.yaml`)](#clear-cache-_clear_cacheyaml)
+    - [Layer 3: Bash Scripts](#layer-3-bash-scripts)
+      - [CI Scripts (`/.github/actions/scripts/`)](#ci-scripts-githubactionsscripts)
+      - [Composite Action (`action.yaml`)](#composite-action-actionyaml)
+      - [Bash Library (`/scripts/bash/lib/`)](#bash-library-scriptsbashlib)
+      - [Utility Scripts (`/scripts/bash/`)](#utility-scripts-scriptsbash)
+  - [Caching Strategy](#caching-strategy)
+    - [NuGet Package Cache (dual-layer)](#nuget-package-cache-dual-layer)
+    - [Build Artifact Cache](#build-artifact-cache)
+    - [Cache Cleanup](#cache-cleanup)
+  - [Script Distribution](#script-distribution)
+  - [NuGet Authentication](#nuget-authentication)
+  - [Actions Secrets](#actions-secrets)
+  - [Dependabot Secrets](#dependabot-secrets)
+  - [Naming Conventions](#naming-conventions)
+    - [`args_to_github_output` — Automatic Name Translation](#args_to_github_output--automatic-name-translation)
 
 <!-- /TOC -->
 
-fourvm2.DevOps provides CI/CD automation for .NET NuGet packages through a four-layer architecture.
+vm2.DevOps provides CI/CD automation framework for .NET NuGet packages through a four-layer architecture.
 
-## 1. Layers
+## Layers
 
 ```text
 ┌─────────────────────────────────────────────────────────┐
@@ -59,22 +60,36 @@ fourvm2.DevOps provides CI/CD automation for .NET NuGet packages through a four-
 └─────────────────────────────────────────────────────────┘
 ```
 
-### 1.1. Layer 1: Consumer Workflows
+```text
+Top-level Workflows      Reusable Workflows                  Bash Scripts                     Bash Library
+vm2.*                    vm2.DevOps/.github/workflows        vm2.DevOps/.github/scripts/      vm2.DevOps/scripts/bash/lib/
 
-Stored in **`vm2.Templates/templates/AddNewPackage/content/.github/workflows/`**, these are the thin, per-repo entry points.
-Each consumer workflow sets repo-specific parameters (project paths, coverage thresholds, etc.)
-and delegates to a reusable workflow via GitHub Actions property
-`uses: vmelamed/vm2.DevOps/.github/workflows/_*.yaml@main`.
+═══════════════════════► ══════════════════════════════════► ═══════════════════════════════► ════════════════════════════
 
-| Template             | Triggers                                         | Calls          |
-| :------------------- | :----------------------------------------------- | :------------- |
-| `CI.yaml`            | `push` to main, `pull_request` targeting main    | `_ci.yaml`     |
-| `Prerelease.yaml`    | workflow_run (after CI succeeds on main)         | `_prerelease`  |
-| `Release.yaml`       | Manual `workflow_dispatch`                       | `_release`     |
-| `ClearCache.yaml`    | Manual `workflow_dispatch`                       | `_clear_cache` |
-| `AutoMerge.yaml`     | `pull_request` targeting main label "auto-merge" | N/A            |
+CI.yaml ───────┬───────► actions/gather-inputs/action.yaml
+               └───────► _ci.yaml ─┬───────────────────────► validate-commits.sh ───────────►
+                                   ├───────────────────────► validate-inputs.sh ────────────►
+                                   ├──► _build.yaml ───────► build.sh ──────────────────────►
+                                   ├──► _test.yaml ────────► run-tests.sh ──────────────────►
+                                   ├──► _benchmarks.yaml ──► run-benchmarks.sh ─────────────►
+                                   └──► _pack.yaml ────────► pack.s ────────────────────────►
 
-#### 1.1.1. Push De-dupe Logic
+Prerelease.yaml ───────► _prerelease.yaml ───────────────┬─► compute-prerelease-version.sh ─►
+                                                         ├─► changelog-and-tag.sh ──────────►
+                                                         └─► publish-package.s ─────────────►
+
+Release.yaml ──────────► _release.yaml ──────────────────┬─► compute-release-version.sh ────►
+                                                         ├─► changelog-and-tag.sh ──────────►
+                                                         └─► publish-package.sh ────────────►
+
+```
+
+### Layer 1: Consumer Workflows
+
+The GitHub Actions workflows at this level originate at **`vm2.Templates/templates/AddNewPackage/content/.github/workflows/`**. They are practically copied to every new vm2 repo's `.github/workflows` when it is created with `dotnet install new vm2pkg`. These are the thin, per-repo entry points. Changes at this layer (although quite stable these days) must be kept in sync with the template's original. This is achieved by executing the standalone script `diff-shared.sh`. The script compares and then copies or merges the source-of-truth template files into the files with shared content, like the workloads at this level. Each consumer workflow sets repo-specific parameters (project paths, coverage thresholds, etc.) and delegates to a reusable workflow via GitHub Actions property `uses: vmelamed/vm2.DevOps/.github/workflows/_*.yaml@main`. For example, `CI.yaml` calls
+`_ci.yaml`, `Prerelease.yaml` calls `_prerelease.yaml`, and so on, see the diagram above.
+
+#### Push De-dupe Logic
 
 When a branch has an open pull request, both `push` and `pull_request` events fire on every commit. To avoid duplicate CI runs,
 each consumer `CI.yaml` includes de-dupe logic in the `prerun-ci` job:
@@ -88,49 +103,49 @@ each consumer `CI.yaml` includes de-dupe logic in the `prerun-ci` job:
 
 This ensures each commit runs CI exactly once regardless of event type.
 
-### 1.2. Layer 2: Reusable Workflows
+#### Gathering Inputs
+
+The workflows at this level have a number of inputs: GitHub Actions `vars`, `secrets`, and `env`-s, manually triggered actions bring inputs from the UI, etc. To handle and prioritize the inputs a composite action `gather-inputs` (`vm2.DevOps/.github/actions/gather-inputs/action.yaml`) at this level gathers the relevant inputs and exports them as parameters (`uses: ... with:...`) for the reusable workflows and scripts to consume. The input-gathering action also performs normalization and validation of inputs, ensuring consistent formats (e.g., JSON arrays for project paths) and enforcing required parameters. When extending the composite action, remember that `vars` and `env` are not automatically passed through to reusable workflows, so they must be explicitly included in the action's `outputs` and then passed as `with` parameters to the reusable workflows. See `gather-inputs/action.yaml` for the full implementation.
+
+### Layer 2: Reusable Workflows
 
 Located in **`vm2.DevOps/.github/workflows/`**. All are `workflow_call` triggered.
 
-#### 1.2.1. CI Pipeline (`_ci.yaml`)
+#### CI Pipeline (`_ci.yaml`)
 
 Orchestrates the full CI process. Accepts JSON arrays of project paths and fans out via matrix strategy.
 
 ```text
-validate-input ──► build ──┬──► test
-                           ├──► benchmarks
-                           └──► pack
+_ci.yaml ─┬───────────────────────► validate-commits.sh ──►
+          ├───────────────────────► validate-inputs.sh ───►
+          ├──► _build.yaml ───────► build.sh ─────────────►
+          ├──► _test.yaml ────────► run-tests.sh ─────────►
+          ├──► _benchmarks.yaml ──► run-benchmarks.sh ────►
+          └──► _pack.yaml ────────► pack.s ───────────────►
 ```
 
-- **validate-input** — Normalizes and validates all inputs through `validate-input.sh`. Uses a `["__skip__"]` sentinel for
-  optional stages (test, benchmarks, pack).  This is a workaround for GitHub Actions not supporting conditional `uses:` in
-  matrix jobs — the matrix must always have at least one item, and `fromJSON('[]')` would fail. The sentinel ensures a valid
-  non-empty array, and each downstream job checks `if: fromJSON(needs.validate-input.outputs.test-projects-len) > 0` to skip
-  execution when no real projects are present.
-- **build** — Compiles via `_build.yaml`. Matrices over `runners-os × build-projects`.
-- **test** — Runs via `_test.yaml`. Matrices over `runners-os`. Skipped when `test-projects` is the sentinel.
-- **benchmarks** — Runs via `_benchmarks.yaml`. Matrices over `runners-os × benchmark-projects`. Also skipped on push commits
-  containing `[skip bm]`.
-- **pack** — Validates NuGet packaging via `_pack.yaml`. Matrices over `runners-os × package-projects`.
+- **validate-commits** — Validates commit messages against Conventional Commits spec via `validate-commits.sh`. This is a CI
+  gate to enforce commit message quality and ensure reliable version calculation from commits
+- **validate-input** — Normalizes and validates all inputs through `validate-input.sh`
+- **build** — Compiles via `_build.yaml`. Matrices over `runners-os × build-projects`. Skipped when `build-projects` is empty.
+- **test** — Runs via `_test.yaml`. Matrices over `runners-os`. Skipped when `test-projects` is empty
+- **benchmarks** — Runs via `_benchmarks.yaml`. Matrices over `runners-os × benchmark-projects`. Skipped when `benchmark-projects` is empty or the push commits contain `[skip bm]`
+- **pack** — Validates NuGet packaging via `_pack.yaml`. Matrices over `runners-os × package-projects`. Skipped when `package-projects`
 
 Concurrency group `ci-${{ github.workflow_ref }}` cancels in-progress runs on new pushes.
 
-#### 1.2.2. Build (`_build.yaml`)
+#### Build (`_build.yaml`)
 
 1. Checks out repository with full history (`fetch-depth: 0`) for MinVer version calculation.
-1. Restores NuGet packages (dual-layer cache — see [Caching Strategy](#caching-strategy)).
+1. Restores NuGet packages (dual-layer cache — see [Caching Strategy](#2-caching-strategy)).
 1. Calls `build.sh` to compile the project.
 1. Saves build artifacts to cache with key `build-artifacts-{os}-{sha}-{configuration}-{run_id}`.
 
-#### 1.2.3. Gate Job Pattern (`postrun-ci`)
+#### Gate Job Pattern (`postrun-ci`)
 
-With reusable workflows and matrix strategies, GitHub Actions produces check names that include the
-workflow prefix, matrix parameters, inner job names, and event suffixes — making them impossible to
-predict for branch-protection required checks. For example, a single test matrix job might appear as
-`Run CI: Build, Test, Benchmark, Pack / Run tests (ubuntu-latest) (pull_request)`.
+With reusable workflows and matrix strategies, GitHub Actions produces check names that include the workflow prefix, matrix parameters, inner job names, and event suffixes — making them impossible to predict for branch-protection required checks. For example, a single test matrix job might appear as `Run CI: Build, Test, Benchmark, Pack / Run tests (ubuntu-latest) (pull_request)`.
 
-To solve this, each consumer `CI.yaml` includes a lightweight **gate job** that depends on all other
-jobs and reports a single, stable check name:
+To solve this, each consumer `CI.yaml` includes a final lightweight **gate job** that depends (wiats for) on all other jobs and reports a single, stable check name:
 
 ```text
 prerun-ci ──► run-ci (calls _ci.yaml) ──► postrun-ci
@@ -160,7 +175,7 @@ postrun-ci:
 - The gate job name is extracted by `repo-setup.sh` → `detect_required_checks()` which parses the consumer's CI.yaml for the
   gate job's name: property and registers it in the branch ruleset
 
-#### 1.2.4. Test (`_test.yaml`)
+#### Test (`_test.yaml`)
 
 1. Restores build artifacts from the build cache.
 1. Iterates test projects (parsed from the JSON array via `jq`).
@@ -170,7 +185,7 @@ postrun-ci:
 1. Posts a PR comment with test results and coverage details.
 1. Publishes GitHub Check annotations via `dorny/test-reporter`.
 
-#### 1.2.5. Benchmarks (`_benchmarks.yaml`)
+#### Benchmarks (`_benchmarks.yaml`)
 
 1. Restores build artifacts from the build cache.
 1. Caches the Bencher CLI binary.
@@ -178,12 +193,12 @@ postrun-ci:
 1. Tracks results via `bencher run` using a percentage threshold test (`max-regression-pct`, default 20%).
 1. Posts a PR comment with benchmark results.
 
-#### 1.2.6. Pack (`_pack.yaml`)
+#### Pack (`_pack.yaml`)
 
 1. Restores build artifacts from the build cache.
 1. Calls `pack.sh` to validate NuGet packaging succeeds.
 
-#### 1.2.7. Prerelease (`_prerelease.yaml`)
+#### Prerelease (`_prerelease.yaml`)
 
 Triggered automatically when CI succeeds after a PR merge to main (a workflow_run on the CI workflow, gated to push events on
 main with conclusion == 'success'). Can also be triggered manually via workflow_dispatch. Three sequential jobs:
@@ -195,7 +210,7 @@ main with conclusion == 'success'). Can also be triggered manually via workflow_
 1. **package-and-publish** — Checks out the prerelease tag, then calls `publish-package.sh` to build, pack, and push the
    prerelease package to the configured NuGet server.
 
-#### 1.2.8. Release (`_release.yaml`)
+#### Release (`_release.yaml`)
 
 > [!IMPORTANT] Manual dispatch.
 
@@ -206,7 +221,7 @@ Three sequential jobs:
    release Git tag.
 1. **release** — Checks out the release tag, then calls `publish-package.sh` to build, pack, and push. (see [Release Process](RELEASE_PROCESS.md#release-process))
 
-##### 1.2.8.1. Example Walkthrough
+##### Example Walkthrough
 
 Given latest stable tag `v1.2.3` and these commits since then:
 
@@ -223,19 +238,19 @@ If there were also a `refactor(core)!: rewrite engine`:
 - `!:` detected → **major bump**
 - Result: `v2.0.0`
 
-##### 1.2.8.2. Prerelease Guard
+##### Prerelease Guard
 
 If the latest prerelease tag is `v1.5.0-preview.3` but the commit-based calculation yields
 `v1.3.0`, the script adopts `1.5.0` from the prerelease instead. This prevents publishing a
 stable version with a lower number than an already-published prerelease.
 
-#### 1.2.9. Clear Cache (`_clear_cache.yaml`)
+#### Clear Cache (`_clear_cache.yaml`)
 
 Emergency cleanup. Deletes caches matching an allowlisted prefix (`nuget-`, `build-artifacts-`, or `bencher-cli-`).
 
-### 1.3. Layer 3: Bash Scripts
+### Layer 3: Bash Scripts
 
-#### 1.3.1. CI Scripts (`/.github/actions/scripts/`)
+#### CI Scripts (`/.github/actions/scripts/`)
 
 Each CI script follows a **three-file pattern** for consistency and separation of concerns the files may be even more
 than three if the script has more complex logical separation needs:
@@ -262,7 +277,7 @@ The CI scripts:
 | `changelog-and-tag.sh`          | `_prerelease`, `_release`     | Update changelog and create Git tag           |
 | `download-artifact.sh`          | (not used in CI)              | Download and extract remote artifacts         |
 
-#### 1.3.2. Composite Action (`action.yaml`)
+#### Composite Action (`action.yaml`)
 
 The file `.github/actions/scripts/action.yaml` is a composite action that adds both the scripts
 directory and the bash library directory to `$PATH`, and exports `$DEVOPS_SCRIPTS_DIR` and
@@ -272,7 +287,7 @@ Every workflow checks out the vm2.DevOps repo (sparse-checkout of `scripts/bash/
 `.github/actions/scripts`) and then invokes this action, making all scripts and library functions
 available for the rest of the job.
 
-#### 1.3.3. Bash Library (`/scripts/bash/lib/`)
+#### Bash Library (`/scripts/bash/lib/`)
 
 A shared function library sourced by scripts at startup.
 
@@ -296,7 +311,7 @@ A shared function library sourced by scripts at startup.
 Scripts source the GitHub Actions helpers `gh_core.sh` (which chains into `core.sh`) and then source additional `_*.sh` modules
 as needed.
 
-#### 1.3.4. Utility Scripts (`/scripts/bash/`)
+#### Utility Scripts (`/scripts/bash/`)
 
 Development-time scripts not used in CI:
 
@@ -312,11 +327,11 @@ Development-time scripts not used in CI:
 
 These also follow the three-file pattern where applicable.
 
-## 2. Caching Strategy
+## Caching Strategy
 
 The build pipeline uses a dual-layer NuGet cache and a build artifact cache.
 
-### 2.1. NuGet Package Cache (dual-layer)
+### NuGet Package Cache (dual-layer)
 
 1. **`setup-dotnet` built-in cache** — Keyed on `packages.lock.json` and `*.csproj` hashes.
 1. **Explicit `actions/cache`** — Weekly rotation via a `YYYY-WVV` calendar-week key, with
@@ -328,18 +343,18 @@ The build pipeline uses a dual-layer NuGet cache and a build artifact cache.
     nuget-{os}-                          (any week)
     ```
 
-### 2.2. Build Artifact Cache
+### Build Artifact Cache
 
 The build job saves compiled outputs (`**/bin/{config}` and `**/obj`) under key
 `build-artifacts-{os}-{sha}-{configuration}-{run_id}`. Downstream jobs (test, benchmarks, pack) restore from this cache to avoid
 rebuilding.
 
-### 2.3. Cache Cleanup
+### Cache Cleanup
 
 The `_clear_cache.yaml` workflow provides emergency cleanup. It restricts deletions to three allowlisted prefixes: `nuget-`,
 `build-artifacts-`, and `bencher-cli-`.
 
-## 3. Script Distribution
+## Script Distribution
 
 When a consumer repo (e.g., vm2.Glob) runs a workflow:
 
@@ -349,7 +364,7 @@ When a consumer repo (e.g., vm2.Glob) runs a workflow:
 1. For workflows running inside vm2.DevOps itself, the local checkout is used instead
    (`if: github.repository == 'vmelamed/vm2.DevOps'`).
 
-## 4. NuGet Authentication
+## NuGet Authentication
 
 All workflows that restore NuGet packages authenticate with GitHub Packages:
 
@@ -362,23 +377,23 @@ dotnet nuget update source github.vm2 \
 
 The `github.vm2` source is configured in each repo's `NuGet.config`.
 
-## 5. Actions Secrets
+## Actions Secrets
 
-| Secret                       | Used by                       | Purpose                                                                           |
-| :--------------------------- | :---------------------------- | :-------------------------------------------------------------------------------- |
-| `NUGET_API_KEY`              | `_prerelease`, `_release`     | The NuGet API key for the selected NuGet server                                     |
-| `CODECOV_TOKEN`              | `_ci` → `_test`               | Codecov upload token                                                              |
-| `BENCHER_API_TOKEN`          | `_ci` → `_benchmarks`         | Bencher.dev tracking token                                                        |
-| `REPORTGENERATOR_LICENSE`    | `_ci` → `_test`               | ReportGenerator license key                                                       |
+| Secret                       | Used by                       | Purpose                                                       |
+| :--------------------------- | :---------------------------- | :------------------------------------------------------------ |
+| `NUGET_API_KEY`              | `_prerelease`, `_release`     | The NuGet API key for the selected NuGet server               |
+| `CODECOV_TOKEN`              | `_ci` → `_test`               | Codecov upload token                                          |
+| `BENCHER_API_TOKEN`          | `_ci` → `_benchmarks`         | Bencher.dev tracking token                                    |
+| `REPORTGENERATOR_LICENSE`    | `_ci` → `_test`               | ReportGenerator license key                                   |
 | `RELEASE_PAT`                | `_prerelease`, `_release`     | Fine-grained PAT (`contents: write`) for pushing to `main` past branch protection |
 
-## 6. Dependabot Secrets
+## Dependabot Secrets
 
-| Secret                       | Used by                       | Purpose                                                                           |
-| :--------------------------- | :---------------------------- | :-------------------------------------------------------------------------------- |
+| Secret                       | Used by                       | Purpose                                                       |
+| :--------------------------- | :---------------------------- | :------------------------------------------------------------ |
 | `GH_PACKAGES_TOKEN`          | `Dependabot`                  | The GitHub Packages token used by Dependabot to authenticate with GitHub Packages |
 
-## 7. Naming Conventions
+## Naming Conventions
 
 Consistent naming transforms flow across the layers:
 
@@ -389,7 +404,7 @@ Consistent naming transforms flow across the layers:
 | Script parameters          | `--lower-kebab-case`      | `--max-regression-pct`  |
 | Script variables           | `lower_snake_case`        | `max_regression_pct`    |
 
-### 7.1. `args_to_github_output` — Automatic Name Translation
+### `args_to_github_output` — Automatic Name Translation
 
 The `args_to_github_output` function (defined in `gh_core.sh`) bridges the naming gap between bash scripts and GitHub Actions.
 It takes a list of bash variable names in `snake_case`, converts each to `kebab-case` (replacing `_` with `-`), and writes them
