@@ -31,6 +31,30 @@ inputs:
   dispatch-reset-benchmark-thresholds:
     description: "Reset benchmark thresholds flag from workflow_dispatch input."
     default: "false"
+  dotnet-version:
+    description: ".NET SDK version."
+    default: "10.0.x"
+  configuration:
+    description: "Build configuration."
+    default: "Release"
+  min-coverage-pct:
+    description: "Minimum code coverage percentage."
+    default: "80"
+  max-regression-pct:
+    description: "Maximum performance regression percentage."
+    default: "20"
+  minver-tag-prefix:
+    description: "MinVer tag prefix."
+    default: "v"
+  minver-prerelease-id:
+    description: "MinVer default pre-release identifiers."
+    default: "preview.0"
+  reset-benchmark-thresholds:
+    description: "Whether to reset benchmark thresholds (repo-level default, before dispatch override)."
+    default: "false"
+  verbose:
+    description: "Enable verbose logging."
+    default: "false"
 
 outputs:
   build-projects:
@@ -86,7 +110,7 @@ runs:
       id: gather
       shell: bash
       env:
-        VERBOSE: ${{ vars.VERBOSE || 'false' }}
+        VERBOSE: ${{ inputs.verbose }}
       run: |
         source $DEVOPS_LIB_DIR/gh_core.sh
 
@@ -95,14 +119,14 @@ runs:
         benchmark_projects='${{ inputs.benchmark-projects || '[]' }}'
         package_projects='${{ inputs.package-projects || '[]' }}'
         runners_os='${{ inputs.runners-os || '["ubuntu-latest"]' }}'
-        dotnet_version='${{ vars.DOTNET_VERSION || '10.0.x' }}'
-        configuration='${{ vars.CONFIGURATION || 'Release' }}'
+        dotnet_version='${{ inputs.dotnet-version }}'
+        configuration='${{ inputs.configuration }}'
         preprocessor_symbols='${{ inputs.preprocessor-symbols }}'
-        min_coverage_pct='${{ vars.MIN_COVERAGE_PCT || 80 }}'
-        max_regression_pct='${{ vars.MAX_REGRESSION_PCT || 20 }}'
-        minver_tag_prefix='${{ vars.MINVERTAGPREFIX || 'v' }}'
-        minver_prerelease_id='${{ vars.MINVERDEFAULTPRERELEASEIDENTIFIERS || 'preview.0' }}'
-        reset_benchmark_thresholds='${{ vars.RESET_BENCHMARK_THRESHOLDS || 'false' }}'
+        min_coverage_pct='${{ inputs.min-coverage-pct }}'
+        max_regression_pct='${{ inputs.max-regression-pct }}'
+        minver_tag_prefix='${{ inputs.minver-tag-prefix }}'
+        minver_prerelease_id='${{ inputs.minver-prerelease-id }}'
+        reset_benchmark_thresholds='${{ inputs.reset-benchmark-thresholds }}'
         skip_push='false'
 
         if [[ '${{ github.event_name }}' == 'pull_request' ||
