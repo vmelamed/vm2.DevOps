@@ -48,7 +48,7 @@ declare -x _ignore=$default__ignore                 # the file to redirect unwan
 # dynamically. This is useful for scripts that do work across all vm2 projects, e.g. diff-shared and change-ver-string.sh.
 # vm2.DevOps is intentionally not included in this list, to avoid accidentally introducing dependencies on it from the other
 # projects.
-declare -rxa vm2_projects=(
+declare -rxa vm2_repositories=(
     "vm2.Templates"
     "vm2.TestUtilities"
     "vm2.Glob"
