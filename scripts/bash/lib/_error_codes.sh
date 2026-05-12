@@ -44,6 +44,7 @@ declare -rxi err_invalid_branch=84      # The specified directory is not on the 
 declare -rxi err_repo_with_no_ci=85     # The specified repository root does not have a CI configuration in repo/.github/workflows
 declare -rxi err_dir_with_ci=86         # The specified directory is not a root directory but has a CI configuration
 declare -rxi err_dir_with_no_ci=87      # The specified directory does not have a CI configuration in dir/.github/workflows (and  is not from a git repository)
+declare -rxi err_not_repos_parent=88    # The specified vm2_repos directory is not the parent directory of the vm2 repositories. Please, ensure that the vm2 repositories are cloned into this directory or correct the parameter/environment variable.
 
 declare -rxA error_codes=(
     [$success]="The command completed successfully."
@@ -71,7 +72,8 @@ declare -rxA error_codes=(
     [$err_invalid_branch]="The specified directory is not on the expected branch."
     [$err_repo_with_no_ci]="The specified repository root does not have a CI configuration in repo/.github/workflows."
     [$err_dir_with_ci]="The specified directory is not a root directory but has a CI configuration."
-    [$err_dir_with_no_ci]="The specified directory does not have a CI configuration in dir/.github/workflows (and  is not from a git repository)."
+    [$err_dir_with_no_ci]="The specified directory does not have a CI configuration in dir/.github/workflows (and is not from a git repository)."
+    [$err_not_repos_parent]="The specified directory is not the parent directory of the vm2 repositories. Please, ensure that the vm2 repositories are cloned into this directory or correct the parameter/environment variable."
 )
 
 function error_message()
@@ -80,8 +82,8 @@ function error_message()
         echo "error_message() requires exactly 1 argument: an error code." >&2
         return "$err_invalid_arguments"
     }
-    is_non_negative "$1" || {
-        echo "error_message() argument must be a non-negative integer error code." >&2
+    is_positive "$1" || {
+        echo "error_message() argument must be a positive integer error code from 1 to 255." >&2
         return "$err_argument_type"
     }
 

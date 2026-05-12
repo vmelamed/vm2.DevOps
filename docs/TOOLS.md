@@ -32,12 +32,15 @@
 
 ## Shell & Scripting
 
-| Tool                        | Purpose                             | Link                                             |
-|-----------------------------|-------------------------------------|--------------------------------------------------|
-| bash 4.2+                   | Script runtime (namerefs, lastpipe) | —                                                |
-| shellcheck                  | Shell script linting                | [shellcheck.net](https://www.shellcheck.net)     |
-| git                         | Version control                     | [git-scm.com](https://git-scm.com)               |
-| jq                          | JSON processing                     | [jqlang.github.io](https://jqlang.github.io/jq/) |
-| yq                          | YAML processing                     | [github](https://github.com/mikefarah/yq)        |
-| realpath, basename, dirname | Path utilities (coreutils)          | —                                                |
-| grep -P (PCRE)              | Pattern matching with Perl regex    | —                                                |
+| Tool                        | Purpose                             | Link                                                     |
+|-----------------------------|-------------------------------------|----------------------------------------------------------|
+| bash 4.2+                   | Script runtime                      | —                                                        |
+| shellcheck                  | Shell script linting                | [shellcheck.net](https://www.shellcheck.net)             |
+| git                         | Version control                     | [git-scm.com](https://git-scm.com)                       |
+| jq                          | JSON processing                     | [jqlang.github.io](https://jqlang.github.io/jq/)         |
+| yq                          | YAML processing                     | [github](https://github.com/mikefarah/yq)                |
+| glow                        | Markdown rendering in terminal      | [github](https://github.com/charmbracelet/glow)          |
+| grep -P (PCRE)              | Pattern matching with Perl regex    | —                                                        |
+| diff (GNU diffutils)        | Compare files                       | [gnu.org](https://www.gnu.org/software/diffutils/)       |
+| delta (difftastic)          | Compare files *(optional, recommended)* | [github](https://github.com/dandavison/delta)        |
+| Visual Studio Code          | Merge files *(optional, recommended)* | [code.visualstudio.com](https://code.visualstudio.com) |

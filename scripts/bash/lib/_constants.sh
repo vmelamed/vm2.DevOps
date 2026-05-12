@@ -6,6 +6,9 @@
 #-------------------------------------------------------------------------------
 # This script defines constants for:
 #
+# Well known vm2 repositories and their locations relative to the parent directory where all the vm2 repositories are cloned
+# (e.g. $VM2_REPOS).
+#
 # Terminal Color and Formatting Constants ANSI escape codes for terminal text formatting and colors:
 #   Available constants:
 #       - Text formatting: BOLD, RESET
@@ -20,32 +23,60 @@
 
 # Circular include guard
 (( ${__VM2_LIB_CONSTANTS_SH_LOADED:-0} == 1 )) && return 0
-declare -gr __VM2_LIB_CONSTANTS_SH_LOADED=1
+declare -xr __VM2_LIB_CONSTANTS_SH_LOADED=1
+
+# Add below all projects that are considered part of the vm2 family and are expected to be present in the same repository as the
+# scripts using this core library, so that they can be easily referenced by the scripts without needing to detect them
+# dynamically. This is useful for scripts that do work across all vm2 projects, e.g. diff-shared and change-ver-string.sh.
+# vm2.DevOps is intentionally not included in this list, to avoid accidentally introducing dependencies on it from the other
+# projects.
+declare -rxa vm2_repositories=(
+    "vm2.Templates"
+    "vm2.TestUtilities"
+    "vm2.Glob"
+    "vm2.SemVer"
+    "vm2.Ulid"
+    "vm2.Linq.Expressions")
 
 #-------------------------------------------------------------------------------
-# Constant: specifies the repository that contains the shared, source-of-truth files - relative to the parent directory
-#           (e.g. $VM2_REPOS) where these repositories are cloned. Some of the files that the directory contains are:
-#           .editorconfig, .gitmessage, .gitattributes, Directory.*.props, etc., the dependabot config file
-#           .github/dependabot.yaml, the GitHub actions workflows .github/workflows.CI.yaml, .github/workflows.Prerelease.yaml,
-#           .github/workflows.Release.yaml, etc..
-#-------------------------------------------------------------------------------
-declare -xr vm2_sot_repo="vm2.Templates"
-
-#-------------------------------------------------------------------------------
-# Constant: specifies the expected location of the vm2 repositories' shared files - a source of truth directory relative to the
-#           parent directory (e.g. $VM2_REPOS) where these repositories are cloned. Some of the files that the directory
-#           contains are: .editorconfig, .gitmessage, .gitattributes, Directory.*.props, etc., the dependabot config file
-#           .github/dependabot.yaml, the GitHub actions workflows .github/workflows.CI.yaml, .github/workflows.Prerelease.yaml,
-#           .github/workflows.Release.yaml, etc..
-#-------------------------------------------------------------------------------
-declare -xr vm2_sot_shared="$vm2_sot_repo/templates/AddNewPackage/content"
-
-#-------------------------------------------------------------------------------
-# Constant: specifies the expected location of the vm2 DevOps repository relative to the parent directory where all the vm2
+# Constant: specifies the expected location of the vm2.DevOps repository relative to the parent directory where all the vm2
 #           repositories are cloned (e.g. $VM2_REPOS). The vm2 DevOps repository contains scripts and callable GitHub Actions
 #           workflow templates that are used by the other vm2 repositories.
 #-------------------------------------------------------------------------------
-declare -xr vm2_devops="vm2.DevOps"
+declare -rx vm2_devops_repo_name="vm2.DevOps"
+
+#-------------------------------------------------------------------------------
+# There are many files in the VM2 repositories that are repeated in other projects (repositories) and all or at least big parts
+# of their content is identical across projects that were created off the same `dotnet add new` template. This shared content
+# may drift and it needs to be kept in sync across repositories. The sources of truth (SoT) for the shared content are the
+# templates in the vm2.Templates repository. E.g. the SoT files for the projects that produce NuGet packages is in the
+# AddNewPackage template and they are located in the "templates/AddNewPackage/content" directory in the vm2.Templates
+# repository. Some of the SoT files are: .editorconfig, .gitignore, global.json, coverage.settings.xml, etc. These are files
+# that are almost always shared without changes across repositories created off the same template. Some other files, e.g.
+# Directory.Build.props and Directory.Build.targets, .github/CI.yaml are shared but they often have some differences across
+# repositories (additional NuGet packages, or test projects to be run in CI, etc.).
+
+#-------------------------------------------------------------------------------
+# Constant: specifies the repository that contains the shared, source-of-truth files relative to the parent directory where
+#           these repositories are cloned (e.g. $VM2_REPOS).
+#-------------------------------------------------------------------------------
+declare -rx vm2_sot_repo_name="vm2.Templates"
+
+#-------------------------------------------------------------------------------
+# Constant: specifies the names of the directories in the vm2.Templates repository (sub-directory "templates/") that contain
+#           "dotnet add package" templates for building vm2 projects.
+#           projects sources of truth templates and
+#           and configuration files therein.
+declare -rxa sources_of_truth=(
+    "AddNewPackage")
+
+#-------------------------------------------------------------------------------
+# Constant: specifies the which SoT directory to use as a source for comparison and synchronization. The script may allow
+#           overriding it by passing the --sot option.
+#           The default value is AddNewPackage, which is the directory in the vm2.Templates repository that contains the source
+#           of truth files for the AddNewPackage template. The script may support other scenarios in the future, and each
+#           template may have its own directory in the vm2.Templates repository.
+declare -rx default_sot="AddNewPackage"
 
 declare -rx varNameRegex="^[A-Za-z_][A-Za-z0-9_]*$"
 declare -rx nugetServersRegex="^(nuget|github|https?://[-a-zA-Z0-9._/]+)$";

@@ -21,16 +21,11 @@ declare -x script_name
 declare -x script_dir
 declare -x lib_dir
 declare -x initial_dir
+declare __devops_parent=""
 
-if [[ ! -v script_name || -z "$script_name" ]]; then
-    script_name=$(basename "${BASH_SOURCE[-1]}")
-fi
-if [[ ! -v script_dir || -z "$script_dir" ]]; then
-    script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[-1]}")")
-fi
-if [[ ! -v lib_dir || -z "$lib_dir" ]]; then
-    lib_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
-fi
+[[ ! -v script_name    || -z "$script_name"    ]] && script_name=$(basename "${BASH_SOURCE[-1]}")
+[[ ! -v script_dir     || -z "$script_dir"     ]] && script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[-1]}")")
+[[ ! -v lib_dir        || -z "$lib_dir"        ]] && lib_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 initial_dir=$(pwd)
 
 # variables commonly used for diagnostics
@@ -39,23 +34,13 @@ declare -rx script_dir
 declare -rx lib_dir
 declare -rx initial_dir
 
-declare -xr default__ignore=/dev/null
-
-declare -x _ignore=$default__ignore                 # the file to redirect unwanted output to, changing the value may be useful for debugging, e.g. to redirect to /dev/stdout
-
-# add below all projects that are considered part of the vm2 family and are expected to be present in the same repository as the
-# scripts using this core library, so that they can be easily referenced by the scripts without needing to detect them
-# dynamically. This is useful for scripts that do work across all vm2 projects, e.g. diff-shared and change-ver-string.sh.
-# vm2.DevOps is intentionally not included in this list, to avoid accidentally introducing dependencies on it from the other
-# projects.
-declare -rxa vm2_repositories=(
-    "vm2.Templates"
-    "vm2.TestUtilities"
-    "vm2.Glob"
-    "vm2.SemVer"
-    "vm2.Ulid"
-    "vm2.LinqExpressions")
-
+declare -rx default__ignore=/dev/null
+declare -x _ignore=$default__ignore
+# Use $_ignore to redirect unwanted output, e.g. errors from commands or tools, to avoid cluttering the terminal or logs. When
+# you need to see the output for debugging purposes, you can redirect $_ignore to /dev/stderr, but NEVER redirect it to /dev/stdout!
+# If it is redirected to stdout AND the output of the whole command is captured or redirected, it will interfere with the
+# expected output of the command, leading to incorrect results or unexpected behavior. Therefore NEVER assign a file to $_ignore
+# directly. Use the functions below to manipulate it.
 
 # source the components of the core library
 source "${lib_dir}/_error_codes.sh"
@@ -69,12 +54,6 @@ source "${lib_dir}/_user.sh"
 source "${lib_dir}/_git.sh"
 source "${lib_dir}/_sanitize.sh"
 
-# Use $_ignore to redirect unwanted output, e.g. errors from commands or tools, to avoid cluttering the terminal or logs. When
-# you need to see the output for debugging purposes, you can redirect $_ignore to /dev/stderr, but NEVER redirect it to /dev/stdout!
-# If it is redirected to stdout AND the output of the whole command is captured or redirected, it will interfere with the
-# expected output of the command, leading to incorrect results or unexpected behavior. Therefore NEVER assign a file to $_ignore
-# directly. Use the functions below to manipulate it.
-
 trace "We are running in CI mode: $ci"
 # Override the default or environment values of common flags based on other flags upon sourcing.
 # Make sure that the other set_* functions are honoring the ci flag.
@@ -87,6 +66,23 @@ if $ci; then
 else
     set_table_format "${DUMP_FORMAT:-graphical}"      # on terminal, default to graphical format unless overridden by DUMP_FORMAT
 fi
+
+function get_devops_parent()
+{
+    if [[ -z $__devops_parent ]]; then
+        r=$(root_working_tree "$lib_dir") && __devops_parent=$(dirname "$r" 2> "$_ignore") || {
+            error 3 "Failed to resolve parent directory of the vm2.DevOps repo from the script directory '$lib_dir'. Please ensure that the script is located in 'vm2.DevOps/scripts/bash/lib' and that the repository is not in a detached HEAD state."
+            exit "$err_not_git_directory"
+        }
+
+        # freeze it!
+        readonly __devops_parent
+    fi
+
+    echo "$__devops_parent"
+    return "$success"
+}
+
 
 #-------------------------------------------------------------------------------
 # Summary: EXIT trap handler that displays failed commands, restores directory, and disables tracing.

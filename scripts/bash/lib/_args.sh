@@ -52,6 +52,15 @@ declare -rx ci                                      # Indicates whether the scri
                                                     # their values should be based only on environment variables defined by the
                                                     # CI/CD system, e.g. GitHub Actions, Azure DevOps, etc. Usually env.var. $CI
 
+declare -xa common_args=(
+    debugger
+    ci
+    PWD
+    quiet
+    verbose
+    dry_run
+)
+
 [[ -n "${_Dbg_DEBUGGER_LEVEL:-}" || -n "${BASHDB_HOME:-}" ]] && debugger=true || debugger=false
 declare -xr debugger                                # Indicates whether the script is running under a debugger, e.g. BashDb.
                                                     # SHOULD NOT BE OVERRIDDEN BY TOP-LEVEL SWITCHES AND OPTIONS!
@@ -430,6 +439,7 @@ function usage()
     local -i exit_code=$success
     (( $# > 0 )) && is_natural "$1" && exit_code=$1 && shift
 
+    # the remaining arguments are error messages to display at the top of the usage text
     (( $# > 0 && exit_code == success )) && exit_code=$failure
 
     # save the tracing state and disable tracing

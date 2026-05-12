@@ -19,45 +19,62 @@ function usage_text()
         vars="$common_vars"
     fi
 
+    local sot_dir
+    sot_dir=${VM2_REPOS:-$(get_devops_parent)}
+
     cat << EOF
-Usage: ${script_name} [<repo-directory>] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
+Usage: ${script_name} [<repo-directory>...] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch>]*
 
-Compares a pre-defined set of common files (e.g. .editorconfig, .gitignore, etc.) from the specified <repo-directory> with the
-corresponding set of files from the source-of-truth repository '$vm2_sot_shared'.
-Note that the <repo-directory> doesn't need to be the root of the repository working tree but deeper. This may be useful for
-multi-solution repository or repository that contains a dotnet template project.
+Compares a pre-defined set of files with shared contents across repositories from one or more target repositories with the
+corresponding source-of-truth (SoT) files listed in ${scrip-name}.config.json from the SoT scenario specified by the
+--source-of-truth parameter. Note that <repo-directory> does not need to be the root of the repository working tree — a deeper
+path works too. This is useful for multi-solution repositories or repositories that contain a dotnet template project.
 
-The root directories of the source-of-truth repositories are expected to be found under the same parent directory, specified
-either by the environment variable \$VM2_REPOS or the --vm2-repos option.
+The root directories of all vm2 repositories are expected under the same parent directory, specified either by the
+environment variable \$VM2_REPOS or the --vm2-repos option.
 
-The <repo-directory> will be determined in the following order:
-  - If not specified, the current working directory is used as the target directory and then
-  - The target directory is sought in the current working directory, otherwise
-  - It is sought under the directory specified by the \$VM2_REPOS environment variable or the --vm2-repos option.
-
-See the README.md file for more details.
+Each <repo-directory> is resolved in the following order:
+  - If not specified, the current working directory is used, otherwise
+  - The name is looked up under the directory specified by \$VM2_REPOS or --vm2-repos.
 
 Arguments:
-  <repo-directory>              Determines the target directory for the operation. It can be:
-                                1) not specified - the current working directory is used
-                                2) just the name of the project's repository (assumed under \$VM2_REPOS)
-                                3) the full path to the project's directory that is either the root of the working tree or
-                                   inside it (useful for dotnet template projects)
+  <repo-directory>              The target repository for the operation. Can be:
+                                1) omitted - the current working directory is used
+                                2) a repository name (looked up under \$VM2_REPOS)
+                                3) an absolute or relative path to a directory that is the root of the
+                                   working tree or inside it
+                                Multiple repositories can be specified as positional arguments.
 
 Options:
-  -r, --vm2-repos               The parent directory of the vm2 templates and shared files '$vm2_sot_shared' are
-                                cloned. Initial from the VM2_REPOS environment variable or '\$HOME/repos/vm2'
-  -f, --files                   A comma-separated list of files to compare/copy/merge. Instead of going through all the pre-
-                                defined files, only the specified files from the full list are processed. The file names can be
-                                regular expressions.
-                                Example: -f '.*ya?ml$' or --files 'Dockerfile,Directory.*'
+  -r, --vm2-repos <dir>         The parent directory where all vm2 repositories are cloned.
+                                Initial value from \$VM2_REPOS or '\$HOME/repos/vm2'.
+  -s, --source-of-truth <sot>   The source-of-truth scenario to use. Must be one of the pre-defined
+                                scenarios in '\$VM2_REPOS/vm2.Templates/templates/'.
+  -a, --all-repos               Compare all pre-defined vm2 repositories under \$VM2_REPOS with the SoT,
+                                one by one. The set is defined in 'lib/core.sh'.
+  -f, --file <pattern>          A comma-separated list of glob patterns. Only files matching the patterns
+                                are processed; the action is taken from the configuration.
+                                Example: --file 'Directory.*.props' or -f '*.yaml,*.toml'
+  --file-ignore <pattern>       Same as --file but overrides the action to 'ignore'.
+  --file-merge-or-copy <pattern>
+                                Same as --file but overrides the action to 'merge or copy' (asks the user).
+  --file-ask-to-merge <pattern> Same as --file but overrides the action to 'ask to merge'.
+  --file-merge <pattern>        Same as --file but overrides the action to 'merge' (no prompt).
+  --file-ask-to-copy <pattern>  Same as --file but overrides the action to 'ask to copy'.
+  --file-copy <pattern>         Same as --file but overrides the action to 'copy' (no prompt).
+  --summary <file>              Write the run summary to <file> in Markdown format. If not specified,
+                                a temporary file is created, displayed at the end, and then deleted.
 $switches
 Environment Variables:
-  VM2_REPOS                     The parent directory of '$vm2_sot_shared' and the other vm2.* project repositories are cloned.
+  VM2_REPOS                     The parent directory where all vm2 repositories are cloned.
 $vars
 Configuration Files:
-    The script uses a configuration file 'diff-shared.actions.json' located in the project's directory to customize the actions
-    taken when differences are found. (See the README.md file for more details.)
+  diff-shared.config.json       Located in the SoT directory. Defines the set of files with shared contents,
+                                the default action for each, and the diff/merge tools to use.
+  diff-shared.custom.json       Optional. Located in the root of the target repository. Overrides actions
+                                and diff/merge tools for that repository only.
+
+For more information see 'docs/diff-shared.md'.
 
 EOF
 }

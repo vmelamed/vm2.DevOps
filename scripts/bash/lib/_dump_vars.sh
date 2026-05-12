@@ -17,22 +17,22 @@ declare -rx varNameRegex
 declare -rxi success
 declare -rxi err_invalid_nameref
 
-gth="┌────────────────────────────────────────────────────────────────────────────"
+gth="╔════════════════════════════════════════════════════════════════════════════"
 
-gbh="├──────────────────────────────────────┬─────────────────────────────────────"
+gbh="╟────────────────────────────────────────────────────────────────────────────"
 
-gmt="├──────────────────────────────────────┴─────────────────────────────────────"
+gmt="╟──────────────────────────────────────┴─────────────────────────────────────"
 
-gmb="├──────────────────────────────────────┬─────────────────────────────────────"
+gmb="╟──────────────────────────────────────┬─────────────────────────────────────"
 
-gln="├──────────────────────────────────────┼─────────────────────────────────────"
+gln="╟──────────────────────────────────────┼─────────────────────────────────────"
 
-gbl="│                                      │                                     "
+gbl="║                                      │                                     "
 
-gbt="└──────────────────────────────────────┴─────────────────────────────────────"
+gbt="╚══════════════════════════════════════╧═════════════════════════════════════"
 
-ghf="│ %s\n"
-gvf="│ \$%-35s │ %-35s\n"
+ghf="║ %s\n"
+gvf="║ %-36s │ %-35s\n"
 
 # shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
 declare -A graphical=(
@@ -51,7 +51,7 @@ mbh="|:-------------------------------------|:----------------------------------
 mln="|--------------------------------------|-------------------------------------|"
 mbl="|                                      |                                     |"
 mhf="| %-36s |                                     |\n"
-mvf="| \$%-35s | %-35s |\n"
+mvf="| %-36s | %-35s |\n"
 
 # shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
 declare -A markdown=(
@@ -97,6 +97,7 @@ function _write_title()
 # Usage: _write_line <variable_name>  # internal use only
 # Notes: Internally used by dump_vars. Do not use, as it may change in the future. Handles scalars, arrays, associative arrays, functions, and undefined variables differently.
 #-------------------------------------------------------------------------------
+# shellcheck disable=SC2059 # Don't use variables in the printf format string. Use printf "..%s.." "$foo".
 function _write_line()
 {
      [[ $1 =~ $varNameRegex ]] || {
@@ -104,24 +105,25 @@ function _write_line()
         return "$err_invalid_nameref"
     }
 
+    local -n table
+    table=$(get_table_format)
+    local format
+    format=${table["value_format"]}
     local -n v=$1
     local value
 
     if is_defined_associative_array "$1"; then
-        first=true
+        printf "$format" "$1" "${#v[@]} values:"
         for key in "${!v[@]}"; do
-            if [[ $first == true ]]; then
-                value="${#v[@]}: ($key→${v[$key]}"
-                first=false
-            else
-                value+=", $key→${v[$key]}"
-            fi
+            printf "$format" "  [$key]:" "  '${v[$key]}'"
         done
-        value+=")"
     elif is_defined_array "$1"; then
-        value="${#v[@]}: (${v[*]})"
+        printf "$format" "$1" "${#v[@]} items:"
+        for i in "${!v[@]}"; do
+            printf "$format" "  [$i]:" "  '${v[i]}'"
+        done
     elif is_defined_function "$1"; then
-        value="$1()"
+        printf "$format" "$1" "$1()"
     elif is_defined_variable "$1"; then
         # shellcheck disable=SC2154
         case $1 in
@@ -132,15 +134,11 @@ function _write_line()
             *            )  local secret=${2:-false}
                             [[ $secret == true ]] && value="$secret_str" || value="$v" ;;
         esac
+        printf "$format" "$1" "$value"
     else
-        value="❌ '$1' is unbound, undefined, or invalid"
+        printf "$format" "$1" "❌ '$1' is unbound, undefined, or invalid"
     fi
 
-    local -n table
-    table=$(get_table_format)
-
-    # shellcheck disable=SC2059 # Don't use variables in the printf format string. Use printf "..%s.." "$foo".
-    printf "${table["value_format"]}" "$1" "$value"
     return "$success"
 }
 
@@ -192,7 +190,8 @@ function dump_vars()
     local -n table
     table=$(get_table_format)
 
-    local top=true
+    local top=true  # is this the top header?
+    local hdr=false # is the next entry a header?
     while (( $# > 0 )); do
         v=$1
         shift
@@ -200,38 +199,28 @@ function dump_vars()
             -h|--header )
                 v=$1
                 shift
-                if [[ $top == true ]]; then
-                    echo "${table["top_header"]}"
-                    _write_title "$v"
-                    echo "${table["bottom_header"]}"
-                    top=false
-                else
-                    echo "${table["top_mid_header"]}"
-                    _write_title "$v"
-                    echo "${table["bottom_mid_header"]}"
-                fi
+                $top && echo "${table["top_header"]}" || {
+                    ! $hdr && echo "${table["top_mid_header"]}"
+                }
+                top=false
+                hdr=false
+                _write_title "$v"
+                [[ $1 != -h && $1 != --header ]] && hdr=false || hdr=true # is the next entry also a header?
+                $hdr && echo "${table["bottom_header"]}" || echo "${table["bottom_mid_header"]}"
                 ;;
             -b|--blank )
                 echo "${table["blank"]}"
-                top=false
                 ;;
             -l|--line )
                 echo "${table["line"]}"
-                top=false
                 ;;
             -s|--secret )
                 v=$1
                 shift
-                if [[ ! $v =~ ^-.* ]]; then
-                    _write_line "$v" true;
-                    top=false
-                fi
+                [[ ! $v =~ ^-.* ]] && _write_line "$v" true
                 ;;
             * )
-                if [[ ! $v =~ ^-.* ]]; then
-                    _write_line "$v";
-                    top=false
-                fi
+                [[ ! $v =~ ^-.* ]] && _write_line "$v"
                 # all options starting with '-' are already processed
                 ;;
         esac

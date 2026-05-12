@@ -14,6 +14,9 @@ function usage_text()
     local switches=""
     local vars=""
 
+    local shared
+    shared=$(get_vm2_sot_path "$vm2_repos" "$sot")
+
     if $long_text; then
         switches="$common_switches"
         vars="Environment Variables:$common_vars"
@@ -97,9 +100,9 @@ Examples:
   ${script_name} vm2.Glob --audit
 
 Configured local Git settings:
-  core.hooksPath                Set to '\$VM2_REPOS/$vm2_devops/scripts/githooks'
+  core.hooksPath                Set to '\$VM2_REPOS/$vm2_devops_repo_name/scripts/githooks'
                                 Tells Git where to find repository hook scripts (e.g. pre-commit, commit-msg).
-  commit.template               Set to '\$VM2_REPOS/$vm2_sot_shared/.gitmessage'
+  commit.template               Set to '$shared/.gitmessage'
                                 Specifies the default commit message template shown when creating commits.
   pull.rebase                   Set to 'true'
                                 Makes 'git pull' rebase local commits on top of upstream changes instead of merging.

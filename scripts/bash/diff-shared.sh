@@ -8,10 +8,10 @@ set -euo pipefail
 script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/lib")
-
-declare -xr script_name
-declare -xr script_dir
-declare -xr lib_dir
+# freeze them!
+declare -rx script_name
+declare -rx script_dir
+declare -rx lib_dir
 
 # shellcheck disable=SC1091
 {
@@ -19,23 +19,10 @@ declare -xr lib_dir
     source "$lib_dir/_git_vm2.sh"
 }
 
-# environment variables:
-declare -xr VM2_REPOS
-declare -xr default_vm2_repos
+# environment variables and defaults:
+declare -rx default_sot
 
-# arguments
-declare -x target_dir=""
-declare -x vm2_repos=""
-declare -xa file_regexes=()
-
-source "${script_dir}/diff-shared.args.sh"
-source "${script_dir}/diff-shared.usage.sh"
-source "${script_dir}/diff-shared.functions.sh"
-
-get_arguments "$@"
-
-declare -i rc=0
-
+# Import constants
 declare -rxi success
 declare -rxi failure
 declare -rxi err_invalid_arguments
@@ -47,194 +34,287 @@ declare -rxi err_not_directory
 declare -rxi err_not_git_root
 declare -rxi err_behind_latest_stable_tag
 declare -rxi err_invalid_repo
-declare -rxi err_invalid_repo
 declare -rxi err_found_too_many
 declare -rxi err_repo_with_no_ci
 declare -rxi err_dir_with_no_ci
 declare -rxi err_not_git_directory
 declare -rxi err_dir_with_ci
 
-declare -xr semverTagReleaseRegex
+declare -rx semverTagReleaseRegex
+declare -rx vm2_devops_repo_name
+declare -ra sources_of_truth
 
-declare target_repo_root
+# Declare variables that will be shared with the functions:
 declare -xi rc="$success"
 
+source "${script_dir}/diff-shared.functions.sh"
+source "${script_dir}/diff-shared.args.sh"
+source "${script_dir}/diff-shared.usage.sh"
+
+# this is the data model of the script. Bash does not have complex data structures, so we use parallel arrays to store the
+# source files, target files and actions. The index of the arrays corresponds to the same file pair and action. For example,
+# source_files[0], target_files[0] and file_actions[0] correspond to the same file pair and action:
+declare -xa source_files=()         # array of the paths of the SoT files
+declare -xa target_files=()         # array of target paths corresponding to the SoT files by index
+declare -xa file_actions=()         # array of default action strings corresponding to the SoT files by index
+
+# arguments:
+declare -x vm2_repos=""
+declare -x sot=$default_sot
+declare -xa target_repos=()         # the target repositories specified as arguments. If not specified, the current directory is used as the only target repo.
+declare -xA selectors_actions=()     # array [file] => [action string] for files specified on the CLI with --file* options
+declare -x summary_file=""
+declare -x diff_only="false"
+declare -xa arguments=(             # array of all arguments for logging and debugging purposes
+    vm2_repos
+    selectors_actions
+    target_repos
+    sot
+    summary_file
+    diff_only
+)
+
+get_arguments "$@"
+
+[[ -n "$summary_file" ]] || {
+    summary_file=$(mktemp -p /tmp "diff-shared-log-$(date +%Y%m%d-%H%M%S)-XXXXXX.md")
+    trap 'rm -f "$summary_file"' EXIT
+}
+
+dump_args --quiet
+
+is_in "$sot" "${sources_of_truth[@]}" || {
+    error "Invalid source of truth '$sot'. Valid values are: ${sources_of_truth[*]}."
+    exit "$err_argument_value"
+}
+
 #===============================
-# Find and validate vm2_repos:
+# Adjust, validate and freeze the arguments:
 #===============================
 vm2_repos=$(resolve_vm2_repos "$vm2_repos") ||
     usage "$rc" "Could not find the parent directory for the vm2 repositories. Please, set the VM2_REPOS environment variable or provide the path as an argument with '--vm2-repos' option."
+declare -rx vm2_repos
+trace "All vm2 repositories are expected to be in '$vm2_repos'"
 
-trace "All vm2 repositories are expected in '$vm2_repos'"
+# if no repos were specified as arguments, use the current directory as the only target repo:
+(( ${#target_repos[@]} != 0 )) || target_repos+=("$(pwd)")
+declare -rxa target_repos
 
-# make sure we are seeing SoT and vm2.DevOps properly through vm2_repos
-# shellcheck disable=SC2154
-[[ -d "$vm2_repos/$vm2_sot_shared" && -d "$vm2_repos/$vm2_devops" ]] ||
-    usage "$err_not_found" "The GitHub Actions workflow templates directory '$vm2_repos/$vm2_sot_shared' and/or the '$vm2_devops' directory are missing from '$vm2_repos'. Please clone the repositories into '$vm2_repos' or correct the parameter/environment variable."
+declare -rxA selectors_actions
 
+#===============================
+# Adjust, validate and freeze the source of truth:
+#===============================
+# ensure vm2.DevOps is a valid Git repository and is not behind the latest stable tag:
 rc="$success"
-validate_repo_root "$vm2_repos/$vm2_devops" "$vm2_repos" "main" || rc=$?
+validate_repo_root "$vm2_devops_repo_name" "$vm2_repos" "main" || rc=$?
 (( rc == err_behind_latest_stable_tag )) &&
-    error "The repository in '$vm2_repos/$vm2_devops' is behind the latest stable tag. Please update it to the latest version of the main branch."
+    error "The repository in '$vm2_devops_repo_name' is behind the latest stable tag. Please update it to the latest version of the main branch."
 
+# ensure the SoT repository is a valid Git repository and is not behind the latest stable tag:
 rc="$success"
-# shellcheck disable=SC2154
-validate_repo_root "$vm2_repos/$vm2_sot_repo" "$vm2_repos" "main" || rc=$?
+validate_repo_root "$vm2_sot_repo_name" "$vm2_repos" "main" || rc=$?
 (( rc == err_behind_latest_stable_tag )) &&
-    error "The repository in '$vm2_repos/$vm2_sot_shared' is behind the latest stable tag. Please update it to the latest version of the main branch."
+    error "The repository in '$vm2_sot_repo_name' is behind the latest stable tag. Please update it to the latest version of the main branch."
+
+sot_path=$(get_vm2_sot_path "$vm2_repos" "$sot") || rc=$?
+(( rc != success )) &&
+    usage "$rc" "Could not find the source of truth directory for the specified template '$sot' in the expected location in '$vm2_repos'. Please make sure it exists or correct the parameter/environment variable."
+readonly sot_path
+trace "The source of truth directory for the '$sot' template is expected in '$sot_path'"
 
 exit_if_has_errors
 
-#=================================================
-# Validate and adjust target_path from target_dir:
-#=================================================
-rc="$success"
-output=$(resolve_repo_root "$target_dir" "$vm2_repos" 2>"$_ignore") || rc=$?
+declare -a sot_dump_vars=(
+    --header "Configuration for SoT $sot:"
+    vm2_repos
+    sot
+    --header "Common Arguments:"
+    "${common_args[@]}"
+    --header "Arguments:"
+    "${arguments[@]}"
+    --header "Data Model:"
+    source_files
+    --quiet
+    # --force
+)
+dump_vars "${sot_dump_vars[@]}"
 
-# here we can only work with git repos and directories that have CI configured:
-(( rc == success || rc == err_dir_with_ci )) ||
-    usage "$rc" "The specified target directory '$target_dir' is invalid. It should have CI configured in '$target_dir/.github/workflows'."
+{
+    echo -e "# Summary\n"
+    echo -e "## Source of truth: **$sot** (\`$sot_path\`)\n"
+} >> "$summary_file"
 
-{ IFS= read -r target_repo_root; IFS= read -r target_path; } <<< "$output"
+# Resolve and validate all repositories specified as arguments, and prepare the list of target files and actions for each of them:
+declare -a target_roots=()
+declare -a target_paths=()
 
-# if it is a git repo then make sure it is in a clean state:
-if (( rc == success )); then
-    branch="$(git -C "$target_repo_root" branch --show-current 2>"$_ignore")" || {
-        rc=$?
-        error "The repository in the specified target directory '$target_dir' appears corrupted."
+for target in "${target_repos[@]}"; do
+    output=$(resolve_target "$target") || {
+        error "Could not resolve the path of the target repository '$target'. Please, ensure that it exists and is a valid directory."
+        reset_errors
+        continue
     }
-    (( rc == success )) && ensure_fresh_git_state "$target_repo_root" "$branch" ||
-        error "The specified target repository at '$target_repo_root' on branch '$branch' is not in a clean state. Please, commit or stash your changes."
-else
-    branch="<not a git repository>"
-fi
+    {
+        read -r target_root
+        read -r target_path
+    } <<< "$output"
+    target_roots+=("$target_root")
+    target_paths+=("$target_path")
+done
 
-exit_if_has_errors
+declare -i i
 
-trace "The target project is in '$target_path' with working tree directory root '$target_repo_root', on branch '$branch'."
+for (( i=0; i < ${#target_repos[@]}; i++ )); do
+    target_root="${target_roots[i]}"
+    target_path="${target_paths[i]}"
 
-# freeze the arguments
-declare -xr vm2_repos
-declare -xr target_dir
-declare -xr target_path
+    # Load tools, file names and actions from the global config JSON
+    configure "$sot_path" "$target_path" || {
+        error "Failed to load configuration for the SoT directory '$sot_path'."
+        reset_errors
+        continue
+    }
 
-dump_args
+    # customize from the custom config JSON in the current target if it exists
+    if (( ${#selectors_actions[@]} > 0 )); then
+        customize "$target_root" true || rc=$?
+        parameterize
+    else
+        customize "$target_root" false || rc=$?
+    fi
 
-declare -a source_files
-declare -a target_files
-declare -A file_actions
+    exit_if_has_errors
 
-configure   # Load files and actions from the global config JSON
-customize   # Load custom actions from the custom config JSON if it exists
+    {
+        echo -e "### Target: ${target#"$vm2_repos/"} ($target_path)\n"
+        if $diff_only; then
+            echo -e "| Source of Truth File | Shared Content File | Difference |"
+            echo -e "|:---------------------|:--------------------|:-----------|"
+        else
+            echo -e "| Source of Truth File | Shared Content File | Difference | Action |"
+            echo -e "|:---------------------|:--------------------|:-----------|:-------|"
+        fi
+    } >> "$summary_file"
 
-# validate the configuration
-if [[ ${#source_files[@]} -ne ${#target_files[@]} ]] ||
-   [[ ${#source_files[@]} -ne ${#file_actions[@]} ]]; then
-    error "The data in the config tables does not match."
-fi
+    target_dump_vars=(
+        --header "Configuration for Target '$target':"
+        --header "Data Model:"
+        target_files
+        file_actions
+        --quiet
+        # --force
+    )
+    dump_vars "${target_dump_vars[@]}"
 
-exit_if_has_errors
+    declare -i j
+    for (( j=0; j < ${#source_files[@]}; j++ )); do
 
-# get the diff and merge tools
-get_diff_tool
-get_merge_tool
+        source_file="${source_files[j]}"
+        target_file="${target_files[j]}"
+        actions="${file_actions[j]}"
+        $diff_only && [[ -n $actions ]] && actions=$action_ignore
 
-declare -i i=0
-
-while [[ $i -lt ${#source_files[@]} ]]; do
-    source_file="${source_files[i]}"
-    target_file="${target_files[i]}"
-    actions="${file_actions[$source_file]}"
-    (( ++i ))
-
-    if [[ ${#file_regexes[@]} -gt 0 ]]; then
-        matched=false
-        for regex in "${file_regexes[@]}"; do
-            if [[ "$source_file" =~ $regex ]]; then
-                matched=true
-                break
-            fi
-        done
-        if [[ $matched == false ]]; then
-            trace "Skipping file '$source_file' as it does not match any of the provided regexes."
+        if [[ -z $actions ]]; then
+            trace "$(printf "%-84s ---- Skipping  ---- %-s\n" "${source_file#"$vm2_repos/${vm2_sot_repo_name}/templates/"}" "${target_file#"$vm2_repos/"}")"
             continue
         fi
-    fi
 
-    is_verbose && trace < <(printf "\n%-73s ---- Comparing ---- %-s\n" "${source_file#"$vm2_repos"/}" "${target_file#"$vm2_repos"/}")
+        declare difference=""
+        declare action=""
 
-    if [[ ! -s "$target_file" ]]; then
-        case $actions in
-            "$action_ignore" )
-                continue
-                ;;
-            "$action_merge_or_copy" | "$action_ask_to_merge" | "$action_ask_to_copy" )
-                confirm "Target file '${target_file}' does not exist. Do you want to copy it from '${source_file}'?" "y" && \
-                copy_file "$source_file" "$target_file"
-                ;;
-            "$action_merge" | "$action_copy" )
-                copy_file "$source_file" "$target_file"
-                ;;
-            * )
-                error "Unknown action '$actions' for files '${source_file}' and '${target_file}'."
-                press_any_key
-                ;;
-        esac
-        continue
-    fi
-
-    show_diff=true
-    if is_in "$actions" "$action_ignore" "$action_merge" "$action_copy"; then
-        show_diff=false
-    fi
-
-    if are_different "${source_file}" "${target_file}" "$show_diff"; then
-        if ! is_quiet; then
+        # if the target file does not exist - copy it or ask the user and then copy it
+        # also, do not show visual diff for the actions that are not asking the user anything
+        if [[ ! -s "$target_file" ]]; then
+            trace "$(printf "%-s does not exist\n" "${target_file#"$vm2_repos"/}")"
+            difference=" ✗ missing"
+            action="ignored"
             case $actions in
                 "$action_ignore" )
-                    continue
                     ;;
 
-                "$action_merge_or_copy" )
-                    echo "File '${source_file}' is different from '${target_file}'."
-                    case $(choose "What do you want to do?" \
-                                  "Do nothing - continue" \
-                                  "Merge the files" \
-                                  "Copy '$source_file' file to '$target_file'") in
-                        2) merge "$target_file" "$source_file" || true
-                           ;;
-                        3) copy_file "$source_file" "$target_file"
-                           ;;
-                        *) ;;
-                    esac
+                "$action_merge_or_copy" | "$action_ask_to_merge" | "$action_ask_to_copy" )
+                    confirm "Target file '$target_file' does not exist. Do you want to copy it from '${source_file}'?" "y" && {
+                        copy_file "$source_file" "$target_file"
+                        action="copied"
+                    }
                     ;;
 
-                "$action_ask_to_merge" )
-                    echo "File '${source_file}' is different from '${target_file}'."
-                    confirm "Do you want to merge '${source_file}' to file '${target_file}'?" "n" && \
-                    merge "$target_file" "$source_file" || true
-                    ;;
-
-                "$action_merge" )
-                    merge "$target_file" "$source_file" || true
-                    ;;
-
-                "$action_ask_to_copy" )
-                    echo "File '${source_file}' is different from '${target_file}'."
-                    confirm "Do you want to copy '${source_file}' to file '${target_file}'?" "n" && \
+                "$action_merge" | "$action_copy" )
                     copy_file "$source_file" "$target_file"
-                    ;;
-
-                "$action_copy" )
-                    copy_file "$source_file" "$target_file"
+                    action="copied"
                     ;;
 
                 * )
                     error "Unknown action '$actions' for files '${source_file}' and '${target_file}'."
+                    action="error"
+                    press_any_key
+                    ;;
+            esac
+            $diff_only &&
+                echo "| ${source_file#"$vm2_repos/"} | ${target_file#"$vm2_repos/"} | $difference |" >> "$summary_file" ||
+                echo "| ${source_file#"$vm2_repos/"} | ${target_file#"$vm2_repos/"} | $difference | $action |" >> "$summary_file"
+            continue
+        fi
+
+        is_in "$actions" "$action_ignore" "$action_merge" "$action_copy" && show_diff=false || show_diff=true
+        are_different "$source_file" "$target_file" "$show_diff" && difference=" ≠ different" || difference=" = identical"
+        action="ignored"
+        if [[ $difference == "different" ]]; then
+            case $actions in
+                "$action_ignore" )
+                    ;;
+
+                "$action_merge_or_copy" )
+                    case $(choose "What do you want to do?" \
+                                "Do nothing - continue" \
+                                "Merge the files" \
+                                "Copy '$source_file' file to '$target_file'") in
+                        2 ) merge "$target_file" "$source_file" && action="merged" || action="not merged"
+                            ;;
+                        3 ) copy_file "$source_file" "$target_file"
+                            action="copied"
+                            ;;
+                        * ) ;;
+                    esac
+                    ;;
+
+                "$action_ask_to_merge" )
+                    confirm "Do you want to merge '${source_file}' to file '${target_file}'?" "n" && {
+                        merge "$target_file" "$source_file" && action="merged" || action="not merged"
+                    }
+                    ;;
+
+                "$action_merge" )
+                    merge "$target_file" "$source_file" && action="merged" || action="not merged"
+                    ;;
+
+                "$action_ask_to_copy" )
+                    confirm "Do you want to copy '${source_file}' to file '${target_file}'?" "n" && {
+                        copy_file "$source_file" "$target_file"
+                        action="copied"
+                    }
+                    ;;
+
+                "$action_copy" )
+                    copy_file "$source_file" "$target_file"
+                    action="copied"
+                    ;;
+
+                * ) error "Unknown action '$actions' for files '${source_file}' and '${target_file}'."
+                    action="error"
                     press_any_key
                     ;;
             esac
         fi
-        echo ""
-    fi
-done
+        $diff_only &&
+            echo "| ${source_file#"$vm2_repos/${vm2_sot_repo_name}/templates/"} | ${target_file#"$vm2_repos/"} | $difference |" >> "$summary_file" ||
+            echo "| ${source_file#"$vm2_repos/${vm2_sot_repo_name}/templates/"} | ${target_file#"$vm2_repos/"} | $difference | $action |" >> "$summary_file"
+    done # SoT files loop
+
+    echo "" >> "$summary_file"
+done # repositories loop
+
+(command -v -p "glow" > "$_ignore" || which "glow" &>"$_ignore") &&
+    glow -w 150 "$summary_file" ||
+    cat "$summary_file"

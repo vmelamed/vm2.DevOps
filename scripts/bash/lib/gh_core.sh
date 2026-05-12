@@ -19,12 +19,12 @@ declare -x script_name
 # The directory of the top-level calling script
 declare -x script_dir
 # The directory of my core library for shell scripts - usually
-# "$VM2_REPOS/$vm2_devops/scripts/bash/lib"
+# "$VM2_REPOS/$vm2_devops_repo_name/scripts/bash/lib"
 declare -x lib_dir
 
 [[ ! -v script_name || -z "$script_name" ]] && script_name=$(basename "${BASH_SOURCE[-1]}")
-[[ ! -v script_dir || -z "$script_dir" ]] && script_dir=$(realpath -e "$(dirname "${BASH_SOURCE[-1]}")")
-[[ ! -v lib_dir || -z "$lib_dir" ]] && lib_dir=$(realpath -e "$(dirname "${BASH_SOURCE[0]}")")
+[[ ! -v script_dir  || -z "$script_dir"  ]] && script_dir=$(realpath -e "$(dirname "${BASH_SOURCE[-1]}")")
+[[ ! -v lib_dir     || -z "$lib_dir"     ]] && lib_dir=$(realpath -e "$(dirname "${BASH_SOURCE[0]}")")
 
 source "${lib_dir}/core.sh"
 source "${lib_dir}/_dotnet.sh"

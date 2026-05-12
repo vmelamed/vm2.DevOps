@@ -29,6 +29,7 @@ declare -xr default_branch="main"
 declare -xr default_interactive=false
 declare -xr default_configure_local=true
 declare -xr default_audit=false
+declare -rx default_sot
 
 # start with default input
 declare -x repo_path=""
@@ -44,6 +45,7 @@ declare -x description=""
 declare -x use_ssh=true
 declare -x use_https=false
 declare -x repo_owner=${ORGANIZATION:-$default_owner}
+declare -rx sot=$default_sot
 
 declare -x vm2_repos=""
 declare -x repo_name=""
@@ -98,23 +100,25 @@ vm2_repos=$(resolve_vm2_repos "$vm2_repos") ||
 trace "All vm2 repositories are expected in '$vm2_repos'"
 init_default_local_git_settings "$vm2_repos"
 
+sot_path=$(get_vm2_sot_path "$vm2_repos" "$sot")
+
 # make sure we are seeing the templates and vm2.DevOps properly through vm2_repos
-[[ -d "$vm2_repos/$vm2_sot_shared" && -d "$vm2_repos/$vm2_devops" ]] ||
-    usage "$err_not_found" "The GitHub Actions workflow templates directory .github and/or the '$vm2_devops' directory is missing in '$vm2_repos', Please clone the repositories into '$vm2_repos'."
+[[ -d "$sot_path" && -d "$vm2_repos/$vm2_devops_repo_name" ]] ||
+    usage "$err_not_found" "The GitHub Actions workflow templates directory .github and/or the '$vm2_devops_repo_name' directory is missing in '$vm2_repos', Please clone the repositories into '$vm2_repos'."
 
 rc="$success"
-validate_repo_root "$vm2_repos/$vm2_devops" "$vm2_repos" "main" || rc=$?
+validate_repo_root "$vm2_repos/$vm2_devops_repo_name" "$vm2_repos" "main" || rc=$?
 (( rc == err_behind_latest_stable_tag )) &&
-    error "The repository in '$vm2_repos/$vm2_devops' is behind the latest stable tag. Please update it to the latest commit on the main branch."
+    error "The repository in '$vm2_repos/$vm2_devops_repo_name' is behind the latest stable tag. Please update it to the latest commit on the main branch."
 
 rc="$success"
-validate_repo_root "$vm2_repos/$vm2_sot_repo" "$vm2_repos" "main" || rc=$?
+validate_repo_root "$vm2_repos/$vm2_sot_repo_name" "$vm2_repos" "main" || rc=$?
 (( rc == err_behind_latest_stable_tag )) &&
-    error "The repository in '$vm2_repos/$vm2_sot_shared' is behind the latest stable tag. Please update it to the latest commit on the main branch."
+    error "The repository in '$sot_path' is behind the latest stable tag. Please update it to the latest commit on the main branch."
 
 declare -x _ci_yaml=''
 
-_ci_yaml="$vm2_repos/$vm2_devops/.github/workflows/_ci.yaml"
+_ci_yaml="$vm2_repos/$vm2_devops_repo_name/.github/workflows/_ci.yaml"
 [[ -s "$_ci_yaml" ]] || error "Could not find _ci.yaml GitHub Actions reusable workflow file in ${vm2_repos}."
 
 declare -xr _ci_yaml
@@ -125,7 +129,7 @@ exit_if_has_errors
 # Resolve and validate repo_path:
 #-------------------------------------------------------------------------------
 rc="$success"
-output=$(resolve_repo_root "$repo_path" "$vm2_repos") || rc=$?
+output=$(resolve_repo_root "$vm2_repos" "$repo_path") || rc=$?
 
 is_in "$rc" "$success" "$err_dir_with_ci" ||
     usage "$err_argument_value" "Could not resolve the '$repo_path' within '$vm2_repos' to a Git initialized or not working tree root with configured CI. $(error_message "$rc")"

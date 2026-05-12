@@ -73,8 +73,10 @@ function validate_gh_repo_owner()
     return "$success"
 }
 
-declare -r valid_repo_names="GitHub repository names can be up to 100 characters, cannot end with .git, and can contain letters, digits, dots, underscores, and hyphens, but must start with a letter or digit.
+valid_repo_names="GitHub repository names can be up to 100 characters, cannot end with .git, and can contain letters, digits, dots, underscores, and hyphens, but must start with a letter or digit.
 See https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user for details."
+
+readonly valid_repo_names
 
 #-------------------------------------------------------------------------------
 # Summary: Validates that the specified repository name is valid according to

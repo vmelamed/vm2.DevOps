@@ -145,19 +145,35 @@ declare -xr VM2_REPOS
 
 # shellcheck disable=SC2154
 declare -xA default_local_git_settings=(
-    ["core.hooksPath"]="$VM2_REPOS/$vm2_devops/scripts/githooks"
-    ["commit.template"]="$VM2_REPOS/$vm2_sot_shared/.gitmessage"
+    ["core.hooksPath"]="$VM2_REPOS/$vm2_devops_repo_name/scripts/githooks"
+    ["commit.template"]="$(get_vm2_sot_path "$VM2_REPOS" "$sot")/.gitmessage"
     ["pull.rebase"]=true
     ["fetch.prune"]=true
     ["push.autoSetupRemote"]=true
     ["merge.ff"]="only" # Enforce fast-forward merges to maintain linear history, which is required by the branch protection rules. If you need to merge a PR with a merge commit, you can do so locally with 'git merge --no-ff'
 )
 
+declare -rxi err_invalid_arguments=2    # The number of the arguments is invalid or more than one type of parameter error code is present
+declare -rxi err_not_directory=17       # Parameter value is not a directory
+
 function init_default_local_git_settings()
 {
-    [[ $# -eq 1 && -n "$1" ]] || error 3 "${FUNCNAME[0]}() requires exactly 1 non-empty argument: the path to the parent directory where '$vm2_devops' is cloned, e.g. the value of \$VM2_REPOS."
+    [[ $# -eq 1 && -n "$1" ]] || {
+        error 3 "${FUNCNAME[0]}() requires exactly 1 non-empty argument: the path to the parent directory where '$vm2_devops_repo_name' is cloned, e.g. the value of \$VM2_REPOS."
+        return "$err_invalid_arguments"
+    }
+    [[ -d $1 ]]  || {
+        error 3 "${FUNCNAME[0]}() must be an existing directory. Provided: '$1'"
+        return "$err_not_directory"
+    }
+
+    local repos=$1
+    local shared
+    shared=$(get_vm2_sot_path "$repos" "$sot")
+
     # cement the paths in the default_local_git_settings that depend on the location of the vm2_repos ($1):
-    default_local_git_settings["core.hooksPath"]="$1/$vm2_devops/scripts/githooks"
-    default_local_git_settings["commit.template"]="$1/$vm2_sot_shared/.gitmessage"
+    default_local_git_settings["core.hooksPath"]="$repos/$vm2_devops_repo_name/scripts/githooks"
+    default_local_git_settings["commit.template"]="$shared/.gitmessage"
+
     declare -xrA default_local_git_settings
 }

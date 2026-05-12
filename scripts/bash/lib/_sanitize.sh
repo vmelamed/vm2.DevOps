@@ -439,23 +439,23 @@ function is_safe_reason()
         return "$err_invalid_arguments"
     }
 
-    local reason="$1"
+    local rsn="$1"
     local max_length=200
 
     # Check length
-    (( ${#reason} <= max_length )) || {
+    (( ${#rsn} <= max_length )) || {
         error "The reason is too long. Maximum length is $max_length characters."
         return "$negative"
     }
 
     # Allow spaces but reject dangerous shell meta-characters
-    is_safe_input "$reason" true || {
+    is_safe_input "$rsn" true || {
         return "$negative"
     }
 
     # Reject if it looks like a command (starts with -, /, .)
-    [[ "$reason" =~ ^[-/.] ]] && {
-        error "The reason '$reason' appears to be a command or contains unsafe characters."
+    [[ "$rsn" =~ ^[-/.] ]] && {
+        error "The reason '$rsn' appears to be a command or contains unsafe characters."
         return "$negative"
     }
 

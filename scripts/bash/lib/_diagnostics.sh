@@ -207,10 +207,8 @@ function reset_errors()
     errors=0
 }
 
-declare -r no_arguments="Function called without message parameters and there are none in the pipe. Provide message parameters or pipe them into the function."
-
 #-------------------------------------------------------------------------------
-# Summary: Internal. logs messages with a given prefix and optional stack depth.
+# Summary: INTERNAL! logs messages with a given prefix and optional stack depth.
 # Parameters:
 #   1 - prefix - the prefix to prepend to each message line
 #   2 - depth - optional stack depth to display (default: 0)
@@ -221,28 +219,37 @@ declare -r no_arguments="Function called without message parameters and there ar
 #-------------------------------------------------------------------------------
 function message()
 {
+    # The first parameter is the prefix to prepend to each message line, e.g. "ERROR: ", "WARN: ", "INFO: ", etc.
     local prefix="$1"
     shift
 
+    # if the next argument is a number, it is the depth of the stack dump to display in the end
     local -i depth=0
-
-    # implement in place is_natural to avoid sourcing _predicates.sh and creating circular dependency
-    [[ "${1:-}" =~ ^[0-9]+$ ]] && depth=$1 && shift
+    is_positive "${1}" && depth=$1 && shift
 
     if [[ $# -eq 0 && -t 0 ]]; then
         # no message arguments were passed and nothing is being piped in on stdin
-        error 4 "$no_arguments"
+        error 4 "Function called without message parameters and there are none in the pipe. Provide message parameters or pipe them into the function."
         return "$err_invalid_arguments"
     fi
 
+    # The remaining parameters are the message parts or error codes to be translated to messages.
+    # If there are no remaining parameters, the message will be read from stdin.
     local first=true
     local line
+    local -i rc=$success
 
     # shellcheck disable=SC2031 # line was modified in a subshell but the f-n is called in the same subshell, so it works as intended.
     function __print_line()
     {
+        if is_positive "$line"; then
+            line=$(error_message "$line")
+            (( rc == success )) && rc=$line
+        fi
         if $first; then
-            (( depth == 0 )) && printf "%s%s\n" "$prefix" "$line" || printf "%s%s (%s): %s\n" "$prefix" "${BASH_SOURCE[1]:-}" "${BASH_LINENO[0]:-}" "$line"
+            (( depth == 0 )) &&
+                printf "%s%s\n" "$prefix" "$line" ||
+                printf "%s%s (%s): %s\n" "$prefix" "${BASH_SOURCE[1]:-}" "${BASH_LINENO[0]:-}" "$line"
             first=false
         else
             echo "           $line"
@@ -263,7 +270,7 @@ function message()
         (( depth > 0 )) && show_stack 3 "$depth" true # skips the frames of show_stack, message_out, and the message_out caller function - basically show where the error or trace was called from.
     }
 
-    return "$success"
+    return "$rc"
 }
 
 #-------------------------------------------------------------------------------
@@ -284,11 +291,10 @@ declare -xr error_prefix="❌  ERROR: "
 
 function error()
 {
-    local -i rc=0
+    local -i rc=$success
 
-    message "$error_prefix" "$@" > >(to_stderr)
-    rc=$?
     (( ++errors ))
+    message "$error_prefix" "$@" > >(to_stderr) || rc=$?
     return "$rc"
 }
 
@@ -309,7 +315,7 @@ declare -xr warning_prefix="⚠️  WARN: "
 
 function warning()
 {
-    message "$warning_prefix" "$@" > >(to_stderr)
+    message "$warning_prefix" "$@" > >(to_stderr) || true
 }
 
 #-------------------------------------------------------------------------------
@@ -328,7 +334,7 @@ declare -xr info_prefix="ℹ️  INFO: "
 
 function info()
 {
-    message "$info_prefix" "$@" > >(to_stdout)
+    message "$info_prefix" "$@" > >(to_stdout) || true
 }
 
 #-------------------------------------------------------------------------------
@@ -350,7 +356,7 @@ declare -xr trace_prefix="🐾  TRACE: "
 function trace()
 {
     ! $verbose && return "$success"
-    message "$trace_prefix" "$@" > >(to_traceout)
+    message "$trace_prefix" "$@" > >(to_traceout) || true
 }
 
 #-------------------------------------------------------------------------------
