@@ -159,7 +159,7 @@ declare -rxi err_not_directory=17       # Parameter value is not a directory
 function init_default_local_git_settings()
 {
     [[ $# -eq 1 && -n "$1" ]] || {
-        error 3 "${FUNCNAME[0]}() requires exactly 1 non-empty argument: the path to the parent directory where '$vm2_devops_repo_name' is cloned, e.g. the value of \$VM2_REPOS."
+        error 3 "${FUNCNAME[0]}() requires exactly 1 non-empty argument: the path to the parent directory where '$vm2_devops_repo_name' is cloned, e.g. the value of \$VM2_REPOS or the parameter of --vm2-repos."
         return "$err_invalid_arguments"
     }
     [[ -d $1 ]]  || {

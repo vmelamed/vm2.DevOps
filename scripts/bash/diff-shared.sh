@@ -19,10 +19,12 @@ declare -rx lib_dir
     source "$lib_dir/_git_vm2.sh"
 }
 
+#===============================
+# Imported constants
+#===============================
 # environment variables and defaults:
 declare -rx default_sot
 
-# Import constants
 declare -rxi success
 declare -rxi failure
 declare -rxi err_invalid_arguments
@@ -44,12 +46,33 @@ declare -rx semverTagReleaseRegex
 declare -rx vm2_devops_repo_name
 declare -ra sources_of_truth
 
-# Declare variables that will be shared with the functions:
-declare -xi rc="$success"
 
 source "${script_dir}/diff-shared.functions.sh"
 source "${script_dir}/diff-shared.args.sh"
 source "${script_dir}/diff-shared.usage.sh"
+
+#===============================
+# arguments:
+#===============================
+declare -x vm2_repos=""
+declare -x sot=$default_sot
+declare -xa target_repos=()         # the target repositories specified as arguments. If not specified, the current directory is used as the only target repo.
+declare -xA selectors_actions=()    # array [file] => [action string] for files specified on the CLI with --file* options
+declare -x diff_only="false"        # if true, only show the differences without asking the user to take any actions. This is useful for CI validation of the shared content. In this mode, the actions are ignored and the summary file will not contain the Action column.
+declare -x summary_file=""          # the file where the summary of the differences and actions will be written. If not specified, a temporary file will be created.
+
+#===============================
+# Shared variables:
+#===============================
+declare -xi rc="$success"
+declare -xa arguments=(             # array of all arguments for logging and debugging purposes
+    vm2_repos
+    selectors_actions
+    target_repos
+    sot
+    diff_only
+    summary_file
+)
 
 # this is the data model of the script. Bash does not have complex data structures, so we use parallel arrays to store the
 # source files, target files and actions. The index of the arrays corresponds to the same file pair and action. For example,
@@ -58,22 +81,9 @@ declare -xa source_files=()         # array of the paths of the SoT files
 declare -xa target_files=()         # array of target paths corresponding to the SoT files by index
 declare -xa file_actions=()         # array of default action strings corresponding to the SoT files by index
 
-# arguments:
-declare -x vm2_repos=""
-declare -x sot=$default_sot
-declare -xa target_repos=()         # the target repositories specified as arguments. If not specified, the current directory is used as the only target repo.
-declare -xA selectors_actions=()     # array [file] => [action string] for files specified on the CLI with --file* options
-declare -x summary_file=""
-declare -x diff_only="false"
-declare -xa arguments=(             # array of all arguments for logging and debugging purposes
-    vm2_repos
-    selectors_actions
-    target_repos
-    sot
-    summary_file
-    diff_only
-)
-
+#===============================
+# Script start:
+#===============================
 get_arguments "$@"
 
 [[ -n "$summary_file" ]] || {
@@ -93,27 +103,30 @@ is_in "$sot" "${sources_of_truth[@]}" || {
 #===============================
 vm2_repos=$(resolve_vm2_repos "$vm2_repos") ||
     usage "$rc" "Could not find the parent directory for the vm2 repositories. Please, set the VM2_REPOS environment variable or provide the path as an argument with '--vm2-repos' option."
-declare -rx vm2_repos
 trace "All vm2 repositories are expected to be in '$vm2_repos'"
 
 # if no repos were specified as arguments, use the current directory as the only target repo:
 (( ${#target_repos[@]} != 0 )) || target_repos+=("$(pwd)")
-declare -rxa target_repos
 
+declare -rx vm2_repos
+declare -rx sot
+declare -rxa target_repos
 declare -rxA selectors_actions
+declare -rx diff_only
+declare -rx summary_file
 
 #===============================
 # Adjust, validate and freeze the source of truth:
 #===============================
 # ensure vm2.DevOps is a valid Git repository and is not behind the latest stable tag:
 rc="$success"
-validate_repo_root "$vm2_devops_repo_name" "$vm2_repos" "main" || rc=$?
+validate_repo_root "$vm2_repos" "$vm2_devops_repo_name" "main" || rc=$?
 (( rc == err_behind_latest_stable_tag )) &&
     error "The repository in '$vm2_devops_repo_name' is behind the latest stable tag. Please update it to the latest version of the main branch."
 
 # ensure the SoT repository is a valid Git repository and is not behind the latest stable tag:
 rc="$success"
-validate_repo_root "$vm2_sot_repo_name" "$vm2_repos" "main" || rc=$?
+validate_repo_root "$vm2_repos" "$vm2_sot_repo_name" "main" || rc=$?
 (( rc == err_behind_latest_stable_tag )) &&
     error "The repository in '$vm2_sot_repo_name' is behind the latest stable tag. Please update it to the latest version of the main branch."
 
@@ -177,6 +190,7 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
     }
 
     # customize from the custom config JSON in the current target if it exists
+    rc="$success"
     if (( ${#selectors_actions[@]} > 0 )); then
         parameterize
         customize "$target_root" true || rc=$?
@@ -315,13 +329,11 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
         $diff_only &&
             echo "| ${source_file#"$vm2_repos/${vm2_sot_repo_name}/templates/"} | ${target_file#"$vm2_repos/"} | $difference |" >> "$summary_file" ||
             echo "| ${source_file#"$vm2_repos/${vm2_sot_repo_name}/templates/"} | ${target_file#"$vm2_repos/"} | $difference | $action |" >> "$summary_file"
-        trace "*** The files index is $files_index out of ${#source_files[@]} ***"
     done # SoT files loop
 
     echo "" >> "$summary_file"
-    trace "*** The targets index is $targets_index out of ${#target_repos[@]} ***"
 done # repositories loop
 
-(command -v -p "glow" > "$_ignore" || which "glow" &>"$_ignore") &&
+[[ $(get_table_format) != "markdown" ]] && (command -v -p "glow" > "$_ignore" || which "glow" &>"$_ignore") &&
     glow -w 150 "$summary_file" ||
     cat "$summary_file"

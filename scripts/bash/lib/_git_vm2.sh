@@ -118,9 +118,9 @@ function resolve_vm2_repos()
 #     4) it is on the specified branch (or the currently checked out branch if not specified)
 #     5) it is at or ahead of the latest stable tag of the specified branch.
 # Parameters:
-#   $1: $repo_name: repository name or absolute, or relative path to the repository, e.g. "vm2.MyRepo" or "./my_repos/vm2_packages/vm2.MyRepo".
-#   $2: $vm2_repos: the parent directory of all vm2 repositories where the repository $1 can be located as well, if it is specified by name only.
+#   $1: $vm2_repos: the parent directory of all vm2 repositories where the repository $1 can be located as well, if it is specified by name only.
 #                   (optional, default: $VM2_REPOS or "$HOME/repos/vm2"). You can use also `$(resolve_vm2_repos)` to determine the parent directory of all vm2 repositories.
+#   $2: $repo_name: repository name or absolute, or relative path to the repository, e.g. "vm2.MyRepo" or "./my_repos/vm2_packages/vm2.MyRepo".
 #   $3: $branch: the branch to check against the latest stable tag (optional, default: the currently checked out branch)
 # Returns:
 #   stdout: the absoluter path to the working tree root of the resolved repository
@@ -135,7 +135,7 @@ function resolve_vm2_repos()
 # Dependencies:
 #   git CLI (functions root_working_tree, is_on_or_after_latest_stable_tag)
 # Usage:
-#   validate_repo_root "vm2.Glob" "$vm2_repos"
+#   validate_repo_root "$vm2_repos" "vm2.Glob"
 #-------------------------------------------------------------------------------
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 function validate_repo_root()
@@ -146,17 +146,20 @@ function validate_repo_root()
         return "$err_invalid_arguments"
     }
 
-    local repo=$1
     local repos
-    repos="$(resolve_vm2_repos "$2")" || return $?
+    repos="$(resolve_vm2_repos "$1")" || return $?
+
+    local repo=$2
+
     local branch="${3}"
+
     local r
     local -i rc
 
-    # try to resolve the repository path from the parameter alone (i.e., the current working directory or the absolute path provided as the first argument)
-    r=$(realpath -e "$repo" 2> "$_ignore") ||
     # try to resolve repo_path relative to $vm2_repos
-    r=$(realpath -e "$repos/${repo#/}" 2> "$_ignore") || {
+    r=$(realpath -e "$repos/${repo#/}" 2> "$_ignore") ||
+    # try to resolve the repository path from the parameter alone (i.e., the current working directory or the absolute path provided as the first argument)
+    r=$(realpath -e "$repo" 2> "$_ignore") || {
        error 3 "Could not find the repository directory for '$repo' neither in the current working directory, nor in '$repos'."
        return "$err_not_found"
     }
@@ -312,7 +315,7 @@ function resolve_repo_root()
 
     local repos
     local dir_path
-    
+
     repos=$1
     dir_path="${2:-"$(pwd)"}"
 

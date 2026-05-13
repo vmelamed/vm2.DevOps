@@ -29,7 +29,7 @@ declare -xr default_branch="main"
 declare -xr default_interactive=false
 declare -xr default_configure_local=true
 declare -xr default_audit=false
-declare -rx default_sot
+declare -rx default_sot # AddNewPackage
 
 # start with default input
 declare -x repo_path=""
@@ -97,7 +97,7 @@ vm2_repos=$(resolve_vm2_repos "$vm2_repos") ||
     usage "$rc" "Could not find the parent directory for the vm2 repositories." \
                 "Please, set the VM2_REPOS environment variable or provide the path as an argument with '--vm2-repos' option."
 
-trace "All vm2 repositories are expected in '$vm2_repos'"
+trace "All vm2 repositories are expected to be in '$vm2_repos'"
 init_default_local_git_settings "$vm2_repos"
 
 sot_path=$(get_vm2_sot_path "$vm2_repos" "$sot")
@@ -107,16 +107,16 @@ sot_path=$(get_vm2_sot_path "$vm2_repos" "$sot")
     usage "$err_not_found" "The GitHub Actions workflow templates directory .github and/or the '$vm2_devops_repo_name' directory is missing in '$vm2_repos', Please clone the repositories into '$vm2_repos'."
 
 rc="$success"
-validate_repo_root "$vm2_repos/$vm2_devops_repo_name" "$vm2_repos" "main" || rc=$?
+validate_repo_root "$vm2_repos" "$vm2_repos/$vm2_devops_repo_name" "main" || rc=$?
 (( rc == err_behind_latest_stable_tag )) &&
     error "The repository in '$vm2_repos/$vm2_devops_repo_name' is behind the latest stable tag. Please update it to the latest commit on the main branch."
 
 rc="$success"
-validate_repo_root "$vm2_repos/$vm2_sot_repo_name" "$vm2_repos" "main" || rc=$?
+validate_repo_root "$vm2_repos" "$vm2_repos/$vm2_sot_repo_name" "main" || rc=$?
 (( rc == err_behind_latest_stable_tag )) &&
     error "The repository in '$sot_path' is behind the latest stable tag. Please update it to the latest commit on the main branch."
 
-declare -x _ci_yaml=''
+declare -x _ci_yaml
 
 _ci_yaml="$vm2_repos/$vm2_devops_repo_name/.github/workflows/_ci.yaml"
 [[ -s "$_ci_yaml" ]] || error "Could not find _ci.yaml GitHub Actions reusable workflow file in ${vm2_repos}."

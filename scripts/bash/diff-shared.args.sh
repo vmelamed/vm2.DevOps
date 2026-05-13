@@ -20,8 +20,8 @@ declare -x  vm2_repos
 declare -x  sot
 declare -xa target_repos            # the target repositories specified as arguments. If not specified, the current directory is used as the only target repo.
 declare -xA selectors_actions       # array [file] => [action string] for files specified on the CLI with --file* options
-declare -x  summary_file
 declare -x  diff_only
+declare -x  summary_file
 declare -xa arguments               # array of all arguments for logging and debugging purposes
 
 declare -xA selectors_actions=()    # array [file] => [action string] for files specified with --file* options, the rest of the files - no action
@@ -50,27 +50,27 @@ function get_arguments()
                 vm2_repos="$1"; shift
                 ;;
 
-            --file*|-f* )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for $option"
-                get_selector_action "$option" "$1"; shift
-                ;;
-
             --source-of-truth|-s )
                 [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for $option"
                 sot="$1"; shift
-                ;;
-
-            --summary )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for $option"
-                summary_file="$1"; shift
                 ;;
 
             --all-repos|-a )
                 target_repos=("${vm2_repositories[@]}")
                 ;;
 
+            --file*|-f* )
+                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for $option"
+                get_selector_action "$option" "$1"; shift
+                ;;
+
             --diff|-d )
                 diff_only="true"
+                ;;
+
+            --summary )
+                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for $option"
+                summary_file="$1"; shift
                 ;;
 
             * ) ! is_in "$value" "${target_repos[@]}" &&

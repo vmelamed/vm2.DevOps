@@ -59,6 +59,7 @@ declare -xa common_args=(
     quiet
     verbose
     dry_run
+    table_format
 )
 
 [[ -n "${_Dbg_DEBUGGER_LEVEL:-}" || -n "${BASHDB_HOME:-}" ]] && debugger=true || debugger=false
