@@ -234,12 +234,13 @@ function choose()
 
     echo "$prompt" >&2
 
-    local -i i=1
-    for o in "${options[@]}"; do
-        (( i == 1 )) &&
-            echo "  $i) $o (default)" >&2 ||
-            echo "  $i) $o" >&2
-        (( ++i ))
+    local -i opt_index
+    local opt
+    for (( opt_index=1; opt_index <= ${#options[@]}; opt_index++ )); do
+        opt="${options[opt_index-1]}"
+        (( opt_index == 1 )) &&
+            echo "  $opt_index) $opt (default)" >&2 ||
+            echo "  $opt_index) $opt" >&2
     done
 
     # read the choice

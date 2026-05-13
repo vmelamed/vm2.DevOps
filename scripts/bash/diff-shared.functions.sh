@@ -69,8 +69,12 @@ declare -rA diff_commands=(
 )
 
 declare -rA merge_commands=(
+    # ["code"]="code --new-window --wait --merge \"\$REMOTE\" \"\$LOCAL\" \"\$REMOTE\" \"\$LOCAL\""
     ["code"]="code --new-window --wait --diff \"\$REMOTE\" \"\$LOCAL\""
-    ["vscode"]="code --new-window --wait --merge \"\$REMOTE\" \"\$LOCAL\" \"\$REMOTE\" \"\$LOCAL\"" # vscode is alias for code, but just in case someone has it configured separately
+        # for the purpose of this script --diff works better for merging than --merge, because it allows to keep the merged
+        # result in the same file and does not require to specify a BASE file, which is not relevant for our use case.
+        # The user can still use the merge command with the appropriate parameters if they configure it in Git or the config file.
+    ["vscode"]="code --new-window --wait --diff \"\$REMOTE\" \"\$LOCAL\""
     ["meld"]="meld \"\$LOCAL\" \"\$REMOTE\""
     ["kdiff3"]="kdiff3 \"\$LOCAL\" \"\$REMOTE\""
     ["vimdiff"]="vimdiff \"\$LOCAL\" \"\$REMOTE\""

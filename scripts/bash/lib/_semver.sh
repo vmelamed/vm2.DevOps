@@ -221,11 +221,11 @@ function compare_semver()
     local len1=${#pre1[@]}
     local len2=${#pre2[@]}
     local -i min_len=$(( len1 < len2 ? len1 : len2 ))
-    local -i i=0
+    local -i seg_index
 
-    while (( i < min_len )); do
-        p1=${pre1[i]}
-        p2=${pre2[i]}
+    for (( seg_index=0; seg_index < min_len; seg_index++ )); do
+        p1=${pre1[seg_index]}
+        p2=${pre2[seg_index]}
         if is_natural "$p1"; then
             if is_natural "$p2"; then
                 local -i n1=$p1 n2=$p2
@@ -257,7 +257,6 @@ function compare_semver()
                 return "$rc_less_than"
             fi
         fi
-        ((i++))
     done
 
     if (( len1 != len2 )); then
