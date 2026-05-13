@@ -246,8 +246,9 @@ function undo_changes()
     (( ${#undos[@]} == 0 )) && return 0
 
     echo "To undo the changes above, you can run the following commands:"
-    for (( i=${#undos[@]}-1; i>=0; i-- )); do
-        echo "    ${undos[i]}"
+    local -i index
+    for (( index=${#undos[@]}-1; index>=0; index-- )); do
+        echo "    ${undos[index]}"
     done
     echo "and then run the script again."
 }

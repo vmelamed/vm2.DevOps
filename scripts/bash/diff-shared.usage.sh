@@ -19,27 +19,20 @@ function usage_text()
         vars="$common_vars"
     fi
 
-    local sot_dir
-    sot_dir=${VM2_REPOS:-$(get_devops_parent)}
-
     cat << EOF
 Usage: ${script_name} [<repo-directory>...] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch>]*
 
-Compares a pre-defined set of files with shared contents across repositories from one or more target repositories with the
-corresponding source-of-truth (SoT) files listed in ${scrip-name}.config.json from the SoT scenario specified by the
---source-of-truth parameter. Note that <repo-directory> does not need to be the root of the repository working tree — a deeper
-path works too. This is useful for multi-solution repositories or repositories that contain a dotnet template project.
+Compares a pre-defined set of files with shared content in one or more target repositories against the corresponding
+source-of-truth (SoT) files listed in ${script_name%.sh}.config.json in the SoT directory, for the scenario specified
+by --source-of-truth. Note that <repo-directory> does not need to be the root of the repository working tree — a deeper
+path works too. This is useful for multi-solution repositories or for repositories that contain a dotnet template project.
 
 The root directories of all vm2 repositories are expected under the same parent directory, specified either by the
 environment variable \$VM2_REPOS or the --vm2-repos option.
 
-Each <repo-directory> is resolved in the following order:
-  - If not specified, the current working directory is used, otherwise
-  - The name is looked up under the directory specified by \$VM2_REPOS or --vm2-repos.
-
 Arguments:
   <repo-directory>              The target repository for the operation. Can be:
-                                1) omitted - the current working directory is used
+                                1) omitted — the current working directory is used
                                 2) a repository name (looked up under \$VM2_REPOS)
                                 3) an absolute or relative path to a directory that is the root of the
                                    working tree or inside it
@@ -52,16 +45,21 @@ Options:
                                 scenarios in '\$VM2_REPOS/vm2.Templates/templates/'.
   -a, --all-repos               Compare all pre-defined vm2 repositories under \$VM2_REPOS with the SoT,
                                 one by one. The set is defined in 'lib/core.sh'.
-  -f, --file <pattern>          A comma-separated list of glob patterns. Only files matching the patterns
-                                are processed; the action is taken from the configuration.
-                                Example: --file 'Directory.*.props' or -f '*.yaml,*.toml'
-  --file-ignore <pattern>       Same as --file but overrides the action to 'ignore'.
-  --file-merge-or-copy <pattern>
+  -d, --diff                    Compare files and display differences and equalities without taking any
+                                action. Can be combined with --all-repos.
+  -f, --file <pattern>          A file name or a quoted glob pattern (quote glob patterns to prevent shell
+                                expansion). Only matching files are processed; the action is taken from
+                                the configuration. Can be specified multiple times to select multiple files.
+                                Example: --file 'Directory.*.props' or -f '*.yaml'
+  -fi, --file-ignore <pattern>  Same as --file but overrides the action to 'ignore'.
+  -fmc, --file-merge-or-copy <pattern>
                                 Same as --file but overrides the action to 'merge or copy' (asks the user).
-  --file-ask-to-merge <pattern> Same as --file but overrides the action to 'ask to merge'.
-  --file-merge <pattern>        Same as --file but overrides the action to 'merge' (no prompt).
-  --file-ask-to-copy <pattern>  Same as --file but overrides the action to 'ask to copy'.
-  --file-copy <pattern>         Same as --file but overrides the action to 'copy' (no prompt).
+  -fam, --file-ask-to-merge <pattern>
+                                Same as --file but overrides the action to 'ask to merge'.
+  -fm, --file-merge <pattern>   Same as --file but overrides the action to 'merge' (no prompt).
+  -fac, --file-ask-to-copy <pattern>
+                                Same as --file but overrides the action to 'ask to copy'.
+  -fc, --file-copy <pattern>    Same as --file but overrides the action to 'copy' (no prompt).
   --summary <file>              Write the run summary to <file> in Markdown format. If not specified,
                                 a temporary file is created, displayed at the end, and then deleted.
 $switches
@@ -69,10 +67,41 @@ Environment Variables:
   VM2_REPOS                     The parent directory where all vm2 repositories are cloned.
 $vars
 Configuration Files:
-  diff-shared.config.json       Located in the SoT directory. Defines the set of files with shared contents,
+  diff-shared.config.json       Located in the SoT directory. Defines the set of files with shared content,
                                 the default action for each, and the diff/merge tools to use.
   diff-shared.custom.json       Optional. Located in the root of the target repository. Overrides actions
                                 and diff/merge tools for that repository only.
+
+Examples:
+
+  diff-shared.sh                The current directory is the target repository, and the SoT is determined by the configuration
+  diff-shared.sh vm2.Ulid       The script will try to resolve the target repo from the vm2 parent, e.g. $VM2_REPOS/vm2.Ulid
+  diff-shared.sh vm2.Ulid vm2.SemVer
+                                The script will process both targets one after the other
+  diff-shared.sh --all-repos    The script will process all known vm2 target repositories one after the other
+  diff-shared.sh --file Directory.Build.props
+                                The script will only process the file Directory.Build.props, the action is determined by the
+                                configuration
+  diff-shared.sh --file-ask-to-merge "Directory.Build.props" --file-ask-to-merge "Directory.Packages.props"
+                                  The script will only process the files Directory.Build.props and Directory.Packages.props, and
+                                  for each difference, it will ask the user whether to ignore, merge or copy the SoT file over
+                                  the target file
+  diff-shared.sh --file-merge-or-copy "*.props"
+                                The script will process all files matching the glob pattern *.props, and for each difference,
+                                it will ask the user whether to ignore, merge or copy the SoT file over the target file
+  diff-shared.sh --file-copy ".editorconfig" --all-repos
+                                The script will copy .editorconfig from the SoT to all known target vm2 repositories without asking,
+                                if it is different or missing in the target repository
+  diff-shared.sh vm2.SemVer --file-copy "*.toml"
+                                The script will copy all .toml files from the SoT to the target repository without asking, if
+                                they are different or missing in the target repository
+  diff-shared.sh --all-repos --file-merge "*.yaml"
+                                The script will process all .yaml files in all known target vm2 repositories, and for each
+                                difference, it will launch the merge tool to merge the SoT file with the target file without
+                                asking
+  diff-shared.sh --diff --all-repos
+                                The script will compare the files in all known target vm2 repositories with the SoT and display
+                                the differences and equalities without taking any actions
 
 For more information see 'docs/diff-shared.md'.
 

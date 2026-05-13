@@ -3,7 +3,7 @@
 <!-- TOC tocDepth:2..3 chapterDepth:2..6 -->
 
 - [Command Line Tool: `diff-shared.sh`](#command-line-tool-diff-sharedsh)
-  - [Source of Truth (SoT)](#source-of-truth-sot)
+  - [What is it?](#what-is-it)
   - [Assumptions](#assumptions)
   - [Diff and Merge Tools](#diff-and-merge-tools)
   - [Actions](#actions)
@@ -18,41 +18,80 @@
 
 <!-- /TOC -->
 
-## Source of Truth (SoT)
+## What is it?
 
-There are many files in the VM2 repositories that are identical or almost identical to files with the same names in other VM2 projects (repositories) created from the same `dotnet new <template-short-name>` template. All or at least big parts of their content is copied and they stay that way - we say that *they have **shared** content*. This shared content may drift with time (due to bug fixes, extensions, etc.) and it must be kept in sync across repositories. The ***sources of truth* (SoT)** for the shared content are the corresponding files in the in the `vm2.Templates` repository. E.g., the SoT files for the projects that produce NuGet packages is in the `AddNewPackage` template and they are located in the `$VM2_REPOS/vm2.Templates/templates/AddNewPackage/content` directory. We call `AddNewPackage` the ***source of truth***. It uniquely identifies the ***source of truth directory*** `$VM2_REPOS/vm2.Templates/templates/AddNewPackage/content` that contains ***source of truth files***.
+The Bash script `diff-shared.sh` is an interactive, command-line tool that helps keep files with shared content across one or more repositories in sync with the corresponding source-of-truth (SoT) repository.
 
-> [!IMPORTANT]
-> ***The Bash script `diff-shared.sh` is an interactive command-line tool that helps keep the files with shared content from one or more repositories in sync with the corresponding Source of Truth***.
+Early on, when we were planning the set of **vm2** repositories and creating their initial content, we relied heavily on copy-pasting from one repository to another, especially for files required for CI workflows (e.g. GitHub Actions workflow YAML files) and for GitHub repository configuration, dev conventions and rules, etc. To name a few such files: `.editorconfig`, `.gitignore`, `.github/dependabot.yml`, `.github/workflows/CI.yaml` etc. This was a quick and efficient way to bootstrap the initial content, but it created the problem of keeping that *shared content* in sync. There are many files in the vm2 repositories that are identical or nearly identical to files, usually with the same names, in other vm2 projects (repositories) that were created from the same template by issuing a command like `dotnet new <template-name>`. Much of their content is simply copied over and stays that way, so we say that *these files have **shared** content*.
 
-It **compares one by one a set of *target files* with the corresponding *source-of-truth (SoT) files*** and when a target file is missing or differs from its SoT counterpart it takes certain, configured actions (e.g. ask the user if they want to ignore the differences, merge or copy the SoT file to the target file, etc.). The action for each file is specified in:
+The ***sources of truth*** (*SoT*) for the ***shared content*** are the corresponding files in a `vm2.Templates` template repository. E.g., the SoT files for projects that produce NuGet packages are in the subdirectory `templates/AddNewPackage/content`, or in the full path `$VM2_REPOS/vm2.Templates/templates/AddNewPackage/content`. We call the template directory `AddNewPackage` the ***source of truth*** (*SoT*) for NuGet package projects.
 
-1. A global configuration file (`diff-shared.config.json`) located in the SoT directory (e.g. `$VM2_REPOS/vm2.Templates/templates/AddNewPackage/content`)
-2. A repository-specific file (`diff-shared.custom.json`) in the root of the target repository (e.g. `$VM2_REPOS/vm2.TestUtilities`), which overrides the global configuration for that repository only
-1. CLI parameters, which override both configuration file for the duration of the current script run
+ > [!NOTE]
+ > `diff-shared.sh` **compares, one by one, a set of *files with shared content* (a.k.a. ***target files***) with the corresponding *source-of-truth (SoT) files***, and when a target file is missing or differs from its SoT counterpart, it takes a configurable action for that file.
+
+For example, the actions can be:
+
+- ask the user if they want to
+  - ignore the differences
+  - merge
+  - copy the SoT file over the target file
+- ask the user if they want to copy the SoT file over the target file without merging
+- open a merge tool without asking to merge the differences
+- copy without asking
+- etc.
+
+The action for each file is specified in:
+
+1. A global configuration file (`diff-shared.config.json`) located in the **SoT directory** (e.g. `$VM2_REPOS/vm2.Templates/templates/AddNewPackage/content`) defines the default action for each file and the diff/merge tools to use. This file is mandatory and must be present in the SoT directory.
+1. A repository-specific file (`diff-shared.custom.json`) in the root of the **target repository** (e.g. `$VM2_REPOS/vm2.TestUtilities`), which may override the global configuration for that repository for specific files
+1. CLI parameters, which override both configuration files for the duration of the current run of the script
 
 ## Assumptions
 
-1. The script is intended to be run interactively from a Linux, macOS, or Git Bash terminals in a **`Bash` shell**. It is interactive because the user may be prompted to confirm or to choose an action for some of the files that are missing or different.
-1. **All *vm2* repositories** (or at least `vm2.DevOps` and `vm2.Templates`) **are cloned under the same <u>*parent directory*</u>** that can be specified with:
-   - the environment variable `$VM2_REPOS`
-   - command line option `--vm2-repos <parent-directory>`
-   - default to the parent directory of the root of the working tree of the `diff-shared.sh` script's Git repository, e.g. if the path of the script is `$HOME/repos/vm2/vm2.DevOps/scripts/bash/diff-shared.sh`, then the default *vm2* parent is `$HOME/repos/vm2/` and the expected structure of the repositories under it is:
+1. The script is intended to be run interactively from a Linux, macOS, or Git Bash terminal in a **`Bash` shell**. It is interactive because the user may be prompted to confirm or choose an action for some of the files that are missing or different.
+1. **All *vm2* repositories** (or at least `vm2.DevOps` and `vm2.Templates`) **are cloned under the same *parent directory*** that can be specified with:
+   - the environment variable **`$VM2_REPOS`**
+   - command line option **`--vm2-repos <parent-directory>`**
+   - defaults to the parent directory of the **root of the working tree of the `diff-shared.sh` script's Git repository**. E.g. if the path of the script is `$HOME/repos/vm2/vm2.DevOps/scripts/bash/diff-shared.sh`, and `$VM2_REPOS` and `--vm2-repos` are not defined or specified, then the default *vm2* parent is `$HOME/repos/vm2/` and the expected structure of the repositories under it is expected to be as follows:
 
      ```text
-     $HOME$/repos/vm2/ (= $VM2_REPOS)            <-- the vm2 parent directory of all vm2 repositories
-                  ├── vm2.DevOps/                    <-- the root of the Git repository containing `diff-shared.sh`
-                  │   └── scripts/
-                  │       └── bash/
-                  │           ├── diff-shared.sh         <--- the diff-shared.sh script
-                  │           ├── repo-setup.sh
-                  │           ├── ...
-                  ├── vm2.Templates/
-                  ├── vm2.Ulid/
-                  ├── ...
+     $HOME/repos/vm2/                         <------- the vm2 PARENT DIRECTORY of all vm2 repositories
+                 │                                    (defined by $VM2_REPOS or --vm2-repos or default)
+                 │
+                 ├── vm2.DevOps/                <---- the Git repository containing `diff-shared.sh`
+                 │   └─ scripts/
+                 │      └─ bash/
+                 │         ├── diff-shared.sh      <- the diff-shared.sh script
+                 │         ├── repo-setup.sh
+                 │         ├── ...
+                 │
+                 ├── vm2.Templates/
+                 │   └─ templates/
+                 │      └─ AddNewPackage/
+                 │         └─ content/           <--- the SOT FILES
+                 |            ├─ diff-shared.config.json  <- global config per (SOT) template (mandatory!)
+                 │            ├─ .github/
+                 │            │  ├─ workflows/
+                 │            │  │  ├─ CI.yaml
+                 │            │  │  ├─ ...
+                 │            │  ├─ ...
+                 │            ├─ .editorconfig
+                 │            ├─ .gitignore
+                 │            ├─ ...
+                 │
+                 ├── vm2.Ulid/                   <--- the TARGET FILES
+                 |   ├─ diff-shared.custom.json    <- per repo custom configuration (optional)
+                 │   ├─ .editorconfig
+                 │   ├─ .gitignore
+                 │   ├─ .github/
+                 │   │  ├─ workflows/
+                 │   │  │  ├─ CI.yaml
+                 ├── ...
      ```
 
-   This **parent directory** is also referred to as *the vm2 parent* throughout this document
+   > [!NOTE]
+   > The **parent directory** is also referred to as *the vm2 parent* throughout this document.
+
 1. The target repository contains a solution created with the `dotnet new <template-short-name>` template.
 1. The target directory either **is** or **will become** a **git repository** with CI workflows configured (GitHub Actions workflow templates) in `.github/workflows/`. This is automatically true for repositories created with the `dotnet new vm2pkg` template.
 
@@ -67,11 +106,11 @@ It **compares one by one a set of *target files* with the corresponding *source-
 
 ## Diff and Merge Tools
 
-To determine the action, the script must first **compare** the target file with its SoT counterpart. For that it uses the standard `diff` utility in a quiet mode, which is fast and is usually available on all platforms. Then, if the files differ, and depending on the configuration the script may need to just **show** the differences to the user, and then **ask them what they want to do** about the displayed differences. Displaying the differences can be done on the terminal CLI or in a graphical UI diff tool, depending on the configuration. We recommend configuring and using a user-friendly CLI diff tool such as [delta](https://github.com/dandavison/delta) - we found, that visual tools like `Visual Studio Code` or `meld` work but are not very convenient for **just** displaying the differences.
+To determine the action, the script must first **compare** the target file with its SoT counterpart. For that, it uses the standard `diff` utility in quiet mode, which is fast and is usually available on all platforms. Then, if the files differ, and depending on the configuration, the script may need to just **show** the differences to the user and then **ask them what they want to do** about them. Displaying the differences can be done in the terminal CLI or in a graphical UI diff tool, depending on the configuration. We recommend configuring and using a user-friendly CLI diff tool such as [delta](https://github.com/dandavison/delta); we found that visual tools like `Visual Studio Code` or `meld` work but are not very convenient for **just** displaying the differences.
 
-After comparing the files and showing the differences, the script may need to open a tool to **merge** the the SoT file changes into the the target file. This can be done again in a terminal CLI or in a graphical UI merge tool, as well, also depending on the configuration. However, for merge we do recommend a good UI tool like `Visual Studio Code` or  [`Meld`](https://meldmerge.org/).
+After comparing the files and showing the differences, the script may need to open a tool to **merge** the SoT file changes into the target file. This can also be done in a terminal CLI or in a graphical UI merge tool, depending on the configuration. However, for merging we do recommend a good UI tool like `Visual Studio Code` or [`Meld`](https://meldmerge.org/).
 
-If not configured explicitly in `diff-shared.config.json` or `diff-shared.custom.sh` the script uses the diff and merge utilities configured in `Git` for displaying and merging. If Git is not configured, it falls back to the good old `diff` and Visual Studio Code, respectively.
+If not configured explicitly in `diff-shared.config.json` or `diff-shared.custom.json`, the script uses the diff and merge utilities configured in `Git` for displaying and merging. If Git is not configured, it falls back to the good old `diff` and Visual Studio Code, respectively.
 
 The tools can be customized in the `diff` and `merge` sections of `diff-shared.config.json` and overridden in `diff-shared.custom.json` using the `diff.tool` and `merge.tool` properties, respectively. The command to run the tool can be customized with the `diff.command` and `merge.command` properties. The `*.command` properties **must** use the placeholders `$LOCAL` and `$REMOTE`, which the script replaces at runtime with the paths of the target file and its SoT counterpart, respectively. For example:
 
@@ -194,7 +233,7 @@ The script supports the standard set of common CLI switches:
   1. Sets `--verbose`
   2. Redirects suppressed output from `/dev/null` to `/dev/stderr`
   3. Enables the Bash trace option `set -x`
-- `-y`, `--dry-run`: suppress execution of commands wrapped in `execute` and display what would have been run. Initial value from `$DRY_RUN` or `false`
+- `-y`, `--dry-run`: suppresses execution of commands wrapped in `execute` and displays what would have been run. Initial value from `$DRY_RUN` or `false`
 - `-q`, `--quiet`: suppresses all user prompts, assuming default answers. Initial value from `$QUIET` or `false`
 - `--help`: displays the full usage text, including all common flags
 - `-h`, `-?`: displays a shorter usage text without the common flags. If both `--help` and `-h`/`-?` are present, the last one wins
@@ -208,89 +247,94 @@ The script accepts one or more target repository paths as positional arguments:
 ```
 
 1. If no positional arguments are provided, the script compares the files in the current directory with the SoT.
-2. Each argument should be an existing or future repository name (looked up under the vm2 parent) or an absolute or relative path.
+1. Each argument can be a repository name (looked up under the vm2 parent) or an absolute or relative path to a directory that is the working tree root or inside it.
 
 ### Named Arguments
 
 - `--vm2-repos <directory>` (`-r`) — the vm2 parent directory. Overrides `$VM2_REPOS`
 - `--source-of-truth <sot>` (`-s`) — the SoT template. Must be one of the pre-defined templates under `$VM2_REPOS/vm2.Templates/templates/`
-- `--summary <file>` — write the run summary to `<file>` in Markdown format. If not specified, a temporary file is created, displayed at the end of the run, and then deleted
-- `--file <pattern>` (`-f`) — a comma-separated list of glob patterns. Only files matching the patterns are processed and only if they are listed in the configuration
-- `--file-ignore <pattern>` — same as `--file` but overrides the action to `ignore`
-- `--file-merge-or-copy <pattern>` — same as `--file` but overrides the action to `merge or copy`
-- `--file-ask-to-merge <pattern>` — same as `--file` but overrides the action to `ask to merge`
-- `--file-merge <pattern>` — same as `--file` but overrides the action to `merge`
-- `--file-ask-to-copy <pattern>` — same as `--file` but overrides the action to `ask to copy`
-- `--file-copy <pattern>` — same as `--file` but overrides the action to `copy`
+- `--file <file-selector>` (`-f`) — the file selector can be a file name or a **quoted** glob pattern. Can be specified multiple times to select multiple files. Only files matching the selector are processed and only if they are listed in the configuration. The argument can be specified multiple times to select multiple files. For example,
+  - `diff-shared.sh --file Directory.Build.props --file Directory.Packages.props` is equivalent to
+  - `diff-shared.sh --file "Directory.*Build*.props"`.
+
+  > [!WARNING]
+  > If you do not quote the glob pattern, the shell will expand it before passing it to the script, and the script will receive the list of matched files instead of the pattern. This leads to unexpected results: the first file will be accepted as a parameter value, but the rest will be treated as positional arguments (target repositories), which is not the intended use.
+
+- The action for the selected file(s) is determined by the configuration, unless overridden by the following variants of the option `--file`:
+
+  - `--file-ignore <file-selector>` — overrides the configured action to `ignore`
+  - `--file-merge-or-copy <file-selector>` — overrides the configured action to `merge or copy`
+  - `--file-ask-to-merge <file-selector>` — overrides the configured action to `ask to merge`
+  - `--file-merge <file-selector>` — overrides the configured action to `merge`
+  - `--file-ask-to-copy <file-selector>` — overrides the configured action to `ask to copy`
+  - `--file-copy <file-selector>` — overrides the configured action to `copy`
+- `--summary <file>` — write the script run summary to `<file>` in Markdown format. If not specified, a temporary file is created, displayed at the end of the run with `glow`, and then deleted.
 
 ### Switches
 
 - `--all-repos` (`-a`) — compare all pre-defined vm2 repositories under the vm2 parent with the SoT, one by one. The set is defined in `lib/core.sh`.
 
     > [!WARNING]
-    > Every time you add a new repository to the vm2 parent, you must add it to `vm2_repositories` in `lib/core.sh`.
+    > For this to work, every time you add a new repository to the vm2 parent, you must add it to `vm2_repositories` array in `$VM2_HOME/vm2.DevOps/scripts/bash/lib/core.sh`.
 
-- `--diff` — compare files using `diff` only, and display the differences and equalities without taking any action. Can be combined with `--all-repos`.
+- `--diff` (`-d`) — compare files and display differences and equalities without taking any action. Can be combined with `--all-repos`.
 
 ### Usage Examples
 
-Assuming `diff-shared.sh` is on `$PATH`:
+Assuming `diff-shared.sh` is on `$PATH` and the current directory is inside any of the vm2 repositories, here are some example usages:
 
 1. Compare all predefined files in the **current** directory with the SoT, applying the configured action for each difference:
 
     ```bash
-    diff-shared.sh
+    diff-shared.sh # the current directory is the target repository, and the SoT is determined by the configuration
     ```
 
 2. Compare all predefined files in a specific repository (e.g. `vm2.Ulid`):
 
     ```bash
-    diff-shared.sh vm2.Ulid
+    diff-shared.sh vm2.Ulid # the script will try to resolve the target repo from the vm2 parent, e.g. $VM2_REPOS/vm2.Ulid
     ```
 
 3. Compare files in two repositories one after the other:
 
     ```bash
-    diff-shared.sh vm2.Ulid vm2.SemVer
+    diff-shared.sh vm2.Ulid vm2.SemVer # the script will process both targets one after the other
     ```
 
 4. Compare files in all pre-defined vm2 repositories:
 
     ```bash
-    diff-shared.sh --all-repos
+    diff-shared.sh --all-repos # the script will process all targets one after the other
     ```
 
 5. Compare only `Directory.Build.props` in the current repository, using the configured action:
 
     ```bash
-    diff-shared.sh --file "Directory.Build.props"
+    diff-shared.sh --file Directory.Build.props # the script will only process the file Directory.Build.props, the action is determined by the configuration
     ```
 
 6. Compare two specific files:
 
     ```bash
-    diff-shared.sh --file "Directory.Build.props,Directory.Packages.props"
+    diff-shared.sh --file-merge-or-copy "*.props" # the script will process all files matching the glob pattern *.props, and for each difference, it will ask the user whether to ignore, merge or copy the SoT file over the target file
     ```
 
-    > [!NOTE]
-    > Multiple files are specified as a **comma-separated** list without spaces. The argument accepts **glob patterns**, so `Directory.*.props` matches all props files starting with `Directory.`.
-
-7. Compare `Directory.Build.props` and, if different, ask the user whether to merge:
+7. Compare `Directory.Build.props` and `Directory.Packages.props` and, if different, ask the user whether to merge:
 
     ```bash
-    diff-shared.sh --file-ask-to-merge "Directory.Build.props"
+    diff-shared.sh --file-ask-to-merge "Directory.Build.props" --file-ask-to-merge "Directory.Packages.props"
     ```
 
-8. Copy `Directory.Build.props` from the SoT without prompting:
+8. Copy `.editorconfig` from the SoT without prompting:
 
     ```bash
-    diff-shared.sh --file-copy "Directory.Build.props"
+    diff-shared.sh --file-copy ".editorconfig" # the script will copy .editorconfig from the SoT to the target repository without asking, if it is different or missing in the target repository
     ```
 
 9. Apply `--file-copy` to all `*.toml` files in a specific repository:
 
     ```bash
-    diff-shared.sh vm2.SemVer --file-copy "*.toml"
+    diff-shared.sh vm2.SemVer --file-copy "*.toml" # the script will copy all .toml files from the SoT to the target repository without asking, if they are different or missing in the target repository
     ```
 
 10. Merge all `*.yaml` files across all repositories without prompting:
@@ -299,7 +343,7 @@ Assuming `diff-shared.sh` is on `$PATH`:
     diff-shared.sh --all-repos --file-merge "*.yaml"
     ```
 
-11. Display differences only, without taking any action:
+11. Display equalities and differences of the files from the current repo only, without taking any action:
 
     ```bash
     diff-shared.sh --diff

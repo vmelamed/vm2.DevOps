@@ -24,7 +24,8 @@ declare -axr valid_actions=(
     "$action_ask_to_merge"
     "$action_merge"
     "$action_ask_to_copy"
-    "$action_copy")
+    "$action_copy"
+)
 
 all_actions_str=$(print_sequence -s=', ' -q='"' "${valid_actions[@]}")
 declare -xr all_actions_str
@@ -60,7 +61,7 @@ declare -rA diff_commands=(
     ["git-delta"]="delta --side-by-side --line-numbers --paging never \"\$LOCAL\" \"\$REMOTE\""
     ["icdiff"]="icdiff --line-numbers --no-bold \"\$LOCAL\" \"\$REMOTE\""
     ["difft"]="dift \"\$LOCAL\" \"\$REMOTE\""
-    ["difftastic"]="dift \"\$LOCAL\" \"\$REMOTE\""
+    ["difftastic"]="difft \"\$LOCAL\" \"\$REMOTE\""
     ["ydiff"]="ydiff -s -w 0 \"\$LOCAL\" \"\$REMOTE\""
     ["colordiff"]="colordiff -a -w -B --strip-trailing-cr -s -y -W 167 --suppress-common-lines \"\$LOCAL\" \"\$REMOTE\""
     ["diff"]="diff -w -B -a --strip-trailing-cr -s -y -W 167 --suppress-common-lines --color=auto \"\$LOCAL\" \"\$REMOTE\"" # add/remove -w -B - ignore whitespace and blank lines
@@ -101,7 +102,7 @@ function configure()
     } < <(get_tools "$config_file")
 
     # Populate the arrays
-    local -i i=0
+    local -i index=0
     local source_file target_file action
     # shellcheck disable=SC2034
     local vm2_sot_shared="${vm2_sot_repo_name}/templates/${sot}/content"
@@ -118,11 +119,11 @@ function configure()
         eval "target_file=\"$target_file\""
         eval "file_action=\"$file_action\""
         # and assign into the model arrays by index:
-        source_files[i]="$source_file"
-        target_files[i]="$target_file"
-        file_actions[i]="$file_action"
+        source_files[index]="$source_file"
+        target_files[index]="$target_file"
+        file_actions[index]="$file_action"
 
-        ((++i)) || true
+        ((++index)) || true
     done < <(jq -r '.files[] | .sourceFile + "=" + .targetFile + "=" + .action' "$config_file")
 
     trace "Loaded ${#source_files[@]} source files"
@@ -149,21 +150,23 @@ function parameterize()
 
     local selector action
     local -a matching_actions
-    local -i i cnt count=0
+    local -i index
+    local -i cnt
+    local -i count=0
 
     # for each source file
-    for (( i=0; i<${#source_files[@]}; i++ )); do
+    for (( index=0; index<${#source_files[@]}; index++ )); do
         matching_actions=()
         # check if it matches any of the provided patterns in the command line arguments
         for selector in "${!selectors_actions[@]}"; do
-            if [[ "${source_files[i]}" == */$selector ]]; then
+            if [[ "${source_files[index]}" == */$selector ]]; then
                 # matches - override or keep the action for that file
                 [[ -n ${selectors_actions[$selector]} ]] &&
                     action="${selectors_actions[$selector]}" ||
-                    action="${file_actions[i]}"
+                    action="${file_actions[index]}"
                 ! is_in "$action" "${matching_actions[@]}" && {
                     matching_actions+=("$action")
-                    trace "File '${source_files[i]#"$vm2_repos/"}' matches selector '$selector' with action '$action'."
+                    trace "File '${source_files[index]#"$vm2_repos/"}' matches selector '$selector' with action '$action'."
                 }
             fi
         done
@@ -172,16 +175,16 @@ function parameterize()
 
         if (( cnt == 1 )); then
             # exactly one action - use it
-            file_actions[i]="${matching_actions[0]}"
+            file_actions[index]="${matching_actions[0]}"
             (( ++count )) || true
         elif (( cnt > 1 )); then
             # multiple different actions matched - this is a CLI error, report it and skip the file (clear the action)
-            file_actions[i]=""
-            warning "Multiple patterns matched for '${source_files[i]#"$vm2_repos/"}' resulting in different actions: ${matching_actions[*]}. Please refine your file selectors so that each matches at most one file. The file will be skipped."
+            file_actions[index]=""
+            warning "Multiple patterns matched for '${source_files[index]#"$vm2_repos/"}' resulting in different actions: ${matching_actions[*]}. Please refine your file selectors so that each matches at most one file. The file will be skipped."
         else
             # no patterns matched - clear the action for that file (it will not be processed) and report a warning
-            file_actions[i]=""
-            trace "File '${source_files[i]#"$vm2_repos/"}' does not match any of the provided patterns: ${!selectors_actions[*]}. It will not be processed."
+            file_actions[index]=""
+            trace "File '${source_files[index]#"$vm2_repos/"}' does not match any of the provided patterns: ${!selectors_actions[*]}. It will not be processed."
         fi
     done
 
@@ -243,7 +246,7 @@ function resolve_target()
 ## Reads ${target_path}/diff-shared.custom.json and overrides file_actions
 function customize()
 {
-    (( $# == 1 || $# == 2 ))        || usage "${FUNCNAME[0]}() requires 2 or 3 arguments (provided $#):" \
+    (( $# == 1 || $# == 2 ))        || usage "${FUNCNAME[0]}() requires 1 or 2 arguments (provided $#):" \
                                              "  1) target repository root directory path" \
                                              "  2) optional flag to customize the tools only."
     [[ -d $1 ]]                     || usage "${FUNCNAME[0]}() the target path is not a valid directory."
@@ -314,11 +317,11 @@ function customize()
             local source_file=""
             local found=false
 
-            local -i i
-            for (( i=0; i<${#target_files[@]}; i++ )); do
-                if [[ "${target_files[i]}" == ${target_path}/**/${file_name} ]]; then
+            local -i index
+            for (( index=0; index<${#target_files[@]}; index++ )); do
+                if [[ "${target_files[index]}" == ${target_path}/**/${file_name} ]]; then
                     # Override the action:
-                    file_actions[i]="$action"
+                    file_actions[index]="$action"
                     (( ++changed_actions )) || true
                     found=true
                     break
@@ -337,7 +340,7 @@ function customize()
 
 function get_tools()
 {
-    [[ $# -eq 1 ]] || usage "${FUNCNAME[0]}() requires exactly 1 arguments (provided $#): configuration or customization file."
+    [[ $# -eq 1 ]] || usage "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): configuration or customization file."
     [[ -s $1 ]]    || usage "${FUNCNAME[0]}() the configuration or customization file does not exists or is empty."
 
     local file="$1"

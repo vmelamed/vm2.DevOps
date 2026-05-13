@@ -429,12 +429,12 @@ function show_stack()
     local source
     local lineno
 
-    local i
+    local -i index
     local end=$(( skip + take ))
-    for (( i=skip; i<end; i++ )); do
-        func=${FUNCNAME[i]:-}
-        source=${BASH_SOURCE[i]:-}
-        lineno=${BASH_LINENO[i-1]:-}
+    for (( index=skip; index<end; index++ )); do
+        func=${FUNCNAME[index]:-}
+        source=${BASH_SOURCE[index]:-}
+        lineno=${BASH_LINENO[index-1]:-}
         printf "    - %-20s (%s: %d)\n" "$func" "${source}" "${lineno}"
     done
 

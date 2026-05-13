@@ -80,6 +80,13 @@ function get_arguments()
     done
 }
 
+declare -xr action_ignore
+declare -xr action_merge_or_copy
+declare -xr action_ask_to_merge
+declare -xr action_merge
+declare -xr action_ask_to_copy
+declare -xr action_copy
+
 function get_selector_action()
 {
     [[ $# -eq 2 ]] || usage "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): option and file patterns list."
@@ -89,15 +96,27 @@ function get_selector_action()
     local action=""
 
     # get the action from the option name, e.g. --file-ask-to-merge => "ask-to-merge"
-    [[ $option =~ ^-(-file|f)(-([a-z-]+))?$ ]] ||
+    [[ $option =~ ^-(-file|f)(-?([a-z-]+))?$ ]] ||
         usage "$err_unknown_argument" "Unknown argument: $option"
 
     # get the action and replace the dashes with spaces in the action name, e.g. "ask-to-merge" => "ask to merge"
     action="${BASH_REMATCH[3]//-/ }"
 
+    case "$action" in
+        "i"  | "$action_ignore" ) action="$action_ignore" ;;
+        "mc" | "$action_merge_or_copy" ) action="$action_merge_or_copy" ;;
+        "am" | "$action_ask_to_merge" ) action="$action_ask_to_merge" ;;
+        "m"  | "$action_merge" ) action="$action_merge" ;;
+        "ac" | "$action_ask_to_copy" ) action="$action_ask_to_copy" ;;
+        "c"  | "$action_copy" ) action="$action_copy" ;;
+        * ) ;;
+    esac
+
     # validate the action
     [[ -z $action ]] || is_in "$action" "${valid_actions[@]}" ||
         usage "$err_argument_value" "Invalid action: $action. Valid actions are: $all_actions_str"
+
+    trace "File selector '$file_selector' with action '$action'"
 
     [[ $file_selector != -* ]] || usage "$err_argument_value" "The argument '$file_selector' does not appear to be a valid file selector."
 

@@ -123,8 +123,6 @@ sot_path=$(get_vm2_sot_path "$vm2_repos" "$sot") || rc=$?
 readonly sot_path
 trace "The source of truth directory for the '$sot' template is expected in '$sot_path'"
 
-exit_if_has_errors
-
 declare -a sot_dump_vars=(
     --header "Configuration for SoT $sot:"
     vm2_repos
@@ -152,7 +150,6 @@ declare -a target_paths=()
 for target in "${target_repos[@]}"; do
     output=$(resolve_target "$target") || {
         error "Could not resolve the path of the target repository '$target'. Please, ensure that it exists and is a valid directory."
-        reset_errors
         continue
     }
     {
@@ -163,11 +160,14 @@ for target in "${target_repos[@]}"; do
     target_paths+=("$target_path")
 done
 
-declare -i i
+exit_if_has_errors
 
-for (( i=0; i < ${#target_repos[@]}; i++ )); do
-    target_root="${target_roots[i]}"
-    target_path="${target_paths[i]}"
+declare -i targets_index
+
+for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ )); do
+    target_root="${target_roots[targets_index]}"
+    target_path="${target_paths[targets_index]}"
+    target="${target_root#"$vm2_repos/"}"
 
     # Load tools, file names and actions from the global config JSON
     configure "$sot_path" "$target_path" || {
@@ -178,8 +178,8 @@ for (( i=0; i < ${#target_repos[@]}; i++ )); do
 
     # customize from the custom config JSON in the current target if it exists
     if (( ${#selectors_actions[@]} > 0 )); then
-        customize "$target_root" true || rc=$?
         parameterize
+        customize "$target_root" true || rc=$?
     else
         customize "$target_root" false || rc=$?
     fi
@@ -187,7 +187,7 @@ for (( i=0; i < ${#target_repos[@]}; i++ )); do
     exit_if_has_errors
 
     {
-        echo -e "### Target: ${target#"$vm2_repos/"} ($target_path)\n"
+        echo -e "### Target: ${target} ($target_path)\n"
         if $diff_only; then
             echo -e "| Source of Truth File | Shared Content File | Difference |"
             echo -e "|:---------------------|:--------------------|:-----------|"
@@ -207,12 +207,12 @@ for (( i=0; i < ${#target_repos[@]}; i++ )); do
     )
     dump_vars "${target_dump_vars[@]}"
 
-    declare -i j
-    for (( j=0; j < ${#source_files[@]}; j++ )); do
+    declare -i files_index
+    for (( files_index=0; files_index < ${#source_files[@]}; files_index++ )); do
 
-        source_file="${source_files[j]}"
-        target_file="${target_files[j]}"
-        actions="${file_actions[j]}"
+        source_file="${source_files[files_index]}"
+        target_file="${target_files[files_index]}"
+        actions="${file_actions[files_index]}"
         $diff_only && [[ -n $actions ]] && actions=$action_ignore
 
         if [[ -z $actions ]]; then
@@ -258,9 +258,14 @@ for (( i=0; i < ${#target_repos[@]}; i++ )); do
         fi
 
         is_in "$actions" "$action_ignore" "$action_merge" "$action_copy" && show_diff=false || show_diff=true
-        are_different "$source_file" "$target_file" "$show_diff" && difference=" ≠ different" || difference=" = identical"
+        rc=$success
+        are_different "$source_file" "$target_file" "$show_diff" || rc=$?
+        (( rc == success )) &&
+            difference=" ≠ different" ||
+            difference=" = identical"
         action="ignored"
-        if [[ $difference == "different" ]]; then
+
+        if (( rc == success )); then
             case $actions in
                 "$action_ignore" )
                     ;;
@@ -310,9 +315,11 @@ for (( i=0; i < ${#target_repos[@]}; i++ )); do
         $diff_only &&
             echo "| ${source_file#"$vm2_repos/${vm2_sot_repo_name}/templates/"} | ${target_file#"$vm2_repos/"} | $difference |" >> "$summary_file" ||
             echo "| ${source_file#"$vm2_repos/${vm2_sot_repo_name}/templates/"} | ${target_file#"$vm2_repos/"} | $difference | $action |" >> "$summary_file"
+        trace "*** The files index is $files_index out of ${#source_files[@]} ***"
     done # SoT files loop
 
     echo "" >> "$summary_file"
+    trace "*** The targets index is $targets_index out of ${#target_repos[@]} ***"
 done # repositories loop
 
 (command -v -p "glow" > "$_ignore" || which "glow" &>"$_ignore") &&
