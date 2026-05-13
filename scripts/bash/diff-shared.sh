@@ -156,6 +156,8 @@ dump_vars "${sot_dump_vars[@]}"
     echo -e "## Source of truth: **$sot** (\`$sot_path\`)\n"
 } >> "$summary_file"
 
+info "Source of Truth '$sot' in '$sot_path'"
+
 # Resolve and validate all repositories specified as arguments, and prepare the list of target files and actions for each of them:
 declare -a target_roots=()
 declare -a target_paths=()
@@ -210,6 +212,7 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
             echo -e "|:---------------------|:--------------------|:-----------|:-------|"
         fi
     } >> "$summary_file"
+    info "  Target '$target' ($target_path)..."
 
     target_dump_vars=(
         --header "Configuration for Target '$target':"
@@ -233,6 +236,8 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
             trace "$(printf "%-84s ---- Skipping  ---- %-s\n" "${source_file#"$vm2_repos/${vm2_sot_repo_name}/templates/"}" "${target_file#"$vm2_repos/"}")"
             continue
         fi
+
+        info "    SoT File: '${source_file#"$vm2_repos/${vm2_sot_repo_name}/templates/"}' vs Target File: '${target_file#"$vm2_repos/"}' with actions '$actions'..."
 
         declare difference=""
         declare action=""

@@ -225,7 +225,7 @@ function message()
 
     # if the next argument is a number, it is the depth of the stack dump to display in the end
     local -i depth=0
-    is_positive "${1}" && depth=$1 && shift
+    (( $# > 0 )) && is_positive "$1" && depth=$1 && shift
 
     if [[ $# -eq 0 && -t 0 ]]; then
         # no message arguments were passed and nothing is being piped in on stdin

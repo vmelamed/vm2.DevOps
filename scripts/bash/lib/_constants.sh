@@ -36,7 +36,8 @@ declare -rxa vm2_repositories=(
     "vm2.Glob"
     "vm2.SemVer"
     "vm2.Ulid"
-    "vm2.Linq.Expressions")
+    "vm2.Linq.Expressions"
+    "vm2.Repository")
 
 #-------------------------------------------------------------------------------
 # Constant: specifies the expected location of the vm2.DevOps repository relative to the parent directory where all the vm2

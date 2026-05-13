@@ -153,8 +153,8 @@ declare -xA default_local_git_settings=(
     ["merge.ff"]="only" # Enforce fast-forward merges to maintain linear history, which is required by the branch protection rules. If you need to merge a PR with a merge commit, you can do so locally with 'git merge --no-ff'
 )
 
-declare -rxi err_invalid_arguments=2    # The number of the arguments is invalid or more than one type of parameter error code is present
-declare -rxi err_not_directory=17       # Parameter value is not a directory
+declare -rxi err_invalid_arguments      # The number of the arguments is invalid or more than one type of parameter error code is present
+declare -rxi err_not_directory          # Parameter value is not a directory
 
 function init_default_local_git_settings()
 {

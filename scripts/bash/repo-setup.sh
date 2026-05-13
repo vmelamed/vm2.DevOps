@@ -253,8 +253,6 @@ function undo_changes()
     echo "and then run the script again."
 }
 
-trap undo_changes EXIT
-
 if ! has_local_repo repo_state; then
 
     # -------------------------------------------------------------------
