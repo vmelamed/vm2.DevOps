@@ -19,18 +19,26 @@ while [[ $# -gt 0 ]]; do
       license="$2"
       shift 2
       ;;
+
     -d|--directory)
       [[ $# -ge 2 ]] || usage
       dir="$2"
       shift 2
       ;;
+
     -y|--dry-run)
       dry_run=true
       shift
       ;;
-    -h|--help|-\?)
-      usage
+
+    --help )
+      usage true
       ;;
+
+    -h|-\?)
+      usage false
+      ;;
+
     *)
       echo "Unknown option: $1" 1>&2
       usage

@@ -68,7 +68,7 @@ declare -xr vm2_sot_repo_name
 function resolve_vm2_repos()
 {
     (( $# <= 1 )) || {
-        error 3 "${FUNCNAME[0]}() takes at most 1 optional arguments ($# provided): the directory that is a parent to all vm2 repositories."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() takes at most 1 optional arguments ($# provided): the directory that is a parent to all vm2 repositories."
         return "$err_invalid_arguments"
     }
 
@@ -80,7 +80,7 @@ function resolve_vm2_repos()
     local repos="${1:-${VM2_REPOS:-$(get_devops_parent)}}"
 
     [[ -n "$repos" && -d "$repos" ]] || {
-         error 3 "The parent directory for the vm2 repositories cannot be resolved from the provided parameter, environment variable \$VM2_REPOS' or from the vm2.DevOps repo's parent. Please provide it as an argument or set it in the environment variable \$VM2_REPOS."
+         error -ec "$err_not_directory" -sd 3 "The parent directory for the vm2 repositories cannot be resolved from the provided parameter, environment variable \$VM2_REPOS' or from the vm2.DevOps repo's parent. Please provide it as an argument or set it in the environment variable \$VM2_REPOS."
          return "$err_not_directory"
     }
 
@@ -91,18 +91,18 @@ function resolve_vm2_repos()
 
     # ensure $vm2_repos is an existing, absolute path:
     repos=$(realpath -e "$repos" 2> "$_ignore") || {
-        error 3 "The resolved parent directory for the vm2 repositories '$repos' does not exist or is not a directory. Please, create it and clone the repositories into it or correct the parameter/environment variable."
+        error -ec "$err_not_directory" -sd 3 "The resolved parent directory for the vm2 repositories '$repos' does not exist or is not a directory. Please, create it and clone the repositories into it or correct the parameter/environment variable."
         return "$err_not_directory"
     }
 
     # validate that it is the parent directory of the git repositories vm2.DevOps and vm2.Templates:
     [[ $repos == "$(dirname "$(root_working_tree "$repos/$vm2_devops_repo_name")")" ]] || {
-        error 3 "The '$repos' is not the parent directory of the '$vm2_devops_repo_name' repository. Please, ensure that the vm2 repositories are cloned into this directory or correct the parameter/environment variable."
+        error -ec "$err_not_git_root" -sd 3 "The '$repos' is not the parent directory of the '$vm2_devops_repo_name' repository. Please, ensure that the vm2 repositories are cloned into this directory or correct the parameter/environment variable."
         return "$err_not_git_root"
     }
 
     [[ $repos == "$(dirname "$(root_working_tree "$repos/$vm2_sot_repo_name")")" ]] || {
-        error 3 "The '$repos' is not the parent directory of the '$vm2_sot_repo_name' repository. Please, ensure that the vm2 repositories are cloned into this directory or correct the parameter/environment variable."
+        error -ec "$err_not_git_root" -sd 3 "The '$repos' is not the parent directory of the '$vm2_sot_repo_name' repository. Please, ensure that the vm2 repositories are cloned into this directory or correct the parameter/environment variable."
         return "$err_not_git_root"
     }
 
@@ -141,7 +141,7 @@ function resolve_vm2_repos()
 function validate_repo_root()
 {
     (( $# >= 1 && $# <= 3 )) || {
-        error 3 "${FUNCNAME[0]}() requires 1 to 3 arguments ($# provided): the name of a repository, the optionally the directory where the repository is expected to be located " \
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires 1 to 3 arguments ($# provided): the name of a repository, the optionally the directory where the repository is expected to be located " \
                 "(e.g. \$VM2_REPOS or \$(get_devops_parent), and the branch to check against the latest stable tag (optional, default: the currently checked out branch)."
         return "$err_invalid_arguments"
     }
@@ -160,7 +160,7 @@ function validate_repo_root()
     r=$(realpath -e "$repos/${repo#/}" 2> "$_ignore") ||
     # try to resolve the repository path from the parameter alone (i.e., the current working directory or the absolute path provided as the first argument)
     r=$(realpath -e "$repo" 2> "$_ignore") || {
-       error 3 "Could not find the repository directory for '$repo' neither in the current working directory, nor in '$repos'."
+       error -ec "$err_not_found" -sd 3 "Could not find the repository directory for '$repo' neither in the current working directory, nor in '$repos'."
        return "$err_not_found"
     }
     local path=$r
@@ -169,24 +169,24 @@ function validate_repo_root()
 
     # 1) the specified directory exists
     [[ -d "${path}" ]] || {
-        error 3 "The '${repo}' git repository directory is not found under ${repos}."
+        error -ec "$err_not_directory" -sd 3 "The '${repo}' git repository directory is not found under ${repos}."
         return "$err_not_directory"
     }
 
     # 2) it is a root of the working directory of the git repository
     r=$(root_working_tree "$path" 2> "$_ignore") || {
         rc=$?
-        error 3 "The '${repo}' repository at '$path' is not a git repository. $(error_message "$rc")."
+        error -ec "$err_not_git_directory" -sd 3 "The '${repo}' repository at '$path' is not a git repository. $(error_message "$rc")."
         return "$err_not_git_directory"
     }
     [[ "$path" == "$r" ]] || {
-        error 3 "The ${repo} repository at '$path' is not the root of the git repository working tree."
+        error -ec "$err_not_git_root" -sd 3 "The ${repo} repository at '$path' is not the root of the git repository working tree."
         return "$err_not_git_root"
     }
 
     # 3) it has GitHub Actions workflows in the .github/workflows directory (unless it is the .github repository itself)
     if [[ ${path##*/} != ".github" && ! -d "$path/.github/workflows" ]]; then
-        error 3 "The '${repo}' repository does not have GitHub Actions workflows in '$path/.github/workflows'."
+        error -ec "$err_repo_with_no_ci" -sd 3 "The '${repo}' repository does not have GitHub Actions workflows in '$path/.github/workflows'."
         return "$err_repo_with_no_ci"
     fi
 
@@ -195,7 +195,7 @@ function validate_repo_root()
         branch=$(git -C "$path" branch --show-current 2>"$_ignore")
     else
         [[ "$branch" == $(git -C "$path" branch --show-current 2>"$_ignore") ]] || {
-            error 3 "The '${repo}' repository at '$path' is not on the expected branch '$branch'."
+            error -ec "$err_invalid_branch" -sd 3 "The '${repo}' repository at '$path' is not on the expected branch '$branch'."
             return "$err_invalid_branch"
         }
     fi
@@ -307,7 +307,7 @@ function search_repo_dir()
 function resolve_repo_root()
 {
     (( $# == 1 || $# == 2 )) || {
-        error 3 "${FUNCNAME[0]}() requires 1 or 2 arguments ($# provided): " \
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires 1 or 2 arguments ($# provided): " \
                 "  1) the parent directory under which to search for the repository (resolved vm2_repos)" \
                 "  2) the directory name of the repository (optional, default - the current directory)."
         return "$err_invalid_arguments"
@@ -364,6 +364,7 @@ function resolve_repo_root()
                 repo_dir="$dir"
                 repo_root="$d"
                 ;;
+
             "$err_dir_with_no_ci" )
                 # we didn't find CI configuration, return
                 #   - the found directory as the repo root (it may not be a repository, but at least it is the closest we got to the provided path)
@@ -372,8 +373,8 @@ function resolve_repo_root()
                 repo_dir="$dir"
                 repo_root="$dir"
                 ;;
-            * )
-                error "Unexpected error code '$rc' caught in ${FUNCNAME[0]}() function."
+
+            * ) error "Unexpected error code '$rc' caught in ${FUNCNAME[0]}() function."
                 return "$rc"
         esac
     else
@@ -404,7 +405,8 @@ function resolve_repo_root()
 function get_vm2_sot_path()
 {
     [[ $# -eq 2 ]] || {
-        error 3 "${FUNCNAME[0]} expects two arguments (provided $#):" \
+        error -ec "$err_invalid_arguments" -sd 3 \
+                "${FUNCNAME[0]} expects two arguments (provided $#):" \
                 "  1) the parent directory of all vm2 repositories" \
                 "  2) the SoT directory name relative to the vm2.Templates repository."
         return "$err_invalid_arguments"
@@ -413,25 +415,25 @@ function get_vm2_sot_path()
     local repos="${1}"
 
     [[ -n $repos ]] || {
-        error "The parent directory for the vm2 repositories cannot be empty. Please provide it as an argument or set it in the environment variable \$VM2_REPOS."
+        error -ec "$err_argument_value" -sd 3 "The parent directory for the vm2 repositories cannot be empty. Please provide it as an argument or set it in the environment variable \$VM2_REPOS."
         return "$err_argument_value"
     }
     [[ -d $repos ]] || {
-        error "The specified parent directory for the vm2 repositories '$repos' does not exist or is not a directory. Please, create it and clone the repositories into it or correct the parameter/environment variable."
+        error -ec "$err_not_directory" -sd 3 "The specified parent directory for the vm2 repositories '$repos' does not exist or is not a directory. Please, create it and clone the repositories into it or correct the parameter/environment variable."
         return "$err_not_directory"
     }
 
     local source="${2}"
 
     [[ -n $source ]] || {
-        error "The SoT directory name cannot be empty. Please provide it as an argument."
+        error -ec "$err_argument_value" -sd 3 "The SoT directory name cannot be empty. Please provide it as an argument."
         return "$err_argument_value"
     }
 
     local vm2_sot="$repos/$vm2_sot_repo_name/templates/$source/content"
 
     [[ -d "$vm2_sot" ]] || {
-        error "The SoT shared content directory is not found at the expected conventional location '$vm2_sot' under the specified parent directory for the vm2 repositories '$repos'. Please make sure it exists or correct the parameter/environment variable."
+        error -ec "$err_not_directory" -sd 3 "The SoT shared content directory is not found at the expected conventional location '$vm2_sot' under the specified parent directory for the vm2 repositories '$repos'. Please make sure it exists or correct the parameter/environment variable."
         return "$err_not_directory"
     }
 

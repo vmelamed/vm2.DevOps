@@ -14,6 +14,10 @@ declare -r lib_dir
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
 source "$lib_dir/gh_core.sh"
 
+declare -rxi success
+declare -rxi err_tool_error
+declare -rxi err_logic_error
+
 # constants and default values
 declare -xr default_nuget_server="github"
 declare -xr default_minver_tag_prefix='v'
@@ -60,13 +64,14 @@ case "${nuget_server}" in
         server_url="$nuget_server"
         ;;
 
-    * ) error "Invalid NuGet server: $nuget_server"
+    * ) error -ec "$err_argument_value" "Invalid NuGet server: $nuget_server"
         ;;
 esac
 # shellcheck disable=SC2154
 server_api_key="${NUGET_API_KEY}"
+
 if [[ -z "${server_api_key}" ]]; then
-    error "No API key provided for server '$server_name'"
+    error -ec "$err_missing_argument" "No API key provided for server '$server_name'"
 fi
 
 exit_if_has_errors
@@ -93,8 +98,9 @@ execute dotnet pack \
             extractDotnetBuildInfo |
             displayDotnetBuildSummary |
             to_summary || true # prevent pipefail from exiting before we can capture the exit code
+
 rc=${PIPESTATUS[0]}
-[[ $rc == "$success" ]] || error "Packing '$package_project' failed."
+[[ $rc == "$success" ]] || error -ec "$err_tool_error" "Packing '$package_project' failed."
 exit_if_has_errors
 
 # Populated by extractDotnetBuildInfo from the dotnet pack log.

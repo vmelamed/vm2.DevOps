@@ -30,11 +30,16 @@ declare -rxi err_too_many_arguments=7   # More than one argument was provided wh
 declare -rxi err_unknown_argument=8     # An unknown argument was provided
 declare -rxi err_not_found=9            # Could not find an item matching the criteria
 declare -rxi err_found_too_many=10      # Found too many items matching the criteria
+declare -rxi err_unsafe_argument=11     # An argument value is unsafe to use (e.g., a file path that could lead to directory traversal, a string that could lead to command injection, etc.)
 
 declare -rxi err_not_file=16            # Parameter value is not a file
 declare -rxi err_not_directory=17       # Parameter value is not a directory
+declare -rxi err_invalid_path=18        # Parameter value is not a valid path (e.g., contains invalid characters, is too long, etc.)
 
 declare -rxi err_not_overridden=64      # A function that should be overridden in the calling script (e.g. usage_text()) was not overridden
+declare -rxi err_tool_not_found=65      # An external tool (e.g., jq, dotnet, etc.) that the script depends on was not found in the system
+declare -rxi err_tool_error=66          # An error occurred while executing an external tool (e.g., git, dotnet, etc.).
+declare -rxi err_logic_error=67         # An error occurred in the logic of the script (e.g., invalid state, unexpected condition, etc.)
 
 declare -rxi err_not_git_directory=80   # The specified directory is not a directory from a Git repository working tree
 declare -rxi err_not_git_root=81        # The specified directory is not a root directory of a Git repository working tree
@@ -59,11 +64,15 @@ declare -rxA error_codes=(
     [$err_unknown_argument]="An unknown argument was provided."
     [$err_not_found]="Could not find an item matching the criteria."
     [$err_found_too_many]="Found too many items matching the criteria."
+    [$err_unsafe_argument]="An argument value is unsafe to use (e.g., a file path that could lead to directory traversal, a string that could lead to command injection, etc.)"
 
     [$err_not_file]="Parameter value is not a file."
     [$err_not_directory]="Parameter value is not a directory."
+    [$err_invalid_path]="Parameter value is not a valid path (e.g., contains invalid characters, is too long, etc.)"
 
     [$err_not_overridden]="A function that should be overridden in the calling script (e.g. usage_text()) was not overridden."
+    [$err_tool_error]="An error occurred while executing an external tool (e.g., git, dotnet, etc.)."
+    [$err_logic_error]="An error occurred in the logic of the script (e.g., invalid state, unexpected condition, etc.)"
 
     [$err_not_git_directory]="The specified directory is not a directory from a Git repository working tree."
     [$err_not_git_root]="The specified directory is not a root directory of a Git repository working tree."

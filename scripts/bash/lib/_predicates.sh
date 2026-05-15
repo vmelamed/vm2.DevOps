@@ -40,7 +40,7 @@ declare -x _ignore
 function is_defined_variable()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the variable to test."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the variable to test."
         return "$err_invalid_arguments"
     }
 
@@ -61,11 +61,11 @@ function is_defined_variable()
 function is_defined_array()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the variable to test."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the variable to test."
         return "$err_invalid_arguments"
     }
     [[ $1 =~ $varNameRegex ]] || {
-        error 3 "${FUNCNAME[0]}() requires a non-empty variable name as argument."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires a non-empty variable name as argument."
         return "$err_invalid_nameref"
     }
 
@@ -96,11 +96,11 @@ function is_defined_array()
 function is_defined_associative_array()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the associative array variable to test."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the associative array variable to test."
         return "$err_invalid_arguments"
     }
      [[ $1 =~ $varNameRegex ]] || {
-        error 3 "${FUNCNAME[0]}() requires a non-empty variable name as argument."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires a non-empty variable name as argument."
         return "$err_invalid_nameref"
     }
 
@@ -132,7 +132,7 @@ function is_defined_associative_array()
 function is_defined_function()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the function to test."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the function to test."
         return "$err_invalid_arguments"
     }
 
@@ -151,7 +151,7 @@ function is_defined_function()
 function is_boolean()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
         return "$err_invalid_arguments"
     }
 
@@ -170,7 +170,7 @@ function is_boolean()
 function is_natural()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
         return "$err_invalid_arguments"
     }
 
@@ -189,7 +189,7 @@ function is_natural()
 function is_positive()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
         return "$err_invalid_arguments"
     }
 
@@ -208,7 +208,7 @@ function is_positive()
 function is_non_negative()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
         return "$err_invalid_arguments"
     }
 
@@ -227,7 +227,7 @@ function is_non_negative()
 function is_non_positive()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
         return "$err_invalid_arguments"
     }
 
@@ -246,7 +246,7 @@ function is_non_positive()
 function is_negative()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
         return "$err_invalid_arguments"
     }
 
@@ -265,7 +265,7 @@ function is_negative()
 function is_integer()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
         return "$err_invalid_arguments"
     }
 
@@ -284,7 +284,7 @@ function is_integer()
 function is_decimal()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
         return "$err_invalid_arguments"
     }
 
@@ -304,7 +304,7 @@ function is_decimal()
 function is_in()
 {
     (( $# >= 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires at least 1 argument: the value to test and zero or more options to compare against."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires at least 1 argument: the value to test and zero or more options to compare against."
         return "$err_invalid_arguments"
     }
 
@@ -324,7 +324,7 @@ function is_in()
 function is_base64()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
         return "$err_invalid_arguments"
     }
 

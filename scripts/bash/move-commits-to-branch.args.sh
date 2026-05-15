@@ -35,18 +35,14 @@ function get_arguments()
                 ;;
 
             --branch|-b )
-                if [[ $# -lt 1 ]]; then
-                    error "Missing branch name after '$option'."
-                    exit 2
-                fi
+                (( $# >= 1 )) ||
+                    usage -ec "$err_missing_argument" "Missing branch name after '$option'."
                 new_branch="$1"; shift
                 ;;
 
             --commit-sha|-c )
-                if [[ $# -lt 1 ]]; then
-                    error "Missing commit SHA after '$option'."
-                    exit 2
-                fi
+                (( $# >= 1 )) ||
+                    usage -ec "$err_missing_argument" "Missing commit SHA after '$option'."
                 commit_sha="$1"; shift
                 ;;
 
@@ -55,7 +51,7 @@ function get_arguments()
                 ;;
 
             * )
-                usage "$err_unknown_argument" "Unknown argument '$option'."
+                usage -ec "$err_unknown_argument" "Unknown argument '$option'."
                 ;;
         esac
     done

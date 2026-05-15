@@ -11,6 +11,13 @@ declare -r lib_dir
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
 source "$lib_dir/gh_core.sh"
 
+declare -rxi err_missing_argument
+declare -rxi err_argument_type
+declare -rxi err_tool_not_found
+declare -rxi err_missing_argument
+declare -rxi err_argument_value
+declare -rxi err_tool_error
+
 declare -x artifact_name=${ARTIFACT_NAME:-}
 declare -x artifacts_dir=${ARTIFACT_DIR:-}
 declare -x repository=${REPOSITORY:-}
@@ -25,14 +32,14 @@ get_arguments "$@"
 
 is_safe_input "$artifact_name"
 if [[ -z "$artifact_name" ]]; then
-    error "The name of the artifact to download must be specified."
+    error -ec "$err_missing_argument" "The name of the artifact to download must be specified."
 fi
 is_safe_path "$artifacts_dir" || true
 is_safe_input "$repository" || true
 is_safe_input "$workflow_id" || true
 is_safe_input "$workflow_name" || true
 is_safe_path "$workflow_path" || true
-is_natural "$workflow_id" || error "The specified workflow identifier '$workflow_id' is not valid."
+is_natural "$workflow_id" || error -ec "$err_argument_type" "The specified workflow identifier '$workflow_id' is not valid."
 
 
 exit_if_has_errors
@@ -82,7 +89,7 @@ if ! command -v -p jq &> "$_ignore" || ! command -v -p gh 2>&1 "$_ignore"; then
     if execute sudo apt-get update && sudo apt-get install -y gh jq; then
         info "GitHub CLI 'gh' and/or 'jq' successfully installed."
     else
-        error "GitHub CLI 'gh' and/or 'jq' were not found and could not install them. Please have 'gh' and 'jq' installed."
+        error -ec "$err_tool_not_found" "GitHub CLI 'gh' and/or 'jq' were not found and could not install them. Please have 'gh' and 'jq' installed."
         exit 1
     fi
 fi
@@ -98,7 +105,7 @@ if [[ -z "$workflow_id" ]]; then
     elif [[ -n "$workflow_path" ]]; then
         query=".[] | select(.path==\"$workflow_path\").id"
     else
-        error "Either the workflow id, the workflow name, or the workflow path must be specified."
+        error -ec "$err_missing_argument" "Either the workflow id, the workflow name, or the workflow path must be specified."
     fi
 fi
 exit_if_has_errors
@@ -111,11 +118,11 @@ fi
 
 if [[ -z $workflow_id ]]; then
     if ! is_natural "$workflow_id"; then
-        error "The specified workflow identifier '$workflow_id' is not valid."
+        error -ec "$err_argument_value" "The specified workflow identifier '$workflow_id' is not valid."
     elif [[ -n "$workflow_path" ]]; then
-        error "The specified workflow path '$workflow_path' does not exist in the repository '$repository'."
+        error -ec "$err_argument_value" "The specified workflow path '$workflow_path' does not exist in the repository '$repository'."
     else
-        error "The specified workflow name '$workflow_name' does not exist in the repository '$repository'."
+        error -ec "$err_argument_value" "The specified workflow name '$workflow_name' does not exist in the repository '$repository'."
     fi
     exit_if_has_errors
 fi
@@ -131,7 +138,7 @@ mapfile -t runs < <(gh run list \
 
 if [[ ${#runs[@]} == 0 ]]; then
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
-    error "No successful runs found for the workflow '$workflow_id' in the repository '$repository'."
+    error -ec "$err_logic_error" "No successful runs found for the workflow '$workflow_id' in the repository '$repository'."
     exit 2
 fi
 
@@ -158,12 +165,12 @@ E.g. re-run the benchmarks with --force-new-baseline or vars.FORCE_NEW_BASELINE"
                                 --repo "$repository" \
                                 --name "$artifact_name" \
                                 --dir "$artifacts_dir") ; then
-        error "Error while downloading '$artifact_name': $http_error"
+        error -ec "$err_tool_error" "Error while downloading '$artifact_name': $http_error"
         exit 2
     fi
     info "✅ The artifact '$artifact_name' successfully downloaded to directory '$artifacts_dir'." >> "$github_step_summary"
     exit 0
 done
 
-error "The artifact '$artifact_name' was not found in the last ${#runs[@]} successful runs of the workflow '$workflow_name' in the repository '$repository'."
+error -ec "$err_logic_error" "The artifact '$artifact_name' was not found in the last ${#runs[@]} successful runs of the workflow '$workflow_name' in the repository '$repository'."
 exit 2

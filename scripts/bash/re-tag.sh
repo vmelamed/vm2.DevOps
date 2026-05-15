@@ -18,6 +18,12 @@ declare -xr lib_dir
 # shellcheck disable=SC1091
 source "${lib_dir}/core.sh"
 
+declare -rxi err_invalid_arguments
+declare -rxi err_argument_value
+declare -rxi err_logic_error
+
+declare -x _ignore
+
 declare -x delete_mode=false
 declare -x del_tag=""
 declare -x old_tag=""
@@ -33,20 +39,20 @@ get_arguments "$@"
 # ─── argument validation & pre-flight ────────────────────────────────────────
 
 if [[ "$delete_mode" == false ]]; then
-    if [[ -z "$old_tag" ]]; then usage "Missing required old and new tag arguments."; fi
-    if [[ -z "$new_tag" ]]; then usage "Missing required new tag argument."; fi
+    if [[ -z "$old_tag" ]]; then usage -ec "$err_invalid_arguments" "Missing required old and new tag arguments."; fi
+    if [[ -z "$new_tag" ]]; then usage -ec "$err_invalid_arguments" "Missing required new tag argument."; fi
 fi
 # We don't need to check for the presence of del_tag in delete mode, because get_arguments already checked for it.
 
-git rev-parse --git-dir >/dev/null 2>&1 || { error "Not a git repository."; exit 1; }
+git rev-parse --git-dir 1>"$_ignore" || { error -ec "$err_logic_error" "Not a git repository."; exit 1; }
 
 # Resolve the commit the old/del tag points to (dereference annotated tags)
 if [[ "$delete_mode" == false ]]; then
-    commit=$(git rev-list -n1 "$old_tag" 2>/dev/null)       || usage "Tag '$old_tag' not found locally."
-    existing_sha=$(git rev-list -n1 "$new_tag" 2>/dev/null) && usage "Tag '$new_tag' already exists → commit ${existing_sha:0:12}."
+    commit=$(git rev-list -n1 "$old_tag" 2>"$_ignore")       || usage -ec "$err_argument_value" "Tag '$old_tag' not found locally."
+    existing_sha=$(git rev-list -n1 "$new_tag" 2>"$_ignore") && usage -ec "$err_argument_value" "Tag '$new_tag' already exists → commit ${existing_sha:0:12}."
     info "Tag '$old_tag' → commit ${commit:0:12}"
 else
-    commit=$(git rev-list -n1 "$del_tag" 2>/dev/null) || usage "Tag '$del_tag' not found locally."
+    commit=$(git rev-list -n1 "$del_tag" 2>"$_ignore") || usage -ec "$err_argument_value" "Tag '$del_tag' not found locally."
     info "Tag '$del_tag' → commit ${commit:0:12}"
 fi
 

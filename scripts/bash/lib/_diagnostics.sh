@@ -44,7 +44,7 @@ declare -xi errors=0
 # Parameters: none (reads from stdin)
 # Returns:
 #   stdout: each line read from stdin
-#   Exit code: 0 always
+#   Exit code: always 0
 # Usage: echo "message" | to_stdout
 # Example: echo "Build completed" | to_stdout
 # Notes: Can be overridden in scripts like gh_core.sh to redirect to GitHub Actions step summary.
@@ -63,7 +63,7 @@ function to_stdout()
 # Parameters: none (reads from stdin)
 # Returns:
 #   stderr: each line read from stdin
-#   Exit code: 0 always
+#   Exit code: always 0
 # Usage: echo "message" | to_traceout
 # Example: echo "Processing file: $file" | to_traceout
 # Notes: Can be overridden in scripts like gh_core.sh to redirect to GitHub Actions step summary.
@@ -82,7 +82,7 @@ function to_traceout()
 # Parameters: none (reads from stdin)
 # Returns:
 #   stderr: each line read from stdin
-#   Exit code: 0 always
+#   Exit code: always 0
 # Usage: echo "message" | to_stderr
 # Example: echo "Warning: file not found" | to_stderr
 # Notes: Can be overridden in scripts like gh_core.sh to redirect to GitHub Actions step summary.
@@ -134,7 +134,6 @@ function get_errors()
 #-------------------------------------------------------------------------------
 function has_errors()
 {
-
     return $(( errors > 0 ? positive : negative ))
 }
 
@@ -142,7 +141,10 @@ function has_errors()
 # Local implementation of usage() to avoid circular dependency with _args.sh
 function usage()
 {
-    error 3 "$@"
+    error  -sd 3 -ec "$err_not_overridden" \
+            "This implementation of usage() is meant to be an 'abstract declaration'." \
+            "Either re-define usage() or source _args.sh." \
+            "$@"
     exit "$failure";
 }
 
@@ -168,7 +170,7 @@ function exit_if_has_errors()
 # Summary: Sets the global error counter.
 # Parameters: the new value for the global error counter
 # Returns:
-#   Exit code: 0 always
+#   Exit code: always 0
 # Env. Vars:
 #   errors - global error counter
 # Usage: set_errors <value>
@@ -178,11 +180,11 @@ function exit_if_has_errors()
 function set_errors()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires one argument ($# provided): the new value for the global error counter."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires one argument ($# provided): the new value for the global error counter."
         return "$err_invalid_arguments"
     }
     [[ $1 =~ ^[0-9]+$ ]] || {
-        error 3 "${FUNCNAME[0]}() requires a numeric argument: the new value for the global error counter."
+        error  -sd 3 "${FUNCNAME[0]}() requires a numeric argument: the new value for the global error counter."
         return "$err_argument_type"
     }
 
@@ -194,7 +196,7 @@ function set_errors()
 # Summary: Resets the global error counter to zero.
 # Parameters: none
 # Returns:
-#   Exit code: 0 always
+#   Exit code: always 0
 # Env. Vars:
 #   errors - global error counter
 # Usage: reset_errors
@@ -208,79 +210,147 @@ function reset_errors()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: INTERNAL! logs messages with a given prefix and optional stack depth.
+# Summary: INTERNAL! prints messages with a given prefix and optional stack depth.
 # Parameters:
 #   1 - prefix - the prefix to prepend to each message line
-#   2 - depth - optional stack depth to display (default: 0)
-#   3+ - message - message parts (optional, if not provided reads from stdin)
+#   2+ - message - message parts (optional, if not provided reads from stdin)
+# Named parameters:
+#   "--error-code" or "-ec" followed by a positive error code - the function will translate the error code to a message and
+#                                                               include it in the output.
+#   "--stack-depth" or "-sd" followed by an integer - how many stack frames to show in the message (default: 0)
+#
+#   There maybe multiple occurrences of "-ec" followed by error codes in the message parts, and all of them will be
+#   translated to messages and included in the output.
+#   Also there maybe multiple occurrences of "--stack-depth" followed by integers in the message parts, but only the last one
+#   will be used to determine the stack depth to show in the message.
 # Returns:
 #   stdout: formatted message with prefix
-#   Exit code: 0 always
+#   Exit code: always 0
 #-------------------------------------------------------------------------------
 function message()
 {
+    local -i count=$# # count of arguments passed to the function
+    local -i updated_count=$count # updated count of message parts after processing named parameters
+
+    (( count > 0 )) || {
+        error -ec "$err_missing_argument" -sd 4 "Function called without any parameters. Provide at least a prefix as the first parameter."
+        return "$err_missing_argument"
+    }
+    [[ $count -gt 1 || ! -t 0 ]] || {
+        # no message arguments were passed and nothing is being piped in on stdin
+        error -ec "$err_missing_argument" -sd 4 "Function called without message parameters and there are none in the pipe. Provide message parameters or pipe them into the function."
+        return "$err_missing_argument"
+    }
+
     # The first parameter is the prefix to prepend to each message line, e.g. "ERROR: ", "WARN: ", "INFO: ", etc.
     local prefix="$1"
     shift
-
-    # if the next argument is a number, it is the depth of the stack dump to display in the end
-    local -i depth=0
-    (( $# > 0 )) && is_positive "$1" && depth=$1 && shift
-
-    if [[ $# -eq 0 && -t 0 ]]; then
-        # no message arguments were passed and nothing is being piped in on stdin
-        error 4 "Function called without message parameters and there are none in the pipe. Provide message parameters or pipe them into the function."
-        return "$err_invalid_arguments"
-    fi
+    (( updated_count-- )) || true # decrement the count of message parts to account for the prefix
 
     # The remaining parameters are the message parts or error codes to be translated to messages.
     # If there are no remaining parameters, the message will be read from stdin.
-    local first=true
-    local line
-    local -i rc=$success
 
-    # shellcheck disable=SC2031 # line was modified in a subshell but the f-n is called in the same subshell, so it works as intended.
+    local args=("$@")
+    local -i depth=0 # stack dump depth
+
+    local -i i
+    # preprocess the arguments array for -ec and -sd flags, and then print the messages lines with the prefix.
+    for (( i=0; i < count-1; i++ )); do
+        case "${args[i]}" in
+
+            "--error-code"|"-ec" )
+                is_positive "${args[i+1]:-}" &&
+                    args[i]="$(error_message "${args[i+1]}")" || {
+                        warning "Expected a positive number that is a known error code after '${args[i]}', but got '${args[i+1]:-}'. Skipping both arguments."
+                        unset "args[i]"
+                        (( updated_count-- )) || true # decrement the count of message parts if the error code is invalid
+                    }
+                (( i++ )) # skip the next argument (the error code)
+                if (( i < count )); then
+                    unset "args[i]" # remove the code from the arguments array
+                    (( updated_count-- )) || true # decrement the count of message parts if the error code is invalid
+                fi
+                continue
+                ;;
+
+            "--stack-depth"|"-sd" )
+                is_positive "${args[i+1]:-}" &&
+                    depth="${args[i+1]}" ||
+                    warning "Expected a positive error code after '${args[i]}', but got '${args[i+1]:-}'. Skipping both arguments."
+                unset "args[i]" # remove the flag from the arguments array
+                (( updated_count-- )) || true # decrement the count of message parts if the error code is invalid
+                (( i++ )) # skip the next argument (the stack depth)
+                if (( i < count )); then
+                    unset "args[i]" # remove the code from the arguments array
+                    (( updated_count-- )) || true # decrement the count of message parts if the error code is invalid
+                fi
+                continue
+                ;;
+
+            * )
+        esac
+    done
+
+    [[ $updated_count -gt 0 || ! -t 0 ]] || {
+        # no message arguments were passed and nothing is being piped in on stdin
+        error -ec "$err_missing_argument" -sd 4 "Function called without message parameters and there are none in the pipe. Provide message parameters or pipe them into the function."
+        return "$err_missing_argument"
+    }
+
+    local first=true
+
     function __print_line()
     {
-        if is_positive "$line"; then
-            line=$(error_message "$line")
-            (( rc == success )) && rc=$line
-        fi
         if $first; then
             (( depth == 0 )) &&
-                printf "%s%s\n" "$prefix" "$line" ||
-                printf "%s%s (%s): %s\n" "$prefix" "${BASH_SOURCE[1]:-}" "${BASH_LINENO[0]:-}" "$line"
+                printf "%s%s\n" "$prefix" "$1" ||
+                printf "%s%s (%s): %s\n" "$prefix" "${BASH_SOURCE[3]:-}" "${BASH_LINENO[2]:-}" "$1"
             first=false
         else
-            echo "           $line"
+            echo "           $1"
         fi
+        return "$success"
     }
 
-    {
-        # shellcheck disable=SC2030 # line was modified in a subshell but the f-n is called in the same subshell, so it works as intended.
-        if (( $# > 0 )); then
-            for line in "$@"; do
-                __print_line
-            done
-        else
-            while IFS= read -r line; do
-                __print_line
-            done
-        fi
-        (( depth > 0 )) && show_stack 3 "$depth" true # skips the frames of show_stack, message_out, and the message_out caller function - basically show where the error or trace was called from.
-    }
+    if (( updated_count > 0 )); then
+        for line in "${args[@]}"; do
+            [[ -n $line ]] && __print_line "$line"
+        done
+    else
+        while IFS= read -r line; do
+            __print_line "$line"
+        done
+    fi
 
-    return "$rc"
+    (( depth > 0 )) &&
+        # skips the frames of
+        #   3 show_stack()
+        #   2 message()
+        #   1 the caller of message() -- e.g. error()
+        # basically show where the error or trace was called from.
+        show_stack 3 "$depth" true
+
+    return "$success"
 }
 
 #-------------------------------------------------------------------------------
 # Summary: Logs error messages to stderr and increments the global error counter.
 # Parameters:
+#   1 - depth (optional) - how many stack frames to show in the message (default: 0)
 #   1+ - message - error message parts (optional, if not provided reads from stdin)
-#   Note that if the first parameter is a number - it will be treated as the depth of the stack to dump.
+#        Here you can include named parameters:
+#        Named parameters:
+#          "--error-code" or "-ec", followed by a positive error code - the function will translate the error code to a message
+#                                                                       and include it in the output.
+#          "--stack-depth" or "-sd", followed by an integer - how many stack frames to show in the message (default: 0)
+#
+#            There maybe multiple occurrences of "-ec" followed by error codes in the message parts, and all of them
+#            will be translated to messages and included in the output.
+#            Also there maybe multiple occurrences of "--stack-depth" followed by integers in the message parts, but only the
+#            last one will be used to determine the stack depth to show in the message.
 # Returns:
 #   stderr: formatted error message with '❌  ERROR: ' prefix via to_stderr
-#   Exit code: 0 always
+#   Exit code: always 0
 # Side Effects: Increments the global $errors counter
 # Usage: error [<depth>] [message2...]
 # Example:
@@ -291,21 +361,29 @@ declare -xr error_prefix="❌  ERROR: "
 
 function error()
 {
-    local -i rc=$success
-
     (( ++errors ))
-    message "$error_prefix" "$@" > >(to_stderr) || rc=$?
-    return "$rc"
+    message "$error_prefix" "$@" > >(to_stderr)
+    return "$success"
 }
 
 #-------------------------------------------------------------------------------
 # Summary: Logs warning messages to stderr.
 # Parameters:
+#   1 - depth (optional) - how many stack frames to show in the message (default: 0)
 #   1+ - message - warning message parts (optional, if not provided reads from stdin)
-#   Note that if the first parameter is a number - it will be treated as the depth of the stack to dump.
+#        Here you can include named parameters:
+#        Named parameters:
+#          "--error-code" or "-ec", followed by a positive error code - the function will translate the error code to a message
+#                                                                       and include it in the output.
+#          "--stack-depth" or "-sd", followed by an integer - how many stack frames to show in the message (default: 0)
+#
+#            There maybe multiple occurrences of "-ec" followed by error codes in the message parts, and all of them
+#            will be translated to messages and included in the output.
+#            Also there maybe multiple occurrences of "--stack-depth" followed by integers in the message parts, but only the
+#            last one will be used to determine the stack depth to show in the message.
 # Returns:
 #   stderr: formatted warning message with '⚠️  WARN: ' prefix via to_stderr
-#   Exit code: 0 always
+#   Exit code: always 0
 # Usage: warning <message1> [message2...]
 # Example:
 #   warning "The option is deprecated"
@@ -315,16 +393,27 @@ declare -xr warning_prefix="⚠️  WARN: "
 
 function warning()
 {
-    message "$warning_prefix" "$@" > >(to_stderr) || true
+    message "$warning_prefix" "$@" > >(to_stderr)
 }
 
 #-------------------------------------------------------------------------------
 # Summary: Logs informational messages to stdout.
 # Parameters:
+#   1 - depth (optional) - how many stack frames to show in the message (default: 0)
 #   1+ - message - informational message parts (optional, if not provided reads from stdin)
+#        Here you can include named parameters:
+#        Named parameters:
+#          "--error-code" or "-ec", followed by a positive error code - the function will translate the error code to a message
+#                                                                       and include it in the output.
+#          "--stack-depth" or "-sd", followed by an integer - how many stack frames to show in the message (default: 0)
+#
+#            There maybe multiple occurrences of "-ec" followed by error codes in the message parts, and all of them
+#            will be translated to messages and included in the output.
+#            Also there maybe multiple occurrences of "--stack-depth" followed by integers in the message parts, but only the
+#            last one will be used to determine the stack depth to show in the message.
 # Returns:
 #   stdout: formatted info message with 'ℹ️  INFO: ' prefix via to_stdout
-#   Exit code: 0 always
+#   Exit code: always 0
 # Usage: info <message1> [message2...]
 # Example:
 #   info "Starting build process"
@@ -334,16 +423,27 @@ declare -xr info_prefix="ℹ️  INFO: "
 
 function info()
 {
-    message "$info_prefix" "$@" > >(to_stdout) || true
+    message "$info_prefix" "$@" > >(to_stdout)
 }
 
 #-------------------------------------------------------------------------------
 # Summary: Logs trace messages to stdout when verbose mode is enabled.
 # Parameters:
+#   1 - depth (optional) - how many stack frames to show in the message (default: 0)
 #   1+ - message - trace message parts (optional, if not provided reads from stdin)
+#        Here you can include named parameters:
+#        Named parameters:
+#          "--error-code" or "-ec", followed by a positive error code - the function will translate the error code to a message
+#                                                                       and include it in the output.
+#          "--stack-depth" or "-sd", followed by an integer - how many stack frames to show in the message (default: 0)
+#
+#            There maybe multiple occurrences of "-ec" followed by error codes in the message parts, and all of them
+#            will be translated to messages and included in the output.
+#            Also there maybe multiple occurrences of "--stack-depth" followed by integers in the message parts, but only the
+#            last one will be used to determine the stack depth to show in the message.
 # Returns:
 #   stdout: formatted trace message with '🐾  TRACE: ' prefix via to_trace-out (only when verbose=true)
-#   Exit code: 0 always
+#   Exit code: always 0
 # Env. Vars:
 #   verbose - when true, outputs trace messages; when false, suppresses output
 # Usage: trace <message1> [message2...]
@@ -356,11 +456,12 @@ declare -xr trace_prefix="🐾  TRACE: "
 function trace()
 {
     ! $verbose && return "$success"
-    message "$trace_prefix" "$@" > >(to_traceout) || true
+    message "$trace_prefix" "$@" > >(to_traceout)
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Logs a warning about a variable's value and sets it to a default value.
+# Summary: Logs a warning about a variable's value and set that variable
+#          to specified default value.
 # Parameters:
 #   1 - variable_name (nameref!) - name of the variable to set
 #   2 - warning_message - warning message to display
@@ -378,15 +479,15 @@ function trace()
 function warning_var()
 {
     (( $# == 3 )) || {
-        error 3 "${FUNCNAME[0]}() requires three arguments ($# provided): variable name, warning message, and default value."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires three arguments ($# provided): variable name, warning message, and default value."
         return "$err_invalid_arguments"
     }
     [[ -n "$1" && -n "$2" ]] || {
-        error 3 "${FUNCNAME[0]}() requires three arguments: variable name, warning message, and default value."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires three arguments: variable name, warning message, and default value."
         return "$err_argument_value"
     }
     [[ $1 =~ $varNameRegex ]] || {
-        error 3 "${FUNCNAME[0]}() requires a non-empty variable name as argument."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires a non-empty variable name as argument."
         return "$err_invalid_nameref"
     }
     warning "$2" "Assuming the default value of '$3'."

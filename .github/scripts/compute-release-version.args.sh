@@ -27,16 +27,16 @@ function get_arguments()
                 ;;
 
             --minver-tag-prefix|-mp )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 minver_tag_prefix="$1"; shift
                 ;;
 
             --reason|-r )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 reason="$1"; shift
                 ;;
 
-            * ) usage "$err_unknown_argument" "Unknown argument: $option"
+            * ) usage -ec "$err_unknown_argument" "Unknown argument: $option"
                 ;;
         esac
     done

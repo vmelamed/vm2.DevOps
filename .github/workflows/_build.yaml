@@ -87,6 +87,31 @@ jobs:
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
               --minver-prerelease-id "${{ inputs.minver-prerelease-id }}"
 
+      - name: Detect SDK drift on failure
+        if: failure()
+        shell: bash
+        env:
+          REFRESH_WF_URL: ${{ github.server_url }}/${{ github.repository }}/actions/workflows/RefreshLockfiles.yaml
+        run: |
+          if dotnet restore --locked-mode 2>&1 | grep -q "NU1004"; then
+            {
+              echo "## ⚠️ SDK version drift"
+              echo ""
+              echo "The NuGet lock files are stale — the runner's .NET SDK changed implicit"
+              echo "package versions (e.g. \`Microsoft.NET.ILLink.Tasks\`)."
+              echo ""
+              echo "**Fix (CI):** trigger the [Refresh Lock Files]($REFRESH_WF_URL) workflow"
+              echo "(scheduled every Monday 05:00 ET, or run manually via \`workflow_dispatch\`)."
+              echo ""
+              echo "**Fix (local):**"
+              echo "\`\`\`"
+              echo "sudo apt upgrade dotnet-sdk-10.0"
+              echo "restore-force-eval.sh"
+              echo "\`\`\`"
+              echo "Then re-push."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       # Save compiled binaries and intermediate files to cache for downstream jobs
       - name: Cache build artifacts
         continue-on-error: true

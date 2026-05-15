@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
+# Git pre-push hook: warns if a dotnet-sdk upgrade is pending via apt.
+# Skipped silently on non-apt systems (Mac, Windows, custom installs).
+# Install: git config core.hooksPath path/to/vm2.DevOps/scripts/githooks (also with repo-setup.sh)
+
+set -euo pipefail
+
+# Only relevant on apt-managed machines
+command -v apt-cache &>/dev/null || exit 0
+
+installed=$(apt-cache policy dotnet-sdk-10.0 2>/dev/null | awk '/Installed:/{print $2}') || true
+candidate=$(apt-cache policy dotnet-sdk-10.0 2>/dev/null | awk '/Candidate:/{print $2}') || true
+
+# Skip if package not found by apt, or already up to date
+[[ -z "$installed" || "$installed" == "(none)" || "$installed" == "$candidate" ]] && exit 0
+
+{
+    echo ""
+    echo "⚠️  dotnet-sdk upgrade available: $installed → $candidate"
+    echo ""
+    echo "   The NuGet lock files will drift and CI will fail."
+    echo ""
+    echo "   Fix:"
+    echo "     sudo apt upgrade dotnet-sdk-10.0"
+    echo "     restore-force-eval.sh"
+    echo ""
+    echo "   Then re-push. (Use --no-verify to bypass this check.)"
+    echo ""
+} >&2
+
+exit 1

@@ -71,7 +71,7 @@ function get_devops_parent()
 {
     if [[ -z $__devops_parent ]]; then
         r=$(root_working_tree "$lib_dir") && __devops_parent=$(dirname "$r" 2> "$_ignore") || {
-            error 3 "Failed to resolve parent directory of the vm2.DevOps repo from the script directory '$lib_dir'. Please ensure that the script is located in 'vm2.DevOps/scripts/bash/lib' and that the repository is not in a detached HEAD state."
+            error -ec "$err_logic_error" -sd 3 "Failed to resolve parent directory of the vm2.DevOps repo from the script directory '$lib_dir'. Please ensure that the script is located in 'vm2.DevOps/scripts/bash/lib' and that the repository is not in a detached HEAD state."
             exit "$err_not_git_directory"
         }
 
@@ -142,7 +142,7 @@ fi
 function show_ignored_output()
 {
     (( $# <= 1 )) || {
-        error 3 "${FUNCNAME[0]}() accepts at most one argument (provided $#): the file name to redirect the ignored output to."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() accepts at most one argument (provided $#): the file name to redirect the ignored output to."
         return "$err_invalid_arguments"
     }
 
@@ -179,7 +179,7 @@ function hide_ignored_output()
 function execute()
 {
     (( $# > 0 )) || {
-        error 3 "${FUNCNAME[0]}() requires at least one argument (provided $#): the command to execute."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires at least one argument (provided $#): the command to execute."
         return "$err_invalid_arguments"
     }
 
@@ -212,7 +212,7 @@ function execute()
 function execute_with_retry()
 {
     (( $# >= 3 )) || {
-        error 3 "${FUNCNAME[0]}() requires at least three arguments (provided $#): <max_attempts> <delay> <command> [args...]"
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires at least three arguments (provided $#): <max_attempts> <delay> <command> [args...]"
         return "$err_invalid_arguments"
     }
 
@@ -225,7 +225,7 @@ function execute_with_retry()
     is_boolean "$1" && shift
 
     (( $# >= 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires at least four arguments (provided $#): <max_attempts> <delay> <ignore output> <command> [args...]"
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires at least four arguments (provided $#): <max_attempts> <delay> <ignore output> <command> [args...]"
         return "$err_invalid_arguments"
     }
 
@@ -268,7 +268,7 @@ function execute_with_retry()
 function list_of_files()
 {
     (( $# >= 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires at least one argument (provided $#): the file pattern."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires at least one argument (provided $#): the file pattern."
         return "$err_invalid_arguments"
     }
 

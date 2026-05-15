@@ -69,7 +69,8 @@ declare -rx vm2_sot_repo_name="vm2.Templates"
 #           projects sources of truth templates and
 #           and configuration files therein.
 declare -rxa sources_of_truth=(
-    "AddNewPackage")
+    "AddNewPackage"
+)
 
 #-------------------------------------------------------------------------------
 # Constant: specifies the which SoT directory to use as a source for comparison and synchronization. The script may allow

@@ -25,19 +25,20 @@ declare -rxi err_invalid_arguments
 declare -rxi err_argument_type
 declare -rxi err_argument_value
 declare -rxi err_not_overridden
+declare -rxi err_logic_error
 
 # default values for the common flags below
-declare -xr default_quiet=false
-declare -xr default_verbose=false
-declare -xr default_dry_run=false
-declare -xr default_debugger=false
-declare -xr default_ci=false
-declare -xr default_table_format="graphical"
+declare -rx default_quiet=false
+declare -rx default_verbose=false
+declare -rx default_dry_run=false
+declare -rx default_debugger=false
+declare -rx default_ci=false
+declare -rx default_table_format="graphical"
 
 declare -axr table_formats=("graphical" "markdown")
 
 # common flags exported for use by the top-level scripts with CLI switches, options and by other means. Prefer the set_* functions below to set them.
-declare -xr default__ignore
+declare -rx default__ignore
 declare -x _ignore                                  # the file to redirect unwanted output to, changing the value may be useful for debugging, e.g. to redirect to /dev/stdout
 
 declare -x quiet=${QUIET:-$default_quiet}           # suppresses user prompts, assuming default answers
@@ -88,7 +89,7 @@ declare -gi __state_saved_subshell=-1
 function save_state()
 {
     if (( __state_saved_pid != 0 )); then
-        error "${FUNCNAME[0]}() called while state is already saved." >&2
+        error -ec "$err_logic_error" "${FUNCNAME[0]}() called while state is already saved." >&2
         return "$failure"
     fi
 
@@ -119,22 +120,25 @@ function restore_state()
     local bad_call=false
 
     (( __state_saved_pid != 0 )) || {
-        error "${FUNCNAME[0]}() called before save_state." >&2
+        error -ec "$err_logic_error" "${FUNCNAME[0]}() called before save_state." >&2
         bad_call=true
     }
     (( __state_saved_pid == BASHPID )) || {
-        error "${FUNCNAME[0]}() must run in same shell: saved pid=$__state_saved_pid current pid=$BASHPID." >&2
+        error -ec "$err_logic_error" "${FUNCNAME[0]}() must run in same shell: saved pid=$__state_saved_pid current pid=$BASHPID." >&2
         bad_call=true
     }
     (( __state_saved_subshell == ${BASH_SUBSHELL:-0} )) || {
-        error "${FUNCNAME[0]}() called from different subshell level." >&2
+        error -ec "$err_logic_error" "${FUNCNAME[0]}() called from different subshell level." >&2
         bad_call=true
     }
     __state_saved_pid=0
     __state_saved_subshell=-1
     ! $bad_call || return "$failure"
 
-    set_table_format "$__saved_table_format" || { error "${FUNCNAME[0]}() failed to restore table format." >&2; return "$failure"; }
+    set_table_format "$__saved_table_format" || {
+        error -ec "$err_logic_error" "${FUNCNAME[0]}() failed to restore table format." >&2
+        return "$failure"
+    }
     $__saved_quiet   && set_quiet   || unset_quiet
     $__saved_verbose && set_verbose || unset_verbose
     $__saved_dry_run && set_dry_run || unset_dry_run
@@ -331,7 +335,7 @@ function unset_trace_enabled()
 function set_table_format()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires one parameter ($# provided) - the table format, one of ${table_formats[*]}"
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires one parameter ($# provided) - the table format, one of ${table_formats[*]}"
         return "$err_invalid_arguments"
     }
 
@@ -344,7 +348,7 @@ function set_table_format()
         fi
     done
 
-    error "Invalid table format: '$1'. Must be one of ${table_formats[*]}."
+    error -ec "$err_invalid_arguments" "Invalid table format: '$1'. Must be one of ${table_formats[*]}."
     return "$err_argument_value"
 }
 
@@ -381,7 +385,7 @@ function get_table_format()
 function get_common_arg()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires one parameter ($# provided): the command-line argument to process"
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires one parameter ($# provided): the command-line argument to process"
         return "$err_invalid_arguments"
     }
 
@@ -391,8 +395,8 @@ function get_common_arg()
     run_long_usage=false
 
     case "${1,,}" in
-        --help          ) usage true "$success" ;;
-        -h|-\?          ) usage "$success" ;;
+        --help          ) usage true;;
+        -h|-\?          ) usage false;;
         -v|--verbose    ) set_verbose ;;
         -q|--quiet      ) set_quiet ;;
         -x|--trace      ) set_trace_enabled ;;
@@ -414,17 +418,26 @@ function get_common_arg()
 #               - 0 ($success) if no error messages are present
 #               - 1 ($failure) if error messages are present
 # Parameters:
-#   1 - long_help - boolean flag indicating whether to display the long (if true) or the short (if false) version of the usage text.
-#       The long version includes the standard parameters like verbose, quiet, etc.
+#   1 - long_help - optional boolean flag indicating whether to display the long (if true) or the short (if false) version of
+#       the usage text. The long version includes the standard parameters like verbose, quiet, etc.
 #       (optional, boolean, default: false)
-#   2 - exit_code - the exit code to use when exiting
-#       (optional, non-negative integer, less than 256, default 1 - if error messages are present, otherwise 0)
-#   3+ - error_message(s) - additional error messages to display at the top
-#       (optional, default - no message)
+#   2 - exit_code - optional exit code to use when exiting
+#       (optional, non-negative integer, less than 256, default: 0 or 1 if error messages are present)
+#   3+ - error_message(s) - additional error messages to display at the top. (optional, default - no message)
+#        Here you can include named parameters:
+#        Named parameters:
+#          "--error-code" or "-ec", followed by a positive error code - the function will translate the error code to a message
+#                                                                       and include it in the output.
+#          "--stack-depth" or "-sd", followed by an integer - how many stack frames to show in the message (default: 0)
+#
+#            There maybe multiple occurrences of "-ec" followed by error codes in the message parts, and all of them
+#            will be translated to messages and included in the output.
+#            Also there maybe multiple occurrences of "--stack-depth" followed by integers in the message parts, but only the
+#            last one will be used to determine the stack depth to show in the message.
 #
 # Returns:
-#   Exit code: depends on implementation
-#     - provided exit code
+#   Exit code: depends on parameters:
+#     - provided exit code in $2
 #     - 1 ($failure) if error messages are present
 #     - 0 ($success) if no error messages are present
 # Usage: usage [<long_help>] [<exit_code>] [<error_message>]*
@@ -448,7 +461,11 @@ function usage()
     [[ $- =~ .*x.* ]] && set_tracing_on=true
     set +x
 
-    (( $# > 0 )) && error "$@"
+    (( $# > 0 )) && {
+        error "$@";
+        exit_code="$failure"
+    }
+
     usage_text "$long"
 
     # restore the tracing state

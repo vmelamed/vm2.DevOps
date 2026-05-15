@@ -29,33 +29,33 @@ function get_arguments()
                 ;;
 
             --configuration|-c )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 configuration=$1; shift
                 ;;
 
             --define|-d    )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 preprocessor_symbols=$1; shift
                 ;;
 
             --min-coverage-pct|-min )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 min_coverage_pct=$1; shift
                 min_coverage_pct=$((min_coverage_pct + 0))  # ensure it's an integer
                 ;;
 
             --minver-tag-prefix|-mp )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 minver_tag_prefix="$1"; shift
                 ;;
 
             --minver-prerelease-id|-mi )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 minver_prerelease_id="$1"; shift
                 ;;
 
             --artifacts|-a )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 tests_artifacts_dir=$1; shift
                 ;;
 

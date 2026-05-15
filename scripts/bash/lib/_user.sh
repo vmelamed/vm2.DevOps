@@ -60,11 +60,11 @@ function press_any_key()
 function confirm()
 {
     (( $# == 1 || $# == 2 )) || {
-        error 3 "${FUNCNAME[0]}() requires at least one parameter (provided $#): the prompt and a second, optional argument -default response."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires at least one parameter (provided $#): the prompt and a second, optional argument -default response."
         return "$err_invalid_arguments"
     }
     [[ -n "$1" ]] || {
-        error 3 "${FUNCNAME[0]}() requires that the \$1 parameter is not empty."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires that the \$1 parameter is not empty."
         return "$err_argument_value"
     }
 
@@ -74,7 +74,7 @@ function confirm()
     (( $# == 1 )) || {
         default=${2,,}
         [[ "$default" =~ ^[yn]$ ]] || {
-            error 3 "${FUNCNAME[0]}() requires that the \$2 parameter is either 'y' or 'n' (case insensitive)."
+            error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires that the \$2 parameter is either 'y' or 'n' (case insensitive)."
             return "$err_argument_value"
         }
     }
@@ -135,7 +135,7 @@ function confirm()
 function enter_value()
 {
     (( $# <= 4 )) || {
-        error 3 "${FUNCNAME[0]}() accepts no more than 4 arguments (provided $#):
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() accepts no more than 4 arguments (provided $#):
     1) a prompt
     2) an optional default value
     3) an optional boolean to suppress the echo of the input to the terminal
@@ -154,12 +154,12 @@ function enter_value()
     [[ $# -ge 4 && "$4" != "_" ]] && validate_fn="$4"
 
     [[ -z $validate_fn || -z $default ]] || $validate_fn "$default" || {
-        error "The default value '$default' does not pass the validation function '$validate_fn'."
+        error -ec "$err_argument_value" "The default value '$default' does not pass the validation function '$validate_fn'."
         return "$err_argument_value"
     }
     is_boolean "$is_secret" || {
-        error "The \$3 argument of ${FUNCNAME[0]}() (is_secret) must be a boolean value (true or false), indicating whether the input is a secret that should not be echoed to the terminal."
-        return "$err_argument_value"
+        error -ec "$err_argument_type" "The \$3 argument of ${FUNCNAME[0]}() (is_secret) must be a boolean value ('true' or 'false' -- provided '$1'), indicating whether the input is a secret that should not be echoed to the terminal."
+        return "$err_argument_type"
     }
     is_quiet && {
         echo "$default"
@@ -218,7 +218,7 @@ function enter_value()
 function choose()
 {
     (( $# >= 3 )) || {
-        error 3 "${FUNCNAME[0]}() requires 3 or more arguments ($# provided): a prompt and at least two choices."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires 3 or more arguments ($# provided): a prompt and at least two choices."
         return "$err_invalid_arguments";
     }
 

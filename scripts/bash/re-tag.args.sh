@@ -38,7 +38,7 @@ function get_arguments()
                 ;;
 
             --delete|-d )
-                [[ $# -ge 1 && -z "$old_tag" ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 && -z "$old_tag" ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 delete_mode=true
                 del_tag="$1"; shift
                 ;;

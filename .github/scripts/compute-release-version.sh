@@ -11,6 +11,9 @@ declare -r lib_dir
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
 source "$lib_dir/gh_core.sh"
 
+declare -rxi err_tool_error
+declare -rxi err_logic_error
+
 # default constants for parameters
 declare -xr default_minver_tag_prefix='v'
 declare -xr default_reason="release build"
@@ -38,12 +41,12 @@ needs_empty_commit=false
 
 if [[ -n $head_tag ]]; then
     if is_semverReleaseTag "$head_tag"; then
-        error "The HEAD is already tagged with stable tag '$head_tag'. Possible remedy: branch 'main' again, do a new PR, and release with a new, higher version number."
+        error -ec "$err_logic_error" "The HEAD is already tagged with stable tag '$head_tag'. Possible remedy: branch 'main' again, do a new PR, and release with a new, higher version number."
     elif is_semverPrereleaseTag "$head_tag"; then
         trace "HEAD is tagged with prerelease tag '$head_tag'; will promote to stable release."
         needs_empty_commit=true
     else
-        error "The HEAD is already tagged with '$head_tag' (not a recognized semver tag). Possible remedy: delete the tag, or branch 'main' again, do a new PR, and release with a new, higher version number."
+        error -ec "$err_logic_error" "The HEAD is already tagged with '$head_tag' (not a recognized semver tag). Possible remedy: delete the tag, or branch 'main' again, do a new PR, and release with a new, higher version number."
     fi
 fi
 
@@ -67,7 +70,7 @@ if is_semverRelease "$latest_stable_ver"; then
     minor=${BASH_REMATCH[$semver_minor]}
     patch=${BASH_REMATCH[$semver_patch]}
     if ((major <= 0 || minor < 0 || patch < 0)); then
-        error "Invalid version numbers in latest stable tag '$latest_stable_tag': $major.$minor.$patch. Major must be > 0, minor and patch must be >= 0."
+        error -ec "$err_logic_error" "Invalid version numbers in latest stable tag '$latest_stable_tag': $major.$minor.$patch. Major must be > 0, minor and patch must be >= 0."
         exit 2
     fi
     trace "Latest stable release: $latest_stable_tag ($major.$minor.$patch)"
@@ -133,7 +136,7 @@ if [[ "$needs_empty_commit" == true && -n "$head_tag" ]]; then
     head_ver=${head_tag#"$minver_tag_prefix"}
     # shellcheck disable=SC2154
     if ! semver_greaterThan "$release_version" "$head_ver"; then
-        error "Computed stable version '$release_version' is not greater than the prerelease tag '$head_tag' on HEAD. Possible remedy: branch 'main' again, do a new PR with commits that bump the version higher, then release."
+        error-ec "$err_logic_error" "Computed stable version '$release_version' is not greater than the prerelease tag '$head_tag' on HEAD. Possible remedy: branch 'main' again, do a new PR with commits that bump the version higher, then release."
     fi
 fi
 
@@ -143,7 +146,7 @@ declare -xr needs_empty_commit
 
 # Check if tag already exists
 if git rev-parse "$release_tag" >"$_ignore" 2>&1; then
-    error "Tag '$release_tag' already exists. Possible remedy: branch 'main' again, and do a new PR and release with a higher version number."
+    error -ec "$err_logic_error" "Tag '$release_tag' already exists. Possible remedy: branch 'main' again, and do a new PR and release with a higher version number."
 fi
 
 exit_if_has_errors

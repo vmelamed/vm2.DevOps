@@ -46,12 +46,12 @@ function get_arguments()
                 ;;
 
             --vm2-repos|-r )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for $option"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for $option"
                 vm2_repos="$1"; shift
                 ;;
 
             --source-of-truth|-s )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for $option"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for $option"
                 sot="$1"; shift
                 ;;
 
@@ -60,7 +60,7 @@ function get_arguments()
                 ;;
 
             --file*|-f* )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for $option"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for $option"
                 get_selector_action "$option" "$1"; shift
                 ;;
 
@@ -69,7 +69,7 @@ function get_arguments()
                 ;;
 
             --summary )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for $option"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for $option"
                 summary_file="$1"; shift
                 ;;
 
@@ -97,7 +97,7 @@ function get_selector_action()
 
     # get the action from the option name, e.g. --file-ask-to-merge => "ask-to-merge"
     [[ $option =~ ^-(-file|f)(-?([a-z-]+))?$ ]] ||
-        usage "$err_unknown_argument" "Unknown argument: $option"
+        usage -ec "$err_unknown_argument" "Unknown argument: $option"
 
     # get the action and replace the dashes with spaces in the action name, e.g. "ask-to-merge" => "ask to merge"
     action="${BASH_REMATCH[3]//-/ }"
@@ -114,11 +114,11 @@ function get_selector_action()
 
     # validate the action
     [[ -z $action ]] || is_in "$action" "${valid_actions[@]}" ||
-        usage "$err_argument_value" "Invalid action: $action. Valid actions are: $all_actions_str"
+        usage -ec "$err_argument_value" "Invalid action: $action. Valid actions are: $all_actions_str"
 
     trace "File selector '$file_selector' with action '$action'"
 
-    [[ $file_selector != -* ]] || usage "$err_argument_value" "The argument '$file_selector' does not appear to be a valid file selector."
+    [[ $file_selector != -* ]] || usage -ec "$err_argument_value" "The argument '$file_selector' does not appear to be a valid file selector."
 
     # get the patterns that the action applies to, and remember the action for those files in the selectors_actions array
     selectors_actions[$file_selector]="$action"

@@ -16,6 +16,7 @@ declare -rx varNameRegex
 
 declare -rxi success
 declare -rxi err_invalid_nameref
+declare -rxi err_invalid_arguments
 
 gth="╔════════════════════════════════════════════════════════════════════════════"
 
@@ -101,7 +102,7 @@ function _write_title()
 function _write_line()
 {
      [[ $1 =~ $varNameRegex ]] || {
-        error 3 "${FUNCNAME[0]}() requires a non-empty variable name as argument."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires a non-empty variable name as argument."
         return "$err_invalid_nameref"
     }
 

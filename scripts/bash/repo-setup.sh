@@ -80,11 +80,11 @@ repo_path="${repo_path:-$(pwd)}"
 # Check the prerequisites
 #-------------------------------------------------------------------------------
 
-command -v jq &> "$_ignore"                                 || error "'jq' is not installed. Please install it first."
-command -v yq &> "$_ignore"                                 || error "'yq' is not installed. Please install it first."
-[[ $(yq --version) =~ https://github\.com/mikefarah/yq/ ]]  || error 'This script requires "yq" by Mike Farah: "wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O ~/.local/bin/yq4; chmod +x ~/.local/bin/yq4"'
-command -v gh &> "$_ignore"                                 || error "'gh' is not installed. Please install it first."
-gh auth status &> "$_ignore"                                || error "'gh' is not authenticated. Run 'gh auth login' first."
+command -v jq &> "$_ignore"                                 || error -ec "$err_tool_not_found" "'jq' is not installed. Please install it first."
+command -v yq &> "$_ignore"                                 || error -ec "$err_tool_not_found" "'yq' is not installed. Please install it first."
+[[ $(yq --version) =~ https://github\.com/mikefarah/yq/ ]]  || error -ec "$err_tool_not_found" 'This script requires "yq" by Mike Farah: "wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O ~/.local/bin/yq4; chmod +x ~/.local/bin/yq4"'
+command -v gh &> "$_ignore"                                 || error -ec "$err_tool_not_found" "'gh' is not installed. Please install it first."
+gh auth status &> "$_ignore"                                || error -ec "$err_tool_not_found" "'gh' is not authenticated. Run 'gh auth login' first."
 
 exit_if_has_errors
 
@@ -94,8 +94,8 @@ declare -xi rc="$success"
 # Find and validate vm2_repos:
 #===============================
 vm2_repos=$(resolve_vm2_repos "$vm2_repos") ||
-    usage "$rc" "Could not find the parent directory for the vm2 repositories." \
-                "Please, set the VM2_REPOS environment variable or provide the path as an argument with '--vm2-repos' option."
+    usage -ec "$rc" "Could not find the parent directory for the vm2 repositories." \
+                    "Please, set the VM2_REPOS environment variable or provide the path as an argument with '--vm2-repos' option."
 
 trace "All vm2 repositories are expected to be in '$vm2_repos'"
 init_default_local_git_settings "$vm2_repos"
@@ -104,22 +104,22 @@ sot_path=$(get_vm2_sot_path "$vm2_repos" "$sot")
 
 # make sure we are seeing the templates and vm2.DevOps properly through vm2_repos
 [[ -d "$sot_path" && -d "$vm2_repos/$vm2_devops_repo_name" ]] ||
-    usage "$err_not_found" "The GitHub Actions workflow templates directory .github and/or the '$vm2_devops_repo_name' directory is missing in '$vm2_repos', Please clone the repositories into '$vm2_repos'."
+    usage -ec "$err_not_found" "The GitHub Actions workflow templates directory .github and/or the '$vm2_devops_repo_name' directory is missing in '$vm2_repos', Please clone the repositories into '$vm2_repos'."
 
 rc="$success"
 validate_repo_root "$vm2_repos" "$vm2_repos/$vm2_devops_repo_name" "main" || rc=$?
 (( rc == err_behind_latest_stable_tag )) &&
-    error "The repository in '$vm2_repos/$vm2_devops_repo_name' is behind the latest stable tag. Please update it to the latest commit on the main branch."
+    error -ec "$err_logic_error" "The repository in '$vm2_repos/$vm2_devops_repo_name' is behind the latest stable tag. Please update it to the latest commit on the main branch."
 
 rc="$success"
 validate_repo_root "$vm2_repos" "$vm2_repos/$vm2_sot_repo_name" "main" || rc=$?
 (( rc == err_behind_latest_stable_tag )) &&
-    error "The repository in '$sot_path' is behind the latest stable tag. Please update it to the latest commit on the main branch."
+    error -ec "$err_logic_error" "The repository in '$sot_path' is behind the latest stable tag. Please update it to the latest commit on the main branch."
 
 declare -x _ci_yaml
 
 _ci_yaml="$vm2_repos/$vm2_devops_repo_name/.github/workflows/_ci.yaml"
-[[ -s "$_ci_yaml" ]] || error "Could not find _ci.yaml GitHub Actions reusable workflow file in ${vm2_repos}."
+[[ -s "$_ci_yaml" ]] || error -ec "$err_logic_error" "Could not find _ci.yaml GitHub Actions reusable workflow file in ${vm2_repos}."
 
 declare -xr _ci_yaml
 
@@ -132,7 +132,7 @@ rc="$success"
 output=$(resolve_repo_root "$vm2_repos" "$repo_path") || rc=$?
 
 is_in "$rc" "$success" "$err_dir_with_ci" ||
-    usage "$err_argument_value" "Could not resolve the '$repo_path' within '$vm2_repos' to a Git initialized or not working tree root with configured CI. $(error_message "$rc")"
+    usage -ec "$err_argument_value" "Could not resolve the '$repo_path' within '$vm2_repos' to a Git initialized or not working tree root with configured CI. $(error_message "$rc")"
 
 reset_errors
 
@@ -160,7 +160,7 @@ if has_local_repo repo_state; then
         warning "The repository path '$repo_path' is different from the repository root '${repo_state[$key_root]}' detected by git. Adjusting to the git-detected repository root."
         repo_path="${repo_state[$key_root]}"
         [[ -s "$repo_path/.github/workflows/CI.yaml" ]] ||
-            usage "$err_repo_with_no_ci" "The git-detected repository path '$repo_path' is missing .github/workflows/CI.yaml. Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2.NewPkg' to create a valid directory structure."
+            usage -ec "$err_repo_with_no_ci" "The git-detected repository path '$repo_path' is missing .github/workflows/CI.yaml. Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2.NewPkg' to create a valid directory structure."
         trace "repo_path='$repo_path' from git-detected repository root"
     fi
     info "Git repository path            => $repo_path"
@@ -211,11 +211,11 @@ declare -xr ci_yaml
 
 visibility="${visibility,,}"
 
-[[ -s "$ci_yaml" ]]                                      || error "The specified path '${repo_path}' is not a valid project/repository root (missing .github/workflows/CI.yaml). Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2pkg <name>' to create a valid directory."
-[[ -z $repo_name || $repo_name =~ $repo_name_regex ]]    || error "Could not determine repository name from the specified path '${repo_path}' or the name is invalid. Please specify a valid path to the root of the project/repository using '--path <path>'."
-[[ -z $repo_owner || $repo_owner =~ $repo_owner_regex ]] || error "Could not determine repository owner from the specified path '${repo_path}', or from the environment variable ORGANIZATION, or the owner name is invalid. Please specify a valid owner of the project/repository using '--owner <owner>' or set the ORGANIZATION environment variable."
-validate_branch_name "$branch" &> "$_ignore"             || error "Invalid branch name '${branch}'. Please specify a valid branch name using '--branch <branch>'."
-is_in "$visibility" "public" "private"                   || error "Invalid visibility '${visibility}'. Valid options are 'public', 'private', or 'internal'. Please specify a valid visibility using '--visibility <public|private|internal>'."
+[[ -s "$ci_yaml" ]]                                      || error -ec "$err_logic_error" "The specified path '${repo_path}' is not a valid project/repository root (missing .github/workflows/CI.yaml). Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2pkg <name>' to create a valid directory."
+[[ -z $repo_name || $repo_name =~ $repo_name_regex ]]    || error -ec "$err_logic_error" "Could not determine repository name from the specified path '${repo_path}' or the name is invalid. Please specify a valid path to the root of the project/repository using '--path <path>'."
+[[ -z $repo_owner || $repo_owner =~ $repo_owner_regex ]] || error -ec "$err_logic_error" "Could not determine repository owner from the specified path '${repo_path}', or from the environment variable ORGANIZATION, or the owner name is invalid. Please specify a valid owner of the project/repository using '--owner <owner>' or set the ORGANIZATION environment variable."
+validate_branch_name "$branch" &> "$_ignore"             || error -ec "$err_logic_error" "Invalid branch name '${branch}'. Please specify a valid branch name using '--branch <branch>'."
+is_in "$visibility" "public" "private"                   || error -ec "$err_logic_error" "Invalid visibility '${visibility}'. Valid options are 'public', 'private', or 'internal'. Please specify a valid visibility using '--visibility <public|private|internal>'."
 
 exit_if_has_errors
 
@@ -331,7 +331,7 @@ if ! has_remote_repo repo_state; then
     dump_repo_state repo_state
 
     if [[ $rc -ne 0 ]]; then
-        error "Failed to get repository state after creation. The repository may have been created successfully, but the script cannot continue with configuration. Please check the repository at $repo_path."
+        error -ec "$err_tool_error" "Failed to get repository state after creation. The repository may have been created successfully, but the script cannot continue with configuration. Please check the repository at $repo_path."
         exit 1
     fi
 
@@ -339,7 +339,7 @@ if ! has_remote_repo repo_state; then
     repo_id="${repo_state[$key_repo_id]}"
 
     [[ -n "$repo_url" && -n "$repo_id" ]] ||
-        usage "$err_not_git_directory" "The repository does not appear to be initialized and/or linked to the remote."
+        usage -ec "$err_not_git_directory" "The repository does not appear to be initialized and/or linked to the remote."
 
     branch="${repo_state[$key_default_branch]}"
     main_protection_rs_name="${main_protection_rs_name:-${branch} protection}"

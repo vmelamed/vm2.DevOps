@@ -11,6 +11,9 @@ declare -r lib_dir
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
 source "$lib_dir/gh_core.sh"
 
+declare -rxi err_tool_error
+declare -rxi err_logic_error
+
 declare -xr default_configuration="Release"
 declare -ixr default_min_coverage_pct=80
 declare -xr default_minver_tag_prefix='v'
@@ -88,7 +91,7 @@ execute mkdir -p "$results_dir"
 
 # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
 repo_root=$(git rev-parse --show-toplevel 2>"$_ignore") || {
-    error "Failed to determine the repository root from $(pwd)."
+    error -ec "$err_tool_error" "Failed to determine the repository root from $(pwd)."
     exit 2
 }
 
@@ -123,7 +126,7 @@ declare -r benchmark_exe_path
 # Verify executables exist
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 if [[ (! -f "${benchmark_exe_path}" || ! -f "${benchmark_dll_path}") && "$dry_run" != true ]]; then
-    error "Cached benchmark executables '${benchmark_exe_path}' or '${benchmark_dll_path}' were not found."
+    error -ec "$err_logic_error" "Cached benchmark executables '${benchmark_exe_path}' or '${benchmark_dll_path}' were not found."
     exit 2
 fi
 
@@ -135,7 +138,7 @@ if ! execute "${benchmark_exe_path}" \
         --exporters json markdown \
         --memory \
         --artifacts "$artifacts_dir"; then
-    error "Benchmarks failed in project '$benchmark_project'."
+    error -ec "$err_logic_error" "Benchmarks failed in project '$benchmark_project'."
     exit 2
 fi
 
@@ -144,7 +147,7 @@ fi
 if [[ $dry_run != true ]]; then
     json_files=("$results_dir"/*-report-full-compressed.json)
     if [[ ! -f "${json_files[0]}" ]]; then
-        error "No JSON benchmark reports found in $results_dir"
+        error -ec "$err_tool_error" "No JSON benchmark reports found in $results_dir"
         exit 2
     fi
 

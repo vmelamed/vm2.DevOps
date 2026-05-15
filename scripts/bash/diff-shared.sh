@@ -22,9 +22,14 @@ declare -rx lib_dir
 #===============================
 # Imported constants
 #===============================
-# environment variables and defaults:
+# imported environment variables and defaults:
 declare -rx default_sot
+declare -rxa sources_of_truth
+declare -rxa vm2_repositories
+declare -rx semverTagReleaseRegex
+declare -rx vm2_devops_repo_name
 
+# import outcomes and error codes
 declare -rxi success
 declare -rxi failure
 declare -rxi err_invalid_arguments
@@ -42,11 +47,6 @@ declare -rxi err_dir_with_no_ci
 declare -rxi err_not_git_directory
 declare -rxi err_dir_with_ci
 
-declare -rx semverTagReleaseRegex
-declare -rx vm2_devops_repo_name
-declare -ra sources_of_truth
-
-
 source "${script_dir}/diff-shared.functions.sh"
 source "${script_dir}/diff-shared.args.sh"
 source "${script_dir}/diff-shared.usage.sh"
@@ -62,7 +62,7 @@ declare -x diff_only="false"        # if true, only show the differences without
 declare -x summary_file=""          # the file where the summary of the differences and actions will be written. If not specified, a temporary file will be created.
 
 #===============================
-# Shared variables:
+# Script shared variables:
 #===============================
 declare -xi rc="$success"
 declare -xa arguments=(             # array of all arguments for logging and debugging purposes
@@ -94,15 +94,16 @@ get_arguments "$@"
 dump_args --quiet
 
 is_in "$sot" "${sources_of_truth[@]}" || {
-    error "Invalid source of truth '$sot'. Valid values are: ${sources_of_truth[*]}."
-    exit "$err_argument_value"
+    usage -ec "$err_argument_value" "Invalid source of truth '$sot'. Valid values are: ${sources_of_truth[*]}."
 }
 
 #===============================
 # Adjust, validate and freeze the arguments:
 #===============================
-vm2_repos=$(resolve_vm2_repos "$vm2_repos") ||
-    usage "$rc" "Could not find the parent directory for the vm2 repositories. Please, set the VM2_REPOS environment variable or provide the path as an argument with '--vm2-repos' option."
+vm2_repos=$(resolve_vm2_repos "$vm2_repos") || {
+    rc=$?
+    usage -ec "$rc" "Could not find the parent directory for the vm2 repositories. Please, set the VM2_REPOS environment variable or provide the path as an argument with '--vm2-repos' option."
+}
 trace "All vm2 repositories are expected to be in '$vm2_repos'"
 
 # if no repos were specified as arguments, use the current directory as the only target repo:
@@ -122,17 +123,17 @@ declare -rx summary_file
 rc="$success"
 validate_repo_root "$vm2_repos" "$vm2_devops_repo_name" "main" || rc=$?
 (( rc == err_behind_latest_stable_tag )) &&
-    error "The repository in '$vm2_devops_repo_name' is behind the latest stable tag. Please update it to the latest version of the main branch."
+    error -ec "$err_logic_error" "The repository in '$vm2_devops_repo_name' is behind the latest stable tag. Please update it to the latest version of the main branch."
 
 # ensure the SoT repository is a valid Git repository and is not behind the latest stable tag:
 rc="$success"
 validate_repo_root "$vm2_repos" "$vm2_sot_repo_name" "main" || rc=$?
 (( rc == err_behind_latest_stable_tag )) &&
-    error "The repository in '$vm2_sot_repo_name' is behind the latest stable tag. Please update it to the latest version of the main branch."
+    error -ec "$err_logic_error" "The repository in '$vm2_sot_repo_name' is behind the latest stable tag. Please update it to the latest version of the main branch."
 
 sot_path=$(get_vm2_sot_path "$vm2_repos" "$sot") || rc=$?
 (( rc != success )) &&
-    usage "$rc" "Could not find the source of truth directory for the specified template '$sot' in the expected location in '$vm2_repos'. Please make sure it exists or correct the parameter/environment variable."
+    usage -ec "$rc" "Could not find the source of truth directory for the specified template '$sot' in the expected location in '$vm2_repos'. Please make sure it exists or correct the parameter/environment variable."
 readonly sot_path
 trace "The source of truth directory for the '$sot' template is expected in '$sot_path'"
 
@@ -164,7 +165,7 @@ declare -a target_paths=()
 
 for target in "${target_repos[@]}"; do
     output=$(resolve_target "$target") || {
-        error "Could not resolve the path of the target repository '$target'. Please, ensure that it exists and is a valid directory."
+        error -ec "$err_logic_error" "Could not resolve the path of the target repository '$target'. Please, ensure that it exists and is a valid directory."
         continue
     }
     {
@@ -186,7 +187,7 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
 
     # Load tools, file names and actions from the global config JSON
     configure "$sot_path" "$target_path" || {
-        error "Failed to load configuration for the SoT directory '$sot_path'."
+        error -ec "$err_logic_error" "Failed to load configuration for the SoT directory '$sot_path'."
         reset_errors
         continue
     }
@@ -264,8 +265,7 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
                     action="copied"
                     ;;
 
-                * )
-                    error "Unknown action '$actions' for files '${source_file}' and '${target_file}'."
+                * ) error -ec "$err_logic_error" "Unknown action '$actions' for files '${source_file}' and '${target_file}'."
                     action="error"
                     press_any_key
                     ;;
@@ -325,7 +325,7 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
                     action="copied"
                     ;;
 
-                * ) error "Unknown action '$actions' for files '${source_file}' and '${target_file}'."
+                * ) error -ec "$err_logic_error" "Unknown action '$actions' for files '${source_file}' and '${target_file}'."
                     action="error"
                     press_any_key
                     ;;

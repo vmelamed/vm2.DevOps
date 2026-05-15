@@ -53,7 +53,7 @@ if ! command -v -p jq &> "$_ignore"; then
     if execute sudo apt-get update && sudo apt-get install -y jq; then
         info "GitHub CLI 'jq' successfully installed."
     else
-        error "GitHub CLI 'jq' was not found and could not install it. Please have 'jq' installed."
+        error -ec "$err_tool_not_found" "GitHub CLI 'jq' was not found and could not install it. Please have 'jq' installed."
         exit 1
     fi
 else
@@ -62,7 +62,7 @@ else
         curl -sLo /tmp/jq https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-linux-amd64
         sudo install /tmp/jq /usr/local/bin/jq
         jq -V | to_stdout | grep -Eo 'jq-1\.8\.[0-9]+' &> "$_ignore" || {
-            error "GitHub CLI 'jq' version 1.8.x is required. Please update 'jq' to version 1.8.x."
+            error -ec "$err_tool_not_found" "GitHub CLI 'jq' version 1.8.x is required. Please update 'jq' to version 1.8.x."
             exit 2
         }
     }
@@ -71,7 +71,7 @@ if ! command -v -p gh 2>&1 "$_ignore"; then
     if execute sudo apt-get update && sudo apt-get install -y gh; then
         info "GitHub CLI 'gh' successfully installed."
     else
-        error "GitHub CLI 'gh' was not found and could not install it. Please have 'gh' installed."
+        error -ec "$err_tool_not_found" "GitHub CLI 'gh' was not found and could not install it. Please have 'gh' installed."
         exit 2
     fi
 fi

@@ -27,11 +27,11 @@ function get_arguments()
                 ;;
 
             --base-ref|-b )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 base_ref="$1"; shift
                 ;;
             * )
-                usage "$err_unknown_argument" "Unknown argument: $option"
+                usage -ec "$err_unknown_argument" "Unknown argument: $option"
                 ;;
         esac
     done

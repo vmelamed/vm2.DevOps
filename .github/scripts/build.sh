@@ -15,6 +15,10 @@ declare -xr lib_dir
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
 source "$lib_dir/gh_core.sh"
 
+declare -rxi success=0   # The command completed successfully.
+declare -rxi failure=1   # A general, unspecified error occurred.
+declare -rxi err_tool_error
+
 # default values for parameters
 declare -xr default_minver_tag_prefix='v'
 declare -xr default_minver_prerelease_id="preview.0"
@@ -74,5 +78,5 @@ execute dotnet build "$build_project" \
             displayDotnetBuildSummary |
             to_summary || true # prevent pipefail from exiting before we can capture the exit code
 rc=${PIPESTATUS[0]}
-[[ $rc == "$success" ]] || error "Building '$build_project' failed." | to_summary
+[[ $rc == "$success" ]] || error -ec "$err_tool_error" "Building '$build_project' failed." | to_summary
 exit "$rc"

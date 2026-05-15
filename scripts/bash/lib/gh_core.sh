@@ -215,12 +215,12 @@ function to_output()
 function to_github_output()
 {
     (( $# == 1 || $# == 2 )) || {
-        error 3 "${FUNCNAME[0]}() requires one or two arguments (provided $#): " \
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires one or two arguments (provided $#): " \
               "the name of the variable to output and optionally the name to use in GitHub Actions output."
         return "$err_invalid_arguments"
     }
      [[ $1 =~ $varNameRegex ]] || {
-        error 3 "${FUNCNAME[0]}() requires a non-empty variable name as argument."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires a non-empty variable name as argument."
         return "$err_invalid_nameref"
     }
 
@@ -254,7 +254,7 @@ function to_github_output()
 function args_to_github_output()
 {
     (( $# > 0 )) || {
-        error 3 "${FUNCNAME[0]}() requires one or more arguments (provided $#): the names of the variables to output."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires one or more arguments (provided $#): the names of the variables to output."
         return "$err_invalid_arguments"
     }
 

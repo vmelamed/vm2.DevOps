@@ -60,13 +60,13 @@ declare -xri url_name=3
 function validate_gh_repo_owner()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the repository owner to validate."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the repository owner to validate."
         return "$err_invalid_arguments"
     }
 
     [[ -z "$1" || "$1" =~ $repo_owner_regex ]] || {
         # repo owner can be empty (for user-level repos) or must match the regex for GitHub owner/organization names
-        error "Invalid repository owner. $valid_repo_owners."
+        error -ec "$err_argument_value" "Invalid repository owner. $valid_repo_owners."
         return "$err_argument_value"
     }
 
@@ -94,13 +94,13 @@ readonly valid_repo_names
 function validate_gh_repo_name()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the repository name to validate."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the repository name to validate."
         return "$err_invalid_arguments"
     }
 
     [[ -n "$1" && "$1" != *.git && "$1" =~ $repo_name_regex ]] || {
         # repo name cannot be empty, cannot end with .git, and must match the regex for GitHub repository names above
-        error "Invalid repository name. $valid_repo_names."
+        error -ec "$err_argument_value" "Invalid repository name. $valid_repo_names."
         return "$err_argument_value"
     }
 
@@ -122,13 +122,13 @@ function validate_gh_repo_name()
 function validate_gh_repo_description()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the repository description to validate."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the repository description to validate."
         return "$err_invalid_arguments"
     }
 
     (( ${#1} >= 3 && ${#1} <= 350 )) || {
         # GitHub repository descriptions must be between 3 and 350 characters long.
-        error "Repository description must be between 3 and 350 characters long."
+        error -ec "$err_argument_value" "Repository description must be between 3 and 350 characters long."
         return "$err_argument_value"
     }
 
@@ -150,12 +150,12 @@ function validate_gh_repo_description()
 function validate_branch_name()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the repository branch name to validate."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the repository branch name to validate."
         return "$err_invalid_arguments"
     }
 
     git check-ref-format --branch "$1" &> "$_ignore" || {
-        error "Invalid branch name '$1'. Branch names must be valid git ref names. See https://git-scm.com/docs/git-check-ref-format for details."
+        error -ec "$err_argument_value" "Invalid branch name '$1'. Branch names must be valid git ref names. See https://git-scm.com/docs/git-check-ref-format for details."
         return "$err_argument_value"
     }
 
@@ -176,11 +176,11 @@ function validate_branch_name()
 function validate_gh_secret()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the secret value to validate."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the secret value to validate."
         return "$err_invalid_arguments"
     }
     [[ -z "$1" || ! "$1" =~ [[:cntrl:]] ]] || {
-        error "Invalid secret value. Secrets cannot have control characters or be empty."
+        error -ec "$err_argument_value" "Invalid secret value. Secrets cannot have control characters or be empty."
         return "$err_argument_value"
     }
 
@@ -203,15 +203,15 @@ function validate_gh_secret()
 function execute_gh_with_retry()
 {
     (( $# >= 3 )) || {
-        error 3 "${FUNCNAME[0]}() requires at least three arguments (provided $#): <max_attempts> <delay> <gh-command> [args...]"
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires at least three arguments (provided $#): <max_attempts> <delay> <gh-command> [args...]"
         return "$err_invalid_arguments"
     }
     is_natural "$1" || {
-        error 3 "${FUNCNAME[0]}() requires the first argument to be a natural number: <max_attempts>"
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires the first argument to be a natural number: <max_attempts>"
         return "$err_argument_type"
     }
     is_natural "$2" || {
-        error 3 "${FUNCNAME[0]}() requires the second argument to be a natural number: <delay> in seconds"
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires the second argument to be a natural number: <delay> in seconds"
         return "$err_argument_type"
     }
 
@@ -249,7 +249,7 @@ function execute_gh_with_retry()
 
         # Retry or give up
         if (( ++attempt >= max_attempts )); then
-            error "After $attempt attempts, the 'gh' command is still failing."
+            error -ec "$err_logic_error" "After $attempt attempts, the 'gh' command is still failing."
             break
         fi
 
@@ -282,15 +282,15 @@ function execute_gh_with_retry()
 function execute_gh_api_with_retry()
 {
     (( $# >= 3 )) || {
-        error 3 "${FUNCNAME[0]}() requires at least three arguments (provided $#): <max_attempts> <delay> <command> [args...]"
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires at least three arguments (provided $#): <max_attempts> <delay> <command> [args...]"
         return "$err_invalid_arguments"
     }
     is_natural "$1" || {
-        error 3 "${FUNCNAME[0]}() requires the first argument to be a natural number: <max_attempts>"
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires the first argument to be a natural number: <max_attempts>"
         return "$err_invalid_arguments"
     }
     is_natural "$2" || {
-        error 3 "${FUNCNAME[0]}() requires the second argument to be a natural number: <delay> in seconds"
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires the second argument to be a natural number: <delay> in seconds"
         return "$err_invalid_arguments"
     }
 
@@ -346,7 +346,7 @@ function execute_gh_api_with_retry()
 
         # transient error - retry
         if (( ++attempt >= max_attempts )); then
-            error "After $attempt attempts, the 'gh api' command is still failing."
+            error -ec "$err_logic_error" "After $attempt attempts, the 'gh api' command is still failing."
             break
         fi
         warning "'gh api' command failed. Attempt $attempt/$max_attempts. Retrying in ${delay}s."
@@ -409,11 +409,11 @@ declare -xr jq_gh_repo_state="{
 function initialize_repo_state()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable."
         return "$err_invalid_arguments"
     }
     is_defined_associative_array "$1" || {
-        error 3 "${FUNCNAME[0]}() requires 1 nameref argument: the name of an associative array variable."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires 1 nameref argument: the name of an associative array variable."
         return "$err_argument_type"
     }
 
@@ -446,22 +446,22 @@ function initialize_repo_state()
 function get_repo_state()
 {
     (( $# == 2 || $# == 3 )) || {
-        error 3 "${FUNCNAME[0]}() requires 2 or 3 arguments (provided $#):
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires 2 or 3 arguments (provided $#):
 1) the existing path to the root of the git repo working tree
 2) nameref: the name of an associative array variable - to receive the repo state
 3) full_info (optional, default: true) - if false, only retrieve the local Git repository state without trying to get GitHub API data."
         return "$err_invalid_arguments"
     }
     [[ -d "$1" ]] || {
-        error 3 "${FUNCNAME[0]}() requires argument \$1 to be the existing path to the root of the git repo working tree"
+        error -ec "$err_not_directory" -sd 3 "${FUNCNAME[0]}() requires argument \$1 to be the existing path to the root of the git repo working tree"
         return "$err_not_directory"
     }
     is_defined_associative_array "$2" || {
-        error 3 "${FUNCNAME[0]}() require \$2 arguments to be a nameref: the name of an associative array variable - to receive the repo state."
-        return "$err_argument_type"
+        error -ec "$err_invalid_nameref" -sd 3 "${FUNCNAME[0]}() require \$2 arguments to be a nameref: the name of an associative array variable - to receive the repo state."
+        return "$err_invalid_nameref"
     }
     (( $# == 2 )) || is_boolean "$3" || {
-        error 3 "${FUNCNAME[0]}() requires argument \$3 to be a boolean if provided"
+        error -ec "$err_argument_type" -sd 3 "${FUNCNAME[0]}() requires argument \$3 to be a boolean if provided"
         return "$err_argument_type"
     }
 
@@ -502,11 +502,11 @@ function get_repo_state()
     # these are real logical problems that can occur if the git remote is misconfigured or the API is returning unexpected data,
     # so we check them all and report all mismatches rather than bailing on the first one
     [[ ${gh_state["$key_ssh_url"]} == "${state[$key_url]}"      ||
-       ${gh_state["$key_url"]}     == "${state[$key_url]}" ]]   || error "GitHub API returned URLs '${gh_state["$key_ssh_url"]}' and '${gh_state["$key_url"]}' that do not match the git remote URL '${state[$key_url]}'."
-    [[ ${gh_state["$key_owner"]}   == "${state[$key_owner]}" ]] || error "GitHub API returned owner '${gh_state["$key_owner"]}' that does not match the git remote owner '${state[$key_owner]}'."
-    [[ ${gh_state["$key_name"]}    == "${state[$key_name]}" ]]  || error "GitHub API returned name '${gh_state["$key_name"]}' that does not match the git remote name '${state[$key_name]}'."
-    [[ ${gh_state["$key_repo"]}    == "${state[$key_repo]}" ]]  || error "GitHub API returned repo '${gh_state["$key_repo"]}' that does not match the expected repo '${state[$key_repo]}'."
-    [[ -n ${gh_state["$key_repo_id"]} ]]                        || error "GitHub API did not return a repo ID for '${gh_state["$key_repo"]}'."
+       ${gh_state["$key_url"]}     == "${state[$key_url]}" ]]   || error -ec "$err_logic_error" -sd 3 "GitHub API returned URLs '${gh_state["$key_ssh_url"]}' and '${gh_state["$key_url"]}' that do not match the git remote URL '${state[$key_url]}'."
+    [[ ${gh_state["$key_owner"]}   == "${state[$key_owner]}" ]] || error -ec "$err_logic_error" -sd 3 "GitHub API returned owner '${gh_state["$key_owner"]}' that does not match the git remote owner '${state[$key_owner]}'."
+    [[ ${gh_state["$key_name"]}    == "${state[$key_name]}" ]]  || error -ec "$err_logic_error" -sd 3 "GitHub API returned name '${gh_state["$key_name"]}' that does not match the git remote name '${state[$key_name]}'."
+    [[ ${gh_state["$key_repo"]}    == "${state[$key_repo]}" ]]  || error -ec "$err_logic_error" -sd 3 "GitHub API returned repo '${gh_state["$key_repo"]}' that does not match the expected repo '${state[$key_repo]}'."
+    [[ -n ${gh_state["$key_repo_id"]} ]]                        || error -ec "$err_logic_error" -sd 3 "GitHub API did not return a repo ID for '${gh_state["$key_repo"]}'."
 
     rc=$(( errs < $(get_errors) ? failure : success ))
 
@@ -524,11 +524,11 @@ function get_repo_state()
 function has_local_repo()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable."
         return "$err_invalid_arguments"
     }
     is_defined_associative_array "$1" || {
-        error 3 "${FUNCNAME[0]}() requires 1 nameref argument - the name of an associative array variable."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires 1 nameref argument - the name of an associative array variable."
         return "$err_argument_type"
     }
 
@@ -544,11 +544,11 @@ function has_local_repo()
 function has_remote_repo()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable."
         return "$err_invalid_arguments"
     }
     is_defined_associative_array "$1" || {
-        error 3 "${FUNCNAME[0]}() requires 1 nameref argument - the name of an associative array variable."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires 1 nameref argument - the name of an associative array variable."
         return "$err_argument_type"
     }
 
@@ -564,11 +564,11 @@ function has_remote_repo()
 function has_github_remote()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable."
         return "$err_invalid_arguments"
     }
     is_defined_associative_array "$1" || {
-        error 3 "${FUNCNAME[0]}() requires 1 nameref argument - the name of an associative array variable."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires 1 nameref argument - the name of an associative array variable."
         return "$err_argument_type"
     }
 
@@ -586,11 +586,11 @@ function has_github_remote()
 function dump_repo_state()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable."
         return "$err_invalid_arguments"
     }
     is_defined_associative_array "$1" || {
-        error 3 "${FUNCNAME[0]}() requires 1 nameref argument - the name of an associative array variable."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires 1 nameref argument - the name of an associative array variable."
         return "$err_argument_type"
     }
 
@@ -618,11 +618,11 @@ function dump_repo_state()
 function read_repo_state()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable."
         return "$err_invalid_arguments"
     }
     is_defined_associative_array "$1" || {
-        error 3 "${FUNCNAME[0]}() requires 1 nameref argument - the name of an associative array variable."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires 1 nameref argument - the name of an associative array variable."
         return "$err_argument_type"
     }
 
@@ -646,11 +646,11 @@ function read_repo_state()
 function print_repo_state()
 {
     (( $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable."
         return "$err_invalid_arguments"
     }
     is_defined_associative_array "$1" || {
-        error 3 "${FUNCNAME[0]}() requires 1 nameref argument - the name of an associative array variable."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires 1 nameref argument - the name of an associative array variable."
         return "$err_argument_type"
     }
 
@@ -675,11 +675,11 @@ function print_repo_state()
 function is_inside_work_tree()
 {
     (( $# == 0 || $# == 1 )) || {
-        error 3 "${FUNCNAME[0]}() requires 0 or 1 argument (provided $#): path to a directory."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires 0 or 1 argument (provided $#): path to a directory."
         return "$err_invalid_arguments"
     }
     (( $# == 0 )) || [[ -d $1 ]] || {
-        error 3 "${FUNCNAME[0]}() the parameter \$1 must be a path to a directory."
+        error -ec "$err_not_directory" -sd 3 "${FUNCNAME[0]}() the parameter \$1 must be a path to a directory."
         return "$err_not_directory"
     }
 
@@ -701,7 +701,7 @@ function is_inside_work_tree()
 function root_working_tree()
 {
     is_inside_work_tree "${1:-.}" || {
-        error 3 "${FUNCNAME[0]}() the parameter \$1 or the current directory must be a path to a directory inside a Git repository working tree."
+        error -ec "$err_not_git_directory" -sd 3 "${FUNCNAME[0]}() the parameter \$1 or the current directory must be a path to a directory inside a Git repository working tree."
         return "$err_not_git_directory"
     }
 
@@ -729,15 +729,15 @@ function root_working_tree()
 function should_fetch_for_latest_stable_tag()
 {
     (( $# <= 2 )) || {
-        error 3 "${FUNCNAME[0]}() requires no more than 2 arguments (provided $#): path to a Git repository and an optional branch name."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires no more than 2 arguments (provided $#): path to a Git repository and an optional branch name."
         return "$err_invalid_arguments"
     }
     (( $# >= 1 )) && [[ -d "$1" ]] || {
-        error 3 "${FUNCNAME[0]}() the parameter \$1 must be a path to an existing directory."
+        error -ec "$err_not_directory" -sd 3 "${FUNCNAME[0]}() the parameter \$1 must be a path to an existing directory."
         return "$err_not_directory"
     }
     (( $# >= 2 )) && validate_branch_name "$2" || {
-        error 3 "${FUNCNAME[0]}() the parameter \$2 must be a valid branch name."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() the parameter \$2 must be a valid branch name."
         return "$err_invalid_arguments"
     }
 
@@ -745,7 +745,7 @@ function should_fetch_for_latest_stable_tag()
     local branch=${2:-main}
 
     is_inside_work_tree "$dir" || {
-        error 3 "${FUNCNAME[0]}() the parameter \$1 or the current directory must be inside a Git work tree."
+        error -ec "$err_not_git_directory" -sd 3 "${FUNCNAME[0]}() the parameter \$1 or the current directory must be inside a Git work tree."
         return "$err_not_git_directory"
     }
 
@@ -794,7 +794,7 @@ function ensure_fresh_git_state()
             trace "Git metadata appears stale or repository is shallow. Fetching from remote is recommended."
             git -C "$1" fetch origin "${2:-main}" --quiet 2> "$_ignore" || {
                 rc=$?
-                error "Failed to fetch from remote repository: $rc"
+                error -ec "$err_logic_error" "Failed to fetch from remote repository: $rc"
             }
             ;;
         "$negative" )
@@ -822,15 +822,15 @@ function ensure_fresh_git_state()
 function get_latest_stable_tag_hash()
 {
     (( $# <= 2 )) || {
-        error 3 "${FUNCNAME[0]}() takes 0, 1 or 2 arguments (provided $#): \$1 - a directory. Optional \$2 - boolean to fetch the latest changes in main from remote (default true)."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() takes 0, 1 or 2 arguments (provided $#): \$1 - a directory. Optional \$2 - boolean to fetch the latest changes in main from remote (default true)."
         return "$err_invalid_arguments"
     }
     (( $# < 1 )) || [[ -d "$1" ]] || {
-        error 3 "The specified directory '$1' does not exist."
+        error -ec "$err_not_directory" -sd 3 "The specified directory '$1' does not exist."
         return "$err_not_directory"
     }
     is_inside_work_tree "${1:-.}" || {
-        error 3 "The specified directory '$1' is not a Git work tree."
+        error -ec "$err_not_git_directory" -sd 3 "The specified directory '$1' is not a Git work tree."
         return "$err_not_git_directory"
     }
 

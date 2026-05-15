@@ -84,16 +84,16 @@ declare -rA merge_commands=(
 ## Reads ${lib_dir}/diff-shared.config.json and populates arrays
 function configure()
 {
-    (( $# == 2 ))                       || usage "${FUNCNAME[0]}() takes 2 mandatory arguments (provided $#) - the SoT directory and the target directory."
-    [[ -d $1 ]]                         || error "${FUNCNAME[0]}() the specified SoT directory '$1' does not exist or is not a directory."
-    [[ -d $2 ]]                         || error "${FUNCNAME[0]}() the specified SoT directory '$2' does not exist or is not a directory."
+    (( $# == 2 ))                       || usage -ec "$err_invalid_arguments" "${FUNCNAME[0]}() takes 2 mandatory arguments (provided $#) - the SoT directory and the target directory."
+    [[ -d $1 ]]                         || error -ec "$err_argument_value" "${FUNCNAME[0]}() the specified SoT directory '$1' does not exist or is not a directory."
+    [[ -d $2 ]]                         || error -ec "$err_argument_value" "${FUNCNAME[0]}() the specified SoT directory '$2' does not exist or is not a directory."
 
     local config_file="$1/diff-shared.config.json"
     local target_path="$2"
 
     # validate the config file and load the diff and merge tools from it:
-    [[ -s "$config_file" ]]              || error "The configuration file '$config_file' was not found or is empty."
-    jq empty "$config_file" 2>"$_ignore" || error "The configuration file '$config_file' contains invalid JSON."
+    [[ -s "$config_file" ]]              || error -ec "$err_argument_value" "The configuration file '$config_file' was not found or is empty."
+    jq empty "$config_file" 2>"$_ignore" || error -ec "$err_argument_value" "The configuration file '$config_file' contains invalid JSON."
 
     exit_if_has_errors
 
@@ -112,14 +112,14 @@ function configure()
     local vm2_sot_shared="${vm2_sot_repo_name}/templates/${sot}/content"
 
     while IFS='=' read -r source_file target_file file_action; do
-        [[ -n "$source_file" ]]                     || error "Empty source file path found in '$config_file'."
-        [[ -n "$target_file" ]]                     || error "Empty target file path found in '$config_file'."
-        [[ -n "$file_action" ]]                     || error "Empty action found in '$config_file'."
-        is_in "$file_action" "${valid_actions[@]}"  || error "'$action' is not a valid action. Must be one of: $all_actions_str."
+        [[ -n "$source_file" ]]                     || error -ec "$err_argument_value" "Empty source file path found in '$config_file'."
+        [[ -n "$target_file" ]]                     || error -ec "$err_argument_value" "Empty target file path found in '$config_file'."
+        [[ -n "$file_action" ]]                     || error -ec "$err_argument_value" "Empty action found in '$config_file'."
+        is_in "$file_action" "${valid_actions[@]}"  || error -ec "$err_argument_value" "'$action' is not a valid action. Must be one of: $all_actions_str."
 
         # Expand variables in paths
         eval "source_file=\"$source_file\""
-        [[ -s "$source_file" ]]                     || error "Source file '$source_file' does not exist or is empty."
+        [[ -s "$source_file" ]]                     || error -ec "$err_argument_value" "Source file '$source_file' does not exist or is empty."
         eval "target_file=\"$target_file\""
         eval "file_action=\"$file_action\""
         # and assign into the model arrays by index:
@@ -136,7 +136,7 @@ function configure()
 
     # validate the configuration
     (( ${#source_files[@]} == ${#target_files[@]} && ${#source_files[@]} == ${#file_actions[@]} )) ||
-        error "The data in the config tables does not match."
+        error -ec "$err_logic_error" "The data in the config tables does not match."
 
     exit_if_has_errors
 
@@ -148,7 +148,7 @@ function parameterize()
     local rc=$failure
 
     (( ${#selectors_actions[@]} > 0 )) || {
-        error "No command line arguments were provided to parameterize the file actions. Please provide at least one --file* argument to specify which files to compare and how."
+        error -ec "$err_invalid_arguments" -sd 3 "No command line arguments were provided to parameterize the file actions. Please provide at least one --file* argument to specify which files to compare and how."
         return "$rc"
     }
 
@@ -196,7 +196,7 @@ function parameterize()
         trace "Parameterized actions for ${count} files based on the provided command line arguments."
         rc=$success
     else
-        error "No files were matched by the provided command line arguments."
+        error -ec "$err_argument_value" "No files were matched by the provided command line arguments."
         rc=$failure
     fi
     return "$rc"
@@ -205,7 +205,7 @@ function parameterize()
 function resolve_target()
 {
     [[ $# -eq 1 ]] || {
-        error 3 "${FUNCNAME[0]} expects one argument (provided $#):" \
+        error -ec "$err_invalid_arguments"  -sd 3 "${FUNCNAME[0]} expects one argument (provided $#):" \
                 "  1) the directory name of the target repository."
         return "$err_invalid_arguments"
     }
@@ -215,7 +215,7 @@ function resolve_target()
 
     # We can only work with git repos or directories that have CI configured:
     (( rc == success || rc == err_dir_with_ci )) || {
-        error "$rc" "The specified target directory '$1' is invalid. It should have CI configured in '.github/workflows'."
+        error -ec "$err_argument_value" "The specified target directory '$1' is invalid. It should have CI configured in '.github/workflows'."
         return "$rc"
     }
 
@@ -231,10 +231,10 @@ function resolve_target()
     if (( rc == success )); then
         branch="$(git -C "$target_root" branch --show-current 2>"$_ignore")" || {
             rc=$?
-            error "The repository in the specified target directory '$target_dir' appears corrupted."
+            error -ec "$err_tool_error" "The repository in the specified target directory '$1' appears corrupted."
         }
         (( rc == success )) && ensure_fresh_git_state "$target_root" "$branch" ||
-            error "The specified target repository at '$target_root' on branch '$branch' is not in a clean state. Please, commit or stash your changes."
+            error -ec "$err_logic_error" "The specified target repository at '$target_root' on branch '$branch' is not in a clean state. Please, commit or stash your changes."
     else
         branch="<not a git repository>"
     fi
@@ -250,11 +250,11 @@ function resolve_target()
 ## Reads ${target_path}/diff-shared.custom.json and overrides file_actions
 function customize()
 {
-    (( $# == 1 || $# == 2 ))        || usage "${FUNCNAME[0]}() requires 1 or 2 arguments (provided $#):" \
+    (( $# == 1 || $# == 2 ))        || usage -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 or 2 arguments (provided $#):" \
                                              "  1) target repository root directory path" \
                                              "  2) optional flag to customize the tools only."
-    [[ -d $1 ]]                     || usage "${FUNCNAME[0]}() the target path is not a valid directory."
-    [[ -z $2 ]] || is_boolean "$2"  || usage "${FUNCNAME[0]}() the second optional argument must be a boolean flag indicating whether to customize the tools only."
+    [[ -d $1 ]]                     || usage -ec "$err_argument_value" "${FUNCNAME[0]}() the target path is not a valid directory."
+    [[ -z $2 ]] || is_boolean "$2"  || usage -ec "$err_argument_value" "${FUNCNAME[0]}() the second optional argument must be a boolean flag indicating whether to customize the tools only."
 
     target_path=$1
     only_tools=${2:-false}
@@ -268,7 +268,7 @@ function customize()
 
     trace "Validate the custom configuration file $custom_config."
     jq empty "$custom_config" 2>"$_ignore" || {
-        error "The custom configuration file $custom_config contains invalid JSON."
+        error -ec "$err_argument_value" "The custom configuration file $custom_config contains invalid JSON."
         return "$failure"
     }
 
@@ -289,7 +289,7 @@ function customize()
        -n $diff_command &&
        -n $merge_tool   &&
        -n $merge_command ]] ||
-        error "The configuration and/or customization files and the defaults must determine the names of the diff and merge tools" \
+        error -ec "$err_argument_value" "The configuration and/or customization files and the defaults must determine the names of the diff and merge tools" \
               "and the corresponding commands: " \
               "  diff tool:    '$diff_tool'" \
               "  diff command: '$diff_command'" \
@@ -344,8 +344,8 @@ function customize()
 
 function get_tools()
 {
-    [[ $# -eq 1 ]] || usage "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): configuration or customization file."
-    [[ -s $1 ]]    || usage "${FUNCNAME[0]}() the configuration or customization file does not exists or is empty."
+    [[ $# -eq 1 ]] || usage -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): configuration or customization file."
+    [[ -s $1 ]]    || usage -ec "$err_argument_value" "${FUNCNAME[0]}() the configuration or customization file does not exists or is empty."
 
     local file="$1"
     local dt dc mt mc

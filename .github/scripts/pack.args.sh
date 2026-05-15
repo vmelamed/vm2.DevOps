@@ -27,27 +27,27 @@ function get_arguments()
                 ;;
 
             --package-project|-pp )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 package_project="$1"; shift
                 ;;
 
             --configuration|-c )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 configuration="$1"; shift
                 ;;
 
             --define|-d )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 preprocessor_symbols="$1"; shift
                 ;;
 
             --minver-tag-prefix|-mp )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 minver_tag_prefix="$1"; shift
                 ;;
 
             --minver-prerelease-id|-mi )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 minver_prerelease_id="$1"; shift
                 ;;
 
@@ -56,7 +56,7 @@ function get_arguments()
                 ;;
 
             * )
-                usage "$err_unknown_argument" "Unknown argument: $option"
+                usage -ec "$err_unknown_argument" "Unknown argument: $option"
                 ;;
         esac
     done

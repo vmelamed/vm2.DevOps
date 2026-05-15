@@ -18,6 +18,8 @@ declare -xr lib_dir
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
 source "$lib_dir/gh_core.sh"
 
+declare -rxi err_argument_value
+
 source "$script_dir/validate-commits.usage.sh"
 source "$script_dir/validate-commits.args.sh"
 
@@ -38,7 +40,7 @@ readonly cc_regex="^(${types_pattern})(\(.+\))?!?: .+"
 
 # Determine the commit range
 if [[ -z "$base_ref" ]]; then
-    error "No base ref provided. Use --base-ref to specify the comparison point."
+    error -ec "$err_argument_value" "No base ref provided. Use --base-ref to specify the comparison point."
     exit_if_has_errors
 fi
 
@@ -51,7 +53,7 @@ while IFS= read -r subject; do
     fi
 
     if [[ ! "$subject" =~ $cc_regex ]]; then
-        error "Bad commit message: $subject"
+        error -ec "$err_argument_value" "Bad commit message: $subject"
         bad+=1
     fi
 done < <(git log --format='%s' "${base_ref}..HEAD")

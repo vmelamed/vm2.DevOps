@@ -11,6 +11,9 @@ declare -r lib_dir
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
 source "$lib_dir/gh_core.sh"
 
+declare -rxi err_tool_error
+declare -rxi err_argument_value
+
 # default constants for parameters
 declare -xr default_minver_tag_prefix='v'
 declare -xr default_minver_prerelease_id="preview.0"
@@ -45,7 +48,7 @@ git fetch --tags --force
 # detect if the head is already tagged
 head_tag=$(git tag --points-at HEAD)
 if [[ -n $head_tag ]]; then
-    error "The HEAD is already tagged with '$head_tag'. A prerelease requires at least one new commit on main."
+    error -ec "$err_tool_error" "The HEAD is already tagged with '$head_tag'. A prerelease requires at least one new commit on main."
 fi
 
 exit_if_has_errors
@@ -80,7 +83,7 @@ if is_semverRelease "$latest_stable_ver"; then
     minor=${BASH_REMATCH[$semver_minor]}
     patch=${BASH_REMATCH[$semver_patch]}
     if ((major <= 0 || minor < 0 || patch < 0)); then
-        error "Invalid version numbers in latest stable tag '$latest_stable_ver': $major.$minor.$patch"
+        error -ec "$err_argument_value" "Invalid version numbers in latest stable tag '$latest_stable_ver': $major.$minor.$patch"
         exit 2
     fi
     trace "Base version from latest stable: $major.$minor.$patch"
@@ -172,7 +175,7 @@ info "Computed prerelease version: $prerelease_version [$bump_type]"
 # ============================================================================
 
 if [[ "$bump_type" != *"none"* ]] && git rev-parse "$prerelease_tag" >"$_ignore" 2>&1; then
-    error "Tag '$prerelease_tag' already exists. Possible remedy: delete the tag, or merge another PR first."
+    error -ec "$err_tool_error" "Tag '$prerelease_tag' already exists. Possible remedy: delete the tag, or merge another PR first."
 fi
 
 exit_if_has_errors

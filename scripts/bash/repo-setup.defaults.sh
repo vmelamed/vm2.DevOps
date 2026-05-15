@@ -3,11 +3,13 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xri admin_role_id=5
+declare -rxi err_argument_value
 
-declare -xr secret_placeholder="UPDATE+ME/==" # valid base64 placeholder
+declare -rxi admin_role_id=5
 
-declare -xrA repo_state_queries=(
+declare -rx secret_placeholder="UPDATE+ME/==" # valid base64 placeholder
+
+declare -rxA repo_state_queries=(
     ["key_repo_id"]=".id"
     ["key_owner"]=".owner.login"
     ["key_default_branch"]=".default_branch"
@@ -17,7 +19,7 @@ declare -xrA repo_state_queries=(
     ["key_repo"]=".full_name"
 )
 
-declare -xrA default_repo_settings=(
+declare -rxA default_repo_settings=(
     ["default_branch"]="main"
     ["delete_branch_on_merge"]=true
     ["allow_squash_merge"]=false
@@ -32,7 +34,7 @@ declare -xrA default_repo_settings=(
     ["visibility"]="public"
 )
 
-declare -xra default_repo_settings_order=(
+declare -rxa default_repo_settings_order=(
     "default_branch"
     "has_wiki"
     "has_issues"
@@ -47,12 +49,12 @@ declare -xra default_repo_settings_order=(
     "visibility"
 )
 
-declare -xrA default_repo_permissions=(
+declare -rxA default_repo_permissions=(
     ["default_workflow_permissions"]="read"
     ["can_approve_pull_request_reviews"]=false
 )
 
-declare -xrA default_ruleset=(
+declare -rxA default_ruleset=(
     ["enforcement"]="active"
     ["repository_admin_bypass"]="present"
     ["deletion"]="present"
@@ -71,7 +73,7 @@ declare -xrA default_ruleset=(
     ["non_fast_forward"]="present"
 )
 
-declare -xra default_ruleset_order=(            # UI: Order in which rules appear in the GitHub UI "Rulesets/main protection"
+declare -rxa default_ruleset_order=(            # UI: Order in which rules appear in the GitHub UI "Rulesets/main protection"
     "enforcement"                               # Enforcement status: Active/Disabled ▾
     "repository_admin_bypass"                   # Bypass actors section
     "deletion"                                  # Restrict deletions
@@ -90,7 +92,7 @@ declare -xra default_ruleset_order=(            # UI: Order in which rules appea
     "non_fast_forward"                          # Block force pushes
 )
 
-declare -xrA default_actions_secrets=(
+declare -rxA default_actions_secrets=(
     ["BENCHER_API_TOKEN"]="$secret_placeholder"
     ["CODECOV_TOKEN"]="$secret_placeholder"
     ["RELEASE_PAT"]="$secret_placeholder"
@@ -98,11 +100,11 @@ declare -xrA default_actions_secrets=(
     ["NUGET_API_KEY"]="$secret_placeholder"
 )
 
-declare -xrA default_dependabot_secrets=(
+declare -rxA default_dependabot_secrets=(
     ["GH_PACKAGES_TOKEN"]="$secret_placeholder"
 )
 
-declare -xrA default_vars=(
+declare -rxA default_vars=(
     ["ACTIONS_RUNNER_DEBUG"]=false
     ["ACTIONS_STEP_DEBUG"]=false
     ["CONFIGURATION"]="Release"
@@ -117,7 +119,7 @@ declare -xrA default_vars=(
     ["VERBOSE"]=false
 )
 
-declare -xrA var_validators=(
+declare -rxA var_validators=(
     ["ACTIONS_RUNNER_DEBUG"]="validate_boolean"
     ["ACTIONS_STEP_DEBUG"]="validate_boolean"
     ["CONFIGURATION"]="is_valid_configuration"
@@ -159,11 +161,11 @@ declare -rxi err_not_directory          # Parameter value is not a directory
 function init_default_local_git_settings()
 {
     [[ $# -eq 1 && -n "$1" ]] || {
-        error 3 "${FUNCNAME[0]}() requires exactly 1 non-empty argument: the path to the parent directory where '$vm2_devops_repo_name' is cloned, e.g. the value of \$VM2_REPOS or the parameter of --vm2-repos."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly 1 non-empty argument: the path to the parent directory where '$vm2_devops_repo_name' is cloned, e.g. the value of \$VM2_REPOS or the parameter of --vm2-repos."
         return "$err_invalid_arguments"
     }
     [[ -d $1 ]]  || {
-        error 3 "${FUNCNAME[0]}() must be an existing directory. Provided: '$1'"
+        error -ec "$err_not_directory" -sd 3 "${FUNCNAME[0]}() must be an existing directory. Provided: '$1'"
         return "$err_not_directory"
     }
 
@@ -175,5 +177,5 @@ function init_default_local_git_settings()
     default_local_git_settings["core.hooksPath"]="$repos/$vm2_devops_repo_name/scripts/githooks"
     default_local_git_settings["commit.template"]="$shared/.gitmessage"
 
-    declare -xrA default_local_git_settings
+    declare -rxA default_local_git_settings
 }

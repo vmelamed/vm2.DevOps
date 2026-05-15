@@ -30,33 +30,33 @@ function get_arguments()
                 ;;
 
             --configuration|-c )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 configuration="$1"; shift
                 ;;
 
             --define|-d )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 preprocessor_symbols="$1"; shift
                 ;;
 
             --minver-tag-prefix|-mp )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 minver_tag_prefix="$1"; shift
                 ;;
 
             --minver-prerelease-id|-mi )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 minver_prerelease_id="$1"; shift
                 ;;
 
             --max-regression-pct|-max )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 value="$1"; shift
                 max_regression_pct=$((value + 0))  # ensure it's an integer
                 ;;
 
             --artifacts|-a )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 artifacts_dir=$1; shift
                 ;;
 

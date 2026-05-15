@@ -30,7 +30,7 @@ function get_arguments()
                     old_branch_name="$new_branch_name"
                     new_branch_name="$option"
                 else
-                    usage "$err_too_many_arguments" "Too many positional arguments: ${option}"
+                    usage -ec "$err_too_many_arguments" "Too many positional arguments: ${option}"
                 fi
                 ;;
         esac

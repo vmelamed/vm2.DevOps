@@ -7,6 +7,10 @@ declare -x _ignore
 declare -x script_name
 declare -x lib_dir
 
+declare -rxi err_invalid_arguments
+declare -rxi err_tool_error
+declare -rxi err_logic_error
+
 declare -x repo_name
 declare -x owner
 declare -x repo
@@ -62,7 +66,7 @@ function resolve_github_actions_app_id()
     # Resolve the GitHub Actions app ID dynamically via the API.
     # Used to pin required status checks to GitHub Actions specifically.
     # this function cannot be called before initialize_gh_paths() because the latter relies on the github_actions_app_id variable being set - circular dependency
-    github_actions_app_id=$(gh api --paginate apps/github-actions --jq '.id' 2>"$_ignore") || error "Failed to resolve GitHub Actions app ID from the API."
+    github_actions_app_id=$(gh api --paginate apps/github-actions --jq '.id' 2>"$_ignore") || error -ec "$err_tool_error" "Failed to resolve GitHub Actions app ID from the API."
     exit_if_has_errors
     trace "GitHub Actions app ID: ${github_actions_app_id}"
     [[ "$github_actions_app_id" == "15368" ]] || warning "Unexpected GitHub Actions app ID: ${github_actions_app_id} (expected 15368). Required status check matching may not work correctly."
@@ -82,8 +86,8 @@ function list_required_checks()
     local gate_name
 
     # Find the gate job: look for postrun-ci first, fall back to ci-gate
-    gate_job=$(yq -r '.jobs | keys[] | select(test("postrun|ci-gate"))' "$ci_yaml" | head -n 1) || error "Failed to parse gate job from CI.yaml."
-    gate_name=$(yq -r ".jobs.${gate_job:-postrun-ci}.name" "$ci_yaml")                          || error "Failed to parse gate job name from CI.yaml."
+    gate_job=$(yq -r '.jobs | keys[] | select(test("postrun|ci-gate"))' "$ci_yaml" | head -n 1) || error -ec "$err_tool_error" "Failed to parse gate job from CI.yaml."
+    gate_name=$(yq -r ".jobs.${gate_job:-postrun-ci}.name" "$ci_yaml")                          || error -ec "$err_tool_error" "Failed to parse gate job name from CI.yaml."
     exit_if_has_errors
 
     required_checks+=(
@@ -99,8 +103,8 @@ function list_required_checks()
 # shellcheck disable=SC2090 # Quotes/backslashes in this variable will not be respected.
 function initialize_gh_paths()
 {
-    [[ -n $repo ]] || error "The 'repo' variable is not set. Cannot initialize GitHub paths."
-    [[ -n $main_protection_rs_name ]] || error "The 'main_protection_rs_name' variable is not set. Cannot initialize GitHub paths."
+    [[ -n $repo ]]                    || error -ec "$err_logic_error" "The 'repo' variable is not set. Cannot initialize GitHub paths."
+    [[ -n $main_protection_rs_name ]] || error -ec "$err_logic_error" "The 'main_protection_rs_name' variable is not set. Cannot initialize GitHub paths."
 
     path_repo="repos/${repo}"
     path_permissions="${path_repo}/actions/permissions/workflow"
@@ -122,9 +126,9 @@ function initialize_gh_paths()
 # shellcheck disable=SC2090 # Quotes/backslashes in this variable will not be respected.
 function initialize_jq_queries()
 {
-    [[ -n $main_protection_rs_name ]] || error "The 'main_protection_rs_name' variable is not set. Cannot initialize GitHub paths."
-    (( github_actions_app_id > 0 )) || error "The 'github_actions_app_id' variable is not set or is invalid. Cannot initialize jq queries."
-    (( admin_role_id > 0 )) || error "The 'admin_role_id' variable is not set or is invalid. Cannot initialize jq queries."
+    [[ -n $main_protection_rs_name ]] || error -ec "$err_logic_error" "The 'main_protection_rs_name' variable is not set. Cannot initialize GitHub paths."
+    (( github_actions_app_id > 0 ))   || error -ec "$err_logic_error" "The 'github_actions_app_id' variable is not set or is invalid. Cannot initialize jq queries."
+    (( admin_role_id > 0 ))           || error -ec "$err_logic_error" "The 'admin_role_id' variable is not set or is invalid. Cannot initialize jq queries."
 
     jq_entries='to_entries[] | "\(.key)=\(.value)"'
     jq_secrets='.secrets[] | "\(.name)=<set>"'
@@ -179,8 +183,8 @@ function initialize_main_protection_rs_id()
     # main_protection_rs_id is not 0 - already initialized
     (( main_protection_rs_id > 0 )) && return 0
 
-    [[ -n $main_protection_rs_name ]] || error "The 'main_protection_rs_name' variable is not set. Cannot initialize main protection ruleset ID."
-    [[ -n $path_rulesets ]] || error "The 'path_rulesets' variable is not set. Run initialize_gh_paths() first. Cannot initialize main protection ruleset ID."
+    [[ -n $main_protection_rs_name ]] || error -ec "$err_logic_error" "The 'main_protection_rs_name' variable is not set. Cannot initialize main protection ruleset ID."
+    [[ -n $path_rulesets ]]           || error -ec "$err_logic_error" "The 'path_rulesets' variable is not set. Run initialize_gh_paths() first. Cannot initialize main protection ruleset ID."
 
     # try to get the main_protection_rs_id
     main_protection_rs_id=$(execute_gh_api_with_retry 3 2 --paginate "$path_rulesets" -q "$jq_ruleset_id" 2>"$_ignore") ||
@@ -337,7 +341,7 @@ function is_valid_secret()
 function configure_secrets()
 {
     if [[ $# -lt 1 ]] || ! is_in "$1" "actions" "dependabot"; then  # we do not use "codespaces"
-        error 3 "${FUNCNAME[0]}() requires exactly one argument: the application type: 'actions' or 'dependabot'."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument: the application type: 'actions' or 'dependabot'."
         return 2
     fi
 

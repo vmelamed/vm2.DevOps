@@ -26,16 +26,18 @@ types_pattern=$(IFS='|'; echo "${allowed_types[*]}")
 readonly cc_regex="^(${types_pattern})(\(.+\))?!?: .+"
 
 if [[ ! "$subject" =~ $cc_regex ]]; then
-    echo "" >&2
-    echo "ERROR: Commit message does not follow Conventional Commits format." >&2
-    echo "" >&2
-    echo "  Expected:  <type>[(scope)][!]: <description>" >&2
-    echo "  Types:     ${allowed_types[*]}" >&2
-    echo "  Examples:  feat: add new glob pattern" >&2
-    echo "             fix(parser): handle empty input" >&2
-    echo "             refactor!: rename public API method" >&2
-    echo "" >&2
-    echo "  Your message: $subject" >&2
-    echo "" >&2
+    {
+        echo ""
+        echo "ERROR: Commit message does not follow Conventional Commits format."
+        echo ""
+        echo "  Expected:  <type>[(scope)][!]: <description>"
+        echo "  Types:     ${allowed_types[*]}"
+        echo "  Examples:  feat: add new glob pattern"
+        echo "             fix(parser): handle empty input"
+        echo "             refactor!: rename public API method"
+        echo ""
+        echo "  Your message: $subject"
+        echo ""
+    } >&2
     exit 1
 fi

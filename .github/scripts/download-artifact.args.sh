@@ -28,43 +28,43 @@ function get_arguments()
                 ;;
 
             --artifact|-a )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                artifact_name="$1"; shift
                ;;
 
             --directory|-d )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 artifacts_dir="$1"; shift
                 ;;
 
             --repository|-r )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 repository="$1"; shift
                 ;;
 
             --wf-id|-i )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 workflow_id="$1"; shift
                 workflow_name=""
                 workflow_path=""
                 ;;
 
             --wf-name|-n )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 workflow_id=""
                 workflow_name="$1"; shift
                 workflow_path=""
                 ;;
 
             --wf-path|-p )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 workflow_id=""
                 workflow_name="";
                 workflow_path="$1"; shift
                 ;;
 
             * )
-                usage "$err_unknown_argument" "Unknown argument '$option'."
+                usage -ec "$err_unknown_argument" "Unknown argument '$option'."
                 ;;
         esac
     done

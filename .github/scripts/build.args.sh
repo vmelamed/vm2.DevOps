@@ -33,9 +33,9 @@ function get_arguments()
                 ;;
 
             --build-project|-bp )
-                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${option,,}"
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 if [[ -n $build_project ]]; then
-                    usage "$err_too_many_arguments" "The script accepts 0 or 1 project or solution."
+                    usage -ec "$err_too_many_arguments" "The script accepts 0 or 1 project or solution."
                 fi
                 build_project="$1"; shift
                 ;;
@@ -65,7 +65,7 @@ function get_arguments()
                 ;;
 
             * )
-                usage "$err_unknown_argument" "Unknown argument: $option"
+                usage -ec "$err_unknown_argument" "Unknown argument: $option"
                 ;;
         esac
     done

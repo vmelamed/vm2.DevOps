@@ -15,6 +15,10 @@ declare -r lib_dir
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
 source "$lib_dir/gh_core.sh"
 
+declare -rxi success
+declare -rxi err_tool_error
+declare -rxi err_logic_error
+
 declare -xr default_configuration="Release"
 declare -xr default_minver_tag_prefix='v'
 declare -xr default_minver_prerelease_id="preview.0"
@@ -56,10 +60,10 @@ test_config_path="${repo_root}/testconfig.json"
 coverage_settings_path="${repo_root}/coverage.settings.xml"                     # path to coverage settings file                ~/repos/vm2.Glob/coverage.settings.xml
 
 if [[ ! -s "$test_config_path" ]]; then
-    error "Test config file not found at: $test_config_path"
+    error -ec "$err_logic_error" "Test config file not found at: $test_config_path"
 fi
 if [[ ! -s "$coverage_settings_path" ]]; then
-    error "Coverage settings file not found at: $coverage_settings_path"
+    error -ec "$err_logic_error" "Coverage settings file not found at: $coverage_settings_path"
 fi
 
 exit_if_has_errors
@@ -143,7 +147,7 @@ if [[ ! -s "${test_exec_path}" && "$dry_run" != true ]]; then
             displayDotnetBuildSummary |
             to_summary || true # prevent pipefail from exiting before we can capture the exit code
     rc=${PIPESTATUS[0]}
-    [[ $rc == "$success" ]] || error "Building '$test_project' failed."
+    [[ $rc == "$success" ]] || error -ec "$err_tool_error" "Building '$test_project' failed."
     exit_if_has_errors
 fi
 
@@ -164,13 +168,13 @@ test_args=(
 ### Run the tests with coverage collection
 ##########################################
 if ! execute "${test_exec_path}" "${test_args[@]}"; then
-    error "Tests failed in project '$test_project'."
+    error -ec "$err_tool_error" "Tests failed in project '$test_project'."
     exit 2
 fi
 
 if [[ $dry_run != true ]]; then
     if [[ ! -s "$coverage_source_path" ]]; then
-        error "Coverage file '$coverage_source_path' not found or is empty."
+        error -ec "$err_tool_error" "Coverage file '$coverage_source_path' not found or is empty."
         exit 2
     fi
 fi

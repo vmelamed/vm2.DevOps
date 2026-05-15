@@ -12,6 +12,9 @@ declare -xr lib_dir
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
 source "$lib_dir/gh_core.sh"
 
+declare -rxi err_argument_value
+declare -rxi err_not_found
+
 declare -xr default_minver_tag_prefix='v'
 
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
@@ -37,7 +40,7 @@ elif is_semverPrereleaseTag "$tag"; then
     is_prerelease=true
     reason=${reason:-"pre-release"}
 else
-    error "Tag '$tag' is not a valid semver release or prerelease tag."
+    error -ec "$err_argument_value" "Tag '$tag' is not a valid semver release or prerelease tag."
 fi
 
 is_safe_reason "$reason" || true
@@ -84,8 +87,9 @@ if [[ ! -s "$cliff_config" ]]; then
 else
     # Fail fast: changelog bootstrapping should be explicit in repo setup.
     if [[ ! -f CHANGELOG.md ]]; then
-        error "Missing CHANGELOG.md in repo root. git-cliff uses --prepend and requires an existing file."
-        error "Create CHANGELOG.md (can be an empty file) and rerun."
+        error -ec "$err_not_found" \
+                  "Missing CHANGELOG.md in repo root. git-cliff uses --prepend and requires an existing file." \
+                  "Create CHANGELOG.md (can be an empty file) and rerun."
         exit 2
     fi
 
@@ -139,7 +143,7 @@ if [[ "$is_prerelease" == true ]]; then
 fi
 
 if ! execute git tag -a "$tag" -m "$tag_message" -m "Reason: $reason"; then
-    error "Failed to create tag $tag (does it already exist?)"
+    error -ec "$err_argument_value" "Failed to create tag $tag (does it already exist?)"
     exit 2
 fi
 

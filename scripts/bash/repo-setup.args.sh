@@ -42,37 +42,37 @@ function get_arguments()
                 ;;
 
             --vm2-repos )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing path after '$option'."
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing path after '$option'."
                 vm2_repos="$1"; shift
                 ;;
 
             --owner|-o )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing owner after '$option'."
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing owner after '$option'."
                 owner="$1"; shift
                 ;;
 
             --repo-name|-n )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing repository name after '$option'."
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing repository name after '$option'."
                 repo_name="$1"; shift
                 ;;
 
             --branch|-b )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing branch name after '$option'."
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing branch name after '$option'."
                 branch="$1"; shift
                 ;;
 
             --visibility )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing visibility after '$option'."
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing visibility after '$option'."
                 visibility="$1"; shift
                 ;;
 
             --ruleset-name|-rs )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing the name of the ruleset for protecting the default branch after '$option'."
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing the name of the ruleset for protecting the default branch after '$option'."
                 main_protection_rs_name="$1"; shift
                 ;;
 
             --description )
-                [[ $# -ge 1 ]] || usage "$err_missing_argument" "Missing description after '$option'."
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing description after '$option'."
                 description="$1"; shift
                 ;;
 
@@ -105,7 +105,7 @@ function get_arguments()
             * ) if [[ -z "$repo_path" ]]; then
                     repo_path="$option"
                 else
-                    usage "$err_too_many_arguments" "Too many positional arguments (project directory or repository name): ${option}"
+                    usage -ec "$err_too_many_arguments" "Too many positional arguments (project directory or repository name): ${option}"
                 fi
                 ;;
         esac
