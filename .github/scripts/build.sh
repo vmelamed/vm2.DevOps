@@ -15,8 +15,8 @@ declare -xr lib_dir
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
 source "$lib_dir/gh_core.sh"
 
-declare -rxi success=0   # The command completed successfully.
-declare -rxi failure=1   # A general, unspecified error occurred.
+declare -rxi success     # The command completed successfully.
+declare -rxi failure     # A general, unspecified error occurred.
 declare -rxi err_tool_error
 
 # default values for parameters
