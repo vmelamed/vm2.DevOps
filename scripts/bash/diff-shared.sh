@@ -196,9 +196,11 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
     rc="$success"
     if (( ${#selectors_actions[@]} > 0 )); then
         parameterize
-        customize "$target_root" true || rc=$?
+        $diff_only ||
+            customize "$target_root" true || rc=$?
     else
-        customize "$target_root" false || rc=$?
+        $diff_only ||
+            customize "$target_root" false || rc=$?
     fi
 
     exit_if_has_errors
@@ -276,13 +278,14 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
             continue
         fi
 
-        is_in "$actions" "$action_ignore" "$action_merge" "$action_copy" && show_diff=false || show_diff=true
+        is_in "$actions" "$action_ignore" "$action_merge" "$action_copy" &&
+            show_diff=false ||
+            show_diff=true
         rc=$success
         are_different "$source_file" "$target_file" "$show_diff" || rc=$?
         (( rc == success )) &&
-            difference=" ≠ different" ||
-            difference=" = identical"
-        action="ignored"
+            difference=" ≠ different" && action="ignored" ||
+            difference=" = identical" && action="none"
 
         if (( rc == success )); then
             case $actions in
@@ -294,23 +297,32 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
                                 "Do nothing - continue" \
                                 "Merge the files" \
                                 "Copy '$source_file' file to '$target_file'") in
-                        2 ) merge "$target_file" "$source_file" && action="merged" || action="not merged"
+
+                        2 ) merge "$target_file" "$source_file" &&
+                                action="merged" ||
+                                action="not merged"
                             ;;
+
                         3 ) copy_file "$source_file" "$target_file"
                             action="copied"
                             ;;
+                            
                         * ) ;;
                     esac
                     ;;
 
                 "$action_ask_to_merge" )
                     confirm "Do you want to merge '${source_file}' to file '${target_file}'?" "n" && {
-                        merge "$target_file" "$source_file" && action="merged" || action="not merged"
+                        merge "$target_file" "$source_file" &&
+                            action="merged" ||
+                            action="not merged"
                     }
                     ;;
 
                 "$action_merge" )
-                    merge "$target_file" "$source_file" && action="merged" || action="not merged"
+                    merge "$target_file" "$source_file" &&
+                        action="merged" ||
+                        action="not merged"
                     ;;
 
                 "$action_ask_to_copy" )

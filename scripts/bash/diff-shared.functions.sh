@@ -323,7 +323,8 @@ function customize()
 
             local -i index
             for (( index=0; index<${#target_files[@]}; index++ )); do
-                if [[ "${target_files[index]}" == ${target_path}/**/${file_name} ]]; then
+                if [[ "${target_files[index]}" == ${target_path}/${file_name} ||
+                      "${target_files[index]}" == ${target_path}/*/${file_name} ]]; then
                     # Override the action:
                     file_actions[index]="$action"
                     (( ++changed_actions )) || true
