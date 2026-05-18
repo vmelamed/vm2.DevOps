@@ -51,7 +51,7 @@ declare -rxa default_repo_settings_order=(
 
 declare -rxA default_repo_permissions=(
     ["default_workflow_permissions"]="read"
-    ["can_approve_pull_request_reviews"]=false
+    ["can_approve_pull_request_reviews"]=true
 )
 
 declare -rxA default_ruleset=(
