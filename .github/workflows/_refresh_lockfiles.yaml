@@ -51,11 +51,11 @@ jobs:
           dotnet-quality: ga
 
       - name: Authenticate with GitHub Packages
-        if: ${{ secrets.GH_PACKAGES_TOKEN != '' }}
+        if: ${{ env.GH_PACKAGES_TOKEN != '' }}
         run: |
           dotnet nuget update source github.vm2 \
             --username ${{ github.actor }} \
-            --password ${{ secrets.GH_PACKAGES_TOKEN }} \
+            --password ${{ env.GH_PACKAGES_TOKEN }} \
             --store-password-in-clear-text
 
       - name: Restore with --force-evaluate
