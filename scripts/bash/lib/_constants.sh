@@ -33,9 +33,9 @@ declare -xr __VM2_LIB_CONSTANTS_SH_LOADED=1
 declare -rxa vm2_repositories=(
     "vm2.Templates"
     "vm2.TestUtilities"
+    "vm2.Ulid"
     "vm2.Glob"
     "vm2.SemVer"
-    "vm2.Ulid"
     "vm2.Linq.Expressions"
     "vm2.Abstractions"
     "vm2.Repository")
