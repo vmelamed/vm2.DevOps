@@ -1,7 +1,7 @@
 name: "Gather CI Inputs"
 description: >-
   Collects CI parameters from repo env, repository vars, and workflow_dispatch inputs,
-  and exposes them as step outputs for the prerun-ci job.
+  and exposes them as step outputs for the pre-run-ci job.
 
 inputs:
   build-projects:
@@ -22,15 +22,6 @@ inputs:
   preprocessor-symbols:
     description: "Preprocessor symbols (semicolon/space/comma-separated) from the repo env."
     default: ""
-  dispatch-runners-os:
-    description: "Comma-separated runner OS-es from workflow_dispatch input (overrides runners-os when event is workflow_dispatch)."
-    default: ""
-  dispatch-preprocessor-symbols:
-    description: "Preprocessor symbols from workflow_dispatch input (appended when event is workflow_dispatch)."
-    default: ""
-  dispatch-reset-benchmark-thresholds:
-    description: "Reset benchmark thresholds flag from workflow_dispatch input."
-    default: "false"
   dotnet-version:
     description: ".NET SDK version."
     default: "10.0.x"
@@ -49,11 +40,26 @@ inputs:
   minver-prerelease-id:
     description: "MinVer default pre-release identifiers."
     default: "preview.0"
-  reset-benchmark-thresholds:
-    description: "Whether to reset benchmark thresholds (repo-level default, before dispatch override)."
-    default: "false"
   verbose:
     description: "Enable verbose logging."
+    default: "false"
+  dispatch-runners-os:
+    description: "Comma-separated runner OS-es from workflow_dispatch input (overrides runners-os when event is workflow_dispatch)."
+    default: ""
+  dispatch-preprocessor-symbols:
+    description: "Preprocessor symbols from workflow_dispatch input (appended when event is workflow_dispatch)."
+    default: ""
+  dispatch-reset-benchmark-thresholds:
+    description: "Reset benchmark thresholds flag from workflow_dispatch input."
+    default: "false"
+  dispatch-skip-benchmarks:
+    description: "Skip benchmarks execution and related steps (e.g. Bencher regression comments) from workflow_dispatch input."
+    default: "false"
+  dispatch-skip-tests:
+    description: "Skip tests execution and related steps (e.g. code coverage collection and comments) from workflow_dispatch input."
+    default: "false"
+  dispatch-skip-packages:
+    description: "Skip packages execution from workflow_dispatch input."
     default: "false"
 
 outputs:
@@ -96,6 +102,15 @@ outputs:
   reset-benchmark-thresholds:
     description: "Whether to reset benchmark thresholds."
     value: ${{ steps.gather.outputs.reset-benchmark-thresholds }}
+  skip-benchmarks:
+    description: "Whether to skip benchmarks execution and related steps (e.g. Bencher regression comments)."
+    value: ${{ steps.gather.outputs.skip-benchmarks }}
+  skip-tests:
+    description: "Whether to skip tests execution and related steps (e.g. code coverage collection and comments)."
+    value: ${{ steps.gather.outputs.skip-tests }}
+  skip-packages:
+    description: "Whether to skip packages execution."
+    value: ${{ steps.gather.outputs.skip-packages }}
   skip-push:
     description: "Whether to skip push-triggered CI (true when an open PR exists for the branch)."
     value: ${{ steps.gather.outputs.skip-push }}
@@ -126,7 +141,10 @@ runs:
         max_regression_pct='${{ inputs.max-regression-pct }}'
         minver_tag_prefix='${{ inputs.minver-tag-prefix }}'
         minver_prerelease_id='${{ inputs.minver-prerelease-id }}'
-        reset_benchmark_thresholds='${{ inputs.reset-benchmark-thresholds }}'
+        reset_benchmark_thresholds='${{ inputs.reset-benchmark-thresholds || 'false' }}'
+        skip_benchmarks='false'
+        skip_tests='false'
+        skip_packages='false'
         skip_push='false'
 
         if [[ '${{ github.event_name }}' == 'pull_request' ||
@@ -180,6 +198,9 @@ runs:
             runners_os=$(echo "${{ inputs.dispatch-runners-os }}" | jq -Rc 'split(",") | map(select(length > 0) | gsub("^\\s+|\\s+$";""))')
             preprocessor_symbols="${preprocessor_symbols};${{ inputs.dispatch-preprocessor-symbols }}"
             reset_benchmark_thresholds="${{ inputs.dispatch-reset-benchmark-thresholds }}"
+            skip_benchmarks="${{ inputs.dispatch-skip-benchmarks }}"
+            skip_tests="${{ inputs.dispatch-skip-tests }}"
+            skip_packages="${{ inputs.dispatch-skip-packages }}"
 
         else
 
@@ -203,4 +224,7 @@ runs:
             minver_tag_prefix \
             minver_prerelease_id \
             reset_benchmark_thresholds \
+            skip_benchmarks \
+            skip_tests \
+            skip_packages \
             skip_push

@@ -91,8 +91,22 @@ function get_arguments()
                 reset_benchmark_thresholds="$1"; shift;
                 ;;
 
-            * )
-                usage -ec "$err_unknown_argument" "Unknown argument: $option"
+            --skip-benchmarks|-sb )
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
+                skip_benchmarks="$1"; shift;
+                ;;
+
+            --skip-tests|-st )
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
+                skip_tests="$1"; shift;
+                ;;
+
+            --skip-packages|-sp )
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
+                skip_packages="$1"; shift;
+                ;;
+
+            * ) usage -ec "$err_unknown_argument" "Unknown argument: $option"
                 ;;
         esac
     done
@@ -115,6 +129,9 @@ function get_arguments()
         minver_tag_prefix \
         minver_prerelease_id \
         reset_benchmark_thresholds \
+        skip_benchmarks \
+        skip_tests \
+        skip_packages \
         --header "other:" \
         ci
 }

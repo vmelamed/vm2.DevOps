@@ -69,6 +69,21 @@ on:
         type: boolean
         default: false
 
+      skip-tests:
+        description: Set to "true" to skip tests execution and related steps (e.g. code coverage collection and comments).
+        type: boolean
+        default: false
+
+      skip-benchmarks:
+        description: Set to "true" to skip benchmarks execution and related steps (e.g. Bencher regression comments).
+        type: boolean
+        default: false
+
+      skip-packages:
+        description: Set to "true" to skip packages execution.
+        type: boolean
+        default: false
+
     secrets:
       CODECOV_TOKEN:
         description: Codecov API token for uploading coverage reports
@@ -134,6 +149,10 @@ jobs:
       minver-tag-prefix: ${{ steps.validate.outputs.minver-tag-prefix }}
       minver-prerelease-id: ${{ steps.validate.outputs.minver-prerelease-id }}
       reset-benchmark-thresholds: ${{ steps.validate.outputs.reset-benchmark-thresholds }}
+      skip-benchmarks: ${{ steps.validate.outputs.skip-benchmarks }}
+      skip-tests: ${{ steps.validate.outputs.skip-tests }}
+      skip-packages: ${{ steps.validate.outputs.skip-packages }}
+      skip-push: ${{ steps.validate.outputs.skip-push }}
 
     steps:
       # Clone the repository to access validation scripts
@@ -164,7 +183,10 @@ jobs:
               --max-regression-pct          '${{ inputs.max-regression-pct }}' \
               --minver-tag-prefix           '${{ inputs.minver-tag-prefix }}' \
               --minver-prerelease-id        '${{ inputs.minver-prerelease-id }}' \
-              --reset-benchmark-thresholds  '${{ inputs.reset-benchmark-thresholds }}'
+              --reset-benchmark-thresholds  '${{ inputs.reset-benchmark-thresholds }}' \
+              --skip-benchmarks             '${{ inputs.skip-benchmarks }}' \
+              --skip-tests                  '${{ inputs.skip-tests }}' \
+              --skip-packages               '${{ inputs.skip-packages }}'
 
   # Build the project and cache artifacts for downstream test/benchmark jobs
   build:
@@ -199,7 +221,9 @@ jobs:
         runner-os: ${{ fromJSON(needs.validate-input.outputs.runners-os) }}
         # Note that here we run ALL tests on a single runner, to get a all code coverage reports and avoid spreading them across
         # multiple test runners. It makes it easier to work with, without a need for additional aggregation job and min. coverage validation.
-    if: fromJSON(needs.validate-input.outputs.test-projects-len) > 0
+    if: >-
+      fromJSON(needs.validate-input.outputs.test-projects-len) > 0 &&
+      needs.validate-input.outputs.skip-tests == 'false'
     uses: vmelamed/vm2.DevOps/.github/workflows/_test.yaml@main
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
@@ -232,7 +256,8 @@ jobs:
     # Honor [skip bm] on pushes
     if: >-
       fromJSON(needs.validate-input.outputs.benchmark-projects-len) > 0 &&
-      (github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip bm]'))
+      (github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip bm]')) &&
+      needs.validate-input.outputs.skip-benchmarks == 'false'
     uses: vmelamed/vm2.DevOps/.github/workflows/_benchmarks.yaml@main
     secrets:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
@@ -266,7 +291,8 @@ jobs:
     if: >-
       always() &&
       fromJSON(needs.validate-input.outputs.package-projects-len) > 0 &&
-      (needs.build.result == 'success' || needs.build.result == 'skipped')
+      (needs.build.result == 'success' || needs.build.result == 'skipped') &&
+      needs.validate-input.outputs.skip-packages == 'false'
     uses: vmelamed/vm2.DevOps/.github/workflows/_pack.yaml@main
     with:
       package-project: ${{ matrix.package-project }}

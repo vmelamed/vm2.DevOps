@@ -62,6 +62,12 @@ Options:
   -r, --reset-benchmark-thresholds
                                 Whether to reset Bencher thresholds if some degradation is expected. Expected 'true' or 'false'
                                 Initial value from \$RESET_BENCHMARK_THRESHOLDS or default 'false'
+  -sb, --skip-benchmarks        Whether to skip running benchmarks. Expected 'true' or 'false'
+                                Initial value from \$SKIP_BENCHMARKS or default 'false'
+  -st, --skip-tests             Whether to skip running tests. Expected 'true' or 'false'
+                                Initial value from \$SKIP_TESTS or default 'false'
+  -sp, --skip-packages          Whether to skip packing projects. Expected 'true' or 'false'
+                                Initial value from \$SKIP_PACKAGES or default 'false'
 $switches
 Environment Variables:
   BUILD_PROJECTS                JSON array of paths to projects to build
@@ -78,6 +84,9 @@ Environment Variables:
   MINVERDEFAULTPRERELEASEIDENTIFIERS
                                 Default semver pre-release identifiers for MinVer
   RESET_BENCHMARK_THRESHOLDS    Whether to reset Bencher thresholds if some degradation is expected
+  SKIP_BENCHMARKS               Whether to skip running benchmarks
+  SKIP_TESTS                    Whether to skip running tests
+  SKIP_PACKAGES                 Whether to skip packing projects
 $vars
 Outputs (to GITHUB_OUTPUT):
   build-projects                JSON array of paths to projects to build
@@ -93,6 +102,9 @@ Outputs (to GITHUB_OUTPUT):
   minver-tag-prefix             Prefix for MinVer version git tags
   minver-prerelease-id          Default semver pre-release identifiers for MinVer
   reset-benchmark-thresholds    Whether to reset Bencher thresholds if some degradation is expected
+  skip-benchmarks               Whether to skip running benchmarks
+  skip-tests                    Whether to skip running tests
+  skip-packages                 Whether to skip packing projects
 
 EOF
 }

@@ -63,8 +63,7 @@ declare -rx varNameRegex
 # Returns:
 #   stdout: each line read from stdin
 #   Exit code: 0
-# Side Effects: Appends also to $github_step_summary file when $github_actions is
-#   true
+# Side Effects: Appends also to $github_step_summary file
 # Env. Vars:
 #   github_actions - when true, indicates running in GitHub Actions environment
 #   github_step_summary - path to GitHub Actions step summary file
@@ -77,7 +76,7 @@ function to_stdout()
     local line
     while IFS= read -r line; do
         echo "$line"
-        $github_actions && echo "$line" >> "$github_step_summary"
+        echo "$line" >> "$github_step_summary"
     done
     return "$success"
 }
@@ -88,8 +87,8 @@ function to_stdout()
 # Returns:
 #   stderr: each line read from stdin
 #   Exit code: 0
-# Side Effects: Appends also to $github_step_summary file when both $github_actions
-#   and $trace_to_summary are true
+# Side Effects: Appends also to $github_step_summary file when $trace_to_summary
+#   is true
 # Env. Vars:
 #   github_actions - when true, indicates running in GitHub Actions environment
 #   trace_to_summary - when true, also writes to step summary
@@ -102,9 +101,7 @@ function to_traceout()
     local line
     while IFS= read -r line; do
         echo "$line" >&2
-        $github_actions &&
-        $trace_to_summary &&
-        echo "$line" >> "$github_step_summary"
+        $trace_to_summary && echo "$line" >> "$github_step_summary" || true
     done
     return "$success"
 }
@@ -115,8 +112,7 @@ function to_traceout()
 # Returns:
 #   stderr: each line read from stdin
 #   Exit code: 0
-# Side Effects: Appends also to $github_step_summary file when $github_actions is
-#   true
+# Side Effects: Appends also to $github_step_summary file
 # Env. Vars:
 #   github_actions - when true, indicates running in GitHub Actions environment
 #   github_step_summary - path to GitHub Actions step summary file
@@ -128,7 +124,7 @@ function to_stderr()
     local line
     while IFS= read -r line; do
         echo "$line" >&2
-        $github_actions && echo "$line" >> "$github_step_summary"
+        echo "$line" >> "$github_step_summary"
     done
     return "$success"
 }
@@ -180,7 +176,7 @@ function to_summary()
 # Returns:
 #   stdout: each line read from stdin
 #   Exit code: 0 always
-# Side Effects: Appends to $github_output file when $github_actions is true
+# Side Effects: Appends to $github_output file
 # Env. Vars:
 #   github_actions - when true, indicates running in GitHub Actions environment
 #   github_output - path to GitHub Actions output file
@@ -192,7 +188,7 @@ function to_output()
     local line
     while IFS= read -r line; do
         echo "$line"
-        $github_actions && echo "$line" >> "$github_output"
+        echo "$line" >> "$github_output"
     done
 }
 

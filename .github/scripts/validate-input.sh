@@ -26,6 +26,10 @@ declare -r defaultMinCoveragePct=80
 declare -r defaultMaxRegressionPct=20
 declare -r defaultMinverTagPrefix='v'
 declare -r defaultMinverPrereleaseId='preview.0'
+declare -r defaultResetBenchmarkThresholds=false
+declare -r defaultSkipBenchmarks=false
+declare -r defaultSkipTests=false
+declare -r defaultSkipPackages=false
 
 # CI Variables that will be passed as environment variables
 declare -x build_projects=${BUILD_PROJECTS:-${defaultBuildProjects}}
@@ -40,7 +44,10 @@ declare -x min_coverage_pct=${MIN_COVERAGE_PCT:-${defaultMinCoveragePct}}
 declare -x max_regression_pct=${MAX_REGRESSION_PCT:-${defaultMaxRegressionPct}}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-${defaultMinverTagPrefix}}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-${defaultMinverPrereleaseId}}
-declare -x reset_benchmark_thresholds=${RESET_BENCHMARK_THRESHOLDS:-false}
+declare -x reset_benchmark_thresholds=${RESET_BENCHMARK_THRESHOLDS:-${defaultResetBenchmarkThresholds}}
+declare -x skip_benchmarks=${SKIP_BENCHMARKS:-${defaultSkipBenchmarks}}
+declare -x skip_tests=${SKIP_TESTS:-${defaultSkipTests}}
+declare -x skip_packages=${SKIP_PACKAGES:-${defaultSkipPackages}}
 
 source "$script_dir/validate-input.usage.sh"
 source "$script_dir/validate-input.args.sh"
@@ -104,7 +111,11 @@ if (( max_regression_pct < 0 || max_regression_pct > 50 )); then
 fi
 validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
 is_safe_boolean "$reset_benchmark_thresholds" || true
+is_safe_boolean "$skip_benchmarks" || true
+is_safe_boolean "$skip_tests" || true
+is_safe_boolean "$skip_packages" || true
 
+# shellcheck disable=SC2119
 dump_vars --quiet --force \
     -h "Validated Parameters" \
     build_projects \
@@ -124,7 +135,11 @@ dump_vars --quiet --force \
     max_regression_pct \
     minver_tag_prefix \
     minver_prerelease_id \
-    reset_benchmark_thresholds | to_summary
+    reset_benchmark_thresholds \
+    skip_benchmarks \
+    skip_tests \
+    skip_packages \
+    | to_summary
 
 exit_if_has_errors
 info "✅ All parameters validated successfully"
@@ -149,4 +164,7 @@ args_to_github_output \
     max_regression_pct \
     minver_tag_prefix \
     minver_prerelease_id \
-    reset_benchmark_thresholds
+    reset_benchmark_thresholds \
+    skip_benchmarks \
+    skip_tests \
+    skip_packages
