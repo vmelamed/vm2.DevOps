@@ -40,6 +40,9 @@ inputs:
   minver-prerelease-id:
     description: "MinVer default pre-release identifiers."
     default: "preview.0"
+  reset-benchmark-thresholds:
+    description: "Reset benchmark thresholds flag."
+    default: "false"
   verbose:
     description: "Enable verbose logging."
     default: "false"
