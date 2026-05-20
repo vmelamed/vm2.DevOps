@@ -253,35 +253,35 @@ function message()
     local args=("$@")
     local -i depth=0 # stack dump depth
 
-    local -i i
+    local -i index
     # preprocess the arguments array for -ec and -sd flags, and then print the messages lines with the prefix.
-    for (( i=0; i < count-1; i++ )); do
-        case "${args[i]}" in
+    for (( index=0; index < count-1; index++ )); do
+        case "${args[index]}" in
 
             "--error-code"|"-ec" )
-                is_positive "${args[i+1]:-}" &&
-                    args[i]="$(error_message "${args[i+1]}")" || {
-                        warning "Expected a positive number that is a known error code after '${args[i]}', but got '${args[i+1]:-}'. Skipping both arguments."
-                        unset "args[i]"
+                is_positive "${args[index+1]:-}" &&
+                    args[index]="$(error_message "${args[index+1]}")" || {
+                        warning "Expected a positive number that is a known error code after '${args[index]}', but got '${args[index+1]:-}'. Skipping both arguments."
+                        unset "args[index]"
                         (( updated_count-- )) || true # decrement the count of message parts if the error code is invalid
                     }
-                (( i++ )) # skip the next argument (the error code)
-                if (( i < count )); then
-                    unset "args[i]" # remove the code from the arguments array
+                (( ++index )) # skip the next argument (the error code)
+                if (( index < count )); then
+                    unset "args[index]" # remove the code from the arguments array
                     (( updated_count-- )) || true # decrement the count of message parts if the error code is invalid
                 fi
                 continue
                 ;;
 
             "--stack-depth"|"-sd" )
-                is_positive "${args[i+1]:-}" &&
-                    depth="${args[i+1]}" ||
-                    warning "Expected a positive error code after '${args[i]}', but got '${args[i+1]:-}'. Skipping both arguments."
-                unset "args[i]" # remove the flag from the arguments array
+                is_positive "${args[index+1]:-}" &&
+                    depth="${args[index+1]}" ||
+                    warning "Expected a positive error code after '${args[index]}', but got '${args[index+1]:-}'. Skipping both arguments."
+                unset "args[index]" # remove the flag from the arguments array
                 (( updated_count-- )) || true # decrement the count of message parts if the error code is invalid
-                (( i++ )) # skip the next argument (the stack depth)
-                if (( i < count )); then
-                    unset "args[i]" # remove the code from the arguments array
+                (( ++index )) # skip the next argument (the stack depth)
+                if (( index < count )); then
+                    unset "args[index]" # remove the code from the arguments array
                     (( updated_count-- )) || true # decrement the count of message parts if the error code is invalid
                 fi
                 continue

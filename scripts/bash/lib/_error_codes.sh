@@ -57,7 +57,7 @@ declare -rxA error_codes=(
 
     [$err_invalid_arguments]="The number of arguments is invalid or more than one type of parameter error code is present."
     [$err_argument_type]="An argument is of the wrong type (types: string, integer, boolean, array, associative array, etc.)."
-    [$err_argument_value]="An argument has an invalid value (out of range, not in allowed set. E.g. expected non-negative integer but got negative value)."
+    [$err_argument_value]="An argument has an invalid value (out of range, not in allowed set). E.g. expected non-negative integer but got negative value."
     [$err_invalid_nameref]="An argument has an invalid nameref (e.g., expected a valid variable name reference but got an invalid one)."
     [$err_missing_argument]="A required argument is missing."
     [$err_too_many_arguments]="More than one argument was provided when only one is allowed."

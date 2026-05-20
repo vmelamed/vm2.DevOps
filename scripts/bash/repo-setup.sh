@@ -132,7 +132,8 @@ rc="$success"
 output=$(resolve_repo_root "$vm2_repos" "$repo_path") || rc=$?
 
 is_in "$rc" "$success" "$err_dir_with_ci" ||
-    usage -ec "$err_argument_value" "Could not resolve the '$repo_path' within '$vm2_repos' to a Git initialized or not working tree root with configured CI. $(error_message "$rc")"
+    usage -ec "$err_argument_value" -sd 3 "Could not resolve the '$repo_path' within '$vm2_repos' to a Git initialized or not working tree root with configured CI. " \
+                                          "Please, specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2pkg <name>' to create a valid directory structure with CI configured."
 
 reset_errors
 
