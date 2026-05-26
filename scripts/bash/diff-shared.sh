@@ -131,6 +131,7 @@ validate_repo_root "$vm2_repos" "$vm2_sot_repo_name" "main" || rc=$?
 (( rc == err_behind_latest_stable_tag )) &&
     error -ec "$err_logic_error" "The repository in '$vm2_sot_repo_name' is behind the latest stable tag. Please update it to the latest version of the main branch."
 
+rc="$success"
 sot_path=$(get_vm2_sot_path "$vm2_repos" "$sot") || rc=$?
 (( rc != success )) &&
     usage -ec "$rc" "Could not find the source of truth directory for the specified template '$sot' in the expected location in '$vm2_repos'. Please make sure it exists or correct the parameter/environment variable."
@@ -306,7 +307,7 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
                         3 ) copy_file "$source_file" "$target_file"
                             action="copied"
                             ;;
-                            
+
                         * ) ;;
                     esac
                     ;;
