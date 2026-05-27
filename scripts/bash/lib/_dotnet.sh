@@ -210,6 +210,9 @@ function get_build_info()
     return "$success"
 }
 
+declare -rx default_configuration
+declare -rx default_tfm
+
 #-------------------------------------------------------------------------------
 # Summary: Returns the full path to the assembly produced by a .NET project.
 # Parameters:
@@ -271,17 +274,17 @@ function assembly_path() {
         warning "Multiple TFMs found in '$(basename "$csproj")'. Using the last one: '${tfm##*;}'."
         tfm="${tfm##*;}"
     fi
-    [[ -n "$tfm" ]] || tfm="net10.0"
+    [[ -n "$tfm" ]] || tfm=$default_tfm
     tfm="${tfm//[[:space:]]/}"
 
-    # Configuration: *.csproj → Directory.Build.props → "Debug"
+    # Configuration: *.csproj → Directory.Build.props → "Release"
     local proj_configuration=""
     proj_configuration=$(grep -oPm1 '(?<=<Configuration>)[^<]+' "$csproj" 2>"$_ignore") || true
 
     if [[ -z "$proj_configuration" && -n "$dir_build_props" ]]; then
         proj_configuration=$(grep -oPm1 '(?<=<Configuration>)[^<]+' "$dir_build_props" 2>"$_ignore") || true
     fi
-    [[ -n "$proj_configuration" ]] || proj_configuration="Debug"
+    [[ -n "$proj_configuration" ]] || proj_configuration=$default_configuration
     proj_configuration="${proj_configuration//[[:space:]]/}"
 
     # AssemblyName: *.csproj → filename without extension
