@@ -57,7 +57,7 @@ function get_arguments()
                 ;;
 
             * ) [[ -z $build_project ]] || usage -ec "$err_too_many_arguments" "Multiple build projects specified. Unknown option: $option"
-                [[ "$option" == -* ]] || usage -ec "$err_unknown_argument" "Unknown option: $option"
+                [[ "$option" != -* ]] || usage -ec "$err_unknown_argument" "Unknown option: $option"
                 build_project="$option"
                 ;;
         esac

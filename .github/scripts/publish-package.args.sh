@@ -78,7 +78,7 @@ function get_arguments()
                 ;;
 
             * ) [[ -z $package_project ]] || usage -ec "$err_too_many_arguments" "Multiple package projects specified. Unknown option: $option"
-                [[ "$option" == -* ]] || usage -ec "$err_unknown_argument" "Unknown option: $option"
+                [[ "$option" != -* ]] || usage -ec "$err_unknown_argument" "Unknown option: $option"
                 package_project="$option"
                 ;;
         esac

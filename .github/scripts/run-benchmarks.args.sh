@@ -68,7 +68,7 @@ function get_arguments()
                 ;;
 
             *)  [[ -z $benchmark_project ]] || usage -ec "$err_too_many_arguments" "Multiple benchmark projects specified. Unknown option: $option"
-                [[ "$option" == -* ]] || usage -ec "$err_unknown_argument" "Unknown option: $option"
+                [[ "$option" != -* ]] || usage -ec "$err_unknown_argument" "Unknown option: $option"
                 benchmark_project="$option"
                 ;;
         esac
