@@ -25,6 +25,7 @@ declare -rxi err_invalid_nameref
 declare -rx varNameRegex
 
 declare -x _ignore
+declare -x __is_windows=""
 
 #-------------------------------------------------------------------------------
 # Summary: Tests if a variable is defined.
@@ -329,4 +330,22 @@ function is_base64()
     }
 
     [[ "$1" =~ ^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$ ]]
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Detects if the current operating system is Windows.
+# Parameters: none
+# Returns:
+#   Exit code: 0 if yes, 1 otherwise
+# Usage: if is_windows; then echo "Running on Windows"; fi
+#-------------------------------------------------------------------------------
+function is_windows()
+{
+    if [[ -z "$__is_windows" ]]; then
+        local os_name
+        os_name="$(uname -s)" || true
+        [[ "$os_name" == "Windows_NT" || "$os_name" == *MINGW* || "$os_name" == *MSYS* ]] && __is_windows="true" || __is_windows="false"
+    fi
+
+    $__is_windows;
 }

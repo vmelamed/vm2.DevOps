@@ -15,6 +15,7 @@ declare -gr __VM2_LIB_DOTNET_SH_LOADED=1
 declare -rxi success
 declare -rxi failure
 declare -rxi err_invalid_arguments
+declare -rxi err_argument_value
 declare -rxi err_logic_error
 
 # export variables to hold the results
@@ -207,4 +208,102 @@ function get_build_info()
             ;;
     esac
     return "$success"
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Returns the full path to the assembly produced by a .NET project.
+# Parameters:
+#   1 - csproj: path to the *.csproj file
+# Returns:
+#   stdout: full path to the produced assembly (e.g. /path/to/proj/bin/Debug/net10.0/vm2.Ulid.dll)
+#   Exit code: $success               - file exists and is not empty
+#              $failure               - file does not exist yet (path is still written to stdout)
+#              $err_invalid_arguments - wrong number of arguments
+#              $err_argument_value    - argument is empty or not a valid *.csproj file
+# Notes:
+#   - Configuration and TFM are read from the *.csproj first, then from the nearest
+#     Directory.Build.props found by walking up from the project directory; defaults
+#     are "Debug" and "net10.0" respectively when not found in either file.
+#   - AssemblyName falls back to the *.csproj filename without the extension.
+#   - OutputType Exe  → *.exe on Windows, no suffix on Linux.
+#     Any other type  → *.dll on any OS.
+# Usage: path=$(assembly_path <csproj>)
+# Example: path=$(assembly_path src/vm2.Ulid/Ulid.csproj)
+#-------------------------------------------------------------------------------
+function assembly_path() {
+    (( $# == 1 )) || {
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the path to a *.csproj file."
+        return "$err_invalid_arguments"
+    }
+    [[ -n "$1" && -s "$1" && "$1" == *.csproj ]] || {
+        error -ec "$err_argument_value" -sd 3 "${FUNCNAME[0]}(): '$1' is not a valid or existing *.csproj file."
+        return "$err_argument_value"
+    }
+
+    local csproj
+    csproj=$(realpath -e "$1")
+
+    local proj_dir
+    proj_dir=$(dirname "$csproj")
+
+    # Find the nearest Directory.Build.props by walking up from the project directory
+    local dir_build_props=""
+    local search_dir="$proj_dir"
+    while [[ "$search_dir" != "/" ]]; do
+        if [[ -f "$search_dir/Directory.Build.props" ]]; then
+            dir_build_props="$search_dir/Directory.Build.props"
+            break
+        fi
+        search_dir=$(dirname "$search_dir")
+    done
+
+    # TFM: *.csproj → Directory.Build.props → "net10.0"
+    local tfm=""
+    tfm=$(grep -oPm1 '(?<=<TargetFramework>)[^<]+' "$csproj" 2>"$_ignore") ||
+    tfm=$(grep -oPm1 '(?<=<TargetFrameworks>)[^<]+' "$csproj" 2>"$_ignore") || true
+
+    if [[ -z "$tfm" && -n "$dir_build_props" ]]; then
+        tfm=$(grep -oPm1 '(?<=<TargetFramework>)[^<]+' "$dir_build_props" 2>"$_ignore") ||
+        tfm=$(grep -oPm1 '(?<=<TargetFrameworks>)[^<]+' "$dir_build_props" 2>"$_ignore") || true
+    fi
+
+    if [[ "$tfm" == *";"* ]]; then
+        warning "Multiple TFMs found in '$(basename "$csproj")'. Using the last one: '${tfm##*;}'."
+        tfm="${tfm##*;}"
+    fi
+    [[ -n "$tfm" ]] || tfm="net10.0"
+    tfm="${tfm//[[:space:]]/}"
+
+    # Configuration: *.csproj → Directory.Build.props → "Debug"
+    local configuration=""
+    configuration=$(grep -oPm1 '(?<=<Configuration>)[^<]+' "$csproj" 2>"$_ignore") || true
+
+    if [[ -z "$configuration" && -n "$dir_build_props" ]]; then
+        configuration=$(grep -oPm1 '(?<=<Configuration>)[^<]+' "$dir_build_props" 2>"$_ignore") || true
+    fi
+    [[ -n "$configuration" ]] || configuration="Debug"
+    configuration="${configuration//[[:space:]]/}"
+
+    # AssemblyName: *.csproj → filename without extension
+    local assembly_name=""
+    assembly_name=$(grep -oPm1 '(?<=<AssemblyName>)[^<]+' "$csproj" 2>"$_ignore") || true
+    [[ -n "$assembly_name" ]] || assembly_name=$(basename "${csproj%.*}")
+    assembly_name="${assembly_name//[[:space:]]/}"
+
+    # OutputType: determines the file suffix
+    local output_type=""
+    output_type=$(grep -oPm1 '(?<=<OutputType>)[^<]+' "$csproj" 2>"$_ignore") || true
+    output_type="${output_type//[[:space:]]/}"
+
+    local suffix
+    if [[ "${output_type,,}" == "exe" ]]; then
+        is_windows && suffix=".exe" || suffix=""
+    else
+        suffix=".dll"
+    fi
+
+    local path="${proj_dir}/bin/${configuration}/${tfm}/${assembly_name}${suffix}"
+
+    echo "$path"
+    [[ -s "$path" ]] && return "$success" || return "$failure"
 }

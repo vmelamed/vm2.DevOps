@@ -32,14 +32,6 @@ function get_arguments()
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
-            --build-project|-bp )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
-                if [[ -n $build_project ]]; then
-                    usage -ec "$err_too_many_arguments" "The script accepts 0 or 1 project or solution."
-                fi
-                build_project="$1"; shift
-                ;;
-
             --configuration|-c )
                 configuration="$1"; shift
                 ;;
@@ -64,8 +56,9 @@ function get_arguments()
                 gh_nuget_password="$1"; shift
                 ;;
 
-            * )
-                usage -ec "$err_unknown_argument" "Unknown argument: $option"
+            * ) [[ -z $build_project ]] || usage -ec "$err_too_many_arguments" "Multiple build projects specified. Unknown option: $option"
+                [[ "$option" == -* ]] || usage -ec "$err_unknown_argument" "Unknown option: $option"
+                build_project="$option"
                 ;;
         esac
     done

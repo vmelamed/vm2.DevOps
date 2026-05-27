@@ -10,6 +10,13 @@ declare -rxi err_missing_argument
 declare -rxi err_too_many_arguments
 declare -rxi err_unknown_argument
 
+declare -x benchmark_project
+declare -x configuration
+declare -x preprocessor_symbols
+declare -x minver_tag_prefix
+declare -x minver_prerelease_id
+declare -x artifacts_dir
+
 # shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
 function get_arguments()
 {
@@ -60,8 +67,9 @@ function get_arguments()
                 artifacts_dir=$1; shift
                 ;;
 
-            *)  value="$option"
-                benchmark_project="$value"
+            *)  [[ -z $benchmark_project ]] || usage -ec "$err_too_many_arguments" "Multiple benchmark projects specified. Unknown option: $option"
+                [[ "$option" == -* ]] || usage -ec "$err_unknown_argument" "Unknown option: $option"
+                benchmark_project="$option"
                 ;;
         esac
     done

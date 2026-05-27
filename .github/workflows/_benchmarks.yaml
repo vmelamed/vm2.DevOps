@@ -132,7 +132,8 @@ jobs:
 
           trace "Running benchmarks for project: ${{ inputs.benchmark-project }} with configuration: ${{ inputs.configuration }} on runner OS: ${{ inputs.runner-os }}"
 
-          run-benchmarks.sh ${{ inputs.benchmark-project }} \
+          run-benchmarks.sh \
+              ${{ inputs.benchmark-project }} \
               --configuration "${{ inputs.configuration }}" \
               --define "${{ inputs.preprocessor-symbols }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \

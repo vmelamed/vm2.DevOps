@@ -25,7 +25,7 @@ declare -xr default_minver_prerelease_id="preview.0"
 declare -xr default_configuration="Release"
 
 # parameters with initial values from environment variables or defaults
-declare -x build_project=${BUILD_PROJECT:-}
+declare -x build_project
 declare -x configuration=${CONFIGURATION:-"$default_configuration"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-""}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
@@ -37,6 +37,7 @@ source "$script_dir/build.usage.sh"
 source "$script_dir/build.args.sh"
 
 get_arguments "$@"
+build_project=${build_project:-"$BUILD_PROJECT"}
 
 # sanitize inputs
 is_safe_path "$build_project" || true

@@ -81,7 +81,7 @@ jobs:
         shell: bash
         run: |
           build.sh \
-              --build-project "${{ inputs.build-project }}" \
+              "${{ inputs.build-project }}" \
               --configuration "${{ inputs.configuration }}" \
               --define "${{ inputs.preprocessor-symbols }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \

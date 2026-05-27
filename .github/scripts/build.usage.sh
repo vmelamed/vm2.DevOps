@@ -19,12 +19,14 @@ function usage_text()
 
     cat << EOF
 Usage: ${script_name} [<project|solution>] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
-Builds a solution or project specified with '--build-project' (see below)
 
-Options:
-  -bp, --build-project          Path to the project to be built. Can be empty string, in which case the solution in the
+Builds a solution or project specified with the positional argument <project|solution> (see below for details).
+
+Arguments:
+  <project|solution>            Path to the project to be built. Can be empty string, in which case the solution in the
                                 repository root will be built
                                 Initial value from \$BUILD_PROJECT
+Options:
   -c, --configuration           Build configuration ('Release' or 'Debug')
                                 Initial value from \$CONFIGURATION or default 'Release'
   -d, --define                  Defines one or more user-defined, space, comma, or semicolon-separated pre-processor symbols.

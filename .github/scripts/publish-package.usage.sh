@@ -16,12 +16,14 @@ function usage_text()
     fi
 
     cat << EOF
-Usage: ${script_name} [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
+Usage: ${script_name} [<package-project>] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
 Packages and publishes NuGet packages to the specified server
 
-Options:
-  -pp, --package-project        Path to the project or solution to package and publish. The file must exist and cannot be empty.
+Arguments:
+  <package-project>             Path to the project or solution to package and publish. The file must exist and cannot be empty.
                                 Initial value from the \$PACKAGE_PROJECT environment variable.
+
+Options:
   -d, --define      Defines one or more user-defined, space, comma, or semicolon-separated pre-processor symbols.
                                 Initial value from \$PREPROCESSOR_SYMBOLS or default ''
   -mp, --minver-tag-prefix      Specifies the tag prefix used by MinVer (e.g., 'v')
@@ -45,7 +47,7 @@ Options:
                                 Initial value from the \$GITHUB_REPOSITORY_OWNER environment variable or "vmelamed"
 $switches
 Environment Variables:
-  PROJECT                       Project/solution paths to package and publish
+  PACKAGE_PROJECT               Project/solution paths to package and publish
   PREPROCESSOR_SYMBOLS          Pre-processor symbols for compilation
                                 (default: '')
   MINVERDEFAULTPRERELEASEIDENTIFIERS

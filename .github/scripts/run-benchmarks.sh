@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# shellcheck disable=SC2119
+
 script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../../scripts/bash/lib")
@@ -11,15 +13,20 @@ declare -r lib_dir
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
 source "$lib_dir/gh_core.sh"
 
+declare -rxi success
+declare -rxi failure
 declare -rxi err_tool_error
 declare -rxi err_logic_error
 
-declare -xr default_configuration="Release"
-declare -ixr default_min_coverage_pct=80
-declare -xr default_minver_tag_prefix='v'
-declare -xr default_minver_prerelease_id="preview.0"
+declare -x _ignore
+declare -x dry_run
 
-declare -x benchmark_project=${BENCHMARK_PROJECT:-}
+declare -rx default_configuration="Release"
+declare -rix default_min_coverage_pct=80
+declare -rx default_minver_tag_prefix='v'
+declare -rx default_minver_prerelease_id="preview.0"
+
+declare -x benchmark_project
 declare -x configuration=${CONFIGURATION:-"${default_configuration}"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"${default_minver_tag_prefix}"}
@@ -30,6 +37,7 @@ source "$script_dir/run-benchmarks.usage.sh"
 source "$script_dir/run-benchmarks.args.sh"
 
 get_arguments "$@"
+benchmark_project=${benchmark_project:-"$BENCHMARK_PROJECT"}
 
 is_safe_existing_path "$benchmark_project" || true
 is_safe_configuration "$configuration" || true
@@ -39,15 +47,11 @@ is_safe_path "$artifacts_dir" || true
 
 exit_if_has_errors
 
-benchmark_name=$(basename "${benchmark_project%.*}")            # the base name of the benchmark project (without the path and file extension)
-benchmark_dir=$(realpath -e "$(dirname "$benchmark_project")")  # the directory of the benchmark project
 results_dir="$artifacts_dir/results"
 renamed_artifacts_dir="$artifacts_dir-$(date -u +"%Y%m%dT%H%M%S")"
 
 # Freeze variables
 declare -xr benchmark_project
-declare -xr benchmark_name
-declare -xr benchmark_dir
 declare -xr configuration
 declare -xr preprocessor_symbols
 declare -xr minver_tag_prefix
@@ -63,7 +67,7 @@ if [[ -d "$artifacts_dir" && -n "$(ls -A "$artifacts_dir")" ]]; then
         execute rm -rf "$artifacts_dir"
     else
         choice=$(choose \
-                    "The benchmarks results directory '$artifacts_dir' already exists. What do you want to do?" \
+                    "The benchmark results directory '$artifacts_dir' already exists. What do you want to do?" \
                         "Delete the directory and continue" \
                         "Rename the directory to '$renamed_artifacts_dir' and continue" \
                         "Exit the script") || exit $?
@@ -89,62 +93,50 @@ fi
 trace "Creating artifacts directory(s)..."
 execute mkdir -p "$results_dir"
 
-# shellcheck disable=SC2154 # _ignore is referenced but not assigned.
-repo_root=$(git rev-parse --show-toplevel 2>"$_ignore") || {
-    error -ec "$err_tool_error" "Failed to determine the repository root from $(pwd)."
-    exit 2
-}
+benchmark_exe_path=$(assembly_path "$benchmark_project")
+rc=$?
+declare -rx benchmark_exe_path
 
-# find-out the TFM
-if ! tfm=$(grep -oPm1 '(?<=<TargetFramework>)[^<]+' "$benchmark_project" 2>"$_ignore")               &&
-   ! tfm=$(grep -oPm1 '(?<=<TargetFrameworks>)[^<]+' "$benchmark_project" 2>"$_ignore")              &&
-   ! tfm=$(grep -oPm1 '(?<=<TargetFramework>)[^<]+' "$repo_root/Directory.Build.props" 2>"$_ignore") &&
-   ! tfm=$(grep -oPm1 '(?<=<TargetFrameworks>)[^<]+' "$repo_root/Directory.Build.props" 2>"$_ignore"); then
-    warning "Failed to determine the Target Framework Moniker (TFM) from $benchmark_project or $repo_root/Directory.Build.props." | to_stdout
-    tfm="net10.0"
-else
-    if [[ "$tfm" == *";"* ]]; then
-        warning "Multiple Target Framework Monikers (TFMs) found. Using the last one: '${tfm##*;}'." | to_stdout
-        tfm="${tfm##*;}"
+((rc <= failure)) || exit_if_has_errors
+
+if (( rc == failure )); then
+    if ! $dry_run; then
+        warning "Cached benchmark executable '${benchmark_exe_path}' was not found. Rebuilding the benchmark project"
+        execute dotnet clean "$benchmark_project" --configuration "$configuration" || true
+        execute dotnet build "$benchmark_project" \
+                --configuration "$configuration" \
+                -p:preprocessor_symbols="$preprocessor_symbols" \
+                -p:MinVerTagPrefix="$minver_tag_prefix" \
+                -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" 2>&1 |
+                extractDotnetBuildInfo |
+                displayDotnetBuildSummary |
+                to_summary || true # prevent pipefail from exiting before we can capture the exit code
+        rc=${PIPESTATUS[0]}
+        [[ $rc == "$success" ]] || error -ec "$err_tool_error" "Building '$benchmark_project' failed."
+        [[ -s $benchmark_exe_path ]] || error -ec "$err_tool_error" "Benchmark executable '$benchmark_exe_path' was not found after rebuilding the project."
+        exit_if_has_errors
     fi
 fi
 
-# Determine the benchmark executable paths. TODO: determine RID and use it to find the correct path
-benchmark_executables_pathname="${benchmark_dir}/bin/${configuration}/${tfm}/${benchmark_name}"
-os_name="$(uname -s)"
-if [[ "$os_name" == "Windows_NT" || "$os_name" == *MINGW* || "$os_name" == *MSYS* ]]; then
-    benchmark_exe_path="${benchmark_executables_pathname}.exe"
-else
-    benchmark_exe_path="${benchmark_executables_pathname}"
-fi
-benchmark_dll_path="${benchmark_executables_pathname}.dll"
-
-declare -r benchmark_executables_pathname
-declare -r benchmark_dll_path
-declare -r benchmark_exe_path
-
-# Verify executables exist
-# shellcheck disable=SC2154 # variable is referenced but not assigned.
-if [[ (! -f "${benchmark_exe_path}" || ! -f "${benchmark_dll_path}") && "$dry_run" != true ]]; then
-    error -ec "$err_logic_error" "Cached benchmark executables '${benchmark_exe_path}' or '${benchmark_dll_path}' were not found."
-    exit 2
-fi
-
-# Run benchmarks with JSON export for Bencher
+# Run benchmark with JSON export for Bencher
 trace "Running benchmark tests in project '$benchmark_project' with build configuration '$configuration'..."
-if ! execute "${benchmark_exe_path}" \
-        --filter '*' \
-        --join \
-        --exporters json markdown \
-        --memory \
-        --artifacts "$artifacts_dir"; then
-    error -ec "$err_logic_error" "Benchmarks failed in project '$benchmark_project'."
+
+benchmark_args=(
+    --filter '*'
+    --join
+    --exporters json markdown
+    --memory
+    --artifacts "$artifacts_dir"
+)
+
+if ! execute "${benchmark_exe_path}" "${benchmark_args[@]}"; then
+    error -ec "$err_logic_error" "Benchmark failed in project '$benchmark_project'."
     exit 2
 fi
 
 # Verify JSON results were created
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
-if [[ $dry_run != true ]]; then
+if ! $dry_run; then
     json_files=("$results_dir"/*-report-full-compressed.json)
     if [[ ! -f "${json_files[0]}" ]]; then
         error -ec "$err_tool_error" "No JSON benchmark reports found in $results_dir"
@@ -164,7 +156,6 @@ if [[ $dry_run != true ]]; then
     # Append markdown benchmark tables to the step summary
     md_files=("$results_dir"/*-report-github.md)
     if [[ -f "${md_files[0]}" ]]; then
-        # shellcheck disable=SC2119
         {
             for file in "${md_files[@]}"; do
                 echo ""

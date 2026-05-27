@@ -16,8 +16,12 @@ declare -r lib_dir
 source "$lib_dir/gh_core.sh"
 
 declare -rxi success
+declare -rxi failure
 declare -rxi err_tool_error
 declare -rxi err_logic_error
+
+declare -x _ignore
+declare -x dry_run
 
 declare -xr default_configuration="Release"
 declare -xr default_minver_tag_prefix='v'
@@ -26,7 +30,7 @@ declare -xr default_tests_artifacts_dir="./TestResults"
 declare -ixr default_min_coverage_pct=80
 declare -ixr default_min_branch_coverage_pct=80
 
-declare -x test_project=${TEST_PROJECT:-}
+declare -x test_project
 declare -x configuration=${CONFIGURATION:="${default_configuration}"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"${default_minver_tag_prefix}"}
@@ -39,6 +43,7 @@ source "$script_dir/run-tests.usage.sh"
 source "$script_dir/run-tests.args.sh"
 
 get_arguments "$@"
+test_project=${test_project:-"$TEST_PROJECT"}
 
 is_safe_existing_file "$test_project" || true
 test_name=$(basename "${test_project%.*}")                                      # the base name of the test project (without the path and file extension)
@@ -53,9 +58,7 @@ declare -A repo_state=()
 declare -xr key_root
 
 get_repo_state "$test_dir" repo_state false # all we need is the root of the repo, so don't go to gh
-
 repo_root="${repo_state[$key_root]}"
-
 test_config_path="${repo_root}/testconfig.json"
 coverage_settings_path="${repo_root}/coverage.settings.xml"                     # path to coverage settings file                ~/repos/vm2.Glob/coverage.settings.xml
 
@@ -70,7 +73,7 @@ exit_if_has_errors
 
 test_dir=$(realpath -e "${test_dir}")                                           # the directory of the test project
 tests_artifacts_dir=$(realpath -m "${tests_artifacts_dir}")
-artifacts_dir="${tests_artifacts_dir}/${test_name}"                              # the directory for test results and reports (resolved to an absolute path, if it was relative)
+artifacts_dir="${tests_artifacts_dir}/${test_name}"                             # the directory for test results and reports (resolved to an absolute path, if it was relative)
 coverage_source_path="${artifacts_dir}/coverage.cobertura.xml"                  # path to the raw coverage file                 ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/coverage.cobertura.xml
 coverage_files="$tests_artifacts_dir/*/coverage.cobertura.xml"
 coverage_reports_dir="${artifacts_dir}/reports"                                 # directory for coverage reports                ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/reports
@@ -122,33 +125,32 @@ if [[ -d "$artifacts_dir" && -n "$(ls -A "$artifacts_dir")" ]]; then
     fi
 fi
 
-test_base_dir="${test_dir}/bin/${configuration}/net10.0"
-test_exec_path="${test_base_dir}/${test_name}"
-os_name="$(uname -s)"
-if [[ "$os_name" == "Windows_NT" || "$os_name" == *MINGW* || "$os_name" == *MSYS* ]]; then
-    test_exec_path="${test_exec_path}.exe"
-fi
-declare -r test_base_dir
-declare -rx test_exec_path
+# try the test name with prefix vm2. as per convention
+test_exe_path=$(assembly_path "$test_project")
+rc=$?
+declare -rx test_exe_path
 
-declare -x _ignore
-declare -x dry_run
+((rc <= failure)) || exit_if_has_errors
 
 # Verify artifacts exist, if not - rebuild the project (mostly for local runs)
-if [[ ! -s "${test_exec_path}" && "$dry_run" != true ]]; then
-    warning "Cached test executable '${test_exec_path}' was not found. Rebuilding the test project"
-    execute dotnet clean "$test_project" --configuration "$configuration" || true
-    execute dotnet build "$test_project" \
-            --configuration "$configuration" \
-            -p:preprocessor_symbols="$preprocessor_symbols" \
-            -p:MinVerTagPrefix="$minver_tag_prefix" \
-            -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" 2>&1 |
-            extractDotnetBuildInfo |
-            displayDotnetBuildSummary |
-            to_summary || true # prevent pipefail from exiting before we can capture the exit code
-    rc=${PIPESTATUS[0]}
-    [[ $rc == "$success" ]] || error -ec "$err_tool_error" "Building '$test_project' failed."
-    exit_if_has_errors
+if ((rc == failure)); then
+    if ! $dry_run; then
+        warning "Cached test executable '${test_exe_path}' was not found. Rebuilding the test project"
+        execute dotnet clean "$test_project" --configuration "$configuration" || true
+        execute dotnet build "$test_project" \
+                --configuration "$configuration" \
+                -p:preprocessor_symbols="$preprocessor_symbols" \
+                -p:MinVerTagPrefix="$minver_tag_prefix" \
+                -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" 2>&1 |
+                extractDotnetBuildInfo |
+                displayDotnetBuildSummary |
+                to_summary || true # prevent pipefail from exiting before we can capture the exit code
+        rc=${PIPESTATUS[0]}
+        [[ $rc == "$success" ]] || error -ec "$err_tool_error" "Building '$test_project' failed."
+        [[ -s $test_exe_path ]] || error -ec "$err_tool_error" "Test executable '$test_exe_path' was not found after rebuilding the project."
+        exit_if_has_errors
+    fi
+    rc=$success
 fi
 
 trace "Running tests from ${test_project}..."
@@ -167,7 +169,7 @@ test_args=(
 ##########################################
 ### Run the tests with coverage collection
 ##########################################
-if ! execute "${test_exec_path}" "${test_args[@]}"; then
+if ! execute "${test_exe_path}" "${test_args[@]}"; then
     error -ec "$err_tool_error" "Tests failed in project '$test_project'."
     exit 2
 fi

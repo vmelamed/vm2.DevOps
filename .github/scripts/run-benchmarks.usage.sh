@@ -23,7 +23,8 @@ directory, i.e., <solution-root>/benchmarks/<benchmark-project-dir>/<benchmark-p
 the corresponding environment variables are set. If both are specified, the command line arguments take precedence
 
 Arguments:
-  <benchmark-project-path>      The path to the benchmark project file. Optional if the environment variable \$BENCHMARK_PROJECT is set
+  <benchmark-project-path>      The path to the benchmark project file.
+                                Initial value from \$BENCHMARK_PROJECT environment variable (see below)
 
 Options:
   -c, --configuration           Specifies the build configuration to use ('Debug' or 'Release')

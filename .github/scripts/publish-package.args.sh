@@ -10,6 +10,16 @@ declare -rxi err_missing_argument
 declare -rxi err_too_many_arguments
 declare -rxi err_unknown_argument
 
+declare -x package_project
+declare -x preprocessor_symbols
+declare -x minver_tag_prefix
+declare -x minver_prerelease_id
+declare -x reason
+declare -x nuget_server
+declare -x repo_owner
+declare -x artifacts_saved
+declare -x artifacts_dir
+
 # shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 function get_arguments()
@@ -25,11 +35,6 @@ function get_arguments()
         case "${option,,}" in
             # do not use the common options - they were already processed by get_common_arg:
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
-                ;;
-
-            --package-project|-pp )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
-                package_project="$1"; shift
                 ;;
 
             --define|-d )
@@ -72,7 +77,9 @@ function get_arguments()
                 artifacts_dir="$1"; shift
                 ;;
 
-            * ) usage -ec "$err_unknown_argument" "Unknown argument: $option"
+            * ) [[ -z $package_project ]] || usage -ec "$err_too_many_arguments" "Multiple package projects specified. Unknown option: $option"
+                [[ "$option" == -* ]] || usage -ec "$err_unknown_argument" "Unknown option: $option"
+                package_project="$option"
                 ;;
         esac
     done

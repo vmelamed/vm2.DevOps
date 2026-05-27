@@ -99,7 +99,7 @@ jobs:
         shell: bash
         run: |
           pack.sh \
-              --package-project "${{ inputs.package-project }}" \
+              "${{ inputs.package-project }}" \
               --configuration "${{ inputs.configuration }}" \
               --define "${{ inputs.preprocessor-symbols }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \

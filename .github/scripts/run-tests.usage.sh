@@ -22,7 +22,8 @@ levels up from the project directory, i.e., <solution-root>/test/<test-project-d
 optional if the corresponding environment variables are set. If both are specified, the command line arguments take precedence
 
 Arguments:
-  <test-project-path>           The path to the test project file. Optional if the environment variable TEST_PROJECT is set
+  <test-project-path>           The path to the test project file.
+                                Initial value from \$TEST_PROJECT environment variable (see below)
 
 Options:
   -c, --configuration           Specifies the build configuration to use ('Debug' or 'Release')
