@@ -19,7 +19,6 @@ declare -xir success
 declare -xir failure
 
 # default values for parameters
-declare -xr default_configuration="Release"
 declare -xr default_minver_tag_prefix='v'
 declare -xr default_minver_prerelease_id="preview.0"
 

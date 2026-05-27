@@ -22,7 +22,6 @@ declare -rxi err_tool_error
 # default values for parameters
 declare -xr default_minver_tag_prefix='v'
 declare -xr default_minver_prerelease_id="preview.0"
-declare -xr default_configuration="Release"
 
 # parameters with initial values from environment variables or defaults
 declare -x build_project=""

@@ -18,6 +18,21 @@ declare -rxi err_invalid_arguments
 declare -rxi err_argument_value
 declare -rxi err_logic_error
 
+declare -rx ci
+
+if $ci; then
+    # In CI, we want to fail immediately if the output cannot be parsed, as it likely indicates a problem with the build or the parsing logic.
+    default_configuration="Release"
+    default_tfm="net10.0"
+else
+    # Locally, we want to be more forgiving and allow the script to continue even if the parsing fails, so that we can still see the full build output and debug any issues.
+    default_configuration="Debug"
+    default_tfm="net10.0"
+fi
+
+declare -rx default_configuration
+declare -rx default_tfm
+
 # export variables to hold the results
 declare -x build_result="Unknown"
 declare -x warnings_count=''
@@ -210,9 +225,6 @@ function get_build_info()
     return "$success"
 }
 
-declare -rx default_configuration
-declare -rx default_tfm
-
 #-------------------------------------------------------------------------------
 # Summary: Returns the full path to the assembly produced by a .NET project.
 # Parameters:
@@ -277,7 +289,7 @@ function assembly_path() {
     [[ -n "$tfm" ]] || tfm=$default_tfm
     tfm="${tfm//[[:space:]]/}"
 
-    # Configuration: *.csproj → Directory.Build.props → "Release"
+    # Configuration: *.csproj → Directory.Build.props → $default_configuration
     local proj_configuration=""
     proj_configuration=$(grep -oPm1 '(?<=<Configuration>)[^<]+' "$csproj" 2>"$_ignore") || true
 

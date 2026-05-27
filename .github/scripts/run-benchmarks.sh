@@ -21,7 +21,6 @@ declare -rxi err_logic_error
 declare -x _ignore
 declare -x dry_run
 
-declare -rx default_configuration="Release"
 declare -rix default_min_coverage_pct=80
 declare -rx default_minver_tag_prefix='v'
 declare -rx default_minver_prerelease_id="preview.0"

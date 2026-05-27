@@ -53,6 +53,7 @@ source "${lib_dir}/_semver.sh"
 source "${lib_dir}/_user.sh"
 source "${lib_dir}/_git.sh"
 source "${lib_dir}/_sanitize.sh"
+source "${lib_dir}/_dotnet.sh"
 
 trace "We are running in CI mode: $ci"
 # Override the default or environment values of common flags based on other flags upon sourcing.

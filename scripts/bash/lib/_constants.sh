@@ -80,8 +80,6 @@ declare -rxa sources_of_truth=(
 #           of truth files for the AddNewPackage template. The script may support other scenarios in the future, and each
 #           template may have its own directory in the vm2.Templates repository.
 declare -rx default_sot="AddNewPackage"
-declare -rx default_configuration="Release"
-declare -rx default_tfm="net10.0"
 
 declare -rx varNameRegex="^[A-Za-z_][A-Za-z0-9_]*$"
 declare -rx nugetServersRegex="^(nuget|github|https?://[-a-zA-Z0-9._/]+)$";

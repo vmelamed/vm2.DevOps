@@ -27,7 +27,6 @@ declare -x lib_dir
 [[ ! -v lib_dir     || -z "$lib_dir"     ]] && lib_dir=$(realpath -e "$(dirname "${BASH_SOURCE[0]}")")
 
 source "${lib_dir}/core.sh"
-source "${lib_dir}/_dotnet.sh"
 
 ## In CI mode, indicates whether the script is running within GitHub Actions.
 declare -x github_actions=${GITHUB_ACTIONS:-false}

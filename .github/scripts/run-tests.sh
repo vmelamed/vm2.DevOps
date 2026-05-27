@@ -23,7 +23,6 @@ declare -rxi err_logic_error
 declare -x _ignore
 declare -x dry_run
 
-declare -xr default_configuration="Release"
 declare -xr default_minver_tag_prefix='v'
 declare -xr default_minver_prerelease_id="preview.0"
 declare -xr default_tests_artifacts_dir="./TestResults"
