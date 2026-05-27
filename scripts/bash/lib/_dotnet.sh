@@ -275,14 +275,14 @@ function assembly_path() {
     tfm="${tfm//[[:space:]]/}"
 
     # Configuration: *.csproj → Directory.Build.props → "Debug"
-    local configuration=""
-    configuration=$(grep -oPm1 '(?<=<Configuration>)[^<]+' "$csproj" 2>"$_ignore") || true
+    local proj_configuration=""
+    proj_configuration=$(grep -oPm1 '(?<=<Configuration>)[^<]+' "$csproj" 2>"$_ignore") || true
 
-    if [[ -z "$configuration" && -n "$dir_build_props" ]]; then
-        configuration=$(grep -oPm1 '(?<=<Configuration>)[^<]+' "$dir_build_props" 2>"$_ignore") || true
+    if [[ -z "$proj_configuration" && -n "$dir_build_props" ]]; then
+        proj_configuration=$(grep -oPm1 '(?<=<Configuration>)[^<]+' "$dir_build_props" 2>"$_ignore") || true
     fi
-    [[ -n "$configuration" ]] || configuration="Debug"
-    configuration="${configuration//[[:space:]]/}"
+    [[ -n "$proj_configuration" ]] || proj_configuration="Debug"
+    proj_configuration="${proj_configuration//[[:space:]]/}"
 
     # AssemblyName: *.csproj → filename without extension
     local assembly_name=""
@@ -302,7 +302,7 @@ function assembly_path() {
         suffix=".dll"
     fi
 
-    local path="${proj_dir}/bin/${configuration}/${tfm}/${assembly_name}${suffix}"
+    local path="${proj_dir}/bin/${proj_configuration}/${tfm}/${assembly_name}${suffix}"
 
     echo "$path"
     [[ -s "$path" ]] && return "$success" || return "$failure"
