@@ -82,7 +82,7 @@ declare -x github_output=${github_output:-/dev/stdout}
 declare -x github_step_summary=${github_step_summary:-/dev/stdout}
 
 declare -x _ignore
-declare -rx dry_run
+declare -x dry_run
 
 # install GitHub CLI and jq if not already installed
 if ! command -v -p jq &> "$_ignore" || ! command -v -p gh 2>&1 "$_ignore"; then

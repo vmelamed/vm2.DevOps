@@ -132,7 +132,7 @@ declare -r test_base_dir
 declare -rx test_exec_path
 
 declare -x _ignore
-declare -rx dry_run
+declare -x dry_run
 
 # Verify artifacts exist, if not - rebuild the project (mostly for local runs)
 if [[ ! -s "${test_exec_path}" && "$dry_run" != true ]]; then
