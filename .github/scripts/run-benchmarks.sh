@@ -93,8 +93,8 @@ fi
 trace "Creating artifacts directory(s)..."
 execute mkdir -p "$results_dir"
 
-benchmark_exe_path=$(assembly_path "$benchmark_project")
-rc=$?
+declare rc=$success
+benchmark_exe_path=$(assembly_path "$benchmark_project") || rc=$?
 declare -rx benchmark_exe_path
 
 ((rc <= failure)) || exit_if_has_errors

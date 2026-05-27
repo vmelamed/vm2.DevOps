@@ -126,8 +126,8 @@ if [[ -d "$artifacts_dir" && -n "$(ls -A "$artifacts_dir")" ]]; then
 fi
 
 # try the test name with prefix vm2. as per convention
-test_exe_path=$(assembly_path "$test_project")
-rc=$?
+declare rc=$success
+test_exe_path=$(assembly_path "$test_project") || rc=$?
 declare -rx test_exe_path
 
 ((rc <= failure)) || exit_if_has_errors
