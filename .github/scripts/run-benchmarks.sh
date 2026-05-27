@@ -26,7 +26,7 @@ declare -rix default_min_coverage_pct=80
 declare -rx default_minver_tag_prefix='v'
 declare -rx default_minver_prerelease_id="preview.0"
 
-declare -x benchmark_project
+declare -x benchmark_project=""
 declare -x configuration=${CONFIGURATION:-"${default_configuration}"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"${default_minver_tag_prefix}"}

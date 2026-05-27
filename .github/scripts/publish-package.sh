@@ -25,7 +25,7 @@ declare -xr default_minver_prerelease_id="preview.0"
 declare -xr default_repo_owner="vmelamed"
 
 # parameters with initial values from environment variables and defaults
-declare -x package_project
+declare -x package_project=""
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-""}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}

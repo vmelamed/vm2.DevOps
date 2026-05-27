@@ -24,7 +24,7 @@ declare -xr default_minver_tag_prefix='v'
 declare -xr default_minver_prerelease_id="preview.0"
 
 # parameters with initial values from environment variables or defaults
-declare -x package_project
+declare -x package_project=""
 declare -x configuration=${CONFIGURATION:-"$default_configuration"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-""}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}

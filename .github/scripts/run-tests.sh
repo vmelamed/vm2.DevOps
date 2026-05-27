@@ -30,7 +30,7 @@ declare -xr default_tests_artifacts_dir="./TestResults"
 declare -ixr default_min_coverage_pct=80
 declare -ixr default_min_branch_coverage_pct=80
 
-declare -x test_project
+declare -x test_project=""
 declare -x configuration=${CONFIGURATION:="${default_configuration}"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"${default_minver_tag_prefix}"}
