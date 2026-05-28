@@ -83,9 +83,9 @@ Examples:
                                 The script will only process the file Directory.Build.props, the action is determined by the
                                 configuration
   diff-shared.sh --file-ask-to-merge "Directory.Build.props" --file-ask-to-merge "Directory.Packages.props"
-                                  The script will only process the files Directory.Build.props and Directory.Packages.props, and
-                                  for each difference, it will ask the user whether to ignore, merge or copy the SoT file over
-                                  the target file
+                                The script will only process the files Directory.Build.props and Directory.Packages.props, and
+                                for each difference, it will ask the user whether to ignore, merge or copy the SoT file over
+                                the target file
   diff-shared.sh --file-merge-or-copy "*.props"
                                 The script will process all files matching the glob pattern *.props, and for each difference,
                                 it will ask the user whether to ignore, merge or copy the SoT file over the target file
