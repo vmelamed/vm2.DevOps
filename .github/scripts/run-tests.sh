@@ -147,7 +147,7 @@ if ((rc == failure)); then
                 to_summary || true # prevent pipefail from exiting before we can capture the exit code
         rc=${PIPESTATUS[0]}
         [[ $rc == "$success" ]] || error -ec "$err_tool_error" "Building '$test_project' failed."
-        [[ -s $test_exe_path ]] || error -ec "$err_tool_error" "Test executable '$test_exe_path' was not found after rebuilding the project."
+        [[ -s $test_exe_path ]] || error -ec "$err_tool_error" "Test executable '$test_exe_path' was still NOT FOUND after rebuilding the project."
         exit_if_has_errors
     fi
     rc=$success

@@ -113,7 +113,7 @@ if (( rc == failure )); then
                 to_summary || true # prevent pipefail from exiting before we can capture the exit code
         rc=${PIPESTATUS[0]}
         [[ $rc == "$success" ]] || error -ec "$err_tool_error" "Building '$benchmark_project' failed."
-        [[ -s $benchmark_exe_path ]] || error -ec "$err_tool_error" "Benchmark executable '$benchmark_exe_path' was not found after rebuilding the project."
+        [[ -s $benchmark_exe_path ]] || error -ec "$err_tool_error" "Benchmark executable '$benchmark_exe_path' was still NOT FOUND after rebuilding the project."
         exit_if_has_errors
     fi
 fi

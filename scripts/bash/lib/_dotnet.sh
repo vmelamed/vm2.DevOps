@@ -257,9 +257,11 @@ function assembly_path() {
 
     local csproj
     csproj=$(realpath -e "$1")
+    trace "Resolving assembly path for project: $csproj"
 
     local proj_dir
     proj_dir=$(dirname "$csproj")
+    trace "Project directory: $proj_dir"
 
     # Find the nearest Directory.Build.props by walking up from the project directory
     local dir_build_props=""
@@ -271,6 +273,7 @@ function assembly_path() {
         fi
         search_dir=$(dirname "$search_dir")
     done
+    trace "Nearest 'Directory.Build.props': ${dir_build_props:-None}"
 
     # TFM: *.csproj → Directory.Build.props → "net10.0"
     local tfm=""
@@ -288,6 +291,7 @@ function assembly_path() {
     fi
     [[ -n "$tfm" ]] || tfm=$default_tfm
     tfm="${tfm//[[:space:]]/}"
+    trace "Using TFM: $tfm"
 
     # Configuration: *.csproj → Directory.Build.props → $default_configuration
     local proj_configuration=""
@@ -298,27 +302,34 @@ function assembly_path() {
     fi
     [[ -n "$proj_configuration" ]] || proj_configuration=$default_configuration
     proj_configuration="${proj_configuration//[[:space:]]/}"
+    trace "Using Configuration: $proj_configuration"
 
     # AssemblyName: *.csproj → filename without extension
     local assembly_name=""
     assembly_name=$(grep -oPm1 '(?<=<AssemblyName>)[^<]+' "$csproj" 2>"$_ignore") || true
     [[ -n "$assembly_name" ]] || assembly_name=$(basename "${csproj%.*}")
     assembly_name="${assembly_name//[[:space:]]/}"
+    trace "Using AssemblyName: $assembly_name"
 
     # OutputType: determines the file suffix
     local output_type=""
     output_type=$(grep -oPm1 '(?<=<OutputType>)[^<]+' "$csproj" 2>"$_ignore") || true
     output_type="${output_type//[[:space:]]/}"
-
     local suffix
     if [[ "${output_type,,}" == "exe" ]]; then
         is_windows && suffix=".exe" || suffix=""
     else
         suffix=".dll"
     fi
+    trace "Using 'OutputType': ${output_type:-None} → suffix: '$suffix'"
 
     local path="${proj_dir}/bin/${proj_configuration}/${tfm}/${assembly_name}${suffix}"
 
     echo "$path"
-    [[ -s "$path" ]] && return "$success" || return "$failure"
+    trace "Looking for assembly at: $path"
+
+    [[ -s "$path" ]] && return "$success" || {
+        warning "Assembly NOT FOUND at: $path"
+        return "$failure"
+    }
 }
