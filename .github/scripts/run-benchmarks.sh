@@ -103,6 +103,7 @@ if (( rc == failure )); then
         warning "Cached benchmark executable '${benchmark_exe_path}' was not found. Rebuilding the benchmark project"
         execute dotnet clean "$benchmark_project" --configuration "$configuration" || true
         execute dotnet build "$benchmark_project" \
+                --verbosity detailed \
                 --configuration "$configuration" \
                 -p:preprocessor_symbols="$preprocessor_symbols" \
                 -p:MinVerTagPrefix="$minver_tag_prefix" \

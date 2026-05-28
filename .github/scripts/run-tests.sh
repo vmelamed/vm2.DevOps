@@ -137,6 +137,7 @@ if ((rc == failure)); then
         warning "Cached test executable '${test_exe_path}' was not found. Rebuilding the test project"
         execute dotnet clean "$test_project" --configuration "$configuration" || true
         execute dotnet build "$test_project" \
+                --verbosity detailed \
                 --configuration "$configuration" \
                 -p:preprocessor_symbols="$preprocessor_symbols" \
                 -p:MinVerTagPrefix="$minver_tag_prefix" \
