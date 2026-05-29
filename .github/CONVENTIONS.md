@@ -130,7 +130,7 @@ The project owner is a non-native English speaker.
 - Global usings: defined in **`usings.cs` per project**
 - Standard folder layout:
   - `src/` — source code
-  - `test/` — test projects. The stack is: **xUnit, FluentAssertions, NSubstitute, MTP v2, coverage**
+  - `tests/` — test projects. The stack is: **xUnit, FluentAssertions, NSubstitute, MTP v2, coverage**
   - `benchmarks/` — **BenchmarkDotNet** projects (desirable)
   - `examples/` — usage examples (desirable). Prefer single-file programs for simplicity, but multi-file projects are acceptable if the example is complex enough to warrant it.
   - `docs/` — documentation (optional, in addition to README.md, e.g. blogs, design docs, etc.)

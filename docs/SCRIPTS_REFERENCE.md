@@ -312,7 +312,7 @@ Compiles a .NET project or solution.
 ### run-tests.sh
 
 Runs tests and collects code coverage. Assumes project layout:
-`<solution>/test/<project>/<project>.csproj`.
+`<solution>/tests/<project>/<project>.csproj`.
 
 **Called by:** `_test.yaml`
 

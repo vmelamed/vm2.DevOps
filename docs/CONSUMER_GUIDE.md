@@ -109,7 +109,7 @@ YourRepo/
 │       └── ClearCache.yaml
 ├── src/
 │   └── MyProject/
-├── test/                           # not having one MUST be justified
+├── tests/                          # not having one MUST be justified
 │   └── MyProject.Tests/
 ├── benchmarks/                     # highly recommended
 │   └── MyProject.Benchmarks/
@@ -135,8 +135,8 @@ YourRepo/
 > [!Important]
 > Note that GitHub only recognizes `dependabot.yml` filename, not `dependabot.yAml`
 
-The `src/`, `test/`, and `benchmarks/` folder conventions are mandatory — the CI scripts assume this layout (e.g.,
-`<solution>/src/<project>/<project>.csproj` or `<solution>/test/<project.Tests>/<project.Tests>.csproj`).
+The `src/`, `tests/`, and `benchmarks/` folder conventions are mandatory — the CI scripts assume this layout (e.g.,
+`<solution>/src/<project>/<project>.csproj` or `<solution>/tests/<project.Tests>/<project.Tests>.csproj`).
 
 Most of the files in the root are required for the workflows to function correctly. Once created they rarely need changes. And
 that's why we recommend using the `dotnet new vm2` template which generates them all correctly from the start or at least manually
@@ -184,7 +184,7 @@ directory of this repository are the canonical versions that you can copy from.
    - ReportGenerator
 
    > [!Note] The file includes also a few references that might be needed by test library projects (.e.g.
-     `vm2.Glob/test/Glob.Api.FakeFileSystem`). These are conditioned on `IsTestLibraryProject`.
+     `vm2.Glob/tests/Glob.Api.FakeFileSystem`). These are conditioned on `IsTestLibraryProject`.
 
 1. Benchmark Stack
 
@@ -241,8 +241,8 @@ env:
     [ "vm2.MyProject.slnx" ]
   TEST_PROJECTS: >
     [
-    "test/MyProject.Tests/MyProject.Tests.csproj",
-    "test/MyProject.Integration.Tests/MyProject.Integration.Tests.csproj"
+    "tests/MyProject.Tests/MyProject.Tests.csproj",
+    "tests/MyProject.Integration.Tests/MyProject.Integration.Tests.csproj"
     ]
   BENCHMARK_PROJECTS: >
     [ "benchmarks/MyProject.Benchmarks/MyProject.Benchmarks.csproj" ]

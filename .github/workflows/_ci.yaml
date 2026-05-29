@@ -188,7 +188,7 @@ jobs:
               --skip-tests                  '${{ inputs.skip-tests }}' \
               --skip-packages               '${{ inputs.skip-packages }}'
 
-  # Build the project and cache artifacts for downstream test/benchmark jobs
+  # Build the project and cache artifacts for downstream tests/benchmark jobs
   build:
     name: Build the source code
     needs:

@@ -231,7 +231,7 @@ env:
   BUILD_PROJECTS: >                     # JSON array of project/solution paths. If empty, assumes the solution file in the root
     [ "src/MyProject/MyProject.slnx" ]
   TEST_PROJECTS: >                      # JSON array of test project paths
-    [ "test/MyProject.Tests/MyProject.Tests.csproj" ]
+    [ "tests/MyProject.Tests/MyProject.Tests.csproj" ]
   BENCHMARK_PROJECTS: >                 # JSON array of benchmark project paths
     [ "benchmarks/MyProject.Benchmarks/MyProject.Benchmarks.csproj" ]
   PACKAGE_PROJECTS: >                   # JSON array of projects to package and publish

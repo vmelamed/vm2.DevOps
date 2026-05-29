@@ -128,7 +128,7 @@ jobs:
 
               # uncomment the next 2 lines if you want to debug the contents of the artifact path
               # ls -la "$ARTIFACT_PATH"/**/*.*
-              # ls -la ./test/**/bin/${{ inputs.configuration }}/*.*
+              # ls -la ./tests/**/bin/${{ inputs.configuration }}/*.*
           fi
 
           # Parse test projects JSON array and run each test project
