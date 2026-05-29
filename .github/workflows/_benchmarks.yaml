@@ -201,7 +201,6 @@ jobs:
                 --branch-start-point main
                 --github-actions "$GH_TOKEN"
                 --ci-number "${{ github.event.pull_request.number }}"
-                --ci-only-thresholds
               )
           elif [[ "${{ github.ref_name }}" != "main" ]]; then
               BENCHER_ARGS+=(
@@ -218,6 +217,13 @@ jobs:
               trace "Resetting Bencher thresholds (reset_thresholds=true)"
               BENCHER_ARGS+=(--thresholds-reset)
           fi
+
+          # In PRs, default to existing thresholds only. When resetting thresholds,
+          # allow Bencher to recreate thresholds from this run.
+          if [[ "${{ github.event_name }}" == "pull_request" && "$reset_benchmark_thresholds" != "true" ]]; then
+            BENCHER_ARGS+=(--ci-only-thresholds)
+          fi
+
           # Add all benchmark result files
           for file in ${{ env.ARTIFACTS_DIR }}/results/*-report-full-compressed.json; do
               if [[ -s "$file" ]]; then
