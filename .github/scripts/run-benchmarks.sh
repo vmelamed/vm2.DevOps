@@ -26,7 +26,7 @@ declare -rx default_minver_tag_prefix='v'
 declare -rx default_minver_prerelease_id="preview.0"
 
 declare -x benchmark_project=""
-declare -x configuration=${CONFIGURATION:-"${default_configuration}"}
+declare -x configuration=${CONFIGURATION:-"Release"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"${default_minver_tag_prefix}"}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"${default_minver_prerelease_id}"}
