@@ -198,14 +198,18 @@ jobs:
               pr_base_sha="${{ github.event.pull_request.base.sha || '' }}"
               BENCHER_ARGS+=(
                 --branch "${{ github.head_ref }}"
-                --branch-start-point main
+                --start-point main
+                --start-point-clone-thresholds
+                --start-point-reset
+                --start-point-hash "$pr_base_sha"
                 --github-actions "$GH_TOKEN"
                 --ci-number "${{ github.event.pull_request.number }}"
               )
           elif [[ "${{ github.ref_name }}" != "main" ]]; then
               BENCHER_ARGS+=(
                 --branch "${{ github.ref_name }}"
-                --branch-start-point main
+                --start-point main
+                --start-point-clone-thresholds
               )
           else
               BENCHER_ARGS+=(
@@ -216,12 +220,6 @@ jobs:
           if [[ "$reset_benchmark_thresholds" == "true" ]]; then
               trace "Resetting Bencher thresholds (reset_thresholds=true)"
               BENCHER_ARGS+=(--thresholds-reset)
-          fi
-
-          # In PRs, default to existing thresholds only. When resetting thresholds,
-          # allow Bencher to recreate thresholds from this run.
-          if [[ "${{ github.event_name }}" == "pull_request" && "$reset_benchmark_thresholds" != "true" ]]; then
-            BENCHER_ARGS+=(--ci-only-thresholds)
           fi
 
           # Add all benchmark result files
