@@ -1,4 +1,4 @@
-# Auto detect text files and perform LF normalization
+﻿# Auto detect text files and perform LF normalization
 * text=auto
 
 # Shell scripts should always use LF line endings
@@ -28,3 +28,6 @@
 *.ico binary
 *.dll binary
 *.exe binary
+
+# Git hook scripts (no extension) must stay LF and executable
+scripts/githooks/* text eol=lf
