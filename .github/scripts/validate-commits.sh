@@ -52,19 +52,27 @@ while IFS= read -r subject; do
         continue
     fi
 
-    if [[ ! "$subject" =~ $cc_regex ]]; then
-        error -ec "$err_argument_value" "Bad commit message: $subject"
-        bad+=1
+    if [[ ! "${subject,,}" =~ $cc_regex ]]; then
+        error -ec "$err_argument_value" \
+                  "Bad commit message: $subject" \
+                  "To fix this commit message:" \
+                  "  1. git rebase -i ${base_ref}" \
+                  "  2. In the editor, change 'pick' to 'reword' for the offending commit" \
+                  "  3. Save and close — Git opens the message editor for that commit" \
+                  "  4. Edit the message (e.g. prepend 'chore: '), save and close" \
+                  "  Note: rebase rewrites commit hashes from that point to HEAD"
+        bad++ || true
     fi
 done < <(git log --format='%s' "${base_ref}..HEAD")
 
 if [[ $bad -gt 0 ]]; then
+    branch=$(git branch --show-current)
     echo "" >&2
-    info "Expected format: <type>[(scope)][!]: <description>"
-    info "Allowed types:   ${allowed_types[*]}"
-    info "Examples:        feat: add new glob pattern"
-    info "                 fix(parser): handle empty input"
-    info "                 refactor!: rename public API method"
+    info "Expected format: <type>[(scope)][!]: <description>" \
+         "Allowed types:   ${allowed_types[*]}" \
+         "Examples        chore(dependencies): update dependencies and lock files"
+    info "Repeat the steps above for each bad commit, then force-push (required because rebase rewrites commit hashes):" \
+         "  git push --force-with-lease origin $branch"
     exit 1
 fi
 

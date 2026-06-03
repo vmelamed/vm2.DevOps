@@ -1,4 +1,5 @@
 {
+    "dotnet.defaultSolution": "disable",
     "cSpell.words": [
         "dift",
         "preproc",
