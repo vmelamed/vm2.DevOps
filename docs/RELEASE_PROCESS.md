@@ -2,21 +2,23 @@
 
 <!-- TOC tocDepth:2..5 chapterDepth:2..6 -->
 
-- [Development Model](#development-model)
-- [Version Source: MinVer](#version-source-minver)
-- [Two Publishing Flows](#two-publishing-flows)
-- [Prerelease Flow](#prerelease-flow)
-  - [Prerelease Version Calculation Algorithm](#prerelease-version-calculation-algorithm)
-    - [Example Walkthrough](#example-walkthrough)
-  - [Changelog and Tagging](#changelog-and-tagging)
-- [Stable Release Flow](#stable-release-flow)
-  - [Release Version Calculation Algorithm](#release-version-calculation-algorithm)
-- [Changelog Strategy](#changelog-strategy)
-- [Initial Bootstrapping](#initial-bootstrapping)
-- [NuGet Server Selection](#nuget-server-selection)
-- [Quick Reference](#quick-reference)
-- [Troubleshooting](#troubleshooting)
-  - [Branch Protection Bypass](#branch-protection-bypass)
+- [Release Process](#release-process)
+  - [Development Model](#development-model)
+  - [Version Source: MinVer](#version-source-minver)
+  - [Two Publishing Flows](#two-publishing-flows)
+  - [Prerelease Flow](#prerelease-flow)
+    - [Prerelease Version Calculation Algorithm](#prerelease-version-calculation-algorithm)
+      - [Example Walkthrough](#example-walkthrough)
+    - [Changelog and Tagging](#changelog-and-tagging)
+  - [Stable Release Flow](#stable-release-flow)
+    - [Release Version Calculation Algorithm](#release-version-calculation-algorithm)
+  - [Changelog Strategy](#changelog-strategy)
+    - [Reviewing and Curating Entries](#reviewing-and-curating-entries)
+  - [Initial Bootstrapping](#initial-bootstrapping)
+  - [NuGet Server Selection](#nuget-server-selection)
+  - [Quick Reference](#quick-reference)
+  - [Troubleshooting](#troubleshooting)
+    - [Branch Protection Bypass](#branch-protection-bypass)
 
 <!-- /TOC -->
 
@@ -240,7 +242,7 @@ The `compute-release-version.sh` script determines the next stable version:
 
    | Commit Regex                                | Bump  | Example                              |
    | :------------------------------------------ | :---- | :----------------------------------- |
-   | `^[a-z]+(\(.+\))?!:`                         | Major | `refactor(core)!: redesign API`      |
+   | `^[a-z]+(\(.+\))?!:`                        | Major | `refactor(core)!: redesign API`      |
    | `^feat(\(.+\))?:`                           | Minor | `feat(parser): add glob negation`    |
    | Everything else                             | Patch | `fix: handle null input`             |
 
