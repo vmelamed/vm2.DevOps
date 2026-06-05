@@ -210,9 +210,9 @@ execute reportgenerator \
     -targetdir:"$coverage_reports_dir" \
     -reporttypes:TextSummary,html_dark,MarkdownSummaryGithub,Badges \
     minimumCoverageThresholds:lineCoverage="$min_coverage_pct" \
-    minimumCoverageThresholds:branchCoverage="$min_branch_coverage_pct" \
+    minimumCoverageThresholds:branchCoverage="$min_coverage_pct" \
     minimumCoverageThresholds:methodCoverage="$min_coverage_pct" \
-    minimumCoverageThresholds:fullMethodCoverage="$min_branch_coverage_pct"
+    minimumCoverageThresholds:fullMethodCoverage="$min_coverage_pct"
 
 if [[ "$uninstall_reportgenerator" = true ]]; then
     trace "Uninstalling the tool 'reportgenerator'..."
