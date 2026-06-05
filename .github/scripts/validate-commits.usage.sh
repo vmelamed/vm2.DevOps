@@ -31,13 +31,14 @@ Description:
 
   commit-message = subject, [ LF, body ] ;
   subject        = type, [ "(", scope, ")" ], [ "!" ], ": ", description ;
-  type           = "style" | "build" | "feat" | "test" | "fix" | "refactor" | "perf" | "security" | "doc" | "docs" | "chore"
-                   | "revert" | "remove" | "ci" | "devops" ;
+  type           = "style" | "build" | "feat" | "test" | "tests" | "fix" | "refactor" | "perf" | "security" | "doc" | "docs" |
+                   "chore" | "revert" | "remove" | "ci" | "devops" ;
   scope          = noun ;
   description    = non-empty string ;
   body           = free-form text ;
 
-  Message type:       Required, one of: style build feat test fix refactor perf security doc docs chore revert remove ci devops
+  Message type:       Required, one of: style build feat test tests fix refactor perf security doc docs chore revert remove ci
+                      devops
   Scope:              Optional. A noun describing the section of the codebase affected by the change (e.g., 'api', 'ui', 'docs')
   Breaking Change:    Optional. '!' before ':' signals a breaking change
   Description:        Required. A short description of the change
