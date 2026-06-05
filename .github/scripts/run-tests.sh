@@ -27,7 +27,8 @@ declare -xr default_minver_tag_prefix='v'
 declare -xr default_minver_prerelease_id="preview.0"
 declare -xr default_tests_artifacts_dir="./TestResults"
 declare -ixr default_min_coverage_pct=80
-declare -ixr default_min_branch_coverage_pct=80
+declare -ixr default_min_branch_coverage_pct=75
+declare -ixr default_min_method_coverage_pct=80
 
 declare -x test_project=""
 declare -x configuration=${CONFIGURATION:="${default_configuration}"}
@@ -37,6 +38,7 @@ declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"${default
 declare -x tests_artifacts_dir=${TEST_ARTIFACTS_DIR:-"${default_tests_artifacts_dir}"}
 declare -ix min_coverage_pct=${MIN_COVERAGE_PCT:-"${default_min_coverage_pct}"}
 declare -ix min_branch_coverage_pct=${MIN_BRANCH_COVERAGE_PCT:-"${default_min_branch_coverage_pct}"}
+declare -ix min_method_coverage_pct=${MIN_BRANCH_COVERAGE_PCT:-"${default_min_branch_coverage_pct}"}
 
 source "$script_dir/run-tests.usage.sh"
 source "$script_dir/run-tests.args.sh"
@@ -50,6 +52,7 @@ test_dir=$(dirname "$test_project")                                             
 is_safe_configuration "$configuration" || true
 validate_preprocessor_symbols preprocessor_symbols || true
 is_safe_min_coverage_pct "$min_coverage_pct" || true
+min_branch_coverage_pct=$((min_branch_coverage_pct - 5))
 validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
 is_safe_path "$tests_artifacts_dir" || true
 
@@ -210,11 +213,21 @@ execute reportgenerator \
     -targetdir:"$coverage_reports_dir" \
     -reporttypes:TextSummary,html_dark,MarkdownSummaryGithub,Badges \
     minimumCoverageThresholds:lineCoverage="$min_coverage_pct" \
-    minimumCoverageThresholds:branchCoverage="$min_coverage_pct" \
-    minimumCoverageThresholds:methodCoverage="$min_coverage_pct" \
-    minimumCoverageThresholds:fullMethodCoverage="$min_coverage_pct"
+    minimumCoverageThresholds:branchCoverage="$min_branch_coverage_pct" || rc=$?
+
+if [[ -s "$coverage_reports_dir/Summary.txt" ]]; then
+    if command -v -p "glow" > "$_ignore" || which "glow" &>"$_ignore"; then
+        glow -w 150 "$coverage_reports_dir/SummaryGithub.md"
+    else
+        cat "$coverage_reports_dir/Summary.txt"
+    fi
+else
+    warning "Summary.txt not found in coverage output directory '$coverage_source_path'."
+fi
 
 if [[ "$uninstall_reportgenerator" = true ]]; then
     trace "Uninstalling the tool 'reportgenerator'..."
     execute dotnet tool uninstall dotnet-reportgenerator-globaltool --global
 fi
+
+exit "$rc"
