@@ -54,6 +54,16 @@ on:
         type: number
         default: 20 # percent
 
+      max-gen1-collects:
+        description: Maximum acceptable Gen1 GC collections per 1000 operations. Used as a Bencher static (absolute) threshold.
+        type: number
+        default: 2
+
+      max-gen2-collects:
+        description: Maximum acceptable Gen2 GC collections per 1000 operations. Used as a Bencher static (absolute) threshold.
+        type: number
+        default: 1
+
       minver-tag-prefix:
         description: MinVer tag prefix to use for version calculation. Cannot be null or empty!
         type: string
@@ -146,6 +156,8 @@ jobs:
       preprocessor-symbols: ${{ steps.validate.outputs.preprocessor-symbols }}
       min-coverage-pct: ${{ steps.validate.outputs.min-coverage-pct }}
       max-regression-pct: ${{ steps.validate.outputs.max-regression-pct }}
+      max-gen1-collects: ${{ steps.validate.outputs.max-gen1-collects }}
+      max-gen2-collects: ${{ steps.validate.outputs.max-gen2-collects }}
       minver-tag-prefix: ${{ steps.validate.outputs.minver-tag-prefix }}
       minver-prerelease-id: ${{ steps.validate.outputs.minver-prerelease-id }}
       reset-benchmark-thresholds: ${{ steps.validate.outputs.reset-benchmark-thresholds }}
@@ -181,6 +193,8 @@ jobs:
               --define                      '${{ inputs.preprocessor-symbols }}' \
               --min-coverage-pct            '${{ inputs.min-coverage-pct }}' \
               --max-regression-pct          '${{ inputs.max-regression-pct }}' \
+              --max-gen1-collects           '${{ inputs.max-gen1-collects }}' \
+              --max-gen2-collects           '${{ inputs.max-gen2-collects }}' \
               --minver-tag-prefix           '${{ inputs.minver-tag-prefix }}' \
               --minver-prerelease-id        '${{ inputs.minver-prerelease-id }}' \
               --reset-benchmark-thresholds  '${{ inputs.reset-benchmark-thresholds }}' \
@@ -275,6 +289,8 @@ jobs:
       minver-tag-prefix: ${{ needs.validate-input.outputs.minver-tag-prefix }}
       minver-prerelease-id: ${{ needs.validate-input.outputs.minver-prerelease-id }}
       max-regression-pct: ${{ fromJSON(needs.validate-input.outputs.max-regression-pct) }}
+      max-gen1-collects: ${{ fromJSON(needs.validate-input.outputs.max-gen1-collects) }}
+      max-gen2-collects: ${{ fromJSON(needs.validate-input.outputs.max-gen2-collects) }}
       reset-benchmark-thresholds: ${{ fromJSON(needs.validate-input.outputs.reset-benchmark-thresholds || 'false') }}
 
   # Validate that projects can be packed into NuGet packages

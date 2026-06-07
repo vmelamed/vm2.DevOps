@@ -73,6 +73,8 @@ Orchestrates the full CI pipeline: validate → build → test / benchmarks / pa
 | `preprocessor-symbols` | `string` | no       | `""`                 | Semicolon-separated preprocessor symbols.                             |
 | `min-coverage-pct`     | `number` | no       | `80`                 | Minimum acceptable code coverage percentage.                          |
 | `max-regression-pct`   | `number` | no       | `20`                 | Maximum acceptable performance regression percentage.                 |
+| `max-gen1-collects`    | `number` | no       | `2`                  | Max Gen1 GC collections per 1000 ops (Bencher static threshold).       |
+| `max-gen2-collects`    | `number` | no       | `1`                  | Max Gen2 GC collections per 1000 ops (Bencher static threshold).       |
 | `minver-tag-prefix`    | `string` | no       | `v`                  | MinVer tag prefix for version calculation.                            |
 | `minver-prerelease-id` | `string` | no       | `preview.0`          | MinVer default pre-release identifiers.                               |
 
@@ -188,6 +190,8 @@ Runs BenchmarkDotNet benchmarks and tracks results via Bencher.dev.
 | `minver-tag-prefix`    | `string` | no       | `v`             | MinVer tag prefix.                                |
 | `minver-prerelease-id` | `string` | no       | `preview.0`     | MinVer pre-release identifiers.                   |
 | `max-regression-pct`   | `number` | no       | `20`            | Maximum acceptable performance regression (%).    |
+| `max-gen1-collects`    | `number` | no       | `2`             | Max Gen1 GC collections / 1000 ops (static).      |
+| `max-gen2-collects`    | `number` | no       | `1`             | Max Gen2 GC collections / 1000 ops (static).      |
 
 ### Secrets
 

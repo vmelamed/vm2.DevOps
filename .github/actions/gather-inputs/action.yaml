@@ -34,6 +34,12 @@ inputs:
   max-regression-pct:
     description: "Maximum performance regression percentage."
     default: "20"
+  max-gen1-collects:
+    description: "Maximum acceptable Gen1 GC collections per 1000 operations (Bencher static threshold)."
+    default: "2"
+  max-gen2-collects:
+    description: "Maximum acceptable Gen2 GC collections per 1000 operations (Bencher static threshold)."
+    default: "1"
   minver-tag-prefix:
     description: "MinVer tag prefix."
     default: "v"
@@ -96,6 +102,12 @@ outputs:
   max-regression-pct:
     description: "Maximum performance regression percentage."
     value: ${{ steps.gather.outputs.max-regression-pct }}
+  max-gen1-collects:
+    description: "Maximum acceptable Gen1 GC collections per 1000 operations."
+    value: ${{ steps.gather.outputs.max-gen1-collects }}
+  max-gen2-collects:
+    description: "Maximum acceptable Gen2 GC collections per 1000 operations."
+    value: ${{ steps.gather.outputs.max-gen2-collects }}
   minver-tag-prefix:
     description: "MinVer tag prefix."
     value: ${{ steps.gather.outputs.minver-tag-prefix }}
@@ -142,6 +154,8 @@ runs:
         preprocessor_symbols='${{ inputs.preprocessor-symbols }}'
         min_coverage_pct='${{ inputs.min-coverage-pct }}'
         max_regression_pct='${{ inputs.max-regression-pct }}'
+        max_gen1_collects='${{ inputs.max-gen1-collects }}'
+        max_gen2_collects='${{ inputs.max-gen2-collects }}'
         minver_tag_prefix='${{ inputs.minver-tag-prefix }}'
         minver_prerelease_id='${{ inputs.minver-prerelease-id }}'
         reset_benchmark_thresholds='${{ inputs.reset-benchmark-thresholds || 'false' }}'
@@ -224,6 +238,8 @@ runs:
             preprocessor_symbols \
             min_coverage_pct \
             max_regression_pct \
+            max_gen1_collects \
+            max_gen2_collects \
             minver_tag_prefix \
             minver_prerelease_id \
             reset_benchmark_thresholds \

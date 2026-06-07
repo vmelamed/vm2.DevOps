@@ -55,6 +55,12 @@ Options:
                                 Initial value from \$MIN_COVERAGE_PCT or default 80
   -max, --max-regression-pct    Maximum acceptable performance regression percentage (0-50)
                                 Initial value from \$MAX_REGRESSION_PCT or default 20
+  -g1, --max-gen1-collects      Maximum acceptable Gen1 GC collections per 1000 operations (non-negative integer, Bencher
+                                static threshold)
+                                Initial value from \$MAX_GEN1_COLLECTS or default 2
+  -g2, --max-gen2-collects      Maximum acceptable Gen2 GC collections per 1000 operations (non-negative integer, Bencher
+                                static threshold)
+                                Initial value from \$MAX_GEN2_COLLECTS or default 1
   -mp, --minver-tag-prefix      Specifies the tag prefix used by MinVer (e.g., 'v')
                                 Initial value from \$MINVERTAGPREFIX environment variable or 'v'
   -mi, --minver-prerelease-id   Default semver pre-release identifiers for MinVer (e.g., 'preview.0', 'alpha', 'beta', 'rc1', etc.)
@@ -80,6 +86,8 @@ Environment Variables:
   PREPROCESSOR_SYMBOLS          Pre-processor symbols for compilation
   MIN_COVERAGE_PCT              Minimum acceptable code coverage percentage
   MAX_REGRESSION_PCT            Maximum acceptable performance regression percentage
+  MAX_GEN1_COLLECTS             Maximum acceptable Gen1 GC collections per 1000 operations
+  MAX_GEN2_COLLECTS             Maximum acceptable Gen2 GC collections per 1000 operations
   MINVERTAGPREFIX               Prefix for MinVer version git tags
   MINVERDEFAULTPRERELEASEIDENTIFIERS
                                 Default semver pre-release identifiers for MinVer
@@ -99,6 +107,8 @@ Outputs (to GITHUB_OUTPUT):
   preprocessor-symbols          Pre-processor symbols for compilation
   min-coverage-pct              Minimum acceptable code coverage percentage
   max-regression-pct            Maximum acceptable performance regression percentage
+  max-gen1-collects             Maximum acceptable Gen1 GC collections per 1000 operations
+  max-gen2-collects             Maximum acceptable Gen2 GC collections per 1000 operations
   minver-tag-prefix             Prefix for MinVer version git tags
   minver-prerelease-id          Default semver pre-release identifiers for MinVer
   reset-benchmark-thresholds    Whether to reset Bencher thresholds if some degradation is expected

@@ -43,6 +43,20 @@ on:
         type: number
         default: 20 # percent
 
+      max-gen1-collects:
+        description: >-
+          Maximum acceptable Gen1 GC collections per 1000 operations. Applied as a Bencher *static* (absolute) upper
+          threshold, not a percentage: GC counts sit near zero, where a percentage test is degenerate.
+        type: number
+        default: 2
+
+      max-gen2-collects:
+        description: >-
+          Maximum acceptable Gen2 GC collections per 1000 operations. Applied as a Bencher *static* (absolute) upper
+          threshold, not a percentage: GC counts sit near zero, where a percentage test is degenerate.
+        type: number
+        default: 1
+
       reset-benchmark-thresholds:
         description: Whether to reset Bencher thresholds if some degradation is expected
         type: boolean
@@ -181,16 +195,14 @@ jobs:
               --threshold-upper-boundary "$UPPER_THRESHOLD"
 
               --threshold-measure gen1-collects
-              --threshold-test percentage
-              --threshold-max-sample-size 64
+              --threshold-test static
               --threshold-lower-boundary _
-              --threshold-upper-boundary "$UPPER_THRESHOLD"
+              --threshold-upper-boundary "${{ inputs.max-gen1-collects }}"
 
               --threshold-measure gen2-collects
-              --threshold-test percentage
-              --threshold-max-sample-size 64
+              --threshold-test static
               --threshold-lower-boundary _
-              --threshold-upper-boundary "$UPPER_THRESHOLD"
+              --threshold-upper-boundary "${{ inputs.max-gen2-collects }}"
           )
 
           # if on PR - add PR data
@@ -291,6 +303,9 @@ jobs:
               echo "Branch: **${BENCHER_BRANCH}**"
               echo "Testbed: **${{ inputs.runner-os }}**"
               echo "Threshold: **±${{ inputs.max-regression-pct }}%**"
+              echo "GC caps (per 1000 ops):"
+              echo "   **Gen1 ≤ ${{ inputs.max-gen1-collects }}**"
+              echo "   **Gen2 ≤ ${{ inputs.max-gen2-collects }}**"
               echo ""
               echo "🌐 [View detailed results on Bencher](https://bencher.dev/console/projects/${BENCHER_SLUG})"
           } | to_summary
