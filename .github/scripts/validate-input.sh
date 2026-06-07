@@ -14,6 +14,9 @@ declare -r lib_dir
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
 source "$lib_dir/gh_core.sh"
 
+# Error code constants (defined in _error_codes.sh, re-declared here so ShellCheck sees them in scope)
+declare -rxi err_argument_value
+
 declare -r defaultBuildProjects='[]'
 declare -r defaultTestProjects='[]'
 declare -r defaultBenchmarkProjects='[]'
@@ -24,6 +27,8 @@ declare -r defaultConfiguration='Release'
 declare -r defaultPreprocessorSymbols=''
 declare -r defaultMinCoveragePct=80
 declare -r defaultMaxRegressionPct=20
+declare -r defaultMaxGen1Collects=2
+declare -r defaultMaxGen2Collects=1
 declare -r defaultMinverTagPrefix='v'
 declare -r defaultMinverPrereleaseId='preview.0'
 declare -r defaultResetBenchmarkThresholds=false
@@ -42,6 +47,8 @@ declare -x configuration=${CONFIGURATION:-${defaultConfiguration}}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-${defaultPreprocessorSymbols}}
 declare -x min_coverage_pct=${MIN_COVERAGE_PCT:-${defaultMinCoveragePct}}
 declare -x max_regression_pct=${MAX_REGRESSION_PCT:-${defaultMaxRegressionPct}}
+declare -x max_gen1_collects=${MAX_GEN1_COLLECTS:-${defaultMaxGen1Collects}}
+declare -x max_gen2_collects=${MAX_GEN2_COLLECTS:-${defaultMaxGen2Collects}}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-${defaultMinverTagPrefix}}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-${defaultMinverPrereleaseId}}
 declare -x reset_benchmark_thresholds=${RESET_BENCHMARK_THRESHOLDS:-${defaultResetBenchmarkThresholds}}
@@ -109,6 +116,14 @@ is_safe_max_regression_pct "$max_regression_pct" || true
 if (( max_regression_pct < 0 || max_regression_pct > 50 )); then
     warning_var max_regression_pct "max-regression-pct must be between 0-50." "$defaultMaxRegressionPct"
 fi
+is_safe_integer "$max_gen1_collects" || true
+if (( max_gen1_collects < 0 )); then
+    error -ec "$err_argument_value" "max-gen1-collects must be a non-negative integer (got '$max_gen1_collects')."
+fi
+is_safe_integer "$max_gen2_collects" || true
+if (( max_gen2_collects < 0 )); then
+    error -ec "$err_argument_value" "max-gen2-collects must be a non-negative integer (got '$max_gen2_collects')."
+fi
 validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
 is_safe_boolean "$reset_benchmark_thresholds" || true
 is_safe_boolean "$skip_benchmarks" || true
@@ -133,6 +148,8 @@ dump_vars --quiet --force \
     preprocessor_symbols \
     min_coverage_pct \
     max_regression_pct \
+    max_gen1_collects \
+    max_gen2_collects \
     minver_tag_prefix \
     minver_prerelease_id \
     reset_benchmark_thresholds \
@@ -162,6 +179,8 @@ args_to_github_output \
     preprocessor_symbols \
     min_coverage_pct \
     max_regression_pct \
+    max_gen1_collects \
+    max_gen2_collects \
     minver_tag_prefix \
     minver_prerelease_id \
     reset_benchmark_thresholds \

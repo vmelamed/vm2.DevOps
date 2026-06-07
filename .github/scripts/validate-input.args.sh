@@ -76,6 +76,16 @@ function get_arguments()
                 max_regression_pct="$1"; shift
                 ;;
 
+            --max-gen1-collects|-g1 )
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
+                max_gen1_collects="$1"; shift
+                ;;
+
+            --max-gen2-collects|-g2 )
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
+                max_gen2_collects="$1"; shift
+                ;;
+
             --minver-tag-prefix|-mp )
                 [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 minver_tag_prefix="$1"; shift
@@ -126,6 +136,8 @@ function get_arguments()
         preprocessor_symbols \
         min_coverage_pct \
         max_regression_pct \
+        max_gen1_collects \
+        max_gen2_collects \
         minver_tag_prefix \
         minver_prerelease_id \
         reset_benchmark_thresholds \
