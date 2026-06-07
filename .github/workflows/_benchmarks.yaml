@@ -303,7 +303,9 @@ jobs:
               echo "Branch: **${BENCHER_BRANCH}**"
               echo "Testbed: **${{ inputs.runner-os }}**"
               echo "Threshold: **±${{ inputs.max-regression-pct }}%**"
-              echo "GC caps (per 1000 ops): **Gen1 ≤ ${{ inputs.max-gen1-collects }}, Gen2 ≤ ${{ inputs.max-gen2-collects }}**"
+              echo "GC caps (per 1000 ops):"
+              echo "   **Gen1 ≤ ${{ inputs.max-gen1-collects }}**"
+              echo "   **Gen2 ≤ ${{ inputs.max-gen2-collects }}**"
               echo ""
               echo "🌐 [View detailed results on Bencher](https://bencher.dev/console/projects/${BENCHER_SLUG})"
           } | to_summary
