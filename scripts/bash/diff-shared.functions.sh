@@ -204,18 +204,23 @@ function parameterize()
 
 function resolve_target()
 {
-    [[ $# -eq 1 ]] || {
-        error -ec "$err_invalid_arguments"  -sd 3 "${FUNCNAME[0]} expects one argument (provided $#):" \
-                "  1) the directory name of the target repository."
+    [[ $# -eq 2 ]] || {
+        error -ec "$err_invalid_arguments"  -sd 3 "${FUNCNAME[0]} expects two arguments (provided $#):" \
+                "  1) the directory of the repositories" \
+                "  2) the directory name of the target repository."
         return "$err_invalid_arguments"
     }
 
+    local vm2repos="$1"
+    local r="$2"
     rc="$success"
-    output=$(resolve_repo_root "$vm2_repos" "$1" 2>"$_ignore") || rc=$?
+
+    output=$(resolve_repo_root "$vm2repos" "$r" 2>"$_ignore") || rc=$?
+    echo "$output"
 
     # We can only work with git repos or directories that have CI configured:
     (( rc == success || rc == err_dir_with_ci )) || {
-        error -ec "$err_argument_value" "The specified target directory '$1' is invalid. It should have CI configured in '.github/workflows'."
+        error -ec "$err_argument_value" -sd 3 "The specified target directory '$vm2repos$r' is invalid. It should have CI configured in '.github/workflows'."
         return "$rc"
     }
 
@@ -231,10 +236,10 @@ function resolve_target()
     if (( rc == success )); then
         branch="$(git -C "$target_root" branch --show-current 2>"$_ignore")" || {
             rc=$?
-            error -ec "$err_tool_error" "The repository in the specified target directory '$1' appears corrupted."
+            error -ec "$err_tool_error" -sd 3 "The repository in the specified target directory '$1' appears corrupted."
         }
         (( rc == success )) && ensure_fresh_git_state "$target_root" "$branch" ||
-            error -ec "$err_logic_error" "The specified target repository at '$target_root' on branch '$branch' is not in a clean state. Please, commit or stash your changes."
+            error -ec "$err_logic_error" -sd 3 "The specified target repository at '$target_root' on branch '$branch' is not in a clean state. Please, commit or stash your changes."
     else
         branch="<not a git repository>"
     fi

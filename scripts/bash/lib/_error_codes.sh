@@ -55,9 +55,9 @@ declare -rxA error_codes=(
     [$success]="The command completed successfully."
     [$failure]="A general, unspecified error occurred."
 
-    [$err_invalid_arguments]="The number of arguments is invalid or more than one type of parameter error code is present."
+    [$err_invalid_arguments]="The number of the arguments is invalid or more than one type of parameter error code is present."
     [$err_argument_type]="An argument is of the wrong type (types: string, integer, boolean, array, associative array, etc.)."
-    [$err_argument_value]="An argument has an invalid value (out of range, not in allowed set). E.g. expected non-negative integer but got negative value."
+    [$err_argument_value]="An argument has an invalid value."
     [$err_invalid_nameref]="An argument has an invalid nameref (e.g., expected a valid variable name reference but got an invalid one)."
     [$err_missing_argument]="A required argument is missing."
     [$err_too_many_arguments]="More than one argument was provided when only one is allowed."
@@ -74,15 +74,15 @@ declare -rxA error_codes=(
     [$err_tool_error]="An error occurred while executing an external tool (e.g., git, dotnet, etc.)."
     [$err_logic_error]="An error occurred in the logic of the script (e.g., invalid state, unexpected condition, etc.)"
 
-    [$err_not_git_directory]="The specified directory is not a directory from a Git repository working tree."
-    [$err_not_git_root]="The specified directory is not a root directory of a Git repository working tree."
+    [$err_not_git_directory]="The specified directory is not in a Git working tree."
+    [$err_not_git_root]="The specified directory is not the root directory of a Git working tree."
     [$err_behind_latest_stable_tag]="The repository is behind the latest stable tag."
     [$err_invalid_repo]="The specified repository is not valid."
     [$err_invalid_branch]="The specified directory is not on the expected branch."
     [$err_repo_with_no_ci]="The specified repository root does not have a CI configuration in repo/.github/workflows."
     [$err_dir_with_ci]="The specified directory is not a root directory but has a CI configuration."
-    [$err_dir_with_no_ci]="The specified directory does not have a CI configuration in dir/.github/workflows (and is not from a git repository)."
-    [$err_not_repos_parent]="The specified directory is not the parent directory of the vm2 repositories. Please, ensure that the vm2 repositories are cloned into this directory or correct the parameter/environment variable."
+    [$err_dir_with_no_ci]="The specified directory does not have a CI configuration in dir/.github/workflows (and is not in a Git repository)."
+    [$err_not_repos_parent]="The specified \$vm2_repos directory is not the parent directory for the vm2 repositories. Please ensure that the vm2 repositories are cloned into this directory or correct the parameter/environment variable."
 )
 
 function error_message()

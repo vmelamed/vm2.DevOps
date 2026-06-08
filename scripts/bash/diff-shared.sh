@@ -165,7 +165,7 @@ declare -a target_roots=()
 declare -a target_paths=()
 
 for target in "${target_repos[@]}"; do
-    output=$(resolve_target "$target") || {
+    output=$(resolve_target "$vm2_repos" "$target") || {
         error -ec "$err_logic_error" "Could not resolve the path of the target repository '$target'. Please, ensure that it exists and is a valid directory."
         continue
     }
