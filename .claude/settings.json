@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:bencher.dev)",
+      "Bash(command -v bencher)",
+      "Bash(bencher --version)",
+      "Bash(bencher run *)"
+    ]
+  }
+}
