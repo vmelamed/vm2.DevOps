@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
+set -euo pipefail
+
+# shellcheck disable=SC2119
+
+script_name=$(basename "${BASH_SOURCE[0]}")
+script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
+lib_dir=$(realpath -e "$script_dir/../../scripts/bash/lib")
+declare -r script_name
+declare -r script_dir
+declare -r lib_dir
+
+# shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
+source "$lib_dir/gh_core.sh"
+
+declare -rxi success
+declare -rxi failure
+declare -rxi err_tool_error
+declare -rxi err_logic_error
+declare -rxi err_argument_value
+declare -rxi err_missing_argument
+declare -rxi err_too_many_arguments
+declare -rxi err_unknown_argument
+
+declare -x _ignore
+declare -x dry_run
+
+declare -rx default_minver_tag_prefix='v'
+declare -rx default_minver_prerelease_id="preview.0"
+declare -rix default_repeat=10
+
+declare -x benchmark_project=""
+declare -xi repeat=${REPEAT:-$default_repeat}
+declare -x configuration=${CONFIGURATION:-"Release"}
+declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
+declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"${default_minver_tag_prefix}"}
+declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"${default_minver_prerelease_id}"}
+declare -x artifacts_dir=${ARTIFACTS_DIR:-"./BenchmarkArtifacts"}
+declare -x bencher_project=${BENCHER_PROJECT:-}
+declare -x bencher_testbed=${BENCHER_TESTBED:-}
+declare -x bencher_branch=${BENCHER_BRANCH:-"main"}
+declare -x bencher_adapter=${BENCHER_ADAPTER:-"c_sharp_dot_net"}
+
+source "$script_dir/rebuild-bench-history-run.usage.sh"
+source "$script_dir/rebuild-bench-history-run.args.sh"
+
+get_arguments "$@"
+benchmark_project=${benchmark_project:-"${BENCHMARK_PROJECT:-}"}
+
+# Validate inputs (accumulate all problems, then bail once).
+is_safe_existing_path "$benchmark_project" || true
+is_safe_configuration "$configuration" || true
+validate_preprocessor_symbols preprocessor_symbols || true
+validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
+is_safe_path "$artifacts_dir" || true
+is_safe_integer "$repeat" || true
+(( repeat >= 1 )) || error -ec "$err_argument_value" "repeat must be a positive integer (got '$repeat')."
+[[ -n "$bencher_project" ]] || error -ec "$err_missing_argument" "Bencher project (--bencher-project) is required."
+[[ -n "$bencher_testbed" ]] || error -ec "$err_missing_argument" "Bencher testbed (--bencher-testbed) is required."
+[[ -n "${BENCHER_API_TOKEN:-}" ]] || error -ec "$err_missing_argument" "The BENCHER_API_TOKEN environment variable is required."
+
+exit_if_has_errors
+
+results_dir="$artifacts_dir/results"
+
+# Freeze variables
+declare -xr benchmark_project
+declare -xr configuration
+declare -xr preprocessor_symbols
+declare -xr minver_tag_prefix
+declare -xr minver_prerelease_id
+declare -xr artifacts_dir
+declare -xr results_dir
+declare -xr bencher_project
+declare -xr bencher_testbed
+declare -xr bencher_branch
+declare -xr bencher_adapter
+declare -xri repeat
+
+command -v bencher &> "$_ignore" || {
+    error -ec "$err_tool_error" "The 'bencher' CLI was not found on PATH."
+    exit_if_has_errors
+}
+
+# Re-record the benchmark N times. Each iteration is an independent process run, so the spread captures the real
+# run-to-run variance of the runner -- exactly the history a statistical threshold needs to learn "normal".
+declare -i uploaded=0
+for (( i=1; i <= repeat; i++ )); do
+    to_stdout "▶ Rebuild run $i of $repeat for '$benchmark_project' (Bencher branch '$bencher_branch')..."
+
+    if ! run-benchmarks.sh \
+            "$benchmark_project" \
+            --configuration "$configuration" \
+            --define "$preprocessor_symbols" \
+            --minver-tag-prefix "$minver_tag_prefix" \
+            --minver-prerelease-id "$minver_prerelease_id" \
+            --artifacts "$artifacts_dir"; then
+        warning "Benchmark run $i failed; skipping the Bencher upload for this iteration."
+        continue
+    fi
+
+    # shellcheck disable=SC2206 # word splitting is intentional - the glob expands to the result file(s)
+    json_files=("$results_dir"/*-report-full-compressed.json)
+    if [[ ! -f "${json_files[0]}" ]]; then
+        warning "No JSON results found after run $i in '$results_dir'; skipping the Bencher upload."
+        continue
+    fi
+
+    bencher_args=(
+        --project "$bencher_project"
+        --token "$BENCHER_API_TOKEN"
+        --testbed "$bencher_testbed"
+        --adapter "$bencher_adapter"
+        --branch "$bencher_branch"
+    )
+    for f in "${json_files[@]}"; do
+        [[ -s "$f" ]] && bencher_args+=(--file "$f")
+    done
+
+    # Record-only: deliberately NO --threshold-* and NO --err. We are establishing the baseline, so a noisy point
+    # must never fail the job and halt the loop.
+    if execute bencher run "${bencher_args[@]}"; then
+        uploaded=$(( uploaded + 1 ))
+        info "Recorded data point $i of $repeat to Bencher project '$bencher_project'."
+    else
+        warning "Bencher upload failed for run $i (continuing with the remaining runs)."
+    fi
+done
+
+{
+    echo "### 📈 Benchmark history rebuild"
+    echo ""
+    echo "Project: **$benchmark_project**"
+    echo "Bencher: **$bencher_project** · testbed **$bencher_testbed** · branch **$bencher_branch**"
+    echo "Recorded **$uploaded** of **$repeat** runs."
+} | to_summary
+
+(( uploaded > 0 )) || {
+    error -ec "$err_logic_error" "No data points were recorded to Bencher."
+    exit_if_has_errors
+}

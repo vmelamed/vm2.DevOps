@@ -260,9 +260,9 @@ dotnet_naming_rule.field_should_be_private_field.severity = warning
 dotnet_naming_rule.field_should_be_private_field.symbols = field
 dotnet_naming_rule.field_should_be_private_field.style = private_field
 
-dotnet_naming_rule.local_varaible_should_be_camel_case.severity = warning
-dotnet_naming_rule.local_varaible_should_be_camel_case.symbols = local_varaible
-dotnet_naming_rule.local_varaible_should_be_camel_case.style = camel_case
+dotnet_naming_rule.local_variable_should_be_camel_case.severity = warning
+dotnet_naming_rule.local_variable_should_be_camel_case.symbols = local_variable
+dotnet_naming_rule.local_variable_should_be_camel_case.style = camel_case
 
 dotnet_naming_rule.public_delegate_should_be_pascal_case.severity = warning
 dotnet_naming_rule.public_delegate_should_be_pascal_case.symbols = public_delegate
@@ -310,9 +310,9 @@ dotnet_naming_symbols.non_public_const_member.applicable_kinds = field, local
 dotnet_naming_symbols.non_public_const_member.applicable_accessibilities = private, protected, protected_internal, private_protected, local
 dotnet_naming_symbols.non_public_const_member.required_modifiers = const
 
-dotnet_naming_symbols.local_varaible.applicable_kinds = local
-dotnet_naming_symbols.local_varaible.applicable_accessibilities = local
-dotnet_naming_symbols.local_varaible.required_modifiers =
+dotnet_naming_symbols.local_variable.applicable_kinds = local
+dotnet_naming_symbols.local_variable.applicable_accessibilities = local
+dotnet_naming_symbols.local_variable.required_modifiers =
 
 dotnet_naming_symbols.async_method_or_function.applicable_kinds = method, local_function
 dotnet_naming_symbols.async_method_or_function.applicable_accessibilities = *
