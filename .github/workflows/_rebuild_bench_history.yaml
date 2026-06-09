@@ -1,0 +1,148 @@
+name: "_rebuild_bench_history (Reusable: re-record benchmark history to Bencher.dev)"
+
+# Re-records a benchmark's results to Bencher.dev N times to rebuild its performance history -- e.g. after a runner-image
+# change or a benchmark restructure invalidates the old baseline. Records ONLY: no thresholds, no --err, so a noisy point
+# never fails the run. Each repetition is an independent process run, so the recorded spread reflects real run-to-run variance.
+
+on:
+  workflow_call:
+    inputs:
+      benchmark-project:
+        description: Path to the benchmark project to re-record (cannot be null or empty string)
+        type: string
+        required: true
+
+      repeat:
+        description: Number of independent runs to record
+        type: number
+        default: 10
+
+      runner-os:
+        description: Runner OS (cannot be null or empty string, default ubuntu-latest)
+        type: string
+        default: ubuntu-latest
+
+      dotnet-version:
+        description: Version of .NET SDK to use (cannot be null or empty string, default 10.0.x)
+        type: string
+        default: 10.0.x
+
+      configuration:
+        description: The type of build to produce, e.g. Release vs Debug (cannot be null or empty string, default Release)
+        type: string
+        default: Release
+
+      preprocessor-symbols:
+        description: Preprocessor symbols. Leave empty for full (non-SHORT_RUN) runs that match release-time numbers.
+        type: string
+        default: ""
+
+      minver-tag-prefix:
+        description: MinVer tag prefix to use for version calculation. Cannot be null or empty!
+        type: string
+        default: v
+
+      minver-prerelease-id:
+        description: MinVer default pre-release identifiers to use for version calculation. Cannot be null or empty!
+        type: string
+        default: preview.0
+
+      bencher-branch:
+        description: The Bencher branch whose history is being rebuilt (the baseline that release runs compare against)
+        type: string
+        default: main
+
+    secrets:
+      BENCHER_API_TOKEN:
+        description: Bencher.dev API token for authentication
+        required: true
+
+permissions:
+  contents: read
+  packages: read # Required for downloading dependencies and tools
+
+env:
+  ARTIFACTS_DIR: ./BenchmarkArtifacts
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  VERBOSE: ${{ vars.VERBOSE || false }}
+
+jobs:
+  rebuild:
+    name: Rebuild benchmark history (${{ inputs.runner-os }})
+    runs-on: ${{ inputs.runner-os }}
+    steps:
+      # Install Bencher CLI (install early so if it fails, we fail fast before doing extra work)
+      - name: Compute Bencher cache daily key
+        id: cache-date
+        run: echo "day=$(date +%Y%m%d)" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      - name: Cache Bencher CLI
+        id: cache-bencher
+        uses: actions/cache@v5
+        with:
+          path: ~/.cargo/bin/bencher
+          key: bencher-cli-${{ runner.os }}-${{ steps.cache-date.outputs.day }}
+          restore-keys: |
+            bencher-cli-${{ runner.os }}-
+
+      - name: Install Bencher CLI
+        if: steps.cache-bencher.outputs.cache-hit != 'true'
+        uses: bencherdev/bencher@v0.6.6
+
+      # Clone the repository with full Git history (MinVer needs it)
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          filter: tree:0
+
+      - name: Setup DevOps environment variables
+        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
+
+      - name: Setup .NET and the dependencies cache
+        uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@main
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+          runner-os: ${{ inputs.runner-os }}
+          github-token: ${{ github.token }}
+          github-actor: ${{ github.actor }}
+
+      # Build once (first iteration) then re-run + record N times. No build-artifacts cache restore on purpose:
+      # this workflow runs standalone, so run-benchmarks.sh builds the project on the first iteration.
+      - name: Rebuild benchmark history
+        shell: bash
+        env:
+          BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          source "$DEVOPS_LIB_DIR/gh_core.sh"
+
+          # Compute Bencher project slug from repository name, e.g. vmelamed/vm2.Ulid -> vm2-ulid
+          REPO_NAME="${{ github.repository }}"
+          BENCHER_SLUG=$(echo "${REPO_NAME#*/}" | tr '[:upper:]' '[:lower:]' | tr '.' '-')
+
+          trace "Rebuilding history for '${{ inputs.benchmark-project }}': ${{ inputs.repeat }} run(s) -> Bencher project '$BENCHER_SLUG', branch '${{ inputs.bencher-branch }}'."
+
+          rebuild-bench-history-run.sh \
+              ${{ inputs.benchmark-project }} \
+              --repeat "${{ inputs.repeat }}" \
+              --configuration "${{ inputs.configuration }}" \
+              --define "${{ inputs.preprocessor-symbols }}" \
+              --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
+              --minver-prerelease-id "${{ inputs.minver-prerelease-id }}" \
+              --artifacts "${{ env.ARTIFACTS_DIR }}" \
+              --bencher-project "$BENCHER_SLUG" \
+              --bencher-testbed "${{ inputs.runner-os }}" \
+              --bencher-branch "${{ inputs.bencher-branch }}"
+
+      # Upload the artifacts for manual inspection
+      - name: Upload benchmark results artifact
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: rebuild-bench-history-${{ inputs.runner-os }}
+          path: ${{ env.ARTIFACTS_DIR }}
+          if-no-files-found: warn
+          overwrite: true
