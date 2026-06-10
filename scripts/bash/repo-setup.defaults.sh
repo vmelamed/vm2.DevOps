@@ -98,6 +98,7 @@ declare -rxA default_actions_secrets=(
     ["RELEASE_PAT"]="$secret_placeholder"
     ["REPORTGENERATOR_LICENSE"]="$secret_placeholder"
     ["NUGET_API_KEY"]="$secret_placeholder"
+    ["BENCH_DISPATCH_PAT"]="$secret_placeholder"
 )
 
 declare -rxA default_dependabot_secrets=(
