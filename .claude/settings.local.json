@@ -17,7 +17,8 @@
       "Bash(sed -n '138,146p' docs/ARCHITECTURE.md)",
       "Bash(sed -n '340,356p' docs/ARCHITECTURE.md)",
       "Bash(sed -n '126,136p' docs/WORKFLOWS_REFERENCE.md)",
-      "Bash(sed -n '98,106p' docs/CACHE_MANAGEMENT.md)"
+      "Bash(sed -n '98,106p' docs/CACHE_MANAGEMENT.md)",
+      "WebSearch"
     ]
   }
 }

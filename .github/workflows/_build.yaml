@@ -130,12 +130,15 @@ jobs:
       - name: Archive build artifacts
         shell: bash
         run: |
-          readarray -t bin_dirs < <(find . -type d -path "*/bin/${{ inputs.configuration }}")
+          # bin/<config> for the jobs that execute binaries (test, benchmarks); obj/ for the jobs that re-enter
+          # MSBuild with --no-build (pack needs the intermediate assembly and generated nuspec inputs).
+          readarray -t bin_dirs < <(find . -type d -path "*/bin/${{ inputs.configuration }}" -prune -print)
+          readarray -t obj_dirs < <(find . -type d -name obj -prune -print)
           [[ ${#bin_dirs[@]} -gt 0 ]] || {
               echo "::error::Build produced no output in bin/${{ inputs.configuration }}."
               exit 1
           }
-          tar czf build-artifacts.tar.gz --exclude='*.tmp' "${bin_dirs[@]}"
+          tar czf build-artifacts.tar.gz --exclude='*.tmp' "${bin_dirs[@]}" "${obj_dirs[@]}"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v6
