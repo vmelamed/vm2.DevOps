@@ -112,12 +112,25 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      # Save compiled binaries and intermediate files to cache for downstream jobs
-      - name: Cache build artifacts
-        continue-on-error: true
-        uses: actions/cache/save@v5
+      # Make the compiled binaries and intermediate files available to the downstream jobs (test, benchmarks, pack) of
+      # this run. Artifacts -- not the cache -- are the intra-run handoff mechanism: the cache service is designed for
+      # cross-run reuse and gives no read-after-write guarantee, so a freshly saved entry may not be visible to a lookup
+      # seconds later (observed 2026-06-11: 4/4 deterministic restore misses ~25s after a verified save).
+      # The slug keeps artifact names unique across the build matrix legs (artifact names are immutable per run).
+      - name: Compute build artifact slug
+        id: slug
+        shell: bash
+        run: |
+          slug=$(echo '${{ inputs.build-project }}' | tr -c 'A-Za-z0-9.\n' '-')
+          echo "slug=${slug:-root}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v6
         with:
-          key: build-artifacts-${{ runner.os }}-${{ github.sha }}-${{ inputs.configuration }}-${{ github.run_id }}
+          name: build-artifacts-${{ runner.os }}-${{ inputs.configuration }}-${{ steps.slug.outputs.slug }}
+          retention-days: 1
+          if-no-files-found: error
+          overwrite: true
           path: |
             **/bin/${{ inputs.configuration }}
             **/obj

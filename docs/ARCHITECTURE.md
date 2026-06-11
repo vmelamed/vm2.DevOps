@@ -26,7 +26,7 @@
       - [Utility Scripts (`/scripts/bash/`)](#utility-scripts-scriptsbash)
   - [Caching Strategy](#caching-strategy)
     - [NuGet Package Cache (dual-layer)](#nuget-package-cache-dual-layer)
-    - [Build Artifact Cache](#build-artifact-cache)
+    - [Build Artifact Handoff (workflow artifacts, not cache)](#build-artifact-handoff-workflow-artifacts-not-cache)
     - [Cache Cleanup](#cache-cleanup)
   - [Script Distribution](#script-distribution)
   - [NuGet Authentication](#nuget-authentication)
@@ -139,7 +139,8 @@ Concurrency group `ci-${{ github.workflow_ref }}` cancels in-progress runs on ne
 1. Checks out repository with full history (`fetch-depth: 0`) for MinVer version calculation.
 1. Restores NuGet packages (dual-layer cache — see [Caching Strategy](#2-caching-strategy)).
 1. Calls `build.sh` to compile the project.
-1. Saves build artifacts to cache with key `build-artifacts-{os}-{sha}-{configuration}-{run_id}`.
+1. Uploads the build outputs as a workflow artifact named `build-artifacts-{os}-{configuration}-{project-slug}`
+   (`retention-days: 1`) for the downstream jobs of the same run.
 
 #### Gate Job Pattern (`postrun-ci`)
 
@@ -343,16 +344,22 @@ The build pipeline uses a dual-layer NuGet cache and a build artifact cache.
     nuget-{os}-                          (any week)
     ```
 
-### Build Artifact Cache
+### Build Artifact Handoff (workflow artifacts, not cache)
 
-The build job saves compiled outputs (`**/bin/{config}` and `**/obj`) under key
-`build-artifacts-{os}-{sha}-{configuration}-{run_id}`. Downstream jobs (test, benchmarks, pack) restore from this cache to avoid
-rebuilding.
+The build job uploads the compiled outputs (`**/bin/{config}` and `**/obj`) as a **workflow artifact** named
+`build-artifacts-{os}-{configuration}-{project-slug}` with `retention-days: 1`. Downstream jobs (test, benchmarks, pack)
+download it by pattern (`merge-multiple: true`) to avoid rebuilding.
+
+This intra-run handoff deliberately does **not** use the Actions cache: the cache service is designed for cross-run reuse
+and gives no read-after-write guarantee — a freshly saved entry may not be visible to a lookup seconds later (observed
+2026-06-11: 4/4 deterministic restore misses ~25s after a verified save, while the same key restored fine hours later).
+Workflow artifacts are synchronous and scoped to the run.
 
 ### Cache Cleanup
 
 The `_clear_cache.yaml` workflow provides emergency cleanup. It restricts deletions to three allowlisted prefixes: `nuget-`,
-`build-artifacts-`, and `bencher-cli-`.
+`build-artifacts-`, and `bencher-cli-`. (The `build-artifacts-` prefix is legacy — these caches are no longer created; the
+prefix remains allowlisted only to purge leftover entries until they age out.)
 
 ## Script Distribution
 

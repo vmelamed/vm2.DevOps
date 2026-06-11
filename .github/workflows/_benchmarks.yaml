@@ -124,15 +124,23 @@ jobs:
           github-token: ${{ github.token }}
           github-actor: ${{ github.actor }}
 
-      # Retrieve compiled binaries from the build job
-      - name: Restore build artifacts from cache
-        uses: actions/cache/restore@v5
+      # Retrieve compiled binaries from the build job. Artifacts (not the cache) are the intra-run handoff:
+      # the cache gives no read-after-write guarantee within a run.
+      - name: Download build artifacts
+        uses: actions/download-artifact@v6
         with:
-          key: build-artifacts-${{ runner.os }}-${{ github.sha }}-${{ inputs.configuration }}-${{ github.run_id }}
-          fail-on-cache-miss: true
-          path: |
-            **/bin/${{ inputs.configuration }}
-            **/obj
+          pattern: build-artifacts-${{ runner.os }}-${{ inputs.configuration }}-*
+          merge-multiple: true
+          path: .
+
+      # A pattern download does not fail on zero matches, so verify explicitly (the equivalent of fail-on-cache-miss)
+      - name: Verify build artifacts were downloaded
+        shell: bash
+        run: |
+          find . -type d -path "*/bin/${{ inputs.configuration }}" -print -quit | grep -q . || {
+              echo "::error::No build artifacts were downloaded from the build job."
+              exit 1
+          }
 
       # Run benchmarks using BenchmarkDotNet and export JSON results
       - name: Run BenchmarkDotNet benchmarks

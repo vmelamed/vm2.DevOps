@@ -6,23 +6,7 @@ problem actually bites), not pushed by the itch — or batched in a quarterly re
 
 The list is ordered by priority — add new items where they belong, not at the end.
 
-## 1. Replace intra-run build-artifacts cache with upload/download-artifact — **TRIGGERED**
-
-**What:** In `_build.yaml`, replace the `actions/cache/save` of `**/bin/{configuration}` + `**/obj` with
-`actions/upload-artifact`; in `_test.yaml`, `_pack.yaml`, and `_benchmarks.yaml`, replace `actions/cache/restore`
-(`fail-on-cache-miss: true`) with `actions/download-artifact`. Artifacts are synchronous and scoped to the run — no index
-propagation, no eviction, no cross-run semantics.
-
-**Why:** The cache service is designed for *cross-run* reuse and gives no read-after-write guarantee. Using it for
-*intra-run* job-to-job handoff fails when the cache index lags the save (observed 2026-06-11: key + version + scope all
-verified identical, save confirmed, restore ~25s later → not-found, 4/4 repros across repos while older entries restored
-fine in the same jobs). Artifacts are the intended mechanism for passing build outputs between jobs of one run.
-
-**Trigger:** FIRED — 2026-06-11, CI on main red on all four released repos.
-**Effort:** ~1-2 hours: 4 workflow files + retention tuning (`retention-days: 1` — these are throwaways) + remove the
-now-dead `build-artifacts-` prefix from `_clear_cache.yaml`'s allowlist and docs.
-
-## 2. Demote `latency`/`throughput` to record-only
+## 1. Demote `latency`/`throughput` to record-only
 
 **What:** Delete the `latency` and `throughput` threshold blocks from `BENCHER_ARGS` in
 `.github/workflows/_benchmarks.yaml`. Both measures stay uploaded and charted in Bencher — they just stop gating CI.

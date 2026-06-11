@@ -99,15 +99,14 @@ jobs:
           github-token: ${{ github.token }}
           github-actor: ${{ github.actor }}
 
-      # Retrieve compiled binaries from the build job to avoid recompilation
-      - name: Restore build artifacts from cache
-        uses: actions/cache/restore@v5
+      # Retrieve compiled binaries from the build job to avoid recompilation. Artifacts (not the cache) are the
+      # intra-run handoff: the cache gives no read-after-write guarantee within a run.
+      - name: Download build artifacts
+        uses: actions/download-artifact@v6
         with:
-          key: build-artifacts-${{ runner.os }}-${{ github.sha }}-${{ inputs.configuration }}-${{ github.run_id }}
-          fail-on-cache-miss: true
-          path: |
-            **/bin/${{ inputs.configuration }}
-            **/obj
+          pattern: build-artifacts-${{ runner.os }}-${{ inputs.configuration }}-*
+          merge-multiple: true
+          path: .
 
       - name: Verify the artifacts were restored and run the tests
         id: run-tests
@@ -121,7 +120,7 @@ jobs:
           ARTIFACT_PATH=$(find . -type d -path "*/bin/${{ inputs.configuration }}" | head -n 1)
 
           if [ -z "$ARTIFACT_PATH" ]; then
-              error "No build artifacts found in cache."
+              error "No build artifacts were downloaded from the build job."
               exit 1
           else
               info "Build artifacts found at: $ARTIFACT_PATH"

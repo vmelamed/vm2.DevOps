@@ -11,7 +11,7 @@
   - [\_build.yaml](#_buildyaml)
     - [Inputs](#inputs-1)
     - [Permissions](#permissions)
-    - [Cache Keys](#cache-keys)
+    - [Cache Keys and Artifacts](#cache-keys-and-artifacts)
     - [Script](#script)
   - [\_test.yaml](#_testyaml)
     - [Inputs](#inputs-2)
@@ -124,12 +124,12 @@ Compiles the project and caches build artifacts for downstream jobs.
     contents: read
     packages: read
 
-### Cache Keys
+### Cache Keys and Artifacts
 
-| Cache                | Key Pattern                                                          |
-| :------------------- | :------------------------------------------------------------------- |
-| NuGet (weekly)       | `nuget-{os}-{YYYY-WVV}-{lockfile-hash}`                              |
-| Build artifacts      | `build-artifacts-{os}-{sha}-{configuration}-{run_id}`                |
+| Mechanism                     | Name / Key Pattern                                                   |
+| :---------------------------- | :------------------------------------------------------------------- |
+| NuGet cache (weekly)          | `nuget-{os}-{YYYY-WVV}-{lockfile-hash}`                              |
+| Build artifacts (workflow artifact, `retention-days: 1`) | `build-artifacts-{os}-{configuration}-{project-slug}` |
 
 ### Script
 
