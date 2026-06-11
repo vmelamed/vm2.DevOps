@@ -196,8 +196,8 @@ function parameterize()
         trace "Parameterized actions for ${count} files based on the provided command line arguments."
         rc=$success
     else
-        error -ec "$err_argument_value" "No files were matched by the provided command line arguments."
-        rc=$failure
+        warning -ec "$err_argument_value" -sd 3 "No files were matched by the provided command line arguments."
+        rc=$success
     fi
     return "$rc"
 }
@@ -205,7 +205,7 @@ function parameterize()
 function resolve_target()
 {
     [[ $# -eq 2 ]] || {
-        error -ec "$err_invalid_arguments"  -sd 3 "${FUNCNAME[0]} expects two arguments (provided $#):" \
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]} expects two arguments (provided $#):" \
                 "  1) the directory of the repositories" \
                 "  2) the directory name of the target repository."
         return "$err_invalid_arguments"
