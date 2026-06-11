@@ -7,11 +7,6 @@ name: "_rebuild_bench_history (Reusable: re-record benchmark history to Bencher.
 on:
   workflow_call:
     inputs:
-      benchmark-project:
-        description: Path to the benchmark project to re-record (cannot be null or empty string)
-        type: string
-        required: true
-
       repeat:
         description: Number of independent runs to record
         type: number
@@ -123,10 +118,9 @@ jobs:
           REPO_NAME="${{ github.repository }}"
           BENCHER_SLUG=$(echo "${REPO_NAME#*/}" | tr '[:upper:]' '[:lower:]' | tr '.' '-')
 
-          trace "Rebuilding history for '${{ inputs.benchmark-project }}': ${{ inputs.repeat }} run(s) -> Bencher project '$BENCHER_SLUG', branch '${{ inputs.bencher-branch }}'."
+          trace "Rebuilding history for all benchmarks in '${{ github.repository }}': ${{ inputs.repeat }} run(s) each -> Bencher project '$BENCHER_SLUG', branch '${{ inputs.bencher-branch }}'."
 
           rebuild-bench-history-run.sh \
-              ${{ inputs.benchmark-project }} \
               --repeat "${{ inputs.repeat }}" \
               --configuration "${{ inputs.configuration }}" \
               --define "${{ inputs.preprocessor-symbols }}" \

@@ -402,3 +402,62 @@ Emergency cache cleanup with allowlisted prefixes.
 
     actions: write
     contents: read
+
+---
+
+## _rebuild_bench_history.yaml
+
+Re-records a repo's benchmark history to Bencher.dev to rebuild a baseline (e.g. after a runner-image change or a benchmark
+restructure). Discovers every benchmark project under `benchmarks/` and records each `repeat` times. **Record-only**: no
+thresholds, no `--err` — a noisy point never fails the run.
+
+### Inputs
+
+| Input                  | Type     | Required | Default     | Description                                          |
+| :--------------------- | :------- | :------- | :---------- | :--------------------------------------------------- |
+| `repeat`               | `number` | no       | `10`        | Independent runs to record per benchmark.            |
+| `runner-os`            | `string` | no       | `ubuntu-latest` | Runner OS.                                       |
+| `dotnet-version`       | `string` | no       | `10.0.x`    | .NET SDK version.                                    |
+| `configuration`        | `string` | no       | `Release`   | Build configuration.                                |
+| `preprocessor-symbols` | `string` | no       | `""`        | Preprocessor symbols (empty = full, non-SHORT_RUN).  |
+| `minver-tag-prefix`    | `string` | no       | `v`         | MinVer tag prefix.                                  |
+| `minver-prerelease-id` | `string` | no       | `preview.0` | MinVer pre-release identifiers.                     |
+| `bencher-branch`       | `string` | no       | `main`      | Bencher branch whose history is being rebuilt.       |
+
+### Secrets
+
+| Secret              | Required | Description                          |
+| :------------------ | :------- | :----------------------------------- |
+| `BENCHER_API_TOKEN` | **yes**  | Bencher.dev API token                |
+
+### Script
+
+`rebuild-bench-history-run.sh`
+
+---
+
+## RebuildBenchHistory.yaml (fan-out, in vm2.DevOps)
+
+Manually dispatched (UI/phone) fan-out. Triggers each vm2 package repo's own `RebuildBenchHistory.yaml` (which calls
+`_rebuild_bench_history.yaml`). Selects targets by probing for a `benchmarks/` directory via `gh api`. **Fire-and-forget** —
+it dispatches the per-repo runs and returns; the rebuilds proceed in each repo's own Actions.
+
+### Inputs
+
+| Input    | Type     | Required | Default | Description                               |
+| :------- | :------- | :------- | :------ | :---------------------------------------- |
+| `repeat` | `number` | no       | `10`    | Independent runs to record per benchmark. |
+
+### Secrets
+
+| Secret               | Required | Description                                                                 |
+| :------------------- | :------- | :-------------------------------------------------------------------------- |
+| `BENCH_DISPATCH_PAT` | **yes**  | Fine-grained PAT (`Actions: write` + `Contents: read`) — set on vm2.DevOps only. See [CONFIGURATION.md](CONFIGURATION.md#actions-secrets). |
+
+### Permissions
+
+    contents: read
+
+### Script
+
+`rebuild-bench-history.sh`

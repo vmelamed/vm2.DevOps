@@ -23,6 +23,8 @@
     - [compute-prerelease-version.sh](#compute-prerelease-versionsh)
     - [changelog-and-tag.sh](#changelog-and-tagsh)
     - [download-artifact.sh](#download-artifactsh)
+    - [rebuild-bench-history.sh](#rebuild-bench-historysh)
+    - [rebuild-bench-history-run.sh](#rebuild-bench-history-runsh)
     - [repo-setup.sh](#repo-setupsh)
 
 <!-- /TOC -->
@@ -459,6 +461,49 @@ Downloads the latest artifact from a previous workflow run.
 | `--wf-path`    | `-p`  | —                        | Workflow file path in the repo        |
 
 Workflow lookup priority: `--wf-name` > `--wf-path` > `--wf-id` (or the corresponding env vars).
+
+---
+
+### rebuild-bench-history.sh
+
+Fan-out dispatcher: triggers each vm2 repo's `RebuildBenchHistory.yaml` to re-record its benchmark history to Bencher.dev.
+Selects repos by probing for a `benchmarks/` directory via `gh api` (no clones), so it runs identically from a CLI and from a
+workflow. Fire-and-forget — it dispatches the per-repo runs and returns.
+
+**Called by:** `RebuildBenchHistory.yaml` (vm2.DevOps); also runnable directly from a CLI.
+
+| Option       | Short | Default                              | Description                              |
+| :----------- | :---- | :----------------------------------- | :--------------------------------------- |
+| `--owner`    | `-o`  | `$GITHUB_REPOSITORY_OWNER` or remote | GitHub owner/org of the target repos     |
+| `--repeat`   | `-n`  | `10`                                 | Independent runs to record per benchmark |
+| `--workflow` | `-w`  | `RebuildBenchHistory.yaml`           | Per-repo workflow to dispatch            |
+
+**Auth:** `$BENCH_DISPATCH_PAT` (exported as `GH_TOKEN`) with `Actions: write` + `Contents: read` on the target repos; falls
+back to the ambient `gh auth`.
+
+---
+
+### rebuild-bench-history-run.sh
+
+Per-repo run loop: discovers every benchmark project under `benchmarks/` (recursive, pruning
+`bin`/`obj`/`BenchmarkDotNet.Artifacts`) and records each to Bencher.dev `--repeat` times. Record-only — no thresholds, no
+`--err`, so a noisy point never fails the run.
+
+**Called by:** `_rebuild_bench_history.yaml`
+
+| Option              | Short | Default              | Description                                        |
+| :------------------ | :---- | :------------------- | :------------------------------------------------- |
+| `<bm-project-path>` |       | `$BENCHMARK_PROJECT` | Positional: one project (else discover all)        |
+| `--repeat`          | `-n`  | `10`                 | Independent runs to record per benchmark           |
+| `--configuration`   | `-c`  | `Release`            | Build configuration                                |
+| `--define`          | `-d`  | `""`                 | Preprocessor symbols (empty = full, non-SHORT_RUN) |
+| `--artifacts`       | `-a`  | `BenchmarkArtifacts` | Artifacts output directory                         |
+| `--bencher-project` | `-bp` | `$BENCHER_PROJECT`   | Bencher project slug (required)                    |
+| `--bencher-testbed` | `-tb` | `$BENCHER_TESTBED`   | Bencher testbed (required)                         |
+| `--bencher-branch`  | `-br` | `main`               | Bencher branch to record to                        |
+| `--bencher-adapter` | `-ad` | `c_sharp_dot_net`    | Bencher adapter                                    |
+
+**Auth:** `$BENCHER_API_TOKEN` (required).
 
 ---
 
