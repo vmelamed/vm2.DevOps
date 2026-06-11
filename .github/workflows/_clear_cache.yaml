@@ -96,4 +96,4 @@ jobs:
               echo "**Reason:** ${REASON}"
               echo "### Remaining Caches"
               gh cache list --limit 20 || echo "No caches remaining"
-          } >> to_summary
+          } | to_summary

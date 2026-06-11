@@ -40,3 +40,26 @@ repo-setup runs). The win is the standardized env contract + summary + dry-run, 
 **Trigger:** The next time a fleet-wide loop gets hand-written — e.g., rolling out the new git settings via
 `foreach-repo.sh -- repo-setup.sh --audit`.
 **Effort:** ~Half a day including docs.
+
+## 3. DevOps for vm2.DevOps — ShellCheck, tests, PR gates
+
+**What:** Give vm2.DevOps the same rigor it enforces on every other repo. Candidate pieces, roughly in value order:
+
+- **actionlint** in CI — static analysis purpose-built for GitHub Actions workflows (expression typos, invalid inputs,
+  shellcheck of embedded `run:` blocks — the YAML-embedded bash that the IDE ShellCheck extension never sees).
+- **ShellCheck as a CI gate** over `scripts/bash/` and `.github/scripts/` — the IDE extension covers interactive editing;
+  CI covers everything else (bulk edits, AI-generated changes, future contributors).
+- **Tests for the bash library** (e.g. bats-core) — 67 functions in `scripts/bash/lib/` with zero automated tests;
+  start with the highest-risk ones (`_sanitize.sh`, `_semver.sh`, `_args.sh`).
+- **PR gate** — a `Postrun-CI`-style required check on vm2.DevOps's own PRs running the above.
+- **(Bigger, separate decision)** Release channel for the reusable workflows: consumers reference `@main`, so every merge
+  deploys fleet-wide instantly and a PR cannot exercise the very workflows it changes. Tagged refs (`@v1`) or a
+  `stable` branch would decouple "merged" from "deployed" — at the cost of a promotion step.
+
+**Why:** vm2.DevOps has the largest blast radius in the ecosystem (all repos consume it `@main`) and the weakest gates —
+the inverse of how it should be. Today a workflow typo ships to every repo the moment it merges.
+
+**Trigger:** The first time a vm2.DevOps merge breaks a consumer repo's CI (or earlier, if a quiet week begs for it —
+but vm2.Repository ships first).
+**Effort:** actionlint + ShellCheck + gate: ~half a day. Library tests: incremental, start small. Release channel: a
+design discussion first.
