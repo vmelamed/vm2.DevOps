@@ -93,7 +93,7 @@ dispatched_list=""
 
 # Summary
 {
-    echo "## Benchmark-history rebuild dispatch (owner=$owner, repeat=$repeat):"
+    echo "### Benchmark-history rebuild dispatch (owner=$owner, repeat=$repeat):"
     echo "  dispatched : ${dispatched}${dispatched_list}"
     echo "  no benchmarks/skipped : $no_bench"
     echo "  failed : $failed"
