@@ -14,11 +14,7 @@ declare -r script_dir
 declare -r lib_dir
 
 # shellcheck disable=SC1091 # Not following: ./core.sh: openBinaryFile: does not exist (No such file or directory)
-{
-    source "$lib_dir/core.sh"
-    source "$lib_dir/_constants.sh"
-    source "$lib_dir/_git.sh"
-}
+source "$lib_dir/gh_core.sh"
 
 declare -rxa vm2_repositories
 declare -rx key_owner
@@ -97,10 +93,10 @@ dispatched_list=""
 
 # Summary
 {
-    echo ""
     echo "## Benchmark-history rebuild dispatch (owner=$owner, repeat=$repeat):"
     echo "  dispatched : ${dispatched}${dispatched_list}"
     echo "  no benchmarks/skipped : $no_bench"
     echo "  failed : $failed"
-    $dry_run && echo "  (dry run — workflows were NOT dispatched; the benchmarks/ probe still ran)"
+    $dry_run &&
+    echo "  (dry run — workflows were NOT dispatched; the benchmarks/ probe still ran)" || true
 } | to_summary
