@@ -116,6 +116,9 @@ if (( rc == failure )); then
         [[ -s $benchmark_exe_path ]] || error -ec "$err_tool_error" "Benchmark executable '$benchmark_exe_path' was still NOT FOUND after rebuilding the project."
         exit_if_has_errors
     fi
+else
+    chmod +x "$benchmark_exe_path" || error "Failed to make test executable '$benchmark_exe_path' executable."
+    exit_if_has_errors
 fi
 
 # Run benchmark with JSON export for Bencher
