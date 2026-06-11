@@ -94,6 +94,7 @@ jobs:
           path: downloaded/
 
       - name: Extract build artifacts
+        if: ${{ !inputs.skip-build-cache }}
         shell: bash
         run: |
           find downloaded/ -name '*.tar.gz' -exec tar xzf {} \;
