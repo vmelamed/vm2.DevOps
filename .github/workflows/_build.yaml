@@ -120,8 +120,10 @@ jobs:
       - name: Compute build artifact slug
         id: slug
         shell: bash
+        env:
+          BUILD_PROJECT: ${{ inputs.build-project }}
         run: |
-          slug=$(echo '${{ inputs.build-project }}' | tr -c 'A-Za-z0-9.\n' '-')
+          slug=$(printf '%s' "${BUILD_PROJECT}" | tr -c 'A-Za-z0-9.\n' '-')
           echo "slug=${slug:-root}" >> "$GITHUB_OUTPUT"
 
       - name: Upload build artifacts
