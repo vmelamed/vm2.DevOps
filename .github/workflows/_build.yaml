@@ -127,13 +127,15 @@ jobs:
           slug=$(printf '%s' "${BUILD_PROJECT}" | tr -c 'A-Za-z0-9.\n' '-')
           echo "slug=${slug:-root}" >> "$GITHUB_OUTPUT"
 
+      - name: Archive build artifacts
+        shell: bash
+        run: |
+          tar czf build-artifacts.tar.gz \
+              --exclude='*.tmp' \
+              $(find . -type d -path "*/bin/${{ inputs.configuration }}" | head -1)/..
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v6
         with:
-          name: build-artifacts-${{ runner.os }}-${{ inputs.configuration }}-${{ steps.slug.outputs.slug }}
-          retention-days: 1
-          if-no-files-found: error
-          overwrite: true
-          path: |
-            **/bin/${{ inputs.configuration }}
-            **/obj
+          name: build-artifacts-${{ runner.os }}-${{ inputs.configuration }}-${{ github.run_id }}
+          path: build-artifacts.tar.gz

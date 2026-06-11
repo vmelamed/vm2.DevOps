@@ -154,9 +154,6 @@ if ((rc == failure)); then
         exit_if_has_errors
     fi
     rc=$success
-else
-    chmod +x "$test_exe_path" || error "Failed to make test executable '$test_exe_path' executable."
-    exit_if_has_errors
 fi
 
 trace "Running tests from ${test_project}..."

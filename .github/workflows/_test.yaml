@@ -106,7 +106,12 @@ jobs:
         with:
           pattern: build-artifacts-${{ runner.os }}-${{ inputs.configuration }}-*
           merge-multiple: true
-          path: .
+          path: downloaded/
+
+      - name: Extract build artifacts
+        shell: bash
+        run: |
+          find downloaded/ -name '*.tar.gz' -exec tar xzf {} \;
 
       - name: Verify the artifacts were restored and run the tests
         id: run-tests
