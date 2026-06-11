@@ -142,22 +142,72 @@ declare -rxA var_validators=(
 declare -xa default_local_git_settings_order=(
     "core.hooksPath"
     "commit.template"
-    "fetch.prune"
     "merge.ff"
     "pull.rebase"
+    "fetch.prune"
     "push.autoSetupRemote"
+    "rerere.enabled"
+    "rerere.autoUpdate"
+    "rebase.autoStash"
+    "merge.conflictstyle"
+    "push.useForceIfIncludes"
+    "tag.sort"
 )
 
 declare -xr VM2_REPOS
 
 # shellcheck disable=SC2154
 declare -xA default_local_git_settings=(
+    # Set the hooks path to a githooks directory in the vm2_devops_repo, which can contain custom Git hooks for the team. This
+    # allows for consistent enforcement of policies and automation of tasks such as pre-commit checks, commit message
+    # validation, or post-merge actions across all team members who clone the repository.
     ["core.hooksPath"]="$VM2_REPOS/$vm2_devops_repo_name/scripts/githooks"
+
+    # Set the commit template to a .gitmessage file located in the SOT directory, which can be customized by the user to provide
+    # a consistent commit message format across the team. This helps ensure that all commits include necessary information such
+    # as the type of change, scope, and a brief description, improving readability and traceability in the commit history.
     ["commit.template"]="$(get_vm2_sot_path "$VM2_REPOS" "$sot")/.gitmessage"
+
+    # Enforce fast-forward merges to maintain linear history, which is required by the branch protection rules. If you need to
+    # merge a PR with a merge commit, you can do so locally with 'git merge --no-ff'
+    ["merge.ff"]="only"
+
+    # Enable rebasing by default when pulling to maintain a cleaner commit history, which is especially beneficial for feature
+    # branches and when the team prefers a linear history. This setting can be overridden on a per-branch basis if needed.
     ["pull.rebase"]=true
+
+    # Automatically remove remote-tracking references that no longer exist on the remote when fetching, to keep the local
+    # repository clean and up-to-date.
     ["fetch.prune"]=true
+
+    # Automatically set up tracking information when pushing a new branch to the remote, so that 'git pull' and 'git push' will
+    # work without additional parameters.
     ["push.autoSetupRemote"]=true
-    ["merge.ff"]="only" # Enforce fast-forward merges to maintain linear history, which is required by the branch protection rules. If you need to merge a PR with a merge commit, you can do so locally with 'git merge --no-ff'
+
+    # Enable reuse of recorded resolution for conflicted merges (rerere) to streamline conflict resolution when rebasing or
+    # merging branches with a shared history.
+    ["rerere.enabled"]=true
+
+    # Automatically stages files that have been resolved by rerere, which can further streamline the conflict resolution process
+    # during rebases and merges.
+    # AI: "Companion to rerere.enabled: also STAGE the auto-resolved files. Without it, rerere resolves the
+    # conflict but leaves it unstaged — you still stop at every commit just to 'git add'."
+    ["rerere.autoUpdate"]=true
+
+    # Stash dirty working tree automatically before rebase/pull --rebase and reapply after. Removes the
+    # "cannot rebase: you have unstaged changes" interruption mid-flow. (Promised in GIT_PLAYBOOK.md.)
+    ["rebase.autoStash"]=true
+
+    # Show the merged-base version in conflict hunks (3-way + base, compacted). You see WHAT both sides
+    # changed relative to the common ancestor, not just the two results. (Promised in GIT_PLAYBOOK.md.)
+    ["merge.conflictstyle"]="zdiff3"
+
+    # Refuse a force-with-lease push if the remote has commits you haven't even fetched yet —
+    # closes the race where dependabot/automation pushed while you were rebasing.
+    ["push.useForceIfIncludes"]=true
+
+    # Sort tags as versions, so 'git tag' lists v1.10.0 after v1.9.0, not before it.
+    ["tag.sort"]="version:refname"
 )
 
 declare -rxi err_invalid_arguments      # The number of the arguments is invalid or more than one type of parameter error code is present

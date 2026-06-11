@@ -11,7 +11,9 @@
       "Bash(git commit *)",
       "Bash(git push *)",
       "Bash(dotnet test *)",
-      "Bash(python3 *)"
+      "Bash(python3 *)",
+      "Bash(git pushf *)",
+      "Bash(git rev-list *)"
     ]
   }
 }

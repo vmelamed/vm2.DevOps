@@ -11,6 +11,8 @@ This playbook is optimized for solo/low-concurrency repos and for a rebase-first
 3. `git fetch --all --prune`
 4. `git rev-list --left-right --count origin/main...HEAD`
 
+Or all four in one: `git preflight` (see [Global aliases](#global-aliases)).
+
 Quick interpretation:
 
 - Left count > 0: local branch is behind `origin/main`
@@ -36,7 +38,18 @@ Quick interpretation:
 2. `git branch --show-current`
 3. `git rev-list --left-right --count origin/main...HEAD`
 4. Run build and fastest relevant tests
-5. `git push`
+5. `git push` for new commits — but **after a rebase, always `git pushf`** (`--force-with-lease`)
+
+### After a rebase (the death-spiral rule)
+
+A rebase rewrites history, so a plain `git push` is rejected as non-fast-forward. The fatal "fix" is `git pull`: it merges
+the **old** remote tip back into the rebased branch — undoing the rebase, doubling the commits, and putting the PR right
+back into "unresolved conflicts". Repeat that loop a few times and it is 4:30am.
+
+1. After every rebase, push with `git pushf` — never plain `push`, **never `pull`**
+2. Rebase **once, immediately before merging**, then merge right away — automation (Prerelease changelog commits,
+   dependabot auto-merges) keeps moving `main`, so do not rebase and then walk away
+3. If the PR still shows conflicts after a `pushf`, stop and diagnose (`git preflight`) — do not re-rebase blindly
 
 ### Conflict protocol (when VS Code looks inconsistent)
 
@@ -46,12 +59,23 @@ Quick interpretation:
    - Merge in progress
    - Normal state
 3. Resolve only unmerged files listed by Git
-4. Continue operation:
-   - Rebase: `git rebase --continue`
+4. **Never hand-resolve generated files** (`packages.lock.json` etc.) — take a side and regenerate:
+
+   ```bash
+   git checkout --theirs '**/packages.lock.json'
+   dotnet restore --force-evaluate
+   git add '**/packages.lock.json'
+   ```
+
+5. Continue operation:
+   - Rebase: `git rebase --continue` (`git rbcontinue`)
    - Merge: `git commit`
-5. Safe abort options:
-   - `git rebase --abort`
+6. Safe abort options:
+   - `git rebase --abort` (`git rbabort`)
    - `git merge --abort`
+
+Repeated conflicts on the same hunks across replayed commits resolve themselves after the first time — that is `rerere` +
+`rerere.autoUpdate` doing their job. If the same conflict keeps stopping you, check `git config rerere.enabled` in that repo.
 
 ### Golden rule
 
@@ -63,32 +87,53 @@ Never mix operations:
 
 ## 2) Safe Git Config + Aliases
 
-Run once (global):
+### Per-repo settings (enforced by repo-setup.sh)
+
+The per-repo Git settings are **enforced by `repo-setup.sh`** from the `default_local_git_settings` table in
+`scripts/bash/repo-setup.defaults.sh` — **that table is the source of truth**, not this document. Run `repo-setup.sh` after
+cloning a vm2 repo (or against an existing clone to re-sync). What it applies and why:
+
+| Setting                  | Value                                    | Why it matters                                                              |
+|--------------------------|------------------------------------------|------------------------------------------------------------------------------|
+| `core.hooksPath`         | `$VM2_REPOS/vm2.DevOps/scripts/githooks` | shared Git hooks across all vm2 repos                                         |
+| `commit.template`        | SoT `.gitmessage`                        | Conventional Commits template on every commit                                 |
+| `merge.ff`               | `only`                                   | refuses non-fast-forward merges → linear history                              |
+| `pull.rebase`            | `true`                                   | aligns pull behavior with the rebase-first flow                               |
+| `fetch.prune`            | `true`                                   | removes stale remote refs                                                     |
+| `push.autoSetupRemote`   | `true`                                   | the first push of a new branch sets up tracking automatically                 |
+| `rerere.enabled`         | `true`                                   | remembers and reapplies repeated conflict resolutions                         |
+| `rerere.autoUpdate`      | `true`                                   | also **stages** rerere's auto-resolutions — replayed conflicts sail through   |
+| `rebase.autoStash`       | `true`                                   | auto-stash/reapply a dirty tree around rebase — no interruptions              |
+| `merge.conflictstyle`    | `zdiff3`                                 | conflict hunks include the common base — see *what changed*, not just results |
+| `push.useForceIfIncludes`| `true`                                   | `--force-with-lease` also fails if the remote moved while you were rebasing   |
+| `tag.sort`               | `version:refname`                        | `git tag` lists `v1.10.0` after `v1.9.0`, not before it                       |
+
+### Global aliases
+
+Aliases are global — set once per machine:
 
 ```bash
-git config --global pull.rebase true
-git config --global rebase.autoStash true
-git config --global fetch.prune true
-git config --global rerere.enabled true
-git config --global merge.conflictstyle zdiff3
-
 git config --global alias.st "status -sb"
-git config --global alias.br "branch -vv"
-git config --global alias.lg "log --oneline --graph --decorate --all -20"
-git config --global alias.aheadbehind "rev-list --left-right --count origin/main...HEAD"
-git config --global alias.whereami "!git status -sb && echo --- && git branch --show-current && echo --- && git rev-list --left-right --count origin/main...HEAD"
-git config --global alias.syncmain "!git fetch origin --prune && git rebase origin/main"
-git config --global alias.unstage "restore --staged ."
-git config --global alias.abortall "!git rebase --abort 2>/dev/null; git merge --abort 2>/dev/null; true"
+git config --global alias.lg "log --oneline --graph --decorate --all"
+git config --global alias.last "log -1 --stat"
+git config --global alias.undo "reset --soft HEAD~1"
+git config --global alias.sync '!git fetch origin --prune && git rebase origin/main'
+git config --global alias.preflight '!f(){ git status -sb; echo; echo "branch: $(git branch --show-current)"; echo; (git rev-list --left-right --count origin/main...HEAD 2>/dev/null && echo "format: behind ahead") || echo "no origin/main yet"; echo; if [ -d .git/rebase-merge ] || [ -d .git/rebase-apply ]; then echo "REBASE IN PROGRESS"; else echo "no rebase in progress"; fi; }; f'
+git config --global alias.rbcontinue "rebase --continue"
+git config --global alias.rbabort "rebase --abort"
+git config --global alias.pushf "push --force-with-lease"
 ```
 
-Why these matter:
-
-- `pull.rebase=true`: aligns pull behavior with rebase-first flow
-- `rebase.autoStash=true`: reduces interruptions from local unstaged edits
-- `fetch.prune=true`: removes stale remote refs
-- `rerere.enabled=true`: remembers and reapplies repeated conflict resolutions
-- `zdiff3`: gives better conflict context than default style
+| Alias                             | Use it for                                                                                |
+|-----------------------------------|--------------------------------------------------------------------------------------------|
+| `git st`                          | quick status                                                                                |
+| `git lg`                          | history graph                                                                               |
+| `git last`                        | what did I just commit?                                                                     |
+| `git undo`                        | un-commit the last commit, keep the changes staged                                          |
+| `git sync`                        | fetch + rebase onto fresh `origin/main` in one move                                         |
+| `git preflight`                   | start-of-day / pre-push check: status, branch, ahead/behind, rebase-in-progress             |
+| `git rbcontinue` / `git rbabort`  | continue / abort a rebase                                                                   |
+| `git pushf`                       | **the only correct push after a rebase** (`--force-with-lease` + `useForceIfIncludes` guard)|
 
 ## 3) Branch Policy for vm2 Repos
 
@@ -106,9 +151,10 @@ Why these matter:
 
 ### Update cadence
 
-1. Rebase at start of day: `git fetch --prune && git rebase origin/main`
+1. Rebase at start of day: `git sync`
 2. Rebase again before switching PR from draft to review
-3. Rebase again before final merge window if main has moved
+3. Rebase once more **immediately before merging** if main has moved — and merge right away (see
+   [After a rebase](#after-a-rebase-the-death-spiral-rule))
 
 ### Conflict policy
 
@@ -128,24 +174,24 @@ Why these matter:
 ## Quick 10-Command Cheat Sheet
 
 ```bash
-# 1) check state
-git status
-# 2) branch
-git branch --show-current
-# 3) refresh remotes
-git fetch --all --prune
-# 4) divergence vs main
-git rev-list --left-right --count origin/main...HEAD
-# 5) rebase
-git rebase origin/main
-# 6) if conflicts: resolve + stage
+# 1) check state: status + branch + ahead/behind + rebase-in-progress
+git preflight
+# 2) fetch + rebase onto fresh origin/main
+git sync
+# 3) if conflicts: resolve + stage (rerere auto-resolves and auto-stages repeats)
 git add <resolved-files>
-# 7) continue rebase
-git rebase --continue
-# 8) smoke checks
+# 4) lockfile conflicts: never hand-resolve — take a side and regenerate
+git checkout --theirs '**/packages.lock.json' && dotnet restore --force-evaluate && git add '**/packages.lock.json'
+# 5) continue rebase
+git rbcontinue
+# 6) smoke checks
 # dotnet build / dotnet test (as needed)
-# 9) push
+# 7) push new commits
 git push
-# 10) if confused, recover
-git rebase --abort || git merge --abort
+# 8) push after a rebase (NEVER plain push, NEVER pull)
+git pushf
+# 9) if confused, recover
+git rbabort || git merge --abort
+# 10) what did I just commit?
+git last
 ```
