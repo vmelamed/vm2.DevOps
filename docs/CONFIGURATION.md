@@ -84,6 +84,19 @@ Set in repo Settings → Secrets and variables → Actions → Secrets.
 | `REPORTGENERATOR_LICENSE`  | CI (test)           | ReportGenerator license key (optional, for Pro features) |
 | `RELEASE_PAT`              | Prerelease, Release | Fine-grained PAT with `contents: write` — required to push the changelog commit and tag to `main` (bypasses branch protection rulesets) |
 
+> [!NOTE]
+> **`BENCH_DISPATCH_PAT` is a vm2.DevOps-only secret** — set it on the **vm2.DevOps** repository, not on the package repos.
+> It is the only secret here that is *not* per-consumer-repo. The `RebuildBenchHistory.yaml` fan-out workflow (in vm2.DevOps)
+> uses it to trigger each package repo's own `RebuildBenchHistory.yaml`, because the default `GITHUB_TOKEN` cannot dispatch
+> workflows across repositories.
+>
+> | Secret                | Required by          | Description                                                                                  |
+> | :-------------------- | :------------------- | :------------------------------------------------------------------------------------------- |
+> | `BENCH_DISPATCH_PAT`  | vm2.DevOps fan-out   | Fine-grained PAT with `Actions: write` + `Contents: read` on the package repos — used by `RebuildBenchHistory.yaml` to dispatch each repo's benchmark-history rebuild |
+>
+> Run locally instead? Export it as the `BENCH_DISPATCH_PAT` **environment variable** (a local script cannot read repo
+> secrets), or rely on your ambient `gh auth login`.
+
 ### Dependabot Secrets
 
 Set in repo Settings → Secrets and variables → Dependabot → Secrets.

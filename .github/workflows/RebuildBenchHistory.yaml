@@ -1,0 +1,36 @@
+name: "Rebuild Benchmark History (fan-out)"
+
+# Manually triggered (UI/phone) fan-out: dispatches each vm2 repo's own RebuildBenchHistory.yaml to re-record its benchmark
+# history to Bencher.dev. Fire-and-forget -- it kicks off the per-repo runs and returns; the rebuilds proceed in each repo's
+# own Actions. Use after a runner-image change or a benchmark restructure invalidates the existing baselines.
+
+on:
+  workflow_dispatch:
+    inputs:
+      repeat:
+        description: Independent runs to record per benchmark
+        type: number
+        default: 10
+
+permissions:
+  contents: read # Only to check out vm2.DevOps for its scripts; cross-repo dispatch uses BENCH_DISPATCH_PAT, not GITHUB_TOKEN.
+
+jobs:
+  fan-out:
+    name: Dispatch benchmark-history rebuilds
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup DevOps environment variables
+        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
+
+      - name: Dispatch rebuilds (fire-and-forget)
+        shell: bash
+        env:
+          # BENCH_DISPATCH_PAT: fine-grained PAT with 'Actions: write' + 'Contents: read' on the target repos.
+          # The default GITHUB_TOKEN cannot trigger workflows in other repositories, hence the PAT.
+          GH_TOKEN: ${{ secrets.BENCH_DISPATCH_PAT }}
+        run: |
+          rebuild-bench-history.sh --repeat "${{ inputs.repeat }}"
