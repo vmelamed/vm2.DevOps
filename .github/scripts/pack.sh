@@ -67,11 +67,13 @@ if ! $build; then
     pack_args+=("--no-build")
 fi
 
+set +o pipefail
 execute dotnet pack "${pack_args[@]}" 2>&1 |
             extractDotnetBuildInfo |
             displayDotnetBuildSummary |
-            to_summary || true # prevent pipefail from exiting before we can capture the exit code
-rc="${PIPESTATUS[0]}"
+            to_summary
+rc="${PIPESTATUS[0]}"  # exit code of dotnet pack — must be captured immediately
+set -o pipefail
 
 nupkg_count=$(find "$pack_output_dir" -name "*.nupkg" | wc -l)
 {
