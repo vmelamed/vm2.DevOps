@@ -130,9 +130,12 @@ jobs:
       - name: Archive build artifacts
         shell: bash
         run: |
-          tar czf build-artifacts.tar.gz \
-              --exclude='*.tmp' \
-              $(find . -type d -path "*/bin/${{ inputs.configuration }}" | head -1)/..
+          readarray -t bin_dirs < <(find . -type d -path "*/bin/${{ inputs.configuration }}")
+          [[ ${#bin_dirs[@]} -gt 0 ]] || {
+              echo "::error::Build produced no output in bin/${{ inputs.configuration }}."
+              exit 1
+          }
+          tar czf build-artifacts.tar.gz --exclude='*.tmp' "${bin_dirs[@]}"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v6
