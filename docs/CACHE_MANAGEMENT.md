@@ -100,7 +100,7 @@ Allowed patterns (enforced by allowlist):
 | Pattern              | What it clears          |
 | :------------------- | :---------------------- |
 | `nuget-`             | NuGet package caches    |
-| `build-artifacts-`   | Build artifact caches   |
+| `build-artifacts-`   | Legacy build artifact caches (no longer created — build outputs now travel as workflow artifacts; prefix kept to purge leftovers) |
 | `bencher-cli-`       | Bencher CLI cache       |
 
 ## MTP v1 vs v2 Lock File Interaction
