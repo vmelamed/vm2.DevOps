@@ -116,8 +116,13 @@ function on_err()
 {
     local rc=$?
 
-    echo "❌  ERR: rc=$rc cmd='$BASH_COMMAND' stack:" >&2
-    show_stack 2 12 true >&2
+    {
+        echo "❌  ON ERROR post-mortem:"
+        echo "     - exit code=$rc;"
+        echo "     - command='$BASH_COMMAND';"
+        echo "     - stack:"
+        show_stack 2 12 true
+    } >&2
     return "$rc"
 }
 
