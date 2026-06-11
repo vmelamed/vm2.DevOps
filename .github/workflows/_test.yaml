@@ -192,7 +192,7 @@ jobs:
 
       # Upload coverage to Codecov for historical tracking and PR integration
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ${{ steps.run-tests.outputs.coverage-files }}
