@@ -77,17 +77,17 @@ for name in "${vm2_repositories[@]}"; do
     # Read-only remote probe for a benchmarks/ directory. Run directly (not via the dry-run-aware wrapper) so --dry-run
     # still reports an accurate target list.
     if ! gh api "repos/$owner/$name/contents/benchmarks" --silent &> "$_ignore"; then
-        trace "'$owner/$name' has no 'benchmarks/' directory (or is unreachable); skipping."
+        info "'$owner/$name' has no 'benchmarks/' directory (or is unreachable); skipping."
         no_bench=$(( no_bench + 1 ))
         continue
     fi
 
-    to_stdout "▶ Dispatching '$workflow' for '$owner/$name' (repeat=$repeat)..."
+    info "▶ Dispatching '$workflow' for '$owner/$name' (repeat=$repeat)..."
     if execute_gh_with_retry 3 5 workflow run "$workflow" --repo "$owner/$name" -f repeat="$repeat"; then
         dispatched=$(( dispatched + 1 ))
         dispatched_repos+=("$owner/$name")
     else
-        warning "Failed to dispatch '$workflow' for '$owner/$name' (is it present on the repo's default branch?)."
+        warning "  Failed to dispatch '$workflow' for '$owner/$name' (is it present on the repo's default branch?)."
         failed=$(( failed + 1 ))
     fi
 done
@@ -95,12 +95,12 @@ done
 dispatched_list=""
 (( ${#dispatched_repos[@]} > 0 )) && dispatched_list=" — ${dispatched_repos[*]}"
 
-to_stdout ""
-to_stdout "Benchmark-history rebuild dispatch (owner=$owner, repeat=$repeat):"
-to_stdout "  dispatched : ${dispatched}${dispatched_list}"
-to_stdout "  no benchmarks/skipped : $no_bench"
-to_stdout "  failed : $failed"
-$dry_run && to_stdout "  (dry run — workflows were NOT dispatched; the benchmarks/ probe still ran)"
-
-(( failed == 0 )) || exit "$err_tool_error"
-exit "$success"
+# Summary
+{
+    echo ""
+    echo "## Benchmark-history rebuild dispatch (owner=$owner, repeat=$repeat):"
+    echo "  dispatched : ${dispatched}${dispatched_list}"
+    echo "  no benchmarks/skipped : $no_bench"
+    echo "  failed : $failed"
+    $dry_run && echo "  (dry run — workflows were NOT dispatched; the benchmarks/ probe still ran)"
+} | to_summary
