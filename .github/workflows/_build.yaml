@@ -108,7 +108,8 @@ jobs:
                   echo "sudo apt upgrade dotnet-sdk-10.0"
                   echo "dotnet restore --force-evaluate"
                   echo "\`\`\`"
-                  echo "Then re-push."
+                  echo "Adjust above for the OS .NET upgrade command and the runner's actual SDK version if not 10.0"
+                  echo "Then commit and push the lockfiles."
               } >> "$GITHUB_STEP_SUMMARY"
           fi
 
