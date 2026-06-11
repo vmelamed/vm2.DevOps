@@ -102,7 +102,7 @@ jobs:
       # Retrieve compiled binaries from the build job to avoid recompilation. Artifacts (not the cache) are the
       # intra-run handoff: the cache gives no read-after-write guarantee within a run.
       - name: Download build artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           pattern: build-artifacts-${{ runner.os }}-${{ inputs.configuration }}-*
           merge-multiple: true
@@ -155,7 +155,7 @@ jobs:
           done < <(echo "$test_projects" | jq -r '.[]')
 
       - name: Generate coverage report
-        uses: danielpalme/ReportGenerator-GitHub-Action@5.5.3
+        uses: danielpalme/ReportGenerator-GitHub-Action@5.5.10
         env:
           REPORTGENERATOR_LICENSE: ${{ secrets.REPORTGENERATOR_LICENSE }}
         with:
@@ -175,7 +175,7 @@ jobs:
 
       # Upload test results and coverage reports as workflow artifacts
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         id: upload-coverage
         with:
           name: coverage-${{ github.event.repository.name }}-${{ inputs.runner-os }}

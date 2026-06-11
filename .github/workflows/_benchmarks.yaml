@@ -127,7 +127,7 @@ jobs:
       # Retrieve compiled binaries from the build job. Artifacts (not the cache) are the intra-run handoff:
       # the cache gives no read-after-write guarantee within a run.
       - name: Download build artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           pattern: build-artifacts-${{ runner.os }}-${{ inputs.configuration }}-*
           merge-multiple: true
@@ -319,7 +319,7 @@ jobs:
       # Upload benchmark results as workflow artifacts for manual inspection
       - name: Upload benchmark results artifact
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: benchmark-results-${{ inputs.runner-os }}
           path: ${{ env.ARTIFACTS_DIR }}
