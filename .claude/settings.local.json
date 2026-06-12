@@ -18,7 +18,14 @@
       "Bash(sed -n '340,356p' docs/ARCHITECTURE.md)",
       "Bash(sed -n '126,136p' docs/WORKFLOWS_REFERENCE.md)",
       "Bash(sed -n '98,106p' docs/CACHE_MANAGEMENT.md)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(ls -la /home/valo/repos/vm2/vm2.Templates/templates/AddNewPackage/content/.gitattributes /home/valo/repos/vm2/vm2.DevOps/.gitattributes 2>&1; echo ---; find /home/valo/repos/vm2 -maxdepth 2 -name .gitattributes 2>/dev/null)",
+      "Read(//home/valo/repos/vm2/**)",
+      "Bash(rm -rf /tmp/lockdrv)",
+      "Bash(xxd)"
+    ],
+    "additionalDirectories": [
+      "/tmp/lockdrv"
     ]
   }
 }

@@ -1,0 +1,30 @@
+{
+    "diff": {
+        "tool": "delta",
+        "command": "delta --side-by-side --line-numbers --paging never \"$LOCAL\" \"$REMOTE\""
+    },
+    "merge": {
+        "tool": "code",
+        "command": "code --new-window --wait --diff \"$REMOTE\" \"$LOCAL\" \"$REMOTE\" \"$LOCAL\""
+    },
+    "action_overrides": {
+        "copilot-instructions.md": "ignore",
+        "settings.json": "ignore",
+        "CI.yaml": "ignore",
+        "Prerelease.yaml": "ignore",
+        "Release.yaml": "ignore",
+        "Directory.Build.props": "ignore",
+        "Directory.Packages.props": "ignore",
+        "ClearCache.yaml": "ignore",
+        "RefreshLockfiles.yaml": "ignore",
+        "AutoMerge.yaml": "ignore",
+        "RebuildBenchHistory.yaml": "ignore",
+        "dependabot.yml": "ignore",
+        ".editorconfig": "ignore",
+        ".gitattributes": "merge",
+        "codecov.yaml": "ignore",
+        "coverage.settings.xml": "ignore",
+        "global.json": "ignore",
+        "testconfig.json": "ignore"
+    }
+}

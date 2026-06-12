@@ -1,4 +1,4 @@
-﻿# Auto detect text files and perform LF normalization
+# Auto detect text files and perform LF normalization
 * text=auto
 
 # Shell scripts should always use LF line endings
@@ -10,15 +10,20 @@
 *.ps1 text eol=crlf
 
 # Explicitly declare text files you want to always be normalized and converted to native line endings on checkout
-*.cs text diff=csharp
-*.csproj text
-*.sln text
-*.slnx text
-*.md text
-*.json text
-*.yaml text
-*.yml text
-*.xml text
+*.cs text eol=lf diff=csharp
+*.csproj text eol=lf
+*.sln text eol=lf
+*.slnx text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.xml text eol=lf
+
+# NuGet lockfiles are generated — never merge them by hand. The 'nugetlock' merge driver (defined locally by
+# repo-setup.sh as merge.nugetlock.*) takes the incoming side; regenerate with 'dotnet restore --force-evaluate'.
+# Without the driver configured, git falls back to the normal text merge.
+packages.lock.json merge=nugetlock
 
 # Denote all files that are truly binary and should not be modified
 *.png binary

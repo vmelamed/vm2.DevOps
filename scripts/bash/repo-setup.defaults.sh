@@ -152,6 +152,8 @@ declare -xa default_local_git_settings_order=(
     "merge.conflictstyle"
     "push.useForceIfIncludes"
     "tag.sort"
+    "merge.nugetlock.name"
+    "merge.nugetlock.driver"
 )
 
 declare -xr VM2_REPOS
@@ -208,6 +210,16 @@ declare -xA default_local_git_settings=(
 
     # Sort tags as versions, so 'git tag' lists v1.10.0 after v1.9.0, not before it.
     ["tag.sort"]="version:refname"
+
+    # Custom merge driver for NuGet lockfiles, bound by the shared .gitattributes line
+    # 'packages.lock.json merge=nugetlock'. Lockfiles are generated — merging them by hand is always wrong.
+    # The driver takes the incoming side (%B — during a rebase that is the commit being replayed, i.e. the
+    # same side as 'git checkout --theirs'), so a lockfile conflict never stops a rebase or merge; the file
+    # must still be regenerated with 'dotnet restore --force-evaluate' before pushing (CI's locked-mode
+    # restore catches a forgotten regeneration). In repos where the driver is not configured (clone without
+    # repo-setup.sh), git falls back to the normal text merge — same behavior as before.
+    ["merge.nugetlock.name"]="NuGet lockfile - take the incoming side and regenerate"
+    ["merge.nugetlock.driver"]='cp -f %B %A && echo "vm2: %P auto-resolved (took the incoming side) - regenerate with: dotnet restore --force-evaluate" >&2'
 )
 
 declare -rxi err_invalid_arguments      # The number of the arguments is invalid or more than one type of parameter error code is present

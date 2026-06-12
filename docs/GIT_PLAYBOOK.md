@@ -59,7 +59,19 @@ back into "unresolved conflicts". Repeat that loop a few times and it is 4:30am.
    - Merge in progress
    - Normal state
 3. Resolve only unmerged files listed by Git
-4. **Never hand-resolve generated files** (`packages.lock.json` etc.) — take a side and regenerate:
+4. **Never hand-resolve generated files** (`packages.lock.json` etc.) — take a side and regenerate.
+
+   In repos set up by `repo-setup.sh` this is automatic: the `nugetlock` merge driver (bound via `.gitattributes`)
+   takes the incoming side, so lockfile conflicts never stop a rebase or merge — you only see a reminder like
+   `vm2: 'packages.lock.json' auto-resolved (took the incoming side) - regenerate with: dotnet restore --force-evaluate`.
+   **The reminder is not optional**: regenerate before pushing, or CI's locked-mode restore will fail with `NU1004`.
+
+   ```bash
+   dotnet restore --force-evaluate
+   git add '**/packages.lock.json'
+   ```
+
+   Manual fallback (repo not yet set up, so the driver is not configured and the conflict stops you):
 
    ```bash
    git checkout --theirs '**/packages.lock.json'
@@ -107,6 +119,7 @@ cloning a vm2 repo (or against an existing clone to re-sync). What it applies an
 | `merge.conflictstyle`    | `zdiff3`                                 | conflict hunks include the common base — see *what changed*, not just results |
 | `push.useForceIfIncludes`| `true`                                   | `--force-with-lease` also fails if the remote moved while you were rebasing   |
 | `tag.sort`               | `version:refname`                        | `git tag` lists `v1.10.0` after `v1.9.0`, not before it                       |
+| `merge.nugetlock.*`      | custom merge driver                      | auto-resolves `packages.lock.json` conflicts by taking the incoming side (bound via `.gitattributes`); regenerate with `dotnet restore --force-evaluate` |
 
 ### Global aliases
 
@@ -180,8 +193,8 @@ git preflight
 git sync
 # 3) if conflicts: resolve + stage (rerere auto-resolves and auto-stages repeats)
 git add <resolved-files>
-# 4) lockfile conflicts: never hand-resolve — take a side and regenerate
-git checkout --theirs '**/packages.lock.json' && dotnet restore --force-evaluate && git add '**/packages.lock.json'
+# 4) lockfile conflicts: the nugetlock merge driver takes a side for you — just regenerate
+dotnet restore --force-evaluate && git add '**/packages.lock.json'
 # 5) continue rebase
 git rbcontinue
 # 6) smoke checks
