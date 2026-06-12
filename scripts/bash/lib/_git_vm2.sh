@@ -119,7 +119,7 @@ function resolve_vm2_repos()
 #     5) it is at or ahead of the latest stable tag of the specified branch.
 # Parameters:
 #   $1: $vm2_repos: the parent directory of all vm2 repositories where the repository $1 can be located as well, if it is specified by name only.
-#                   (optional, default: $VM2_REPOS or "$HOME/repos/vm2"). You can use also `$(resolve_vm2_repos)` to determine the parent directory of all vm2 repositories.
+#                   MUST be already resolved with `$(resolve_vm2_repos)` to determine the parent directory of all vm2 repositories.
 #   $2: $repo_name: repository name or absolute, or relative path to the repository, e.g. "vm2.MyRepo" or "./my_repos/vm2_packages/vm2.MyRepo".
 #   $3: $branch: the branch to check against the latest stable tag (optional, default: the currently checked out branch)
 # Returns:
@@ -146,11 +146,8 @@ function validate_repo_root()
         return "$err_invalid_arguments"
     }
 
-    local repos
-    repos="$(resolve_vm2_repos "$1")" || return $?
-
+    local repos=$1
     local repo=$2
-
     local branch="${3}"
 
     local r
@@ -319,6 +316,8 @@ function resolve_repo_root()
     repos=$1
     dir_path="${2:-"$(pwd)"}"
 
+    trace "Searching for '$dir_path' under '\$vm2_repos=$repos'..."
+
     local repo_dir=""
     local dir=""
     local repo_root=""
@@ -326,7 +325,6 @@ function resolve_repo_root()
     local -i rc
 
     # find a directory with the same sub-path under $vm2_repos and check if it is a git work tree root (if root_only is true)
-    trace "Searching for '$dir_path' under '\$vm2_repos=$repos'..."
     d=$(search_repo_dir "$dir_path" "$repos")
     rc=$?
     if (( rc == err_not_found )); then

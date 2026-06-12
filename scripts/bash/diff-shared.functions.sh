@@ -220,7 +220,7 @@ function resolve_target()
 
     # We can only work with git repos or directories that have CI configured:
     (( rc == success || rc == err_dir_with_ci )) || {
-        error -ec "$err_argument_value" -sd 3 "The specified target directory '$vm2repos$r' is invalid. It should have CI configured in '.github/workflows'."
+        error -ec "$err_argument_value" -sd 3 "The specified target directory '${vm2repos%/}/${r#/}' is invalid. It should have CI configured in '.github/workflows'."
         return "$rc"
     }
 

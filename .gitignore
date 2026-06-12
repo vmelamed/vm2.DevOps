@@ -146,6 +146,8 @@ _TeamCity*
 coverage*.json
 coverage*.xml
 coverage*.info
+# But keep the settings file, which is not auto-generated and is needed for code coverage to work properly
+!coverage.settings.xml
 
 # Visual Studio code coverage results
 *.coverage
@@ -301,10 +303,6 @@ node_modules/
 *.dsw
 *.dsp
 
-# Visual Studio 6 technical files
-*.ncb
-*.aps
-
 # Visual Studio LightSwitch build output
 **/*.HTMLClient/GeneratedArtifacts
 **/*.DesktopClient/GeneratedArtifacts
@@ -399,8 +397,8 @@ launchSettings.json
 
 # benchmarkDotNet results folder(s)
 TestArtifacts/
+BenchmarkArtifacts/
 BmArtifacts/
-TestResults/
 report.txt
 
 # Coverage files
@@ -418,7 +416,7 @@ report.txt
 *[Ss][Cc][Rr][Aa][Tt][Cc][Hh]*
 *[Ss][Cc][Rr][Aa][Tt][Cc][Hh]*/
 _ignore
-*[Ii][Nn][Ss][Tt][Rr][Uu][Cc][Tt][Ii][Oo][Nn][Ss]*.[Mm][Dd]
+# *[Ii][Nn][Ss][Tt][Rr][Uu][Cc][Tt][Ii][Oo][Nn][Ss]*.[Mm][Dd]
 
 # Ignore user-specific config e.g. "appsettings.val melamed.json"
 **/appsettings.*.json
