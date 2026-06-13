@@ -73,6 +73,7 @@ function get_arguments()
                 ;;
         esac
     done
+    usage_if_requested
     dump_vars --force --quiet --markdown \
         --header "Script Arguments:" \
         dry_run \

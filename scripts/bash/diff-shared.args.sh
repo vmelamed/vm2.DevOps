@@ -78,6 +78,7 @@ function get_arguments()
                 ;;
         esac
     done
+    usage_if_requested
 }
 
 declare -xr action_ignore

@@ -24,6 +24,7 @@ declare -rxi negative
 declare -rxi err_invalid_arguments
 declare -rxi err_argument_type
 declare -rxi err_argument_value
+declare -rxi err_missing_argument
 declare -rxi err_not_overridden
 declare -rxi err_logic_error
 
@@ -367,6 +368,9 @@ function get_table_format()
     return "$success"
 }
 
+declare -x usage_requested=""
+declare -x vm2_option="${VM2_REPOS:-}"
+
 #-------------------------------------------------------------------------------
 # Summary: Processes common command-line arguments like --quiet, --verbose, --trace, --dry-run.
 # Parameters:
@@ -407,6 +411,25 @@ function get_common_arg()
     esac
 
     return "$positive" # it was a common argument and was processed
+}
+
+#-------------------------------------------------------------------------------
+# Summary: Exits the script if a usage request was made via command-line arguments.
+# Parameters: none
+# Returns:
+#   Exit code: 0 if no usage was requested, otherwise exits the script
+# Side Effects: May call the usage function and exit the script
+# Usage: usage_if_requested
+# Example:
+#     usage_if_requested
+#-------------------------------------------------------------------------------
+function usage_if_requested()
+{
+    case "${usage_requested}" in
+        short ) usage false;;
+        long  ) usage true;;
+        *     ) return 0;;
+    esac
 }
 
 #-------------------------------------------------------------------------------

@@ -54,7 +54,7 @@ source "${script_dir}/diff-shared.usage.sh"
 #===============================
 # arguments:
 #===============================
-declare -x vm2_repos=""
+declare -x vm2_repos="${VM2_REPOS:-}"
 declare -x sot=$default_sot
 declare -xa target_repos=()         # the target repositories specified as arguments. If not specified, the current directory is used as the only target repo.
 declare -xA selectors_actions=()    # array [file] => [action string] for files specified on the CLI with --file* options
