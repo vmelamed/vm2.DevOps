@@ -47,7 +47,7 @@ declare -x use_https=false
 declare -x repo_owner=${ORGANIZATION:-$default_owner}
 declare -rx sot=$default_sot
 
-declare -x vm2_repos=""
+declare -x vm2_repos="${VM2_REPOS:-}"
 declare -x repo_name=""
 declare -x repo=""
 declare -x repo_url=""

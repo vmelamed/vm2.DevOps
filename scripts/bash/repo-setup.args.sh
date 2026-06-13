@@ -110,6 +110,7 @@ function get_arguments()
                 ;;
         esac
     done
+    usage_if_requested
     dump_args
 }
 
