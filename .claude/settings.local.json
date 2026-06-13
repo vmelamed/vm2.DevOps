@@ -22,10 +22,13 @@
       "Bash(ls -la /home/valo/repos/vm2/vm2.Templates/templates/AddNewPackage/content/.gitattributes /home/valo/repos/vm2/vm2.DevOps/.gitattributes 2>&1; echo ---; find /home/valo/repos/vm2 -maxdepth 2 -name .gitattributes 2>/dev/null)",
       "Read(//home/valo/repos/vm2/**)",
       "Bash(rm -rf /tmp/lockdrv)",
-      "Bash(xxd)"
+      "Bash(xxd)",
+      "Bash(git -C /home/valo/repos/vm2/vm2.Templates diff --stat HEAD)",
+      "Bash(git -C /home/valo/repos/vm2 diff --stat HEAD)"
     ],
     "additionalDirectories": [
-      "/tmp/lockdrv"
+      "/tmp/lockdrv",
+      "/home/valo/repos/vm2"
     ]
   }
 }
