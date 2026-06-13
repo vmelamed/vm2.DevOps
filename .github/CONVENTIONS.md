@@ -7,57 +7,58 @@
     - [Code Generation and File Editing](#code-generation-and-file-editing)
     - [PR Review](#pr-review)
     - [Language and Writing Quality](#language-and-writing-quality)
-  - [Directory Structure](#directory-structure)
-  - [Document Convention](#document-convention)
-    - [Files with shared content](#files-with-shared-content)
-  - [Dependency Management](#dependency-management)
-    - [Files with shared content](#files-with-shared-content-1)
   - [Project Structure](#project-structure)
-    - [Files with shared content](#files-with-shared-content-2)
+  - [Dependency Management](#dependency-management)
   - [General C# Coding Conventions](#general-c-coding-conventions)
-    - [Files with shared content](#files-with-shared-content-3)
   - [Async](#async)
   - [Services (if applicable)](#services-if-applicable)
   - [Error Handling](#error-handling)
   - [Testing](#testing)
-    - [Files with shared content](#files-with-shared-content-4)
+  - [Performance Benchmarks](#performance-benchmarks)
   - [Performance](#performance)
   - [Security](#security)
   - [Naming](#naming)
   - [AOT and Trimming](#aot-and-trimming)
   - [Git and PR Hygiene](#git-and-pr-hygiene)
-    - [Files with shared content](#files-with-shared-content-5)
   - [Documentation](#documentation)
-  - [Markdown](#markdown)
+    - [Markdown](#markdown)
   - [File Modification](#file-modification)
   - [CI / GitHub Actions](#ci--github-actions)
 
 <!-- /TOC -->
 
-The *vm2* family of repositories (packages, solutions, etc.) **share a common set of conventions** for the directory structure, project structure, coding style, documentation style, Git and PR hygiene, and more. This file documents these shared conventions to ensure **consistency across all repositories** and to provide guidance for contributors.
+The *vm2* family of repositories (packages, solutions, etc.) **share a common set of conventions** for the directory
+structure, project structure, coding style, documentation style, Git and PR hygiene, and more. This file documents these
+shared conventions to ensure **consistency across all repositories** and to provide guidance for contributors.
 
-The key words **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, and **MAY** in this document are to be interpreted as described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119).
+The key words **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, and **MAY** in this document are to be interpreted as
+described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119).
 
 > [!NOTE]
-> This file contains common conventions for contributing to the *vm2* repos targeting both humans and the AI coding systems. It is **copied to each repo's `.github/` directory**. The content of this file should be relatively stable and constant across repos. However, it may evolve over time as we learn and grow. Changes will be discussed, possibly leading to change in the SoT file at `$VM2_REPOS/vm2.Templates/templates/AddNewPackage/content/.github/CONVENTIONS.md`, and then propagate it to all repos.
->
-> It is quite possible that some projects and solutions are "special" (e.g. vm2.DevOps) and require extra conventions and/or deviation from the shared conventions. `diff-shared.sh` allows for that: merge the source into the special target, instead of manual copy/paste. For more details about the `diff-shared.sh` script, clone the repo vm2.DevOps if you haven't done so and see the [tool's documentation](../vm2.DevOps/docs/diff-shared.md). Please, refrain from changing local copies of SoT files manually and thus deviating from the conventions in individual repos - use the tool.
+> This file is **copied identically to each repo's `.github/` directory** via `diff-shared.sh`.
+> The canonical source of truth is `vm2.Templates/templates/AddNewPackage/content/.github/CONVENTIONS.md`.
+> **Edit the canonical copy first**, then propagate with `diff-shared.sh`.
+> Repo-specific overrides belong in `CLAUDE.md` and `copilot-instructions.md`, not here.
 
 ## For AI Coding Assistants
 
-This section consolidates instructions specifically for AI coding assistants (Claude, Copilot, etc.). The conventions in the rest of this document apply to all contributors — human and AI alike.
+This section consolidates instructions specifically for AI coding assistants (Claude, Copilot, etc.). The conventions
+in the rest of this document apply to all contributors — human and AI alike.
 
 ### Code Generation and File Editing
 
 - **Wrap complete generated Markdown files in tilde fences** (`~~~markdown`) so the user can copy them cleanly
 - **Align Markdown table columns with spaces** so the table is readable in raw Markdown, not only in the rendered view
-- Do not remove commented-out code without explicit permission
-- Preserve YAML/JSON comments in configuration files
+- Do not remove commented-out code or configuration comments without explicit permission; feel free to *suggest* removal
+- Preserve YAML/JSON/XML comments in configuration files
 - For GitHub Actions workflows: preserve commented-out alternatives and explanatory notes
+- When adding new code, comment on *why* it exists — non-obvious constraints, invariants, workarounds, TODOs with context
+- When refactoring, update affected comments to maintain accuracy
 
 ### PR Review
 
-- If a PR addresses more than one logical concern, **reject it** and request it be split — do not approve or suggest improvements until the scope is reduced to one concern
+- If a PR addresses more than one logical concern, **reject it** and request that it be split — do not approve or suggest
+  improvements until the scope is reduced to one concern
 
 ### Language and Writing Quality
 
@@ -67,302 +68,215 @@ The project owner is a non-native English speaker.
 - Recommend better, idiomatic wording for unclear, passive, or awkward sentences
 - Prefer active voice
 - Explain why a suggested change improves the text
-- When suggesting a correction, add one short sentence that states exactly what changed and why, especially for small edits such as punctuation, articles, or word order.
+- When suggesting a correction, add one short sentence stating exactly what changed and why — especially for small edits
+  such as punctuation, articles, or word order
 - Examples:
   - ❌ "The pattern is being matched by the enumerator"
   - ✅ "The enumerator matches the pattern"
 
-## Directory Structure
-
-- For ease of locating repositories (repos), solutions, and project files and for ease of parameter specification in the cross solution tools, the repos of **all solutions are located under a single parent folder** (e.g. `~/repos/vm2/`). This parent folder is not committed to git, but **its existence is a convention for local organization of the repos**. By convention this folder is specified by the **global environment variable `VM2_REPOS`**. However, every cross-solution tool or script also accepts an option (named parameter) **--vm2-repos** that overrides the env. variable. If neither is specified, the tools and scripts assume default location `$HOME/repos/vm2/` which may not be what you'd like or what other contributors are using, so **it is recommended to set the env. variable VM2_REPOS**
-- Usually **every .NET solution is placed in one git repository** and has one or more closely related C# projects, e.g. source code projects, test projects, benchmark projects, examples, etc. Sometimes in the documentation and colloquial speech **we use "solution" and "repository" interchangeably**, but it always means the same thing: a repository that contains one solution with one or more projects in it
-- The solutions may produce one or more NuGet packages, dotnet tools, templates, set of scripts (vm2.DevOps), containerized services, etc
-- Use the set of shared tools (scripts) for cross-solution tasks like building, testing, benchmarking, code coverage, changelog generation, etc. To make them available to all solutions, keep them in a separate repository in **$VM2_REPOS/vm2.DevOps** that must be cloned locally alongside the other solution repos
-- To propagate many of the conventions and environmental choices **do not share content with git submodules or symlinks**. This can be difficult to work with across different OSes, platforms and IDEs. Use a **copy-and-merge strategy for shared content**
-- The **source-of-truth files (SoT)** for shared content are located in the **`$VM2_REPOS/vm2.Templates/templates/AddNewPackage/content/`**. The solution `vm2.Templates` is a C# template solution for creating new solutions that produce a NuGet package with `dotnet new vm2pkg <solution name>`, therefore the `vm2.Templates` solution should also be cloned and synced often
-- When shared content needs to be updated (add/modify/delete a convention, setting, variable, dependency version),
-  1. **first update the source-of-truth file in vm2.Templates**
-  1. Build and deploy the template package to NuGet repository
-  1. **Use the `diff-shared.sh` script to propagate the changes** to all existing repos
-
-  This way, all new projects created with the template and all existing projects will have the latest content and will be following the latest conventions.
-
-## Document Convention
-
-- Files that should be identical across all repos are marked with an asterisk **\***. If any of those change, **the sharing tool will copy the content of the source SoT file over the target repo's corresponding file**
-- Files which content is only partially shared are marked with a double asterisk **\*\***. If any of those change, **the sharing tool will display the differences and ask if you want to ignore the new content, copy the new content (overwriting the existing file), or merge the new content with the existing file** (both the diff tool and the merge tool are configurable in the script or use the git defaults - see the documentation for details)
-- Files that are not shared and should be maintained separately in each repo are not marked
-- These conventions are implemented by the `diff-shared.sh` script, which is used to propagate changes from the source-of-truth files in the template content folder to the target repos. The script can be configured to specify which files are shared and how to handle changes to them. For even more nuanced and flexible control, it defines 6 different actions for handling changes to shared files:
-  - **`ignore`**: do not update the target file, keep it as is
-  - **`merge or copy`**: ask the user to choose between ignoring, merging or copying the new content over the existing content.
-  - **`ask to merge`**: ask the user if they want to merge the new content with the existing file; if they choose not to merge, do not update the target file
-  - **`merge`**: open the merge utility without asking the user to merge the new content with the existing file, preserving both the shared content and the repo-specific content
-  - **`ask to copy`**: ask the user if they want to copy the new content over the existing file; if they choose not to copy, do not update the target file
-  - **`copy`**: copy the new content over the existing file (overwriting it) without asking
-
-  By default all documents marked with **\*** are set to `copy`, and all documents marked with **\*\*** are set to `merge or copy`.
-
-  For more details on how to use the `diff-shared.sh` script, see the [tool's documentation](../vm2.DevOps/docs/diff-shared.md).
-
-### Files with shared content
-
-- `.editorconfig` **\*** — **authoritative code style and analyzers** (used by IDEs and dotnet CLI)
-
-## Dependency Management
-
-- **Use `Directory.Build.props` and `Directory.Packages.props` for shared build configuration and centralized package version management**. Each project file (`*.csproj`) references the shared properties and packages that it uses without versions (unless they are already referenced in `Directory.Build.props`). This ensures consistency across all projects and makes it easier to update dependencies in one place. That's why our *.csproj files are surprisingly small and clean
-- **Restore the project's dependencies with `dotnet restore --use-lock-file`** to ensure that the exact versions specified in the lock files are used, and to prevent unintended updates of dependencies
-- **Build projects and solutions with `dotnet restore --use-lock-file ... && dotnet build --no-restore ...`**
-- If the dependencies changed **update the version in `Directory.Packages.props`, then run `dotnet restore --force-evaluate` to update the lock files, and commit both the updated `Directory.Packages.props` and the updated `packages.lock.json` files**
-- Dependabot configuration is defined in `.github/dependabot.yml` * and should be set up to check for updates in the `Directory.Packages.props` file, which is the source of truth for package versions. This way, when a new version of a dependency is released, dependabot will create a PR with the updated version in `Directory.Packages.props`, and then you can review, merge, and then run `dotnet restore --force-evaluate` to update the lock files
-
-### Files with shared content
-
-- `global.json` **\*** — shared SDK version and global tool versions
-- `Directory.Build.props` **\*\*** — shared build configuration
-- `Directory.Packages.props` **\*\*** — centralized package versions
-- `*.csproj` - always prefer referencing shared packages and settings from the above files, without versions, to ensure consistency and ease of maintenance
-- `packages.lock.json` — generated by `dotnet restore --use-lock-file` to lock down exact dependency versions; must be committed to source control; update by running `dotnet restore --force-evaluate` after changing versions in `Directory.Packages.props`
-- `NuGet.config` **\*** — for custom package sources or credentials, e.g. GitHub Packages, Azure Artifacts, etc. Create with `dotnet new nugetConfig` and then customize as needed. The SoT version of the file is usually enough
-
 ## Project Structure
 
 - Solutions: **`.slnx` format** (Visual Studio 2022+)
-- Package versions: **Central Package Management via `Directory.Packages.props`**
+- `Directory.Build.props` for shared build settings
+- `Directory.Packages.props` for centralized package version management
 - Project files: **SDK-style**
-- Global usings: defined in **`usings.cs` per project**
+- Global usings: defined in **`usings.cs`** per project
 - Standard folder layout:
-  - `src/` — source code
-  - `tests/` — test projects. The stack is: **xUnit, FluentAssertions, NSubstitute, MTP v2, coverage**
-  - `benchmarks/` — **BenchmarkDotNet** projects (desirable)
-  - `examples/` — usage examples (desirable). Prefer single-file programs for simplicity, but multi-file projects are acceptable if the example is complex enough to warrant it.
-  - `docs/` — documentation (optional, in addition to README.md, e.g. blogs, design docs, etc.)
-  - `.github/workflows/` — **GitHub Actions CI/CD**:
-    - `CI.yaml` kicks-in the **inputs validation, build, test, benchmark, and package** shared workflows
-    - `Prerelease.yaml` for **prerelease workflows**: computes the pre-release version, e.g. `1.2.0-preview.3`; tags the main branch with a tag like `v1.2.0-preview.3`; builds pre-release package(s); **publishes the pre-release packages to GitHub Packages or NuGet.org**; **updates CHANGELOG.md** using cliff-git. Triggered by a successful merge of a pull request
-    - `Release.yaml` for **release workflows**: computes the release version, e.g. `1.2.0`; tags the main branch with a tag like `v1.2.0`; builds release package(s); **publishes the pre-release packages to GitHub Packages or NuGet.org**; **updates CHANGELOG.md** using cliff-git. Triggered manually when we want to cut a release, usually after a successful prerelease validation
+  - `src/` — source code for deliverables
+  - `tests/` — test projects (xUnit v3, FluentAssertions, NSubstitute, MTP v2, Coverlet)
+  - `benchmarks/` — BenchmarkDotNet projects (desirable)
+  - `examples/` — usage examples (desirable; prefer single-file programs)
+  - `docs/` — documentation beyond README.md (optional)
+  - `.github/`
+    - AI-specific guidance and conventions (`CONVENTIONS.md` and/or `copilot-instructions.md`)
+    - dependabot configuration (`dependabot.yml`)
+    - issue and pull request templates (`ISSUE_TEMPLATE/` and `PULL_REQUEST_TEMPLATE.md`)
+  - `.github/workflows/` — GitHub Actions CI/CD (`CI.yaml`, `Prerelease.yaml`, `Release.yaml`, `RefreshLockFiles.yaml`, `AutoMerge.yaml`, `ClearCache.yaml`, `RebuildBenchHistory.yaml`)
 
-### Files with shared content
+## Dependency Management
 
-- `.github/`:
-  - `PULL_REQUEST_TEMPLATE.md` **\*** — shared **PR description template**
-  - `dependabot.yml` **\*** — shared **dependabot configuration** for automated dependency updates
-  - `CONVENTIONS.md` **\*** — **this file**: **shared conventions for contributing to the repo**, including coding style, testing, documentation, Git hygiene, etc. This file itself is shared content and should be identical across all repos. **Used by Claude AI**. Usually copied without modification from SoT
-  - `copilot-instructions.md` **\*** — **instructions for Copilot** to ensure consistent code generation style and patterns across all repos. Usually it refers to the `CONVENTIONS.md` file and is copied without modification from SoT
-  - `workflows/`:
-    - `CI.yaml` **\*\*** — **continuous integration (CI) workflow. Declares the build, test, benchmark, and packaged projects** and possible other differences. Usually this file merges the SoT file to preserve the repo-specific differences in the workflow configuration.
-    - `Prerelease.yaml` **\*\*** — **prerelease workflow. Declares the packaged pre-release projects**. Usually this file merges the SoT file to preserve the repo-specific differences in the workflow configuration.
-    - `Release.yaml` **\*\*** — **release workflow. Declares the packaged release projects**. Usually this file merges the SoT file to preserve the repo-specific differences in the workflow configuration.
+- **Use `Directory.Build.props` and `Directory.Packages.props`** for shared build configuration and centralized package
+  version management; `*.csproj` files reference packages without versions
+- **Restore with `dotnet restore --use-lock-file`** to pin exact versions; commit `packages.lock.json`
+- **Build with `dotnet restore --use-lock-file ... && dotnet build --no-restore ...`**
+- When dependencies change: update `Directory.Packages.props`, **AND** then run `dotnet restore --force-evaluate`, commit both files
+- Dependabot watches `Directory.Packages.props`; after merging a Dependabot PR, run `dotnet restore --force-evaluate` (also done by `RefreshLockFiles.yaml` and `AutoMerge.yaml`)
 
 ## General C# Coding Conventions
 
-- **See .editorconfig** first
+- **See the repo's `.editorconfig` first** — it is authoritative for style and analyzers
 - File-scoped namespaces
 - Implicit usings for common namespaces (defined in `usings.cs`)
 - `record` for immutable data models and DTOs
-- `readonly record struct` for small immutable value objects (e.g. `Ulid`, `Result<T>`, etc.)
-- `internal` by default; **`public` only for intentional API surface**
+- `readonly record struct` for small immutable value objects (e.g. `Ulid`, `Result<T>`)
+- `internal` by default; **`public` only for intentional API surface**. For referencing internal classes and members from say test projects, use the `InternalsVisibleTo` attribute rather than making them `public`
 - `sealed` by default; open **only** when extensibility is required and justified
-- Expression-bodied members when trivial and readable, e.g. one-liners, simple getters, etc.
+- Expression-bodied members when trivial and readable (one-liners, simple getters)
 - `var` when the type is obvious from the right-hand side
-- **Nullable reference types always enabled**; treat warnings as design feedback.
-- **No static mutable state** unless guarded with **proper encapsulation and synchronization** (prefer `ReaderWriterLockSlim` over `Lock`, `Mutex`, `Event`)
-- Prefer `[GeneratedRegex(...)]` partial methods over `new Regex(..., RegexOptions.Compiled)` for static patterns in .NET 8+ code.
+- **Nullable reference types always enabled**; treat warnings as design feedback
+- **No static mutable state** unless guarded with proper synchronization (prefer `ReaderWriterLockSlim`)
+- Prefer `[GeneratedRegex(...)]` partial methods over `new Regex(..., RegexOptions.Compiled)` for static patterns
 - **Dependency injection** over service locator
-- Use `System.TimeProvider` (.NET 8 BCL) for time abstraction and `FakeTimeProvider` (from `Microsoft.Extensions.TimeProvider.Testing`) for tests — **never** introduce a homegrown `IClock`-style interface (Val!)
-- Guard clauses at method entry (throw early, no nested pyramids)
+- Use `System.TimeProvider` (.NET 8+) for time abstraction; `FakeTimeProvider` in tests — **never** a homegrown `IClock`
+- Guard clauses at method entry (throw early; no nested pyramids)
+- All public interfaces must validate their input parameters and throw appropriate exceptions (e.g., `ArgumentNullException`, `ArgumentException`) for invalid arguments even if nullable references are enabled
 - Pattern matching (`is`, `switch` expressions) over `if`/`else` chains when semantically clearer
 - No curly braces for single-line blocks unless they improve readability
-- `#region` / `#endregion` acceptable for logical grouping in larger files, especially interface implementations, and generated code
-- EBNF (ISO 14977) for grammar definitions: `=` definitions, `,` concatenation, `;` rule terminator, `[ ]` optional, `|` alternation, `"..."` terminals.
-
-### Files with shared content
-
-- `.editorconfig` **\*** — **authoritative code style and analyzers** (used by IDEs and dotnet CLI)
+- `#region` / `#endregion` acceptable for logical grouping in larger files and for interface implementations
+- EBNF (ISO 14977) for grammar definitions: `=` definitions, `,` concatenation, `;` terminator, `[ ]` optional,
+  `|` alternation, `"..."` terminals
 
 ## Async
 
 - Async methods suffixed with `Async`
 - `CancellationToken ct` **threaded through all async call chains**
-- **No fire-and-forget** except documented background operations, e.g. `Task.Run` for CPU-bound work, or explicitly detached background tasks with proper error handling and logging
+- **No fire-and-forget** except documented background operations with proper error handling and logging
 - `ValueTask` only when allocation reduction is measurable (hot paths, cached results)
 
 ## Services (if applicable)
 
-- For inter-service communications **prefer async APIs** with `Task`/`ValueTask` over synchronous APIs, even if the current implementation is synchronous, to allow for future async implementations without breaking changes
-- For inter-service communications within a (k8s) cluster **prefer gRPC and messaging** over HTTP/REST for better performance and reliability, even if the current implementation is HTTP/REST, to allow for future gRPC/messaging implementations without breaking changes
+- Prefer async APIs even when the current implementation is synchronous — avoids breaking changes later
+- Within a cluster, prefer gRPC and messaging over HTTP/REST for performance and reliability
 
 ## Error Handling
 
-- **Always consider using `Result<T>` for expected failure modes** instead of exceptions
-- **Never use exceptions for expected control flow** (e.g. not found) — prefer `Result<T>` or similar patterns instead
+- **Consider `Result<T>` for expected failure modes** instead of exceptions
+- **Never use exceptions for expected control flow** (e.g. not-found) — prefer `Result<T>`
 - **Exceptions for unrecoverable failures only** (e.g. `ArgumentException`)
-- Railway patterns (`Result<T>`) for short throws and flow control.
-- `Try...` patterns preferred over broad exception-based control flow.
-- **Domain-specific exceptions** for business rule violations
-- **Never swallow exceptions** — log or rethrow
+- `Try<MethodName>` patterns over broad exception-based control flow
+- **Never swallow exceptions** — at minimum log or rethrow
 - **Never log sensitive data** (PII, secrets)
-- **Use logger scopes** for contextual information, not string concatenation or interpolation in log messages
-- **Prefer `ILogger<T>`** with structured logging over static loggers or string-based logging
-- In services with external dependencies, prefer **circuit breakers and retries** over exceptions for transient faults
-- In services use **health checks and monitoring** to detect and respond to failures instead of relying on exceptions for observability
-- In services for distributed systems **use OpenTelemetry** for distributed tracing and metrics to understand system behavior and failures instead of relying on exceptions alone
+- **Use logger scopes** for contextual information; never string concatenation in log messages
+- **Prefer `ILogger<T>`** with structured logging
+- In services: prefer circuit breakers and retries over exceptions for transient faults
+- In services: use health checks and OpenTelemetry for observability, not exceptions
 
 ## Testing
 
 - Framework: **xUnit v3 with Microsoft Testing Platform (MTP) v2**
 - Assertions: **FluentAssertions** (never `Assert.*` unless framework-specific)
 - Mocks: **NSubstitute**
-- Use vm2.TestUtilities:
-  - **for easy locating failing theory tests** with `TestUtilities.PathLine()`, etc.
-  - **use the `XUnitLogger` for capturing structured logs** in tests without needing to set up a real logger
-  - **use `TestBase`** to
-    - derive test classes and **inherit `ITestOutputHelper Out`**
-    - **suppress the `FluentAssertions` licensing messages** (we bought it)
-    - to have the **`FluentAssertionsExceptionFormatter`  that usually hides nested exceptions**
-- Naming:
+- Use **vm2.TestUtilities**:
+  - `TestUtilities.PathLine()` — locates failing theory tests
+  - `XUnitLogger` — captures structured logs without a real logger
+  - `TestBase` — inherit `ITestOutputHelper Out`, suppress FluentAssertions licensing noise, get `FluentAssertionsExceptionFormatter`
+- Test naming:
   - Sync:  `MethodName_WhenCondition_ShouldOutcome`
   - Async: `MethodName_WhenCondition_ShouldOutcome_Async`
 - Arrange / Act / Assert with clear blank-line separation
 - One logical assertion per test (chained FluentAssertions counts as one)
+- Prefer `[Theory]` with inline data; use `[MemberData]` or `[ClassData]` for complex scenarios
 - No testing of implementation details; mock only observable behavior
-- `[Trait("Category","Integration")]` for slow or external-dependency tests (usually integration tests)
-- Inject mock clock abstractions — never `DateTime.UtcNow` directly in tests
+- `[Trait("Category","Integration")]` for slow or external-dependency tests
+- Inject mock clock, e.g., `FakeTimeProvider` — never `DateTime.UtcNow` directly in tests
 - Inject mock ID providers — never rely on live generation in tests
-- Only mock external collaborators (I/O, time, random, repository, bus)
-- Do not mock value objects
+- Mock only external collaborators (I/O, time, random, repository, bus); never mock value objects
+- Strive for 80% code coverage on critical paths; prioritize meaningful tests over coverage numbers
+- Upload coverage to Codecov
 
-### Files with shared content
+## Performance Benchmarks
 
-- `Directory.Build.props` **\*\*** — shared build configuration for tests and test libraries, including referencing and configuring the test stack: MTP v2, xUnit, FluentAssertions, NSubstitute, code coverage
-- `Directory.Packages.props` **\*\*** — centralized package versions for tests and test libraries, including referencing and configuring the test stack: MTP v2, xUnit, FluentAssertions, NSubstitute, code coverage
-- `codecov.yml` **\*** — shared codecov configuration for codecov.io, e.g. repository token, upload settings, etc. This file is used by the CI pipeline to configure codecov reporting
-- `coverage.settings.xml` **\*** — shared code coverage configuration for Coverlet, e.g. include/exclude filters, thresholds, etc. This file is used by the CI pipeline to configure code coverage collection and reporting
-- `testconfig.json` **\*** — shared test configuration, e.g. test timeouts, parallelization settings, etc. This file is used by the test projects to configure the test runner (MTP)
+- Framework: **BenchmarkDotNet**
+- Derive from `BenchmarkBase` to inherit consistent `MemoryDiagnoser`, `GcServer`, and other attributes
+- Benchmark hot paths and critical scenarios, not every method
+- Use `GlobalSetup` for expensive initialization; `IterationSetup` for per-iteration setup
+- Use `Params` for parameterized benchmarks to compare inputs
+- Upload results to Bencher for regression tracking
 
 ## Performance
 
-- `AsNoTracking()` for read-only EF queries.
-- No unnecessary `ToList()` inside query pipelines.
-- `ReadOnlySpan<char>` for parsing hot paths.
-- `stackalloc` for small buffers with heap fallback for large inputs.
+- `AsNoTracking()` for read-only EF queries
+- Prefer lazy evaluation with iterators (`yield return`) over eager materialization for sequences
+- Prefer lazy initialization (`Lazy<T>`, `Lazy<T>(LazyThreadSafetyMode.*)`) for expensive objects
+- No unnecessary `ToList()` inside query pipelines
+- `ReadOnlySpan<char>` for parsing hot paths
+- `stackalloc` for small buffers with heap fallback for large inputs
 
 ## Security
 
-- No embedded secrets — user secrets or environment variables only.
-- Validate all external inputs at system boundaries.
-- Principle of least privilege throughout.
-- Prefer quantum-resistant algorithms for cryptography where applicable.
+- No embedded secrets — secure storage, user secrets, or environment variables only
+- Validate all external inputs at system boundaries
+- Principle of least privilege throughout
+- Prefer quantum-resistant algorithms for cryptography where applicable
 
 ## Naming
 
-- Events: past tense — `OrderPlacedEvent`.
-- Commands: imperative — `PlaceOrderCommand`.
-- Handlers: `...Handler` suffix.
-- **Always set `<OutputType>` explicitly** in every `*.csproj` to make it clear to the CI scripts what type of file to run for tests and benchmarks, and to avoid drift when project file names change.
-- Prefer **domain-first public API type names** without suffixes unless required to avoid language-level symbol conflicts.
-- Prefer **package-first artifact identity** for NuGet packages and assemblies:
+- Events: past tense — `OrderPlacedEvent`
+- Commands: imperative — `PlaceOrderCommand`
+- Handlers: `...Handler` suffix
+- Prefer **domain-first public API type names** without suffixes unless required to avoid symbol conflicts
+- **Package-first artifact identity**:
   - Package ID: `vm2.<Package>` or `vm2.<Package>.<Feature>`
   - Assembly name: `vm2.<Package>` or `vm2.<Package>.<Feature>`
-- Always set `<RootNamespace>` explicitly in every `*.csproj`.
-- Root namespace policy:
-  - For core libraries, prioritize API clarity and discoverability.
-  - For feature libraries, use a stable hierarchy that mirrors the feature domain.
-- Test naming policy (tests-first):
-  - Project and assembly: `<Package>.Tests` or `<Package>.<Feature>.Tests` to group tests by package and feature, e.g. `Ulid.Tests` for `vm2.Ulid` package, `UlidTool.Tests` for `vm2.UlidTool` package, etc. This also makes it clear that the assembly contains tests for the specific package or feature. **Prefer the default name for the assembly** - the name of the project file without the extension, e.g. `Ulid.Tests` for `Ulid.Tests.csproj`.
-  - Namespace: `vm2.Tests.<Package>[.<Feature>]` to avoid conflicts where `<Package>` is also a name of a type, e.g. `Ulid`. It also makes it clear that the namespace contains tests for the specific package, class, or feature, e.g. `vm2.Tests.Ulid` for `vm2.Ulid` package/type, `vm2.Tests.UlidTool` for `vm2.UlidTool` package/feature (tool), etc.
-  - **Always specify `<OutputType>Exe</OutputType>` explicitly** in test project files to make it clear to the CI scripts what type of file to run.
-- Benchmark naming policy (benchmarks-first):
-  - Project and assembly: `<Package>.Benchmarks` or `<Package>.<Feature>.Benchmarks` to group benchmarks by package and feature, e.g. `Ulid.Benchmarks` for `vm2.Ulid` package. This also makes it clear that the assembly contains benchmarks for the specific package or feature. **The assembly name MUST be the default** - the name of the project file without the extension, e.g. `Ulid.Benchmarks` for `Ulid.Benchmarks.csproj`. This is BenchmarkDotNet's required convention.
-  - Namespace: `vm2.Benchmarks.<Package>[.Feature]` to avoid conflicts where `<Package>` is also a name of a type, e.g. `Ulid`. It also makes it clear that the namespace contains tests for the specific package, class, or feature, e.g. `vm2.Tests.Ulid` for `vm2.Ulid` package/type.
-  - **Always specify `<OutputType>Exe</OutputType>`** in benchmark project files to make it clear to the CI scripts what type of file to run for benchmarks.
-- Inside a single repository, do not mix naming strategies. Choose one namespace strategy and apply it consistently to `src/`, `tests/`, and `benchmarks/`.
+- **Always set `<RootNamespace>` explicitly** in every `*.csproj`
+- **Always set `<OutputType>` explicitly** in every `*.csproj`
+- Test projects — assembly: `<Package>.Tests`; namespace: `vm2.Tests.<Package>[.<Feature>]`. Note the placement of the `Tests` segment and the mirroring of the assembly structure: it helps avoiding symbol conflicts. Always `<OutputType>Exe</OutputType>` - xUnit v3 + MTP v2.
+- Benchmark projects — assembly: `<Package>.Benchmarks`; namespace: `vm2.Benchmarks.<Package>[.<Feature>]`. Note the placement of the `Benchmarks` segment and the mirroring of the assembly structure: it helps avoiding symbol conflicts. Always `<OutputType>Exe</OutputType>` - BenchmarkDotNet requires the default name for the entry point assembly.
+- Do not mix naming strategies within a single repository
 
 ## AOT and Trimming
 
-- Scope by project type (usually set in **`Directory.Build.props`** with folder-based conditions):
-  - **test** and **benchmark** projects: no trimming and no AOT checks by default; optimize for correctness/perf feedback, not deployment-shape validation:
-    - `IsAotCompatible=false`
-    - `VerifyReferenceAotCompatibility=false`
-    - `EnableTrimAnalyzer=false`
-    - `IsTrimmable=false`
-  - **product** projects: trimming and AOT checks enabled by default  (usually set in **`Directory.Build.props`**):
-    - `IsAotCompatible=true`
-    - `VerifyReferenceAotCompatibility=true` when strict dependency metadata validation is desired.
-    - `EnableTrimAnalyzer=true`
-    - `IsTrimmable=true`
-- Build and classify diagnostics (handled in CI and local `dotnet build`/`dotnet publish`):
-  - IL2026-family: trimming compatibility issue.
-  - IL3050-family: AOT dynamic-code issue.
-  - IL3058: referenced assembly is not marked AOT-compatible.
-- If IL2026 appears (code-level fix):
-  - first try `DynamicallyAccessedMembersAttribute` to make reflection requirements explicit.
-  - if an API is fundamentally trim-unsafe, annotate the API boundary with `RequiresUnreferencedCodeAttribute`.
-  - avoid suppression-first fixes.
-- If IL3050 appears (code-level fix):
-  - first try removing/replacing dynamic code patterns.
-  - if an API is fundamentally AOT-unsafe, annotate the API boundary with `RequiresDynamicCodeAttribute`.
-  - if unsupported surface is substantial, split into AOT-safe core and non-AOT companion code/package.
-- If strict AOT/trimming is not worth it for a specific product project (project-level opt-out in **`*.csproj`**):
-  - `IsAotCompatible=false`
-  - `VerifyReferenceAotCompatibility=false`
-  If needed, also set:
-  - `EnableTrimAnalyzer=false`
-  - `IsTrimmable=false`
-  - use this only as an explicit, documented design decision with rationale in README/changelog/PR.
-- Re-run checks and verify warning flow (CI and local build/publish):
-  - warnings should be either fixed or intentionally bubbled at public API boundaries.
-  - unsupported features must be documented clearly for consumers.
-- IL warning suppression policy (code-level and project-level):
-  - **do not suppress IL warnings** (`IL2xxx`, `IL3xxx`) by default.
-  - only suppress when the safety argument is explicit, tested, and documented.
-  - if you think suppression is the easiest fix, stop and re-evaluate API design first.
-  - unless you really, really know what you are doing, Val.
+Scope via `Directory.Build.props` (folder-based conditions):
+
+- **Test and benchmark projects** — AOT and trim checks disabled; optimize for correctness/perf feedback:
+  `IsAotCompatible=false`, `VerifyReferenceAotCompatibility=false`, `EnableTrimAnalyzer=false`, `IsTrimmable=false`
+- **Product projects** — AOT and trim checks enabled, unless code or dependencies explicitly require otherwise:
+  `IsAotCompatible=true`, `VerifyReferenceAotCompatibility=true`, `EnableTrimAnalyzer=true`, `IsTrimmable=true`
+
+Diagnostic classification:
+
+- `IL2026` family — trimming compatibility; fix with `DynamicallyAccessedMembersAttribute` or
+  `RequiresUnreferencedCodeAttribute` at the API boundary
+- `IL3050` family — AOT dynamic-code; fix by removing dynamic patterns or annotating with
+  `RequiresDynamicCodeAttribute`; split into AOT-safe core + non-AOT companion if the surface is large
+- `IL3058` — referenced assembly not marked AOT-compatible
+
+IL warning suppression policy:
+
+- **Do not suppress IL warnings** (`IL2xxx`, `IL3xxx`) by default
+- Only suppress when the safety argument is explicit, tested, and documented
+- If suppression seems like the easiest fix, stop and re-evaluate the API design first
+
+If strict AOT/trimming is not worth it for a specific product project, opt out explicitly in `*.csproj` with documented
+rationale in README/CHANGELOG/PR.
 
 ## Git and PR Hygiene
 
-- Commit messages: `<type>[(scope)][!]: <description>` - where scope is optional `!` marks **breaking change(s)**
+- Commit messages: `<type>[(scope)][!]: <description>` — `!` marks a breaking change
   - `fix: correct null reference in UserService`
   - `feat(serialization): add IUtf8SpanFormattable implementation`
-- One logical concern per PR (Val!)
-
-### Files with shared content
-
-- `.github/PULL_REQUEST_TEMPLATE.md` **\*** — PR description: What / Why / How / Risk / Rollback
-- `.gitmessage` **\*** — shared Git commit message template with EBNF format and examples
+- One logical concern per PR
 
 ## Documentation
 
-- **Technical and specification documents** (README, design docs, CONVENTIONS, XML docs, API specs, etc.) **MUST** include the RFC 2119 boilerplate at the top: "The key words **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, and **MAY** in this document are to be interpreted as described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119)."
-- **Blogs and free-form articles** (e.g. `docs/blog-*.md`) **MUST NOT** use RFC 2119 keywords as normative terms — in prose, MUST and SHOULD are emphasis, not specifications
-- Use clear, concise language with proper grammar and spelling
-- Prefer active voice and direct statements
-- Explain the "why" and intent behind decisions, not just the "what"
-- Use examples to illustrate complex concepts or usage patterns
-- **XML docs on all public API surface** at least
+- **Technical and specification documents** MUST include the RFC 2119 boilerplate:
+  "The key words **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, and **MAY** in this document are to be interpreted
+  as described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119)."
+- **Blogs and free-form articles** (`docs/blog-*.md`) MUST NOT use RFC 2119 keywords as normative terms
+- Use clear, concise, idiomatic language; prefer active voice and direct statements
+- Explain the *why* and intent behind decisions, not just the *what*
+- **XML docs on all public API surface**
 - Line length: 128 characters maximum
-- Internal code: **document intent and rationale only** — not what the code does (the code should be clear enough on its own)
-- XML tags on their own lines unless the content fits on one line
-- Always **proofread for spelling, grammar, and technical accuracy**
+- XML tags on their own lines unless the entire XML element fits on one line
 - **Cite specifications** (POSIX, RFC, SemVer, ULID spec, etc.) with title and URL
-- **README code examples must be self-contained and runnable**: include all required `using` directives, declare all variables, and avoid unexplained placeholders (`...`, `// ...`). **A reader must be able to paste the example into a project and have it compile without guessing missing context**
-- Standard references block format:
+- **README code examples must be self-contained and runnable**: include all `using` directives, declare all variables,
+  avoid unexplained placeholders. A reader must be able to paste the example and have it compile
+- Standard references block:
 
       ## References
       - [Title](URL) — Author or organization
 
-## Markdown
+### Markdown
 
-- **Follow markdownlint default rules** (or `.markdownlint.json` if present).
-- **Align table columns with spaces** for readability in raw Markdown — pad cells so columns line up visually.
-- Use 4-space indentation for code blocks inside Markdown content.
-- **Use `1.` for all items in ordered lists** (renderers number automatically).
-- Prefer kebab-case in YAML; avoid snake_case unless required by external schema.
+- Follow markdownlint default rules (or `.markdownlint.json` if present)
+- **Align table columns with spaces** for readability in raw Markdown
+- 4-space indentation for code blocks inside Markdown
+- **Use `1.` for all items in ordered lists** (renderers number automatically)
+- Prefer kebab-case in YAML; avoid snake_case unless required by an external schema
 
 ## File Modification
 
 - **Preserve existing comments** unless correcting inaccuracies or improving English
-- **Document why new code exists**, not just what it does
 - Do not remove commented-out code without explicit permission
 - Preserve YAML/JSON comments in configuration files
 - For GitHub Actions workflows: preserve commented-out alternatives and explanatory notes
@@ -371,15 +285,15 @@ The project owner is a non-native English speaker.
 
 When adding a new project, register it in `.github/workflows/CI.yaml`:
 
-| Array                | Purpose                     |
-|----------------------|-----------------------------|
-| `BUILD_PROJECTS`     | Solutions/projects to build |
-| `TEST_PROJECTS`      | Test projects to run        |
-| `BENCHMARK_PROJECTS` | Benchmark projects to run   |
-| `PACKAGE_PROJECTS`   | Projects to pack as NuGet   |
+| Array                | Purpose                               |
+|----------------------|---------------------------------------|
+| `BUILD_PROJECTS`     | Solutions/projects to build           |
+| `TEST_PROJECTS`      | Test projects to build and run        |
+| `BENCHMARK_PROJECTS` | Benchmark projects to build and run   |
+| `PACKAGE_PROJECTS`   | Projects to pack as NuGet packages    |
 
-Also, add the project to the `.slnx` solution file under the appropriate folder.
+Also add the project to the `.slnx` solution file under the appropriate folder.
 
 ---
-*Canonical source: vm2.Templates/templates/AddNewPackage/content/.github/CONVENTIONS.md*
-*Copies maintained by diff-shared.sh — edit the canonical copy first.*
+*Canonical source: `vm2.Templates/templates/AddNewPackage/content/.github/CONVENTIONS.md`*
+*Copies maintained by `diff-shared.sh` — edit the canonical copy first.*
