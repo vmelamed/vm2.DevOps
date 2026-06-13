@@ -1,0 +1,156 @@
+# Copilot Instructions for vm2.MyPackage
+
+## Shared Conventions
+
+Copilot MUST read and follow [CONVENTIONS.md](CONVENTIONS.md) before suggesting or making changes.
+
+Do not duplicate shared rules here — shared instructions belong in [CONVENTIONS.md](CONVENTIONS.md) so all AI systems
+use the same source of truth.
+
+## Package-Specific Guidance
+
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+@~/.claude/CLAUDE.md
+@~/repos/vm2/CLAUDE.md
+@.github/CONVENTIONS.md
+@docs/ARCHITECTURE.md
+@docs/WORKFLOWS_REFERENCE.md
+@docs/GIT_PLAYBOOK.md
+@docs/RELEASE_PROCESS.md
+
+## Project Context
+
+This is a solo project — Val Melamed is currently the only developer. There is no team. This affects prioritization (correctness still matters; urgency and process overhead do not).
+
+## What This Repository Is
+
+vm2.DevOps is the shared CI/CD automation framework for all vm2 .NET packages. It provides:
+
+- **Reusable GitHub Actions workflows** — consumed by every vm2 package repo
+- **CI/CD action scripts** — in `.github/scripts/`, each following the three-file convention
+- **Bash script library** — 67 functions in `scripts/bash/lib/`, sourced by CI scripts and local utilities
+- **Local development scripts** — in `scripts/bash/`, used for repository setup, syncing shared files, and creating PRs with vm2 conventions
+
+Consumer repos use workflow templates from `vm2.Templates`. The reusable workflows and the scripts they call live here.
+
+## Architecture
+
+```text
+Top-level Workflows      Reusable Workflows                  Bash Scripts                     Bash Library
+vm2.*                    vm2.DevOps/.github/workflows        vm2.DevOps/.github/scripts/      vm2.DevOps/scripts/bash/lib/
+
+═══════════════════════► ══════════════════════════════════► ═══════════════════════════════► ════════════════════════════
+
+CI.yaml ───────┬───────► actions/gather-inputs/action.yaml
+               └───────► _ci.yaml ─┬───────────────────────► validate-commits.sh ───────────►
+                                   ├───────────────────────► validate-inputs.sh ────────────►
+                                   ├──► _build.yaml ───────► build.sh ──────────────────────►
+                                   ├──► _test.yaml ────────► run-tests.sh ──────────────────►
+                                   ├──► _benchmarks.yaml ──► run-benchmarks.sh ─────────────►
+                                   └──► _pack.yaml ────────► pack.s ────────────────────────►
+
+Prerelease.yaml ───────► _prerelease.yaml ───────────────┬─► compute-prerelease-version.sh ─►
+                                                         ├─► changelog-and-tag.sh ──────────►
+                                                         └─► publish-package.s ─────────────►
+
+Release.yaml ──────────► _release.yaml ──────────────────┬─► compute-release-version.sh ────►
+                                                         ├─► changelog-and-tag.sh ──────────►
+                                                         └─► publish-package.sh ────────────►
+
+```
+
+See `$VM2_REPOS/vm2.DevOps/docs/ARCHITECTURE.md` for the full design and `$VM2_REPOS/vm2.DevOps/docs/WORKFLOWS_REFERENCE.md` for workflow inputs/outputs.
+
+## Key Directories
+
+| Path                   | Contents                                                             |
+|------------------------|----------------------------------------------------------------------|
+| `.github/workflows/`   | Reusable workflows (`_ci.yaml`, `_build.yaml`, `_test.yaml`, etc.)   |
+| `.github/scripts/`     | CI/CD action scripts (three-file convention — see below)             |
+| `.github/actions/`     | Custom composite actions (`setup-env`, `cache-dependencies`, etc.)   |
+| `scripts/bash/lib/`    | Shared bash library (`_diagnostics.sh`, `_git.sh`, `_args.sh`, etc.) |
+| `scripts/bash/`        | Local dev utility scripts (`diff-shared.sh`, `repo-setup.sh`, etc.)  |
+| `docs/`                | Reference documentation (12 `.md` files)                             |
+
+## Common Local Development Commands
+
+```bash
+# Sync shared files contents from vm2.Templates canonical source (a.k.a. source of truth - SOT)
+./scripts/bash/diff-shared.sh
+
+# Audit and initialize Git and GitHub repository configuration
+./scripts/bash/repo-setup.sh
+
+# Create a PR with vm2 conventions
+./scripts/bash/gh-pr-create.sh
+
+# Add SPDX license identifiers to the project files
+./scripts/bash/add-spdx.sh
+
+# Rename a Git branch
+./scripts/bash/rename-branch.sh
+```
+
+ShellCheck runs live in VSCode via the ShellCheck extension — do not run it from the CLI.
+
+## Three-File Script Convention
+
+Every CI/CD script in `.github/scripts/` and `scripts/bash/` usually consists of three files:
+
+```text
+script.sh        # Main executable — processes args, calls library functions
+script.usage.sh  # Help/usage text
+script.args.sh   # Argument parser — maps CLI args to script variables
+```
+
+New scripts must follow this pattern: `*.usage.sh` and `*.args.sh` should implement the boilerplate code for input and help
+text. Source `gh_core.sh` at the top for GitHub Actions integration.
+
+## Bash Library
+
+All library files live in `scripts/bash/lib/` and are sourced by scripts that need them:
+
+| File              | Purpose                                                          |
+|-------------------|------------------------------------------------------------------|
+| `core.sh`         | Initialization, trap handlers (sources `_*.sh` below)            |
+| `gh_core.sh`      | GitHub Actions environment integration (sources `core.sh`)       |
+| `_args.sh`        | Argument parsing (quiet, verbose, dry-run, trace modes)          |
+| `_diagnostics.sh` | Logging (`to_stdout`, `error`, `warning`, `trace`, etc.)         |
+| `_sanitize.sh`    | Input validation (`is_safe_path`, `is_safe_configuration`, etc.) |
+| `_git.sh`         | Git operations                                                   |
+| `_git_vm2.sh`     | Git operations with focus on vm2 repos                           |
+| `_semver.sh`      | Semantic versioning utilities                                    |
+| `_predicates.sh`  | Boolean checks (`is_array`, `is_positive`, etc.)                 |
+| `_error_codes.sh` | Error code constants                                             |
+| `_constants.sh`   | ANSI color codes and a few other constants                       |
+| `_dotnet.sh`      | Manages the output of `dotnet build` command                     |
+| `_dump_vars.sh`   | Dumps the values of bash variables in a tabular format           |
+| `_user.sh`        | User interface primitives                                        |
+
+See `scripts/bash/lib/FUNCTIONS_REFERENCE.md` for the full function inventory.
+
+## Shared File Sync
+
+Files that are canonical in `vm2.Templates` (`.editorconfig`, `.github/CONVENTIONS.md`, `Directory.Build.props`, etc.) are
+synced here via `diff-shared.sh`. The mapping is in `scripts/bash/diff-shared.config.json`.
+
+**Do not edit synced files directly** without also updating the canonical source in `vm2.Templates`.
+
+## Documentation Reference
+
+| File                          | Covers                                           |
+|-------------------------------|--------------------------------------------------|
+| `docs/CONSUMER_GUIDE.md`      | Integrating vm2.DevOps into a consumer repo      |
+| `docs/ARCHITECTURE.md`        | Detailed workflow and script design              |
+| `docs/WORKFLOWS_REFERENCE.md` | All reusable workflows: inputs, outputs, secrets |
+| `docs/SCRIPTS_REFERENCE.md`   | CI/CD scripts: args and behavior                 |
+| `docs/CONFIGURATION.md`       | Required repository variables and secrets        |
+| `docs/RELEASE_PROCESS.md`     | MinVer versioning, prerelease and stable flows   |
+| `docs/DEVELOPER_WORKFLOW.md`  | Conventional Commits, PR process                 |
+| `docs/GIT_PLAYBOOK.md`        | Rebase-first workflow and git operations         |
+| `docs/ERROR_RECOVERY.md`      | Failure scenarios and recovery runbooks          |
+| `DEVOPS_WISHLIST.md`          | Roadmap for future DevOps improvements and ideas |
+| `README.md`                   | Overview of the project                          |

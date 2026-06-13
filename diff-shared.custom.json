@@ -9,7 +9,6 @@
     },
     "action_overrides": {
         "copilot-instructions.md": "ignore",
-        "settings.json": "ignore",
         "CI.yaml": "ignore",
         "Prerelease.yaml": "ignore",
         "Release.yaml": "ignore",
