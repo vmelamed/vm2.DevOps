@@ -59,7 +59,7 @@ declare -rxi err_logic_error
 #===============================
 # arguments:
 #===============================
-declare -x vm2_repos="${VM2_REPOS:-}"
+declare -x vm2_repos="${VM2_REPOS:-$HOME/repos/vm2}"
 declare -x vm2_sot_repo_name
 declare -x sot=$default_sot
 declare -xa common_args
