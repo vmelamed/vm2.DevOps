@@ -369,7 +369,6 @@ function get_table_format()
 }
 
 declare -x usage_requested=""
-declare -x vm2_option="${VM2_REPOS:-}"
 
 #-------------------------------------------------------------------------------
 # Summary: Processes common command-line arguments like --quiet, --verbose, --trace, --dry-run.
@@ -399,8 +398,8 @@ function get_common_arg()
     run_long_usage=false
 
     case "${1,,}" in
-        --help          ) usage true;;
-        -h|-\?          ) usage false;;
+        --help          ) usage_requested="long";;
+        -h|-\?          ) usage_requested="short";;
         -v|--verbose    ) set_verbose ;;
         -q|--quiet      ) set_quiet ;;
         -x|--trace      ) set_trace_enabled ;;
