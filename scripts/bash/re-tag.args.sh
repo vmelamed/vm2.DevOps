@@ -8,6 +8,11 @@ declare -xr lib_dir
 
 declare -rxi err_missing_argument
 
+declare -x delete_mode
+declare -x del_tag
+declare -x old_tag
+declare -x new_tag
+
 function dump_all_variables()
 {
     dump_vars --quiet \

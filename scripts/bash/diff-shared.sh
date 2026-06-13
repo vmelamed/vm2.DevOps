@@ -23,6 +23,7 @@ declare -rx lib_dir
 # Imported constants
 #===============================
 # imported environment variables and defaults:
+declare -x _ignore
 declare -rx default_sot
 declare -rxa sources_of_truth
 declare -rxa vm2_repositories
@@ -46,16 +47,22 @@ declare -rxi err_repo_with_no_ci
 declare -rxi err_dir_with_no_ci
 declare -rxi err_not_git_directory
 declare -rxi err_dir_with_ci
+declare -rxi err_logic_error
 
-source "${script_dir}/diff-shared.functions.sh"
-source "${script_dir}/diff-shared.args.sh"
-source "${script_dir}/diff-shared.usage.sh"
+# shellcheck disable=SC1091
+{
+    source "${script_dir}/diff-shared.functions.sh"
+    source "${script_dir}/diff-shared.args.sh"
+    source "${script_dir}/diff-shared.usage.sh"
+}
 
 #===============================
 # arguments:
 #===============================
 declare -x vm2_repos="${VM2_REPOS:-}"
+declare -x vm2_sot_repo_name
 declare -x sot=$default_sot
+declare -xa common_args
 declare -xa target_repos=()         # the target repositories specified as arguments. If not specified, the current directory is used as the only target repo.
 declare -xA selectors_actions=()    # array [file] => [action string] for files specified on the CLI with --file* options
 declare -x diff_only="false"        # if true, only show the differences without asking the user to take any actions. This is useful for CI validation of the shared content. In this mode, the actions are ignored and the summary file will not contain the Action column.
@@ -64,6 +71,7 @@ declare -x summary_file=""          # the file where the summary of the differen
 #===============================
 # Script shared variables:
 #===============================
+declare -x action_ignore action_merge_or_copy action_ask_to_merge action_ask_to_copy action_merge action_copy
 declare -xi rc="$success"
 declare -xa arguments=(             # array of all arguments for logging and debugging purposes
     vm2_repos

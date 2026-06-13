@@ -66,11 +66,14 @@ declare -xi github_actions_app_id=0
 
 declare -x vm2=""
 
-source "${script_dir}/repo-setup.args.sh"
-source "${script_dir}/repo-setup.usage.sh"
-source "${script_dir}/repo-setup.defaults.sh"
-source "${script_dir}/repo-setup.functions.sh"
-source "${script_dir}/repo-setup.audit.sh"
+# shellcheck disable=SC1091
+{
+    source "${script_dir}/repo-setup.args.sh"
+    source "${script_dir}/repo-setup.usage.sh"
+    source "${script_dir}/repo-setup.defaults.sh"
+    source "${script_dir}/repo-setup.functions.sh"
+    source "${script_dir}/repo-setup.audit.sh"
+}
 
 get_arguments "$@"
 
