@@ -91,7 +91,7 @@ jobs:
         if: failure()
         shell: bash
         env:
-          REFRESH_WF_URL: ${{ github.server_url }}/${{ github.repository }}/actions/workflows/RefreshLockfiles.yaml
+          REFRESH_WF_URL: ${{ github.server_url }}/${{ github.repository }}/actions/workflows/RefreshLockFiles.yaml
         run: |
           if dotnet restore --locked-mode 2>&1 | grep -q "NU1004"; then
               {
