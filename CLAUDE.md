@@ -1,5 +1,21 @@
 # CLAUDE.md
 
+<!-- TOC tocDepth:2..3 chapterDepth:2..6 -->
+
+- [CLAUDE.md](#claudemd)
+  - [Project Context](#project-context)
+  - [What This Repository Is](#what-this-repository-is)
+  - [Architecture](#architecture)
+  - [Key Directories](#key-directories)
+  - [Common Local Commands](#common-local-commands)
+  - [Script Filenames Base Convention: `<action>-<target>`](#script-filenames-base-convention-action-target)
+  - [Three-File Script Convention](#three-file-script-convention)
+  - [Bash Library](#bash-library)
+  - [Shared File Sync](#shared-file-sync)
+  - [Documentation Reference](#documentation-reference)
+
+<!-- /TOC -->
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 @~/.claude/CLAUDE.md
@@ -12,7 +28,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Context
 
-This is a solo project — Val Melamed is currently the only developer. There is no team. This affects prioritization (correctness still matters; urgency and process overhead do not).
+Val is currently the only developer on this project. There is no team. This affects prioritization (correctness still matters; urgency and process overhead do not).
 
 ## What This Repository Is
 
@@ -73,26 +89,30 @@ See `docs/ARCHITECTURE.md` for the full design and `docs/WORKFLOWS_REFERENCE.md`
 ./scripts/bash/setup-repo.sh
 
 # Create a PR with vm2 conventions
-./scripts/bash/gh-pr-create.sh
+./scripts/bash/gh-create-pr.sh
 ```
 
 ShellCheck runs live in VSCode via the ShellCheck extension — do not run it from the CLI.
 
+## Script Filenames Base Convention: `<action>-<target>`
+
+The first part of the script (`script`) should follow the convention <action>-<target> (or <verb>-<noun>), where `<action>` describes the action the script performs and `<target>` describes the target or context of the action. For example, `setup-repo*.sh` for a script that sets up the repository or `diff-shared*.sh` for the script that compares files with shared content between the canonical source and the local repository.
+
 ## Three-File Script Convention
 
-Every CI/CD script in `.github/scripts/` consists of three files:
+Every CI/CD script in `.github/scripts/` should consist of three files:
 
 ```text
-script.sh        # Main executable — processes args, calls library functions
-script.usage.sh  # Help/usage text
-script.args.sh   # Argument parser — maps CLI args to script variables
+action-target.sh        # Main executable — processes args, calls library functions
+action-target.usage.sh  # Help/usage text
+action-target.args.sh   # Argument parser — maps CLI args to script variables
 ```
 
-New scripts must follow this pattern: `*.usage.sh` and `*.args.sh` should implement the boilerplate code for input and help text. Source `gh_core.sh` at the top for GitHub Actions integration.
+New scripts should follow the pattern: `*.usage.sh` and `*.args.sh` and should implement the boilerplate code for input and help text. Source `gh_core.sh` at the top for GitHub Actions integration.
 
 ## Bash Library
 
-All library files live in `scripts/bash/lib/` and are sourced by scripts that need them:
+All core library files live in `scripts/bash/lib/` and are sourced by scripts that need them:
 
 | File              | Purpose                                                          |
 |-------------------|------------------------------------------------------------------|
