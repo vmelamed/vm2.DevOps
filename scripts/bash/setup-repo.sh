@@ -68,11 +68,11 @@ declare -x vm2=""
 
 # shellcheck disable=SC1091
 {
-    source "${script_dir}/repo-setup.args.sh"
-    source "${script_dir}/repo-setup.usage.sh"
-    source "${script_dir}/repo-setup.defaults.sh"
-    source "${script_dir}/repo-setup.functions.sh"
-    source "${script_dir}/repo-setup.audit.sh"
+    source "${script_dir}/setup-repo.args.sh"
+    source "${script_dir}/setup-repo.usage.sh"
+    source "${script_dir}/setup-repo.defaults.sh"
+    source "${script_dir}/setup-repo.functions.sh"
+    source "${script_dir}/setup-repo.audit.sh"
 }
 
 get_arguments "$@"

@@ -35,10 +35,10 @@ predicate command, run an action command. LINQ over the repo fleet: `all_repos.W
   config-driven pipeline (the inner-platform effect: reinventing bash inside bash, badly).
 
 **Why:** The pattern has appeared three times (rebuild-bench-history dispatch, diff-shared targets, fleet-wide
-repo-setup runs). The win is the standardized env contract + summary + dry-run, not the loop itself.
+setup-repo runs). The win is the standardized env contract + summary + dry-run, not the loop itself.
 
 **Trigger:** The next time a fleet-wide loop gets hand-written — e.g., rolling out the new git settings via
-`foreach-repo.sh -- repo-setup.sh --audit`.
+`foreach-repo.sh -- setup-repo.sh --audit`.
 **Effort:** ~Half a day including docs.
 
 ## 3. DevOps for vm2.DevOps — ShellCheck, tests, PR gates

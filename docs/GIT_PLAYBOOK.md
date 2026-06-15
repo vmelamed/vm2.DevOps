@@ -61,7 +61,7 @@ back into "unresolved conflicts". Repeat that loop a few times and it is 4:30am.
 3. Resolve only unmerged files listed by Git
 4. **Never hand-resolve generated files** (`packages.lock.json` etc.) — take a side and regenerate.
 
-   In repos set up by `repo-setup.sh` this is automatic: the `nugetlock` merge driver (bound via `.gitattributes`)
+   In repos set up by `setup-repo.sh` this is automatic: the `nugetlock` merge driver (bound via `.gitattributes`)
    takes the incoming side, so lockfile conflicts never stop a rebase or merge — you only see a reminder like
    `vm2: 'packages.lock.json' auto-resolved (took the incoming side) - regenerate with: dotnet restore --force-evaluate`.
    **The reminder is not optional**: regenerate before pushing, or CI's locked-mode restore will fail with `NU1004`.
@@ -99,10 +99,10 @@ Never mix operations:
 
 ## 2) Safe Git Config + Aliases
 
-### Per-repo settings (enforced by repo-setup.sh)
+### Per-repo settings (enforced by setup-repo.sh)
 
-The per-repo Git settings are **enforced by `repo-setup.sh`** from the `default_local_git_settings` table in
-`scripts/bash/repo-setup.defaults.sh` — **that table is the source of truth**, not this document. Run `repo-setup.sh` after
+The per-repo Git settings are **enforced by `setup-repo.sh`** from the `default_local_git_settings` table in
+`scripts/bash/setup-repo.defaults.sh` — **that table is the source of truth**, not this document. Run `setup-repo.sh` after
 cloning a vm2 repo (or against an existing clone to re-sync). What it applies and why:
 
 | Setting                  | Value                                    | Why it matters                                                              |

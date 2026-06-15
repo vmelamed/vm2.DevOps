@@ -21,7 +21,7 @@
 *.xml text eol=lf
 
 # NuGet lockfiles are generated — never merge them by hand. The 'nugetlock' merge driver (defined locally by
-# repo-setup.sh as merge.nugetlock.*) takes the incoming side; regenerate with 'dotnet restore --force-evaluate'.
+# setup-repo.sh as merge.nugetlock.*) takes the incoming side; regenerate with 'dotnet restore --force-evaluate'.
 # Without the driver configured, git falls back to the normal text merge.
 packages.lock.json merge=nugetlock
 

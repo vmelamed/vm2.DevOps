@@ -62,7 +62,7 @@ The action for each file is specified in:
                  │   └─ scripts/
                  │      └─ bash/
                  │         ├── diff-shared.sh      <- the diff-shared.sh script
-                 │         ├── repo-setup.sh
+                 │         ├── setup-repo.sh
                  │         ├── ...
                  │
                  ├── vm2.Templates/
@@ -96,7 +96,7 @@ The action for each file is specified in:
 1. The target directory either **is** or **will become** a **git repository** with CI workflows configured (GitHub Actions workflow templates) in `.github/workflows/`. This is automatically true for repositories created with the `dotnet new vm2pkg` template.
 
     > [!NOTE]
-    > Immediately after creating a new NuGet package project, consider running the script `repo-setup.sh` (adjacent to `diff-shared.sh` in the `vm2.DevOps` repo) to create and set up its GitHub repository with the correct structure and content, including the CI workflow templates, variables, secrets, rules and protections.
+    > Immediately after creating a new NuGet package project, consider running the script `setup-repo.sh` (adjacent to `diff-shared.sh` in the `vm2.DevOps` repo) to create and set up its GitHub repository with the correct structure and content, including the CI workflow templates, variables, secrets, rules and protections.
 
 1. The SoT files are located in the *vm2.Templates* repository, already cloned under the vm2 parent, e.g. in `$VM2_REPOS/vm2.Templates/templates/<sot>/content/`. The vm2.Templates repository **must** be in sync with its Git remote.
 1. Both the target files and their SoT counterparts are **predefined**. The files are specified as relative paths in both locations. The predefined set is in `diff-shared.config.json` in the SoT directory; its actions can be overridden by `diff-shared.custom.json` in the target repository or by CLI parameters.

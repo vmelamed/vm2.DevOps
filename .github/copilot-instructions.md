@@ -64,7 +64,7 @@ See `docs/ARCHITECTURE.md` for the full design and `docs/WORKFLOWS_REFERENCE.md`
 | `.github/scripts/`     | CI/CD action scripts (three-file convention — see below)             |
 | `.github/actions/`     | Custom composite actions (`setup-env`, `cache-dependencies`, etc.)   |
 | `scripts/bash/lib/`    | Shared bash library (`_diagnostics.sh`, `_git.sh`, `_args.sh`, etc.) |
-| `scripts/bash/`        | Local dev utility scripts (`diff-shared.sh`, `repo-setup.sh`, etc.)  |
+| `scripts/bash/`        | Local dev utility scripts (`diff-shared.sh`, `setup-repo.sh`, etc.)  |
 | `docs/`                | Reference documentation (12 `.md` files)                             |
 
 ## Common Local Development Commands
@@ -74,7 +74,7 @@ See `docs/ARCHITECTURE.md` for the full design and `docs/WORKFLOWS_REFERENCE.md`
 ./scripts/bash/diff-shared.sh
 
 # Audit and initialize Git and GitHub repository configuration
-./scripts/bash/repo-setup.sh
+./scripts/bash/setup-repo.sh
 
 # Create a PR with vm2 conventions
 ./scripts/bash/gh-pr-create.sh
