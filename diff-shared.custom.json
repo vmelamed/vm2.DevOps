@@ -15,7 +15,7 @@
         "Directory.Build.props": "ignore",
         "Directory.Packages.props": "ignore",
         "ClearCache.yaml": "ignore",
-        "RefreshLockfiles.yaml": "ignore",
+        "RefreshLockFiles.yaml": "ignore",
         "AutoMerge.yaml": "ignore",
         "RebuildBenchHistory.yaml": "ignore",
         "dependabot.yml": "ignore",
