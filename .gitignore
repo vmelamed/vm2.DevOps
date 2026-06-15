@@ -432,3 +432,6 @@ _ignore
 examples/*.lock.json
 examples/**/obj/
 examples/**/bin/
+
+# Local settings for Claude AI
+.claude/

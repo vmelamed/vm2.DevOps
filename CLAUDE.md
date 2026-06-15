@@ -42,7 +42,7 @@ CI.yaml ───────┬───────► actions/gather-inputs/a
 
 Prerelease.yaml ───────► _prerelease.yaml ───────────────┬─► compute-prerelease-version.sh ─►
                                                          ├─► changelog-and-tag.sh ──────────►
-                                                         └─► publish-package.s ─────────────►
+                                                         └─► publish-package.sh ────────────►
 
 Release.yaml ──────────► _release.yaml ──────────────────┬─► compute-release-version.sh ────►
                                                          ├─► changelog-and-tag.sh ──────────►
