@@ -77,7 +77,7 @@ See `docs/ARCHITECTURE.md` for the full design and `docs/WORKFLOWS_REFERENCE.md`
 ./scripts/bash/setup-repo.sh
 
 # Create a PR with vm2 conventions
-./scripts/bash/gh-pr-create.sh
+./scripts/bash/gh-create-pr.sh
 
 # Add SPDX license identifiers to the project files
 ./scripts/bash/add-spdx.sh

@@ -2,13 +2,13 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025-2026 Val Melamed
 #
-# gh pr-create — create a PR with commit messages auto-populated.
-# Registered as a gh alias:  gh alias set --shell pr-create 'bash "<path>/gh-pr-create.sh" "$@"'
+# gh create-pr — create a PR with commit messages auto-populated.
+# Registered as a gh alias:  gh alias set --shell create-pr 'bash "<path>/create-pr.sh" "$@"'
 #
-# Usage: gh pr-create [gh-pr-create-flags...]
-# Example: gh pr-create --web
-#          gh pr-create --reviewer someone
-#          gh pr-create --fill
+# Usage: gh create-pr [gh-create-pr-flags...]
+# Example: gh create-pr --web
+#          gh create-pr --reviewer someone
+#          gh create-pr --fill
 
 set -euo pipefail
 
