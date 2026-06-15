@@ -1,4 +1,4 @@
-# Copilot Instructions for vm2.MyPackage
+# Copilot Instructions for vm2.DevOps
 
 ## Shared Conventions
 
@@ -11,15 +11,7 @@ use the same source of truth.
 
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-@~/.claude/CLAUDE.md
-@~/repos/vm2/CLAUDE.md
-@.github/CONVENTIONS.md
-@docs/ARCHITECTURE.md
-@docs/WORKFLOWS_REFERENCE.md
-@docs/GIT_PLAYBOOK.md
-@docs/RELEASE_PROCESS.md
+This file provides guidance to Copilot when working with code in this repository.
 
 ## Project Context
 
@@ -54,7 +46,7 @@ CI.yaml ───────┬───────► actions/gather-inputs/a
 
 Prerelease.yaml ───────► _prerelease.yaml ───────────────┬─► compute-prerelease-version.sh ─►
                                                          ├─► changelog-and-tag.sh ──────────►
-                                                         └─► publish-package.s ─────────────►
+                                                         └─► publish-package.sh ────────────►
 
 Release.yaml ──────────► _release.yaml ──────────────────┬─► compute-release-version.sh ────►
                                                          ├─► changelog-and-tag.sh ──────────►
@@ -62,7 +54,7 @@ Release.yaml ──────────► _release.yaml ──────�
 
 ```
 
-See `$VM2_REPOS/vm2.DevOps/docs/ARCHITECTURE.md` for the full design and `$VM2_REPOS/vm2.DevOps/docs/WORKFLOWS_REFERENCE.md` for workflow inputs/outputs.
+See `docs/ARCHITECTURE.md` for the full design and `docs/WORKFLOWS_REFERENCE.md` for workflow inputs/outputs.
 
 ## Key Directories
 
@@ -134,8 +126,8 @@ See `scripts/bash/lib/FUNCTIONS_REFERENCE.md` for the full function inventory.
 
 ## Shared File Sync
 
-Files that are canonical in `vm2.Templates` (`.editorconfig`, `.github/CONVENTIONS.md`, `Directory.Build.props`, etc.) are
-synced here via `diff-shared.sh`. The mapping is in `scripts/bash/diff-shared.config.json`.
+Files that are canonical in the `vm2.Templates` repo (`.editorconfig`, `.github/CONVENTIONS.md`, `Directory.Build.props`, etc.)
+are synced here via `diff-shared.sh`. The mapping is in `vm2.Templates/templates/AddNewPackage/content/diff-shared.config.json`.
 
 **Do not edit synced files directly** without also updating the canonical source in `vm2.Templates`.
 
