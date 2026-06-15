@@ -11,7 +11,7 @@ use the same source of truth.
 
 # CLAUDE.md
 
-This file provides guidance to Copilot when working with code in this repository.
+The file provides guidance to Claude AND Copilot when working with code in this repository.
 
 ## Project Context
 
@@ -42,7 +42,7 @@ CI.yaml ───────┬───────► actions/gather-inputs/a
                                    ├──► _build.yaml ───────► build.sh ──────────────────────►
                                    ├──► _test.yaml ────────► run-tests.sh ──────────────────►
                                    ├──► _benchmarks.yaml ──► run-benchmarks.sh ─────────────►
-                                   └──► _pack.yaml ────────► pack.s ────────────────────────►
+                                   └──► _pack.yaml ────────► pack.sh ───────────────────────►
 
 Prerelease.yaml ───────► _prerelease.yaml ───────────────┬─► compute-prerelease-version.sh ─►
                                                          ├─► changelog-and-tag.sh ──────────►

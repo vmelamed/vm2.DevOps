@@ -38,7 +38,7 @@ CI.yaml ───────┬───────► actions/gather-inputs/a
                                    ├──► _build.yaml ───────► build.sh ──────────────────────►
                                    ├──► _test.yaml ────────► run-tests.sh ──────────────────►
                                    ├──► _benchmarks.yaml ──► run-benchmarks.sh ─────────────►
-                                   └──► _pack.yaml ────────► pack.s ────────────────────────►
+                                   └──► _pack.yaml ────────► pack.sh ───────────────────────►
 
 Prerelease.yaml ───────► _prerelease.yaml ───────────────┬─► compute-prerelease-version.sh ─►
                                                          ├─► changelog-and-tag.sh ──────────►
