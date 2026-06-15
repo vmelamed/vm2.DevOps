@@ -217,7 +217,7 @@ declare -xA default_local_git_settings=(
     # same side as 'git checkout --theirs'), so a lockfile conflict never stops a rebase or merge; the file
     # must still be regenerated with 'dotnet restore --force-evaluate' before pushing (CI's locked-mode
     # restore catches a forgotten regeneration). In repos where the driver is not configured (clone without
-    # repo-setup.sh), git falls back to the normal text merge — same behavior as before.
+    # setup-repo.sh), git falls back to the normal text merge — same behavior as before.
     ["merge.nugetlock.name"]="NuGet lockfile - take the incoming side and regenerate"
     ["merge.nugetlock.driver"]='cp -f %B %A && echo "vm2: %P auto-resolved (took the incoming side) - regenerate with: dotnet restore --force-evaluate" >&2'
 )

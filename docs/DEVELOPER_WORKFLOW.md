@@ -517,7 +517,7 @@ git config commit.template ~/repos/vm2/vm2.DevOps/scripts/githooks/.gitmessage
 ```
 
 > [!NOTE]
-> `repo-setup.sh` configures both settings automatically via `git config --local` on first run.
+> `setup-repo.sh` configures both settings automatically via `git config --local` on first run.
 > You only need the commands above if you set up a clone manually.
 
 Both settings in one go:
@@ -1155,7 +1155,7 @@ The rebase workflow naturally prevents stepping on each other's work:
 
 ### Settings to Enable First
 
-Run these once per clone (or let `repo-setup.sh` do it):
+Run these once per clone (or let `setup-repo.sh` do it):
 
 ```bash
 git config --local core.hooksPath ~/repos/vm2/vm2.DevOps/scripts/githooks

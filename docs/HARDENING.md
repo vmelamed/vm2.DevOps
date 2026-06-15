@@ -108,7 +108,7 @@ These own the version-bump logic and are the highest-risk scripts in the repo.
 
 ### Layer 5 — Top-level orchestrators  *(integration, mock filesystem)*
 
-`diff-shared.sh`, `repo-setup.sh`, `validate-input.sh`
+`diff-shared.sh`, `setup-repo.sh`, `validate-input.sh`
 
 - Use `BATS_TMPDIR` for scratch repos; stub network calls.
 - Focus on argument-validation paths and error-exit codes rather than end-to-end execution.

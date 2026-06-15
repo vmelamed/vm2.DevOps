@@ -173,7 +173,7 @@ postrun-ci:
 - `needs` covers all upstream jobs so any failure is caught
 - Branch rulesets match against the bare check-run name (Postrun-CI), not the UI-decorated form
   (CI: Build, Test, Benchmark, Pack / Postrun-CI (pull_request))
-- The gate job name is extracted by `repo-setup.sh` → `detect_required_checks()` which parses the consumer's CI.yaml for the
+- The gate job name is extracted by `setup-repo.sh` → `detect_required_checks()` which parses the consumer's CI.yaml for the
   gate job's name: property and registers it in the branch ruleset
 
 #### Test (`_test.yaml`)
@@ -321,7 +321,7 @@ Development-time scripts not used in CI:
 | `diff-shared.sh`            | Diff common files across vm2 repos         |
 | `local-git-config.sh`       | Bootstrap local Git config for vm2 work    |
 | `move-commits-to-branch.sh` | Move commits from one branch to another    |
-| `repo-setup.sh`             | Bootstrap and configure a new GitHub repo  |
+| `setup-repo.sh`             | Bootstrap and configure a new GitHub repo  |
 | `add-spdx.sh`               | Add SPDX license headers to source files   |
 | `retag.sh`                  | Recreate a Git tag at a different commit   |
 | `restore-force-eval.sh`     | Force re-evaluation of NuGet restore       |

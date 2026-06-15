@@ -32,7 +32,7 @@
     - [Secrets](#secrets)
     - [Variables](#variables)
     - [Copilot Code Review](#copilot-code-review)
-  - [Repository Setup using `repo-setup.sh`](#repository-setup-using-repo-setupsh)
+  - [Repository Setup using `setup-repo.sh`](#repository-setup-using-setup-reposh)
   - [Running the Script `local-git-config.sh`](#running-the-script-local-git-configsh)
 
 <!-- /TOC -->
@@ -324,7 +324,7 @@ secrets:
 
 ## Repository Setup via UI
 
-The `repo-setup.sh` script automates the steps below. If you prefer to configure it
+The `setup-repo.sh` script automates the steps below. If you prefer to configure it
 manually, or need to verify/adjust settings on an existing repo, follow these steps.
 
 ### Repository Settings
@@ -346,7 +346,7 @@ manually, or need to verify/adjust settings on an existing repo, follow these st
 
 **Settings → Rules → Rulesets → New ruleset:**
 
-1. **Ruleset Name:** `main protection` (the name is mandatory - expected by the audit option of `repo-setup.sh`)
+1. **Ruleset Name:** `main protection` (the name is mandatory - expected by the audit option of `setup-repo.sh`)
 1. **Enforcement status:** Active
 1. **Bypass list:** click **+ Add bypass** and choose:
 
@@ -377,7 +377,7 @@ manually, or need to verify/adjust settings on an existing repo, follow these st
      - ✔️ Review new pushes
      - ✔️ Review draft pull requests (Optional)
 
-Unfortunately, only the script `repo-setup.sh` can automatically configure the required status checks for branch
+Unfortunately, only the script `setup-repo.sh` can automatically configure the required status checks for branch
 protection rules using the GitHub API and parameters that are otherwise not exposed in the GitHub UI. The idea is that
 there is one final "dummy" job "Postrun-CI" that depends on all other jobs and reports a single, stable check name that
 can be used in the branch protection rules. However in certain PR scenarios it registers a false negative which is
@@ -430,9 +430,9 @@ Actions standard `ACTIONS_RUNNER_DEBUG` and `ACTIONS_STEP_DEBUG` variables for d
 1. Enable ✔️ **Copilot code review** to automatically review pull requests
 2. This is advisory only — it does not block merging
 
-## Repository Setup using `repo-setup.sh`
+## Repository Setup using `setup-repo.sh`
 
-The `repo-setup.sh` script automates the repository setup steps outlined above, including:
+The `setup-repo.sh` script automates the repository setup steps outlined above, including:
 
 - Checking prerequisites (GitHub CLI, API access, etc.)
 - Initializing a new repository if the specified path is not already a git repository but contains a valid `CI.yaml`
@@ -445,7 +445,7 @@ It can be safely re-run to fix any drift or misconfiguration that may occur over
 audit result may look like this:
 
 ```text
-❯ repo-setup.sh vm2.SemVer -a
+❯ setup-repo.sh vm2.SemVer -a
 ℹ️  INFO: Git repository path            => /home/valo/repos/vm2/vm2.SemVer
 ℹ️  INFO: GitHub repository              => vmelamed/vm2.SemVer
 ℹ️  INFO: GitHub repository Id           => 1199917173

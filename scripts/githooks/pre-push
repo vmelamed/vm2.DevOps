@@ -4,7 +4,7 @@
 
 # Git pre-push hook: warns if a dotnet-sdk upgrade is pending via apt.
 # Skipped silently on non-apt systems (Mac, Windows, custom installs).
-# Install: git config core.hooksPath path/to/vm2.DevOps/scripts/githooks (also with repo-setup.sh)
+# Install: git config core.hooksPath path/to/vm2.DevOps/scripts/githooks (also with setup-repo.sh)
 
 set -euo pipefail
 

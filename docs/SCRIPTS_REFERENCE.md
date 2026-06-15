@@ -25,7 +25,7 @@
     - [download-artifact.sh](#download-artifactsh)
     - [rebuild-bench-history.sh](#rebuild-bench-historysh)
     - [rebuild-bench-history-run.sh](#rebuild-bench-history-runsh)
-    - [repo-setup.sh](#repo-setupsh)
+    - [setup-repo.sh](#setup-reposh)
 
 <!-- /TOC -->
 
@@ -507,7 +507,7 @@ Per-repo run loop: discovers every benchmark project under `benchmarks/` (recurs
 
 ---
 
-### repo-setup.sh
+### setup-repo.sh
 
 Bootstraps and configures a vm2 package repository using the GitHub CLI. Creates the repo,
 sets secrets/variables, configures repo settings, Actions permissions, and branch protection.
