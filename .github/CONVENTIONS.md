@@ -1,32 +1,5 @@
 # vm2 Shared Conventions
 
-<!-- TOC tocDepth:2..3 chapterDepth:2..6 -->
-
-- [vm2 Shared Conventions](#vm2-shared-conventions)
-  - [For AI Coding Assistants](#for-ai-coding-assistants)
-    - [Code Generation and File Editing](#code-generation-and-file-editing)
-    - [PR Review](#pr-review)
-    - [Language and Writing Quality](#language-and-writing-quality)
-  - [Project Structure](#project-structure)
-  - [Dependency Management](#dependency-management)
-  - [General C# Coding Conventions](#general-c-coding-conventions)
-  - [Async](#async)
-  - [Services (if applicable)](#services-if-applicable)
-  - [Error Handling](#error-handling)
-  - [Testing](#testing)
-  - [Performance Benchmarks](#performance-benchmarks)
-  - [Performance](#performance)
-  - [Security](#security)
-  - [Naming](#naming)
-  - [AOT and Trimming](#aot-and-trimming)
-  - [Git and PR Hygiene](#git-and-pr-hygiene)
-  - [Documentation](#documentation)
-    - [Markdown](#markdown)
-  - [File Modification](#file-modification)
-  - [CI / GitHub Actions](#ci--github-actions)
-
-<!-- /TOC -->
-
 The *vm2* family of repositories (packages, solutions, etc.) **share a common set of conventions** for the directory
 structure, project structure, coding style, documentation style, Git and PR hygiene, and more. This file documents these
 shared conventions to ensure **consistency across all repositories** and to provide guidance for contributors.

@@ -1,30 +1,17 @@
 # CLAUDE.md
 
-<!-- TOC tocDepth:2..3 chapterDepth:2..6 -->
-
-- [CLAUDE.md](#claudemd)
-  - [Project Context](#project-context)
-  - [What This Repository Is](#what-this-repository-is)
-  - [Architecture](#architecture)
-  - [Key Directories](#key-directories)
-  - [Common Local Commands](#common-local-commands)
-  - [Script Filenames Base Convention: `<action>-<target>`](#script-filenames-base-convention-action-target)
-  - [Three-File Script Convention](#three-file-script-convention)
-  - [Bash Library](#bash-library)
-  - [Shared File Sync](#shared-file-sync)
-  - [Documentation Reference](#documentation-reference)
-
-<!-- /TOC -->
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 @~/.claude/CLAUDE.md
 @~/repos/vm2/CLAUDE.md
 @.github/CONVENTIONS.md
+
+Additional references:
+
 @docs/ARCHITECTURE.md
 @docs/WORKFLOWS_REFERENCE.md
 @docs/GIT_PLAYBOOK.md
 @docs/RELEASE_PROCESS.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Context
 
