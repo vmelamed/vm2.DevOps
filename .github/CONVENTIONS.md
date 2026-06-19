@@ -116,7 +116,8 @@ The project owner is a non-native English speaker.
 - **Consider `Result<T>` for expected failure modes** instead of exceptions
 - **Never use exceptions for expected control flow** (e.g. not-found) — prefer `Result<T>`
 - **Exceptions for unrecoverable failures only** (e.g. `ArgumentException`)
-- `Try<MethodName>` patterns over broad exception-based control flow
+- `Try<MethodName>` patterns over broad exception-based control flow; use `TryParse` / `TryFormat` at system
+  boundaries (user input, external APIs) — `Parse` / `Format` for trusted internal call sites
 - **Never swallow exceptions** — at minimum log or rethrow
 - **Never log sensitive data** (PII, secrets)
 - **Use logger scopes** for contextual information; never string concatenation in log messages
