@@ -18,7 +18,6 @@ declare -xr lib_dir
 # shellcheck disable=SC1091
 {
     source "$lib_dir/core.sh"
-    source "$lib_dir/_sanitize.sh"
     source "$lib_dir/_git_vm2.sh"
 }
 
@@ -77,8 +76,6 @@ declare -x vm2=""
 
 get_arguments "$@"
 
-repo_path="${repo_path:-$(pwd)}"
-
 #-------------------------------------------------------------------------------
 # Check the prerequisites
 #-------------------------------------------------------------------------------
@@ -96,18 +93,20 @@ declare -xi rc="$success"
 #===============================
 # Find and validate vm2_repos:
 #===============================
-vm2_repos=$(resolve_vm2_repos "$vm2_repos") ||
+vm2_repos=$(resolve_vm2_repos "$vm2_repos") || {
+    rc=$?
     usage -ec "$rc" "Could not find the parent directory for the vm2 repositories." \
                     "Please, set the VM2_REPOS environment variable or provide the path as an argument with '--vm2-repos' option."
-
+}
 trace "All vm2 repositories are expected to be in '$vm2_repos'"
-init_default_local_git_settings "$vm2_repos"
+
+init_default_local_git_settings "$vm2_repos" # make sure that $default_local_git_settings is fully initialized with the vm2.DevOps hooks and SOT .gitmessage
 
 sot_path=$(get_vm2_sot_path "$vm2_repos" "$sot")
 
 # make sure we are seeing the templates and vm2.DevOps properly through vm2_repos
 [[ -d "$sot_path" && -d "$vm2_repos/$vm2_devops_repo_name" ]] ||
-    usage -ec "$err_not_found" "The GitHub Actions workflow templates directory .github and/or the '$vm2_devops_repo_name' directory is missing in '$vm2_repos', Please clone the repositories into '$vm2_repos'."
+    usage -ec "$err_not_found" "The '$vm2_devops_repo_name' directory is missing in '$vm2_repos'. Please clone the repositories $vm2_devops_repo_name and $vm2_sot_repo_name into '$vm2_repos'."
 
 rc="$success"
 validate_repo_root "$vm2_repos" "$vm2_repos/$vm2_devops_repo_name" "main" || rc=$?
@@ -122,7 +121,8 @@ validate_repo_root "$vm2_repos" "$vm2_repos/$vm2_sot_repo_name" "main" || rc=$?
 declare -x _ci_yaml
 
 _ci_yaml="$vm2_repos/$vm2_devops_repo_name/.github/workflows/_ci.yaml"
-[[ -s "$_ci_yaml" ]] || error -ec "$err_logic_error" "Could not find _ci.yaml GitHub Actions reusable workflow file in ${vm2_repos}."
+[[ -s "$_ci_yaml" ]] ||
+    error -ec "$err_logic_error" "Could not find _ci.yaml GitHub Actions reusable workflow file in ${vm2_repos}."
 
 declare -xr _ci_yaml
 
@@ -131,11 +131,28 @@ exit_if_has_errors
 #-------------------------------------------------------------------------------
 # Resolve and validate repo_path:
 #-------------------------------------------------------------------------------
+
+if [[ -n "$repo_name" ]]; then
+    repo_path="${vm2_repos}/${repo_name}"
+    if [[ ! -d "$repo_path" ]]; then
+        usage -ec "$err_argument_value" -sd 3 "The specified repository '$repo_name' does not exist in '$vm2_repos'." \
+                                              "Please provide a valid repository name using '--repo-name <name>'."
+    fi
+else
+    repo_path="$(pwd)"
+    repo_name="$(basename "$repo_path")"
+    repo_dir="$(dirname "$repo_path")"
+    if [[ "$repo_dir" != "$vm2_repos" ]]; then
+        usage -ec "$err_argument_value" -sd 3 "The current directory '$repo_path' is not in '$vm2_repos'." \
+                                              "Please navigate to a directory within '$vm2_repos' or provide the name using '--repo-name <name>'."
+    fi
+fi
+
 rc="$success"
 output=$(resolve_repo_root "$vm2_repos" "$repo_path") || rc=$?
 
 is_in "$rc" "$success" "$err_dir_with_ci" ||
-    usage -ec "$err_argument_value" -sd 3 "Could not resolve the '$repo_path' within '$vm2_repos' to a Git initialized or not working tree root with configured CI. " \
+    usage -ec "$err_argument_value" -sd 3 "Could not resolve the '$repo_path' within '$vm2_repos' to a Git initialized repo; or to a directory that will become the Git repository with configured CI. " \
                                           "Please, specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2pkg <name>' to create a valid directory structure with CI configured."
 
 reset_errors
@@ -164,7 +181,8 @@ if has_local_repo repo_state; then
         warning "The repository path '$repo_path' is different from the repository root '${repo_state[$key_root]}' detected by git. Adjusting to the git-detected repository root."
         repo_path="${repo_state[$key_root]}"
         [[ -s "$repo_path/.github/workflows/CI.yaml" ]] ||
-            usage -ec "$err_repo_with_no_ci" "The git-detected repository path '$repo_path' is missing .github/workflows/CI.yaml. Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2.NewPkg' to create a valid directory structure."
+            usage -ec "$err_repo_with_no_ci" "The git-detected repository path '$repo_path' is missing .github/workflows/CI.yaml." \
+                                             "Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2.NewPkg' to create a valid directory structure."
         trace "repo_path='$repo_path' from git-detected repository root"
     fi
     info "Git repository path            => $repo_path"
@@ -215,11 +233,16 @@ declare -xr ci_yaml
 
 visibility="${visibility,,}"
 
-[[ -s "$ci_yaml" ]]                                      || error -ec "$err_logic_error" "The specified path '${repo_path}' is not a valid project/repository root (missing .github/workflows/CI.yaml). Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2pkg <name>' to create a valid directory."
-[[ -z $repo_name || $repo_name =~ $repo_name_regex ]]    || error -ec "$err_logic_error" "Could not determine repository name from the specified path '${repo_path}' or the name is invalid. Please specify a valid path to the root of the project/repository using '--path <path>'."
-[[ -z $repo_owner || $repo_owner =~ $repo_owner_regex ]] || error -ec "$err_logic_error" "Could not determine repository owner from the specified path '${repo_path}', or from the environment variable ORGANIZATION, or the owner name is invalid. Please specify a valid owner of the project/repository using '--owner <owner>' or set the ORGANIZATION environment variable."
-validate_branch_name "$branch" &> "$_ignore"             || error -ec "$err_logic_error" "Invalid branch name '${branch}'. Please specify a valid branch name using '--branch <branch>'."
-is_in "$visibility" "public" "private"                   || error -ec "$err_logic_error" "Invalid visibility '${visibility}'. Valid options are 'public', 'private', or 'internal'. Please specify a valid visibility using '--visibility <public|private|internal>'."
+[[ -s "$ci_yaml" ]]                                      || error -ec "$err_logic_error" "The specified path '${repo_path}' is not a valid project/repository root (missing .github/workflows/CI.yaml)." \
+                                                                                         "Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2pkg <name>' to create a valid directory."
+[[ -z $repo_name || $repo_name =~ $repo_name_regex ]]    || error -ec "$err_logic_error" "Could not determine repository name from the specified path '${repo_path}' or the name is invalid." \
+                                                                                         "Please specify a valid path to the root of the project/repository using '--path <path>'."
+[[ -z $repo_owner || $repo_owner =~ $repo_owner_regex ]] || error -ec "$err_logic_error" "Could not determine repository owner from the specified path '${repo_path}', or from the environment variable ORGANIZATION, or the owner name is invalid." \
+                                                                                         "Please specify a valid owner of the project/repository using '--owner <owner>' or set the ORGANIZATION environment variable."
+validate_branch_name "$branch" &> "$_ignore"             || error -ec "$err_logic_error" "Invalid branch name '${branch}'." \
+                                                                                         "Please specify a valid branch name using '--branch <branch>'."
+is_in "$visibility" "public" "private"                   || error -ec "$err_logic_error" "Invalid visibility '${visibility}'. Valid options are 'public', 'private', or 'internal'." \
+                                                                                         "Please specify a valid visibility using '--visibility <public|private|internal>'."
 
 exit_if_has_errors
 

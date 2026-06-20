@@ -110,7 +110,8 @@ is_in "$sot" "${sources_of_truth[@]}" || {
 #===============================
 vm2_repos=$(resolve_vm2_repos "$vm2_repos") || {
     rc=$?
-    usage -ec "$rc" "Could not find the parent directory for the vm2 repositories. Please, set the VM2_REPOS environment variable or provide the path as an argument with '--vm2-repos' option."
+    usage -ec "$rc" "Could not find the parent directory for the vm2 repositories." \
+                    "Please, set the VM2_REPOS environment variable or provide the path as an argument with '--vm2-repos' option."
 }
 trace "All vm2 repositories are expected to be in '$vm2_repos'"
 
