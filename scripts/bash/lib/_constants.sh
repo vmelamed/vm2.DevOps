@@ -37,6 +37,8 @@ declare -rxa vm2_repositories=(
     "vm2.Glob"
     "vm2.SemVer"
     "vm2.Linq.Expressions"
+    "vm2.Functional"
+    "vm2.Domain"
     "vm2.Abstractions"
     "vm2.Repository")
 
