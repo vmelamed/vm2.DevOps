@@ -87,7 +87,7 @@ jobs:
       needs-empty-commit: ${{ steps.version.outputs.needs-empty-commit }}
     steps:
       - name: Checkout (full history)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           filter: tree:0
@@ -111,7 +111,7 @@ jobs:
       - compute-version
     steps:
       - name: Checkout (full history on main)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_PAT }}
@@ -147,7 +147,7 @@ jobs:
     if: fromJSON(inputs.package-projects-len) > 0
     steps:
       - name: Checkout release tag (full history)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.compute-version.outputs.release-tag }}
           fetch-tags: true

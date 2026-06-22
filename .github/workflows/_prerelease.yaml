@@ -94,7 +94,7 @@ jobs:
       reason: ${{ steps.version.outputs.reason }}
     steps:
       - name: Checkout (full history)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.sha || github.sha }}
           fetch-depth: 0
@@ -121,7 +121,7 @@ jobs:
       - compute-version
     steps:
       - name: Checkout (full history on main)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_PAT }}
@@ -172,7 +172,7 @@ jobs:
       ARTIFACTS_DIR: artifacts/pack
     steps:
       - name: Checkout prerelease tag (full history)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.compute-version.outputs.prerelease-tag }}
           fetch-tags: true

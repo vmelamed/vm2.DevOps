@@ -84,11 +84,11 @@ jobs:
 
       - name: Install Bencher CLI
         if: steps.cache-bencher.outputs.cache-hit != 'true'
-        uses: bencherdev/bencher@v0.6.7
+        uses: bencherdev/bencher@v0.6.8
 
       # Clone the repository with full Git history (MinVer needs it)
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           filter: tree:0

@@ -60,7 +60,7 @@ jobs:
     steps:
       # Clone the repository with full Git history for version calculation
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           filter: tree:0

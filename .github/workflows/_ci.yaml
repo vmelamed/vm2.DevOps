@@ -122,7 +122,7 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - name: Checkout (full history for commit range)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           filter: tree:0
@@ -169,7 +169,7 @@ jobs:
     steps:
       # Clone the repository to access validation scripts
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup DevOps
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main

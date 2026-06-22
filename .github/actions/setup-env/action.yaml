@@ -7,7 +7,7 @@ runs:
     - name: Checkout vm2.DevOps scripts
       # Clone only the scripts from vm2.DevOps and invoke functions from scripts/bash/lib
       if: github.repository != 'vmelamed/vm2.DevOps'
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         repository: vmelamed/vm2.DevOps
         path: vm2-devops
