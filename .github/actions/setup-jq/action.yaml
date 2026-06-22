@@ -1,14 +1,14 @@
-name: "Setup jq"
-description: "Installs jq 1.8.x (latest) to replace the default jq on the runner"
+name: Setup jq
+description: Installs jq 1.8.x (latest) to replace the default jq on the runner
 
 inputs:
   version:
-    description: "jq version to install"
+    description: jq version to install
     required: false
-    default: "1.8.1"
+    default: 1.8.1
 
 runs:
-  using: "composite"
+  using: composite
   steps:
     - name: Install jq ${{ inputs.version }}
       shell: bash

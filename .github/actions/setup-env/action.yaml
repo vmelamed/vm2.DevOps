@@ -1,8 +1,8 @@
-name: "Setup DevOps Environment"
-description: "Provides access to vm2.DevOps bash scripts for CI/CD workflows"
+name: Setup DevOps Environment
+description: Provides access to vm2.DevOps bash scripts for CI/CD workflows
 
 runs:
-  using: "composite"
+  using: composite
   steps:
     - name: Checkout vm2.DevOps scripts
       # Clone only the scripts from vm2.DevOps and invoke functions from scripts/bash/lib

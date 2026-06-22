@@ -1,137 +1,137 @@
-name: "Gather CI Inputs"
+name: Gather CI Inputs
 description: >-
   Collects CI parameters from repo env, repository vars, and workflow_dispatch inputs,
   and exposes them as step outputs for the pre-run-ci job.
 
 inputs:
   build-projects:
-    description: "JSON array of solution/project paths to build."
+    description: JSON array of solution/project paths to build.
     default: "[]"
   test-projects:
-    description: "JSON array of test project paths to run."
+    description: JSON array of test project paths to run.
     default: "[]"
   benchmark-projects:
-    description: "JSON array of benchmark project paths to run."
+    description: JSON array of benchmark project paths to run.
     default: "[]"
   package-projects:
-    description: "JSON array of project paths to pack."
+    description: JSON array of project paths to pack.
     default: "[]"
   runners-os:
-    description: "JSON array of runner OS-es."
-    default: '["ubuntu-latest"]'
+    description: JSON array of runner OS-es.
+    default: "[ubuntu-latest]"
   preprocessor-symbols:
-    description: "Preprocessor symbols (semicolon/space/comma-separated) from the repo env."
+    description: Preprocessor symbols (semicolon/space/comma-separated) from the repo env.
     default: ""
   dotnet-version:
-    description: ".NET SDK version."
-    default: "10.0.x"
+    description: .NET SDK version.
+    default: 10.0.x
   configuration:
-    description: "Build configuration."
-    default: "Release"
+    description: Build configuration.
+    default: Release
   min-coverage-pct:
-    description: "Minimum code coverage percentage."
+    description: Minimum code coverage percentage.
     default: "80"
   max-regression-pct:
-    description: "Maximum performance regression percentage."
+    description: Maximum performance regression percentage.
     default: "20"
   max-gen1-collects:
-    description: "Maximum acceptable Gen1 GC collections per 1000 operations (Bencher static threshold)."
+    description: Maximum acceptable Gen1 GC collections per 1000 operations (Bencher static threshold).
     default: "2"
   max-gen2-collects:
-    description: "Maximum acceptable Gen2 GC collections per 1000 operations (Bencher static threshold)."
+    description: Maximum acceptable Gen2 GC collections per 1000 operations (Bencher static threshold).
     default: "1"
   minver-tag-prefix:
-    description: "MinVer tag prefix."
-    default: "v"
+    description: MinVer tag prefix.
+    default: v
   minver-prerelease-id:
-    description: "MinVer default pre-release identifiers."
-    default: "preview.0"
+    description: MinVer default pre-release identifiers.
+    default: preview.0
   reset-benchmark-thresholds:
-    description: "Reset benchmark thresholds flag."
+    description: Reset benchmark thresholds flag.
     default: "false"
   verbose:
-    description: "Enable verbose logging."
+    description: Enable verbose logging.
     default: "false"
   dispatch-runners-os:
-    description: "Comma-separated runner OS-es from workflow_dispatch input (overrides runners-os when event is workflow_dispatch)."
+    description: Comma-separated runner OS-es from workflow_dispatch input (overrides runners-os when event is workflow_dispatch).
     default: ""
   dispatch-preprocessor-symbols:
-    description: "Preprocessor symbols from workflow_dispatch input (appended when event is workflow_dispatch)."
+    description: Preprocessor symbols from workflow_dispatch input (appended when event is workflow_dispatch).
     default: ""
   dispatch-reset-benchmark-thresholds:
-    description: "Reset benchmark thresholds flag from workflow_dispatch input."
+    description: Reset benchmark thresholds flag from workflow_dispatch input.
     default: "false"
   dispatch-skip-benchmarks:
-    description: "Skip benchmarks execution and related steps (e.g. Bencher regression comments) from workflow_dispatch input."
+    description: Skip benchmarks execution and related steps (e.g. Bencher regression comments) from workflow_dispatch input.
     default: "false"
   dispatch-skip-tests:
-    description: "Skip tests execution and related steps (e.g. code coverage collection and comments) from workflow_dispatch input."
+    description: Skip tests execution and related steps (e.g. code coverage collection and comments) from workflow_dispatch input.
     default: "false"
   dispatch-skip-packages:
-    description: "Skip packages execution from workflow_dispatch input."
+    description: Skip packages execution from workflow_dispatch input.
     default: "false"
 
 outputs:
   build-projects:
-    description: "JSON array of solution/project paths to build."
+    description: JSON array of solution/project paths to build.
     value: ${{ steps.gather.outputs.build-projects }}
   test-projects:
-    description: "JSON array of test project paths."
+    description: JSON array of test project paths.
     value: ${{ steps.gather.outputs.test-projects }}
   benchmark-projects:
-    description: "JSON array of benchmark project paths."
+    description: JSON array of benchmark project paths.
     value: ${{ steps.gather.outputs.benchmark-projects }}
   package-projects:
-    description: "JSON array of package project paths."
+    description: JSON array of package project paths.
     value: ${{ steps.gather.outputs.package-projects }}
   runners-os:
-    description: "JSON array of runner OS-es."
+    description: JSON array of runner OS-es.
     value: ${{ steps.gather.outputs.runners-os }}
   dotnet-version:
-    description: ".NET SDK version."
+    description: .NET SDK version.
     value: ${{ steps.gather.outputs.dotnet-version }}
   configuration:
-    description: "Build configuration."
+    description: Build configuration.
     value: ${{ steps.gather.outputs.configuration }}
   preprocessor-symbols:
-    description: "Resolved preprocessor symbols."
+    description: Resolved preprocessor symbols.
     value: ${{ steps.gather.outputs.preprocessor-symbols }}
   min-coverage-pct:
-    description: "Minimum code coverage percentage."
+    description: Minimum code coverage percentage.
     value: ${{ steps.gather.outputs.min-coverage-pct }}
   max-regression-pct:
-    description: "Maximum performance regression percentage."
+    description: Maximum performance regression percentage.
     value: ${{ steps.gather.outputs.max-regression-pct }}
   max-gen1-collects:
-    description: "Maximum acceptable Gen1 GC collections per 1000 operations."
+    description: Maximum acceptable Gen1 GC collections per 1000 operations.
     value: ${{ steps.gather.outputs.max-gen1-collects }}
   max-gen2-collects:
-    description: "Maximum acceptable Gen2 GC collections per 1000 operations."
+    description: Maximum acceptable Gen2 GC collections per 1000 operations.
     value: ${{ steps.gather.outputs.max-gen2-collects }}
   minver-tag-prefix:
-    description: "MinVer tag prefix."
+    description: MinVer tag prefix.
     value: ${{ steps.gather.outputs.minver-tag-prefix }}
   minver-prerelease-id:
-    description: "MinVer default pre-release identifiers."
+    description: MinVer default pre-release identifiers.
     value: ${{ steps.gather.outputs.minver-prerelease-id }}
   reset-benchmark-thresholds:
-    description: "Whether to reset benchmark thresholds."
+    description: Whether to reset benchmark thresholds.
     value: ${{ steps.gather.outputs.reset-benchmark-thresholds }}
   skip-benchmarks:
-    description: "Whether to skip benchmarks execution and related steps (e.g. Bencher regression comments)."
+    description: Whether to skip benchmarks execution and related steps (e.g. Bencher regression comments).
     value: ${{ steps.gather.outputs.skip-benchmarks }}
   skip-tests:
-    description: "Whether to skip tests execution and related steps (e.g. code coverage collection and comments)."
+    description: Whether to skip tests execution and related steps (e.g. code coverage collection and comments).
     value: ${{ steps.gather.outputs.skip-tests }}
   skip-packages:
-    description: "Whether to skip packages execution."
+    description: Whether to skip packages execution.
     value: ${{ steps.gather.outputs.skip-packages }}
   skip-push:
-    description: "Whether to skip push-triggered CI (true when an open PR exists for the branch)."
+    description: Whether to skip push-triggered CI (true when an open PR exists for the branch).
     value: ${{ steps.gather.outputs.skip-push }}
 
 runs:
-  using: "composite"
+  using: composite
   steps:
     - name: Setup DevOps environment variables
       uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main

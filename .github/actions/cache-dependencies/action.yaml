@@ -1,5 +1,6 @@
 name: Cache .NET Packages
 description: Caches .NET packages to speed up build times
+
 inputs:
   dotnet-version:
     description: .NET SDK version to install
@@ -19,7 +20,7 @@ inputs:
     required: true
 
 runs:
-  using: "composite"
+  using: composite
   steps:
       # Generate a weekly cache key to automatically rotate NuGet cache
       - name: Get cache timestamp (weekly rotation)
