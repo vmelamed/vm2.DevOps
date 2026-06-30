@@ -63,17 +63,16 @@ declare -x vm2_repos="${VM2_REPOS:-$HOME/repos/vm2}"
 declare -x vm2_sot_repo_name
 declare -x sot=$default_sot
 declare -xa common_args
-declare -xa target_repos=()         # the target repositories specified as arguments. If not specified, the current directory is used as the only target repo.
-declare -xA selectors_actions=()    # array [file] => [action string] for files specified on the CLI with --file* options
-declare -x diff_only="false"        # if true, only show the differences without asking the user to take any actions. This is useful for CI validation of the shared content. In this mode, the actions are ignored and the summary file will not contain the Action column.
-declare -x summary_file=""          # the file where the summary of the differences and actions will be written. If not specified, a temporary file will be created.
+declare -xa target_repos        # the target repositories specified as arguments. If not specified, the current directory is used as the only target repo.
+declare -xA selectors_actions   # array [file] => [action string] for files specified on the CLI with --file* options
+declare -x diff_only="false"    # if true, only show the differences without asking the user to take any actions. This is useful for CI validation of the shared content. In this mode, the actions are ignored and the summary file will not contain the Action column.
+declare -x summary_file=""      # the file where the summary of the differences and actions will be written. If not specified, a temporary file will be created.
 
 #===============================
 # Script shared variables:
 #===============================
 declare -x action_ignore action_merge_or_copy action_ask_to_merge action_ask_to_copy action_merge action_copy
-declare -xi rc="$success"
-declare -xa arguments=(             # array of all arguments for logging and debugging purposes
+declare -xa arguments=(         # array of all arguments for logging and debugging purposes
     vm2_repos
     selectors_actions
     target_repos
@@ -85,9 +84,9 @@ declare -xa arguments=(             # array of all arguments for logging and deb
 # this is the data model of the script. Bash does not have complex data structures, so we use parallel arrays to store the
 # source files, target files and actions. The index of the arrays corresponds to the same file pair and action. For example,
 # source_files[0], target_files[0] and file_actions[0] correspond to the same file pair and action:
-declare -xa source_files=()         # array of the paths of the SoT files
-declare -xa target_files=()         # array of target paths corresponding to the SoT files by index
-declare -xa file_actions=()         # array of default action strings corresponding to the SoT files by index
+declare -xa source_files=()     # array of the paths of the SoT files
+declare -xa target_files=()     # array of target paths corresponding to the SoT files by index
+declare -xa file_actions=()     # array of default action strings corresponding to the SoT files by index
 
 #===============================
 # Script start:
@@ -108,11 +107,10 @@ is_in "$sot" "${sources_of_truth[@]}" || {
 #===============================
 # Adjust, validate and freeze the arguments:
 #===============================
-vm2_repos=$(resolve_vm2_repos "$vm2_repos") || {
-    rc=$?
-    usage -ec "$rc" "Could not find the parent directory for the vm2 repositories." \
-                    "Please, set the VM2_REPOS environment variable or provide the path as an argument with '--vm2-repos' option."
-}
+declare -xi rc="$success"
+
+vm2_repos=$(resolve_vm2_repos "$vm2_repos")
+exit_if_has_errors
 trace "All vm2 repositories are expected to be in '$vm2_repos'"
 
 # if no repos were specified as arguments, use the current directory as the only target repo:
@@ -130,17 +128,6 @@ declare -rx summary_file
 #===============================
 # ensure vm2.DevOps is a valid Git repository and is not behind the latest stable tag:
 rc="$success"
-validate_repo_root "$vm2_repos" "$vm2_devops_repo_name" "main" || rc=$?
-(( rc == err_behind_latest_stable_tag )) &&
-    error -ec "$err_logic_error" "The repository in '$vm2_devops_repo_name' is behind the latest stable tag. Please update it to the latest version of the main branch."
-
-# ensure the SoT repository is a valid Git repository and is not behind the latest stable tag:
-rc="$success"
-validate_repo_root "$vm2_repos" "$vm2_sot_repo_name" "main" || rc=$?
-(( rc == err_behind_latest_stable_tag )) &&
-    error -ec "$err_logic_error" "The repository in '$vm2_sot_repo_name' is behind the latest stable tag. Please update it to the latest version of the main branch."
-
-rc="$success"
 sot_path=$(get_vm2_sot_path "$vm2_repos" "$sot") || rc=$?
 (( rc != success )) &&
     usage -ec "$rc" "Could not find the source of truth directory for the specified template '$sot' in the expected location in '$vm2_repos'. Please make sure it exists or correct the parameter/environment variable."
@@ -155,8 +142,6 @@ declare -a sot_dump_vars=(
     "${common_args[@]}"
     --header "Arguments:"
     "${arguments[@]}"
-    --header "Data Model:"
-    source_files
     --quiet
     # --force
 )
@@ -174,14 +159,13 @@ declare -a target_roots=()
 declare -a target_paths=()
 
 for target in "${target_repos[@]}"; do
-    output=$(resolve_target "$vm2_repos" "$target") || {
-        error -ec "$err_logic_error" "Could not resolve the path of the target repository '$target'. Please, ensure that it exists and is a valid directory."
-        continue
-    }
     {
         read -r target_root
         read -r target_path
-    } <<< "$output"
+    } < <(resolve_target "$vm2_repos" "$target") || {
+        error -ec "$err_logic_error" "Could not resolve the path of the target repository '$target'. Please, ensure that it exists and is a valid directory."
+        continue
+    }
     target_roots+=("$target_root")
     target_paths+=("$target_path")
 done
@@ -230,6 +214,7 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
     target_dump_vars=(
         --header "Configuration for Target '$target':"
         --header "Data Model:"
+        source_files
         target_files
         file_actions
         --quiet

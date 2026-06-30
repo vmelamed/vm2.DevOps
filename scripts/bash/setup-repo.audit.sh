@@ -25,15 +25,6 @@ declare -xrA default_dependabot_secrets
 declare -xrA default_vars
 declare -xrA default_ruleset
 
-declare -x path_vars
-declare -x path_repo
-declare -x path_permissions
-declare -x path_actions_secrets
-declare -x path_dependabot_secrets
-declare -x path_vars
-declare -x path_rulesets
-declare -x path_main_protection_ruleset
-
 declare -x jq_entries
 declare -x jq_secrets
 declare -x jq_vars
@@ -41,9 +32,9 @@ declare -x jq_ruleset_id
 declare -x jq_ruleset_rules
 declare -x jq_status_checks
 
-declare -rxi err_invalid_nameref
+declare -xri err_invalid_nameref
 
-declare -rx varNameRegex
+declare -xr varNameRegex
 
 #-------------------------------------------------------------------------------
 # Summary: Fetches the current settings from GitHub API and compares them to the expected settings, reporting equalities, differences,
@@ -145,6 +136,14 @@ function compare_settings()
     results="$pass $diff $errs"
     return 0
 }
+
+declare -x path_repo
+declare -x path_actions_secrets
+declare -x path_dependabot_secrets
+declare -x path_permissions
+declare -x path_vars
+declare -x path_rulesets
+declare -x path_main_protection_ruleset
 
 function audit_repo()
 {

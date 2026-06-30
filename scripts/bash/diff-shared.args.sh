@@ -119,7 +119,8 @@ function get_selector_action()
 
     trace "File selector '$file_selector' with action '$action'"
 
-    [[ $file_selector != -* ]] || usage -ec "$err_argument_value" "The argument '$file_selector' does not appear to be a valid file selector."
+    [[ $file_selector != -* ]] ||
+        usage -ec "$err_argument_value" "The argument '$file_selector' does not appear to be a valid file selector."
 
     # get the patterns that the action applies to, and remember the action for those files in the selectors_actions array
     selectors_actions[$file_selector]="$action"

@@ -52,18 +52,8 @@ declare -x repo=""
 declare -x repo_url=""
 declare -x repo_id=""
 
-declare -x path_vars
-declare -x path_repo
-declare -x path_permissions
-declare -x path_actions_secrets
-declare -x path_vars
-declare -x path_rulesets
-declare -x path_main_protection_ruleset
-
 declare -xa required_checks=()
 declare -xi github_actions_app_id=0
-
-declare -x vm2=""
 
 # shellcheck disable=SC1091
 {
@@ -80,93 +70,61 @@ get_arguments "$@"
 # Check the prerequisites
 #-------------------------------------------------------------------------------
 
-command -v jq &> "$_ignore"                                 || error -ec "$err_tool_not_found" "'jq' is not installed. Please install it first."
-command -v yq &> "$_ignore"                                 || error -ec "$err_tool_not_found" "'yq' is not installed. Please install it first."
-[[ $(yq --version) =~ https://github\.com/mikefarah/yq/ ]]  || error -ec "$err_tool_not_found" 'This script requires "yq" by Mike Farah: "wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O ~/.local/bin/yq4; chmod +x ~/.local/bin/yq4"'
-command -v gh &> "$_ignore"                                 || error -ec "$err_tool_not_found" "'gh' is not installed. Please install it first."
-gh auth status &> "$_ignore"                                || error -ec "$err_tool_not_found" "'gh' is not authenticated. Run 'gh auth login' first."
+command -v jq &> "$_ignore"  || error -ec "$err_tool_not_found" "'jq' is not installed. Please install it first."
+command -v gh &> "$_ignore"  || error -ec "$err_tool_not_found" "'gh' is not installed. Please install it first."
+gh auth status &> "$_ignore" || error -ec "$err_tool_not_found" "'gh' is not authenticated. Run 'gh auth login' first."
+command -v yq &> "$_ignore"  || error -ec "$err_tool_not_found" "'yq' is not installed. Please install it first."
+[[ $(yq --version) =~ https://github\.com/mikefarah/yq/ ]] ||
+                                error -ec "$err_tool_not_found" "This script requires 'yq' by Mike Farah: " \
+                                                                "wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O ~/.local/bin/yq4 &&" \
+                                                                " chmod +x ~/.local/bin/yq4"
 
 exit_if_has_errors
 
+#===============================================================================
+# Find and validate vm2_repos, SOT, DevOps directories:
+#===============================================================================
 declare -xi rc="$success"
 
-#===============================
-# Find and validate vm2_repos:
-#===============================
-vm2_repos=$(resolve_vm2_repos "$vm2_repos") || {
-    rc=$?
-    usage -ec "$rc" "Could not find the parent directory for the vm2 repositories." \
-                    "Please, set the VM2_REPOS environment variable or provide the path as an argument with '--vm2-repos' option."
-}
+vm2_repos=$(resolve_vm2_repos "$vm2_repos")
+exit_if_has_errors
 trace "All vm2 repositories are expected to be in '$vm2_repos'"
 
-init_default_local_git_settings "$vm2_repos" # make sure that $default_local_git_settings is fully initialized with the vm2.DevOps hooks and SOT .gitmessage
-
+# make sure that $default_local_git_settings is fully initialized with the vm2.DevOps hooks and SOT .gitmessage
 sot_path=$(get_vm2_sot_path "$vm2_repos" "$sot")
+init_default_local_git_settings "$vm2_repos" "$sot_path"
 
-# make sure we are seeing the templates and vm2.DevOps properly through vm2_repos
-[[ -d "$sot_path" && -d "$vm2_repos/$vm2_devops_repo_name" ]] ||
-    usage -ec "$err_not_found" "The '$vm2_devops_repo_name' directory is missing in '$vm2_repos'. Please clone the repositories $vm2_devops_repo_name and $vm2_sot_repo_name into '$vm2_repos'."
-
-rc="$success"
-validate_repo_root "$vm2_repos" "$vm2_repos/$vm2_devops_repo_name" "main" || rc=$?
-(( rc == err_behind_latest_stable_tag )) &&
-    error -ec "$err_logic_error" "The repository in '$vm2_repos/$vm2_devops_repo_name' is behind the latest stable tag. Please update it to the latest commit on the main branch."
-
-rc="$success"
-validate_repo_root "$vm2_repos" "$vm2_repos/$vm2_sot_repo_name" "main" || rc=$?
-(( rc == err_behind_latest_stable_tag )) &&
-    error -ec "$err_logic_error" "The repository in '$sot_path' is behind the latest stable tag. Please update it to the latest commit on the main branch."
-
-declare -x _ci_yaml
-
-_ci_yaml="$vm2_repos/$vm2_devops_repo_name/.github/workflows/_ci.yaml"
+declare -x _ci_yaml="${vm2_repos}/${vm2_devops_repo_name}/.github/workflows/_ci.yaml"
 [[ -s "$_ci_yaml" ]] ||
     error -ec "$err_logic_error" "Could not find _ci.yaml GitHub Actions reusable workflow file in ${vm2_repos}."
-
 declare -xr _ci_yaml
 
 exit_if_has_errors
 
-#-------------------------------------------------------------------------------
+#===============================================================================
 # Resolve and validate repo_path:
-#-------------------------------------------------------------------------------
-
-if [[ -n "$repo_name" ]]; then
-    repo_path="${vm2_repos}/${repo_name}"
-    if [[ ! -d "$repo_path" ]]; then
-        usage -ec "$err_argument_value" -sd 3 "The specified repository '$repo_name' does not exist in '$vm2_repos'." \
-                                              "Please provide a valid repository name using '--repo-name <name>'."
-    fi
-else
-    repo_path="$(pwd)"
-    repo_name="$(basename "$repo_path")"
-    repo_dir="$(dirname "$repo_path")"
-    if [[ "$repo_dir" != "$vm2_repos" ]]; then
-        usage -ec "$err_argument_value" -sd 3 "The current directory '$repo_path' is not in '$vm2_repos'." \
-                                              "Please navigate to a directory within '$vm2_repos' or provide the name using '--repo-name <name>'."
-    fi
-fi
-
-rc="$success"
-output=$(resolve_repo_root "$vm2_repos" "$repo_path") || rc=$?
-
-is_in "$rc" "$success" "$err_dir_with_ci" ||
-    usage -ec "$err_argument_value" -sd 3 "Could not resolve the '$repo_path' within '$vm2_repos' to a Git initialized repo; or to a directory that will become the Git repository with configured CI. " \
-                                          "Please, specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2pkg <name>' to create a valid directory structure with CI configured."
-
-reset_errors
-
-{ IFS= read -r repo_path; IFS= read -r _; } <<< "$output"
+#===============================================================================
+{
+    read -r repo_path
+    read -r _
+} < <(resolve_repo_root "$vm2_repos" "$repo_path") || {
+    rc=$?
+    is_in "$rc" "$success" "$err_dir_with_ci" ||
+        usage -ec "$?" "Could not resolve the path of the target repository '$target'." \
+                       "Please, ensure that it exists and is a valid directory."
+}
 
 (( rc == err_dir_with_ci )) &&
     info "There is '$repo_path/.github/workflows/CI.yaml'. Will initialize a new repository in '$repo_path'."
 
+rc="$success"
+reset_errors
+
 trace "Repository path: '$repo_path'"
 
-#-------------------------------------------------------------------------------
+#===============================================================================
 # Get the repo state
-#-------------------------------------------------------------------------------
+#===============================================================================
 
 declare -A repo_state=()
 declare -x suggest_repo_name=''
@@ -227,9 +185,9 @@ trace "ci_yaml='$ci_yaml' from \$repo_path"
 
 declare -xr ci_yaml
 
-#-------------------------------------------------------------------------------
+#===============================================================================
 # Final validation of the inputs and assumptions before we start making any changes or API calls:
-#-------------------------------------------------------------------------------
+#===============================================================================
 
 visibility="${visibility,,}"
 
@@ -249,9 +207,9 @@ exit_if_has_errors
 resolve_github_actions_app_id
 list_required_checks
 
-# ------------------------------------------------------------------
+#===============================================================================
 # Audit
-# ------------------------------------------------------------------
+#===============================================================================
 
 if $audit && ! $interactive_secrets && ! $interactive_vars && has_github_remote repo_state; then
     initialize_jq_queries
@@ -261,9 +219,9 @@ if $audit && ! $interactive_secrets && ! $interactive_vars && has_github_remote 
     exit 0
 fi
 
-# ------------------------------------------------------------------
+#===============================================================================
 # Initialize and configure the repository
-# ------------------------------------------------------------------
+#===============================================================================
 
 # list of undos to perform in case of failure or when the script finishes - e.g. to delete the created repository, or undo any changes to the local repository. The undos must be executed in a LIFO order.
 declare -a undos=()
@@ -282,9 +240,9 @@ function undo_changes()
 
 if ! has_local_repo repo_state; then
 
-    # -------------------------------------------------------------------
+    #===========================================================================
     # We need to initialize the local repository.
-    # -------------------------------------------------------------------
+    #===========================================================================
     info "Initializing local git repository in '$repo_path'..."
 
     [[ -n "$branch" ]] ||
@@ -309,9 +267,9 @@ fi
 
 if ! has_remote_repo repo_state; then
 
-    #----------------------------------------------------------------------
+    #===========================================================================
     # Create and link remote GitHub repository
-    #----------------------------------------------------------------------
+    #===========================================================================
     info "Creating GitHub repository..."
 
     [[ -n $repo_name ]] || repo_name=$(enter_value "GitHub Repository name" "$suggest_repo_name" false validate_gh_repo_name)
@@ -378,9 +336,9 @@ if ! has_remote_repo repo_state; then
 fi
 
 if $configure_local; then
-    # ----------------------------------------------------------------------------
+    #===========================================================================
     # Configure local git settings
-    # ----------------------------------------------------------------------------
+    #===========================================================================
 
     info "Configuring local git settings..."
 
@@ -394,9 +352,9 @@ if $configure_local; then
     info "...local git settings configured."
 fi
 
-# ----------------------------------------------------------------------------
+#===============================================================================
 # Configure the remote repository on GitHub
-# ----------------------------------------------------------------------------
+#===============================================================================
 
 initialize_gh_paths
 initialize_jq_queries

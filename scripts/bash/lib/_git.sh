@@ -750,25 +750,32 @@ function should_fetch_for_latest_stable_tag()
     }
 
     # Shallow repositories can miss history or tags needed by release predicates.
-    [[ $(git -C "$dir" rev-parse --is-shallow-repository 2>"$_ignore") != true ]] || return "$positive"
+    [[ $(git -C "$dir" rev-parse --is-shallow-repository 2>"$_ignore") != true ]] ||
+        return "$positive"
 
     local local_sha remote_sha
 
-    local_sha=$(git -C "$dir" rev-parse --verify refs/remotes/origin/"$branch" 2>"$_ignore") || return "$positive"
+    local_sha=$(git -C "$dir" rev-parse --verify refs/remotes/origin/"$branch" 2>"$_ignore") ||
+        return "$positive"
     remote_sha=$(git -C "$dir" ls-remote --heads origin "$branch" 2>"$_ignore" | awk 'NR==1 {print $1}')
 
-    [[ -z "$remote_sha" ]] && return "$positive"
-    [[ "$local_sha" != "$remote_sha" ]] && return "$positive"
+    [[ -n "$remote_sha" ]] ||
+        return "$positive"
+    [[ "$local_sha" != "$remote_sha" ]] ||
+        return "$positive"
 
     local local_stable_tag remote_stable_tag
 
     local_stable_tag=$(git -C "$dir" tag | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1)
-    [[ -n "$local_stable_tag" ]] || return "$positive"
+    [[ -n "$local_stable_tag" ]] ||
+        return "$positive"
 
     remote_stable_tag=$(git -C "$dir" ls-remote --tags --refs origin 2>"$_ignore" | awk '{print $2}' | sed 's#refs/tags/##' | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1)
-    [[ -n "$remote_stable_tag" ]] || return "$positive"
+    [[ -n "$remote_stable_tag" ]] ||
+        return "$positive"
 
-    [[ "$local_stable_tag" == "$remote_stable_tag" ]] || return "$positive"
+    [[ "$local_stable_tag" == "$remote_stable_tag" ]] ||
+        return "$positive"
 
     return "$negative"
 }
@@ -785,16 +792,17 @@ function should_fetch_for_latest_stable_tag()
 #-------------------------------------------------------------------------------
 function ensure_fresh_git_state()
 {
-    local -i rc
+    local -i rc=$positive
 
-    should_fetch_for_latest_stable_tag "$@"; rc=$?
+    should_fetch_for_latest_stable_tag "$@"
 
-    case $rc in
+    case $? in
         "$positive" )
-            trace "Git metadata appears stale or repository is shallow. Fetching from remote is recommended."
+            trace "Git metadata appears stale or repository is shallow. Fetching from origin..."
+            rc=$success
             git -C "$1" fetch origin "${2:-main}" --quiet 2> "$_ignore" || {
                 rc=$?
-                error -ec "$err_logic_error" "Failed to fetch from remote repository: $rc"
+                error -ec "$err_logic_error" "Failed to fetch from origin: $rc"
             }
             ;;
         "$negative" )
@@ -840,7 +848,8 @@ function get_latest_stable_tag_hash()
 
     # Get latest stable tag (excludes pre-release tags with -)
     latest_stable_tag=$(git -C "$dir" tag | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1)
-    [[ -n $latest_stable_tag ]] || return 1 # no stable tags? - return 1
+    [[ -n $latest_stable_tag ]] ||
+        return "$failure" # no stable tags? - return 1
 
     # get the hash of the commit of the latest stable tag
     git -C "$dir" rev-parse "$latest_stable_tag^{commit}" 2>"$_ignore"
@@ -864,9 +873,7 @@ function is_on_latest_stable_tag()
     local -i rc
 
     # get commit of the latest stable tag
-    latest_stable_hash=$(get_latest_stable_tag_hash "$@")
-    rc=$?
-    (( rc == 0 )) || return "$rc"
+    latest_stable_hash=$(get_latest_stable_tag_hash "$@") || return $?
 
     # How many commits since the latest stable tag
     commits_after_latest_stable=$(git -C "${1:-.}" rev-list "$latest_stable_hash..HEAD" --count 2>"$_ignore")
@@ -890,9 +897,7 @@ function is_after_latest_stable_tag()
     local -i rc
 
     # get commit of the latest stable tag
-    latest_stable_hash=$(get_latest_stable_tag_hash "$@")
-    rc=$?
-    (( rc == 0 )) || return "$rc"
+    latest_stable_hash=$(get_latest_stable_tag_hash "$@") || return $?
 
     # How many commits since the latest stable tag
     commits_after_latest_stable=$(git -C "${1:-.}" rev-list "$latest_stable_hash..HEAD" --count 2>"$_ignore")
@@ -915,9 +920,7 @@ function is_on_or_after_latest_stable_tag()
     local -i rc
 
     # get commit of the latest stable tag
-    latest_stable_hash=$(get_latest_stable_tag_hash "$@")
-    rc=$?
-    (( rc == 0 )) || return "$rc"
+    latest_stable_hash=$(get_latest_stable_tag_hash "$@") || return $?
 
     # Check if current commit is on or after the latest tag
     # Returns 0 if tag commit is an ancestor of HEAD (i.e., HEAD is at or after the tag)

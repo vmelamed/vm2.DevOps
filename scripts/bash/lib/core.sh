@@ -71,7 +71,8 @@ function get_devops_parent()
 {
     if [[ -z $__devops_parent ]]; then
         r=$(root_working_tree "$lib_dir") && __devops_parent=$(dirname "$r" 2> "$_ignore") || {
-            error -ec "$err_logic_error" -sd 3 "Failed to resolve parent directory of the vm2.DevOps repo from the script directory '$lib_dir'. Please ensure that the script is located in 'vm2.DevOps/scripts/bash/lib' and that the repository is not in a detached HEAD state."
+            error -ec "$err_logic_error" -sd 3 "Failed to resolve parent directory of the vm2.DevOps repo from the script directory '$lib_dir'." \
+                                               "Please ensure that the script is located in 'vm2.DevOps/scripts/bash/lib' and that the repository is not in a detached HEAD state."
             exit "$err_not_git_directory"
         }
 

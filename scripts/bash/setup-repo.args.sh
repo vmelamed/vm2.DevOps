@@ -51,11 +51,6 @@ function get_arguments()
                 owner="$1"; shift
                 ;;
 
-            --repo-name|-n )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing repository name after '$option'."
-                repo_name="$1"; shift
-                ;;
-
             --branch|-b )
                 [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing branch name after '$option'."
                 branch="$1"; shift

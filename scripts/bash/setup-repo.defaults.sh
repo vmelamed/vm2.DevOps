@@ -225,20 +225,27 @@ declare -xA default_local_git_settings=(
 declare -rxi err_invalid_arguments      # The number of the arguments is invalid or more than one type of parameter error code is present
 declare -rxi err_not_directory          # Parameter value is not a directory
 
+declare -xri default_sot
+
 function init_default_local_git_settings()
 {
-    [[ $# -eq 1 && -n "$1" ]] || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly 1 non-empty argument: the path to the parent directory where '$vm2_devops_repo_name' is cloned, e.g. the value of \$VM2_REPOS or the parameter of --vm2-repos."
+    [[ $# -eq 2 && -n "$1" && -n "$2" ]] || {
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly 2 non-empty arguments:" \
+                                                 "- the path to the parent directory where '$vm2_devops_repo_name' is cloned, e.g. the value of \$VM2_REPOS or the parameter of --vm2-repos." \
+                                                 "- the path to the source of truth (SOT) directory, $VM2_REPOS/$default_sot."
         return "$err_invalid_arguments"
     }
     [[ -d $1 ]]  || {
-        error -ec "$err_not_directory" -sd 3 "${FUNCNAME[0]}() must be an existing directory. Provided: '$1'"
+        error -ec "$err_not_directory" -sd 3 "The first parameter of ${FUNCNAME[0]}() must be an existing directory. Provided: '$1'"
+        return "$err_not_directory"
+    }
+    [[ -d $2 ]]  || {
+        error -ec "$err_not_directory" -sd 3 "The second parameter of ${FUNCNAME[0]}() must be an existing directory. Provided: '$1'"
         return "$err_not_directory"
     }
 
     local repos=$1
-    local shared
-    shared=$(get_vm2_sot_path "$repos" "$sot")
+    local shared=$2
 
     # cement the paths in the default_local_git_settings that depend on the location of the vm2_repos ($1):
     default_local_git_settings["core.hooksPath"]="$repos/$vm2_devops_repo_name/scripts/githooks"

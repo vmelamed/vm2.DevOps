@@ -42,9 +42,19 @@ declare -rxi err_repo_with_no_ci
 declare -rxi err_dir_with_ci
 declare -rxi err_dir_with_no_ci
 declare -rxi err_not_git_directory
+declare -rxi err_logic_error
 
 declare -xr vm2_devops_repo_name
 declare -xr vm2_sot_repo_name
+
+declare -a vm2_repos_instructions=(
+    "Please, create a single directory for all vm2.* repositories. "
+    "Clone the vm2.DevOps, vm2.Templates, and all vm2.* repositories that you work on into it."
+    "Then, either:"
+    "  - provide the path to that directory as an argument to the script using the '--vm2-repos <path>' option, or"
+    "  - set the environment variable \$VM2_REPOS to the path of that directory, or"
+    "  - start the script from the cloned vm2.DevOps repository in that directory."
+)
 
 #-------------------------------------------------------------------------------
 # Summary: Resolves the vm2_repos directory from
@@ -68,7 +78,7 @@ declare -xr vm2_sot_repo_name
 function resolve_vm2_repos()
 {
     (( $# <= 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() takes at most 1 optional arguments ($# provided): the directory that is a parent to all vm2 repositories."
+        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() takes 1 optional argument ($# provided): the directory that is a parent to all vm2 repositories."
         return "$err_invalid_arguments"
     }
 
@@ -77,37 +87,46 @@ function resolve_vm2_repos()
     #   2) environment variable $VM2_REPOS
     #   3) the lib/ directory
     # in this order of preference:
-    local repos="${1:-${VM2_REPOS:-$(get_devops_parent)}}"
-
-    [[ -n "$repos" && -d "$repos" ]] || {
-         error -ec "$err_not_directory" -sd 3 "The parent directory for the vm2 repositories cannot be resolved from the provided parameter, environment variable \$VM2_REPOS' or from the vm2.DevOps repo's parent. Please provide it as an argument or set it in the environment variable \$VM2_REPOS."
-         return "$err_not_directory"
-    }
-
-    trace "vm2_repos='$repos' resolved  from" \
-                "argument '\$1=${1:-}', or from " \
-                "'\$VM2_REPOS=${VM2_REPOS:-}', or from "\
-                "'\$devops_parent=$(get_devops_parent)'."
+    local source=""
+    if [[ -n "$1" && -d "$1" ]]; then
+        repos="$1"
+        trace "vm2_repos='$repos' from argument '\$1=${1:-}'."
+    elif [[ -n "$VM2_REPOS" && -d "$VM2_REPOS" ]]; then
+        repos="$VM2_REPOS"
+        trace "vm2_repos='$repos' from env. var. '\$VM2_REPOS=${VM2_REPOS:-}'."
+    elif [[ -d "$(get_devops_parent)" ]]; then
+        repos="$(get_devops_parent)"
+        trace "vm2_repos='$repos' from the location of vm2.DevOps."
+    else
+        error -ec "$err_not_directory" -sd 3 "Cannot resolve the parent directory of the vm2 repositories." "${vm2_repos_instructions[@]}"
+        return "$err_not_directory"
+    fi
 
     # ensure $vm2_repos is an existing, absolute path:
     repos=$(realpath -e "$repos" 2> "$_ignore") || {
-        error -ec "$err_not_directory" -sd 3 "The resolved parent directory for the vm2 repositories '$repos' does not exist or is not a directory. Please, create it and clone the repositories into it or correct the parameter/environment variable."
+        error -ec "$err_not_directory" -sd 3 "The resolved parent directory for the vm2 repositories '$repos' does not exist or is not a directory." "${vm2_repos_instructions[@]}"
         return "$err_not_directory"
     }
 
-    # validate that it is the parent directory of the git repositories vm2.DevOps and vm2.Templates:
-    [[ $repos == "$(dirname "$(root_working_tree "$repos/$vm2_devops_repo_name")")" ]] || {
-        error -ec "$err_not_git_root" -sd 3 "The '$repos' is not the parent directory of the '$vm2_devops_repo_name' repository. Please, ensure that the vm2 repositories are cloned into this directory or correct the parameter/environment variable."
-        return "$err_not_git_root"
-    }
+    # validate that $vm2_repos is the parent directory of the git repository vm2.DevOps;
+    # it is on the main branch;
+    # and it is at or ahead of the latest stable tag:
+    rc="$success"
+    validate_repo_root "$repos" "$vm2_devops_repo_name" "main" || rc=$?
+    (( rc == err_behind_latest_stable_tag )) &&
+        error -ec "$err_logic_error" "The main branch of the repository '$vm2_devops_repo_name' is behind the latest stable tag." \
+                                     "Please update it to the latest version of the main branch."
 
-    [[ $repos == "$(dirname "$(root_working_tree "$repos/$vm2_sot_repo_name")")" ]] || {
-        error -ec "$err_not_git_root" -sd 3 "The '$repos' is not the parent directory of the '$vm2_sot_repo_name' repository. Please, ensure that the vm2 repositories are cloned into this directory or correct the parameter/environment variable."
-        return "$err_not_git_root"
-    }
+    # validate that $vm2_repos is the parent directory of the git repository vm2.Templates;
+    # it is on the main branch;
+    # and it is at or ahead of the latest stable tag:
+    validate_repo_root "$repos" "$vm2_sot_repo_name" "main" || rc=$?
+    (( rc == err_behind_latest_stable_tag )) &&
+        error -ec "$err_logic_error" "The main branch of the repository '$vm2_sot_repo_name' is behind the latest stable tag." \
+                                     "Please update it to the latest version of the main branch."
 
     echo "$repos"
-    return "$success"
+    return "$rc"
 }
 
 #-------------------------------------------------------------------------------
@@ -148,27 +167,26 @@ function validate_repo_root()
 
     local repos=$1
     local repo=$2
-    local branch="${3}"
+    local branch="$3"
 
-    local r
-    local -i rc
+    local -i rc=$success
 
-    # try to resolve repo_path relative to $vm2_repos
-    r=$(realpath -e "$repos/${repo#/}" 2> "$_ignore") ||
-    # try to resolve the repository path from the parameter alone (i.e., the current working directory or the absolute path provided as the first argument)
-    r=$(realpath -e "$repo" 2> "$_ignore") || {
-       error -ec "$err_not_found" -sd 3 "Could not find the repository directory for '$repo' neither in the current working directory, nor in '$repos'."
-       return "$err_not_found"
-    }
-    local path=$r
+    local path # the full repo path
 
-    trace "repo_path='$path' from parameter, \$(pwd), or vm2_repos with realpath"
+    # try to resolve repo_path relative to $repos
 
     # 1) the specified directory exists
-    [[ -d "${path}" ]] || {
-        error -ec "$err_not_directory" -sd 3 "The '${repo}' git repository directory is not found under ${repos}."
-        return "$err_not_directory"
+    path=$(realpath -e "$repos/${repo#/}" 2> "$_ignore") ||
+    # try to resolve the repository path from the parameter alone
+    # i.e., the current working directory or the absolute path provided as the first argument
+    path=$(realpath -e "$repo" 2> "$_ignore") ||
+    # couldn't resolve the repo path - error and exit
+    {
+       error -ec "$err_not_found" -sd 3 "Could not find the path '$repo' neither in the current working directory, nor in '$repos'."
+       return "$err_not_found"
     }
+
+    trace "repo_path='$path' from parameter, \$(pwd), or vm2_repos with realpath"
 
     # 2) it is a root of the working directory of the git repository
     r=$(root_working_tree "$path" 2> "$_ignore") || {
@@ -181,11 +199,11 @@ function validate_repo_root()
         return "$err_not_git_root"
     }
 
-    # 3) it has GitHub Actions workflows in the .github/workflows directory (unless it is the .github repository itself)
-    if [[ ${path##*/} != ".github" && ! -d "$path/.github/workflows" ]]; then
+    # 3) it has GitHub Actions workflows in the .github/workflows directory
+    [[ -d "$path/.github/workflows" ]] || {
         error -ec "$err_repo_with_no_ci" -sd 3 "The '${repo}' repository does not have GitHub Actions workflows in '$path/.github/workflows'."
         return "$err_repo_with_no_ci"
-    fi
+    }
 
     # 4) it is on the specified branch (or the currently checked out branch if not specified)
     if [[ -z "$branch" ]]; then
