@@ -63,8 +63,8 @@ declare -x vm2_repos="${VM2_REPOS:-$HOME/repos/vm2}"
 declare -x vm2_sot_repo_name
 declare -x sot=$default_sot
 declare -xa common_args
-declare -xa target_repos        # the target repositories specified as arguments. If not specified, the current directory is used as the only target repo.
-declare -xA selectors_actions   # array [file] => [action string] for files specified on the CLI with --file* options
+declare -xa target_repos=()     # the target repositories specified as arguments. If not specified, the current directory is used as the only target repo.
+declare -xA selectors_actions=() # array [file] => [action string] for files specified on the CLI with --file* options
 declare -x diff_only="false"    # if true, only show the differences without asking the user to take any actions. This is useful for CI validation of the shared content. In this mode, the actions are ignored and the summary file will not contain the Action column.
 declare -x summary_file=""      # the file where the summary of the differences and actions will be written. If not specified, a temporary file will be created.
 
