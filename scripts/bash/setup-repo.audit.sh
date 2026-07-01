@@ -75,6 +75,9 @@ function compare_settings()
     local modify_keys="$4"
     local -n results="$5"
 
+    (( ${#expecteds[@]} > 0 )) ||
+        return 0
+
     # query the GitHub API and transform the JSON response into key=value pairs using the provided jq query, then...
     local json
 

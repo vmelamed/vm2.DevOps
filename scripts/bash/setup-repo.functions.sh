@@ -339,14 +339,24 @@ function is_valid_secret()
 
 function configure_secrets()
 {
-    if [[ $# -lt 1 ]] || ! is_in "$1" "actions" "dependabot"; then  # we do not use "codespaces"
+    if [[ $# -lt 1 ]] || ! is_in "$1" "actions" "dependabot"; then  # we do not use "agents" and "codespaces" yet
         error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument: the application type: 'actions' or 'dependabot'."
         return 2
     fi
 
     local app="$1"
+
+    local -n default_secrets
+    [[ $app == "actions"    ]] && default_secrets="default_actions_secrets"    || true
+    [[ $app == "dependabot" ]] && default_secrets="default_dependabot_secrets" || true
+
+    (( ${#default_secrets[@]} > 0 )) || {
+        return 0 # no secrets to set for this app, so we are done
+    }
+
     local path_secrets
-    [[ $app == "actions" ]] && path_secrets="$path_actions_secrets" || path_secrets="$path_dependabot_secrets"
+    [[ $app == "actions"    ]] && path_secrets="$path_actions_secrets"         || true
+    [[ $app == "dependabot" ]] && path_secrets="$path_dependabot_secrets"      || true
 
     # get the names of the existing secrets
     local -a existing
@@ -366,8 +376,6 @@ function configure_secrets()
     local skipped=0 set_new=0 set_default=0
     local name value exists         # about the current secret
 
-    local -n default_secrets
-    [[ $app == "actions" ]] && default_secrets="default_actions_secrets" || default_secrets="default_dependabot_secrets"
     local -a ordered_names
     mapfile -t ordered_names < <(printf '%s\n' "${!default_secrets[@]}" | sort)
 

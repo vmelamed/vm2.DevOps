@@ -99,10 +99,10 @@ declare -rxA default_actions_secrets=(
     ["REPORTGENERATOR_LICENSE"]="$secret_placeholder"
     ["NUGET_API_KEY"]="$secret_placeholder"
     ["BENCH_DISPATCH_PAT"]="$secret_placeholder"
+    ["GH_PACKAGES_TOKEN"]="$secret_placeholder"
 )
 
 declare -rxA default_dependabot_secrets=(
-    ["GH_PACKAGES_TOKEN"]="$secret_placeholder"
 )
 
 declare -rxA default_vars=(
