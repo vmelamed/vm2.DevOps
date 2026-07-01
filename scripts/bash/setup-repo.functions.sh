@@ -50,7 +50,7 @@ declare -x path_dependabot_secrets
 declare -x path_permissions
 declare -x path_vars
 declare -x path_rulesets
-declare -r path_main_protection_ruleset
+declare -x path_main_protection_ruleset
 
 declare -x jq_entries
 declare -x jq_secrets
@@ -111,7 +111,6 @@ function initialize_gh_paths()
     path_permissions="${path_repo}/actions/permissions/workflow"
     path_vars="${path_repo}/actions/variables"
     path_rulesets="${path_repo}/rulesets"
-    path_main_protection_ruleset="${path_rulesets}/${main_protection_rs_id}"
 
     # freeze the paths now
     declare -xr path_repo
@@ -120,7 +119,6 @@ function initialize_gh_paths()
     declare -xr path_permissions
     declare -xr path_vars
     declare -xr path_rulesets
-    declare -xr path_main_protection_ruleset
 }
 
 # shellcheck disable=SC2089 # Quotes/backslashes will be treated literally. Use an array.
@@ -193,6 +191,8 @@ function initialize_main_protection_rs_id()
 
     if (( main_protection_rs_id > 0 )); then
         trace "Initialized main protection ruleset ID: $main_protection_rs_id"
+
+        path_main_protection_ruleset="${path_rulesets}/${main_protection_rs_id}"
 
         declare -xir main_protection_rs_id
         declare -xr path_main_protection_ruleset
