@@ -53,7 +53,7 @@ declare -xr varNameRegex
 function ltrim()
 {
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to trim spaces from the left."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to trim spaces from the left."
         return "$err_invalid_arguments"
     }
 
@@ -73,7 +73,7 @@ function ltrim()
 function rtrim()
 {
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to trim spaces from the right."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to trim spaces from the right."
         return "$err_invalid_arguments"
     }
 
@@ -93,7 +93,7 @@ function rtrim()
 function trim()
 {
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to trim spaces from the left and from the right."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to trim spaces from the left and from the right."
         return "$err_invalid_arguments"
     }
 
@@ -114,7 +114,7 @@ function trim()
 function is_safe_input()
 {
     (( $# == 1 || $# == 2 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires one or two arguments (provided $#): the input string to sanitize and an optional flag to allow spaces."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one or two arguments (provided $#): the input string to sanitize and an optional flag to allow spaces."
         return "$err_invalid_arguments"
     }
 
@@ -132,7 +132,7 @@ function is_safe_input()
     $allow_spaces && dangerous_chars=$'[;|&$`\\\\<>(){}\n\r]' || dangerous_chars=$'[;|&$`\\\\<>(){}\n\r ]'
 
     if [[ "$input" =~ $dangerous_chars ]]; then
-        error -ec "$err_unsafe_argument" -sd 3 "${FUNCNAME[0]}(): The input '$input' contains one or more of the unsafe characters '$dangerous_chars'."
+        error -sd 3 -ec "$err_unsafe_argument" "${FUNCNAME[0]}(): The input '$input' contains one or more of the unsafe characters '$dangerous_chars'."
         return "$negative"
     fi
 
@@ -151,7 +151,7 @@ function is_safe_input()
 function validate_boolean()
 {
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the boolean value to validate."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the boolean value to validate."
         return "$err_invalid_arguments"
     }
 
@@ -170,11 +170,11 @@ function validate_boolean()
 function is_safe_boolean()
 {
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the boolean value to test."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the boolean value to test."
         return "$err_invalid_arguments"
     }
     is_boolean "$1" || {
-        error -ec "$err_argument_type" -sd 3 "${FUNCNAME[0]}(): The input '$1' is not a valid boolean. Expected 'true' or 'false'."
+        error -sd 3 -ec "$err_argument_type" "${FUNCNAME[0]}(): The input '$1' is not a valid boolean. Expected 'true' or 'false'."
         return "$negative"
     }
 
@@ -193,11 +193,11 @@ function is_safe_boolean()
 function is_safe_integer()
 {
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the integer value to test."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the integer value to test."
         return "$err_invalid_arguments"
     }
     is_integer "$1" || {
-        error -ec "$err_argument_type" -sd 3 "${FUNCNAME[0]}(): The input '$1' is not a valid integer."
+        error -sd 3 -ec "$err_argument_type" "${FUNCNAME[0]}(): The input '$1' is not a valid integer."
         return "$negative"
     }
 
@@ -217,7 +217,7 @@ function is_safe_integer()
 function is_safe_path()
 {
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the file path to test."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the file path to test."
         return "$err_invalid_arguments"
     }
 
@@ -257,7 +257,7 @@ function is_safe_path()
 function is_safe_existing_path()
 {
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the file path to test."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the file path to test."
         return "$err_invalid_arguments"
     }
 
@@ -284,7 +284,7 @@ function is_safe_existing_path()
 function is_safe_existing_directory()
 {
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the directory path to test."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the directory path to test."
         return "$err_invalid_arguments"
     }
 
@@ -311,7 +311,7 @@ function is_safe_existing_directory()
 function is_safe_existing_file()
 {
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the file path to test."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the file path to test."
         return "$err_invalid_arguments"
     }
 
@@ -350,7 +350,7 @@ declare -xr jq_array_strings_nonempty='type == "array" and length > 0 and all(ty
 function is_safe_json_array()
 {
     (( $# == 3 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly three arguments (provided $#):"$'\n' \
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly three arguments (provided $#):"$'\n' \
               "  \$1: the JSON"$'\n' \
               "  \$2: the default value to use if the variable is unbound or empty, and"$'\n' \
               "  \$3: the name of the function to validate each item in the array."
@@ -405,7 +405,7 @@ function is_safe_json_array()
 function is_safe_runner_os()
 {
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the runner OS to test."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the runner OS to test."
         return "$err_invalid_arguments"
     }
 
@@ -437,7 +437,7 @@ function is_safe_runner_os()
 function is_safe_reason()
 {
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the reason text to test."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the reason text to test."
         return "$err_invalid_arguments"
     }
 
@@ -477,7 +477,7 @@ function is_safe_reason()
 function is_valid_nuget_server()
 {
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the NuGet server to test."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the NuGet server to test."
         return "$err_invalid_arguments"
     }
 
@@ -513,14 +513,18 @@ function is_safe_nuget_server()
 #-------------------------------------------------------------------------------
 function validate_nuget_server()
 {
+    local -i rc="$success"
+
     (( $# >= 1 && $# <= 2 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires at least one or two arguments (provided $#): the NAME OF THE VARIABLE containing the NuGet server to validate and an optional default value for the NuGet server."
-        return "$err_invalid_arguments"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires at least one or two arguments (provided $#): the NAME OF THE VARIABLE containing the NuGet server to validate and an optional default value for the NuGet server."
     }
-     [[ $1 =~ $varNameRegex ]] || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires a non-empty variable name as argument."
-        return "$err_invalid_nameref"
+    [[ $# -lt 1 || $1 =~ $varNameRegex ]] || {
+        rc="$err_invalid_nameref"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires a non-empty variable name as argument."
     }
+
+    (( rc == success )) || return "$err_invalid_arguments"
 
     local -n server=$1
     local default_server=${2:-"nuget"}
@@ -556,7 +560,7 @@ function validate_nuget_server()
 function is_valid_configuration()
 {
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires one argument (provided $#): the NAME of the configuration variable to test."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#): the NAME of the configuration variable to test."
         return "$err_invalid_arguments"
     }
 
@@ -576,7 +580,7 @@ function is_valid_configuration()
 function is_safe_configuration()
 {
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires one argument (provided $#): the NAME of the configuration variable to test."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#): the NAME of the configuration variable to test."
         return "$err_invalid_arguments"
     }
 
@@ -604,21 +608,25 @@ function is_safe_configuration()
 #-------------------------------------------------------------------------------
 function validate_preprocessor_symbols()
 {
+    local -i rc="$success"
+
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires one argument (provided $#): the NAME of the variable containing the preprocessor symbols to test."
-        return "$err_invalid_arguments"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires one argument (provided $#): the NAME of the variable containing the preprocessor symbols to test."
     }
-    [[ $1 =~ $varNameRegex ]] || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires a non-empty variable name as argument."
-        return "$err_invalid_nameref"
+    [[ $# -ne 1 || $1 =~ $varNameRegex ]] || {
+        rc="$err_invalid_nameref"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires a non-empty variable name as argument."
     }
+
+    (( rc == success )) || return "$err_invalid_arguments"
 
     local -n symbols=$1
     local -a symbol_array=()
 
     [[ -z $symbols ]] && return "$positive"
 
-    IFS=' ,:;' read -ra symbol_array <<< "$symbols"
+    IFS=' ,:;' read -r -a symbol_array <<< "$symbols"
 
     local bad=false
     local s=''
@@ -651,7 +659,7 @@ function validate_preprocessor_symbols()
 function is_valid_percentage()
 {
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires one argument (provided $#): the percentage to test."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#): the percentage to test."
         return "$err_invalid_arguments"
     }
 
@@ -713,7 +721,7 @@ declare -xr semverRex
 function is_valid_minverPrereleaseId()
 {
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires one argument (provided $#): the MinVer prerelease ID to test."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#): the MinVer prerelease ID to test."
         return "$err_invalid_arguments"
     }
 
@@ -760,7 +768,7 @@ declare -xr dotnet_regex="^([0-9]+\\.[0-9]+(\\.x)?)|([0-9]+(\\.x)?)|([0-9]+\\.[0
 function is_valid_dotnet_version()
 {
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires one argument (provided $#): the .NET version to test."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#): the .NET version to test."
         return "$err_invalid_arguments"
     }
 
@@ -798,7 +806,7 @@ function is_safe_dotnet_version()
 function escape_ere()
 {
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires one argument (provided $#): the string that needs its special ERE characters to be escaped."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#): the string that needs its special ERE characters to be escaped."
         return "$err_invalid_arguments"
     }
 

@@ -28,8 +28,8 @@ declare -rx default_minver_prerelease_id="preview.0"
 declare -x benchmark_project=""
 declare -x configuration=${CONFIGURATION:-"Release"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
-declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"${default_minver_tag_prefix}"}
-declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"${default_minver_prerelease_id}"}
+declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
+declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}
 declare -x artifacts_dir=${ARTIFACTS_DIR:-"./BenchmarkArtifacts"}
 
 source "$script_dir/run-benchmarks.usage.sh"
@@ -100,7 +100,7 @@ declare -rx benchmark_exe_path
 
 if (( rc == failure )); then
     if ! $dry_run; then
-        warning "Cached benchmark executable '${benchmark_exe_path}' was not found. Rebuilding the benchmark project"
+        warning "Cached benchmark executable '$benchmark_exe_path' was not found. Rebuilding the benchmark project"
         execute dotnet clean "$benchmark_project" --configuration "$configuration" || true
         execute dotnet build "$benchmark_project" \
                 --verbosity detailed \
@@ -129,7 +129,7 @@ benchmark_args=(
     --artifacts "$artifacts_dir"
 )
 
-if ! execute "${benchmark_exe_path}" "${benchmark_args[@]}"; then
+if ! execute "$benchmark_exe_path" "${benchmark_args[@]}"; then
     error -ec "$err_logic_error" "Benchmark failed in project '$benchmark_project'."
     exit 2
 fi

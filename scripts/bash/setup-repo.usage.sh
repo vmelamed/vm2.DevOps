@@ -23,7 +23,7 @@ function usage_text()
     fi
 
     cat << EOF
-Usage: ${script_name} [<repo-directory>] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
+Usage: $script_name [<repo-directory>] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
 
 Bootstrap and configure a repository for a vm2 package project. This script assumes that the project has already been created
 locally, e.g. using 'dotnet new vm2.NewPkg' and has all the common files, including the *edited* GitHub Actions workflow *.yaml
@@ -94,10 +94,10 @@ Switches:
 $switches
 $vars
 Examples:
-  ${script_name} ~/repos/vm2.Glob
-  ${script_name} \$VM2_REPOS/vm2.Glob --interactive-secrets --verbose
-  ${script_name} vmelamed/vm2.MyPackage --visibility private --ssh
-  ${script_name} vm2.Glob --audit
+  $script_name ~/repos/vm2.Glob
+  $script_name \$VM2_REPOS/vm2.Glob --interactive-secrets --verbose
+  $script_name vmelamed/vm2.TestUtilities --visibility private --ssh
+  $script_name vm2.Glob --audit
 
 Configured local Git settings:
   core.hooksPath                Set to '\$VM2_REPOS/$vm2_devops_repo_name/scripts/githooks'

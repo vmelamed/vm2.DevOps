@@ -16,7 +16,7 @@ function usage_text()
     fi
 
     cat << EOF
-Usage: ${script_name} [<package-project>] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
+Usage: $script_name [<package-project>] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
 Packages and publishes NuGet packages to the specified server
 
 Arguments:

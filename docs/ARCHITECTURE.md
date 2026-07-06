@@ -388,17 +388,18 @@ The `github.vm2` source is configured in each repo's `NuGet.config`.
 
 | Secret                       | Used by                       | Purpose                                                       |
 | :--------------------------- | :---------------------------- | :------------------------------------------------------------ |
-| `NUGET_API_KEY`              | `_prerelease`, `_release`     | The NuGet API key for the selected NuGet server               |
+| `REPORTGENERATOR_LICENSE`    | `_ci` → `_test`               | ReportGenerator license key                                   |
 | `CODECOV_TOKEN`              | `_ci` → `_test`               | Codecov upload token                                          |
 | `BENCHER_API_TOKEN`          | `_ci` → `_benchmarks`         | Bencher.dev tracking token                                    |
-| `REPORTGENERATOR_LICENSE`    | `_ci` → `_test`               | ReportGenerator license key                                   |
+| `BENCH_DISPATCH_PAT`         | `rebuild_bench_history.sh`    | PAT with `repo` scope for dispatching benchmark history rebuilds |
+| `NUGET_API_KEY`              | `_prerelease`, `_release`     | The NuGet API key for the selected NuGet server               |
+| `GH_PACKAGES_TOKEN`          | `_refresh_lockfiles.sh`       | The GitHub Packages token used to update GitHub Packages      |
 | `RELEASE_PAT`                | `_prerelease`, `_release`     | Fine-grained PAT (`contents: write`) for pushing to `main` past branch protection |
 
 ## Dependabot Secrets
 
 | Secret                       | Used by                       | Purpose                                                       |
 | :--------------------------- | :---------------------------- | :------------------------------------------------------------ |
-| `GH_PACKAGES_TOKEN`          | `Dependabot`                  | The GitHub Packages token used by Dependabot to authenticate with GitHub Packages |
 
 ## Naming Conventions
 

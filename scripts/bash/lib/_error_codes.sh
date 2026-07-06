@@ -14,8 +14,10 @@
 declare -gr __VM2_LIB_ERROR_CODES_SH_LOADED=1
 
 # RETURN CODES THAT MUST NOT BE REUSED FOR OTHER PURPOSES:
-declare -rxi success=0   # The command completed successfully.
-declare -rxi failure=1   # A general, unspecified error occurred.
+declare -rxi success=0      # The command completed successfully.
+declare -rxi failure=1      # A general, unspecified error occurred.
+declare -rxi eof=1          # Alias for failure: end-of-file is encountered  (e.g., when using the read command)
+declare -rxi time_out=128   # The command timed out (e.g., when using the read command)
 # alternatively as boolean return codes:
 declare -rxi positive=0
 declare -rxi negative=1
@@ -50,6 +52,7 @@ declare -rxi err_repo_with_no_ci=85     # The specified repository root does not
 declare -rxi err_dir_with_ci=86         # The specified directory is not a root directory but has a CI configuration
 declare -rxi err_dir_with_no_ci=87      # The specified directory does not have a CI configuration in dir/.github/workflows (and  is not from a git repository)
 declare -rxi err_not_repos_parent=88    # The specified vm2_repos directory is not the parent directory of the vm2 repositories. Please, ensure that the vm2 repositories are cloned into this directory or correct the parameter/environment variable.
+declare -rxi err_not_on_current_commit=89   # The specified repository is not on the current commit of the expected branch (e.g., main)
 
 declare -rxA error_codes=(
     [$success]="The command completed successfully."
@@ -83,20 +86,32 @@ declare -rxA error_codes=(
     [$err_dir_with_ci]="The specified directory is not a root directory but has a CI configuration."
     [$err_dir_with_no_ci]="The specified directory does not have a CI configuration in dir/.github/workflows (and is not in a Git repository)."
     [$err_not_repos_parent]="The specified \$vm2_repos directory is not the parent directory for the vm2 repositories. Please ensure that the vm2 repositories are cloned into this directory or correct the parameter/environment variable."
+    [$err_not_on_current_commit]="The specified repository is not on the current commit of the expected branch."
 )
 
 function error_message()
 {
+    local -i rc="$success"
+
     (( $# == 1 )) || {
-        echo "error_message() requires exactly 1 argument: an error code." >&2
-        return "$err_invalid_arguments"
+        (( ++errors ))
+        rc="$err_invalid_arguments"
+        echo "❌  error_message() requires exactly 1 argument: an error code." >&2
     }
-    is_positive "$1" || {
-        echo "error_message() argument must be a positive integer error code from 1 to 255." >&2
-        return "$err_argument_type"
+    [[ $# -ne 1 ]] || is_positive "$1" || {
+        (( ++errors ))
+        rc="$err_argument_type"
+        echo "❌  error_message() argument must be a positive integer error code from 1 to 255." >&2
     }
-
     local -i code="$1"
+    [[ -v error_codes[$code] ]] || {
+        (( ++errors ))
+        rc="$err_unknown_argument"
+        echo "❌  error_message() argument '$code' is not a known error code." >&2
+    }
 
-    [[ -v error_codes[$code] ]] && echo "$code: ${error_codes[$code]}" || echo "Unknown error code: $code"
+    (( rc == success )) || return "$err_invalid_arguments"
+
+
+    echo "$code: ${error_codes[$code]}"
 }

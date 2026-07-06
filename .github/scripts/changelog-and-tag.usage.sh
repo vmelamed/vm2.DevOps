@@ -16,7 +16,7 @@ function usage_text()
     fi
 
     cat << EOF
-Usage: ${script_name} [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
+Usage: $script_name [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
 Updates CHANGELOG.md using git-cliff, then creates and pushes a Git tag.
 
 Accepts both release tags (e.g., v1.2.3) and prerelease tags (e.g., v1.2.3-preview.1).

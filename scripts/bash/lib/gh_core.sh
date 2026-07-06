@@ -26,7 +26,7 @@ declare -x lib_dir
 [[ ! -v script_dir  || -z "$script_dir"  ]] && script_dir=$(realpath -e "$(dirname "${BASH_SOURCE[-1]}")")
 [[ ! -v lib_dir     || -z "$lib_dir"     ]] && lib_dir=$(realpath -e "$(dirname "${BASH_SOURCE[0]}")")
 
-source "${lib_dir}/core.sh"
+source "$lib_dir/core.sh"
 
 ## In CI mode, indicates whether the script is running within GitHub Actions.
 declare -x github_actions=${GITHUB_ACTIONS:-false}
@@ -209,15 +209,19 @@ function to_output()
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 function to_github_output()
 {
+    local -i rc="$success"
+
     (( $# == 1 || $# == 2 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires one or two arguments (provided $#): " \
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires one or two arguments (provided $#): " \
               "the name of the variable to output and optionally the name to use in GitHub Actions output."
-        return "$err_invalid_arguments"
     }
-     [[ $1 =~ $varNameRegex ]] || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires a non-empty variable name as argument."
-        return "$err_invalid_nameref"
+    [[ $# -lt 1 || $1 =~ $varNameRegex ]] || {
+        rc="$err_invalid_nameref"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires a non-empty variable name as argument."
     }
+
+    (( rc == success )) || return "$err_invalid_arguments"
 
     local k
     # get the key from the second argument if provided,
@@ -248,10 +252,14 @@ function to_github_output()
 #-------------------------------------------------------------------------------
 function args_to_github_output()
 {
+    local -i rc="$success"
+
     (( $# > 0 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires one or more arguments (provided $#): the names of the variables to output."
-        return "$err_invalid_arguments"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires one or more arguments (provided $#): the names of the variables to output."
     }
+
+    (( rc == success )) || return "$err_invalid_arguments"
 
     {
         local var

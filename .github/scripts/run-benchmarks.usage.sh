@@ -16,7 +16,7 @@ function usage_text()
     fi
 
     cat << EOF
-Usage: ${script_name} [<bm-project-path>] | [--<long option> <value> | -<short option> <value> |
+Usage: $script_name [<bm-project-path>] | [--<long option> <value> | -<short option> <value> |
                                              --<long switch> | -<short switch> ]*
 Runs the benchmark tests in the specified project. It assumes that the solution folder is two levels up from the project
 directory, i.e., <solution-root>/benchmarks/<benchmark-project-dir>/<benchmark-project>.csproj All parameters are optional if

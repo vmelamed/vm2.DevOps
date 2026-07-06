@@ -8,17 +8,17 @@ declare -x GITHUB_WORKSPACE
 declare -x GITHUB_PATH
 declare -x GITHUB_ENV
 
-if [[ -d "${GITHUB_WORKSPACE}/vm2-devops" ]]; then
+if [[ -d "$GITHUB_WORKSPACE/vm2-devops" ]]; then
     # We're running inside vm2.DevOps
-    base="${GITHUB_WORKSPACE}/vm2-devops"
+    base="$GITHUB_WORKSPACE/vm2-devops"
 else
     # We're running outside vm2.DevOps itself
     base="$(realpath "$(dirname "${BASH_SOURCE[0]}")/../../../")"
 fi
 
 # we need the scripts in these two directories:
-scripts_dir="${base}/.github/scripts"
-lib_dir="${base}/scripts/bash/lib"
+scripts_dir="$base/.github/scripts"
+lib_dir="$base/scripts/bash/lib"
 
 {
     echo "$scripts_dir"

@@ -16,7 +16,7 @@ function usage_text()
     fi
 
     cat << EOF
-Usage: ${script_name} [<package project>] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
+Usage: $script_name [<package project>] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
 Validates that a .NET project can be successfully packed into a NuGet package (dry-run pack without publishing)
 
 Arguments:

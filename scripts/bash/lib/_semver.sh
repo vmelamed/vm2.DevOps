@@ -26,7 +26,7 @@ fi
 
 # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
 if ! declare -pF "error" > "$_ignore"; then
-    source "${lib_dir}/_diagnostics.sh"
+    source "$lib_dir/_diagnostics.sh"
 fi
 
 # Regular expressions that test if a string contains a semantic version:
@@ -50,18 +50,18 @@ declare -xr minverTagPrefixRex='[0-9A-Za-z_]([-0-9A-Za-z._/]*[-A-Za-z_])?'
 declare -xr minverPrereleaseIdRex=$prereleaseLabelRex
 
 # Regular expressions that test if a string is a MinVer tag prefix and MinVerDefaultPrereleaseIds (MinverPrereleaseId)
-declare -xr minverTagPrefixRegex="^${minverTagPrefixRex}$"
-declare -xr minverPrereleaseIdRegex="^${minverPrereleaseIdRex}$"
+declare -xr minverTagPrefixRegex="^$minverTagPrefixRex$"
+declare -xr minverPrereleaseIdRegex="^$minverPrereleaseIdRex$"
 
 # Regular expressions that test if a string contains a git tag with semantic version and MinVer prefix (e.g. v1.2.3-alpha.3)
-declare -rx semverTagRex="${minverTagPrefixRex}${semverRex}"
-declare -rx semverTagPrereleaseRex="${minverTagPrefixRex}${semverPrereleaseRex}"
-declare -rx semverTagReleaseRex="${minverTagPrefixRex}${semverReleaseRex}"
+declare -rx semverTagRex="$minverTagPrefixRex$semverRex"
+declare -rx semverTagPrereleaseRex="$minverTagPrefixRex$semverPrereleaseRex"
+declare -rx semverTagReleaseRex="$minverTagPrefixRex$semverReleaseRex"
 
 # Regular expressions that test if a string is a git tag with semantic version (e.g. v1.2.3-alpha.3)
-declare -rx semverTagRegex="^${minverTagPrefixRex}${semverRex}$"
-declare -rx semverTagPrereleaseRegex="^${minverTagPrefixRex}${semverPrereleaseRex}$"
-declare -rx semverTagReleaseRegex="^${minverTagPrefixRex}${semverReleaseRex}$"
+declare -rx semverTagRegex="^$minverTagPrefixRex$semverRex$"
+declare -rx semverTagPrereleaseRegex="^$minverTagPrefixRex$semverPrereleaseRex$"
+declare -rx semverTagReleaseRegex="^$minverTagPrefixRex$semverReleaseRex$"
 
 function print_semver_regexes()
 {
@@ -98,15 +98,15 @@ function print_semver_regexes()
 function validate_semverTagComponents()
 {
     (( $# == 1 || $# == 2 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires 1 or 2 arguments ($# provided): the semver tag prefix used by MinVer and the optional default prerelease identifier template."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 or 2 arguments ($# provided): the semver tag prefix used by MinVer and the optional default prerelease identifier template."
         return "$err_invalid_arguments"
     }
 
     local errs
     errs=$(get_errors)
 
-    [[ "$1" =~ $minverTagPrefixRegex ]]                     || error -ec "$err_argument_value" -sd 3 "The semver tag prefix used by MinVer ('$1') is not valid. It must match the regex: $minverTagPrefixRegex. Did you pass a nameref by mistake?"
-    [[ $# -eq 1 || "$2" =~ $minverPrereleaseIdRegex ]]      || error -ec "$err_argument_value" -sd 3 "The semver prerelease identifier template used by MinVer ('$2') is not valid. It must match the regex: $minverPrereleaseIdRegex. Did you pass a nameref by mistake?"
+    [[ "$1" =~ $minverTagPrefixRegex ]]                     || error -sd 3 -ec "$err_argument_value" "The semver tag prefix used by MinVer ('$1') is not valid. It must match the regex: $minverTagPrefixRegex. Did you pass a nameref by mistake?"
+    [[ $# -eq 1 || "$2" =~ $minverPrereleaseIdRegex ]]      || error -sd 3 -ec "$err_argument_value" "The semver prerelease identifier template used by MinVer ('$2') is not valid. It must match the regex: $minverPrereleaseIdRegex. Did you pass a nameref by mistake?"
     (( $(get_errors) == errs ))
 }
 
@@ -157,7 +157,7 @@ function compare_semver()
     errs=$(get_errors)
 
     (( $# == 2 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires at exactly 2 arguments (provided $#): version1 and version2."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires at exactly 2 arguments (provided $#): version1 and version2."
         return "$err_invalid_arguments"
     }
 
@@ -171,7 +171,7 @@ function compare_semver()
         local -i patch1=${BASH_REMATCH[$semver_patch]}
         local prerelease1=${BASH_REMATCH[$semver_prerelease]#-}
     else
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires the version1 argument to be a valid [Semantic Versioning 2.0.0](https://semver.org/) string."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires the version1 argument to be a valid [Semantic Versioning 2.0.0](https://semver.org/) string."
     fi
     # local build1=${BASH_REMATCH[semver_build]#-} does not participate in comparison by spec
 
@@ -181,7 +181,7 @@ function compare_semver()
         local -i patch2=${BASH_REMATCH[$semver_patch]}
         local prerelease2=${BASH_REMATCH[$semver_prerelease]#-}
     else
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires the version2 argument to be a valid [Semantic Versioning 2.0.0](https://semver.org/) string."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires the version2 argument to be a valid [Semantic Versioning 2.0.0](https://semver.org/) string."
     fi
     # local build2=${BASH_REMATCH[semver_build]#-} does not participate in comparison by spec
 
@@ -287,7 +287,7 @@ function compare_semver()
 function semver_equal()
 {
     (( $# == 2 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
         return "$err_invalid_arguments"
     }
     compare_semver "$1" "$2"; rc=$?
@@ -308,7 +308,7 @@ function semver_equal()
 function semver_greaterThan()
 {
     (( $# == 2 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
         return "$err_invalid_arguments"
     }
     compare_semver "$1" "$2"; rc=$?
@@ -329,7 +329,7 @@ function semver_greaterThan()
 function semver_greaterThanOrEqual()
 {
     (( $# == 2 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
         return "$err_invalid_arguments"
     }
     compare_semver "$1" "$2"; rc=$?
@@ -350,7 +350,7 @@ function semver_greaterThanOrEqual()
 function semver_lessThan()
 {
     (( $# == 2 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
         return "$err_invalid_arguments"
     }
     compare_semver "$1" "$2"; rc=$?
@@ -371,7 +371,7 @@ function semver_lessThan()
 function semver_lessThanOrEqual()
 {
     (( $# == 2 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
         return "$err_invalid_arguments"
     }
     compare_semver "$1" "$2"; rc=$?
@@ -396,7 +396,7 @@ function semver_lessThanOrEqual()
 function is_semver()
 {
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): the version."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): the version."
         return "$err_invalid_arguments"
     }
     [[ "$1" =~ $semverRegex ]]
@@ -418,7 +418,7 @@ function is_semver()
 function is_semverTag()
 {
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): the semver tag."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): the semver tag."
         return "$err_invalid_arguments"
     }
     [[ "$1" =~ $semverTagRegex ]]
@@ -437,7 +437,7 @@ function is_semverTag()
 function is_semverPrerelease()
 {
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): the semver prerelease."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): the semver prerelease."
         return "$err_invalid_arguments"
     }
     [[ "$1" =~ $semverPrereleaseRegex ]]
@@ -459,7 +459,7 @@ function is_semverPrerelease()
 function is_semverPrereleaseTag()
 {
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): the semver prerelease tag."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): the semver prerelease tag."
         return "$err_invalid_arguments"
     }
     [[ "$1" =~ $semverTagPrereleaseRegex ]]
@@ -478,7 +478,7 @@ function is_semverPrereleaseTag()
 function is_semverRelease()
 {
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): the version."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): the version."
         return "$err_invalid_arguments"
     }
     [[ "$1" =~ $semverReleaseRegex ]]
@@ -500,7 +500,7 @@ function is_semverRelease()
 function is_semverReleaseTag()
 {
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly 1 argument: the semver release tag."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 argument: the semver release tag."
         return "$err_invalid_arguments"
     }
     [[ "$1" =~ $semverTagReleaseRegex ]]

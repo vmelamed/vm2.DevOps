@@ -58,10 +58,10 @@ exit_if_has_errors
 # ============================================================================
 
 # shellcheck disable=SC2154 # semverTagReleaseRegex is referenced but not assigned.
-latest_stable_tag=$(git tag --list "${minver_tag_prefix}*" | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1 || echo "")
+latest_stable_tag=$(git tag --list "$minver_tag_prefix*" | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1 || echo "")
 
 # shellcheck disable=SC2154 # semverTagPrereleaseRegex is referenced but not assigned.
-latest_prerelease_tag=$(git tag --list "${minver_tag_prefix}*" | grep -E "$semverTagPrereleaseRegex" | sort -V | tail -n1 || echo "")
+latest_prerelease_tag=$(git tag --list "$minver_tag_prefix*" | grep -E "$semverTagPrereleaseRegex" | sort -V | tail -n1 || echo "")
 
 trace "Latest stable tag: ${latest_stable_tag:-<none>}"
 trace "Latest prerelease tag: ${latest_prerelease_tag:-<none>}"
@@ -165,8 +165,8 @@ if [[ -n "$latest_prerelease_ver" ]] && is_semverPrerelease "$latest_prerelease_
     fi
 fi
 
-prerelease_version="${base_version}-${prerelease_prefix}.${prerelease_counter}"
-prerelease_tag="${minver_tag_prefix}${prerelease_version}"
+prerelease_version="$base_version-$prerelease_prefix.$prerelease_counter"
+prerelease_tag="$minver_tag_prefix$prerelease_version"
 
 info "Computed prerelease version: $prerelease_version [$bump_type]"
 
@@ -197,5 +197,5 @@ args_to_github_output \
     echo "## 🏷️ Prerelease Version: **$prerelease_version**"
     echo "- Git Tag: \`$prerelease_tag\`"
     echo "- Bump: $bump_type"
-    echo "- Reason: ${reason}"
+    echo "- Reason: $reason"
 } | to_summary

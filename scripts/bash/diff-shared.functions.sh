@@ -81,12 +81,14 @@ declare -rA merge_commands=(
 )
 
 ## Loads all file actions from JSON configuration file
-## Reads ${lib_dir}/diff-shared.config.json and populates arrays
+## Reads $lib_dir/diff-shared.config.json and populates arrays
 function configure()
 {
-    (( $# == 2 ))                       || usage -ec "$err_invalid_arguments" "${FUNCNAME[0]}() takes 2 mandatory arguments (provided $#) - the SoT directory and the target directory."
-    [[ -d $1 ]]                         || error -ec "$err_argument_value" "${FUNCNAME[0]}() the specified SoT directory '$1' does not exist or is not a directory."
-    [[ -d $2 ]]                         || error -ec "$err_argument_value" "${FUNCNAME[0]}() the specified SoT directory '$2' does not exist or is not a directory."
+    (( $# == 2 ))                        || error -ec "$err_invalid_arguments" "${FUNCNAME[0]}() takes 2 mandatory arguments (provided $#) - the SoT directory and the target directory."
+    [[ $# -lt 1 || -d $1 ]]              || error -ec "$err_argument_value" "${FUNCNAME[0]}() the specified SoT directory '$1' does not exist or is not a directory."
+    [[ $# -lt 2 || -d $2 ]]              || error -ec "$err_argument_value" "${FUNCNAME[0]}() the specified SoT directory '$2' does not exist or is not a directory."
+
+    exit_if_has_errors
 
     local config_file="$1/diff-shared.config.json"
     local target_path="$2"
@@ -98,18 +100,13 @@ function configure()
     exit_if_has_errors
 
     # get the configured tools
-    {
-        IFS=$'\n' read -r diff_tool     &&
-        IFS=$'\n' read -r diff_command  &&
-        IFS=$'\n' read -r merge_tool    &&
-        IFS=$'\n' read -r merge_command;
-    } < <(get_tools "$config_file")
+    { read -r diff_tool; read -r diff_command; read -r merge_tool; read -r merge_command; } < <(get_tools "$config_file")
 
     # Populate the arrays
     local -i index=0
     local source_file target_file action
     # shellcheck disable=SC2034
-    local vm2_sot_shared="${vm2_sot_repo_name}/templates/${sot}/content"
+    local vm2_sot_shared="$vm2_sot_repo_name/templates/$sot/content"
 
     while IFS='=' read -r source_file target_file file_action; do
         [[ -n "$source_file" ]]                     || error -ec "$err_argument_value" "Empty source file path found in '$config_file'."
@@ -145,12 +142,14 @@ function configure()
 
 function parameterize()
 {
-    local rc=$failure
+    local rc=$success
 
     (( ${#selectors_actions[@]} > 0 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "No command line arguments were provided to parameterize the file actions. Please provide at least one --file* argument to specify which files to compare and how."
-        return "$rc"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "No command line arguments were provided to parameterize the file actions. Please provide at least one --file* argument to specify which files to compare and how."
     }
+
+    ((  rc == success )) || return "$rc"
 
     local selector action
     local -a matching_actions
@@ -193,78 +192,77 @@ function parameterize()
     done
 
     if (( count > 0 )); then
-        trace "Parameterized actions for ${count} files based on the provided command line arguments."
-        rc=$success
+        trace "Parameterized actions for $count files based on the provided command line arguments."
     else
-        warning -ec "$err_argument_value" -sd 3 "No files were matched by the provided command line arguments."
-        rc=$success
+        warning -sd 3 -ec "$err_argument_value" "No files were matched by the provided command line arguments."
     fi
     return "$rc"
 }
 
 function resolve_target()
 {
+    local -i rc="$success"
+
     [[ $# -eq 2 ]] || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]} expects two arguments (provided $#):" \
-                "  1) the directory of the repositories" \
-                "  2) the directory name of the target repository."
-        return "$err_invalid_arguments"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]} expects two arguments (provided $#):" \
+                              "  1) the directory of the repositories" \
+                              "  2) the directory name of the target repository."
     }
 
-    local vm2repos="$1"
+    (( rc == success )) || return "$rc"
+
+    local repos="$1"
     local r="$2"
-    rc="$success"
+    local output target_root target_path
 
-    output=$(resolve_repo_root "$vm2repos" "$r" 2>"$_ignore") || rc=$?
-    echo "$output"
-
+    output=$(resolve_repo_root "$repos" "$r") || rc=$?
     # We can only work with git repos or directories that have CI configured:
     (( rc == success || rc == err_dir_with_ci )) || {
-        error -ec "$err_argument_value" -sd 3 "The specified target directory '${vm2repos%/}/${r#/}' is invalid. It should have CI configured in '.github/workflows'."
+        error -sd 3 -ec "$rc" "The specified target directory '${repos%/}/${r#/}' is invalid." \
+                              "It should have CI configured in '.github/workflows'."
         return "$rc"
     }
-
-    local target_root=""
-    local target_path=""
-
-    {
-        IFS= read -r target_root;
-        IFS= read -r target_path;
-    } <<< "$output"
+    { read -r target_root; read -r target_path; } <<< "$output"
 
     # if it is a git repo then make sure it is in a clean state:
     if (( rc == success )); then
         branch="$(git -C "$target_root" branch --show-current 2>"$_ignore")" || {
             rc=$?
-            error -ec "$err_tool_error" -sd 3 "The repository in the specified target directory '$1' appears corrupted."
+            error -sd 3 -ec "$err_tool_error" "The repository in the specified target directory '$1' appears corrupted."
         }
-        (( rc == success )) && ensure_fresh_git_state "$target_root" "$branch" ||
-            error -ec "$err_logic_error" -sd 3 "The specified target repository at '$target_root' on branch '$branch' is not in a clean state. Please, commit or stash your changes."
+        (( rc == success )) && {
+            ensure_fresh_git_state "$target_root" "$branch" ||
+                error -sd 3 -ec "$err_logic_error" "The specified target repository at '$target_root' on branch '$branch' is not in a clean state." \
+                                                   "Commit or stash your changes."
+        }
     else
         branch="<not a git repository>"
     fi
 
     exit_if_has_errors
 
-    trace "The target project is in '$target_path' with working tree directory root '$target_root', on a branch '$branch'."
+    trace "The target project's working tree root directory is '$target_root', on a branch '$branch'."
     echo "$target_root"
     echo "$target_path"
 }
 
 ## Loads custom file actions from JSON file
-## Reads ${target_path}/diff-shared.custom.json and overrides file_actions
+## Reads $target_path/diff-shared.custom.json and overrides file_actions
 function customize()
 {
-    (( $# == 1 || $# == 2 ))        || usage -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 or 2 arguments (provided $#):" \
+    (( $# == 1 || $# == 2 ))            || error -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 or 2 arguments (provided $#):" \
                                              "  1) target repository root directory path" \
                                              "  2) optional flag to customize the tools only."
-    [[ -d $1 ]]                     || usage -ec "$err_argument_value" "${FUNCNAME[0]}() the target path is not a valid directory."
-    [[ -z $2 ]] || is_boolean "$2"  || usage -ec "$err_argument_value" "${FUNCNAME[0]}() the second optional argument must be a boolean flag indicating whether to customize the tools only."
+    [[ $# -lt 1 || -d $1 ]]             || error -ec "$err_argument_value" "${FUNCNAME[0]}() the target path is not a valid directory."
+    [[ $# -lt 2 || -z $2 ]] || is_boolean "${2:-}" || error -ec "$err_argument_value" "${FUNCNAME[0]}() the second optional argument must be a boolean flag indicating whether to customize the tools only."
+
+    exit_if_has_errors
 
     target_path=$1
     only_tools=${2:-false}
 
-    custom_config="${target_path}/diff-shared.custom.json"
+    custom_config="$target_path/diff-shared.custom.json"
 
     [[ -s "$custom_config" ]] || {
          trace "The customization file '$custom_config' does not exist or is empty. Continuing with the default configuration."
@@ -277,12 +275,7 @@ function customize()
         return "$failure"
     }
 
-    {
-        IFS=$'\n' read -r custom_diff_tool     &&
-        IFS=$'\n' read -r custom_diff_command  &&
-        IFS=$'\n' read -r custom_merge_tool    &&
-        IFS=$'\n' read -r custom_merge_command;
-    } < <(get_tools "$custom_config")
+    { read -r custom_diff_tool; read -r custom_diff_command; read -r custom_merge_tool; read -r custom_merge_command; } < <(get_tools "$custom_config")
 
     [[ -n $custom_diff_tool ]]     && diff_tool="$custom_diff_tool"         || diff_tool="$config_diff_tool"
     [[ -n $custom_diff_command ]]  && diff_command="$custom_diff_command"   || diff_command="$config_diff_command"
@@ -328,8 +321,8 @@ function customize()
 
             local -i index
             for (( index=0; index<${#target_files[@]}; index++ )); do
-                if [[ "${target_files[index]}" == ${target_path}/${file_name} ||
-                      "${target_files[index]}" == ${target_path}/*/${file_name} ]]; then
+                if [[ "${target_files[index]}" == $target_path/$file_name ||
+                      "${target_files[index]}" == $target_path/*/$file_name ]]; then
                     # Override the action:
                     file_actions[index]="$action"
                     (( ++changed_actions )) || true
@@ -344,25 +337,22 @@ function customize()
             }
         done < <(jq -r '.action_overrides | to_entries | .[] | .key+"="+.value' "$custom_config" 2>"$_ignore") # convert JSON object to key=value pairs
 
-        $diff_only || info "$script_name was customized successfully with ${changed_actions} modified actions."
+        $diff_only || info "$script_name was customized successfully with $changed_actions modified actions."
     fi
 }
 
 function get_tools()
 {
-    [[ $# -eq 1 ]] || usage -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): configuration or customization file."
-    [[ -s $1 ]]    || usage -ec "$err_argument_value" "${FUNCNAME[0]}() the configuration or customization file does not exists or is empty."
+    [[ $# -eq 1 ]]           || error -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): configuration or customization file."
+    [[ $# -ne 1 || -s $1 ]]  || error -ec "$err_argument_value" "${FUNCNAME[0]}() the configuration or customization file does not exists or is empty."
+
+    exit_if_has_errors
 
     local file="$1"
     local dt dc mt mc
 
     # get the diff and merge tool commands from the main config file
-    {
-        IFS=$'\n' read -r dt &&
-        IFS=$'\n' read -r dc &&
-        IFS=$'\n' read -r mt &&
-        IFS=$'\n' read -r mc;
-    } < <(jq -r '.diff.tool, .diff.command, .merge.tool, .merge.command' "$file" 2>"$_ignore")
+    { read -r dt; read -r dc; read -r mt; read -r mc; } < <(jq -r '.diff.tool, .diff.command, .merge.tool, .merge.command' "$file" 2>"$_ignore")
 
     if [[ -n $dt && -n $dc ]] &&
        (command -p -v "$dt" &>"$_ignore" || which "$dt" &>"$_ignore"); then
@@ -370,11 +360,13 @@ function get_tools()
         trace "Diff tool configured in $file: '$dt': $dc"
     else
         # get it from Git
-        dt=$(git config --global --get diff.tool 2>"$_ignore") &&
+        dt=$(git config --global --get "diff.tool" 2>"$_ignore" || true) &&
         dc=$(git config --global --get "diff.$dt.cmd" 2>"$_ignore" || true)
 
-        if [[ -n "$dt" && -n "$dc" ]] &&
-           (command -v -p "$dt" > "$_ignore" || which "$dt" &>"$_ignore"); then
+        if [[ -n "$dt" ]] && (command -v -p "$dt" > "$_ignore" || which "$dt" &>"$_ignore") &&
+           ([[ -n "$dc" ]] || is_in "$dt" "${!diff_commands[@]}"); then
+            # OK the git configured diff tool is available, if a command is not configured, get ours
+            dc=${dc:-${diff_commands[$dt]}}
             trace "Diff tool configured in Git: '$dt': $dc"
         else
             # use the hardcoded defaults from this script
@@ -388,25 +380,28 @@ function get_tools()
                 # fall-back to good ole 'diff' - it is not as good, but it will do the job and return good exit codes
                 dt="diff"
                 dc=${diff_commands[$dt]}
-                trace "Diff tool fall-back to diff: '$dt': $dc"
+                trace "Diff tool fall-back to classic diff: '$dt': $dc"
             fi
         fi
     fi
 
+    # similar logic for the merge tool, but we prefer our default merge commands over the git configured ones
     if [[ -n $mt && -n $mc ]] &&
        (command -p -v "$mt" &>"$_ignore" || which "$mt" &>"$_ignore"); then
         # the configured merge tool/command is good, use it
         trace "Merge tool configured in $file: '$mt': $mc"
     else
         # get it from Git
-        mt=$(git config --global --get merge.tool 2>"$_ignore") || true
+        mt=$(git config --global --get "merge.tool" 2>"$_ignore" || true)
         mc=$(git config --global --get "mergetool.$mt.cmd" 2>"$_ignore" || true)
-        if [[ -n $mt ]] && ([[ -n $mc ]] || is_in "$merge_tool" "${!merge_commands[@]}") &&
-           (command -v -p "$mt" > "$_ignore" || which "$mt" &>"$_ignore"); then
-            if is_in "$merge_tool" "${!merge_commands[@]}"; then
-                # for the purposes of this script, our merge commands work better than the ones configured in git
-                mc=${merge_commands[$mt]}
-            fi
+        local mt_is_in_merge_commands="false"
+        is_in "$mt" "${!merge_commands[@]}" && mt_is_in_merge_commands="true"
+
+        if [[ -n $mt ]] && (command -v -p "$mt" > "$_ignore" || which "$mt" &>"$_ignore") &&
+           ([[ -n $mc ]] || $mt_is_in_merge_commands); then
+            # for the purposes of this script, our merge commands work better than the ones configured in git,
+            # so we ignore the git config here if we can
+            $mt_is_in_merge_commands && mc=${merge_commands[$mt]}
             trace "Merge tool from Git config with '$mt': $mc"
         else
             # use the hardcoded defaults from this script
@@ -415,16 +410,16 @@ function get_tools()
 
             if [[ -n $mt && -n $mc ]] &&
                (command -v -p "$mt" > "$_ignore" || which "$mt" &>"$_ignore"); then
-                trace "Diff tool configured by default: '$mt': $mc"
+                trace "Merge tool configured by default: '$mt': $mc"
             else
                 # fall-back to good ole 'code' if available
                 mt="code"
                 if [[ -n $mt && -n $mc ]] &&
                    (command -v -p "$mt" > "$_ignore" || which "$mt" &>"$_ignore"); then
                     mc=${merge_commands[$mt]}
-                    trace "Default merge tool with '$mt': $mc"
+                    trace "Choosing Visual Studio Code as a merge tool '$mt': $mc"
                 else
-                    trace "No merge tool was configured or none is available. Merge operations will not be possible."
+                    warning "No merge tool was configured or none is available. Merge operations will not be possible."
                     mt=""
                     mc=""
                 fi
@@ -464,7 +459,7 @@ function trace_files()
         * )
             format="%-84s ??????????????????? %-s\n"
     esac
-    trace "$(printf "$format" "${2#"$vm2_repos/${vm2_sot_repo_name}/templates/"}" "${3#"$vm2_repos/"}")"
+    trace "$(printf "$format" "${2#"$vm2_repos/$vm2_sot_repo_name/templates/"}" "${3#"$vm2_repos/"}")"
 }
 
 ## Compares two files using the default tool or the configured git diff.

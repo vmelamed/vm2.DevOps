@@ -51,10 +51,10 @@ trap 'rm -rf "$pack_output_dir"' EXIT
 temp_output=$(mktemp)
 trap 'rm -f "$temp_output"; rm -rf "$pack_output_dir"' EXIT
 
-execute dotnet restore "${package_project}"
+execute dotnet restore "$package_project"
 
 pack_args=(
-    "${package_project}"
+    "$package_project"
     "--no-restore"
     "--verbosity" "detailed"
     "--configuration" "$configuration"
@@ -83,8 +83,8 @@ nupkg_count=$(find "$pack_output_dir" -name "*.nupkg" | wc -l)
         echo "### ❌ Pack Validation Failed"
     fi
     echo ""
-    echo "Project: **${package_project}**"
-    echo "Packages produced: **${nupkg_count}**"
+    echo "Project: **$package_project**"
+    echo "Packages produced: **$nupkg_count**"
     echo ""
     for f in "$pack_output_dir"/*.nupkg; do
         [[ -f "$f" ]] && echo "  - $(basename "$f")"

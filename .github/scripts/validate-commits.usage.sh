@@ -23,7 +23,7 @@ function usage_text()
 
     cat << EOF
 Usage:
-  ${script_name} --base-ref <ref> [options]
+  $script_name --base-ref <ref> [options]
 
 Description:
   Validates that all commit messages between <base-ref> and HEAD follow the Conventional Commits specification
@@ -52,7 +52,7 @@ Options:
   -b, --base-ref <ref>          Required. Git ref to compare against (e.g. origin/main, a SHA, or a tag).
 $switches$vars
 Examples:
-    ${script_name} --base-ref origin/main
-    ${script_name} --base-ref v1.0.0 --verbose
+    $script_name --base-ref origin/main
+    $script_name --base-ref v1.0.0 --verbose
 EOF
 }

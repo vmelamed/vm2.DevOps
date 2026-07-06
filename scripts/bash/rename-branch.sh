@@ -13,7 +13,7 @@ declare -xr script_dir
 declare -xr lib_dir
 
 # shellcheck disable=SC1091
-source "${lib_dir}/core.sh"
+source "$lib_dir/core.sh"
 
 declare -rxi success
 declare -rxi failure

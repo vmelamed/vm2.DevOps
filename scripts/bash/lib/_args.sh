@@ -336,7 +336,7 @@ function unset_trace_enabled()
 function set_table_format()
 {
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires one parameter ($# provided) - the table format, one of ${table_formats[*]}"
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one parameter ($# provided) - the table format, one of ${table_formats[*]}"
         return "$err_invalid_arguments"
     }
 
@@ -387,10 +387,14 @@ declare -x usage_requested=""
 # shellcheck disable=SC2034 # variable appears unused. Verify it or export it
 function get_common_arg()
 {
+    local -i validation_rc="$success"
+
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires one parameter ($# provided): the command-line argument to process"
-        return "$err_invalid_arguments"
+        validation_rc="$err_invalid_arguments"
+        error -sd 3 -ec "$validation_rc" "${FUNCNAME[0]}() requires one parameter ($# provided): the command-line argument to process"
     }
+
+    (( validation_rc == success )) || return "$err_invalid_arguments"
 
     # the calling scripts should not use short options:
     # --help|-h|-\?|-v|--verbose|-q|--quiet|-x|--trace|-y|--dry-run
@@ -424,7 +428,7 @@ function get_common_arg()
 #-------------------------------------------------------------------------------
 function usage_if_requested()
 {
-    case "${usage_requested}" in
+    case "$usage_requested" in
         short ) usage false;;
         long  ) usage true;;
         *     ) return 0;;
@@ -544,7 +548,7 @@ function usage_text()
     fi
 
     cat << EOF
-OVERRIDE THE FUNCTION usage_text() IN THE CALLING SCRIPT ${script_name} TO PROVIDE CUSTOM USAGE INFORMATION.
+OVERRIDE THE FUNCTION usage_text() IN THE CALLING SCRIPT $script_name TO PROVIDE CUSTOM USAGE INFORMATION.
 $switches
 $vars
 EOF

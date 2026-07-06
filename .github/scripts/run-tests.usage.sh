@@ -16,7 +16,7 @@ function usage_text()
     fi
 
     cat << EOF
-Usage: ${script_name} [<test-project-path>] | [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
+Usage: $script_name [<test-project-path>] | [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
 Runs the tests in the specified test project and collects code coverage information. It assumes that the solution folder is two
 levels up from the project directory, i.e., <solution-root>/tests/<test-project-dir>/<test-project>.csproj. All parameters are
 optional if the corresponding environment variables are set. If both are specified, the command line arguments take precedence

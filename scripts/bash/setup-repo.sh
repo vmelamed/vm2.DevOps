@@ -32,12 +32,12 @@ declare -rx default_sot # AddNewPackage
 
 # start with default input
 declare -x repo_path=""
-declare -x visibility=${default_visibility}
-declare -x branch=${default_branch}
-declare -x interactive_vars=${default_interactive}
-declare -x interactive_secrets=${default_interactive}
-declare -x configure_local=${default_configure_local}
-declare -x audit=${default_audit}
+declare -x visibility=$default_visibility
+declare -x branch=$default_branch
+declare -x interactive_vars=$default_interactive
+declare -x interactive_secrets=$default_interactive
+declare -x configure_local=$default_configure_local
+declare -x audit=$default_audit
 declare -x main_protection_rs_name=""
 declare -xi main_protection_rs_id=0
 declare -x description=""
@@ -46,22 +46,23 @@ declare -x use_https=false
 declare -x repo_owner=${ORGANIZATION:-$default_owner}
 declare -rx sot=$default_sot
 
-declare -x vm2_repos="${VM2_REPOS:-${HOME}/repos/vm2}"
+declare -x vm2_repos="${VM2_REPOS:-$HOME/repos/vm2}"
 declare -x repo_name=""
 declare -x repo=""
 declare -x repo_url=""
 declare -x repo_id=""
 
 declare -xa required_checks=()
-declare -xi github_actions_app_id=0
+declare -xi actions_app_id=0
+declare -xi dependabot_app_id=0
 
 # shellcheck disable=SC1091
 {
-    source "${script_dir}/setup-repo.args.sh"
-    source "${script_dir}/setup-repo.usage.sh"
-    source "${script_dir}/setup-repo.defaults.sh"
-    source "${script_dir}/setup-repo.functions.sh"
-    source "${script_dir}/setup-repo.audit.sh"
+    source "$script_dir/setup-repo.args.sh"
+    source "$script_dir/setup-repo.usage.sh"
+    source "$script_dir/setup-repo.defaults.sh"
+    source "$script_dir/setup-repo.functions.sh"
+    source "$script_dir/setup-repo.audit.sh"
 }
 
 get_arguments "$@"
@@ -86,7 +87,7 @@ exit_if_has_errors
 #===============================================================================
 declare -xi rc="$success"
 
-vm2_repos=$(resolve_vm2_repos "$vm2_repos")
+vm2_repos=$(resolve_vm2_repos "$vm2_repos") || true
 exit_if_has_errors
 trace "All vm2 repositories are expected to be in '$vm2_repos'"
 
@@ -94,9 +95,9 @@ trace "All vm2 repositories are expected to be in '$vm2_repos'"
 sot_path=$(get_vm2_sot_path "$vm2_repos" "$sot")
 init_default_local_git_settings "$vm2_repos" "$sot_path"
 
-declare -x _ci_yaml="${vm2_repos}/${vm2_devops_repo_name}/.github/workflows/_ci.yaml"
+declare -x _ci_yaml="$vm2_repos/$vm2_devops_repo_name/.github/workflows/_ci.yaml"
 [[ -s "$_ci_yaml" ]] ||
-    error -ec "$err_logic_error" "Could not find _ci.yaml GitHub Actions reusable workflow file in ${vm2_repos}."
+    error -ec "$err_logic_error" "Could not find _ci.yaml GitHub Actions reusable workflow file in $vm2_repos."
 declare -xr _ci_yaml
 
 exit_if_has_errors
@@ -104,18 +105,16 @@ exit_if_has_errors
 #===============================================================================
 # Resolve and validate repo_path:
 #===============================================================================
-{
-    read -r repo_path
-    read -r _
-} < <(resolve_repo_root "$vm2_repos" "$repo_path") || {
-    rc=$?
-    is_in "$rc" "$success" "$err_dir_with_ci" ||
-        usage -ec "$?" "Could not resolve the path of the target repository '$target'." \
-                       "Please, ensure that it exists and is a valid directory."
-}
+declare output
+output=$(resolve_repo_root "$vm2_repos" "$repo_path") || rc=$?
+is_in "$rc" "$success" "$err_dir_with_ci" ||
+    usage -ec "$rc" "Failed to resolve the path of the target repository '$repo_path'."
+
+{ read -r repo_path; read -r _; } <<< "$output"
 
 (( rc == err_dir_with_ci )) &&
-    info "There is '$repo_path/.github/workflows/CI.yaml'. Will initialize a new repository in '$repo_path'."
+    warning "'$repo_path' is not a Git repository, however there is '$repo_path/.github/workflows/CI.yaml'." \
+            "A new Git repository will be initialized in '$repo_path'."
 
 rc="$success"
 reset_errors
@@ -163,7 +162,7 @@ if has_local_repo repo_state; then
         if has_github_remote repo_state; then
             repo_id="${repo_state[$key_repo_id]}"
             branch="${repo_state[$key_default_branch]}"
-            main_protection_rs_name="${main_protection_rs_name:-${branch} protection}"
+            main_protection_rs_name="${main_protection_rs_name:-$branch protection}"
 
             info "GitHub repository Id           => $repo_id"
             info "GitHub default Branch          => $branch"
@@ -180,7 +179,7 @@ if ! has_local_repo repo_state || ! has_remote_repo repo_state; then
     declare -rx suggest_repo_name
 fi
 
-ci_yaml="${repo_path}/.github/workflows/CI.yaml"
+ci_yaml="$repo_path/.github/workflows/CI.yaml"
 trace "ci_yaml='$ci_yaml' from \$repo_path"
 
 declare -xr ci_yaml
@@ -189,35 +188,41 @@ declare -xr ci_yaml
 # Final validation of the inputs and assumptions before we start making any changes or API calls:
 #===============================================================================
 
-visibility="${visibility,,}"
-
-[[ -s "$ci_yaml" ]]                                      || error -ec "$err_logic_error" "The specified path '${repo_path}' is not a valid project/repository root (missing .github/workflows/CI.yaml)." \
+[[ -s "$ci_yaml" ]]                                      || error -ec "$err_logic_error" "The specified path '$repo_path' is not a valid project/repository root (missing .github/workflows/CI.yaml)." \
                                                                                          "Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2pkg <name>' to create a valid directory."
-[[ -z $repo_name || $repo_name =~ $repo_name_regex ]]    || error -ec "$err_logic_error" "Could not determine repository name from the specified path '${repo_path}' or the name is invalid." \
+[[ -z $repo_name || $repo_name =~ $repo_name_regex ]]    || error -ec "$err_logic_error" "Could not determine repository name from the specified path '$repo_path' or the name is invalid." \
                                                                                          "Please specify a valid path to the root of the project/repository using '--path <path>'."
-[[ -z $repo_owner || $repo_owner =~ $repo_owner_regex ]] || error -ec "$err_logic_error" "Could not determine repository owner from the specified path '${repo_path}', or from the environment variable ORGANIZATION, or the owner name is invalid." \
+[[ -z $repo_owner || $repo_owner =~ $repo_owner_regex ]] || error -ec "$err_logic_error" "Could not determine repository owner from the specified path '$repo_path', or from the environment variable ORGANIZATION, or the owner name is invalid." \
                                                                                          "Please specify a valid owner of the project/repository using '--owner <owner>' or set the ORGANIZATION environment variable."
-validate_branch_name "$branch" &> "$_ignore"             || error -ec "$err_logic_error" "Invalid branch name '${branch}'." \
+validate_branch_name "$branch" &> "$_ignore"             || error -ec "$err_logic_error" "Invalid branch name '$branch'." \
                                                                                          "Please specify a valid branch name using '--branch <branch>'."
-is_in "$visibility" "public" "private"                   || error -ec "$err_logic_error" "Invalid visibility '${visibility}'. Valid options are 'public', 'private', or 'internal'." \
+visibility="${visibility,,}"
+is_in "$visibility" "public" "private"                   || error -ec "$err_logic_error" "Invalid visibility '$visibility'. Valid options are 'public', 'private', or 'internal'." \
                                                                                          "Please specify a valid visibility using '--visibility <public|private|internal>'."
+if $audit; then
+    has_github_remote repo_state                         || error -ec "$err_logic_error" "The repository in '$repo_path' is not linked to a GitHub remote. Cannot perform audit." \
+                                                                                         "Please ensure that the repository is properly initialized and linked to GitHub before running the script with '--audit'."
+    ! $interactive_secrets && ! $interactive_vars        || error -ec "$err_logic_error" "Secrets and/or variables cannot be interactively set during audit." \
+                                                                                         "Please remove the '--interactive-secrets' and '--interactive-vars' options when running the script with '--audit'."
+fi
 
 exit_if_has_errors
 
-resolve_github_actions_app_id
+resolve_github_app_ids
+
 list_required_checks
 
 #===============================================================================
 # Audit
 #===============================================================================
 
-if $audit && ! $interactive_secrets && ! $interactive_vars && has_github_remote repo_state; then
+$audit && {
     initialize_jq_queries
     initialize_gh_paths
     initialize_main_protection_rs_id || true
     audit_repo
     exit 0
-fi
+}
 
 #===============================================================================
 # Initialize and configure the repository
@@ -252,8 +257,8 @@ if ! has_local_repo repo_state; then
         undos+=("rm -rf '$repo_path/.git'")
     fi
 
-    info "  ...creating and checking out the default branch '${branch}';"
-    execute git -C "$repo_path" checkout -b "${branch}" >"$_ignore" 2>&1            && trace "'${branch}' branch checked out"
+    info "  ...creating and checking out the default branch '$branch';"
+    execute git -C "$repo_path" checkout -b "$branch" >"$_ignore" 2>&1            && trace "'$branch' branch checked out"
 
     info "  ...staging and committing existing files in '$repo_path';"
     execute git -C "$repo_path" add . >"$_ignore"                                   && trace "Staged all existing files in '$repo_path' for commit."
@@ -261,7 +266,7 @@ if ! has_local_repo repo_state; then
         execute git -C "$repo_path" commit -m "chore: initial scaffold" >"$_ignore" && trace "Committed staged files to '$repo_path'."
     fi
 
-    info "...initialized a new git repository in '$repo_path' in the default branch '${branch}'."
+    info "...initialized a new git repository in '$repo_path' in the default branch '$branch'."
     repo_state["$key_root"]="$repo_path"
 fi
 
@@ -278,7 +283,7 @@ if ! has_remote_repo repo_state; then
 
     create_repo_params=(
         "$repo"
-        "--${visibility}"
+        "--$visibility"
         "--source" "$repo_path"
         "--remote" "origin"
         "--disable-wiki"
@@ -288,12 +293,12 @@ if ! has_remote_repo repo_state; then
     [[ -n "$description" ]] && create_repo_params+=("--description" "$description")
 
     if $use_ssh || $use_https; then
-        $use_ssh   && repo_url="git@github.com:${repo}.git" || true
-        $use_https && repo_url="https://github.com/${repo}" || true
+        $use_ssh   && repo_url="git@github.com:$repo.git" || true
+        $use_https && repo_url="https://github.com/$repo" || true
     else
         case $(choose "Access remote origin via" "SSH" "HTTPS") in
-            1 ) use_ssh=true;   repo_url="git@github.com:${repo}.git" ;;
-            * ) use_https=true; repo_url="https://github.com/${repo}" ;;
+            1 ) use_ssh=true;   repo_url="git@github.com:$repo.git" ;;
+            * ) use_https=true; repo_url="https://github.com/$repo" ;;
         esac
     fi
 
@@ -302,12 +307,12 @@ if ! has_remote_repo repo_state; then
     undos+=("gh repo delete '$repo' --yes")
 
     info "  ...setting the remote origin URL to '$repo_url';"
-    execute git -C "$repo_path" remote set-url origin "${repo_url}" >"$_ignore"
+    execute git -C "$repo_path" remote set-url origin "$repo_url" >"$_ignore"
     undos+=("git -C '$repo_path' remote remove origin")
 
-    info "  ...pushing the default branch '${branch}' to GitHub;"
-    execute_with_retry 3 2 true git -C "$repo_path" push -u origin "${branch}"
-    undos+=("git -C '$repo_path' push -u origin --delete '${branch}'")
+    info "  ...pushing the default branch '$branch' to GitHub;"
+    execute_with_retry 3 2 true git -C "$repo_path" push -u origin "$branch"
+    undos+=("git -C '$repo_path' push -u origin --delete '$branch'")
 
     info "...GitHub repository '$repo' created and linked to the local repository in '$repo_path'."
 
@@ -316,7 +321,7 @@ if ! has_remote_repo repo_state; then
     dump_repo_state repo_state
 
     if [[ $rc -ne 0 ]]; then
-        error -ec "$err_tool_error" "Failed to get repository state after creation. The repository may have been created successfully, but the script cannot continue with configuration. Please check the repository at $repo_path."
+        error -ec "$rc" "Failed to get repository state after creation. The repository may have been created successfully, but the script cannot continue with configuration. Please check the repository at $repo_path."
         exit 1
     fi
 
@@ -327,7 +332,7 @@ if ! has_remote_repo repo_state; then
         usage -ec "$err_not_git_directory" "The repository does not appear to be initialized and/or linked to the remote."
 
     branch="${repo_state[$key_default_branch]}"
-    main_protection_rs_name="${main_protection_rs_name:-${branch} protection}"
+    main_protection_rs_name="${main_protection_rs_name:-$branch protection}"
 
     [[ -n "$repo_url"  ]] &&
     info "Repository URL                 => $repo_url"

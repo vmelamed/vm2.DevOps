@@ -40,10 +40,14 @@ declare -x __is_windows=""
 #-------------------------------------------------------------------------------
 function is_defined_variable()
 {
+    local -i rc="$success"
+
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the variable to test."
-        return "$err_invalid_arguments"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the variable to test."
     }
+
+    (( rc == success )) || return "$err_invalid_arguments"
 
     [[ -v "$1" ]] && declare -p "$1" &> "$_ignore"
 }
@@ -61,25 +65,27 @@ function is_defined_variable()
 #-------------------------------------------------------------------------------
 function is_defined_array()
 {
+    local -i rc="$success"
+
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the variable to test."
-        return "$err_invalid_arguments"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the variable to test."
     }
-    [[ $1 =~ $varNameRegex ]] || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires a non-empty variable name as argument."
-        return "$err_invalid_nameref"
+    [[ $# -ne 1 || $1 =~ $varNameRegex ]] || {
+        rc="$err_invalid_nameref"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires a non-empty variable name as argument."
     }
+
+    (( rc == success )) || return "$err_invalid_arguments"
 
     restoreShopt=$(shopt -p nocasematch) || true
     shopt -u nocasematch # set case sensitive matching
 
-    local decl rc="$negative"
-
-    decl=$(declare -p "$1" 2>"$_ignore") &&
-        [[ $decl =~ ^declare\ -a ]] &&
-            rc="$positive"
+    decl=$(declare -p "$1" 2>"$_ignore")
+    [[ $decl =~ ^declare\ -a ]] && rc="$positive" || rc="$negative"
 
     eval "$restoreShopt" &> "$_ignore" || true # restore original shopt state
+    
     return "$rc"
 }
 
@@ -96,14 +102,18 @@ function is_defined_array()
 #-------------------------------------------------------------------------------
 function is_defined_associative_array()
 {
+    local -i rc="$success"
+
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the associative array variable to test."
-        return "$err_invalid_arguments"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the associative array variable to test."
     }
-     [[ $1 =~ $varNameRegex ]] || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires a non-empty variable name as argument."
-        return "$err_invalid_nameref"
+    [[ $# -ne 1 || $1 =~ $varNameRegex ]] || {
+        rc="$err_invalid_nameref"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires a non-empty variable name as argument."
     }
+
+    (( rc == success )) || return "$err_invalid_arguments"
 
     restoreShopt=$(shopt -p nocasematch) || true
     shopt -u nocasematch # set case sensitive matching
@@ -132,10 +142,14 @@ function is_defined_associative_array()
 #-------------------------------------------------------------------------------
 function is_defined_function()
 {
+    local -i rc="$success"
+
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the function to test."
-        return "$err_invalid_arguments"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the function to test."
     }
+
+    (( rc == success )) || return "$err_invalid_arguments"
 
     declare -pF "$1" > "$_ignore" 2>&1
 }
@@ -151,10 +165,14 @@ function is_defined_function()
 #-------------------------------------------------------------------------------
 function is_boolean()
 {
+    local -i rc="$success"
+
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
-        return "$err_invalid_arguments"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
     }
+
+    (( rc == success )) || return "$err_invalid_arguments"
 
     [[ "$1" =~ ^(true|false)$ ]]
 }
@@ -170,10 +188,14 @@ function is_boolean()
 #-------------------------------------------------------------------------------
 function is_natural()
 {
+    local -i rc="$success"
+
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
-        return "$err_invalid_arguments"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
     }
+
+    (( rc == success )) || return "$err_invalid_arguments"
 
     [[ "$1" =~ ^[0-9]+$ ]]
 }
@@ -189,10 +211,14 @@ function is_natural()
 #-------------------------------------------------------------------------------
 function is_positive()
 {
+    local -i rc="$success"
+
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
-        return "$err_invalid_arguments"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
     }
+
+    (( rc == success )) || return "$err_invalid_arguments"
 
     [[ "$1" =~ ^[+]?[0-9]+$  && ! "$1" =~ ^[+]?0+$ ]]
 }
@@ -208,10 +234,14 @@ function is_positive()
 #-------------------------------------------------------------------------------
 function is_non_negative()
 {
+    local -i rc="$success"
+
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
-        return "$err_invalid_arguments"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
     }
+
+    (( rc == success )) || return "$err_invalid_arguments"
 
     [[ "$1" =~ ^[+]?[0-9]+$ ]]
 }
@@ -227,10 +257,14 @@ function is_non_negative()
 #-------------------------------------------------------------------------------
 function is_non_positive()
 {
+    local -i rc="$success"
+
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
-        return "$err_invalid_arguments"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
     }
+
+    (( rc == success )) || return "$err_invalid_arguments"
 
     [[ "$1" =~ ^-[0-9]+$ || "$1" =~ ^[-]?0+$ ]]
 }
@@ -246,10 +280,14 @@ function is_non_positive()
 #-------------------------------------------------------------------------------
 function is_negative()
 {
+    local -i rc="$success"
+
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
-        return "$err_invalid_arguments"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
     }
+
+    (( rc == success )) || return "$err_invalid_arguments"
 
     [[ $1 =~ ^-[0-9]+$ && ! "$1" =~ ^[-]?0+$ ]]
 }
@@ -265,10 +303,14 @@ function is_negative()
 #-------------------------------------------------------------------------------
 function is_integer()
 {
+    local -i rc="$success"
+
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
-        return "$err_invalid_arguments"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
     }
+
+    (( rc == success )) || return "$err_invalid_arguments"
 
     [[ "$1" =~ ^[-+]?[0-9]+$ ]]
 }
@@ -284,10 +326,14 @@ function is_integer()
 #-------------------------------------------------------------------------------
 function is_decimal()
 {
+    local -i rc="$success"
+
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
-        return "$err_invalid_arguments"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
     }
+
+    (( rc == success )) || return "$err_invalid_arguments"
 
     [[ "$1" =~ ^[-+]?[0-9]*(\.[0-9]*)?$ ]]
 }
@@ -304,10 +350,14 @@ function is_decimal()
 #-------------------------------------------------------------------------------
 function is_in()
 {
+    local -i rc="$success"
+
     (( $# >= 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires at least 1 argument: the value to test and zero or more options to compare against."
-        return "$err_invalid_arguments"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires at least 1 argument: the value to test and zero or more options to compare against."
     }
+
+    (( rc == success )) || return "$err_invalid_arguments"
 
     # testing against an empty set of options is always false
     (( $# == 1 )) && return "$negative"
@@ -324,10 +374,14 @@ function is_in()
 
 function is_base64()
 {
+    local -i rc="$success"
+
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
-        return "$err_invalid_arguments"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
     }
+
+    (( rc == success )) || return "$err_invalid_arguments"
 
     [[ "$1" =~ ^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$ ]]
 }

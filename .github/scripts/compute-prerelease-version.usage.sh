@@ -16,7 +16,7 @@ function usage_text()
     fi
 
     cat << EOF
-Usage: ${script_name} [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
+Usage: $script_name [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
 Computes the next prerelease version based on conventional commits. Analyzes commit messages since the last stable tag to
 determine the appropriate semantic version bump, then appends a prerelease suffix:
   - <type>! (e.g. feat!, refactor!) -> major bump

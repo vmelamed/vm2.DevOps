@@ -30,13 +30,13 @@ function update_dependencies() {
     local repo=$2
 
     set +e
-    cd "${repos}/${repo}"
-    gh workflow run "ClearCache.yaml" --repo "vmelamed/${repo}"
+    cd "$repos/$repo"
+    gh workflow run "ClearCache.yaml" --repo "vmelamed/$repo"
     rm ./**/*.lock.json
     dotnet restore --force-evaluate
     git add -A
     git commit -m "chore: update dependencies"
-    gh run watch --repo "vmelamed/${repo}"
+    gh run watch --repo "vmelamed/$repo"
     git push origin --force-with-lease
     set -e
 }

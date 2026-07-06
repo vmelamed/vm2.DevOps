@@ -23,7 +23,7 @@ types_pattern=$(IFS='|'; echo "${allowed_types[*]}")
 
 # Conventional Commits: type[(scope)][!]: description
 # The ! before : indicates a breaking change
-readonly cc_regex="^(${types_pattern})(\(.+\))?!?: .+"
+readonly cc_regex="^($types_pattern)(\(.+\))?!?: .+"
 
 if [[ ! "$subject" =~ $cc_regex ]]; then
     {

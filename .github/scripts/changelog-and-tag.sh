@@ -97,10 +97,10 @@ else
     # shellcheck disable=SC2154 # semverTagReleaseRegex is referenced but not assigned.
     if [[ "$is_release" == true ]]; then
         # For stable releases: range from last stable tag to HEAD
-        last_ref=$(git tag --list "${minver_tag_prefix}*" | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1 || echo "")
+        last_ref=$(git tag --list "$minver_tag_prefix*" | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1 || echo "")
     else
         # For prereleases: range from last tag of any kind to HEAD
-        last_ref=$(git tag --list "${minver_tag_prefix}*" | sort -V | tail -n1 || echo "")
+        last_ref=$(git tag --list "$minver_tag_prefix*" | sort -V | tail -n1 || echo "")
     fi
 
     if [[ -n "$last_ref" ]]; then

@@ -18,7 +18,7 @@ function usage_text()
     fi
 
     cat << EOF
-Usage: ${script_name} [<project|solution>] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
+Usage: $script_name [<project|solution>] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
 
 Builds a solution or project specified with the positional argument <project|solution> (see below for details).
 

@@ -9,6 +9,10 @@ declare -rxi admin_role_id=5
 
 declare -rx secret_placeholder="UPDATE+ME/==" # valid base64 placeholder
 
+declare -xr missing_state="<missing>"
+declare -xr present_state="<present>"
+declare -xr undefined_default="<undefined>"
+
 declare -rxA repo_state_queries=(
     ["key_repo_id"]=".id"
     ["key_owner"]=".owner.login"
@@ -92,20 +96,27 @@ declare -rxa default_ruleset_order=(            # UI: Order in which rules appea
     "non_fast_forward"                          # Block force pushes
 )
 
-declare -rxA default_actions_secrets=(
-    ["BENCHER_API_TOKEN"]="$secret_placeholder"
-    ["CODECOV_TOKEN"]="$secret_placeholder"
-    ["RELEASE_PAT"]="$secret_placeholder"
+declare -rxa apps_with_secrets=(
+    "actions"
+    "dependabot"
+    "agents"
+    "codespaces"
+)
+
+declare -rxA actions_secrets=(
     ["REPORTGENERATOR_LICENSE"]="$secret_placeholder"
-    ["NUGET_API_KEY"]="$secret_placeholder"
+    ["CODECOV_TOKEN"]="$secret_placeholder"
+    ["BENCHER_API_TOKEN"]="$secret_placeholder"
     ["BENCH_DISPATCH_PAT"]="$secret_placeholder"
     ["GH_PACKAGES_TOKEN"]="$secret_placeholder"
+    ["NUGET_API_KEY"]="$secret_placeholder"
+    ["RELEASE_PAT"]="$secret_placeholder"
 )
+declare -rxA dependabot_secrets=()
+declare -rxA agents_secrets=()
+declare -rxA codespaces_secrets=()
 
-declare -rxA default_dependabot_secrets=(
-)
-
-declare -rxA default_vars=(
+declare -rxA actions_default_vars=(
     ["ACTIONS_RUNNER_DEBUG"]=false
     ["ACTIONS_STEP_DEBUG"]=false
     ["CONFIGURATION"]="Release"
@@ -122,7 +133,7 @@ declare -rxA default_vars=(
     ["VERBOSE"]=false
 )
 
-declare -rxA var_validators=(
+declare -rxA actions_var_validators=(
     ["ACTIONS_RUNNER_DEBUG"]="validate_boolean"
     ["ACTIONS_STEP_DEBUG"]="validate_boolean"
     ["CONFIGURATION"]="is_valid_configuration"
@@ -222,6 +233,7 @@ declare -xA default_local_git_settings=(
     ["merge.nugetlock.driver"]='cp -f %B %A && echo "vm2: %P auto-resolved (took the incoming side) - regenerate with: dotnet restore --force-evaluate" >&2'
 )
 
+declare -rxi success                    # Operation completed successfully
 declare -rxi err_invalid_arguments      # The number of the arguments is invalid or more than one type of parameter error code is present
 declare -rxi err_not_directory          # Parameter value is not a directory
 
@@ -229,20 +241,24 @@ declare -xri default_sot
 
 function init_default_local_git_settings()
 {
+    local -i rc="$success"
+
     [[ $# -eq 2 && -n "$1" && -n "$2" ]] || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly 2 non-empty arguments:" \
-                                                 "- the path to the parent directory where '$vm2_devops_repo_name' is cloned, e.g. the value of \$VM2_REPOS or the parameter of --vm2-repos." \
-                                                 "- the path to the source of truth (SOT) directory, $VM2_REPOS/$default_sot."
-        return "$err_invalid_arguments"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires exactly 2 non-empty arguments:" \
+                              "- the path to the parent directory where '$vm2_devops_repo_name' is cloned, e.g. the value of \$VM2_REPOS or the parameter of --vm2-repos." \
+                              "- the path to the source of truth (SOT) directory, $VM2_REPOS/$default_sot."
     }
-    [[ -d $1 ]]  || {
-        error -ec "$err_not_directory" -sd 3 "The first parameter of ${FUNCNAME[0]}() must be an existing directory. Provided: '$1'"
-        return "$err_not_directory"
+    [[ $# -lt 1 || -d $1 ]]  || {
+        rc="$err_not_directory"
+        error -sd 3 -ec "$rc" "The first parameter of ${FUNCNAME[0]}() must be an existing directory. Provided: '$1'"
     }
-    [[ -d $2 ]]  || {
-        error -ec "$err_not_directory" -sd 3 "The second parameter of ${FUNCNAME[0]}() must be an existing directory. Provided: '$1'"
-        return "$err_not_directory"
+    [[ $# -lt 2 || -d $2 ]]  || {
+        rc="$err_not_directory"
+        error -sd 3 -ec "$rc" "The second parameter of ${FUNCNAME[0]}() must be an existing directory. Provided: '$2'"
     }
+
+    (( rc == success )) || return "$err_invalid_arguments"
 
     local repos=$1
     local shared=$2

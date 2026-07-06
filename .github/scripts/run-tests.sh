@@ -31,14 +31,14 @@ declare -ixr default_min_branch_coverage_pct=75
 declare -ixr default_min_method_coverage_pct=80
 
 declare -x test_project=""
-declare -x configuration=${CONFIGURATION:="${default_configuration}"}
+declare -x configuration=${CONFIGURATION:="$default_configuration"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
-declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"${default_minver_tag_prefix}"}
-declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"${default_minver_prerelease_id}"}
-declare -x tests_artifacts_dir=${TEST_ARTIFACTS_DIR:-"${default_tests_artifacts_dir}"}
-declare -ix min_coverage_pct=${MIN_COVERAGE_PCT:-"${default_min_coverage_pct}"}
-declare -ix min_branch_coverage_pct=${MIN_BRANCH_COVERAGE_PCT:-"${default_min_branch_coverage_pct}"}
-declare -ix min_method_coverage_pct=${MIN_BRANCH_COVERAGE_PCT:-"${default_min_branch_coverage_pct}"}
+declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
+declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}
+declare -x tests_artifacts_dir=${TEST_ARTIFACTS_DIR:-"$default_tests_artifacts_dir"}
+declare -ix min_coverage_pct=${MIN_COVERAGE_PCT:-"$default_min_coverage_pct"}
+declare -ix min_branch_coverage_pct=${MIN_BRANCH_COVERAGE_PCT:-"$default_min_branch_coverage_pct"}
+declare -ix min_method_coverage_pct=${MIN_BRANCH_COVERAGE_PCT:-"$default_min_branch_coverage_pct"}
 
 source "$script_dir/run-tests.usage.sh"
 source "$script_dir/run-tests.args.sh"
@@ -61,8 +61,8 @@ declare -xr key_root
 
 get_repo_state "$test_dir" repo_state false # all we need is the root of the repo, so don't go to gh
 repo_root="${repo_state[$key_root]}"
-test_config_path="${repo_root}/testconfig.json"
-coverage_settings_path="${repo_root}/coverage.settings.xml"                     # path to coverage settings file                ~/repos/vm2.Glob/coverage.settings.xml
+test_config_path="$repo_root/testconfig.json"
+coverage_settings_path="$repo_root/coverage.settings.xml"                     # path to coverage settings file                ~/repos/vm2.Glob/coverage.settings.xml
 
 if [[ ! -s "$test_config_path" ]]; then
     error -ec "$err_logic_error" "Test config file not found at: $test_config_path"
@@ -73,12 +73,12 @@ fi
 
 exit_if_has_errors
 
-test_dir=$(realpath -e "${test_dir}")                                           # the directory of the test project
-tests_artifacts_dir=$(realpath -m "${tests_artifacts_dir}")
-artifacts_dir="${tests_artifacts_dir}/${test_name}"                             # the directory for test results and reports (resolved to an absolute path, if it was relative)
-coverage_source_path="${artifacts_dir}/coverage.cobertura.xml"                  # path to the raw coverage file                 ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/coverage.cobertura.xml
+test_dir=$(realpath -e "$test_dir")                                           # the directory of the test project
+tests_artifacts_dir=$(realpath -m "$tests_artifacts_dir")
+artifacts_dir="$tests_artifacts_dir/$test_name"                             # the directory for test results and reports (resolved to an absolute path, if it was relative)
+coverage_source_path="$artifacts_dir/coverage.cobertura.xml"                  # path to the raw coverage file                 ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/coverage.cobertura.xml
 coverage_files="$tests_artifacts_dir/*/coverage.cobertura.xml"
-coverage_reports_dir="${artifacts_dir}/reports"                                 # directory for coverage reports                ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/reports
+coverage_reports_dir="$artifacts_dir/reports"                                 # directory for coverage reports                ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/reports
 
 # Freeze the variables
 declare -xr test_project
@@ -137,7 +137,7 @@ declare -rx test_exe_path
 # Verify artifacts exist, if not - rebuild the project (mostly for local runs)
 if ((rc == failure)); then
     if ! $dry_run; then
-        warning "Cached test executable '${test_exe_path}' was not found. Rebuilding the test project"
+        warning "Cached test executable '$test_exe_path' was not found. Rebuilding the test project"
         execute dotnet clean "$test_project" --configuration "$configuration" || true
         execute dotnet build "$test_project" \
                 --verbosity detailed \
@@ -156,13 +156,13 @@ if ((rc == failure)); then
     rc=$success
 fi
 
-trace "Running tests from ${test_project}..."
+trace "Running tests from $test_project..."
 
 # Build test and coverage command arguments
 test_args=(
     --config-file "$test_config_path"
-    --results-directory "${artifacts_dir}"
-    --coverage-settings "${coverage_settings_path}"
+    --results-directory "$artifacts_dir"
+    --coverage-settings "$coverage_settings_path"
     --report-trx
     --coverage
     --coverage-output-format "cobertura"
@@ -172,7 +172,7 @@ test_args=(
 ##########################################
 ### Run the tests with coverage collection
 ##########################################
-if ! execute "${test_exe_path}" "${test_args[@]}"; then
+if ! execute "$test_exe_path" "${test_args[@]}"; then
     error -ec "$err_tool_error" "Tests failed in project '$test_project'."
     exit 2
 fi

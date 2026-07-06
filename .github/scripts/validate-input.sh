@@ -37,24 +37,24 @@ declare -r defaultSkipTests=false
 declare -r defaultSkipPackages=false
 
 # CI Variables that will be passed as environment variables
-declare -x build_projects=${BUILD_PROJECTS:-${defaultBuildProjects}}
-declare -x test_projects=${TEST_PROJECTS:-${defaultTestProjects}}
-declare -x benchmark_projects=${BENCHMARK_PROJECTS:-${defaultBenchmarkProjects}}
-declare -x package_projects=${PACKAGE_PROJECTS:-${defaultPackageProjects}}
-declare -x runners_os=${RUNNERS_OS:-${defaultRunnersOs}}
-declare -x dotnet_version=${DOTNET_VERSION:-${defaultDotnetVersion}}
-declare -x configuration=${CONFIGURATION:-${defaultConfiguration}}
-declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-${defaultPreprocessorSymbols}}
-declare -x min_coverage_pct=${MIN_COVERAGE_PCT:-${defaultMinCoveragePct}}
-declare -x max_regression_pct=${MAX_REGRESSION_PCT:-${defaultMaxRegressionPct}}
-declare -x max_gen1_collects=${MAX_GEN1_COLLECTS:-${defaultMaxGen1Collects}}
-declare -x max_gen2_collects=${MAX_GEN2_COLLECTS:-${defaultMaxGen2Collects}}
-declare -x minver_tag_prefix=${MINVERTAGPREFIX:-${defaultMinverTagPrefix}}
-declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-${defaultMinverPrereleaseId}}
-declare -x reset_benchmark_thresholds=${RESET_BENCHMARK_THRESHOLDS:-${defaultResetBenchmarkThresholds}}
-declare -x skip_benchmarks=${SKIP_BENCHMARKS:-${defaultSkipBenchmarks}}
-declare -x skip_tests=${SKIP_TESTS:-${defaultSkipTests}}
-declare -x skip_packages=${SKIP_PACKAGES:-${defaultSkipPackages}}
+declare -x build_projects=${BUILD_PROJECTS:-$defaultBuildProjects}
+declare -x test_projects=${TEST_PROJECTS:-$defaultTestProjects}
+declare -x benchmark_projects=${BENCHMARK_PROJECTS:-$defaultBenchmarkProjects}
+declare -x package_projects=${PACKAGE_PROJECTS:-$defaultPackageProjects}
+declare -x runners_os=${RUNNERS_OS:-$defaultRunnersOs}
+declare -x dotnet_version=${DOTNET_VERSION:-$defaultDotnetVersion}
+declare -x configuration=${CONFIGURATION:-$defaultConfiguration}
+declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-$defaultPreprocessorSymbols}
+declare -x min_coverage_pct=${MIN_COVERAGE_PCT:-$defaultMinCoveragePct}
+declare -x max_regression_pct=${MAX_REGRESSION_PCT:-$defaultMaxRegressionPct}
+declare -x max_gen1_collects=${MAX_GEN1_COLLECTS:-$defaultMaxGen1Collects}
+declare -x max_gen2_collects=${MAX_GEN2_COLLECTS:-$defaultMaxGen2Collects}
+declare -x minver_tag_prefix=${MINVERTAGPREFIX:-$defaultMinverTagPrefix}
+declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-$defaultMinverPrereleaseId}
+declare -x reset_benchmark_thresholds=${RESET_BENCHMARK_THRESHOLDS:-$defaultResetBenchmarkThresholds}
+declare -x skip_benchmarks=${SKIP_BENCHMARKS:-$defaultSkipBenchmarks}
+declare -x skip_tests=${SKIP_TESTS:-$defaultSkipTests}
+declare -x skip_packages=${SKIP_PACKAGES:-$defaultSkipPackages}
 
 source "$script_dir/validate-input.usage.sh"
 source "$script_dir/validate-input.args.sh"

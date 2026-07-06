@@ -51,10 +51,10 @@ is_safe_path "$artifacts_dir" || true
 
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 # shellcheck disable=SC2153 # Possible Misspelling: MYVARIABLE may not be assigned. Did you mean MY_VARIABLE?
-case "${nuget_server}" in
+case "$nuget_server" in
     github )
         server_name="GitHub Packages"
-        server_url="https://nuget.pkg.github.com/${repo_owner}/index.json"
+        server_url="https://nuget.pkg.github.com/$repo_owner/index.json"
         ;;
     nuget )
         server_name="NuGet.org"
@@ -69,44 +69,50 @@ case "${nuget_server}" in
         ;;
 esac
 # shellcheck disable=SC2154
-server_api_key="${NUGET_API_KEY}"
+server_api_key="$NUGET_API_KEY"
 
-if [[ -z "${server_api_key}" ]]; then
+if [[ -z "$server_api_key" ]]; then
     error -ec "$err_missing_argument" "No API key provided for server '$server_name'"
 fi
 
 exit_if_has_errors
 
 # restore dependencies
-execute dotnet restore "${package_project}" --locked-mode
+execute dotnet restore "$package_project" --locked-mode
 
 # create output directory for packed packages
 execute mkdir -p "$artifacts_dir"
 
 # build and pack the project
 temp_output=$(mktemp)
-trap 'rm -f "$temp_output"' EXIT
+build_info_output=$(mktemp)
+trap 'rm -f "$temp_output" "$build_info_output"' EXIT
 
+rc="$success"
 execute dotnet pack \
-    "${package_project}" \
+    "$package_project" \
     --configuration Release \
     --output "$artifacts_dir" \
     --no-restore \
     "-p:preprocessor_symbols=$preprocessor_symbols" \
     "-p:MinVerTagPrefix=$minver_tag_prefix" \
     "-p:MinVerPrereleaseIdentifiers=$minver_prerelease_id" \
-    "-p:PackageReleaseNotes=\"$reason\"" 2>&1 |
-            extractDotnetBuildInfo |
-            displayDotnetBuildSummary |
-            to_summary || true # prevent pipefail from exiting before we can capture the exit code
+    "-p:PackageReleaseNotes=\"$reason\"" > "$temp_output" 2>&1 || rc=$? # prevent set -e from exiting before we can inspect $rc
 
-rc=${PIPESTATUS[0]}
+# Run extractDotnetBuildInfo directly in THIS shell (not as the left side of a pipe or inside a
+# $(...) command substitution, either of which would run it in a subshell and lose its variable
+# assignments) so it can populate $version, $package_version, etc. for use below. Its stdout (the
+# key=value pairs) is captured to a file and replayed into displayDotnetBuildSummary for the
+# human-readable report.
+extractDotnetBuildInfo < "$temp_output" > "$build_info_output"
+displayDotnetBuildSummary < "$build_info_output" | to_summary
+
 [[ $rc == "$success" ]] || error -ec "$err_tool_error" "Packing '$package_project' failed."
 exit_if_has_errors
 
 # Populated by extractDotnetBuildInfo from the dotnet pack log.
-declare -x version=''
-declare -x package_version=''
+declare -x version
+declare -x package_version
 
 if is_semverRelease "$(get_build_info version)"; then
     summary_header="Release Summary"
@@ -115,7 +121,7 @@ else
     summary_header="Prerelease Summary"
     reason="${reason:="pre-release"}"
 fi
-git_tag="${minver_tag_prefix}${version}"
+git_tag="$minver_tag_prefix$version"
 
 # push packages to NuGet server
 execute dotnet nuget push "$artifacts_dir"/*.nupkg \
@@ -131,11 +137,11 @@ execute dotnet nuget push "$artifacts_dir"/*.nupkg \
     echo ""
     [[ "$artifacts_saved" == true ]] && echo "Will be saved as workflow artifacts to $artifacts_dir."
     echo ""
-    echo "| ${summary_header} |                |"
+    echo "| $summary_header   |                |"
     echo "|:------------------|:---------------|"
-    echo "| Server            | ${server_name} |"
-    echo "| Server URL        | ${server_url}  |"
-    echo "| Version           | ${version}     |"
-    echo "| Git Tag           | ${git_tag}     |"
-    echo "| Reason            | ${reason}      |"
+    echo "| Server            | $server_name   |"
+    echo "| Server URL        | $server_url    |"
+    echo "| Version           | $version       |"
+    echo "| Git Tag           | $git_tag       |"
+    echo "| Reason            | $reason        |"
 } | to_summary

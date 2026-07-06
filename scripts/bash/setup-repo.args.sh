@@ -100,7 +100,7 @@ function get_arguments()
             * ) if [[ -z "$repo_path" ]]; then
                     repo_path="$option"
                 else
-                    usage -ec "$err_too_many_arguments" "Too many positional arguments (project directory or repository name): ${option}"
+                    usage -ec "$err_too_many_arguments" "Too many positional arguments (project directory or repository name): $option"
                 fi
                 ;;
         esac

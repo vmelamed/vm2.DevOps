@@ -120,6 +120,65 @@ All core library files live in `scripts/bash/lib/` and are sourced by scripts th
 
 See `scripts/bash/lib/FUNCTIONS_REFERENCE.md` for the full function inventory.
 
+## Parameter and Precondition Validation Pattern
+
+Bash functions that validate their own call arguments (`$1`, `$2`, `$#`) follow an **accumulate-then-single-return**
+shape, not return-on-first-failure:
+
+```bash
+function foo()
+{
+    local -i rc="$success"
+
+    [[ check1 ]] || {
+        rc="$err_specific_code_1"
+        error -ec "$rc" -sd 3 "..."
+    }
+    [[ check2 ]] || {
+        rc="$err_specific_code_2"
+        error -ec "$rc" -sd 3 "..."
+    }
+
+    (( rc == success )) || return "$err_invalid_arguments"
+
+    # business logic follows
+}
+```
+
+- Every check runs — do not `return` inside an individual check. This reports **all** bad arguments in one call
+  instead of just the first.
+- Each check logs its own specific error code via `error -ec` (`err_not_directory`, `err_argument_value`,
+  `err_invalid_nameref`, `err_argument_type`, etc.) so the message is precise.
+- The final `return` after the gate always uses the **generic** `$err_invalid_arguments`, regardless of which
+  specific check(s) failed — callers only need to test for one sentinel value.
+- If a later check reads `$1`/`$2` that may be unset or empty because an earlier check already failed (e.g. wrong
+  `$#`), guard it: `[[ $# -lt N || original_check ]] || { ... }` — this keeps accumulation safe instead of
+  triggering spurious errors on unset positional parameters.
+- If the function's own business logic (not validation) reuses the same variable name afterward to hold a real
+  status code (not an argument error), either give it a fresh `local` declaration to shadow the validation
+  accumulator, or name the validation accumulator distinctly (e.g. `validation_rc`) to avoid stale-state leaking
+  into a later `return`. This was audited across the codebase — see `resolve_repo_root`, `get_repo_state`,
+  `validate_nuget_server` for examples of both approaches.
+
+**Precondition checks are a different case.** Some functions (e.g. `initialize_gh_paths`,
+`initialize_jq_queries`, `initialize_main_protection_rs_id` in `setup-repo.functions.sh`) validate *global/environment
+state* set by earlier setup steps, not their own call arguments. These use the same accumulate-then-gate shape, but
+the final `return` uses the error code that actually describes the failure (typically `$err_logic_error`), not
+`$err_invalid_arguments` — since there's no "argument" to blame.
+
+**Top-level CLI scripts and argument parsers are a third case.** Functions like `configure()`, `customize()`, and
+`get_tools()` in `diff-shared.functions.sh` validate top-level command-line input and are meant to **exit** the
+process on bad input (via `usage()`/`exit_if_has_errors()`), not return an error code to a caller. These accumulate
+failures via plain `error -ec` calls (no `rc` variable, no `return`), then call `exit_if_has_errors` once at the end
+of the checks. Do not convert these to `return`-based validation — that would change a hard stop into silent
+continuation with bad input.
+
+Functions that interleave positional-argument parsing with validation (`shift`-based, e.g. `execute_with_retry` in
+`core.sh`, `enter_value` in `_user.sh`) may need **multiple** accumulate-then-gate blocks in sequence — one per
+"phase" of argument consumption — since a later check's meaning can depend on an earlier `shift` having already
+happened. `message()` in `_diagnostics.sh` is deliberately excluded from this pattern entirely; it's a complex
+argument parser, not a simple validator.
+
 ## Shared File Sync
 
 Files that are canonical in `vm2.Templates` (`.editorconfig`, `.github/CONVENTIONS.md`, `Directory.Build.props`, etc.) are synced here via `diff-shared.sh`. The mapping is in `scripts/bash/diff-shared.config.json`.

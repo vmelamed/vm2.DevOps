@@ -16,8 +16,8 @@ function usage_text()
     fi
 
     cat << EOF
-Usage: ${script_name} [<bm-project-path>] | [--<long option> <value> | -<short option> <value> |
-                                             --<long switch> | -<short switch> ]*
+Usage: $script_name [<bm-project-path>] | [--<long option> <value> | -<short option> <value> |
+                                            --<long switch> | -<short switch> ]*
 Re-records a benchmark's results to Bencher.dev N times to rebuild its performance history (e.g. after a runner-image
 change or a benchmark restructure invalidates the old baseline). Each repetition is an independent process run, so the
 recorded spread reflects the real run-to-run variance. Results are recorded only: NO thresholds are applied and the run

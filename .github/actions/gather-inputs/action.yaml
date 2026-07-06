@@ -191,7 +191,7 @@ runs:
                 open_pr_count=0
                 warning "Failed to query open PR-s via gh. Running push-triggered CI with SHORT_RUN."
             }
-            info "Open PR count for '${{ github.ref_name }}': ${open_pr_count}"
+            info "Open PR count for '${{ github.ref_name }}': $open_pr_count"
 
             # if there are open PRs, skip push-triggered CI - rely on the PR to trigger it
 
@@ -200,7 +200,7 @@ runs:
                 skip_push='true'
             else
                 info "No open PRs for this branch. Running push-triggered CI with SHORT_RUN preprocessor symbol for faster benchmarks."
-                preprocessor_symbols="${preprocessor_symbols};SHORT_RUN"
+                preprocessor_symbols="$preprocessor_symbols;SHORT_RUN"
             fi
 
         elif [[ '${{ github.event_name }}' == "workflow_dispatch" ]]; then
@@ -213,7 +213,7 @@ runs:
             # and override them with the inputs from the UI.
 
             runners_os=$(echo "${{ inputs.dispatch-runners-os }}" | jq -Rc 'split(",") | map(select(length > 0) | gsub("^\\s+|\\s+$";""))')
-            preprocessor_symbols="${preprocessor_symbols};${{ inputs.dispatch-preprocessor-symbols }}"
+            preprocessor_symbols="$preprocessor_symbols;${{ inputs.dispatch-preprocessor-symbols }}"
             reset_benchmark_thresholds="${{ inputs.dispatch-reset-benchmark-thresholds }}"
             skip_benchmarks="${{ inputs.dispatch-skip-benchmarks }}"
             skip_tests="${{ inputs.dispatch-skip-tests }}"

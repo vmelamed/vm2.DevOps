@@ -179,14 +179,18 @@ function exit_if_has_errors()
 #-------------------------------------------------------------------------------
 function set_errors()
 {
+    local -i rc="$success"
+
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires one argument ($# provided): the new value for the global error counter."
-        return "$err_invalid_arguments"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires one argument ($# provided): the new value for the global error counter."
     }
-    [[ $1 =~ ^[0-9]+$ ]] || {
-        error  -sd 3 "${FUNCNAME[0]}() requires a numeric argument: the new value for the global error counter."
-        return "$err_argument_type"
+    [[ $# -ne 1 || $1 =~ ^[0-9]+$ ]] || {
+        rc="$err_argument_type"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires a numeric argument: the new value for the global error counter."
     }
+
+    (( rc == success )) || return "$err_invalid_arguments"
 
     # shellcheck disable=SC2154 # errors is referenced but not assigned.
     errors=$1
@@ -229,18 +233,21 @@ function reset_errors()
 #-------------------------------------------------------------------------------
 function message()
 {
+    local rc="$success"
     local -i count=$# # count of arguments passed to the function
     local -i updated_count=$count # updated count of message parts after processing named parameters
 
     (( count > 0 )) || {
-        error -ec "$err_missing_argument" -sd 4 "Function called without any parameters. Provide at least a prefix as the first parameter."
-        return "$err_missing_argument"
+        rc="$err_missing_argument"
+        error -sd 4 -ec "$rc" "Function called without any parameters. Provide at least a prefix as the first parameter."
     }
     [[ $count -gt 1 || ! -t 0 ]] || {
         # no message arguments were passed and nothing is being piped in on stdin
-        error -ec "$err_missing_argument" -sd 4 "Function called without message parameters and there are none in the pipe. Provide message parameters or pipe them into the function."
-        return "$err_missing_argument"
+        rc="$err_missing_argument"
+        error -sd 4 -ec "$rc" "Function called without message parameters and there are none in the pipe. Provide message parameters or pipe them into the function."
     }
+
+    (( rc == success )) || return "$rc"
 
     # The first parameter is the prefix to prepend to each message line, e.g. "ERROR: ", "WARN: ", "INFO: ", etc.
     local prefix="$1"
@@ -293,7 +300,7 @@ function message()
 
     [[ $updated_count -gt 0 || ! -t 0 ]] || {
         # no message arguments were passed and nothing is being piped in on stdin
-        error -ec "$err_missing_argument" -sd 4 "Function called without message parameters and there are none in the pipe. Provide message parameters or pipe them into the function."
+        error -sd 4 -ec "$err_missing_argument" "Function called without message parameters and there are none in the pipe. Provide message parameters or pipe them into the function."
         return "$err_missing_argument"
     }
 
@@ -478,18 +485,23 @@ function trace()
 #-------------------------------------------------------------------------------
 function warning_var()
 {
+    local -i rc="$success"
+
     (( $# == 3 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires three arguments ($# provided): variable name, warning message, and default value."
-        return "$err_invalid_arguments"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires three arguments ($# provided): variable name, warning message, and default value."
     }
-    [[ -n "$1" && -n "$2" ]] || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires three arguments: variable name, warning message, and default value."
-        return "$err_argument_value"
+    [[ $# -lt 3 || ( -n "$1" && -n "$2" ) ]] || {
+        rc="$err_argument_value"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires three arguments: variable name, warning message, and default value."
     }
-    [[ $1 =~ $varNameRegex ]] || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires a non-empty variable name as argument."
-        return "$err_invalid_nameref"
+    [[ $# -lt 1 || $1 =~ $varNameRegex ]] || {
+        rc="$err_invalid_nameref"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires a non-empty variable name as argument."
     }
+
+    (( rc == success )) || return "$err_invalid_arguments"
+
     warning "$2" "Assuming the default value of '$3'."
 
     local -n var=$1;
@@ -536,7 +548,7 @@ function show_stack()
         func=${FUNCNAME[index]:-}
         source=${BASH_SOURCE[index]:-}
         lineno=${BASH_LINENO[index-1]:-}
-        printf "    - %-20s (%s: %d)\n" "$func" "${source}" "${lineno}"
+        printf "    - %-20s (%s: %d)\n" "$func" "$source" "$lineno"
     done
 
     return "$success"

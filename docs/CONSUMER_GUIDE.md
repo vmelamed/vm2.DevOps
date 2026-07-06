@@ -75,7 +75,7 @@ updates.
    ```bash
    mkdir -p .github/workflows
    for wf in CI Prerelease Release ClearCache; do
-       curl -o .github/workflows/${wf}.yaml https://raw.githubusercontent.com/vmelamed/vm2.Templates/main/templates/AddNewPackage/content/.github/workflows/${wf}.yaml
+       curl -o .github/workflows/$wf.yaml https://raw.githubusercontent.com/vmelamed/vm2.Templates/main/templates/AddNewPackage/content/.github/workflows/$wf.yaml
    done
      curl -o .github/dependabot.yml https://raw.githubusercontent.com/vmelamed/vm2.Templates/main/templates/AddNewPackage/content/.github/dependabot.yml
    ```
@@ -87,7 +87,7 @@ updates.
             .editorconfig .gitignore .gitattributes NuGet.config \
             codecov.yaml coverage.settings.xml testconfig.json LICENSE; do
        curl -o "$f" \
-       https://raw.githubusercontent.com/vmelamed/vm2.Templates/main/templates/AddNewPackage/content/${f}
+       https://raw.githubusercontent.com/vmelamed/vm2.Templates/main/templates/AddNewPackage/content/$f
    done
    ```
 

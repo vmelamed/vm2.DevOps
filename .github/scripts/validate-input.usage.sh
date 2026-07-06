@@ -19,7 +19,7 @@ $common_switches"
 
     cat << EOF
 Usage:
-  ${script_name} [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
+  $script_name [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
 Validates and sets up CI variables for GitHub Actions workflows. It validates all inputs and outputs them to GITHUB_OUTPUT for
 use by subsequent workflow jobs
 

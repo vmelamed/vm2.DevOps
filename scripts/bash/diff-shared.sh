@@ -51,9 +51,9 @@ declare -rxi err_logic_error
 
 # shellcheck disable=SC1091
 {
-    source "${script_dir}/diff-shared.functions.sh"
-    source "${script_dir}/diff-shared.args.sh"
-    source "${script_dir}/diff-shared.usage.sh"
+    source "$script_dir/diff-shared.functions.sh"
+    source "$script_dir/diff-shared.args.sh"
+    source "$script_dir/diff-shared.usage.sh"
 }
 
 #===============================
@@ -73,10 +73,8 @@ declare -x summary_file=""      # the file where the summary of the differences 
 #===============================
 declare -x action_ignore action_merge_or_copy action_ask_to_merge action_ask_to_copy action_merge action_copy
 declare -xa arguments=(         # array of all arguments for logging and debugging purposes
-    vm2_repos
     selectors_actions
     target_repos
-    sot
     diff_only
     summary_file
 )
@@ -109,19 +107,12 @@ is_in "$sot" "${sources_of_truth[@]}" || {
 #===============================
 declare -xi rc="$success"
 
-vm2_repos=$(resolve_vm2_repos "$vm2_repos")
-exit_if_has_errors
+vm2_repos=$(resolve_vm2_repos "$vm2_repos") || rc=$?
+(( rc == success )) || usage "Could not resolve the path of the vm2 repositories directory from the specified value of '$vm2_repos'."
 trace "All vm2 repositories are expected to be in '$vm2_repos'"
 
 # if no repos were specified as arguments, use the current directory as the only target repo:
 (( ${#target_repos[@]} != 0 )) || target_repos+=("$(pwd)")
-
-declare -rx vm2_repos
-declare -rx sot
-declare -rxa target_repos
-declare -rxA selectors_actions
-declare -rx diff_only
-declare -rx summary_file
 
 #===============================
 # Adjust, validate and freeze the source of truth:
@@ -129,15 +120,21 @@ declare -rx summary_file
 # ensure vm2.DevOps is a valid Git repository and is not behind the latest stable tag:
 rc="$success"
 sot_path=$(get_vm2_sot_path "$vm2_repos" "$sot") || rc=$?
-(( rc != success )) &&
-    usage -ec "$rc" "Could not find the source of truth directory for the specified template '$sot' in the expected location in '$vm2_repos'. Please make sure it exists or correct the parameter/environment variable."
-readonly sot_path
+(( rc == success )) || usage -ec "$rc" "Could not find the source of truth directory for the specified template '$sot' in the expected location in '$vm2_repos'."
 trace "The source of truth directory for the '$sot' template is expected in '$sot_path'"
+
+declare -rx vm2_repos
+declare -rx sot
+declare -rx sot_path
+declare -rxa target_repos
+declare -rxA selectors_actions
+declare -rx diff_only
+declare -rx summary_file
 
 declare -a sot_dump_vars=(
     --header "Configuration for SoT $sot:"
     vm2_repos
-    sot
+    sot_path
     --header "Common Arguments:"
     "${common_args[@]}"
     --header "Arguments:"
@@ -155,17 +152,16 @@ dump_vars "${sot_dump_vars[@]}"
 info "Source of Truth '$sot' in '$sot_path'"
 
 # Resolve and validate all repositories specified as arguments, and prepare the list of target files and actions for each of them:
+declare output target_root target_path
 declare -a target_roots=()
 declare -a target_paths=()
 
 for target in "${target_repos[@]}"; do
-    {
-        read -r target_root
-        read -r target_path
-    } < <(resolve_target "$vm2_repos" "$target") || {
-        error -ec "$err_logic_error" "Could not resolve the path of the target repository '$target'. Please, ensure that it exists and is a valid directory."
+    output=$(resolve_target "$vm2_repos" "$target") || {
+        error -ec "$?" "Could not resolve the path of the target repository '$target'. Please, ensure that it exists and is a valid directory."
         continue
     }
+    { read -r target_root; read -r target_path; } <<< "$output"
     target_roots+=("$target_root")
     target_paths+=("$target_path")
 done
@@ -200,7 +196,7 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
     exit_if_has_errors
 
     {
-        echo -e "### Target: ${target} ($target_path)\n"
+        echo -e "### Target: $target ($target_path)\n"
         if $diff_only; then
             echo -e "| Source of Truth File | Shared Content File | Difference |"
             echo -e "|:---------------------|:--------------------|:-----------|"
@@ -231,11 +227,11 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
         $diff_only && [[ -n $actions ]] && actions=$action_ignore
 
         if [[ -z $actions ]]; then
-            trace "$(printf "%-84s ---- Skipping  ---- %-s\n" "${source_file#"$vm2_repos/${vm2_sot_repo_name}/templates/"}" "${target_file#"$vm2_repos/"}")"
+            trace "$(printf "%-84s ---- Skipping  ---- %-s\n" "${source_file#"$vm2_repos/$vm2_sot_repo_name/templates/"}" "${target_file#"$vm2_repos/"}")"
             continue
         fi
 
-        info "    SoT File: '${source_file#"$vm2_repos/${vm2_sot_repo_name}/templates/"}' vs Target File: '${target_file#"$vm2_repos/"}' with actions '$actions'..."
+        info "    SoT File: '${source_file#"$vm2_repos/$vm2_sot_repo_name/templates/"}' vs Target File: '${target_file#"$vm2_repos/"}' with actions '$actions'..."
 
         declare difference=""
         declare action=""
@@ -251,7 +247,7 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
                     ;;
 
                 "$action_merge_or_copy" | "$action_ask_to_merge" | "$action_ask_to_copy" )
-                    confirm "Target file '$target_file' does not exist. Do you want to copy it from '${source_file}'?" "y" && {
+                    confirm "Target file '$target_file' does not exist. Do you want to copy it from '$source_file'?" "y" && {
                         copy_file "$source_file" "$target_file"
                         action="copied"
                     }
@@ -262,7 +258,7 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
                     action="copied"
                     ;;
 
-                * ) error -ec "$err_logic_error" "Unknown action '$actions' for files '${source_file}' and '${target_file}'."
+                * ) error -ec "$err_logic_error" "Unknown action '$actions' for files '$source_file' and '$target_file'."
                     action="error"
                     press_any_key
                     ;;
@@ -307,7 +303,7 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
                     ;;
 
                 "$action_ask_to_merge" )
-                    confirm "Do you want to merge '${source_file}' to file '${target_file}'?" "n" && {
+                    confirm "Do you want to merge '$source_file' to file '$target_file'?" "n" && {
                         merge "$target_file" "$source_file" &&
                             action="merged" ||
                             action="not merged"
@@ -321,7 +317,7 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
                     ;;
 
                 "$action_ask_to_copy" )
-                    confirm "Do you want to copy '${source_file}' to file '${target_file}'?" "n" && {
+                    confirm "Do you want to copy '$source_file' to file '$target_file'?" "n" && {
                         copy_file "$source_file" "$target_file"
                         action="copied"
                     }
@@ -332,15 +328,15 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
                     action="copied"
                     ;;
 
-                * ) error -ec "$err_logic_error" "Unknown action '$actions' for files '${source_file}' and '${target_file}'."
+                * ) error -ec "$err_logic_error" "Unknown action '$actions' for files '$source_file' and '$target_file'."
                     action="error"
                     press_any_key
                     ;;
             esac
         fi
         $diff_only &&
-            echo "| ${source_file#"$vm2_repos/${vm2_sot_repo_name}/templates/"} | ${target_file#"$vm2_repos/"} | $difference |" >> "$summary_file" ||
-            echo "| ${source_file#"$vm2_repos/${vm2_sot_repo_name}/templates/"} | ${target_file#"$vm2_repos/"} | $difference | $action |" >> "$summary_file"
+            echo "| ${source_file#"$vm2_repos/$vm2_sot_repo_name/templates/"} | ${target_file#"$vm2_repos/"} | $difference |" >> "$summary_file" ||
+            echo "| ${source_file#"$vm2_repos/$vm2_sot_repo_name/templates/"} | ${target_file#"$vm2_repos/"} | $difference | $action |" >> "$summary_file"
     done # SoT files loop
 
     echo "" >> "$summary_file"

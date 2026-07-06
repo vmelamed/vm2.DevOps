@@ -10,7 +10,7 @@ declare -xr script_dir
 declare -xr lib_dir
 
 # shellcheck disable=SC1091
-source "${lib_dir}/core.sh"
+source "$lib_dir/core.sh"
 declare -x commit_sha=""
 declare -x new_branch=""
 declare -x check_out_new_branch=false
@@ -28,8 +28,8 @@ declare -rxi err_too_many_arguments
 declare -rxi err_unknown_argument
 declare -rxi err_tool_error
 
-source "${script_dir}/move-commits-to-branch.args.sh"
-source "${script_dir}/move-commits-to-branch.usage.sh"
+source "$script_dir/move-commits-to-branch.args.sh"
+source "$script_dir/move-commits-to-branch.usage.sh"
 
 get_arguments "$@"
 

@@ -36,7 +36,7 @@ exit_if_has_errors
 types_pattern=$(IFS='|'; echo "${allowed_types[*]}")
 
 # Conventional Commits: type[(scope)][!]: description
-readonly cc_regex="^(${types_pattern})(\(.+\))?!?: .+"
+readonly cc_regex="^($types_pattern)(\(.+\))?!?: .+"
 
 # Determine the commit range
 if [[ -z "$base_ref" ]]; then
@@ -56,14 +56,14 @@ while IFS= read -r subject; do
         error -ec "$err_argument_value" \
                   "Bad commit message: $subject" \
                   "To fix this commit message:" \
-                  "  1. git rebase -i ${base_ref}" \
+                  "  1. git rebase -i $base_ref" \
                   "  2. In the editor, change 'pick' to 'reword' for the offending commit" \
                   "  3. Save and close — Git opens the message editor for that commit" \
                   "  4. Edit the message (e.g. prepend 'chore: '), save and close" \
                   "  Note: rebase rewrites commit hashes from that point to HEAD"
         bad++ || true
     fi
-done < <(git log --format='%s' "${base_ref}..HEAD")
+done < <(git log --format='%s' "$base_ref..HEAD")
 
 if [[ $bad -gt 0 ]]; then
     branch=$(git branch --show-current)

@@ -20,7 +20,7 @@ function usage_text()
     fi
 
     cat << EOF
-Usage: ${script_name} [<repo-directory>...] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch>]*
+Usage: $script_name [<repo-directory>...] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch>]*
 
 Compares a pre-defined set of files with shared content in one or more target repositories against the corresponding
 source-of-truth (SoT) files listed in ${script_name%.sh}.config.json in the SoT directory, for the scenario specified

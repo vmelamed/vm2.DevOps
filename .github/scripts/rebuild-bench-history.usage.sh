@@ -16,7 +16,7 @@ function usage_text()
     fi
 
     cat << EOF
-Usage: ${script_name} [--<long option> <value> | -<short option> <value> | --<long switch> | -<short switch> ]*
+Usage: $script_name [--<long option> <value> | -<short option> <value> | --<long switch> | -<short switch> ]*
 
 Fans out a benchmark-history rebuild across all vm2 repositories that have a 'benchmarks/' directory. For each such repo it
 triggers that repo's 'RebuildBenchHistory.yaml' workflow (via 'gh workflow run -f repeat=N'), which re-records the benchmark

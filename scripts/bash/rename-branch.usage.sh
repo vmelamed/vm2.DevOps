@@ -19,7 +19,7 @@ function usage_text()
     fi
 
     cat << EOF
-Usage: ${script_name} [<old_branch_name>] <new_branch_name>
+Usage: $script_name [<old_branch_name>] <new_branch_name>
 Renames a Git branch both locally and remotely.
 
 Arguments:

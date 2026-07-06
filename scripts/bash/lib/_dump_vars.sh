@@ -102,7 +102,7 @@ function _write_title()
 function _write_line()
 {
      [[ $1 =~ $varNameRegex ]] || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires a non-empty variable name as argument."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires a non-empty variable name as argument."
         return "$err_invalid_nameref"
     }
 

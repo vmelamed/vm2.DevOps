@@ -18,7 +18,7 @@ $common_switches"
     fi
 
     cat << EOF
-Usage: ${script_name} [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
+Usage: $script_name [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
 Computes the next release version based on conventional commits or manual input. Analyzes commit messages since the last
 stable tag to determine the appropriate semantic version bump:
   - <type>! (e.g. feat!, refactor!) -> major bump

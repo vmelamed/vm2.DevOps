@@ -66,7 +66,7 @@ skipped=0
 # Process C# files
 while IFS= read -r -d '' file; do
   processed=$((processed + 1))
-  rel=".${file#"${root}"}"
+  rel=".${file#"$root"}"
 
   if grep -q "SPDX-License-Identifier" "$file"; then
     echo "Skipping (has header): $rel"
@@ -100,16 +100,16 @@ while IFS= read -r -d '' file; do
   echo "Added header to: $rel"
   modified=$((modified + 1))
 done < <(find "$root" -type f -name '*.cs' \
-  ! -path '*/obj/*' \
-  ! -path '*/bin/*' \
-  ! -name 'AssemblyInfo.cs' \
-  ! -name '*.g.cs' \
-  ! -name '*.designer.cs' -print0)
+            ! -path '*/obj/*' \
+            ! -path '*/bin/*' \
+            ! -name 'AssemblyInfo.cs' \
+            ! -name '*.g.cs' \
+            ! -name '*.designer.cs' -print0)
 
 # Process bash files
 while IFS= read -r -d '' file; do
   processed=$((processed + 1))
-  rel=".${file#"${root}"}"
+  rel=".${file#"$root"}"
 
   if grep -q "SPDX-License-Identifier" "$file"; then
     echo "Skipping (has header): $rel"

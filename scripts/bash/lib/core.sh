@@ -43,17 +43,17 @@ declare -x _ignore=$default__ignore
 # directly. Use the functions below to manipulate it.
 
 # source the components of the core library
-source "${lib_dir}/_error_codes.sh"
-source "${lib_dir}/_constants.sh"
-source "${lib_dir}/_diagnostics.sh"
-source "${lib_dir}/_args.sh"
-source "${lib_dir}/_predicates.sh"
-source "${lib_dir}/_dump_vars.sh"
-source "${lib_dir}/_semver.sh"
-source "${lib_dir}/_user.sh"
-source "${lib_dir}/_git.sh"
-source "${lib_dir}/_sanitize.sh"
-source "${lib_dir}/_dotnet.sh"
+source "$lib_dir/_error_codes.sh"
+source "$lib_dir/_constants.sh"
+source "$lib_dir/_diagnostics.sh"
+source "$lib_dir/_args.sh"
+source "$lib_dir/_predicates.sh"
+source "$lib_dir/_dump_vars.sh"
+source "$lib_dir/_semver.sh"
+source "$lib_dir/_user.sh"
+source "$lib_dir/_git.sh"
+source "$lib_dir/_sanitize.sh"
+source "$lib_dir/_dotnet.sh"
 
 # Override the default or environment values of common flags based on other flags upon sourcing.
 # Make sure that the other set_* functions are honoring the ci flag.
@@ -71,7 +71,7 @@ function get_devops_parent()
 {
     if [[ -z $__devops_parent ]]; then
         r=$(root_working_tree "$lib_dir") && __devops_parent=$(dirname "$r" 2> "$_ignore") || {
-            error -ec "$err_logic_error" -sd 3 "Failed to resolve parent directory of the vm2.DevOps repo from the script directory '$lib_dir'." \
+            error -sd 3 -ec "$err_logic_error" "Failed to resolve parent directory of the vm2.DevOps repo from the script directory '$lib_dir'." \
                                                "Please ensure that the script is located in 'vm2.DevOps/scripts/bash/lib' and that the repository is not in a detached HEAD state."
             exit "$err_not_git_directory"
         }
@@ -148,7 +148,7 @@ fi
 function show_ignored_output()
 {
     (( $# <= 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() accepts at most one argument (provided $#): the file name to redirect the ignored output to."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() accepts at most one argument (provided $#): the file name to redirect the ignored output to."
         return "$err_invalid_arguments"
     }
 
@@ -185,7 +185,7 @@ function hide_ignored_output()
 function execute()
 {
     (( $# > 0 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires at least one argument (provided $#): the command to execute."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires at least one argument (provided $#): the command to execute."
         return "$err_invalid_arguments"
     }
 
@@ -217,10 +217,14 @@ function execute()
 #-------------------------------------------------------------------------------
 function execute_with_retry()
 {
+    local -i rc=$success
+
     (( $# >= 3 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires at least three arguments (provided $#): <max_attempts> <delay> <command> [args...]"
-        return "$err_invalid_arguments"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires at least three arguments (provided $#): <max_attempts> <delay> <command> [args...]"
     }
+
+    (( rc == "$success" )) || return "$err_invalid_arguments"
 
     local max_attempts=$1; shift
     local delay=$1; shift
@@ -231,9 +235,11 @@ function execute_with_retry()
     is_boolean "$1" && shift
 
     (( $# >= 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires at least four arguments (provided $#): <max_attempts> <delay> <ignore output> <command> [args...]"
-        return "$err_invalid_arguments"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires at least four arguments (provided $#): <max_attempts> <delay> <ignore output> <command> [args...]"
     }
+
+    (( rc == "$success" )) || return "$err_invalid_arguments"
 
     local attempt=0
     local exit_code=0
@@ -273,10 +279,14 @@ function execute_with_retry()
 #-------------------------------------------------------------------------------
 function list_of_files()
 {
+    local -i rc=$success
+
     (( $# >= 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires at least one argument (provided $#): the file pattern."
-        return "$err_invalid_arguments"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires at least one argument (provided $#): the file pattern."
     }
+
+    (( rc == "$success" )) || return "$err_invalid_arguments"
 
     # remember the current settings of the nullglob and globstar options
     local restoreGlobstar restoreNullglob

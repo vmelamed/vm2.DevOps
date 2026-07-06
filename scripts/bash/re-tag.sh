@@ -16,7 +16,7 @@ declare -xr script_dir
 declare -xr lib_dir
 
 # shellcheck disable=SC1091
-source "${lib_dir}/core.sh"
+source "$lib_dir/core.sh"
 
 declare -rxi err_invalid_arguments
 declare -rxi err_argument_value

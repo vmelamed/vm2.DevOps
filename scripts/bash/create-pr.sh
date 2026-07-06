@@ -13,7 +13,7 @@
 set -euo pipefail
 
 base="$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name 2>/dev/null || echo main)"
-commits="$(git log --reverse --format="- %s" "origin/${base}..HEAD" 2>/dev/null)"
+commits="$(git log --reverse --format="- %s" "origin/$base..HEAD" 2>/dev/null)"
 
 if [[ -z "$commits" ]]; then
     commits="_(no commits)_"

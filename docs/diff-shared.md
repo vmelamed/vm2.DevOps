@@ -158,23 +158,23 @@ This file is mandatory and must be located in the SoT directory. It defines the 
     },
     "files": [
         {
-            "sourceFile": "${vm2_repos}/$vm2_sot_shared/.github/workflows/Release.yaml",
-            "targetFile": "${target_path}/.github/workflows/Release.yaml",
+            "sourceFile": "$vm2_repos/$vm2_sot_shared/.github/workflows/Release.yaml",
+            "targetFile": "$target_path/.github/workflows/Release.yaml",
             "action": "ask to merge"
         },
         {
-            "sourceFile": "${vm2_repos}/$vm2_sot_shared/.github/workflows/ClearCache.yaml",
-            "targetFile": "${target_path}/.github/workflows/ClearCache.yaml",
+            "sourceFile": "$vm2_repos/$vm2_sot_shared/.github/workflows/ClearCache.yaml",
+            "targetFile": "$target_path/.github/workflows/ClearCache.yaml",
             "action": "copy"
         },
         {
-            "sourceFile": "${vm2_repos}/$vm2_sot_shared/.editorconfig",
-            "targetFile": "${target_path}/.editorconfig",
+            "sourceFile": "$vm2_repos/$vm2_sot_shared/.editorconfig",
+            "targetFile": "$target_path/.editorconfig",
             "action": "ask to copy"
         },
         {
-            "sourceFile": "${vm2_repos}/$vm2_sot_shared/.gitignore",
-            "targetFile": "${target_path}/.gitignore",
+            "sourceFile": "$vm2_repos/$vm2_sot_shared/.gitignore",
+            "targetFile": "$target_path/.gitignore",
             "action": "copy"
         },
         ...
@@ -184,9 +184,9 @@ This file is mandatory and must be located in the SoT directory. It defines the 
 
 File paths may contain variables that the script resolves at runtime:
 
-- `${vm2_repos}` — the vm2 parent directory, e.g. `/home/user/repos/vm2`
-- `${vm2_sot_shared}` — path to the SoT files relative to the vm2 parent, e.g. `vm2.Templates/templates/AddNewPackage/content`
-- `${target_path}` — path to the target repository
+- `$vm2_repos` — the vm2 parent directory, e.g. `/home/user/repos/vm2`
+- `$vm2_sot_shared` — path to the SoT files relative to the vm2 parent, e.g. `vm2.Templates/templates/AddNewPackage/content`
+- `$target_path` — path to the target repository
 
 The example above configures:
 

@@ -128,13 +128,14 @@ if [[ -z $workflow_id ]]; then
 fi
 
 # get the IDs of the last 1000 successful runs of the specified workflow
-mapfile -t runs < <(gh run list \
-                        --repo "$repository" \
-                        --workflow "$workflow_id" \
-                        --status success \
-                        --limit 100 \
-                        --json databaseId \
-                        --jq '.[].databaseId')
+readarray -t runs < <(
+    gh run list \
+        --repo "$repository" \
+        --workflow "$workflow_id" \
+        --status success \
+        --limit 100 \
+        --json databaseId \
+        --jq '.[].databaseId')
 
 if [[ ${#runs[@]} == 0 ]]; then
 # shellcheck disable=SC2154 # variable is referenced but not assigned.

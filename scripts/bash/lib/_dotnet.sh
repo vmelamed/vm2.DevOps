@@ -188,10 +188,14 @@ function displayDotnetBuildSummary()
 
 function get_build_info()
 {
+    local -i rc="$success"
+
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): the name of the build information variable to retrieve."
-        return "$err_invalid_arguments"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): the name of the build information variable to retrieve."
     }
+
+    (( rc == success )) || return "$err_invalid_arguments"
 
     case $1 in
         build_result )
@@ -246,14 +250,18 @@ function get_build_info()
 # Example: path=$(assembly_path src/vm2.Ulid/Ulid.csproj)
 #-------------------------------------------------------------------------------
 function assembly_path() {
+    local -i rc="$success"
+
     (( $# == 1 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires exactly one argument (provided $#): the path to a *.csproj file."
-        return "$err_invalid_arguments"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the path to a *.csproj file."
     }
-    [[ -n "$1" && -s "$1" && "$1" == *.csproj ]] || {
-        error -ec "$err_argument_value" -sd 3 "${FUNCNAME[0]}(): '$1' is not a valid or existing *.csproj file."
-        return "$err_argument_value"
+    [[ $# -ne 1 || ( -n "$1" && -s "$1" && "$1" == *.csproj ) ]] || {
+        rc="$err_argument_value"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}(): '$1' is not a valid or existing *.csproj file."
     }
+
+    (( rc == success )) || return "$err_invalid_arguments"
 
     local csproj
     csproj=$(realpath -e "$1")
@@ -323,7 +331,7 @@ function assembly_path() {
     fi
     trace "Using 'OutputType': ${output_type:-None} → suffix: '$suffix'"
 
-    local path="${proj_dir}/bin/${proj_configuration}/${tfm}/${assembly_name}${suffix}"
+    local path="$proj_dir/bin/$proj_configuration/$tfm/$assembly_name$suffix"
 
     echo "$path"
     trace "Looking for assembly at: $path"

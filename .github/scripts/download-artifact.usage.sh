@@ -16,7 +16,7 @@ function usage_text()
     fi
 
     cat << EOF
-Usage: ${script_name} [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
+Usage: $script_name [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
 Tries to find and download the latest artifact created by previous runs of the specified workflow. All parameters are optional
 if the corresponding environment variables are set. If both are specified, the command line arguments take precedence
 

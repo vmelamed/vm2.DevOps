@@ -54,9 +54,9 @@ exit_if_has_errors
 
 # Find latest stable like v1.2.3
 # shellcheck disable=SC2154 # semverTagReleaseRegex is referenced but not assigned.
-latest_stable_tag=$(git tag --list "${minver_tag_prefix}*" | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1 || echo "")
+latest_stable_tag=$(git tag --list "$minver_tag_prefix*" | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1 || echo "")
 # shellcheck disable=SC2154 # semverTagPrereleaseRegex is referenced but not assigned.
-latest_prerelease_tag=$(git tag --list "${minver_tag_prefix}*" | grep -E "$semverTagPrereleaseRegex" | sort -V | tail -n1 || echo "")
+latest_prerelease_tag=$(git tag --list "$minver_tag_prefix*" | grep -E "$semverTagPrereleaseRegex" | sort -V | tail -n1 || echo "")
 
 latest_stable_ver="${latest_stable_tag#"$minver_tag_prefix"}"
 latest_prerelease_ver="${latest_prerelease_tag#"$minver_tag_prefix"}"
@@ -129,7 +129,7 @@ fi
 
 info "Finalized new release version: $release_version [$bump_type]"
 
-release_tag="${minver_tag_prefix}${release_version}"
+release_tag="$minver_tag_prefix$release_version"
 
 # If HEAD is already tagged with a prerelease, verify the stable version is strictly greater
 if [[ "$needs_empty_commit" == true && -n "$head_tag" ]]; then
@@ -162,7 +162,7 @@ args_to_github_output \
 {
     echo "## 🎯 Release Version: **$release_version**"
     echo "- Git Tag: \`$release_tag\`"
-    echo "- Reason: ${reason}"
+    echo "- Reason: $reason"
     if [[ "$needs_empty_commit" == true ]]; then
         echo "- Promoting prerelease \`$head_tag\` → stable (empty commit will advance HEAD)"
     fi

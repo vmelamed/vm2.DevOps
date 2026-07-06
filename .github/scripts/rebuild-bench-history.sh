@@ -41,7 +41,7 @@ get_arguments "$@"
 # Resolve the GitHub owner: --owner, else $GITHUB_REPOSITORY_OWNER (set by Actions), else derive from this repo's remote.
 [[ -n "$owner" ]] || owner="${GITHUB_REPOSITORY_OWNER:-}"
 if [[ -z "$owner" ]]; then
-    self_root=$(root_working_tree "$script_dir" 2> "$_ignore") || true
+    self_root=$(root_working_tree "$script_dir") || true
     if [[ -n "${self_root:-}" ]]; then
         declare -A self_state=()
         get_repo_state "$self_root" self_state false || true
@@ -94,7 +94,7 @@ dispatched_list=""
 # Summary
 {
     echo "### Benchmark-history rebuild dispatch (owner=$owner, repeat=$repeat):"
-    echo "  dispatched : ${dispatched}${dispatched_list}"
+    echo "  dispatched : $dispatched$dispatched_list"
     echo "  no benchmarks/skipped : $no_bench"
     echo "  failed : $failed"
     $dry_run &&

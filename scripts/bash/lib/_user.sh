@@ -35,7 +35,7 @@ declare -rxi err_argument_value
 function press_any_key()
 {
     is_quiet || {
-        read -n 1 -rsp 'Press any key to continue...'
+        read -n 1 -r -s -p 'Press any key to continue...'
         echo
     }
     return "$success"
@@ -59,25 +59,27 @@ function press_any_key()
 #-------------------------------------------------------------------------------
 function confirm()
 {
+    local -i rc="$success"
+
     (( $# == 1 || $# == 2 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires at least one parameter (provided $#): the prompt and a second, optional argument -default response."
-        return "$err_invalid_arguments"
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires at least one parameter (provided $#): the prompt and a second, optional argument -default response."
     }
-    [[ -n "$1" ]] || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires that the \$1 parameter is not empty."
-        return "$err_argument_value"
+    [[ $# -lt 1 || -n "$1" ]] || {
+        rc="$err_argument_value"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires that the \$1 parameter is not empty."
     }
+    [[ $# -lt 2 || "${2,,}" =~ ^[yn]$ ]] || {
+        rc="$err_argument_value"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires that the \$2 parameter is either 'y' or 'n' (case insensitive)."
+    }
+
+    (( rc == success )) || return "$err_invalid_arguments"
 
     local default="y"
     local errs
 
-    (( $# == 1 )) || {
-        default=${2,,}
-        [[ "$default" =~ ^[yn]$ ]] || {
-            error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires that the \$2 parameter is either 'y' or 'n' (case insensitive)."
-            return "$err_argument_value"
-        }
-    }
+    (( $# == 1 )) || default=${2,,}
 
     local response=$default
     is_quiet || {
@@ -86,7 +88,7 @@ function confirm()
         [[ "$default" == y ]] && suffix="[Y/n]" || suffix="[y/N]"
 
         while true; do
-            read -rp "$prompt $suffix: " response
+            read -r -p "$prompt $suffix: " response
             [[ -z "$response" || "$response" =~ ^[ynYN]$ ]] && break
             warning "Please enter one of Y or N (case insensitive)."
         done
@@ -134,14 +136,18 @@ function confirm()
 #-------------------------------------------------------------------------------
 function enter_value()
 {
+    local -i rc="$success"
+
     (( $# <= 4 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() accepts no more than 4 arguments (provided $#):
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() accepts no more than 4 arguments (provided $#):
     1) a prompt
     2) an optional default value
     3) an optional boolean to suppress the echo of the input to the terminal
     4) the optional name of a validation function."
-        return "$err_invalid_arguments"
     }
+
+    (( rc == success )) || return "$err_invalid_arguments"
 
     local prompt=''
     local default=''
@@ -154,13 +160,16 @@ function enter_value()
     [[ $# -ge 4 && "$4" != "_" ]] && validate_fn="$4"
 
     [[ -z $validate_fn || -z $default ]] || $validate_fn "$default" || {
-        error -ec "$err_argument_value" "The default value '$default' does not pass the validation function '$validate_fn'."
-        return "$err_argument_value"
+        rc="$err_argument_value"
+        error -ec "$rc" "The default value '$default' does not pass the validation function '$validate_fn'."
     }
     is_boolean "$is_secret" || {
-        error -ec "$err_argument_type" "The \$3 argument of ${FUNCNAME[0]}() (is_secret) must be a boolean value ('true' or 'false' -- provided '$1'), indicating whether the input is a secret that should not be echoed to the terminal."
-        return "$err_argument_type"
+        rc="$err_argument_type"
+        error -ec "$rc" "The \$3 argument of ${FUNCNAME[0]}() (is_secret) must be a boolean value ('true' or 'false' -- provided '$1'), indicating whether the input is a secret that should not be echoed to the terminal."
     }
+
+    (( rc == success )) || return "$err_invalid_arguments"
+
     is_quiet && {
         echo "$default"
         return "$success"
@@ -218,7 +227,7 @@ function enter_value()
 function choose()
 {
     (( $# >= 3 )) || {
-        error -ec "$err_invalid_arguments" -sd 3 "${FUNCNAME[0]}() requires 3 or more arguments ($# provided): a prompt and at least two choices."
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires 3 or more arguments ($# provided): a prompt and at least two choices."
         return "$err_invalid_arguments";
     }
 
