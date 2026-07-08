@@ -6,7 +6,22 @@ problem actually bites), not pushed by the itch — or batched in a quarterly re
 
 The list is ordered by priority — add new items where they belong, not at the end.
 
-## 1. Demote `latency`/`throughput` to record-only
+## 1. Adopt `shdoc`-style tags for bash function doc comments
+
+**What:** Replace the free-text `# Summary:`/`Parameters:`/`Returns:` header convention in `scripts/bash/lib/*.sh` with
+[shdoc](https://github.com/reconquest/shdoc)-style tags (`@description`, `@arg`, `@exitcode`, `@stdout`, `@example`).
+Once the tags are in place, generate `scripts/bash/lib/FUNCTIONS_REFERENCE.md` from the source instead of hand-syncing
+it — the doc and the code can no longer drift apart.
+
+**Why:** Bash has no doc-comment standard, but `shdoc`/Google's Shell Style Guide tag format is the closest thing to
+one, and it buys a generated reference doc for free. Prompted by re-reviewing `enter_value()`'s doc comment in
+`_user.sh`, which needed several correctness passes by hand — a generator would catch drift structurally.
+
+**Trigger:** Next time `FUNCTIONS_REFERENCE.md` is caught out of sync with the actual function signatures.
+**Effort:** Small pilot on one file (e.g. `_user.sh`) to validate the tag format and generated output, then a
+mechanical pass over the remaining 66 functions.
+
+## 2. Demote `latency`/`throughput` to record-only
 
 **What:** Delete the `latency` and `throughput` threshold blocks from `BENCHER_ARGS` in
 `.github/workflows/_benchmarks.yaml`. Both measures stay uploaded and charted in Bencher — they just stop gating CI.
@@ -20,7 +35,7 @@ gate well; noisy measures chart well.
 **Trigger:** The next time the latency/throughput gate cries wolf.
 **Effort:** Minutes — thresholds are per-measure, `--err` stays for the remaining gated measures.
 
-## 2. `foreach-repo.sh` — fleet-wide Where/ForEach utility
+## 3. `foreach-repo.sh` — fleet-wide Where/ForEach utility
 
 **What:** `scripts/bash/foreach-repo.sh` (three-file convention, on the lib): iterate `$vm2_repositories`, filter by a
 predicate command, run an action command. LINQ over the repo fleet: `all_repos.Where(condition).ForEach(action)`.
@@ -41,7 +56,7 @@ setup-repo runs). The win is the standardized env contract + summary + dry-run, 
 `foreach-repo.sh -- setup-repo.sh --audit`.
 **Effort:** ~Half a day including docs.
 
-## 3. DevOps for vm2.DevOps — ShellCheck, tests, PR gates
+## 4. DevOps for vm2.DevOps — ShellCheck, tests, PR gates
 
 **What:** Give vm2.DevOps the same rigor it enforces on every other repo. Candidate pieces, roughly in value order:
 

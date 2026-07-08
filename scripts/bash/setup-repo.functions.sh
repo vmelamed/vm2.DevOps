@@ -344,54 +344,93 @@ function configure_variables()
 {
     info "Configuring GitHub Actions variables..."
 
+    local path_vars="$path_repo/actions/variables"
+
     # Get existing variables as name=value pairs
     local -A existing
     local name value exists # about the current variable
 
     while IFS='=' read -r name value; do
-        existing["$name"]="$present_state"
-    done < <(execute_gh_api_with_retry 3 2 --paginate "$path_repo/actions/variables" -q "$jq_vars")
+        existing["$name"]="$value"
+    done < <(execute_gh_api_with_retry 3 2 --paginate "$path_vars" -q "$jq_vars")
 
-    local new_value=""
-    local default_value=""
     local -i skipped=0 set_new=0 set_default=0
     local -a ordered_names
 
     readarray -t ordered_names < <(printf '%s\n' "${!actions_default_vars[@]}" | sort)
 
+    local new_value=""
+    local default_value=""
+
     for name in "${ordered_names[@]}"; do
+        # does the var exists in GH?
         [[ -v existing[$name] ]] && exists=true || exists=false
 
-        # the variable exists in GH but we are not in interactive mode and we cannot modify it, so skip it
-        $exists && ! $interactive_vars && (( ++skipped )) && continue
+        # we are not in interactive mode and we cannot modify the variable but it exists in GH -- continue to the next variable
+        ! $interactive_vars && $exists && (( ++skipped )) && continue
 
-        # the variable does not exist in GH (we have to create it) or it exists and we are in interactive (the user might want to change it):
-        # get the variable's value (to know if it is different from the default)
-        $exists && value="${existing[$name]}" || value=""
+        # get the variable's current and default values
+        $exists && value="${existing[$name]:-}"
         default_value="${actions_default_vars[$name]}"
 
         if $interactive_vars; then
-            # prompt the user for a new value while showing them the current value (if it exists) and the default value
-            $exists && new_value=$(enter_value "        Enter value for variable $name (current: '$value')" "$default_value" false "${actions_var_validators["$name"]}") ||
-                       new_value=$(enter_value "        Enter value for variable $name" "$default_value" false "${actions_var_validators["$name"]}")
+            # prompt the user for a value while showing them the current value (if it exists) and the default value
+            $exists &&
+                new_value=$(enter_value "        Enter value for variable $name (default: '$default_value')" "$value"         false "${actions_var_validators["$name"]}") ||
+                new_value=$(enter_value "        Enter value for variable $name"                             "$default_value" false "${actions_var_validators["$name"]}")
+            if [[ $new_value != "$value" ]]; then
+                # set the variable to the value
+                trace "Setting variable: $name=$new_value"
+                set_var "$name" "$new_value" || continue
+                [[ $new_value != "$default_value" ]] &&
+                    (( ++set_new )) ||
+                    (( ++set_default ))
+            elif [[ $new_value == "$value" ]]; then
+                trace "Unchanged variable: $name=$value"
+                (( ++skipped ))
+            else
+                error -sd 3 -ec "$err_logic_error" "Unexpected error: new_value '$new_value' is not equal to either the current value '$value' or the default value '$default_value'. This should never happen."
+                reset_errors
+            fi
         else
             # we are not in interactive mode and the var does not exist, so we will create it using the default value
-            ! $exists && new_value="$default_value"
+            ! $exists && new_value="$default_value" && (( ++set_default ))
+            if $exists; then
+                trace "Variable unchanged: $name=$value"
+                (( ++skipped ))
+            else
+                trace "Setting variable to default value: $name=$default_value"
+                set_var "$name" "$default_value" && (( ++set_default ))
+            fi
         fi
-
-        $exists && [[ $value == "$new_value" ]] && (( ++skipped )) && continue # nothing to do if the new value is the same as the previous value
-
-        execute_gh_with_retry 3 2 true variable set "$name" --body "$new_value" -R "$repo"
-        trace "Set variable: $name=$new_value"
-
-        # increment counters based on whether the new value is the default or a new value for the summary in the end of the function
-        [[ $new_value == "$default_value" ]] && (( ++set_default )) || (( ++set_new ))
     done
 
     # display the summary
     (( set_new > 0 ))     && info "    $set_new variable(s) set to new value(s)."             || true
     (( set_default > 0 )) && info "    $set_default variable(s) set to default value(s)."     || true
     (( skipped > 0 ))     && info "    $skipped variable(s) were not modified."               || true
+    info "  Run the script with option '--interactive-vars' or '-iv' to set new values for any of the Actions vars."
+}
+
+function set_var()
+{
+    (( $# == 2 )) || {
+        error -sd 2 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly two arguments: name and value."
+        return "$err_invalid_arguments"
+    }
+
+    local name="$1"
+    local value="$2"
+
+    local rc=$success
+
+    # create and/or set the secret value on GitHub
+    execute_gh_with_retry 3 2 true variable set "$name" --body "$new_value" -R "$repo" || {
+        rc=$?
+        warning "Failed to set variable $name. Run the script with '--verbose' to see more details and troubleshoot."
+    }
+
+    return "$rc"
 }
 
 function is_valid_secret()
@@ -401,12 +440,15 @@ function is_valid_secret()
 
 function configure_secrets()
 {
+    # validate the parameter - the application name: actions, or dependabot, or agents, or or codespaces
     local -i rc="$success"
 
     [[ $# -eq 1 ]] && is_in "$1" "${apps_with_secrets[@]}" || {
         rc="$err_invalid_arguments"
         error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires exactly one argument -- the application name. It should be one of: ${apps_with_secrets[#]}."
     }
+
+    (( rc == success )) || return "$err_invalid_arguments"
 
     local app="$1"
     local secrets_array_name="${app,,}_secrets"
@@ -420,11 +462,11 @@ function configure_secrets()
 
     local -n app_secrets=$secrets_array_name
 
-    (( ${#app_secrets[@]} > 0 )) || return 0 # no secrets to set for this app, so we are done
+    (( ${#app_secrets[@]} > 0 )) || return 0 # no secrets to set for this app - we are done
+
+    info "Configuring ${app^} secrets..."
 
     local path_secrets="$path_repo/$app/secrets"
-    local -a names
-    readarray -t names < <(printf '%s\n' "${!app_secrets[@]}" | sort)
 
     # get the names of the existing secrets
     local -A existing
@@ -434,56 +476,65 @@ function configure_secrets()
         existing["$name"]="$present_state"
     done < <(execute_gh_api_with_retry 3 2 --paginate "$path_secrets" -q "$jq_secret_names")
 
-    info "Configuring ${app^} secrets..."
-
     # remember the current verbose and tracing settings so we can restore them after setting the secret(s)
     local -i skipped=0 set_new=0 need_new=0
+    local -a ordered_names
 
-    for name in "${names[@]}"; do
+    readarray -t ordered_names < <(printf '%s\n' "${!app_secrets[@]}" | sort)
 
+    for name in "${ordered_names[@]}"; do
+        # does the secret exists in GH?
         [[ -v existing[$name] ]] && exists=true || exists=false
 
-        value=""
+        # we are not in interactive mode and we cannot modify the secret but it exists in GH -- continue to the next variable
+        ! $interactive_secrets && $exists && (( ++skipped )) && continue
+
         # get the value for the secret or use the placeholder if we are not entering secrets interactively
         if $interactive_secrets; then
             # prompt the user for a (new) value of the secret
             $exists &&
-                value=$(enter_value "        Enter value for secret $name [$secret_str]" "$secret_str" true validate_gh_secret) ||
-                value=$(enter_value "        Enter value for secret $name" true validate_gh_secret)
+                value=$(enter_value "        Enter value for secret $name" "$secret_str" true validate_gh_secret) ||
+                value=$(enter_value "        Enter value for secret $name" ""            true validate_gh_secret)
             echo ""
+            if [[ -n $value && $value != "$secret_str" ]]; then
+                set_secret "$name" "$value" "$app" || continue
+                trace "Set value of secret: $name"
+                (( ++set_new ))
+            elif [[ -n $value && $value == "$secret_str" ]]; then
+                trace "Unchanged secret: $name"
+                (( ++skipped ))
+            elif [[ -z $value ]]; then
+                warning "      Create secret: $name."
+                (( ++need_new ))
+            fi
         else
             # the secret exists in GH or it does not exist; but we are not in interactive mode, so either way skip it
-            $exists && (( ++skipped )) || (( ++need_new ))
+            if $exists; then
+                trace "Secret unchanged: $name"
+                (( ++skipped ))
+            else
+                warning "      Create secret: $name."
+                (( ++need_new ))
+            fi
             continue
         fi
 
-        if [[ -n $value && $value != "$secret_str" ]]; then
-            set_secret "$name" "$value" "$app" || {
-                warning "Failed to set secret $name for ${app^}. Run the script with '--verbose' to see more details and troubleshoot."
-                continue
-            }
-            (( ++set_new ))
-            trace "Set value for secret: $name"
-        elif [[ -n $value && $value == "$secret_str" ]]; then
-            (( ++skipped ))
-            trace "Secret unchanged: $name"
-        elif [[ -z $value ]]; then
-            (( ++need_new ))
-            warning "      Create secret: $name."
-        fi
     done
 
     (( set_new > 0 ))  && info "    $set_new secret(s) set to new value(s)."      || true
     (( skipped > 0 ))  && info "    $skipped secret(s) were not modified."        || true
-    (( need_new > 0 )) && warning "  Run the script with option '--interactive-secrets' or '-is' to set the values for $need_new secrets." || true
+    (( need_new > 0 )) && warning "  Run the script with option '--interactive-secrets' or '-is' to set the values for $need_new ${app^} secrets." || true
 }
 
 function set_secret()
 {
+    (( $# == 3 )) || {
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly three arguments: name, value, and app."
+        return "$err_invalid_arguments"
+    }
     local name="$1"
     local value="$2"
     local app="$3"
-    local rc=$success
 
     # we have a new legitimate value for the secret that we need to create and/or set:
     trace "gh secret set $name --body <secret> --app $app --repo $repo"
@@ -494,8 +545,13 @@ function set_secret()
     unset_verbose
     set +x
 
+    local rc=$success
+
     # create and/or set the secret value on GitHub
-    execute_gh_with_retry 3 2 true secret set "$name" --body "$value" --app "$app" --repo "$repo" || rc=$?
+    execute_gh_with_retry 3 2 true secret set "$name" --body "$value" --app "$app" --repo "$repo" || {
+        rc=$?
+        warning "Failed to set secret $name for ${app^}. Run the script with '--verbose' to see more details and troubleshoot." -ec "$rc"
+    }
 
     restore_state
     return "$rc"

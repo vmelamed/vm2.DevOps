@@ -45,7 +45,7 @@ declare -xr undefined_default
 # Parameters:
 #   $1: <gh_endpoint> GitHub API endpoint path to fetch the settings from, e.g. "repos/$repo" or "repos/$repo/actions/permissions/workflow"
 #   $2: <jq_transform> jq query to transform the JSON response into key=value pairs
-#   $3: <expecteds> name of the associative array variable containing expected key-value pairs, e.g. default_repo_settings or
+#   $3: <expected> names of the associative array variable containing expected key-value pairs, e.g. default_repo_settings or
 #       default_repo_permissions
 #   $4: <modify_keys> boolean flag specifying that the keys of the expected settings should be displayed sentence-capitalized
 #       and with spaces instead of underscores (for better readability), e.g. "allow_squash_merge" => "Allow squash merge"
@@ -89,7 +89,7 @@ function compare_settings()
     }
     [[ $# -lt 6 ]] || is_defined_array "$6" || {
         rc="$err_invalid_nameref"
-        error -sd 3 -ec "$rc" "Argument 5 to ${FUNCNAME[0]}() is optional. If provided, it must be the name of an array variable containing the names of settings in order to compare and display."
+        error -sd 3 -ec "$rc" "Argument 6 to ${FUNCNAME[0]}() must be the name of an array variable containing the names of settings in order to compare and display (optional)."
     }
 
     (( rc == success )) || return "$err_invalid_arguments"
@@ -228,7 +228,7 @@ function audit_repo()
     done
 
     # --- Variables ---
-    echo "  ℹ️  GitHub Actions Variables:"
+    echo "  ℹ️  Actions Variables:"
     compare_settings "$path_vars" "$jq_vars" actions_default_vars false results || {
         error -ec "$?" "Failed to compare GitHub Actions variables."
         return 2

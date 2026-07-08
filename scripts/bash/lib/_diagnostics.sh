@@ -217,7 +217,7 @@ function reset_errors()
 # Summary: INTERNAL! prints messages with a given prefix and optional stack depth.
 # Parameters:
 #   1 - prefix - the prefix to prepend to each message line
-#   2+ - message - message parts (optional, if not provided reads from stdin)
+#   2+ - message - message parts (optional, if not provided, reads them from stdin)
 # Named parameters:
 #   "--error-code" or "-ec" followed by a positive error code - the function will translate the error code to a message and
 #                                                               include it in the output.
@@ -343,7 +343,7 @@ function message()
 #-------------------------------------------------------------------------------
 # Summary: Logs error messages to stderr and increments the global error counter.
 # Parameters:
-#   1 - depth (optional) - how many stack frames to show in the message (default: 0)
+#   1 - depth - how many stack frames to show in the message (optional, default: 0)
 #   1+ - message - error message parts (optional, if not provided reads from stdin)
 #        Here you can include named parameters:
 #        Named parameters:
@@ -376,7 +376,7 @@ function error()
 #-------------------------------------------------------------------------------
 # Summary: Logs warning messages to stderr.
 # Parameters:
-#   1 - depth (optional) - how many stack frames to show in the message (default: 0)
+#   1 - depth - how many stack frames to show in the message (optional, default: 0)
 #   1+ - message - warning message parts (optional, if not provided reads from stdin)
 #        Here you can include named parameters:
 #        Named parameters:
@@ -406,7 +406,7 @@ function warning()
 #-------------------------------------------------------------------------------
 # Summary: Logs informational messages to stdout.
 # Parameters:
-#   1 - depth (optional) - how many stack frames to show in the message (default: 0)
+#   1 - depth - how many stack frames to show in the message (optional, default: 0)
 #   1+ - message - informational message parts (optional, if not provided reads from stdin)
 #        Here you can include named parameters:
 #        Named parameters:
@@ -436,7 +436,7 @@ function info()
 #-------------------------------------------------------------------------------
 # Summary: Logs trace messages to stdout when verbose mode is enabled.
 # Parameters:
-#   1 - depth (optional) - how many stack frames to show in the message (default: 0)
+#   1 - depth - how many stack frames to show in the message (optional, default: 0)
 #   1+ - message - trace message parts (optional, if not provided reads from stdin)
 #        Here you can include named parameters:
 #        Named parameters:
@@ -513,10 +513,11 @@ function warning_var()
 #-------------------------------------------------------------------------------
 # Summary: Displays the current call stack to stdout (consider redirecting to stderr)
 # Parameters:
-#   1 - skip (optional) - how many stack frames to skip; defaults to 0
-#   2 - take (optional) - how many stack frames to show; defaults to 1
-#   3 - verbose (optional) - if true, outputs the stack trace; if false, does nothing;
-#       defaults to the value of the global $verbose variable or false if not set
+#   1 - skip - how many stack frames to skip; (optional, defaults to 0)
+#   2 - take - how many stack frames to show; (optional, defaults to 1)
+#   3 - verbose - if true, outputs the stack trace; if false, does nothing;
+#       (optional, defaults to the value of the global $verbose variable or
+#        to false if not set)
 # Returns:
 #   stdout: formatted stack trace showing function names, files, and line numbers
 #           (consider redirecting to stderr)

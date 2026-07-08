@@ -289,7 +289,7 @@ if ! has_remote_repo repo_state; then
         "--disable-wiki"
     )
 
-    [[ -n "$description" ]] || description=$(enter_value "GitHub repository description (3-350 characters)" "$repo_name" _ validate_gh_repo_description)
+    [[ -n "$description" ]] || description=$(enter_value "GitHub repository description (3-350 characters)" "$repo_name" false validate_gh_repo_description)
     [[ -n "$description" ]] && create_repo_params+=("--description" "$description")
 
     if $use_ssh || $use_https; then

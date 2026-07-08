@@ -253,9 +253,9 @@ function customize()
 {
     (( $# == 1 || $# == 2 ))            || error -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 or 2 arguments (provided $#):" \
                                              "  1) target repository root directory path" \
-                                             "  2) optional flag to customize the tools only."
-    [[ $# -lt 1 || -d $1 ]]             || error -ec "$err_argument_value" "${FUNCNAME[0]}() the target path is not a valid directory."
-    [[ $# -lt 2 || -z $2 ]] || is_boolean "${2:-}" || error -ec "$err_argument_value" "${FUNCNAME[0]}() the second optional argument must be a boolean flag indicating whether to customize the tools only."
+                                             "  2) flag to customize the tools only (optional)"
+    [[ $# -lt 1 || -d $1 ]]             || error -ec "$err_argument_value" "${FUNCNAME[0]}() the target repository path is not a valid directory."
+    [[ $# -lt 2 || -z $2 ]] || is_boolean "${2:-}" || error -ec "$err_argument_value" "${FUNCNAME[0]}() the second argument must be a boolean flag indicating whether to customize the tools only."
 
     exit_if_has_errors
 

@@ -63,7 +63,8 @@ declare -a vm2_repos_instructions=(
 #   2) the environment variable $VM2_REPOS, or
 #   3) the parent directory of the repository root of this script.
 # Parameters:
-#   $1 - optional: the directory to use as vm2_repos
+#   $1 - the directory to use as the parent directory of all vm2 repos. (optional, default: $VM2_REPOS or the parent directory
+#        of the repository root of this script)
 # Returns:
 #   stdout: the absolute path to the vm2_repos directory
 #   Exit codes:
@@ -167,10 +168,12 @@ function validate_repo_root()
 {
     local -i rc="$success"
 
-    (( $# >= 1 && $# <= 3 )) || {
+    (( $# == 2 || $# == 3 )) || {
         rc="$err_invalid_arguments"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires 1 to 3 arguments ($# provided): the name of a repository, the optionally the directory where the repository is expected to be located " \
-                "(e.g. \$VM2_REPOS or \$(get_devops_parent), and the branch to check against the latest stable tag (optional, default: the currently checked out branch)."
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires 1 to 3 arguments ($# provided):" \
+                              "  - the parent directory of all vm2 repositories where the repository can be located as well (e.g. \$VM2_REPOS or \$(get_devops_parent))" \
+                              "  - repository name, or, the absolute or relative path to the repository, e.g. 'vm2.MyRepo' or './my_repos/vm2_packages/vm2.MyRepo'" \
+                              "  - the branch to check against the latest stable tag (optional, default: the currently checked out branch)"
     }
 
     (( rc == success )) || return "$err_invalid_arguments"

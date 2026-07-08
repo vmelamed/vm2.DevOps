@@ -13,6 +13,8 @@
 (( ${__VM2_LIB_USER_SH_LOADED:-0} == 1 )) && return 0
 declare -gr __VM2_LIB_USER_SH_LOADED=1
 
+declare -rxi secret_str
+
 declare -rxi success
 declare -rxi failure
 declare -rxi positive
@@ -101,88 +103,85 @@ function confirm()
 #-------------------------------------------------------------------------------
 # Summary: Displays a prompt and asks the user to enter a value
 # Parameters:
-#   1 - prompt - the prompt will be appended with ' [<default>]: ' if
-#       <is_secret> is false, and the default value is not empty. Otherwise,
-#       it will be appended with ': '. Can be empty and the prompt will be just
-#       ': ' or ' [<default>]: '. (optional, default '')
-#   2 - default - the default value to output to stdout if the user presses the
-#       [Enter] key without entering any values (optional, default: '').
-#   3 - is_secret, boolean: suppresses echoing the input to the terminal. Use
-#       for passwords, keys, etc. (optional, default false)
-#   4 - validation function name: if provided, the function will be called with
-#       the entered value, and should return 0 if the value is valid, or
-#       non-zero if invalid. The user will be re-prompted until a valid value is
-#       entered. (optional, default: true, which means no validation, all values
-#       are accepted)
-# Note:
-#   - If any of the parameters are given the discard value of "_" (i.e. an
-#     underscore), they will be treated as if they were not provided, and the
-#     default value will be used for that parameter.
-#   - If the environment variable 'quiet' is set to true, the function will skip
-#     prompting and immediately return the default value (or an empty string if
-#     the default is not provided).
-#   - If the third parameter is true, the input will not be echoed to the
-#     terminal (useful for secrets). However, the input will still be returned
-#     to stdout. After reading the input, a newline will NOT be printed to the
-#     terminal and probably the caller would like to do that themselves, as in
-#     the example below.
+#   $1  'prompt' - the text of the prompt. It will be appended with
+#       ' [<default>]: ' if the second parameter is non-empty; otherwise, just
+#       ': '. If the third parameter is true, the default value will be masked
+#       in the prompt as '••••••'.
+#   $2  'default', string - the default value to output to stdout if the user
+#       presses the [Enter] key without typing anything (optional if last,
+#       default: '').
+#   $3  'is_secret', boolean: suppresses echoing the input to the terminal. Use
+#       for passwords, keys, etc. (optional if last, default false).
+#   $4  'validation_function', string: the name of a validation function for
+#       both: the default value (if provided) and for the user's input. It
+#       should return 0 if the value is valid, or non-zero - if it is invalid.
+#       The user will be re-prompted until a valid value is entered. (optional,
+#       default: true, in effect - no validation, all values are accepted)
 # Returns:
-#   stdout: the entered value, or the default value if the user entered nothing
+#   stdout: the entered value, or the default value, if the user entered nothing
 #   Exit code: 0 if the input parameters are valid, 2 on invalid arguments
 # Usage: value=$(enter_value <prompt> [default] [is_secret] [validate_fn])
 # Example:
-#   password=$("Enter description (up to 350 characters)" "test" false validate_no_longer_than_350)
-#   password=$("Enter your password" _ true) && echo ""
+#   password=$(enter_value "Enter description (up to 350 characters)" "test" false validate_no_longer_than_350)
+#   password=$(enter_value "Enter your password" "" true) && echo ""
+# Note:
+#     - If the environment variable 'quiet' is set to true, the function will
+#       skip prompting and will immediately output the default value (or an
+#       empty string if the default is not provided) to '/dev/stdout'.
+#     - If the third parameter is true, the input will be marked in the prompt
+#       as "••••••" (useful for secrets) and the terminal echo of the user input
+#       will be suppressed. However, the actual input (or the default) will
+#       still be output to stdout. After reading the input, a newline will NOT
+#       be printed to the terminal and the caller should print one as in the
+#       example above.
 #-------------------------------------------------------------------------------
 function enter_value()
 {
     local -i rc="$success"
 
-    (( $# <= 4 )) || {
+    (( $# >= 1 && $# <= 4 )) || {
         rc="$err_invalid_arguments"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() accepts no more than 4 arguments (provided $#):
-    1) a prompt
-    2) an optional default value
-    3) an optional boolean to suppress the echo of the input to the terminal
-    4) the optional name of a validation function."
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() accepts from 1 to 4 arguments (provided $#):" \
+                              "    1) a prompt" \
+                              "    2) default value (optional if the rest are not specified, default: '')" \
+                              "    3) boolean to suppress the echo of the input to the terminal (optional if the rest are not specified, default: false)" \
+                              "    4) the name of a validation function (optional, default: true)."
     }
 
     (( rc == success )) || return "$err_invalid_arguments"
 
-    local prompt=''
-    local default=''
-    local is_secret=false
-    local validate_fn=true
+    local prompt=$1
+    local default=${2:-''}
+    local is_secret=${3:-false}
+    local validate_fn=${4:-true}
 
-    [[ $# -ge 1 && "$1" != "_" ]] && prompt="$1"
-    [[ $# -ge 2 && "$2" != "_" ]] && default="$2"
-    [[ $# -ge 3 && "$3" != "_" ]] && is_secret="$3"
-    [[ $# -ge 4 && "$4" != "_" ]] && validate_fn="$4"
+    is_quiet &&
+        echo "$default" &&
+        return "$success"
 
-    [[ -z $validate_fn || -z $default ]] || $validate_fn "$default" || {
-        rc="$err_argument_value"
-        error -ec "$rc" "The default value '$default' does not pass the validation function '$validate_fn'."
-    }
     is_boolean "$is_secret" || {
         rc="$err_argument_type"
         error -ec "$rc" "The \$3 argument of ${FUNCNAME[0]}() (is_secret) must be a boolean value ('true' or 'false' -- provided '$1'), indicating whether the input is a secret that should not be echoed to the terminal."
     }
+    [[ -z $default ]] || $validate_fn "$default" || {
+        rc="$err_argument_value"
+        error -ec "$rc" "The default value '$default' does not pass the validation function '$validate_fn'."
+    }
 
     (( rc == success )) || return "$err_invalid_arguments"
 
-    is_quiet && {
-        echo "$default"
-        return "$success"
-    }
+    if [[ -n $default ]]; then
+        $is_secret && prompt="$prompt [$secret_str]: " || prompt="$prompt [$default]: "
+    else
+        prompt="$prompt: "
+    fi
 
     local input
     local valid=false
-    local first=true
     local errs
     errs=$(get_errors)
 
-    [[ -n "$default" ]] && ! $is_secret && prompt="$prompt [$default]: " || prompt="$prompt: "
-
+    local first_iter=true
     while ! $valid; do
         if $is_secret; then
             read -r -s -p "$prompt" input
@@ -190,13 +189,13 @@ function enter_value()
             read -r    -p "$prompt" input
         fi
 
-        [[  -n "$input" ]] || input="$default"
+        [[ -n "$input" ]] || input="$default"
         $validate_fn "$input" && valid=true || valid=false
 
-        ! $valid && $is_secret && $first && {
+        ! $valid && $is_secret && $first_iter && {
             # prefix the prompt with a newline to separate the new prompts with new lines in secret mode
             prompt=$'\n'"$prompt"
-            first=false
+            first_iter=false
         }
     done
 

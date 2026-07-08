@@ -437,17 +437,17 @@ function usage_if_requested()
 
 #-------------------------------------------------------------------------------
 # Summary:
-#       1) displays optional exit error message
-#       2) displays optionally long or short usage message
+#       1) displays an optional exit error message
+#       2) displays an optionally long or short usage message
 #       3) exits the script with
 #               - optional exit code
 #               - 0 ($success) if no error messages are present
 #               - 1 ($failure) if error messages are present
 # Parameters:
-#   1 - long_help - optional boolean flag indicating whether to display the long (if true) or the short (if false) version of
-#       the usage text. The long version includes the standard parameters like verbose, quiet, etc.
+#   1 - long_help - flag indicating whether to display the long (if true) or the short (if false) version of the usage text.
+#       The long version includes the standard parameters like verbose, quiet, etc.
 #       (optional, boolean, default: false)
-#   2 - exit_code - optional exit code to use when exiting
+#   2 - exit_code - exit code to use when exiting
 #       (optional, non-negative integer, less than 256, default: 0 or 1 if error messages are present)
 #   3+ - error_message(s) - additional error messages to display at the top. (optional, default - no message)
 #        Here you can include named parameters:

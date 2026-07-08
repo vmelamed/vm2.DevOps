@@ -208,8 +208,8 @@ function validate_gh_secret()
 # Parameters:
 #   1 - max_attempts: Maximum number of attempts
 #   2 - delay: Delay between attempts in seconds
-#   3, if boolean - ignore_output: indicates whether to suppress output (true) or not (false)
-#   3 or 4... - gh command parameters: subcommand, flags, etc...
+#   3 - if boolean - ignore_output: indicates whether to suppress output (true) or not (default: false)
+#   3/4... - gh command parameters: subcommand, flags, etc...
 # Returns:
 #   Exit code: 0 if the command succeeds, non-zero if it fails after all attempts
 # Examples:
@@ -224,11 +224,11 @@ function execute_gh_with_retry()
         rc="$err_invalid_arguments"
         error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires at least three arguments (provided $#): <max_attempts> <delay> <gh-command> [args...]"
     }
-    [[ $# -lt 3 ]] || is_natural "$1" || {
+    is_natural "$1" || {
         rc="$err_argument_type"
         error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires the first argument to be a natural number: <max_attempts>"
     }
-    [[ $# -lt 3 ]] || is_natural "$2" || {
+    is_natural "$2" || {
         rc="$err_argument_type"
         error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires the second argument to be a natural number: <delay> in seconds"
     }
@@ -236,16 +236,17 @@ function execute_gh_with_retry()
     (( rc == success )) || return "$err_invalid_arguments"
 
     # get the first two and the optional third (ignore_output) boolean parameter
-    local output="/dev/stdout"
+    local output
+
     local max_attempts=$1; shift
     local delay=$1; shift
     local ignore_output=false
-    is_boolean "$1" && ignore_output=$1 && shift    # otherwise ignore_output remains false
-    $ignore_output && output="$_ignore"             # otherwise output remains /dev/stdout
+    is_boolean "$1" && ignore_output=$1 && shift
+    $ignore_output && output="$_ignore" || output="/dev/stdout"
 
     "$dry_run" && echo "dry-run$ gh $*" >&2 && return "$success"
 
-    # stderr goes to a temp file to preserve output fidelity (especially newlines), yet still allow us to process them separately
+    # stderr goes to a temp file to preserve output fidelity (especially newlines), yet still allows us to process them separately
     local stderr_file
     local stdout_file
     stderr_file=$(mktemp)
@@ -253,32 +254,35 @@ function execute_gh_with_retry()
 
     local attempt=0
     local message=""
-    local -i rc=0
+    local -i rc=$success
     trace "Executing with retry from (${BASH_SOURCE[1]:-} ${BASH_LINENO[0]:-}): 'gh $*'"
 
-    until gh "$@" >"$output" 2>"$stderr_file"; do
+    until gh "$@" >"$stdout_file" 2>"$stderr_file"; do
         rc=$?
 
+        cat "$stderr_file" >&2
         message=$(cat "$stderr_file") || true
 
         # Check if error is transient - retry
         if [[ ! "$message" =~ (rate.limit|server.error|timeout|temporarily.unavailable|try.again|502|503|504|connection.refused|network.error) ]]; then
-            # Permanent error (invalid args, not found, permissions, etc.) - don't retry
-           break
+            error -ec "$rc" "'gh' command unrecoverable error during attempt: $attempt/$max_attempts."
+            break # Permanent error (invalid args, not found, permissions, etc.) - don't retry
         fi
 
-        # Retry or give up
-        if (( ++attempt >= max_attempts )); then
+        # transient error - retry or give up
+        if (( ++attempt < max_attempts )); then
+            # retry and reset rc to success to avoid returning a failure code if the last attempt fails with a transient error
+            warning "'gh' command failed. Attempt: $attempt/$max_attempts. Retrying in ${delay}s."
+            sleep "$delay"
+            rc=$success
+        else
+            # give up and return the last error
             error -ec "$err_logic_error" "After $attempt attempts, the 'gh' command is still failing."
             break
         fi
-
-        warning "'gh' command failed. Attempt $attempt/$max_attempts. Retrying in ${delay}s."
-        cat "$stderr_file" >&2
-        sleep "$delay"
     done
 
-    cat "$stderr_file" >&2
+    (( rc == success )) && cat "$stderr_file" >&2
     cat "$stdout_file" >> "$output"
 
     rm -f "$stderr_file" "$stdout_file"
@@ -291,7 +295,7 @@ function execute_gh_with_retry()
 # Parameters:
 #   1 - max_attempts: Maximum number of attempts
 #   2 - delay: Delay between attempts in seconds
-#   3, if boolean - ignore_output: indicates whether to suppress output (true) or not (false)
+#   3, if boolean - ignore_output: indicates whether to suppress output (true) or not (default: false)
 #   3 or 4... - gh api parameters: route, etc...
 # Returns:
 #   Exit code: 0 if the command succeeds, non-zero if it fails after all attempts
@@ -307,11 +311,11 @@ function execute_gh_api_with_retry()
         rc="$err_invalid_arguments"
         error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires at least three arguments (provided $#): <max_attempts> <delay> <command> [args...]"
     }
-    [[ $# -lt 3 ]] || is_natural "$1" || {
+    is_natural "$1" || {
         rc="$err_invalid_type"
         error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires the first argument to be a natural number: <max_attempts>"
     }
-    [[ $# -lt 3 ]] || is_natural "$2" || {
+    is_natural "$2" || {
         rc="$err_invalid_type"
         error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires the second argument to be a natural number: <delay> in seconds"
     }
@@ -319,17 +323,19 @@ function execute_gh_api_with_retry()
     (( rc == success )) || return "$err_invalid_arguments"
 
     # get the first two and the optional third (ignore_output) boolean parameter
-    local output="/dev/stdout"
+    local output
+
     local max_attempts=$1; shift
     local delay=$1; shift
     local ignore_output=false
-    is_boolean "$1" && ignore_output=$1 && shift    # otherwise ignore_output remains false
-    $ignore_output && output="$_ignore"             # otherwise output remains /dev/stdout
+    is_boolean "$1" && ignore_output=$1 && shift
+    $ignore_output && output="$_ignore" || output="/dev/stdout"
 
     "$dry_run" && echo "dry-run$ gh $*" >&2 && return "$success"
 
     # stderr and stdout go to temp files to preserve output fidelity (especially newlines), yet still allow us to process them separately
-    local stderr_file stdout_file
+    local stderr_file
+    local stdout_file
     stderr_file=$(mktemp)
     stdout_file=$(mktemp)
 
@@ -341,6 +347,8 @@ function execute_gh_api_with_retry()
     until gh api "$@" >"$stdout_file" 2>"$stderr_file"; do
         rc=$?
 
+        cat "$stderr_file" >&2
+
         response=$(cat "$stdout_file")            || true
         status=$(jq -r '.status' <<< "$response") || true
 
@@ -349,6 +357,7 @@ function execute_gh_api_with_retry()
             message=$(cat "$stderr_file") || true
             # If it's a not a transient error in stderr - break(return), otherwise - retry
             if [[ ! "$message" =~ (authentication|network|timeout|dns|connection) ]]; then
+                error -ec "$rc" "'gh api' command unrecoverable error during attempt: $attempt/$max_attempts."
                 break
             fi
         else
@@ -362,23 +371,24 @@ function execute_gh_api_with_retry()
                     break
                     ;;
 
-                * ) rc=1                            # everything else is a bad outcome that will not be fixed by retrying
-                    break
+                * ) break                           # everything else is a bad outcome that will not be fixed by retrying
                     ;;
             esac
         fi
 
-        # transient error - retry
-        if (( ++attempt >= max_attempts )); then
+        # transient error - retry or give up
+        if (( ++attempt < max_attempts )); then
+            # retry and reset rc to success to avoid returning a failure code if the last attempt fails with a transient error
+            warning "'gh api' command failed. Attempt $attempt/$max_attempts. Retrying in ${delay}s."
+            sleep "$delay"
+            rc=$success
+        else
             error -ec "$err_logic_error" "After $attempt attempts, the 'gh api' command is still failing."
             break
         fi
-        warning "'gh api' command failed. Attempt $attempt/$max_attempts. Retrying in ${delay}s."
-        cat "$stderr_file" >&2
-        sleep "$delay"
     done
 
-    cat "$stderr_file" >&2
+    (( rc == success )) && cat "$stderr_file" >&2
     cat "$stdout_file" >> "$output"
 
     rm -f "$stderr_file" "$stdout_file" 2> "$_ignore"
@@ -477,10 +487,10 @@ function get_repo_state()
 
     (( $# == 2 || $# == 3 )) || {
         rc="$err_invalid_arguments"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires 2 or 3 arguments (provided $#):
-1) the existing path to the root of the git repo working tree
-2) nameref: the name of an associative array variable - to receive the repo state
-3) full_info (optional, default: true) - if false, only retrieve the local Git repository state without trying to get GitHub API data."
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires 2 or 3 arguments (provided $#):" \
+                              "  - the existing path to the root of the git repo working tree" \
+                              "  - nameref: the name of an associative array variable - to receive the repo state" \
+                              "  - full_info - if false, only retrieve the local Git repository state without trying to get GitHub API data (optional, default: true)."
     }
     [[ $# -lt 1 || -d "$1" ]] || {
         rc="$err_not_directory"
@@ -743,14 +753,14 @@ function is_inside_work_tree()
 
     (( rc == success )) || return "$err_invalid_arguments"
 
-    git -C "${1:-.}" rev-parse --is-inside-work-tree &> "$_ignore"
+    git -C "${1:-$initial_dir}" rev-parse --is-inside-work-tree &> "$_ignore"
 }
 
 #-------------------------------------------------------------------------------
 # Summary: Retrieves the root of the Git repository working tree for the specified
 #          directory or the current directory.
 # Parameters:
-#   1 - directory - optional path to a directory inside a Git repository working tree
+#   1 - directory - path to a directory inside a Git repository working tree (optional, default: current directory)
 # Returns:
 #   stdout: absolute path to the root of the Git repository working tree
 #   Exit code: 0 on success, non-zero on failure
@@ -762,22 +772,22 @@ function root_working_tree()
 {
     local -i rc="$success"
 
-    is_inside_work_tree "${1:-.}" || {
+    is_inside_work_tree "${1:-$initial_dir}" || {
         rc="$err_not_git_directory"
         error -sd 3 -ec "$rc" "${FUNCNAME[0]}() the parameter \$1 or the current directory must be a path to a directory inside a Git repository working tree."
     }
 
     (( rc == success )) || return "$err_invalid_arguments"
 
-    git -C "${1:-.}" rev-parse --show-toplevel 2> "$_ignore"
+    git -C "${1:-$initial_dir}" rev-parse --show-toplevel 2> "$_ignore"
 }
 
 #-------------------------------------------------------------------------------
 # Summary: Tests whether local Git metadata is stale enough to justify fetching
 #   before evaluating latest-stable-tag predicates.
 # Parameters:
-#   1 - directory - optional path to Git repository (default: current directory)
-#   2 - branch - optional, the branch to compare against (default: main)
+#   1 - directory - path to Git repository (optional, if the rest of the parameters are not provided, default: current directory)
+#   2 - branch - the branch to compare against (optional, default: main)
 # Returns:
 #   Exit code:
 #     0 - if fetch is recommended
@@ -796,7 +806,9 @@ function should_fetch_for_latest_stable_tag()
 
     (( $# <= 2 )) || {
         rc="$err_invalid_arguments"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires no more than 2 arguments (provided $#): path to a Git repository and an optional branch name."
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires no more than 2 arguments (provided $#):" \
+                              "  - path to an existing directory (Git repository) (optional if the remaining parameters are not provided, default: current working directory)" \
+                              "  - the branch name to compare against (optional, default: main)."
     }
     (( $# < 1 )) || [[ -d "$1" ]] || {
         rc="$err_not_directory"
@@ -809,7 +821,7 @@ function should_fetch_for_latest_stable_tag()
 
     (( rc == success )) || return "$err_invalid_arguments"
 
-    local dir=${1:-.}
+    local dir=${1:-$initial_dir}
     local branch=${2:-main}
 
     is_inside_work_tree "$dir" || {
@@ -850,8 +862,8 @@ function should_fetch_for_latest_stable_tag()
 #-------------------------------------------------------------------------------
 # Summary: Ensures that the Git repository in the specified directory has fresh metadata by fetching from the remote if needed.
 # Parameters:
-#   1 - directory - optional path to Git repository (default: current directory)
-#   2 - branch - optional, the branch to compare against (default: main)
+#   1 - directory - path to Git repository (optional, if the rest of the parameters are not provided, default: current directory)
+#   2 - branch - the branch to compare against (optional, default: main)
 # Returns:
 #   None
 # Dependencies: git
@@ -906,14 +918,14 @@ function get_latest_stable_tag_hash()
         rc="$err_not_directory"
         error -sd 3 -ec "$rc" "The specified directory '$1' does not exist."
     }
-    is_inside_work_tree "${1:-.}" || {
+    is_inside_work_tree "${1:-$initial_dir}" || {
         rc="$err_not_git_directory"
         error -sd 3 -ec "$rc" "The specified directory '$1' is not a Git work tree."
     }
 
     (( rc == success )) || return "$err_invalid_arguments"
 
-    local dir=${1:-.}
+    local dir=${1:-$initial_dir}
 
     local latest_stable_tag latest_stable_hash
 
@@ -930,7 +942,7 @@ function get_latest_stable_tag_hash()
 # Summary: Tests if the current commit in the specified directory is on the latest stable tag.
 # Parameters:
 #   1 - directory - path to Git repository
-#   2 - optional, should_fetch - if true, fetch the latest changes from remote (optional, default: false)
+#   2 - should_fetch - if true, fetch the latest changes from remote (optional, default: false)
 # Returns:
 #   Exit code: 0 if on latest stable tag, 1 if not, 2 on invalid arguments or errors
 # Dependencies: git
@@ -939,6 +951,17 @@ function get_latest_stable_tag_hash()
 #-------------------------------------------------------------------------------
 function is_on_latest_stable_tag()
 {
+    local -i rc="$success"
+
+    (( $# == 1 || $# == 2 )) || {
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() takes 1 or 2 arguments (provided $#):" \
+                              "  - directory - path to Git repository" \
+                              "  - should_fetch - if true, fetch the latest changes from remote (optional, default: false)"
+    }
+
+    (( rc == success )) || return "$err_invalid_arguments"
+
     local latest_stable_hash commits_after_latest_stable
     local -i rc
 
@@ -946,7 +969,7 @@ function is_on_latest_stable_tag()
     latest_stable_hash=$(get_latest_stable_tag_hash "$@") || return $?
 
     # How many commits since the latest stable tag
-    commits_after_latest_stable=$(git -C "${1:-.}" rev-list "$latest_stable_hash..HEAD" --count 2>"$_ignore")
+    commits_after_latest_stable=$(git -C "${1:-$initial_dir}" rev-list "$latest_stable_hash..HEAD" --count 2>"$_ignore")
     (( commits_after_latest_stable == 0 ))
 }
 
@@ -954,7 +977,7 @@ function is_on_latest_stable_tag()
 # Summary: Tests if the current commit in the specified directory is after the latest stable tag.
 # Parameters:
 #   1 - directory - path to Git repository
-#   2 - optional, should_fetch - if true, fetch the latest changes from remote (optional, default: false)
+#   2 - should_fetch - if true, fetch the latest changes from remote (optional, default: false)
 # Returns:
 #   Exit code: 0 if after latest stable tag, 1 if not, 2 on invalid arguments or errors
 # Dependencies: git
@@ -970,7 +993,7 @@ function is_after_latest_stable_tag()
     latest_stable_hash=$(get_latest_stable_tag_hash "$@") || return $?
 
     # How many commits since the latest stable tag
-    commits_after_latest_stable=$(git -C "${1:-.}" rev-list "$latest_stable_hash..HEAD" --count 2>"$_ignore")
+    commits_after_latest_stable=$(git -C "${1:-$initial_dir}" rev-list "$latest_stable_hash..HEAD" --count 2>"$_ignore")
     (( commits_after_latest_stable > 0 ))
 }
 
@@ -993,5 +1016,5 @@ function is_on_or_after_latest_stable_tag()
 
     # Check if current commit is on or after the latest tag
     # Returns 0 if tag commit is an ancestor of HEAD (i.e., HEAD is at or after the tag)
-    git -C "${1:-.}" merge-base --is-ancestor "$latest_stable_tag_hash" HEAD &> "$_ignore"
+    git -C "${1:-$initial_dir}" merge-base --is-ancestor "$latest_stable_tag_hash" HEAD &> "$_ignore"
 }
