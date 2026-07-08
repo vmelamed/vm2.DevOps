@@ -59,10 +59,10 @@ is_safe_path "$tests_artifacts_dir" || true
 declare -A repo_state=()
 declare -xr key_root
 
-get_repo_state "$test_dir" repo_state false # all we need is the root of the repo, so don't go to gh
+get_repo_state "$test_dir" repo_state false                                     # all we need is the root of the repo, so don't go to gh
 repo_root="${repo_state[$key_root]}"
 test_config_path="$repo_root/testconfig.json"
-coverage_settings_path="$repo_root/coverage.settings.xml"                     # path to coverage settings file                ~/repos/vm2.Glob/coverage.settings.xml
+coverage_settings_path="$repo_root/coverage.settings.xml"                       # path to coverage settings file                ~/repos/vm2.Glob/coverage.settings.xml
 
 if [[ ! -s "$test_config_path" ]]; then
     error -ec "$err_logic_error" "Test config file not found at: $test_config_path"
@@ -73,12 +73,12 @@ fi
 
 exit_if_has_errors
 
-test_dir=$(realpath -e "$test_dir")                                           # the directory of the test project
+test_dir=$(realpath -e "$test_dir")                                             # the directory of the test project
 tests_artifacts_dir=$(realpath -m "$tests_artifacts_dir")
-artifacts_dir="$tests_artifacts_dir/$test_name"                             # the directory for test results and reports (resolved to an absolute path, if it was relative)
-coverage_source_path="$artifacts_dir/coverage.cobertura.xml"                  # path to the raw coverage file                 ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/coverage.cobertura.xml
+artifacts_dir="$tests_artifacts_dir/$test_name"                                 # the directory for test results and reports (resolved to an absolute path, if it was relative)
+coverage_source_path="$artifacts_dir/coverage.cobertura.xml"                    # path to the raw coverage file                 ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/coverage.cobertura.xml
 coverage_files="$tests_artifacts_dir/*/coverage.cobertura.xml"
-coverage_reports_dir="$artifacts_dir/reports"                                 # directory for coverage reports                ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/reports
+coverage_reports_dir="$artifacts_dir/reports"                                   # directory for coverage reports                ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/reports
 
 # Freeze the variables
 declare -xr test_project

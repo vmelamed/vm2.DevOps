@@ -33,38 +33,44 @@ fi
 declare -rx default_configuration
 declare -rx default_tfm
 
-# export variables to hold the results
-declare -x build_result="Unknown"
-declare -x warnings_count=''
-declare -x errors_count=''
-declare -x assembly_version=''
-declare -x file_version=''
-declare -x informational_version=''
-declare -x version=''
-declare -x package_version=''
+# export global variables that hold the results
+declare -xi warnings_count=0
+declare -xi errors_count=0
+declare -x build_result="N/A"
+declare -x assembly_version='N/A'
+declare -x file_version='N/A'
+declare -x informational_version='N/A'
+declare -x version='N/A'
+declare -x package_version='N/A'
 
 #-------------------------------------------------------------------------------
-# Summary: Extracts build information from the output of a 'dotnet build -v d' command.
-# Parameters: none (reads from stdin)
-# Returns:
-#   stdout: key=value pairs of build information
-#   Exit code: 0 always
-# Side Effects: Sets global exported variables: $build_result, $warnings_count, $errors_count,
-#               $assembly_version, $file_version, $informational_version, $version, $package_version
-# Caution: The values of the global variables are only valid after this function has been called and the input has been fully
-#          read if and only if it is ran in the current shell context not piped or in a subshell.
+# @description Extracts build information from the output of a 'dotnet build -v d' command, read line by line from stdin.
+#
+# Notes:
+#   - Sets the global exported variables $build_result, $warnings_count, $errors_count, $assembly_version, $file_version,
+#     $informational_version, $version, and $package_version.
+#   - These globals are only valid after the function returns and the input has been fully read, and only if the function
+#     runs in the current shell context (not piped into, or run in, a subshell).
+#   - If $build_result ends up "FAILED", the version fields ($assembly_version, $file_version, $informational_version,
+#     $version, $package_version) are reset to 'N/A'.
+#   - $build_result is informational only: it does not gate CI. The actual pass/fail decision is the exit code of
+#     'dotnet build' itself, captured separately by callers via '${PIPESTATUS[0]}' (see e.g. build.sh).
+#
+# @exitcode 0 always
+#
+# @stdout key=value pairs, one per line, for each of the extracted build information variables
 #-------------------------------------------------------------------------------
 function extractDotnetBuildInfo()
 {
     # reset the globals
-    build_result="Unknown"
-    warnings_count=''
-    errors_count=''
-    assembly_version=''
-    file_version=''
-    informational_version=''
-    version=''
-    package_version=''
+    warnings_count=0
+    errors_count=0
+    build_result="N/A"
+    assembly_version='N/A'
+    file_version='N/A'
+    informational_version='N/A'
+    version='N/A'
+    package_version='N/A'
 
     local restoreShopt
     restoreShopt=$(shopt -p nocasematch) || true
@@ -89,19 +95,7 @@ function extractDotnetBuildInfo()
         elif [[ -z $package_version && $line =~ PackageVersion:\ ([[:alnum:][:punct:]]+) ]]; then
             package_version=${BASH_REMATCH[1]}
         fi
-        rc=$?
-        if (( rc != 0 )); then
-            build_result="FAILED"
-        fi
     done
-
-    if [[ $build_result == FAILED ]]; then
-        assembly_version='N/A'
-        file_version='N/A'
-        informational_version='N/A'
-        version='N/A'
-        package_version='N/A'
-    fi
 
     echo "build_result=$build_result"
     echo "warnings_count=$warnings_count"
@@ -117,24 +111,28 @@ function extractDotnetBuildInfo()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Displays a formatted summary of the build information extracted by extractDotnetBuildInfo.
-# Parameters: none (reads from stdin)
-# Returns:
-#   stdout: formatted table of build summary via dump_vars
-#   Exit code: 0 always
-# Side Effects: Sets global exported variables: $build_result, $warnings_count, $errors_count,
-#               $assembly_version, $file_version, $informational_version, $version, $package_version
+# @description Displays a formatted summary of build information, read line by line from stdin as key=value pairs (the
+# format produced by extractDotnetBuildInfo).
+#
+# Notes:
+#   - Unlike extractDotnetBuildInfo, this function stores the parsed values into function-local variables (declared with
+#     `local`), not the module's global exported variables of the same name.
+#
+# @exitcode 0 always
+#
+# @stdout "Build Results" header followed by a formatted table (via dump_vars) with the build result, warning/error
+#   counts, and version information
 #-------------------------------------------------------------------------------
 function displayDotnetBuildSummary()
 {
-    local build_result="Unknown"
-    local warnings_count=''
-    local errors_count=''
-    local assembly_version=''
-    local file_version=''
-    local informational_version=''
-    local version=''
-    local package_version=''
+    local warnings_count=0
+    local errors_count=0
+    local build_result="N/A"
+    local assembly_version='N/A'
+    local file_version='N/A'
+    local informational_version='N/A'
+    local version='N/A'
+    local package_version='N/A'
 
     local var value
     while IFS='=' read -r var value; do
@@ -230,24 +228,26 @@ function get_build_info()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Returns the full path to the assembly produced by a .NET project.
-# Parameters:
-#   1 - csproj: path to the *.csproj file
-# Returns:
-#   stdout: full path to the produced assembly (e.g. /path/to/proj/bin/Debug/net10.0/vm2.Ulid.dll)
-#   Exit code: $success               - file exists and is not empty
-#              $failure               - file does not exist yet (path is still written to stdout)
-#              $err_invalid_arguments - wrong number of arguments
-#              $err_argument_value    - argument is empty or not a valid *.csproj file
+# @description Returns the full path to the assembly produced by a .NET project.
+#
 # Notes:
-#   - Configuration and TFM are read from the *.csproj first, then from the nearest
-#     Directory.Build.props found by walking up from the project directory; defaults
-#     are "Debug" and "net10.0" respectively when not found in either file.
+#   - Configuration and TFM are read from the *.csproj first, then from the nearest Directory.Build.props found by
+#     walking up from the project directory; the defaults ($default_configuration and $default_tfm, e.g. "Debug"/"Release"
+#     and "net10.0") are used when neither file specifies a value.
 #   - AssemblyName falls back to the *.csproj filename without the extension.
-#   - OutputType Exe  → *.exe on Windows, no suffix on Linux.
-#     Any other type  → *.dll on any OS.
-# Usage: path=$(assembly_path <csproj>)
-# Example: path=$(assembly_path src/vm2.Ulid/Ulid.csproj)
+#   - OutputType "Exe" -> *.exe on Windows, no suffix on Linux. Any other OutputType -> *.dll on any OS.
+#
+# @arg $1 string csproj - path to the *.csproj file
+#
+# @exitcode 0 ($success) the assembly file exists and is not empty
+# @exitcode 1 ($failure) the assembly path was resolved but the file does not exist yet (the path is still written to stdout)
+# @exitcode 2 ($err_invalid_arguments) wrong number of arguments
+# @exitcode 4 ($err_argument_value) the argument is empty or not a valid, existing *.csproj file
+#
+# @stdout the full path to the produced assembly (e.g. /path/to/proj/bin/Debug/net10.0/vm2.Ulid.dll)
+#
+# @example
+#   path=$(assembly_path src/vm2.Ulid/Ulid.csproj)
 #-------------------------------------------------------------------------------
 function assembly_path() {
     local -i rc="$success"
@@ -256,7 +256,7 @@ function assembly_path() {
         rc="$err_invalid_arguments"
         error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the path to a *.csproj file."
     }
-    [[ $# -ne 1 || ( -n "$1" && -s "$1" && "$1" == *.csproj ) ]] || {
+    [[ -n "$1" && -s "$1" && "$1" == *.csproj ]] || {
         rc="$err_argument_value"
         error -sd 3 -ec "$rc" "${FUNCNAME[0]}(): '$1' is not a valid or existing *.csproj file."
     }

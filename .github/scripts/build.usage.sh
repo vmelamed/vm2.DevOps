@@ -4,8 +4,14 @@ declare -xr common_switches
 declare -xr common_vars
 declare -xr script_name
 
-## Outputs the usage text for this script to /dev/stdout
-## Usage: usage_text
+# @description Outputs the usage text for this script to stdout.
+#
+# @arg $1 bool Whether to include the long-form help text (switches and environment variables list).
+#
+# @stdout The usage/help text for this script.
+#
+# @example
+#   usage_text true
 function usage_text()
 {
     local long_text=$1

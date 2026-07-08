@@ -18,6 +18,20 @@ declare -x commit_sha
 declare -x new_branch
 declare -x check_out_new_branch
 
+#-------------------------------------------------------------------------------
+# @description Parses the command-line arguments for 'move-commits-to-branch.sh'. Delegates common switches (help, quiet,
+# verbose, trace, dry-run) to 'get_common_arg'. Recognizes '--commit-sha|-c', '--branch|-b', and '--check-out-new|-n'; any
+# other argument is rejected.
+#
+# @arg $@ string Named options: '--commit-sha|-c <sha>', '--branch|-b <name>', '--check-out-new|-n'.
+#
+# @exitcode 0 Arguments parsed successfully.
+# @exitcode non-zero A recognized option is missing its required value ('err_missing_argument'), an unrecognized argument
+#   was given ('err_unknown_argument'), or help was requested (via 'usage_if_requested').
+#
+# @example
+#   get_arguments --commit-sha ff5c2d1 --branch feature/my-feature
+#-------------------------------------------------------------------------------
 # shellcheck disable=SC2154 # verbose is referenced but not assigned.
 function get_arguments()
 {

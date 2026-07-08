@@ -40,14 +40,20 @@ declare -rxi err_invalid_arguments
 declare -xi errors=0
 
 #-------------------------------------------------------------------------------
-# Summary: Logs messages to stdout, allowing override in other scripts for alternate destinations.
-# Parameters: none (reads from stdin)
-# Returns:
-#   stdout: each line read from stdin
-#   Exit code: always 0
-# Usage: echo "message" | to_stdout
-# Example: echo "Build completed" | to_stdout
-# Notes: Can be overridden in scripts like gh_core.sh to redirect to GitHub Actions step summary.
+# @description Logs messages to stdout. Designed to be overridden in other scripts to redirect to alternate
+# destinations.
+#
+# Notes:
+#   - Can be overridden in scripts like `gh_core.sh` to redirect to the GitHub Actions step summary.
+#
+# @arg $@ nil No arguments; reads its input from stdin.
+#
+# @stdout string Each line read from stdin, echoed back unchanged.
+#
+# @exitcode 0 Always.
+#
+# @example
+#   echo "Build completed" | to_stdout
 #-------------------------------------------------------------------------------
 function to_stdout()
 {
@@ -59,14 +65,18 @@ function to_stdout()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Logs trace messages to stderr, allowing override in other scripts for alternate destinations.
-# Parameters: none (reads from stdin)
-# Returns:
-#   stderr: each line read from stdin
-#   Exit code: always 0
-# Usage: echo "message" | to_traceout
-# Example: echo "Processing file: $file" | to_traceout
-# Notes: Can be overridden in scripts like gh_core.sh to redirect to GitHub Actions step summary.
+# @description Logs trace messages to stderr. Designed to be overridden in other scripts to redirect to alternate
+# destinations.
+#
+# Notes:
+#   - Can be overridden in scripts like `gh_core.sh` to redirect to the GitHub Actions step summary.
+#
+# @arg $@ nil No arguments; reads its input from stdin.
+#
+# @exitcode 0 Always.
+#
+# @example
+#   echo "Processing file: $file" | to_traceout
 #-------------------------------------------------------------------------------
 function to_traceout()
 {
@@ -78,14 +88,18 @@ function to_traceout()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Logs messages to stderr, allowing override in other scripts for alternate destinations.
-# Parameters: none (reads from stdin)
-# Returns:
-#   stderr: each line read from stdin
-#   Exit code: always 0
-# Usage: echo "message" | to_stderr
-# Example: echo "Warning: file not found" | to_stderr
-# Notes: Can be overridden in scripts like gh_core.sh to redirect to GitHub Actions step summary.
+# @description Logs messages to stderr. Designed to be overridden in other scripts to redirect to alternate
+# destinations.
+#
+# Notes:
+#   - Can be overridden in scripts like `gh_core.sh` to redirect to the GitHub Actions step summary.
+#
+# @arg $@ nil No arguments; reads its input from stdin.
+#
+# @exitcode 0 Always.
+#
+# @example
+#   echo "Warning: file not found" | to_stderr
 #-------------------------------------------------------------------------------
 function to_stderr()
 {
@@ -97,19 +111,14 @@ function to_stderr()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Returns the current value of the global error counter.
-# Parameters: none
-# Returns:
-#   Exit code: the current value of the global error counter
-# Env. Vars:
-#   errors - global error counter
-# Usage: if [[ $(get_errors) -gt 0 ]]; then ...; fi
-# Example:
-#   if [[ $(get_errors) -gt 0 ]]; then
-#     echo "Errors were encountered."
-#   else
-#     echo "No errors."
-#   fi
+# @description Returns the current value of the global error counter.
+#
+# @stdout int The current value of the global `$errors` counter.
+#
+# @exitcode 0 Always.
+#
+# @example
+#   (( $(get_errors) == 0 )) && echo "No errors." || echo "Errors were encountered."
 #-------------------------------------------------------------------------------
 function get_errors()
 {
@@ -118,14 +127,12 @@ function get_errors()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Checks if the global error counter has any errors.
-# Parameters: none
-# Returns:
-#   Exit code: 0 if no errors, 1 if errors exist
-# Env. Vars:
-#   errors - global error counter
-# Usage: if has_errors; then ...; fi
-# Example:
+# @description Tests whether the global error counter has recorded any errors.
+#
+# @exitcode 0 ($positive) At least one error has been recorded (`$errors > 0`).
+# @exitcode 1 ($negative) No errors have been recorded.
+#
+# @example
 #   if has_errors; then
 #     echo "Errors were encountered."
 #   else
@@ -141,7 +148,7 @@ function has_errors()
 # Local implementation of usage() to avoid circular dependency with _args.sh
 function usage()
 {
-    error  -sd 3 -ec "$err_not_overridden" \
+    error -sd 3 -ec "$err_not_overridden" \
             "This implementation of usage() is meant to be an 'abstract declaration'." \
             "Either re-define usage() or source _args.sh." \
             "$@"
@@ -149,15 +156,12 @@ function usage()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Tests the global error counter and exits if errors were encountered.
-# Parameters:
-# Returns:
-#   Exit code: 2 if errors exist, 0 otherwise
-# Env. Vars:
-#   errors - global error counter
-# Usage: exit_if_has_errors
-# Example:
-#   exit_if_has_errors  # exits with code 2 if errors exist
+# @description Tests the global error counter and exits the script (via `usage`) if any errors were recorded.
+#
+# @exitcode 0 No errors were recorded; execution continues normally.
+#
+# @example
+#   exit_if_has_errors  # exits (via usage) with code 1 if errors exist
 #-------------------------------------------------------------------------------
 function exit_if_has_errors()
 {
@@ -167,14 +171,14 @@ function exit_if_has_errors()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Sets the global error counter.
-# Parameters: the new value for the global error counter
-# Returns:
-#   Exit code: always 0
-# Env. Vars:
-#   errors - global error counter
-# Usage: set_errors <value>
-# Example:
+# @description Sets the global error counter to a specific value.
+#
+# @arg $1 int The new value for the global error counter. Must be a non-negative integer.
+#
+# @exitcode 0 The counter was set.
+# @exitcode 2 Wrong argument count, or the argument is not a non-negative integer.
+#
+# @example
 #   set_errors 0  # sets the global error counter to zero
 #-------------------------------------------------------------------------------
 function set_errors()
@@ -197,14 +201,11 @@ function set_errors()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Resets the global error counter to zero.
-# Parameters: none
-# Returns:
-#   Exit code: always 0
-# Env. Vars:
-#   errors - global error counter
-# Usage: reset_errors
-# Example:
+# @description Resets the global error counter to zero.
+#
+# @exitcode 0 Always.
+#
+# @example
 #   reset_errors  # sets the global error counter to zero
 #-------------------------------------------------------------------------------
 function reset_errors()
@@ -214,22 +215,28 @@ function reset_errors()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: INTERNAL! prints messages with a given prefix and optional stack depth.
-# Parameters:
-#   1 - prefix - the prefix to prepend to each message line
-#   2+ - message - message parts (optional, if not provided, reads them from stdin)
-# Named parameters:
-#   "--error-code" or "-ec" followed by a positive error code - the function will translate the error code to a message and
-#                                                               include it in the output.
-#   "--stack-depth" or "-sd" followed by an integer - how many stack frames to show in the message (default: 0)
+# @description INTERNAL! Prints one or more message lines with a given prefix, optionally translating embedded error
+# codes to messages and appending a stack dump. Used internally by `error`, `warning`, `info`, and `trace` -- not
+# meant to be called directly from top-level scripts.
 #
-#   There maybe multiple occurrences of "-ec" followed by error codes in the message parts, and all of them will be
-#   translated to messages and included in the output.
-#   Also there maybe multiple occurrences of "--stack-depth" followed by integers in the message parts, but only the last one
-#   will be used to determine the stack depth to show in the message.
-# Returns:
-#   stdout: formatted message with prefix
-#   Exit code: always 0
+# @arg $1 string The prefix to prepend to the first printed line (e.g. "ERROR: ", "WARN: ", "INFO: ").
+# @arg $@ string The message parts to print, one per line. Optional -- if none are given (after removing the named
+#   parameters below), the message is instead read line-by-line from stdin. May include these named parameters,
+#   interspersed anywhere among the message parts:
+#     - `--error-code`/`-ec` followed by a positive error code -- translated to its error message (via
+#       `error_message`) and substituted into the output in place of the flag and its argument. May occur multiple
+#       times; every occurrence is translated.
+#     - `--stack-depth`/`-sd` followed by an integer -- how many stack frames to show below the message (default: 0).
+#       May occur multiple times; only the last occurrence takes effect.
+#
+# @exitcode 0 Message printed successfully.
+# @exitcode 4 ($err_missing_argument) No arguments were given at all, or no message parts remain after removing the
+#   prefix and named parameters, and stdin is a terminal (i.e. there is nothing to read from a pipe either).
+#
+# @stdout string The formatted message: the prefix followed by the first line (prefixed further with the immediate
+#   caller's source file and line number if `--stack-depth`/`-sd` was given a value greater than 0), then any
+#   remaining lines indented to align under the first, then (if a stack depth was requested) the call stack via
+#   `show_stack`.
 #-------------------------------------------------------------------------------
 function message()
 {
@@ -340,126 +347,112 @@ function message()
     return "$success"
 }
 
-#-------------------------------------------------------------------------------
-# Summary: Logs error messages to stderr and increments the global error counter.
-# Parameters:
-#   1 - depth - how many stack frames to show in the message (optional, default: 0)
-#   1+ - message - error message parts (optional, if not provided reads from stdin)
-#        Here you can include named parameters:
-#        Named parameters:
-#          "--error-code" or "-ec", followed by a positive error code - the function will translate the error code to a message
-#                                                                       and include it in the output.
-#          "--stack-depth" or "-sd", followed by an integer - how many stack frames to show in the message (default: 0)
-#
-#            There maybe multiple occurrences of "-ec" followed by error codes in the message parts, and all of them
-#            will be translated to messages and included in the output.
-#            Also there maybe multiple occurrences of "--stack-depth" followed by integers in the message parts, but only the
-#            last one will be used to determine the stack depth to show in the message.
-# Returns:
-#   stderr: formatted error message with '❌  ERROR: ' prefix via to_stderr
-#   Exit code: always 0
-# Side Effects: Increments the global $errors counter
-# Usage: error [<depth>] [message2...]
-# Example:
-#   error "File not found: $filename"
-#   echo "Build failed" | error 3
-#-------------------------------------------------------------------------------
 declare -xr error_prefix="❌  ERROR: "
 
+#-------------------------------------------------------------------------------
+# @description Logs an error message to stderr (via `message`, prefixed with `$error_prefix`) and increments the
+# global error counter.
+#
+# Notes:
+#   - Increments the global `$errors` counter by 1, every call.
+#
+# @arg $@ string Error message parts (optional -- if none are given, the message is read from stdin instead). May
+#   include the named parameters described in `message`:
+#     - `--error-code`/`-ec` followed by a positive error code -- translated to its error message and included in
+#       the output. May occur multiple times.
+#     - `--stack-depth`/`-sd` followed by an integer -- how many stack frames to show below the message (default: 0).
+#       If given more than once, only the last occurrence takes effect.
+#
+# @exitcode 0 Message printed successfully.
+# @exitcode 4 ($err_missing_argument) No message parts were given and stdin is a terminal (nothing to read).
+#
+# @example
+#   error "File not found: $filename"
+# @example
+#   error -sd 3 "Build failed"
+#-------------------------------------------------------------------------------
 function error()
 {
     (( ++errors ))
     message "$error_prefix" "$@" > >(to_stderr)
-    return "$success"
 }
 
-#-------------------------------------------------------------------------------
-# Summary: Logs warning messages to stderr.
-# Parameters:
-#   1 - depth - how many stack frames to show in the message (optional, default: 0)
-#   1+ - message - warning message parts (optional, if not provided reads from stdin)
-#        Here you can include named parameters:
-#        Named parameters:
-#          "--error-code" or "-ec", followed by a positive error code - the function will translate the error code to a message
-#                                                                       and include it in the output.
-#          "--stack-depth" or "-sd", followed by an integer - how many stack frames to show in the message (default: 0)
-#
-#            There maybe multiple occurrences of "-ec" followed by error codes in the message parts, and all of them
-#            will be translated to messages and included in the output.
-#            Also there maybe multiple occurrences of "--stack-depth" followed by integers in the message parts, but only the
-#            last one will be used to determine the stack depth to show in the message.
-# Returns:
-#   stderr: formatted warning message with '⚠️  WARN: ' prefix via to_stderr
-#   Exit code: always 0
-# Usage: warning <message1> [message2...]
-# Example:
-#   warning "The option is deprecated"
-#   echo "Missing optional configuration" | warning 3
-#-------------------------------------------------------------------------------
 declare -xr warning_prefix="⚠️  WARN: "
 
+#-------------------------------------------------------------------------------
+# @description Logs a warning message to stderr (via `message`, prefixed with `$warning_prefix`).
+#
+# @arg $@ string Warning message parts (optional -- if none are given, the message is read from stdin instead). May
+#   include the named parameters described in `message`:
+#     - `--error-code`/`-ec` followed by a positive error code -- translated to its error message and included in
+#       the output. May occur multiple times.
+#     - `--stack-depth`/`-sd` followed by an integer -- how many stack frames to show below the message (default: 0).
+#       If given more than once, only the last occurrence takes effect.
+#
+# @exitcode 0 Message printed successfully.
+# @exitcode 4 ($err_missing_argument) No message parts were given and stdin is a terminal (nothing to read).
+#
+# @example
+#   warning "The option is deprecated"
+# @example
+#   warning -sd 3 "Missing optional configuration"
+#-------------------------------------------------------------------------------
 function warning()
 {
     message "$warning_prefix" "$@" > >(to_stderr)
 }
 
-#-------------------------------------------------------------------------------
-# Summary: Logs informational messages to stdout.
-# Parameters:
-#   1 - depth - how many stack frames to show in the message (optional, default: 0)
-#   1+ - message - informational message parts (optional, if not provided reads from stdin)
-#        Here you can include named parameters:
-#        Named parameters:
-#          "--error-code" or "-ec", followed by a positive error code - the function will translate the error code to a message
-#                                                                       and include it in the output.
-#          "--stack-depth" or "-sd", followed by an integer - how many stack frames to show in the message (default: 0)
-#
-#            There maybe multiple occurrences of "-ec" followed by error codes in the message parts, and all of them
-#            will be translated to messages and included in the output.
-#            Also there maybe multiple occurrences of "--stack-depth" followed by integers in the message parts, but only the
-#            last one will be used to determine the stack depth to show in the message.
-# Returns:
-#   stdout: formatted info message with 'ℹ️  INFO: ' prefix via to_stdout
-#   Exit code: always 0
-# Usage: info <message1> [message2...]
-# Example:
-#   info "Starting build process"
-#   echo "Configuration loaded" | info
-#-------------------------------------------------------------------------------
 declare -xr info_prefix="ℹ️  INFO: "
 
+#-------------------------------------------------------------------------------
+# @description Logs an informational message to stdout (via `message`, prefixed with `$info_prefix`).
+#
+# @arg $@ string Informational message parts (optional -- if none are given, the message is read from stdin
+#   instead). May include the named parameters described in `message`:
+#     - `--error-code`/`-ec` followed by a positive error code -- translated to its error message and included in
+#       the output. May occur multiple times.
+#     - `--stack-depth`/`-sd` followed by an integer -- how many stack frames to show below the message (default: 0).
+#       If given more than once, only the last occurrence takes effect.
+#
+# @stdout string The formatted info message, prefixed with `$info_prefix`.
+#
+# @exitcode 0 Message printed successfully.
+# @exitcode 4 ($err_missing_argument) No message parts were given and stdin is a terminal (nothing to read).
+#
+# @example
+#   info "Starting build process"
+# @example
+#   echo "Configuration loaded" | info
+#-------------------------------------------------------------------------------
 function info()
 {
     message "$info_prefix" "$@" > >(to_stdout)
 }
 
-#-------------------------------------------------------------------------------
-# Summary: Logs trace messages to stdout when verbose mode is enabled.
-# Parameters:
-#   1 - depth - how many stack frames to show in the message (optional, default: 0)
-#   1+ - message - trace message parts (optional, if not provided reads from stdin)
-#        Here you can include named parameters:
-#        Named parameters:
-#          "--error-code" or "-ec", followed by a positive error code - the function will translate the error code to a message
-#                                                                       and include it in the output.
-#          "--stack-depth" or "-sd", followed by an integer - how many stack frames to show in the message (default: 0)
-#
-#            There maybe multiple occurrences of "-ec" followed by error codes in the message parts, and all of them
-#            will be translated to messages and included in the output.
-#            Also there maybe multiple occurrences of "--stack-depth" followed by integers in the message parts, but only the
-#            last one will be used to determine the stack depth to show in the message.
-# Returns:
-#   stdout: formatted trace message with '🐾  TRACE: ' prefix via to_trace-out (only when verbose=true)
-#   Exit code: always 0
-# Env. Vars:
-#   verbose - when true, outputs trace messages; when false, suppresses output
-# Usage: trace <message1> [message2...]
-# Example:
-#   trace "Processing item: $item"
-#   echo "Debug: variable value = $var" | trace
-#-------------------------------------------------------------------------------
 declare -xr trace_prefix="🐾  TRACE: "
 
+#-------------------------------------------------------------------------------
+# @description Logs a trace message to stderr (via `message`, prefixed with `$trace_prefix`), but only when verbose
+# mode is enabled.
+#
+# @arg $@ string Trace message parts (optional -- if none are given, the message is read from stdin instead, unless
+#   verbose mode is off, in which case stdin is never read). May include the named parameters described in
+#   `message`:
+#     - `--error-code`/`-ec` followed by a positive error code -- translated to its error message and included in
+#       the output. May occur multiple times.
+#     - `--stack-depth`/`-sd` followed by an integer -- how many stack frames to show below the message (default: 0).
+#       If given more than once, only the last occurrence takes effect.
+#
+# @exitcode 0 Verbose mode is off (message suppressed without being processed), or the message was printed
+#   successfully.
+# @exitcode 4 ($err_missing_argument) Verbose mode is on, no message parts were given, and stdin is a terminal
+#   (nothing to read).
+#
+# @example
+#   trace "Processing item: $item"
+# @example
+#   echo "Debug: variable value = $var" | trace
+#-------------------------------------------------------------------------------
 function trace()
 {
     ! $verbose && return "$success"
@@ -467,21 +460,24 @@ function trace()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Logs a warning about a variable's value and set that variable
-#          to specified default value.
-# Parameters:
-#   1 - variable_name (nameref!) - name of the variable to set
-#   2 - warning_message - warning message to display
-#   3 - default_value - default value to assign to the variable
-# Returns:
-#   stderr: warning message via warning function
-#   Exit code: 0 on success, 1 on error
-# Side Effects: Sets the named variable to the default value
-# Usage: warning_var <variable_name> <warning_message> <default_value>
-# Example: warning_var timeout "Timeout not specified." 30
-# WARNING: This function uses nameref to set the variable by name. DO NOT PIPE
-#   this function into to_stdout or similar, as it will run in a subshell and
-#   the variable assignment will be lost.
+# @description Logs a warning about a missing or invalid variable's value, and sets that variable to a specified
+# default value.
+#
+# Notes:
+#   - This function uses a bash nameref (`local -n`) to set the variable by name. Do NOT pipe a call to this
+#     function into `to_stdout` or similar -- the left side of a pipe runs in a subshell, so the variable assignment
+#     would be lost (see the file-level warning at the top of this file).
+#
+# @arg $1 nameref The name of the variable to set.
+# @arg $2 string The warning message to display.
+# @arg $3 string The default value to assign to the named variable.
+#
+# @exitcode 0 The variable was set successfully.
+# @exitcode 2 ($err_invalid_arguments) Wrong argument count, an empty variable name or warning message, or the
+#   variable name does not match `$varNameRegex`.
+#
+# @example
+#   warning_var timeout "Timeout not specified." 30
 #-------------------------------------------------------------------------------
 function warning_var()
 {
@@ -511,21 +507,20 @@ function warning_var()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Displays the current call stack to stdout (consider redirecting to stderr)
-# Parameters:
-#   1 - skip - how many stack frames to skip; (optional, defaults to 0)
-#   2 - take - how many stack frames to show; (optional, defaults to 1)
-#   3 - verbose - if true, outputs the stack trace; if false, does nothing;
-#       (optional, defaults to the value of the global $verbose variable or
-#        to false if not set)
-# Returns:
-#   stdout: formatted stack trace showing function names, files, and line numbers
-#           (consider redirecting to stderr)
-#   Exit code: always 0
-# Env. Vars:
-#   verbose - when true, displays stack trace; when false, does nothing
-# Usage: show_stack
-# Example: show_stack  # typically called during debugging or error handling
+# @description Displays the current call stack. Consider redirecting the output to stderr at the call site.
+#
+# @arg $1 int How many stack frames to skip, not including the caller of `show_stack`. Optional, default: 0.
+# @arg $2 int How many stack frames to show. Optional, default: all remaining frames after the skip.
+# @arg $3 bool Whether to output the stack trace at all. Optional, default: the value of the global `$verbose`
+#   variable, or `false` if that is unset.
+#
+# @exitcode 0 Always.
+#
+# @stdout string The formatted stack trace, one line per frame, showing function name, source file, and line number
+#   (consider redirecting to stderr at the call site).
+#
+# @example
+#   show_stack  # typically called during debugging or error handling
 #-------------------------------------------------------------------------------
 function show_stack()
 {
@@ -533,10 +528,11 @@ function show_stack()
 
     ! $v && return "$success"
 
-    local skip=${1:-1}                              # by default skip this call
+    local skip=${1:-0}
+    (( ++skip ))                                    # skip the frame of this call
     local max_take=$(( ${#FUNCNAME[@]} - skip ))    # take no more than the remaining stack frames
     local take=${2:-$max_take}
-    (( take = take < max_take ? take : max_take ))   # adjust take if it exceeds the available stack frames
+    (( take = take < max_take ? take : max_take ))  # adjust take if it exceeds the available stack frames
     (( take <= 0 )) && return "$success"
 
     local func

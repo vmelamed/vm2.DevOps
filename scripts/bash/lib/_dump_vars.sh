@@ -68,14 +68,21 @@ declare -A markdown=(
 )
 
 #-------------------------------------------------------------------------------
-# Summary: Internal function to write a header title in the variable dump table.
-# Parameters:
-#   1 - title - header text to display
-# Returns:
-#   stdout: formatted header line
-#   Exit code: 0 always
-# Usage: _write_title <title>  # internal use only
-# Notes: Internally used by dump_vars. Do not use, as it may change in the future.
+# @description Writes a header title line in the variable dump table, using the
+# current table format (graphical or markdown).
+#
+# Notes:
+#   - Internal helper used by `dump_vars`. Do not call directly — its signature
+#     and behavior may change without notice.
+#
+# @arg $1 string Header text to display.
+#
+# @exitcode 0 Always.
+#
+# @stdout Formatted header line.
+#
+# @example
+#   _write_title "Build Summary:"
 #-------------------------------------------------------------------------------
 function _write_title()
 {
@@ -88,15 +95,27 @@ function _write_title()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Internal function to write a variable name and value line in the dump table.
-# Parameters:
-#   1 - variable_name - name of the variable to display (passed as nameref)
-#   2 - secret - if true, the value will be masked: ••••••
-# Returns:
-#   stdout: formatted variable line showing name and value
-#   Exit code: 0 always
-# Usage: _write_line <variable_name>  # internal use only
-# Notes: Internally used by dump_vars. Do not use, as it may change in the future. Handles scalars, arrays, associative arrays, functions, and undefined variables differently.
+# @description Writes a "name: value" line in the variable dump table for the named variable.
+# Scalars, arrays, associative arrays, functions, and undefined/unbound variables are each
+# formatted differently.
+#
+# Notes:
+#   - Internal helper used by `dump_vars`. Do not call directly — its signature and behavior may
+#     change without notice.
+#
+# @arg $1 nameref Name of the variable to display.
+# @arg $2 bool If true, masks the value with the `$secret_str` placeholder instead of printing it
+#   (optional, default: false).
+#
+# @exitcode 0 Always, except when argument validation fails.
+# @exitcode 5 The name in $1 does not match the variable-name pattern.
+#
+# @stdout Formatted variable line showing the name and its value (or a placeholder for unbound
+#   or invalid names).
+#
+# @example
+#   _write_line "build_result"
+#   _write_line "api_key" true
 #-------------------------------------------------------------------------------
 # shellcheck disable=SC2059 # Don't use variables in the printf format string. Use printf "..%s.." "$foo".
 function _write_line()
@@ -144,24 +163,30 @@ function _write_line()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: If $verbose is on, dumps a table of variables and in the end, if $quiet is off, asks the user to "press any key to continue." (see also the flags --quiet and --force below)
-# Parameters:
-#   1+ - variable_names - names of variables to dump (passed as strings without leading $ - nameref-s). Optionally the caller can put in the list flags like:
-#        -h or --header <text>: will display the header text and the dividing horizontal lines in the table, so PASS THE TOP HEADER TEXT FIRST. Subsequent headers will be treated as mid headers
-#        -m or --markdown: will display the table in markdown format instead of the current format
-#        -g or --graphical: will display the table in graphical format instead of the current format
-#        -b or --blank: will display a blank line in the table
-#        -l or --line: will display a dividing horizontal line in the table
-#        -q or --quiet: will not ask the user to "press any key to continue" after dumping the variables, even if $quiet is false
-#        -f or --force: will dump the variables even if $verbose is not true
-# Exit Codes:
-#   0 - success
-# Returns:
-#   stdout: formatted table of variable names and values
-# Side Effects: Will display output to stdout and prompt user for key press, if $quiet is false.
-# Usage: dump_vars [options] <variable_name1> [<variable_name2> ...]
-# Example:
+# @description If `$verbose` is on, dumps a table of variable names and values, then, if `$quiet`
+# is off, prompts the user to "press any key to continue" (see the `--quiet` and `--force` flags
+# below, which can override both checks).
+#
+# @arg $@ mixed Variable names to dump (passed as strings without a leading `$`), interspersed
+#   with any of the following flags:
+#     -h, --header <text>  Display the header text and the table's dividing horizontal lines.
+#                           Pass the top header text first — subsequent -h/--header occurrences
+#                           are treated as mid headers.
+#     -m, --markdown        Render the table in markdown format instead of the current format.
+#     -g, --graphical       Render the table in graphical format instead of the current format.
+#     -b, --blank           Display a blank line in the table.
+#     -l, --line            Display a dividing horizontal line in the table.
+#     -s, --secret <name>   Dump the named variable with its value masked.
+#     -q, --quiet           Skip the "press any key to continue" prompt, even if `$quiet` is false.
+#     -f, --force           Dump the variables even if `$verbose` is not true.
+#
+# @exitcode 0 Always.
+#
+# @stdout Formatted table of variable names and values.
+#
+# @example
 #   dump_vars --header "Build Summary:" build_result warnings_count errors_count
+# @example
 #   dump_vars --markdown --header "Configuration:" config_path log_level --line setting1 setting2
 #-------------------------------------------------------------------------------
 function dump_vars()

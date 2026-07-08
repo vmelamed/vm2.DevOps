@@ -7,6 +7,16 @@ declare -xr common_switches
 declare -xr common_vars
 declare -xr script_name
 
+#-------------------------------------------------------------------------------
+# @description Builds and prints the usage/help text for 'rename-branch.sh'. When '$1' is true, appends the common switches
+# and environment variables sections; otherwise prints only the short usage summary.
+#
+# @arg $1 bool Whether to include the long-form help (common switches and environment variables sections).
+#
+# @exitcode 0 Always.
+#
+# @stdout The usage text for 'rename-branch.sh'.
+#-------------------------------------------------------------------------------
 function usage_text()
 {
     local long_text=$1

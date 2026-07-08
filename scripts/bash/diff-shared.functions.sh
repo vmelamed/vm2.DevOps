@@ -80,8 +80,21 @@ declare -rA merge_commands=(
     ["vimdiff"]="vimdiff \"\$LOCAL\" \"\$REMOTE\""
 )
 
-## Loads all file actions from JSON configuration file
-## Reads $lib_dir/diff-shared.config.json and populates arrays
+#-------------------------------------------------------------------------------
+# @description Loads the diff/merge tool configuration and the list of source/target/action file entries from the SoT
+# directory's 'diff-shared.config.json', populating the global model arrays 'source_files', 'target_files', and
+# 'file_actions'. This is a top-level CLI configuration step: on any validation or configuration failure it reports the
+# error(s) via 'error' and exits the process via 'exit_if_has_errors' rather than returning an error code.
+#
+# @arg $1 string the SoT directory path (must exist and be a directory; the configuration file
+#   '$1/diff-shared.config.json' must exist, be non-empty, and contain valid JSON)
+# @arg $2 string the target repository directory path (must exist and be a directory)
+#
+# @exitcode 0 configuration loaded and validated successfully
+#
+# @example
+#   configure "$sot_path" "$target_path"
+#-------------------------------------------------------------------------------
 function configure()
 {
     (( $# == 2 ))                        || error -ec "$err_invalid_arguments" "${FUNCNAME[0]}() takes 2 mandatory arguments (provided $#) - the SoT directory and the target directory."
@@ -247,8 +260,23 @@ function resolve_target()
     echo "$target_path"
 }
 
-## Loads custom file actions from JSON file
-## Reads $target_path/diff-shared.custom.json and overrides file_actions
+#-------------------------------------------------------------------------------
+# @description Loads per-repository customizations from '<target_path>/diff-shared.custom.json', if present, overriding
+# the configured diff/merge tools and (unless 'only_tools' is set) the per-file actions in the global 'file_actions'
+# array. If the custom configuration file does not exist or is empty, the function leaves the configured tools and
+# actions untouched and returns successfully.
+#
+# @arg $1 string target repository root directory path (must be an existing directory)
+# @arg $2 bool whether to customize the diff/merge tools only, skipping the per-file action overrides (optional,
+#   default: false)
+#
+# @exitcode 0 ($success) customization applied successfully, or no custom configuration file was found
+# @exitcode 1 ($failure) the custom configuration file contains invalid JSON
+#
+# @example
+#   customize "$target_root" true
+#   customize "$target_root" false
+#-------------------------------------------------------------------------------
 function customize()
 {
     (( $# == 1 || $# == 2 ))            || error -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 or 2 arguments (provided $#):" \
@@ -462,8 +490,21 @@ function trace_files()
     trace "$(printf "$format" "${2#"$vm2_repos/$vm2_sot_repo_name/templates/"}" "${3#"$vm2_repos/"}")"
 }
 
-## Compares two files using the default tool or the configured git diff.
-## Usage: are_different <sot-file> <target-file> [<show-diff>]
+#-------------------------------------------------------------------------------
+# @description Compares two files with a fast whitespace/blank-line-insensitive 'diff -q -w -B'. If they are identical,
+# returns immediately. If they differ and 'show_diff' is true, also launches the configured (or default) visual diff
+# tool via '$diff_command' against the global 'LOCAL'/'REMOTE' variables, which this function sets before evaluating it.
+#
+# @arg $1 string SoT (source of truth) file path; assigned to the global 'LOCAL' for '$diff_command' to use
+# @arg $2 string target file path; assigned to the global 'REMOTE' for '$diff_command' to use
+# @arg $3 bool whether to also display the visual diff when the files differ (optional, default: true)
+#
+# @exitcode 0 the files differ
+# @exitcode 1 the files are identical
+#
+# @example
+#   are_different "$source_file" "$target_file" false
+#-------------------------------------------------------------------------------
 function are_different()
 {
     local display_diff=${3:-true}
@@ -483,8 +524,22 @@ function are_different()
     fi
 }
 
-## Loads the script arguments into the configured git merge.
-## Usage: merge <target-file> <sot-file>
+#-------------------------------------------------------------------------------
+# @description Runs the configured (or default) merge tool via '$merge_command' to merge the SoT file into the target
+# file in place. Follows the Git merge parameter naming convention ('LOCAL', 'REMOTE', 'MERGED', 'BASE') so that
+# '$merge_command' can reference these globals. Detects whether the merge actually changed the target file by comparing
+# a SHA-256 hash of the target file before and after running the tool.
+#
+# @arg $1 string target file path; assigned to the globals 'LOCAL' and 'MERGED' (the file the merge tool is expected to
+#   modify in place)
+# @arg $2 string SoT (source of truth) file path; assigned to the globals 'REMOTE' and 'BASE'
+#
+# @exitcode 0 the target file's content changed as a result of the merge
+# @exitcode 1 the target file's content is unchanged after the merge tool ran
+#
+# @example
+#   merge "$target_file" "$source_file"
+#-------------------------------------------------------------------------------
 # shellcheck disable=SC2034 # BASE appears unused. Verify use (or export if used externally).
 function merge()
 {
@@ -507,8 +562,19 @@ function merge()
     }
 }
 
-## Copies a source file over a destination file, creating the destination directory if needed.
-## Usage: copy_file <source-file> <destination-file>
+#-------------------------------------------------------------------------------
+# @description Copies the source file over the destination file, creating the destination directory first if it does
+# not already exist. Both the directory creation and the copy go through 'execute', so they are skipped (and only
+# printed) in dry-run mode.
+#
+# @arg $1 string source file path to copy from
+# @arg $2 string destination file path to copy to
+#
+# @exitcode 0 the copy (or dry-run print) succeeded
+#
+# @example
+#   copy_file "$source_file" "$target_file"
+#-------------------------------------------------------------------------------
 function copy_file()
 {
     local src_file="$1"

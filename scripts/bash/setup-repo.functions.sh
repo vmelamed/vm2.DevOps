@@ -75,6 +75,20 @@ declare -xr missing_state
 declare -xr present_state
 declare -xr undefined_default
 
+#-------------------------------------------------------------------------------
+# @description Resolves the numeric GitHub App IDs for GitHub Actions, Dependabot, and Codespaces via the GitHub
+# API, storing them in `actions_app_id`, `dependabot_app_id`, and `codespaces_app_id`. These IDs are used to pin
+# required status checks and other GitHub-App-scoped settings to GitHub Actions specifically. Each resolved ID is
+# checked against its well-known expected value and a warning is logged if it differs (the vm2 GitHub Apps have
+# stable IDs across all repositories, so a mismatch likely signals an API change worth investigating).
+#
+# Notes:
+#   - This function must run before `initialize_gh_paths()` and `initialize_jq_queries()`, since the latter rely on
+#     `actions_app_id` already being set -- calling it after would be a circular dependency.
+#
+# @exitcode 0 All three app IDs resolved successfully.
+# @exitcode (via exit_if_has_errors) Exits the process if any of the three API calls failed.
+#-------------------------------------------------------------------------------
 function resolve_github_app_ids()
 {
     # Resolve the GitHub Actions app ID dynamically via the API.
@@ -97,6 +111,15 @@ function resolve_github_app_ids()
     declare -xr actions_app_id dependabot_app_id codespaces_app_id
 }
 
+#-------------------------------------------------------------------------------
+# @description Determines the single, stable "gate job" check name from the target repository's `CI.yaml` and
+# appends it to the `required_checks` array, then freezes the array read-only. See the inline comment below for why
+# a gate job (rather than the individual matrix job names) is what gets pinned as a required status check.
+#
+# @exitcode 0 Success; `required_checks` populated and frozen.
+# @exitcode (via exit_if_has_errors) Exits the process if the gate job or its name could not be parsed from
+#   `$ci_yaml`.
+#-------------------------------------------------------------------------------
 function list_required_checks()
 {
     # With reusable workflows + matrix strategies, GitHub Actions produces check names that include the workflow prefix, matrix
@@ -122,6 +145,20 @@ function list_required_checks()
     trace "Required checks: ${required_checks[*]}"
 }
 
+#-------------------------------------------------------------------------------
+# @description Computes and freezes the `path_*` GitHub API endpoint variables (`path_repo`, `path_permissions`,
+# `path_rulesets`, `path_actions_secrets`, `path_dependabot_secrets`, `path_vars`) from the already-resolved `repo`
+# and `main_protection_rs_name` globals.
+#
+# Notes:
+#   - This is a precondition check on global/environment state set by earlier setup steps, not on the function's
+#     own call arguments -- it takes no arguments. Per the accumulate-then-gate pattern used for preconditions in
+#     this codebase, the final `return` uses `$err_logic_error`, the code that actually describes the failure, not
+#     `$err_invalid_arguments`.
+#
+# @exitcode 0 Success; all `path_*` variables set and frozen read-only.
+# @exitcode 67 `$repo` or `$main_protection_rs_name` is not set (`$err_logic_error`).
+#-------------------------------------------------------------------------------
 # shellcheck disable=SC2089 # Quotes/backslashes will be treated literally. Use an array.
 # shellcheck disable=SC2090 # Quotes/backslashes in this variable will not be respected.
 function initialize_gh_paths()
@@ -161,6 +198,20 @@ function initialize_gh_paths()
     declare -xr path_vars
 }
 
+#-------------------------------------------------------------------------------
+# @description Builds and freezes the `jq_*` query strings (`jq_entries`, `jq_secrets`, `jq_secret_names`,
+# `jq_vars`, `jq_ruleset_id`, `jq_status_checks`, `jq_ruleset_rules`) used throughout `setup-repo.sh` and
+# `setup-repo.audit.sh` to extract and compare data from GitHub API JSON responses. The queries embed
+# `$main_protection_rs_name`, `$actions_app_id`, `$admin_role_id`, and `${#required_checks[@]}` at build time.
+#
+# Notes:
+#   - This is a precondition check on global/environment state (`main_protection_rs_name`, `actions_app_id`,
+#     `admin_role_id`), not on call arguments -- it takes no arguments. The final `return` uses `$err_logic_error`
+#     per the precondition-check pattern in this codebase.
+#
+# @exitcode 0 Success; all `jq_*` variables set and frozen read-only.
+# @exitcode 67 A required precondition variable is unset or invalid (`$err_logic_error`).
+#-------------------------------------------------------------------------------
 # shellcheck disable=SC2089 # Quotes/backslashes will be treated literally. Use an array.
 # shellcheck disable=SC2090 # Quotes/backslashes in this variable will not be respected.
 function initialize_jq_queries()
@@ -169,7 +220,7 @@ function initialize_jq_queries()
 
     [[ -n $main_protection_rs_name ]] || {
         rc="$err_logic_error"
-        error -sd 3 -ec "$rc" "The 'main_protection_rs_name' variable is not set. Cannot initialize GitHub paths."
+        error -sd 3 -ec "$rc" "The 'main_protection_rs_name' variable is not set. Cannot initialize jq queries."
     }
     (( actions_app_id > 0 ))          || {
         rc="$err_logic_error"
@@ -230,6 +281,25 @@ def count_pr_checks_param(check): [.rules[] | select(.type == "required_status_c
     declare -xr jq_status_checks
 }
 
+#-------------------------------------------------------------------------------
+# @description Resolves the numeric ID of the branch-protection ruleset named `$main_protection_rs_name` via the
+# GitHub API and stores it in `main_protection_rs_id`, also deriving and freezing `path_main_protection_ruleset`. If
+# `main_protection_rs_id` is already set (> 0), returns immediately without re-querying the API -- callers can call
+# this idempotently.
+#
+# Notes:
+#   - This is a precondition check on global/environment state (`main_protection_rs_name`, `path_rulesets` -- the
+#     latter set by `initialize_gh_paths()`), not on call arguments -- it takes no arguments.
+#   - Unlike the other precondition-check functions in this file, when the ruleset genuinely does not exist yet (or
+#     the API call fails), this function returns the generic `1`, not `$err_logic_error` -- callers use this as a
+#     "ruleset not found yet" sentinel (see `setup-repo.sh`'s `initialize_main_protection_rs_id || true` and
+#     `configure_branch_protection()`'s success/failure branch below), not as an argument or logic error.
+#
+# @exitcode 0 Success; `main_protection_rs_id` and `path_main_protection_ruleset` set and frozen.
+# @exitcode 1 The ruleset does not exist yet, or the GitHub API call failed.
+# @exitcode 67 A required precondition variable (`main_protection_rs_name`, `path_rulesets`) is unset
+#   (`$err_logic_error`).
+#-------------------------------------------------------------------------------
 function initialize_main_protection_rs_id()
 {
     # main_protection_rs_id is not 0 - already initialized
@@ -267,6 +337,17 @@ function initialize_main_protection_rs_id()
 
 }
 
+#-------------------------------------------------------------------------------
+# @description Fetches the target repository's current settings and PATCHes any that differ from
+# `default_repo_settings` via the GitHub API. Booleans are sent as JSON (`-F`), other values as strings (`-f`).
+# Settings that already match the expected value are left untouched (no-op PATCH avoided when there is nothing to
+# change).
+#
+# @exitcode 0 Always (a failed PATCH call is logged as a warning, not surfaced as a non-zero exit code).
+#
+# @stdout Progress/status messages via `info` ("Configuring repository settings...", "...repository settings
+#   configured.").
+#-------------------------------------------------------------------------------
 function configure_default_repo_settings()
 {
     info "Configuring repository settings..."
@@ -305,6 +386,18 @@ function configure_default_repo_settings()
     fi
 }
 
+#-------------------------------------------------------------------------------
+# @description Sets the target repository's Actions workflow permissions via the GitHub API to match
+# `default_repo_permissions`. Unlike `configure_default_repo_settings()`, this always includes every key from
+# `default_repo_permissions` in the PUT request body regardless of whether the current value already matches --
+# the permissions endpoint is a full-replace PUT, not a partial PATCH, so there is no per-key skip optimization
+# here. Booleans are sent as JSON (`-F`), other values as strings (`-f`).
+#
+# @exitcode 0 Always (a failed PUT call is logged as a warning, not surfaced as a non-zero exit code).
+#
+# @stdout Progress/status messages via `info` ("Configuring Actions workflow permissions...", "...actions workflow
+#   permissions configured.").
+#-------------------------------------------------------------------------------
 function configure_actions_permissions()
 {
     info "Configuring Actions workflow permissions..."
@@ -340,6 +433,18 @@ function configure_actions_permissions()
     fi
 }
 
+#-------------------------------------------------------------------------------
+# @description Reconciles the target repository's GitHub Actions variables against `actions_default_vars`. In
+# non-interactive mode (the default), creates any missing variable with its default value and leaves existing
+# variables untouched. In interactive mode (`$interactive_vars == true`), prompts the user for each variable's
+# value (pre-filled with the current value if it exists, else the default), validating input with the validator
+# from `actions_var_validators`, and calls `set_var` only when the entered value differs from the current one.
+# Prints a summary of how many variables were set to a new value, set to their default, or left unmodified.
+#
+# @exitcode 0 Always (individual `set_var` failures are logged and skipped, not surfaced as a non-zero exit code).
+#
+# @stdout Progress/status messages via `info`, and (in interactive mode) prompts via `enter_value`.
+#-------------------------------------------------------------------------------
 function configure_variables()
 {
     info "Configuring GitHub Actions variables..."
@@ -412,6 +517,16 @@ function configure_variables()
     info "  Run the script with option '--interactive-vars' or '-iv' to set new values for any of the Actions vars."
 }
 
+#-------------------------------------------------------------------------------
+# @description Creates or updates a single GitHub Actions repository variable via `gh variable set`.
+#
+# @arg $1 string Name of the variable to set.
+# @arg $2 string Value to set the variable to.
+#
+# @exitcode 0 Variable set successfully.
+# @exitcode 2 Wrong number of arguments (`$err_invalid_arguments`).
+# @exitcode * Whatever `execute_gh_with_retry` returned on failure (logged as a warning, then propagated).
+#-------------------------------------------------------------------------------
 function set_var()
 {
     (( $# == 2 )) || {
@@ -425,7 +540,7 @@ function set_var()
     local rc=$success
 
     # create and/or set the secret value on GitHub
-    execute_gh_with_retry 3 2 true variable set "$name" --body "$new_value" -R "$repo" || {
+    execute_gh_with_retry 3 2 true variable set "$name" --body "$value" -R "$repo" || {
         rc=$?
         warning "Failed to set variable $name. Run the script with '--verbose' to see more details and troubleshoot."
     }
@@ -433,19 +548,50 @@ function set_var()
     return "$rc"
 }
 
+#-------------------------------------------------------------------------------
+# @description Checks whether a candidate secret value is safe to send to the GitHub API -- i.e. it contains no
+# control characters.
+#
+# Notes:
+#   - This function is not called anywhere in this file: `configure_secrets()` validates user-entered secret values
+#     with `validate_gh_secret` (defined in `lib/_git.sh`), not with this one. Left in place undocumented-as-dead
+#     since removing it is outside the scope of this documentation pass; flagged here for future cleanup
+#     consideration.
+#
+# @arg $1 string Candidate secret value to validate.
+#
+# @exitcode 0 The value contains no control characters.
+# @exitcode 1 The value contains at least one control character.
+#-------------------------------------------------------------------------------
 function is_valid_secret()
 {
     [[ ! "$1" =~ [[:cntrl:]] ]]
 }
 
+#-------------------------------------------------------------------------------
+# @description Reconciles one GitHub App's repository secrets (Actions, Dependabot, agents, or Codespaces) against
+# the corresponding `<app>_secrets` associative array. Secret values themselves cannot be read back from GitHub, so
+# reconciliation is presence-only: an existing secret is left untouched, and a missing secret is either created
+# interactively (prompting the user, `$interactive_secrets == true`) or flagged with a warning asking the user to
+# create it (`$interactive_secrets == false`). Prints a summary of how many secrets were set or still need a value.
+#
+# @arg $1 string Application name; must be one of the entries in `apps_with_secrets` (`actions`, `dependabot`,
+#   `agents`, `codespaces`).
+#
+# @exitcode 0 Success, including the case where the app has no configured secrets at all (returns immediately).
+# @exitcode 2 Wrong number of arguments, an unrecognized application name, or the corresponding `<app>_secrets`
+#   array is not defined (`$err_invalid_arguments`).
+#
+# @stdout Progress/status messages via `info`, and (in interactive mode) prompts via `enter_value`.
+#-------------------------------------------------------------------------------
 function configure_secrets()
 {
-    # validate the parameter - the application name: actions, or dependabot, or agents, or or codespaces
+    # validate the parameter - the application name: actions, dependabot, agents, or codespaces
     local -i rc="$success"
 
     [[ $# -eq 1 ]] && is_in "$1" "${apps_with_secrets[@]}" || {
         rc="$err_invalid_arguments"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires exactly one argument -- the application name. It should be one of: ${apps_with_secrets[#]}."
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires exactly one argument -- the application name. It should be one of: ${apps_with_secrets[*]}."
     }
 
     (( rc == success )) || return "$err_invalid_arguments"
@@ -526,6 +672,20 @@ function configure_secrets()
     (( need_new > 0 )) && warning "  Run the script with option '--interactive-secrets' or '-is' to set the values for $need_new ${app^} secrets." || true
 }
 
+#-------------------------------------------------------------------------------
+# @description Creates or updates a single GitHub repository secret for the given app (`actions`, `dependabot`,
+# `agents`, or `codespaces`) via `gh secret set`. Temporarily suppresses verbose/trace output and `set -x` around
+# the actual `gh` call so the secret's plaintext value is never written to logs, restoring the previous state
+# afterward regardless of success or failure.
+#
+# @arg $1 string Name of the secret to set.
+# @arg $2 string Plaintext value to set the secret to.
+# @arg $3 string GitHub App the secret belongs to (`actions`, `dependabot`, `agents`, or `codespaces`).
+#
+# @exitcode 0 Secret set successfully.
+# @exitcode 2 Wrong number of arguments (`$err_invalid_arguments`).
+# @exitcode * Whatever `execute_gh_with_retry` returned on failure (logged as a warning, then propagated).
+#-------------------------------------------------------------------------------
 function set_secret()
 {
     (( $# == 3 )) || {
@@ -557,6 +717,18 @@ function set_secret()
     return "$rc"
 }
 
+#-------------------------------------------------------------------------------
+# @description Creates (POST) or updates (PUT, if `initialize_main_protection_rs_id` finds one already exists) the
+# GitHub ruleset that protects the default branch: linear history, no force pushes, a required pull request with
+# rebase-only merges, and the required status checks collected in `required_checks`. After the API call, re-runs
+# `initialize_main_protection_rs_id` so `main_protection_rs_id`/`path_main_protection_ruleset` reflect a
+# newly-created ruleset (a no-op if the ruleset already existed and was just updated).
+#
+# @exitcode 0 Always (a failed API call from `execute_gh_api_with_retry` is not checked/propagated here).
+#
+# @stdout Progress/status messages via `info` ("Configuring branch ruleset...", "Updating existing ruleset...", or
+#   "Creating new ruleset...").
+#-------------------------------------------------------------------------------
 function configure_branch_protection()
 {
     info "Configuring branch ruleset for '$branch'..."

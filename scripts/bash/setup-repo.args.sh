@@ -13,7 +13,7 @@ declare -rxi err_unknown_argument
 declare -x vm2_repos
 declare -x repo_name
 declare -x repo_path
-declare -x owner
+declare -x repo_owner
 declare -x repo
 declare -x visibility
 declare -x branch
@@ -26,6 +26,24 @@ declare -x description
 declare -x use_ssh
 declare -x use_https
 
+#-------------------------------------------------------------------------------
+# @description Parses the command-line arguments of `setup-repo.sh`, populating the script-level variables declared
+# at the top of this file (`vm2_repos`, `repo_path`, `owner`, `visibility`, `branch`, `interactive_vars`,
+# `interactive_secrets`, `configure_local`, `audit`, `main_protection_rs_name`, `description`, `use_ssh`,
+# `use_https`). Common switches (`-h`, `-v`, `-q`, `-x`, `-y`, etc.) are delegated to `get_common_arg` first. The
+# first (and only) positional argument is taken as `repo_path`; a second positional argument triggers a usage error.
+# On completion, calls `usage_if_requested` (exits the process if `--help` was seen) and `dump_args` (prints the
+# parsed values in verbose mode).
+#
+# Notes:
+#   - This is a top-level CLI argument parser (see the "Parameter and Precondition Validation Pattern" in
+#     CLAUDE.md): it exits the process via `usage()` on bad input rather than returning an error code.
+#
+# @arg $@ string Command-line arguments passed to `setup-repo.sh`.
+#
+# @exitcode 0 All arguments parsed successfully (function returns normally; `usage()` exits the process directly on
+#   error or on `--help`).
+#-------------------------------------------------------------------------------
 # shellcheck disable=SC2154 # verbose is referenced but not assigned.
 function get_arguments()
 {
@@ -48,7 +66,7 @@ function get_arguments()
 
             --owner|-o )
                 [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing owner after '$option'."
-                owner="$1"; shift
+                repo_owner="$1"; shift
                 ;;
 
             --branch|-b )
@@ -109,6 +127,15 @@ function get_arguments()
     dump_args
 }
 
+#-------------------------------------------------------------------------------
+# @description Dumps the parsed input variables to stdout in tabular form via `dump_vars`, but only when verbose
+# mode is active. No-op otherwise.
+#
+# @exitcode 0 Values dumped (verbose mode), or verbose mode is off and the function returned early.
+# @stdout A tabular listing of the parsed input variables (`vm2_repos`, `repo_path`, `repo_owner`, `repo_name`,
+#   `visibility`, `branch`, `main_protection_rs_name`, `description`, `use_ssh`, `use_https`, `interactive_vars`,
+#   `interactive_secrets`, `audit`, `dry_run`, `verbose`, `quiet`) -- only when verbose mode is active.
+#-------------------------------------------------------------------------------
 function dump_args()
 {
     is_verbose || return 0

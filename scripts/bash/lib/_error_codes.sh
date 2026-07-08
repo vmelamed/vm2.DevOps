@@ -89,6 +89,20 @@ declare -rxA error_codes=(
     [$err_not_on_current_commit]="The specified repository is not on the current commit of the expected branch."
 )
 
+#-------------------------------------------------------------------------------
+# @description Looks up an error code in the `error_codes` associative array and prints
+# "<code>: <message>" to stdout.
+#
+# @arg $1 int Positive error code (1-255) to look up.
+#
+# @exitcode 0 Success.
+# @exitcode 2 Invalid arguments (wrong argument count, non-positive-integer argument, or unknown error code).
+#
+# @stdout "<code>: <message>" for the given error code.
+#
+# @example
+#   error_message "$err_not_found"
+#-------------------------------------------------------------------------------
 function error_message()
 {
     local -i rc="$success"

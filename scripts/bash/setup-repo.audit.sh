@@ -40,24 +40,32 @@ declare -xr present_state
 declare -xr undefined_default
 
 #-------------------------------------------------------------------------------
-# Summary: Fetches the current settings from GitHub API and compares them to the expected settings, reporting equalities, differences,
-#   and missing values (errors).
-# Parameters:
-#   $1: <gh_endpoint> GitHub API endpoint path to fetch the settings from, e.g. "repos/$repo" or "repos/$repo/actions/permissions/workflow"
-#   $2: <jq_transform> jq query to transform the JSON response into key=value pairs
-#   $3: <expected> names of the associative array variable containing expected key-value pairs, e.g. default_repo_settings or
-#       default_repo_permissions
-#   $4: <modify_keys> boolean flag specifying that the keys of the expected settings should be displayed sentence-capitalized
-#       and with spaces instead of underscores (for better readability), e.g. "allow_squash_merge" => "Allow squash merge"
-#   $5: <results> name of an array variable (nameref) to store the results in, where the first element is the number of matches,
-#       the second is the number of differences, and the third is the number of errors (missing settings)
-#   $6: <keys_in_order> name of an array variable containing the display order of settings (optional, default: sorted
-#       alphabetically)
-# Returns:
-#   Exit code: 0 on success, 2 - failed to read the settings
-# Dependencies: gh CLI, jq
-# Usage:
-# Example:
+# @description Fetches the current settings from the GitHub API and compares them to the expected settings,
+# reporting matches, differences, and missing values (errors) to stdout in a formatted list.
+#
+# For each key, the expected value is looked up in the `expected` associative array. If the expected value is the
+# secret placeholder (`$secret_placeholder`), the comparison degrades to presence-only: the actual value is reported
+# as either present or missing, never compared for equality (this is how secrets, whose real values this script
+# never reads back, are audited). Otherwise the actual and expected values are compared for equality.
+#
+# @arg $1 string GitHub API endpoint path to fetch the settings from, e.g. `repos/$repo` or
+#   `repos/$repo/actions/permissions/workflow`.
+# @arg $2 string jq query used to transform the JSON response into `key=value` lines.
+# @arg $3 nameref Name of the associative array variable containing the expected key-value pairs, e.g.
+#   `default_repo_settings` or `default_repo_permissions`.
+# @arg $4 bool When `true`, display keys sentence-capitalized with spaces instead of underscores (for readability),
+#   e.g. `allow_squash_merge` => `Allow squash merge`.
+# @arg $5 nameref Name of an array variable to store the results in: `[0]` is the number of matches, `[1]` is the
+#   number of differences, and `[2]` is the number of errors (missing settings).
+# @arg $6 nameref Name of an array variable containing the display order of the setting keys (optional; default:
+#   sorted alphabetically).
+#
+# @exitcode 0 Success (including the case where `expected` is empty and the function returns immediately).
+# @exitcode 2 Invalid arguments, or failed to fetch data from the GitHub API.
+# @exitcode 66 error after executing a tool - most likely a bug.
+#
+# @stdout One formatted line per compared key, prefixed with an emoji marker (match/present, difference, or
+#   missing).
 #-------------------------------------------------------------------------------
 function compare_settings()
 {
@@ -107,8 +115,9 @@ function compare_settings()
     local json
 
     if ! json=$(execute_gh_api_with_retry 3 2 --paginate "$gh_endpoint"); then
-        error -ec "$err_tool_error" "Failed to fetch data from GitHub API: $gh_endpoint."
-        return 2
+        rc="$err_tool_error"
+        error -ec "$rc" "Failed to fetch data from GitHub API: $gh_endpoint."
+        return "$rc"
     fi
 
     # read the key=value pairs into actual $actual_key_values
@@ -163,7 +172,7 @@ function compare_settings()
         else
             # we should never be here, but just in case...
             printf "      ❌  %-36s => %s (default: '%s')\n" "$key" "$actual" "$expected"
-            (( ++err ))
+            (( ++errs ))
         fi
     done
 
@@ -189,6 +198,22 @@ declare -x path_vars
 
 declare -x path_main_protection_ruleset
 
+#-------------------------------------------------------------------------------
+# @description Runs a full, read-only audit of the target GitHub repository against the vm2 conventions, comparing
+# repository settings, Actions workflow permissions, per-app secrets, Actions variables, the branch-protection
+# ruleset (and its required status checks), and the local Git config -- then prints a totals summary. Requires
+# `initialize_gh_paths`, `initialize_jq_queries`, and `resolve_github_app_ids` to have already run so the
+# `path_*`/`jq_*` variables and `required_checks` are populated.
+#
+# @exitcode 0 Audit completed and printed.
+# @exitcode 1 The branch-protection ruleset for the configured branch is missing or could not be found (exits the
+#   whole script via `exit 1`, not just this function).
+# @exitcode 2 A `compare_settings` call failed (e.g. GitHub API fetch error), or fetching the required-status-checks
+#   list from the GitHub API failed.
+#
+# @stdout A multi-section, emoji-annotated audit report (repository settings, Actions permissions, secrets per app,
+#   Actions variables, branch ruleset, required status checks, local Git settings) followed by a totals summary.
+#-------------------------------------------------------------------------------
 function audit_repo()
 {
     local -i pass=0 diff=0 errs=0

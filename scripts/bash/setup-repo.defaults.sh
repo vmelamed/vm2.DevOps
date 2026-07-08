@@ -239,6 +239,20 @@ declare -rxi err_not_directory          # Parameter value is not a directory
 
 declare -xri default_sot
 
+#-------------------------------------------------------------------------------
+# @description Finalizes the `default_local_git_settings` associative array by resolving the two entries whose values
+# depend on the caller's environment: `core.hooksPath` (derived from the vm2 repos parent directory) and
+# `commit.template` (derived from the source-of-truth directory). After computing these values, the array is
+# re-declared read-only so no later code can accidentally change the shared defaults.
+#
+# @arg $1 string Path to the parent directory where the `vm2.DevOps` repository is cloned (e.g. the value of
+#   $VM2_REPOS or the `--vm2-repos` option). Must be an existing directory.
+# @arg $2 string Path to the source-of-truth (SOT) directory, e.g. `$VM2_REPOS/$default_sot`. Must be an existing
+#   directory.
+#
+# @exitcode 0 Success; `default_local_git_settings` updated and frozen.
+# @exitcode 2 Invalid arguments (wrong count, empty value, or a value that is not an existing directory).
+#-------------------------------------------------------------------------------
 function init_default_local_git_settings()
 {
     local -i rc="$success"

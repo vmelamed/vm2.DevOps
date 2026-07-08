@@ -57,18 +57,20 @@ declare -rxi err_invalid_nameref
 declare -rx varNameRegex
 
 #-------------------------------------------------------------------------------
-# Summary: Sends the input to stdout AND, if in GitHub Actions, to GitHub step summary.
-# Parameters: none (reads from stdin)
-# Returns:
-#   stdout: each line read from stdin
-#   Exit code: 0
-# Side Effects: Appends also to $github_step_summary file
-# Env. Vars:
-#   github_actions - when true, indicates running in GitHub Actions environment
-#   github_step_summary - path to GitHub Actions step summary file
-# Usage: echo "message" | to_stdout
-# Example: echo "Build completed successfully" | to_stdout
-# Notes: Overrides the base implementation from _diagnostics.sh.
+# @description Reads lines from /dev/stdin, echoing each to stdout and also appending it to the GitHub
+# Actions step summary file or to /dev/null.
+#
+# Notes:
+#   - Overrides the base implementation from `_diagnostics.sh`.
+#   - Outside GitHub Actions, `$github_step_summary` defaults to `/dev/null`, so the append is a
+#     no-op there. The function does not itself branch on `$github_actions`.
+#
+# @exitcode 0 Always.
+#
+# @stdout Each line read from stdin.
+#
+# @example
+#   echo "Build completed successfully" | to_stdout
 #-------------------------------------------------------------------------------
 function to_stdout()
 {
@@ -81,19 +83,13 @@ function to_stdout()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Sends the input to stderr AND, if in GitHub Actions, to GitHub step summary.
-# Parameters: none (reads from stdin)
-# Returns:
-#   stderr: each line read from stdin
-#   Exit code: 0
-# Side Effects: Appends also to $github_step_summary file when $trace_to_summary
-#   is true
-# Env. Vars:
-#   github_actions - when true, indicates running in GitHub Actions environment
-#   trace_to_summary - when true, also writes to step summary
-#   github_step_summary - path to GitHub Actions step summary file
-# Usage: echo "message" | to_traceout
-# Example: echo "Debug info: $variable" | to_traceout
+# @description Reads lines from stdin, sending each to /dev/stderr, and
+# additionally appending it to the GitHub Actions step summary file or to /dev/null, when `$trace_to_summary` is true.
+#
+# @exitcode 0 Always.
+#
+# @example
+#   echo "Debug info: $variable" | to_traceout
 #-------------------------------------------------------------------------------
 function to_traceout()
 {
@@ -106,17 +102,17 @@ function to_traceout()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Sends the input to stderr AND, if in GitHub Actions, to GitHub step summary.
-# Parameters: none (reads from stdin)
-# Returns:
-#   stderr: each line read from stdin
-#   Exit code: 0
-# Side Effects: Appends also to $github_step_summary file
-# Env. Vars:
-#   github_actions - when true, indicates running in GitHub Actions environment
-#   github_step_summary - path to GitHub Actions step summary file
-# Usage: echo "error message" | to_stderr
-# Example: echo "Warning: deprecated feature" | to_stderr
+# @description Reads lines from stdin, sending each to stderr and also appending it to the GitHub
+# Actions step summary file or to /dev/null.
+#
+# Notes:
+#   - Outside GitHub Actions, `$github_step_summary` defaults to `/dev/null`, so the append is a
+#     no-op there. The function does not itself branch on `$github_actions`.
+#
+# @exitcode 0 Always.
+#
+# @example
+#   echo "Warning: deprecated feature" | to_stderr
 #-------------------------------------------------------------------------------
 function to_stderr()
 {
@@ -129,17 +125,19 @@ function to_stderr()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Logs a summary message(s) with markdown heading to stdout AND, if in
-#   GitHub Actions, to GitHub step summary.
-# Parameters:
-#   1+ - message - summary message parts (optional, if not provided reads from
-#       stdin)
-# Returns:
-#   stdout: formatted summary with ## heading prefix via to_stdout
-#   Exit code: 0 always
-# Usage: to_summary <message1> [message2...]
-# Example:
+# @description Logs one or more summary messages with a `## Summary` markdown heading, via
+# `to_stdout` — so, in GitHub Actions, the heading and messages also land in the step summary.
+#
+# @arg $@ string Summary message parts, one per line (optional; if omitted, reads lines from
+#   stdin instead).
+#
+# @exitcode 0 Always.
+#
+# @stdout `## Summary` heading followed by each message line.
+#
+# @example
 #   to_summary "Build completed successfully"
+# @example
 #   echo "Deployment finished" | to_summary
 #-------------------------------------------------------------------------------
 function to_summary()
@@ -169,18 +167,20 @@ function to_summary()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Sends input to stdout AND, if in GitHub Actions, also appends to the
-#   GitHub output file.
-# Parameters: none (reads from stdin)
-# Returns:
-#   stdout: each line read from stdin
-#   Exit code: 0 always
-# Side Effects: Appends to $github_output file
-# Env. Vars:
-#   github_actions - when true, indicates running in GitHub Actions environment
-#   github_output - path to GitHub Actions output file
-# Usage: echo "key=value" | to_output
-# Example: echo "version=1.2.3" | to_output
+# @description Reads lines from stdin, echoing each to /dev/stdout and also appending it to the
+# GitHub Actions output file or /dev/null.
+#
+# Notes:
+#   - Outside GitHub Actions, `$github_output` defaults to `/dev/null`, so the append is a no-op
+#     there. The function does not itself branch on `$github_actions`.
+#
+# @exitcode 0 Effectively always (no explicit `return`; the loop's last command is `echo`, which
+#   succeeds).
+#
+# @stdout Each line read from stdin.
+#
+# @example
+#   echo "version=1.2.3" | to_output
 #-------------------------------------------------------------------------------
 function to_output()
 {
@@ -192,18 +192,22 @@ function to_output()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Outputs a key and value of a variable to GitHub Actions GITHUB_OUTPUT file.
-# Parameters:
-#   1 - variable_name (nameref!) - the name of the variable that contains the GITHUB_OUTPUT value
-#   2 - output_key - the GITHUB_OUTPUT key
-#       Optional, defaults to the name of the variable in $1, but underscores are replaced by hyphens)
-# Returns:
-#   Outputs to $github_output via to_output
-#   Exit code: 0 on success, 2 on invalid arguments
-# Usage: to_github_output <variable_name> [<output-key>]
-# Example:
+# @description Outputs a "key=value" pair for a variable to the GitHub Actions output file
+# (`$github_output`), via `to_output`.
+#
+# @arg $1 nameref Name of the variable whose value is to be output.
+# @arg $2 string GitHub Actions output key (optional; defaults to the name in $1 with underscores
+#   replaced by hyphens).
+#
+# @exitcode 0 Success.
+# @exitcode 2 Invalid arguments (wrong argument count, or $1 is not a valid variable name).
+#
+# @stdout "key=value", via `to_output` (also appended to `$github_output`).
+#
+# @example
 #   build_version="1.2.3"
 #   to_github_output build_version             # outputs: build-version=1.2.3
+# @example
 #   to_github_output build_version custom-key  # outputs: custom-key=1.2.3
 #-------------------------------------------------------------------------------
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
@@ -233,16 +237,18 @@ function to_github_output()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Outputs a key=value pair for each of the input variable names.
-#   The key is synthesized from the name by replacing the underscores with
-#   hyphens. The value is the value of the variable with that name.
-# Parameters:
-#   1+ - variable_names - name refs of variables to output
-# Returns:
-#   Outputs to $github_output via to_output
-#   Exit code: 0 on success, 2 on invalid arguments
-# Usage: args_to_github_output <variable_name1> [variable_name2...]
-# Example:
+# @description Outputs a "key=value" pair for each of the given variable names, via `to_output`.
+# Each key is synthesized from the variable name by replacing underscores with hyphens; the value
+# is read from the variable via indirect expansion (`${!var}`).
+#
+# @arg $@ nameref Names of the variables to output.
+#
+# @exitcode 0 Success.
+# @exitcode 2 Invalid arguments (no variable names given).
+#
+# @stdout "key=value" for each variable, via `to_output` (also appended to `$github_output`).
+#
+# @example
 #   build_version="1.2.3"
 #   package_count=5
 #   args_to_github_output build_version package_count

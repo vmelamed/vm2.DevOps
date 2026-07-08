@@ -28,15 +28,16 @@ declare -x _ignore
 declare -x __is_windows=""
 
 #-------------------------------------------------------------------------------
-# Summary: Tests if a variable is defined.
-# Parameters:
-#   1 - variable_name (nameref!) - name of the variable to test
-# Returns:
-#   Exit code: 0 if variable is defined, non-zero otherwise, 2 on invalid arguments
-# Env. Vars:
-#   _ignore - file to redirect unwanted output to
-# Usage: if is_defined_variable <variable_name>; then ... fi
-# Example: if is_defined_variable MY_VAR; then echo "MY_VAR is defined"; fi
+# @description Tests if a variable is defined.
+#
+# @arg $1 string variable_name - name of the variable to test
+#
+# @exitcode 0 the variable is defined
+# @exitcode 1 the variable is not defined
+# @exitcode 2 invalid arguments ($err_invalid_arguments)
+#
+# @example
+#   if is_defined_variable MY_VAR; then echo "MY_VAR is defined"; fi
 #-------------------------------------------------------------------------------
 function is_defined_variable()
 {
@@ -53,15 +54,16 @@ function is_defined_variable()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Tests if an array variable is defined.
-# Parameters:
-#   1 - variable_name (nameref!) - name of the array variable to test
-# Returns:
-#   Exit code: 0 if array variable is defined, non-zero otherwise, 2 on invalid arguments
-# Env. Vars:
-#   _ignore - file to redirect unwanted output to
-# Usage: if is_defined_array <variable_name>; then ... fi
-# Example: if is_defined_array MY_ARRAY; then echo "MY_ARRAY is defined"; fi
+# @description Tests if an indexed array variable is defined.
+#
+# @arg $1 string variable_name - name of the array variable to test
+#
+# @exitcode 0 ($positive) the array variable is defined
+# @exitcode 1 ($negative) the array variable is not defined
+# @exitcode 2 invalid arguments ($err_invalid_arguments)
+#
+# @example
+#   if is_defined_array MY_ARRAY; then echo "MY_ARRAY is defined"; fi
 #-------------------------------------------------------------------------------
 function is_defined_array()
 {
@@ -85,20 +87,21 @@ function is_defined_array()
     [[ $decl =~ ^declare\ -a ]] && rc="$positive" || rc="$negative"
 
     eval "$restoreShopt" &> "$_ignore" || true # restore original shopt state
-    
+
     return "$rc"
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Tests if an associative array variable is defined.
-# Parameters:
-#   1 - variable_name (nameref!) - name of the associative array variable to test
-# Returns:
-#   Exit code: 0 if associative array variable is defined, non-zero otherwise, 2 on invalid arguments
-# Env. Vars:
-#   _ignore - file to redirect unwanted output to
-# Usage: if is_defined_associative_array <variable_name>; then ... fi
-# Example: if is_defined_associative_array MY_ASSOC_ARRAY; then echo "MY_ASSOC_ARRAY is defined"; fi
+# @description Tests if an associative array variable is defined.
+#
+# @arg $1 string variable_name - name of the associative array variable to test
+#
+# @exitcode 0 ($positive) the associative array variable is defined
+# @exitcode 1 ($negative) the associative array variable is not defined
+# @exitcode 2 invalid arguments ($err_invalid_arguments)
+#
+# @example
+#   if is_defined_associative_array MY_ASSOC_ARRAY; then echo "MY_ASSOC_ARRAY is defined"; fi
 #-------------------------------------------------------------------------------
 function is_defined_associative_array()
 {
@@ -130,15 +133,16 @@ function is_defined_associative_array()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Tests if a function is defined.
-# Parameters:
-#   1 - function_name (nameref!) - name of the function to test
-# Returns:
-#   Exit code: 0 if function is defined, non-zero otherwise, 2 on invalid arguments
-# Env. Vars:
-#   _ignore - file to redirect unwanted output to
-# Usage: if is_defined_function <function_name>; then ... fi
-# Example: if is_defined_function MY_FUNC; then echo "MY_FUNC is defined"; fi
+# @description Tests if a function is defined.
+#
+# @arg $1 string function_name - name of the function to test
+#
+# @exitcode 0 the function is defined
+# @exitcode 1 the function is not defined
+# @exitcode 2 invalid arguments ($err_invalid_arguments)
+#
+# @example
+#   if is_defined_function MY_FUNC; then echo "MY_FUNC is defined"; fi
 #-------------------------------------------------------------------------------
 function is_defined_function()
 {
@@ -155,13 +159,15 @@ function is_defined_function()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Tests if the parameter represents a valid boolean - 'true' or 'false'
-# Parameters:
-#   1 - boolean - string to test
-# Returns:
-#   Exit code: 0 if boolean, non-zero otherwise
-# Usage: if is_boolean <var>; then ... fi
-# Example: if is_natural "$apples"; then echo "apples is valid"; fi
+# @description Tests if the parameter represents a valid boolean - 'true' or 'false'.
+#
+# @arg $1 string boolean - string to test
+#
+# @exitcode 0 the string is 'true' or 'false'
+# @exitcode 1 otherwise
+#
+# @example
+#   if is_boolean "$flag"; then echo "flag is valid"; fi
 #-------------------------------------------------------------------------------
 function is_boolean()
 {
@@ -178,13 +184,15 @@ function is_boolean()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Tests if the parameter represents a valid natural number (0, 1, 2, 3, ...) without a sign.
-# Parameters:
-#   1 - number - string to test
-# Returns:
-#   Exit code: 0 if natural, non-zero otherwise
-# Usage: if is_natural <number>; then ... fi
-# Example: if is_natural "$apples"; then echo "apples is valid"; fi
+# @description Tests if the parameter represents a valid natural number (0, 1, 2, 3, ...) without a sign.
+#
+# @arg $1 string number - string to test
+#
+# @exitcode 0 the string is a natural number
+# @exitcode 1 otherwise
+#
+# @example
+#   if is_natural "$apples"; then echo "apples is valid"; fi
 #-------------------------------------------------------------------------------
 function is_natural()
 {
@@ -201,13 +209,15 @@ function is_natural()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Tests if the parameter represents a valid positive integer number (natural number: 1, 2, 3, ...).
-# Parameters:
-#   1 - number - string to test
-# Returns:
-#   Exit code: 0 if positive integer, non-zero otherwise
-# Usage: if is_positive <number>; then ... fi
-# Example: if is_positive "$count"; then echo "Count is positive"; fi
+# @description Tests if the parameter represents a valid positive integer (1, 2, 3, ...), with an optional leading '+'.
+#
+# @arg $1 string number - string to test
+#
+# @exitcode 0 the string is a positive integer
+# @exitcode 1 otherwise
+#
+# @example
+#   if is_positive "$count"; then echo "Count is positive"; fi
 #-------------------------------------------------------------------------------
 function is_positive()
 {
@@ -224,13 +234,16 @@ function is_positive()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Tests if the parameter represents a valid non-negative integer (0, 1, 2, 3, ...) - the same as is_natural().
-# Parameters:
-#   1 - number - string to test
-# Returns:
-#   Exit code: 0 if non-negative integer, non-zero otherwise
-# Usage: if is_non_negative <number>; then ... fi
-# Example: if is_non_negative "$index"; then echo "Index is valid"; fi
+# @description Tests if the parameter represents a valid non-negative integer (0, 1, 2, 3, ...), with an optional
+# leading '+'.
+#
+# @arg $1 string number - string to test
+#
+# @exitcode 0 the string is a non-negative integer
+# @exitcode 1 otherwise
+#
+# @example
+#   if is_non_negative "$index"; then echo "Index is valid"; fi
 #-------------------------------------------------------------------------------
 function is_non_negative()
 {
@@ -247,13 +260,15 @@ function is_non_negative()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Tests if the parameter represents a valid non-positive integer (0, -1, -2, -3, ...).
-# Parameters:
-#   1 - number - string to test
-# Returns:
-#   Exit code: 0 if non-positive integer, non-zero otherwise
-# Usage: if is_non_positive <number>; then ... fi
-# Example: if is_non_positive "$delta"; then echo "Delta is non-positive"; fi
+# @description Tests if the parameter represents a valid non-positive integer (0, -1, -2, -3, ...).
+#
+# @arg $1 string number - string to test
+#
+# @exitcode 0 the string is a non-positive integer
+# @exitcode 1 otherwise
+#
+# @example
+#   if is_non_positive "$delta"; then echo "Delta is non-positive"; fi
 #-------------------------------------------------------------------------------
 function is_non_positive()
 {
@@ -270,13 +285,15 @@ function is_non_positive()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Tests if the parameter represents a valid negative integer (-1, -2, -3, ...).
-# Parameters:
-#   1 - number - string to test
-# Returns:
-#   Exit code: 0 if negative integer, non-zero otherwise
-# Usage: if is_negative <number>; then ... fi
-# Example: if is_negative "$offset"; then echo "Offset is negative"; fi
+# @description Tests if the parameter represents a valid negative integer (-1, -2, -3, ...).
+#
+# @arg $1 string number - string to test
+#
+# @exitcode 0 the string is a negative integer
+# @exitcode 1 otherwise
+#
+# @example
+#   if is_negative "$offset"; then echo "Offset is negative"; fi
 #-------------------------------------------------------------------------------
 function is_negative()
 {
@@ -293,13 +310,16 @@ function is_negative()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Tests if the parameter represents a valid integer (..., -2, -1, 0, 1, 2, ...).
-# Parameters:
-#   1 - number - string to test
-# Returns:
-#   Exit code: 0 if integer, non-zero otherwise
-# Usage: if is_integer <number>; then ... fi
-# Example: if is_integer "$value"; then echo "Value is an integer"; fi
+# @description Tests if the parameter represents a valid integer (..., -2, -1, 0, 1, 2, ...), with an optional leading
+# sign.
+#
+# @arg $1 string number - string to test
+#
+# @exitcode 0 the string is an integer
+# @exitcode 1 otherwise
+#
+# @example
+#   if is_integer "$value"; then echo "Value is an integer"; fi
 #-------------------------------------------------------------------------------
 function is_integer()
 {
@@ -316,13 +336,20 @@ function is_integer()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Tests if the parameter represents a valid decimal number (including integers and floating-point).
-# Parameters:
-#   1 - number - string to test
-# Returns:
-#   Exit code: 0 if decimal number, non-zero otherwise
-# Usage: if is_decimal <number>; then ... fi
-# Example: if is_decimal "$price"; then echo "Price is valid"; fi
+# @description Tests if the parameter represents a valid decimal number (including integers and floating-point), with an
+# optional leading sign.
+#
+# Notes:
+#   - The regex `^[-+]?[0-9]*(\.[0-9]*)?$` also accepts a lone sign, an empty string, or a lone '.', since all the
+#     numeric parts are optional. Callers relying on strict numeric validity should be aware of these edge cases.
+#
+# @arg $1 string number - string to test
+#
+# @exitcode 0 the string matches the decimal-number pattern
+# @exitcode 1 otherwise
+#
+# @example
+#   if is_decimal "$price"; then echo "Price is valid"; fi
 #-------------------------------------------------------------------------------
 function is_decimal()
 {
@@ -339,14 +366,21 @@ function is_decimal()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Tests if the first parameter equals one of the following parameters.
-# Parameters:
-#   1 - value - value to search for
-#   2+ - options - one or more valid options to compare against
-# Returns:
-#   Exit code: 0 if value found in options, 1 if not found, 2 on invalid arguments
-# Usage: if is_in <value> <option1> [option2...]; then ... fi
-# Example: if is_in "$color" "red" "green" "blue"; then echo "Valid color"; fi
+# @description Tests if the first parameter equals one of the following parameters.
+#
+# Notes:
+#   - If no options are given (only $1 is provided), the test always fails ($negative) -- an empty option set never
+#     contains the sought value.
+#
+# @arg $1 string value - value to search for
+# @arg $@ string options - zero or more valid options to compare against
+#
+# @exitcode 0 ($positive) the value was found among the options
+# @exitcode 1 ($negative) the value was not found (or no options were given)
+# @exitcode 2 invalid arguments ($err_invalid_arguments) -- fewer than 1 argument was provided
+#
+# @example
+#   if is_in "$color" "red" "green" "blue"; then echo "Valid color"; fi
 #-------------------------------------------------------------------------------
 function is_in()
 {
@@ -387,11 +421,14 @@ function is_base64()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Detects if the current operating system is Windows.
-# Parameters: none
-# Returns:
-#   Exit code: 0 if yes, 1 otherwise
-# Usage: if is_windows; then echo "Running on Windows"; fi
+# @description Detects if the current operating system is Windows (including Windows_NT, MINGW, and MSYS environments).
+# The result is cached in the module-level variable $__is_windows after the first call.
+#
+# @exitcode 0 running on Windows
+# @exitcode 1 otherwise
+#
+# @example
+#   if is_windows; then echo "Running on Windows"; fi
 #-------------------------------------------------------------------------------
 function is_windows()
 {

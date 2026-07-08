@@ -24,14 +24,14 @@ declare -rxi err_argument_type
 declare -rxi err_argument_value
 
 #-------------------------------------------------------------------------------
-# Summary: Displays a prompt and waits for user to press any key before continuing.
-# Parameters: none
-# Returns:
-#   Exit code: 0 always
-# Env. Vars:
-#   quiet - when true, skips prompt and returns immediately
-# Usage: press_any_key
-# Example: press_any_key  # typically called after displaying information
+# @description Displays a prompt and waits for the user to press any key before
+# continuing. If the environment variable 'quiet' is true, skips the prompt and
+# returns immediately.
+#
+# @exitcode 0 Always.
+#
+# @example
+#   press_any_key  # typically called after displaying information
 #-------------------------------------------------------------------------------
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 function press_any_key()
@@ -44,17 +44,17 @@ function press_any_key()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Asks the user to respond yes or no to a prompt.
-# Parameters:
-#   1 - prompt - the confirmation question to ask
-#   2 - default - default response if user presses Enter: "y" or "n" (optional, default: "y")
-# Returns:
-#   stdout: 'y' or 'n' based on user response
-#   Exit code: 0 if response is 'y', 1 if response is 'n', 2 on invalid arguments
-# Env. Vars:
-#   quiet - when true, assumes default response without prompting
-# Usage: if confirm <prompt> [default]; then ... fi
-# Example:
+# @description Asks the user to respond yes or no to a prompt. If the environment
+# variable 'quiet' is true, assumes the default response without prompting.
+#
+# @arg $1 string The confirmation question to ask.
+# @arg $2 string Default response if the user presses Enter: 'y' or 'n' (optional, default: 'y').
+#
+# @exitcode 0 The response is 'y'.
+# @exitcode 1 The response is 'n'.
+# @exitcode 2 Invalid arguments.
+#
+# @example
 #   if confirm "Delete all files?" "n"; then
 #     rm -rf *
 #   fi
@@ -101,39 +101,38 @@ function confirm()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Displays a prompt and asks the user to enter a value
-# Parameters:
-#   $1  'prompt' - the text of the prompt. It will be appended with
-#       ' [<default>]: ' if the second parameter is non-empty; otherwise, just
-#       ': '. If the third parameter is true, the default value will be masked
-#       in the prompt as '••••••'.
-#   $2  'default', string - the default value to output to stdout if the user
-#       presses the [Enter] key without typing anything (optional if last,
-#       default: '').
-#   $3  'is_secret', boolean: suppresses echoing the input to the terminal. Use
-#       for passwords, keys, etc. (optional if last, default false).
-#   $4  'validation_function', string: the name of a validation function for
-#       both: the default value (if provided) and for the user's input. It
-#       should return 0 if the value is valid, or non-zero - if it is invalid.
-#       The user will be re-prompted until a valid value is entered. (optional,
-#       default: true, in effect - no validation, all values are accepted)
-# Returns:
-#   stdout: the entered value, or the default value, if the user entered nothing
-#   Exit code: 0 if the input parameters are valid, 2 on invalid arguments
-# Usage: value=$(enter_value <prompt> [default] [is_secret] [validate_fn])
-# Example:
+# @description Displays a prompt and asks the user to enter a value.
+#
+# Notes:
+#   - If the environment variable 'quiet' is true, skips prompting and
+#     immediately outputs the default value (or an empty string if no default
+#     was provided).
+#   - If $3 (is_secret) is true, the default value is masked in the prompt as
+#     '••••••', and the terminal echo of the user's input is suppressed. The
+#     actual input (or default) is still written to stdout. After reading the
+#     input, a newline is NOT printed to the terminal; the caller should print
+#     one, as shown in the second example below.
+#
+# @arg $1 string The text of the prompt. Appended with ' [<default>]: ' if $2 is
+# non-empty, otherwise just ': '.
+# @arg $2 string Default value output to stdout if the user presses [Enter]
+# without typing anything (optional if last, default: '').
+# @arg $3 bool Suppresses echoing the input to the terminal. Use for passwords,
+# keys, etc. (optional if last, default: false).
+# @arg $4 string Name of a validation function, called with both the default
+# value (if provided) and the user's input. It must return 0 if the value is
+# valid, non-zero if invalid; the user is re-prompted until a valid value is
+# entered (optional, default: true, meaning no validation -- all values accepted).
+#
+# @exitcode 0 The input parameters are valid.
+# @exitcode 2 Invalid arguments.
+#
+# @stdout The entered value, or the default value if the user entered nothing.
+#
+# @example
 #   password=$(enter_value "Enter description (up to 350 characters)" "test" false validate_no_longer_than_350)
+# @example
 #   password=$(enter_value "Enter your password" "" true) && echo ""
-# Note:
-#     - If the environment variable 'quiet' is set to true, the function will
-#       skip prompting and will immediately output the default value (or an
-#       empty string if the default is not provided) to '/dev/stdout'.
-#     - If the third parameter is true, the input will be marked in the prompt
-#       as "••••••" (useful for secrets) and the terminal echo of the user input
-#       will be suppressed. However, the actual input (or the default) will
-#       still be output to stdout. After reading the input, a newline will NOT
-#       be printed to the terminal and the caller should print one as in the
-#       example above.
 #-------------------------------------------------------------------------------
 function enter_value()
 {
@@ -205,17 +204,19 @@ function enter_value()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Displays a prompt and list of options, asks user to choose one.
-# Parameters:
-#   1 - prompt - the prompt to display before options
-#   2+ - options - two or more option texts (first option is default)
-# Returns:
-#   stdout: number of chosen option (1-based index)
-#   Exit code: 0 on success, 2 on invalid arguments (less than 3 parameters)
-# Env. Vars:
-#   quiet - when true, assumes first option (default) without prompting
-# Usage: selection=$(choose <prompt> <option1> <option2> [option3...])
-# Example:
+# @description Displays a prompt and a list of options, and asks the user to
+# choose one. If the environment variable 'quiet' is true, assumes the first
+# option (the default) without prompting.
+#
+# @arg $1 string The prompt to display before the options.
+# @arg $@ string Two or more option texts (the first option is the default).
+#
+# @exitcode 0 Success.
+# @exitcode 2 Invalid arguments (fewer than 3 parameters).
+#
+# @stdout The number of the chosen option (1-based index).
+#
+# @example
 #   choice=$(choose "Select environment:" "Development" "Staging" "Production")
 #   case $choice in
 #     1) env="dev" ;;
@@ -232,7 +233,7 @@ function choose()
 
     is_quiet && {
         # just return the default choice (1)
-        printf '1'
+        printf '1\n'
         return "$success"
     }
 
@@ -264,29 +265,32 @@ function choose()
         (( selection >= 1 && selection <= ${#options[@]} )) && break
         warning "Invalid choice: $selection"
     done
-    printf '%d' "$selection"
+    printf '%d\n' "$selection"
 
     return "$success"
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Prints a sequence of quoted values with customizable quote, separator, and parentheses.
-# Parameters:
-#   Named parameters (must come before values):
-#     --quote=<char>|-q=<char> - quote character (default: '). Use '' for no quotes
-#     --separator=<char>|-s=<char> - separator (default: ,). Special: 'nl', 'tab', ''
-#     --paren=<type>|-p=<type> - parentheses type: (), [], {}, nl, or none (default: none)
-#     --json-array|--json|-j - shorthand for --quote='"' --separator=', ' --paren='[]'
-#   Positional parameters:
-#     1+ - values - values to include in sequence
-# Returns:
-#   stdout: formatted sequence
-#   Exit code: 0 always
-# Usage: print_sequence [--quote=<char>] [--separator=<char>] [--paren=<type>] <value1> [value2...]
-# Example:
+# @description Prints a sequence of quoted values with a customizable quote,
+# separator, and enclosing parentheses. Named parameters must come before the
+# values.
+#
+# @arg $@ mixed Named parameters (see below), followed by one or more positional
+# values to include in the sequence.
+#
+# Named parameters:
+#   --quote=<char>|-q=<char>         Quote character (default: '). Use '' for no quotes.
+#   --separator=<char>|-s=<char>     Separator (default: ,). Special values: 'nl', 'tab', ''.
+#   --paren=<type>|-p=<type>         Parentheses type: (), [], {}, nl, or none (default: none).
+#   --json-array|--json|-j           Shorthand for --quote='"' --separator=', ' --paren='[]'.
+#
+# @exitcode 0 Always.
+#
+# @stdout The formatted sequence.
+#
+# @example
 #   print_sequence --quote='"' --separator='; ' --paren='()' apple banana cherry
-#   Output: ("apple"; "banana"; "cherry")
-# Notes: Named parameters should not be placed last in the argument list.
+#   # Output: ("apple"; "banana"; "cherry")
 #-------------------------------------------------------------------------------
 function print_sequence()
 {
@@ -345,13 +349,15 @@ function print_sequence()
         esac
     done
 
+    local first=true
     [[ -n "$open_paren" ]] && printf "%s" "$open_paren" || true
     for arg in "$@"; do
         [[ "$arg" == -* || "$arg" == --* ]] && continue || true
-        if [[ $arg != "${!#}" ]]; then
-            printf "%s%s%s%s" "$quote" "$arg" "$quote" "$separator"
-        else
+        if $first; then
             printf "%s%s%s" "$quote" "$arg" "$quote"
+            first=false
+        else
+            printf "%s%s%s%s"  "$separator" "$quote" "$arg" "$quote"
         fi
     done
     [[ -n "$close_paren" ]] && printf "%s" "$close_paren" || true

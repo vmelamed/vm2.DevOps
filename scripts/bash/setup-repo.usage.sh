@@ -8,6 +8,17 @@ declare -xr common_switches
 declare -xr common_vars
 declare -xr script_name
 
+#-------------------------------------------------------------------------------
+# @description Builds and prints the full `--help` text for `setup-repo.sh` to stdout: usage line, description of
+# what the script does, parameters, options, switches, examples, and the list of local Git settings the script
+# configures. When `$1` is `true`, the shared switches and environment-variable sections (`$common_switches`,
+# `$common_vars`) are appended as well.
+#
+# @arg $1 bool When `true`, include the shared/common switches and environment variables sections in the output.
+#
+# @exitcode 0 Always.
+# @stdout The full help text for `setup-repo.sh`.
+#-------------------------------------------------------------------------------
 function usage_text()
 {
     local long_text=$1

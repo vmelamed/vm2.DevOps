@@ -28,7 +28,36 @@ declare -rxi err_too_many_arguments
 declare -rxi err_unknown_argument
 declare -rxi err_tool_error
 
-# Save the current head
+#-------------------------------------------------------------------------------
+# @description Renames a Git branch both locally and on the 'origin' remote, and re-points the local branch's upstream
+# tracking to the new remote name.
+#
+# The script validates both names before making any change: the new name must be a syntactically valid Git branch name and
+# must not already exist locally or on 'origin'; the old name (explicit or the current branch) must be a syntactically valid
+# Git branch name that exists both locally and on 'origin'.
+#
+# Notes:
+#   - If <old_branch_name> is omitted, the current branch (HEAD) is renamed.
+#   - The old branch is not checked out before the rename — 'git branch -m' can rename a branch that is not currently
+#     checked out.
+#   - If deleting the old branch on 'origin' fails after the new branch has been pushed, the script logs a warning and
+#     continues rather than failing, since the rename itself already succeeded.
+#
+# @arg $1 string The name of the existing branch to rename (optional; defaults to the current branch).
+# @arg $2 string The new name for the branch. Required. Must be a valid Git branch name and must not already exist locally or
+#   on 'origin'.
+#
+# @exitcode 0 The branch was renamed and pushed successfully.
+# @exitcode non-zero Missing/invalid arguments, the branch names are identical, or a git operation failed (see
+#   'err_missing_argument', 'err_argument_value', 'err_tool_error' in '_error_codes.sh').
+#
+# @stdout Progress/info messages (e.g. the final "Branch '<old>' successfully renamed to '<new>'." confirmation).
+#
+# @example
+#   rename-branch.sh feature/old-name feature/new-name
+# @example
+#   rename-branch.sh feature/new-name   # renames the current branch
+#-------------------------------------------------------------------------------
 
 declare -x old_branch_name=""
 declare -x new_branch_name=""

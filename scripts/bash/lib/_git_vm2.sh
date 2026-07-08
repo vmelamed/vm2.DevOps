@@ -58,25 +58,32 @@ declare -a vm2_repos_instructions=(
 )
 
 #-------------------------------------------------------------------------------
-# Summary: Resolves the vm2_repos directory from
-#   1) the parameter (usually command line argument --vm2-repos), or
+# @description Resolves the vm2_repos directory (the parent directory of all vm2 repositories) from, in order of
+# preference:
+#   1) the parameter (usually the command-line option --vm2-repos),
 #   2) the environment variable $VM2_REPOS, or
-#   3) the parent directory of the repository root of this script.
-# Parameters:
-#   $1 - the directory to use as the parent directory of all vm2 repos. (optional, default: $VM2_REPOS or the parent directory
-#        of the repository root of this script)
-# Returns:
-#   stdout: the absolute path to the vm2_repos directory
-#   Exit codes:
-#     $success - if the vm2_repos directory was successfully resolved
-#     $err_not_found - if the vm2_repos directory could not be resolved from the provided parameter
-#     $err_not_directory - if the parameter, or \$VM2_REPOS, or the default value $HOME/repos/vm2 are not valid directories
-#     $err_not_git_directory - the found directory is not a parent to the git repositories vm2.DevOps and vm2.Templates
-#     $err_invalid_arguments - if an invalid number of arguments was provided
-# Environment variables:
-#   VM2_REPOS - the parent directory where the vm2 repositories are expected to have been cloned to
-# Usage:
-#   resolve_vm2_repos [directory]
+#   3) the parent directory of vm2.DevOps's own repository root (via get_devops_parent).
+#
+# Once resolved, validates that the directory is the parent of both the vm2.DevOps and vm2.Templates repositories, that
+# each is on the "main" branch, and that each is at or ahead of its latest stable tag.
+#
+# Notes:
+#   - Despite the exit-code table below (inherited from validate_repo_root), the "behind latest stable tag" warning
+#     messages in this function can never actually fire.
+#
+# @arg $1 string the directory to use as the parent directory of all vm2 repos (optional, default: $VM2_REPOS, or the
+#   parent directory of vm2.DevOps's repository root)
+#
+# @exitcode 0 ($success) the vm2_repos directory was successfully resolved and validated
+# @exitcode 17 ($err_not_directory) the parameter, $VM2_REPOS, or the resolved default is not a valid, existing directory
+# @exitcode 2 ($err_invalid_arguments) an invalid number of arguments was provided
+# @exitcode N propagated from validate_repo_root (e.g. $err_not_found, $err_repo_with_no_ci, $err_behind_latest_stable_tag)
+#   if vm2.DevOps or vm2.Templates fail validation under the resolved directory
+#
+# @stdout the absolute path to the vm2_repos directory
+#
+# @example
+#   repos=$(resolve_vm2_repos "$VM2_REPOS")
 #-------------------------------------------------------------------------------
 function resolve_vm2_repos()
 {
@@ -137,30 +144,33 @@ function resolve_vm2_repos()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Validates that
-#     1) the specified directory exists
-#     2) it is a root of the working tree of the git repository
-#     3) it has GitHub Actions workflows in the .github/workflows directory (unless it is the .github repository itself)
-#     4) it is on the specified branch (or the currently checked out branch if not specified)
-#     5) it is at or ahead of the latest stable tag of the specified branch.
-# Parameters:
-#   $1: $vm2_repos: the parent directory of all vm2 repositories where the repository $1 can be located as well, if it is specified by name only.
-#                   MUST be already resolved with `$(resolve_vm2_repos)` to determine the parent directory of all vm2 repositories.
-#   $2: $repo_name: repository name or absolute, or relative path to the repository, e.g. "vm2.MyRepo" or "./my_repos/vm2_packages/vm2.MyRepo".
-#   $3: $branch: the branch to check against the latest stable tag (optional, default: the currently checked out branch)
-# Returns:
-#   stdout: the absoluter path to the working tree root of the resolved repository
-#   Exit code:
-#     $success - if the repository directory exists and meets the above criteria, or
-#     $err_invalid_arguments - invalid number of arguments
-#     $err_not_found - could not find the repository directory path from $repo_name and $vm2_repos parameters
-#     $err_not_directory - the repository directory does not exist
-#     $err_not_git_root - the directory exists but it is not a git repository
-#     $err_repo_with_no_ci - the repository does not have GitHub Actions workflows in '$repo_path/.github/workflows'
-#     $err_behind_latest_stable_tag - the directory exists and it is a git repository, but the repository is behind the latest stable tag of the specified branch
-# Dependencies:
-#   git CLI (functions root_working_tree, is_on_or_after_latest_stable_tag)
-# Usage:
+# @description Validates that:
+#   1) the specified directory (or repository name resolved under $vm2_repos) exists,
+#   2) it is the root of a Git repository working tree,
+#   3) it has GitHub Actions workflows in the .github/workflows directory,
+#   4) it is on the specified branch (or the currently checked-out branch if none is specified), and
+#   5) it is at or ahead of the latest stable tag of that branch.
+#
+# @arg $1 string vm2_repos - the parent directory of all vm2 repositories, where the repository named by $2 can also be
+#   located if it is given by name only. MUST already be resolved via `$(resolve_vm2_repos)`.
+# @arg $2 string repo_name - repository name, or an absolute or relative path to the repository, e.g. "vm2.MyRepo" or
+#   "./my_repos/vm2_packages/vm2.MyRepo".
+# @arg $3 string branch - the branch to check against the latest stable tag (optional, default: the currently checked-out
+#   branch)
+#
+# @exitcode 0 ($success) the repository directory exists and meets all the criteria above
+# @exitcode 2 ($err_invalid_arguments) invalid number of arguments
+# @exitcode 9 ($err_not_found) could not find the repository directory from $repo_name and $vm2_repos
+# @exitcode 80 ($err_not_git_directory) the resolved path is not a Git repository
+# @exitcode 81 ($err_not_git_root) the resolved path exists and is inside a Git repository, but is not the working tree root
+# @exitcode 85 ($err_repo_with_no_ci) the repository has no GitHub Actions workflows in '$repo_path/.github/workflows'
+# @exitcode 84 ($err_invalid_branch) the repository is not on the expected branch (when $3 is given)
+# @exitcode 89 ($err_not_on_current_commit) the repository exists and is on the expected branch, but is not at or ahead of
+#   the latest stable tag
+#
+# @stdout the absolute path to the working tree root of the resolved repository
+#
+# @example
 #   validate_repo_root "$vm2_repos" "vm2.Glob"
 #-------------------------------------------------------------------------------
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
@@ -230,23 +240,26 @@ function validate_repo_root()
 
     is_on_or_after_latest_stable_tag "$path" &&
         return "$success" ||
-        return "$err_not_on_current_commit"
+        return "$err_behind_latest_stable_tag"
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Internal, used by resolve_repo_root. Searches for a directory with the given name under a specified parent directory.
-# Parameters:
-#   1 - $look_for - directory name or relative path to search for
-#   2 - $start_from - parent directory under which to search for the specified directory
-# Returns:
-#   stdout: the absolute path of the found directory
-#   Exit codes:
-#     $success - exactly one matching directory with a Git repository is found
-#     $err_not_git_directory - exactly one matching directory is found, but it is not a Git repository
-#     $err_found_too_many - multiple matching directories are found
-#     $err_not_found - no matching directory is found
-# Dependencies: find
-# Usage: dir=$(search_repo_dir <directory-name> <start-from>)
+# @description Internal helper used by resolve_repo_root. Searches for a directory with the given name (or relative
+# path) under a specified parent directory, skipping common noise directories (.git, node_modules, .cache, bin, obj,
+# TestResults, etc.) during the search.
+#
+# @arg $1 string look_for - directory name or relative path to search for
+# @arg $2 string start_from - parent directory under which to search for the specified directory
+#
+# @exitcode 0 ($success) exactly one matching directory is found, and it is inside a Git repository
+# @exitcode 80 ($err_not_git_directory) exactly one matching directory is found, but it is not inside a Git repository
+# @exitcode 10 ($err_found_too_many) multiple matching directories are found
+# @exitcode 9 ($err_not_found) no matching directory is found
+#
+# @stdout the absolute path of the found directory
+#
+# @example
+#   dir=$(search_repo_dir <directory-name> <start-from>)
 #-------------------------------------------------------------------------------
 function search_repo_dir()
 {
@@ -302,33 +315,41 @@ function search_repo_dir()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Finds the root directory of a Git repository working tree by searching for a directory with the given name under a
-# specified parent directory. It should be under \$VM2_REPOS. The directory may or may not have a Git repository.
-# If it is not a Git repository, the root of the repository will be the nearest parent directory containing a '.github/workflows'
-# directory or the found directory itself if no such parent directory is found.
-# Parameters:
-#   1 - $vm2_repos - parent directory under which to search for the specified directory (mandatory, resolved vm2_repos)
-#   2 - $dir_path - directory name or relative path to search for (optional, default: the current directory)
-# Returns:
-#   stdout: 2 values:
-#     1) the absolute path of the root of the Git repository containing the found directory
-#     2) the absolute path of the found directory
-#     If the found directory is not a Git repository, the first value will be the directory itself - equal to the second value.
-#   Exit code:
-#     $success - exactly one matching directory with a Git repository is found
-#     $err_repo_with_no_ci - exactly one matching directory with a Git repository is found, but it has no CI configuration
-#     $err_not_git_directory - exactly one matching directory with CI configuration is found, but it is not a Git repository
-#     $err_dir_with_no_ci - exactly one matching directory is found, but it is not a Git repository and has no CI configuration
-#     $err_found_too_many - multiple matching directories are found
-#     $err_not_found - no matching directory was found
-#           $err_not_found and $err_found_too_many are the fatal errors
-# Dependencies: git, find
-# Usage: resolve_repo_root <directory-name> [repos-parent]
-# Example:
-#       local output
-#       output=$(resolve_repo_root "$vm2_repos" "$repo_path" 2>"$_ignore") || rc=$?
-#       (( rc == success || rc == err_repo_with_no_ci || rc == err_not_git_directory || rc == err_dir_with_no_ci )) || exit "$rc"
-#       { read -r root; read -r resolved_dir; } < <(resolve_repo_root "$repo_root" "$vm2_repos")
+# @description Finds the root directory of a Git repository working tree by searching for a directory with the given
+# name (or relative path) under a specified parent directory (expected to be under $VM2_REPOS, falling back to a search
+# under $HOME if not found there). The target directory may or may not itself be a Git repository. If it is not, the
+# resolved "root" is instead the nearest parent directory containing a '.github/workflows' directory, or the found
+# directory itself if no such parent is found.
+#
+# Notes:
+#   - This function's doc previously had two different, inconsistent parameter orders (the Parameters list said
+#     vm2_repos first, dir_path second, but the Usage line showed the opposite). The signature below reflects the
+#     actual argument order used by the code: `repos=$1`, `dir_path=$2`.
+#
+# @arg $1 string vm2_repos - parent directory under which to search for the specified directory (resolved vm2_repos)
+# @arg $2 string dir_path - directory name or relative path to search for (optional, default: the current directory)
+#
+# @exitcode 0 ($success) exactly one matching directory with a Git repository is found and it has CI configuration
+# @exitcode 2 ($err_invalid_arguments) invalid number of arguments
+# @exitcode 83 ($err_invalid_repo) the matching directory's Git working-tree root could not be resolved
+# @exitcode 85 ($err_repo_with_no_ci) exactly one matching Git repository directory is found, but it has no CI configuration
+# @exitcode 80 ($err_not_git_directory) exactly one matching directory with CI configuration is found via a parent walk, but
+#   the original match is not a Git repository
+# @exitcode 87 ($err_dir_with_no_ci) exactly one matching directory is found, but it is not a Git repository and no
+#   ancestor up to $HOME has CI configuration
+# @exitcode 10 ($err_found_too_many) multiple matching directories are found (fatal)
+# @exitcode 9 ($err_not_found) no matching directory was found, under either $vm2_repos or $HOME (fatal)
+#
+# @stdout two lines:
+#   1) the absolute path of the root of the Git repository containing the found directory (or, if the found directory is
+#      not a Git repository, the nearest ancestor with CI configuration -- or the found directory itself if none exists)
+#   2) the absolute path of the found directory
+#
+# @example
+#   local output
+#   output=$(resolve_repo_root "$vm2_repos" "$repo_path" 2>"$_ignore") || rc=$?
+#   (( rc == success || rc == err_repo_with_no_ci || rc == err_not_git_directory || rc == err_dir_with_no_ci )) || exit "$rc"
+#   { read -r root; read -r resolved_dir; } < <(resolve_repo_root "$vm2_repos" "$repo_path")
 #-------------------------------------------------------------------------------
 function resolve_repo_root()
 {
@@ -417,20 +438,23 @@ function resolve_repo_root()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Resolves the path to the SoT shared content directory in the vm2_sot_repo_name repository, which is expected to be located
-#          under $vm2_repos.
-# Parameters:
-#   1 - $vm2_repos: the parent directory where all the vm2 repositories are cloned (required)
-#   2 - $sot: the SoT directory name relative to the vm2.Templates repository (required)
-# Returns:
-#   stdout: the absolute path to the SoT shared content directory,
-#   Exit codes:
-#     $success - if the SoT shared content directory is found at the expected location
-#     $failure - if the specified parent directory for the vm2 repositories does not exist or is not a directory, or if the SoT shared content directory does not exist at the expected location under the specified parent directory for the vm2 repositories.
-# Usage:
-#   shared=$(get_vm2_sot_path [vm2_repos] [sot])
+# @description Resolves the path to the SoT (Source of Truth) shared content directory inside the vm2.Templates
+# repository (named by $vm2_sot_repo_name), expected to be located under $vm2_repos.
+#
+# @arg $1 string vm2_repos - the parent directory where all the vm2 repositories are cloned (required, non-empty,
+#   must be an existing directory)
+# @arg $2 string sot - the SoT directory name relative to the vm2.Templates repository (required, non-empty)
+#
+# @exitcode 0 ($success) the SoT shared content directory is found at the expected location
+# @exitcode 2 ($err_invalid_arguments) wrong argument count, an empty argument, or $1 is not an existing directory
+# @exitcode 17 ($err_not_directory) the SoT shared content directory does not exist at the expected conventional location
+#   ('$vm2_repos/$vm2_sot_repo_name/templates/$sot/content')
+#
+# @stdout the absolute path to the SoT shared content directory
+#
+# @example
+#   shared=$(get_vm2_sot_path "$vm2_repos" "AddNewPackage")
 #-------------------------------------------------------------------------------
-# shellcheck disable=SC2154
 function get_vm2_sot_path()
 {
     local -i rc="$success"
@@ -445,18 +469,18 @@ function get_vm2_sot_path()
 
     local repos="${1:-}"
 
-    [[ $# -lt 1 || -n $repos ]] || {
+    [[ -n $repos ]] || {
         rc="$err_argument_value"
         error -sd 3 -ec "$rc" "The parent directory for the vm2 repositories cannot be empty. Please provide it as an argument or set it in the environment variable \$VM2_REPOS."
     }
-    [[ $# -lt 1 || -d $repos ]] || {
+    [[ -d $repos ]] || {
         rc="$err_not_directory"
         error -sd 3 -ec "$rc" "The specified parent directory for the vm2 repositories '$repos' does not exist or is not a directory. Please, create it and clone the repositories into it or correct the parameter/environment variable."
     }
 
     local source="${2:-}"
 
-    [[ $# -lt 2 || -n $source ]] || {
+    [[ -n $source ]] || {
         rc="$err_argument_value"
         error -sd 3 -ec "$rc" "The SoT directory name cannot be empty. Please provide it as an argument."
     }

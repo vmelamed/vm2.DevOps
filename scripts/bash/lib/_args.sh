@@ -79,13 +79,19 @@ declare -gi __state_saved_pid=0
 declare -gi __state_saved_subshell=-1
 
 #-------------------------------------------------------------------------------
-# Summary: Saves current state of global flags to be restored later by restore_state.
-# Parameters: none
-# Returns:
-#   Exit code: 0 always
-# Usage: save_state
-# Example: save_state  # typically called at beginning of dump_vars
-# Notes: Internally used by dump_vars. Do not use, as it may change in the future. Works cooperatively with restore_state to ensure no side effects in dump_vars.
+# @description Saves the current state of the global flags (quiet, verbose, dry-run, `$_ignore`, table format, and the
+# bash tracing option) so it can be restored later by `restore_state`.
+#
+# Notes:
+#   - Internal use only, by `dump_vars`. Do not call this directly -- it may change in the future.
+#   - Works cooperatively with `restore_state` to ensure `dump_vars` has no observable side effects on these globals.
+#   - Guards against being called twice without an intervening `restore_state` (tracked via `$__state_saved_pid`).
+#
+# @exitcode 0 State saved successfully.
+# @exitcode 1 ($failure) Called while a state was already saved (no matching `restore_state` since the last `save_state`).
+#
+# @example
+#   save_state  # typically called at the beginning of dump_vars
 #-------------------------------------------------------------------------------
 function save_state()
 {
@@ -108,13 +114,19 @@ function save_state()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Restores state of global flags previously saved by save_state.
-# Parameters: none
-# Returns:
-#   Exit code: 0 always
-# Usage: restore_state
-# Example: restore_state  # typically called at end of dump_vars
-# Notes: Internally used by dump_vars. Do not use, as it may change in the future. Works cooperatively with save_state to ensure no side effects in dump_vars.
+# @description Restores the global flags previously saved by `save_state`.
+#
+# Notes:
+#   - Internal use only, by `dump_vars`. Do not call this directly -- it may change in the future.
+#   - Works cooperatively with `save_state` to ensure `dump_vars` has no observable side effects on these globals.
+#   - Validates that a matching `save_state` call happened, in the same process and the same subshell level, before
+#     restoring; logs an error and returns failure otherwise.
+#
+# @exitcode 0 State restored successfully.
+# @exitcode 1 ($failure) No matching `save_state` call, a process/subshell mismatch, or `set_table_format` failed while restoring.
+#
+# @example
+#   restore_state  # typically called at the end of dump_vars
 #-------------------------------------------------------------------------------
 function restore_state()
 {
@@ -151,13 +163,15 @@ function restore_state()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Sets the script to quiet mode, suppressing user prompts.
-# Parameters: none
-# Returns:
-#   Exit code: 0 always
-# Side Effects: Sets global variable $quiet to true
-# Usage: set_quiet
-# Example: set_quiet  # typically called when --quiet flag is passed
+# @description Sets the script to quiet mode, suppressing user prompts.
+#
+# Notes:
+#   - Sets the global variable `$quiet` to `true`.
+#
+# @exitcode 0 Always.
+#
+# @example
+#   set_quiet  # typically called when --quiet flag is passed
 #-------------------------------------------------------------------------------
 function set_quiet()
 {
@@ -166,13 +180,15 @@ function set_quiet()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Sets the script to non-quiet mode, enabling user prompts.
-# Parameters: none
-# Returns:
-#   Exit code: 0 always
-# Side Effects: Sets global variable $quiet to false
-# Usage: unset_quiet
-# Example: unset_quiet  # typically called explicitly to disable quiet mode, allowing user prompts
+# @description Sets the script to non-quiet mode, enabling user prompts.
+#
+# Notes:
+#   - Sets the global variable `$quiet` to `false`.
+#
+# @exitcode 0 Always.
+#
+# @example
+#   unset_quiet  # typically called explicitly to disable quiet mode, allowing user prompts
 #-------------------------------------------------------------------------------
 function unset_quiet()
 {
@@ -181,13 +197,13 @@ function unset_quiet()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Returns whether the script is in quiet mode.
-# Parameters: none
-# Returns:
-#   stdout: true if in quiet mode, false otherwise
-#   Exit code: 0 if quiet mode is on and 1 if it is off
-# Usage: if is_quiet; then ...
-# Example: if is_quiet; then echo "Quiet mode is on"; else echo "Quiet mode is off"; fi
+# @description Tests whether the script is in quiet mode.
+#
+# @exitcode 0 Quiet mode is on.
+# @exitcode 1 Quiet mode is off.
+#
+# @example
+#   if is_quiet; then echo "Quiet mode is on"; else echo "Quiet mode is off"; fi
 #-------------------------------------------------------------------------------
 function is_quiet()
 {
@@ -195,13 +211,15 @@ function is_quiet()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Sets the script to verbose mode, enabling detailed output.
-# Parameters: none
-# Returns:
-#   Exit code: 0 always
-# Side Effects: Sets global variable $verbose to true
-# Usage: set_verbose
-# Example: set_verbose  # typically called when --verbose flag is passed
+# @description Sets the script to verbose mode, enabling detailed output.
+#
+# Notes:
+#   - Sets the global variable `$verbose` to `true`.
+#
+# @exitcode 0 Always.
+#
+# @example
+#   set_verbose  # typically called when --verbose flag is passed
 #-------------------------------------------------------------------------------
 function set_verbose()
 {
@@ -210,13 +228,15 @@ function set_verbose()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Clears the script's verbose mode, disabling detailed output.
-# Parameters: none
-# Returns:
-#   Exit code: 0 always
-# Side Effects: Sets global variable $verbose to false
-# Usage: unset_verbose
-# Example: unset_verbose  # typically called explicitly to disable verbose mode, allowing less detailed output
+# @description Clears the script's verbose mode, disabling detailed output.
+#
+# Notes:
+#   - Sets the global variable `$verbose` to `false`.
+#
+# @exitcode 0 Always.
+#
+# @example
+#   unset_verbose  # typically called explicitly to disable verbose mode, allowing less detailed output
 #-------------------------------------------------------------------------------
 function unset_verbose()
 {
@@ -225,13 +245,13 @@ function unset_verbose()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Returns whether the script is in verbose mode.
-# Parameters: none
-# Returns:
-#   stdout: true if in verbose mode, false otherwise
-#   Exit code: 0 if verbose mode is on and 1 if it is off
-# Usage: if is_verbose; then ...
-# Example: if is_verbose; then echo "Verbose mode is on"; else echo "Verbose mode is off"; fi
+# @description Tests whether the script is in verbose mode.
+#
+# @exitcode 0 Verbose mode is on.
+# @exitcode 1 Verbose mode is off.
+#
+# @example
+#   if is_verbose; then echo "Verbose mode is on"; else echo "Verbose mode is off"; fi
 #-------------------------------------------------------------------------------
 function is_verbose()
 {
@@ -239,13 +259,15 @@ function is_verbose()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Sets the script to dry-run mode, simulating commands without execution.
-# Parameters: none
-# Returns:
-#   Exit code: 0 always
-# Side Effects: Sets global variable $dry_run to true
-# Usage: set_dry_run
-# Example: set_dry_run  # typically called when --dry-run flag is passed
+# @description Sets the script to dry-run mode, simulating commands without execution.
+#
+# Notes:
+#   - Sets the global variable `$dry_run` to `true`.
+#
+# @exitcode 0 Always.
+#
+# @example
+#   set_dry_run  # typically called when --dry-run flag is passed
 #-------------------------------------------------------------------------------
 function set_dry_run()
 {
@@ -254,13 +276,15 @@ function set_dry_run()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Clears the script's dry-run mode, disabling simulation of commands.
-# Parameters: none
-# Returns:
-#   Exit code: 0 always
-# Side Effects: Sets global variable $dry_run to false
-# Usage: unset_dry_run
-# Example: unset_dry_run  # typically called explicitly to disable dry-run mode, allowing actual command execution
+# @description Clears the script's dry-run mode, disabling simulation of commands.
+#
+# Notes:
+#   - Sets the global variable `$dry_run` to `false`.
+#
+# @exitcode 0 Always.
+#
+# @example
+#   unset_dry_run  # typically called explicitly to disable dry-run mode, allowing actual command execution
 #-------------------------------------------------------------------------------
 function unset_dry_run()
 {
@@ -269,13 +293,13 @@ function unset_dry_run()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Returns whether the script is in dry-run mode.
-# Parameters: none
-# Returns:
-#   stdout: true if in dry-run mode, false otherwise
-#   Exit code: 0 if dry-run mode is on and 1 if it is off
-# Usage: if is_dry_run; then ...
-# Example: if is_dry_run; then echo "Dry-run mode is on"; else echo "Dry-run mode is off"; fi
+# @description Tests whether the script is in dry-run mode.
+#
+# @exitcode 0 Dry-run mode is on.
+# @exitcode 1 Dry-run mode is off.
+#
+# @example
+#   if is_dry_run; then echo "Dry-run mode is on"; else echo "Dry-run mode is off"; fi
 #-------------------------------------------------------------------------------
 function is_dry_run()
 {
@@ -283,16 +307,18 @@ function is_dry_run()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Enables trace mode for debugging by setting verbose, redirecting output, and enabling bash tracing.
-# Parameters: none
-# Returns:
-#   Exit code: 0 always
-# Side Effects:
-#   - Sets global variable $verbose to true
-#   - Sets global variable $_ignore to /dev/stderr
-#   - Enables bash trace mode (set -x)
-# Usage: set_trace_enabled
-# Example: set_trace_enabled  # typically called when --trace flag is passed
+# @description Enables trace mode for debugging: turns on verbose mode, redirects normally-suppressed output to
+# stderr, and enables bash's built-in trace option.
+#
+# Notes:
+#   - Sets the global variable `$verbose` to `true`.
+#   - Sets the global variable `$_ignore` to `/dev/stderr`.
+#   - Enables bash trace mode (`set -x`).
+#
+# @exitcode 0 Always.
+#
+# @example
+#   set_trace_enabled  # typically called when --trace flag is passed
 #-------------------------------------------------------------------------------
 function set_trace_enabled()
 {
@@ -303,16 +329,18 @@ function set_trace_enabled()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Disables trace mode for debugging by clearing verbose, redirecting output, and disabling bash tracing.
-# Parameters: none
-# Returns:
-#   Exit code: 0 always
-# Side Effects:
-#   - Sets global variable $verbose to false
-#   - Sets global variable $_ignore to /dev/null
-#   - Disables bash trace mode (set +x)
-# Usage: unset_trace_enabled
-# Example: unset_trace_enabled  # typically called explicitly to disable trace mode, allowing less detailed output
+# @description Disables trace mode for debugging: turns off verbose mode, redirects normally-suppressed output back
+# to /dev/null, and disables bash's built-in trace option.
+#
+# Notes:
+#   - Sets the global variable `$verbose` to `false`.
+#   - Sets the global variable `$_ignore` to `/dev/null`.
+#   - Disables bash trace mode (`set +x`).
+#
+# @exitcode 0 Always.
+#
+# @example
+#   unset_trace_enabled  # typically called explicitly to disable trace mode, allowing less detailed output
 #-------------------------------------------------------------------------------
 function unset_trace_enabled()
 {
@@ -323,15 +351,21 @@ function unset_trace_enabled()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Sets the table format for variable dumps to either graphical or markdown.
-# Parameters:
-#   1 - format - desired table format: "graphical" or "markdown"
-# Returns:
-#   Exit code: 0 on success, 2 on invalid format
-# Side Effects: Sets global variable $table_format
-# Dependencies: is_in function
-# Usage: set_table_format <format>
-# Example: set_table_format "markdown"
+# @description Sets the table format used for variable dumps (e.g. in `dump_vars`) to either "graphical" or
+# "markdown".
+#
+# Notes:
+#   - The format is matched case-insensitively; on success, sets the global variable `$table_format` to the
+#     lower-cased value.
+#
+# @arg $1 string The desired table format. Must be one of the values in `$table_formats` ("graphical" or "markdown").
+#
+# @exitcode 0 The format was valid and `$table_format` was updated.
+# @exitcode 2 ($err_invalid_arguments) Wrong argument count, or ($err_argument_value) the format is not one of
+#   `$table_formats`.
+#
+# @example
+#   set_table_format "markdown"
 #-------------------------------------------------------------------------------
 function set_table_format()
 {
@@ -354,13 +388,14 @@ function set_table_format()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Returns the current table format setting.
-# Parameters: none
-# Returns:
-#   stdout: current table format ("graphical" or "markdown")
-#   Exit code: 0 always
-# Usage: format=$(get_table_format)
-# Example: current_format=$(get_table_format)
+# @description Returns the current table format setting.
+#
+# @stdout string The current table format ("graphical" or "markdown").
+#
+# @exitcode 0 Always.
+#
+# @example
+#   current_format=$(get_table_format)
 #-------------------------------------------------------------------------------
 function get_table_format()
 {
@@ -371,14 +406,21 @@ function get_table_format()
 declare -x usage_requested=""
 
 #-------------------------------------------------------------------------------
-# Summary: Processes common command-line arguments like --quiet, --verbose, --trace, --dry-run.
-# Parameters:
-#   1 - argument - command-line argument to process
-# Returns:
-#   Exit code: 0 if argument was processed, 1 if not a common argument, 2 if no argument provided
-# Side Effects: May call set_* functions or usage/exit based on argument
-# Usage: get_common_arg <argument>
-# Example:
+# @description Processes one common command-line argument, such as `--quiet`, `--verbose`, `--trace`, or `--dry-run`.
+# Only long-form switches are recognized; calling scripts should not offer single-letter short options of their own
+# that collide with these.
+#
+# Notes:
+#   - May call `set_quiet`, `set_verbose`, `set_trace_enabled`, `set_dry_run`, or `set_table_format`, or set the
+#     global `$usage_requested` (consumed later by `usage_if_requested`), depending on the argument.
+#
+# @arg $1 string The command-line argument to process.
+#
+# @exitcode 0 ($positive) The argument was a recognized common argument and was processed.
+# @exitcode 1 ($negative) The argument was not a common argument.
+# @exitcode 2 ($err_invalid_arguments) Wrong argument count.
+#
+# @example
 #   for arg in "$@"; do
 #     get_common_arg "$arg" && continue
 #     # handle custom arguments
@@ -397,10 +439,7 @@ function get_common_arg()
     (( validation_rc == success )) || return "$err_invalid_arguments"
 
     # the calling scripts should not use short options:
-    # --help|-h|-\?|-v|--verbose|-q|--quiet|-x|--trace|-y|--dry-run
-    run_short_usage=false
-    run_long_usage=false
-
+    # --help|-h|-\?|-v|--verbose|-q|--quiet|-x|--trace|-y|--dry-run|-gr|--graphical|-md|--markdown
     case "${1,,}" in
         --help          ) usage_requested="long";;
         -h|-\?          ) usage_requested="short";;
@@ -417,14 +456,14 @@ function get_common_arg()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Exits the script if a usage request was made via command-line arguments.
-# Parameters: none
-# Returns:
-#   Exit code: 0 if no usage was requested, otherwise exits the script
-# Side Effects: May call the usage function and exit the script
-# Usage: usage_if_requested
-# Example:
-#     usage_if_requested
+# @description Exits the script (via `usage`) if a usage request (`--help`, `-h`, or `-?`) was previously recorded
+# by `get_common_arg` in the global `$usage_requested` variable.
+#
+# @exitcode 0 No usage was requested; execution continues normally.
+# @noargs
+#
+# @example
+#   usage_if_requested
 #-------------------------------------------------------------------------------
 function usage_if_requested()
 {
@@ -436,40 +475,35 @@ function usage_if_requested()
 }
 
 #-------------------------------------------------------------------------------
-# Summary:
-#       1) displays an optional exit error message
-#       2) displays an optionally long or short usage message
-#       3) exits the script with
-#               - optional exit code
-#               - 0 ($success) if no error messages are present
-#               - 1 ($failure) if error messages are present
-# Parameters:
-#   1 - long_help - flag indicating whether to display the long (if true) or the short (if false) version of the usage text.
-#       The long version includes the standard parameters like verbose, quiet, etc.
-#       (optional, boolean, default: false)
-#   2 - exit_code - exit code to use when exiting
-#       (optional, non-negative integer, less than 256, default: 0 or 1 if error messages are present)
-#   3+ - error_message(s) - additional error messages to display at the top. (optional, default - no message)
-#        Here you can include named parameters:
-#        Named parameters:
-#          "--error-code" or "-ec", followed by a positive error code - the function will translate the error code to a message
-#                                                                       and include it in the output.
-#          "--stack-depth" or "-sd", followed by an integer - how many stack frames to show in the message (default: 0)
+# @description Displays an optional error message, then the (long or short) usage text, and exits the script.
 #
-#            There maybe multiple occurrences of "-ec" followed by error codes in the message parts, and all of them
-#            will be translated to messages and included in the output.
-#            Also there maybe multiple occurrences of "--stack-depth" followed by integers in the message parts, but only the
-#            last one will be used to determine the stack depth to show in the message.
+# 1. Displays an optional error message at the top, via `error`.
+# 1. Displays the long or short usage text, via `usage_text`.
+# 1. Exits the script with the resolved exit code (see @exitcode below).
 #
-# Returns:
-#   Exit code: depends on parameters:
-#     - provided exit code in $2
-#     - 1 ($failure) if error messages are present
-#     - 0 ($success) if no error messages are present
-# Usage: usage [<long_help>] [<exit_code>] [<error_message>]*
-# Example:
-#     usage true
-#     usage $err_invalid_argument_value "Invalid argument value for the option <option_name>"
+# Notes:
+#   - Temporarily disables bash trace mode (`set -x`) while it runs, restoring the prior tracing state before
+#     exiting, so the usage text itself is never polluted by trace output.
+#
+# @arg $1 bool Whether to display the long (`true`) or short (`false`) version of the usage text. The long version
+#   includes the standard flags like verbose, quiet, etc. Optional, default: `false`.
+# @arg $2 int The exit code to use when exiting. Optional, non-negative integer less than 256. Default: 0, or 1 if
+#   error messages are present (see @exitcode below).
+# @arg $@ string Additional error message parts to display at the top of the output. Optional; if omitted, no
+#   message is shown. Supports the same named parameters as `message`/`error`:
+#     - `--error-code`/`-ec` followed by a positive error code -- translated to a message and included in the output.
+#       May occur multiple times; each occurrence is translated independently.
+#     - `--stack-depth`/`-sd` followed by an integer -- how many stack frames to show (default: 0). If given more
+#       than once, only the last occurrence is used.
+#
+# @exitcode 0 ($success) No error messages were given, and $2 was omitted or 0.
+# @exitcode 1 ($failure) Error messages were given and $2 was omitted or 0 (the exit code is forced to $failure).
+# @exitcode N The exit code from $2, if it is a positive value (whether or not error messages are present).
+#
+# @example
+#   usage true
+# @example
+#   usage "$err_invalid_arguments" -sd 3 -ec "$err_argument_value" "Invalid argument value for the option <option_name>"
 #-------------------------------------------------------------------------------
 function usage()
 {
@@ -530,11 +564,14 @@ declare -rx common_vars=\
 "
 
 #-------------------------------------------------------------------------------
-# Summary: Displays the usage text for the script. Override in each top-level script to show different usage text.
-# Parameters:
-#   1 - long_help - boolean flag indicating whether to display the long (if true) or the short (if false) version of the usage text.
-#       The long version includes the standard parameters like verbose, quiet, etc.
-#       (optional, boolean, default: false)
+# @description Displays the usage text for the script. This default implementation is a placeholder -- override it in
+# each top-level script to show script-specific usage information.
+#
+# @arg $1 bool Whether to display the long (`true`) or short (`false`) version of the usage text. The long version
+#   includes the standard flags like verbose, quiet, etc. Optional, default: `false`.
+#
+# @stdout string The usage text (a placeholder message telling the script author to override this function, plus the
+#   common switches/environment variables section when $1 is `true`).
 #-------------------------------------------------------------------------------
 function usage_text()
 {

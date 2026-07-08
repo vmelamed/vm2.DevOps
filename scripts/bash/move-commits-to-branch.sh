@@ -1,4 +1,38 @@
 #!/usr/bin/env bash
+#-------------------------------------------------------------------------------
+# @description Moves all commits from a given commit SHA (inclusive) onwards on the current 'main' branch to a new branch,
+# then resets 'main' back to the commit before that SHA and force-pushes it. Use this to split a chain of commits that was
+# accidentally accumulated on 'main' into its own feature branch.
+#
+# The script must be run from the 'main' branch with a clean working tree. It prompts for confirmation (default: no) after
+# showing the commits that would be moved, before making any destructive change.
+#
+# Steps performed once confirmed:
+#   1. Create '<new_branch>' at the current HEAD (so it carries all the commits from '<commit_sha>' onwards).
+#   2. Reset 'main' to the commit before '<commit_sha>' ('git reset --hard <commit_sha>^').
+#   3. Push '<new_branch>' to 'origin' (sets upstream tracking).
+#   4. Force-push the rewound 'main' to 'origin'.
+#   5. If '--check-out-new' was given, check out '<new_branch>'.
+#
+# Notes:
+#   - This rewrites the history of 'origin/main' via a force push — coordinate with anyone else using the repository before
+#     running this.
+#
+# @arg $@ string Named options: '--commit-sha|-c <sha>' (required), '--branch|-b <name>' (required),
+#   '--check-out-new|-n' (optional switch).
+#
+# @exitcode 0 The commits were moved and 'main' was reset and force-pushed successfully, or the user declined to continue
+#   (in which case the script exits with 1 — see the 'confirm' check below).
+# @exitcode non-zero Missing/invalid arguments, not on 'main', uncommitted changes present, or the commit SHA does not exist
+#   (see 'err_argument_value', 'err_tool_error' in '_error_codes.sh').
+#
+# @stdout The list of commits that will be moved, a confirmation prompt, and progress/info messages for each step.
+#
+# @example
+#   move-commits-to-branch.sh --commit-sha ff5c2d182c0d3a01c1f1dfd66c9267f0569d9802 --branch feature/my-feature
+# @example
+#   move-commits-to-branch.sh -c ff5c2d1 -b feature/my-feature -n
+#-------------------------------------------------------------------------------
 set -euo pipefail
 
 script_name=$(basename "${BASH_SOURCE[0]}")

@@ -86,18 +86,15 @@ function get_devops_parent()
 
 
 #-------------------------------------------------------------------------------
-# Summary: EXIT trap handler that displays failed commands, restores directory, and disables tracing.
-# Parameters: none
-# Returns:
-#   stderr: error message if exit code is non-zero and not from explicit exit command
-#   Exit code: inherits from the exiting command
-# Side Effects:
-#   - Changes directory to $initial_dir
-#   - Disables trace mode (set +x)
-# Env. Vars:
-#   initial_dir - directory to restore on exit
-# Usage: trap on_exit EXIT
-# Notes: Works cooperatively with on_debug for error handling. Automatically set by core.sh.
+# @description EXIT trap handler. Reports the failed command to stderr (if the shell is exiting with a non-zero, non-explicit
+# exit code), restores the working directory to $initial_dir, and disables trace mode.
+#
+# Notes:
+#   - Registered automatically by core.sh via `trap on_exit EXIT` (unless $debugger is true).
+#   - Works cooperatively with on_err, which handles the ERR trap.
+#
+# @exitcode 0 the shell exited cleanly
+# @exitcode N inherited from the exiting command (the trap does not change the exit code)
 #-------------------------------------------------------------------------------
 declare -xr explicit_exit_regex='^(exit([[:space:]]+.*)?|source[[:space:]]+.*)$'
 function on_exit()
@@ -137,13 +134,20 @@ if ! $debugger; then
 fi
 
 #-------------------------------------------------------------------------------
-# Summary: Redirects the ignored output to the specified file.
-# Parameters:
-#   1 - file name to redirect the ignored output to (optional, default: /dev/stderr)
-# Returns:
-#   Exit code: 0 on success, 2 on invalid arguments
-# Usage: show_ignored_output [file]
-# Example: show_ignored_output /dev/stdout
+# @description Redirects the ignored output (held in $_ignore) to the specified file. With no argument, redirects it to
+# /dev/stderr so that output normally discarded becomes visible for debugging.
+#
+# Notes:
+#   - Redirecting to /dev/stdout is allowed but triggers a warning, since it can corrupt the output of any command whose
+#     stdout is captured or redirected.
+#
+# @arg $1 string file to redirect the ignored output to (optional, default: /dev/stderr)
+#
+# @exitcode 0 success
+# @exitcode 2 invalid arguments ($err_invalid_arguments)
+#
+# @example
+#   show_ignored_output /dev/stdout
 #-------------------------------------------------------------------------------
 function show_ignored_output()
 {
@@ -163,7 +167,7 @@ function show_ignored_output()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: restores the ignored output to /dev/null
+# @description Restores the ignored output (held in $_ignore) to /dev/null.
 #-------------------------------------------------------------------------------
 function hide_ignored_output()
 {
@@ -171,16 +175,20 @@ function hide_ignored_output()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Depending on the value of $dry_run, either executes or displays what would have been executed.
-# Parameters:
-#   1 - command - the command to execute
-#   2+ - args - arguments to pass to the command (optional)
-# Returns:
-#   Exit code: 0 on success or in dry-run mode, command's exit code otherwise, 2 on invalid arguments
-# Env. Vars:
-#   dry_run - when true, displays command without executing it
-# Usage: execute <command> [args...]
-# Example: execute git commit -m "Initial commit"
+# @description Depending on the value of $dry_run, either executes the given command or prints what would have been
+# executed, without running it.
+#
+# @arg $1 string the command to execute
+# @arg $@ mixed additional arguments to pass to the command (optional)
+#
+# @exitcode 0 success, or dry-run mode (command not executed)
+# @exitcode 2 invalid arguments ($err_invalid_arguments)
+# @exitcode N the executed command's own exit code, on failure
+#
+# @stdout in dry-run mode: "dry-run$ <command> [args...]"; otherwise whatever the executed command writes to stdout
+#
+# @example
+#   execute git commit -m "Initial commit"
 #-------------------------------------------------------------------------------
 function execute()
 {
@@ -200,20 +208,30 @@ function execute()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Execute a command with retry logic for transient failures
-# Parameters:
-#   1 - max_attempts - maximum number of attempts (default: 3)
-#   2 - delay - delay in seconds between retries (default: 2)
-#   3 - ignore output - if the third parameter is boolean and is true it
-#       indicates that the standard output of the command should be forwarded to
-#       $_ignore (usually /dev/null)
-#   3+ (or 4+ if $3 is boolean) - command and arguments to execute
-# Returns:
-#   Exit code: 0 on success, command's exit code after final failure
-# Env. Vars:
-#   dry_run - when true, displays command without executing it
-# Usage: execute_with_retry <max_attempts> <delay> [<ignore output>] <command> [args...]
-# Example: execute_with_retry 3 2 true gh api repos/owner/repo
+# @description Executes a command, retrying on failure until it succeeds or the maximum number of attempts is reached, with a
+# fixed delay between attempts.
+#
+# Notes:
+#   - $1 and $2 are always max_attempts and delay; there is no default when the arguments are omitted -- at least three
+#     arguments are required.
+#   - If $3 is a valid boolean ('true' or 'false') it is consumed as the "ignore output" flag: when 'true', the command's
+#     stdout is redirected to $_ignore instead of the terminal. If $3 is not a boolean, it is treated as the start of the
+#     command to execute.
+#
+# @arg $1 int max_attempts - maximum number of attempts
+# @arg $2 int delay - delay in seconds between retries
+# @arg $3 bool ignore output - if boolean, redirect the command's stdout to $_ignore when true (optional)
+# @arg $@ mixed command and arguments to execute
+#
+# @exitcode 0 success (including dry-run mode, where the command is not executed)
+# @exitcode 2 invalid arguments ($err_invalid_arguments)
+# @exitcode N the command's own exit code, after the final failed attempt
+#
+# @stdout whatever the executed command writes to stdout, unless redirected to $_ignore per the "ignore output" flag; in
+#   dry-run mode, nothing is written to stdout -- "dry-run$ <command> [args...]" is written to stderr instead
+#
+# @example
+#   execute_with_retry 3 2 true gh api repos/owner/repo
 #-------------------------------------------------------------------------------
 function execute_with_retry()
 {
@@ -265,17 +283,23 @@ function execute_with_retry()
 }
 
 #-------------------------------------------------------------------------------
-# Summary: Tests if parameter is a valid file pattern and returns matching files, recursing into subdirectories.
-# Parameters:
-#   1 - file_pattern - glob pattern to match files (supports ** for recursive matching)
-# Returns:
-#   stdout: space-separated list of matching files
-#   Exit code: 0 on success, 2 on invalid arguments
-# Usage: files=$(list_of_files <file_pattern>)
-# Example:
+# @description Expands a glob pattern (with globstar and nullglob enabled) and returns the matching files as a
+# space-separated list. The globstar option lets "**" match files recursively across subdirectories.
+#
+# Notes:
+#   - Prints an empty string if no files match the pattern.
+#   - The previous nullglob/globstar shopt settings are restored before the function returns.
+#
+# @arg $1 string file_pattern - glob pattern to match files (supports ** for recursive matching)
+#
+# @exitcode 0 success
+# @exitcode 2 invalid arguments ($err_invalid_arguments)
+#
+# @stdout space-separated list of matching files (empty if none match)
+#
+# @example
 #   packages=$(list_of_files "artifacts/pack/*.nupkg")
 #   for pkg in $packages; do echo "$pkg"; done
-# Notes: Returns empty string if no files match pattern.
 #-------------------------------------------------------------------------------
 function list_of_files()
 {

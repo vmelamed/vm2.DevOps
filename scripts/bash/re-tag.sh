@@ -36,6 +36,34 @@ source "$script_dir/re-tag.usage.sh"
 
 get_arguments "$@"
 
+#-------------------------------------------------------------------------------
+# @description Main script body: renames an existing git tag to a new name, or deletes a tag, both locally and on 'origin'.
+# In rename mode, the old tag is deleted (locally and remotely) and a new tag with the new name is created at the same
+# commit and pushed. In delete mode ('--delete <tag>'), the tag is only deleted, locally and remotely.
+#
+# Notes:
+#   - Renaming an annotated tag dereferences it to the commit it points to; the new tag is created as a fresh (lightweight)
+#     tag at that commit, not a copy of the original tag object.
+#   - If the tag being deleted/renamed does not exist on 'origin', the remote deletion step is skipped with a warning rather
+#     than failing.
+#
+# @arg $1 string '<old-tag>' — the existing tag to rename (rename mode only; required unless '--delete' is used).
+# @arg $2 string '<new-tag>' — the new tag name to create at the same commit (rename mode only; required unless '--delete' is
+#   used).
+# @arg $@ string '--delete|-d <tag>' — deletes '<tag>' instead of renaming (delete mode).
+#
+# @exitcode 0 The tag was renamed or deleted successfully.
+# @exitcode non-zero Missing/invalid arguments, not a git repository, the old/deleted tag does not exist, or the new tag
+#   already exists (see 'err_invalid_arguments', 'err_argument_value', 'err_logic_error' in '_error_codes.sh').
+#
+# @stdout Progress/info messages (resolved commit, deletion/creation/push confirmations).
+#
+# @example
+#   re-tag.sh v3.1.0-preview.5 v3.1.1-preview.2
+# @example
+#   re-tag.sh --delete v3.1.0-preview.4
+#-------------------------------------------------------------------------------
+
 # ─── argument validation & pre-flight ────────────────────────────────────────
 
 if [[ "$delete_mode" == false ]]; then
@@ -58,6 +86,19 @@ fi
 
 # ─── helpers ─────────────────────────────────────────────────────────────────
 
+#-------------------------------------------------------------------------------
+# @description Deletes a git tag locally, and on 'origin' if it exists there. Used both for the standalone '--delete' mode
+# and as the first step of the rename flow (deleting the old tag before creating the new one).
+#
+# @arg $1 string The name of the tag to delete.
+#
+# @exitcode 0 The tag was deleted locally, and remotely if present there.
+#
+# @stdout Trace/warning messages about the local and remote deletion outcome.
+#
+# @example
+#   delete_tag v3.1.0-preview.4
+#-------------------------------------------------------------------------------
 delete_tag()
 {
     local tag="$1"
