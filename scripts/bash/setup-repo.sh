@@ -56,6 +56,16 @@ declare -xa required_checks=()
 declare -xi actions_app_id=0
 declare -xi dependabot_app_id=0
 
+declare -xr key_root
+declare -xr key_url
+declare -xr key_schema
+declare -xr key_authority
+declare -xr key_owner
+declare -xr key_name
+declare -xr key_repo
+declare -xr key_repo_id
+declare -xr key_default_branch
+
 # shellcheck disable=SC1091
 {
     source "$script_dir/setup-repo.args.sh"

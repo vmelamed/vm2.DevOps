@@ -479,10 +479,17 @@ function configure_variables()
         default_value="${actions_default_vars[$name]}"
 
         if $interactive_vars; then
+
+            local prompt="        Enter value for variable $name"
+            local default="$default_value"
+
             # prompt the user for a value while showing them the current value (if it exists) and the default value
-            $exists &&
-                new_value=$(enter_value "        Enter value for variable $name (default: '$default_value')" "$value"         false "${actions_var_validators["$name"]}") ||
-                new_value=$(enter_value "        Enter value for variable $name"                             "$default_value" false "${actions_var_validators["$name"]}")
+            if $exists; then
+                default="$value"
+                [[ $default_value != "$value" ]] && prompt="$prompt (default: '$default_value')"
+            fi
+            new_value=$(enter_value "$prompt" "$default" false "${actions_var_validators["$name"]}")
+
             if [[ $new_value != "$value" ]]; then
                 # set the variable to the value
                 trace "Setting variable: $name=$new_value"
@@ -637,11 +644,17 @@ function configure_secrets()
 
         # get the value for the secret or use the placeholder if we are not entering secrets interactively
         if $interactive_secrets; then
+
             # prompt the user for a (new) value of the secret
-            $exists &&
-                value=$(enter_value "        Enter value for secret $name" "$secret_str" true validate_gh_secret) ||
-                value=$(enter_value "        Enter value for secret $name" ""            true validate_gh_secret)
-            echo ""
+            local prompt="        Enter value for secret $name"
+            local default="$secret_str"
+
+            ! $exists && default=""
+
+            value=$(enter_value "$prompt" "$default" true validate_gh_secret) ||
+
+            [[ -n $value ]] && echo "$secret_str" || echo ""
+
             if [[ -n $value && $value != "$secret_str" ]]; then
                 set_secret "$name" "$value" "$app" || continue
                 trace "Set value of secret: $name"

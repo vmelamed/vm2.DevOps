@@ -27,10 +27,16 @@ declare -rxi err_not_directory
 declare -rxi err_not_git_directory
 declare -rxi err_not_git_root
 
+
 declare -xr gh_ssh_authority='git@github.com'                           # OK, it is actually the URI schema only, but we only support GitHub SSH URLs for now, so we can hardcode the authority and just call it that. This is the part of the URL before the owner/name, e.g. "git@github.com"
 declare -xr gh_https_authority='https://github.com'                     # OK, it is actually the URI schema + authority, but we only support GitHub HTTPS URLs for now, so we can hardcode the authority and just call it that. This is the part of the URL before the owner/name, e.g. "https://github.com"
 
-declare -xr repo_authority_rex='git@github\.com|https://github\.com'    # OK. it is actually the URI schema + authority, but we only support GitHub URLs for now, so we can hardcode the authority and just call it that. This is the part of the URL before the owner/name, e.g. "git@github.com" or "https://github.com"
+declare -xr repo_ssh_schema_rex='git'
+declare -xr repo_https_schema_rex='https'
+
+declare -xr repo_schema_rex="($repo_ssh_schema_rex|$repo_https_schema_rex)"
+declare -xr repo_authority_rex="github\.com"
+# declare -xr repo_authority_rex='git@github\.com|https://github\.com'    # OK. it is actually the URI schema + authority, but we only support GitHub URLs for now, so we can hardcode the authority and just call it that. This is the part of the URL before the owner/name, e.g. "git@github.com" or "https://github.com"
 declare -xr repo_owner_rex='[a-zA-Z0-9][a-zA-Z0-9-]{0,37}[a-zA-Z0-9]'   # GitHub owner/organization names can be up to 39 characters, must start and end with a letter or digit, and can contain letters, digits, and hyphens. See https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user for details.
 declare -xr repo_name_rex='[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}'             # GitHub repository names can be up to 100 characters, cannot end with .git, and can contain letters, digits, dots, underscores, and hyphens, but must start with a letter or digit. See https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user for details.
 
@@ -38,12 +44,14 @@ declare -xr repo_owner_regex="^$repo_owner_rex$"
 declare -xr repo_name_regex="^$repo_name_rex$"
 declare -xr repo_regex="^$repo_owner_rex/$repo_name_rex$"
 
-declare -xr github_url_regex="^($repo_authority_rex)[:/]($repo_owner_rex)/($repo_name_rex)$"
+# declare -xr github_url_regex="^($repo_authority_rex)[:/]($repo_owner_rex)/($repo_name_rex)$"
+declare -xr github_url_regex="^($repo_ssh_schema_rex|$repo_https_schema_rex)(@|://)($repo_authority_rex)[:/]($repo_owner_rex)/($repo_name_rex)$"
 
 # BASH_REMATCH indexes after matching a URL with $github_url_regex:
-declare -xri url_authority=1
-declare -xri url_owner=2
-declare -xri url_name=3
+declare -xri url_schema=1
+declare -xri url_authority=3
+declare -xri url_owner=4
+declare -xri url_name=5
 
 #-------------------------------------------------------------------------------
 # @description Validates that the specified repository owner is valid according to GitHub naming
@@ -465,8 +473,8 @@ function execute_gh_api_with_retry()
 # The following constants define the predefined keys of a repo state:
 #-------------------------------------------------------------------------------
 declare -xr key_root='root'
-declare -xr key_url='url'
-declare -xr key_ssh_url='ssh_url'
+declare -xr key_url='url'   # the URL used to access the repo, either SSH or HTTPS
+declare -xr key_schema='schema'
 declare -xr key_authority='authority'
 declare -xr key_owner='owner'
 declare -xr key_name='name'
@@ -474,12 +482,17 @@ declare -xr key_repo='repo'
 declare -xr key_repo_id='repo_id'
 declare -xr key_default_branch='default_branch'
 
+# keys used in gh api results
+declare -xr key_ssh_url='ssh_url'
+declare -xr key_https_url='https_url'
+
 #-------------------------------------------------------------------------------
 # The following list contains the predefined keys of a repo state:
 #-------------------------------------------------------------------------------
 declare -xar repo_state_keys=(
     "$key_root"
     "$key_url"
+    "$key_schema"
     "$key_authority"
     "$key_owner"
     "$key_name"
@@ -489,7 +502,7 @@ declare -xar repo_state_keys=(
 )
 
 declare -xr jq_gh_repo_state="{
-    $key_url: .html_url,
+    $key_https_url: .html_url,
     $key_ssh_url: .ssh_url,
     $key_owner: .owner.login,
     $key_name: .name,
@@ -592,48 +605,52 @@ function get_repo_state()
     local -n state="$2" # associative array variable to receive the repo state, passed by nameref
     initialize_repo_state "$2" # make sure we have all fields
 
-    state[$key_root]=$(git -C "$1" rev-parse --show-toplevel 2>"$_ignore") || return "$success" # no local git repo - return
     local url
-    url=$(git -C "$1" remote get-url origin 2>"$_ignore")                  || return "$success" # no origin remote - return
+    state["$key_root"]=$(git -C "$1" rev-parse --show-toplevel 2>"$_ignore") || return "$success" # no local git repo
+    url=$(git -C "$1" remote get-url origin 2>"$_ignore")                    || return "$success" # no origin remote
+    [[ -n $url && $url =~ $github_url_regex ]]                               || return "$success" # origin remote is not a GitHub URL
 
-    [[ -n $url && $url =~ $github_url_regex ]]                             || return "$success" # origin remote is not a GitHub URL - return
-
+    local schema="${BASH_REMATCH[$url_schema]}"
     local authority="${BASH_REMATCH[$url_authority]}"
     local owner="${BASH_REMATCH[$url_owner]}"
-    local name="${BASH_REMATCH[$url_name]}"; name="${name%.git}"
-    local repo=$owner/$name
+    local name="${BASH_REMATCH[$url_name]}"
 
-    state[key_url]="$url"
-    state[key_authority]="$authority"
-    state[key_owner]="$owner"
-    state[key_name]="$name"
-    state[key_repo]="$repo"
+    state["$key_url"]=$url
+    state["$key_schema"]=$schema
+    state["$key_authority"]=$authority
+    state["$key_owner"]=$owner
+    if [[ $schema == "$repo_ssh_schema_rex" ]]; then
+        name=${name%.git}
+    fi
+    repo="$owner/$name"
+    state["$key_name"]=$name
+    state["$key_repo"]=$repo
 
-    $full_info                                                             || return "$success" # caller does not want full info - return with what we have from git, without trying to get GitHub API data
+    $full_info || return "$success" # caller does not want full info - return with what we have from git, without trying to get GitHub API data
 
-    local -A gh_state
+    local -A gh_state k v
 
-    while IFS='=' read -r name value; do
-        gh_state["$name"]="$value"
-    done < <(execute_gh_api_with_retry 3 2 --paginate "repos/$owner/$name" -q "$jq_gh_repo_state")
+    while IFS='=' read -r k v; do
+        gh_state["$k"]="$v"
+    done < <(execute_gh_api_with_retry 3 2 --paginate "repos/$repo" -q "$jq_gh_repo_state")
 
-    local -i rc=0
-    local -i errs
-    errs=$(get_errors)
-
-    # these are real logical problems that can occur if the git remote is misconfigured or the API is returning unexpected data,
+    # make sure all is kosher: the GitHub API data should match the local git remote data for the fields we care about
+    # these are real logical problems that may occur if the git remote is misconfigured or the API is returning unexpected data,
     # so we check them all and report all mismatches rather than bailing on the first one
-    [[ ${gh_state["$key_ssh_url"]} == "${state[$key_url]}" ||
-       ${gh_state["$key_url"]}     == "${state[$key_url]}"   ]] || error -sd 3 -ec "$err_logic_error" "GitHub API returned URLs '${gh_state["$key_ssh_url"]}' and '${gh_state["$key_url"]}' that do not match the git remote URL '${state[$key_url]}'."
-    [[ ${gh_state["$key_owner"]}   == "${state[$key_owner]}" ]] || error -sd 3 -ec "$err_logic_error" "GitHub API returned owner '${gh_state["$key_owner"]}' that does not match the git remote owner '${state[$key_owner]}'."
-    [[ ${gh_state["$key_name"]}    == "${state[$key_name]}"  ]] || error -sd 3 -ec "$err_logic_error" "GitHub API returned name '${gh_state["$key_name"]}' that does not match the git remote name '${state[$key_name]}'."
-    [[ ${gh_state["$key_repo"]}    == "${state[$key_repo]}"  ]] || error -sd 3 -ec "$err_logic_error" "GitHub API returned repo '${gh_state["$key_repo"]}' that does not match the expected repo '${state[$key_repo]}'."
-    [[ -n ${gh_state["$key_repo_id"]}                        ]] || error -sd 3 -ec "$err_logic_error" "GitHub API did not return a repo ID for '${gh_state["$key_repo"]}'."
+    [[ $schema == "$repo_ssh_schema_rex"   && ${gh_state["$key_ssh_url"]}   == "$url" ||
+       $schema == "$repo_https_schema_rex" && ${gh_state["$key_https_url"]} == "$url"    ]] &&
+    [[ ${gh_state["$key_owner"]} == "$owner" ]] &&
+    [[ ${gh_state["$key_name"]}  == "$name"  ]] &&
+    [[ ${gh_state["$key_repo"]}  == "$repo"  ]] &&
+    [[ -n ${gh_state["$key_repo_id"]}        ]] &&
+        rc=$success || {
+        rc=$failure
+        error -sd 3 -ec "$err_logic_error" "GitHub API returned URLs '${gh_state["$key_ssh_url"]}' and '${gh_state["$key_https_url"]}' that do not match the git remote URL '$url'."
+    }
 
-    rc=$(( errs < $(get_errors) ? failure : success ))
-
-    state[key_repo_id]="${gh_state["$key_repo_id"]}"
-    state[key_default_branch]="${gh_state["$key_default_branch"]}"
+    # merge GitHub API state into repo state for the fields we care about
+    state["$key_repo_id"]="${gh_state["$key_repo_id"]}"
+    state["$key_default_branch"]="${gh_state["$key_default_branch"]}"
 
     return "$rc"
 }
