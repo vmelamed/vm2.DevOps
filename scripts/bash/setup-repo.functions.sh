@@ -8,6 +8,7 @@ declare -x script_name
 declare -x lib_dir
 
 declare -rxi success
+declare -rxi failure
 declare -rxi err_invalid_arguments
 declare -rxi err_tool_error
 declare -rxi err_logic_error
@@ -234,7 +235,7 @@ function initialize_jq_queries()
     (( rc == success )) || return "$err_logic_error"
 
     jq_entries='to_entries[] | "\(.key)=\(.value)"'
-    jq_secrets='.secrets[] | "\(.name)=<set>"'
+    jq_secrets='.secrets[] | "\(.name)='"$secret_str"'"'
     jq_secret_names='.secrets[] | .name'
     jq_vars='.variables[] | "\(.name)=\(.value)"'
     jq_ruleset_id='.[] | select(.name == "'"$main_protection_rs_name"'") | .id // empty'
@@ -284,8 +285,7 @@ def count_pr_checks_param(check): [.rules[] | select(.type == "required_status_c
 #-------------------------------------------------------------------------------
 # @description Resolves the numeric ID of the branch-protection ruleset named `$main_protection_rs_name` via the
 # GitHub API and stores it in `main_protection_rs_id`, also deriving and freezing `path_main_protection_ruleset`. If
-# `main_protection_rs_id` is already set (> 0), returns immediately without re-querying the API -- callers can call
-# this idempotently.
+# `main_protection_rs_id` is already set (> 0), returns immediately without re-querying the API.
 #
 # Notes:
 #   - This is a precondition check on global/environment state (`main_protection_rs_name`, `path_rulesets` -- the
@@ -320,7 +320,7 @@ function initialize_main_protection_rs_id()
 
     # try to get the main_protection_rs_id
     main_protection_rs_id=$(execute_gh_api_with_retry 3 2 --paginate "$path_rulesets" -q "$jq_ruleset_id") ||
-        return 1
+        return "$failure"
 
     if (( main_protection_rs_id > 0 )); then
         trace "Initialized main protection ruleset ID: $main_protection_rs_id"
@@ -329,10 +329,10 @@ function initialize_main_protection_rs_id()
 
         declare -xir main_protection_rs_id
         declare -xr path_main_protection_ruleset
-        return 0
+        return "$success"
     else
         trace "Failed to initialize main protection ruleset ID."
-        return 1
+        return "$failure"
     fi
 
 }
@@ -449,79 +449,80 @@ function configure_variables()
 {
     info "Configuring GitHub Actions variables..."
 
-    local path_vars="$path_repo/actions/variables"
-
-    # Get existing variables as name=value pairs
-    local -A existing
-    local name value exists # about the current variable
-
-    while IFS='=' read -r name value; do
-        existing["$name"]="$value"
-    done < <(execute_gh_api_with_retry 3 2 --paginate "$path_vars" -q "$jq_vars")
-
-    local -i skipped=0 set_new=0 set_default=0
     local -a ordered_names
 
     readarray -t ordered_names < <(printf '%s\n' "${!actions_default_vars[@]}" | sort)
 
+    local -A existing=()
+    local name value
+
+    while IFS='=' read -r name value; do
+        existing["$name"]="$value"
+    done < <(execute_gh_api_with_retry 3 2 --paginate "$path_repo/actions/variables" -q "$jq_vars")
+
+    local exists
     local new_value=""
     local default_value=""
+    local -i skipped=0 set_new=0 set_default=0
 
     for name in "${ordered_names[@]}"; do
-        # does the var exists in GH?
-        [[ -v existing[$name] ]] && exists=true || exists=false
-
-        # we are not in interactive mode and we cannot modify the variable but it exists in GH -- continue to the next variable
-        ! $interactive_vars && $exists && (( ++skipped )) && continue
-
-        # get the variable's current and default values
-        $exists && value="${existing[$name]:-}"
         default_value="${actions_default_vars[$name]}"
+        if [[ -v existing[$name] ]]; then
+            exists=true
+            value="${existing[$name]:-}"
+            # we are not in interactive mode, so we cannot modify the variable, but it exists in GH -- continue with the next variable
+            ! $interactive_vars && (( ++skipped )) && continue
+        else
+            exists=false;
+            value="";
+        fi
 
         if $interactive_vars; then
-
-            local prompt="        Enter value for variable $name"
+            local prompt="            Enter value for variable $name"
             local default="$default_value"
 
-            # prompt the user for a value while showing them the current value (if it exists) and the default value
+            # prompt the user for a value while showing them the current value (if it exists) and the default value (if it is different from the current value)
             if $exists; then
                 default="$value"
                 [[ $default_value != "$value" ]] && prompt="$prompt (default: '$default_value')"
             fi
+
             new_value=$(enter_value "$prompt" "$default" false "${actions_var_validators["$name"]}")
 
             if [[ $new_value != "$value" ]]; then
                 # set the variable to the value
                 trace "Setting variable: $name=$new_value"
                 set_var "$name" "$new_value" || continue
-                [[ $new_value != "$default_value" ]] &&
-                    (( ++set_new )) ||
-                    (( ++set_default ))
-            elif [[ $new_value == "$value" ]]; then
+                [[ $new_value == "$default_value" ]] && (( ++set_default )) || (( ++set_new ))
+            else
+                trace "Unchanged variable: $name=$value"
+                (( ++skipped ))
+            fi
+        else
+            if $exists; then
                 trace "Unchanged variable: $name=$value"
                 (( ++skipped ))
             else
-                error -sd 3 -ec "$err_logic_error" "Unexpected error: new_value '$new_value' is not equal to either the current value '$value' or the default value '$default_value'. This should never happen."
-                reset_errors
-            fi
-        else
-            # we are not in interactive mode and the var does not exist, so we will create it using the default value
-            ! $exists && new_value="$default_value" && (( ++set_default ))
-            if $exists; then
-                trace "Variable unchanged: $name=$value"
-                (( ++skipped ))
-            else
-                trace "Setting variable to default value: $name=$default_value"
+                # we are not in interactive mode and the var does not exist, so we will create it with its default value
+                trace "Creating a variable with its default value: $name=$default_value"
                 set_var "$name" "$default_value" && (( ++set_default ))
             fi
         fi
     done
 
     # display the summary
-    (( set_new > 0 ))     && info "    $set_new variable(s) set to new value(s)."             || true
-    (( set_default > 0 )) && info "    $set_default variable(s) set to default value(s)."     || true
-    (( skipped > 0 ))     && info "    $skipped variable(s) were not modified."               || true
-    info "  Run the script with option '--interactive-vars' or '-iv' to set new values for any of the Actions vars."
+    (( set_new     == 1 )) && info "    1 variable was set to a new value."
+    (( set_new      > 1 )) && info "    $set_new variables were set to new values."
+
+    (( set_default == 1 )) && info "    1 variable was set to its default value."
+
+    (( set_default  > 1 )) && info "    $set_default variables were set to their default values."
+
+    (( skipped     == 1 )) && info "    1 variable was not modified."
+    (( skipped      > 1 )) && info "    $skipped variables were not modified."
+
+    $interactive_vars      || info "  Run the script with option '--interactive-vars' or '-iv' to set new values for any of the Actions vars."
+    true
 }
 
 #-------------------------------------------------------------------------------
@@ -572,7 +573,7 @@ function set_var()
 #-------------------------------------------------------------------------------
 function is_valid_secret()
 {
-    [[ ! "$1" =~ [[:cntrl:]] ]]
+    [[ "$1" =~ [[:cntrl:]] ]]
 }
 
 #-------------------------------------------------------------------------------
@@ -619,47 +620,42 @@ function configure_secrets()
 
     info "Configuring ${app^} secrets..."
 
-    local path_secrets="$path_repo/$app/secrets"
-
-    # get the names of the existing secrets
-    local -A existing
-    local name value exists # about the current variable
-
-    while IFS='=' read -r name; do
-        existing["$name"]="$present_state"
-    done < <(execute_gh_api_with_retry 3 2 --paginate "$path_secrets" -q "$jq_secret_names")
-
     # remember the current verbose and tracing settings so we can restore them after setting the secret(s)
+    local name value exists # about the current variable
     local -i skipped=0 set_new=0 need_new=0
     local -a ordered_names
+    local -a existing
 
     readarray -t ordered_names < <(printf '%s\n' "${!app_secrets[@]}" | sort)
+    readarray -t existing < <(execute_gh_api_with_retry 3 2 --paginate "$path_repo/$app/secrets" -q "$jq_secret_names")
 
     for name in "${ordered_names[@]}"; do
         # does the secret exists in GH?
-        [[ -v existing[$name] ]] && exists=true || exists=false
-
-        # we are not in interactive mode and we cannot modify the secret but it exists in GH -- continue to the next variable
-        ! $interactive_secrets && $exists && (( ++skipped )) && continue
+        if is_in "$name" "${existing[@]}"; then
+            exists=true
+            ! $interactive_secrets && (( ++skipped )) && continue
+        else
+            exists=false
+        fi
 
         # get the value for the secret or use the placeholder if we are not entering secrets interactively
         if $interactive_secrets; then
 
             # prompt the user for a (new) value of the secret
             local prompt="        Enter value for secret $name"
-            local default="$secret_str"
+            local default
 
-            ! $exists && default=""
+            $exists && default="$secret_str" || default=""
 
-            value=$(enter_value "$prompt" "$default" true validate_gh_secret) ||
-
-            [[ -n $value ]] && echo "$secret_str" || echo ""
+            value=$(enter_value "$prompt" "$default" true validate_gh_secret)
 
             if [[ -n $value && $value != "$secret_str" ]]; then
+                echo "$secret_str"
                 set_secret "$name" "$value" "$app" || continue
                 trace "Set value of secret: $name"
                 (( ++set_new ))
             elif [[ -n $value && $value == "$secret_str" ]]; then
+                echo ""
                 trace "Unchanged secret: $name"
                 (( ++skipped ))
             elif [[ -z $value ]]; then
@@ -675,14 +671,20 @@ function configure_secrets()
                 warning "      Create secret: $name."
                 (( ++need_new ))
             fi
-            continue
         fi
-
     done
 
-    (( set_new > 0 ))  && info "    $set_new secret(s) set to new value(s)."      || true
-    (( skipped > 0 ))  && info "    $skipped secret(s) were not modified."        || true
-    (( need_new > 0 )) && warning "  Run the script with option '--interactive-secrets' or '-is' to set the values for $need_new ${app^} secrets." || true
+    if $interactive_secrets; then
+        (( set_new == 1 )) && info "    1 secret was set to a new value."
+        (( set_new  > 1 )) && info "    $set_new secrets were set to new values."
+
+        (( skipped == 1 )) && info "    1 secret was not modified."
+        (( skipped  > 1 )) && info "    $skipped secrets were not modified."
+    fi
+
+    (( need_new == 1 )) && warning "Run the script with option '--interactive-secrets' or '-is' to set the value for 1 ${app^} secret."
+    (( need_new  > 1 )) && warning "Run the script with option '--interactive-secrets' or '-is' to set the values for $need_new ${app^} secrets."
+    true
 }
 
 #-------------------------------------------------------------------------------

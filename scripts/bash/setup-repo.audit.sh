@@ -44,7 +44,7 @@ declare -xr undefined_default
 # reporting matches, differences, and missing values (errors) to stdout in a formatted list.
 #
 # For each key, the expected value is looked up in the `expected` associative array. If the expected value is the
-# secret placeholder (`$secret_placeholder`), the comparison degrades to presence-only: the actual value is reported
+# secret placeholder (`$secret_str`), the comparison degrades to presence-only: the actual value is reported
 # as either present or missing, never compared for equality (this is how secrets, whose real values this script
 # never reads back, are audited). Otherwise the actual and expected values are compared for equality.
 #
@@ -120,14 +120,12 @@ function compare_settings()
         return "$rc"
     fi
 
-    # read the key=value pairs into actual $actual_key_values
+    # read the key=value pairs into $actual_key_values
     local -A actual_key_values=()
     local key='' actual=''
 
     while IFS='=' read -r key actual; do
-        [[ -v expected_key_values["$key"] ]] || continue
-        # is_in "$key" "${!expected_key_values[@]}" &&
-        actual_key_values["$key"]="$actual"
+        [[ -v expected_key_values["$key"] ]] && actual_key_values["$key"]="$actual"
     done < <(jq -r "$jq_transform" <<< "$json")
 
     # put the keys in the array in display order
@@ -144,7 +142,7 @@ function compare_settings()
 
     for key in "${keys[@]}"; do
         expected="${expected_key_values[$key]}"
-        if [[ $expected == "$secret_placeholder" ]]; then
+        if [[ $expected == "$secret_str" ]]; then
             expected=$undefined_default
             [[ -v actual_key_values[$key] ]] && actual=$present_state || actual=$missing_state
         else
@@ -156,9 +154,11 @@ function compare_settings()
             key=${key//_/ } && key=${key^} # Replace underscores with spaces and capitalize first letter for better display
 
         if [[ $actual == "$missing_state" ]]; then
-            [[ $expected != "$undefined_default" ]] &&
-                printf "      ❌  %-36s => %s (default: '%s')\n" "$key" "$actual" "$expected" ||
+            if [[ $expected != "$undefined_default" ]]; then
+                printf "      ❌  %-36s => %s (default: '%s')\n" "$key" "$actual" "$expected"
+            else
                 printf "      ❌  %-36s => %s\n" "$key" "$actual"
+            fi
             (( ++errs ))
         elif [[ $actual == "$present_state" ]]; then
             printf "      🆗  %-36s => %s\n" "$key" "$actual"

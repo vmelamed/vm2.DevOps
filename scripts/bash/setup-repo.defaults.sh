@@ -7,7 +7,7 @@ declare -rxi err_argument_value
 
 declare -rxi admin_role_id=5
 
-declare -rx secret_placeholder="UPDATE+ME/==" # valid base64 placeholder
+declare -xr secret_str
 
 declare -xr missing_state="<missing>"
 declare -xr present_state="<present>"
@@ -94,13 +94,13 @@ declare -rxa apps_with_secrets=(
 )
 
 declare -rxA actions_secrets=(
-    ["REPORTGENERATOR_LICENSE"]="$secret_placeholder"
-    ["CODECOV_TOKEN"]="$secret_placeholder"
-    ["BENCHER_API_TOKEN"]="$secret_placeholder"
-    ["BENCH_DISPATCH_PAT"]="$secret_placeholder"
-    ["GH_PACKAGES_TOKEN"]="$secret_placeholder"
-    ["NUGET_API_KEY"]="$secret_placeholder"
-    ["RELEASE_PAT"]="$secret_placeholder"
+    ["REPORTGENERATOR_LICENSE"]="$secret_str"
+    ["CODECOV_TOKEN"]="$secret_str"
+    ["BENCHER_API_TOKEN"]="$secret_str"
+    ["BENCH_DISPATCH_PAT"]="$secret_str"
+    ["GH_PACKAGES_TOKEN"]="$secret_str"
+    ["NUGET_API_KEY"]="$secret_str"
+    ["RELEASE_PAT"]="$secret_str"
 )
 declare -rxA dependabot_secrets=()
 declare -rxA agents_secrets=()
