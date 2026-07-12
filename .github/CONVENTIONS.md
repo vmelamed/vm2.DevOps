@@ -97,6 +97,15 @@ The project owner is a non-native English speaker.
   Do **not** scatter a type's own core operations (e.g. `Option<T>.Map`/`Bind`, `Result<T>.Ensure`/`Tap`) into external
   static classes; keep them inside the type. When extensions are unavoidable, group them in one clearly named static
   class per concern (`OptionExtensions`, `ResultAsyncExtensions`) so the out-of-type code is organized, not sprinkled.
+- **Compose, don't impersonate.** A type MUST NOT implement an interface (or expose a conversion) merely to borrow the
+  ergonomics that come with *being* that thing when it is not semantically that thing. Gain a capability from the
+  *method shapes* the feature actually requires, not from a false `is-a`. For example, support LINQ query syntax over a
+  monad by giving it `Select`/`SelectMany`/`Where` **methods** rather than implementing `IEnumerable<T>` — a monad
+  (`Option<T>`, `Result<T>`, `Task<T>`) is **not** a collection, and claiming to be one floods its surface with
+  meaningless operators (`OrderBy`, `Zip`, `Chunk`), re-opens throwing extractors (`First`, `Single`) that bypass the
+  type's own safety, and boxes the value. This is distinct from *prefer composition over inheritance*: that rule governs
+  implementation **reuse** (`has-a` over `extends-a`); this one governs interface **honesty** (do not advertise an
+  identity you do not have).
 - Expression-bodied members when trivial and readable (one-liners, simple getters)
 - `var` when the type is obvious from the right-hand side
 - **Nullable reference types always enabled**; treat warnings as design feedback
@@ -300,6 +309,10 @@ rationale in README/CHANGELOG/PR.
   - `fix: correct null reference in UserService`
   - `feat(serialization): add IUtf8SpanFormattable implementation`
 - One logical concern per PR
+- **Credit AI co-authorship.** When an AI coding assistant materially contributed to a commit (wrote or substantially
+  shaped the code, tests, or docs), add a `Co-Authored-By:` trailer at the end of the commit message naming the
+  assistant, e.g. `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`. This keeps authorship honest and the
+  history auditable; it is not optional vanity — it records who (or what) actually shaped the change.
 
 ## Documentation
 
