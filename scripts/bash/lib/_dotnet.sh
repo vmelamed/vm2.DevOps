@@ -36,7 +36,7 @@ declare -rx default_tfm
 # export global variables that hold the results
 declare -xi warnings_count=0
 declare -xi errors_count=0
-declare -x build_result=''
+declare -x build_result='Unknown'
 declare -x assembly_version=''
 declare -x file_version=''
 declare -x informational_version=''
@@ -65,7 +65,7 @@ function extractDotnetBuildInfo()
     # reset the globals
     warnings_count=0
     errors_count=0
-    build_result=''
+    build_result='Unknown'
     assembly_version=''
     file_version=''
     informational_version=''
@@ -97,6 +97,14 @@ function extractDotnetBuildInfo()
         fi
     done
 
+    if [[ $build_result == FAILED ]]; then
+        assembly_version='N/A'
+        file_version='N/A'
+        informational_version='N/A'
+        version='N/A'
+        package_version='N/A'
+    fi
+
     echo "build_result=$build_result"
     echo "warnings_count=$warnings_count"
     echo "errors_count=$errors_count"
@@ -127,12 +135,12 @@ function displayDotnetBuildSummary()
 {
     local warnings_count=0
     local errors_count=0
-    local build_result=''
-    local assembly_version=''
-    local file_version=''
-    local informational_version=''
-    local version=''
-    local package_version=''
+    local build_result='Unknown'
+    local assembly_version='N/A'
+    local file_version='N/A'
+    local informational_version='N/A'
+    local version='N/A'
+    local package_version='N/A'
 
     local var value
     while IFS='=' read -r var value; do
