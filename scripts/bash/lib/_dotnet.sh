@@ -36,12 +36,12 @@ declare -rx default_tfm
 # export global variables that hold the results
 declare -xi warnings_count=0
 declare -xi errors_count=0
-declare -x build_result="N/A"
-declare -x assembly_version='N/A'
-declare -x file_version='N/A'
-declare -x informational_version='N/A'
-declare -x version='N/A'
-declare -x package_version='N/A'
+declare -x build_result=''
+declare -x assembly_version=''
+declare -x file_version=''
+declare -x informational_version=''
+declare -x version=''
+declare -x package_version=''
 
 #-------------------------------------------------------------------------------
 # @description Extracts build information from the output of a 'dotnet build -v d' command, read line by line from stdin.
@@ -52,7 +52,7 @@ declare -x package_version='N/A'
 #   - These globals are only valid after the function returns and the input has been fully read, and only if the function
 #     runs in the current shell context (not piped into, or run in, a subshell).
 #   - If $build_result ends up "FAILED", the version fields ($assembly_version, $file_version, $informational_version,
-#     $version, $package_version) are reset to 'N/A'.
+#     $version, $package_version) are reset to ''.
 #   - $build_result is informational only: it does not gate CI. The actual pass/fail decision is the exit code of
 #     'dotnet build' itself, captured separately by callers via '${PIPESTATUS[0]}' (see e.g. build.sh).
 #
@@ -65,12 +65,12 @@ function extractDotnetBuildInfo()
     # reset the globals
     warnings_count=0
     errors_count=0
-    build_result="N/A"
-    assembly_version='N/A'
-    file_version='N/A'
-    informational_version='N/A'
-    version='N/A'
-    package_version='N/A'
+    build_result=''
+    assembly_version=''
+    file_version=''
+    informational_version=''
+    version=''
+    package_version=''
 
     local restoreShopt
     restoreShopt=$(shopt -p nocasematch) || true
@@ -127,12 +127,12 @@ function displayDotnetBuildSummary()
 {
     local warnings_count=0
     local errors_count=0
-    local build_result="N/A"
-    local assembly_version='N/A'
-    local file_version='N/A'
-    local informational_version='N/A'
-    local version='N/A'
-    local package_version='N/A'
+    local build_result=''
+    local assembly_version=''
+    local file_version=''
+    local informational_version=''
+    local version=''
+    local package_version=''
 
     local var value
     while IFS='=' read -r var value; do
