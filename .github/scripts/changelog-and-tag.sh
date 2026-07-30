@@ -62,8 +62,8 @@ fi
 # Configure git for CI
 # shellcheck disable=SC2154 # ci is referenced but not assigned.
 if $ci; then
-    execute git config user.name vmelamed # "github-actions[bot]"
-    execute git config user.email vmelamed@users.noreply.github.com # "41898282+github-actions[bot]@users.noreply.github.com"
+    execute git config user.name vmelamed
+    execute git config user.email vmelamed@users.noreply.github.com
     # execute git remote set-url origin "https://x-access-token:${RELEASE_PAT}@github.com/${GITHUB_REPOSITORY}.git"
 fi
 
