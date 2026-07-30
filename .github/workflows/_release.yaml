@@ -45,6 +45,11 @@ on:
         type: string
         required: true
 
+      nuget-username:
+        description: "Username for the NuGet server"
+        type: string
+        default: nuget
+
       save-package-artifacts:
         description: Upload package(s) as workflow artifacts
         type: boolean
@@ -135,6 +140,7 @@ jobs:
 
   release:
     name: Build and Publish Release
+    if: fromJSON(inputs.package-projects-len) > 0
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs:
@@ -144,7 +150,9 @@ jobs:
       fail-fast: false
       matrix:
         project: ${{ fromJSON(inputs.package-projects) }}
-    if: fromJSON(inputs.package-projects-len) > 0
+    permissions:
+      packages: write
+      id-token: write # Required for authentication with the NuGet server
     steps:
       - name: Checkout release tag (full history)
         uses: actions/checkout@v7
@@ -165,10 +173,18 @@ jobs:
           github-token: ${{ github.token }}
           github-actor: ${{ github.actor }}
 
+      - name: Authenticate with NuGet.org trusted publishing
+        id: nuget-login
+        if: inputs.nuget-server == 'nuget'
+        uses: NuGet/login@v1
+        with:
+          user: ${{ inputs.nuget-username }}
+
       - name: Build, Package and Publish release to NuGet server
+        id: publish
         shell: bash
         env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY || secrets.NUGET_API_KEY }}
         run: |
           publish-package.sh \
               "${{ matrix.project }}" \

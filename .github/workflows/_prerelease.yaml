@@ -45,6 +45,11 @@ on:
         type: string
         default: nuget
 
+      nuget-username:
+        description: "Username for the NuGet server"
+        type: string
+        default: nuget
+
       save-package-artifacts:
         description: Upload package(s) as workflow artifacts
         type: boolean
@@ -156,18 +161,19 @@ jobs:
 
   package-and-publish:
     name: Publish Package (prerelease) to NuGet server
+    if: fromJSON(inputs.package-projects-len) > 0
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs:
       - compute-version
       - changelog-and-tag
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      packages: write
     strategy:
       fail-fast: false
       matrix:
         project: ${{ fromJSON(inputs.package-projects) }}
-    if: fromJSON(inputs.package-projects-len) > 0
+    permissions:
+      packages: write
+      id-token: write # Required for authentication with the NuGet server
     env:
       ARTIFACTS_DIR: artifacts/pack
     steps:
@@ -190,11 +196,18 @@ jobs:
           github-token: ${{ github.token }}
           github-actor: ${{ github.actor }}
 
-      - name: Publish package (prerelease) to NuGet server
-        shell: bash
+      - name: Authenticate with NuGet.org trusted publishing
+        if: inputs.nuget-server == 'nuget'
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ inputs.nuget-username }}
+
+      - name: Publish package (prerelease) to a NuGet server
         id: publish
+        shell: bash
         env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY || secrets.NUGET_API_KEY }}
         run: |
           publish-package.sh \
               "${{ matrix.project }}" \

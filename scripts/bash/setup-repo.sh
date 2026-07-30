@@ -51,6 +51,7 @@ declare -x repo_name=""
 declare -x repo=""
 declare -x repo_url=""
 declare -x repo_id=""
+declare -x nuget_server=""
 
 declare -xa required_checks=()
 declare -xi actions_app_id=0
@@ -386,9 +387,11 @@ initialize_main_protection_rs_id || true
 configure_default_repo_settings
 configure_actions_permissions
 configure_branch_protection
+# it is important to configure variables before secrets!
 configure_variables
-configure_secrets "actions"
-configure_secrets "dependabot"
+trace "NuGet server is: $nuget_server"
+configure_secrets "actions" "$nuget_server"
+configure_secrets "dependabot" "$nuget_server"
 echo ""
 audit_repo
 if [[ ${#undos[@]} -gt 0 ]]; then

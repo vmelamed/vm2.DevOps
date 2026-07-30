@@ -36,6 +36,8 @@ declare -xrA default_ruleset
 declare -xra default_ruleset_order
 
 declare -xra apps_with_secrets
+declare -rxa nuget_servers
+declare -rx default_nuget_server
 
 declare -rxA actions_default_vars
 declare -rxA actions_var_validators
@@ -433,6 +435,8 @@ function configure_actions_permissions()
     fi
 }
 
+declare -x nuget_server
+
 #-------------------------------------------------------------------------------
 # @description Reconciles the target repository's GitHub Actions variables against `actions_default_vars`. In
 # non-interactive mode (the default), creates any missing variable with its default value and leaves existing
@@ -464,14 +468,13 @@ function configure_variables()
     local new_value=""
     local default_value=""
     local -i skipped=0 set_new=0 set_default=0
+    local -n nuget=nuget_server
 
     for name in "${ordered_names[@]}"; do
         default_value="${actions_default_vars[$name]}"
         if [[ -v existing[$name] ]]; then
             exists=true
             value="${existing[$name]:-}"
-            # we are not in interactive mode, so we cannot modify the variable, but it exists in GH -- continue with the next variable
-            ! $interactive_vars && (( ++skipped )) && continue
         else
             exists=false;
             value="";
@@ -508,6 +511,10 @@ function configure_variables()
                 set_var "$name" "$default_value" && (( ++set_default ))
             fi
         fi
+        # send the nuget server name to stdout for use by, e.g. configure_secrets()
+        # shellcheck disable=SC2034 # nuget is assigned but not used - it is a nameref
+        [[ $name == "NUGET_SERVER" ]] &&
+            nuget="$value"
     done
 
     # display the summary
@@ -585,6 +592,7 @@ function is_valid_secret()
 #
 # @arg $1 string Application name; must be one of the entries in `apps_with_secrets` (`actions`, `dependabot`,
 #   `agents`, `codespaces`).
+# @arg $2 string NuGet server; must be one of the entries in `nuget_servers` (supported servers: `nuget`, `github`).
 #
 # @exitcode 0 Success, including the case where the app has no configured secrets at all (returns immediately).
 # @exitcode 2 Wrong number of arguments, an unrecognized application name, or the corresponding `<app>_secrets`
@@ -597,14 +605,23 @@ function configure_secrets()
     # validate the parameter - the application name: actions, dependabot, agents, or codespaces
     local -i rc="$success"
 
-    [[ $# -eq 1 ]] && is_in "$1" "${apps_with_secrets[@]}" || {
+    [[ $# -eq 2 ]] || {
         rc="$err_invalid_arguments"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires exactly one argument -- the application name. It should be one of: ${apps_with_secrets[*]}."
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires exactly two arguments -- the application name and the NuGet server." \
+                              "The application should be one of: ${apps_with_secrets[*]}." \
+                              "The NuGet server should be one of: ${nuget_servers[*]}."
+    }
+    is_in "$1" "${apps_with_secrets[@]}" || {
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() was passed invalid application name. It should be one of: ${apps_with_secrets[*]}."
+    }
+    is_in "$2" "${nuget_servers[@]}" || {
+        rc="$err_invalid_arguments"
+        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() was passed invalid NuGet server. It should be one of: ${nuget_servers[*]}."
     }
 
-    (( rc == success )) || return "$err_invalid_arguments"
-
     local app="$1"
+    local nuget_server="$2"
     local secrets_array_name="${app,,}_secrets"
 
     is_defined_associative_array "$secrets_array_name" || {
@@ -612,16 +629,18 @@ function configure_secrets()
         error -sd 3 -ec "$rc" "The secrets array '$secrets_array_name' for the application '$app' is not defined. Cannot configure secrets for this application."
     }
 
-    (( rc == success )) || return "$err_invalid_arguments"
+    (( rc == success )) ||
+        return "$err_invalid_arguments"
 
     local -n app_secrets=$secrets_array_name
 
-    (( ${#app_secrets[@]} > 0 )) || return 0 # no secrets to set for this app - we are done
+    (( ${#app_secrets[@]} > 0 )) ||
+        return 0 # no secrets to set for this app - we are done
 
     info "Configuring ${app^} secrets..."
 
     # remember the current verbose and tracing settings so we can restore them after setting the secret(s)
-    local name value exists # about the current variable
+    local name value exists delete # about the current variable
     local -i skipped=0 set_new=0 need_new=0
     local -a ordered_names
     local -a existing
@@ -630,9 +649,16 @@ function configure_secrets()
     readarray -t existing < <(execute_gh_api_with_retry 3 2 --paginate "$path_repo/$app/secrets" -q "$jq_secret_names")
 
     for name in "${ordered_names[@]}"; do
+        [[ $name == "NUGET_API_KEY" && $nuget_server == "nuget" ]] && delete=true || delete=false
+
         # does the secret exists in GH?
         if is_in "$name" "${existing[@]}"; then
             exists=true
+            if $delete; then
+                trace "Deleting secret: $name"
+                delete_secret "$name" "$app"
+                continue
+            fi
             ! $interactive_secrets && (( ++skipped )) && continue
         else
             exists=false
@@ -730,6 +756,36 @@ function set_secret()
 
     restore_state
     return "$rc"
+}
+
+function delete_secret()
+{
+    (( $# == 2 )) || {
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly two arguments: name and app."
+        return "$err_invalid_arguments"
+    }
+    local name="$1"
+    local app="$2"
+
+    # we have a new legitimate value for the secret that we need to create and/or set:
+    trace "gh secret delete $name --app $app --repo $repo"
+
+    save_state
+
+    # suppress all tracing to avoid revealing the secret value
+    unset_verbose
+    set +x
+
+    local rc=$success
+
+    # delete the secret value on GitHub
+    execute_gh_with_retry 3 2 true secret delete "$name" --app "$app" --repo "$repo" || {
+        rc=$?
+        warning "Failed to delete secret $name for ${app^}. Run the script with '--verbose' to see more details and troubleshoot." -ec "$rc"
+    }
+
+    restore_state
+    return "$success"
 }
 
 #-------------------------------------------------------------------------------

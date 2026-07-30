@@ -93,6 +93,13 @@ declare -rxa apps_with_secrets=(
     "codespaces"
 )
 
+declare -rxa nuget_servers=(
+    "github"
+    "nuget"
+)
+
+declare -rx default_nuget_server="${nuget_servers[0]}"
+
 declare -rxA actions_secrets=(
     ["REPORTGENERATOR_LICENSE"]="$secret_str"
     ["CODECOV_TOKEN"]="$secret_str"
@@ -134,7 +141,7 @@ declare -rxA actions_var_validators=(
     ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="is_valid_minverPrereleaseId"
     ["MINVERTAGPREFIX"]="validate_semverTagComponents"
     ["MIN_COVERAGE_PCT"]="is_valid_percentage"
-    ["NUGET_SERVER"]="is_valid_nuget_server"
+    ["NUGET_SERVER"]="is_one_of_nuget_servers"
     ["RESET_BENCHMARK_THRESHOLDS"]="validate_boolean"
     ["SAVE_PACKAGE_ARTIFACTS"]="validate_boolean"
     ["VERBOSE"]="validate_boolean"
@@ -272,4 +279,22 @@ function init_default_local_git_settings()
     default_local_git_settings["commit.template"]="$shared/.gitmessage"
 
     declare -rxA default_local_git_settings
+}
+
+#-------------------------------------------------------------------------------
+# @description Checks if the given server is one of the valid NuGet servers.
+#
+# @arg $1 string The server to check.
+# @stdout None.
+# @exitcode 0 The server is one of the valid NuGet servers.
+# @exitcode 2 Invalid arguments (wrong count or empty value).
+# @exitcode 1 The server is not one of the valid NuGet servers.
+#-------------------------------------------------------------------------------
+function is_one_of_nuget_servers()
+{
+    [[ $# -eq 1 ]] && is_valid_nuget_server "$1" || {
+        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the server to check."
+        return "$err_invalid_arguments"
+    }
+    is_in "$1" "${nuget_servers[@]}"
 }
