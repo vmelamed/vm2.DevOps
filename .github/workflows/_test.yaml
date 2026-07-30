@@ -52,6 +52,7 @@ on:
       CODECOV_TOKEN:
         description: Codecov API token for uploading coverage reports
         required: true
+
       REPORTGENERATOR_LICENSE:
         description: ReportGenerator license key for enhanced coverage reports
         required: false
