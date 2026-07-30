@@ -55,18 +55,15 @@ declare -xr needs_empty_commit
 exit_if_has_errors
 
 if [[ -z "$GITHUB_REPOSITORY" || -z "$RELEASE_PAT" ]]; then
-    error -ec "$err_argument_value" "GITHUB_REPOSITORY or RELEASE_PAT is not set."
+    error -ec "$err_argument_value" "GITHUB_REPOSITORY and/or RELEASE_PAT are not set."
     exit 1
 fi
-
-tok="${RELEASE_PAT:11:32}"
-trace "Repo: $GITHUB_REPOSITORY" "PAT: $tok"
 
 # Configure git for CI
 # shellcheck disable=SC2154 # ci is referenced but not assigned.
 if $ci; then
-    execute git config user.name "github-actions[bot]"
-    execute git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+    execute git config user.name vmelamed # "github-actions[bot]"
+    execute git config user.email vmelamed@users.noreply.github.com # "41898282+github-actions[bot]@users.noreply.github.com"
     execute git remote set-url origin "https://x-access-token:${RELEASE_PAT}@github.com/${GITHUB_REPOSITORY}.git"
 fi
 
