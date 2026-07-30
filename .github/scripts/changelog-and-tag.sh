@@ -59,7 +59,7 @@ if [[ -z "$GITHUB_REPOSITORY" || -z "$RELEASE_PAT" ]]; then
     exit 1
 fi
 
-trace "Repo: $GITHUB_REPOSITORY" "PAT: ******"
+trace "Repo: $GITHUB_REPOSITORY" "PAT: $RELEASE_PAT"
 
 # Configure git for CI
 # shellcheck disable=SC2154 # ci is referenced but not assigned.
