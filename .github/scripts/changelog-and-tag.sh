@@ -59,6 +59,7 @@ exit_if_has_errors
 if $ci; then
     execute git config user.name "github-actions[bot]"
     execute git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+    execute git remote set-url origin "https://x-access-token:${RELEASE_PAT}@github.com/${GITHUB_REPOSITORY}.git"
 fi
 
 # ============================================================================

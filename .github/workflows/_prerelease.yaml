@@ -156,6 +156,9 @@ jobs:
 
       - name: Update CHANGELOG.md and create prerelease tag
         shell: bash
+        env:
+          RELEASE_PAT: ${{ secrets.RELEASE_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           changelog-and-tag.sh \
               --tag "${{ needs.compute-version.outputs.prerelease-tag }}" \
@@ -187,6 +190,8 @@ jobs:
           fetch-tags: true
           fetch-depth: 0
           filter: tree:0
+          persist-credentials: true
+          token: ${{ github.token }}
 
       - name: Setup DevOps environment variables
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
