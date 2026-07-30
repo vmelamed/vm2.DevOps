@@ -54,6 +54,11 @@ declare -xr needs_empty_commit
 
 exit_if_has_errors
 
+if [[ -z "$GITHUB_REPOSITORY" || -z "$RELEASE_PAT" ]]; then
+    error -ec "$err_argument_value" "GITHUB_REPOSITORY or RELEASE_PAT is not set."
+    exit 1
+fi
+
 # Configure git for CI
 # shellcheck disable=SC2154 # ci is referenced but not assigned.
 if $ci; then
