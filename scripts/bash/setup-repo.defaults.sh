@@ -10,7 +10,7 @@ declare -rxi admin_role_id=5
 declare -xr secret_str
 
 declare -xr missing_state="<missing>"
-declare -xr present_state="<present>"
+declare -xr present_state=$secret_str
 declare -xr undefined_default="<undefined>"
 
 declare -rxA default_repo_settings=(
@@ -101,13 +101,17 @@ declare -rxa nuget_servers=(
 declare -rx default_nuget_server="${nuget_servers[0]}"
 
 declare -rxA actions_secrets=(
-    ["REPORTGENERATOR_LICENSE"]="$secret_str"
-    ["CODECOV_TOKEN"]="$secret_str"
-    ["BENCHER_API_TOKEN"]="$secret_str"
-    ["BENCH_DISPATCH_PAT"]="$secret_str"
-    ["GH_PACKAGES_TOKEN"]="$secret_str"
-    ["NUGET_API_KEY"]="$secret_str"
-    ["RELEASE_PAT"]="$secret_str"
+    # GitHub tokens and secrets:
+    ["GH_PACKAGES_TOKEN"]="$secret_str"         # The GitHub Packages token used to update the local GitHub Packages (used by Dependabot)
+    ["NUGET_API_KEY"]="$secret_str"             # The NuGet API key for the selected NuGet server. Note that nuget.org uses a
+                                                # different authentication mechanism - Trusted Publishing (see https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing)
+    ["RELEASE_PAT"]="$secret_str"               # PAT for a user listed as a bypass actor (e.g. Admin) in the branch ruleset protecting main.
+                                                # Required to push changelog commits and version tags directly to main.
+    ["BENCH_DISPATCH_PAT"]="$secret_str"        # Fine-grained PAT with `Actions: write` + `Contents: read` on the package repos —
+                                                # used by `RebuildBenchHistory.yaml` to dispatch each repo's benchmark-history rebuild
+    ["CODECOV_TOKEN"]="$secret_str"             # Token used by Codecov to upload coverage reports - different for different projects
+    ["REPORTGENERATOR_LICENSE"]="$secret_str"   # License key used by ReportGenerator for generating coverage reports
+    ["BENCHER_API_TOKEN"]="$secret_str"         # API token used by Bencher for authentication
 )
 declare -rxA dependabot_secrets=()
 declare -rxA agents_secrets=()

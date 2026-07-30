@@ -144,7 +144,9 @@ function compare_settings()
         expected="${expected_key_values[$key]}"
         if [[ $expected == "$secret_str" ]]; then
             expected=$undefined_default
-            [[ -v actual_key_values[$key] ]] && actual=$present_state || actual=$missing_state
+            [[ -v actual_key_values[$key] ]] &&
+                actual=$present_state ||
+                actual=$missing_state
         else
             expected="${expected:-$undefined_default}"
             actual=${actual_key_values[$key]:-$missing_state}
