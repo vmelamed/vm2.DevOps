@@ -59,7 +59,7 @@ if [[ -z "$GITHUB_REPOSITORY" || -z "$RELEASE_PAT" ]]; then
     exit 1
 fi
 
-tok="${RELEASE_PAT:4:-1}"
+tok="${RELEASE_PAT:11:32}"
 trace "Repo: $GITHUB_REPOSITORY" "PAT: $tok"
 
 # Configure git for CI
