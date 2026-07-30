@@ -104,7 +104,6 @@ jobs:
           ref: ${{ inputs.sha || github.sha }}
           fetch-depth: 0
           filter: tree:0
-          persist-credentials: true
           token: ${{ github.token }}
 
       # Clone only the scripts from vm2.DevOps, so that we can run the composite
@@ -131,8 +130,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          persist-credentials: true
-          token: ${{ github.token }}
+          token: ${{ secrets.RELEASE_PAT }}
 
       - name: Setup DevOps environment variables
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
