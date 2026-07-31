@@ -657,12 +657,12 @@ function configure_secrets()
             if $delete; then
                 trace "Deleting secret: $name"
                 delete_secret "$name" "$app"
-                continue
             fi
             ! $interactive_secrets && (( ++skipped )) && continue
         else
             exists=false
         fi
+        $delete && continue
 
         # get the value for the secret or use the placeholder if we are not entering secrets interactively
         if $interactive_secrets; then

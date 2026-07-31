@@ -239,12 +239,23 @@ function audit_repo()
     }
     (( pass += results[0], diff += results[1], errs += results[2], 1 ))
 
+    # --- Variables ---
+    echo "  ℹ️  Actions Variables:"
+    compare_settings "$path_vars" "$jq_vars" actions_default_vars false results || {
+        error -ec "$?" "Failed to compare GitHub Actions variables."
+        return 2
+    }
+    (( pass += results[0], diff += results[1], errs += results[2], 1 ))
+
     # --- Secrets ---
     for app in "${apps_with_secrets[@]}"; do
         local secrets_array_name="${app,,}_secrets"
         local -n app_secrets="$secrets_array_name"
 
         (( ${#app_secrets[@]} > 0 )) || continue
+        if [[ ${actions_default_vars["NUGET_SERVER"]} == 'nuget' ]]; then
+            unset 'app_secrets["NUGET_API_KEY"]'
+        fi
 
         echo "  ℹ️  ${app^} Secrets:"
         compare_settings "$path_repo/$app/secrets" "$jq_secrets" "$secrets_array_name" false results || {
@@ -253,14 +264,6 @@ function audit_repo()
         }
         (( pass += results[0], diff += results[1], errs += results[2], 1 ))
     done
-
-    # --- Variables ---
-    echo "  ℹ️  Actions Variables:"
-    compare_settings "$path_vars" "$jq_vars" actions_default_vars false results || {
-        error -ec "$?" "Failed to compare GitHub Actions variables."
-        return 2
-    }
-    (( pass += results[0], diff += results[1], errs += results[2], 1 ))
 
     # --- Branch ruleset ---
     local rulesets_json

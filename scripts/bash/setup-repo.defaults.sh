@@ -100,7 +100,7 @@ declare -rxa nuget_servers=(
 
 declare -rx default_nuget_server="${nuget_servers[0]}"
 
-declare -rxA actions_secrets=(
+declare -xA actions_secrets=(
     # GitHub tokens and secrets:
     ["GH_PACKAGES_TOKEN"]="$secret_str"         # The GitHub Packages token used to update the local GitHub Packages (used by Dependabot)
     ["NUGET_API_KEY"]="$secret_str"             # The NuGet API key for the selected NuGet server. Note that nuget.org uses a
