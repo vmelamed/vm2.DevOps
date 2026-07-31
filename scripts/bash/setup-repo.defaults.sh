@@ -147,6 +147,7 @@ declare -rxA actions_var_validators=(
     ["MINVERTAGPREFIX"]="validate_semverTagComponents"
     ["MIN_COVERAGE_PCT"]="is_valid_percentage"
     ["NUGET_SERVER"]="is_one_of_nuget_servers"
+    ["NUGET_USERNAME"]=""
     ["RESET_BENCHMARK_THRESHOLDS"]="validate_boolean"
     ["SAVE_PACKAGE_ARTIFACTS"]="validate_boolean"
     ["VERBOSE"]="validate_boolean"
