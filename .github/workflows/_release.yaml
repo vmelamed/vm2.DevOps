@@ -132,6 +132,9 @@ jobs:
 
       - name: Update CHANGELOG.md and create release tag
         shell: bash
+        env:
+          RELEASE_PAT: ${{ secrets.RELEASE_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           changelog-and-tag.sh \
               --tag "${{ needs.compute-version.outputs.release-tag }}" \
