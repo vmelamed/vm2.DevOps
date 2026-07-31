@@ -129,6 +129,7 @@ declare -rxA actions_default_vars=(
     ["MINVERTAGPREFIX"]="v"
     ["MIN_COVERAGE_PCT"]="80"
     ["NUGET_SERVER"]="github"
+    ["NUGET_USERNAME"]="vmelamed"
     ["RESET_BENCHMARK_THRESHOLDS"]=false
     ["SAVE_PACKAGE_ARTIFACTS"]=false
     ["VERBOSE"]=false
