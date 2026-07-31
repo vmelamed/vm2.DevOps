@@ -87,6 +87,7 @@ permissions:
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
+  ARTIFACTS_DIR: artifacts/pack
   VERBOSE: ${{ vars.VERBOSE || false }}
 
 jobs:
@@ -175,8 +176,6 @@ jobs:
     permissions:
       packages: write
       id-token: write # Required for authentication with the NuGet server
-    env:
-      ARTIFACTS_DIR: artifacts/pack
     strategy:
       fail-fast: false
       matrix:

@@ -77,7 +77,6 @@ permissions:
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
-  NUGET_SERVER: ${{ inputs.nuget-server || 'nuget' }}
   ARTIFACTS_DIR: artifacts/pack
   VERBOSE: ${{ vars.VERBOSE || false }}
 
@@ -96,7 +95,6 @@ jobs:
         with:
           fetch-depth: 0
           filter: tree:0
-          persist-credentials: true
           token: ${{ github.token }}
 
       - name: Setup DevOps environment variables
@@ -122,7 +120,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: true
-          token: ${{ github.token }}
+          token: ${{ secrets.RELEASE_PAT }}
 
       - name: Setup DevOps environment variables
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
@@ -141,7 +139,7 @@ jobs:
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
               --needs-empty-commit "${{ needs.compute-version.outputs.needs-empty-commit }}"
 
-  release:
+  package-and-publish:
     name: Build and Publish Release
     if: fromJSON(inputs.package-projects-len) > 0
     runs-on: ubuntu-latest
@@ -149,13 +147,13 @@ jobs:
     needs:
       - compute-version
       - changelog-and-tag
+    permissions:
+      packages: write
+      id-token: write # Required for authentication with the NuGet server
     strategy:
       fail-fast: false
       matrix:
         project: ${{ fromJSON(inputs.package-projects) }}
-    permissions:
-      packages: write
-      id-token: write # Required for authentication with the NuGet server
     steps:
       - name: Checkout release tag (full history)
         uses: actions/checkout@v7
