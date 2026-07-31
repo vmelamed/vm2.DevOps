@@ -160,6 +160,28 @@ jobs:
           RELEASE_PAT: ${{ secrets.RELEASE_PAT }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
+          source $DEVOPS_LIB_DIR/gh_core.sh
+
+          release_pat1='${{ secrets.RELEASE_PAT }}'
+          if [[ -z $release_pat1 ]]; then
+              error "secrets.RELEASE_PAT is not set"
+              exit 1
+          fi
+          release_pat2='${{ env.RELEASE_PAT }}'
+          if [[ -z $release_pat2 ]]; then
+              error "env.RELEASE_PAT is not set"
+              exit 1
+          fi
+          release_pat3="$RELEASE_PAT"
+          if [[ -z $release_pat3 ]]; then
+              error "$RELEASE_PAT is not set"
+              exit 1
+          fi
+          github_repository='${{ github.repository }}'
+          if [[ $nuget_server != 'nuget' && -z $nuget_api_key ]]; then
+              error "NUGET_API_KEY is not set"
+              exit 1
+          fi
           changelog-and-tag.sh \
               --tag "${{ needs.compute-version.outputs.prerelease-tag }}" \
               --reason "${{ needs.compute-version.outputs.reason }}" \
@@ -213,10 +235,23 @@ jobs:
         env:
           NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY || secrets.NUGET_API_KEY }}
         run: |
+          source $DEVOPS_LIB_DIR/gh_core.sh
+
+          release_pat='${{ secrets.RELEASE_PAT }}'
+          if [[ -z $release_pat ]]; then
+              error "RELEASE_PAT is not set"
+              exit 1
+          fi
+          nuget_api_key='${{ env.NUGET_API_KEY }}'
+          if [[ $nuget_server != 'nuget' && -z $nuget_api_key ]]; then
+              error "NUGET_API_KEY is not set"
+              exit 1
+          fi
+
           {
-              echo "NuGet  NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}"
-              echo "GitHub NUGET_API_KEY:${{ secrets.NUGET_API_KEY }}"
-              echo "Env:   NUGET_API_KEY: $NUGET_API_KEY"
+              trace "NuGet  NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}"
+              trace "GitHub NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}"
+              trace "Env:   NUGET_API_KEY: $NUGET_API_KEY"
           } >> $GITHUB_STEP_SUMMARY
           publish-package.sh \
               "${{ matrix.project }}" \

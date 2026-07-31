@@ -97,6 +97,8 @@ jobs:
           filter: tree:0
           token: ${{ github.token }}
 
+      # Clone only the scripts from vm2.DevOps, so that we can run the composite
+      # action .github/actions/scripts/action.yaml for both local and external calls
       - name: Setup DevOps environment variables
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
 
@@ -136,6 +138,28 @@ jobs:
           RELEASE_PAT: ${{ secrets.RELEASE_PAT }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
+          source $DEVOPS_LIB_DIR/gh_core.sh
+
+          release_pat1='${{ secrets.RELEASE_PAT }}'
+          if [[ -z $release_pat1 ]]; then
+              error "secrets.RELEASE_PAT is not set"
+              exit 1
+          fi
+          release_pat2='${{ env.RELEASE_PAT }}'
+          if [[ -z $release_pat2 ]]; then
+              error "env.RELEASE_PAT is not set"
+              exit 1
+          fi
+          release_pat3="$RELEASE_PAT"
+          if [[ -z $release_pat3 ]]; then
+              error "$RELEASE_PAT is not set"
+              exit 1
+          fi
+          github_repository='${{ github.repository }}'
+          if [[ $nuget_server != 'nuget' && -z $nuget_api_key ]]; then
+              error "NUGET_API_KEY is not set"
+              exit 1
+          fi
           changelog-and-tag.sh \
               --tag "${{ needs.compute-version.outputs.release-tag }}" \
               --reason "${{ inputs.reason }}" \
@@ -190,6 +214,19 @@ jobs:
         env:
           NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY || secrets.NUGET_API_KEY }}
         run: |
+          source $DEVOPS_LIB_DIR/gh_core.sh
+
+          release_pat='${{ secrets.RELEASE_PAT }}'
+          if [[ -z $release_pat ]]; then
+              error "RELEASE_PAT is not set"
+              exit 1
+          fi
+          nuget_api_key='${{ env.NUGET_API_KEY }}'
+          if [[ $nuget_server != 'nuget' && -z $nuget_api_key ]]; then
+              error "NUGET_API_KEY is not set"
+              exit 1
+          fi
+
           publish-package.sh \
               "${{ matrix.project }}" \
               --define "${{ inputs.preprocessor-symbols }}" \
