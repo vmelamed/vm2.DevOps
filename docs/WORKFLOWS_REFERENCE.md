@@ -50,6 +50,15 @@
   - [\_clear\_cache.yaml](#_clear_cacheyaml)
     - [Inputs](#inputs-7)
     - [Permissions](#permissions-6)
+  - [\_rebuild\_bench\_history.yaml](#_rebuild_bench_historyyaml)
+    - [Inputs](#inputs-8)
+    - [Secrets](#secrets-5)
+    - [Script](#script-4)
+  - [RebuildBenchHistory.yaml (fan-out, in vm2.DevOps)](#rebuildbenchhistoryyaml-fan-out-in-vm2devops)
+    - [Inputs](#inputs-9)
+    - [Secrets](#secrets-6)
+    - [Permissions](#permissions-7)
+    - [Script](#script-5)
 
 <!-- /TOC -->
 
@@ -319,7 +328,7 @@ that belongs to a user (e.g. Admin) configured as a **bypass actor** in the bran
 ### Concurrency
 
     group: prerelease-${{ github.ref }}
-    cancel-in-progress: false
+    cancel-in-progress: true
 
 ### Jobs
 

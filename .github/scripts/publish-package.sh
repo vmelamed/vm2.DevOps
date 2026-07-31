@@ -34,6 +34,8 @@ declare -x nuget_server=${NUGET_SERVER:-"$default_nuget_server"}
 declare -x repo_owner=${GITHUB_REPOSITORY_OWNER:-"$default_repo_owner"}
 declare -x artifacts_saved=${ARTIFACTS_SAVED:-false}
 declare -x artifacts_dir=${ARTIFACTS_DIR:-artifacts/pack}
+# shellcheck disable=SC2154 # variable is referenced but not assigned.
+declare -x server_api_key=${NUGET_API_KEY:-}
 
 source "$script_dir/publish-package.usage.sh"
 source "$script_dir/publish-package.args.sh"
@@ -68,12 +70,7 @@ case "$nuget_server" in
     * ) error -ec "$err_argument_value" "Invalid NuGet server: $nuget_server"
         ;;
 esac
-# shellcheck disable=SC2154
-server_api_key="$NUGET_API_KEY"
-
-if [[ -z "$server_api_key" ]]; then
-    error -ec "$err_missing_argument" "No API key provided for server '$server_name'"
-fi
+[[ -n "$server_api_key" ]] || error -ec "$err_missing_argument" "No API key provided for server '$server_name'"
 
 exit_if_has_errors
 

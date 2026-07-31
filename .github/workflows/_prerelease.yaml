@@ -79,7 +79,7 @@ on:
 
 concurrency:
   group: prerelease-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -109,13 +109,14 @@ jobs:
 
       # Clone only the scripts from vm2.DevOps, so that we can run the composite
       # action .github/actions/scripts/action.yaml for both local and external calls
-      - name: Setup DevOps
+      - name: Setup DevOps environment variables
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
 
       - name: Validate and compute prerelease version
         id: version
         shell: bash
         run: |
+          git fetch --tags --force
           compute-prerelease-version.sh \
               --minver-tag-prefix '${{ inputs.minver-tag-prefix }}' \
               --minver-prerelease-id '${{ inputs.minver-prerelease-id }}' \
@@ -162,26 +163,22 @@ jobs:
         run: |
           source $DEVOPS_LIB_DIR/gh_core.sh
 
-          release_pat1='${{ secrets.RELEASE_PAT }}'
-          if [[ -z $release_pat1 ]]; then
-              error "secrets.RELEASE_PAT is not set"
-              exit 1
-          fi
-          release_pat2='${{ env.RELEASE_PAT }}'
-          if [[ -z $release_pat2 ]]; then
-              error "env.RELEASE_PAT is not set"
-              exit 1
-          fi
-          release_pat3="$RELEASE_PAT"
-          if [[ -z $release_pat3 ]]; then
-              error "$RELEASE_PAT is not set"
-              exit 1
-          fi
+          release_pat='${{ secrets.RELEASE_PAT }}'
+          [[ -n $release_pat ]] || error "secrets.RELEASE_PAT is not set"
+          release_pat='${{ env.RELEASE_PAT }}'
+          [[ -n $release_pat ]] || error "env.RELEASE_PAT is not set"
+          release_pat="$RELEASE_PAT"
+          [[ -n $release_pat ]] || error "RELEASE_PAT is not set"
+
           github_repository='${{ github.repository }}'
-          if [[ $nuget_server != 'nuget' && -z $nuget_api_key ]]; then
-              error "NUGET_API_KEY is not set"
-              exit 1
-          fi
+          [[ -n $github_repository ]] || error "github.repository is not set"
+          github_repository='${{ env.GITHUB_REPOSITORY }}'
+          [[ -n $github_repository ]] || error "env.GITHUB_REPOSITORY is not set"
+          github_repository="$GITHUB_REPOSITORY"
+          [[ -n $github_repository ]] || error "GITHUB_REPOSITORY is not set"
+
+          exit_if_has_errors
+
           changelog-and-tag.sh \
               --tag "${{ needs.compute-version.outputs.prerelease-tag }}" \
               --reason "${{ needs.compute-version.outputs.reason }}" \
@@ -222,7 +219,7 @@ jobs:
           github-token: ${{ github.token }}
           github-actor: ${{ github.actor }}
 
-      - name: Authenticate with NuGet.org trusted publishing
+      - name: Authenticate with NuGet.org trusted publishing to get steps.nuget-login.outputs.NUGET_API_KEY
         if: inputs.nuget-server == 'nuget'
         id: nuget-login
         uses: NuGet/login@v1
@@ -237,22 +234,15 @@ jobs:
         run: |
           source $DEVOPS_LIB_DIR/gh_core.sh
 
-          release_pat='${{ secrets.RELEASE_PAT }}'
-          if [[ -z $release_pat ]]; then
-              error "RELEASE_PAT is not set"
-              exit 1
-          fi
-          nuget_api_key='${{ env.NUGET_API_KEY }}'
-          if [[ $nuget_server != 'nuget' && -z $nuget_api_key ]]; then
-              error "NUGET_API_KEY is not set"
-              exit 1
-          fi
+          nuget_api_key=${{ steps.nuget-login.outputs.NUGET_API_KEY }}
+          [[ $nuget_server == 'nuget' && -n $nuget_api_key ]] || error "steps.nuget-login.outputs.NUGET_API_KEY is not set"
+          nuget_api_key=${{ secrets.NUGET_API_KEY }}
+          [[ $nuget_server != 'nuget' && -n $nuget_api_key ]] || error "secrets.NUGET_API_KEY is not set"
+          nuget_api_key=$NUGET_API_KEY
+          [[ $nuget_server != 'nuget' && -n $nuget_api_key ]] || error "NUGET_API_KEY is not set"
 
-          {
-              trace "NuGet  NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}"
-              trace "GitHub NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}"
-              trace "Env:   NUGET_API_KEY: $NUGET_API_KEY"
-          } >> $GITHUB_STEP_SUMMARY
+          exit_if_has_errors
+
           publish-package.sh \
               "${{ matrix.project }}" \
               --define "${{ inputs.preprocessor-symbols }}" \
