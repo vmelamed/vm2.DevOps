@@ -48,7 +48,7 @@ on:
       nuget-username:
         description: "Username for the NuGet server"
         type: string
-        default: nuget
+        default: valo@vtmelamed.com
 
       save-package-artifacts:
         description: Upload package(s) as workflow artifacts
