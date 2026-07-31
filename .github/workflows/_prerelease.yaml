@@ -240,7 +240,7 @@ jobs:
           fi
 
           nuget_api_key=${{ secrets.NUGET_API_KEY }}
-          [[ $nuget_server != 'nuget' && -z $nuget_api_key ]]; then
+          if [[ $nuget_server != 'nuget' && -z $nuget_api_key ]]; then
               error "secrets.NUGET_API_KEY is not set"
           fi
 
