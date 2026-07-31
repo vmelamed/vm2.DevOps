@@ -235,11 +235,17 @@ jobs:
           source $DEVOPS_LIB_DIR/gh_core.sh
 
           nuget_api_key=${{ steps.nuget-login.outputs.NUGET_API_KEY }}
-          [[ $nuget_server == 'nuget' && -n $nuget_api_key ]] || error "steps.nuget-login.outputs.NUGET_API_KEY is not set"
+          if [[ $nuget_server == 'nuget' && -z $nuget_api_key ]]; then
+              error "steps.nuget-login.outputs.NUGET_API_KEY is not set"
+          fi
+
           nuget_api_key=${{ secrets.NUGET_API_KEY }}
-          [[ $nuget_server != 'nuget' && -n $nuget_api_key ]] || error "secrets.NUGET_API_KEY is not set"
+          [[ $nuget_server != 'nuget' && -z $nuget_api_key ]]; then
+              error "secrets.NUGET_API_KEY is not set"
+          fi
+
           nuget_api_key=$NUGET_API_KEY
-          [[ $nuget_server != 'nuget' && -n $nuget_api_key ]] || error "NUGET_API_KEY is not set"
+          [[ -n $nuget_api_key ]] || error "NUGET_API_KEY is not set"
 
           exit_if_has_errors
 
