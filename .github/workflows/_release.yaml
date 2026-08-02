@@ -15,11 +15,6 @@ on:
         type: string
         default: "[]"
 
-      package-projects-len:
-        description: Length of the JSON array of project/solution paths to package and publish.
-        type: string
-        default: "0"
-
       preprocessor-symbols:
         description: Preprocessor symbols to pass to the compiler
         type: string
@@ -164,7 +159,7 @@ jobs:
 
   package-and-publish:
     name: Build and Publish Release
-    if: fromJSON(inputs.package-projects-len) > 0
+    if: fromJSON(inputs.package-projects)[0] != null
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs:
