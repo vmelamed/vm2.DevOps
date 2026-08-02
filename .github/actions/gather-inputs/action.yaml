@@ -204,15 +204,15 @@ runs:
             fi
 
         elif [[ '${{ github.event_name }}' == "workflow_dispatch" ]]; then
-
-            # Get the values from the UI inputs of workflow_dispatch event. Convert comma-separated runners' OS values to JSON array because
-            # there is a known GitHub actions issue: the workflow dispatch UI doesn't properly handle JSON strings with quotes.
-            # E.g. for the input '["ubuntu-latest"]', the UI removes the inner quotes and it becomes the invalid JSON: '[ubuntu-latest]'.
-
             # For UI manually triggered runs (workflow_dispatch event), use the arg. values from env: vars, secrets, defaults
             # and override them with the inputs from the UI.
 
+            # Convert comma-separated runners' OS values to JSON array because there is a known GitHub actions issue:
+            # the workflow dispatch UI doesn't properly handle JSON strings with quotes. E.g. for the input '["ubuntu-latest"]',
+            # the UI removes the inner quotes and it becomes the invalid JSON: '[ubuntu-latest]'.
             runners_os=$(echo "${{ inputs.dispatch-runners-os }}" | jq -Rc 'split(",") | map(select(length > 0) | gsub("^\\s+|\\s+$";""))')
+
+            # Get the values from the UI inputs of workflow_dispatch event.
             preprocessor_symbols="$preprocessor_symbols;${{ inputs.dispatch-preprocessor-symbols }}"
             reset_benchmark_thresholds="${{ inputs.dispatch-reset-benchmark-thresholds }}"
             skip_benchmarks="${{ inputs.dispatch-skip-benchmarks }}"
