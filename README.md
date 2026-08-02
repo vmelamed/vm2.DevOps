@@ -99,6 +99,7 @@ Inputs flow through layers with consistent name transformations:
 | [Consumer Guide](docs/CONSUMER_GUIDE.md)                           | How to integrate vm2.DevOps into your repository              |
 | [Architecture](docs/ARCHITECTURE.md)                               | Detailed design of workflows, scripts, and library            |
 | [Workflows Reference](docs/WORKFLOWS_REFERENCE.md)                 | All reusable workflows with inputs, outputs, and secrets      |
+| [GitHub Actions Cheat Sheet](docs/GITHUB_ACTIONS_CHEAT_SHEET.md)   | Scope, data flow, reusable-workflow, and release syntax       |
 | [Scripts Reference](docs/SCRIPTS_REFERENCE.md)                     | CI/CD action scripts (build, test, benchmark, pack, publish)  |
 | [Bash Library Reference](scripts/bash/lib/FUNCTIONS_REFERENCE.md)  | All 67 shared bash library functions                          |
 | [Configuration](docs/CONFIGURATION.md)                             | Repository variables, secrets, and branch protection setup    |
