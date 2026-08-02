@@ -51,12 +51,13 @@ function update_dependencies() {
 
     set +e
     cd "$repos/$repo"
+    "$repos/vm2.DevOps/scripts/bash/diff-shared.sh" --vm2-repos "$repos" --file-merge Directory.Packages.props
     gh workflow run "ClearCache.yaml" --repo "vmelamed/$repo"
     rm ./**/*.lock.json
     dotnet restore --force-evaluate
     git add -A
-    git commit -m "chore: update dependencies"
-    gh run watch --repo "vmelamed/$repo"
+    git commit -m "chore: update dependencies" || true
+    gh run watch --repo "vmelamed/$repo" || true
     git push origin --force-with-lease
     set -e
 }
