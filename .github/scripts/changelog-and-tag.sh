@@ -64,7 +64,6 @@ fi
 if $ci; then
     execute git config user.name vmelamed
     execute git config user.email vmelamed@users.noreply.github.com
-      # execute git remote set-url origin "https://x-access-token:${RELEASE_PAT}@github.com/${GITHUB_REPOSITORY}.git"
 fi
 
 # ============================================================================

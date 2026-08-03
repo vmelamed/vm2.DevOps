@@ -70,6 +70,13 @@ on:
           Token for authentication to the selected NuGet server - must be issued by the selected nuget-server.
         required: false
 
+    outputs:
+      artifact-ids:
+        description: >-
+          Comma-separated list of artifact IDs for the uploaded package artifacts, if any.
+          Empty string if no artifacts were uploaded.
+        value: ${{ jobs.collect-artifacts.outputs.artifact-ids }}
+
 concurrency:
   group: prerelease-${{ github.ref }}
   cancel-in-progress: true
@@ -178,7 +185,7 @@ jobs:
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}"
 
   package-and-publish:
-    name: Publish Package (prerelease) to NuGet server
+    name: Publish Package (prerelease) to NuGet server and/or save package artifacts
     if: fromJSON(inputs.package-projects)[0] != null
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -212,43 +219,15 @@ jobs:
           github-token: ${{ github.token }}
           github-actor: ${{ github.actor }}
 
-      - name: Debug OIDC claims (temporary)
-        shell: bash
-        run: |
-          set -euo pipefail
-          tok_json="$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=api://AzureADTokenExchange")"
-          jwt="$(echo "$tok_json" | jq -r '.value')"
-          payload="$(echo "$jwt" | cut -d'.' -f2 | tr '_-' '/+' | base64 -d 2>/dev/null || true)"
-          echo "$payload" | jq '{repository, repository_id, repository_owner, repository_owner_id, workflow, workflow_ref, job_workflow_ref, ref, sha, actor}'
-
-      - name: Authenticate with NuGet.org trusted publishing to get steps.nuget-login.outputs.NUGET_API_KEY
-        if: inputs.nuget-server == 'nuget'
-        id: nuget-login
-        uses: NuGet/login@v1
-        with:
-          user: ${{ inputs.nuget-username }}
-
       - name: Publish package (prerelease) to a NuGet server
         id: publish
         shell: bash
         env:
-          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY || secrets.NUGET_API_KEY }}
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         run: |
           source $DEVOPS_LIB_DIR/gh_core.sh
 
-          nuget_api_key=${{ steps.nuget-login.outputs.NUGET_API_KEY }}
-          if [[ $nuget_server == 'nuget' && -z $nuget_api_key ]]; then
-              error "steps.nuget-login.outputs.NUGET_API_KEY is not set"
-          fi
-
-          nuget_api_key=${{ secrets.NUGET_API_KEY }}
-          if [[ $nuget_server != 'nuget' && -z $nuget_api_key ]]; then
-              error "secrets.NUGET_API_KEY is not set"
-          fi
-
-          nuget_api_key=$NUGET_API_KEY
-          [[ -n $nuget_api_key ]] || error "NUGET_API_KEY is not set"
+          [[ -n $NUGET_API_KEY ]] || error "NUGET_API_KEY is not set"
 
           exit_if_has_errors
 
@@ -263,10 +242,39 @@ jobs:
               --artifacts-dir "${{ env.ARTIFACTS_DIR }}"
 
       - name: Upload package artifact
-        if: inputs.save-package-artifacts == 'true'
+        id: upload-artifact
+        # Upload package artifacts if the user requested it or if the NuGet server is 'nuget' (NuGet.org)
+        # since we cannot publish to NuGet.org with OIDC we need to save the artifacts for publishing by the calling workflow.
+        if: inputs.save-package-artifacts || inputs.nuget-server == 'nuget'
         uses: actions/upload-artifact@v7
         with:
           name: nuget-packages-${{ needs.compute-version.outputs.prerelease-tag }}-${{ hashFiles(matrix.project) }}
           path: ${{ env.ARTIFACTS_DIR }}/*.nupkg
-          if-no-files-found: ignore
+          if-no-files-found: error
           overwrite: true
+
+  collect-artifacts:
+    name: Collect package artifact IDs
+    needs: package-and-publish
+    if: inputs.save-package-artifacts || inputs.nuget-server == 'nuget'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    outputs:
+      artifact-ids: ${{ steps.collect.outputs.artifact-ids }}
+    steps:
+      - name: Collect artifact IDs
+        id: collect
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        shell: bash
+        run: |
+          artifact_ids=$(
+              gh api "repos/$GH_REPO/actions/runs/$RUN_ID/artifacts" --paginate \
+              --jq '.artifacts[] | select(.name | startswith("nuget-packages-")) | .id' |
+              paste -sd, -
+          )
+          echo "artifact-ids=$artifact_ids" # to the logs
+          echo "artifact-ids=$artifact_ids" >> "$GITHUB_OUTPUT"

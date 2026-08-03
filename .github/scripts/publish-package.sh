@@ -121,24 +121,42 @@ fi
 git_tag="$minver_tag_prefix$version"
 
 # push packages to NuGet server
-execute dotnet nuget push "$artifacts_dir"/*.nupkg \
-    --source "$server_url" \
-    --api-key "$server_api_key" \
-    --skip-duplicate
+if [[ -n $server_url ]]; then
+    execute dotnet nuget push "$artifacts_dir"/*.nupkg \
+        --source "$server_url" \
+        --api-key "$server_api_key" \
+        --skip-duplicate
 
-{
-    echo "🎯 Package(s) $package_version pushed to $server_name:"
-    for f in "$artifacts_dir"/*.nupkg; do
-        echo "  - $(basename "$f")"
-    done
-    echo ""
-    [[ "$artifacts_saved" == true ]] && echo "Will be saved as workflow artifacts to $artifacts_dir."
-    echo ""
-    echo "| $summary_header   |                |"
-    echo "|:------------------|:---------------|"
-    echo "| Server            | $server_name   |"
-    echo "| Server URL        | $server_url    |"
-    echo "| Version           | $version       |"
-    echo "| Git Tag           | $git_tag       |"
-    echo "| Reason            | $reason        |"
-} | to_summary
+    {
+        echo "🎯 Package(s) $package_version pushed to $server_name:"
+        for f in "$artifacts_dir"/*.nupkg; do
+            echo "  - $(basename "$f")"
+        done
+        echo ""
+        [[ "$artifacts_saved" == true ]] && echo "Will be saved as workflow artifacts to $artifacts_dir."
+        echo ""
+        echo "| $summary_header   |                |"
+        echo "|:------------------|:---------------|"
+        echo "| Server            | $server_name   |"
+        echo "| Server URL        | $server_url    |"
+        echo "| Version           | $version       |"
+        echo "| Git Tag           | $git_tag       |"
+        echo "| Reason            | $reason        |"
+    } | to_summary
+else
+    {
+        echo "🎯 Package(s) $package_version were **NOT** pushed to $server_name:"
+        for f in "$artifacts_dir"/*.nupkg; do
+            echo "  - $(basename "$f")"
+        done
+        echo ""
+        [[ "$artifacts_saved" == true ]] && echo "Will be saved as workflow artifacts to $artifacts_dir."
+        echo ""
+        echo "| $summary_header   |                |"
+        echo "|:------------------|:---------------|"
+        echo "| Server            | $server_name   |"
+        echo "| Version           | $version       |"
+        echo "| Git Tag           | $git_tag       |"
+        echo "| Reason            | $reason        |"
+    } | to_summary
+fi
