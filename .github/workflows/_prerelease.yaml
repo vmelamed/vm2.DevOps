@@ -83,6 +83,8 @@ concurrency:
 
 permissions:
   contents: write
+  packages: write
+  actions: read
 
 env:
   DOTNET_NOLOGO: true
@@ -192,8 +194,6 @@ jobs:
     needs:
       - compute-version
       - changelog-and-tag
-    permissions:
-      packages: write
     strategy:
       fail-fast: false
       matrix:
