@@ -17,6 +17,7 @@ source "$lib_dir/gh_core.sh"
 declare -rxi success
 declare -rxi err_tool_error
 declare -rxi err_logic_error
+declare -rxi err_argument_value
 
 # constants and default values
 declare -xr default_nuget_server="github"
@@ -51,8 +52,6 @@ validate_nuget_server "nuget_server" || true
 is_safe_input "$repo_owner" || true
 is_safe_path "$artifacts_dir" || true
 
-# shellcheck disable=SC2154 # variable is referenced but not assigned.
-# shellcheck disable=SC2153 # Possible Misspelling: MYVARIABLE may not be assigned. Did you mean MY_VARIABLE?
 case "$nuget_server" in
     github )
         server_name="GitHub Packages"
@@ -70,7 +69,8 @@ case "$nuget_server" in
     * ) error -ec "$err_argument_value" "Invalid NuGet server: $nuget_server"
         ;;
 esac
-[[ -n "$server_api_key" ]] || error -ec "$err_missing_argument" "No API key provided for server '$server_name'"
+[[ $nuget_server != "nuget" && -n "$server_api_key" ]] ||
+    error -ec "$err_missing_argument" "No API key provided for server '$server_name'"
 
 exit_if_has_errors
 
