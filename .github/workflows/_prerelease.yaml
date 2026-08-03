@@ -194,7 +194,6 @@ jobs:
       - changelog-and-tag
     permissions:
       packages: write
-      id-token: write # Required for authentication with the NuGet server
     strategy:
       fail-fast: false
       matrix:
