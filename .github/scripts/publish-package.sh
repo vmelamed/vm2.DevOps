@@ -7,6 +7,7 @@ set -euo pipefail
 script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../../scripts/bash/lib")
+
 declare -r script_name
 declare -r script_dir
 declare -r lib_dir
@@ -53,24 +54,26 @@ is_safe_input "$repo_owner" || true
 is_safe_path "$artifacts_dir" || true
 
 case "$nuget_server" in
-    github )
-        server_name="GitHub Packages"
-        server_url="https://nuget.pkg.github.com/$repo_owner/index.json"
-        ;;
     nuget )
         server_name="NuGet.org"
         server_url="https://api.nuget.org/v3/index.json"
         ;;
+    github )
+        server_name="GitHub Packages"
+        server_url="https://nuget.pkg.github.com/$repo_owner/index.json"
+        [[ -n "$server_api_key" ]] ||
+            error -ec "$err_missing_argument" "No API key provided for server '$server_name'"
+        ;;
     "https?://.+" )
         server_name="$nuget_server"
         server_url="$nuget_server"
+        [[ -n "$server_api_key" ]] ||
+            error -ec "$err_missing_argument" "No API key provided for server '$server_name'"
         ;;
 
     * ) error -ec "$err_argument_value" "Invalid NuGet server: $nuget_server"
         ;;
 esac
-[[ $nuget_server != "nuget" && -n "$server_api_key" ]] ||
-    error -ec "$err_missing_argument" "No API key provided for server '$server_name'"
 
 exit_if_has_errors
 
