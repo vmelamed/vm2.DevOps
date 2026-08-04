@@ -74,7 +74,7 @@ permissions:
   pull-requests: write # Required for Bencher to comment on PRs
 
 env:
-  ARTIFACTS_DIR: ./BenchmarkArtifacts
+  ARTIFACTS_DIR: ${{ vars.ARTIFACTS_DIR || 'artifacts' }}
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   VERBOSE: ${{ vars.VERBOSE || false }}
@@ -165,7 +165,7 @@ jobs:
               --define "${{ inputs.preprocessor-symbols }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
               --minver-prerelease-id "${{ inputs.minver-prerelease-id }}" \
-              --artifacts "${{ env.ARTIFACTS_DIR }}"
+              --artifacts "$ARTIFACTS_DIR"
 
           trace "Benchmarks completed. Preparing to upload results to Bencher.dev with max regression threshold of ±${{ inputs.max-regression-pct }}%."
 
@@ -273,7 +273,7 @@ jobs:
           fi
 
           # Add all benchmark result files
-          for file in ${{ env.ARTIFACTS_DIR }}/results/*-report-full-compressed.json; do
+          for file in "$ARTIFACTS_DIR/benchmarks/results/*-report-full-compressed.json"; do
               if [[ -s "$file" ]]; then
                   trace "Adding benchmark result file: $file"
                   BENCHER_ARGS+=(--file "$file")
@@ -281,8 +281,8 @@ jobs:
           done
 
           if [[ $verbose == "true" ]]; then
-              trace "Looking for benchmark result files matching: ${{ env.ARTIFACTS_DIR }}/results/*-report-full-compressed.json:"
-              trace "$(ls -l ${{ env.ARTIFACTS_DIR }}/results/*-report-full-compressed.json)"
+              trace "Looking for benchmark result files matching: $ARTIFACTS_DIR/benchmarks/results/*-report-full-compressed.json:"
+              trace "$(ls -l $ARTIFACTS_DIR/benchmarks/results/*-report-full-compressed.json)"
 
               declare -a sanitized_bencher_args=("${BENCHER_ARGS[@]}")
 
@@ -322,7 +322,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: benchmark-results-${{ inputs.runner-os }}
-          path: ${{ env.ARTIFACTS_DIR }}
+          path: $ARTIFACTS_DIR/benchmarks
           if-no-files-found: warn
           overwrite: true
 

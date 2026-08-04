@@ -37,14 +37,14 @@ Options:
                                 Initial value from \$MINVERTAGPREFIX environment variable or 'v'
   -mi, --minver-prerelease-id   Default semver pre-release identifiers for MinVer (e.g., 'preview.0', 'alpha', 'beta', 'rc1', etc.)
                                 Initial value from \$MINVERDEFAULTPRERELEASEIDENTIFIERS environment variable or 'preview.0'
-  -a, --artifacts               Specifies the root directory (preferably relative to the repository root) where to create the
-                                script's artifacts: summaries, report files, etc. The artifacts will be in a subdirectory of the
-                                artifacts root directory named after the test project, e.g. <artifacts-root>/<test-project-name>/*
-                                Initial value from \$TEST_ARTIFACTS_DIR environment variable or '<solution-root>/TestArtifacts'
+  -a, --artifacts               Specifies the root directory for test artifacts, such as test results, coverage reports, and
+                                summaries. Artifacts are stored in a subdirectory named after the test project:
+                                <artifacts-root>/tests/<test-project-name>/*
+                                Initial value: \$ARTIFACTS_DIR or 'artifacts'
 $switches
 Environment Variables:
   TEST_PROJECT                  Path to the test project file
-  TEST_ARTIFACTS_DIR            Directory relative to the repository root where to create the script's artifacts
+  ARTIFACTS_DIR                 Directory relative to the repository root where to create the script's artifacts
   CONFIGURATION                 Build configuration ('Release' or 'Debug')
   PREPROCESSOR_SYMBOLS          Pre-processor symbols to define when building the test project
   MIN_COVERAGE_PCT              Minimum acceptable code coverage percentage

@@ -89,23 +89,23 @@ jobs:
         if: ${{ !inputs.skip-build-cache }}
         uses: actions/download-artifact@v8
         with:
-          pattern: build-artifacts-${{ runner.os }}-${{ inputs.configuration }}-*
+          pattern: built-artifacts-${{ runner.os }}-${{ inputs.configuration }}-*
           merge-multiple: true
           path: downloaded/
 
-      - name: Extract build artifacts
+      - name: Extract built artifacts
         if: ${{ !inputs.skip-build-cache }}
         shell: bash
         run: |
           find downloaded/ -name '*.tar.gz' -exec tar xzf {} \;
 
       # A pattern download does not fail on zero matches, so verify explicitly (the equivalent of fail-on-cache-miss)
-      - name: Verify build artifacts were downloaded
+      - name: Verify built artifacts were downloaded
         if: ${{ !inputs.skip-build-cache }}
         shell: bash
         run: |
           find . -type d -path "*/bin/${{ inputs.configuration }}" -print -quit | grep -q . || {
-              echo "::error::No build artifacts were downloaded from the build job."
+              echo "::error::No built artifacts were downloaded from the build job."
               exit 1
           }
 

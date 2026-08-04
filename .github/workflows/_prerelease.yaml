@@ -8,11 +8,17 @@ on:
           JSON array of project/solution paths to package and publish, e.g. '["src/Project1/Project1.csproj", "src/Project2/Project2.csproj"]'.
           If empty array, dotnet CLI will auto-detect root .sln, .slnx, or .csproj files.
         type: string
+        default: "[]"
 
       dotnet-version:
         description: Version of .NET SDK to use (cannot be null or empty string, default 10.0.x)
         type: string
         default: 10.0.x
+
+      configuration:
+        description: The type of build to produce, e.g. Release vs Debug. Cannot be null or empty!
+        type: string
+        default: Release
 
       preprocessor-symbols:
         description: Preprocessor symbols to pass to the compiler
@@ -43,11 +49,6 @@ on:
         description: "Username for the NuGet server"
         type: string
 
-      save-package-artifacts:
-        description: Upload package(s) as workflow artifacts
-        type: boolean
-        default: false
-
       sha:
         description: >-
           Exact git SHA to compute the version from and tag. When triggered automatically via
@@ -65,11 +66,6 @@ on:
           Required to push changelog commits and version tags directly to main.
         required: true
 
-      NUGET_API_KEY:
-        description: >-
-          Token for authentication to the selected NuGet server - must be issued by the selected nuget-server.
-        required: false
-
     outputs:
       artifact-ids:
         description: >-
@@ -79,7 +75,7 @@ on:
 
 concurrency:
   group: prerelease-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -89,68 +85,58 @@ permissions:
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
-  ARTIFACTS_DIR: artifacts/pack
+  ARTIFACTS_DIR: ${{ vars.ARTIFACTS_DIR || 'artifacts' }}
+  CONFIGURATION: ${{ vars.CONFIGURATION || 'Release' }}
+  PREPROCESSOR_SYMBOLS: ${{ vars.PREPROCESSOR_SYMBOLS || '' }}
+  MINVER_TAG_PREFIX: ${{ vars.MINVER_TAG_PREFIX || 'v' }}
+  MINVER_PRERELEASE_ID: ${{ vars.MINVER_PRERELEASE_ID || 'preview.0' }}
+  REASON: ${{ vars.REASON || '' }}
+  NUGET_SERVER: ${{ vars.NUGET_SERVER || 'nuget' }}
+  NUGET_USERNAME: ${{ vars.NUGET_USERNAME || '' }}
   VERBOSE: ${{ vars.VERBOSE || false }}
 
 jobs:
-  compute-version:
-    name: Compute Prerelease Version
+  prepare-prerelease:
+    name: Compute Prerelease Version, Update CHANGELOG.md and Create Prerelease Tag
     runs-on: ubuntu-latest
     outputs:
-      prerelease-version: ${{ steps.version.outputs.prerelease-version }}
-      prerelease-tag: ${{ steps.version.outputs.prerelease-tag }}
-      reason: ${{ steps.version.outputs.reason }}
+      prerelease-version: ${{ steps.version-tag-and-changelog.outputs.prerelease-version }}
+      prerelease-tag: ${{ steps.version-tag-and-changelog.outputs.prerelease-tag }}
+      reason: ${{ steps.version-tag-and-changelog.outputs.reason }}
     steps:
       - name: Checkout (full history)
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ inputs.sha || github.sha }}
-          fetch-depth: 0
-          filter: tree:0
-          token: ${{ github.token }}
-
-      # Clone only the scripts from vm2.DevOps, so that we can run the composite
-      # action .github/actions/scripts/action.yaml for both local and external calls
-      - name: Setup DevOps environment variables
-        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
-
-      - name: Validate and compute prerelease version
-        id: version
-        shell: bash
-        run: |
-          git fetch --tags --force
-          compute-prerelease-version.sh \
-              --minver-tag-prefix '${{ inputs.minver-tag-prefix }}' \
-              --minver-prerelease-id '${{ inputs.minver-prerelease-id }}' \
-              --reason '${{ inputs.reason }}'
-
-  changelog-and-tag:
-    name: Update CHANGELOG.md and Create Prerelease Tag
-    runs-on: ubuntu-latest
-    needs:
-      - compute-version
-    steps:
-      - name: Checkout (full history on main)
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
           persist-credentials: true
           token: ${{ secrets.RELEASE_PAT }}
 
+      # Clone only the scripts from vm2.DevOps, so that we can run the composite
+      # action .github/actions/scripts/action.yaml for both local and external calls
       - name: Setup DevOps environment variables
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
 
-      - name: Verify HEAD matches the CI-validated SHA
-        if: inputs.sha != ''
+      - name: Verify HEAD matches the CI-validated SHA; Validate and compute prerelease version
+        id: version-tag-and-changelog
         shell: bash
         run: |
           source "$DEVOPS_LIB_DIR/gh_core.sh"
-          actual_sha=$(git rev-parse HEAD)
-          if [[ "$actual_sha" != "${{ inputs.sha }}" ]]; then
-              error "Race condition detected: HEAD is $actual_sha but expected ${{ inputs.sha }}."
-              error "Another commit was pushed to main after CI completed. Re-run the Prerelease workflow."
-              exit 1
+
+          if [[ "${{ inputs.sha }}" != '' ]]; then
+              actual_sha=$(git rev-parse HEAD)
+              if [[ "${{ inputs.sha }}" != '' && "$actual_sha" != "${{ inputs.sha }}" ]]; then
+                  error "Race condition detected: HEAD is $actual_sha but expected ${{ inputs.sha }}."
+                  error "Another commit was pushed to main after CI completed. Re-run the Prerelease workflow."
+                  exit 1
+              fi
           fi
+          git fetch --tags --force
+          compute-prerelease-version.sh \
+              --minver-tag-prefix '${{ inputs.minver-tag-prefix }}' \
+              --minver-prerelease-id '${{ inputs.minver-prerelease-id }}' \
+              --reason '${{ inputs.reason }}'
+
+          # outputs: prerelease-version, prerelease-tag, reason
 
       - name: Install git-cliff
         uses: taiki-e/install-action@v2
@@ -165,25 +151,13 @@ jobs:
         run: |
           source $DEVOPS_LIB_DIR/gh_core.sh
 
-          release_pat='${{ secrets.RELEASE_PAT }}'
-          [[ -n $release_pat ]] || error "secrets.RELEASE_PAT is not set"
-          release_pat='${{ env.RELEASE_PAT }}'
-          [[ -n $release_pat ]] || error "env.RELEASE_PAT is not set"
-          release_pat="$RELEASE_PAT"
-          [[ -n $release_pat ]] || error "RELEASE_PAT is not set"
-
-          github_repository='${{ github.repository }}'
-          [[ -n $github_repository ]] || error "github.repository is not set"
-          github_repository='${{ env.GITHUB_REPOSITORY }}'
-          [[ -n $github_repository ]] || error "env.GITHUB_REPOSITORY is not set"
-          github_repository="$GITHUB_REPOSITORY"
-          [[ -n $github_repository ]] || error "GITHUB_REPOSITORY is not set"
-
+          [[ -n $RELEASE_PAT ]]       || error "secrets.RELEASE_PAT, or env.RELEASE_PAT, or RELEASE_PAT is not set"
+          [[ -n $GITHUB_REPOSITORY ]] || error "github.repository(?), or env.GITHUB_REPOSITORY, or GITHUB_REPOSITORY is not set"
           exit_if_has_errors
 
           changelog-and-tag.sh \
-              --tag "${{ needs.compute-version.outputs.prerelease-tag }}" \
-              --reason "${{ needs.compute-version.outputs.reason }}" \
+              --tag "${{ steps.version-tag-and-changelog.outputs.prerelease-tag }}" \
+              --reason "${{ steps.version-tag-and-changelog.outputs.reason }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}"
 
   package-and-publish:
@@ -192,8 +166,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs:
-      - compute-version
-      - changelog-and-tag
+      - prepare-prerelease
     strategy:
       fail-fast: false
       matrix:
@@ -202,10 +175,9 @@ jobs:
       - name: Checkout prerelease tag (full history)
         uses: actions/checkout@v7
         with:
-          ref: ${{ needs.compute-version.outputs.prerelease-tag }}
+          ref: ${{ needs.prepare-prerelease.outputs.prerelease-tag }}
           fetch-tags: true
           fetch-depth: 0
-          filter: tree:0
 
       - name: Setup DevOps environment variables
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
@@ -218,44 +190,33 @@ jobs:
           github-token: ${{ github.token }}
           github-actor: ${{ github.actor }}
 
-      - name: Publish package (prerelease) to a NuGet server
-        id: publish
+      - name: Build package (prerelease)
+        id: package
         shell: bash
-        env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         run: |
-          source $DEVOPS_LIB_DIR/gh_core.sh
-
-          [[ -n $NUGET_API_KEY ]] || error "NUGET_API_KEY is not set"
-
-          exit_if_has_errors
-
-          publish-package.sh \
+          pack.sh \
               "${{ matrix.project }}" \
+              --build \
+              --configuration "${{ inputs.configuration }}" \
               --define "${{ inputs.preprocessor-symbols }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
               --minver-prerelease-id "${{ inputs.minver-prerelease-id }}" \
-              --reason "${{ needs.compute-version.outputs.reason }}" \
-              --nuget-server "${{ inputs.nuget-server }}" \
-              --artifacts-saved "${{ inputs.save-package-artifacts }}" \
-              --artifacts-dir "${{ env.ARTIFACTS_DIR }}"
+              --reason "${{ needs.prepare-prerelease.outputs.reason }}" \
+              --artifacts "$ARTIFACTS_DIR"
 
       - name: Upload package artifact
         id: upload-artifact
-        # Upload package artifacts if the user requested it or if the NuGet server is 'nuget' (NuGet.org)
         # since we cannot publish to NuGet.org with OIDC we need to save the artifacts for publishing by the calling workflow.
-        if: inputs.save-package-artifacts || inputs.nuget-server == 'nuget'
         uses: actions/upload-artifact@v7
         with:
-          name: nuget-packages-${{ needs.compute-version.outputs.prerelease-tag }}-${{ hashFiles(matrix.project) }}
-          path: ${{ env.ARTIFACTS_DIR }}/*.nupkg
+          name: nuget-packages-${{ needs.prepare-prerelease.outputs.prerelease-tag }}-${{ hashFiles(matrix.project) }}
+          path: $ARTIFACTS_DIR/packages/*.nupkg
           if-no-files-found: error
           overwrite: true
 
   collect-artifacts:
     name: Collect package artifact IDs
     needs: package-and-publish
-    if: inputs.save-package-artifacts || inputs.nuget-server == 'nuget'
     runs-on: ubuntu-latest
     permissions:
       actions: read

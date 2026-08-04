@@ -131,7 +131,7 @@ else
     if git status --porcelain -- CHANGELOG.md | grep -q .; then
         execute git add CHANGELOG.md
         execute git commit -m "chore: update changelog for $tag [skip ci]"
-        execute git push
+        execute git push --force-with-lease
         info "✅ CHANGELOG updated and pushed"
     else
         warning "No changelog changes to commit"

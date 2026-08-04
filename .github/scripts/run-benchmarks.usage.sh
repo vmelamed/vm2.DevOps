@@ -40,12 +40,14 @@ Options:
                                 base-line benchmark results
                                 Initial value from \$MAX_REGRESSION_PCT or default 20
   -a, --artifacts               Specifies the directory where to create the benchmark artifacts: results, summaries, base lines,
-                                etc.
-                                Initial value: '<solution root>/BenchmarkArtifacts'
+                                etc. The benchmark artifacts will be saved in a 'benchmarks' subdirectory within this directory
+                                and the results will be stored in the 'results' subdirectory within the 'benchmarks'
+                                subdirectory.
+                                Initial value: '<solution root>/artifacts'
 $switches
 Environment Variables:
   BENCHMARK_PROJECT             Path to the benchmark project file
-  ARTIFACTS_DIR                 Directory where benchmark artifacts will be created
+  ARTIFACTS_DIR                 Directory where benchmark artifacts will be created (see --artifacts above)
   CONFIGURATION                 Build configuration ('Debug' or 'Release')
   PREPROCESSOR_SYMBOLS          Pre-processor symbols to define when building the benchmark project
   MAX_REGRESSION_PCT            Maximum acceptable regression percentage when comparing to previous benchmark results

@@ -69,6 +69,7 @@ fi
 execute dotnet restore --locked-mode
 
 execute dotnet build "$build_project" \
+            --no-restore \
             --verbosity detailed \
             --configuration "$configuration" \
             -p:preprocessor_symbols="$preprocessor_symbols" \

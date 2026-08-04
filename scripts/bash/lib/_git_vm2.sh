@@ -302,6 +302,7 @@ function search_repo_dir()
                   -o -name __pycache__ \
                   -o -name bin \
                   -o -name obj \
+                  -o -name artifacts \
                   -o -name TestResults \
                   -o -name BenchmarkDotNet.Artifacts \
                   \) -prune \

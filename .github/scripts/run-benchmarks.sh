@@ -30,7 +30,7 @@ declare -x configuration=${CONFIGURATION:-"Release"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}
-declare -x artifacts_dir=${ARTIFACTS_DIR:-"./BenchmarkArtifacts"}
+declare -x artifacts_dir=${ARTIFACTS_DIR:-"artifacts"}
 
 source "$script_dir/run-benchmarks.usage.sh"
 source "$script_dir/run-benchmarks.args.sh"
@@ -46,8 +46,9 @@ is_safe_path "$artifacts_dir" || true
 
 exit_if_has_errors
 
-results_dir="$artifacts_dir/results"
-renamed_artifacts_dir="$artifacts_dir-$(date -u +"%Y%m%dT%H%M%S")"
+artifacts_benchmarks_dir="$artifacts_dir/benchmarks"
+results_dir="$artifacts_benchmarks_dir/results"
+renamed_artifacts_dir="$artifacts_benchmarks_dir-$(date -u +"%Y%m%dT%H%M%S")"
 
 # Freeze variables
 declare -xr benchmark_project
@@ -55,29 +56,29 @@ declare -xr configuration
 declare -xr preprocessor_symbols
 declare -xr minver_tag_prefix
 declare -xr minver_prerelease_id
-declare -xr artifacts_dir
+declare -xr artifacts_benchmarks_dir
 declare -xr results_dir
 declare -r renamed_artifacts_dir
 
-if [[ -d "$artifacts_dir" && -n "$(ls -A "$artifacts_dir")" ]]; then
+if [[ -d "$artifacts_benchmarks_dir" && -n "$(ls -A "$artifacts_benchmarks_dir")" ]]; then
     if [[ -n "${CI:-}" ]]; then
         # Auto-delete in CI
         echo "Deleting existing artifacts directory (running in CI)..."
-        execute rm -rf "$artifacts_dir"
+        execute rm -rf "$artifacts_benchmarks_dir"
     else
         choice=$(choose \
-                    "The benchmark results directory '$artifacts_dir' already exists. What do you want to do?" \
+                    "The benchmark results directory '$artifacts_benchmarks_dir' already exists. What do you want to do?" \
                         "Delete the directory and continue" \
                         "Rename the directory to '$renamed_artifacts_dir' and continue" \
                         "Exit the script") || exit $?
 
         trace "User selected option: $choice"
         case $choice in
-            1)  echo "Deleting the directory '$artifacts_dir'..."
-                execute rm -rf "$artifacts_dir"
+            1)  echo "Deleting the directory '$artifacts_benchmarks_dir'..."
+                execute rm -rf "$artifacts_benchmarks_dir"
                 ;;
-            2)  echo "Renaming the directory '$artifacts_dir' to '$renamed_artifacts_dir'..."
-                execute mv "$artifacts_dir" "$renamed_artifacts_dir"
+            2)  echo "Renaming the directory '$artifacts_benchmarks_dir' to '$renamed_artifacts_dir'..."
+                execute mv "$artifacts_benchmarks_dir" "$renamed_artifacts_dir"
                 ;;
             3)  echo "Exiting the script."
                 exit 0
@@ -126,7 +127,7 @@ benchmark_args=(
     --join
     --exporters json markdown
     --memory
-    --artifacts "$artifacts_dir"
+    --artifacts "$artifacts_benchmarks_dir"
 )
 
 if ! execute "$benchmark_exe_path" "${benchmark_args[@]}"; then

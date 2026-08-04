@@ -94,8 +94,8 @@ declare -rxa apps_with_secrets=(
 )
 
 declare -rxa nuget_servers=(
-    "github"
     "nuget"
+    "github"
 )
 
 declare -rx default_nuget_server="${nuget_servers[0]}"
@@ -120,6 +120,7 @@ declare -rxA codespaces_secrets=()
 declare -rxA actions_default_vars=(
     ["ACTIONS_RUNNER_DEBUG"]=false
     ["ACTIONS_STEP_DEBUG"]=false
+    ["ARTIFACTS_DIR"]="artifacts"
     ["CONFIGURATION"]="Release"
     ["DOTNET_VERSION"]="10.0.x"
     ["MAX_REGRESSION_PCT"]="20"
@@ -128,16 +129,16 @@ declare -rxA actions_default_vars=(
     ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="preview.0"
     ["MINVERTAGPREFIX"]="v"
     ["MIN_COVERAGE_PCT"]="80"
-    ["NUGET_SERVER"]="nuget"                # The default NuGet server to use for publishing packages. Can be 'github', 'nuget', or a custom server URL.
+    ["NUGET_SERVER"]="nuget"                # The default NuGet server to use for publishing packages. Can be 'nuget', 'github', or a custom server URL.
     ["NUGET_USERNAME"]="valo"               # The default username to use for the selected NuGet server. github - vmelamed, nuget - your NuGet.org username, custom server - as required.
     ["RESET_BENCHMARK_THRESHOLDS"]=false
-    ["SAVE_PACKAGE_ARTIFACTS"]=false
     ["VERBOSE"]=false
 )
 
 declare -rxA actions_var_validators=(
     ["ACTIONS_RUNNER_DEBUG"]="validate_boolean"
     ["ACTIONS_STEP_DEBUG"]="validate_boolean"
+    ["ARTIFACTS_DIR"]="is_safe_path"
     ["CONFIGURATION"]="is_valid_configuration"
     ["DOTNET_VERSION"]="is_valid_dotnet_version"
     ["MAX_REGRESSION_PCT"]="is_valid_percentage"
@@ -149,7 +150,6 @@ declare -rxA actions_var_validators=(
     ["NUGET_SERVER"]="is_one_of_nuget_servers"
     ["NUGET_USERNAME"]=""
     ["RESET_BENCHMARK_THRESHOLDS"]="validate_boolean"
-    ["SAVE_PACKAGE_ARTIFACTS"]="validate_boolean"
     ["VERBOSE"]="validate_boolean"
 )
 

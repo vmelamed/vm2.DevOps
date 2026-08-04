@@ -298,7 +298,7 @@ function execute_with_retry()
 # @stdout space-separated list of matching files (empty if none match)
 #
 # @example
-#   packages=$(list_of_files "artifacts/pack/*.nupkg")
+#   packages=$(list_of_files "artifacts/packages/*.nupkg")
 #   for pkg in $packages; do echo "$pkg"; done
 #-------------------------------------------------------------------------------
 function list_of_files()

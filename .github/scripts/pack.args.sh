@@ -43,6 +43,10 @@ function get_arguments()
                 preprocessor_symbols="$1"; shift
                 ;;
 
+            --build|-b )
+                build=true
+                ;;
+
             --minver-tag-prefix|-mp )
                 [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
                 minver_tag_prefix="$1"; shift
@@ -53,8 +57,14 @@ function get_arguments()
                 minver_prerelease_id="$1"; shift
                 ;;
 
-            --build|-b )
-                build=true
+            --reason|-r )
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
+                reason="$1"; shift
+                ;;
+
+            --artifacts|-a )
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
+                artifacts_dir="$1"; shift
                 ;;
 
             * ) [[ -z $package_project ]] || usage -ec "$err_too_many_arguments" "Multiple package projects specified. Unknown option: $option"
@@ -73,9 +83,10 @@ function get_arguments()
         package_project \
         configuration \
         preprocessor_symbols \
+        reason \
         minver_tag_prefix \
         minver_prerelease_id \
-        build \
+        artifacts_dir \
         --header "other:" \
         ci
 }

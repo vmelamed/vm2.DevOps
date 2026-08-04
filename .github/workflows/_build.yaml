@@ -50,7 +50,7 @@ env:
   VERBOSE: ${{ vars.VERBOSE || false }}
 
 jobs:
-  # Compile the project and optionally cache the build artifacts
+  # Compile the project and optionally cache the built artifacts
   build:
     name: Build on ${{ inputs.runner-os }}
     runs-on: ${{ inputs.runner-os }}
@@ -127,7 +127,7 @@ jobs:
           slug=$(printf '%s' "$BUILD_PROJECT" | tr -c 'A-Za-z0-9.\n' '-')
           echo "slug=${slug:-root}" >> "$GITHUB_OUTPUT"
 
-      - name: Archive build artifacts
+      - name: Archive built artifacts
         shell: bash
         run: |
           # bin/<config> for the jobs that execute binaries (test, benchmarks); obj/ for the jobs that re-enter
@@ -138,10 +138,10 @@ jobs:
               echo "::error::Build produced no output in bin/${{ inputs.configuration }}."
               exit 1
           }
-          tar czf build-artifacts.tar.gz --exclude='*.tmp' "${bin_dirs[@]}" "${obj_dirs[@]}"
+          tar czf built-artifacts.tar.gz --exclude='*.tmp' "${bin_dirs[@]}" "${obj_dirs[@]}"
 
-      - name: Upload build artifacts
+      - name: Upload built artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: build-artifacts-${{ runner.os }}-${{ inputs.configuration }}-${{ github.run_id }}
-          path: build-artifacts.tar.gz
+          name: built-artifacts-${{ runner.os }}-${{ inputs.configuration }}-${{ github.run_id }}
+          path: built-artifacts.tar.gz

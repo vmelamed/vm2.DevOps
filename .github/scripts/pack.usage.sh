@@ -28,13 +28,18 @@ Options:
                                 Initial value from \$CONFIGURATION or default 'Release'
   -d, --define                  Defines one or more user-defined, space, comma, or semicolon-separated pre-processor symbols.
                                 Initial value from \$PREPROCESSOR_SYMBOLS or default ''
+  -b, --build                   Build the project before packing (default: use pre-built artifacts).
+                                Use when no prior build job cached the artifacts (e.g., this is a template projects).
+                                Initial value from \$BUILD or default 'false'
   -mp, --minver-tag-prefix      Specifies the tag prefix used by MinVer (e.g., 'v')
                                 Initial value from \$MINVERTAGPREFIX environment variable or 'v'
   -mi, --minver-prerelease-id   Default semver pre-release identifiers for MinVer (e.g., 'preview.0')
                                 Initial value from \$MINVERDEFAULTPRERELEASEIDENTIFIERS environment variable or 'preview.0'
-  -b, --build                   Build the project before packing (default: use pre-built artifacts).
-                                Use when no prior build job cached the artifacts (e.g., template projects).
-                                Initial value from \$BUILD or default 'false'
+  -r, --reason                  Reason for the build (e.g., 'CI', 'Manual', 'Scheduled')
+                                Initial value from \$REASON or default ''
+  -a, --artifacts               Directory to save the NuGet packages
+                                Initial value from \$ARTIFACTS_DIR or default '<solution dir>/artifacts'. The artifacts (the
+                                packages) will be saved in a 'packages' subdirectory within this directory.
 $switches
 Environment Variables:
   PACKAGE_PROJECT               Path to the project to pack

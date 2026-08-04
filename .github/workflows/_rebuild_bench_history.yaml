@@ -57,7 +57,7 @@ permissions:
   packages: read # Required for downloading dependencies and tools
 
 env:
-  ARTIFACTS_DIR: ./BenchmarkArtifacts
+  ARTIFACTS_DIR: ${{ vars.ARTIFACTS_DIR || 'artifacts' }}
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   VERBOSE: ${{ vars.VERBOSE || false }}
@@ -126,7 +126,7 @@ jobs:
               --define "${{ inputs.preprocessor-symbols }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
               --minver-prerelease-id "${{ inputs.minver-prerelease-id }}" \
-              --artifacts "${{ env.ARTIFACTS_DIR }}" \
+              --artifacts "$ARTIFACTS_DIR" \
               --bencher-project "$BENCHER_SLUG" \
               --bencher-testbed "${{ inputs.runner-os }}" \
               --bencher-branch "${{ inputs.bencher-branch }}"
@@ -137,6 +137,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: rebuild-bench-history-${{ inputs.runner-os }}
-          path: ${{ env.ARTIFACTS_DIR }}
+          path: $ARTIFACTS_DIR/benchmarks
           if-no-files-found: warn
           overwrite: true

@@ -38,7 +38,7 @@ declare -x configuration=${CONFIGURATION:-"Release"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}
-declare -x artifacts_dir=${ARTIFACTS_DIR:-"./BenchmarkArtifacts"}
+declare -x artifacts_dir=${ARTIFACTS_DIR:-"artifacts"}
 declare -x bencher_project=${BENCHER_PROJECT:-}
 declare -x bencher_testbed=${BENCHER_TESTBED:-}
 declare -x bencher_branch=${BENCHER_BRANCH:-"main"}
@@ -77,7 +77,8 @@ is_safe_integer "$repeat" || true
 
 exit_if_has_errors
 
-results_dir="$artifacts_dir/results"
+artifacts_benchmarks_dir=$artifacts_dir/benchmarks
+results_dir="$artifacts_benchmarks_dir/results"
 
 # Freeze variables
 declare -xr benchmark_project
@@ -85,7 +86,7 @@ declare -xr configuration
 declare -xr preprocessor_symbols
 declare -xr minver_tag_prefix
 declare -xr minver_prerelease_id
-declare -xr artifacts_dir
+declare -xr artifacts_benchmarks_dir
 declare -xr results_dir
 declare -xr bencher_project
 declare -xr bencher_testbed
@@ -113,7 +114,7 @@ for project in "${benchmark_projects[@]}"; do
                 --define "$preprocessor_symbols" \
                 --minver-tag-prefix "$minver_tag_prefix" \
                 --minver-prerelease-id "$minver_prerelease_id" \
-                --artifacts "$artifacts_dir"; then
+                --artifacts "$artifacts_benchmarks_dir"; then
             warning "Benchmark run $i of '$project' failed; skipping the Bencher upload for this iteration."
             continue
         fi

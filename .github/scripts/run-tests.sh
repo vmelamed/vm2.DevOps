@@ -25,7 +25,7 @@ declare -x dry_run
 
 declare -xr default_minver_tag_prefix='v'
 declare -xr default_minver_prerelease_id="preview.0"
-declare -xr default_tests_artifacts_dir="./TestResults"
+declare -xr default_artifacts_dir="artifacts"
 declare -ixr default_min_coverage_pct=80
 declare -ixr default_min_branch_coverage_pct=75
 declare -ixr default_min_method_coverage_pct=80
@@ -35,7 +35,7 @@ declare -x configuration=${CONFIGURATION:="$default_configuration"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}
-declare -x tests_artifacts_dir=${TEST_ARTIFACTS_DIR:-"$default_tests_artifacts_dir"}
+declare -x artifacts_dir=${ARTIFACTS_DIR:-"$default_artifacts_dir"}
 declare -ix min_coverage_pct=${MIN_COVERAGE_PCT:-"$default_min_coverage_pct"}
 declare -ix min_branch_coverage_pct=${MIN_BRANCH_COVERAGE_PCT:-"$default_min_branch_coverage_pct"}
 declare -ix min_method_coverage_pct=${MIN_BRANCH_COVERAGE_PCT:-"$default_min_branch_coverage_pct"}
@@ -54,7 +54,7 @@ validate_preprocessor_symbols preprocessor_symbols || true
 is_safe_min_coverage_pct "$min_coverage_pct" || true
 min_branch_coverage_pct=$((min_branch_coverage_pct - 5))
 validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
-is_safe_path "$tests_artifacts_dir" || true
+is_safe_path "$artifacts_dir" || true
 
 declare -A repo_state=()
 declare -xr key_root
@@ -74,11 +74,15 @@ fi
 exit_if_has_errors
 
 test_dir=$(realpath -e "$test_dir")                                             # the directory of the test project
-tests_artifacts_dir=$(realpath -m "$tests_artifacts_dir")
-artifacts_dir="$tests_artifacts_dir/$test_name"                                 # the directory for test results and reports (resolved to an absolute path, if it was relative)
-coverage_source_path="$artifacts_dir/coverage.cobertura.xml"                    # path to the raw coverage file                 ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/coverage.cobertura.xml
-coverage_files="$tests_artifacts_dir/*/coverage.cobertura.xml"
-coverage_reports_dir="$artifacts_dir/reports"                                   # directory for coverage reports                ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/reports
+
+artifacts_tests_dir="$artifacts_dir/tests"
+artifacts_tests_dir=$(realpath -m "$artifacts_tests_dir")
+
+artifacts_test_dir="$artifacts_tests_dir/$test_name"                            # the directory for test results and reports (resolved to an absolute path, if it was relative)
+
+coverage_source_path="$artifacts_test_dir/coverage.cobertura.xml"              # path to the raw coverage file                 ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/coverage.cobertura.xml
+coverage_reports_dir="$artifacts_test_dir/reports"                             # directory for coverage reports                ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/reports
+coverage_files="$artifacts_tests_dir/*/coverage.cobertura.xml"
 
 # Freeze the variables
 declare -xr test_project
@@ -90,32 +94,33 @@ declare -xr minver_prerelease_id
 declare -xr test_name
 declare -xr test_dir
 declare -xr test_config_path
-declare -xr artifacts_dir
+declare -xr artifacts_tests_dir
+declare -xr artifacts_test_dir
 declare -xr coverage_source_path
 declare -xr coverage_settings_path
 declare -xr coverage_files
 declare -xr coverage_reports_dir
 
-if [[ -d "$artifacts_dir" && -n "$(ls -A "$artifacts_dir")" ]]; then
+if [[ -d "$artifacts_test_dir" && -n "$(ls -A "$artifacts_test_dir")" ]]; then
     if [[ -n "${CI:-}" ]]; then
         # Auto-delete in CI
         echo "Deleting existing artifacts directory (running in CI)..."
-        execute rm -rf "$artifacts_dir"
+        execute rm -rf "$artifacts_test_dir"
     else
-        renamed_artifacts_dir="$artifacts_dir-$(date -u +"%Y%m%dT%H%M%S")"
+        renamed_artifacts_dir="$artifacts_test_dir-$(date -u +"%Y%m%dT%H%M%S")"
         choice=$(choose \
-                    "The test results directory '$artifacts_dir' already exists. What do you want to do?" \
+                    "The test results directory '$artifacts_test_dir' already exists. What do you want to do?" \
                         "Delete the directory and continue" \
                         "Rename the directory to '$renamed_artifacts_dir' and continue" \
                         "Exit the script") || exit $?
 
         trace "User selected option: $choice"
         case $choice in
-            1)  echo "Deleting the directory '$artifacts_dir'..."
-                execute rm -rf "$artifacts_dir"
+            1)  echo "Deleting the directory '$artifacts_test_dir'..."
+                execute rm -rf "$artifacts_test_dir"
                 ;;
-            2)  echo "Renaming the directory '$artifacts_dir' to '$renamed_artifacts_dir'..."
-                execute mv "$artifacts_dir" "$renamed_artifacts_dir"
+            2)  echo "Renaming the directory '$artifacts_test_dir' to '$renamed_artifacts_dir'..."
+                execute mv "$artifacts_test_dir" "$renamed_artifacts_dir"
                 ;;
             3)  echo "Exiting the script."
                 exit 0
@@ -161,7 +166,7 @@ trace "Running tests from $test_project..."
 # Build test and coverage command arguments
 test_args=(
     --config-file "$test_config_path"
-    --results-directory "$artifacts_dir"
+    --results-directory "$artifacts_test_dir"
     --coverage-settings "$coverage_settings_path"
     --report-trx
     --coverage

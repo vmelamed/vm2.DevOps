@@ -15,7 +15,7 @@ declare -x configuration
 declare -x preprocessor_symbols
 declare -x minver_tag_prefix
 declare -x minver_prerelease_id
-declare -x tests_artifacts_dir
+declare -x artifacts_dir
 declare -ix min_coverage_pct
 declare -ix min_branch_coverage_pct
 
@@ -65,7 +65,7 @@ function get_arguments()
 
             --artifacts|-a )
                 [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
-                tests_artifacts_dir=$1; shift
+                artifacts_dir=$1; shift
                 ;;
 
             * ) [[ -z $test_project ]] || usage -ec "$err_too_many_arguments" "Multiple test projects specified. Unknown option: $option"
@@ -87,7 +87,7 @@ function get_arguments()
         min_coverage_pct \
         minver_tag_prefix \
         minver_prerelease_id \
-        tests_artifacts_dir \
+        artifacts_dir \
         --header "other:" \
         ci
 }
