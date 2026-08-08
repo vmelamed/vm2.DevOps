@@ -15,17 +15,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 <!-- TOC tocDepth:2..3 chapterDepth:2..6 -->
 
-- [Project Context](#project-context)
-- [What This Repository Is](#what-this-repository-is)
-- [Architecture](#architecture)
-- [Key Directories](#key-directories)
-- [Common Local Commands](#common-local-commands)
-- [Script Filenames Base Convention: `<action>-<target>`](#script-filenames-base-convention-action-target)
-- [Three-File Script Convention](#three-file-script-convention)
-- [Bash Library](#bash-library)
-- [Parameter and Precondition Validation Pattern](#parameter-and-precondition-validation-pattern)
-- [Shared File Sync](#shared-file-sync)
-- [Documentation Reference](#documentation-reference)
+- [CLAUDE.md](#claudemd)
+  - [Project Context](#project-context)
+  - [What This Repository Is](#what-this-repository-is)
+  - [Architecture](#architecture)
+  - [Key Directories](#key-directories)
+  - [Common Local Commands](#common-local-commands)
+  - [Script Base Filenames Convention: `<action>-<target>`](#script-base-filenames-convention-action-target)
+  - [Three-File Script Convention](#three-file-script-convention)
+  - [Bash Library](#bash-library)
+  - [Parameter and Precondition Validation Pattern](#parameter-and-precondition-validation-pattern)
+  - [Shared File Sync](#shared-file-sync)
+  - [Documentation Reference](#documentation-reference)
 
 <!-- /TOC -->
 
@@ -80,7 +81,7 @@ See `docs/ARCHITECTURE.md` for the full design and `docs/WORKFLOWS_REFERENCE.md`
 | `.github/actions/`     | Custom composite actions (`setup-env`, `cache-dependencies`, etc.)   |
 | `scripts/bash/lib/`    | Shared bash library (`_diagnostics.sh`, `_git.sh`, `_args.sh`, etc.) |
 | `scripts/bash/`        | Local dev utility scripts (`diff-shared.sh`, `setup-repo.sh`, etc.)  |
-| `docs/`                | Reference documentation (12 `.md` files)                             |
+| `docs/`                | Reference documentation (15 `.md` files)                             |
 
 ## Common Local Commands
 
@@ -97,16 +98,16 @@ See `docs/ARCHITECTURE.md` for the full design and `docs/WORKFLOWS_REFERENCE.md`
 
 ShellCheck runs live in VSCode via the ShellCheck extension — do not run it from the CLI.
 
-## Script Filenames Base Convention: `<action>-<target>`
+## Script Base Filenames Convention: `<action>-<target>`
 
-The first part of the script (`script`) should follow the convention <action>-<target> (or <verb>-<noun>), where `<action>` describes the action the script performs and `<target>` describes the target or context of the action. For example, `setup-repo*.sh` for a script that sets up the repository or `diff-shared*.sh` for the script that compares files with shared content between the canonical source and the local repository.
+The first part of the script (`script`) should follow the convention &lt;action&gt;-&lt;target&gt; (or &lt;verb&gt;-&lt;noun&gt;), where `<action>` describes the action the script performs and `<target>` describes the target or context of the action. For example, `setup-repo*.sh` for a script that sets up the repository or `diff-shared*.sh` for the script that compares files with shared content between the canonical source and the local repository.
 
 ## Three-File Script Convention
 
 Every CI/CD script in `.github/scripts/` should consist of three files:
 
 ```text
-action-target.sh        # Main executable — processes args, calls library functions
+action-target.sh        # Main executable — processes args, calls script's or library functions
 action-target.usage.sh  # Help/usage text
 action-target.args.sh   # Argument parser — maps CLI args to script variables
 ```
@@ -146,13 +147,17 @@ function foo()
 {
     local -i rc="$success"
 
-    [[ check1 ]] || {
-        rc="$err_specific_code_1"
-        error -ec "$rc" -sd 3 "..."
+    (( $# == <N> )) || {
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires exactly <N> arguments (provided $#)."
     }
-    [[ check2 ]] || {
+    [[ -v 1 && check1 ]] || {
+        rc="$err_specific_code_1"
+        error -ec "$rc" -sd 3 "${FUNCNAME[0]}() argument 1 MUST ..."
+    }
+    [[ -v && check2 ]] || {
         rc="$err_specific_code_2"
-        error -ec "$rc" -sd 3 "..."
+        error -ec "$rc" -sd 3 "${FUNCNAME[0]}() argument 2 MUST ..."
     }
 
     (( rc == success )) || return "$err_invalid_arguments"
@@ -168,7 +173,7 @@ function foo()
 - The final `return` after the gate always uses the **generic** `$err_invalid_arguments`, regardless of which
   specific check(s) failed — callers only need to test for one sentinel value.
 - If a later check reads `$1`/`$2` that may be unset or empty because an earlier check already failed (e.g. wrong
-  `$#`), guard it: `[[ $# -lt N || original_check ]] || { ... }` — this keeps accumulation safe instead of
+  `$#`), guard it: `[[ -v N && original_check ]] || { ... }` — this keeps accumulation safe instead of
   triggering spurious errors on unset positional parameters.
 - If the function's own business logic (not validation) reuses the same variable name afterward to hold a real
   status code (not an argument error), either give it a fresh `local` declaration to shadow the validation
@@ -203,14 +208,18 @@ Files that are canonical in `vm2.Templates` (`.editorconfig`, `.github/CONVENTIO
 
 ## Documentation Reference
 
-| File                          | Covers                                           |
-|-------------------------------|--------------------------------------------------|
-| `docs/CONSUMER_GUIDE.md`      | Integrating vm2.DevOps into a consumer repo      |
-| `docs/ARCHITECTURE.md`        | Detailed workflow and script design              |
-| `docs/WORKFLOWS_REFERENCE.md` | All reusable workflows: inputs, outputs, secrets |
-| `docs/SCRIPTS_REFERENCE.md`   | CI/CD scripts: args and behavior                 |
-| `docs/CONFIGURATION.md`       | Required repository variables and secrets        |
-| `docs/RELEASE_PROCESS.md`     | MinVer versioning, prerelease and stable flows   |
-| `docs/DEVELOPER_WORKFLOW.md`  | Conventional Commits, PR process                 |
-| `docs/GIT_PLAYBOOK.md`        | Rebase-first workflow and git operations         |
-| `docs/ERROR_RECOVERY.md`      | Failure scenarios and recovery runbooks          |
+| File                                    | Covers                                           |
+|-----------------------------------------|--------------------------------------------------|
+| `docs/CONSUMER_GUIDE.md`                | Integrating vm2.DevOps into a consumer repo      |
+| `docs/ARCHITECTURE.md`                  | Detailed workflow and script design              |
+| `docs/WORKFLOWS_REFERENCE.md`           | All reusable workflows: inputs, outputs, secrets |
+| `docs/SCRIPTS_REFERENCE.md`             | CI/CD scripts: args and behavior                 |
+| `docs/CONFIGURATION.md`                 | Required repository variables and secrets        |
+| `docs/RELEASE_PROCESS.md`               | MinVer versioning, prerelease and stable flows   |
+| `docs/DEVELOPER_WORKFLOW.md`            | Conventional Commits, PR process                 |
+| `docs/GIT_PLAYBOOK.md`                  | Rebase-first workflow and git operations         |
+| `docs/ERROR_RECOVERY.md`                | Failure scenarios and recovery runbooks          |
+| `docs/diff-shared.md`                   | Documents the features and file formats of the shared file contents sync mechanism |
+| `docs/GITHUB_ACTIONS_CHEATSHEET.md`     | Short reference for GitHub Actions usage and best practices |
+| `docs/HARDENING.md`                     | Security hardening guidelines for the repository |
+| `docs/TOOLS.md`                         | Reference for tools used in the repository/CI-CD pipelines |

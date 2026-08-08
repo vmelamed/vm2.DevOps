@@ -210,8 +210,8 @@ main with conclusion == 'success'). Can also be triggered manually via workflow_
    commits.
 1. **changelog-and-tag** — Calls `changelog-and-tag.sh` to update `CHANGELOG.md` using `cliff.prerelease.toml`, commit, and
    create the prerelease tag.
-1. **package-and-publish** — Checks out the prerelease tag, then calls `publish-package.sh` to build, pack, and push the
-   prerelease package to the configured NuGet server.
+1. **package** — Checks out the prerelease tag, then calls `pack.sh` to build and pack the prerelease package to the ***artifacts*** directory.
+1. **publish** — Calls `publish.sh` to push the prerelease package to the configured NuGet server. Note that for `nuget.org` the script uses Trusted Publishing but for the other repositories (GitHub Packages) it still uses standard authentication via `NUGETY_KEY_API`.
 
 #### Release (`_release.yaml`)
 
@@ -222,7 +222,8 @@ Three sequential jobs:
 1. **compute-version** — Calls `compute-release-version.sh` to determine the stable version from conventional commits.
 1. **changelog-and-tag** — Calls `changelog-and-tag.sh` to update the changelog using `cliff.release-header.toml` and create the
    release Git tag.
-1. **release** — Checks out the release tag, then calls `publish-package.sh` to build, pack, and push. (see [Release Process](RELEASE_PROCESS.md#release-process))
+1. **package** — Checks out the release tag, then calls `pack.sh` to build and pack the stable release package to the ***artifacts*** directory.
+1. **publish** — Calls `publish.sh` to push the prerelease package to the configured NuGet server. Note that for `nuget.org` the script uses Trusted Publishing but for the other repositories (GitHub Packages) it still uses standard authentication via `NUGETY_KEY_API` (see [Release Process](RELEASE_PROCESS.md#release-process)).
 
 ##### Example Walkthrough
 
@@ -375,6 +376,9 @@ When a consumer repo (e.g., vm2.Glob) runs a workflow:
 
 ## NuGet Authentication
 
+> [!IMPORTANT]
+> As of vm2.DevOps version 5.0.0 pushing packages to nuget.org requires Trusted Publishing, while other repositories (e.g., GitHub Packages) use standard authentication via `NUGET_API_KEY`.
+
 All workflows that restore NuGet packages authenticate with GitHub Packages:
 
 ```bash
@@ -393,8 +397,8 @@ The `github.vm2` source is configured in each repo's `NuGet.config`.
 | `REPORTGENERATOR_LICENSE`    | `_ci` → `_test`               | ReportGenerator license key                                   |
 | `CODECOV_TOKEN`              | `_ci` → `_test`               | Codecov upload token                                          |
 | `BENCHER_API_TOKEN`          | `_ci` → `_benchmarks`         | Bencher.dev tracking token                                    |
-| `BENCH_DISPATCH_PAT`         | `rebuild_bench_history.sh`    | PAT with `repo` scope for dispatching benchmark history rebuilds |
-| `NUGET_API_KEY`              | `_prerelease`, `_release`     | The NuGet API key for the selected NuGet server               |
+| `BENCH_DISPATCH_PAT`         | `rebuild_bench_history.sh`    | PAT for dispatching benchmark history rebuilds (`repo` scope) |
+| `NUGET_API_KEY`              | `_prerelease`, `_release`     | NuGet API key for the selected NuGet server (except nuget.org)|
 | `GH_PACKAGES_TOKEN`          | `_refresh_lockfiles.sh`       | The GitHub Packages token used to update GitHub Packages      |
 | `RELEASE_PAT`                | `_prerelease`, `_release`     | Fine-grained PAT (`contents: write`) for pushing to `main` past branch protection |
 
