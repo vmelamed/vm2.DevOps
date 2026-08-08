@@ -2,6 +2,7 @@
 # Copyright (c) 2025-2026 Val Melamed
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
+# shellcheck disable=SC1091 # Disable warnings for word splitting and globbing issues in the following source commands.
 
 #-------------------------------------------------------------------------------
 # This script defines functions and regular expressions for working with semantic versions (SemVer) and MinVer tags.
@@ -101,25 +102,23 @@ function print_semver_regexes()
 #-------------------------------------------------------------------------------
 function validate_semverTagComponents()
 {
-    local -i rc=$success
+    local -i _rc=$success
 
     (( $# == 1 || $# == 2 )) || {
-        rc=$err_invalid_arguments
-        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 or 2 arguments ($# provided): the semver tag prefix used by MinVer and the optional default prerelease identifier template."
+        _rc=$err_invalid_arguments
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires one or two arguments (provided $#): the SemVer tag prefix used by MinVer and an optional default prerelease identifier template."
+    }
+    [[ -v 1 && $1 =~ $minverTagPrefixRegex ]] || {
+        _rc=$err_argument_value
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the MinVer tag prefix, to match '$minverTagPrefixRegex' (provided '${1-<missing>}'). Did you pass a variable name instead of its value?"
+    }
+    [[ ! -v 2 || $2 =~ $minverPrereleaseIdRegex ]] || {
+        _rc=$err_argument_value
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires optional argument 2, the MinVer prerelease identifier template, to match '$minverPrereleaseIdRegex' (provided '${2-<missing>}'). Did you pass a variable name instead of its value?"
     }
 
-    (( rc == success )) || return "$err_invalid_arguments"
-
-    [[ "$1" =~ $minverTagPrefixRegex ]]                     || {
-        rc=$err_argument_value
-        error -sd 3 -ec "$rc" "The semver tag prefix used by MinVer ('$1') is not valid. It must match the regex: $minverTagPrefixRegex. Did you pass a nameref by mistake?"
-    }
-    [[ $# -eq 1 || "$2" =~ $minverPrereleaseIdRegex ]]      || {
-        rc=$err_argument_value
-        error -sd 3 -ec "$err_argument_value" "The semver prerelease identifier template used by MinVer ('$2') is not valid. It must match the regex: $minverPrereleaseIdRegex. Did you pass a nameref by mistake?"
-    }
-
-    return "$rc"
+    (( _rc == success )) || return "$err_invalid_arguments"
+    return "$success"
 }
 
 # semver components indexes in BASH_REMATCH
@@ -168,121 +167,119 @@ declare -irx rc_less_than=255
 #-------------------------------------------------------------------------------
 function compare_semver()
 {
-    local -i rc=$success
+    local -i _rc=$success
 
     (( $# == 2 )) || {
-        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires at exactly 2 arguments (provided $#): version1 and version2."
-        return "$err_invalid_arguments"
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires exactly two arguments (provided $#): the first and second semantic versions."
+    }
+    [[ -v 1 && $1 =~ $semverRegex ]] || {
+        _rc="$err_argument_value"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a valid Semantic Versioning 2.0.0 string (provided '${1-<missing>}')."
+    }
+    [[ -v 2 && $2 =~ $semverRegex ]] || {
+        _rc="$err_argument_value"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2 to be a valid Semantic Versioning 2.0.0 string (provided '${2-<missing>}')."
     }
 
-    (( rc == success )) || return "$err_invalid_arguments"
+    (( _rc == success )) || return "$err_invalid_arguments"
 
     if [[ "$1" == "$2" ]]; then
         return "$rc_equal"
     fi
 
-    if [[ "$1" =~ $semverRegex ]]; then
-        local -i major1=${BASH_REMATCH[$semver_major]}
-        local -i minor1=${BASH_REMATCH[$semver_minor]}
-        local -i patch1=${BASH_REMATCH[$semver_patch]}
-        local prerelease1=${BASH_REMATCH[$semver_prerelease]#-}
-    else
-        rc=$err_invalid_arguments
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires the version1 argument to be a valid [Semantic Versioning 2.0.0](https://semver.org/) string."
-    fi
+    [[ "$1" =~ $semverRegex ]]
+    local -i _major1=${BASH_REMATCH[$semver_major]}
+    local -i _minor1=${BASH_REMATCH[$semver_minor]}
+    local -i _patch1=${BASH_REMATCH[$semver_patch]}
+    local _prerelease1=${BASH_REMATCH[$semver_prerelease]#-}
     # local build1=${BASH_REMATCH[semver_build]#-} does not participate in comparison by spec
 
-    if [[ "$2" =~ $semverRegex ]]; then
-        local -i major2=${BASH_REMATCH[$semver_major]}
-        local -i minor2=${BASH_REMATCH[$semver_minor]}
-        local -i patch2=${BASH_REMATCH[$semver_patch]}
-        local prerelease2=${BASH_REMATCH[$semver_prerelease]#-}
-    else
-        rc=$err_invalid_arguments
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires the version2 argument to be a valid [Semantic Versioning 2.0.0](https://semver.org/) string."
-    fi
+    [[ "$2" =~ $semverRegex ]]
+    local -i _major2=${BASH_REMATCH[$semver_major]}
+    local -i _minor2=${BASH_REMATCH[$semver_minor]}
+    local -i _patch2=${BASH_REMATCH[$semver_patch]}
+    local _prerelease2=${BASH_REMATCH[$semver_prerelease]#-}
     # local build2=${BASH_REMATCH[semver_build]#-} does not participate in comparison by spec
 
-    (( rc == success )) || return "$err_argument_value"
-
-    if (( major1 != major2 )); then
-        if (( major1 > major2 )); then
+    if (( _major1 != _major2 )); then
+        if (( _major1 > _major2 )); then
             return "$rc_greater_than"
         else
             return "$rc_less_than"
         fi
-    elif (( minor1 != minor2 )); then
-        if (( minor1 > minor2 )); then
+    elif (( _minor1 != _minor2 )); then
+        if (( _minor1 > _minor2 )); then
             return "$rc_greater_than"
         else
             return "$rc_less_than"
         fi
-    elif (( patch1 != patch2 )); then
-        if (( patch1 > patch2 )); then
+    elif (( _patch1 != _patch2 )); then
+        if (( _patch1 > _patch2 )); then
             return "$rc_greater_than"
         else
             return "$rc_less_than"
         fi
-    elif [[ -z "$prerelease1" && -n "$prerelease2" ]]; then
+    elif [[ -z "$_prerelease1" && -n "$_prerelease2" ]]; then
         return "$rc_greater_than"
-    elif [[ -n "$prerelease1" && -z "$prerelease2" ]]; then
+    elif [[ -n "$_prerelease1" && -z "$_prerelease2" ]]; then
         return "$rc_less_than"
-    elif [[ -z "$prerelease1" && -z "$prerelease2" ]]; then
+    elif [[ -z "$_prerelease1" && -z "$_prerelease2" ]]; then
         return "$rc_equal"
     fi
 
-    local -a pre1 pre2
+    local -a _pre1 _pre2
 
-    IFS='.' read -r -a pre1 <<< "$prerelease1"
-    IFS='.' read -r -a pre2 <<< "$prerelease2"
+    IFS='.' read -r -a _pre1 <<< "$_prerelease1"
+    IFS='.' read -r -a _pre2 <<< "$_prerelease2"
 
-    local len1=${#pre1[@]}
-    local len2=${#pre2[@]}
-    local -i min_len=$(( len1 < len2 ? len1 : len2 ))
-    local -i seg_index
+    local _len1=${#_pre1[@]}
+    local _len2=${#_pre2[@]}
+    local -i _min_len=$(( _len1 < _len2 ? _len1 : _len2 ))
+    local -i _seg_index
 
-    for (( seg_index=0; seg_index < min_len; seg_index++ )); do
-        p1=${pre1[seg_index]}
-        p2=${pre2[seg_index]}
-        if is_natural "$p1"; then
-            if is_natural "$p2"; then
-                local -i n1=$p1 n2=$p2
-                if (( n1 != n2 )); then
-                    if (( n1 > n2 )); then
-                        trace "Version '$1' is greater than '$2' because its prerelease identifier ($n1) is greater than prerelease identifier of '$2' ($n2)."
+    for (( _seg_index=0; _seg_index < _min_len; _seg_index++ )); do
+        local _p1=${_pre1[_seg_index]}
+        local _p2=${_pre2[_seg_index]}
+        if is_natural "$_p1"; then
+            if is_natural "$_p2"; then
+                local -i _n1=$_p1 _n2=$_p2
+                if (( _n1 != _n2 )); then
+                    if (( _n1 > _n2 )); then
+                        trace "Version '$1' is greater than '$2' because its prerelease identifier ($_n1) is greater than prerelease identifier of '$2' ($_n2)."
                         return "$rc_greater_than"
                     else
-                        trace "Version '$1' is less than '$2' because its prerelease identifier ($n1) is less than prerelease identifier of '$2' ($n2)."
+                        trace "Version '$1' is less than '$2' because its prerelease identifier ($_n1) is less than prerelease identifier of '$2' ($_n2)."
                         return "$rc_less_than"
                     fi
                 fi
             else
-                trace "Version '$1' is less than '$2' because its prerelease identifier ($p1) is less than prerelease identifier of '$2' ($p2)."
+                trace "Version '$1' is less than '$2' because its prerelease identifier ($_p1) is less than prerelease identifier of '$2' ($_p2)."
                 return "$rc_less_than"
             fi
         else
-            if is_natural "$p2"; then
-                trace "Version '$1' is greater than '$2' because its prerelease identifier ($p1) is greater than prerelease identifier of '$2' ($p2)."
+            if is_natural "$_p2"; then
+                trace "Version '$1' is greater than '$2' because its prerelease identifier ($_p1) is greater than prerelease identifier of '$2' ($_p2)."
                 return "$rc_greater_than"
             fi
         fi
-        if [[ "$p1" != "$p2" ]]; then
-            if [[ "$p1" > "$p2" ]]; then
-                trace "Version '$1' is greater than '$2' because its prerelease identifier ($p1) is greater than prerelease identifier of '$2' ($p2)."
+        if [[ "$_p1" != "$_p2" ]]; then
+            if [[ "$_p1" > "$_p2" ]]; then
+                trace "Version '$1' is greater than '$2' because its prerelease identifier ($_p1) is greater than prerelease identifier of '$2' ($_p2)."
                 return "$rc_greater_than"
             else
-                trace "Version '$1' is less than '$2' because its prerelease identifier ($p1) is less than prerelease identifier of '$2' ($p2)."
+                trace "Version '$1' is less than '$2' because its prerelease identifier ($_p1) is less than prerelease identifier of '$2' ($_p2)."
                 return "$rc_less_than"
             fi
         fi
     done
 
-    if (( len1 != len2 )); then
-        if (( len1 > len2 )); then
-            trace "Version '$1' is greater than '$2' because it has more prerelease identifiers ($len1 vs $len2)."
+    if (( _len1 != _len2 )); then
+        if (( _len1 > _len2 )); then
+            trace "Version '$1' is greater than '$2' because it has more prerelease identifiers ($_len1 vs $_len2)."
             return "$rc_greater_than"
         else
-            trace "Version '$1' is less than '$2' because it has fewer prerelease identifiers ($len1 vs $len2)."
+            trace "Version '$1' is less than '$2' because it has fewer prerelease identifiers ($_len1 vs $_len2)."
             return "$rc_less_than"
         fi
     fi
@@ -307,24 +304,24 @@ function compare_semver()
 #-------------------------------------------------------------------------------
 function semver_equal()
 {
-    local -i rc=$rc_equal
+    local -i _rc=$rc_equal
 
     (( $# == 2 )) || {
-        rc=err_invalid_arguments
+        _rc=$err_invalid_arguments
         error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
     }
 
-    (( rc == rc_equal )) || return "$err_invalid_arguments"
+    (( _rc == rc_equal )) || return "$err_invalid_arguments"
 
-    compare_semver "$1" "$2" || rc=$?
+    compare_semver "$1" "$2" || _rc=$?
 
-    if (( rc == rc_equal )); then
+    if (( _rc == rc_equal )); then
         return "$success"
-    elif (( rc == rc_greater_than || rc == rc_less_than )); then
+    elif (( _rc == rc_greater_than || _rc == rc_less_than )); then
         return "$failure"
     else
         # Propagate invalid-arguments error from compare_semver, or any other unexpected error code.
-        return "$rc"
+        return "$_rc"
     fi
 }
 
@@ -344,24 +341,24 @@ function semver_equal()
 #-------------------------------------------------------------------------------
 function semver_greaterThan()
 {
-    local -i rc=$rc_equal
+    local -i _rc=$rc_equal
 
     (( $# == 2 )) || {
-        rc=err_invalid_arguments
+        _rc=$err_invalid_arguments
         error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
     }
 
-    (( rc == rc_equal )) || return "$err_invalid_arguments"
+    (( _rc == rc_equal )) || return "$err_invalid_arguments"
 
-    compare_semver "$1" "$2" || rc=$?
+    compare_semver "$1" "$2" || _rc=$?
 
-    if (( rc == rc_greater_than )); then
+    if (( _rc == rc_greater_than )); then
         return "$success"
-    elif (( rc == rc_equal || rc == rc_less_than )); then
+    elif (( _rc == rc_equal || _rc == rc_less_than )); then
         return "$failure"
     else
         # Propagate invalid-arguments error from compare_semver, or any other unexpected error code.
-        return "$rc"
+        return "$_rc"
     fi
 }
 
@@ -381,24 +378,24 @@ function semver_greaterThan()
 #-------------------------------------------------------------------------------
 function semver_greaterThanOrEqual()
 {
-    local -i rc=$rc_equal
+    local -i _rc=$rc_equal
 
     (( $# == 2 )) || {
-        rc=err_invalid_arguments
+        _rc=$err_invalid_arguments
         error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
     }
 
-    (( rc == rc_equal )) || return "$err_invalid_arguments"
+    (( _rc == rc_equal )) || return "$err_invalid_arguments"
 
-    compare_semver "$1" "$2" || rc=$?
+    compare_semver "$1" "$2" || _rc=$?
 
-    if (( rc == rc_equal || rc == rc_greater_than )); then
+    if (( _rc == rc_equal || _rc == rc_greater_than )); then
         return "$success"
-    elif (( rc == rc_less_than )); then
+    elif (( _rc == rc_less_than )); then
         return "$failure"
     else
         # Propagate invalid-arguments error from compare_semver, or any other unexpected error code.
-        return "$rc"
+        return "$_rc"
     fi
 }
 
@@ -418,24 +415,24 @@ function semver_greaterThanOrEqual()
 #-------------------------------------------------------------------------------
 function semver_lessThan()
 {
-    local -i rc=$rc_equal
+    local -i _rc=$rc_equal
 
     (( $# == 2 )) || {
-        rc=err_invalid_arguments
+        _rc=$err_invalid_arguments
         error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
     }
 
-    (( rc == rc_equal )) || return "$err_invalid_arguments"
+    (( _rc == rc_equal )) || return "$err_invalid_arguments"
 
-    compare_semver "$1" "$2" || rc=$?
+    compare_semver "$1" "$2" || _rc=$?
 
-    if (( rc == rc_less_than )); then
+    if (( _rc == rc_less_than )); then
         return "$success"
-    elif (( rc == rc_equal || rc == rc_greater_than )); then
+    elif (( _rc == rc_equal || _rc == rc_greater_than )); then
         return "$failure"
     else
         # Propagate invalid-arguments error from compare_semver, or any other unexpected error code.
-        return "$rc"
+        return "$_rc"
     fi
 }
 
@@ -455,24 +452,24 @@ function semver_lessThan()
 #-------------------------------------------------------------------------------
 function semver_lessThanOrEqual()
 {
-    local -i rc=$rc_equal
+    local -i _rc=$rc_equal
 
     (( $# == 2 )) || {
-        rc=err_invalid_arguments
+        _rc=$err_invalid_arguments
         error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
     }
 
-    (( rc == rc_equal )) || return "$err_invalid_arguments"
+    (( _rc == rc_equal )) || return "$err_invalid_arguments"
 
-    compare_semver "$1" "$2" || rc=$?
+    compare_semver "$1" "$2" || _rc=$?
 
-    if (( rc == rc_equal || rc == rc_less_than )); then
+    if (( _rc == rc_equal || _rc == rc_less_than )); then
         return "$success"
-    elif (( rc == rc_greater_than )); then
+    elif (( _rc == rc_greater_than )); then
         return "$failure"
     else
         # Propagate invalid-arguments error from compare_semver, or any other unexpected error code.
-        return "$rc"
+        return "$_rc"
     fi
 }
 

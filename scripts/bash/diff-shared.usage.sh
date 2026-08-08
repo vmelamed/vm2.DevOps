@@ -10,13 +10,13 @@ declare -xr script_name
 
 function usage_text()
 {
-    local long_text=$1
-    local switches=""
-    local vars=""
+    local _long_text=$1
+    local _switches=""
+    local _vars=""
 
-    if $long_text; then
-        switches="Switches:"$'\n'"$common_switches"
-        vars="$common_vars"
+    if $_long_text; then
+        _switches="Switches:"$'\n'"$common_switches"
+        _vars="$common_vars"
     fi
 
     cat << EOF
@@ -62,10 +62,10 @@ Options:
   -fc, --file-copy <pattern>    Same as --file but overrides the action to 'copy' (no prompt).
   --summary <file>              Write the run summary to <file> in Markdown format. If not specified,
                                 a temporary file is created, displayed at the end, and then deleted.
-$switches
+$_switches
 Environment Variables:
   VM2_REPOS                     The parent directory where all vm2 repositories are cloned.
-$vars
+$_vars
 Configuration Files:
   diff-shared.config.json       Located in the SoT directory. Defines the set of files with shared content,
                                 the default action for each, and the diff/merge tools to use.

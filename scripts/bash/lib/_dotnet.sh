@@ -16,222 +16,256 @@ declare -rxi success
 declare -rxi failure
 declare -rxi err_invalid_arguments
 declare -rxi err_argument_value
+declare -rxi err_invalid_nameref
+declare -rxi err_missing_argument
+declare -rxi err_tool_error
 declare -rxi err_logic_error
 
 declare -rx ci
 
-if $ci; then
-    # In CI, we want to fail immediately if the output cannot be parsed, as it likely indicates a problem with the build or the parsing logic.
-    default_configuration="Release"
-    default_tfm="net10.0"
-else
-    # Locally, we want to be more forgiving and allow the script to continue even if the parsing fails, so that we can still see the full build output and debug any issues.
-    default_configuration="Debug"
-    default_tfm="net10.0"
-fi
+$ci && default_configuration="Release" || default_configuration="Debug"
+default_tfm="net10.0"
 
 declare -rx default_configuration
 declare -rx default_tfm
 
-# export global variables that hold the results
-declare -xi warnings_count=0
-declare -xi errors_count=0
-declare -x build_result='Unknown'
-declare -x assembly_version=''
-declare -x file_version=''
-declare -x informational_version=''
-declare -x version=''
-declare -x package_version=''
+# export global variables that hold the keys of the associative array with the build information
+declare -rx key_warnings_count='warnings_count'
+declare -rx key_errors_count='errors_count'
+declare -rx key_build_result='build_result'
+declare -rx key_assembly_version='assembly_version'
+declare -rx key_file_version='file_version'
+declare -rx key_informational_version='informational_version'
+declare -rx key_version='version'
+declare -rx key_package_version='package_version'
+
+declare -arx build_info_keys=(
+    "$key_build_result"
+    "$key_errors_count"
+    "$key_warnings_count"
+    "$key_version"
+    "$key_assembly_version"
+    "$key_file_version"
+    "$key_informational_version"
+    "$key_package_version"
+)
 
 #-------------------------------------------------------------------------------
-# @description Extracts build information from the output of a 'dotnet build -v d' command, read line by line from stdin.
+# @description Builds a .NET project using the provided build arguments and captures build information.
 #
-# Notes:
-#   - Sets the global exported variables $build_result, $warnings_count, $errors_count, $assembly_version, $file_version,
-#     $informational_version, $version, and $package_version.
-#   - These globals are only valid after the function returns and the input has been fully read, and only if the function
-#     runs in the current shell context (not piped into, or run in, a subshell).
-#   - If $build_result ends up "FAILED", the version fields ($assembly_version, $file_version, $informational_version,
-#     $version, $package_version) are reset to ''.
-#   - $build_result is informational only: it does not gate CI. The actual pass/fail decision is the exit code of
-#     'dotnet build' itself, captured separately by callers via '${PIPESTATUS[0]}' (see e.g. build.sh).
+# @param $1 The name of an array with arguments to pass to 'dotnet build'. Required.
+# @param $2 The name of an associative array to receive the build information (optional).
 #
-# @exitcode 0 always
+# @return Returns 0 on success, or an error code on failure. If @param $2 is provided, it will be populated with the build
+#   information.
 #
-# @stdout key=value pairs, one per line, for each of the extracted build information variables
+# @stdout will contain the build information as a stream of key=value lines.
 #-------------------------------------------------------------------------------
-function extractDotnetBuildInfo()
+function dotnet_build()
 {
-    # reset the globals
-    warnings_count=0
-    errors_count=0
-    build_result='Unknown'
-    assembly_version=''
-    file_version=''
-    informational_version=''
-    version=''
-    package_version=''
+    local -A _internal_build_info=()
+    local -i _rc=$success
 
-    local restoreShopt
-    restoreShopt=$(shopt -p nocasematch) || true
-    shopt -s nocasematch
+    (( $# == 1 || $# == 2 )) || {
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires one or two arguments (provided $#):" \
+                                                 "  1) the name of an array with arguments to pass to 'dotnet build'" \
+                                                 "  2) the name of an associative array to receive the build information (optional)"
+    }
 
-    local line
-    while IFS= read -r line; do
-        if [[ $line =~ Build\ (succeeded|FAILED) ]]; then
-            build_result="${BASH_REMATCH[1]}"
-        elif [[ -z $warnings_count && $line =~ ([0-9]+)\ Warning ]]; then
-            warnings_count=${BASH_REMATCH[1]}
-        elif [[ -z $errors_count && $line =~ ([0-9]+)\ Error ]]; then
-            errors_count=${BASH_REMATCH[1]}
-        elif [[ -z $assembly_version && $line =~ AssemblyVersion:\ ([[:alnum:][:punct:]]+) ]]; then
-            assembly_version=${BASH_REMATCH[1]}
-        elif [[ -z $file_version && $line =~ FileVersion:\ ([[:alnum:][:punct:]]+) ]]; then
-            file_version=${BASH_REMATCH[1]}
-        elif [[ -z $informational_version && $line =~ InformationalVersion:\ ([[:alnum:][:punct:]]+) ]]; then
-            informational_version=${BASH_REMATCH[1]}
-        elif [[ -z $version && $line =~ Version:\ ([[:alnum:][:punct:]]+) ]]; then
-            version=${BASH_REMATCH[1]}
-        elif [[ -z $package_version && $line =~ PackageVersion:\ ([[:alnum:][:punct:]]+) ]]; then
-            package_version=${BASH_REMATCH[1]}
-        fi
-    done
-
-    if [[ $build_result == FAILED ]]; then
-        assembly_version='N/A'
-        file_version='N/A'
-        informational_version='N/A'
-        version='N/A'
-        package_version='N/A'
+    if [[ -v 1 ]] && is_defined_array "$1"; then
+        local -n _validated_build_args=$1
+        (( ${#_validated_build_args[@]} > 0 )) || {
+            _rc="$err_argument_value"
+            error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires the array named by argument 1 to contain at least one 'dotnet build' argument (provided '$1')."
+        }
+    else
+        _rc="$err_invalid_nameref"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to name an indexed array of 'dotnet build' arguments (provided '${1-<missing>}')."
     fi
 
-    echo "build_result=$build_result"
-    echo "warnings_count=$warnings_count"
-    echo "errors_count=$errors_count"
-    echo "assembly_version=$assembly_version"
-    echo "file_version=$file_version"
-    echo "informational_version=$informational_version"
-    echo "version=$version"
-    echo "package_version=$package_version"
+    [[ ! -v 2 || -z $2 ]] || is_defined_associative_array "$2" || {
+        _rc="$err_invalid_nameref"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires optional argument 2 to name an associative array that will receive build information (provided '${2-<missing>}')."
+    }
 
-    # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
-    eval "$restoreShopt" &> "$_ignore"
+    (( _rc == success )) || return "$err_invalid_arguments"
+
+    local -n _build_args=$1
+    local _build_info_name=${2:-_internal_build_info}
+
+    local _build_project=''
+    local -i _i
+    local _arg
+    local -i _v_index=-2
+    local _v_value=''
+
+    # make sure we have a project file and verbosity level is specified as detailed
+    for (( _i=0; _i < "${#_build_args[@]}"; _i++ )); do
+        _arg="${_build_args[_i]}"
+        [[ $_arg == *.@(csproj|sln|slnx) && -s $_arg ]] && _build_project="$_arg" ||
+        [[ $_arg == --verbosity ]] && _v_index=$_i
+        (( _i == _v_index + 1 )) && [[ $_arg == @(quiet|q|minimal|m|detailed|d|diagnostic|diag) ]] && _build_args[_i]="detailed" && _v_value="detailed"
+    done
+
+    [[ -n $_build_project ]] || {
+        error -sd 3 -ec "$err_argument_value" "Could not find the project argument in the build arguments array. It must be an existing file with a suffix '.csproj'."
+        return "$err_argument_value"
+    }
+
+    # ensure verbosity is set to detailed
+    if [[ $_v_value != "detailed" ]]; then
+        (( _v_index >= 0 )) && unset "_build_args[_v_index]"
+        _build_args+=(--verbosity detailed)
+    fi
+
+    local -n _build_info=$_build_info_name
+    _build_info=()
+
+    local _output_file
+    _output_file=$(mktemp) || return "$err_tool_error"
+
+    execute dotnet build "${_build_args[@]}" >"$_output_file" 2>&1 ||
+        error sd 3 -ec "$err_tool_error" "Building '$_build_project' failed." | to_summary
+
+    extractDotnetBuildInfo "$_build_info_name" <"$_output_file" ||
+        error -sd 3 -ec "$err_logic_error" "Failed to extract build information from 'dotnet build' output." | to_summary
+
+    rm -f -- "$_output_file"
+
+    displayDotnetBuildSummary "$_build_info_name" | to_summary
+
+    return "$_rc"
 }
 
 #-------------------------------------------------------------------------------
-# @description Displays a formatted summary of build information, read line by line from stdin as key=value pairs (the
-# format produced by extractDotnetBuildInfo).
+# @description Extracts build information from the output of a 'dotnet build' command and populates the specified associative
+#   array with the results.
 #
-# Notes:
-#   - Unlike extractDotnetBuildInfo, this function stores the parsed values into function-local variables (declared with
-#     `local`), not the module's global exported variables of the same name.
+# @param $1 The name of an associative array to receive the build information.
+#
+# @exitcode 0 always
+#-------------------------------------------------------------------------------
+# shellcheck disable=SC2004  # $/${} is unnecessary on arithmetic variables.
+function extractDotnetBuildInfo()
+{
+    local -i _rc=$success
+
+    (( $# == 1 )) || {
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of an associative array that will receive build information."
+    }
+
+    [[ -v 1 ]] && is_defined_associative_array "$1" || {
+        _rc="$err_invalid_nameref"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to name an associative array that will receive build information (provided '${1-<missing>}')."
+    }
+
+    (( _rc == success )) || return "$err_invalid_arguments"
+
+    local -n _extracted=$1
+
+    _extracted=(
+        [$key_build_result]='Unknown'
+        [$key_warnings_count]=0
+        [$key_errors_count]=0
+        [$key_assembly_version]=''
+        [$key_file_version]=''
+        [$key_informational_version]=''
+        [$key_version]=''
+        [$key_package_version]=''
+    )
+
+    local _restoreShopt
+    _restoreShopt=$(shopt -p nocasematch) || true
+    shopt -s nocasematch
+
+    local _line
+    while IFS= read -r _line; do
+        if [[ $_line =~ Build\ (succeeded|FAILED) ]]; then
+            _extracted[$key_build_result]="${BASH_REMATCH[1]}"
+        elif [[ $_line =~ ([0-9]+)\ Warning ]]; then
+            _extracted[$key_warnings_count]=${BASH_REMATCH[1]}
+        elif [[ $_line =~ ([0-9]+)\ Error ]]; then
+            _extracted[$key_errors_count]=${BASH_REMATCH[1]}
+        elif [[ $_line =~ AssemblyVersion:\ ([[:alnum:][:punct:]]+) ]]; then
+            _extracted[$key_assembly_version]=${BASH_REMATCH[1]}
+        elif [[ $_line =~ FileVersion:\ ([[:alnum:][:punct:]]+) ]]; then
+            _extracted[$key_file_version]=${BASH_REMATCH[1]}
+        elif [[ $_line =~ InformationalVersion:\ ([[:alnum:][:punct:]]+) ]]; then
+            _extracted[$key_informational_version]=${BASH_REMATCH[1]}
+        elif [[ $_line =~ Version:\ ([[:alnum:][:punct:]]+) ]]; then
+            _extracted[$key_version]=${BASH_REMATCH[1]}
+        elif [[ $_line =~ PackageVersion:\ ([[:alnum:][:punct:]]+) ]]; then
+            _extracted[$key_package_version]=${BASH_REMATCH[1]}
+        fi
+    done
+
+    # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
+    eval "$_restoreShopt" &> "$_ignore"
+
+    if [[ ${_extracted[$key_build_result]} == FAILED ]]; then
+        _extracted[$key_assembly_version]='N/A'
+        _extracted[$key_file_version]='N/A'
+        _extracted[$key_informational_version]='N/A'
+        _extracted[$key_version]='N/A'
+        _extracted[$key_package_version]='N/A'
+    fi
+}
+
+#-------------------------------------------------------------------------------
+# @description Displays a formatted summary of build information stored in an associative array.
+#
+# @param $1 The name of an associative array containing the build information to display.
 #
 # @exitcode 0 always
 #
-# @stdout "Build Results" header followed by a formatted table (via dump_vars) with the build result, warning/error
-#   counts, and version information
+# @stdout "Build Results" header followed by a formatted table (via dump_vars) with the build result, warning/error counts, and
+#   version information
 #-------------------------------------------------------------------------------
 function displayDotnetBuildSummary()
 {
-    local warnings_count=0
-    local errors_count=0
-    local build_result='Unknown'
-    local assembly_version='N/A'
-    local file_version='N/A'
-    local informational_version='N/A'
-    local version='N/A'
-    local package_version='N/A'
+    local -i _rc=$success
 
-    local var value
-    while IFS='=' read -r var value; do
-        case $var in
-            build_result )
-                build_result="$value"
-                ;;
-            warnings_count )
-                warnings_count="$value"
-                ;;
-            errors_count )
-                errors_count="$value"
-                ;;
-            assembly_version )
-                assembly_version="$value"
-                ;;
-            file_version )
-                file_version="$value"
-                ;;
-            informational_version )
-                informational_version="$value"
-                ;;
-            version )
-                version="$value"
-                ;;
-            package_version )
-                package_version="$value"
-                ;;
-            * )
-                ;;
+    (( $# == 1 )) || {
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of an associative array containing build information."
+    }
 
-        esac
-    done
+    [[ -v 1 ]] && is_defined_associative_array "$1" || {
+        _rc="$err_invalid_nameref"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to name an associative array containing build information (provided '${1-<missing>}')."
+    }
+
+    (( _rc == success )) || return "$err_invalid_arguments"
+
+    local -n _build_info=$1
+
+    local _build_result=${_build_info[$key_build_result]:-Unknown}
+
+    local _errors_count=${_build_info[$key_errors_count]:-0}
+    local _warnings_count=${_build_info[$key_warnings_count]:-0}
+
+    local _assembly_version=${_build_info[$key_assembly_version]:-N/A}
+    local _file_version=${_build_info[$key_file_version]:-N/A}
+    local _informational_version=${_build_info[$key_informational_version]:-N/A}
+    local _version=${_build_info[$key_version]:-N/A}
+    local _package_version=${_build_info[$key_package_version]:-N/A}
 
     echo "Build Results"
     dump_vars --force --quiet \
         --header "Dotnet Build Summary:" \
-        build_result \
+        _build_result \
         --line \
-        warnings_count \
-        errors_count \
+        _errors_count \
+        _warnings_count \
         --header "Version Information:" \
-        assembly_version \
-        file_version \
-        version \
-        package_version \
-        informational_version
+        _assembly_version \
+        _file_version \
+        _version \
+        _package_version \
+        _informational_version
 
-    return "$success"
-}
-
-function get_build_info()
-{
-    local -i rc="$success"
-
-    (( $# == 1 )) || {
-        rc="$err_invalid_arguments"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): the name of the build information variable to retrieve."
-    }
-
-    (( rc == success )) || return "$err_invalid_arguments"
-
-    case $1 in
-        build_result )
-            echo "$build_result"
-            ;;
-        warnings_count )
-            echo "$warnings_count"
-            ;;
-        errors_count )
-            echo "$errors_count"
-            ;;
-        assembly_version )
-            echo "$assembly_version"
-            ;;
-        file_version )
-            echo "$file_version"
-            ;;
-        informational_version )
-            echo "$informational_version"
-            ;;
-        version )
-            echo "$version"
-            ;;
-        package_version )
-            echo "$package_version"
-            ;;
-        * ) error -ec "$err_logic_error" "Unrecognized variable: '$1'"
-            return "$failure"
-            ;;
-    esac
     return "$success"
 }
 
@@ -246,6 +280,9 @@ function get_build_info()
 #   - OutputType "Exe" -> *.exe on Windows, no suffix on Linux. Any other OutputType -> *.dll on any OS.
 #
 # @arg $1 string csproj - path to the *.csproj file
+# @arg $2 string artifacts - optional path to the artifacts directory where a dotnet build should put its outputs
+# @arg $3 string configuration - optional build configuration, if not specified will read from *.csproj, or
+#   Directory.Build.props, or the default: in CI - Release, otherwise Debug. If specified, $2 also MUST be specified.
 #
 # @exitcode 0 ($success) the assembly file exists and is not empty
 # @exitcode 1 ($failure) the assembly path was resolved but the file does not exist yet (the path is still written to stdout)
@@ -255,97 +292,109 @@ function get_build_info()
 # @stdout the full path to the produced assembly (e.g. /path/to/proj/bin/Debug/net10.0/vm2.Ulid.dll)
 #
 # @example
-#   path=$(assembly_path src/vm2.Ulid/Ulid.csproj)
+#   path=$(get_assembly_path src/vm2.Ulid/Ulid.csproj)
 #-------------------------------------------------------------------------------
-function assembly_path() {
-    local -i rc="$success"
+function get_assembly_path() {
+    local -i _rc="$success"
 
-    (( $# == 1 )) || {
-        rc="$err_invalid_arguments"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the path to a *.csproj file."
+    (( $# >= 1 && $# <= 3 )) || {
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires one, two, or three arguments (provided $#):" \
+                              " 1) the path to a *.csproj file" \
+                              " 2) the path to the artifacts directory (optional)" \
+                              " 3) build configuration (optional)"
     }
-    [[ -n "$1" && -s "$1" && "$1" == *.csproj ]] || {
-        rc="$err_argument_value"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}(): '$1' is not a valid or existing *.csproj file."
+
+    [[ -v 1 && -s $1 && $1 == *.csproj ]] || {
+        _rc="$err_argument_value"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be an existing, non-empty .csproj file (provided '${1-<missing>}')."
+    }
+    [[ ! -v 3 || -v 2 ]] || {
+        _rc="$err_missing_argument"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, the artifacts directory, when argument 3, the build configuration, is provided."
     }
 
-    (( rc == success )) || return "$err_invalid_arguments"
+    (( _rc == success )) || return "$err_invalid_arguments"
 
-    local csproj
-    csproj=$(realpath -e "$1")
-    trace "Resolving assembly path for project: $csproj"
+    local _csproj="$1"
+    local _artifacts="${2:-}"
+    local _build_configuration="${3:-}"
 
-    local proj_dir
-    proj_dir=$(dirname "$csproj")
-    trace "Project directory: $proj_dir"
+    _csproj=$(realpath -e "$1")
+    trace "Resolving assembly path for project: $_csproj"
+
+    local _proj_dir
+    _proj_dir=$(dirname "$_csproj")
+    proj_name=$(basename "$_csproj" .csproj)
+    trace "Project directory: $_proj_dir"
+
+    local _output_dir
+
+    [[ -n "$_artifacts" ]] &&
+        _output_dir="${_artifacts%/}/$proj_name" ||
+        _output_dir="$_proj_dir/bin"
 
     # Find the nearest Directory.Build.props by walking up from the project directory
-    local dir_build_props=""
-    local search_dir="$proj_dir"
-    while [[ "$search_dir" != "/" ]]; do
-        if [[ -f "$search_dir/Directory.Build.props" ]]; then
-            dir_build_props="$search_dir/Directory.Build.props"
+    local _dir_build_props=""
+    local _search_dir="$_proj_dir"
+    while [[ "$_search_dir" != "/" ]]; do
+        if [[ -f "$_search_dir/Directory.Build.props" ]]; then
+            _dir_build_props="$_search_dir/Directory.Build.props"
             break
         fi
-        search_dir=$(dirname "$search_dir")
+        _search_dir=$(dirname "$_search_dir")
     done
-    trace "Nearest 'Directory.Build.props': ${dir_build_props:-None}"
+    trace "Nearest 'Directory.Build.props': ${_dir_build_props:-None}"
 
     # TFM: *.csproj → Directory.Build.props → "net10.0"
-    local tfm=""
-    tfm=$(grep -oPm1 '(?<=<TargetFramework>)[^<]+' "$csproj" 2>"$_ignore") ||
-    tfm=$(grep -oPm1 '(?<=<TargetFrameworks>)[^<]+' "$csproj" 2>"$_ignore") || true
+    local _tfm=""
+    _tfm=$(grep -oPm1 '(?<=<TargetFramework>)[^<]+' "$_csproj" 2>"$_ignore") ||
+    _tfm=$(grep -oPm1 '(?<=<TargetFrameworks>)[^<]+' "$_csproj" 2>"$_ignore") || true
 
-    if [[ -z "$tfm" && -n "$dir_build_props" ]]; then
-        tfm=$(grep -oPm1 '(?<=<TargetFramework>)[^<]+' "$dir_build_props" 2>"$_ignore") ||
-        tfm=$(grep -oPm1 '(?<=<TargetFrameworks>)[^<]+' "$dir_build_props" 2>"$_ignore") || true
+    if [[ -z "$_tfm" && -n "$_dir_build_props" ]]; then
+        _tfm=$(grep -oPm1 '(?<=<TargetFramework>)[^<]+' "$_dir_build_props" 2>"$_ignore") ||
+        _tfm=$(grep -oPm1 '(?<=<TargetFrameworks>)[^<]+' "$_dir_build_props" 2>"$_ignore") || true
     fi
 
-    if [[ "$tfm" == *";"* ]]; then
-        warning "Multiple TFMs found in '$(basename "$csproj")'. Using the last one: '${tfm##*;}'."
-        tfm="${tfm##*;}"
+    if [[ "$_tfm" == *";"* ]]; then
+        warning "Multiple TFMs found in '$(basename "$_csproj")'. Using the last one: '${_tfm##*;}'."
+        _tfm="${_tfm##*;}"
     fi
-    [[ -n "$tfm" ]] || tfm=$default_tfm
-    tfm="${tfm//[[:space:]]/}"
-    trace "Using TFM: $tfm"
+    [[ -n "$_tfm" ]] || _tfm=$default_tfm
+    _tfm="${_tfm//[[:space:]]/}"
+    trace "Using TFM: $_tfm"
 
     # Configuration: *.csproj → Directory.Build.props → $default_configuration
-    local proj_configuration=""
-    proj_configuration=$(grep -oPm1 '(?<=<Configuration>)[^<]+' "$csproj" 2>"$_ignore") || true
-
-    if [[ -z "$proj_configuration" && -n "$dir_build_props" ]]; then
-        proj_configuration=$(grep -oPm1 '(?<=<Configuration>)[^<]+' "$dir_build_props" 2>"$_ignore") || true
+    if [[ -z $_build_configuration ]]; then
+        _build_configuration=$(grep -oPm1 '(?<=<Configuration>)[^<]+' "$_csproj" 2>"$_ignore") || true
+        if [[ -z "$_build_configuration" && -n "$_dir_build_props" ]]; then
+            _build_configuration=$(grep -oPm1 '(?<=<Configuration>)[^<]+' "$_dir_build_props" 2>"$_ignore") || true
+        fi
+        _build_configuration=${_build_configuration:-${default_configuration}}
     fi
-    [[ -n "$proj_configuration" ]] || proj_configuration=$default_configuration
-    proj_configuration="${proj_configuration//[[:space:]]/}"
-    trace "Using Configuration: $proj_configuration"
+    _build_configuration="${_build_configuration//[[:space:]]/}"
+    trace "Using Configuration: $_build_configuration"
 
     # AssemblyName: *.csproj → filename without extension
-    local assembly_name=""
-    assembly_name=$(grep -oPm1 '(?<=<AssemblyName>)[^<]+' "$csproj" 2>"$_ignore") || true
-    [[ -n "$assembly_name" ]] || assembly_name=$(basename "${csproj%.*}")
-    assembly_name="${assembly_name//[[:space:]]/}"
-    trace "Using AssemblyName: $assembly_name"
+    local _assembly_name=""
+    _assembly_name=$(grep -oPm1 '(?<=<AssemblyName>)[^<]+' "$_csproj" 2>"$_ignore") || true
+    [[ -n "$_assembly_name" ]] || _assembly_name=$(basename "${_csproj%.*}")
+    _assembly_name="${_assembly_name//[[:space:]]/}"
+    trace "Using AssemblyName: $_assembly_name"
 
     # OutputType: determines the file suffix
-    local output_type=""
-    output_type=$(grep -oPm1 '(?<=<OutputType>)[^<]+' "$csproj" 2>"$_ignore") || true
-    output_type="${output_type//[[:space:]]/}"
-    local suffix
-    if [[ "${output_type,,}" == "exe" ]]; then
-        is_windows && suffix=".exe" || suffix=""
+    local _output_type=""
+    _output_type=$(grep -oPm1 '(?<=<OutputType>)[^<]+' "$_csproj" 2>"$_ignore") || true
+    _output_type="${_output_type//[[:space:]]/}"
+
+    local _suffix
+    if [[ "${_output_type,,}" == "exe" ]]; then
+        is_windows && _suffix=".exe" || _suffix=""
     else
-        suffix=".dll"
+        _suffix=".dll"
     fi
-    trace "Using 'OutputType': ${output_type:-None} → suffix: '$suffix'"
+    trace "Using 'OutputType': ${_output_type:-None} → suffix: '$_suffix'"
+    trace "Assembly path: $_output_dir/$_build_configuration/$_tfm/$_assembly_name$_suffix"
 
-    local path="$proj_dir/bin/$proj_configuration/$tfm/$assembly_name$suffix"
-
-    echo "$path"
-    trace "Looking for assembly at: $path"
-
-    [[ -s "$path" ]] && return "$success" || {
-        warning "Assembly NOT FOUND at: $path"
-        return "$failure"
-    }
+    echo "$_output_dir/$_build_configuration/$_tfm/$_assembly_name$_suffix"
 }

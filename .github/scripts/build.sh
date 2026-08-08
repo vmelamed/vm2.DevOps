@@ -13,7 +13,10 @@ declare -xr script_dir
 declare -xr lib_dir
 
 # shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
-source "$lib_dir/gh_core.sh"
+{
+    source "$lib_dir/gh_core.sh"
+    source "$lib_dir/_git_vm2.sh"
+}
 
 declare -rxi success     # The command completed successfully.
 declare -rxi failure     # A general, unspecified error occurred.
@@ -31,6 +34,7 @@ declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}
 declare -x gh_nuget_username=${GH_ACTOR:-""}
 declare -x gh_nuget_password=${GH_TOKEN:-""}
+declare -x artifacts=${ARTIFACTS_DIR:-"artifacts"}
 
 source "$script_dir/build.usage.sh"
 source "$script_dir/build.args.sh"
@@ -39,13 +43,19 @@ get_arguments "$@"
 build_project=${build_project:-"$BUILD_PROJECT"}
 
 # sanitize inputs
-is_safe_path "$build_project" || true
-is_safe_configuration "$configuration" || true
-validate_preprocessor_symbols preprocessor_symbols || true
+is_safe_path "$build_project"                                             || true
+is_safe_configuration "$configuration"                                    || true
+validate_preprocessor_symbols preprocessor_symbols                        || true
 validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
-is_safe_input "$gh_nuget_username" || true
+is_safe_input "$gh_nuget_username"                                        || true
+is_safe_path "$artifacts"                                                 || true
 
 exit_if_has_errors
+
+[[ -n $artifacts ]] &&
+    artifacts=$(get_artifacts_path "$build_project" "$artifacts")
+output_path=$(get_assembly_path "$build_project" "$artifacts" "$configuration")
+output_dir="${output_path%/*}"
 
 # freeze the parameters
 declare -xr build_project
@@ -55,8 +65,15 @@ declare -xr minver_tag_prefix
 declare -xr minver_prerelease_id
 declare -xr gh_nuget_username
 declare -xr gh_nuget_password
+declare -xr artifacts
+declare -xr output_dir
 
-# Configure GitHub Packages NuGet source with GitHub authentication
+dump_vars --force --quiet \
+    --header "Build output directories:" \
+    artifacts \
+    output_dir
+
+# If credentials are provided, configure GitHub Packages NuGet source with GitHub authentication
 if [[ -n "$gh_nuget_username" && -n "$gh_nuget_password" ]]; then
     execute dotnet nuget update source github.vm2 \
                 --username "$gh_nuget_username" \
@@ -68,16 +85,18 @@ fi
 # Restore dependencies
 execute dotnet restore --locked-mode
 
-execute dotnet build "$build_project" \
-            --no-restore \
-            --verbosity detailed \
-            --configuration "$configuration" \
-            -p:preprocessor_symbols="$preprocessor_symbols" \
-            -p:MinVerTagPrefix="$minver_tag_prefix" \
-            -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" 2>&1 |
-            extractDotnetBuildInfo |
-            displayDotnetBuildSummary |
-            to_summary || true # prevent pipefail from exiting before we can capture the exit code
-rc=${PIPESTATUS[0]}
-[[ $rc == "$success" ]] || error -ec "$err_tool_error" "Building '$build_project' failed." | to_summary
-exit "$rc"
+# shellcheck disable=SC2034 # build_args appears unused. Verify use (or export if used externally). Passed as nameref.
+build_args=(
+    "$build_project" \
+    --no-restore \
+    --configuration "$configuration" \
+    --output "$output_dir" \
+    "-p:preprocessor_symbols=\"$preprocessor_symbols\"" \
+    "-p:MinVerTagPrefix=\"$minver_tag_prefix\"" \
+    "-p:MinVerPrereleaseIdentifiers=\"$minver_prerelease_id\""
+)
+
+# shellcheck disable=SC2034 # build_info appears unused. Verify use (or export if used externally).
+declare -A build_info=()
+
+dotnet_build build_args build_info

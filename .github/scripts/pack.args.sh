@@ -21,25 +21,25 @@ declare -x minver_prerelease_id
 # shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
 function get_arguments()
 {
-    local option
+    local _option
 
     while [[ $# -gt 0 ]]; do
-        option="$1"; shift
-        if get_common_arg "$option"; then
+        _option="$1"; shift
+        if get_common_arg "$_option"; then
             continue
         fi
-        case "${option,,}" in
+        case "${_option,,}" in
             # do not use the common options - they were already processed by get_common_arg:
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
             --configuration|-c )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 configuration="$1"; shift
                 ;;
 
             --define|-d )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 preprocessor_symbols="$1"; shift
                 ;;
 
@@ -48,28 +48,28 @@ function get_arguments()
                 ;;
 
             --minver-tag-prefix|-mp )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 minver_tag_prefix="$1"; shift
                 ;;
 
             --minver-prerelease-id|-mi )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 minver_prerelease_id="$1"; shift
                 ;;
 
             --reason|-r )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 reason="$1"; shift
                 ;;
 
             --artifacts|-a )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 artifacts_dir="$1"; shift
                 ;;
 
-            * ) [[ -z $package_project ]] || usage -ec "$err_too_many_arguments" "Multiple package projects specified. Unknown option: $option"
-                [[ "$option" != -* ]] || usage -ec "$err_unknown_argument" "Unknown option: $option"
-                package_project="$option"
+            * ) [[ -z $package_project ]] || usage -ec "$err_too_many_arguments" "Multiple package projects specified. Unknown option: $_option"
+                [[ "$_option" != -* ]] || usage -ec "$err_unknown_argument" "Unknown option: $_option"
+                package_project="$_option"
                 ;;
         esac
     done

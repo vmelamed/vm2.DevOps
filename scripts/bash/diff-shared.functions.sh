@@ -97,48 +97,49 @@ declare -rA merge_commands=(
 #-------------------------------------------------------------------------------
 function configure()
 {
-    (( $# == 2 ))                        || error -ec "$err_invalid_arguments" "${FUNCNAME[0]}() takes 2 mandatory arguments (provided $#) - the SoT directory and the target directory."
-    [[ $# -lt 1 || -d $1 ]]              || error -ec "$err_argument_value" "${FUNCNAME[0]}() the specified SoT directory '$1' does not exist or is not a directory."
-    [[ $# -lt 2 || -d $2 ]]              || error -ec "$err_argument_value" "${FUNCNAME[0]}() the specified SoT directory '$2' does not exist or is not a directory."
+    (( $# == 2 ))                        || error -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly two arguments (provided $#): the SoT directory and the target directory."
+    [[ -v 1 && -d $1 ]]                  || error -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the SoT directory, to be an existing directory (provided '${1-<missing>}')."
+    [[ -v 2 && -d $2 ]]                  || error -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the target directory, to be an existing directory (provided '${2-<missing>}')."
 
     exit_if_has_errors
 
-    local config_file="$1/diff-shared.config.json"
-    local target_path="$2"
+    local _config_file="$1/diff-shared.config.json"
+    local _target_path="$2"
 
     # validate the config file and load the diff and merge tools from it:
-    [[ -s "$config_file" ]]              || error -ec "$err_argument_value" "The configuration file '$config_file' was not found or is empty."
-    jq empty "$config_file" 2>"$_ignore" || error -ec "$err_argument_value" "The configuration file '$config_file' contains invalid JSON."
+    [[ -s "$_config_file" ]]              || error -ec "$err_argument_value" "The configuration file '$_config_file' was not found or is empty."
+    jq empty "$_config_file" 2>"$_ignore" || error -ec "$err_argument_value" "The configuration file '$_config_file' contains invalid JSON."
 
     exit_if_has_errors
 
     # get the configured tools
-    { read -r diff_tool; read -r diff_command; read -r merge_tool; read -r merge_command; } < <(get_tools "$config_file")
+    { read -r diff_tool; read -r diff_command; read -r merge_tool; read -r merge_command; } < <(get_tools "$_config_file")
 
     # Populate the arrays
-    local -i index=0
-    local source_file target_file action
+    local -i _index=0
     # shellcheck disable=SC2034
-    local vm2_sot_shared="$vm2_sot_repo_name/templates/$sot/content"
+    local _vm2_sot_shared="$vm2_sot_repo_name/templates/$sot/content"
+    local _source_file _target_file _file_action
 
-    while IFS='=' read -r source_file target_file file_action; do
-        [[ -n "$source_file" ]]                     || error -ec "$err_argument_value" "Empty source file path found in '$config_file'."
-        [[ -n "$target_file" ]]                     || error -ec "$err_argument_value" "Empty target file path found in '$config_file'."
-        [[ -n "$file_action" ]]                     || error -ec "$err_argument_value" "Empty action found in '$config_file'."
-        is_in "$file_action" "${valid_actions[@]}"  || error -ec "$err_argument_value" "'$action' is not a valid action. Must be one of: $all_actions_str."
+    while IFS='=' read -r _source_file _target_file _file_action; do
+        [[ -n "$_source_file" ]]                    || error -ec "$err_argument_value" "Empty source file path found in '$_config_file'."
+        [[ -n "$_target_file" ]]                    || error -ec "$err_argument_value" "Empty target file path found in '$_config_file'."
+        [[ -n "$_file_action" ]]                    || error -ec "$err_argument_value" "Empty action found in '$_config_file'."
+        is_in "$_file_action" "${valid_actions[@]}" || error -ec "$err_argument_value" "'$_file_action' is not a valid action. Must be one of: $all_actions_str."
 
         # Expand variables in paths
-        eval "source_file=\"$source_file\""
-        [[ -s "$source_file" ]]                     || error -ec "$err_argument_value" "Source file '$source_file' does not exist or is empty."
-        eval "target_file=\"$target_file\""
-        eval "file_action=\"$file_action\""
-        # and assign into the model arrays by index:
-        source_files[index]="$source_file"
-        target_files[index]="$target_file"
-        file_actions[index]="$file_action"
+        eval "_source_file=\"$_source_file\""
+        [[ -s "$_source_file" ]]                     || error -ec "$err_argument_value" "Source file '$_source_file' does not exist or is empty."
+        eval "_target_file=\"$_target_file\""
+        eval "_file_action=\"$_file_action\""
 
-        ((++index)) || true
-    done < <(jq -r '.files[] | .sourceFile + "=" + .targetFile + "=" + .action' "$config_file")
+        # and assign into the model arrays by index:
+        source_files[_index]="$_source_file"
+        target_files[_index]="$_target_file"
+        file_actions[_index]="$_file_action"
+
+        ((++_index)) || true
+    done < <(jq -r '.files[] | .sourceFile + "=" + .targetFile + "=" + .action' "$_config_file")
 
     trace "Loaded ${#source_files[@]} source files"
     trace "Loaded ${#target_files[@]} target files"
@@ -155,98 +156,98 @@ function configure()
 
 function parameterize()
 {
-    local rc=$success
+    local -i _rc=$success
 
     (( ${#selectors_actions[@]} > 0 )) || {
-        rc="$err_invalid_arguments"
-        error -sd 3 -ec "$rc" "No command line arguments were provided to parameterize the file actions. Please provide at least one --file* argument to specify which files to compare and how."
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "No command line arguments were provided to parameterize the file actions. Please provide at least one --file* argument to specify which files to compare and how."
     }
 
-    ((  rc == success )) || return "$rc"
+    (( _rc == success )) || return "$_rc"
 
-    local selector action
-    local -a matching_actions
-    local -i index
-    local -i cnt
-    local -i count=0
+    local _selector _action
+    local -a _matching_actions
+    local -i _index
+    local -i _cnt
+    local -i _count=0
 
     # for each source file
-    for (( index=0; index<${#source_files[@]}; index++ )); do
-        matching_actions=()
+    for (( _index=0; _index<${#source_files[@]}; _index++ )); do
+        _matching_actions=()
         # check if it matches any of the provided patterns in the command line arguments
-        for selector in "${!selectors_actions[@]}"; do
-            if [[ "${source_files[index]}" == */$selector ]]; then
+        for _selector in "${!selectors_actions[@]}"; do
+            if [[ "${source_files[_index]}" == */$selector ]]; then
                 # matches - override or keep the action for that file
-                [[ -n ${selectors_actions[$selector]} ]] &&
-                    action="${selectors_actions[$selector]}" ||
-                    action="${file_actions[index]}"
-                ! is_in "$action" "${matching_actions[@]}" && {
-                    matching_actions+=("$action")
-                    trace "File '${source_files[index]#"$vm2_repos/"}' matches selector '$selector' with action '$action'."
+                [[ -n ${selectors_actions[$_selector]} ]] &&
+                    _action="${selectors_actions[$_selector]}" ||
+                    _action="${file_actions[_index]}"
+                ! is_in "$_action" "${_matching_actions[@]}" && {
+                    _matching_actions+=("$_action")
+                    trace "File '${source_files[_index]#"$vm2_repos/"}' matches selector '$_selector' with action '$_action'."
                 }
             fi
         done
 
-        cnt=${#matching_actions[@]}
+        _cnt=${#_matching_actions[@]}
 
-        if (( cnt == 1 )); then
+        if (( _cnt == 1 )); then
             # exactly one action - use it
-            file_actions[index]="${matching_actions[0]}"
-            (( ++count )) || true
-        elif (( cnt > 1 )); then
+            file_actions[_index]="${_matching_actions[0]}"
+            (( ++_count )) || true
+        elif (( _cnt > 1 )); then
             # multiple different actions matched - this is a CLI error, report it and skip the file (clear the action)
-            file_actions[index]=""
-            warning "Multiple patterns matched for '${source_files[index]#"$vm2_repos/"}' resulting in different actions: ${matching_actions[*]}. Please refine your file selectors so that each matches at most one file. The file will be skipped."
+            file_actions[_index]=""
+            warning "Multiple patterns matched for '${source_files[_index]#"$vm2_repos/"}' resulting in different actions: ${_matching_actions[*]}. Please refine your file selectors so that each matches at most one file. The file will be skipped."
         else
             # no patterns matched - clear the action for that file (it will not be processed) and report a warning
-            file_actions[index]=""
-            trace "File '${source_files[index]#"$vm2_repos/"}' does not match any of the provided patterns: ${!selectors_actions[*]}. It will not be processed."
+            file_actions[_index]=""
+            trace "File '${source_files[_index]#"$vm2_repos/"}' does not match any of the provided patterns: ${!selectors_actions[*]}. It will not be processed."
         fi
     done
 
-    if (( count > 0 )); then
-        trace "Parameterized actions for $count files based on the provided command line arguments."
+    if (( _count > 0 )); then
+        trace "Parameterized actions for $_count files based on the provided command line arguments."
     else
         warning -sd 3 -ec "$err_argument_value" "No files were matched by the provided command line arguments."
     fi
-    return "$rc"
+    return "$_rc"
 }
 
 function resolve_target()
 {
-    local -i rc="$success"
+    local -i _rc="$success"
 
-    [[ $# -eq 2 ]] || {
-        rc="$err_invalid_arguments"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]} expects two arguments (provided $#):" \
+    (( $# == 2 )) || {
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]} expects two arguments (provided $#):" \
                               "  1) the directory of the repositories" \
                               "  2) the directory name of the target repository."
     }
 
-    (( rc == success )) || return "$rc"
+    (( _rc == success )) || return "$_rc"
 
-    local repos="$1"
-    local r="$2"
-    local output target_root target_path
+    local _repos="$1"
+    local _r="$2"
+    local _output _target_path
 
-    output=$(resolve_repo_root "$repos" "$r") || rc=$?
+    _output=$(resolve_repo_root "$_repos" "$_r") || _rc=$?
     # We can only work with git repos or directories that have CI configured:
-    (( rc == success || rc == err_dir_with_ci )) || {
-        error -sd 3 -ec "$rc" "The specified target directory '${repos%/}/${r#/}' is invalid." \
+    (( _rc == success || _rc == err_dir_with_ci )) || {
+        error -sd 3 -ec "$_rc" "The specified target directory '${_repos%/}/${_r#/}' is invalid." \
                               "It should have CI configured in '.github/workflows'."
-        return "$rc"
+        return "$_rc"
     }
-    { read -r target_root; read -r target_path; } <<< "$output"
+    { read -r _; read -r _target_path; } <<< "$_output"
 
     # if it is a git repo then make sure it is in a clean state:
-    if (( rc == success )); then
-        branch="$(git -C "$target_root" branch --show-current 2>"$_ignore")" || {
-            rc=$?
+    if (( _rc == success )); then
+        branch="$(git -C "$_target_root" branch --show-current 2>"$_ignore")" || {
+            _rc=$?
             error -sd 3 -ec "$err_tool_error" "The repository in the specified target directory '$1' appears corrupted."
         }
-        (( rc == success )) && {
-            ensure_fresh_git_state "$target_root" "$branch" ||
-                error -sd 3 -ec "$err_logic_error" "The specified target repository at '$target_root' on branch '$branch' is not in a clean state." \
+        (( _rc == success )) && {
+            ensure_fresh_git_state "$_target_root" "$branch" ||
+                error -sd 3 -ec "$err_logic_error" "The specified target repository at '$_target_root' on branch '$branch' is not in a clean state." \
                                                    "Commit or stash your changes."
         }
     else
@@ -255,9 +256,9 @@ function resolve_target()
 
     exit_if_has_errors
 
-    trace "The target project's working tree root directory is '$target_root', on a branch '$branch'."
-    echo "$target_root"
-    echo "$target_path"
+    trace "The target project's working tree root directory is '$_target_root', on a branch '$branch'."
+    echo "$_target_root"
+    echo "$_target_path"
 }
 
 #-------------------------------------------------------------------------------
@@ -279,11 +280,9 @@ function resolve_target()
 #-------------------------------------------------------------------------------
 function customize()
 {
-    (( $# == 1 || $# == 2 ))            || error -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 or 2 arguments (provided $#):" \
-                                             "  1) target repository root directory path" \
-                                             "  2) flag to customize the tools only (optional)"
-    [[ $# -lt 1 || -d $1 ]]             || error -ec "$err_argument_value" "${FUNCNAME[0]}() the target repository path is not a valid directory."
-    [[ $# -lt 2 || -z $2 ]] || is_boolean "${2:-}" || error -ec "$err_argument_value" "${FUNCNAME[0]}() the second argument must be a boolean flag indicating whether to customize the tools only."
+    (( $# == 1 || $# == 2 ))            || error -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one or two arguments (provided $#): the target repository directory and an optional tools-only flag."
+    [[ -v 1 && -d $1 ]]                  || error -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the target repository path, to be an existing directory (provided '${1-<missing>}')."
+    [[ ! -v 2 ]] || is_boolean "$2"     || error -ec "$err_argument_type" "${FUNCNAME[0]}() requires optional argument 2, the tools-only flag, to be 'true' or 'false' (provided '${2-<missing>}')."
 
     exit_if_has_errors
 
@@ -326,168 +325,167 @@ function customize()
         return "$success"
     fi
 
-    local -i changed_actions=0
+    local -i _changed_actions=0
 
     if [[ -s "$custom_config" ]]; then
         # Read each key-value pair from JSON
-        local  file_name action
-        while IFS='=' read -r file_name action; do
+        local  _file_name _action
+        while IFS='=' read -r _file_name _action; do
             # Validate action
-            is_in "$action" "${valid_actions[@]}" || {
-                warning "Invalid action '$action' for '$file_name' in $custom_config - must be one of: $all_actions_str."
+            is_in "$_action" "${valid_actions[@]}" || {
+                warning "Invalid action '$_action' for '$_file_name' in $custom_config - must be one of: $all_actions_str."
                 continue
             }
             # Validate the path
-            [[ -n "$file_name" ]] || {
+            [[ -n "$_file_name" ]] || {
                 warning "Empty relative path in $custom_config."
                 continue
             }
 
             # Find corresponding target file and source file
-            local source_file=""
-            local found=false
+            local _found=false
 
-            local -i index
-            for (( index=0; index<${#target_files[@]}; index++ )); do
-                if [[ "${target_files[index]}" == $target_path/$file_name ||
-                      "${target_files[index]}" == $target_path/*/$file_name ]]; then
+            local -i _index
+            for (( _index=0; _index<${#target_files[@]}; _index++ )); do
+                if [[ "${target_files[_index]}" == $target_path/$_file_name ||
+                      "${target_files[_index]}" == $target_path/*/$_file_name ]]; then
                     # Override the action:
-                    file_actions[index]="$action"
-                    (( ++changed_actions )) || true
-                    found=true
+                    file_actions[_index]="$_action"
+                    (( ++_changed_actions )) || true
+                    _found=true
                     break
                 fi
             done
 
-            [[ "$found" == true ]] || {
-                 [[ $action != "ignore" ]] && warning "Path '$file_name' from $custom_config does not match any known target relative path."
+            [[ "$_found" == true ]] || {
+                 [[ $_action != "ignore" ]] && warning "Path '$_file_name' from $custom_config does not match any known target relative path."
                 continue
             }
         done < <(jq -r '.action_overrides | to_entries | .[] | .key+"="+.value' "$custom_config" 2>"$_ignore") # convert JSON object to key=value pairs
 
-        $diff_only || info "$script_name was customized successfully with $changed_actions modified actions."
+        $diff_only || info "$script_name was customized successfully with $_changed_actions modified actions."
     fi
 }
 
 function get_tools()
 {
-    [[ $# -eq 1 ]]           || error -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): configuration or customization file."
-    [[ $# -ne 1 || -s $1 ]]  || error -ec "$err_argument_value" "${FUNCNAME[0]}() the configuration or customization file does not exists or is empty."
+    (( $# == 1 ))            || error -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the configuration or customization file."
+    [[ -v 1 && -s $1 ]]      || error -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be an existing, non-empty configuration or customization file (provided '${1-<missing>}')."
 
     exit_if_has_errors
 
-    local file="$1"
-    local dt dc mt mc
+    local _file="$1"
+    local _dt _dc _mt _mc
 
     # get the diff and merge tool commands from the main config file
-    { read -r dt; read -r dc; read -r mt; read -r mc; } < <(jq -r '.diff.tool, .diff.command, .merge.tool, .merge.command' "$file" 2>"$_ignore")
+    { read -r _dt; read -r _dc; read -r _mt; read -r _mc; } < <(jq -r '.diff.tool, .diff.command, .merge.tool, .merge.command' "$_file" 2>"$_ignore")
 
-    if [[ -n $dt && -n $dc ]] &&
-       (command -p -v "$dt" &>"$_ignore" || which "$dt" &>"$_ignore"); then
+    if [[ -n $_dt && -n $_dc ]] &&
+       (command -p -v "$_dt" &>"$_ignore" || which "$_dt" &>"$_ignore"); then
         # the configured diff tool/command is good, use it
-        trace "Diff tool configured in $file: '$dt': $dc"
+        trace "Diff tool configured in $_file: '$_dt': $_dc"
     else
         # get it from Git
-        dt=$(git config --global --get "diff.tool" 2>"$_ignore" || true) &&
-        dc=$(git config --global --get "diff.$dt.cmd" 2>"$_ignore" || true)
+        _dt=$(git config --global --get "diff.tool" 2>"$_ignore" || true) &&
+        _dc=$(git config --global --get "diff.$_dt.cmd" 2>"$_ignore" || true)
 
-        if [[ -n "$dt" ]] && (command -v -p "$dt" > "$_ignore" || which "$dt" &>"$_ignore") &&
-           ([[ -n "$dc" ]] || is_in "$dt" "${!diff_commands[@]}"); then
+        if [[ -n "$_dt" ]] && (command -v -p "$_dt" > "$_ignore" || which "$_dt" &>"$_ignore") &&
+           ([[ -n "$_dc" ]] || is_in "$_dt" "${!diff_commands[@]}"); then
             # OK the git configured diff tool is available, if a command is not configured, get ours
-            dc=${dc:-${diff_commands[$dt]}}
-            trace "Diff tool configured in Git: '$dt': $dc"
+            _dc=${_dc:-${diff_commands[$_dt]}}
+            trace "Diff tool configured in Git: '$_dt': $_dc"
         else
             # use the hardcoded defaults from this script
-            dt="$default_diff_tool"
-            dc=${diff_commands[$dt]}
+            _dt="$default_diff_tool"
+            _dc=${diff_commands[$_dt]}
 
-            if [[ -n "$dt" && -n "$dc" ]] &&
-               (command -v -p "$dt" > "$_ignore" || which "$dt" &>"$_ignore"); then
-                trace "Diff tool configured by default: '$dt': $dc"
+            if [[ -n "$_dt" && -n "$_dc" ]] &&
+               (command -v -p "$_dt" > "$_ignore" || which "$_dt" &>"$_ignore"); then
+                trace "Diff tool configured by default: '$_dt': $_dc"
             else
                 # fall-back to good ole 'diff' - it is not as good, but it will do the job and return good exit codes
-                dt="diff"
-                dc=${diff_commands[$dt]}
-                trace "Diff tool fall-back to classic diff: '$dt': $dc"
+                _dt="diff"
+                _dc=${diff_commands[$_dt]}
+                trace "Diff tool fall-back to classic diff: '$_dt': $_dc"
             fi
         fi
     fi
 
     # similar logic for the merge tool, but we prefer our default merge commands over the git configured ones
-    if [[ -n $mt && -n $mc ]] &&
-       (command -p -v "$mt" &>"$_ignore" || which "$mt" &>"$_ignore"); then
+    if [[ -n $_mt && -n $_mc ]] &&
+       (command -p -v "$_mt" &>"$_ignore" || which "$_mt" &>"$_ignore"); then
         # the configured merge tool/command is good, use it
-        trace "Merge tool configured in $file: '$mt': $mc"
+        trace "Merge tool configured in $_file: '$_mt': $_mc"
     else
         # get it from Git
-        mt=$(git config --global --get "merge.tool" 2>"$_ignore" || true)
-        mc=$(git config --global --get "mergetool.$mt.cmd" 2>"$_ignore" || true)
-        local mt_is_in_merge_commands="false"
-        is_in "$mt" "${!merge_commands[@]}" && mt_is_in_merge_commands="true"
+        _mt=$(git config --global --get "merge.tool" 2>"$_ignore" || true)
+        _mc=$(git config --global --get "mergetool.$_mt.cmd" 2>"$_ignore" || true)
+        local _mt_is_in_merge_commands="false"
+        is_in "$_mt" "${!merge_commands[@]}" && _mt_is_in_merge_commands="true"
 
-        if [[ -n $mt ]] && (command -v -p "$mt" > "$_ignore" || which "$mt" &>"$_ignore") &&
-           ([[ -n $mc ]] || $mt_is_in_merge_commands); then
+        if [[ -n $_mt ]] && (command -v -p "$_mt" > "$_ignore" || which "$_mt" &>"$_ignore") &&
+           ([[ -n $_mc ]] || $_mt_is_in_merge_commands); then
             # for the purposes of this script, our merge commands work better than the ones configured in git,
             # so we ignore the git config here if we can
-            $mt_is_in_merge_commands && mc=${merge_commands[$mt]}
-            trace "Merge tool from Git config with '$mt': $mc"
+            $_mt_is_in_merge_commands && _mc=${merge_commands[$_mt]}
+            trace "Merge tool from Git config with '$_mt': $_mc"
         else
             # use the hardcoded defaults from this script
-            mt="$default_merge_tool"
-            mc=${merge_commands[$mt]}
+            _mt="$default_merge_tool"
+            _mc=${merge_commands[$_mt]}
 
-            if [[ -n $mt && -n $mc ]] &&
-               (command -v -p "$mt" > "$_ignore" || which "$mt" &>"$_ignore"); then
-                trace "Merge tool configured by default: '$mt': $mc"
+            if [[ -n $_mt && -n $_mc ]] &&
+               (command -v -p "$_mt" > "$_ignore" || which "$_mt" &>"$_ignore"); then
+                trace "Merge tool configured by default: '$_mt': $_mc"
             else
                 # fall-back to good ole 'code' if available
-                mt="code"
-                if [[ -n $mt && -n $mc ]] &&
-                   (command -v -p "$mt" > "$_ignore" || which "$mt" &>"$_ignore"); then
-                    mc=${merge_commands[$mt]}
-                    trace "Choosing Visual Studio Code as a merge tool '$mt': $mc"
+                _mt="code"
+                if [[ -n $_mt && -n $_mc ]] &&
+                   (command -v -p "$_mt" > "$_ignore" || which "$_mt" &>"$_ignore"); then
+                    _mc=${merge_commands[$_mt]}
+                    trace "Choosing Visual Studio Code as a merge tool '$_mt': $_mc"
                 else
                     warning "No merge tool was configured or none is available. Merge operations will not be possible."
-                    mt=""
-                    mc=""
+                    _mt=""
+                    _mc=""
                 fi
             fi
         fi
     fi
 
-    echo "$dt"
-    echo "$dc"
-    echo "$mt"
-    echo "$mc"
+    echo "$_dt"
+    echo "$_dc"
+    echo "$_mt"
+    echo "$_mc"
 }
 
 # shellcheck disable=SC2059
 function trace_files()
 {
-    local format
+    local _format
     case "${1,,}" in
         identical )
-            format="%-84s ==== Identical ==== %-s\n"
+            _format="%-84s ==== Identical ==== %-s\n"
             ;;
         different )
-            format="%-84s ≠≠≠≠ Different ≠≠≠≠ %-s\n"
+            _format="%-84s ≠≠≠≠ Different ≠≠≠≠ %-s\n"
             ;;
         not_changed )
-            format="%-84s →←→← No change →←→← %-s\n"
+            _format="%-84s →←→← No change →←→← %-s\n"
             ;;
         merged )
-            format="%-84s →←→← Merged    →←→← %-s\n"
+            _format="%-84s →←→← Merged    →←→← %-s\n"
             ;;
         copied )
-            format="%-84s →→→→ Copied    →→→→ %-s\n"
+            _format="%-84s →→→→ Copied    →→→→ %-s\n"
             ;;
         skipped )
-            format="%-84s ---- Skipping  ---- %-s\n"
+            _format="%-84s ---- Skipping  ---- %-s\n"
             ;;
         * )
-            format="%-84s ??????????????????? %-s\n"
+            _format="%-84s ??????????????????? %-s\n"
     esac
-    trace "$(printf "$format" "${2#"$vm2_repos/$vm2_sot_repo_name/templates/"}" "${3#"$vm2_repos/"}")"
+    trace "$(printf "$_format" "${2#"$vm2_repos/$vm2_sot_repo_name/templates/"}" "${3#"$vm2_repos/"}")"
 }
 
 #-------------------------------------------------------------------------------
@@ -507,7 +505,28 @@ function trace_files()
 #-------------------------------------------------------------------------------
 function are_different()
 {
-    local display_diff=${3:-true}
+    local -i _rc="$success"
+
+    (( $# == 2 || $# == 3 )) || {
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires two or three arguments (provided $#): the SoT file, target file, and optional display-diff flag."
+    }
+    [[ -v 1 && -f $1 ]] || {
+        _rc="$err_not_file"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the SoT file, to be an existing file (provided '${1-<missing>}')."
+    }
+    [[ -v 2 && -f $2 ]] || {
+        _rc="$err_not_file"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, the target file, to be an existing file (provided '${2-<missing>}')."
+    }
+    [[ ! -v 3 ]] || is_boolean "$3" || {
+        _rc="$err_argument_type"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires optional argument 3, the display-diff flag, to be 'true' or 'false' (provided '${3-<missing>}')."
+    }
+
+    (( _rc == success )) || return "$err_invalid_arguments"
+
+    local _display_diff=${3:-true}
 
     # follow the git diff command parameters naming convention, so the eval command can use them correctly
     LOCAL=$1
@@ -519,7 +538,7 @@ function are_different()
         return 1
     else
         trace_files "different" "$LOCAL" "$REMOTE"
-        $display_diff && eval "$diff_command"
+        $_display_diff && eval "$diff_command"
         return 0
     fi
 }
@@ -543,6 +562,23 @@ function are_different()
 # shellcheck disable=SC2034 # BASE appears unused. Verify use (or export if used externally).
 function merge()
 {
+    local -i _rc="$success"
+
+    (( $# == 2 )) || {
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires exactly two arguments (provided $#): the target file and SoT file."
+    }
+    [[ -v 1 && -f $1 ]] || {
+        _rc="$err_not_file"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the target file, to be an existing file (provided '${1-<missing>}')."
+    }
+    [[ -v 2 && -f $2 ]] || {
+        _rc="$err_not_file"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, the SoT file, to be an existing file (provided '${2-<missing>}')."
+    }
+
+    (( _rc == success )) || return "$err_invalid_arguments"
+
     # follow the git merge command parameters naming convention, so the eval command can use them correctly
     LOCAL=$1
     REMOTE=$2
@@ -577,15 +613,32 @@ function merge()
 #-------------------------------------------------------------------------------
 function copy_file()
 {
-    local src_file="$1"
-    local dest_file="$2"
-    local dest_dir
+    local -i _rc="$success"
 
-    dest_dir=$(dirname "$dest_file")
+    (( $# == 2 )) || {
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires exactly two arguments (provided $#): the source and destination file paths."
+    }
+    [[ -v 1 && -f $1 ]] || {
+        _rc="$err_not_file"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the source file, to be an existing file (provided '${1-<missing>}')."
+    }
+    [[ -v 2 && -n $2 ]] || {
+        _rc="$err_argument_value"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, the destination file path, to be non-empty (provided '${2-<missing>}')."
+    }
 
-    if [[ ! -d "$dest_dir" ]]; then
-        execute mkdir -p "$dest_dir"
+    (( _rc == success )) || return "$err_invalid_arguments"
+
+    local _src_file="$1"
+    local _dest_file="$2"
+    local _dest_dir
+
+    _dest_dir=$(dirname "$_dest_file")
+
+    if [[ ! -d "$_dest_dir" ]]; then
+        execute mkdir -p "$_dest_dir"
     fi
-    execute cp "$src_file" "$dest_file"
-    trace_files "copied" "$src_file" "$dest_file"
+    execute cp "$_src_file" "$_dest_file"
+    trace_files "copied" "$_src_file" "$_dest_file"
 }

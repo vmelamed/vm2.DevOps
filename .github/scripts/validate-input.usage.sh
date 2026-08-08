@@ -6,15 +6,15 @@ declare -xr script_name
 
 function usage_text()
 {
-    local long_text=$1
-    local switches=""
-    local vars=""
+    local _long_text=$1
+    local _switches=""
+    local _vars=""
 
-    if $long_text; then
-        switches="
+    if $_long_text; then
+        _switches="
 Switches:
 $common_switches"
-        vars=$common_vars
+        _vars=$common_vars
     fi
 
     cat << EOF
@@ -74,7 +74,7 @@ Options:
                                 Initial value from \$SKIP_TESTS or default 'false'
   -sp, --skip-packages          Whether to skip packing projects. Expected 'true' or 'false'
                                 Initial value from \$SKIP_PACKAGES or default 'false'
-$switches
+$_switches
 Environment Variables:
   BUILD_PROJECTS                JSON array of paths to projects to build
   TEST_PROJECTS                 JSON array of paths to test projects to run
@@ -95,7 +95,7 @@ Environment Variables:
   SKIP_BENCHMARKS               Whether to skip running benchmarks
   SKIP_TESTS                    Whether to skip running tests
   SKIP_PACKAGES                 Whether to skip packing projects
-$vars
+$_vars
 Outputs (to GITHUB_OUTPUT):
   build-projects                JSON array of paths to projects to build
   test-projects                 JSON array of paths to test projects to run

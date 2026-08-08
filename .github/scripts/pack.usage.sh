@@ -6,13 +6,13 @@ declare -xr script_name
 
 function usage_text()
 {
-    local long_text=$1
-    local switches=""
-    local vars=""
+    local _long_text=$1
+    local _switches=""
+    local _vars=""
 
-    if $long_text; then
-        switches=$'\n'"Switches:"$'\n'"$common_switches"
-        vars=$common_vars
+    if $_long_text; then
+        _switches=$'\n'"Switches:"$'\n'"$common_switches"
+        _vars=$common_vars
     fi
 
     cat << EOF
@@ -40,7 +40,7 @@ Options:
   -a, --artifacts               Directory to save the NuGet packages
                                 Initial value from \$ARTIFACTS_DIR or default '<solution dir>/artifacts'. The artifacts (the
                                 packages) will be saved in a 'packages' subdirectory within this directory.
-$switches
+$_switches
 Environment Variables:
   PACKAGE_PROJECT               Path to the project to pack
   CONFIGURATION                 Build configuration ('Release' or 'Debug')
@@ -54,6 +54,6 @@ Environment Variables:
                                 (default: 'preview.0')
   BUILD                         When 'true', build the project before packing
                                 (default: 'false')
-$vars
+$_vars
 EOF
 }

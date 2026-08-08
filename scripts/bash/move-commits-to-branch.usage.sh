@@ -16,13 +16,13 @@ declare -xr script_name
 #-------------------------------------------------------------------------------
 function usage_text()
 {
-    local long_text=$1
-    local switches=""
-    local vars=""
+    local _long_text=$1
+    local _switches=""
+    local _vars=""
 
-    if $long_text; then
-        switches="$common_switches"
-        vars=$'\n'"Environment Variables:"$'\n'"$common_vars"
+    if $_long_text; then
+        _switches="$common_switches"
+        _vars=$'\n'"Environment Variables:"$'\n'"$common_vars"
     fi
 
     cat << EOF
@@ -41,7 +41,7 @@ Options:
 
 Switches:
   -n, --check-out-new           After moving the commits, check out the new branch.
-$switches$vars
+$_switches$_vars
 Examples:
   $script_name --commit-sha ff5c2d182c0d3a01c1f1dfd66c9267f0569d9802 --branch feature/my-feature
   $script_name -c ff5c2d1 -b feature/my-feature -n

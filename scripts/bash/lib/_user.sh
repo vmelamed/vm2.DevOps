@@ -61,43 +61,43 @@ function press_any_key()
 #-------------------------------------------------------------------------------
 function confirm()
 {
-    local -i rc="$success"
+    local -i _rc="$success"
 
     (( $# == 1 || $# == 2 )) || {
-        rc="$err_invalid_arguments"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires at least one parameter (provided $#): the prompt and a second, optional argument -default response."
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires one or two arguments (provided $#): a prompt and an optional default response."
     }
-    [[ $# -lt 1 || -n "$1" ]] || {
-        rc="$err_argument_value"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires that the \$1 parameter is not empty."
+    [[ -v 1 && -n "$1" ]] || {
+        _rc="$err_argument_value"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the confirmation prompt, to be non-empty (provided '${1-<missing>}')."
     }
-    [[ $# -lt 2 || "${2,,}" =~ ^[yn]$ ]] || {
-        rc="$err_argument_value"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires that the \$2 parameter is either 'y' or 'n' (case insensitive)."
+    [[ ! -v 2 || "${2,,}" =~ ^[yn]$ ]] || {
+        _rc="$err_argument_value"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires optional argument 2, the default response, to be 'y' or 'n' (case-insensitive; provided '${2-<missing>}')."
     }
 
-    (( rc == success )) || return "$err_invalid_arguments"
+    (( _rc == success )) || return "$err_invalid_arguments"
 
-    local default="y"
-    local errs
+    local _default="y"
+    local _errs
 
-    (( $# == 1 )) || default=${2,,}
+    (( $# == 1 )) || _default=${2,,}
 
-    local response=$default
+    local _response=$_default
     is_quiet || {
-        local prompt="$1"
-        local suffix
-        [[ "$default" == y ]] && suffix="[Y/n]" || suffix="[y/N]"
+        local _prompt="$1"
+        local _suffix
+        [[ "$_default" == y ]] && _suffix="[Y/n]" || _suffix="[y/N]"
 
         while true; do
-            read -r -p "$prompt $suffix: " response
-            [[ -z "$response" || "$response" =~ ^[ynYN]$ ]] && break
+            read -r -p "$_prompt $_suffix: " _response
+            [[ -z "$_response" || "$_response" =~ ^[ynYN]$ ]] && break
             warning "Please enter one of Y or N (case insensitive)."
         done
     }
 
-    response=${response:-$default}
-    [[ ${response,,} == "y" ]]
+    _response=${_response:-$_default}
+    [[ ${_response,,} == "y" ]]
 }
 
 #-------------------------------------------------------------------------------
@@ -136,71 +136,79 @@ function confirm()
 #-------------------------------------------------------------------------------
 function enter_value()
 {
-    local -i rc="$success"
+    local -i _rc="$success"
 
     (( $# >= 1 && $# <= 4 )) || {
-        rc="$err_invalid_arguments"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() accepts from 1 to 4 arguments (provided $#):" \
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() accepts from 1 to 4 arguments (provided $#):" \
                               "    1) a prompt" \
                               "    2) default value (optional if the rest are not specified, default: '')" \
                               "    3) boolean to suppress the echo of the input to the terminal (optional if the rest are not specified, default: false)" \
                               "    4) the name of a validation function (optional, default: true)."
     }
+    [[ -v 1 && -n $1 ]] || {
+        _rc="$err_argument_value"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the prompt, to be non-empty (provided '${1-<missing>}')."
+    }
+    [[ ! -v 3 || $3 =~ ^(true|false)$ ]] || {
+        _rc="$err_argument_type"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires optional argument 3, the secret-input flag, to be 'true' or 'false' (provided '${3-<missing>}')."
+    }
+    [[ ! -v 4 ]] || is_defined_function "$4" || {
+        _rc="$err_argument_type"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires optional argument 4 to name a defined validation function (provided '${4-<missing>}')."
+    }
 
-    (( rc == success )) || return "$err_invalid_arguments"
+    (( _rc == success )) || return "$err_invalid_arguments"
 
-    local prompt=$1
-    local default=${2:-''}
-    local is_secret=${3:-false}
-    local validate_fn=${4:-true}
+    local _prompt=$1
+    local _default=${2:-''}
+    local _is_secret=${3:-false}
+    local _validate_fn=${4:-true}
 
     is_quiet &&
-        echo "$default" &&
+        echo "$_default" &&
         return "$success"
 
-    is_boolean "$is_secret" || {
-        rc="$err_argument_type"
-        error -ec "$rc" "The \$3 argument of ${FUNCNAME[0]}() (is_secret) must be a boolean value ('true' or 'false' -- provided '$1'), indicating whether the input is a secret that should not be echoed to the terminal."
-    }
-    [[ -z $default ]] || $validate_fn "$default" || {
-        rc="$err_argument_value"
-        error -ec "$rc" "The default value '$default' does not pass the validation function '$validate_fn'."
+    [[ -z $_default ]] || $_validate_fn "$_default" || {
+        _rc="$err_argument_value"
+        error -ec "$_rc" "The default value '$_default' does not pass the validation function '$_validate_fn'."
     }
 
-    (( rc == success )) || return "$err_invalid_arguments"
+    (( _rc == success )) || return "$err_invalid_arguments"
 
-    if [[ -n $default ]]; then
-        $is_secret && prompt="$prompt [$secret_str]: " || prompt="$prompt [$default]: "
+    if [[ -n $_default ]]; then
+        $_is_secret && _prompt="$_prompt [$secret_str]: " || _prompt="$_prompt [$_default]: "
     else
-        prompt="$prompt: "
+        _prompt="$_prompt: "
     fi
 
-    local input
-    local valid=false
-    local errs
-    errs=$(get_errors)
+    local _input
+    local _valid=false
+    local _errs
+    _errs=$(get_errors)
 
-    local first_iter=true
-    while ! $valid; do
-        if $is_secret; then
-            read -r -s -p "$prompt" input
+    local _first_iter=true
+    while ! $_valid; do
+        if $_is_secret; then
+            read -r -s -p "$_prompt" _input
         else
-            read -r    -p "$prompt" input
+            read -r    -p "$_prompt" _input
         fi
 
-        [[ -n "$input" ]] || input="$default"
-        $validate_fn "$input" && valid=true || valid=false
+        [[ -n "$_input" ]] || _input="$_default"
+        $_validate_fn "$_input" && _valid=true || _valid=false
 
-        ! $valid && $is_secret && $first_iter && {
+        ! $_valid && $_is_secret && $_first_iter && {
             # prefix the prompt with a newline to separate the new prompts with new lines in secret mode
-            prompt=$'\n'"$prompt"
-            first_iter=false
+            _prompt=$'\n'"$_prompt"
+            _first_iter=false
         }
     done
 
     # all good here! reset the global error counter back to the value it had before the loop with the validation function
-    set_errors "$errs"
-    echo "$input"
+    set_errors "$_errs"
+    echo "$_input"
 }
 
 #-------------------------------------------------------------------------------
@@ -226,10 +234,18 @@ function enter_value()
 #-------------------------------------------------------------------------------
 function choose()
 {
+    local -i _rc="$success"
+
     (( $# >= 3 )) || {
-        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires 3 or more arguments ($# provided): a prompt and at least two choices."
-        return "$err_invalid_arguments";
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires three or more arguments (provided $#): a prompt and at least two choices."
     }
+    [[ -v 1 && -n $1 ]] || {
+        _rc="$err_argument_value"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the choice prompt, to be non-empty (provided '${1-<missing>}')."
+    }
+
+    (( _rc == success )) || return "$err_invalid_arguments"
 
     is_quiet && {
         # just return the default choice (1)
@@ -238,34 +254,34 @@ function choose()
     }
 
     # print the menu
-    local prompt=$1; shift
-    local options=("$@")
+    local _prompt=$1; shift
+    local _options=("$@")
 
-    echo "$prompt" >&2
+    echo "$_prompt" >&2
 
-    local -i opt_index
-    local opt
-    for (( opt_index=1; opt_index <= ${#options[@]}; opt_index++ )); do
-        opt="${options[opt_index-1]}"
-        (( opt_index == 1 )) &&
-            echo "  $opt_index) $opt (default)" >&2 ||
-            echo "  $opt_index) $opt" >&2
+    local -i _opt_index
+    local _opt
+    for (( _opt_index=1; _opt_index <= ${#_options[@]}; _opt_index++ )); do
+        _opt="${_options[_opt_index-1]}"
+        (( _opt_index == 1 )) &&
+            echo "  $_opt_index) $_opt (default)" >&2 ||
+            echo "  $_opt_index) $_opt" >&2
     done
 
     # read the choice
-    local selection=1
+    local _selection=1
     while true; do
-        read -r -p "Enter choice [1-${#options[@]}]: " selection
-        selection=${selection:-1}
-        if ! is_natural "$selection"; then # it is not from this world;)
-            warning "Invalid choice: $selection."
+        read -r -p "Enter choice [1-${#_options[@]}]: " _selection
+        _selection=${_selection:-1}
+        if ! is_natural "$_selection"; then # it is not from this world;)
+            warning "Invalid choice: $_selection."
             continue
         fi
-        (( selection == 0 )) && selection=1 && break
-        (( selection >= 1 && selection <= ${#options[@]} )) && break
-        warning "Invalid choice: $selection"
+        (( _selection == 0 )) && _selection=1 && break
+        (( _selection >= 1 && _selection <= ${#_options[@]} )) && break
+        warning "Invalid choice: $_selection"
     done
-    printf '%d\n' "$selection"
+    printf '%d\n' "$_selection"
 
     return "$success"
 }
@@ -294,54 +310,54 @@ function choose()
 #-------------------------------------------------------------------------------
 function print_sequence()
 {
-    local open_paren=""
-    local close_paren=""
-    local quote="'"
-    local separator=","
+    local _open_paren=""
+    local _close_paren=""
+    local _quote="'"
+    local _separator=","
     for arg in "$@"; do
         case $arg in
             --json-array|--json|--jq-array|-j )
-                quote='"'
-                separator=", "
-                open_paren="["
-                close_paren="]"
+                _quote='"'
+                _separator=", "
+                _open_paren="["
+                _close_paren="]"
                 ;;
             --quote=*|-q=* )
-                quote="${arg#*=}"
+                _quote="${arg#*=}"
                 ;;
             --separator=*|-s=* )
-                separator="${arg#*=}"
+                _separator="${arg#*=}"
                 # Handle special values
-                case "$separator" in
-                    nl  ) separator=$'\n' ;;
-                    tab ) separator=$'\t' ;;
+                case "$_separator" in
+                    nl  ) _separator=$'\n' ;;
+                    tab ) _separator=$'\t' ;;
                     *   ) ;;
                 esac
                 ;;
             --parenthesis=*|--paren=*|-p=* )
-                local paren_val="${arg#*=}"
-                case "$paren_val" in
+                local _paren_val="${arg#*=}"
+                case "$_paren_val" in
                     \(|\)|\(\) ) # (|)|()
-                        open_paren="("
-                        close_paren=")"
+                        _open_paren="("
+                        _close_paren=")"
                         ;;
                     \[|\]|\[\] ) # [|]|[]
-                        open_paren="["
-                        close_paren="]"
+                        _open_paren="["
+                        _close_paren="]"
                         ;;
                     \{|\}|\{\} ) # {|}|{}
-                        open_paren="{"
-                        close_paren="}"
+                        _open_paren="{"
+                        _close_paren="}"
                         ;;
                     nl|$'\n'|'\n' )
                         # Handle special values
-                        open_paren=$'\n'
-                        close_paren=$'\n'
+                        _open_paren=$'\n'
+                        _close_paren=$'\n'
                         ;;
                     * )
                         warning "Unknown paren type: ${arg#*=}. Ignoring."
-                        open_paren=""
-                        close_paren=""
+                        _open_paren=""
+                        _close_paren=""
                         ;;
                 esac
                 ;;
@@ -349,16 +365,16 @@ function print_sequence()
         esac
     done
 
-    local first=true
-    [[ -n "$open_paren" ]] && printf "%s" "$open_paren" || true
+    local _first=true
+    [[ -n "$_open_paren" ]] && printf "%s" "$_open_paren" || true
     for arg in "$@"; do
         [[ "$arg" == -* || "$arg" == --* ]] && continue || true
-        if $first; then
-            printf "%s%s%s" "$quote" "$arg" "$quote"
-            first=false
+        if $_first; then
+            printf "%s%s%s" "$_quote" "$arg" "$_quote"
+            _first=false
         else
-            printf "%s%s%s%s"  "$separator" "$quote" "$arg" "$quote"
+            printf "%s%s%s%s"  "$_separator" "$_quote" "$arg" "$_quote"
         fi
     done
-    [[ -n "$close_paren" ]] && printf "%s" "$close_paren" || true
+    [[ -n "$_close_paren" ]] && printf "%s" "$_close_paren" || true
 }

@@ -2,6 +2,7 @@
 # Copyright (c) 2025-2026 Val Melamed
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
+# shellcheck disable=SC1091 # Disable warnings for word splitting and globbing issues in the following source commands.
 
 #-------------------------------------------------------------------------------
 # This script defines several GitHub specific constants, variables, and helper
@@ -27,6 +28,9 @@ declare -x lib_dir
 [[ ! -v lib_dir     || -z "$lib_dir"     ]] && lib_dir=$(realpath -e "$(dirname "${BASH_SOURCE[0]}")")
 
 source "$lib_dir/core.sh"
+
+declare -rxi success
+declare -rxi failure
 
 ## In CI mode, indicates whether the script is running within GitHub Actions.
 declare -x github_actions=${GITHUB_ACTIONS:-false}
@@ -74,10 +78,10 @@ declare -rx varNameRegex
 #-------------------------------------------------------------------------------
 function to_stdout()
 {
-    local line
-    while IFS= read -r line; do
-        echo "$line"
-        echo "$line" >> "$github_step_summary"
+    local _line
+    while IFS= read -r _line; do
+        echo "$_line"
+        echo "$_line" >> "$github_step_summary"
     done
     return "$success"
 }
@@ -93,10 +97,10 @@ function to_stdout()
 #-------------------------------------------------------------------------------
 function to_traceout()
 {
-    local line
-    while IFS= read -r line; do
-        echo "$line" >&2
-        $trace_to_summary && echo "$line" >> "$github_step_summary" || true
+    local _line
+    while IFS= read -r _line; do
+        echo "$_line" >&2
+        $trace_to_summary && echo "$_line" >> "$github_step_summary" || true
     done
     return "$success"
 }
@@ -116,10 +120,10 @@ function to_traceout()
 #-------------------------------------------------------------------------------
 function to_stderr()
 {
-    local line
-    while IFS= read -r line; do
-        echo "$line" >&2
-        echo "$line" >> "$github_step_summary"
+    local _line
+    while IFS= read -r _line; do
+        echo "$_line" >&2
+        echo "$_line" >> "$github_step_summary"
     done
     return "$success"
 }
@@ -140,24 +144,26 @@ function to_stderr()
 # @example
 #   echo "Deployment finished" | to_summary
 #-------------------------------------------------------------------------------
+# shellcheck disable=SC2120 # to_summary references arguments, but none are ever passed.
+# It's OK: the f-n can either read from stdin (preferred!) or use its parameters (should be avoided).
 function to_summary()
 {
-    local line
-    local first=true
+    local _line
+    local _first=true
 
     function __print_line()
     {
-        $first && echo "## Summary" && first=false
-        echo "$line"
+        $_first && echo "## Summary" && _first=false
+        echo "$_line"
     }
 
     {
         if [[ $# -gt 0 ]]; then
-            for line in "$@"; do
+            for _line in "$@"; do
                 __print_line
             done
         else
-            while IFS= read -r line; do
+            while IFS= read -r _line; do
                 __print_line
             done
         fi
@@ -184,10 +190,10 @@ function to_summary()
 #-------------------------------------------------------------------------------
 function to_output()
 {
-    local line
-    while IFS= read -r line; do
-        echo "$line"
-        echo "$line" >> "$github_output"
+    local _line
+    while IFS= read -r _line; do
+        echo "$_line"
+        echo "$_line" >> "$github_output"
     done
 }
 
@@ -213,27 +219,27 @@ function to_output()
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 function to_github_output()
 {
-    local -i rc="$success"
+    local -i _rc="$success"
 
     (( $# == 1 || $# == 2 )) || {
-        rc="$err_invalid_arguments"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires one or two arguments (provided $#): " \
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires one or two arguments (provided $#): " \
               "the name of the variable to output and optionally the name to use in GitHub Actions output."
     }
-    [[ $# -lt 1 || $1 =~ $varNameRegex ]] || {
-        rc="$err_invalid_nameref"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires a non-empty variable name as argument."
+    [[ -v 1 && $1 =~ $varNameRegex ]] || {
+        _rc="$err_invalid_nameref"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a valid variable name (provided '${1-<missing>}')."
     }
 
-    (( rc == success )) || return "$err_invalid_arguments"
+    (( _rc == success )) || return "$err_invalid_arguments"
 
-    local k
+    local _k
     # get the key from the second argument if provided,
     # otherwise transform the var name to a key by replacing underscores with hyphens
-    (( $# == 2 )) && k="$2" || k="${1//_/-}"
+    (( $# == 2 )) && _k="$2" || _k="${1//_/-}"
 
-    local -n v=$1
-    echo "$k=$v" | to_output
+    local -n _v=$1
+    echo "$_k=$_v" | to_output
 }
 
 #-------------------------------------------------------------------------------
@@ -258,22 +264,31 @@ function to_github_output()
 #-------------------------------------------------------------------------------
 function args_to_github_output()
 {
-    local -i rc="$success"
+    local -i _rc="$success"
 
     (( $# > 0 )) || {
-        rc="$err_invalid_arguments"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires one or more arguments (provided $#): the names of the variables to output."
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires one or more arguments (provided $#): the names of the variables to output."
     }
 
-    (( rc == success )) || return "$err_invalid_arguments"
+    local _var
+    local -i _argument_number=1
+    for _var in "$@"; do
+        [[ $_var =~ $varNameRegex ]] || {
+            _rc="$err_invalid_nameref"
+            error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument $_argument_number to be a valid variable name (provided '${_var-<missing>}')."
+        }
+        (( _argument_number++ ))
+    done
+
+    (( _rc == success )) || return "$err_invalid_arguments"
 
     {
-        local var
-        local k
-        for var in "$@"; do
+        local _k
+        for _var in "$@"; do
             # transform the var name to a key by replacing underscores with hyphens
-            k="${var//_/-}"
-            echo "$k=${!var}"
+            _k="${_var//_/-}"
+            echo "$_k=${!_var}"
         done
     } | to_output
 }

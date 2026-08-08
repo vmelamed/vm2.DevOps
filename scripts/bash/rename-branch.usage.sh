@@ -19,13 +19,13 @@ declare -xr script_name
 #-------------------------------------------------------------------------------
 function usage_text()
 {
-    local long_text=$1
-    local switches=""
-    local vars=""
+    local _long_text=$1
+    local _switches=""
+    local _vars=""
 
-    if $long_text; then
-        switches=$'\n'"Switches:"$'\n'"$common_switches"
-        vars=$'\n'"Environment Variables:"$'\n'"$common_vars"
+    if $_long_text; then
+        _switches=$'\n'"Switches:"$'\n'"$common_switches"
+        _vars=$'\n'"Environment Variables:"$'\n'"$common_vars"
     fi
 
     cat << EOF
@@ -35,6 +35,6 @@ Renames a Git branch both locally and remotely.
 Arguments:
   <old_branch_name>             The name of the existing branch to be renamed. If not specified, the current branch is used.
   <new_branch_name>             The new name for the branch. This must be a valid Git branch name and must not already exist.
-$switches$vars
+$_switches$_vars
 EOF
 }

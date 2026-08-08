@@ -30,28 +30,28 @@ declare -xA selectors_actions=()    # array [file] => [action string] for files 
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 function get_arguments()
 {
-    local option
+    local __option
 
     while [[ $# -gt 0 ]]; do
-        option="$1"; shift
-        if get_common_arg "$option"; then
+        __option="$1"; shift
+        if get_common_arg "$__option"; then
             continue
         fi
 
-        value="$option"
-        option=${option,,}
-        case "$option" in
+        value="$__option"
+        __option=${__option,,}
+        case "$__option" in
             # do not use the common options - they were already processed by get_common_arg:
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
             --vm2-repos|-r )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for $option"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for $__option"
                 vm2_repos="$1"; shift
                 ;;
 
             --source-of-truth|-s )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for $option"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for $__option"
                 sot="$1"; shift
                 ;;
 
@@ -60,8 +60,8 @@ function get_arguments()
                 ;;
 
             --file*|-f* )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for $option"
-                get_selector_action "$option" "$1"; shift
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for $__option"
+                get_selector_action "$__option" "$1"; shift
                 ;;
 
             --diff|-d )
@@ -69,7 +69,7 @@ function get_arguments()
                 ;;
 
             --summary )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for $option"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for $__option"
                 summary_file="$1"; shift
                 ;;
 
@@ -90,40 +90,40 @@ declare -xr action_copy
 
 function get_selector_action()
 {
-    [[ $# -eq 2 ]] || usage "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): option and file patterns list."
+    [[ $# -eq 2 ]] || usage "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): option and file selector."
 
-    local option="$1"
-    local file_selector=$2
-    local action=""
+    local _option="$1"
+    local _file_selector=$2
+    local _action=""
 
     # get the action from the option name, e.g. --file-ask-to-merge => "ask-to-merge"
-    [[ $option =~ ^-(-file|f)(-?([a-z-]+))?$ ]] ||
-        usage -ec "$err_unknown_argument" "Unknown argument: $option"
+    [[ $_option =~ ^-(-file|f)(-?([a-z-]+))?$ ]] ||
+        usage -ec "$err_unknown_argument" "Unknown argument: $_option"
 
     # get the action and replace the dashes with spaces in the action name, e.g. "ask-to-merge" => "ask to merge"
-    action="${BASH_REMATCH[3]//-/ }"
+    _action="${BASH_REMATCH[3]//-/ }"
 
-    case "$action" in
-        "i"  | "$action_ignore" ) action="$action_ignore" ;;
-        "mc" | "$action_merge_or_copy" ) action="$action_merge_or_copy" ;;
-        "am" | "$action_ask_to_merge" ) action="$action_ask_to_merge" ;;
-        "m"  | "$action_merge" ) action="$action_merge" ;;
-        "ac" | "$action_ask_to_copy" ) action="$action_ask_to_copy" ;;
-        "c"  | "$action_copy" ) action="$action_copy" ;;
+    case "$_action" in
+        "i"  | "$action_ignore" ) _action="$action_ignore" ;;
+        "mc" | "$action_merge_or_copy" ) _action="$action_merge_or_copy" ;;
+        "am" | "$action_ask_to_merge" ) _action="$action_ask_to_merge" ;;
+        "m"  | "$action_merge" ) _action="$action_merge" ;;
+        "ac" | "$action_ask_to_copy" ) _action="$action_ask_to_copy" ;;
+        "c"  | "$action_copy" ) _action="$action_copy" ;;
         * ) ;;
     esac
 
     # validate the action
-    [[ -z $action ]] || is_in "$action" "${valid_actions[@]}" ||
-        usage -ec "$err_argument_value" "Invalid action: $action. Valid actions are: $all_actions_str"
+    [[ -z $_action ]] || is_in "$_action" "${valid_actions[@]}" ||
+        usage -ec "$err_argument_value" "Invalid action: $_action. Valid actions are: $all_actions_str"
 
-    trace "File selector '$file_selector' with action '$action'"
+    trace "File selector '$_file_selector' with action '$_action'"
 
-    [[ $file_selector != -* ]] ||
-        usage -ec "$err_argument_value" "The argument '$file_selector' does not appear to be a valid file selector."
+    [[ $_file_selector != -* ]] ||
+        usage -ec "$err_argument_value" "The argument '$_file_selector' does not appear to be a valid file selector."
 
     # get the patterns that the action applies to, and remember the action for those files in the selectors_actions array
-    selectors_actions[$file_selector]="$action"
+    selectors_actions[$_file_selector]="$_action"
 }
 
 function dump_args()

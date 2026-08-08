@@ -57,10 +57,10 @@ declare -xi errors=0
 #-------------------------------------------------------------------------------
 function to_stdout()
 {
-    local line
+    local _line
 
-    while IFS= read -r line; do
-        echo "$line"
+    while IFS= read -r _line; do
+        echo "$_line"
     done
 }
 
@@ -80,10 +80,10 @@ function to_stdout()
 #-------------------------------------------------------------------------------
 function to_traceout()
 {
-    local line
+    local _line
 
-    while IFS= read -r line; do
-        echo "$line" >&2
+    while IFS= read -r _line; do
+        echo "$_line" >&2
     done
 }
 
@@ -103,10 +103,10 @@ function to_traceout()
 #-------------------------------------------------------------------------------
 function to_stderr()
 {
-    local line
+    local _line
 
-    while IFS= read -r line; do
-        echo "$line" >&2
+    while IFS= read -r _line; do
+        echo "$_line" >&2
     done
 }
 
@@ -183,18 +183,18 @@ function exit_if_has_errors()
 #-------------------------------------------------------------------------------
 function set_errors()
 {
-    local -i rc="$success"
+    local -i _rc="$success"
 
     (( $# == 1 )) || {
-        rc="$err_invalid_arguments"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires one argument ($# provided): the new value for the global error counter."
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires one argument ($# provided)."
     }
-    [[ $# -ne 1 || $1 =~ ^[0-9]+$ ]] || {
-        rc="$err_argument_type"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires a numeric argument: the new value for the global error counter."
+    [[ -v 1 && $1 =~ ^[0-9]+$ ]] || {
+        _rc="$err_argument_type"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be provided as a non-negative integer: the new value for the global error counter (provided '${1-<missing>}')."
     }
 
-    (( rc == success )) || return "$err_invalid_arguments"
+    (( _rc == success )) || return "$err_invalid_arguments"
 
     # shellcheck disable=SC2154 # errors is referenced but not assigned.
     errors=$1
@@ -240,63 +240,62 @@ function reset_errors()
 #-------------------------------------------------------------------------------
 function message()
 {
-    local rc="$success"
-    local -i count=$# # count of arguments passed to the function
-    local -i updated_count=$count # updated count of message parts after processing named parameters
+    local -i _rc="$success"
+    local -i _updated_count=$# # updated count of message parts after processing named parameters
 
-    (( count > 0 )) || {
-        rc="$err_missing_argument"
-        error -sd 4 -ec "$rc" "Function called without any parameters. Provide at least a prefix as the first parameter."
+    (( $# > 0 )) || {
+        _rc="$err_missing_argument"
+        error -sd 4 -ec "$_rc" "Function called without any parameters. Provide at least a prefix as the first parameter."
     }
-    [[ $count -gt 1 || ! -t 0 ]] || {
+    (( $# > 1 )) || [[ ! -t 0 ]] || {
         # no message arguments were passed and nothing is being piped in on stdin
-        rc="$err_missing_argument"
-        error -sd 4 -ec "$rc" "Function called without message parameters and there are none in the pipe. Provide message parameters or pipe them into the function."
+        _rc="$err_missing_argument"
+        error -sd 4 -ec "$_rc" "Function called without message parameters and there are none in the pipe. Provide message parameters or pipe them into the function."
     }
 
-    (( rc == success )) || return "$rc"
+    (( _rc == success )) || return "$_rc"
 
     # The first parameter is the prefix to prepend to each message line, e.g. "ERROR: ", "WARN: ", "INFO: ", etc.
-    local prefix="$1"
+    local _prefix="$1"
     shift
-    (( updated_count-- )) || true # decrement the count of message parts to account for the prefix
+    (( _updated_count-- )) || true # decrement the count of message parts to account for the prefix
 
     # The remaining parameters are the message parts or error codes to be translated to messages.
     # If there are no remaining parameters, the message will be read from stdin.
 
-    local args=("$@")
-    local -i depth=0 # stack dump depth
+    local _args=("$@")
+    local -i _depth=0 # stack dump depth
 
-    local -i index
+    local -i _index
     # preprocess the arguments array for -ec and -sd flags, and then print the messages lines with the prefix.
-    for (( index=0; index < count-1; index++ )); do
-        case "${args[index]}" in
+    for (( _index=0; _index < $#-1; _index++ )); do
+        case "${_args[_index]}" in
 
             "--error-code"|"-ec" )
-                is_positive "${args[index+1]:-}" &&
-                    args[index]="$(error_message "${args[index+1]}")" || {
-                        warning "Expected a positive number that is a known error code after '${args[index]}', but got '${args[index+1]:-}'. Skipping both arguments."
-                        unset "args[index]"
-                        (( updated_count-- )) || true # decrement the count of message parts if the error code is invalid
+                is_positive "${_args[_index+1]:-}" &&
+                    _args[_index]="$(error_message "${_args[_index+1]}")" || {
+                        warning "Expected a positive number that is a known error code after '${_args[_index]}', but got '${_args[_index+1]:-}'. Skipping both arguments."
+                        unset "_args[_index]"
+                        (( _updated_count-- )) || true # decrement the count of message parts if the error code is invalid
                     }
-                (( ++index )) # skip the next argument (the error code)
-                if (( index < count )); then
-                    unset "args[index]" # remove the code from the arguments array
-                    (( updated_count-- )) || true # decrement the count of message parts if the error code is invalid
+                (( ++_index )) # skip the next argument (the error code)
+                if (( _index < $# )); then
+                    unset "_args[_index]" # remove the code from the arguments array
+                    (( _updated_count-- )) || true # decrement the count of message parts if the error code is invalid
                 fi
                 continue
                 ;;
 
             "--stack-depth"|"-sd" )
-                is_positive "${args[index+1]:-}" &&
-                    depth="${args[index+1]}" ||
-                    warning "Expected a positive error code after '${args[index]}', but got '${args[index+1]:-}'. Skipping both arguments."
-                unset "args[index]" # remove the flag from the arguments array
-                (( updated_count-- )) || true # decrement the count of message parts if the error code is invalid
-                (( ++index )) # skip the next argument (the stack depth)
-                if (( index < count )); then
-                    unset "args[index]" # remove the code from the arguments array
-                    (( updated_count-- )) || true # decrement the count of message parts if the error code is invalid
+                is_positive "${_args[_index+1]:-}" &&
+                    _depth="${_args[_index+1]}" ||
+                    warning "Expected a positive error code after '${_args[_index]}', but got '${_args[_index+1]:-}'. Skipping both arguments."
+                unset "_args[_index]" # remove the flag from the arguments array
+                (( _updated_count-- )) || true # decrement the count of message parts if the error code is invalid
+                (( ++_index )) # skip the next argument (the stack depth)
+                if (( _index < $# )); then
+                    unset "_args[_index]" # remove the code from the arguments array
+                    (( _updated_count-- )) || true # decrement the count of message parts if the error code is invalid
                 fi
                 continue
                 ;;
@@ -305,44 +304,44 @@ function message()
         esac
     done
 
-    [[ $updated_count -gt 0 || ! -t 0 ]] || {
+    [[ $_updated_count -gt 0 || ! -t 0 ]] || {
         # no message arguments were passed and nothing is being piped in on stdin
         error -sd 4 -ec "$err_missing_argument" "Function called without message parameters and there are none in the pipe. Provide message parameters or pipe them into the function."
         return "$err_missing_argument"
     }
 
-    local first=true
+    local _first=true
 
     function __print_line()
     {
-        if $first; then
-            (( depth == 0 )) &&
-                printf "%s%s\n" "$prefix" "$1" ||
-                printf "%s%s (%s): %s\n" "$prefix" "${BASH_SOURCE[3]:-}" "${BASH_LINENO[2]:-}" "$1"
-            first=false
+        if $_first; then
+            (( _depth == 0 )) &&
+                printf "%s%s\n" "$_prefix" "$1" ||
+                printf "%s%s (%s): %s\n" "$_prefix" "${BASH_SOURCE[3]:-}" "${BASH_LINENO[2]:-}" "$1"
+            _first=false
         else
             echo "           $1"
         fi
         return "$success"
     }
 
-    if (( updated_count > 0 )); then
-        for line in "${args[@]}"; do
-            [[ -n $line ]] && __print_line "$line"
+    if (( _updated_count > 0 )); then
+        for _line in "${_args[@]}"; do
+            [[ -n $_line ]] && __print_line "$_line"
         done
     else
-        while IFS= read -r line; do
-            __print_line "$line"
+        while IFS= read -r _line; do
+            __print_line "$_line"
         done
     fi
 
-    (( depth > 0 )) &&
+    (( _depth > 0 )) &&
         # skips the frames of
         #   3 show_stack()
         #   2 message()
         #   1 the caller of message() -- e.g. error()
         # basically show where the error or trace was called from.
-        show_stack 3 "$depth" true
+        show_stack 3 "$_depth" true
 
     return "$success"
 }
@@ -481,28 +480,32 @@ function trace()
 #-------------------------------------------------------------------------------
 function warning_var()
 {
-    local -i rc="$success"
+    local -i _rc="$success"
 
     (( $# == 3 )) || {
-        rc="$err_invalid_arguments"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires three arguments ($# provided): variable name, warning message, and default value."
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires three arguments ($# provided): variable name, warning message, and default value."
     }
-    [[ $# -lt 3 || ( -n "$1" && -n "$2" ) ]] || {
-        rc="$err_argument_value"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires three arguments: variable name, warning message, and default value."
+    [[ -v 1 && -n $1 && $1 =~ $varNameRegex ]] || {
+        _rc="$err_invalid_nameref"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a valid variable name (provided '${1-<missing>}')."
     }
-    [[ $# -lt 1 || $1 =~ $varNameRegex ]] || {
-        rc="$err_invalid_nameref"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires a non-empty variable name as argument."
+    [[ -v 2 && -n $2 ]] || {
+        _rc="$err_argument_value"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, the warning message, to be non-empty (provided '${2-<missing>}')."
+    }
+    [[ -v 3 ]] || {
+        _rc="$err_missing_argument"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 3, the default value, to be provided."
     }
 
-    (( rc == success )) || return "$err_invalid_arguments"
+    (( _rc == success )) || return "$err_invalid_arguments"
 
     warning "$2" "Assuming the default value of '$3'."
 
-    local -n var=$1;
+    local -n _var=$1;
     # shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
-    var="$3"
+    _var="$3"
     return "$success"
 }
 
@@ -524,28 +527,31 @@ function warning_var()
 #-------------------------------------------------------------------------------
 function show_stack()
 {
-    local v=${3:-"${verbose:-false}"}
+    local _v=${3:-"${verbose:-false}"}
 
-    ! $v && return "$success"
+    ! $_v && return "$success"
 
-    local skip=${1:-0}
-    (( ++skip ))                                    # skip the frame of this call
-    local max_take=$(( ${#FUNCNAME[@]} - skip ))    # take no more than the remaining stack frames
-    local take=${2:-$max_take}
-    (( take = take < max_take ? take : max_take ))  # adjust take if it exceeds the available stack frames
-    (( take <= 0 )) && return "$success"
+    local _skip=${1:-0}
+    (( ++_skip ))                                    # skip the frame of this call
 
-    local func
-    local source
-    local lineno
+    local _max_take=$(( ${#FUNCNAME[@]} - _skip ))    # take no more than the remaining stack frames
+    local _take=${2:-$_max_take}
 
-    local -i index
-    local end=$(( skip + take ))
-    for (( index=skip; index<end; index++ )); do
-        func=${FUNCNAME[index]:-}
-        source=${BASH_SOURCE[index]:-}
-        lineno=${BASH_LINENO[index-1]:-}
-        printf "    - %-20s (%s: %d)\n" "$func" "$source" "$lineno"
+    (( _take = _take < _max_take ? _take : _max_take ))  # adjust take if it exceeds the available stack frames
+    (( _take <= 0 )) && return "$success"
+
+    local _func
+    local _source
+    local _lineno
+
+    local -i _index
+    local _end=$(( _skip + _take ))
+
+    for (( _index=_skip; _index<_end; _index++ )); do
+        _func=${FUNCNAME[_index]:-}
+        _source=${BASH_SOURCE[_index]:-}
+        _lineno=${BASH_LINENO[_index-1]:-}
+        printf "    - %-20s (%s: %d)\n" "$_func" "$_source" "$_lineno"
     done
 
     return "$success"

@@ -35,28 +35,28 @@ declare -x check_out_new_branch
 # shellcheck disable=SC2154 # verbose is referenced but not assigned.
 function get_arguments()
 {
-    local option
+    local _option
 
     while [[ $# -gt 0 ]]; do
-        option="$1"; shift
-        if get_common_arg "$option"; then
+        _option="$1"; shift
+        if get_common_arg "$_option"; then
             continue
         fi
 
-        case "${option,,}" in
+        case "${_option,,}" in
             # do not use the common options - they were already processed by get_common_arg:
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
             --branch|-b )
                 (( $# >= 1 )) ||
-                    usage -ec "$err_missing_argument" "Missing branch name after '$option'."
+                    usage -ec "$err_missing_argument" "Missing branch name after '$_option'."
                 new_branch="$1"; shift
                 ;;
 
             --commit-sha|-c )
                 (( $# >= 1 )) ||
-                    usage -ec "$err_missing_argument" "Missing commit SHA after '$option'."
+                    usage -ec "$err_missing_argument" "Missing commit SHA after '$_option'."
                 commit_sha="$1"; shift
                 ;;
 
@@ -65,7 +65,7 @@ function get_arguments()
                 ;;
 
             * )
-                usage -ec "$err_unknown_argument" "Unknown argument '$option'."
+                usage -ec "$err_unknown_argument" "Unknown argument '$_option'."
                 ;;
         esac
     done

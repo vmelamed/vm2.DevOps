@@ -13,4 +13,5 @@ enable=require-double-brackets
 enable=useless-use-of-cat
 disable=SC1017  # Literal carriage return. Run script through `tr -d '\r'`.
 disable=SC2015  # Note that A && B || C is not if-then-else. C may run when A is true.
+disable=SC1091  # Not following external source files.
 disable=SC2178  # Variable was used as an array but is now assigned a string.

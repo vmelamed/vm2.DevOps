@@ -69,120 +69,120 @@ declare -xr undefined_default
 #-------------------------------------------------------------------------------
 function compare_settings()
 {
-    local -i rc="$success"
+    local -i _rc="$success"
 
-    [[ $# -eq 5 || $# -eq 6 ]] || {
-        rc="$err_invalid_arguments"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires 4 or 5 arguments: <hq_path> <jq_transform> <expected_nameref_array> <mod_keys_flag> [<settings_order>]"
+    (( $# == 5 || $# == 6 )) || {
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires five or six arguments (provided $#): the API path, jq transform, expected-values array, display-format flag, results array, and optional key-order array."
     }
-    [[ -n "$1" ]] || {
-        rc="$err_argument_value"
-        error -sd 3 -ec "$rc" "Argument 1 to ${FUNCNAME[0]}() must be a non-empty string specifying the GitHub API path to fetch the settings from, e.g. 'repos/\$repo' or 'repos/\$repo/actions/permissions/workflow'."
+    [[ -v 1 && -n "$1" ]] || {
+        _rc="$err_argument_value"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the GitHub API path, to be non-empty (provided '${1-<missing>}'); for example, 'repos/\$repo'."
     }
-    [[ -n "$2" ]] || {
-        rc="$err_argument_value"
-        error -sd 3 -ec "$rc" "Argument 2 to ${FUNCNAME[0]}() must be a non-empty string specifying the jq query to transform the JSON response into key=value pairs."
+    [[ -v 2 && -n "$2" ]] || {
+        _rc="$err_argument_value"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, the jq transformation query, to be non-empty (provided '${2-<missing>}')."
     }
-    is_defined_associative_array "$3" || {
-        rc="$err_invalid_nameref"
-        error -sd 3 -ec "$rc" "Argument 3 to ${FUNCNAME[0]}() must be the name of an associative array variable containing expected key-value pairs, e.g. default_repo_settings or default_repo_permissions."
+    [[ -v 3 ]] && is_defined_associative_array "$3" || {
+        _rc="$err_invalid_nameref"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 3 to name an associative array containing expected key-value pairs (provided '${3-<missing>}')."
     }
-    is_boolean "$4" || {
-        rc="$err_argument_type"
-        error -sd 3 -ec "$rc" "Argument 4 to ${FUNCNAME[0]}() must be a boolean flag (provided '$1') specifying that the keys of the expected settings should be capitalized and displayed with spaces instead of underscores (for better readability)."
+    [[ -v 4 ]] && is_boolean "$4" || {
+        _rc="$err_argument_type"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 4, the display-key formatting flag, to be 'true' or 'false' (provided '${4-<missing>}')."
     }
-    is_defined_array "$5" || {
-        rc="$err_invalid_nameref"
-        error -sd 3 -ec "$rc" "Argument 5 to ${FUNCNAME[0]}() must be the name of an array variable (nameref) to store the results in: [0] is the number of matches, [1] is the number of differences, and [3] is the number of errors (missing settings)."
+    [[ -v 5 ]] && is_defined_array "$5" || {
+        _rc="$err_invalid_nameref"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 5 to name an indexed results array: [0] matches, [1] differences, and [2] errors (provided '${5-<missing>}')."
     }
-    [[ $# -lt 6 ]] || is_defined_array "$6" || {
-        rc="$err_invalid_nameref"
-        error -sd 3 -ec "$rc" "Argument 6 to ${FUNCNAME[0]}() must be the name of an array variable containing the names of settings in order to compare and display (optional)."
+    [[ ! -v 6 ]] || is_defined_array "$6" || {
+        _rc="$err_invalid_nameref"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires optional argument 6 to name an indexed array containing the display order (provided '${6-<missing>}')."
     }
 
-    (( rc == success )) || return "$err_invalid_arguments"
+    (( _rc == success )) || return "$err_invalid_arguments"
 
-    local gh_endpoint="$1"
-    local jq_transform=$2
-    local -n expected_key_values="$3"
-    local modify_keys="$4"
-    local -n rs="$5"
+    local _gh_endpoint="$1"
+    local _jq_transform=$2
+    local -n _expected_key_values="$3"
+    local _modify_keys="$4"
+    local -n _rs="$5"
 
-    (( ${#expected_key_values[@]} > 0 )) ||
+    (( ${#_expected_key_values[@]} > 0 )) ||
         return 0
 
     # query the GitHub API and transform the JSON response into key=value pairs using the provided jq query, then...
-    local json
+    local _json
 
-    if ! json=$(execute_gh_api_with_retry 3 2 --paginate "$gh_endpoint"); then
-        rc="$err_tool_error"
-        error -ec "$rc" "Failed to fetch data from GitHub API: $gh_endpoint."
-        return "$rc"
+    if ! _json=$(execute_gh_api_with_retry 3 2 --paginate "$_gh_endpoint"); then
+        _rc="$err_tool_error"
+        error -ec "$_rc" "Failed to fetch data from GitHub API: $_gh_endpoint."
+        return "$_rc"
     fi
 
     # read the key=value pairs into $actual_key_values
-    local -A actual_key_values=()
-    local key='' actual=''
+    local -A _actual_key_values=()
+    local _key='' _actual=''
 
-    while IFS='=' read -r key actual; do
-        [[ -v expected_key_values["$key"] ]] && actual_key_values["$key"]="$actual"
-    done < <(jq -r "$jq_transform" <<< "$json")
+    while IFS='=' read -r _key _actual; do
+        [[ -v expected_key_values["$_key"] ]] && _actual_key_values["$_key"]="$_actual"
+    done < <(jq -r "$_jq_transform" <<< "$_json")
 
     # put the keys in the array in display order
-    local -a keys
+    local -a _keys
     if [[ $# -eq 6 ]]; then
-        local -n keys_in_order="$6"
-        keys=("${keys_in_order[@]}")
+        local -n _keys_in_order="$6"
+        _keys=("${_keys_in_order[@]}")
     else
-        readarray -t keys < <(printf '%s\n' "${!expected_key_values[@]}" | sort)
+        readarray -t _keys < <(printf '%s\n' "${!_expected_key_values[@]}" | sort)
     fi
 
-    local expected actual
-    local -i pass=0 diff=0 errs=0
+    local _expected _actual
+    local -i _pass=0 _diff=0 _errs=0
 
-    for key in "${keys[@]}"; do
-        expected="${expected_key_values[$key]}"
-        if [[ $expected == "$secret_str" ]]; then
-            expected=$undefined_default
-            [[ -v actual_key_values[$key] ]] &&
-                actual=$present_state ||
-                actual=$missing_state
+    for _key in "${_keys[@]}"; do
+        _expected="${_expected_key_values[$_key]}"
+        if [[ $_expected == "$secret_str" ]]; then
+            _expected=$undefined_default
+            [[ -v actual_key_values[$_key] ]] &&
+                _actual=$present_state ||
+                _actual=$missing_state
         else
-            expected="${expected:-$undefined_default}"
-            actual=${actual_key_values[$key]:-$missing_state}
+            _expected="${_expected:-$undefined_default}"
+            _actual=${_actual_key_values[$_key]:-$missing_state}
         fi
 
-        [[ "$modify_keys" == true ]] &&
-            key=${key//_/ } && key=${key^} # Replace underscores with spaces and capitalize first letter for better display
+        [[ "$_modify_keys" == true ]] &&
+            _key=${_key//_/ } && _key=${_key^} # Replace underscores with spaces and capitalize first letter for better display
 
-        if [[ $actual == "$missing_state" ]]; then
-            if [[ $expected != "$undefined_default" ]]; then
-                printf "      ❌  %-36s => %s (default: '%s')\n" "$key" "$actual" "$expected"
+        if [[ $_actual == "$missing_state" ]]; then
+            if [[ $_expected != "$undefined_default" ]]; then
+                printf "      ❌  %-36s => %s (default: '%s')\n" "$_key" "$_actual" "$_expected"
             else
-                printf "      ❌  %-36s => %s\n" "$key" "$actual"
+                printf "      ❌  %-36s => %s\n" "$_key" "$_actual"
             fi
-            (( ++errs ))
-        elif [[ $actual == "$present_state" ]]; then
-            printf "      🆗  %-36s => %s\n" "$key" "$actual"
-            (( ++pass ))
-        elif [[ $actual == "$expected" ]]; then
-            printf "      ✅  %-36s => %s\n" "$key" "$actual"
-            (( ++pass ))
-        elif [[ $actual != "$expected" ]]; then
-            printf "      ❓  %-36s => %s (default: '%s')\n" "$key" "$actual" "$expected"
-            (( ++diff ))
+            (( ++_errs ))
+        elif [[ $_actual == "$present_state" ]]; then
+            printf "      🆗  %-36s => %s\n" "$_key" "$_actual"
+            (( ++_pass ))
+        elif [[ $_actual == "$_expected" ]]; then
+            printf "      ✅  %-36s => %s\n" "$_key" "$_actual"
+            (( ++_pass ))
+        elif [[ $_actual != "$_expected" ]]; then
+            printf "      ❓  %-36s => %s (default: '%s')\n" "$_key" "$_actual" "$_expected"
+            (( ++_diff ))
         else
             # we should never be here, but just in case...
-            printf "      ❌  %-36s => %s (default: '%s')\n" "$key" "$actual" "$expected"
-            (( ++errs ))
+            printf "      ❌  %-36s => %s (default: '%s')\n" "$_key" "$_actual" "$_expected"
+            (( ++_errs ))
         fi
     done
 
     # shellcheck disable=SC2034 # it's a nameref
     {
-        rs[0]=$pass
-        rs[1]=$diff
-        rs[2]=$errs
+        _rs[0]=$_pass
+        _rs[1]=$_diff
+        _rs[2]=$_errs
     }
 
     return 0
@@ -218,8 +218,8 @@ declare -x path_main_protection_ruleset
 #-------------------------------------------------------------------------------
 function audit_repo()
 {
-    local -i pass=0 diff=0 errs=0
-    local -a results=(0 0 0)
+    local -i _pass=0 _diff=0 _errs=0
+    local -a _results=(0 0 0)
 
     echo "ℹ️  Audit of https://github.com/$repo"
 
@@ -229,7 +229,7 @@ function audit_repo()
         error -ec "$?" "Failed to compare repository settings."
         return 2
     }
-    (( pass += results[0], diff += results[1], errs += results[2], 1 ))
+    (( _pass += _results[0], _diff += _results[1], _errs += _results[2], 1 ))
 
     # --- Actions permissions ---
     echo "  ℹ️  Actions permissions:"
@@ -237,7 +237,7 @@ function audit_repo()
         error -ec "$?" "Failed to compare repository permissions settings."
         return 2
     }
-    (( pass += results[0], diff += results[1], errs += results[2], 1 ))
+    (( _pass += _results[0], _diff += _results[1], _errs += _results[2], 1 ))
 
     # --- Variables ---
     echo "  ℹ️  Actions Variables:"
@@ -245,89 +245,89 @@ function audit_repo()
         error -ec "$?" "Failed to compare GitHub Actions variables."
         return 2
     }
-    (( pass += results[0], diff += results[1], errs += results[2], 1 ))
+    (( _pass += _results[0], _diff += _results[1], _errs += _results[2], 1 ))
 
     # --- Secrets ---
     for app in "${apps_with_secrets[@]}"; do
-        local secrets_array_name="${app,,}_secrets"
-        local -n app_secrets="$secrets_array_name"
+        local _secrets_array_name="${app,,}_secrets"
+        local -n _app_secrets="$_secrets_array_name"
 
-        (( ${#app_secrets[@]} > 0 )) || continue
+        (( ${#_app_secrets[@]} > 0 )) || continue
         if [[ ${actions_default_vars["NUGET_SERVER"]} == 'nuget' ]]; then
             unset 'app_secrets["NUGET_API_KEY"]'
         fi
 
         echo "  ℹ️  ${app^} Secrets:"
-        compare_settings "$path_repo/$app/secrets" "$jq_secrets" "$secrets_array_name" false results || {
+        compare_settings "$path_repo/$app/secrets" "$jq_secrets" "$_secrets_array_name" false results || {
             error -ec "$?" "Failed to compare $app secrets."
             return 2
         }
-        (( pass += results[0], diff += results[1], errs += results[2], 1 ))
+        (( _pass += _results[0], _diff += _results[1], _errs += _results[2], 1 ))
     done
 
     # --- Branch ruleset ---
-    local rulesets_json
-    rulesets_json=$(execute_gh_api_with_retry 3 2 --paginate "$path_rulesets") || true
+    local _rulesets_json
+    _rulesets_json=$(execute_gh_api_with_retry 3 2 --paginate "$path_rulesets") || true
 
-    if [[ -z "${rulesets_json:-}" ]]; then
+    if [[ -z "${_rulesets_json:-}" ]]; then
         echo "  ❌  Ruleset '$main_protection_rs_name' for branch '$branch' is missing"
         exit 1
     fi
 
-    local ruleset_id
-    ruleset_id=$(jq -r "$jq_ruleset_id" <<< "$rulesets_json" 2>"$_ignore")
+    local _ruleset_id
+    _ruleset_id=$(jq -r "$jq_ruleset_id" <<< "$_rulesets_json" 2>"$_ignore")
 
-    [[ -z "$ruleset_id" ]] && {
+    [[ -z "$_ruleset_id" ]] && {
         echo "  ❌  Ruleset '$main_protection_rs_name' for branch '$branch' does not exist"
         exit 1;
     }
 
-    echo "  ℹ️  Ruleset '$main_protection_rs_name' for branch '$branch' (id: $ruleset_id):"
-    compare_settings "$path_rulesets/$ruleset_id" "$jq_ruleset_rules" default_ruleset true results default_ruleset_order || {
+    echo "  ℹ️  Ruleset '$main_protection_rs_name' for branch '$branch' (id: $_ruleset_id):"
+    compare_settings "$path_rulesets/$_ruleset_id" "$jq_ruleset_rules" default_ruleset true results default_ruleset_order || {
         error -ec "$?" "Failed to compare branch protection ruleset settings."
         return 2
     }
-    (( pass += results[0], diff += results[1], errs += results[2], 1 ))
+    (( _pass += _results[0], _diff += _results[1], _errs += _results[2], 1 ))
 
     echo "      ℹ️  Required status checks list:"
-    local json
-    json=$(execute_gh_api_with_retry 3 2 --paginate "$path_main_protection_ruleset") || {
+    local _json
+    _json=$(execute_gh_api_with_retry 3 2 --paginate "$path_main_protection_ruleset") || {
         error -ec "$err_tool_error" "Failed to fetch data from GitHub API: $path_main_protection_ruleset."
         return 2
     }
-    local -a present_checks=()
-    local check
+    local -a _present_checks=()
+    local _check
 
-    while read -r check; do
-        present_checks+=("$check")
-    done < <(jq -r "$jq_status_checks" <<< "$json")
+    while read -r _check; do
+        _present_checks+=("$_check")
+    done < <(jq -r "$jq_status_checks" <<< "$_json")
 
-    for check in "${required_checks[@]}"; do
-        if is_in "$check" "${present_checks[@]}"; then
-            printf "          ✅  %-32s => present\n" "$check"
-            (( ++pass ))
+    for _check in "${required_checks[@]}"; do
+        if is_in "$_check" "${_present_checks[@]}"; then
+            printf "          ✅  %-32s => present\n" "$_check"
+            (( ++_pass ))
         else
-            printf "          ❌  %-32s => missing\n" "$check"
-            (( ++errs ))
+            printf "          ❌  %-32s => missing\n" "$_check"
+            (( ++_errs ))
         fi
     done
 
     # --- Local Git Settings ---
     echo "  ℹ️  Local Git Settings:"
 
-    local key expected actual rc=0
-    for key in "${default_local_git_settings_order[@]}"; do
-        expected="${default_local_git_settings[$key]}"
-        actual=$(git -C "$repo_path" config --local --get "$key" 2>"$_ignore") || rc=$?
-        if [[ $rc -ne "$success" ]]; then
-            printf "      ❌  %-36s => %s (default: '%s')\n" "$key" "$actual" "$expected"
-            (( ++errs ))
-        elif [[ "$actual" != "$expected" ]]; then
-            printf "      ❓  %-36s => %s (default: '%s')\n" "$key" "$actual" "$expected"
-            (( ++diff ))
+    local _key _expected _actual _rc=0
+    for _key in "${default_local_git_settings_order[@]}"; do
+        _expected="${default_local_git_settings[$_key]}"
+        _actual=$(git -C "$repo_path" config --local --get "$_key" 2>"$_ignore") || _rc=$?
+        if [[ $_rc -ne "$success" ]]; then
+            printf "      ❌  %-36s => %s (default: '%s')\n" "$_key" "$_actual" "$_expected"
+            (( ++_errs ))
+        elif [[ "$_actual" != "$_expected" ]]; then
+            printf "      ❓  %-36s => %s (default: '%s')\n" "$_key" "$_actual" "$_expected"
+            (( ++_diff ))
         else
-            printf "      ✅  %-36s => %s\n" "$key" "$actual"
-            (( ++pass ))
+            printf "      ✅  %-36s => %s\n" "$_key" "$_actual"
+            (( ++_pass ))
         fi
     done
 
@@ -337,8 +337,8 @@ function audit_repo()
 ℹ️  Totals:
     ✅  expected:  %3d
     ❓  different: %3d
-    ❌  missing:   %3d\n" "$pass" "$diff" "$errs"
+    ❌  missing:   %3d\n" "$_pass" "$_diff" "$_errs"
     echo ""
-    (( errs > 0 )) && echo "⚠️  TODO: Run without '--audit' to fix the above discrepancies."
+    (( _errs > 0 )) && echo "⚠️  TODO: Run without '--audit' to fix the above discrepancies."
     return 0
 }

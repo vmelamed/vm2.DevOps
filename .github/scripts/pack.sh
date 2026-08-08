@@ -35,7 +35,7 @@ declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}
 declare -x reason=${REASON:-}
 declare -x build=${BUILD:-false}
-declare -x artifacts_dir=${ARTIFACTS_DIR:-artifacts}
+declare -x artifacts=${ARTIFACTS_DIR:-artifacts}
 
 source "$script_dir/pack.usage.sh"
 source "$script_dir/pack.args.sh"
@@ -45,7 +45,7 @@ package_project=${package_project:-"$PACKAGE_PROJECT"}
 
 # sanitize inputs
 is_safe_boolean "$build" || true
-is_safe_path "$artifacts_dir" || true
+is_safe_path "$artifacts" || true
 is_safe_path "$package_project" || true
 is_safe_configuration "$configuration" || true
 validate_preprocessor_symbols preprocessor_symbols || true
@@ -55,8 +55,8 @@ is_safe_reason "$reason" || true
 exit_if_has_errors
 
 # create output directory for the packages
-declare -x artifacts_packages_dir="$artifacts_dir/packages"
-execute mkdir -p "$artifacts_packages_dir"
+declare -x output_dir="$artifacts/packages"
+execute mkdir -p "$output_dir"
 
 # restore the project if the build is requested, otherwise skip restore and build - assume they are done already
 $build && execute dotnet restore "$package_project" --locked-mode
@@ -66,7 +66,7 @@ dotnet_pack_arguments=(
     "$package_project"
     "--verbosity" "detailed"
     "--configuration" "$configuration"
-    "--output" "$artifacts_packages_dir"
+    "--output" "$output_dir"
     "--no-restore"
     "-p:preprocessor_symbols=$preprocessor_symbols"
     "-p:MinVerTagPrefix=$minver_tag_prefix"
@@ -91,15 +91,20 @@ execute dotnet pack "${dotnet_pack_arguments[@]}" > "$temp_output" 2>&1 || rc=$?
 # assignments) so it can populate $version, $package_version, etc. for use below. Its stdout (the
 # key=value pairs) is captured to a file and replayed into displayDotnetBuildSummary for the
 # human-readable report.
-extractDotnetBuildInfo < "$temp_output" > "$build_info_output"
-displayDotnetBuildSummary < "$build_info_output" | to_summary
+declare -A build_info=()
+
+extractDotnetBuildInfo build_info < "$temp_output" || rc=$?
+displayDotnetBuildSummary build_info | to_summary
 
 [[ $rc == "$success" ]] ||
     error -ec "$err_tool_error" "Packing '$package_project' failed."
 exit_if_has_errors
 
-nupkg_count=$(find "$artifacts_packages_dir" -name "*.nupkg" | wc -l)
-version=$(get_build_info version)
+nupkg_count=$(find "$output_dir" -name "*.nupkg" | wc -l)
+
+declare -rx key_version
+
+version=${build_info[$key_version]}
 
 if is_semverRelease "$version"; then
     summary_header="Release Summary"
@@ -120,7 +125,7 @@ fi
     echo "| Reason            | $reason        |"
     echo ""
     echo "Packages:"
-    for f in "$artifacts_dir"/*.nupkg; do
+    for f in "$output_dir"/*.nupkg; do
         [[ -f "$f" ]] && echo "  - $(basename "$f")"
     done
 } | to_summary

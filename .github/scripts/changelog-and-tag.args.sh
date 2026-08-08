@@ -19,40 +19,40 @@ declare -x needs_empty_commit
 # shellcheck disable=SC2154 # variable is referenced but not assigned.
 function get_arguments()
 {
-    local option
+    local _option
 
     while [[ $# -gt 0 ]]; do
-        option="$1"; shift
-        if get_common_arg "$option"; then
+        _option="$1"; shift
+        if get_common_arg "$_option"; then
             continue
         fi
-        case "${option,,}" in
+        case "${_option,,}" in
             # do not use the common options - they were already processed by get_common_arg:
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
             --tag|-t )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 tag="$1"; shift
                 ;;
 
             --minver-tag-prefix|-p )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 minver_tag_prefix="$1"; shift
                 ;;
 
             --reason|-r )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 reason="$1"; shift
                 ;;
 
             --needs-empty-commit )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 needs_empty_commit="$1"; shift
                 ;;
 
             * )
-                usage -ec "$err_unknown_argument" "Unknown argument: $option"
+                usage -ec "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
         esac
     done

@@ -10,14 +10,14 @@ declare -xr script_name
 
 function usage_text()
 {
-    local long_text=$1
-    local switches=""
-    local vars=""
+    local _long_text=$1
+    local _switches=""
+    local _vars=""
 
-    if $long_text; then
+    if $_long_text; then
 
-        switches=$'\n'"Switches:"$'\n'"$common_switches"
-        vars=$'\n'"Environment Variables:"$'\n'"$common_vars"
+        _switches=$'\n'"Switches:"$'\n'"$common_switches"
+        _vars=$'\n'"Environment Variables:"$'\n'"$common_vars"
 
     fi
 
@@ -50,7 +50,7 @@ Description:
 
 Options:
   -b, --base-ref <ref>          Required. Git ref to compare against (e.g. origin/main, a SHA, or a tag).
-$switches$vars
+$_switches$_vars
 Examples:
     $script_name --base-ref origin/main
     $script_name --base-ref v1.0.0 --verbose

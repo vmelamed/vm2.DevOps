@@ -6,13 +6,13 @@ declare -xr script_name
 
 function usage_text()
 {
-    local long_text=$1
-    local switches=""
-    local vars=""
+    local _long_text=$1
+    local _switches=""
+    local _vars=""
 
-    if $long_text; then
-        switches="Switches:"$'\n'"$common_switches"
-        vars=$common_vars
+    if $_long_text; then
+        _switches="Switches:"$'\n'"$common_switches"
+        _vars=$common_vars
     fi
 
     cat << EOF
@@ -39,12 +39,12 @@ Options:
                                 promoting a prerelease-tagged HEAD to stable). Default: 'false'
                                 Initial value from \$NEEDS_EMPTY_COMMIT
 
-$switches
+$_switches
 Environment Variables:
   RELEASE_TAG                   The tag to create (e.g., 'v1.2.3' or 'v1.2.3-preview.1')
   MINVERTAGPREFIX               Tag prefix (default: 'v')
   REASON                        Release reason (default: auto-detected from tag type)
   NEEDS_EMPTY_COMMIT            'true' or 'false' (default: 'false')
-$vars
+$_vars
 EOF
 }

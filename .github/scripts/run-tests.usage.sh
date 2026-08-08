@@ -6,13 +6,13 @@ declare -xr script_name
 
 function usage_text()
 {
-    local long_text=$1
-    local switches=""
-    local vars=""
+    local _long_text=$1
+    local _switches=""
+    local _vars=""
 
-    if $long_text; then
-        switches=$'\n'"Switches:"$'\n'"$common_switches"
-        vars="$common_vars"
+    if $_long_text; then
+        _switches=$'\n'"Switches:"$'\n'"$common_switches"
+        _vars="$common_vars"
     fi
 
     cat << EOF
@@ -41,14 +41,14 @@ Options:
                                 summaries. Artifacts are stored in a subdirectory named after the test project:
                                 <artifacts-root>/tests/<test-project-name>/*
                                 Initial value: \$ARTIFACTS_DIR or 'artifacts'
-$switches
+$_switches
 Environment Variables:
   TEST_PROJECT                  Path to the test project file
   ARTIFACTS_DIR                 Directory relative to the repository root where to create the script's artifacts
   CONFIGURATION                 Build configuration ('Release' or 'Debug')
   PREPROCESSOR_SYMBOLS          Pre-processor symbols to define when building the test project
   MIN_COVERAGE_PCT              Minimum acceptable code coverage percentage
-$vars
+$_vars
 Outputs (to GITHUB_OUTPUT):
   results-dir                   The directory where test results are stored
 EOF

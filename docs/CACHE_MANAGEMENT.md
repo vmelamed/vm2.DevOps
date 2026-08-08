@@ -28,7 +28,17 @@ The pipeline uses a **multi-layer caching approach** to balance build speed with
 ```
 
 - CI builds fail if `packages.lock.json` is out of date (locked mode).
-- Developers update lock files locally with `dotnet restore --force-evaluate` and commit the result.
+- Developers update lock files locally and commit the result. E.g., with
+
+  ```bash
+  dotnet restore --force-evaluate
+  git add -A
+  git commit -m "chore: update packages lock files" || true
+  git push origin --force-with-lease
+  ```
+
+  See also the script `vm2.DevOps/scripts/bash/update-dependencies.sh` in the repo root.
+
 - Cache keys include `**/packages.lock.json`, so any dependency change invalidates the cache.
 
 ### Weekly Cache Rotation
@@ -92,8 +102,12 @@ CI run.
 
 ## Manual Cache Clear
 
-The `_clear_cache` reusable workflow deletes caches matching a specified pattern. Trigger it via
-Actions → ClearCache → Run workflow.
+The `_clear_cache` reusable workflow deletes caches matching a specified pattern. Trigger it via the UI in the consumer repo:
+Actions → ClearCache → Run workflow or via CLI:
+
+```bash
+gh workflow run "ClearCache.yaml" --repo "vmelamed/<repo>"
+```
 
 Allowed patterns (enforced by allowlist):
 

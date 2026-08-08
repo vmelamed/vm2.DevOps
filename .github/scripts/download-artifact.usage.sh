@@ -6,13 +6,13 @@ declare -xr script_name
 
 function usage_text()
 {
-    local long_text=$1
-    local switches=""
-    local vars=""
+    local _long_text=$1
+    local _switches=""
+    local _vars=""
 
-    if $long_text; then
-        switches=$'\n'"Switches:"$'\n'"$common_switches"
-        vars="$common_vars"
+    if $_long_text; then
+        _switches=$'\n'"Switches:"$'\n'"$common_switches"
+        _vars="$common_vars"
     fi
 
     cat << EOF
@@ -41,7 +41,7 @@ Note:
      variable WORKFLOW_NAME, WORKFLOW_PATH, and WORKFLOW_ID in that order
   2) If more than one --wf-* options are specified, only the last one is considered
   3) If one of the --wf-* options is specified, the environment variables will be ignored
-$switches
+$_switches
 Environment Variables:
   ARTIFACT_NAME                 Name of the artifact to download
   ARTIFACT_DIR                  Directory where artifacts will be downloaded
@@ -49,6 +49,6 @@ Environment Variables:
   WORKFLOW_ID                   ID of the workflow
   WORKFLOW_NAME                 Name of the workflow
   WORKFLOW_PATH                 Path to the workflow file
-$vars
+$_vars
 EOF
 }

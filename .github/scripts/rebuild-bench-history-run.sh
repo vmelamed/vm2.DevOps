@@ -57,7 +57,7 @@ if [[ -n "$benchmark_project" ]]; then
     is_safe_existing_path "$benchmark_project" || true
     benchmark_projects=("$benchmark_project")
 elif [[ -d benchmarks ]]; then
-    mapfile -t benchmark_projects < <(
+    readarray -t benchmark_projects < <(
         find benchmarks \
             -type d \( -name bin -o -name obj -o -name BenchmarkDotNet.Artifacts \) -prune \
             -o -name '*.csproj' -print | sort)

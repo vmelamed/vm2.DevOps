@@ -14,10 +14,10 @@
 declare -gr __VM2_LIB_ERROR_CODES_SH_LOADED=1
 
 # RETURN CODES THAT MUST NOT BE REUSED FOR OTHER PURPOSES:
-declare -rxi success=0      # The command completed successfully.
-declare -rxi failure=1      # A general, unspecified error occurred.
-declare -rxi eof=1          # Alias for failure: end-of-file is encountered  (e.g., when using the read command)
-declare -rxi time_out=128   # The command timed out (e.g., when using the read command)
+declare -rxi success=0                  # The command completed successfully.
+declare -rxi failure=1                  # A general, unspecified error occurred.
+declare -rxi eof=1                      # Alias for failure: end-of-file is encountered  (e.g., when using the read command)
+declare -rxi time_out=128               # The command timed out (e.g., when using the read command)
 # alternatively as boolean return codes:
 declare -rxi positive=0
 declare -rxi negative=1
@@ -41,7 +41,7 @@ declare -rxi err_invalid_path=18        # Parameter value is not a valid path (e
 declare -rxi err_not_overridden=64      # A function that should be overridden in the calling script (e.g. usage_text()) was not overridden
 declare -rxi err_tool_not_found=65      # An external tool (e.g., jq, dotnet, etc.) that the script depends on was not found in the system
 declare -rxi err_tool_error=66          # An error occurred while executing an external tool (e.g., git, dotnet, etc.).
-declare -rxi err_logic_error=67         # An error occurred in the logic of the script (e.g., invalid state, unexpected condition, etc.)
+declare -rxi err_logic_error=67         # An error occurred in the logic of the script (e.g., bug, invalid state, unexpected condition, etc.)
 
 declare -rxi err_not_git_directory=80   # The specified directory is not a directory from a Git repository working tree
 declare -rxi err_not_git_root=81        # The specified directory is not a root directory of a Git repository working tree
@@ -75,7 +75,7 @@ declare -rxA error_codes=(
 
     [$err_not_overridden]="A function that should be overridden in the calling script (e.g. usage_text()) was not overridden."
     [$err_tool_error]="An error occurred while executing an external tool (e.g., git, dotnet, etc.)."
-    [$err_logic_error]="An error occurred in the logic of the script (e.g., invalid state, unexpected condition, etc.)"
+    [$err_logic_error]="An error occurred in the logic of the script (e.g., bug, invalid state, unexpected condition, etc.)"
 
     [$err_not_git_directory]="The specified directory is not in a Git working tree."
     [$err_not_git_root]="The specified directory is not the root directory of a Git working tree."
@@ -105,27 +105,26 @@ declare -rxA error_codes=(
 #-------------------------------------------------------------------------------
 function error_message()
 {
-    local -i rc="$success"
+    local -i _rc="$success"
 
     (( $# == 1 )) || {
         (( ++errors ))
-        rc="$err_invalid_arguments"
+        _rc="$err_invalid_arguments"
         echo "❌  error_message() requires exactly 1 argument: an error code." >&2
     }
-    [[ $# -ne 1 ]] || is_positive "$1" || {
+    [[ -v 1 ]] && is_positive "$1" || {
         (( ++errors ))
-        rc="$err_argument_type"
-        echo "❌  error_message() argument must be a positive integer error code from 1 to 255." >&2
+        _rc="$err_argument_type"
+        echo "❌  error_message() requires argument 1 to be a positive integer error code from 1 to 255 (provided '${1-<missing>}')." >&2
     }
-    local -i code="$1"
-    [[ -v error_codes[$code] ]] || {
+    [[ ! -v 1 || ! $1 =~ ^[+]?[1-9][0-9]*$ ]] || [[ -v error_codes[$1] ]] || {
         (( ++errors ))
-        rc="$err_unknown_argument"
-        echo "❌  error_message() argument '$code' is not a known error code." >&2
+        _rc="$err_unknown_argument"
+        echo "❌  error_message() argument 1 ('$1') is not a known error code." >&2
     }
 
-    (( rc == success )) || return "$err_invalid_arguments"
+    (( _rc == success )) || return "$err_invalid_arguments"
 
-
-    echo "$code: ${error_codes[$code]}"
+    local -i _code="$1"
+    echo "$_code: ${error_codes[$_code]}"
 }

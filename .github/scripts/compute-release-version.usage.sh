@@ -6,15 +6,15 @@ declare -xr script_name
 
 function usage_text()
 {
-    local long_text=$1
-    local switches=""
-    local vars=""
+    local _long_text=$1
+    local _switches=""
+    local _vars=""
 
-    if $long_text; then
-        switches="
+    if $_long_text; then
+        _switches="
 Switches:
 $common_switches"
-        vars=$common_vars
+        _vars=$common_vars
     fi
 
     cat << EOF
@@ -30,13 +30,13 @@ Options:
                                 Initial value from \$MINVERTAGPREFIX or default 'v'
   -r, --reason                  Reason for release (e.g., "stable release", "hotfix", etc.)
                                 Initial value from \$REASON or default "release build"
-$switches
+$_switches
 Environment Variables:
   MINVERTAGPREFIX               Git tag prefix to be recognized by MinVer
                                 (default: 'v')
   REASON                        Reason for the release build and possibly overriding the natural versioning
                                 (default: 'release build')
-$vars
+$_vars
 Outputs (to GITHUB_OUTPUT):
   release-version               The computed version (e.g., '1.2.3')
   release-tag                   The full tag (e.g., 'v1.2.3')

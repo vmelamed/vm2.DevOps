@@ -104,7 +104,9 @@ execute dotnet pack \
 # assignments) so it can populate $version, $package_version, etc. for use below. Its stdout (the
 # key=value pairs) is captured to a file and replayed into displayDotnetBuildSummary for the
 # human-readable report.
-extractDotnetBuildInfo < "$temp_output" > "$build_info_output"
+declare -A build_info=()
+
+extractDotnetBuildInfo build_info < "$temp_output" || rc=$?
 displayDotnetBuildSummary < "$build_info_output" | to_summary
 
 [[ $rc == "$success" ]] || error -ec "$err_tool_error" "Packing '$package_project' failed."
@@ -114,7 +116,11 @@ exit_if_has_errors
 declare -x version
 declare -x package_version
 
-if is_semverRelease "$(get_build_info version)"; then
+declare -rx key_version
+
+version=${build_info[$key_version]}
+
+if is_semverRelease "$version"; then
     summary_header="Release Summary"
     reason="${reason:="stable release"}"
 else

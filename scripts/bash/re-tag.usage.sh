@@ -19,13 +19,13 @@ declare -xr script_name
 #-------------------------------------------------------------------------------
 function usage_text()
 {
-    local long_text=$1
-    local switches=""
-    local vars=""
+    local _long_text=$1
+    local _switches=""
+    local _vars=""
 
-    if $long_text; then
-        switches="Switches:"$'\n'"$common_switches"
-        vars="$common_vars"
+    if $_long_text; then
+        _switches="Switches:"$'\n'"$common_switches"
+        _vars="$common_vars"
     fi
 
     cat <<EOF
@@ -45,9 +45,9 @@ Arguments:
               '--delete'
 Options:
   --delete    Delete the tag following the option.
-$switches
+$_switches
 Environment Variables:
-$vars
+$_vars
 
 Examples:
   $script_name v3.1.0-preview.5 v3.1.1-preview.2

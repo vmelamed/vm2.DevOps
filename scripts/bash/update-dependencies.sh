@@ -46,18 +46,28 @@ declare -x repo
 #   update_dependencies "$HOME/repos/vm2" "vm2.Glob"
 #-------------------------------------------------------------------------------
 function update_dependencies() {
-    local repos=$1
-    local repo=$2
+    local _repos=$1
+    local _repo=$2
 
     set +e
-    cd "$repos/$repo"
-    "$repos/vm2.DevOps/scripts/bash/diff-shared.sh" --vm2-repos "$repos" --file-merge Directory.Packages.props
-    gh workflow run "ClearCache.yaml" --repo "vmelamed/$repo"
-    rm ./**/*.lock.json
+    cd "$_repos/$_repo"
+
+    # Run the diff-shared script to update dependencies in the repo's Directory.Packages.props file from the SoT
+    "$_repos/vm2.DevOps/scripts/bash/diff-shared.sh" --vm2-repos "$_repos" --file-merge Directory.Packages.props
+
+    # Clear the cache for this repository via the ClearCache workflow
+    gh workflow run "ClearCache.yaml" --repo "vmelamed/$_repo"
+    rm ./**/packages.lock.json
     dotnet restore --force-evaluate
-    git add -A
+
+    # Stage and commit all changes
+    git add ./**/packages.lock.json
     git commit -m "chore: update dependencies" || true
-    gh run watch --repo "vmelamed/$repo" || true
+
+    # Watch the triggered ClearCache workflow run to finish before pushing changes
+    gh run watch --repo "vmelamed/$_repo" || true
+
+    # Push the committed changes to the remote repository
     git push origin --force-with-lease
     set -e
 }
@@ -73,6 +83,5 @@ function update_dependencies() {
 # @stdout Combined output of 'update_dependencies' for every processed repository.
 #-------------------------------------------------------------------------------
 for r in "${vm2_repositories[@]}"; do
-    if [[ $r == "$vm2_devops_repo_name" ]]; then continue; fi
-    update_dependencies "$vm2_repos" "$r"
+    [[ $r != "$vm2_devops_repo_name" ]] && update_dependencies "$vm2_repos" "$r"
 done

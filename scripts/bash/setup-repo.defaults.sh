@@ -148,7 +148,7 @@ declare -rxA actions_var_validators=(
     ["MINVERTAGPREFIX"]="validate_semverTagComponents"
     ["MIN_COVERAGE_PCT"]="is_valid_percentage"
     ["NUGET_SERVER"]="is_one_of_nuget_servers"
-    ["NUGET_USERNAME"]=""
+    ["NUGET_USERNAME"]="is_safe_input"
     ["RESET_BENCHMARK_THRESHOLDS"]="validate_boolean"
     ["VERBOSE"]="validate_boolean"
 )
@@ -258,31 +258,29 @@ declare -xri default_sot
 #-------------------------------------------------------------------------------
 function init_default_local_git_settings()
 {
-    local -i rc="$success"
+    local -i _rc="$success"
 
-    [[ $# -eq 2 && -n "$1" && -n "$2" ]] || {
-        rc="$err_invalid_arguments"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires exactly 2 non-empty arguments:" \
-                              "- the path to the parent directory where '$vm2_devops_repo_name' is cloned, e.g. the value of \$VM2_REPOS or the parameter of --vm2-repos." \
-                              "- the path to the source of truth (SOT) directory, $VM2_REPOS/$default_sot."
+    (( $# == 2 )) || {
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires exactly 2 non-empty arguments (provided $#)."
     }
-    [[ $# -lt 1 || -d $1 ]]  || {
-        rc="$err_not_directory"
-        error -sd 3 -ec "$rc" "The first parameter of ${FUNCNAME[0]}() must be an existing directory. Provided: '$1'"
+    [[ -v 1 && -d $1 ]]  || {
+        _rc="$err_not_directory"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the vm2 repositories parent, to be an existing directory (provided '${1-<missing>}')."
     }
-    [[ $# -lt 2 || -d $2 ]]  || {
-        rc="$err_not_directory"
-        error -sd 3 -ec "$rc" "The second parameter of ${FUNCNAME[0]}() must be an existing directory. Provided: '$2'"
+    [[ -v 2 && -d $2 ]]  || {
+        _rc="$err_not_directory"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, the source-of-truth directory, to be an existing directory (provided '${2-<missing>}')."
     }
 
-    (( rc == success )) || return "$err_invalid_arguments"
+    (( _rc == success )) || return "$err_invalid_arguments"
 
-    local repos=$1
-    local shared=$2
+    local _repos=$1
+    local _shared=$2
 
     # cement the paths in the default_local_git_settings that depend on the location of the vm2_repos ($1):
-    default_local_git_settings["core.hooksPath"]="$repos/$vm2_devops_repo_name/scripts/githooks"
-    default_local_git_settings["commit.template"]="$shared/.gitmessage"
+    default_local_git_settings["core.hooksPath"]="$_repos/$vm2_devops_repo_name/scripts/githooks"
+    default_local_git_settings["commit.template"]="$_shared/.gitmessage"
 
     declare -rxA default_local_git_settings
 }
@@ -298,9 +296,17 @@ function init_default_local_git_settings()
 #-------------------------------------------------------------------------------
 function is_one_of_nuget_servers()
 {
-    [[ $# -eq 1 ]] && is_valid_nuget_server "$1" || {
-        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the server to check."
-        return "$err_invalid_arguments"
+    local -i _rc="$success"
+
+    (( $# == 1 )) || {
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the NuGet server to check."
     }
+    [[ -v 1 ]] && is_valid_nuget_server "$1" || {
+        _rc="$err_argument_value"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a valid NuGet server (provided '${1-<missing>}')."
+    }
+
+    (( _rc == success )) || return "$err_invalid_arguments"
     is_in "$1" "${nuget_servers[@]}"
 }

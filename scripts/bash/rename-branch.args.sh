@@ -29,25 +29,25 @@ declare -rxi err_unknown_argument
 #-------------------------------------------------------------------------------
 function get_arguments()
 {
-    local option
+    local _option
 
     while [[ $# -gt 0 ]]; do
-        option="$1"; shift
-        if get_common_arg "$option"; then
+        _option="$1"; shift
+        if get_common_arg "$_option"; then
             continue
         fi
-        case "${option,,}" in
+        case "${_option,,}" in
             # do not use the common options - they were already processed by get_common_arg:
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
             * ) if [[ -z "$new_branch_name" ]]; then
-                    new_branch_name="$option"
+                    new_branch_name="$_option"
                 elif [[ -z "$old_branch_name" ]]; then
                     old_branch_name="$new_branch_name"
-                    new_branch_name="$option"
+                    new_branch_name="$_option"
                 else
-                    usage -ec "$err_too_many_arguments" "Too many positional arguments: $option"
+                    usage -ec "$err_too_many_arguments" "Too many positional arguments: $_option"
                 fi
                 ;;
         esac

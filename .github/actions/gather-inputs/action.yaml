@@ -19,15 +19,15 @@ inputs:
   runners-os:
     description: JSON array of runner OS-es.
     default: "[ubuntu-latest]"
-  preprocessor-symbols:
-    description: Preprocessor symbols (semicolon/space/comma-separated) from the repo env.
-    default: ""
   dotnet-version:
     description: .NET SDK version.
     default: 10.0.x
   configuration:
     description: Build configuration.
     default: Release
+  preprocessor-symbols:
+    description: Preprocessor symbols (semicolon/space/comma-separated) from the repo env.
+    default: ""
   min-coverage-pct:
     description: Minimum code coverage percentage.
     default: "80"
@@ -144,6 +144,8 @@ runs:
       run: |
         source $DEVOPS_LIB_DIR/gh_core.sh
 
+        # Get the input or default values:
+
         build_projects='${{ inputs.build-projects || '[]' }}'
         test_projects='${{ inputs.test-projects || '[]' }}'
         benchmark_projects='${{ inputs.benchmark-projects || '[]' }}'
@@ -164,18 +166,16 @@ runs:
         skip_packages='false'
         skip_push='false'
 
-        if [[ '${{ github.event_name }}' == 'pull_request' ||
-              '${{ github.event_name }}' == 'push' && '${{ github.ref_name }}' == 'main' ]]; then
+        # depending on the event:
 
-            # For pull requests and pushes to the main branch, use the arg. values from env: vars, secrets, defaults
+        if [[ '${{ github.event_name }}' == 'push' &&
+              '${{ github.ref_name }}' != 'main' ]]; then
 
-            info "Event: ${{ github.event_name }}. Using the argument values from the environment: vars, secrets, defaults."
-
-        elif [[ '${{ github.event_name }}' == 'push' && '${{ github.ref_name }}' != 'main' ]]; then
+            # This is a regular push to a non-main branch - just a commit and push.
 
             # To avoid duplicate runs when:
-            #     1) push to main AND
-            #     2) there is an open PR to main
+            #     1) there is a push to main (from another branch) AND
+            #     2) there is an open PR to main (for that branch)
             # then skip the push-triggered CI
             # otherwise use the argument values from the CI environment: vars, secrets, defaults
 
@@ -183,7 +183,7 @@ runs:
 
             # how many open PRs exist for this branch?
 
-           open_pr_count=$(gh pr list \
+            open_pr_count=$(gh pr list \
                                   --repo "${{ github.repository }}" \
                                   --state open \
                                   --json headRefName \
@@ -203,13 +203,23 @@ runs:
                 preprocessor_symbols="$preprocessor_symbols;SHORT_RUN"
             fi
 
+        elif [[ '${{ github.event_name }}' == 'pull_request' ||
+                '${{ github.event_name }}' == 'push' && '${{ github.ref_name }}' == 'main' ]]; then
+
+            # For pull requests and pushes to the main branch, use the arg. values from env: vars, secrets, defaults
+
+            info "Event: ${{ github.event_name }}. Using the argument values from the environment: vars, secrets, defaults."
+
         elif [[ '${{ github.event_name }}' == "workflow_dispatch" ]]; then
+
             # For UI manually triggered runs (workflow_dispatch event), use the arg. values from env: vars, secrets, defaults
             # and override them with the inputs from the UI.
 
-            # Convert comma-separated runners' OS values to JSON array because there is a known GitHub actions issue:
-            # the workflow dispatch UI doesn't properly handle JSON strings with quotes. E.g. for the input '["ubuntu-latest"]',
-            # the UI removes the inner quotes and it becomes the invalid JSON: '[ubuntu-latest]'.
+            # Convert comma-separated runners' OS values to JSON array. There is a known GitHub actions issue:
+            # the workflow dispatch UI doesn't properly handle JSON strings with quotes.
+            # E.g. for the input '["ubuntu-latest"]', the UI removes the inner quotes and it becomes
+            # the invalid JSON:  '[ubuntu-latest]'.
+
             runners_os=$(echo "${{ inputs.dispatch-runners-os }}" | jq -Rc 'split(",") | map(select(length > 0) | gsub("^\\s+|\\s+$";""))')
 
             # Get the values from the UI inputs of workflow_dispatch event.

@@ -13,6 +13,22 @@ Additional references:
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+<!-- TOC tocDepth:2..3 chapterDepth:2..6 -->
+
+- [Project Context](#project-context)
+- [What This Repository Is](#what-this-repository-is)
+- [Architecture](#architecture)
+- [Key Directories](#key-directories)
+- [Common Local Commands](#common-local-commands)
+- [Script Filenames Base Convention: `<action>-<target>`](#script-filenames-base-convention-action-target)
+- [Three-File Script Convention](#three-file-script-convention)
+- [Bash Library](#bash-library)
+- [Parameter and Precondition Validation Pattern](#parameter-and-precondition-validation-pattern)
+- [Shared File Sync](#shared-file-sync)
+- [Documentation Reference](#documentation-reference)
+
+<!-- /TOC -->
+
 ## Project Context
 
 Val is currently the only developer on this project. There is no team. This affects prioritization (correctness still matters; urgency and process overhead do not).

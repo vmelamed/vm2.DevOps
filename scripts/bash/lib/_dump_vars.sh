@@ -15,6 +15,7 @@ declare -gr __VM2_LIB_DUMP_VARS_SH_LOADED=1
 declare -rx varNameRegex
 
 declare -rxi success
+declare -rxi err_argument_type
 declare -rxi err_invalid_nameref
 declare -rxi err_invalid_arguments
 
@@ -86,11 +87,11 @@ declare -A markdown=(
 #-------------------------------------------------------------------------------
 function _write_title()
 {
-    local -n table
-    table=$(get_table_format)
+    local -n _table
+    _table=$(get_table_format)
 
     # shellcheck disable=SC2059 # Don't use variables in the printf format string. Use printf "..%s.." "$foo".
-    printf "${table["header_format"]}" "$1"
+    printf "${_table["header_format"]}" "$1"
     return "$success"
 }
 
@@ -120,43 +121,57 @@ function _write_title()
 # shellcheck disable=SC2059 # Don't use variables in the printf format string. Use printf "..%s.." "$foo".
 function _write_line()
 {
-     [[ $1 =~ $varNameRegex ]] || {
-        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires a non-empty variable name as argument."
-        return "$err_invalid_nameref"
+    local -i _rc="$success"
+
+    (( $# == 1 || $# == 2 )) || {
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires one or two arguments (provided $#): a variable name and an optional secret-masking flag."
+    }
+    [[ -v 1 && $1 =~ $varNameRegex ]] || {
+        _rc="$err_invalid_nameref"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a valid variable name (provided '${1-<missing>}')."
+    }
+    [[ ! -v 2 || $2 =~ ^(true|false)$ ]] || {
+        _rc="$err_argument_type"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires optional argument 2, the secret-masking flag, to be 'true' or 'false' (provided '${2-<missing>}')."
     }
 
-    local -n table
-    table=$(get_table_format)
-    local format
-    format=${table["value_format"]}
-    local -n v=$1
-    local value
+    (( _rc == success )) || return "$err_invalid_arguments"
+
+    local -n _table
+    _table=$(get_table_format)
+    local _format
+    _format=${_table["value_format"]}
+    local -n _v=$1
+    local _value
 
     if is_defined_associative_array "$1"; then
-        printf "$format" "$1" "${#v[@]} values:"
-        for key in "${!v[@]}"; do
-            printf "$format" "  [$key]:" "  '${v[$key]}'"
+        printf "$_format" "$1" "${#_v[@]} values:"
+        local _key
+        for _key in "${!_v[@]}"; do
+            printf "$_format" "  [$_key]:" "  '${_v[$_key]}'"
         done
     elif is_defined_array "$1"; then
-        printf "$format" "$1" "${#v[@]} items:"
-        for i in "${!v[@]}"; do
-            printf "$format" "  [$i]:" "  '${v[i]}'"
+        printf "$_format" "$1" "${#_v[@]} items:"
+        local -i _i
+        for (( _i=0; _i < ${#_v[@]}; _i++ )); do
+            printf "$_format" "  [$_i]:" "  '${_v[_i]}'"
         done
     elif is_defined_function "$1"; then
-        printf "$format" "$1" "$1()"
+        printf "$_format" "$1" "$1()"
     elif is_defined_variable "$1"; then
         # shellcheck disable=SC2154
         case $1 in
-            verbose      )  value=$__saved_verbose ;;
-            quiet        )  value=$__saved_quiet ;;
-            table_format )  value=$__saved_table_format ;;
-            _ignore      )  value=$__saved_ignore ;;
+            verbose      )  _value=$__saved_verbose ;;
+            quiet        )  _value=$__saved_quiet ;;
+            table_format )  _value=$__saved_table_format ;;
+            _ignore      )  _value=$__saved_ignore ;;
             *            )  local secret=${2:-false}
-                            [[ $secret == true ]] && value="$secret_str" || value="$v" ;;
+                            [[ $secret == true ]] && _value="$secret_str" || _value="$_v" ;;
         esac
-        printf "$format" "$1" "$value"
+        printf "$_format" "$1" "$_value"
     else
-        printf "$format" "$1" "❌ '$1' is unbound, undefined, or invalid"
+        printf "$_format" "$1" "❌ '$1' is unbound, undefined, or invalid"
     fi
 
     return "$success"
@@ -199,9 +214,9 @@ function dump_vars()
     # shellcheck disable=SC2154 # ci is referenced but not assigned.
     $ci && set_table_format "markdown"
     set +x
-    local v
-    for v in "$@"; do
-        case ${v,,} in
+    local _v
+    for _v in "$@"; do
+        case ${_v,,} in
             -q|--quiet) set_quiet ;;
             -f|--force) set_verbose ;;
             -m|--markdown) set_table_format "markdown" ;;
@@ -213,45 +228,46 @@ function dump_vars()
     ! is_verbose && restore_state && return "$success"
 
     # for the proper behavior of this function change some global flags (to be restored before returning from the function)
-    local -n table
-    table=$(get_table_format)
+    local -n _table
+    _table=$(get_table_format)
 
-    local top=true  # is this the top header?
-    local hdr=false # is the next entry a header?
+    local _top=true  # is this the top header?
+    local _hdr=false # is the next entry a header?
+    local _v
     while (( $# > 0 )); do
-        v=$1
+        _v=$1
         shift
-        case ${v,,} in
+        case ${_v,,} in
             -h|--header )
-                v=$1
+                _v=$1
                 shift
-                $top && echo "${table["top_header"]}" || {
-                    ! $hdr && echo "${table["top_mid_header"]}"
+                $_top && echo "${_table["top_header"]}" || {
+                    ! $_hdr && echo "${_table["top_mid_header"]}"
                 }
-                top=false
-                hdr=false
-                _write_title "$v"
-                [[ $1 != -h && $1 != --header ]] && hdr=false || hdr=true # is the next entry also a header?
-                $hdr && echo "${table["bottom_header"]}" || echo "${table["bottom_mid_header"]}"
+                _top=false
+                _hdr=false
+                _write_title "$_v"
+                [[ $1 != -h && $1 != --header ]] && _hdr=false || _hdr=true # is the next entry also a header?
+                $_hdr && echo "${_table["bottom_header"]}" || echo "${_table["bottom_mid_header"]}"
                 ;;
             -b|--blank )
-                echo "${table["blank"]}"
+                echo "${_table["blank"]}"
                 ;;
             -l|--line )
-                echo "${table["line"]}"
+                echo "${_table["line"]}"
                 ;;
             -s|--secret )
-                v=$1
+                _v=$1
                 shift
-                [[ ! $v =~ ^-.* ]] && _write_line "$v" true
+                [[ ! $_v =~ ^-.* ]] && _write_line "$_v" true
                 ;;
             * )
-                [[ ! $v =~ ^-.* ]] && _write_line "$v"
+                [[ ! $_v =~ ^-.* ]] && _write_line "$_v"
                 # all options starting with '-' are already processed
                 ;;
         esac
     done
-    echo "${table["bottom"]}";
+    echo "${_table["bottom"]}";
     sync
 
     press_any_key

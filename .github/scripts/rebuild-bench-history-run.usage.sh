@@ -6,13 +6,13 @@ declare -xr script_name
 
 function usage_text()
 {
-    local long_text=$1
-    local switches=""
-    local vars=""
+    local _long_text=$1
+    local _switches=""
+    local _vars=""
 
-    if $long_text; then
-        switches=$'\n'"Switches:"$'\n'"$common_switches"
-        vars=$common_vars
+    if $_long_text; then
+        _switches=$'\n'"Switches:"$'\n'"$common_switches"
+        _vars=$common_vars
     fi
 
     cat << EOF
@@ -52,7 +52,7 @@ Options:
                                 Initial value from \$BENCHER_BRANCH or default 'main'
   -ad, --bencher-adapter        The Bencher.dev adapter used to parse the results
                                 Initial value from \$BENCHER_ADAPTER or default 'c_sharp_dot_net'
-$switches
+$_switches
 Environment Variables:
   BENCHER_API_TOKEN             Bencher.dev API token used to upload results (required)
   BENCHMARK_PROJECT             Path to the benchmark project file
@@ -67,6 +67,6 @@ Environment Variables:
   BENCHER_TESTBED               Bencher.dev testbed name
   BENCHER_BRANCH                Bencher.dev branch (default 'main')
   BENCHER_ADAPTER               Bencher.dev adapter (default 'c_sharp_dot_net')
-$vars
+$_vars
 EOF
 }

@@ -6,13 +6,13 @@ declare -xr script_name
 
 function usage_text()
 {
-    local long_text=$1
-    local switches=""
-    local vars=""
+    local _long_text=$1
+    local _switches=""
+    local _vars=""
 
-    if $long_text; then
-        switches=$'\n'"Switches:"$'\n'"$common_switches"
-        vars=$common_vars
+    if $_long_text; then
+        _switches=$'\n'"Switches:"$'\n'"$common_switches"
+        _vars=$common_vars
     fi
 
     cat << EOF
@@ -45,7 +45,7 @@ Options:
   -o, --repo-owner              Repository owner. When run on a GitHub runner, this is automatically set from the
                                 \$GITHUB_REPOSITORY_OWNER environment variable. Required only if publishing to GitHub Packages
                                 Initial value from the \$GITHUB_REPOSITORY_OWNER environment variable or "vmelamed"
-$switches
+$_switches
 Environment Variables:
   PACKAGE_PROJECT               Project/solution paths to package and publish
   PREPROCESSOR_SYMBOLS          Pre-processor symbols for compilation
@@ -66,6 +66,6 @@ Environment Variables:
   ARTIFACTS_DIR                 Directory where artifacts will be saved if --artifacts-saved is true
                                 Initial value from \$ARTIFACTS_DIR or default "artifacts/pack"
   NUGET_API_KEY                 The NuGet API key for the selected NuGet server
-$vars
+$_vars
 EOF
 }

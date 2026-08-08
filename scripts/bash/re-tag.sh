@@ -101,14 +101,14 @@ fi
 #-------------------------------------------------------------------------------
 delete_tag()
 {
-    local tag="$1"
-    execute git tag -d "$tag"
-    trace "Deleted local tag '$tag'."
-    if git ls-remote --tags origin "$tag" | grep -q "$tag"; then
-        execute git push origin ":refs/tags/$tag"
-        trace "Deleted remote tag 'origin/$tag'."
+    local _tag="$1"
+    execute git tag -d "$_tag"
+    trace "Deleted local tag '$_tag'."
+    if git ls-remote --tags origin "$_tag" | grep -q "$_tag"; then
+        execute git push origin ":refs/tags/$_tag"
+        trace "Deleted remote tag 'origin/$_tag'."
     else
-        warning "Tag '$tag' not found on origin — skipping remote deletion."
+        warning "Tag '$_tag' not found on origin — skipping remote deletion."
     fi
 }
 

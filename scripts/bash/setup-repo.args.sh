@@ -47,45 +47,45 @@ declare -x use_https
 # shellcheck disable=SC2154 # verbose is referenced but not assigned.
 function get_arguments()
 {
-    local option
+    local _option
 
     while [[ $# -gt 0 ]]; do
-        option="$1"; shift
-        if get_common_arg "$option"; then
+        _option="$1"; shift
+        if get_common_arg "$_option"; then
             continue
         fi
 
-        case "${option,,}" in
+        case "${_option,,}" in
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
             --vm2-repos )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing path after '$option'."
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing path after '$_option'."
                 vm2_repos="$1"; shift
                 ;;
 
             --owner|-o )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing owner after '$option'."
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing owner after '$_option'."
                 repo_owner="$1"; shift
                 ;;
 
             --branch|-b )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing branch name after '$option'."
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing branch name after '$_option'."
                 branch="$1"; shift
                 ;;
 
             --visibility )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing visibility after '$option'."
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing visibility after '$_option'."
                 visibility="$1"; shift
                 ;;
 
             --ruleset-name|-rs )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing the name of the ruleset for protecting the default branch after '$option'."
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing the name of the ruleset for protecting the default branch after '$_option'."
                 main_protection_rs_name="$1"; shift
                 ;;
 
             --description )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing description after '$option'."
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing description after '$_option'."
                 description="$1"; shift
                 ;;
 
@@ -116,9 +116,9 @@ function get_arguments()
                 ;;
 
             * ) if [[ -z "$repo_path" ]]; then
-                    repo_path="$option"
+                    repo_path="$_option"
                 else
-                    usage -ec "$err_too_many_arguments" "Too many positional arguments (project directory or repository name): $option"
+                    usage -ec "$err_too_many_arguments" "Too many positional arguments (project directory or repository name): $_option"
                 fi
                 ;;
         esac

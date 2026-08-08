@@ -6,13 +6,13 @@ declare -xr script_name
 
 function usage_text()
 {
-    local long_text=$1
-    local switches=""
-    local vars=""
+    local _long_text=$1
+    local _switches=""
+    local _vars=""
 
-    if $long_text; then
-        switches=$'\n'"Switches:"$'\n'"$common_switches"
-        vars=$common_vars
+    if $_long_text; then
+        _switches=$'\n'"Switches:"$'\n'"$common_switches"
+        _vars=$common_vars
     fi
 
     cat << EOF
@@ -44,7 +44,7 @@ Options:
                                 and the results will be stored in the 'results' subdirectory within the 'benchmarks'
                                 subdirectory.
                                 Initial value: '<solution root>/artifacts'
-$switches
+$_switches
 Environment Variables:
   BENCHMARK_PROJECT             Path to the benchmark project file
   ARTIFACTS_DIR                 Directory where benchmark artifacts will be created (see --artifacts above)
@@ -54,7 +54,7 @@ Environment Variables:
   MINVERTAGPREFIX               Git tag prefix used by MinVer (e.g., 'v')
   MINVERDEFAULTPRERELEASEIDENTIFIERS
                                 Default semver pre-release identifiers for MinVer
-$vars
+$_vars
 Outputs (to GITHUB_OUTPUT):
   results-dir                   The directory where benchmark results are stored
 EOF

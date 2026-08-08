@@ -60,6 +60,11 @@ vm2.DevOps provides CI/CD automation framework for .NET NuGet packages through a
 └─────────────────────────────────────────────────────────┘
 ```
 
+### Layer 1: Consumer Workflows
+
+The GitHub Actions workflows at this level originate at **`vm2.Templates/templates/AddNewPackage/content/.github/workflows/`**. They are practically copied to every new vm2 repo's `.github/workflows` when it is created with `dotnet install new vm2pkg`. These are the thin, per-repo entry points. Changes at this layer (although quite stable these days) must be kept in sync with the template's original. This is achieved by executing the standalone script `diff-shared.sh`. The script compares and then copies or merges the source-of-truth template files into the files with shared content, like the workloads at this level. Each consumer workflow sets repo-specific parameters (project paths, coverage thresholds, etc.) and delegates to a reusable workflow via GitHub Actions property `uses: vmelamed/vm2.DevOps/.github/workflows/_*.yaml@main`. For example, `CI.yaml` calls
+`_ci.yaml`, `Prerelease.yaml` calls `_prerelease.yaml`, and so on, see the diagram below.
+
 ```text
 Top-level Workflows      Reusable Workflows                  Bash Scripts                     Bash Library
 vm2.*                    vm2.DevOps/.github/workflows        vm2.DevOps/.github/scripts/      vm2.DevOps/scripts/bash/lib/
@@ -84,11 +89,6 @@ Release.yaml ──────────► _release.yaml ──────�
 
 ```
 
-### Layer 1: Consumer Workflows
-
-The GitHub Actions workflows at this level originate at **`vm2.Templates/templates/AddNewPackage/content/.github/workflows/`**. They are practically copied to every new vm2 repo's `.github/workflows` when it is created with `dotnet install new vm2pkg`. These are the thin, per-repo entry points. Changes at this layer (although quite stable these days) must be kept in sync with the template's original. This is achieved by executing the standalone script `diff-shared.sh`. The script compares and then copies or merges the source-of-truth template files into the files with shared content, like the workloads at this level. Each consumer workflow sets repo-specific parameters (project paths, coverage thresholds, etc.) and delegates to a reusable workflow via GitHub Actions property `uses: vmelamed/vm2.DevOps/.github/workflows/_*.yaml@main`. For example, `CI.yaml` calls
-`_ci.yaml`, `Prerelease.yaml` calls `_prerelease.yaml`, and so on, see the diagram above.
-
 #### Push De-dupe Logic
 
 When a branch has an open pull request, both `push` and `pull_request` events fire on every commit. To avoid duplicate CI runs,
@@ -105,7 +105,9 @@ This ensures each commit runs CI exactly once regardless of event type.
 
 #### Gathering Inputs
 
-The workflows at this level have a number of inputs: GitHub Actions `vars`, `secrets`, and `env`-s, manually triggered actions bring inputs from the UI, etc. To handle and prioritize the inputs a composite action `gather-inputs` (`vm2.DevOps/.github/actions/gather-inputs/action.yaml`) at this level gathers the relevant inputs and exports them as parameters (`uses: ... with:...`) for the reusable workflows and scripts to consume. The input-gathering action also performs normalization and validation of inputs, ensuring consistent formats (e.g., JSON arrays for project paths) and enforcing required parameters. When extending the composite action, remember that `vars` and `env` are not automatically passed through to reusable workflows, so they must be explicitly included in the action's `outputs` and then passed as `with` parameters to the reusable workflows. See `gather-inputs/action.yaml` for the full implementation.
+The workflows at this level have a number of inputs: GitHub Actions `vars`, `secrets`, and `env`-s, manually triggered actions bring inputs from the UI, default values, etc. To handle and prioritize the inputs, a composite action `gather-inputs` (`vm2.DevOps/.github/actions/gather-inputs/action.yaml`) at this level gathers the relevant inputs and exports them as finalized parameters (`uses: ... with:...`) for the downstream reusable workflows and scripts to consume. The input-gathering action also performs some normalization and validation of inputs, ensuring consistent formats (e.g., JSON arrays for project paths), enforcing required parameters, etc.
+
+> [!Note] When extending the composite action, remember that `vars` and `env` are not automatically passed through to reusable workflows, so they must be explicitly included in the action's `outputs` and then passed as `with` parameters to the reusable workflows. See `gather-inputs/action.yaml` for the full implementation.
 
 ### Layer 2: Reusable Workflows
 
@@ -130,7 +132,7 @@ _ci.yaml ─┬─────────────────────�
 - **build** — Compiles via `_build.yaml`. Matrices over `runners-os × build-projects`. Skipped when `build-projects` is empty.
 - **test** — Runs via `_test.yaml`. Matrices over `runners-os`. Skipped when `test-projects` is empty
 - **benchmarks** — Runs via `_benchmarks.yaml`. Matrices over `runners-os × benchmark-projects`. Skipped when `benchmark-projects` is empty or the push commits contain `[skip bm]`
-- **pack** — Validates NuGet packaging via `_pack.yaml`. Matrices over `runners-os × package-projects`. Skipped when `package-projects`
+- **pack** — Validates NuGet packaging via `_pack.yaml`. Matrices over `runners-os × package-projects`. Skipped when `package-projects` is empty.
 
 Concurrency group `ci-${{ github.workflow_ref }}` cancels in-progress runs on new pushes.
 

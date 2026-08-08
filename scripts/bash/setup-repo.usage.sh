@@ -21,16 +21,16 @@ declare -xr script_name
 #-------------------------------------------------------------------------------
 function usage_text()
 {
-    local long_text=$1
-    local switches=""
-    local vars=""
+    local _long_text=$1
+    local _switches=""
+    local _vars=""
 
-    local shared
-    shared=$(get_vm2_sot_path "$vm2_repos" "$sot")
+    local _shared
+    _shared=$(get_vm2_sot_path "$vm2_repos" "$sot")
 
-    if $long_text; then
-        switches="$common_switches"
-        vars="Environment Variables:$common_vars"
+    if $_long_text; then
+        _switches="$common_switches"
+        _vars="Environment Variables:$common_vars"
     fi
 
     cat << EOF
@@ -77,8 +77,8 @@ Options:
                                 interactively, inferring the default name from the name of the repo directory. Used during
                                 linking the local repository to GitHub
   -d, --description <text>      Short description for the GitHub repository (max 350 chars). If not specified, the script will
-                                ask the user interactively with a default - the name of the repository. Used during linking the
-                                local repository to GitHub
+                                ask the user interactively with a default - the name of the repository. Used during linking
+                                the local repository to GitHub
   --visibility [public|private] Repository visibility. Used during linking the local repository to GitHub. Default: 'public'
   -b, --branch <branch>         GitHub default branch name. Used during linking the local repository to GitHub. Default: 'main'
   -rs, --ruleset-name <name>    The name of the ruleset for protecting the default branch (main). Used during linking the local
@@ -102,8 +102,8 @@ Switches:
                                 and policies. Use this option alone when the repository already exists and is linked to a GitHub
                                 repository and none of the --interactive-* options are specified. In any other case, the script
                                 will run its normal course and will display the audit at the end anyway.
-$switches
-$vars
+$_switches
+$_vars
 Examples:
   $script_name ~/repos/vm2.Glob
   $script_name \$VM2_REPOS/vm2.Glob --interactive-secrets --verbose
@@ -113,7 +113,7 @@ Examples:
 Configured local Git settings:
   core.hooksPath                Set to '\$VM2_REPOS/$vm2_devops_repo_name/scripts/githooks'
                                 Tells Git where to find repository hook scripts (e.g. pre-commit, commit-msg).
-  commit.template               Set to '$shared/.gitmessage'
+  commit.template               Set to '$_shared/.gitmessage'
                                 Specifies the default commit message template shown when creating commits.
   pull.rebase                   Set to 'true'
                                 Makes 'git pull' rebase local commits on top of upstream changes instead of merging.

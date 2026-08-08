@@ -14,13 +14,13 @@ declare -xr script_name
 #   usage_text true
 function usage_text()
 {
-    local long_text=$1
-    local switches=""
-    local vars=""
+    local _long_text=$1
+    local _switches=""
+    local _vars=""
 
-    if $long_text; then
-        switches="Switches:"$'\n'"$common_switches"
-        vars=$common_vars
+    if $_long_text; then
+        _switches="Switches:"$'\n'"$common_switches"
+        _vars=$common_vars
     fi
 
     cat << EOF
@@ -45,8 +45,9 @@ Options:
                                 Initial value from \$GH_ACTOR or ''
   --nuget-password              Password or token for authenticating with the NuGet repository if needed
                                 Initial value from \$GH_TOKEN or ''
-
-$switches
+  -a, --artifacts               Artifacts main directory. The built artifacts will be stored in the subdirectory 'build'.
+                                Initial value from \$ARTIFACTS_DIR or default './artifacts'.
+$_switches
 Environment Variables:
   BUILD_PROJECT                 Path to the solution/project to build
   CONFIGURATION                 Build configuration ('Release' or 'Debug')
@@ -57,6 +58,6 @@ Environment Variables:
   GH_ACTOR                      Username for authenticating with the NuGet repository if needed
   GH_TOKEN                      Password or token for authenticating with the NuGet repository if needed
   GITHUB_STEP_SUMMARY           Path to the file to which step summary is written
-$vars
+$_vars
 EOF
 }

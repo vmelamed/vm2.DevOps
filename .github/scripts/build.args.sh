@@ -17,17 +17,18 @@ declare -x minver_tag_prefix
 declare -x minver_prerelease_id
 declare -x gh_nuget_username
 declare -x gh_nuget_password
+declare -x artifacts
 
 function get_arguments()
 {
-    local option
+    local _option
 
     while [[ $# -gt 0 ]]; do
-        option="$1"; shift
-        if get_common_arg "$option"; then
+        _option="$1"; shift
+        if get_common_arg "$_option"; then
             continue
         fi
-        case "${option,,}" in
+        case "${_option,,}" in
             # do not use the common options - they were already processed by get_common_arg:
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
@@ -56,9 +57,13 @@ function get_arguments()
                 gh_nuget_password="$1"; shift
                 ;;
 
-            * ) [[ -z $build_project ]] || usage -ec "$err_too_many_arguments" "Multiple build projects specified. Unknown option: $option"
-                [[ "$option" != -* ]] || usage -ec "$err_unknown_argument" "Unknown option: $option"
-                build_project="$option"
+            --artifacts|-a )
+                artifacts="$1"; shift
+                ;;
+
+            * ) [[ -z $build_project ]] || usage -ec "$err_too_many_arguments" "Multiple build projects specified. Unknown option: $_option"
+                [[ "$_option" != -* ]] || usage -ec "$err_unknown_argument" "Unknown option: $_option"
+                build_project="$_option"
                 ;;
         esac
     done

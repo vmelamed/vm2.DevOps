@@ -25,6 +25,7 @@ declare -rxi err_not_file
 declare -rxi err_not_directory
 declare -rxi err_unsafe_argument
 declare -rxi err_invalid_path
+declare -rxi err_missing_argument
 
 declare -rx varNameRegex
 
@@ -62,9 +63,9 @@ function ltrim()
         return "$err_invalid_arguments"
     }
 
-    local var="$1"
-    var="${var#"${var%%[![:space:]]*}"}"
-    printf '%s' "$var"
+    local _var="$1"
+    _var="${_var#"${_var%%[![:space:]]*}"}"
+    printf '%s' "$_var"
 }
 
 #--------------------------------------------------------------------------------
@@ -87,9 +88,9 @@ function rtrim()
         return "$err_invalid_arguments"
     }
 
-    local var="$1"
-    var="${var%"${var##*[![:space:]]}"}"
-    printf '%s' "$var"
+    local _var="$1"
+    _var="${_var%"${_var##*[![:space:]]}"}"
+    printf '%s' "$_var"
 }
 
 #--------------------------------------------------------------------------------
@@ -140,21 +141,21 @@ function is_safe_input()
         return "$err_invalid_arguments"
     }
 
-    local input="$1"
-    local allow_spaces="${2:-false}"
+    local _input="$1"
+    local _allow_spaces="${2:-false}"
 
     # Empty input is considered safe
-    if [[ -z "$input" ]]; then
+    if [[ -z "$_input" ]]; then
         return "$positive"
     fi
 
     # Dangerous characters that could enable command injection
-    local dangerous_chars
+    local _dangerous_chars
 
-    $allow_spaces && dangerous_chars=$'[;|&$`\\\\<>(){}\n\r]' || dangerous_chars=$'[;|&$`\\\\<>(){}\n\r ]'
+    $_allow_spaces && _dangerous_chars=$'[;|&$`\\\\<>(){}\n\r]' || _dangerous_chars=$'[;|&$`\\\\<>(){}\n\r ]'
 
-    if [[ "$input" =~ $dangerous_chars ]]; then
-        error -sd 3 -ec "$err_unsafe_argument" "${FUNCNAME[0]}(): The input '$input' contains one or more of the unsafe characters '$dangerous_chars'."
+    if [[ "$_input" =~ $_dangerous_chars ]]; then
+        error -sd 3 -ec "$err_unsafe_argument" "${FUNCNAME[0]}(): The input '$_input' contains one or more of the unsafe characters '$_dangerous_chars'."
         return "$negative"
     fi
 
@@ -258,23 +259,23 @@ function is_safe_path()
         return "$err_invalid_arguments"
     }
 
-    local path="$1"
+    local _path="$1"
 
     # Reject paths with directory traversal
-    [[ ! "$path" =~ \.\. ]] || {
-        error -ec "$err_unsafe_argument" "The path '$path' contains directory traversal sequences."
+    [[ ! "$_path" =~ \.\. ]] || {
+        error -ec "$err_unsafe_argument" "The path '$_path' contains directory traversal sequences."
         return "$negative"
     }
 
     # Reject absolute paths starting with /
-    [[ ! "$path" =~ ^/ ]] || {
-        error -ec "$err_unsafe_argument" "The path '$path' is an absolute path, which is not allowed."
+    [[ ! "$_path" =~ ^/ ]] || {
+        error -ec "$err_unsafe_argument" "The path '$_path' is an absolute path, which is not allowed."
         return "$negative"
     }
 
     # Reject paths with dangerous characters
-    [[ ! "$path" =~ [\$\`\;] ]] || {
-        error -ec "$err_unsafe_argument" "The path '$path' contains one or more unsafe characters: \$, \`, ;"
+    [[ ! "$_path" =~ [\$\`\;] ]] || {
+        error -ec "$err_unsafe_argument" "The path '$_path' contains one or more unsafe characters: \$, \`, ;"
         return "$negative"
     }
 
@@ -397,23 +398,39 @@ declare -xr jq_array_strings_nonempty='type == "array" and length > 0 and all(ty
 #-------------------------------------------------------------------------------
 function is_safe_json_array()
 {
+    local -i _rc="$success"
+
     (( $# == 3 )) || {
-        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly three arguments (provided $#):"$'\n' \
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires exactly three arguments (provided $#):"$'\n' \
               "  \$1: the JSON"$'\n' \
               "  \$2: the default value to use if the variable is unbound or empty, and"$'\n' \
               "  \$3: the name of the function to validate each item in the array."
-        return "$err_invalid_arguments"
+    }
+    [[ -v 1 ]] || {
+        _rc="$err_missing_argument"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the JSON input, to be provided."
+    }
+    [[ -v 2 ]] || {
+        _rc="$err_missing_argument"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, the default JSON value, to be provided."
+    }
+    [[ -v 3 ]] && is_defined_function "$3" || {
+        _rc="$err_argument_type"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 3 to name a defined item-validation function (provided '${3-<missing>}')."
     }
 
-    local default="$2"
-    local is_safe_item_fn=$3
+    (( _rc == success )) || return "$err_invalid_arguments"
 
-    local input output
-    input="$(trim "$1")"
-    [[ -n "$input" ]] || input=$default
+    local _default="$2"
+    local _is_safe_item_fn=$3
+
+    local _input _output
+    _input="$(trim "$1")"
+    [[ -n "$_input" ]] || _input=$_default
 
     # validate and normalize JSON
-    output="$(
+    _output="$(
         jq -c '
             if type == "boolean" or type == "number" or type == "object" then
                 error("The input cannot be boolean, number, object, or null. It must be a JSON array of non-empty strings or a JSON string.")
@@ -425,18 +442,18 @@ function is_safe_json_array()
                 map( . | tostring | trim )
             else
                 error("The input must be a JSON array of non-empty strings or a JSON string.")
-            end ' <<< "$input"
+            end ' <<< "$_input"
     )" || {
-        error -ec "$err_argument_value" "'$input' is not a valid JSON: '$1'"
+        error -ec "$err_argument_value" "'$_input' is not a valid JSON: '$1'"
         return "$err_argument_value"
     }
 
     # validate each item in the array
     while read -r item; do
-        $is_safe_item_fn "$item" || return "$negative"
-    done < <(jq -r '.[]' <<< "$output")
+        $_is_safe_item_fn "$item" || return "$negative"
+    done < <(jq -r '.[]' <<< "$_output")
 
-    echo "$output"
+    echo "$_output"
     return "$positive"
 }
 
@@ -462,14 +479,14 @@ function is_safe_runner_os()
         return "$err_invalid_arguments"
     }
 
-    local runner_os="$1"
+    local _runner_os="$1"
 
-    [[ -n "$runner_os" ]] || {
+    [[ -n "$_runner_os" ]] || {
         error -ec "$err_argument_value" "The runner OS name is empty."
         return "$err_argument_value"
     }
-    is_in "$runner_os" "${allowed_runners_os[@]}" || {
-        error -ec "$err_argument_value" "The runner OS '$runner_os' is not allowed. Valid options: ${allowed_runners_os[*]}."
+    is_in "$_runner_os" "${allowed_runners_os[@]}" || {
+        error -ec "$err_argument_value" "The runner OS '$_runner_os' is not allowed. Valid options: ${allowed_runners_os[*]}."
         return "$negative"
     }
 
@@ -501,23 +518,23 @@ function is_safe_reason()
         return "$err_invalid_arguments"
     }
 
-    local rsn="$1"
-    local max_length=200
+    local _rsn="$1"
+    local _max_length=200
 
     # Check length
-    (( ${#rsn} <= max_length )) || {
-        error -ec "$err_argument_value" "The reason is too long. Maximum length is $max_length characters."
+    (( ${#_rsn} <= _max_length )) || {
+        error -ec "$err_argument_value" "The reason is too long. Maximum length is $_max_length characters."
         return "$negative"
     }
 
     # Allow spaces but reject dangerous shell meta-characters
-    is_safe_input "$rsn" true || {
+    is_safe_input "$_rsn" true || {
         return "$negative"
     }
 
     # Reject if it looks like a command (starts with -, /, .)
-    [[ "$rsn" =~ ^[-/.] ]] && {
-        error -ec "$err_unsafe_argument" "The reason '$rsn' appears to be a command or contains unsafe characters."
+    [[ "$_rsn" =~ ^[-/.] ]] && {
+        error -ec "$err_unsafe_argument" "The reason '$_rsn' appears to be a command or contains unsafe characters."
         return "$negative"
     }
 
@@ -589,34 +606,33 @@ function is_safe_nuget_server()
 #-------------------------------------------------------------------------------
 function validate_nuget_server()
 {
-    local -i rc="$success"
+    local -i _rc="$success"
 
-    (( $# >= 1 && $# <= 2 )) || {
-        rc="$err_invalid_arguments"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires at least one or two arguments (provided $#): the NAME OF THE VARIABLE containing the NuGet server to validate and an optional default value for the NuGet server."
+    (( $# == 1 || $# == 2 )) || {
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires one or two arguments (provided $#): the name of the variable containing the NuGet server and an optional default server."
     }
-    [[ $# -lt 1 || $1 =~ $varNameRegex ]] || {
-        rc="$err_invalid_nameref"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires a non-empty variable name as argument."
+    [[ -v 1 && $1 =~ $varNameRegex ]] || {
+        _rc="$err_invalid_nameref"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a valid variable name for the NuGet server value (provided '${1-<missing>}')."
     }
-
-    (( rc == success )) || return "$err_invalid_arguments"
-
-    local -n server=$1
-    local default_server=${2:-"nuget"}
-
-    [[ $default_server =~ $nugetServersRegex ]] || {
-        error -ec "$err_argument_value" "Invalid default NuGet server: $default_server."
-        return "$err_invalid_arguments"
+    [[ ! -v 2 || $2 =~ $nugetServersRegex ]] || {
+        _rc="$err_argument_value"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires optional argument 2 to be a valid default NuGet server (provided '${2-<missing>}')."
     }
 
-    [[ -n "$server" ]] || {
-        warning_var "server" "No NuGet server configured." "$default_server"
+    (( _rc == success )) || return "$err_invalid_arguments"
+
+    local -n _server=$1
+    local _default_server=${2:-"nuget"}
+
+    [[ -n "$_server" ]] || {
+        warning_var "server" "No NuGet server configured." "$_default_server"
         return "$positive"
     }
 
-    [[ "$server" =~ $nugetServersRegex ]] || {
-        error -ec "$err_argument_value" "Invalid NuGet server: $server."
+    [[ "$_server" =~ $nugetServersRegex ]] || {
+        error -ec "$err_argument_value" "Invalid NuGet server: $_server."
         return "$negative"
     }
 
@@ -701,41 +717,41 @@ function is_safe_configuration()
 #-------------------------------------------------------------------------------
 function validate_preprocessor_symbols()
 {
-    local -i rc="$success"
+    local -i _rc="$success"
 
     (( $# == 1 )) || {
-        rc="$err_invalid_arguments"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires one argument (provided $#): the NAME of the variable containing the preprocessor symbols to test."
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires one argument (provided $#): the NAME of the variable containing the preprocessor symbols to test."
     }
-    [[ $# -ne 1 || $1 =~ $varNameRegex ]] || {
-        rc="$err_invalid_nameref"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires a non-empty variable name as argument."
+    [[ -v 1 && $1 =~ $varNameRegex ]] || {
+        _rc="$err_invalid_nameref"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a valid variable name for the preprocessor-symbol list (provided '${1-<missing>}')."
     }
 
-    (( rc == success )) || return "$err_invalid_arguments"
+    (( _rc == success )) || return "$err_invalid_arguments"
 
-    local -n symbols=$1
-    local -a symbol_array=()
+    local -n _symbols=$1
+    local -a _symbol_array=()
 
-    [[ -z $symbols ]] && return "$positive"
+    [[ -z $_symbols ]] && return "$positive"
 
-    IFS=' ,:;' read -r -a symbol_array <<< "$symbols"
+    IFS=' ,:;' read -r -a _symbol_array <<< "$_symbols"
 
-    local bad=false
-    local s=''
-    for symbol in "${symbol_array[@]}"; do
+    local _bad=false
+    local _s=''
+    for symbol in "${_symbol_array[@]}"; do
         [[ -z $symbol ]] && continue
         if [[ "$symbol" =~ $varNameRegex ]]; then
-            [[ -z $s ]] && s="$symbol" || s="$s;$symbol"
+            [[ -z $_s ]] && _s="$symbol" || _s="$_s;$symbol"
         else
             error -ec "$err_argument_value" "The pre-processor symbol '$symbol' is not valid."
-            bad=true
+            _bad=true
         fi
     done
 
-    "$bad" && return "$negative"
+    "$_bad" && return "$negative"
 
-    symbols=$s
+    _symbols=$_s
     return "$positive"
 }
 

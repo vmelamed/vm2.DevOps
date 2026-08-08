@@ -130,23 +130,23 @@ function save_state()
 #-------------------------------------------------------------------------------
 function restore_state()
 {
-    local bad_call=false
+    local _bad_call=false
 
     (( __state_saved_pid != 0 )) || {
         error -ec "$err_logic_error" "${FUNCNAME[0]}() called before save_state." >&2
-        bad_call=true
+        _bad_call=true
     }
     (( __state_saved_pid == BASHPID )) || {
         error -ec "$err_logic_error" "${FUNCNAME[0]}() must run in same shell: saved pid=$__state_saved_pid current pid=$BASHPID." >&2
-        bad_call=true
+        _bad_call=true
     }
     (( __state_saved_subshell == ${BASH_SUBSHELL:-0} )) || {
         error -ec "$err_logic_error" "${FUNCNAME[0]}() called from different subshell level." >&2
-        bad_call=true
+        _bad_call=true
     }
     __state_saved_pid=0
     __state_saved_subshell=-1
-    ! $bad_call || return "$failure"
+    ! $_bad_call || return "$failure"
 
     set_table_format "$__saved_table_format" || {
         error -ec "$err_logic_error" "${FUNCNAME[0]}() failed to restore table format." >&2
@@ -374,11 +374,11 @@ function set_table_format()
         return "$err_invalid_arguments"
     }
 
-    local f="${1,,}"
+    local _f="${1,,}"
 
     for tf in "${table_formats[@]}"; do
-        if [[ "$f" == "$tf" ]]; then
-            table_format="$f"
+        if [[ "$_f" == "$tf" ]]; then
+            table_format="$_f"
             return "$success"
         fi
     done
@@ -429,14 +429,14 @@ declare -x usage_requested=""
 # shellcheck disable=SC2034 # variable appears unused. Verify it or export it
 function get_common_arg()
 {
-    local -i validation_rc="$success"
+    local -i _validation_rc="$success"
 
     (( $# == 1 )) || {
-        validation_rc="$err_invalid_arguments"
-        error -sd 3 -ec "$validation_rc" "${FUNCNAME[0]}() requires one parameter ($# provided): the command-line argument to process"
+        _validation_rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_validation_rc" "${FUNCNAME[0]}() requires one parameter ($# provided): the command-line argument to process"
     }
 
-    (( validation_rc == success )) || return "$err_invalid_arguments"
+    (( _validation_rc == success )) || return "$err_invalid_arguments"
 
     # the calling scripts should not use short options:
     # --help|-h|-\?|-v|--verbose|-q|--quiet|-x|--trace|-y|--dry-run|-gr|--graphical|-md|--markdown
@@ -507,31 +507,31 @@ function usage_if_requested()
 #-------------------------------------------------------------------------------
 function usage()
 {
-    local long=false
-    (( $# > 0 )) && is_boolean "$1" && long=$1 && shift
+    local _long=false
+    (( $# > 0 )) && is_boolean "$1" && _long=$1 && shift
 
-    local -i exit_code=$success
-    (( $# > 0 )) && is_natural "$1" && exit_code=$1 && shift
+    local -i _exit_code=$success
+    (( $# > 0 )) && is_natural "$1" && _exit_code=$1 && shift
 
     # the remaining arguments are error messages to display at the top of the usage text
-    (( $# > 0 && exit_code == success )) && exit_code=$failure
+    (( $# > 0 && _exit_code == success )) && _exit_code=$failure
 
     # save the tracing state and disable tracing
-    local set_tracing_on=false
-    [[ $- =~ .*x.* ]] && set_tracing_on=true
+    local _set_tracing_on=false
+    [[ $- =~ .*x.* ]] && _set_tracing_on=true
     set +x
 
     (( $# > 0 )) && {
         error "$@";
-        exit_code="$failure"
+        _exit_code="$failure"
     }
 
-    usage_text "$long"
+    usage_text "$_long"
 
     # restore the tracing state
-    $set_tracing_on && set -x
+    $_set_tracing_on && set -x
 
-    exit "$exit_code"
+    exit "$_exit_code"
 }
 
 declare -rx common_switches=\
@@ -575,18 +575,18 @@ declare -rx common_vars=\
 #-------------------------------------------------------------------------------
 function usage_text()
 {
-    local long_text=$1
-    local switches=""
-    local vars=""
+    local _long_text=$1
+    local _switches=""
+    local _vars=""
 
-    if $long_text; then
-        switches="Switches:"$'\n'"$common_switches"
-        vars="Environment Variables:"$'\n'"$common_vars"
+    if $_long_text; then
+        _switches="Switches:"$'\n'"$common_switches"
+        _vars="Environment Variables:"$'\n'"$common_vars"
     fi
 
     cat << EOF
 OVERRIDE THE FUNCTION usage_text() IN THE CALLING SCRIPT $script_name TO PROVIDE CUSTOM USAGE INFORMATION.
-$switches
-$vars
+$_switches
+$_vars
 EOF
 }

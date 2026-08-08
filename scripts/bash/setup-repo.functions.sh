@@ -10,6 +10,8 @@ declare -x lib_dir
 declare -rxi success
 declare -rxi failure
 declare -rxi err_invalid_arguments
+declare -rxi err_argument_value
+declare -rxi err_missing_argument
 declare -rxi err_tool_error
 declare -rxi err_logic_error
 
@@ -131,16 +133,16 @@ function list_required_checks()
     #
     # The GitHub UI decorates check names as "Workflow / JobName (event)" but the check-runs API returns bare names and ruleset
     # matching uses the bare check-run name field. So we extract just the gate job's `name:` property from CI.yaml.
-    local gate_job
-    local gate_name
+    local _gate_job
+    local _gate_name
 
     # Find the gate job: look for postrun-ci first, fall back to ci-gate
-    gate_job=$(yq -r '.jobs | keys[] | select(test("postrun|ci-gate"))' "$ci_yaml" | head -n 1) || error -ec "$err_tool_error" "Failed to parse gate job from CI.yaml."
-    gate_name=$(yq -r ".jobs.${gate_job:-postrun-ci}.name" "$ci_yaml")                          || error -ec "$err_tool_error" "Failed to parse gate job name from CI.yaml."
+    _gate_job=$(yq -r '.jobs | keys[] | select(test("postrun|ci-gate"))' "$ci_yaml" | head -n 1) || error -ec "$err_tool_error" "Failed to parse gate job from CI.yaml."
+    _gate_name=$(yq -r ".jobs.${_gate_job:-postrun-ci}.name" "$ci_yaml")                         || error -ec "$err_tool_error" "Failed to parse gate job name from CI.yaml."
     exit_if_has_errors
 
     required_checks+=(
-        "$gate_name"
+        "$_gate_name"
     )
 
     declare -xra required_checks
@@ -166,18 +168,18 @@ function list_required_checks()
 # shellcheck disable=SC2090 # Quotes/backslashes in this variable will not be respected.
 function initialize_gh_paths()
 {
-    local -i rc="$success"
+    local -i _rc="$success"
 
     [[ -n $repo ]]                    || {
-        rc="$err_logic_error"
-        error -sd 3 -ec "$rc" "The 'repo' variable is not set. Cannot initialize GitHub paths."
+        _rc="$err_logic_error"
+        error -sd 3 -ec "$_rc" "The 'repo' variable is not set. Cannot initialize GitHub paths."
     }
     [[ -n $main_protection_rs_name ]] || {
-        rc="$err_logic_error"
-        error -sd 3 -ec "$rc" "The 'main_protection_rs_name' variable is not set. Cannot initialize GitHub paths."
+        _rc="$err_logic_error"
+        error -sd 3 -ec "$_rc" "The 'main_protection_rs_name' variable is not set. Cannot initialize GitHub paths."
     }
 
-    (( rc == success )) || return "$err_logic_error"
+    (( _rc == success )) || return "$err_logic_error"
 
     path_repo="repos/$repo"
 
@@ -219,22 +221,22 @@ function initialize_gh_paths()
 # shellcheck disable=SC2090 # Quotes/backslashes in this variable will not be respected.
 function initialize_jq_queries()
 {
-    local -i rc="$success"
+    local -i _rc="$success"
 
     [[ -n $main_protection_rs_name ]] || {
-        rc="$err_logic_error"
-        error -sd 3 -ec "$rc" "The 'main_protection_rs_name' variable is not set. Cannot initialize jq queries."
+        _rc="$err_logic_error"
+        error -sd 3 -ec "$_rc" "The 'main_protection_rs_name' variable is not set. Cannot initialize jq queries."
     }
     (( actions_app_id > 0 ))          || {
-        rc="$err_logic_error"
-        error -sd 3 -ec "$rc" "The 'actions_app_id' variable is not set or is invalid. Cannot initialize jq queries."
+        _rc="$err_logic_error"
+        error -sd 3 -ec "$_rc" "The 'actions_app_id' variable is not set or is invalid. Cannot initialize jq queries."
     }
     (( admin_role_id > 0 ))           || {
-        rc="$err_logic_error"
-        error -sd 3 -ec "$rc" "The 'admin_role_id' variable is not set or is invalid. Cannot initialize jq queries."
+        _rc="$err_logic_error"
+        error -sd 3 -ec "$_rc" "The 'admin_role_id' variable is not set or is invalid. Cannot initialize jq queries."
     }
 
-    (( rc == success )) || return "$err_logic_error"
+    (( _rc == success )) || return "$err_logic_error"
 
     jq_entries='to_entries[] | "\(.key)=\(.value)"'
     jq_secrets='.secrets[] | "\(.name)='"$secret_str"'"'
@@ -307,18 +309,18 @@ function initialize_main_protection_rs_id()
     # main_protection_rs_id is not 0 - already initialized
     (( main_protection_rs_id > 0 )) && return 0
 
-    local -i rc="$success"
+    local -i _rc="$success"
 
     [[ -n $main_protection_rs_name ]] || {
-        rc="$err_logic_error"
-        error -sd 3 -ec "$rc" "The 'main_protection_rs_name' variable is not set. Cannot initialize main protection ruleset ID."
+        _rc="$err_logic_error"
+        error -sd 3 -ec "$_rc" "The 'main_protection_rs_name' variable is not set. Cannot initialize main protection ruleset ID."
     }
     [[ -n $path_rulesets ]]           || {
-        rc="$err_logic_error"
-        error -sd 3 -ec "$rc" "The 'path_rulesets' variable is not set. Run initialize_gh_paths() first. Cannot initialize main protection ruleset ID."
+        _rc="$err_logic_error"
+        error -sd 3 -ec "$_rc" "The 'path_rulesets' variable is not set. Run initialize_gh_paths() first. Cannot initialize main protection ruleset ID."
     }
 
-    (( rc == success )) || return "$err_logic_error"
+    (( _rc == success )) || return "$err_logic_error"
 
     # try to get the main_protection_rs_id
     main_protection_rs_id=$(execute_gh_api_with_retry 3 2 --paginate "$path_rulesets" -q "$jq_ruleset_id") ||
@@ -355,32 +357,35 @@ function configure_default_repo_settings()
     info "Configuring repository settings..."
 
     # get existing repository settings
-    local -A existing
-    while IFS='=' read -r key value; do
-        existing["$key"]="$value"
+    local -A _existing
+    local _key _value
+
+    while IFS='=' read -r _key _value; do
+        _existing["$_key"]="$_value"
     done < <(execute_gh_api_with_retry 3 2 "$path_repo" -q "$jq_entries")
 
-    local -a rs=()
-    local actual
-    local expected
-    for key in "${!default_repo_settings[@]}"; do
-        [[ -n ${existing[$key]+_} ]] && actual="${existing[$key]}" || actual=""
-        expected="${default_repo_settings[$key]}"
-        if [[ "$actual" != "$expected" ]]; then
+    local -a _rs=()
+    local _actual
+    local _expected
+
+    for _key in "${!default_repo_settings[@]}"; do
+        [[ -n ${_existing[$_key]+_} ]] && _actual="${_existing[$_key]}" || _actual=""
+        _expected="${default_repo_settings[$_key]}"
+        if [[ "$_actual" != "$_expected" ]]; then
             # Use -F for booleans to send as JSON instead of strings
-            if is_boolean "$expected"; then
-                rs+=("-F" "$key=$expected")
+            if is_boolean "$_expected"; then
+                _rs+=("-F" "$_key=$_expected")
             else
-                rs+=("-f" "$key=$expected")
+                _rs+=("-f" "$_key=$_expected")
             fi
-            trace "Setting repository setting: $key=$expected"
+            trace "Setting repository setting: $_key=$_expected"
         else
-            trace "Repository setting is already set: $key=$actual, skipping."
+            trace "Repository setting is already set: $_key=$_actual, skipping."
         fi
     done
 
-    if [[ ${#rs[@]} -gt 0 ]]; then
-        execute_gh_api_with_retry 3 2 true -X PATCH "$path_repo" "${rs[@]}" &&
+    if [[ ${#_rs[@]} -gt 0 ]]; then
+        execute_gh_api_with_retry 3 2 true -X PATCH "$path_repo" "${_rs[@]}" &&
         info "...repository settings configured." ||
         warning "Could not configure repository settings. Run the script with '--verbose' to see more details and troubleshoot."
     else
@@ -405,29 +410,32 @@ function configure_actions_permissions()
     info "Configuring Actions workflow permissions..."
 
     # get existing repository permissions
-    local -A existing
-    while IFS='=' read -r key value; do
-        existing["$key"]="$value"
+    local -A _existing
+    local _key _value
+
+    while IFS='=' read -r _key _value; do
+        _existing["$_key"]="$_value"
     done < <(execute_gh_api_with_retry 3 2 "$path_permissions" -q "$jq_entries")
 
-    local -a rs=()
-    local actual
-    local expected
-    for key in "${!default_repo_permissions[@]}"; do
-        [[ -n ${existing[$key]+_} ]] && actual="${existing[$key]}" || actual=""
-        expected="${default_repo_permissions[$key]}"
+    local -a _rs=()
+    local _actual
+    local _expected
+
+    for _key in "${!default_repo_permissions[@]}"; do
+        [[ -n ${_existing[$_key]+_} ]] && _actual="${_existing[$_key]}" || _actual=""
+        _expected="${default_repo_permissions[$_key]}"
 
         # Use -F for booleans to send as JSON instead of strings
-        if is_boolean "$expected"; then
-            rs+=("-F" "$key=$expected")
+        if is_boolean "$_expected"; then
+            _rs+=("-F" "$_key=$_expected")
         else
-            rs+=("-f" "$key=$expected")
+            _rs+=("-f" "$_key=$_expected")
         fi
-        trace "Setting repository setting: $key=$expected"
+        trace "Setting repository setting: $_key=$_expected"
     done
 
-    if [[ ${#rs[@]} -gt 0 ]]; then
-        execute_gh_api_with_retry 3 2 true -X PUT "$path_permissions" -H "Accept: application/vnd.github+json" "${rs[@]}" &&
+    if [[ ${#_rs[@]} -gt 0 ]]; then
+        execute_gh_api_with_retry 3 2 true -X PUT "$path_permissions" -H "Accept: application/vnd.github+json" "${_rs[@]}" &&
         info "...actions workflow permissions configured." ||
         warning "Could not configure Actions workflow permissions. Run the script with '--verbose' to see more details and troubleshoot."
     else
@@ -453,82 +461,82 @@ function configure_variables()
 {
     info "Configuring GitHub Actions variables..."
 
-    local -a ordered_names
+    local -a _ordered_names
 
-    readarray -t ordered_names < <(printf '%s\n' "${!actions_default_vars[@]}" | sort)
+    readarray -t _ordered_names < <(printf '%s\n' "${!actions_default_vars[@]}" | sort)
 
-    local -A existing=()
-    local name value
+    local -A _existing=()
+    local _name _value
 
-    while IFS='=' read -r name value; do
-        existing["$name"]="$value"
+    while IFS='=' read -r _name _value; do
+        _existing["$_name"]="$_value"
     done < <(execute_gh_api_with_retry 3 2 --paginate "$path_repo/actions/variables" -q "$jq_vars")
 
-    local exists
-    local new_value=""
-    local default_value=""
-    local -i skipped=0 set_new=0 set_default=0
-    local -n nuget=nuget_server
+    local _exists
+    local _new_value=""
+    local _default_value=""
+    local -i _skipped=0 _set_new=0 _set_default=0
+    local -n _nuget=nuget_server
 
-    for name in "${ordered_names[@]}"; do
-        default_value="${actions_default_vars[$name]}"
-        if [[ -v existing[$name] ]]; then
-            exists=true
-            value="${existing[$name]:-}"
+    for _name in "${_ordered_names[@]}"; do
+        _default_value="${actions_default_vars[$_name]}"
+        if [[ -v existing[$_name] ]]; then
+            _exists=true
+            _value="${_existing[$_name]:-}"
         else
-            exists=false;
-            value="";
+            _exists=false;
+            _value="";
         fi
 
         if $interactive_vars; then
-            local prompt="            Enter value for variable $name"
-            local default="$default_value"
+            local _prompt="            Enter value for variable $_name"
+            local _default="$_default_value"
 
             # prompt the user for a value while showing them the current value (if it exists) and the default value (if it is different from the current value)
-            if $exists; then
-                default="$value"
-                [[ $default_value != "$value" ]] && prompt="$prompt (default: '$default_value')"
+            if $_exists; then
+                _default="$_value"
+                [[ $_default_value != "$_value" ]] && _prompt="$_prompt (default: '$_default_value')"
             fi
 
-            new_value=$(enter_value "$prompt" "$default" false "${actions_var_validators["$name"]}")
+            _new_value=$(enter_value "$_prompt" "$_default" false "${actions_var_validators["$_name"]}")
 
-            if [[ $new_value != "$value" ]]; then
+            if [[ $_new_value != "$_value" ]]; then
                 # set the variable to the value
-                trace "Setting variable: $name=$new_value"
-                set_var "$name" "$new_value" || continue
-                [[ $new_value == "$default_value" ]] && (( ++set_default )) || (( ++set_new ))
+                trace "Setting variable: $_name=$_new_value"
+                set_var "$_name" "$_new_value" || continue
+                [[ $_new_value == "$_default_value" ]] && (( ++_set_default )) || (( ++_set_new ))
             else
-                trace "Unchanged variable: $name=$value"
-                (( ++skipped ))
+                trace "Unchanged variable: $_name=$_value"
+                (( ++_skipped ))
             fi
         else
-            if $exists; then
-                trace "Unchanged variable: $name=$value"
-                (( ++skipped ))
+            if $_exists; then
+                trace "Unchanged variable: $_name=$_value"
+                (( ++_skipped ))
             else
                 # we are not in interactive mode and the var does not exist, so we will create it with its default value
-                trace "Creating a variable with its default value: $name=$default_value"
-                set_var "$name" "$default_value" && (( ++set_default ))
+                trace "Creating a variable with its default value: $_name=$_default_value"
+                set_var "$_name" "$_default_value" && (( ++_set_default ))
             fi
         fi
         # send the nuget server name to stdout for use by, e.g. configure_secrets()
         # shellcheck disable=SC2034 # nuget is assigned but not used - it is a nameref
-        [[ $name == "NUGET_SERVER" ]] &&
-            nuget="$value"
+        [[ $_name == "NUGET_SERVER" ]] &&
+            _nuget="$_value"
     done
 
     # display the summary
-    (( set_new     == 1 )) && info "    1 variable was set to a new value."
-    (( set_new      > 1 )) && info "    $set_new variables were set to new values."
+    (( _set_new     == 1 )) && info "    1 variable was set to a new value."
+    (( _set_new      > 1 )) && info "    $_set_new variables were set to new values."
 
-    (( set_default == 1 )) && info "    1 variable was set to its default value."
+    (( _set_default == 1 )) && info "    1 variable was set to its default value."
 
-    (( set_default  > 1 )) && info "    $set_default variables were set to their default values."
+    (( _set_default  > 1 )) && info "    $_set_default variables were set to their default values."
 
-    (( skipped     == 1 )) && info "    1 variable was not modified."
-    (( skipped      > 1 )) && info "    $skipped variables were not modified."
+    (( _skipped     == 1 )) && info "    1 variable was not modified."
+    (( _skipped      > 1 )) && info "    $_skipped variables were not modified."
 
-    $interactive_vars      || info "  Run the script with option '--interactive-vars' or '-iv' to set new values for any of the Actions vars."
+    $interactive_vars       || info "  Run the script with option '--interactive-vars' or '-iv' to set new values for any of the Actions vars."
     true
 }
 
@@ -544,23 +552,33 @@ function configure_variables()
 #-------------------------------------------------------------------------------
 function set_var()
 {
+    local -i _rc=$success
+
     (( $# == 2 )) || {
-        error -sd 2 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly two arguments: name and value."
-        return "$err_invalid_arguments"
+        _rc="$err_invalid_arguments"
+        error -sd 2 -ec "$_rc" "${FUNCNAME[0]}() requires exactly two arguments (provided $#): the variable name and value."
+    }
+    [[ -v 1 && -n $1 ]] || {
+        _rc="$err_argument_value"
+        error -sd 2 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the variable name, to be non-empty (provided '${1-<missing>}')."
+    }
+    [[ -v 2 ]] || {
+        _rc="$err_missing_argument"
+        error -sd 2 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, the variable value, to be provided."
     }
 
-    local name="$1"
-    local value="$2"
+    (( _rc == success )) || return "$err_invalid_arguments"
 
-    local rc=$success
+    local _name="$1"
+    local _value="$2"
 
     # create and/or set the secret value on GitHub
-    execute_gh_with_retry 3 2 true variable set "$name" --body "$value" -R "$repo" || {
-        rc=$?
-        warning "Failed to set variable $name. Run the script with '--verbose' to see more details and troubleshoot."
+    execute_gh_with_retry 3 2 true variable set "$_name" --body "$_value" -R "$repo" || {
+        _rc=$?
+        warning "Failed to set variable $_name. Run the script with '--verbose' to see more details and troubleshoot."
     }
 
-    return "$rc"
+    return "$_rc"
 }
 
 #-------------------------------------------------------------------------------
@@ -580,6 +598,19 @@ function set_var()
 #-------------------------------------------------------------------------------
 function is_valid_secret()
 {
+    local -i _rc="$success"
+
+    (( $# == 1 )) || {
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the candidate secret value."
+    }
+    [[ -v 1 ]] || {
+        _rc="$err_missing_argument"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the candidate secret value, to be provided."
+    }
+
+    (( _rc == success )) || return "$err_invalid_arguments"
+
     [[ "$1" =~ [[:cntrl:]] ]]
 }
 
@@ -603,113 +634,112 @@ function is_valid_secret()
 function configure_secrets()
 {
     # validate the parameter - the application name: actions, dependabot, agents, or codespaces
-    local -i rc="$success"
+    local -i _rc="$success"
 
-    [[ $# -eq 2 ]] || {
-        rc="$err_invalid_arguments"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() requires exactly two arguments -- the application name and the NuGet server." \
-                              "The application should be one of: ${apps_with_secrets[*]}." \
-                              "The NuGet server should be one of: ${nuget_servers[*]}."
+    (( $# == 2 )) || {
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires exactly two arguments (provided $#): the application name and NuGet server."
     }
-    is_in "$1" "${apps_with_secrets[@]}" || {
-        rc="$err_invalid_arguments"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() was passed invalid application name. It should be one of: ${apps_with_secrets[*]}."
+    [[ -v 1 ]] && is_in "$1" "${apps_with_secrets[@]}" || {
+        _rc="$err_argument_value"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the application name, to be one of: ${apps_with_secrets[*]} (provided '${1-<missing>}')."
     }
-    is_in "$2" "${nuget_servers[@]}" || {
-        rc="$err_invalid_arguments"
-        error -sd 3 -ec "$rc" "${FUNCNAME[0]}() was passed invalid NuGet server. It should be one of: ${nuget_servers[*]}."
+    [[ -v 2 ]] && is_in "$2" "${nuget_servers[@]}" || {
+        _rc="$err_argument_value"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, the NuGet server, to be one of: ${nuget_servers[*]} (provided '${2-<missing>}')."
     }
 
-    local app="$1"
-    local nuget_server="$2"
-    local secrets_array_name="${app,,}_secrets"
+    (( _rc == success )) || return "$err_invalid_arguments"
 
-    is_defined_associative_array "$secrets_array_name" || {
-        rc="$err_logic_error"
-        error -sd 3 -ec "$rc" "The secrets array '$secrets_array_name' for the application '$app' is not defined. Cannot configure secrets for this application."
+    local _app="$1"
+    local _nuget_server="$2"
+    local _secrets_array_name="${_app,,}_secrets"
+
+    is_defined_associative_array "$_secrets_array_name" || {
+        _rc="$err_logic_error"
+        error -sd 3 -ec "$_rc" "The secrets array '$_secrets_array_name' for the application '$_app' is not defined. Cannot configure secrets for this application."
     }
 
-    (( rc == success )) ||
-        return "$err_invalid_arguments"
+    (( _rc == success )) || return "$err_logic_error"
 
-    local -n app_secrets=$secrets_array_name
+    local -n _app_secrets=$_secrets_array_name
 
-    (( ${#app_secrets[@]} > 0 )) ||
+    (( ${#_app_secrets[@]} > 0 )) ||
         return 0 # no secrets to set for this app - we are done
 
-    info "Configuring ${app^} secrets..."
+    info "Configuring ${_app^} secrets..."
 
     # remember the current verbose and tracing settings so we can restore them after setting the secret(s)
-    local name value exists delete # about the current variable
-    local -i skipped=0 set_new=0 need_new=0
-    local -a ordered_names
-    local -a existing
+    local _name _value _exists _delete # about the current variable
+    local -i _skipped=0 _set_new=0 _need_new=0
+    local -a _ordered_names
+    local -a _existing
 
-    readarray -t ordered_names < <(printf '%s\n' "${!app_secrets[@]}" | sort)
-    readarray -t existing < <(execute_gh_api_with_retry 3 2 --paginate "$path_repo/$app/secrets" -q "$jq_secret_names")
+    readarray -t _ordered_names < <(printf '%s\n' "${!_app_secrets[@]}" | sort)
+    readarray -t _existing < <(execute_gh_api_with_retry 3 2 --paginate "$path_repo/$_app/secrets" -q "$jq_secret_names")
 
-    for name in "${ordered_names[@]}"; do
-        [[ $name == "NUGET_API_KEY" && $nuget_server == "nuget" ]] && delete=true || delete=false
+    for _name in "${_ordered_names[@]}"; do
+        [[ $_name == "NUGET_API_KEY" && $_nuget_server == "nuget" ]] && _delete=true || _delete=false
 
         # does the secret exists in GH?
-        if is_in "$name" "${existing[@]}"; then
-            exists=true
-            if $delete; then
-                trace "Deleting secret: $name"
-                delete_secret "$name" "$app"
+        if is_in "$_name" "${_existing[@]}"; then
+            _exists=true
+            if $_delete; then
+                trace "Deleting secret: $_name"
+                delete_secret "$_name" "$_app"
             fi
-            ! $interactive_secrets && (( ++skipped )) && continue
+            ! $interactive_secrets && (( ++_skipped )) && continue
         else
-            exists=false
+            _exists=false
         fi
-        $delete && continue
+        $_delete && continue
 
         # get the value for the secret or use the placeholder if we are not entering secrets interactively
         if $interactive_secrets; then
 
             # prompt the user for a (new) value of the secret
-            local prompt="        Enter value for secret $name"
-            local default
+            local _prompt="        Enter value for secret $_name"
+            local _default
 
-            $exists && default="$secret_str" || default=""
+            $_exists && _default="$secret_str" || _default=""
 
-            value=$(enter_value "$prompt" "$default" true validate_gh_secret)
+            _value=$(enter_value "$_prompt" "$_default" true validate_gh_secret)
 
-            if [[ -n $value && $value != "$secret_str" ]]; then
+            if [[ -n $_value && $_value != "$secret_str" ]]; then
                 echo "$secret_str"
-                set_secret "$name" "$value" "$app" || continue
-                trace "Set value of secret: $name"
-                (( ++set_new ))
-            elif [[ -n $value && $value == "$secret_str" ]]; then
+                set_secret "$_name" "$_value" "$_app" || continue
+                trace "Set value of secret: $_name"
+                (( ++_set_new ))
+            elif [[ -n $_value && $_value == "$secret_str" ]]; then
                 echo ""
-                trace "Unchanged secret: $name"
-                (( ++skipped ))
-            elif [[ -z $value ]]; then
-                warning "      Create secret: $name."
-                (( ++need_new ))
+                trace "Unchanged secret: $_name"
+                (( ++_skipped ))
+            elif [[ -z $_value ]]; then
+                warning "      Create secret: $_name."
+                (( ++_need_new ))
             fi
         else
             # the secret exists in GH or it does not exist; but we are not in interactive mode, so either way skip it
-            if $exists; then
-                trace "Secret unchanged: $name"
-                (( ++skipped ))
+            if $_exists; then
+                trace "Secret unchanged: $_name"
+                (( ++_skipped ))
             else
-                warning "      Create secret: $name."
-                (( ++need_new ))
+                warning "      Create secret: $_name."
+                (( ++_need_new ))
             fi
         fi
     done
 
     if $interactive_secrets; then
-        (( set_new == 1 )) && info "    1 secret was set to a new value."
-        (( set_new  > 1 )) && info "    $set_new secrets were set to new values."
+        (( _set_new == 1 )) && info "    1 secret was set to a new value."
+        (( _set_new  > 1 )) && info "    $_set_new secrets were set to new values."
 
-        (( skipped == 1 )) && info "    1 secret was not modified."
-        (( skipped  > 1 )) && info "    $skipped secrets were not modified."
+        (( _skipped == 1 )) && info "    1 secret was not modified."
+        (( _skipped  > 1 )) && info "    $_skipped secrets were not modified."
     fi
 
-    (( need_new == 1 )) && warning "Run the script with option '--interactive-secrets' or '-is' to set the value for 1 ${app^} secret."
-    (( need_new  > 1 )) && warning "Run the script with option '--interactive-secrets' or '-is' to set the values for $need_new ${app^} secrets."
+    (( _need_new == 1 )) && warning "Run the script with option '--interactive-secrets' or '-is' to set the value for 1 ${_app^} secret."
+    (( _need_new  > 1 )) && warning "Run the script with option '--interactive-secrets' or '-is' to set the values for $_need_new ${_app^} secrets."
     true
 }
 
@@ -729,16 +759,33 @@ function configure_secrets()
 #-------------------------------------------------------------------------------
 function set_secret()
 {
+    local -i _rc=$success
+
     (( $# == 3 )) || {
-        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly three arguments: name, value, and app."
-        return "$err_invalid_arguments"
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires exactly three arguments (provided $#): the secret name, value, and application."
     }
-    local name="$1"
-    local value="$2"
-    local app="$3"
+    [[ -v 1 && -n $1 ]] || {
+        _rc="$err_argument_value"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the secret name, to be non-empty (provided '${1-<missing>}')."
+    }
+    [[ -v 2 ]] || {
+        _rc="$err_missing_argument"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, the secret value, to be provided."
+    }
+    [[ -v 3 ]] && is_in "$3" "${apps_with_secrets[@]}" || {
+        _rc="$err_argument_value"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 3, the application name, to be one of: ${apps_with_secrets[*]} (provided '${3-<missing>}')."
+    }
+
+    (( _rc == success )) || return "$err_invalid_arguments"
+
+    local _name="$1"
+    local _value="$2"
+    local _app="$3"
 
     # we have a new legitimate value for the secret that we need to create and/or set:
-    trace "gh secret set $name --body <secret> --app $app --repo $repo"
+    trace "gh secret set $_name --body <secret> --app $_app --repo $repo"
 
     save_state
 
@@ -746,29 +793,40 @@ function set_secret()
     unset_verbose
     set +x
 
-    local rc=$success
-
     # create and/or set the secret value on GitHub
-    execute_gh_with_retry 3 2 true secret set "$name" --body "$value" --app "$app" --repo "$repo" || {
-        rc=$?
-        warning "Failed to set secret $name for ${app^}. Run the script with '--verbose' to see more details and troubleshoot." -ec "$rc"
+    execute_gh_with_retry 3 2 true secret set "$_name" --body "$_value" --app "$_app" --repo "$repo" || {
+        _rc=$?
+        warning "Failed to set secret $_name for ${_app^}. Run the script with '--verbose' to see more details and troubleshoot." -ec "$_rc"
     }
 
     restore_state
-    return "$rc"
+    return "$_rc"
 }
 
 function delete_secret()
 {
+    local -i _rc=$success
+
     (( $# == 2 )) || {
-        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly two arguments: name and app."
-        return "$err_invalid_arguments"
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires exactly two arguments (provided $#): the secret name and application."
     }
-    local name="$1"
-    local app="$2"
+    [[ -v 1 && -n $1 ]] || {
+        _rc="$err_argument_value"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the secret name, to be non-empty (provided '${1-<missing>}')."
+    }
+    [[ -v 2 ]] && is_in "$2" "${apps_with_secrets[@]}" || {
+        _rc="$err_argument_value"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, the application name, to be one of: ${apps_with_secrets[*]} (provided '${2-<missing>}')."
+    }
+
+    (( _rc == success )) || return "$err_invalid_arguments"
+
+    local _name="$1"
+    local _app="$2"
 
     # we have a new legitimate value for the secret that we need to create and/or set:
-    trace "gh secret delete $name --app $app --repo $repo"
+    trace "gh secret delete $_name --app $_app --repo $repo"
 
     save_state
 
@@ -776,12 +834,10 @@ function delete_secret()
     unset_verbose
     set +x
 
-    local rc=$success
-
     # delete the secret value on GitHub
-    execute_gh_with_retry 3 2 true secret delete "$name" --app "$app" --repo "$repo" || {
-        rc=$?
-        warning "Failed to delete secret $name for ${app^}. Run the script with '--verbose' to see more details and troubleshoot." -ec "$rc"
+    execute_gh_with_retry 3 2 true secret delete "$_name" --app "$_app" --repo "$repo" || {
+        _rc=$?
+        warning "Failed to delete secret $_name for ${_app^}. Run the script with '--verbose' to see more details and troubleshoot." -ec "$_rc"
     }
 
     restore_state
@@ -804,32 +860,32 @@ function configure_branch_protection()
 {
     info "Configuring branch ruleset for '$branch'..."
 
-    local method
-    local endpoint
+    local _method
+    local _endpoint
 
     # Check if a ruleset named "main protection" already exists
     if initialize_main_protection_rs_id; then
-        method="PUT"
-        endpoint="$path_main_protection_ruleset"
+        _method="PUT"
+        _endpoint="$path_main_protection_ruleset"
         info "Updating existing ruleset $main_protection_rs_name (id: $main_protection_rs_id)..."
     else
-        method="POST"
-        endpoint="$path_rulesets"
+        _method="POST"
+        _endpoint="$path_rulesets"
         info "Creating new ruleset $main_protection_rs_name..."
     fi
 
     # Build required status checks array
-    local status_checks_json=""
+    local _status_checks_json=""
     if [[ ${#required_checks[@]} -gt 0 ]]; then
-        local -a entries=()
+        local -a _entries=()
         for check in "${required_checks[@]}"; do
-            entries+=("{\"context\":\"$check\",\"integration_id\":$actions_app_id}")
+            _entries+=("{\"context\":\"$check\",\"integration_id\":$actions_app_id}")
         done
-        IFS=',' status_checks_json="${entries[*]}"
-        status_checks_json="[$status_checks_json]"
+        IFS=',' _status_checks_json="${_entries[*]}"
+        _status_checks_json="[$_status_checks_json]"
     fi
 
-    execute_gh_api_with_retry 3 2 true -X "$method" "$endpoint" -H "Accept: application/vnd.github+json" \
+    execute_gh_api_with_retry 3 2 true -X "$_method" "$_endpoint" -H "Accept: application/vnd.github+json" \
         --input - >"$_ignore" << JSON
 {
     "name": "$main_protection_rs_name",
@@ -874,7 +930,7 @@ function configure_branch_protection()
             "parameters": {
                 "do_not_enforce_on_create": true,
                 "strict_required_status_checks_policy": true,
-                "required_status_checks": $status_checks_json
+                "required_status_checks": $_status_checks_json
             }
         },
         {

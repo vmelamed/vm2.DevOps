@@ -30,7 +30,7 @@ declare -x configuration=${CONFIGURATION:-"Release"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}
-declare -x artifacts_dir=${ARTIFACTS_DIR:-"artifacts"}
+declare -x artifacts=${ARTIFACTS_DIR:-"artifacts"}
 
 source "$script_dir/run-benchmarks.usage.sh"
 source "$script_dir/run-benchmarks.args.sh"
@@ -42,12 +42,20 @@ is_safe_existing_path "$benchmark_project" || true
 is_safe_configuration "$configuration" || true
 validate_preprocessor_symbols preprocessor_symbols || true
 validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
-is_safe_path "$artifacts_dir" || true
+is_safe_path "$artifacts" || true
 
 exit_if_has_errors
 
-artifacts_benchmarks_dir="$artifacts_dir/benchmarks"
+artifacts=$(get_artifacts_path "$benchmark_project" "$artifacts")
+artifacts_benchmarks_dir="$artifacts/benchmarks"
 results_dir="$artifacts_benchmarks_dir/results"
+
+dump_vars --force --quiet \
+    --header "Benchmarks output directories and files:" \
+    artifacts \
+    artifacts_benchmarks_dir \
+    results_dir
+
 renamed_artifacts_dir="$artifacts_benchmarks_dir-$(date -u +"%Y%m%dT%H%M%S")"
 
 # Freeze variables
@@ -94,26 +102,31 @@ trace "Creating artifacts directory(s)..."
 execute mkdir -p "$results_dir"
 
 declare rc=$success
-benchmark_exe_path=$(assembly_path "$benchmark_project") || rc=$?
+benchmark_exe_path=$(get_assembly_path "$benchmark_project") || rc=$?
 declare -rx benchmark_exe_path
 
 ((rc <= failure)) || exit_if_has_errors
 
 if (( rc == failure )); then
+    (( rc = success ))
     if ! $dry_run; then
         warning "Cached benchmark executable '$benchmark_exe_path' was not found. Rebuilding the benchmark project"
+
+        # shellcheck disable=SC2034 # build_info appears unused. Verify use (or export if used externally). Used as a nameref.
+        declare -a build_args=(
+            "$benchmark_project"
+            --configuration "$configuration"
+            "-p:preprocessor_symbols=\"$preprocessor_symbols\""
+            "-p:MinVerTagPrefix=\"$minver_tag_prefix\""
+            "-p:MinVerPrereleaseIdentifiers=\"$minver_prerelease_id\""
+        )
+
+        # shellcheck disable=SC2034 # build_info appears unused. Verify use (or export if used externally). Used as a nameref.
+        declare -A build_info=()
+
         execute dotnet clean "$benchmark_project" --configuration "$configuration" || true
-        execute dotnet build "$benchmark_project" \
-                --verbosity detailed \
-                --configuration "$configuration" \
-                -p:preprocessor_symbols="$preprocessor_symbols" \
-                -p:MinVerTagPrefix="$minver_tag_prefix" \
-                -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" 2>&1 |
-                extractDotnetBuildInfo |
-                displayDotnetBuildSummary |
-                to_summary || true # prevent pipefail from exiting before we can capture the exit code
-        rc=${PIPESTATUS[0]}
-        [[ $rc == "$success" ]] || error -ec "$err_tool_error" "Building '$benchmark_project' failed."
+        dotnet_build build_args build_info || rc=$?
+
         [[ -s $benchmark_exe_path ]] || error -ec "$err_tool_error" "Benchmark executable '$benchmark_exe_path' was still NOT FOUND after rebuilding the project."
         exit_if_has_errors
     fi

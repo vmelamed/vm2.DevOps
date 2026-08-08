@@ -95,7 +95,7 @@ jobs:
         run: |
           if dotnet restore --locked-mode 2>&1 | grep -q "NU1004"; then
               {
-                  echo "## ⚠️ SDK version drift"
+                  echo "## ⚠️ Detected SDK version drift"
                   echo ""
                   echo "The NuGet lock files are stale — the runner's .NET SDK changed implicit"
                   echo "package versions (e.g. \`Microsoft.NET.ILLink.Tasks\`)."
@@ -103,12 +103,12 @@ jobs:
                   echo "**Fix (CI):** trigger the [Refresh Lock Files]($REFRESH_WF_URL) workflow"
                   echo "(scheduled every Monday 05:00 ET, or run manually via \`workflow_dispatch\`)."
                   echo ""
-                  echo "**Fix (local):**"
+                  echo "**Fix your local development environment:**"
                   echo "\`\`\`"
                   echo "sudo apt upgrade dotnet-sdk-10.0"
                   echo "dotnet restore --force-evaluate"
                   echo "\`\`\`"
-                  echo "Adjust above for the OS .NET upgrade command and the runner's actual SDK version if not 10.0"
+                  echo "Adjust the above for the OS .NET upgrade command and the runner's actual SDK version if not 10.0"
                   echo "Then commit and push the lockfiles."
               } >> "$GITHUB_STEP_SUMMARY"
           fi

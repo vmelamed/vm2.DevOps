@@ -35,7 +35,7 @@ declare -x configuration=${CONFIGURATION:="$default_configuration"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}
-declare -x artifacts_dir=${ARTIFACTS_DIR:-"$default_artifacts_dir"}
+declare -x artifacts=${ARTIFACTS_DIR:-"$default_artifacts_dir"}
 declare -ix min_coverage_pct=${MIN_COVERAGE_PCT:-"$default_min_coverage_pct"}
 declare -ix min_branch_coverage_pct=${MIN_BRANCH_COVERAGE_PCT:-"$default_min_branch_coverage_pct"}
 declare -ix min_method_coverage_pct=${MIN_BRANCH_COVERAGE_PCT:-"$default_min_branch_coverage_pct"}
@@ -46,21 +46,18 @@ source "$script_dir/run-tests.args.sh"
 get_arguments "$@"
 test_project=${test_project:-"$TEST_PROJECT"}
 
+# validate input parameters
 is_safe_existing_file "$test_project" || true
-test_name=$(basename "${test_project%.*}")                                      # the base name of the test project (without the path and file extension)
-test_dir=$(dirname "$test_project")                                             # the directory of the test project
+test_name=$(basename "${test_project}" .csproj)                                 # the base name of the test project (without the path and file extension)
+test_dir=$(realpath -e "${test_project%/*}")                                    # the absolute path to the test project directory
 is_safe_configuration "$configuration" || true
 validate_preprocessor_symbols preprocessor_symbols || true
 is_safe_min_coverage_pct "$min_coverage_pct" || true
-min_branch_coverage_pct=$((min_branch_coverage_pct - 5))
+min_branch_coverage_pct=$((min_coverage_pct - 5))
 validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
-is_safe_path "$artifacts_dir" || true
+is_safe_path "$artifacts" || true
 
-declare -A repo_state=()
-declare -xr key_root
-
-get_repo_state "$test_dir" repo_state false                                     # all we need is the root of the repo, so don't go to gh
-repo_root="${repo_state[$key_root]}"
+repo_root="$(root_working_tree "$test_dir")"
 test_config_path="$repo_root/testconfig.json"
 coverage_settings_path="$repo_root/coverage.settings.xml"                       # path to coverage settings file                ~/repos/vm2.Glob/coverage.settings.xml
 
@@ -73,16 +70,21 @@ fi
 
 exit_if_has_errors
 
-test_dir=$(realpath -e "$test_dir")                                             # the directory of the test project
-
-artifacts_tests_dir="$artifacts_dir/tests"
-artifacts_tests_dir=$(realpath -m "$artifacts_tests_dir")
-
-artifacts_test_dir="$artifacts_tests_dir/$test_name"                            # the directory for test results and reports (resolved to an absolute path, if it was relative)
-
+artifacts=$(get_artifacts_path "$test_project" "$artifacts")
+artifacts_tests_dir=$(realpath -m "$artifacts/tests")
+artifacts_test_dir="$artifacts_tests_dir/$test_name"
 coverage_source_path="$artifacts_test_dir/coverage.cobertura.xml"              # path to the raw coverage file                 ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/coverage.cobertura.xml
 coverage_reports_dir="$artifacts_test_dir/reports"                             # directory for coverage reports                ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/reports
 coverage_files="$artifacts_tests_dir/*/coverage.cobertura.xml"
+
+dump_vars --force --quiet \
+    --header "Test output directories and files:" \
+    artifacts \
+    artifacts_tests_dir \
+    artifacts_test_dir \
+    coverage_source_path \
+    coverage_reports_dir \
+    coverage_files
 
 # Freeze the variables
 declare -xr test_project
@@ -94,6 +96,7 @@ declare -xr minver_prerelease_id
 declare -xr test_name
 declare -xr test_dir
 declare -xr test_config_path
+declare -xr artifacts
 declare -xr artifacts_tests_dir
 declare -xr artifacts_test_dir
 declare -xr coverage_source_path
@@ -132,34 +135,38 @@ if [[ -d "$artifacts_test_dir" && -n "$(ls -A "$artifacts_test_dir")" ]]; then
     fi
 fi
 
-# try the test name with prefix vm2. as per convention
 declare rc=$success
-test_exe_path=$(assembly_path "$test_project") || rc=$?
-declare -rx test_exe_path
-
-((rc <= failure)) || exit_if_has_errors
+test_exe_path=$(get_assembly_path "$test_project" "" "$configuration")
+trace "Expected test executable: $test_exe_path"
 
 # Verify artifacts exist, if not - rebuild the project (mostly for local runs)
-if ((rc == failure)); then
+if [[ ! -s $test_exe_path ]]; then
     if ! $dry_run; then
         warning "Cached test executable '$test_exe_path' was not found. Rebuilding the test project"
+
+        # shellcheck disable=SC2034 # build_info appears unused. Verify use (or export if used externally). Used as a nameref.
+        declare -a build_args=(
+            "$test_project"
+            --configuration "$configuration"
+            "-p:preprocessor_symbols=\"$preprocessor_symbols\""
+            "-p:MinVerTagPrefix=\"$minver_tag_prefix\""
+            "-p:MinVerPrereleaseIdentifiers=\"$minver_prerelease_id\""
+        )
+
+        # shellcheck disable=SC2034 # build_info appears unused. Verify use (or export if used externally). Used as a nameref.
+        declare -A build_info=()
+
         execute dotnet clean "$test_project" --configuration "$configuration" || true
-        execute dotnet build "$test_project" \
-                --verbosity detailed \
-                --configuration "$configuration" \
-                -p:preprocessor_symbols="$preprocessor_symbols" \
-                -p:MinVerTagPrefix="$minver_tag_prefix" \
-                -p:MinVerPrereleaseIdentifiers="$minver_prerelease_id" 2>&1 |
-                extractDotnetBuildInfo |
-                displayDotnetBuildSummary |
-                to_summary || true # prevent pipefail from exiting before we can capture the exit code
-        rc=${PIPESTATUS[0]}
-        [[ $rc == "$success" ]] || error -ec "$err_tool_error" "Building '$test_project' failed."
-        [[ -s $test_exe_path ]] || error -ec "$err_tool_error" "Test executable '$test_exe_path' was still NOT FOUND after rebuilding the project."
+        dotnet_build build_args build_info || rc=$?
+
+        trace "New expected test executable: $test_exe_path"
+        [[ -s $test_exe_path ]] || error -sd 3 -ec "$err_tool_error" "After rebuilding the project, the test executable '$test_exe_path' was still NOT FOUND."
         exit_if_has_errors
     fi
     rc=$success
 fi
+declare -rx test_exe_path
+trace "Test executable: $test_exe_path"
 
 trace "Running tests from $test_project..."
 
@@ -216,7 +223,7 @@ fi
 execute reportgenerator \
     -reports:"$coverage_source_path" \
     -targetdir:"$coverage_reports_dir" \
-    -reporttypes:TextSummary,html_dark,MarkdownSummaryGithub,Badges \
+    -reporttypes:TextSummary,html_dark,MarkdownSummaryGithub \
     minimumCoverageThresholds:lineCoverage="$min_coverage_pct" \
     minimumCoverageThresholds:branchCoverage="$min_branch_coverage_pct" || rc=$?
 

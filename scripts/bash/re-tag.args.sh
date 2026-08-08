@@ -55,28 +55,28 @@ function dump_all_variables()
 #-------------------------------------------------------------------------------
 function get_arguments()
 {
-    local option
+    local _option
 
     while [[ $# -gt 0 ]]; do
-        option="$1"; shift
-        if get_common_arg "$option"; then
+        _option="$1"; shift
+        if get_common_arg "$_option"; then
             continue
         fi
-        case "${option,,}" in
+        case "${_option,,}" in
             # do not use the common options - they were already processed by get_common_arg:
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
             --delete|-d )
-                [[ $# -ge 1 && -z "$old_tag" ]] || usage -ec "$err_missing_argument" "Missing value for ${option,,}"
+                [[ $# -ge 1 && -z "$old_tag" ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 delete_mode=true
                 del_tag="$1"; shift
                 ;;
 
             * )
-                if   [[ -z "$old_tag" ]]; then old_tag="$option"
-                elif [[ -z "$new_tag" ]]; then new_tag="$option"
-                else usage -c "$err_unknown_argument" "Unknown argument: $option"
+                if   [[ -z "$old_tag" ]]; then old_tag="$_option"
+                elif [[ -z "$new_tag" ]]; then new_tag="$_option"
+                else usage -c "$err_unknown_argument" "Unknown argument: $_option"
                 fi
                 ;;
         esac
