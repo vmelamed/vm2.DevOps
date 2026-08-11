@@ -86,6 +86,28 @@ declare -rx default_sot="AddNewPackage"
 declare -rx varNameRegex="^[A-Za-z_][A-Za-z0-9_]*$"
 declare -rx nugetServersRegex="^(nuget|github|https?://[-a-zA-Z0-9._/]+)$";
 
+# KEEP IN SYNC WITH:
+# - [vm2.Templates/templates/AddNewPackage/content/.gitmessage](../vm2.Templates/templates/AddNewPackage/content/.gitmessage)
+# - [vm2.Templates/changelog/cliff.prerelease.toml](../vm2.Templates/changelog/cliff.prerelease.toml)
+# - [vm2.Templates/changelog/cliff.release-header.toml](../vm2.Templates/changelog/cliff.release-header.toml)
+declare -arx allowed_commit_types=(
+    "feat"              # minor  New feature
+    "fix"               # patch  Bug fix
+    "perf"              # patch  Performance improvement
+    "security"          # patch  Security fix/hardening
+    "doc"               # patch  Documentation change. SHOULD not force client rebuild
+    "docs"              # patch  Documentation change. SHOULD not force client rebuild
+    "deps"              # patch  Dependency updates
+    "revert"            # patch  Revert previous commit
+    "remove"            # patch  Remove code or files
+    "refactor"          # patch  Code refactoring that does not change functionality, API, etc. MUST not force client rebuild
+    "style"             # n/a    Code style changes (formatting, linting, etc.) MUST not force client rebuild
+    "test"              # n/a    Adding or updating tests
+    "tests"             # n/a    Adding or updating tests
+    "ci"                # n/a    Continuous integration configuration changes that do not force client rebuild
+    "chore"             # n/a    Miscellaneous tasks or maintenance that do not force client rebuild
+)
+
 # characters
 declare -xr secret_str='••••••'
 declare -xr mask_ch='•'
