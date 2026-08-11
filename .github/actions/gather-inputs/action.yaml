@@ -70,6 +70,9 @@ inputs:
   dispatch-skip-packages:
     description: Skip packages execution from workflow_dispatch input.
     default: "false"
+  artifacts-dir:
+    description: Artifacts directory relative to the repository root.
+    default: "artifacts"
 
 outputs:
   build-projects:
@@ -129,6 +132,9 @@ outputs:
   skip-push:
     description: Whether to skip push-triggered CI (true when an open PR exists for the branch).
     value: ${{ steps.gather.outputs.skip-push }}
+  artifacts-dir:
+    description: Artifacts directory relative to the repository root.
+    value: ${{ steps.gather.outputs.artifacts-dir }}
 
 runs:
   using: composite
@@ -165,6 +171,7 @@ runs:
         skip_tests='false'
         skip_packages='false'
         skip_push='false'
+        artifacts_dir='${{ inputs.artifacts-dir || 'artifacts' }}'
 
         # depending on the event:
 
@@ -256,4 +263,5 @@ runs:
             skip_benchmarks \
             skip_tests \
             skip_packages \
-            skip_push
+            skip_push \
+            artifacts_dir
