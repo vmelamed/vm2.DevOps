@@ -54,7 +54,6 @@ exit_if_has_errors
 
 [[ -n $artifacts ]] &&
     artifacts=$(get_artifacts_path "$build_project" "$artifacts")
-
 output_path=$(get_assembly_path "$build_project" "$artifacts" "$configuration")
 output_dir="${output_path%/*}"
 

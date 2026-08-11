@@ -346,7 +346,7 @@ rationale in README/CHANGELOG/PR.
 - **Edit shared files at their canonical source, never in a consumer repo.** Files synced by `diff-shared.sh` (mapped in
   `diff-shared.config.json`) are sourced from `vm2.Templates` (the `AddNewPackage` content). Edit the canonical copy
   first, then propagate with `diff-shared.sh`.
-  - Action **`copy`** (`.editorconfig`, `.gitignore`, `.gitattributes`, `CONVENTIONS.md`, `global.json`,
+  - Action **`copy`** (`.editorconfig`, `.gitignore`, `.gitattributes`, `.gitmessage`, `CONVENTIONS.md`, `global.json`,
     `LICENSE`, `NuGet.config`, `dependabot.yml`, the `cliff.*` configs, and several workflows — see the config for the
     authoritative list): **100% shared and overwritten verbatim.** A direct edit in a consumer repo MUST NOT be made —
     the next `diff-shared.sh` run silently clobbers it.

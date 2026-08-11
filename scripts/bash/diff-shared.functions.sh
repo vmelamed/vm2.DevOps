@@ -86,8 +86,8 @@ declare -rA merge_commands=(
 # 'file_actions'. This is a top-level CLI configuration step: on any validation or configuration failure it reports the
 # error(s) via 'error' and exits the process via 'exit_if_has_errors' rather than returning an error code.
 #
-# @arg $1 string the SoT directory path (must exist and be a directory; the configuration file '$1/diff-shared.config.json' MUST
-#   exist, be non-empty, and contain valid JSON)
+# @arg $1 string the SoT directory path (must exist and be a directory; the configuration file
+#   '$1/diff-shared.config.json' must exist, be non-empty, and contain valid JSON)
 # @arg $2 string the target repository directory path (must exist and be a directory)
 #
 # @exitcode 0 configuration loaded and validated successfully
@@ -104,8 +104,7 @@ function configure()
     exit_if_has_errors
 
     local _config_file="$1/diff-shared.config.json"
-    # shellcheck disable=SC2034 # target_file_path appears unused. Verify use (or export if used externally): used as a macro variable in the config files and evaluated with 'eval' below
-    local target_file_path="$2"
+    local _target_path="$2"
 
     # validate the config file and load the diff and merge tools from it:
     [[ -s "$_config_file" ]]              || error -ec "$err_argument_value" "The configuration file '$_config_file' was not found or is empty."
@@ -119,7 +118,7 @@ function configure()
     # Populate the arrays
     local -i _index=0
     # shellcheck disable=SC2034
-    local vm2_sot_shared="$vm2_sot_repo_name/templates/$sot/content"
+    local _vm2_sot_shared="$vm2_sot_repo_name/templates/$sot/content"
     local _source_file _target_file _file_action
 
     while IFS='=' read -r _source_file _target_file _file_action; do
@@ -129,9 +128,9 @@ function configure()
         is_in "$_file_action" "${valid_actions[@]}" || error -ec "$err_argument_value" "'$_file_action' is not a valid action. Must be one of: $all_actions_str."
 
         # Expand variables in paths
-        eval "_source_file=\"$_source_file\""       # uses $vm2_repos and $vm2_sot_shared as a macro variables
-        [[ -s "$_source_file" ]]                    || error -ec "$err_argument_value" "Source file '$_source_file' does not exist or is empty."
-        eval "_target_file=\"$_target_file\""       # uses $target_file_path as a macro variable
+        eval "_source_file=\"$_source_file\""
+        [[ -s "$_source_file" ]]                     || error -ec "$err_argument_value" "Source file '$_source_file' does not exist or is empty."
+        eval "_target_file=\"$_target_file\""
         eval "_file_action=\"$_file_action\""
 
         # and assign into the model arrays by index:
@@ -155,8 +154,6 @@ function configure()
     trace "$script_name was configured successfully with ${#source_files[@]} files and actions."
 }
 
-#-------------------------------------------------------------------------------
-# @description: Changes the file actions from the config file(s) based on the provided command line arguments.
 function parameterize()
 {
     local -i _rc=$success
@@ -179,12 +176,11 @@ function parameterize()
         _matching_actions=()
         # check if it matches any of the provided patterns in the command line arguments
         for _selector in "${!selectors_actions[@]}"; do
-            if [[ "${source_files[_index]}" == */$_selector ]]; then
+            if [[ "${source_files[_index]}" == */$selector ]]; then
                 # matches - override or keep the action for that file
                 [[ -n ${selectors_actions[$_selector]} ]] &&
-                    # get the action from the command line arguments if provided, otherwise use the pre-configured action
-                    _action="${selectors_actions[$_selector]}" || _action="${file_actions[_index]}"
-                # add the action to the list of matching actions if it is not already present
+                    _action="${selectors_actions[$_selector]}" ||
+                    _action="${file_actions[_index]}"
                 ! is_in "$_action" "${_matching_actions[@]}" && {
                     _matching_actions+=("$_action")
                     trace "File '${source_files[_index]#"$vm2_repos/"}' matches selector '$_selector' with action '$_action'."
@@ -199,11 +195,11 @@ function parameterize()
             file_actions[_index]="${_matching_actions[0]}"
             (( ++_count )) || true
         elif (( _cnt > 1 )); then
-            # multiple different actions matched - this is a CLI error, report it and skip the file (clear the action, as we are not certain what to do) and report as a warning
+            # multiple different actions matched - this is a CLI error, report it and skip the file (clear the action)
             file_actions[_index]=""
             warning "Multiple patterns matched for '${source_files[_index]#"$vm2_repos/"}' resulting in different actions: ${_matching_actions[*]}. Please refine your file selectors so that each matches at most one file. The file will be skipped."
         else
-            # no patterns matched - clear the action for that file (clear the action, as we are not certain what to do) and report as a warning
+            # no patterns matched - clear the action for that file (it will not be processed) and report a warning
             file_actions[_index]=""
             trace "File '${source_files[_index]#"$vm2_repos/"}' does not match any of the provided patterns: ${!selectors_actions[*]}. It will not be processed."
         fi
@@ -232,7 +228,7 @@ function resolve_target()
 
     local _repos="$1"
     local _r="$2"
-    local _output _target_root _target_path
+    local _output _target_path
 
     _output=$(resolve_repo_root "$_repos" "$_r") || _rc=$?
     # We can only work with git repos or directories that have CI configured:
@@ -241,10 +237,7 @@ function resolve_target()
                               "It should have CI configured in '.github/workflows'."
         return "$_rc"
     }
-    {
-        read -r _target_root;
-        read -r _target_path;
-    } <<< "$_output"
+    { read -r _; read -r _target_path; } <<< "$_output"
 
     # if it is a git repo then make sure it is in a clean state:
     if (( _rc == success )); then
@@ -288,27 +281,28 @@ function resolve_target()
 function customize()
 {
     (( $# == 1 || $# == 2 ))            || error -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one or two arguments (provided $#): the target repository directory and an optional tools-only flag."
-    [[ -v 1 && -d $1 ]]                 || error -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the target repository path, to be an existing directory (provided '${1-<missing>}')."
+    [[ -v 1 && -d $1 ]]                  || error -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the target repository path, to be an existing directory (provided '${1-<missing>}')."
     [[ ! -v 2 ]] || is_boolean "$2"     || error -ec "$err_argument_type" "${FUNCNAME[0]}() requires optional argument 2, the tools-only flag, to be 'true' or 'false' (provided '${2-<missing>}')."
 
     exit_if_has_errors
 
-    local _target_path=$1
-    local _only_tools=${2:-false}
-    local _custom_config="$_target_path/diff-shared.custom.json"
+    target_path=$1
+    only_tools=${2:-false}
 
-    [[ -s "$_custom_config" ]] || {
-         trace "The customization file '$_custom_config' does not exist or is empty. Continuing with the default configuration."
+    custom_config="$target_path/diff-shared.custom.json"
+
+    [[ -s "$custom_config" ]] || {
+         trace "The customization file '$custom_config' does not exist or is empty. Continuing with the default configuration."
          return "$success"
     }
 
-    trace "Validate the custom configuration file $_custom_config."
-    jq empty "$_custom_config" 2>"$_ignore" || {
-        error -ec "$err_argument_value" "The custom configuration file $_custom_config contains invalid JSON."
+    trace "Validate the custom configuration file $custom_config."
+    jq empty "$custom_config" 2>"$_ignore" || {
+        error -ec "$err_argument_value" "The custom configuration file $custom_config contains invalid JSON."
         return "$failure"
     }
 
-    { read -r custom_diff_tool; read -r custom_diff_command; read -r custom_merge_tool; read -r custom_merge_command; } < <(get_tools "$_custom_config")
+    { read -r custom_diff_tool; read -r custom_diff_command; read -r custom_merge_tool; read -r custom_merge_command; } < <(get_tools "$custom_config")
 
     [[ -n $custom_diff_tool ]]     && diff_tool="$custom_diff_tool"         || diff_tool="$config_diff_tool"
     [[ -n $custom_diff_command ]]  && diff_command="$custom_diff_command"   || diff_command="$config_diff_command"
@@ -327,24 +321,24 @@ function customize()
               "  merge tool:   '$merge_tool'" \
               "  merge command: '$merge_command'"
 
-    if [[ "$_only_tools" == true ]]; then
+    if [[ "$only_tools" == true ]]; then
         return "$success"
     fi
 
     local -i _changed_actions=0
 
-    if [[ -s "$_custom_config" ]]; then
+    if [[ -s "$custom_config" ]]; then
         # Read each key-value pair from JSON
         local  _file_name _action
         while IFS='=' read -r _file_name _action; do
             # Validate action
             is_in "$_action" "${valid_actions[@]}" || {
-                warning "Invalid action '$_action' for '$_file_name' in $_custom_config - must be one of: $all_actions_str."
+                warning "Invalid action '$_action' for '$_file_name' in $custom_config - must be one of: $all_actions_str."
                 continue
             }
             # Validate the path
             [[ -n "$_file_name" ]] || {
-                warning "Empty relative path in $_custom_config."
+                warning "Empty relative path in $custom_config."
                 continue
             }
 
@@ -353,8 +347,8 @@ function customize()
 
             local -i _index
             for (( _index=0; _index<${#target_files[@]}; _index++ )); do
-                if [[ "${target_files[_index]}" == $_target_path/$_file_name ||
-                      "${target_files[_index]}" == $_target_path/*/$_file_name ]]; then
+                if [[ "${target_files[_index]}" == $target_path/$_file_name ||
+                      "${target_files[_index]}" == $target_path/*/$_file_name ]]; then
                     # Override the action:
                     file_actions[_index]="$_action"
                     (( ++_changed_actions )) || true
@@ -364,10 +358,10 @@ function customize()
             done
 
             [[ "$_found" == true ]] || {
-                 [[ $_action != "ignore" ]] && warning "Path '$_file_name' from $_custom_config does not match any known target relative path."
+                 [[ $_action != "ignore" ]] && warning "Path '$_file_name' from $custom_config does not match any known target relative path."
                 continue
             }
-        done < <(jq -r '.action_overrides | to_entries | .[] | .key+"="+.value' "$_custom_config" 2>"$_ignore") # convert JSON object to key=value pairs
+        done < <(jq -r '.action_overrides | to_entries | .[] | .key+"="+.value' "$custom_config" 2>"$_ignore") # convert JSON object to key=value pairs
 
         $diff_only || info "$script_name was customized successfully with $_changed_actions modified actions."
     fi

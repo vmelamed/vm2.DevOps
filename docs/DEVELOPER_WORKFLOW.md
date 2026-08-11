@@ -80,7 +80,7 @@ All vm2 repositories use **trunk-based development** with `main` as the sole lon
 
 ```text
 main ─────●─────●─────●─────●─────●─────
-          |                  ▲
+          │                  ▲
           └── feature/x ─────┘  (PR + rebase)
 ```
 
@@ -89,7 +89,7 @@ main ─────●─────●─────●─────●─
 - Merge via **rebase** (the only allowed merge method)
 - Delete the branch after merge (automatic on remote, clean-up yourself locally)
 
-**Branch naming** is free-form, but these conventions (similar to the conventional-commits) help:
+**Branch naming** is free-form, but these conventions help:
 
 | Prefix      | Use for                  | Example                      |
 | :---------- | :----------------------- | :--------------------------- |
@@ -242,12 +242,12 @@ When you open a PR, the CI pipeline runs:
 ```text
 prerun-ci (gather parameters)
     ├── run-ci (_ci.yaml)
-    |       ├── validate-commits (PR only: Conventional Commits check)
-    |       ├── validate-input
-    |       ├── build (compile)
-    |       ├── test (unit tests + coverage)
-    |       ├── benchmarks (performance)
-    |       └── pack (NuGet validation)
+    │       ├── validate-commits (PR only: Conventional Commits check)
+    │       ├── validate-input
+    │       ├── build (compile)
+    │       ├── test (unit tests + coverage)
+    │       ├── benchmarks (performance)
+    │       └── pack (NuGet validation)
     └── postrun-ci (gate check: Postrun-CI ✅ or ❌)
 ```
 
@@ -408,8 +408,8 @@ All vm2 repositories use [Conventional Commits](https://www.conventionalcommits.
 ```ebnf
 commit-message = subject, [ LF, body ] ;
 subject        = type, [ "(", scope, ")" ], [ "!" ], ": ", description ;
-type           = "feat" | "fix" | "perf" | "security" | "doc" | "docs" | "deps" | "revert" | "remove" | "refactor" |
-                 "style" | "test" | "tests" | "ci" | "chore" ;
+type           = "style" | "build" | "feat" | "test" | "tests" | "fix" | "refactor" | "perf" | "security" | "doc" | "docs" |
+                 "chore" | "revert" | "remove" | "remove" | "ci" | "devops" ;
 scope          = noun ;
 description    = non-empty string ;
 body           = free-form text ;
@@ -417,31 +417,7 @@ body           = free-form text ;
 
 Where:
 
-- **Type**: Required. One of the keywords: `feat`, `fix`, `perf`, `security`, `doc`, `docs`, `deps`, `revert`, `remove`, `refactor`, `style`, `test`, `tests`, `ci`, `chore`
-
-  |   Type:    | Use when:                                           | Bump:     |
-  |:-----------| :-------------------------------------------------- | :-------- |
-  | `!`        | Backwards incompatibility                           | major     |
-  | `feat`     | New feature                                         | minor     |
-  | `fix`      | Bug fix                                             | patch     |
-  | `perf`     | Performance improvement                             | patch     |
-  | `security` | Security fix or hardening                           | patch     |
-  | `doc(s)`   | Documentation only                                  | patch     |
-  | `deps`     | Dependencies changes                                | patch     |
-  | `revert`   | Revert a previous commit                            | patch?    |
-  | `remove`   | Remove feature or code                              | patch?    |
-  | `refactor` | Code restructuring - no behavior change!            | patch?    |
-  | `style`    | Formatting, whitespaces, etc. - no code change!     | n/a       |
-  | `test(s)`  | Adding or updating unit, integration, perf. tests   | n/a       |
-  | `ci`       | Build and CI/CD related changes                     | n/a       |
-  | `chore`    | Insignificant build, tooling, config., etc.         | n/a       |
-
-  > [!NOTE]
-  > The type keywords are defined in the vm2.DevOps script: [vm2.DevOps/scripts/bash/lib/_constants.sh](../vm2.DevOps/scripts/bash/lib/_constants.sh) and should be kept in sync with:
-  > - [vm2.Templates/templates/AddNewPackage/content/.gitmessage](../vm2.Templates/templates/AddNewPackage/content/.gitmessage)
-  > - [vm2.Templates/changelog/cliff.prerelease.toml](../vm2.Templates/changelog/cliff.prerelease.toml)
-  > - [vm2.Templates/changelog/cliff.release-header.toml](../vm2.Templates/changelog/cliff.release-header.toml)
-
+- **Type**: Required. One of the keywords: `style` `build` `feat` `test` `tests` `fix` `refactor` `perf` `security` `doc` `docs` `chore` `revert` `remove` `ci` `devops`
 - **Scope**: Optional. A noun describing the section of the codebase (e.g. `api`, `ui`, `docs`)
 - **Breaking Change**: Optional. **`!`** before `:` signals a breaking change
 - **Description**: Required. A short description of the change
@@ -453,6 +429,26 @@ feat(api)!: change the 'getUserData' method of the API endpoint for user data. T
 fix(ui):    correct button alignment on homepage
 chore(ci):  update GitHub Actions workflow
 ```
+
+| Type       | Triggers       | Use when                                              |
+| :--------- | :------------- | :---------------------------------------------------- |
+| `!`        | **major bump** | Creates backwards-incompatible changes                |
+| `feat`     | **minor bump** | Adding new functionality                              |
+| `fix`      | **patch bump** | Fixing a bug                                          |
+| `perf`     | **patch bump** | Performance improvement                               |
+| `security` | **patch bump** | Security fixes                                        |
+| `remove`   | **patch bump** | Removing code or functionality                        |
+| `revert`   | **patch bump** | Reverting a previous commit                           |
+| `refactor` | no bump        | Code restructuring without behavior change            |
+| `style`    | no bump        | Code style changes (whitespace, formatting, etc.)     |
+| `build`    | no bump        | Changes that affect the build system or dependencies  |
+| `test`     | no bump        | Adding or updating tests                              |
+| `tests`    | no bump        | Adding or updating tests                              |
+| `doc`      | no bump        | Documentation changes only                            |
+| `docs`     | no bump        | Documentation changes only                            |
+| `chore`    | no bump        | Build, CI, tooling, dependency updates                |
+| `ci`       | no bump        | Continuous Integration related changes                |
+| `devops`   | no bump        | DevOps related changes                                |
 
 **Breaking changes** trigger a **major** bump. Mark them with `!` after the type/scope:
 
@@ -517,7 +513,7 @@ A commit message template shows the allowed types and format in your editor ever
 `git commit`. To enable, run once per clone:
 
 ```bash
-git config commit.template ~/repos/vm2/vm2.Templates/templates/AddNewPackage/content/.gitmessage
+git config commit.template ~/repos/vm2/vm2.DevOps/scripts/githooks/.gitmessage
 ```
 
 > [!NOTE]
@@ -528,7 +524,7 @@ Both settings in one go:
 
 ```bash
 git config --local core.hooksPath ~/repos/vm2/vm2.DevOps/scripts/githooks
-git config --local commit.template ~/repos/vm2/vm2.Templates/templates/AddNewPackage/content/.gitmessage
+git config --local commit.template ~/repos/vm2/vm2.DevOps/scripts/githooks/.gitmessage
 ```
 
 ---
@@ -1163,7 +1159,7 @@ Run these once per clone (or let `setup-repo.sh` do it):
 
 ```bash
 git config --local core.hooksPath ~/repos/vm2/vm2.DevOps/scripts/githooks
-git config --local commit.template ~/repos/vm2/vm2.Templates/templates/AddNewPackage/content/.gitmessage
+git config --local commit.template ~/repos/vm2/vm2.DevOps/scripts/githooks/.gitmessage
 ```
 
 In VS Code, enable force-push support:

@@ -24,7 +24,7 @@ source "$script_dir/validate-commits.usage.sh"
 source "$script_dir/validate-commits.args.sh"
 
 # Allowed commit types — keep in sync with changelog/cliff.prerelease.toml commit_parsers
-declare -arx allowed_commit_types
+readonly -a allowed_types=(style build feat test tests fix refactor perf security doc docs chore revert remove ci devops)
 
 declare -x base_ref=${BASE_REF:-}
 
@@ -33,7 +33,7 @@ get_arguments "$@"
 exit_if_has_errors
 
 # Build the type alternation: feat|fix|perf|...
-types_pattern=$(IFS='|'; echo "${allowed_commit_types[*]}")
+types_pattern=$(IFS='|'; echo "${allowed_types[*]}")
 
 # Conventional Commits: type[(scope)][!]: description
 readonly cc_regex="^($types_pattern)(\(.+\))?!?: .+"
@@ -70,7 +70,7 @@ if [[ $bad -gt 0 ]]; then
     branch=$(git branch --show-current)
     echo "" >&2
     info "Expected format: <type>[(scope)][!]: <description>" \
-         "Allowed types:   ${allowed_commit_types[*]}" \
+         "Allowed types:   ${allowed_types[*]}" \
          "Examples        chore(dependencies): update dependencies and lock files"
     info "Repeat the steps above for each bad commit, then force-push (required because rebase rewrites commit hashes):" \
          "  git push --force-with-lease origin $branch"

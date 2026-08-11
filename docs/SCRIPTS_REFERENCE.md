@@ -261,30 +261,9 @@ Only runs on `pull_request` events.
 | :------------- | :---- | :------ | :--------------------------------------- |
 | `--base-ref`   | `-b`  | —       | Git ref to compare against (e.g. `origin/main`) |
 
-**Allowed types:** : `feat`, `fix`, `perf`, `security`, `doc`, `docs`, `deps`, `revert`, `remove`, `refactor`, `style`, `test`, `tests`, `ci`, `chore`
+**Allowed types:** `feat` `fix` `perf` `refactor` `doc` `docs` `style` `test` `tests` `chore` `revert` `remove` `security` `build` `ci`
 
-|   Type:    | Use when:                                           | Bump:     |
-|:-----------| :-------------------------------------------------- | :-------- |
-| `!`        | Backwards incompatibility                           | major     |
-| `feat`     | New feature                                         | minor     |
-| `fix`      | Bug fix                                             | patch     |
-| `perf`     | Performance improvement                             | patch     |
-| `security` | Security fix or hardening                           | patch     |
-| `doc(s)`   | Documentation only                                  | patch     |
-| `deps`     | Dependencies changes                                | patch     |
-| `revert`   | Revert a previous commit                            | patch?    |
-| `remove`   | Remove feature or code                              | patch?    |
-| `refactor` | Code restructuring - no behavior change!            | patch?    |
-| `style`    | Formatting, whitespaces, etc. - no code change!     | n/a       |
-| `test(s)`  | Adding or updating unit, integration, perf. tests   | n/a       |
-| `ci`       | Build and CI/CD related changes                     | n/a       |
-| `chore`    | Insignificant build, tooling, config., etc.         | n/a       |
-
-> [!NOTE]
-> The type keywords are defined in the vm2.DevOps script: [vm2.DevOps/scripts/bash/lib/_constants.sh](../vm2.DevOps/scripts/bash/lib/_constants.sh) and should be kept in sync with:
-> - [vm2.Templates/templates/AddNewPackage/content/.gitmessage](../vm2.Templates/templates/AddNewPackage/content/.gitmessage)
-> - [vm2.Templates/changelog/cliff.prerelease.toml](../vm2.Templates/changelog/cliff.prerelease.toml)
-> - [vm2.Templates/changelog/cliff.release-header.toml](../vm2.Templates/changelog/cliff.release-header.toml)
+Merge commits and `Revert` commits are automatically skipped.
 
 ---
 

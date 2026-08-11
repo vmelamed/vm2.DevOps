@@ -58,15 +58,14 @@ source "$lib_dir/_dotnet.sh"
 
 declare -xr ci
 
-declare -rxi success
-declare -rxi err_logic_error
-declare -rxi err_invalid_arguments
-declare -rxi err_argument_type
-declare -rxi err_not_git_directory
-declare -rxi err_argument_value
-
-declare -rx debugger
-declare -x dry_run
+declare -xr debugger
+declare -xr success=0
+declare -xr err_logic_error
+declare -xr err_invalid_arguments
+declare -xr err_argument_type
+declare -xr err_not_git_directory
+declare -xr err_argument_value
+declare -xr dry_run
 
 # Override the default or environment values of common flags based on other flags upon sourcing.
 # Make sure that the other set_* functions are honoring the ci flag.

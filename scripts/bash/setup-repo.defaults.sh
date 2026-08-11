@@ -250,8 +250,8 @@ declare -xri default_sot
 #
 # @arg $1 string Path to the parent directory where the `vm2.DevOps` repository is cloned (e.g. the value of
 #   $VM2_REPOS or the `--vm2-repos` option). Must be an existing directory.
-# @arg $2 string Path to the source-of-truth (SOT) directory, a.k.a. shared contents, e.g. `$VM2_REPOS/$default_sot`. Must be an
-#   existing directory.
+# @arg $2 string Path to the source-of-truth (SOT) directory, e.g. `$VM2_REPOS/$default_sot`. Must be an existing
+#   directory.
 #
 # @exitcode 0 Success; `default_local_git_settings` updated and frozen.
 # @exitcode 2 Invalid arguments (wrong count, empty value, or a value that is not an existing directory).
