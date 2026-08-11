@@ -109,6 +109,7 @@ on:
 
 env:
   VERBOSE: ${{ vars.VERBOSE || false }}
+  ARTIFACTS_DIR: ${{ vars.ARTIFACTS_DIR || 'artifacts' }}
 
 concurrency:
   group: ci-${{ github.workflow_ref }}
@@ -139,6 +140,7 @@ jobs:
       skip-tests: ${{ steps.validate.outputs.skip-tests }}
       skip-packages: ${{ steps.validate.outputs.skip-packages }}
       skip-push: ${{ steps.validate.outputs.skip-push }}
+      artifacts-dir: ${{ steps.validate.outputs.artifacts-dir }}
 
     steps:
       # Clone the repository to access validation scripts
@@ -179,7 +181,8 @@ jobs:
               --reset-benchmark-thresholds  '${{ inputs.reset-benchmark-thresholds }}' \
               --skip-benchmarks             '${{ inputs.skip-benchmarks }}' \
               --skip-tests                  '${{ inputs.skip-tests }}' \
-              --skip-packages               '${{ inputs.skip-packages }}'
+              --skip-packages               '${{ inputs.skip-packages }}' \
+              --artifacts                   '${{ env.ARTIFACTS_DIR }}'
 
   # Build the project and cache artifacts for downstream tests/benchmark jobs
   build:

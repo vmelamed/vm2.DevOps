@@ -24,10 +24,9 @@ declare -rxi err_logic_error
 declare -rx ci
 
 $ci && default_configuration="Release" || default_configuration="Debug"
-default_tfm="net10.0"
-
 declare -rx default_configuration
-declare -rx default_tfm
+declare -rx default_tfm="net10.0"
+declare -rx defaultOutputType="Library"
 
 # export global variables that hold the keys of the associative array with the build information
 declare -rx key_warnings_count='warnings_count'
@@ -279,25 +278,28 @@ function displayDotnetBuildSummary()
 #   - AssemblyName falls back to the *.csproj filename without the extension.
 #   - OutputType "Exe" -> *.exe on Windows, no suffix on Linux. Any other OutputType -> *.dll on any OS.
 #
-# @arg $1 string csproj - path to the *.csproj file
-# @arg $2 string artifacts - optional path to the artifacts directory where a dotnet build should put its outputs
-# @arg $3 string configuration - optional build configuration, if not specified will read from *.csproj, or
-#   Directory.Build.props, or the default: in CI - Release, otherwise Debug. If specified, $2 also MUST be specified.
+# @arg $1 string csproj - required path to the *.csproj file
+# @arg $2 string artifacts - optional path to the root artifacts directory where the stages should put their outputs
+#   (default: "<src>/<proj.dir>/bin")
+# @arg $3 string configuration - optional build configuration, if not specified, will read it from $1 - the csproj, or from the
+#   nearest Directory.Build.props, or the default: in CI - Release, otherwise Debug. If specified, #2 also MUST be specified
 #
 # @exitcode 0 ($success) the assembly file exists and is not empty
 # @exitcode 1 ($failure) the assembly path was resolved but the file does not exist yet (the path is still written to stdout)
 # @exitcode 2 ($err_invalid_arguments) wrong number of arguments
 # @exitcode 4 ($err_argument_value) the argument is empty or not a valid, existing *.csproj file
 #
-# @stdout the full path to the produced assembly (e.g. /path/to/proj/bin/Debug/net10.0/vm2.Ulid.dll)
+# @stdout the full path to the produced assembly, e.g.:
+#   /path/to/repo/src/proj/bin/Debug/net10.0/vm2.Ulid.dll or
+#   /path/to/repo/artifacts/build/proj/Debug/net10.0/vm2.Ulid.dll
 #
 # @example
-#   path=$(get_assembly_path src/vm2.Ulid/Ulid.csproj)
+#   path=$(get_assembly_path src/vm2.Ulid/Ulid.csproj build $ARTIFACTS_DIR Release)
 #-------------------------------------------------------------------------------
 function get_assembly_path() {
     local -i _rc="$success"
 
-    (( $# >= 1 && $# <= 3 )) || {
+    (( $# >= 1 && $# <= 4 )) || {
         _rc="$err_invalid_arguments"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires one, two, or three arguments (provided $#):" \
                               " 1) the path to a *.csproj file" \
@@ -305,13 +307,17 @@ function get_assembly_path() {
                               " 3) build configuration (optional)"
     }
 
-    [[ -v 1 && -s $1 && $1 == *.csproj ]] || {
+    [[ -v 1 && -s $1 && $1 == @(*.csproj) ]] || {
         _rc="$err_argument_value"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be an existing, non-empty .csproj file (provided '${1-<missing>}')."
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 - the project to build - to be an existing, non-empty .csproj file (provided '${1-<missing>}')."
     }
-    [[ ! -v 3 || -v 2 ]] || {
-        _rc="$err_missing_argument"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, the artifacts directory, when argument 3, the build configuration, is provided."
+    [[ -v 2 && -n $2 ]] || {
+        _rc="$err_argument_value"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2 - the artifacts directory, if specified, to be a non-empty string (provided '${2-<missing>}')."
+    }
+    [[ -v 3 && ${3^} == @(Release|Debug) ]] || {
+        _rc="$err_argument_value"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 3 - the build configuration, if specified, to be either 'Release' or 'Debug' (provided '${3-<missing>}')."
     }
 
     (( _rc == success )) || return "$err_invalid_arguments"
@@ -325,19 +331,13 @@ function get_assembly_path() {
 
     local _proj_dir
     _proj_dir=$(dirname "$_csproj")
-    proj_name=$(basename "$_csproj" .csproj)
-    trace "Project directory: $_proj_dir"
-
-    local _output_dir
-
-    [[ -n "$_artifacts" ]] &&
-        _output_dir="${_artifacts%/}/$proj_name" ||
-        _output_dir="$_proj_dir/bin"
+    _proj_name=$(basename "$_csproj" ".$_suffix")
+    trace "Project directory and name:" "$_proj_dir" "$_proj_name"
 
     # Find the nearest Directory.Build.props by walking up from the project directory
     local _dir_build_props=""
     local _search_dir="$_proj_dir"
-    while [[ "$_search_dir" != "/" ]]; do
+    while [[ "$_search_dir" != / ]]; do
         if [[ -f "$_search_dir/Directory.Build.props" ]]; then
             _dir_build_props="$_search_dir/Directory.Build.props"
             break
@@ -373,6 +373,7 @@ function get_assembly_path() {
         _build_configuration=${_build_configuration:-${default_configuration}}
     fi
     _build_configuration="${_build_configuration//[[:space:]]/}"
+    _build_configuration="${_build_configuration^}"
     trace "Using Configuration: $_build_configuration"
 
     # AssemblyName: *.csproj → filename without extension
@@ -382,10 +383,14 @@ function get_assembly_path() {
     _assembly_name="${_assembly_name//[[:space:]]/}"
     trace "Using AssemblyName: $_assembly_name"
 
-    # OutputType: determines the file suffix
+    # OutputType: *.csproj → Directory.Build.props → default_output_type - determines the file suffix
     local _output_type=""
     _output_type=$(grep -oPm1 '(?<=<OutputType>)[^<]+' "$_csproj" 2>"$_ignore") || true
+    if [[ -z "$_output_type" && -n "$_dir_build_props" ]]; then
+        _output_type=$(grep -oPm1 '(?<=<OutputType>)[^<]+' "$_dir_build_props" 2>"$_ignore") || true
+    fi
     _output_type="${_output_type//[[:space:]]/}"
+    _output_type="${_output_type:-${defaultOutputType}}"
 
     local _suffix
     if [[ "${_output_type,,}" == "exe" ]]; then
@@ -394,6 +399,13 @@ function get_assembly_path() {
         _suffix=".dll"
     fi
     trace "Using 'OutputType': ${_output_type:-None} → suffix: '$_suffix'"
+
+    local _output_dir
+
+    [[ -n "$_artifacts" ]] &&
+        _output_dir="${_artifacts%/}/build/$_proj_name" ||
+        _output_dir="$_proj_dir/bin" # the default output directory if no artifacts directory is specified
+
     trace "Assembly path: $_output_dir/$_build_configuration/$_tfm/$_assembly_name$_suffix"
 
     echo "$_output_dir/$_build_configuration/$_tfm/$_assembly_name$_suffix"

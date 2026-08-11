@@ -480,7 +480,7 @@ function configure_variables()
 
     for _name in "${_ordered_names[@]}"; do
         _default_value="${actions_default_vars[$_name]}"
-        if [[ -v existing[$_name] ]]; then
+        if [[ -v _existing[$_name] ]]; then
             _exists=true
             _value="${_existing[$_name]:-}"
         else

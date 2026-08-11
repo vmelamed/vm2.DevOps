@@ -1202,7 +1202,7 @@ function is_on_or_after_latest_stable_tag()
 #   directory. (e.g. "src/Ulid/Ulid.csproj").
 # @arg $2 string artifacts - The name of the artifacts directory. If it is a relative path, it will be resolved - relative to
 #   the working tree root of the project's repository; it does not need to exist. If $2 is an absolute path, it will be used
-#   as-is, but it MUST exist. Arg $1 will be ignored.
+#   as-is, but it MUST exist. and arg $1 will be ignored.
 #
 # @exitcode 0 if the absolute path to the artifacts directory is successfully determined, non-zero otherwise.
 # @exitcode 4 if the specified absolute path to the artifacts directory is invalid, or does not exist, or is not a directory.
@@ -1227,18 +1227,22 @@ function get_artifacts_path()
         _rc="$err_argument_value"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, or ARTIFACTS_DIR, to provide a non-empty artifacts path (argument 2: '${2-<missing>}')."
     }
-    [[ $_artifacts == /* || ( -v 1 && -n $1 ) ]] || {
+    [[ $_artifacts == /* || ( -v 1 && -s $1 ) ]] || {
         _rc="$err_argument_value"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the project path, to be non-empty when the artifacts path is relative (provided '${1-<missing>}')."
     }
 
-    (( _rc == success )) || return "$err_invalid_arguments"
+    [[ $_artifacts == /* && -d "$_artifacts" ]] && realpath -e "$_artifacts" && return "$success" || {
+        _rc="$err_argument_value"
+        error -sd 3 -ec "$_rc" "The artifacts directory '$_artifacts' is an absolute path, but it does not specify a valid, existing directory. Please, create it or correct the parameter/environment variable."
+    }
 
-    if [[ $_artifacts == /* ]]; then
-        realpath -e "$_artifacts" && [[ -d "$_artifacts" ]] && return "$success"
-        error -sd 3 -ec "$err_argument_value" "The artifacts directory '$_artifacts' is an absolute path, but it does not specify a valid, existing directory. Please, create it or correct the parameter/environment variable."
-        return "$err_argument_value"
-    fi
+    [[ -v 1 && -s $1 ]] || {
+        _rc="$err_argument_value"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the project path, to exist and be non-empty (provided '${1-<missing>}')."
+    }
+
+    (( _rc == success )) || return "$err_invalid_arguments"
 
     local _project_path="$1"
     local _repo_root

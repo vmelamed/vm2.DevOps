@@ -8,6 +8,8 @@ declare -xr common_switches
 declare -xr common_vars
 declare -xr script_name
 
+declare -arx allowed_commit_types
+
 function usage_text()
 {
     local _long_text=$1
@@ -21,6 +23,10 @@ function usage_text()
 
     fi
 
+    local _types
+    _types=$(printf '%s | ' "${allowed_commit_types[@]}")
+    _types=${_types% | }
+
     cat << EOF
 Usage:
   $script_name --base-ref <ref> [options]
@@ -31,8 +37,7 @@ Description:
 
   commit-message = subject, [ LF, body ] ;
   subject        = type, [ "(", scope, ")" ], [ "!" ], ": ", description ;
-  type           = "style" | "build" | "feat" | "test" | "tests" | "fix" | "refactor" | "perf" | "security" | "doc" | "docs" |
-                   "chore" | "revert" | "remove" | "ci" | "devops" ;
+  type           = $_types ;
   scope          = noun ;
   description    = non-empty string ;
   body           = free-form text ;

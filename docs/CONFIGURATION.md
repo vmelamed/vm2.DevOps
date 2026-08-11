@@ -21,6 +21,7 @@
     - [GitHub Check Names](#github-check-names)
     - [Setting Up Branch Protection](#setting-up-branch-protection)
     - [Required Permissions](#required-permissions)
+  - [Artifacts](#artifacts)
   - [Consumer Workflow Customization](#consumer-workflow-customization)
     - [CI.yaml](#ciyaml)
     - [Prerelease.yaml](#prereleaseyaml)
@@ -145,10 +146,10 @@ Test runner (usually xUnit) configuration. Controls parallelism, culture, diagno
 
 ### Git Hooks
 
-| File                                          | Purpose                                               |
-| :-------------------------------------------- | :---------------------------------------------------- |
-| `vm2.DevOps/scripts/githooks/commit-msg`      | Validates Conventional Commits format at commit time  |
-| `vm2.DevOps/scripts/githooks/.gitmessage`     | Commit message template with allowed types            |
+| File                                                        | Purpose                                               |
+| :---------------------------------------------------------- | :---------------------------------------------------- |
+| `vm2.DevOps/scripts/githooks/commit-msg`                    | Validates Conventional Commits format at commit time  |
+| `vm2.Templates/templates/AddNewPackage/content/.gitmessage` | Commit message template with allowed types            |
 
 ### Local Git Settings
 
@@ -164,7 +165,7 @@ Run once per clone to configure local git settings via `git config --local`:
 
 ```bash
 git config --local core.hooksPath ~/repos/vm2/vm2.DevOps/scripts/githooks
-git config --local commit.template ~/repos/vm2/vm2.DevOps/scripts/githooks/.gitmessage
+git config --local commit.template ~/repos/vm2/vm2.Templates/templates/AddNewPackage/content/.gitmessage
 git config --local pull.rebase true
 git config --local fetch.prune true
 git config --local push.autoSetupRemote true
@@ -222,6 +223,50 @@ permissions:
   packages: read
   pull-requests: write    # PR comments
   checks: write           # GitHub Check annotations
+```
+
+## Artifacts
+
+The major stages of the CI/CD pipeline include:
+
+- **Build**: Compiles the source code and generates build artifacts.
+- **Test**: Runs unit and integration tests to validate the code.
+- **Benchmark**: Executes performance benchmarks.
+- **Package**: Packages the application for distribution.
+- **Publish**: Publishes the packaged application to the appropriate repository.
+
+Each of these stages produces artifacts that can be used in subsequent stages of the CI/CD pipeline; or can be analyzed for debugging, performance, and quality assurance purposes. The artifacts of the different stages are different:
+
+- **build stage**: **the executable files** (.exe-s) and **libraries** (.dll-s) produced from the source code in the `src/` directory.
+- **test stage**: the **test result** files and **code coverage reports**.
+- **benchmark stage**: the **benchmark result files**.
+- **package stage**: the **NuGet packages** built from the **build stage** artifacts.
+
+A common convention has been establish to place all artifacts in the `artifacts/` directory at the root of the repository. Here is the typical structure:
+
+```text
+artifacts/
+├── build/
+│   ├── <src-project1-name>/             (e.g. project1)
+│   │   └── <configuration>/                 (e.g. Release)
+│   │       └── <TFM>/                           (e.g. net10)
+│   │           └── project1.dll
+│   └── <project2>/
+│       └── Release/
+│           └── net10/
+│               └── project2.dll
+├── test/
+│   ├── <project1-tests-name>/          (e.g. project1.Tests)
+│   │   ├── coverage.cobertura.xml
+│   │   └── reports/
+│   │
+│   └── <project2.Tests>
+│       ├── coverage.cobertura.xml
+│       └── reports/
+├── benchmark/
+│   └── <project1-benchmarks-name>/    (e.g. project1.Benchmarks)
+│       └── results/
+├── package/
 ```
 
 ## Consumer Workflow Customization

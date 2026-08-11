@@ -96,6 +96,7 @@ last_stable_ref="${latest_stable_tag:-$(git rev-list --max-parents=0 HEAD)}"
 commits=$(git log "$last_stable_ref"..HEAD --pretty=format:"%s%n%b" 2>"$_ignore" || echo "")
 
 # Determine bump type from conventional commits
+# KEEP IN SYNC WITH vm2.DevOps/scripts/bash/lib/_constants.sh AND vm2.Templates/templates/AddNewPackage/content/.gitmessage!
 if echo "$commits" | grep -qiE '^[a-z]+(\(.+\))?!:'; then
     major=$((major + 1))
     minor=0
@@ -105,7 +106,7 @@ elif echo "$commits" | grep -qiE '^feat(\(.+\))?:'; then
     minor=$((minor + 1))
     patch=0
     bump_type="minor (new features detected)"
-elif echo "$commits" | grep -qiE '^(fix|perf|security|remove|revert)(\(.+\))?:'; then
+elif echo "$commits" | grep -qiE '^(fix|perf|security|doc|docs|deps|revert|remove|refactor)(\(.+\))?:'; then
     patch=$((patch + 1))
     bump_type="patch (fixes or other changes detected)"
 else
