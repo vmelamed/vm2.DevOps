@@ -7,8 +7,14 @@
 
 set -euo pipefail
 
+# script_name=$(basename "${BASH_SOURCE[0]}")
+script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
+lib_dir=$(realpath -e "$script_dir/../bash/lib")
+
+source "$lib_dir/core.sh"
+
 # Allowed commit types — keep in sync with changelog/cliff.prerelease.toml commit_parsers
-readonly -a allowed_types=(style build feat test tests fix refactor perf security doc docs chore revert remove ci devops)
+declare -arx allowed_commit_types
 
 # Read the commit message (first line only for format validation)
 subject=$(head -1 "$1")
@@ -19,11 +25,12 @@ if [[ "$subject" =~ ^(Merge|Revert)\  ]]; then
 fi
 
 # Build the type alternation: feat|fix|perf|...
-types_pattern=$(IFS='|'; echo "${allowed_types[*]}")
+types_pattern=$(printf "%s|" "${allowed_commit_types[@]}")
+types_pattern=${types_pattern%|}
 
 # Conventional Commits: type[(scope)][!]: description
 # The ! before : indicates a breaking change
-readonly cc_regex="^($types_pattern)(\(.+\))?!?: .+"
+declare -r cc_regex="^($types_pattern)(\(.+\))?!?: .+"
 
 if [[ ! "$subject" =~ $cc_regex ]]; then
     {
@@ -31,7 +38,7 @@ if [[ ! "$subject" =~ $cc_regex ]]; then
         echo "ERROR: Commit message does not follow Conventional Commits format."
         echo ""
         echo "  Expected:  <type>[(scope)][!]: <description>"
-        echo "  Types:     ${allowed_types[*]}"
+        echo "  Types:     ${allowed_commit_types[*]}"
         echo "  Examples:  feat: add new glob pattern"
         echo "             fix(parser): handle empty input"
         echo "             refactor!: rename public API method"
