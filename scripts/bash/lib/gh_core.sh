@@ -58,8 +58,6 @@ unset -f to_stderr
 
 declare -rxi err_invalid_nameref
 
-declare -rx varNameRegex
-
 #-------------------------------------------------------------------------------
 # @description Reads lines from /dev/stdin, echoing each to stdout and also appending it to the GitHub
 # Actions step summary file or to /dev/null.
@@ -226,7 +224,7 @@ function to_github_output()
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires one or two arguments (provided $#): " \
               "the name of the variable to output and optionally the name to use in GitHub Actions output."
     }
-    [[ -v 1 && $1 =~ $varNameRegex ]] || {
+    is_variable_name "$1" || {
         _rc="$err_invalid_nameref"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a valid variable name (provided '${1-<missing>}')."
     }
@@ -274,7 +272,7 @@ function args_to_github_output()
     local _var
     local -i _argument_number=1
     for _var in "$@"; do
-        [[ $_var =~ $varNameRegex ]] || {
+        is_variable_name "$_var" || {
             _rc="$err_invalid_nameref"
             error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument $_argument_number to be a valid variable name (provided '${_var-<missing>}')."
         }

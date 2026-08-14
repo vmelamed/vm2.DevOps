@@ -480,7 +480,7 @@ function configure_variables()
 
     for _name in "${_ordered_names[@]}"; do
         _default_value="${actions_default_vars[$_name]}"
-        if [[ -v existing[$_name] ]]; then
+        if [[ -v _existing[$_name] ]]; then
             _exists=true
             _value="${_existing[$_name]:-}"
         else
@@ -558,7 +558,7 @@ function set_var()
         _rc="$err_invalid_arguments"
         error -sd 2 -ec "$_rc" "${FUNCNAME[0]}() requires exactly two arguments (provided $#): the variable name and value."
     }
-    [[ -v 1 && -n $1 ]] || {
+    [[ -n $1 ]] || {
         _rc="$err_argument_value"
         error -sd 2 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the variable name, to be non-empty (provided '${1-<missing>}')."
     }
@@ -765,7 +765,7 @@ function set_secret()
         _rc="$err_invalid_arguments"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires exactly three arguments (provided $#): the secret name, value, and application."
     }
-    [[ -v 1 && -n $1 ]] || {
+    [[ -n $1 ]] || {
         _rc="$err_argument_value"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the secret name, to be non-empty (provided '${1-<missing>}')."
     }
@@ -811,7 +811,7 @@ function delete_secret()
         _rc="$err_invalid_arguments"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires exactly two arguments (provided $#): the secret name and application."
     }
-    [[ -v 1 && -n $1 ]] || {
+    [[ -n $1 ]] || {
         _rc="$err_argument_value"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the secret name, to be non-empty (provided '${1-<missing>}')."
     }
@@ -881,8 +881,8 @@ function configure_branch_protection()
         for check in "${required_checks[@]}"; do
             _entries+=("{\"context\":\"$check\",\"integration_id\":$actions_app_id}")
         done
-        IFS=',' _status_checks_json="${_entries[*]}"
-        _status_checks_json="[$_status_checks_json]"
+        local IFS=','
+        _status_checks_json="[${_entries[*]}]"
     fi
 
     execute_gh_api_with_retry 3 2 true -X "$_method" "$_endpoint" -H "Accept: application/vnd.github+json" \

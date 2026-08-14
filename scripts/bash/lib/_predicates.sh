@@ -53,6 +53,19 @@ function is_defined_variable()
     [[ -v "$1" ]] && declare -p "$1" &> "$_ignore"
 }
 
+function is_variable_name()
+{
+    local -i _rc="$success"
+
+    (( $# == 1 )) || {
+        _rc="$err_invalid_arguments"
+        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the variable to test."
+    }
+
+    (( _rc == success )) || return "$err_invalid_arguments"
+
+    [[ $1 =~ $varNameRegex ]]
+}
 #-------------------------------------------------------------------------------
 # @description Tests if an indexed array variable is defined.
 #
@@ -73,7 +86,7 @@ function is_defined_array()
         _rc="$err_invalid_arguments"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the variable to test."
     }
-    [[ -v 1 && $1 =~ $varNameRegex ]] || {
+    is_variable_name "$1" || {
         _rc="$err_invalid_nameref"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a valid indexed-array variable name (provided '${1-<missing>}')."
     }
@@ -94,7 +107,7 @@ function is_defined_array()
 #-------------------------------------------------------------------------------
 # @description Tests if an associative array variable is defined.
 #
-# @arg $1 string variable_name - name of the associative array variable to test
+# @arg $1 string variable name - name of the associative array variable to test
 #
 # @exitcode 0 ($positive) the associative array variable is defined
 # @exitcode 1 ($negative) the associative array variable is not defined
@@ -111,7 +124,7 @@ function is_defined_associative_array()
         _rc="$err_invalid_arguments"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the associative array variable to test."
     }
-    [[ -v 1 && $1 =~ $varNameRegex ]] || {
+    is_variable_name "$1" || {
         _rc="$err_invalid_nameref"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a valid associative-array variable name (provided '${1-<missing>}')."
     }

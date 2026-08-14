@@ -187,11 +187,11 @@ function validate_repo_root()
         _rc="$err_not_directory"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the vm2 repositories parent, to be an existing directory (provided '${1-<missing>}')."
     }
-    [[ -v 2 && -n $2 ]] || {
+    [[ -n $2 ]] || {
         _rc="$err_argument_value"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, the repository name or path, to be non-empty (provided '${2-<missing>}')."
     }
-    [[ ! -v 3 || -z $3 ]] || git check-ref-format --branch "$3" &> "$_ignore" || {
+    [[ -z $3 ]] || git check-ref-format --branch "$3" &> "$_ignore" || {
         _rc="$err_invalid_branch"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires optional argument 3 to be a valid Git branch name (provided '${3-<missing>}')."
     }
@@ -283,7 +283,7 @@ function search_repo_dir()
         _rc="$err_not_directory"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the search root, to be an existing directory (provided '${1-<missing>}')."
     }
-    [[ -v 2 && -n $2 ]] || {
+    [[ -n $2 ]] || {
         _rc="$err_argument_value"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, the directory name or relative path to find, to be non-empty (provided '${2-<missing>}')."
     }
@@ -501,7 +501,7 @@ function get_vm2_sot_path()
                 "  2) the SoT directory name relative to the vm2.Templates repository."
     }
 
-    [[ -v 1 && -n $1 ]] || {
+    [[ -n $1 ]] || {
         _rc="$err_argument_value"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the vm2 repositories parent directory, to be non-empty (provided '${1-<missing>}')."
     }
@@ -509,7 +509,7 @@ function get_vm2_sot_path()
         _rc="$err_not_directory"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be an existing directory (provided '${1-<missing>}')."
     }
-    [[ -v 2 && -n $2 ]] || {
+    [[ -n $2 ]] || {
         _rc="$err_argument_value"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, the SoT directory name, to be non-empty (provided '${2-<missing>}')."
     }

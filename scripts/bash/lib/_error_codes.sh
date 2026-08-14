@@ -112,15 +112,10 @@ function error_message()
         _rc="$err_invalid_arguments"
         echo "❌  error_message() requires exactly 1 argument: an error code." >&2
     }
-    [[ -v 1 ]] && is_positive "$1" || {
+    [[ -v 1 ]] && is_positive "$1" && [[ -v error_codes[$1] ]] || {
         (( ++errors ))
         _rc="$err_argument_type"
-        echo "❌  error_message() requires argument 1 to be a positive integer error code from 1 to 255 (provided '${1-<missing>}')." >&2
-    }
-    [[ ! -v 1 || ! $1 =~ ^[+]?[1-9][0-9]*$ ]] || [[ -v error_codes[$1] ]] || {
-        (( ++errors ))
-        _rc="$err_unknown_argument"
-        echo "❌  error_message() argument 1 ('$1') is not a known error code." >&2
+        echo "❌  error_message() requires argument 1 to be a positive integer error code from 1 to 255 with a corresponding error message (provided '${1-<missing>}')" >&2
     }
 
     (( _rc == success )) || return "$err_invalid_arguments"

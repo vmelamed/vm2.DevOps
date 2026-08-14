@@ -12,8 +12,6 @@
 (( ${__VM2_LIB_DUMP_VARS_SH_LOADED:-0} == 1 )) && return 0
 declare -gr __VM2_LIB_DUMP_VARS_SH_LOADED=1
 
-declare -rx varNameRegex
-
 declare -rxi success
 declare -rxi err_argument_type
 declare -rxi err_invalid_nameref
@@ -127,11 +125,11 @@ function _write_line()
         _rc="$err_invalid_arguments"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires one or two arguments (provided $#): a variable name and an optional secret-masking flag."
     }
-    [[ -v 1 && $1 =~ $varNameRegex ]] || {
+    [[ -v 1 ]] && is_variable_name "$1" || {
         _rc="$err_invalid_nameref"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a valid variable name (provided '${1-<missing>}')."
     }
-    [[ ! -v 2 || $2 =~ ^(true|false)$ ]] || {
+    [[ -z $2 ]] || is_boolean "$2" || {
         _rc="$err_argument_type"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires optional argument 2, the secret-masking flag, to be 'true' or 'false' (provided '${2-<missing>}')."
     }

@@ -33,8 +33,6 @@ declare -x jq_status_checks
 
 declare -xri err_invalid_nameref
 
-declare -xr varNameRegex
-
 declare -xr missing_state
 declare -xr present_state
 declare -xr undefined_default
@@ -75,11 +73,11 @@ function compare_settings()
         _rc="$err_invalid_arguments"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires five or six arguments (provided $#): the API path, jq transform, expected-values array, display-format flag, results array, and optional key-order array."
     }
-    [[ -v 1 && -n "$1" ]] || {
+    [[ -n "$1" ]] || {
         _rc="$err_argument_value"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the GitHub API path, to be non-empty (provided '${1-<missing>}'); for example, 'repos/\$repo'."
     }
-    [[ -v 2 && -n "$2" ]] || {
+    [[ -n "$2" ]] || {
         _rc="$err_argument_value"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, the jq transformation query, to be non-empty (provided '${2-<missing>}')."
     }
@@ -125,7 +123,7 @@ function compare_settings()
     local _key='' _actual=''
 
     while IFS='=' read -r _key _actual; do
-        [[ -v expected_key_values["$_key"] ]] && _actual_key_values["$_key"]="$_actual"
+        [[ -v _expected_key_values["$_key"] ]] && _actual_key_values["$_key"]="$_actual"
     done < <(jq -r "$_jq_transform" <<< "$_json")
 
     # put the keys in the array in display order
@@ -144,7 +142,7 @@ function compare_settings()
         _expected="${_expected_key_values[$_key]}"
         if [[ $_expected == "$secret_str" ]]; then
             _expected=$undefined_default
-            [[ -v actual_key_values[$_key] ]] &&
+            [[ -v _actual_key_values[$_key] ]] &&
                 _actual=$present_state ||
                 _actual=$missing_state
         else
@@ -225,7 +223,7 @@ function audit_repo()
 
     # --- Repo settings ---
     echo "  ℹ️  Repository settings:"
-    compare_settings "$path_repo" "$jq_entries" default_repo_settings true results default_repo_settings_order || {
+    compare_settings "$path_repo" "$jq_entries" default_repo_settings true _results default_repo_settings_order || {
         error -ec "$?" "Failed to compare repository settings."
         return 2
     }
@@ -233,7 +231,7 @@ function audit_repo()
 
     # --- Actions permissions ---
     echo "  ℹ️  Actions permissions:"
-    compare_settings "$path_permissions" "$jq_entries" default_repo_permissions true results || {
+    compare_settings "$path_permissions" "$jq_entries" default_repo_permissions true _results || {
         error -ec "$?" "Failed to compare repository permissions settings."
         return 2
     }
@@ -241,7 +239,7 @@ function audit_repo()
 
     # --- Variables ---
     echo "  ℹ️  Actions Variables:"
-    compare_settings "$path_vars" "$jq_vars" actions_default_vars false results || {
+    compare_settings "$path_vars" "$jq_vars" actions_default_vars false _results || {
         error -ec "$?" "Failed to compare GitHub Actions variables."
         return 2
     }
@@ -258,7 +256,7 @@ function audit_repo()
         fi
 
         echo "  ℹ️  ${app^} Secrets:"
-        compare_settings "$path_repo/$app/secrets" "$jq_secrets" "$_secrets_array_name" false results || {
+        compare_settings "$path_repo/$app/secrets" "$jq_secrets" "$_secrets_array_name" false _results || {
             error -ec "$?" "Failed to compare $app secrets."
             return 2
         }
@@ -283,7 +281,7 @@ function audit_repo()
     }
 
     echo "  ℹ️  Ruleset '$main_protection_rs_name' for branch '$branch' (id: $_ruleset_id):"
-    compare_settings "$path_rulesets/$_ruleset_id" "$jq_ruleset_rules" default_ruleset true results default_ruleset_order || {
+    compare_settings "$path_rulesets/$_ruleset_id" "$jq_ruleset_rules" default_ruleset true _results default_ruleset_order || {
         error -ec "$?" "Failed to compare branch protection ruleset settings."
         return 2
     }

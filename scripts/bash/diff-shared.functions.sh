@@ -629,7 +629,7 @@ function copy_file()
         _rc="$err_not_file"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the source file, to be an existing file (provided '${1-<missing>}')."
     }
-    [[ -v 2 && -n $2 ]] || {
+    [[ -n $2 ]] || {
         _rc="$err_argument_value"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, the destination file path, to be non-empty (provided '${2-<missing>}')."
     }

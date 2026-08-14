@@ -67,7 +67,7 @@ function confirm()
         _rc="$err_invalid_arguments"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires one or two arguments (provided $#): a prompt and an optional default response."
     }
-    [[ -v 1 && -n "$1" ]] || {
+    [[ -n "$1" ]] || {
         _rc="$err_argument_value"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the confirmation prompt, to be non-empty (provided '${1-<missing>}')."
     }
@@ -146,7 +146,7 @@ function enter_value()
                               "    3) boolean to suppress the echo of the input to the terminal (optional if the rest are not specified, default: false)" \
                               "    4) the name of a validation function (optional, default: true)."
     }
-    [[ -v 1 && -n $1 ]] || {
+    [[ -n $1 ]] || {
         _rc="$err_argument_value"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the prompt, to be non-empty (provided '${1-<missing>}')."
     }
@@ -240,7 +240,7 @@ function choose()
         _rc="$err_invalid_arguments"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires three or more arguments (provided $#): a prompt and at least two choices."
     }
-    [[ -v 1 && -n $1 ]] || {
+    [[ -n $1 ]] || {
         _rc="$err_argument_value"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the choice prompt, to be non-empty (provided '${1-<missing>}')."
     }

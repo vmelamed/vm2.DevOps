@@ -27,8 +27,6 @@ declare -rxi err_unsafe_argument
 declare -rxi err_invalid_path
 declare -rxi err_missing_argument
 
-declare -rx varNameRegex
-
 declare -xra allowed_runners_os=(
     "ubuntu-latest"
     "ubuntu-22.04"
@@ -41,7 +39,6 @@ declare -xra allowed_runners_os=(
     "macos-11")
 
 declare -xr nugetServersRegex
-declare -xr varNameRegex
 
 #--------------------------------------------------------------------------------
 # @description Trims leading whitespace from a string.
@@ -612,7 +609,7 @@ function validate_nuget_server()
         _rc="$err_invalid_arguments"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires one or two arguments (provided $#): the name of the variable containing the NuGet server and an optional default server."
     }
-    [[ -v 1 && $1 =~ $varNameRegex ]] || {
+    is_variable_name "$1" || {
         _rc="$err_invalid_nameref"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a valid variable name for the NuGet server value (provided '${1-<missing>}')."
     }
@@ -723,7 +720,7 @@ function validate_preprocessor_symbols()
         _rc="$err_invalid_arguments"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires one argument (provided $#): the NAME of the variable containing the preprocessor symbols to test."
     }
-    [[ -v 1 && $1 =~ $varNameRegex ]] || {
+    is_variable_name "$1" || {
         _rc="$err_invalid_nameref"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a valid variable name for the preprocessor-symbol list (provided '${1-<missing>}')."
     }
@@ -741,7 +738,7 @@ function validate_preprocessor_symbols()
     local _s=''
     for symbol in "${_symbol_array[@]}"; do
         [[ -z $symbol ]] && continue
-        if [[ "$symbol" =~ $varNameRegex ]]; then
+        if is_variable_name "$symbol"; then
             [[ -z $_s ]] && _s="$symbol" || _s="$_s;$symbol"
         else
             error -ec "$err_argument_value" "The pre-processor symbol '$symbol' is not valid."

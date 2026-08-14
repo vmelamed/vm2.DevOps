@@ -486,11 +486,11 @@ function warning_var()
         _rc="$err_invalid_arguments"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires three arguments ($# provided): variable name, warning message, and default value."
     }
-    [[ -v 1 && -n $1 && $1 =~ $varNameRegex ]] || {
+    [[ -n $1 ]] && is_variable_name "$1" || {
         _rc="$err_invalid_nameref"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a valid variable name (provided '${1-<missing>}')."
     }
-    [[ -v 2 && -n $2 ]] || {
+    [[ -n $2 ]] || {
         _rc="$err_argument_value"
         error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, the warning message, to be non-empty (provided '${2-<missing>}')."
     }
