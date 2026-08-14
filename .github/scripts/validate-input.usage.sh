@@ -74,6 +74,9 @@ Options:
                                 Initial value from \$SKIP_TESTS or default 'false'
   -sp, --skip-packages          Whether to skip packing projects. Expected 'true' or 'false'
                                 Initial value from \$SKIP_PACKAGES or default 'false'
+  -a, --artifacts-dir           Directory to store build, test, benchmark, and test artifacts.
+                                MUST be relative to the repository root
+                                Initial value from \$ARTIFACTS_DIR environment variable or 'artifacts'
 $_switches
 Environment Variables:
   BUILD_PROJECTS                JSON array of paths to projects to build
@@ -95,6 +98,8 @@ Environment Variables:
   SKIP_BENCHMARKS               Whether to skip running benchmarks
   SKIP_TESTS                    Whether to skip running tests
   SKIP_PACKAGES                 Whether to skip packing projects
+  ARTIFACTS_DIR                 Directory to store build, test, benchmark, and test artifacts.
+                                MUST be relative to the repository root
 $_vars
 Outputs (to GITHUB_OUTPUT):
   build-projects                JSON array of paths to projects to build
@@ -115,6 +120,8 @@ Outputs (to GITHUB_OUTPUT):
   skip-benchmarks               Whether to skip running benchmarks
   skip-tests                    Whether to skip running tests
   skip-packages                 Whether to skip packing projects
+  artifacts-dir                 Directory to store build, test, benchmark, and test artifacts.
+                                MUST be relative to the repository root
 
 EOF
 }

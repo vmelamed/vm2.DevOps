@@ -35,6 +35,7 @@ declare -r defaultResetBenchmarkThresholds=false
 declare -r defaultSkipBenchmarks=false
 declare -r defaultSkipTests=false
 declare -r defaultSkipPackages=false
+declare -r defaultArtifactsDir='artifacts'
 
 # CI Variables that will be passed as environment variables
 declare -x build_projects=${BUILD_PROJECTS:-$defaultBuildProjects}
@@ -55,6 +56,7 @@ declare -x reset_benchmark_thresholds=${RESET_BENCHMARK_THRESHOLDS:-$defaultRese
 declare -x skip_benchmarks=${SKIP_BENCHMARKS:-$defaultSkipBenchmarks}
 declare -x skip_tests=${SKIP_TESTS:-$defaultSkipTests}
 declare -x skip_packages=${SKIP_PACKAGES:-$defaultSkipPackages}
+declare -x artifacts_dir=${ARTIFACTS_DIR:-$defaultArtifactsDir}
 
 source "$script_dir/validate-input.usage.sh"
 source "$script_dir/validate-input.args.sh"
@@ -120,6 +122,7 @@ is_safe_boolean "$reset_benchmark_thresholds" || true
 is_safe_boolean "$skip_benchmarks" || true
 is_safe_boolean "$skip_tests" || true
 is_safe_boolean "$skip_packages" || true
+is_safe_path "$artifacts_dir" || true
 
 # shellcheck disable=SC2119
 dump_vars --quiet --force \
@@ -142,6 +145,7 @@ dump_vars --quiet --force \
     skip_benchmarks \
     skip_tests \
     skip_packages \
+    artifacts_dir \
     | to_summary
 
 exit_if_has_errors
@@ -167,4 +171,5 @@ args_to_github_output \
     reset_benchmark_thresholds \
     skip_benchmarks \
     skip_tests \
-    skip_packages
+    skip_packages \
+    artifacts_dir

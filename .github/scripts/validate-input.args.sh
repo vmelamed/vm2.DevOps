@@ -116,6 +116,11 @@ function get_arguments()
                 skip_packages="$1"; shift;
                 ;;
 
+            --artifacts|-a )
+                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                artifacts_dir="$1"; shift;
+                ;;
+
             * ) usage -ec "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
         esac
@@ -145,6 +150,7 @@ function get_arguments()
         skip_benchmarks \
         skip_tests \
         skip_packages \
+        artifacts_dir \
         --header "other:" \
         ci
 }
