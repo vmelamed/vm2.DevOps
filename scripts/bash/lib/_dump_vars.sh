@@ -293,9 +293,10 @@ function dump_vars()
 
             -ci|--common-dotnet-args )
                 _secret=false
-                for arg in "${dump_common_dotnet_args[@]}"; do
-                    [[ $arg == @(-s|--secret) ]] && _secret=true && continue
-                    _write_line "$arg" "$_secret"
+                local _arg
+                for _arg in "${dump_common_dotnet_args[@]}"; do
+                    [[ $_arg == @(-s|--secret) ]] && _secret=true && continue
+                    _write_line "$_arg" "$_secret"
                     _secret=false
                 done
                 ;;

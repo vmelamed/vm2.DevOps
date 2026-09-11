@@ -53,13 +53,16 @@ source "$script_dir/publish-package.usage.sh"
 source "$script_dir/publish-package.args.sh"
 
 get_arguments "$@"
-package_project=${package_project:-"$PACKAGE_PROJECT"}
+package_project=${package_project:-"${PACKAGE_PROJECT:-}"}
 
 is_safe_existing_file "$package_project"                                      || true
 [[ $package_project == *.csproj ]]                                            || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)."
 is_safe_reason "$reason"                                                      || true
 is_safe_input "$repo_owner"                                                   || true
 validate_nuget_server nuget_server nuget_server_name nuget_server_url "nuget" || true
+
+exit_if_has_errors
+
 sanitize_common_dotnet_args "$package_project"                                || true
 
 exit_if_has_errors

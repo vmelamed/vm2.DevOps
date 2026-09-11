@@ -552,8 +552,8 @@ function save_state()
 
     local -n __state="$1"
 
-    [[ ! -v __state[key_pid] ]] || (( __state[key_pid] == 0 ))                    || bug -ec "$err_logic_error" "${FUNCNAME[0]}() must be called with a unused or previously restored state."
-    [[ ! -v __state[key_subshell_pid] ]] || (( __state[key_subshell_pid] == -1 )) || bug -ec "$err_logic_error" "${FUNCNAME[0]}() must be called with a unused or previously restored state."
+    [[ ! -v __state[$key_pid] ]] || (( __state[$key_pid] == 0 ))                    || bug -ec "$err_logic_error" "${FUNCNAME[0]}() must be called with a unused or previously restored state."
+    [[ ! -v __state[$key_subshell_pid] ]] || (( __state[$key_subshell_pid] == -1 )) || bug -ec "$err_logic_error" "${FUNCNAME[0]}() must be called with a unused or previously restored state."
 
     exit_if_has_bugs
 

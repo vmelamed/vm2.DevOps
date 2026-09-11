@@ -683,6 +683,8 @@ function print_repo_state()
     (( $# == 1 ))                     || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable."
     is_defined_associative_array "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name an associative array containing repository state (provided '${1:-<none>}')."
 
+    exit_if_has_bugs
+
     # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
     local -n _state="$1"
     local _key
@@ -714,7 +716,9 @@ function is_inside_work_tree()
 
     local _path="${1:-$initial_cwd}"
 
-    git -C "$_path" rev-parse --is-inside-work-tree &> "$_ignore"
+    # normalize to $positive/$negative -- `git rev-parse` exits 128 (its generic "fatal" code),
+    # not 1, when the directory is not inside a work tree.
+    git -C "$_path" rev-parse --is-inside-work-tree &> "$_ignore" && return "$positive" || return "$negative"
 }
 
 #---------------------------------------------------------------------------------------------
@@ -738,6 +742,8 @@ function root_working_tree()
                                                                                     "  - the name of the variable to store the absolute path of the root of the Git working tree containing the found directory"
     [[ ! -v 1 || -d $1 ]]                    || bug -ec "$err_not_directory" "${FUNCNAME[0]}() requires argument 1 to be an existing directory (provided '${1:-<none>}')."
     [[ ! -v 2 ]] || is_defined_variable "$2" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to be the name of the variable to store the absolute path of the root of the Git repository containing the found directory."
+
+    exit_if_has_bugs # gate here: $2 must be validated before creating a nameref from it below
 
     local _path=$1
     local -n _repo_root_ref=$2

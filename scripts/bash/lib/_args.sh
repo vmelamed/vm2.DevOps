@@ -159,10 +159,7 @@ function usage()
     save_state _core_state
     set +x
 
-    (( $# > 0 )) && {
-        error "$@";
-        _exit_code="$failure"
-    }
+    (( $# > 0 )) && error "$@"
 
     echo ""
     usage_text "$_long_usage"

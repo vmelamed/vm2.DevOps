@@ -13,6 +13,8 @@
 (( ${__VM2_LIB_ERROR_CODES_SH_LOADED:-0} == 1 )) && return 0
 declare -xri __VM2_LIB_ERROR_CODES_SH_LOADED=1
 
+declare -x bug_prefix
+
 # RETURN CODES THAT MUST NOT BE REUSED FOR OTHER PURPOSES:
 declare -xri success=0                  # The command completed successfully.
 declare -xri failure=1                  # A general, unspecified error occurred.
@@ -175,15 +177,19 @@ function error_message()
 
     (( $# == 1 )) || {
         _rc="$err_invalid_arguments"
-        error -ec "$_rc" "${FUNCNAME[0]}() requires exactly 1 argument: an error code (provided: $#).\n"
+        # avoid calling the error function here to prevent recursion in case error_message is called from within error handling
+        printf "%s ${FUNCNAME[0]}() requires exactly 1 argument: an error code (provided: $#).\n" "$bug_prefix"
+        show_stack 2 4 true
     }
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     [[ ! -v 1 ]] || is_non_negative "$1" || {
         _rc="$err_argument_type"
-        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be an error code (0..255) (provided '${1:-<none>}')"
+        # avoid calling the error function here to prevent recursion in case error_message is called from within error handling
+        printf "%s ${FUNCNAME[0]}() requires argument 1 to be an error code (0..255) (provided '${1:-<none>}')." "$bug_prefix"
+        show_stack 2 4 true
     }
 
-    (( _rc == success )) || bug_exit "Please, fix the above errors, and try again."
+    (( _rc == success )) || exit "$_rc"
 
     [[ -v __error_messages[$1] ]] &&
         echo "$1: ${__error_messages[$1]}" ||

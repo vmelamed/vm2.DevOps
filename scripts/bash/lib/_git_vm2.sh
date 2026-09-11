@@ -196,8 +196,8 @@ function resolve_vm2_repos()
     (( $# <= 2 ))                            || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() takes 1 or 2 arguments ($# provided):" \
                                                                                     "  - the directory that is a parent to all vm2 repositories" \
                                                                                     "  - name of a variable to receive the resolved vm2_repos directory"
-    [[ ! -v 1 || -z "$1" || -d "$1" ]]       || bug -ec "$err_not_directory" "${FUNCNAME[0]}() requires argument 2 to be an existing directory if provided (provided '${1:-<none>}')."
-    [[ ! -v 2 ]] || is_defined_variable "$2" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires a variable name as the first argument to store the resolved vm2_repos directory (provided '${2:-<none>}')."
+    [[ ! -v 1 || -z "$1" || -d "$1" ]]       || bug -ec "$err_not_directory" "${FUNCNAME[0]}() requires argument 1 to be an existing directory if provided (provided '${1:-<none>}')."
+    [[ ! -v 2 ]] || is_defined_variable "$2" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to be a variable name to store the resolved vm2_repos directory (provided '${2:-<none>}')."
 
     exit_if_has_bugs
 
@@ -495,7 +495,8 @@ function get_vm2_sot_path()
                                                                                     "  - the SoT directory name relative to the vm2.Templates repository" \
                                                                                     "  - the name of the variable to store the absolute path of the path to the SoT shared content directory"
     [[ ! -v 1 || -n $1 ]]                    || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the vm2 repositories parent directory, to be non-empty (provided '${1:-<none>}')."
-    [[ -d $1 ]]                              || bug -ec "$err_not_directory" "${FUNCNAME[0]}() requires argument 1 to be an existing directory (provided '${1:-<none>}')."
+    # if $1 is missing/empty it is already reported above, otherwise validate its value
+    [[ ! -v 1 || -z $1 || -d $1 ]]           || bug -ec "$err_not_directory" "${FUNCNAME[0]}() requires argument 1 to be an existing directory (provided '${1:-<none>}')."
     [[ ! -v 2 || -n $2 ]]                    || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the SoT directory name, to be non-empty (provided '${2:-<none>}')."
     [[ ! -v 3 ]] || is_defined_variable "$3" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3, the name of the variable to store the absolute path of the path to the SoT shared content directory, to be defined (provided '${3:-<none>}')."
 

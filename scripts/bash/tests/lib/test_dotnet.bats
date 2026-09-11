@@ -1,0 +1,192 @@
+#!/usr/bin/env bats
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
+# Characterization tests for scripts/bash/lib/_dotnet.sh, as it behaves TODAY -- written before
+# the tier-4 predicate/validator convention refactor so the refactor has a safety net.
+#
+# The happy paths of dotnet_clean/dotnet_restore/dotnet_build/dotnet_pack (which invoke the real
+# `dotnet` CLI) are exercised end-to-end separately, via build.sh/pack.sh against a real vm2
+# package. Here we cover the pure-logic functions in full, and only the formal argument
+# validation (bug-exit) of the dotnet-invoking functions.
+
+bats_require_minimum_version 1.5.0
+
+load '../libs/bats-support/load'
+load '../libs/bats-assert/load'
+load '../helpers/setup'
+
+setup() {
+    _fake_csproj="$BATS_TEST_TMPDIR/fake.csproj"
+    echo "<Project />" > "$_fake_csproj"
+}
+
+# --- get_dotnet_error_message --------------------------------------------------------------
+
+@test "get_dotnet_error_message: returns the message for a known dotnet exit code" {
+    run get_dotnet_error_message 0
+    assert_success
+    assert_output "0: Build succeeded; no errors or warnings were reported"
+    run get_dotnet_error_message 1
+    assert_output "1: Unknown error or catch-all error; check the build output for details"
+}
+
+@test "get_dotnet_error_message: falls back to the unknown-code message" {
+    run get_dotnet_error_message 999
+    assert_success
+    assert_output "999: Unknown dotnet error code"
+}
+
+@test "get_dotnet_error_message: bug-exits on a negative or missing argument" {
+    run get_dotnet_error_message
+    assert_failure 254
+    run get_dotnet_error_message -1
+    assert_failure 254
+}
+
+# --- convert_dotnet_args_to_msbuild_args -------------------------------------------------------
+
+@test "convert_dotnet_args_to_msbuild_args: converts known options and passes the project through" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare -a msb=(); convert_dotnet_args_to_msbuild_args msb proj.csproj --configuration Release -c Debug --self-contained; printf '%s\n' \"\${msb[@]}\""
+    assert_success
+    assert_line --index 0 "proj.csproj"
+    assert_line --index 1 '-property:Configuration="Release"'
+    assert_line --index 2 '-property:Configuration="Debug"'
+    assert_line --index 3 "-property:SelfContained=true"
+}
+
+@test "convert_dotnet_args_to_msbuild_args: drops @remove-mapped options like --no-build" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare -a msb=(); convert_dotnet_args_to_msbuild_args msb proj.csproj --no-build --no-restore; printf '%s\n' \"\${msb[@]}\""
+    assert_success
+    assert_output "proj.csproj"
+}
+
+@test "convert_dotnet_args_to_msbuild_args: passes an unrecognized option through unchanged" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare -a msb=(); convert_dotnet_args_to_msbuild_args msb proj.csproj --some-unknown-flag; printf '%s\n' \"\${msb[@]}\""
+    assert_success
+    assert_line --index 1 "--some-unknown-flag"
+}
+
+@test "convert_dotnet_args_to_msbuild_args: fails on the removed --os/--arch options" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare -a msb=(); convert_dotnet_args_to_msbuild_args msb proj.csproj --os linux"
+    assert_failure 3
+}
+
+@test "convert_dotnet_args_to_msbuild_args: fails when an option requiring a value is given last" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare -a msb=(); convert_dotnet_args_to_msbuild_args msb proj.csproj --configuration"
+    assert_failure 6
+}
+
+@test "convert_dotnet_args_to_msbuild_args: bug-exits with fewer than two arguments" {
+    run convert_dotnet_args_to_msbuild_args
+    assert_failure 254
+}
+
+# --- extract_dotnet_build_info --------------------------------------------------------------
+
+@test "extract_dotnet_build_info: parses properties, result, warnings, and errors from build output" {
+    run bash -c "
+        source '$lib_dir/core.sh' --no-trap > /dev/null
+        declare -A info=()
+        extract_dotnet_build_info '$_fake_csproj' 0 info <<'EOF'
+  Configuration=Release
+  TargetFramework=net10.0
+  Version=1.2.3
+    1 Warning(s)
+    0 Error(s)
+Build succeeded.
+EOF
+        echo \"result=\${info[build_result]}\"
+        echo \"config=\${info[Configuration]}\"
+        echo \"tfm=\${info[TargetFramework]}\"
+        echo \"version=\${info[Version]}\"
+        echo \"warnings=\${info[warnings_count]}\"
+        echo \"errors=\${info[errors_count]}\"
+    "
+    assert_success
+    assert_line "result=succeeded"
+    assert_line "config=Release"
+    assert_line "tfm=net10.0"
+    assert_line "version=1.2.3"
+    assert_line "warnings=1"
+    assert_line "errors=0"
+}
+
+@test "extract_dotnet_build_info: drops per-project keys (TargetPath, PackageId) for solution builds" {
+    run bash -c "
+        source '$lib_dir/core.sh' --no-trap > /dev/null
+        _fake_slnx='$BATS_TEST_TMPDIR/fake.slnx'
+        echo fake > \"\$_fake_slnx\"
+        declare -A info=()
+        extract_dotnet_build_info \"\$_fake_slnx\" 0 info <<'EOF'
+  TargetPath=/some/path/out.dll
+  PackageId=vm2.Fake
+Build succeeded.
+EOF
+        [[ -v info[TargetPath] ]] && echo 'TargetPath still present' || echo 'TargetPath removed'
+        [[ -v info[PackageId] ]] && echo 'PackageId still present' || echo 'PackageId removed'
+    "
+    assert_success
+    assert_line "TargetPath removed"
+    assert_line "PackageId removed"
+}
+
+@test "extract_dotnet_build_info: bug-exits on a non-project/solution argument 1" {
+    run extract_dotnet_build_info "not-a-project-file" 0 info
+    assert_failure 254
+}
+
+@test "extract_dotnet_build_info: bug-exits with the wrong argument count" {
+    run extract_dotnet_build_info "$_fake_csproj" 0
+    assert_failure 254
+}
+
+# --- display_dotnet_build_summary ------------------------------------------------------------
+
+@test "display_dotnet_build_summary: prints a summary without crashing on a minimal build-info array" {
+    run bash -c "
+        source '$lib_dir/core.sh' --no-trap > /dev/null
+        declare -A info=([build_result]=succeeded [ExitCode]=0 [Version]=1.2.3)
+        display_dotnet_build_summary info
+    "
+    assert_success
+    assert_output --partial "succeeded"
+    assert_output --partial "1.2.3"
+}
+
+@test "display_dotnet_build_summary: bug-exits on a non-associative-array argument" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare -a arr=(); display_dotnet_build_summary arr"
+    assert_failure 254
+}
+
+# --- formal argument validation of the dotnet-invoking functions --------------------------------
+
+@test "dotnet_clean: bug-exits on a non-existent/invalid project path" {
+    run dotnet_clean "not-a-real-project.csproj"
+    assert_failure 254
+}
+
+@test "dotnet_restore: bug-exits on a non-existent/invalid project path" {
+    run dotnet_restore "not-a-real-project.csproj"
+    assert_failure 254
+}
+
+@test "dotnet_build: bug-exits on a non-existent/invalid project path" {
+    run dotnet_build "not-a-real-project.csproj"
+    assert_failure 254
+}
+
+@test "dotnet_pack: bug-exits on a non-.csproj argument 1" {
+    run dotnet_pack "not-a-real-project.slnx" "" properties
+    assert_failure 254
+}
+
+@test "get_target_path: bug-exits on a non-existent .csproj project (regression: was silently bypassed by a -v \$1 typo)" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare target=''; get_target_path 'totally-not-a-real-file.csproj' target"
+    assert_failure 254
+}
+
+@test "get_target_path: bug-exits with the wrong argument count" {
+    run get_target_path "$_fake_csproj"
+    assert_failure 254
+}

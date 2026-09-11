@@ -55,13 +55,16 @@ source "$script_dir/run-tests.usage.sh"
 source "$script_dir/run-tests.args.sh"
 
 get_arguments "$@"
-test_project=${test_project:-"$TEST_PROJECT"}
+test_project=${test_project:-"${TEST_PROJECT:-}"}
 
 # validate the values of the variables common for many vm2.DevOps scripts,
 # usually set from CLI arguments, environment variables, or defaults
 is_safe_existing_file "$test_project"        || true
 [[ $test_project == *.csproj ]]              || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)."
 is_safe_min_coverage_pct "$min_coverage_pct" || true
+
+exit_if_has_errors
+
 sanitize_common_dotnet_args "$test_project"  || true
 
 # other script specific variables

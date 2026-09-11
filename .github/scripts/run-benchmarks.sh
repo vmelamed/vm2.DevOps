@@ -44,11 +44,14 @@ source "$script_dir/run-benchmarks.usage.sh"
 source "$script_dir/run-benchmarks.args.sh"
 
 get_arguments "$@"
-benchmark_project=${benchmark_project:-"$BENCHMARK_PROJECT"}
+benchmark_project=${benchmark_project:-"${BENCHMARK_PROJECT:-}"}
 
 # validate input parameters
 is_safe_existing_path "$benchmark_project"   || true
 [[ $benchmark_project == *.csproj ]]         || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)."
+
+exit_if_has_errors
+
 sanitize_common_dotnet_args "$benchmark_project" || true
 
 artifacts_benchmarks="$artifacts/benchmarks"

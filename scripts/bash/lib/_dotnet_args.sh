@@ -280,16 +280,21 @@ function sanitize_common_dotnet_args()
         }
     }
 
-    # freeze the common dotnet arguments
-    declare -xr preprocessor_symbols
-    declare -xr configuration
-    declare -xr framework
-    declare -xr runtime
-    declare -xr artifacts
-    declare -xr minver_tag_prefix
-    declare -xr minver_prerelease_id
-    declare -xr gh_nuget_username
-    declare -xr gh_nuget_password
+    # freeze the common dotnet arguments -- `readonly` (a POSIX special builtin), not `declare
+    # -r`, is required here: this runs inside a function body, and `declare -r` without `-g`
+    # only freezes a function-local shadow that is discarded when the function returns, leaving
+    # the real global variables unprotected. `readonly` has no such scoping quirk -- it always
+    # freezes the actual global. The variables are already exported from their original
+    # top-level declaration, so `readonly` alone (no `-x`) is sufficient here.
+    readonly preprocessor_symbols
+    readonly configuration
+    readonly framework
+    readonly runtime
+    readonly artifacts
+    readonly minver_tag_prefix
+    readonly minver_prerelease_id
+    readonly gh_nuget_username
+    readonly gh_nuget_password
 
     return "$_validation_rc"
 }

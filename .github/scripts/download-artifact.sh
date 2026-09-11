@@ -54,7 +54,7 @@ declare -xr workflow_path
 if [[ -d "$artifacts" && -n "$(ls -A "$artifacts")" ]]; then
     renamed_artifacts_dir="$artifacts-$(date -u +"%Y%m%dT%H%M%S")"
 
-    declare -r renamed_artifacts_dir choice
+    declare -r renamed_artifacts_dir
 
     choose "The artifacts' directory '$artifacts' already exists. What do you want to do?" \
            choice \

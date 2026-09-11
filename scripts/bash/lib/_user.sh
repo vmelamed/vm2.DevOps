@@ -195,8 +195,6 @@ function enter_value()
 # @exitcode success/positive=0:
 # @exitcode err_invalid_arguments=2: Invalid arguments (fewer than 3 parameters).
 #
-# @stdout The number of the chosen option (1-based index).
-#
 # @example
 #   choose "Select environment:" choice "Development" "Staging" "Production"
 #   case $choice in
@@ -230,8 +228,7 @@ function choose()
     _selection=1
 
     is_quiet && {
-        # just return the default choice (1)
-        printf '1\n'
+        # just return the default choice (1) via the nameref
         return "$success"
     }
 
@@ -347,7 +344,14 @@ function print_sequence()
     local _first=true
     [[ -n "$_open_paren" ]] && printf "%s" "$_open_paren" || true
     for _arg in "$@"; do
-        [[ "$_arg" == -* || "$_arg" == --* ]] && continue || true
+        # skip only the recognized named parameters (matching the case patterns above), not any
+        # value that merely happens to start with '-' (e.g. a negative number).
+        case $_arg in
+            --json-array|--json|--jq-array|-j|--quote=*|-q=*|--separator=*|-s=*|--parenthesis=*|--paren=*|-p=* )
+                continue
+                ;;
+            * ) ;;
+        esac
         if $_first; then
             printf "%s%s%s" "$_quote" "$_arg" "$_quote"
             _first=false

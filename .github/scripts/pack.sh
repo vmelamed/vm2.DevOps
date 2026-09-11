@@ -43,7 +43,7 @@ source "$script_dir/pack.usage.sh"
 source "$script_dir/pack.args.sh"
 
 get_arguments "$@"
-package_project=${package_project:-"$PACKAGE_PROJECT"}
+package_project=${package_project:-"${PACKAGE_PROJECT:-}"}
 
 # validate the values of the variables common for many vm2.DevOps scripts,
 # usually set from CLI arguments, environment variables, or defaults
@@ -51,8 +51,9 @@ is_safe_existing_file "$package_project"       || true
 [[ $package_project == *.csproj ]]             || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)."
 is_safe_reason "$reason"                       || true
 is_boolean "$build"                            || true
-sanitize_common_dotnet_args "$package_project" || true
+exit_if_has_errors
 
+sanitize_common_dotnet_args "$package_project" || true
 exit_if_has_errors
 
 # freeze the parameters

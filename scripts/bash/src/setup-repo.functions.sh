@@ -120,7 +120,10 @@ function resolve_github_app_ids()
 
     exit_if_has_errors
 
-    declare -xr actions_app_id dependabot_app_id codespaces_app_id
+    # `readonly` (a POSIX special builtin), not `declare -r`: this runs inside a function body,
+    # and `declare -r` without `-g` only freezes a function-local shadow, leaving the real
+    # globals unprotected.
+    readonly actions_app_id dependabot_app_id codespaces_app_id
 }
 
 #---------------------------------------------------------------------------------------------
@@ -152,7 +155,11 @@ function list_required_checks()
         "$_gate_name"
     )
 
-    declare -xra required_checks
+    # `readonly` (a POSIX special builtin), not `declare -r`: this runs inside a function body,
+    # and `declare -r` without `-g` only freezes a function-local shadow, leaving the real
+    # global unprotected (doubly so for `-a` here: arrays cannot be exported at all, so `-x`
+    # was already a no-op on this line).
+    readonly required_checks
 
     trace "Required checks: ${required_checks[*]}"
 }
@@ -190,16 +197,18 @@ function initialize_gh_paths()
 
     path_vars="$path_repo/actions/variables"
 
-    # freeze the paths now
-    declare -xr path_repo
+    # freeze the paths now -- `readonly` (a POSIX special builtin), not `declare -r`: this runs
+    # inside a function body, and `declare -r` without `-g` only freezes a function-local
+    # shadow, leaving the real globals unprotected.
+    readonly path_repo
 
-    declare -xr path_permissions
-    declare -xr path_rulesets
+    readonly path_permissions
+    readonly path_rulesets
 
-    declare -xr path_actions_secrets
-    declare -xr path_dependabot_secrets
+    readonly path_actions_secrets
+    readonly path_dependabot_secrets
 
-    declare -xr path_vars
+    readonly path_vars
 }
 
 #---------------------------------------------------------------------------------------------
@@ -264,14 +273,16 @@ def count_pr_checks_param(check): [.rules[] | select(.type == "required_status_c
     non_fast_forward:                       count_rules("non_fast_forward"),
 } | to_entries[] | "\(.key)=\(.value)"'
 
-    # freeze the queries now
-    declare -xr jq_entries
-    declare -xr jq_secrets
-    declare -xr jq_secret_names
-    declare -xr jq_vars
-    declare -xr jq_ruleset_id
-    declare -xr jq_ruleset_rules
-    declare -xr jq_status_checks
+    # freeze the queries now -- `readonly` (a POSIX special builtin), not `declare -r`: this
+    # runs inside a function body, and `declare -r` without `-g` only freezes a function-local
+    # shadow, leaving the real globals unprotected.
+    readonly jq_entries
+    readonly jq_secrets
+    readonly jq_secret_names
+    readonly jq_vars
+    readonly jq_ruleset_id
+    readonly jq_ruleset_rules
+    readonly jq_status_checks
 }
 
 #---------------------------------------------------------------------------------------------
@@ -309,8 +320,11 @@ function initialize_main_protection_rs_id()
 
         path_main_protection_ruleset="$path_rulesets/$main_protection_rs_id"
 
-        declare -xir main_protection_rs_id
-        declare -xr path_main_protection_ruleset
+        # `readonly` (a POSIX special builtin), not `declare -r`: this runs inside a function
+        # body, and `declare -r` without `-g` only freezes a function-local shadow, leaving the
+        # real globals unprotected.
+        readonly main_protection_rs_id
+        readonly path_main_protection_ruleset
         return "$success"
     else
         trace "Failed to initialize main protection ruleset ID."

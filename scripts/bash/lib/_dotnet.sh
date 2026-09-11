@@ -955,8 +955,8 @@ function get_target_path()
     (( $# == 2 ))                                  || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
                                                                                         "  - path to a .csproj file" \
                                                                                         "  - nameref to a variable to receive the full path to the assembly that was or would be produced"
-    [[ ! -v $1 ]] || [[ $1 == *.csproj && -s $1 ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the project, to be an existing, non-empty .csproj file (provided '${1:-<none>}')."
-    [[ ! -v $2 ]] || is_defined_variable "$2"      || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the variable name to receive the full path to the assembly, to be a defined variable (provided '${2:-<none>}')."
+    [[ ! -v 1 ]] || [[ $1 == *.csproj && -s $1 ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the project, to be an existing, non-empty .csproj file (provided '${1:-<none>}')."
+    [[ ! -v 2 ]] || is_defined_variable "$2"      || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the variable name to receive the full path to the assembly, to be a defined variable (provided '${2:-<none>}')."
 
     exit_if_has_bugs
 

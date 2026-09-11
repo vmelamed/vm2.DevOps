@@ -186,6 +186,13 @@ function to_summary()
 declare -xi __errors=0
 
 #---------------------------------------------------------------------------------------------
+# @description The shallowest bash call-stack depth at which an unflushed error was recorded.
+#   Mirrors `$__bugs_min_depth` -- see its documentation for the full rationale. Meaningless
+#   while `$__errors == 0`.
+#---------------------------------------------------------------------------------------------
+declare -xi __errors_min_depth=0
+
+#---------------------------------------------------------------------------------------------
 # @description Tests whether the global error counter has recorded any errors.
 #
 # @exitcode success/positive=0: At least one error has been recorded.
@@ -273,11 +280,31 @@ function reset_errors()
 declare -xi __bugs=0
 
 #---------------------------------------------------------------------------------------------
-# @description Tests the global bug counter and exits the script if any bugs were recorded.
+# @description The shallowest bash call-stack depth (`${#FUNCNAME[@]}`, measured the same way
+#   `bug()` and `exit_if_has_bugs()` each see it from their own call site) at which an
+#   unflushed bug was recorded. Meaningless while `$__bugs == 0`.
+#
+# Notes:
+#   - `bug()` and `exit_if_has_bugs()` are always called as sibling statements within the same
+#     function, so they observe the same depth for that function. This lets
+#     `exit_if_has_bugs()` tell "a bug that belongs to me or something I called" (depth >= mine)
+#     apart from "a bug an ancestor recorded earlier in its own still-open validation block,
+#     before it got a chance to call its own `exit_if_has_bugs()`" (depth < mine) -- the latter
+#     is deferred instead of being exited on by an unrelated, deeper function that happens to
+#     also follow the check-then-exit_if_has_bugs convention.
+#---------------------------------------------------------------------------------------------
+declare -xi __bugs_min_depth=0
+
+#---------------------------------------------------------------------------------------------
+# @description Tests the global bug counter and exits the script if any bugs were recorded,
+#   unless the shallowest unflushed bug belongs to an ancestor's still-open validation block
+#   (see `$__bugs_min_depth`), in which case it defers to that ancestor's own
+#   `exit_if_has_bugs()` call instead of exiting on its behalf.
 #
 # @noargs
 #
-# @exitcode success/positive=0: No bugs were recorded; execution continues normally.
+# @exitcode success/positive=0: No bugs were recorded, or the recorded bug(s) are not this
+#   call's to report; execution continues normally.
 #
 # @example
 #   exit_if_has_bugs  # exits with code 254 (err_has_bugs) if any bugs were recorded
@@ -286,10 +313,13 @@ function exit_if_has_bugs()
 {
     (( __bugs == 0 )) && return "$success"
 
+    local -i _depth=${#FUNCNAME[@]}
+    (( __bugs_min_depth >= _depth )) || return "$success" # not mine to report -- defer to the ancestor whose validation block is still open
+
     local -i _bugs=$__bugs
-    __bugs=0 # clear before reporting: helpers called below (is_exit_code, __test_with_regex, etc.) also
-             # follow the check-then-exit_if_has_bugs convention, and would otherwise see the stale
-             # count and recurse back into this same exit path indefinitely.
+    __bugs=0            # clear before reporting: helpers called below (is_exit_code, __test_with_regex, etc.) also
+    __bugs_min_depth=0  # follow the check-then-exit_if_has_bugs convention, and would otherwise see the stale
+                        # count and recurse back into this same exit path indefinitely.
     error -ec "$err_has_bugs" -ns "$_bugs bug(s) detected. Please fix the above issues and try again. Exiting the script immediately..."
     exit "$err_has_bugs"
 }
@@ -333,14 +363,17 @@ function exit_if_has_errors()
 
     ! has_errors && return "$success"
 
+    local -i _depth=${#FUNCNAME[@]}
+    (( __errors_min_depth >= _depth )) || return "$success" # not mine to report -- defer to the ancestor whose validation block is still open
+
     [[ -v 1 ]] && is_boolean "$1" && _display_usage="$1"
 
     local -i _errors=$__errors
-    __errors=0 # clear before reporting: guards against any future helper called below that follows
-               # the check-then-exit_if_has_errors convention and would otherwise see the stale
-               # count and recurse back into this same exit path (mirrors exit_if_has_bugs).
+    __errors=0            # clear before reporting: guards against any future helper called below that follows
+    __errors_min_depth=0  # the check-then-exit_if_has_errors convention and would otherwise see the stale
+                          # count and recurse back into this same exit path (mirrors exit_if_has_bugs).
 
-    $_display_usage && usage -ns "$err_has_errors" "$_errors error(s) encountered. Please fix the above issues and try again."
+    $_display_usage && usage -ec "$err_has_errors" -ns "$_errors error(s) encountered. Please fix the above issues and try again."
     # exits with error message, code, and usage, if $_display_usage is true
 
     error -ec "$err_has_errors" -ns "$_errors error(s) encountered. Please fix the above issues and try again. Exiting the script immediately..."
@@ -507,8 +540,8 @@ function __message()
 
 declare -xr error_exit_prefix="❌  ERROR: "
 declare -xr error_prefix="❌  ERROR: "
-declare -xr bug_prefix="🪲  ERROR: "
-declare -xr fatal_prefix="💀  ERROR: "
+declare -xr bug_prefix="🪲  BUG:   "
+declare -xr fatal_prefix="💀  FATAL: "
 declare -xr warning_prefix="⚠️  WARN:  "
 declare -xr info_prefix="ℹ️  INFO:  "
 declare -xr trace_prefix="🐾  TRACE: "
@@ -545,6 +578,8 @@ declare -xr trace_prefix="🐾  TRACE: "
 function error()
 {
     __message "$error_prefix" "$@" > >(to_stderr)
+    local -i _depth=${#FUNCNAME[@]}
+    (( __errors == 0 || _depth < __errors_min_depth )) && __errors_min_depth=$_depth
     (( ++__errors ))
 }
 
@@ -581,6 +616,8 @@ function error()
 function bug()
 {
     __message "$bug_prefix" "$@" > >(to_stderr)
+    local -i _depth=${#FUNCNAME[@]}
+    (( __bugs == 0 || _depth < __bugs_min_depth )) && __bugs_min_depth=$_depth
     (( ++__bugs ))
 }
 
@@ -612,7 +649,18 @@ function bug()
 #---------------------------------------------------------------------------------------------
 function fatal_exit()
 {
-    __bad_exit "$fatal_prefix" "$@"
+    local -i _exit_code=$failure
+    local -a _args=("$@")
+    local -i _i
+
+    for (( _i = 0; _i < ${#_args[@]}; _i++ )); do
+        [[ ${_args[_i]} == "--error-code" || ${_args[_i]} == "-ec" ]] || continue
+        is_exit_code "${_args[_i+1]:-}" && _exit_code=${_args[_i+1]}
+        break
+    done
+
+    __message "$fatal_prefix" "$@" > >(to_stderr)
+    exit "$_exit_code"
 }
 
 #---------------------------------------------------------------------------------------------

@@ -160,7 +160,7 @@ function trim_var()
     _var="${_var%"${_var##*[![:space:]]}"}"
 }
 
-declare -rx dangerous_chars_regex='[;|&$`<>(){}\n\r]'
+declare -rx dangerous_chars_regex=$'[;|&$`<>(){}\n\r]'
 declare -rx dangerous_chars_and_whitespaces_regex='[;|&$`<>(){}[:space:]]'
 #---------------------------------------------------------------------------------------------
 # @description Tests if user input is safe by checking for potentially dangerous characters.
@@ -433,7 +433,6 @@ function is_safe_existing_directory()
 #---------------------------------------------------------------------------------------------
 function is_safe_existing_file()
 {
-
     (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the file path to test."
 
     exit_if_has_bugs
@@ -444,7 +443,7 @@ function is_safe_existing_file()
     is_safe_existing_path "$1" ||
         return "$?"
 
-    [[ -s "$_path" ]] || {
+    [[ -f "$_path" && -s "$_path" ]] || {
         _rc="$err_not_file"
         error -ec "$_rc" "The path '$_path' is not a file or is empty."
     }
@@ -486,7 +485,7 @@ function validate_json_array()
     local -n _input=${1:-$2}
 
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-    [[ -n "$_input" ]] && is_safe_input "$_input" || {
+    [[ -n "$_input" ]] && is_safe_input "$_input" true || {
         error -ec "$err_invalid_json" "${FUNCNAME[0]}() requires a safe, non-empty string representing a JSON array of strings, or an empty array; or a JSON string (possibly empty); or null (provided '${_input:-<none>}')."
         return "$err_invalid_json"
     }
@@ -819,7 +818,7 @@ function is_safe_framework()
     return "$_rc"
 }
 
-declare -xr rid_regex="^(([a-z][a-z-]*[a-z])((\.[1-9][0-9]*)*)(-[a-z][0-9a-z]*)?(-[.0-9a-z]+)?)|([:space:]*)$"
+declare -xr rid_regex="^(([a-z][a-z-]*[a-z])((\.[1-9][0-9]*)*)(-[a-z][0-9a-z]*)?(-[.0-9a-z]+)?|[[:space:]]*)$"
 #---------------------------------------------------------------------------------------------
 # @description Validates that a string is a valid Runtime Identifier (RID).
 #
@@ -923,6 +922,8 @@ function validate_preprocessor_symbols()
     local -i _rc="$success"
     local -n _symbols=$1
 
+    [[ -z $_symbols ]] && return "$positive"
+
     [[ $_symbols =~ ^[\ \,:\;0-9A-Z_a-z]+$ ]] || {
         _rc="$err_argument_value"
         error -ec "$_rc" "The preprocessor symbols '$_symbols' contain invalid characters."
@@ -930,8 +931,6 @@ function validate_preprocessor_symbols()
     }
 
     local -a _symbol_array=()
-
-    [[ -z $_symbols ]] && return "$positive"
 
     IFS=' ,:;' read -r -a _symbol_array <<< "$_symbols"
 

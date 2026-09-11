@@ -51,6 +51,7 @@ load '../helpers/setup'
 # --- is_defined_indexed_array / is_defined_associative_array / is_defined_array ------------------
 
 @test "is_defined_indexed_array: true for an indexed array" {
+    # shellcheck disable=SC2190 # Elements in associative arrays need index, e.g. array=( [index]=value ) .
     declare -a arr=(a b c)
     run is_defined_indexed_array arr
     assert_success
@@ -69,6 +70,7 @@ load '../helpers/setup'
 }
 
 @test "is_defined_associative_array: false for an indexed array" {
+    # shellcheck disable=SC2190 # Elements in associative arrays need index, e.g. array=( [index]=value ) .
     declare -a arr=(a b c)
     run is_defined_associative_array arr
     assert_failure 1
@@ -77,6 +79,7 @@ load '../helpers/setup'
 @test "is_defined_associative_array: does not recurse/hang (regression for the save_state cycle)" {
     declare -A arr=([a]=1)
     run --separate-stderr timeout 5 bash -c '
+        # shellcheck disable=SC2154 # lib_dir is referenced but not assigned.
         source "'"$lib_dir"'/core.sh" --no-trap > /dev/null
         declare -A arr=([a]=1)
         is_defined_associative_array arr
@@ -84,6 +87,7 @@ load '../helpers/setup'
     assert_success
 }
 
+# shellcheck disable=SC2034 # idx appears unused. Verify use (or export if used externally).
 @test "is_defined_array: true for either an indexed or an associative array" {
     declare -a idx=(a b c)
     declare -A assoc=([a]=1)
@@ -108,12 +112,15 @@ load '../helpers/setup'
 }
 
 @test "is_array_empty: false for a non-empty array" {
+    # shellcheck disable=SC2034
+    # shellcheck disable=SC2190
     declare -a arr=(a)
     run is_array_empty arr
     assert_failure 1
 }
 
 @test "is_array_empty: bug-exits when the name is not an array" {
+    # shellcheck disable=SC2034
     declare foo=bar
     run is_array_empty foo
     assert_failure 254
