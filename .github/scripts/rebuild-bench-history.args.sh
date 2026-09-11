@@ -6,23 +6,20 @@
 declare -xr script_name
 declare -xr lib_dir
 
-declare -rxi err_missing_argument
-declare -rxi err_unknown_argument
+declare -xri err_missing_argument
+declare -xri err_unknown_argument
 
 declare -x owner
 declare -xi repeat
 declare -x workflow
 
-# shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
 function get_arguments()
 {
     local _option
 
     while [[ $# -gt 0 ]]; do
         _option="$1"; shift
-        if get_common_arg "$_option"; then
-            continue
-        fi
+        get_common_arg "$_option" && continue
         case "${_option,,}" in
             # do not use the common options - they were already processed by get_common_arg:
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
@@ -47,14 +44,13 @@ function get_arguments()
                 ;;
         esac
     done
-    usage_if_requested
+
     dump_vars --force --quiet \
-        --header "Script Arguments:" \
-        dry_run \
-        verbose \
-        quiet \
-        --blank \
+        --header "Arguments for $script_name:" \
+        --core-state \
         owner \
         repeat \
         workflow
+
+    usage_if_requested
 }

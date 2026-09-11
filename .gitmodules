@@ -1,0 +1,9 @@
+[submodule "scripts/bash/tests/libs/bats-support"]
+	path = scripts/bash/tests/libs/bats-support
+	url = https://github.com/bats-core/bats-support.git
+[submodule "scripts/bash/tests/libs/bats-assert"]
+	path = scripts/bash/tests/libs/bats-assert
+	url = https://github.com/bats-core/bats-assert.git
+[submodule "scripts/bash/tests/libs/bats-file"]
+	path = scripts/bash/tests/libs/bats-file
+	url = https://github.com/bats-core/bats-file.git

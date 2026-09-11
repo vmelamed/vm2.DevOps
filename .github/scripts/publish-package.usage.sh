@@ -1,18 +1,27 @@
-#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
+# shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
 declare -xr common_switches
 declare -xr common_vars
 declare -xr script_name
 
+declare -xr common_dotnet_parameters
+declare -xr common_dotnet_vars
+
 function usage_text()
 {
     local _long_text=$1
-    local _switches=""
-    local _vars=""
+    local _common_switches=""
+    local _common_vars=""
 
     if $_long_text; then
-        _switches=$'\n'"Switches:"$'\n'"$common_switches"
-        _vars=$common_vars
+        _common_vars=$common_vars
+        _common_switches="\
+
+Switches:
+$common_switches"
     fi
 
     cat << EOF
@@ -24,48 +33,35 @@ Arguments:
                                 Initial value from the \$PACKAGE_PROJECT environment variable.
 
 Options:
-  -d, --define      Defines one or more user-defined, space, comma, or semicolon-separated pre-processor symbols.
-                                Initial value from \$PREPROCESSOR_SYMBOLS or default ''
-  -mp, --minver-tag-prefix      Specifies the tag prefix used by MinVer (e.g., 'v')
-                                Initial value from \$MINVERTAGPREFIX environment variable or 'v'
-  -mi, --minver-prerelease-id   Default semver pre-release identifiers for MinVer (e.g., 'preview.0')
-                                Initial value from \$MINVERDEFAULTPRERELEASEIDENTIFIERS environment variable or 'preview.0'
-  -r, --reason                  Reason for release (e.g., "prerelease", "stable release", "hotfix", etc.) Added also as a
-                                release note in the package metadata
-                                Initial value from \$REASON or default "release build"
-  -a, --artifacts-saved         Whether the package(s) should be uploaded as workflow artifacts as well
-                                Initial value from \$ARTIFACTS_SAVED or default false
-  -ad, --artifacts-dir          Directory where artifacts will be saved, if --artifacts-saved is true
-                                Initial value from \$ARTIFACTS_DIR or default "artifacts/pack"
-  -n, --nuget-server            NuGet server to push packages to. Valid values are "github" for  GitHub. Packages, "nuget" for
-                                NuGet.org, or a custom server URL for pushing to
-                                Initial value from the \$NUGET_SERVER environment variable or "github"
-                                NOTE: the corresponding API key environment variable must be set for authentication in the NuGet
+  -r, --reason <reason text>    Reason for release (e.g., "prerelease", "stable release", "hotfix", etc.). The reason is also
+                                added as a release note in the package metadata.
+                                Initial value from \$REASON or default "release build".
+  -s, --save-artifacts [true|false]
+                                Whether the package(s) should be uploaded as workflow artifact(s) as well.
+                                Initial value from \$SAVE_ARTIFACTS or default false.
+  -n, --nuget-server <NuGet moniker>
+                                NuGet server to push the packages to. Valid values are, "nuget" for NuGet.org, "github" for
+                                GitHub Packages, or a custom server URL for pushing to.
+                                Initial value from the \$NUGET_SERVER environment variable or "nuget".
+                                NOTE: the corresponding API key environment variable MUST be set for authentication in the NuGet
                                 API key: \$NUGET_API_KEY.
-  -o, --repo-owner              Repository owner. When run on a GitHub runner, this is automatically set from the
+  -o, --repo-owner <repo owner> Repository owner. When run on a GitHub runner, this is automatically set from the
                                 \$GITHUB_REPOSITORY_OWNER environment variable. Required only if publishing to GitHub Packages
-                                Initial value from the \$GITHUB_REPOSITORY_OWNER environment variable or "vmelamed"
-$_switches
+                                Initial value from the \$GITHUB_REPOSITORY_OWNER environment variable or "vmelamed".
+$common_dotnet_parameters
+$_common_switches
 Environment Variables:
-  PACKAGE_PROJECT               Project/solution paths to package and publish
-  PREPROCESSOR_SYMBOLS          Pre-processor symbols for compilation
-                                (default: '')
-  MINVERDEFAULTPRERELEASEIDENTIFIERS
-                                Default semver pre-release identifiers for MinVer
-                                (default: 'preview.0')
-  MINVERTAGPREFIX               Git tag prefix to be recognized by MinVer
-                                (default: 'v')
+  PACKAGE_PROJECT               Project/solution paths to package and publish.
   REASON                        Reason for triggering the release
                                 (defaults: for stable release: 'stable release'; for prerelease: 'prerelease')
   NUGET_SERVER                  NuGet server to publish to (supported values: 'nuget', 'github', or custom URI)
-                                (default: 'nuget')
+                                (default: 'nuget').
   GITHUB_REPOSITORY_OWNER       The owner of the GitHub repository
-                                (default: 'vmelamed')
-  ARTIFACTS_SAVED               Whether the package(s) will be uploaded as workflow artifacts as well
-                                Initial value from \$ARTIFACTS_SAVED or default false
-  ARTIFACTS_DIR                 Directory where artifacts will be saved if --artifacts-saved is true
-                                Initial value from \$ARTIFACTS_DIR or default "artifacts/pack"
-  NUGET_API_KEY                 The NuGet API key for the selected NuGet server
-$_vars
+                                (default: 'vmelamed').
+  SAVE_ARTIFACTS                Whether the package(s) will be uploaded as workflow artifacts as well
+                                Initial value from \$SAVE_ARTIFACTS or default false.
+  NUGET_API_KEY                 The NuGet API key for the selected NuGet server. Mandatory.
+$common_dotnet_vars
+$_common_vars
 EOF
 }

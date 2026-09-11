@@ -9,7 +9,7 @@ set -euo pipefail
 
 script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
-lib_dir=$(realpath -e "$script_dir/lib")
+lib_dir=$(realpath -e "$script_dir/../lib")
 
 declare -xr script_name
 declare -xr script_dir
@@ -18,9 +18,9 @@ declare -xr lib_dir
 # shellcheck disable=SC1091
 source "$lib_dir/core.sh"
 
-declare -rxi err_invalid_arguments
-declare -rxi err_argument_value
-declare -rxi err_logic_error
+declare -xri err_invalid_arguments
+declare -xri err_argument_value
+declare -xri err_logic_error
 
 declare -x _ignore
 
@@ -29,14 +29,12 @@ declare -x del_tag=""
 declare -x old_tag=""
 declare -x new_tag=""
 
-# shellcheck disable=SC1091
 source "$script_dir/re-tag.args.sh"
-# shellcheck disable=SC1091
 source "$script_dir/re-tag.usage.sh"
 
 get_arguments "$@"
 
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 # @description Main script body: renames an existing git tag to a new name, or deletes a tag, both locally and on 'origin'.
 # In rename mode, the old tag is deleted (locally and remotely) and a new tag with the new name is created at the same
 # commit and pushed. In delete mode ('--delete <tag>'), the tag is only deleted, locally and remotely.
@@ -52,7 +50,7 @@ get_arguments "$@"
 #   used).
 # @arg $@ string '--delete|-d <tag>' — deletes '<tag>' instead of renaming (delete mode).
 #
-# @exitcode 0 The tag was renamed or deleted successfully.
+# @exitcode success/positive=0: The tag was renamed or deleted successfully.
 # @exitcode non-zero Missing/invalid arguments, not a git repository, the old/deleted tag does not exist, or the new tag
 #   already exists (see 'err_invalid_arguments', 'err_argument_value', 'err_logic_error' in '_error_codes.sh').
 #
@@ -62,7 +60,7 @@ get_arguments "$@"
 #   re-tag.sh v3.1.0-preview.5 v3.1.1-preview.2
 # @example
 #   re-tag.sh --delete v3.1.0-preview.4
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 
 # ─── argument validation & pre-flight ────────────────────────────────────────
 
@@ -72,7 +70,7 @@ if [[ "$delete_mode" == false ]]; then
 fi
 # We don't need to check for the presence of del_tag in delete mode, because get_arguments already checked for it.
 
-git rev-parse --git-dir 1>"$_ignore" || { error -ec "$err_logic_error" "Not a git repository."; exit 1; }
+git rev-parse --git-dir 1>"$_ignore" || { error -ec "$err_logic_error" "Not a git repository."; exit "$err_logic_error"; }
 
 # Resolve the commit the old/del tag points to (dereference annotated tags)
 if [[ "$delete_mode" == false ]]; then
@@ -86,19 +84,19 @@ fi
 
 # ─── helpers ─────────────────────────────────────────────────────────────────
 
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 # @description Deletes a git tag locally, and on 'origin' if it exists there. Used both for the standalone '--delete' mode
 # and as the first step of the rename flow (deleting the old tag before creating the new one).
 #
 # @arg $1 string The name of the tag to delete.
 #
-# @exitcode 0 The tag was deleted locally, and remotely if present there.
+# @exitcode success/positive=0: The tag was deleted locally, and remotely if present there.
 #
 # @stdout Trace/warning messages about the local and remote deletion outcome.
 #
 # @example
 #   delete_tag v3.1.0-preview.4
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 delete_tag()
 {
     local _tag="$1"

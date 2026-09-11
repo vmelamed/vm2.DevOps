@@ -46,12 +46,12 @@ dotnet new vm2pkg -n MyProject
 This generates the full directory structure, workflows, and configuration files — no manual
 customization needed.
 
-Still it is very useful to familiarize yourself with the `scripts/bash/diff-shared.sh` script and its usage to streamline the
+Still it is very useful to familiarize yourself with the `scripts/bash/src/diff-shared.sh` script and its usage to streamline the
 process of your subsequent updates of common files.
 
 ### Option B: `diff-shared.sh` Script
 
-Clone the vm2.Templates and vm2.DevOps repositories and run the `scripts/bash/diff-shared.sh` script to copy all required
+Clone the vm2.Templates and vm2.DevOps repositories and run the `scripts/bash/src/diff-shared.sh` script to copy all required
 files from
 
 - `vm2.Templates/templates/AddNewPackage/content/.github/workflows/`

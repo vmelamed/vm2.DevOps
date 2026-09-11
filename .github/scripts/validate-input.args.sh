@@ -4,153 +4,150 @@
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
 declare -xr script_name
-declare -xr lib_dir
 
-declare -rxi err_missing_argument
-declare -rxi err_too_many_arguments
-declare -rxi err_unknown_argument
+declare -xri err_missing_argument
+declare -xri err_too_many_arguments
+declare -xri err_unknown_argument
 
-# shellcheck disable=SC2154 # variable is referenced but not assigned.
-# shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
+declare -x build_projects
+declare -x test_projects
+declare -x benchmark_projects
+declare -x package_projects
+declare -x runners_os
+declare -x min_coverage_pct
+declare -x max_regression_pct
+declare -x max_gen1_collects
+declare -x max_gen2_collects
+declare -x reset_benchmark_thresholds
+declare -x skip_benchmarks
+declare -x skip_tests
+declare -x skip_packages
+
 function get_arguments()
 {
     local _option
 
     while [[ $# -gt 0 ]]; do
-        _option="$1"; shift
-        if get_common_arg "$_option"; then
-            continue
-        fi
-        case "${_option,,}" in
-            # do not use the common options - they were already processed by get_common_arg:
-            -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
-                ;;
+        _option="$1"
+        shift
 
+        get_common_arg "$_option" &&
+            continue
+
+        (( $# >= 1 )) &&
+            get_common_dotnet_arg "$_option" "$1" &&
+            shift &&
+            continue
+
+        case "${_option,,}" in
             --build-projects|-bp )
                 [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                build_projects="$1"; shift
+                build_projects="$1"
+                shift
                 ;;
 
             --test-projects|-tp )
                 [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                test_projects="$1"; shift
+                test_projects="$1"
+                shift
                 ;;
 
             --benchmark-projects|-bmp )
                 [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                benchmark_projects="$1"; shift
+                benchmark_projects="$1"
+                shift
                 ;;
 
             --package-projects|-pp )
                 [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                package_projects="$1"; shift
+                package_projects="$1"
+                shift
                 ;;
 
             --runners-os|-os )
                 [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                runners_os="$1"; shift
-                ;;
-
-            --dotnet-version|-dn )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                dotnet_version="$1"; shift
-                ;;
-
-            --configuration|-c )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                configuration="$1"; shift
-                ;;
-
-            --define|-d )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                preprocessor_symbols="$1"; shift
+                runners_os="$1"
+                shift
                 ;;
 
             --min-coverage-pct|-min )
                 [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                min_coverage_pct="$1"; shift
+                min_coverage_pct="$1"
+                shift
                 ;;
 
             --max-regression-pct|-max )
                 [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                max_regression_pct="$1"; shift
+                max_regression_pct="$1"
+                shift
                 ;;
 
             --max-gen1-collects|-g1 )
                 [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                max_gen1_collects="$1"; shift
+                max_gen1_collects="$1"
+                shift
                 ;;
 
             --max-gen2-collects|-g2 )
                 [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                max_gen2_collects="$1"; shift
+                max_gen2_collects="$1"
+                shift
                 ;;
 
-            --minver-tag-prefix|-mp )
+            --reset-benchmark-thresholds|-rt )
                 [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                minver_tag_prefix="$1"; shift
-                ;;
-
-            --minver-prerelease-id|-mi )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                minver_prerelease_id="$1"; shift
-                ;;
-
-            --reset-benchmark-thresholds|-r )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                reset_benchmark_thresholds="$1"; shift;
+                reset_benchmark_thresholds="$1"
+                shift;
                 ;;
 
             --skip-benchmarks|-sb )
                 [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                skip_benchmarks="$1"; shift;
+                skip_benchmarks="$1"
+                shift;
                 ;;
 
             --skip-tests|-st )
                 [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                skip_tests="$1"; shift;
+                skip_tests="$1"
+                shift;
                 ;;
 
             --skip-packages|-sp )
                 [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                skip_packages="$1"; shift;
+                skip_packages="$1"
+                shift;
                 ;;
 
-            --artifacts|-a )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                artifacts_dir="$1"; shift;
+            # do not use the common options - they were already processed by get_common_arg and get_common_dotnet_arg:
+            -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
+                ;;
+            -d|-c|-f|-r|-a|-mp|-mi|--define|--configuration|--framework|--runtime|--artifacts-path|--minver-tag-prefix|--minver-prerelease-id|--nuget-username|--nuget-password )
                 ;;
 
             * ) usage -ec "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
         esac
     done
-    usage_if_requested
+
     dump_vars --force --quiet \
-        --header "Script Arguments:" \
-        dry_run \
-        verbose \
-        quiet \
-        --blank \
+        --header "Arguments of $script_name:" \
+        --core-state \
         build_projects \
         test_projects \
         benchmark_projects \
         package_projects \
+        --common-dotnet-args \
         runners_os \
-        dotnet_version \
-        configuration \
-        preprocessor_symbols \
         min_coverage_pct \
         max_regression_pct \
         max_gen1_collects \
         max_gen2_collects \
-        minver_tag_prefix \
-        minver_prerelease_id \
         reset_benchmark_thresholds \
         skip_benchmarks \
         skip_tests \
         skip_packages \
-        artifacts_dir \
         --header "other:" \
         ci
+
+    usage_if_requested
 }

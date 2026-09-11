@@ -4,77 +4,64 @@
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
 declare -xr script_name
-declare -xr lib_dir
 
-declare -rxi err_missing_argument
-declare -rxi err_too_many_arguments
-declare -rxi err_unknown_argument
+declare -xri err_missing_argument
+declare -xri err_too_many_arguments
+declare -xri err_unknown_argument
 
 declare -x package_project
-declare -x preprocessor_symbols
-declare -x minver_tag_prefix
-declare -x minver_prerelease_id
 declare -x reason
 declare -x nuget_server
 declare -x repo_owner
-declare -x artifacts_saved
-declare -x artifacts_dir
+declare -x save_artifacts
 
-# shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
-# shellcheck disable=SC2154 # variable is referenced but not assigned.
 function get_arguments()
 {
     local _option
 
     while [[ $# -gt 0 ]]; do
         # get the option and convert it to lower case
-        _option="$1"; shift
-        if get_common_arg "$_option"; then
+        _option="$1"
+        shift
+
+        get_common_arg "${_option,,}" &&
             continue
-        fi
+
+        (( $# >= 1 )) &&
+            get_common_dotnet_arg "$_option" "$1" &&
+            shift &&
+            continue
+
         case "${_option,,}" in
             # do not use the common options - they were already processed by get_common_arg:
-            -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
-                ;;
-
-            --define|-d )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                preprocessor_symbols="$1"; shift
-                ;;
-
-            --minver-tag-prefix|-mp )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                minver_tag_prefix="$1"; shift
-                ;;
-
-            --minver-prerelease-id|-mi )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                minver_prerelease_id="$1"; shift
-                ;;
-
-            --reason|-r )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                reason="$1"; shift
+            --reason )
+                (( $# > 0 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                reason="$1"
+                shift
                 ;;
 
             --nuget-server|-n )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                nuget_server="$1"; shift
+                (( $# > 0 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                nuget_server="$1"
+                shift
                 ;;
 
             --repo-owner|-o )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                repo_owner="$1"; shift
+                (( $# > 0 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                repo_owner="$1"
+                shift
                 ;;
 
-            --artifacts-saved|-a )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                artifacts_saved="$1"; shift
+            --save-artifacts|-s )
+                (( $# > 0 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                save_artifacts="$1"
+                shift
                 ;;
 
-            --artifacts-dir|-ad )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                artifacts_dir="$1"; shift
+            # do not use the common options - they were already processed by get_common_arg and get_common_dotnet_arg:
+            -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
+                ;;
+            -d|-c|-f|-r|-a|-mp|-mi|--define|--configuration|--framework|--runtime|--artifacts-path|--minver-tag-prefix|--minver-prerelease-id|--nuget-username|--nuget-password )
                 ;;
 
             * ) [[ -z $package_project ]] || usage -ec "$err_too_many_arguments" "Multiple package projects specified. Unknown option: $_option"
@@ -83,22 +70,18 @@ function get_arguments()
                 ;;
         esac
     done
-    usage_if_requested
-    dump_vars --force --quiet --markdown \
-        --header "Script Arguments:" \
-        dry_run \
-        verbose \
-        quiet \
-        --blank \
+
+    dump_vars --force --quiet \
+        --header "Arguments for $script_name:" \
+        --core-state \
         package_project \
-        preprocessor_symbols \
-        minver_tag_prefix \
-        minver_prerelease_id \
+        --common-dotnet-args \
         reason \
         nuget_server \
         repo_owner \
-        artifacts_saved \
-        artifacts_dir \
+        save_artifacts \
         --header "other:" \
         ci
+
+    usage_if_requested
 }

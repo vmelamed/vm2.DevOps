@@ -7,12 +7,14 @@ declare -xr script_name
 function usage_text()
 {
     local _long_text=$1
-    local _switches=""
-    local _vars=""
+    local _common_switches=""
+    local _common_vars=""
 
     if $_long_text; then
-        _switches=$'\n'"Switches:"$'\n'"$common_switches"
-        _vars=$common_vars
+        _common_vars=$common_vars
+        _common_switches="
+Switches:
+$common_switches"
     fi
 
     cat << EOF
@@ -38,13 +40,13 @@ Options:
                                 Initial value from \$REPEAT or default 10
   -w, --workflow                The per-repo workflow file to dispatch in each target repository
                                 Default 'RebuildBenchHistory.yaml'
-$_switches
+$_common_switches
 Environment Variables:
   BENCH_DISPATCH_PAT            Fine-grained PAT ('Actions: write' + 'Contents: read' on the target repos) used to
                                 authenticate 'gh'. Optional - falls back to \$GH_TOKEN or the ambient 'gh auth'.
   GH_TOKEN                      Token used by 'gh' (set automatically from BENCH_DISPATCH_PAT when that is provided)
   GITHUB_REPOSITORY_OWNER       The GitHub owner of the target repositories (set automatically inside Actions)
   REPEAT                        How many independent runs to record per benchmark
-$_vars
+$_common_vars
 EOF
 }

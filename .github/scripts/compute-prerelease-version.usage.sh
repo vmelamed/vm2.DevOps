@@ -7,12 +7,14 @@ declare -xr script_name
 function usage_text()
 {
     local _long_text=$1
-    local _switches=""
-    local _vars=""
+    local _common_switches=""
+    local _common_vars=""
 
     if $_long_text; then
-        _switches="Switches:"$'\n'"$common_switches"
-        _vars=$common_vars
+        _common_vars=$common_vars
+        _common_switches="\
+Switches:
+$common_switches"
     fi
 
     cat << EOF
@@ -27,15 +29,16 @@ The prerelease counter increments when the base version matches the latest prere
 changes.
 
 Options:
-  -mp, --minver-tag-prefix      Specifies the tag prefix used by MinVer (e.g., 'v')
+  -mp, --minver-tag-prefix <prefix>
+                                Specifies the tag prefix used by MinVer (e.g., 'v')
                                 Initial value from \$MINVERTAGPREFIX or default 'v'
-  -mi, --minver-prerelease-id   MinVer pre-release identifiers (e.g., 'preview.0', 'alpha', 'rc.0')
+  -mi, --minver-prerelease-id  <id>
+                                MinVer pre-release identifiers (e.g., 'preview.0', 'alpha', 'rc.0')
                                 The height seed (trailing '.N') is stripped to derive the prefix.
                                 Initial value from \$MINVERDEFAULTPRERELEASEIDENTIFIERS or default 'preview.0'
-  -r, --reason                  Reason for prerelease (e.g., "pre-release", "manual prerelease", etc.)
+  -r, --reason <reason text>    Reason for prerelease (e.g., "pre-release", "manual prerelease", etc.)
                                 Initial value from \$REASON or default "pre-release"
-
-$_switches
+$_common_switches
 Environment Variables:
   MINVERTAGPREFIX               Git tag prefix to be recognized by MinVer
                                 (default: 'v')
@@ -44,7 +47,7 @@ Environment Variables:
                                 (default: 'preview.0')
   REASON                        Reason for the prerelease build
                                 (default: 'pre-release')
-$_vars
+$_common_vars
 Outputs (to GITHUB_OUTPUT):
   prerelease-version            The computed version (e.g., '1.2.3-preview.1')
   prerelease-tag                The full tag (e.g., 'v1.2.3-preview.1')

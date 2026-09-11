@@ -5,7 +5,7 @@
 # gh create-pr — create a PR with commit messages auto-populated.
 # Registered as a gh alias:  gh alias set --shell create-pr 'bash "<path>/create-pr.sh" "$@"'
 
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 # @description Creates a GitHub pull request whose body is auto-populated with the list of commits between the default
 # branch and HEAD, merged into the repository's PR template. Falls back to a hard-coded minimal template if no
 # '.github/PULL_REQUEST_TEMPLATE.md' or '.github/pull_request_template.md' is found in the current repository. All
@@ -30,7 +30,7 @@
 #   gh create-pr --reviewer someone
 # @example
 #   gh create-pr --fill
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 
 set -euo pipefail
 

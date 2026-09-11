@@ -7,12 +7,14 @@ declare -xr script_name
 function usage_text()
 {
     local _long_text=$1
-    local _switches=""
-    local _vars=""
+    local _common_switches=""
+    local _common_vars=""
 
     if $_long_text; then
-        _switches=$'\n'"Switches:"$'\n'"$common_switches"
-        _vars=$common_vars
+        _common_vars=$common_vars
+        _common_switches="
+Switches:
+$common_switches"
     fi
 
     cat << EOF
@@ -29,11 +31,12 @@ Arguments:
                                 Initial value from \$BENCHMARK_PROJECT environment variable (see below)
 
 Options:
-  -n, --repeat                  How many independent runs to record (positive integer)
+  -n, --repeat <number>         How many independent runs to record (positive integer)
                                 Initial value from \$REPEAT or default 10
-  -c, --configuration           Specifies the build configuration to use ('Debug' or 'Release')
+  -c, --configuration [Release|Debug]
+                                Specifies the build configuration to use ('Debug' or 'Release')
                                 Initial value from \$CONFIGURATION or default 'Release'
-  -d, --define                  Defines one or more user-defined, space, comma, or semicolon-separated pre-processor
+  -d, --define <symbols>        Defines one or more user-defined, space, comma, or semicolon-separated pre-processor
                                 symbols. Leave empty for full (non-SHORT_RUN) runs that match release-time numbers.
                                 Initial value from \$PREPROCESSOR_SYMBOLS or default ''
   -mp, --minver-tag-prefix      Specifies the git tag prefix used by MinVer (e.g., 'v')
@@ -52,12 +55,12 @@ Options:
                                 Initial value from \$BENCHER_BRANCH or default 'main'
   -ad, --bencher-adapter        The Bencher.dev adapter used to parse the results
                                 Initial value from \$BENCHER_ADAPTER or default 'c_sharp_dot_net'
-$_switches
+$_common_switches
 Environment Variables:
   BENCHER_API_TOKEN             Bencher.dev API token used to upload results (required)
   BENCHMARK_PROJECT             Path to the benchmark project file
   REPEAT                        Number of independent runs to record
-  ARTIFACTS_DIR                 Directory where benchmark artifacts will be created (see --artifacts above)
+  ARTIFACTS_PATH                     Directory where benchmark artifacts will be created (see --artifacts above)
   CONFIGURATION                 Build configuration ('Debug' or 'Release')
   PREPROCESSOR_SYMBOLS          Pre-processor symbols to define when building the benchmark project
   MINVERTAGPREFIX               Git tag prefix used by MinVer (e.g., 'v')
@@ -67,6 +70,6 @@ Environment Variables:
   BENCHER_TESTBED               Bencher.dev testbed name
   BENCHER_BRANCH                Bencher.dev branch (default 'main')
   BENCHER_ADAPTER               Bencher.dev adapter (default 'c_sharp_dot_net')
-$_vars
+$_common_vars
 EOF
 }

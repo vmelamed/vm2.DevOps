@@ -37,7 +37,7 @@ gate well; noisy measures chart well.
 
 ## 3. `foreach-repo.sh` — fleet-wide Where/ForEach utility
 
-**What:** `scripts/bash/foreach-repo.sh` (three-file convention, on the lib): iterate `$vm2_repositories`, filter by a
+**What:** `scripts/bash/src/foreach-repo.sh` (three-file convention, on the lib): iterate `$vm2_repositories`, filter by a
 predicate command, run an action command. LINQ over the repo fleet: `all_repos.Where(condition).ForEach(action)`.
 
 - Action/condition as **argv after `--`** (no eval-quoting hell); pipes allowed via `bash -c`.

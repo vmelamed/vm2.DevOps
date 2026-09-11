@@ -18,7 +18,7 @@ on:
         type: string
         default: ubuntu-latest
 
-      dotnet-version:
+      target-framework:
         description: Version of .NET SDK to use (cannot be null or empty string, default 10.0.x)
         type: string
         default: 10.0.x
@@ -65,7 +65,7 @@ permissions:
 env:
   # this must be the same across all jobs and steps below.
   # We must know where to find the artifacts and where to download/upload to/from across all jobs and steps here.
-  ARTIFACTS_DIR: ${{ vars.ARTIFACTS_DIR || 'artifacts' }}
+  ARTIFACTS_PATH: ${{ vars.ARTIFACTS_PATH || 'artifacts' }}
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   VERBOSE: ${{ vars.VERBOSE || false }}
@@ -96,18 +96,17 @@ jobs:
       - name: Setup .NET and the dependencies cache
         uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@main
         with:
-          dotnet-version: ${{ inputs.dotnet-version }}
+          target-framework: ${{ inputs.target-framework }}
           runner-os: ${{ inputs.runner-os }}
           github-token: ${{ github.token }}
           github-actor: ${{ github.actor }}
 
-      # Retrieve compiled binaries from the build job to avoid recompilation. Artifacts (not the cache) are the
+      # Retrieve compiled binaries from the build workflow to avoid recompilation. Artifacts (not the cache) are the
       # intra-run handoff: the cache gives no read-after-write guarantee within a run.
       - name: Download built artifacts
         uses: actions/download-artifact@v8
         with:
           pattern: built-artifacts-${{ runner.os }}-${{ inputs.configuration }}-*
-          merge-multiple: true
           path: downloaded/
 
       - name: Extract built artifacts
@@ -149,7 +148,7 @@ jobs:
                 --min-coverage-pct "${{ inputs.min-coverage-pct }}" \
                 --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
                 --minver-prerelease-id "${{ inputs.minver-prerelease-id }}" \
-                --artifacts "$ARTIFACTS_DIR"
+                --artifacts "$ARTIFACTS_PATH"
 
                 # This is the root artifacts directory. The script will create a subdirectory for each test project,
                 # e.g. artifacts/tests/results/<test-project-name>/*

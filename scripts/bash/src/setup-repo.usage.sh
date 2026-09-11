@@ -2,13 +2,16 @@
 # Copyright (c) 2025-2026 Val Melamed
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
-# shellcheck disable=SC2154
 
 declare -xr common_switches
 declare -xr common_vars
 declare -xr script_name
 
-#-------------------------------------------------------------------------------
+declare -x vm2_repos
+declare -x sot
+declare -xr vm2_devops_repo_name
+
+#---------------------------------------------------------------------------------------------
 # @description Builds and prints the full `--help` text for `setup-repo.sh` to stdout: usage line, description of
 # what the script does, parameters, options, switches, examples, and the list of local Git settings the script
 # configures. When `$1` is `true`, the shared switches and environment-variable sections (`$common_switches`,
@@ -16,21 +19,24 @@ declare -xr script_name
 #
 # @arg $1 bool When `true`, include the shared/common switches and environment variables sections in the output.
 #
-# @exitcode 0 Always.
+# @exitcode success/positive=0
 # @stdout The full help text for `setup-repo.sh`.
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 function usage_text()
 {
     local _long_text=$1
-    local _switches=""
-    local _vars=""
+    local _common_switches=""
+    local _common_vars=""
 
-    local _shared
-    _shared=$(get_vm2_sot_path "$vm2_repos" "$sot")
+    local _shared='<unresolved SOT>'
+    get_vm2_sot_path "$vm2_repos" "$sot" _shared
 
     if $_long_text; then
-        _switches="$common_switches"
-        _vars="Environment Variables:$common_vars"
+        _common_switches="$common_switches"
+        _common_vars="\
+
+Environment Variables:
+$common_vars"
     fi
 
     cat << EOF
@@ -79,7 +85,7 @@ Options:
   -d, --description <text>      Short description for the GitHub repository (max 350 chars). If not specified, the script will
                                 ask the user interactively with a default - the name of the repository. Used during linking
                                 the local repository to GitHub
-  --visibility [public|private] Repository visibility. Used during linking the local repository to GitHub. Default: 'public'
+  --visibility (public|private) Repository visibility. Used during linking the local repository to GitHub. Default: 'public'
   -b, --branch <branch>         GitHub default branch name. Used during linking the local repository to GitHub. Default: 'main'
   -rs, --ruleset-name <name>    The name of the ruleset for protecting the default branch (main). Used during linking the local
                                 repository to GitHub. Default: "<GitHub default branch name> protection", e.g. 'main protection'
@@ -102,8 +108,7 @@ Switches:
                                 and policies. Use this option alone when the repository already exists and is linked to a GitHub
                                 repository and none of the --interactive-* options are specified. In any other case, the script
                                 will run its normal course and will display the audit at the end anyway.
-$_switches
-$_vars
+$_common_switches$_common_vars
 Examples:
   $script_name ~/repos/vm2.Glob
   $script_name \$VM2_REPOS/vm2.Glob --interactive-secrets --verbose

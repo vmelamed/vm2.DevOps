@@ -15,16 +15,16 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
-# shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
+# shellcheck disable=SC1091 # Not following
 source "$lib_dir/gh_core.sh"
 
-declare -rxi err_argument_value
+declare -xri err_argument_value
 
 source "$script_dir/validate-commits.usage.sh"
 source "$script_dir/validate-commits.args.sh"
 
 # Allowed commit types — keep in sync with changelog/cliff.prerelease.toml commit_parsers
-declare -arx allowed_commit_types
+declare -xra allowed_commit_types
 
 declare -x base_ref=${BASE_REF:-}
 
@@ -64,7 +64,7 @@ while IFS= read -r subject; do
                   "  3. Save and close — Git opens the message editor for that commit" \
                   "  4. Edit the message (e.g. prepend 'chore: '), save and close" \
                   "  Note: rebase rewrites commit hashes from that point to HEAD"
-        bad++ || true
+        (( ++bad ))
     fi
 done < <(git log --format='%s' "$base_ref..HEAD")
 
@@ -76,7 +76,7 @@ if [[ $bad -gt 0 ]]; then
          "Examples        chore(dependencies): update dependencies and lock files"
     info "Repeat the steps above for each bad commit, then force-push (required because rebase rewrites commit hashes):" \
          "  git push --force-with-lease origin $branch"
-    exit 1
+    exit "$err_argument_value"
 fi
 
 info "✅ All commit messages follow Conventional Commits format"

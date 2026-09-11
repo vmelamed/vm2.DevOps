@@ -80,7 +80,7 @@ In each consumer repository, create these GitHub Actions variables:
 
 ```text
 NUGET_SERVER   = nuget
-NUGET_USERNAME = vmelamed (TODO: modify vm2.DevOps/scripts/bash/setup-repo.sh)
+NUGET_USERNAME = vmelamed (TODO: modify vm2.DevOps/scripts/bash/src/setup-repo.sh)
 ```
 
 `NUGET_USERNAME` must be the NuGet.org profile name, not an email address. Once trusted publishing is verified for that

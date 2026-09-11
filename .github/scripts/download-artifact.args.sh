@@ -6,11 +6,17 @@
 declare -xr script_name
 declare -xr lib_dir
 
-declare -rxi err_missing_argument
-declare -rxi err_too_many_arguments
-declare -rxi err_unknown_argument
+declare -xri err_missing_argument
+declare -xri err_too_many_arguments
+declare -xri err_unknown_argument
 
-# shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
+declare -x artifact_name
+declare -x artifacts
+declare -x repository
+declare -x workflow_id
+declare -x workflow_name
+declare -x workflow_path
+
 function get_arguments()
 {
     local _option
@@ -18,9 +24,7 @@ function get_arguments()
     while [[ $# -gt 0 ]]; do
         # get the option and convert it to lower case
         _option="$1"; shift
-        if get_common_arg "$_option"; then
-            continue
-        fi
+        get_common_arg "$_option" && continue
         # do not use short options -q -v -x -y
         case "${_option,,}" in
             # do not use the common options - they were already processed by get_common_arg:
@@ -34,7 +38,7 @@ function get_arguments()
 
             --directory|-d )
                 [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                artifacts_dir="$1"; shift
+                artifacts="$1"; shift
                 ;;
 
             --repository|-r )
@@ -68,19 +72,18 @@ function get_arguments()
                 ;;
         esac
     done
-    usage_if_requested
-    dump_vars --force --quiet --markdown \
-        --header "Script Arguments:" \
-        dry_run \
-        verbose \
-        quiet \
-        --blank \
+
+    dump_vars --force --quiet \
+        --header "Arguments for $script_name:" \
+        --core-state \
         artifact_name \
-        artifacts_dir \
+        artifacts \
         repository \
         workflow_id \
         workflow_name \
         workflow_path \
         --header "other:" \
         ci
+
+    usage_if_requested
 }

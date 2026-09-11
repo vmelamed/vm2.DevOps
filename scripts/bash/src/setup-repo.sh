@@ -3,32 +3,42 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025-2026 Val Melamed
 
-# shellcheck disable=SC2154 # _ignore is referenced but not assigned.
-
 set -euo pipefail
 
 script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
-lib_dir=$(realpath -e "$script_dir/lib")
+lib_dir=$(realpath -e "$script_dir/../lib")
 
 declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
 # shellcheck disable=SC1091
-{
-    source "$lib_dir/core.sh"
-    source "$lib_dir/_git_vm2.sh"
-}
+source "$lib_dir/core.sh"
+
+declare -xri success
+declare -xri err_tool_not_found
+declare -xri err_dir_with_ci
+declare -xri err_repo_with_no_ci
+declare -xri err_not_git_directory
+declare -xri err_logic_error
+
+declare -xr repo_name_regex
+declare -xr repo_owner_regex
 
 # defaults
-declare -xr default_owner="vmelamed"
+declare -xr default_repo_owner
+
 declare -xr default_visibility="public"
 declare -xr default_branch="main"
 declare -xr default_interactive=false
 declare -xr default_configure_local=true
 declare -xr default_audit=false
-declare -rx default_sot # AddNewPackage
+declare -xr default_sot # AddNewPackage
+
+declare -x _ignore
+
+declare -xr vm2_devops_repo_name
 
 # start with default input
 declare -x repo_path=""
@@ -43,8 +53,7 @@ declare -xi main_protection_rs_id=0
 declare -x description=""
 declare -x use_ssh=true
 declare -x use_https=false
-declare -x repo_owner=${ORGANIZATION:-$default_owner}
-declare -rx sot=$default_sot
+declare -x repo_owner=${ORGANIZATION:-$default_repo_owner}
 
 declare -x vm2_repos="${VM2_REPOS:-$HOME/repos/vm2}"
 declare -x repo_name=""
@@ -67,20 +76,21 @@ declare -xr key_repo
 declare -xr key_repo_id
 declare -xr key_default_branch
 
-# shellcheck disable=SC1091
-{
-    source "$script_dir/setup-repo.args.sh"
-    source "$script_dir/setup-repo.usage.sh"
-    source "$script_dir/setup-repo.defaults.sh"
-    source "$script_dir/setup-repo.functions.sh"
-    source "$script_dir/setup-repo.audit.sh"
-}
+source "$script_dir/setup-repo.defaults.sh"
+source "$script_dir/setup-repo.args.sh"
+source "$script_dir/setup-repo.usage.sh"
+source "$script_dir/setup-repo.functions.sh"
+source "$script_dir/setup-repo.audit.sh"
+
+declare -xr sot
+declare -xA default_local_git_settings
+declare -xra default_local_git_settings_order
 
 get_arguments "$@"
 
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 # Check the prerequisites
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 
 command -v jq &> "$_ignore"  || error -ec "$err_tool_not_found" "'jq' is not installed. Please install it first."
 command -v gh &> "$_ignore"  || error -ec "$err_tool_not_found" "'gh' is not installed. Please install it first."
@@ -91,20 +101,23 @@ command -v yq &> "$_ignore"  || error -ec "$err_tool_not_found" "'yq' is not ins
                                                                 "wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O ~/.local/bin/yq4 &&" \
                                                                 " chmod +x ~/.local/bin/yq4"
 
-exit_if_has_errors
-
-#===============================================================================
+#=============================================================================================
 # Find and validate vm2_repos, SOT, DevOps directories:
-#===============================================================================
+#=============================================================================================
 declare -xi rc="$success"
 
-vm2_repos=$(resolve_vm2_repos "$vm2_repos") || true
+resolve_vm2_repos "$vm2_repos" vm2_repos || true
 exit_if_has_errors
 trace "All vm2 repositories are expected to be in '$vm2_repos'"
 
 # make sure that $default_local_git_settings is fully initialized with the vm2.DevOps hooks and SOT .gitmessage
-sot_path=$(get_vm2_sot_path "$vm2_repos" "$sot")
-init_default_local_git_settings "$vm2_repos" "$sot_path"
+declare -x sot_path
+get_vm2_sot_path "$vm2_repos" "$sot" sot_path
+
+# cement the paths in the default_local_git_settings that depend on the location of the vm2_repos ($1):
+default_local_git_settings["core.hooksPath"]="$vm2_repos/$vm2_devops_repo_name/scripts/githooks"
+default_local_git_settings["commit.template"]="$sot_path/.gitmessage"
+declare -xrA default_local_git_settings
 
 declare -x _ci_yaml="$vm2_repos/$vm2_devops_repo_name/.github/workflows/_ci.yaml"
 [[ -s "$_ci_yaml" ]] ||
@@ -113,15 +126,12 @@ declare -xr _ci_yaml
 
 exit_if_has_errors
 
-#===============================================================================
+#=============================================================================================
 # Resolve and validate repo_path:
-#===============================================================================
-declare output
-output=$(resolve_repo_root "$vm2_repos" "$repo_path") || rc=$?
+#=============================================================================================
+resolve_repo_root "$vm2_repos" "$repo_path" repo_path _ || rc=$?
 is_in "$rc" "$success" "$err_dir_with_ci" ||
     usage -ec "$rc" "Failed to resolve the path of the target repository '$repo_path'."
-
-{ read -r repo_path; read -r _; } <<< "$output"
 
 (( rc == err_dir_with_ci )) &&
     warning "'$repo_path' is not a Git repository, however there is '$repo_path/.github/workflows/CI.yaml'." \
@@ -132,16 +142,16 @@ reset_errors
 
 trace "Repository path: '$repo_path'"
 
-#===============================================================================
+#=============================================================================================
 # Get the repo state
-#===============================================================================
+#=============================================================================================
 
 declare -A repo_state=()
 declare -x suggest_repo_name=''
 declare -x ci_yaml=''
 
 get_repo_state "$repo_path" repo_state
-dump_repo_state repo_state
+dump_vars --quiet --header "Repository State 'repo_state':" repo_state
 
 if has_local_repo repo_state; then
 
@@ -153,7 +163,7 @@ if has_local_repo repo_state; then
                                              "Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2.NewPkg' to create a valid directory structure."
         trace "repo_path='$repo_path' from git-detected repository root"
     fi
-    info "Git repository path            => $repo_path"
+    info "Git repository working tree root => $repo_path"
 
     declare -r repo_path
 
@@ -166,20 +176,20 @@ if has_local_repo repo_state; then
         declare -xr repo_url
         declare -xr repo_owner
         declare -xr repo_name
-        declare -rx repo
+        declare -xr repo
 
-        info "GitHub repository              => $repo"
+        info "GitHub repository                => $repo"
 
         if has_github_remote repo_state; then
             repo_id="${repo_state[$key_repo_id]}"
             branch="${repo_state[$key_default_branch]}"
             main_protection_rs_name="${main_protection_rs_name:-$branch protection}"
 
-            info "GitHub repository Id           => $repo_id"
-            info "GitHub default Branch          => $branch"
+            info "GitHub repository Id             => $repo_id"
+            info "GitHub repository default Branch => $branch"
         fi
 
-        info "GitHub repository URL          => $repo_url"
+        info "GitHub repository URL            => $repo_url"
     fi
 fi
 
@@ -187,7 +197,7 @@ if ! has_local_repo repo_state || ! has_remote_repo repo_state; then
     suggest_repo_name=$(basename "$repo_path")
     trace "Will suggest '$suggest_repo_name' from basename repo_path as a repo name and repo description during repo creation if needed."
 
-    declare -rx suggest_repo_name
+    declare -xr suggest_repo_name
 fi
 
 ci_yaml="$repo_path/.github/workflows/CI.yaml"
@@ -195,9 +205,9 @@ trace "ci_yaml='$ci_yaml' from \$repo_path"
 
 declare -xr ci_yaml
 
-#===============================================================================
+#=============================================================================================
 # Final validation of the inputs and assumptions before we start making any changes or API calls:
-#===============================================================================
+#=============================================================================================
 
 [[ -s "$ci_yaml" ]]                                      || error -ec "$err_logic_error" "The specified path '$repo_path' is not a valid project/repository root (missing .github/workflows/CI.yaml)." \
                                                                                          "Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2pkg <name>' to create a valid directory."
@@ -213,7 +223,8 @@ is_in "$visibility" "public" "private"                   || error -ec "$err_logi
 if $audit; then
     has_github_remote repo_state                         || error -ec "$err_logic_error" "The repository in '$repo_path' is not linked to a GitHub remote. Cannot perform audit." \
                                                                                          "Please ensure that the repository is properly initialized and linked to GitHub before running the script with '--audit'."
-    ! $interactive_secrets && ! $interactive_vars        || error -ec "$err_logic_error" "Secrets and/or variables cannot be interactively set during audit." \
+    # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
+    ! $interactive_secrets && ! $interactive_vars        || error -ec "$err_logic_error" "Secrets and variables cannot be interactively set during audit." \
                                                                                          "Please remove the '--interactive-secrets' and '--interactive-vars' options when running the script with '--audit'."
 fi
 
@@ -223,36 +234,36 @@ resolve_github_app_ids
 
 list_required_checks
 
-#===============================================================================
+#=============================================================================================
 # Audit
-#===============================================================================
+#=============================================================================================
 
 $audit && {
     initialize_jq_queries
     initialize_gh_paths
     initialize_main_protection_rs_id || true
     audit_repo
-    exit 0
+    exit "$success"
 }
 
-#===============================================================================
+#=============================================================================================
 # Initialize and configure the repository
-#===============================================================================
+#=============================================================================================
 
 # list of undos to perform in case of failure or when the script finishes - e.g. to delete the created repository, or undo any changes to the local repository. The undos must be executed in a LIFO order.
 declare -a undos=()
 
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 # @description Prints the recorded `undos` array (commands to revert side effects performed by this run, e.g.
 # deleting a newly created GitHub repository or removing a remote) in LIFO order, so the user can copy-paste them
 # to manually roll back a failed or aborted run. No-op if nothing has been recorded yet.
 #
-# @exitcode 0 Always.
+# @exitcode success/positive=0
 # @stdout The list of undo commands in LIFO order, wrapped in explanatory text -- or nothing if `undos` is empty.
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 function undo_changes()
 {
-    (( ${#undos[@]} == 0 )) && return 0
+    (( ${#undos[@]} == 0 )) && return "$success"
 
     echo "To undo the changes above, you can run the following commands:"
     local -i _index
@@ -270,7 +281,7 @@ if ! has_local_repo repo_state; then
     info "Initializing local git repository in '$repo_path'..."
 
     [[ -n "$branch" ]] ||
-        branch=$(enter_value "Default branch name" "$default_branch" false validate_branch_name)
+        enter_value "Default branch name" branch "$default_branch" false validate_branch_name
 
     if execute git -C "$repo_path" init >"$_ignore"; then
         undos+=("rm -rf '$repo_path/.git'")
@@ -296,7 +307,7 @@ if ! has_remote_repo repo_state; then
     #===========================================================================
     info "Creating GitHub repository..."
 
-    [[ -n $repo_name ]] || repo_name=$(enter_value "GitHub Repository name" "$suggest_repo_name" false validate_gh_repo_name)
+    [[ -n $repo_name ]] || enter_value "GitHub Repository name" repo_name "$suggest_repo_name" false validate_gh_repo_name
     repo="$repo_owner/$repo_name"
     repo=${repo#/} # remove leading slash if repo_owner is empty
 
@@ -308,14 +319,16 @@ if ! has_remote_repo repo_state; then
         "--disable-wiki"
     )
 
-    [[ -n "$description" ]] || description=$(enter_value "GitHub repository description (3-350 characters)" "$repo_name" false validate_gh_repo_description)
+    [[ -n "$description" ]] || enter_value "GitHub repository description (3-350 characters)" description "$repo_name" false validate_gh_repo_description
     [[ -n "$description" ]] && create_repo_params+=("--description" "$description")
 
     if $use_ssh || $use_https; then
         $use_ssh   && repo_url="git@github.com:$repo.git" || true
         $use_https && repo_url="https://github.com/$repo" || true
     else
-        case $(choose "Access remote origin via" "SSH" "HTTPS") in
+        declare choice
+        choose "Access remote origin via" choice "SSH" "HTTPS"
+        case $choice in
             1 ) use_ssh=true;   repo_url="git@github.com:$repo.git" ;;
             * ) use_https=true; repo_url="https://github.com/$repo" ;;
         esac
@@ -336,12 +349,12 @@ if ! has_remote_repo repo_state; then
     info "...GitHub repository '$repo' created and linked to the local repository in '$repo_path'."
 
     # Checks: get the repo state again that will have more real git and github information in it.
-    get_repo_state "$repo_path" repo_state; rc=$?
-    dump_repo_state repo_state
+    get_repo_state "$repo_path" repo_state || rc=$?
+    dump_vars --quiet --header "Repository State 'repo_state':" repo_state
 
     if [[ $rc -ne 0 ]]; then
         error -ec "$rc" "Failed to get repository state after creation. The repository may have been created successfully, but the script cannot continue with configuration. Please check the repository at $repo_path."
-        exit 1
+        exit "$rc"
     fi
 
     repo_url="${repo_state[$key_url]}"
@@ -376,9 +389,9 @@ if $configure_local; then
     info "...local git settings configured."
 fi
 
-#===============================================================================
+#=============================================================================================
 # Configure the remote repository on GitHub
-#===============================================================================
+#=============================================================================================
 
 initialize_gh_paths
 initialize_jq_queries
@@ -390,6 +403,13 @@ configure_branch_protection
 # it is important to configure variables before secrets!
 configure_variables
 trace "NuGet server is: $nuget_server"
+
+declare -xA actions_secrets
+
+if [[ ${actions_default_vars["NUGET_SERVER"]} == 'nuget' && -v actions_secrets["NUGET_API_KEY"] ]]; then
+    # remove the NUGET_API_KEY secret if the NuGet server is set to 'nuget' - they use the Trusted Publishing now
+    unset 'actions_secrets["NUGET_API_KEY"]'
+fi
 configure_secrets "actions" "$nuget_server"
 configure_secrets "dependabot" "$nuget_server"
 echo ""

@@ -13,7 +13,7 @@ on:
         type: string
         default: ubuntu-latest
 
-      dotnet-version:
+      target-framework:
         description: Version of .NET SDK to use (default 10.0.x)
         type: string
         default: 10.0.x
@@ -78,7 +78,7 @@ jobs:
       - name: Setup .NET and the dependencies cache
         uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@main
         with:
-          dotnet-version: ${{ inputs.dotnet-version }}
+          target-framework: ${{ inputs.target-framework }}
           runner-os: ${{ inputs.runner-os }}
           github-token: ${{ github.token }}
           github-actor: ${{ github.actor }}
@@ -90,7 +90,6 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           pattern: built-artifacts-${{ runner.os }}-${{ inputs.configuration }}-*
-          merge-multiple: true
           path: downloaded/
 
       - name: Extract built artifacts

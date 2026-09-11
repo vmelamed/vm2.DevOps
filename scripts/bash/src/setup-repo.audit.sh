@@ -2,27 +2,44 @@
 # Copyright (c) 2025-2026 Val Melamed
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
-# shellcheck disable=SC2154
 
 declare -x script_name
 declare -x lib_dir
 
-declare -x repo_name
-declare -x owner
+declare -xri success
+declare -xri err_invalid_arguments
+declare -xri err_argument_value
+declare -xri err_argument_type
+declare -xri err_invalid_nameref
+declare -xri err_tool_error
+
+declare -x _ignore
+declare -xr secret_str
+
+declare -x repo_path
 declare -x repo
-declare -x visibility
 declare -x branch
-declare -x audit
 declare -x required_checks
 
-declare -x ci_yaml
-declare -x _ci_yaml
-
+declare -xr missing_state
+declare -xr present_state
+declare -xr undefined_default
 declare -xrA default_repo_settings
+declare -xra default_repo_settings_order
 declare -xrA default_repo_permissions
-declare -xrA actions_default_secrets
-declare -xrA dependabot_default_secrets
 declare -xrA default_ruleset
+declare -xra default_ruleset_order
+declare -xa apps_with_secrets
+declare -xrA actions_default_vars
+declare -xA default_local_git_settings
+declare -xa default_local_git_settings_order
+
+declare -xA actions_secrets
+declare -xrA dependabot_secrets
+declare -xrA agents_secrets
+declare -xrA codespaces_secrets
+
+declare -x main_protection_rs_name
 
 declare -x jq_entries
 declare -x jq_secrets
@@ -33,11 +50,8 @@ declare -x jq_status_checks
 
 declare -xri err_invalid_nameref
 
-declare -xr missing_state
-declare -xr present_state
-declare -xr undefined_default
 
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 # @description Fetches the current settings from the GitHub API and compares them to the expected settings,
 # reporting matches, differences, and missing values (errors) to stdout in a formatted list.
 #
@@ -46,64 +60,53 @@ declare -xr undefined_default
 # as either present or missing, never compared for equality (this is how secrets, whose real values this script
 # never reads back, are audited). Otherwise the actual and expected values are compared for equality.
 #
+# Notes:
+#   - Will exit the script if an invalid argument(s) is/are provided with exit codes
+#
 # @arg $1 string GitHub API endpoint path to fetch the settings from, e.g. `repos/$repo` or
 #   `repos/$repo/actions/permissions/workflow`.
 # @arg $2 string jq query used to transform the JSON response into `key=value` lines.
-# @arg $3 nameref Name of the associative array variable containing the expected key-value pairs, e.g.
-#   `default_repo_settings` or `default_repo_permissions`.
-# @arg $4 bool When `true`, display keys sentence-capitalized with spaces instead of underscores (for readability),
-#   e.g. `allow_squash_merge` => `Allow squash merge`.
-# @arg $5 nameref Name of an array variable to store the results in: `[0]` is the number of matches, `[1]` is the
-#   number of differences, and `[2]` is the number of errors (missing settings).
-# @arg $6 nameref Name of an array variable containing the display order of the setting keys (optional; default:
-#   sorted alphabetically).
+# @arg $3 bool when `true`, in the following associative array, change the keys to sentence-capitalized with spaces instead of
+#   underscores (for UI readability), e.g. `allow_squash_merge` => `Allow squash merge`.
+# @arg $4 nameref to an associative array variable containing the expected key-value pairs, e.g. `default_repo_settings` or
+#   `default_repo_permissions`.
+# @arg $5 nameref to an indexed array variable to store the summary results in:
+#   [0] - number of exact matches
+#   [1] - number of differences
+#   [2] - number of errors (e.g., missing settings)
+# @arg $6 nameref - the name of an indexed array variable containing the display order of the setting keys (optional, default:
+#   sort alphabetically).
 #
-# @exitcode 0 Success (including the case where `expected` is empty and the function returns immediately).
-# @exitcode 2 Invalid arguments, or failed to fetch data from the GitHub API.
-# @exitcode 66 error after executing a tool - most likely a bug.
+# @exitcode success/positive=0: (including the case where `expected` is empty and the function returns immediately).
+# @exitcode err_tool_error=66: error after executing a tool - most likely a bug.
 #
 # @stdout One formatted line per compared key, prefixed with an emoji marker (match/present, difference, or
 #   missing).
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 function compare_settings()
 {
     local -i _rc="$success"
 
-    (( $# == 5 || $# == 6 )) || {
-        _rc="$err_invalid_arguments"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires five or six arguments (provided $#): the API path, jq transform, expected-values array, display-format flag, results array, and optional key-order array."
-    }
-    [[ -n "$1" ]] || {
-        _rc="$err_argument_value"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the GitHub API path, to be non-empty (provided '${1-<missing>}'); for example, 'repos/\$repo'."
-    }
-    [[ -n "$2" ]] || {
-        _rc="$err_argument_value"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, the jq transformation query, to be non-empty (provided '${2-<missing>}')."
-    }
-    [[ -v 3 ]] && is_defined_associative_array "$3" || {
-        _rc="$err_invalid_nameref"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 3 to name an associative array containing expected key-value pairs (provided '${3-<missing>}')."
-    }
-    [[ -v 4 ]] && is_boolean "$4" || {
-        _rc="$err_argument_type"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 4, the display-key formatting flag, to be 'true' or 'false' (provided '${4-<missing>}')."
-    }
-    [[ -v 5 ]] && is_defined_array "$5" || {
-        _rc="$err_invalid_nameref"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 5 to name an indexed results array: [0] matches, [1] differences, and [2] errors (provided '${5-<missing>}')."
-    }
-    [[ ! -v 6 ]] || is_defined_array "$6" || {
-        _rc="$err_invalid_nameref"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires optional argument 6 to name an indexed array containing the display order (provided '${6-<missing>}')."
-    }
+    (( $# == 5 || $# == 6 ))                                     || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires five or six arguments (provided $#):" \
+                                                                                                        "  - the GitHub API endpoint path to fetch settings from" \
+                                                                                                        "  - jq transform JSON -> key=value lines" \
+                                                                                                        "  - display-format flag: if true, change expected-values array's keys to sentence-capitalized" \
+                                                                                                        "  - name of an associative array variable to store the expected key-values" \
+                                                                                                        "  - name of an indexed array variable to store the summary results: [0] matches, [1] differences, and [2] errors" \
+                                                                                                        "  - optional name of an indexed array with the display order of the keys."
+    [[ ! -v 1 || -n "$1" ]]                                      || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the GitHub API path, to be non-empty (provided '${1:-<none>}'); for example, 'repos/\$repo'."
+    [[ ! -v 2 || -n "$2" ]]                                      || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the jq transformation query, to be non-empty (provided '${2:-<none>}')."
+    [[ ! -v 3 ]] || is_boolean "$3"                              || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 3, the display-key formatting flag, to be 'true' or 'false' (provided '${3:-<none>}')."
+    [[ ! -v 4 ]] || is_defined_associative_array "$4"            || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 4 to name an associative array containing expected key-value pairs (provided '${4:-<none>}')."
+    [[ ! -v 5 ]] || is_defined_indexed_array "$5"                || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 5 to name an indexed array for summary results: [0] matches, [1] differences, and [2] errors (provided '${5:-<none>}')."
+    [[ ! -v 6 || -z "${6:-}" ]] || is_defined_indexed_array "$6" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires optional argument 6 to name an indexed array containing the display order (provided '${6:-<none>}')."
 
-    (( _rc == success )) || return "$err_invalid_arguments"
+    exit_if_has_bugs
 
     local _gh_endpoint="$1"
     local _jq_transform=$2
-    local -n _expected_key_values="$3"
-    local _modify_keys="$4"
+    local _modify_keys="$3"
+    local -n _expected_key_values="$4"
     local -n _rs="$5"
 
     (( ${#_expected_key_values[@]} > 0 )) ||
@@ -126,12 +129,13 @@ function compare_settings()
         [[ -v _expected_key_values["$_key"] ]] && _actual_key_values["$_key"]="$_actual"
     done < <(jq -r "$_jq_transform" <<< "$_json")
 
-    # put the keys in the array in display order
     local -a _keys
-    if [[ $# -eq 6 ]]; then
+    if [[ -n "${6:-}" ]]; then
+        # put the keys in the array in display order
         local -n _keys_in_order="$6"
         _keys=("${_keys_in_order[@]}")
     else
+        # otherwise put the keys in the array in sorted order
         readarray -t _keys < <(printf '%s\n' "${!_expected_key_values[@]}" | sort)
     fi
 
@@ -139,6 +143,11 @@ function compare_settings()
     local -i _pass=0 _diff=0 _errs=0
 
     for _key in "${_keys[@]}"; do
+        if [[ $_key == --* ]]; then
+            printf "    ➡️  %-38s %s\n" "${_key#--}" "────────────────────────────────────────────────────────────────────────"
+            continue
+        fi
+
         _expected="${_expected_key_values[$_key]}"
         if [[ $_expected == "$secret_str" ]]; then
             _expected=$undefined_default
@@ -198,22 +207,20 @@ declare -x path_vars
 
 declare -x path_main_protection_ruleset
 
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 # @description Runs a full, read-only audit of the target GitHub repository against the vm2 conventions, comparing
 # repository settings, Actions workflow permissions, per-app secrets, Actions variables, the branch-protection
 # ruleset (and its required status checks), and the local Git config -- then prints a totals summary. Requires
 # `initialize_gh_paths`, `initialize_jq_queries`, and `resolve_github_app_ids` to have already run so the
 # `path_*`/`jq_*` variables and `required_checks` are populated.
 #
-# @exitcode 0 Audit completed and printed.
-# @exitcode 1 The branch-protection ruleset for the configured branch is missing or could not be found (exits the
+# @exitcode success/positive=0: Audit completed and printed.
+# @exitcode failure/negative=1: The branch-protection ruleset for the configured branch is missing or could not be found (exits the
 #   whole script via `exit 1`, not just this function).
-# @exitcode 2 A `compare_settings` call failed (e.g. GitHub API fetch error), or fetching the required-status-checks
-#   list from the GitHub API failed.
 #
 # @stdout A multi-section, emoji-annotated audit report (repository settings, Actions permissions, secrets per app,
 #   Actions variables, branch ruleset, required status checks, local Git settings) followed by a totals summary.
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 function audit_repo()
 {
     local -i _pass=0 _diff=0 _errs=0
@@ -223,7 +230,7 @@ function audit_repo()
 
     # --- Repo settings ---
     echo "  ℹ️  Repository settings:"
-    compare_settings "$path_repo" "$jq_entries" default_repo_settings true _results default_repo_settings_order || {
+    compare_settings "$path_repo" "$jq_entries" true default_repo_settings _results default_repo_settings_order || {
         error -ec "$?" "Failed to compare repository settings."
         return 2
     }
@@ -231,7 +238,7 @@ function audit_repo()
 
     # --- Actions permissions ---
     echo "  ℹ️  Actions permissions:"
-    compare_settings "$path_permissions" "$jq_entries" default_repo_permissions true _results || {
+    compare_settings "$path_permissions" "$jq_entries" true default_repo_permissions _results || {
         error -ec "$?" "Failed to compare repository permissions settings."
         return 2
     }
@@ -239,24 +246,31 @@ function audit_repo()
 
     # --- Variables ---
     echo "  ℹ️  Actions Variables:"
-    compare_settings "$path_vars" "$jq_vars" actions_default_vars false _results || {
+    compare_settings "$path_vars" "$jq_vars" false actions_default_vars _results actions_default_vars_order || {
         error -ec "$?" "Failed to compare GitHub Actions variables."
         return 2
     }
     (( _pass += _results[0], _diff += _results[1], _errs += _results[2], 1 ))
 
     # --- Secrets ---
+    if [[ -v actions_secrets["NUGET_API_KEY"] && ${actions_default_vars["NUGET_SERVER"]} == 'nuget' ]]; then
+        # remove the NUGET_API_KEY secret if the NuGet server is set to 'nuget' - they use the Trusted Publishing now
+        unset 'actions_secrets["NUGET_API_KEY"]'
+    fi
+
+    local app
     for app in "${apps_with_secrets[@]}"; do
         local _secrets_array_name="${app,,}_secrets"
-        local -n _app_secrets="$_secrets_array_name"
 
-        (( ${#_app_secrets[@]} > 0 )) || continue
-        if [[ ${actions_default_vars["NUGET_SERVER"]} == 'nuget' ]]; then
-            unset 'app_secrets["NUGET_API_KEY"]'
+        is_array_empty "$_secrets_array_name" && continue
+
+        local _secrets_array_order_name="${app,,}_secrets_order"
+        if ! is_defined_indexed_array "$_secrets_array_order_name" || is_array_empty "$_secrets_array_order_name"; then
+            _secrets_array_order_name=
         fi
 
         echo "  ℹ️  ${app^} Secrets:"
-        compare_settings "$path_repo/$app/secrets" "$jq_secrets" "$_secrets_array_name" false _results || {
+        compare_settings "$path_repo/$app/secrets" "$jq_secrets" false "$_secrets_array_name" _results "$_secrets_array_order_name" || {
             error -ec "$?" "Failed to compare $app secrets."
             return 2
         }
@@ -281,7 +295,7 @@ function audit_repo()
     }
 
     echo "  ℹ️  Ruleset '$main_protection_rs_name' for branch '$branch' (id: $_ruleset_id):"
-    compare_settings "$path_rulesets/$_ruleset_id" "$jq_ruleset_rules" default_ruleset true _results default_ruleset_order || {
+    compare_settings "$path_rulesets/$_ruleset_id" "$jq_ruleset_rules" true default_ruleset _results default_ruleset_order || {
         error -ec "$?" "Failed to compare branch protection ruleset settings."
         return 2
     }
@@ -313,8 +327,10 @@ function audit_repo()
     # --- Local Git Settings ---
     echo "  ℹ️  Local Git Settings:"
 
-    local _key _expected _actual _rc=0
+    local _key _expected _actual
+    local -i _rc
     for _key in "${default_local_git_settings_order[@]}"; do
+        _rc=$success
         _expected="${default_local_git_settings[$_key]}"
         _actual=$(git -C "$repo_path" config --local --get "$_key" 2>"$_ignore") || _rc=$?
         if [[ $_rc -ne "$success" ]]; then

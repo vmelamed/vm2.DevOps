@@ -6,9 +6,9 @@
 declare -xr script_name
 declare -xr lib_dir
 
-declare -rxi err_missing_argument
-declare -rxi err_too_many_arguments
-declare -rxi err_unknown_argument
+declare -xri err_missing_argument
+declare -xri err_too_many_arguments
+declare -xri err_unknown_argument
 
 declare -x tag
 declare -x minver_tag_prefix
@@ -16,16 +16,13 @@ declare -x reason
 declare -x needs_empty_commit
 
 
-# shellcheck disable=SC2154 # variable is referenced but not assigned.
 function get_arguments()
 {
     local _option
 
     while [[ $# -gt 0 ]]; do
         _option="$1"; shift
-        if get_common_arg "$_option"; then
-            continue
-        fi
+        get_common_arg "$_option" && continue
         case "${_option,,}" in
             # do not use the common options - they were already processed by get_common_arg:
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
@@ -56,17 +53,16 @@ function get_arguments()
                 ;;
         esac
     done
-    usage_if_requested
-    dump_vars --force --quiet --markdown \
-        --header "Script Arguments:" \
-        dry_run \
-        verbose \
-        quiet \
-        --blank \
+
+    dump_vars --force --quiet \
+        --header "Arguments for $script_name:" \
+        --core-state \
         tag \
         minver_tag_prefix \
         reason \
         needs_empty_commit \
         --header "other:" \
         ci
+
+    usage_if_requested
 }

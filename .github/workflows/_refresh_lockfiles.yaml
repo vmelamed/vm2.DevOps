@@ -7,7 +7,7 @@ name: _refresh_lockfiles (Reusable workflow)
 on:
   workflow_call:
     inputs:
-      dotnet-version:
+      target-framework:
         description: .NET SDK version pattern (e.g. "10.0.x")
         type: string
         default: "10.0.x"
@@ -47,7 +47,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: ${{ inputs.dotnet-version }}
+          target-framework: ${{ inputs.target-framework }}
           dotnet-quality: ga
 
       - name: Authenticate with GitHub Packages

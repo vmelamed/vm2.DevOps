@@ -4,18 +4,25 @@ set -euo pipefail
 script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../../scripts/bash/lib")
-declare -r script_name
-declare -r script_dir
-declare -r lib_dir
 
-# shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
+declare -xr script_name
+declare -xr script_dir
+declare -xr lib_dir
+
+# shellcheck disable=SC1091 # Not following
 source "$lib_dir/gh_core.sh"
 
-declare -rxi err_tool_error
-declare -rxi err_logic_error
+declare -xri err_tool_error
+declare -xri err_logic_error
+
+declare -xr _ignore
+declare -xr semverReleaseRegex
+declare -xr semverPrereleaseRegex
+declare -xr semverTagReleaseRegex
+declare -xr semverTagPrereleaseRegex
 
 # default constants for parameters
-declare -xr default_minver_tag_prefix='v'
+declare -xr default_minver_tag_prefix
 declare -xr default_reason="release build"
 
 # parameters with initial values from environment variables or defaults
@@ -53,9 +60,7 @@ fi
 exit_if_has_errors
 
 # Find latest stable like v1.2.3
-# shellcheck disable=SC2154 # semverTagReleaseRegex is referenced but not assigned.
 latest_stable_tag=$(git tag --list "$minver_tag_prefix*" | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1 || echo "")
-# shellcheck disable=SC2154 # semverTagPrereleaseRegex is referenced but not assigned.
 latest_prerelease_tag=$(git tag --list "$minver_tag_prefix*" | grep -E "$semverTagPrereleaseRegex" | sort -V | tail -n1 || echo "")
 
 latest_stable_ver="${latest_stable_tag#"$minver_tag_prefix"}"
@@ -71,7 +76,7 @@ if is_semverRelease "$latest_stable_ver"; then
     patch=${BASH_REMATCH[$semver_patch]}
     if ((major <= 0 || minor < 0 || patch < 0)); then
         error -ec "$err_logic_error" "Invalid version numbers in latest stable tag '$latest_stable_tag': $major.$minor.$patch. Major must be > 0, minor and patch must be >= 0."
-        exit 2
+        exit "$err_logic_error"
     fi
     trace "Latest stable release: $latest_stable_tag ($major.$minor.$patch)"
 else
@@ -80,9 +85,9 @@ fi
 
 # Auto-detect next stable version from conventional commits
 last_tag="${latest_stable_tag:-$(git rev-list --max-parents=0 HEAD)}"
-# shellcheck disable=SC2154 # _ignore is referenced but not assigned.
 commits=$(git log "$last_tag"..HEAD --pretty=format:"%s" 2>"$_ignore" || echo "")
 
+# KEEP IN SYNC WITH vm2.DevOps/scripts/bash/lib/_constants.sh AND vm2.Templates/templates/AddNewPackage/content/.gitmessage!
 if echo "$commits" | grep -qiE '^[a-z]+(\(.+\))?!:'; then
     # Major bump
     major=$((major + 1))
@@ -117,7 +122,6 @@ if [[ -n "$latest_prerelease_tag" ]]; then
         # the computed release version is less than the latest prerelease version,
         # so adopt the major, minor, and patch from the latest prerelease version and make it a release version
         trace "Latest prerelease tag '$latest_prerelease_tag' is greater than computed release version '$release_version'; adjusting release version."
-        # shellcheck disable=SC2154
         [[ "$latest_prerelease_ver" =~ $semverPrereleaseRegex ]]
         major=${BASH_REMATCH[$semver_major]}
         minor=${BASH_REMATCH[$semver_minor]}
@@ -133,7 +137,6 @@ release_tag="$minver_tag_prefix$release_version"
 
 if [[ "$needs_empty_commit" == true && -n "$head_tag" ]]; then
     head_ver=${head_tag#"$minver_tag_prefix"}
-    # shellcheck disable=SC2154
     if ! semver_greaterThan "$release_version" "$head_ver"; then
         error -ec "$err_logic_error" "Computed stable version '$release_version' is not greater than the prerelease tag '$head_tag' on HEAD. Possible remedy: branch 'main' again, do a new PR with commits that bump the version higher, then release."
     fi

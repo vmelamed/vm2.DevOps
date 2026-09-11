@@ -29,20 +29,25 @@ on:
         default: >-
           ["ubuntu-latest"]
 
-      dotnet-version:
-        description: Version of .NET SDK to use. Cannot be null or empty!.
+      preprocessor-symbols:
+        description: Define preprocessor symbols to pass to the compiler
         type: string
-        default: 10.0.x
+        default: ""
 
       configuration:
         description: The type of build to produce, e.g. Release vs Debug. Cannot be null or empty!
         type: string
         default: Release
 
-      preprocessor-symbols:
-        description: Define preprocessor symbols to pass to the compiler
+      target-framework:
+        description: Version of .NET SDK to use. Cannot be null or empty!.
         type: string
-        default: ""
+        default: 10.0.x
+
+      runtime-id:
+        description: Runtime identifier for the build (e.g., 'linux-x64')
+        type: string
+        default: ''
 
       min-coverage-pct:
         description: Minimum acceptable code coverage percentage. Cannot be 0, null or empty!
@@ -109,6 +114,7 @@ on:
 
 env:
   VERBOSE: ${{ vars.VERBOSE || false }}
+  ARTIFACTS_PATH: ${{ vars.ARTIFACTS_PATH || 'artifacts' }}
 
 concurrency:
   group: ci-${{ github.workflow_ref }}
@@ -125,7 +131,7 @@ jobs:
       benchmark-projects: ${{ steps.validate.outputs.benchmark-projects }}
       package-projects: ${{ steps.validate.outputs.package-projects }}
       runners-os: ${{ steps.validate.outputs.runners-os }}
-      dotnet-version: ${{ steps.validate.outputs.dotnet-version }}
+      target-framework: ${{ steps.validate.outputs.target-framework }}
       configuration: ${{ steps.validate.outputs.configuration }}
       preprocessor-symbols: ${{ steps.validate.outputs.preprocessor-symbols }}
       min-coverage-pct: ${{ steps.validate.outputs.min-coverage-pct }}
@@ -139,6 +145,7 @@ jobs:
       skip-tests: ${{ steps.validate.outputs.skip-tests }}
       skip-packages: ${{ steps.validate.outputs.skip-packages }}
       skip-push: ${{ steps.validate.outputs.skip-push }}
+      artifacts: ${{ steps.validate.outputs.artifacts }}
 
     steps:
       # Clone the repository to access validation scripts
@@ -167,9 +174,9 @@ jobs:
               --benchmark-projects          '${{ inputs.benchmark-projects }}' \
               --package-projects            '${{ inputs.package-projects }}' \
               --runners-os                  '${{ inputs.runners-os }}' \
-              --dotnet-version              '${{ inputs.dotnet-version }}' \
-              --configuration               '${{ inputs.configuration }}' \
               --define                      '${{ inputs.preprocessor-symbols }}' \
+              --configuration               '${{ inputs.configuration }}' \
+              --target-framework            '${{ inputs.target-framework }}' \
               --min-coverage-pct            '${{ inputs.min-coverage-pct }}' \
               --max-regression-pct          '${{ inputs.max-regression-pct }}' \
               --max-gen1-collects           '${{ inputs.max-gen1-collects }}' \
@@ -179,7 +186,8 @@ jobs:
               --reset-benchmark-thresholds  '${{ inputs.reset-benchmark-thresholds }}' \
               --skip-benchmarks             '${{ inputs.skip-benchmarks }}' \
               --skip-tests                  '${{ inputs.skip-tests }}' \
-              --skip-packages               '${{ inputs.skip-packages }}'
+              --skip-packages               '${{ inputs.skip-packages }}' \
+              --artifacts                   '${{ env.ARTIFACTS_PATH }}'
 
   # Build the project and cache artifacts for downstream tests/benchmark jobs
   build:
@@ -196,7 +204,7 @@ jobs:
     with:
       build-project: ${{ matrix.build-project }}
       runner-os: ${{ matrix.runner-os }}
-      dotnet-version: ${{ needs.validate-input.outputs.dotnet-version }}
+      target-framework: ${{ needs.validate-input.outputs.target-framework }}
       configuration: ${{ needs.validate-input.outputs.configuration }}
       preprocessor-symbols: ${{ needs.validate-input.outputs.preprocessor-symbols }}
       minver-tag-prefix: ${{ needs.validate-input.outputs.minver-tag-prefix }}
@@ -228,7 +236,7 @@ jobs:
     with:
       test-projects: ${{ needs.validate-input.outputs.test-projects }}
       runner-os: ${{ matrix.runner-os }}
-      dotnet-version: ${{ needs.validate-input.outputs.dotnet-version }}
+      target-framework: ${{ needs.validate-input.outputs.target-framework }}
       configuration: ${{ needs.validate-input.outputs.configuration }}
       preprocessor-symbols: ${{ needs.validate-input.outputs.preprocessor-symbols }}
       min-coverage-pct: ${{ fromJSON(needs.validate-input.outputs.min-coverage-pct) }}
@@ -262,7 +270,7 @@ jobs:
     with:
       benchmark-project: ${{ matrix.benchmark-project }}
       runner-os: ${{ matrix.runner-os }}
-      dotnet-version: ${{ needs.validate-input.outputs.dotnet-version }}
+      target-framework: ${{ needs.validate-input.outputs.target-framework }}
       configuration: ${{ needs.validate-input.outputs.configuration }}
       preprocessor-symbols: ${{ needs.validate-input.outputs.preprocessor-symbols }}
       minver-tag-prefix: ${{ needs.validate-input.outputs.minver-tag-prefix }}
@@ -292,7 +300,7 @@ jobs:
     with:
       package-project: ${{ matrix.package-project }}
       runner-os: ${{ matrix.runner-os }}
-      dotnet-version: ${{ needs.validate-input.outputs.dotnet-version }}
+      target-framework: ${{ needs.validate-input.outputs.target-framework }}
       configuration: ${{ needs.validate-input.outputs.configuration }}
       preprocessor-symbols: ${{ needs.validate-input.outputs.preprocessor-symbols }}
       minver-tag-prefix: ${{ needs.validate-input.outputs.minver-tag-prefix }}

@@ -6,12 +6,10 @@
 declare -xr script_name
 declare -xr lib_dir
 
-declare -rxi err_missing_argument
-declare -rxi err_too_many_arguments
-declare -rxi err_unknown_argument
-declare -rxi err_argument_value
-
-declare -xa common_args
+declare -xri err_missing_argument
+declare -xri err_too_many_arguments
+declare -xri err_unknown_argument
+declare -xri err_argument_value
 
 declare -xar valid_actions
 declare -xr all_actions_str
@@ -23,14 +21,12 @@ declare -xA selectors_actions       # array [file] => [action string] for files 
 declare -x  diff_only
 declare -x  summary_file
 declare -xa arguments               # array of all arguments for logging and debugging purposes
+declare -xa vm2_repositories
 
-declare -xA selectors_actions=()    # array [file] => [action string] for files specified with --file* options, the rest of the files - no action
-
-# shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
-# shellcheck disable=SC2154 # variable is referenced but not assigned.
 function get_arguments()
 {
     local __option
+    local value
 
     while [[ $# -gt 0 ]]; do
         __option="$1"; shift
@@ -78,6 +74,19 @@ function get_arguments()
                 ;;
         esac
     done
+
+    [[ -n "$summary_file" ]] || {
+        summary_file=$(mktemp -p /tmp "diff-shared-log-$(date +%Y%m%d-%H%M%S)-XXXXXX.md")
+        trap 'rm -f "$summary_file"' EXIT
+    }
+
+    dump_vars \
+        --graphical \
+        --header "Arguments of $script_name:" \
+        --core-state \
+        "${arguments[@]}" \
+        "$@"
+
     usage_if_requested
 }
 
@@ -124,14 +133,4 @@ function get_selector_action()
 
     # get the patterns that the action applies to, and remember the action for those files in the selectors_actions array
     selectors_actions[$_file_selector]="$_action"
-}
-
-function dump_args()
-{
-    dump_vars \
-        --header "Script Arguments:" \
-        "${common_args[@]}" \
-        --blank \
-        "${arguments[@]}" \
-        "$@"
 }

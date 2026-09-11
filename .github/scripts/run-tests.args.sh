@@ -4,90 +4,62 @@
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
 declare -xr script_name
-declare -xr lib_dir
 
-declare -rxi err_missing_argument
-declare -rxi err_too_many_arguments
-declare -rxi err_unknown_argument
+declare -xri err_missing_argument
+declare -xri err_too_many_arguments
+declare -xri err_unknown_argument
 
+# parameters specific to this script only with initial values from environment variables or defaults
 declare -x test_project
-declare -x configuration
-declare -x preprocessor_symbols
-declare -x minver_tag_prefix
-declare -x minver_prerelease_id
-declare -x artifacts
-declare -ix min_coverage_pct
-declare -ix min_branch_coverage_pct
+declare -xi min_coverage_pct
+declare -xi min_branch_coverage_pct
 
-# shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
 function get_arguments()
 {
     local _option
-    local _value
 
     while [[ $# -gt 0 ]]; do
         # get the option and convert it to lower case
-        _option="$1"; shift
-        if get_common_arg "$_option"; then
+        _option="$1"
+        shift
+        get_common_arg "${_option,,}" &&
             continue
-        fi
-        # do not use short options -q -v -x -y
+
+        (( $# >= 1 )) &&
+            get_common_dotnet_arg "$_option" "$1" &&
+            shift &&
+            continue
+
         case "${_option,,}" in
-            # do not use the common options - they were already processed by get_common_arg:
-            -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
-                ;;
-
-            --configuration|-c )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                configuration=$1; shift
-                ;;
-
-            --define|-d    )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                preprocessor_symbols=$1; shift
-                ;;
-
+            # get the arguments specific to this script
             --min-coverage-pct|-min )
                 [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                min_coverage_pct=$1; shift
+                min_coverage_pct=$1
+                shift
                 min_coverage_pct=$((min_coverage_pct + 0))  # ensure it's an integer
                 ;;
 
-            --minver-tag-prefix|-mp )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                minver_tag_prefix="$1"; shift
+            # do not use the common options - they were already processed by get_common_arg and get_common_dotnet_arg:
+            -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
+                ;;
+            -d|-c|-f|-r|-a|-mp|-mi|--define|--configuration|--framework|--runtime|--artifacts-path|--minver-tag-prefix|--minver-prerelease-id|--nuget-username|--nuget-password )
                 ;;
 
-            --minver-prerelease-id|-mi )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                minver_prerelease_id="$1"; shift
-                ;;
-
-            --artifacts|-a )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                artifacts=$1; shift
-                ;;
-
-            * ) [[ -z $test_project ]] || usage -ec "$err_too_many_arguments" "Multiple test projects specified. Unknown option: $_option"
-                [[ "$_option" != -* ]] || usage -ec "$err_unknown_argument" "Unknown option: $_option"
+            * ) [[ -z $test_project ]] || usage -sd 3 -ec "$err_too_many_arguments" "Multiple test projects specified. Unknown option: $_option"
+                [[ "$_option" != -* ]] || usage -sd 3 -ec "$err_unknown_argument" "Unknown option: $_option"
                 test_project="$_option"
                 ;;
         esac
     done
-    usage_if_requested
+
     dump_vars --force --quiet \
-        --header "Script Arguments:" \
-        dry_run \
-        verbose \
-        quiet \
-        --blank \
+        --header "Arguments of $script_name:" \
+        --core-state \
         test_project \
-        configuration \
-        preprocessor_symbols \
+        --common-dotnet-args \
         min_coverage_pct \
-        minver_tag_prefix \
-        minver_prerelease_id \
-        artifacts \
         --header "other:" \
         ci
+
+    usage_if_requested
 }

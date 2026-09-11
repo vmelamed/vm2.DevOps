@@ -6,7 +6,7 @@ set -euo pipefail
 
 script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
-lib_dir=$(realpath -e "$script_dir/lib")
+lib_dir=$(realpath -e "$script_dir/../lib")
 
 declare -xr script_name
 declare -xr script_dir
@@ -15,20 +15,22 @@ declare -xr lib_dir
 # shellcheck disable=SC1091
 source "$lib_dir/core.sh"
 
-declare -rxi success
-declare -rxi failure
-declare -rxi positive
-declare -rxi negative
-declare -rxi err_invalid_arguments
-declare -rxi err_argument_type
-declare -rxi err_argument_value
-declare -rxi err_invalid_nameref
-declare -rxi err_missing_argument
-declare -rxi err_too_many_arguments
-declare -rxi err_unknown_argument
-declare -rxi err_tool_error
+declare -xri success
+declare -xri failure
+declare -xri positive
+declare -xri negative
+declare -xri err_invalid_arguments
+declare -xri err_argument_type
+declare -xri err_argument_value
+declare -xri err_invalid_nameref
+declare -xri err_missing_argument
+declare -xri err_too_many_arguments
+declare -xri err_unknown_argument
+declare -xri err_tool_error
 
-#-------------------------------------------------------------------------------
+declare -x _ignore
+
+#---------------------------------------------------------------------------------------------
 # @description Renames a Git branch both locally and on the 'origin' remote, and re-points the local branch's upstream
 # tracking to the new remote name.
 #
@@ -47,7 +49,7 @@ declare -rxi err_tool_error
 # @arg $2 string The new name for the branch. Required. Must be a valid Git branch name and must not already exist locally or
 #   on 'origin'.
 #
-# @exitcode 0 The branch was renamed and pushed successfully.
+# @exitcode success/positive=0: The branch was renamed and pushed successfully.
 # @exitcode non-zero Missing/invalid arguments, the branch names are identical, or a git operation failed (see
 #   'err_missing_argument', 'err_argument_value', 'err_tool_error' in '_error_codes.sh').
 #
@@ -57,7 +59,7 @@ declare -rxi err_tool_error
 #   rename-branch.sh feature/old-name feature/new-name
 # @example
 #   rename-branch.sh feature/new-name   # renames the current branch
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 
 declare -x old_branch_name=""
 declare -x new_branch_name=""
@@ -71,7 +73,6 @@ get_arguments "$@"
 
 if [[ -z "$old_branch_name" ]]; then
     # Get the current branch name if old_branch_name was not provided
-    # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
     old_branch_name=$(git branch --show-current 2>"$_ignore") || usage -ec "$err_missing_argument" "Old name not specified, HEAD is detached, or not in a repo."
     [[ -n "$old_branch_name" ]] || usage -ec "$err_missing_argument" "Old name not specified, HEAD is detached, or not in a repo."
 fi
@@ -83,7 +84,6 @@ fi
 git fetch origin 1>"$_ignore" || usage -ec "$err_tool_error" "Failed to fetch from remote."
 
 # Check if it is a valid git branch name?
-# shellcheck disable=SC2154 # _ignore is referenced but not assigned.
 git check-ref-format --branch "$new_branch_name" 1>"$_ignore" || usage -ec "$err_argument_value" "Invalid branch name '$new_branch_name'."
 # Make sure that a local branch with the new name does not already exist:
 git show-ref --verify --quiet "refs/heads/$new_branch_name" 1>"$_ignore" && usage -ec "$err_argument_value" "Branch '$new_branch_name' already exists locally."

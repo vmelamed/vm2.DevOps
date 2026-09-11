@@ -7,25 +7,32 @@ declare -xr common_switches
 declare -xr common_vars
 declare -xr script_name
 
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 # @description Builds and prints the usage/help text for 're-tag.sh'. When '$1' is true, appends the common switches and
 # environment variables sections; otherwise prints only the short usage summary.
 #
 # @arg $1 bool Whether to include the long-form help (common switches and environment variables sections).
 #
-# @exitcode 0 Always.
+# @exitcode success/positive=0
 #
 # @stdout The usage text for 're-tag.sh'.
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 function usage_text()
 {
     local _long_text=$1
-    local _switches=""
-    local _vars=""
+    local _common_switches=""
+    local _common_vars=""
 
     if $_long_text; then
-        _switches="Switches:"$'\n'"$common_switches"
-        _vars="$common_vars"
+        _common_switches="\
+
+Switches:
+$common_switches"
+
+        _common_vars="\
+
+Environment Variables:
+$common_vars"
     fi
 
     cat <<EOF
@@ -45,10 +52,7 @@ Arguments:
               '--delete'
 Options:
   --delete    Delete the tag following the option.
-$_switches
-Environment Variables:
-$_vars
-
+$_common_switches$_common_vars
 Examples:
   $script_name v3.1.0-preview.5 v3.1.1-preview.2
   $script_name --delete v3.1.0-preview.4

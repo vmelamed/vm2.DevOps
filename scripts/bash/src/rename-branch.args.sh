@@ -6,11 +6,11 @@
 declare -xr script_name
 declare -xr lib_dir
 
-declare -rxi err_missing_argument
-declare -rxi err_too_many_arguments
-declare -rxi err_unknown_argument
+declare -xri err_missing_argument
+declare -xri err_too_many_arguments
+declare -xri err_unknown_argument
 
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 # @description Parses the command-line arguments for 'rename-branch.sh'. Delegates common switches (help, quiet, verbose,
 # trace, dry-run) to 'get_common_arg'. Accepts up to two positional arguments: if one positional argument is given, it is
 # taken as the new branch name; if two are given, the first is the old branch name and the second is the new branch name.
@@ -18,7 +18,7 @@ declare -rxi err_unknown_argument
 #
 # @arg $@ string Up to two positional arguments: '[<old_branch_name>] <new_branch_name>'.
 #
-# @exitcode 0 Arguments parsed successfully.
+# @exitcode success/positive=0: Arguments parsed successfully.
 # @exitcode non-zero A third positional argument was given ('err_too_many_arguments'), or help was requested (via
 #   'usage_if_requested').
 #
@@ -26,16 +26,14 @@ declare -rxi err_unknown_argument
 #   get_arguments feature/new-name
 # @example
 #   get_arguments feature/old-name feature/new-name
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 function get_arguments()
 {
     local _option
 
     while [[ $# -gt 0 ]]; do
         _option="$1"; shift
-        if get_common_arg "$_option"; then
-            continue
-        fi
+        get_common_arg "$_option" && continue
         case "${_option,,}" in
             # do not use the common options - they were already processed by get_common_arg:
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
@@ -52,26 +50,11 @@ function get_arguments()
                 ;;
         esac
     done
-    usage_if_requested
-}
-
-#-------------------------------------------------------------------------------
-# @description Dumps the current values of the script's argument variables (common switches plus the old and new branch
-# names) for diagnostics.
-#
-# @exitcode 0 Always.
-#
-# @stdout A tabular dump of the script's argument variables (suppressed if '--quiet' is in effect — see 'dump_vars').
-#-------------------------------------------------------------------------------
-dump_all_variables()
-{
-    dump_vars --quiet \
-        --header "Script Arguments:" \
-        dry_run \
-        verbose \
-        quiet \
-        --blank \
+    dump_vars \
+        --header "Arguments for $script_name:" \
+        --core-state \
         old_branch_name \
         new_branch_name
         # add var names above this line
+    usage_if_requested
 }

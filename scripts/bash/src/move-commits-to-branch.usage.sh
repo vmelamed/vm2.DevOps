@@ -1,28 +1,34 @@
-#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
+# shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
 declare -xr common_switches
 declare -xr common_vars
 declare -xr script_name
 
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 # @description Builds and prints the usage/help text for 'move-commits-to-branch.sh'. When '$1' is true, appends the common
 # switches and environment variables sections; otherwise prints only the short usage summary.
 #
 # @arg $1 bool Whether to include the long-form help (common switches and environment variables sections).
 #
-# @exitcode 0 Always.
+# @exitcode success/positive=0
 #
 # @stdout The usage text for 'move-commits-to-branch.sh'.
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 function usage_text()
 {
     local _long_text=$1
-    local _switches=""
-    local _vars=""
+    local _common_switches=""
+    local _common_vars=""
 
     if $_long_text; then
-        _switches="$common_switches"
-        _vars=$'\n'"Environment Variables:"$'\n'"$common_vars"
+        _common_switches="$common_switches"
+        _common_vars="\
+
+Environment Variables:
+$common_vars"
     fi
 
     cat << EOF
@@ -41,7 +47,7 @@ Options:
 
 Switches:
   -n, --check-out-new           After moving the commits, check out the new branch.
-$_switches$_vars
+$_common_switches$_common_vars
 Examples:
   $script_name --commit-sha ff5c2d182c0d3a01c1f1dfd66c9267f0569d9802 --branch feature/my-feature
   $script_name -c ff5c2d1 -b feature/my-feature -n

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-# shellcheck disable=SC2119
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
 
 set -euo pipefail
 declare -x TZ="${TZ:-America/New_York}"
@@ -8,37 +9,47 @@ declare -x TZ="${TZ:-America/New_York}"
 script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(realpath -e "$(dirname "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../../scripts/bash/lib")
-declare -r script_name
-declare -r script_dir
-declare -r lib_dir
 
-# shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
+declare -xr script_name
+declare -xr script_dir
+declare -xr lib_dir
+
+# shellcheck disable=SC1091 # Not following
 source "$lib_dir/gh_core.sh"
 
-declare -rxi success
-declare -rxi failure
-declare -rxi err_tool_error
-declare -rxi err_logic_error
-
+# Declare variables defined in the core library.
+declare -xr ci
 declare -x _ignore
-declare -x dry_run
+declare -xr glow_present
 
-declare -xr default_minver_tag_prefix='v'
-declare -xr default_minver_prerelease_id="preview.0"
-declare -xr default_artifacts_dir="artifacts"
-declare -ixr default_min_coverage_pct=80
-declare -ixr default_min_branch_coverage_pct=75
-declare -ixr default_min_method_coverage_pct=80
+# Declare error codes defined in the core library
+declare -xri success
+declare -xri failure
+declare -xri err_tool_error
+declare -xri err_logic_error
+declare -xri err_unknown_argument
 
+# define default constants specific for this script only
+declare -xri default_min_coverage_pct=80
+declare -xri default_min_branch_coverage_pct=75
+declare -xri default_min_method_coverage_pct=80
+
+# Define CI common variables passed in as common dotnet arguments
+declare -x preprocessor_symbols
+declare -x configuration
+declare -x framework
+declare -x runtime
+declare -x artifacts
+declare -x minver_tag_prefix
+declare -x minver_prerelease_id
+declare -x gh_nuget_username
+declare -x gh_nuget_password
+
+# parameters specific to this script only with initial values from environment variables or defaults
 declare -x test_project=""
-declare -x configuration=${CONFIGURATION:="$default_configuration"}
-declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
-declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
-declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}
-declare -x artifacts=${ARTIFACTS_DIR:-"$default_artifacts_dir"}
-declare -ix min_coverage_pct=${MIN_COVERAGE_PCT:-"$default_min_coverage_pct"}
-declare -ix min_branch_coverage_pct=${MIN_BRANCH_COVERAGE_PCT:-"$default_min_branch_coverage_pct"}
-declare -ix min_method_coverage_pct=${MIN_BRANCH_COVERAGE_PCT:-"$default_min_branch_coverage_pct"}
+declare -xi min_coverage_pct=${MIN_COVERAGE_PCT:-"$default_min_coverage_pct"}
+declare -xi min_branch_coverage_pct=${MIN_BRANCH_COVERAGE_PCT:-"$default_min_branch_coverage_pct"}
+declare -xi min_method_coverage_pct=${MIN_METHOD_COVERAGE_PCT:-"$default_min_method_coverage_pct"}
 
 source "$script_dir/run-tests.usage.sh"
 source "$script_dir/run-tests.args.sh"
@@ -46,20 +57,23 @@ source "$script_dir/run-tests.args.sh"
 get_arguments "$@"
 test_project=${test_project:-"$TEST_PROJECT"}
 
-# validate input parameters
-is_safe_existing_file "$test_project" || true
+# validate the values of the variables common for many vm2.DevOps scripts,
+# usually set from CLI arguments, environment variables, or defaults
+is_safe_existing_file "$test_project"        || true
+[[ $test_project == *.csproj ]]              || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)."
+is_safe_min_coverage_pct "$min_coverage_pct" || true
+sanitize_common_dotnet_args "$test_project"  || true
+
+# other script specific variables
+# Derive the branch-coverage threshold from the line-coverage threshold, unless the caller
+# explicitly set $MIN_BRANCH_COVERAGE_PCT.
+[[ -n ${MIN_BRANCH_COVERAGE_PCT:-} ]] || min_branch_coverage_pct=$((min_coverage_pct - 5))
 test_name=$(basename "${test_project}" .csproj)                                 # the base name of the test project (without the path and file extension)
 test_dir=$(realpath -e "${test_project%/*}")                                    # the absolute path to the test project directory
-is_safe_configuration "$configuration" || true
-validate_preprocessor_symbols preprocessor_symbols || true
-is_safe_min_coverage_pct "$min_coverage_pct" || true
-min_branch_coverage_pct=$((min_coverage_pct - 5))
-validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
-is_safe_path "$artifacts" || true
-
-repo_root="$(root_working_tree "$test_dir")"
+declare repo_root
+root_working_tree "$test_dir" repo_root || true
 test_config_path="$repo_root/testconfig.json"
-coverage_settings_path="$repo_root/coverage.settings.xml"                       # path to coverage settings file                ~/repos/vm2.Glob/coverage.settings.xml
+coverage_settings_path="$repo_root/coverage.settings.xml"                       # path to coverage settings file    ~/repos/vm2.Glob/coverage.settings.xml
 
 if [[ ! -s "$test_config_path" ]]; then
     error -ec "$err_logic_error" "Test config file not found at: $test_config_path"
@@ -68,13 +82,10 @@ if [[ ! -s "$coverage_settings_path" ]]; then
     error -ec "$err_logic_error" "Coverage settings file not found at: $coverage_settings_path"
 fi
 
-exit_if_has_errors
-
-artifacts=$(get_artifacts_path "$test_project" "$artifacts")
 artifacts_tests_dir=$(realpath -m "$artifacts/tests")
 artifacts_test_dir="$artifacts_tests_dir/$test_name"
-coverage_source_path="$artifacts_test_dir/coverage.cobertura.xml"              # path to the raw coverage file                 ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/coverage.cobertura.xml
-coverage_reports_dir="$artifacts_test_dir/reports"                             # directory for coverage reports                ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/reports
+coverage_source_path="$artifacts_test_dir/coverage.cobertura.xml"              # path to the raw coverage file      ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/coverage.cobertura.xml
+coverage_reports_dir="$artifacts_test_dir/reports"                             # directory for coverage reports     ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/reports
 coverage_files="$artifacts_tests_dir/*/coverage.cobertura.xml"
 
 dump_vars --force --quiet \
@@ -86,17 +97,14 @@ dump_vars --force --quiet \
     coverage_reports_dir \
     coverage_files
 
+exit_if_has_errors
+
 # Freeze the variables
 declare -xr test_project
-declare -xr configuration
-declare -xr preprocessor_symbols
 declare -xr min_coverage_pct
-declare -xr minver_tag_prefix
-declare -xr minver_prerelease_id
 declare -xr test_name
 declare -xr test_dir
 declare -xr test_config_path
-declare -xr artifacts
 declare -xr artifacts_tests_dir
 declare -xr artifacts_test_dir
 declare -xr coverage_source_path
@@ -111,62 +119,54 @@ if [[ -d "$artifacts_test_dir" && -n "$(ls -A "$artifacts_test_dir")" ]]; then
         execute rm -rf "$artifacts_test_dir"
     else
         renamed_artifacts_dir="$artifacts_test_dir-$(date -u +"%Y%m%dT%H%M%S")"
-        choice=$(choose \
-                    "The test results directory '$artifacts_test_dir' already exists. What do you want to do?" \
-                        "Delete the directory and continue" \
-                        "Rename the directory to '$renamed_artifacts_dir' and continue" \
-                        "Exit the script") || exit $?
 
-        trace "User selected option: $choice"
+        declare choice=''
+
+        choose "The test results directory '$artifacts_test_dir' already exists. What do you want to do?" \
+               choice \
+                   "Delete the directory and continue" \
+                   "Rename the directory to '$renamed_artifacts_dir' and continue" \
+                   "Exit the script" || exit $?
+
+        trace "User selected option: '$choice'"
         case $choice in
-            1)  echo "Deleting the directory '$artifacts_test_dir'..."
+            1)  info "Deleting the directory '$artifacts_test_dir'..."
                 execute rm -rf "$artifacts_test_dir"
                 ;;
-            2)  echo "Renaming the directory '$artifacts_test_dir' to '$renamed_artifacts_dir'..."
+            2)  info "Renaming the directory '$artifacts_test_dir' to '$renamed_artifacts_dir'..."
                 execute mv "$artifacts_test_dir" "$renamed_artifacts_dir"
                 ;;
-            3)  echo "Exiting the script."
+            3)  info "Exiting the script."
                 exit 0
                 ;;
-            *)  echo "Invalid option $choice. Exiting."
-                exit 2
+            *)  error -sd 3 -ec "$err_unknown_argument" "Invalid option '$choice'. Exiting."
+                exit "$err_unknown_argument"
                 ;;
         esac
     fi
 fi
 
-declare rc=$success
-test_exe_path=$(get_assembly_path "$test_project" "" "$configuration")
-trace "Expected test executable: $test_exe_path"
+declare -x test_exec_path
+get_target_path "$test_project" test_exec_path
+declare -xr test_exec_path
+trace "Expecting test executable: $test_exec_path"
 
-# Verify artifacts exist, if not - rebuild the project (mostly for local runs)
-if [[ ! -s $test_exe_path ]]; then
-    if ! $dry_run; then
-        warning "Cached test executable '$test_exe_path' was not found. Rebuilding the test project"
+exit_if_has_errors
 
-        # shellcheck disable=SC2034 # build_info appears unused. Verify use (or export if used externally). Used as a nameref.
-        declare -a build_args=(
-            "$test_project"
-            --configuration "$configuration"
-            "-p:preprocessor_symbols=\"$preprocessor_symbols\""
-            "-p:MinVerTagPrefix=\"$minver_tag_prefix\""
-            "-p:MinVerPrereleaseIdentifiers=\"$minver_prerelease_id\""
-        )
+# Verify build artifacts exist, if not - rebuild the project (mostly for local runs)
+if [[ ! -s $test_exec_path ]]; then
+    if ! is_dry_run; then
+        warning "Test executable '$test_exec_path' was not found in the artifacts directory. Rebuilding the test project..."
 
-        # shellcheck disable=SC2034 # build_info appears unused. Verify use (or export if used externally). Used as a nameref.
-        declare -A build_info=()
+        update_nuget_sources_with_github_vm2 || error -ec "$err_tool_error" "Updating the NuGet sources with GitHub packages from vm2 failed."
+        dotnet_clean "$test_project"         || error -ec "$err_tool_error" "Cleaning the test project failed."
+        dotnet_restore "$test_project"       || error -ec "$err_tool_error" "Restoring the test project failed."
+        dotnet_build "$test_project"         || error -ec "$err_tool_error" -sd 3 "Building the test project failed."
+        [[ -s $test_exec_path ]]             || error -ec "$err_tool_error" -sd 3 "After rebuilding the project, the test executable '$test_exec_path' was still NOT FOUND."
 
-        execute dotnet clean "$test_project" --configuration "$configuration" || true
-        dotnet_build build_args build_info || rc=$?
-
-        trace "New expected test executable: $test_exe_path"
-        [[ -s $test_exe_path ]] || error -sd 3 -ec "$err_tool_error" "After rebuilding the project, the test executable '$test_exe_path' was still NOT FOUND."
         exit_if_has_errors
     fi
-    rc=$success
 fi
-declare -rx test_exe_path
-trace "Test executable: $test_exe_path"
 
 trace "Running tests from $test_project..."
 
@@ -184,27 +184,30 @@ test_args=(
 ##########################################
 ### Run the tests with coverage collection
 ##########################################
-if ! execute "$test_exe_path" "${test_args[@]}"; then
-    error -ec "$err_tool_error" "Tests failed in project '$test_project'."
-    exit 2
+declare rc=$success
+
+if [[ "$test_exec_path" == *.dll ]]; then
+    dotnet "$test_exec_path" "${test_args[@]}" || rc=$?
+else
+    # *.exe or *. (Linux)
+    "$test_exec_path" "${test_args[@]}" || rc=$?
+fi
+if (( rc != 0 )); then
+    error -ec "$err_tool_error" "Tests failed in project '$test_project' with exit code $rc."
+    exit "$err_tool_error"
+fi
+if [[ ! -s "$coverage_source_path" ]]; then
+    error -ec "$err_tool_error" "Coverage file '$coverage_source_path' not found or is empty."
+    exit "$err_tool_error"
 fi
 
-if [[ $dry_run != true ]]; then
-    if [[ ! -s "$coverage_source_path" ]]; then
-        error -ec "$err_tool_error" "Coverage file '$coverage_source_path' not found or is empty."
-        exit 2
-    fi
-fi
-
-# shellcheck disable=SC2154 # ci is referenced but not assigned.
 if $ci; then
     # Set outputs for merged coverage
-    # shellcheck disable=SC2034 # proj_name appears unused. Verify use (or export if used externally).
     args_to_github_output \
         "coverage_files" \
         "coverage_reports_dir"
 
-    trace "Running in CI environment, skipping coverage report generation - will be generated later by an action."
+    trace "Running in CI environment, skipping coverage report generation - it will be generated later by an action."
     exit 0
 fi
 
@@ -225,10 +228,16 @@ execute reportgenerator \
     -targetdir:"$coverage_reports_dir" \
     -reporttypes:TextSummary,html_dark,MarkdownSummaryGithub \
     minimumCoverageThresholds:lineCoverage="$min_coverage_pct" \
-    minimumCoverageThresholds:branchCoverage="$min_branch_coverage_pct" || rc=$?
+    minimumCoverageThresholds:branchCoverage="$min_branch_coverage_pct" \
+    minimumCoverageThresholds:methodCoverage="$min_method_coverage_pct" || rc=$?
+
+$glow_present && [[ -s "$coverage_reports_dir/SummaryGithub.md" ]] &&
+    glow -w 150 "$coverage_reports_dir/SummaryGithub.md" ||
+[[ -s "$coverage_reports_dir/Summary.txt" ]] &&
+    cat "$coverage_reports_dir/Summary.txt"
 
 if [[ -s "$coverage_reports_dir/Summary.txt" ]]; then
-    if command -v -p "glow" > "$_ignore" || which "glow" &>"$_ignore"; then
+    if $glow_present; then
         glow -w 150 "$coverage_reports_dir/SummaryGithub.md"
     else
         cat "$coverage_reports_dir/Summary.txt"

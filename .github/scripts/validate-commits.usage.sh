@@ -8,23 +8,29 @@ declare -xr common_switches
 declare -xr common_vars
 declare -xr script_name
 
-declare -arx allowed_commit_types
+declare -xra allowed_commit_types
 
 function usage_text()
 {
     local _long_text=$1
-    local _switches=""
-    local _vars=""
+    local _common_switches=""
+    local _common_vars=""
 
     if $_long_text; then
 
-        _switches=$'\n'"Switches:"$'\n'"$common_switches"
-        _vars=$'\n'"Environment Variables:"$'\n'"$common_vars"
+        _common_switches="\
 
+Switches:
+$common_switches"
+
+        _common_vars="\
+
+Environment Variables:
+$common_vars"
     fi
 
     local _types
-    _types=$(printf '%s | ' "${allowed_commit_types[@]}")
+    printf -v _types -- '%s | ' "${allowed_commit_types[@]}"
     _types=${_types% | }
 
     cat << EOF
@@ -55,9 +61,9 @@ Description:
 
 Options:
   -b, --base-ref <ref>          Required. Git ref to compare against (e.g. origin/main, a SHA, or a tag).
-$_switches$_vars
+$_common_switches$_common_vars
 Examples:
-    $script_name --base-ref origin/main
-    $script_name --base-ref v1.0.0 --verbose
+  $script_name --base-ref origin/main
+  $script_name --base-ref v1.0.0 --verbose
 EOF
 }

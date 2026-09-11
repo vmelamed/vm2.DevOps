@@ -6,9 +6,9 @@
 declare -xr script_name
 declare -xr lib_dir
 
-declare -rxi err_missing_argument
-declare -rxi err_too_many_arguments
-declare -rxi err_unknown_argument
+declare -xri err_missing_argument
+declare -xri err_too_many_arguments
+declare -xri err_unknown_argument
 
 declare -x benchmark_project
 declare -xi repeat
@@ -16,22 +16,19 @@ declare -x configuration
 declare -x preprocessor_symbols
 declare -x minver_tag_prefix
 declare -x minver_prerelease_id
-declare -x artifacts_dir
+declare -x artifacts
 declare -x bencher_project
 declare -x bencher_testbed
 declare -x bencher_branch
 declare -x bencher_adapter
 
-# shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
 function get_arguments()
 {
     local _option
 
     while [[ $# -gt 0 ]]; do
         _option="$1"; shift
-        if get_common_arg "$_option"; then
-            continue
-        fi
+        get_common_arg "$_option" && continue
         case "${_option,,}" in
             # do not use the common options - they were already processed by get_common_arg:
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
@@ -64,7 +61,7 @@ function get_arguments()
 
             --artifacts|-a )
                 [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                artifacts_dir="$1"; shift
+                artifacts="$1"; shift
                 ;;
 
             --bencher-project|-bp )
@@ -93,24 +90,23 @@ function get_arguments()
                 ;;
         esac
     done
-    usage_if_requested
-    dump_vars --force --quiet --markdown \
-        --header "Script Arguments:" \
-        dry_run \
-        verbose \
-        quiet \
-        --blank \
+
+    dump_vars --force --quiet \
+        --header "Arguments for $script_name:" \
+        --core-state \
         benchmark_project \
         repeat \
         configuration \
         preprocessor_symbols \
         minver_tag_prefix \
         minver_prerelease_id \
-        artifacts_dir \
+        artifacts \
         bencher_project \
         bencher_testbed \
         bencher_branch \
         bencher_adapter \
         --header "other:" \
         ci
+
+    usage_if_requested
 }

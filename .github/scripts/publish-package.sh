@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-# shellcheck disable=SC2119
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
 
 set -euo pipefail
 
@@ -8,36 +9,45 @@ script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../../scripts/bash/lib")
 
-declare -r script_name
-declare -r script_dir
-declare -r lib_dir
+declare -xr script_name
+declare -xr script_dir
+declare -xr lib_dir
 
-# shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
+# shellcheck disable=SC1091 # Not following
 source "$lib_dir/gh_core.sh"
 
-declare -rxi success
-declare -rxi err_tool_error
-declare -rxi err_logic_error
-declare -rxi err_argument_value
+# Declare error codes defined in the core library
+declare -xri success
+declare -xri err_tool_error
 
-# constants and default values
-declare -xr default_nuget_server="github"
-declare -xr default_minver_tag_prefix='v'
-declare -xr default_minver_prerelease_id="preview.0"
-declare -xr default_repo_owner="vmelamed"
+# Declare defaults defined in the core library.
+declare -xr default_nuget_server
+declare -xr default_repo_owner
 
-# parameters with initial values from environment variables and defaults
+# Declare variables defined in the core library.
+declare -x _ignore
+
+# Define CI common variables passed in as common dotnet arguments
+declare -x preprocessor_symbols
+declare -x configuration
+declare -x framework
+declare -x runtime
+declare -x artifacts
+declare -x minver_tag_prefix
+declare -x minver_prerelease_id
+declare -x gh_nuget_username
+declare -x gh_nuget_password
+
+# parameters specific to this script only with initial values from environment variables or defaults
 declare -x package_project=""
-declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-""}
-declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
-declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}
 declare -x reason=${REASON:-}
 declare -x nuget_server=${NUGET_SERVER:-"$default_nuget_server"}
 declare -x repo_owner=${GITHUB_REPOSITORY_OWNER:-"$default_repo_owner"}
-declare -x artifacts_saved=${ARTIFACTS_SAVED:-false}
-declare -x artifacts_dir=${ARTIFACTS_DIR:-artifacts/pack}
-# shellcheck disable=SC2154 # variable is referenced but not assigned.
+declare -x save_artifacts=${SAVE_ARTIFACTS:-false}
 declare -x server_api_key=${NUGET_API_KEY:-}
+
+declare nuget_server_name
+declare nuget_server_url
 
 source "$script_dir/publish-package.usage.sh"
 source "$script_dir/publish-package.args.sh"
@@ -45,127 +55,56 @@ source "$script_dir/publish-package.args.sh"
 get_arguments "$@"
 package_project=${package_project:-"$PACKAGE_PROJECT"}
 
-is_safe_path "$package_project" || true
-validate_preprocessor_symbols preprocessor_symbols || true
-validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
-is_safe_reason "$reason" || true
-validate_nuget_server "nuget_server" || true
-is_safe_input "$repo_owner" || true
-is_safe_path "$artifacts_dir" || true
-
-case "$nuget_server" in
-    nuget )
-        server_name="NuGet.org"
-        server_url="https://api.nuget.org/v3/index.json"
-        ;;
-    github )
-        server_name="GitHub Packages"
-        server_url="https://nuget.pkg.github.com/$repo_owner/index.json"
-        [[ -n "$server_api_key" ]] ||
-            error -ec "$err_missing_argument" "No API key provided for server '$server_name'"
-        ;;
-    "https?://.+" )
-        server_name="$nuget_server"
-        server_url="$nuget_server"
-        [[ -n "$server_api_key" ]] ||
-            error -ec "$err_missing_argument" "No API key provided for server '$server_name'"
-        ;;
-
-    * ) error -ec "$err_argument_value" "Invalid NuGet server: $nuget_server"
-        ;;
-esac
+is_safe_existing_file "$package_project"                                      || true
+[[ $package_project == *.csproj ]]                                            || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)."
+is_safe_reason "$reason"                                                      || true
+is_safe_input "$repo_owner"                                                   || true
+validate_nuget_server nuget_server nuget_server_name nuget_server_url "nuget" || true
+sanitize_common_dotnet_args "$package_project"                                || true
 
 exit_if_has_errors
 
-# restore dependencies
-execute dotnet restore "$package_project" --locked-mode
+declare -A properties=()
 
-# create output directory for packed packages
-execute mkdir -p "$artifacts_dir"
-
-# build and pack the project
-temp_output=$(mktemp)
-build_info_output=$(mktemp)
-trap 'rm -f "$temp_output" "$build_info_output"' EXIT
-
-rc="$success"
-execute dotnet pack \
-    "$package_project" \
-    --configuration Release \
-    --output "$artifacts_dir" \
-    --no-restore \
-    "-p:preprocessor_symbols=$preprocessor_symbols" \
-    "-p:MinVerTagPrefix=$minver_tag_prefix" \
-    "-p:MinVerPrereleaseIdentifiers=$minver_prerelease_id" \
-    "-p:PackageReleaseNotes=\"$reason\"" > "$temp_output" 2>&1 || rc=$? # prevent set -e from exiting before we can inspect $rc
-
-# Run extractDotnetBuildInfo directly in THIS shell (not as the left side of a pipe or inside a
-# $(...) command substitution, either of which would run it in a subshell and lose its variable
-# assignments) so it can populate $version, $package_version, etc. for use below. Its stdout (the
-# key=value pairs) is captured to a file and replayed into displayDotnetBuildSummary for the
-# human-readable report.
-declare -A build_info=()
-
-extractDotnetBuildInfo build_info < "$temp_output" || rc=$?
-displayDotnetBuildSummary < "$build_info_output" | to_summary
-
-[[ $rc == "$success" ]] || error -ec "$err_tool_error" "Packing '$package_project' failed."
+dotnet_pack "$package_project" "$reason" properties
 exit_if_has_errors
 
-# Populated by extractDotnetBuildInfo from the dotnet pack log.
-declare -x version
-declare -x package_version
-
-declare -rx key_version
-
-version=${build_info[$key_version]}
+package=${properties["PackagePath"]}
+symbols=${properties["SymbolsPath"]}
+version=${properties["Version"]}
+id=${properties["PackageId"]}
 
 if is_semverRelease "$version"; then
     summary_header="Release Summary"
-    reason="${reason:="stable release"}"
+    reason="${reason:-"Stable release of $id"}"
 else
-    summary_header="Prerelease Summary"
-    reason="${reason:="pre-release"}"
+    summary_header="Pre-release Summary"
+    reason="${reason:-"Pre-release of $id"}"
 fi
-git_tag="$minver_tag_prefix$version"
+declare git_tag="$minver_tag_prefix$version"
 
 # push packages to NuGet server
-if [[ -n $server_url ]]; then
-    execute dotnet nuget push "$artifacts_dir"/*.nupkg \
-        --source "$server_url" \
-        --api-key "$server_api_key" \
-        --skip-duplicate
+{
+    if [[ -n $nuget_server_url && -n $server_api_key ]]; then
+        execute dotnet nuget push "$artifacts"/*.nupkg \
+            --source "$nuget_server_url" \
+            --api-key "$server_api_key" \
+            --skip-duplicate
 
-    {
-        echo "🎯 Package(s) $package_version pushed to $server_name:"
-        for f in "$artifacts_dir"/*.nupkg; do
-            echo "  - $(basename "$f")"
-        done
-        echo ""
-        [[ "$artifacts_saved" == true ]] && echo "Will be saved as workflow artifacts to $artifacts_dir."
-        echo ""
-        echo "| $summary_header   |                |"
-        echo "|:------------------|:---------------|"
-        echo "| Server            | $server_name   |"
-        echo "| Server URL        | $server_url    |"
-        echo "| Version           | $version       |"
-        echo "| Git Tag           | $git_tag       |"
-        echo "| Reason            | $reason        |"
-    } | to_summary
-else
-    {
-        echo "🎯 Package(s) $package_version were **NOT** pushed to $server_name:"
-        for f in "$artifacts_dir"/*.nupkg; do
-            echo "  - $(basename "$f")"
-        done
-        echo ""
-        [[ "$artifacts_saved" == true ]] && echo "Will be saved as workflow artifacts to $artifacts_dir."
-        echo ""
-        echo "| $summary_header   |                |"
-        echo "|:------------------|:---------------|"
-        echo "| Server            | $server_name   |"
-        echo "| Version           | $version       |"
-        echo "| Git Tag           | $git_tag       |"
-        echo "| Reason            | $reason        |"
-    } | to_summary
-fi
+        echo "🎯 $id packages $git_tag were released to $nuget_server_name:"
+    else
+        echo "🎯 $id packages $git_tag were **NOT** released to $nuget_server_name:"
+    fi
+    echo "  - $(basename "$package")"
+    echo "  - $(basename "$symbols")"
+    echo ""
+    [[ "$save_artifacts" == true ]] && echo "Will be saved as workflow artifacts to $artifacts."
+    echo ""
+    echo "| $summary_header   |                    |"
+    echo "|:------------------|:-------------------|"
+    echo "| Server            | $nuget_server_name |"
+    echo "| Server URL        | $nuget_server_url  |"
+    echo "| Version           | $version           |"
+    echo "| Git Tag           | $git_tag           |"
+    echo "| Reason            | $reason            |"
+} | to_summary

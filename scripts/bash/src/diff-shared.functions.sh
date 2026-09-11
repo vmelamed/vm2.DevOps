@@ -2,14 +2,40 @@
 # Copyright (c) 2025-2026 Val Melamed
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
-# shellcheck disable=SC2154 # _ignore is referenced but not assigned.
 
 declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
+declare -xri success
+declare -xri failure
+declare -xri positive
+declare -xri negative
+declare -xri err_missing_argument
+declare -xri err_too_many_arguments
+declare -xri err_unknown_argument
+declare -xri err_argument_value
+declare -xri err_invalid_nameref
+declare -xri err_not_directory
+declare -xri err_tool_not_found
+declare -xri err_config_not_found
+declare -xri err_file_not_found
+declare -xri err_directory_not_found
+declare -xri err_invalid_arguments
+declare -xri err_action_not_found
+declare -xri err_tool_not_configured
+declare -xri err_tool_not_supported
+declare -xri err_logic_error
+declare -xri err_tool_error
+declare -xri err_dir_with_ci
+declare -xri err_argument_type
+declare -xri err_not_file
+
+declare -x _ignore
+
 declare -x vm2_repos
 declare -x custom_config=""
+declare -x diff_only
 
 declare -xr action_ignore="ignore"
 declare -xr action_merge_or_copy="merge or copy"
@@ -18,7 +44,7 @@ declare -xr action_merge="merge"
 declare -xr action_ask_to_copy="ask to copy"
 declare -xr action_copy="copy"
 
-declare -axr valid_actions=(
+declare -xra valid_actions=(
     "$action_ignore"
     "$action_merge_or_copy"
     "$action_ask_to_merge"
@@ -80,32 +106,35 @@ declare -rA merge_commands=(
     ["vimdiff"]="vimdiff \"\$LOCAL\" \"\$REMOTE\""
 )
 
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 # @description Loads the diff/merge tool configuration and the list of source/target/action file entries from the SoT
 # directory's 'diff-shared.config.json', populating the global model arrays 'source_files', 'target_files', and
 # 'file_actions'. This is a top-level CLI configuration step: on any validation or configuration failure it reports the
 # error(s) via 'error' and exits the process via 'exit_if_has_errors' rather than returning an error code.
 #
+# Notes:
+#   - Will exit the script if an invalid argument(s) is/are provided with exit codes
+#
 # @arg $1 string the SoT directory path (must exist and be a directory; the configuration file '$1/diff-shared.config.json' MUST
 #   exist, be non-empty, and contain valid JSON)
 # @arg $2 string the target repository directory path (must exist and be a directory)
 #
-# @exitcode 0 configuration loaded and validated successfully
+# @exitcode success/positive=0: configuration loaded and validated successfully
 #
 # @example
 #   configure "$sot_path" "$target_path"
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 function configure()
 {
-    (( $# == 2 ))                        || error -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly two arguments (provided $#): the SoT directory and the target directory."
-    [[ -v 1 && -d $1 ]]                  || error -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the SoT directory, to be an existing directory (provided '${1-<missing>}')."
-    [[ -v 2 && -d $2 ]]                  || error -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the target directory, to be an existing directory (provided '${2-<missing>}')."
+    (( $# == 2 ))       || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
+                                                            "  - the SoT directory" \
+                                                            "  - the target directory"
+    [[ -v 1 && -d $1 ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the SoT directory, to be an existing directory (provided '${1:-<none>}')."
+    [[ -v 2 && -d $2 ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the target directory, to be an existing directory (provided '${2:-<none>}')."
 
-    exit_if_has_errors
+    exit_if_has_bugs
 
     local _config_file="$1/diff-shared.config.json"
-    # shellcheck disable=SC2034 # target_file_path appears unused. Verify use (or export if used externally): used as a macro variable in the config files and evaluated with 'eval' below
-    local target_file_path="$2"
 
     # validate the config file and load the diff and merge tools from it:
     [[ -s "$_config_file" ]]              || error -ec "$err_argument_value" "The configuration file '$_config_file' was not found or is empty."
@@ -118,8 +147,6 @@ function configure()
 
     # Populate the arrays
     local -i _index=0
-    # shellcheck disable=SC2034
-    local vm2_sot_shared="$vm2_sot_repo_name/templates/$sot/content"
     local _source_file _target_file _file_action
 
     while IFS='=' read -r _source_file _target_file _file_action; do
@@ -155,7 +182,7 @@ function configure()
     trace "$script_name was configured successfully with ${#source_files[@]} files and actions."
 }
 
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 # @description: Changes the file actions from the config file(s) based on the provided command line arguments.
 function parameterize()
 {
@@ -163,7 +190,7 @@ function parameterize()
 
     (( ${#selectors_actions[@]} > 0 )) || {
         _rc="$err_invalid_arguments"
-        error -sd 3 -ec "$_rc" "No command line arguments were provided to parameterize the file actions. Please provide at least one --file* argument to specify which files to compare and how."
+        error -ec "$_rc" "No command line arguments were provided to parameterize the file actions. Please provide at least one --file* argument to specify which files to compare and how."
     }
 
     (( _rc == success )) || return "$_rc"
@@ -187,7 +214,7 @@ function parameterize()
                 # add the action to the list of matching actions if it is not already present
                 ! is_in "$_action" "${_matching_actions[@]}" && {
                     _matching_actions+=("$_action")
-                    trace "File '${source_files[_index]#"$vm2_repos/"}' matches selector '$_selector' with action '$_action'."
+                    trace "File '${source_files[_index]#${vm2_repos:-}/}' matches selector '${_selector:-<none>}' with action '${_action:-<none>}'."
                 }
             fi
         done
@@ -205,7 +232,7 @@ function parameterize()
         else
             # no patterns matched - clear the action for that file (clear the action, as we are not certain what to do) and report as a warning
             file_actions[_index]=""
-            trace "File '${source_files[_index]#"$vm2_repos/"}' does not match any of the provided patterns: ${!selectors_actions[*]}. It will not be processed."
+            trace "File '${source_files[_index]#${vm2_repos}/}' does not match any of the provided patterns: ${!selectors_actions[*]}. It will not be processed."
         fi
     done
 
@@ -217,81 +244,101 @@ function parameterize()
     return "$_rc"
 }
 
+#---------------------------------------------------------------------------------------------
+# @description Resolves the target repository directory and ensures it is in a valid state.
+#
+# Notes:
+#   - Will exit the script if an invalid argument(s) is/are provided with exit codes
+#
+# @arg $1 string the directory of the vm2 repositories (must be an existing directory)
+# @arg $2 string the directory name of the target repository
+# @arg $3 string nameref to the variable to store the absolute path of the root of the target repository
+# @arg $4 string nameref to the variable to store the absolute path of the target repository directory
+#
+# @exitcode success/positive=0: the target repository directory is resolved and in a valid state
+# @exitcode err_not_directory=17: the target repository directory does not exist or is not a valid git repository with CI configured
+#---------------------------------------------------------------------------------------------
 function resolve_target()
 {
     local -i _rc="$success"
 
-    (( $# == 2 )) || {
-        _rc="$err_invalid_arguments"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]} expects two arguments (provided $#):" \
-                              "  1) the directory of the repositories" \
-                              "  2) the directory name of the target repository."
-    }
+    (( $# == 4 ))            || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() expects four arguments (provided $#):" \
+                                                                    "  - the directory of the repositories" \
+                                                                    "  - the directory name of the target repository" \
+                                                                    "  - the name of the variable to store the absolute path of the root of the target repository" \
+                                                                    "  - the name of the variable to store the absolute path of the target repository directory"
+    [[ -n $1 && -d $1 ]]     || bug -ec "$err_not_directory" "${FUNCNAME[0]}() requires argument 1, the directory of the vm2 repositories, to be a non-empty existing directory."
+    [[ -n $2 ]]              || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the directory name of the target repository, to be a non-empty existing directory."
+    is_defined_variable "$3" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3, the name of the variable to store the absolute path to the root of the working tree of the target repository."
+    is_defined_variable "$4" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 4, the name of the variable to store the absolute path to the target repository directory."
 
-    (( _rc == success )) || return "$_rc"
+    exit_if_has_bugs
 
     local _repos="$1"
     local _r="$2"
-    local _output _target_root _target_path
+    local -n _target_root="$3"
+    local -n _target_path="$4"
+    local branch="<not a git repository>"
 
-    _output=$(resolve_repo_root "$_repos" "$_r") || _rc=$?
+    resolve_repo_root "$_repos" "$_r" _target_root _target_path || _rc=$?
+
     # We can only work with git repos or directories that have CI configured:
     (( _rc == success || _rc == err_dir_with_ci )) || {
-        error -sd 3 -ec "$_rc" "The specified target directory '${_repos%/}/${_r#/}' is invalid." \
-                              "It should have CI configured in '.github/workflows'."
+        error -ec "$_rc" "The specified target directory '${_repos%/}/${_r#/}' is invalid. It should have CI configured in '.github/workflows'."
         return "$_rc"
     }
-    {
-        read -r _target_root;
-        read -r _target_path;
-    } <<< "$_output"
+
+    (( _rc == err_dir_with_ci )) && {
+        warning "The root directory of the target project is '$_target_root', but it is not a git repository yet."
+        return "$success"
+    }
 
     # if it is a git repo then make sure it is in a clean state:
-    if (( _rc == success )); then
-        branch="$(git -C "$_target_root" branch --show-current 2>"$_ignore")" || {
-            _rc=$?
-            error -sd 3 -ec "$err_tool_error" "The repository in the specified target directory '$1' appears corrupted."
+    # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
+    branch="$(git -C "$_target_root" branch --show-current 2>"$_ignore")" && {
+        ensure_fresh_git_state "$_target_root" "$branch" || {
+            _rc=$err_logic_error
+            error -ec "$_rc" "The specified target repository at '$_target_root' on branch '$branch' is not in a clean state." \
+                                                "Commit or stash your changes."
         }
-        (( _rc == success )) && {
-            ensure_fresh_git_state "$_target_root" "$branch" ||
-                error -sd 3 -ec "$err_logic_error" "The specified target repository at '$_target_root' on branch '$branch' is not in a clean state." \
-                                                   "Commit or stash your changes."
-        }
-    else
-        branch="<not a git repository>"
-    fi
+    } || {
+        _rc=$err_tool_error
+        error -ec "$_rc" "The repository in the specified target directory '$1' appears corrupted."
+    }
 
-    exit_if_has_errors
-
-    trace "The target project's working tree root directory is '$_target_root', on a branch '$branch'."
-    echo "$_target_root"
-    echo "$_target_path"
+    trace "The Git working tree root of the target project is '$_target_root', on a branch '$branch'."
+    return "$_rc"
 }
 
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 # @description Loads per-repository customizations from '<target_path>/diff-shared.custom.json', if present, overriding
 # the configured diff/merge tools and (unless 'only_tools' is set) the per-file actions in the global 'file_actions'
 # array. If the custom configuration file does not exist or is empty, the function leaves the configured tools and
 # actions untouched and returns successfully.
 #
+# Notes:
+#   - Will exit the script if an invalid argument(s) is/are provided with exit codes
+#
 # @arg $1 string target repository root directory path (must be an existing directory)
 # @arg $2 bool whether to customize the diff/merge tools only, skipping the per-file action overrides (optional,
 #   default: false)
 #
-# @exitcode 0 ($success) customization applied successfully, or no custom configuration file was found
-# @exitcode 1 ($failure) the custom configuration file contains invalid JSON
+# @exitcode success/positive=0: customization applied successfully, or no custom configuration file was found
+# @exitcode failure/negative=1: the custom configuration file contains invalid JSON
 #
 # @example
 #   customize "$target_root" true
 #   customize "$target_root" false
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 function customize()
 {
-    (( $# == 1 || $# == 2 ))            || error -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one or two arguments (provided $#): the target repository directory and an optional tools-only flag."
-    [[ -v 1 && -d $1 ]]                 || error -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the target repository path, to be an existing directory (provided '${1-<missing>}')."
-    [[ ! -v 2 ]] || is_boolean "$2"     || error -ec "$err_argument_type" "${FUNCNAME[0]}() requires optional argument 2, the tools-only flag, to be 'true' or 'false' (provided '${2-<missing>}')."
+    (( $# == 1 || $# == 2 ))        || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one or two arguments (provided $#):" \
+                                                                        "  - the target repository directory" \
+                                                                        "  - an optional tools-only flag"
+    [[ -v 1 && -d $1 ]]             || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the target repository path, to be an existing directory (provided '${1:-<none>}')."
+    [[ ! -v 2 ]] || is_boolean "$2" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires optional argument 2, the tools-only flag, to be 'true' or 'false' (provided '${2:-<none>}')."
 
-    exit_if_has_errors
+    exit_if_has_bugs
 
     local _target_path=$1
     local _only_tools=${2:-false}
@@ -373,12 +420,30 @@ function customize()
     fi
 }
 
+#---------------------------------------------------------------------------------------------
+# @description Retrieves the diff and merge tool commands from the specified configuration or
+#   from the git configuration or will assume defaults (diff and VS Code)
+#
+# Notes:
+#   - Will exit the script if an invalid argument(s) is/are provided with exit codes.
+#
+# @exitcode success/positive=0: If the diff and merge tool commands are retrieved
+#   successfully.
+#
+# @stdout
+#   The retrieved diff and merge tool names and commands:
+#     - line 1: diff tool name
+#     - line 2: diff tool command
+#     - line 3: merge tool name
+#     - line 4: merge tool command
+#---------------------------------------------------------------------------------------------
 function get_tools()
 {
-    (( $# == 1 ))            || error -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the configuration or customization file."
-    [[ -v 1 && -s $1 ]]      || error -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be an existing, non-empty configuration or customization file (provided '${1-<missing>}')."
+    (( $# == 1 ))       || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#):" \
+                                                            "  - the configuration or customization file."
+    [[ -v 1 && -s $1 ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be an existing, non-empty configuration or customization file (provided '${1:-<none>}')."
 
-    exit_if_has_errors
+    exit_if_has_bugs
 
     local _file="$1"
     local _dt _dc _mt _mc
@@ -392,8 +457,8 @@ function get_tools()
         trace "Diff tool configured in $_file: '$_dt': $_dc"
     else
         # get it from Git
-        _dt=$(git config --global --get "diff.tool" 2>"$_ignore" || true) &&
-        _dc=$(git config --global --get "diff.$_dt.cmd" 2>"$_ignore" || true)
+        _dt=$(git config --get "diff.tool" 2>"$_ignore" || true) &&
+        _dc=$(git config --get "diff.$_dt.cmd" 2>"$_ignore" || true)
 
         if [[ -n "$_dt" ]] && (command -v -p "$_dt" > "$_ignore" || which "$_dt" &>"$_ignore") &&
            ([[ -n "$_dc" ]] || is_in "$_dt" "${!diff_commands[@]}"); then
@@ -424,8 +489,8 @@ function get_tools()
         trace "Merge tool configured in $_file: '$_mt': $_mc"
     else
         # get it from Git
-        _mt=$(git config --global --get "merge.tool" 2>"$_ignore" || true)
-        _mc=$(git config --global --get "mergetool.$_mt.cmd" 2>"$_ignore" || true)
+        _mt=$(git config --get "merge.tool" 2>"$_ignore" || true)
+        _mc=$(git config --get "mergetool.$_mt.cmd" 2>"$_ignore" || true)
         local _mt_is_in_merge_commands="false"
         is_in "$_mt" "${!merge_commands[@]}" && _mt_is_in_merge_commands="true"
 
@@ -465,7 +530,6 @@ function get_tools()
     echo "$_mc"
 }
 
-# shellcheck disable=SC2059
 function trace_files()
 {
     local _format
@@ -491,46 +555,39 @@ function trace_files()
         * )
             _format="%-84s ??????????????????? %-s\n"
     esac
+    # shellcheck disable=SC2059 # Suppress warnings about printf format strings being non-literal
     trace "$(printf "$_format" "${2#"$vm2_repos/$vm2_sot_repo_name/templates/"}" "${3#"$vm2_repos/"}")"
 }
 
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 # @description Compares two files with a fast whitespace/blank-line-insensitive 'diff -q -w -B'. If they are identical,
 # returns immediately. If they differ and 'show_diff' is true, also launches the configured (or default) visual diff
 # tool via '$diff_command' against the global 'LOCAL'/'REMOTE' variables, which this function sets before evaluating it.
+#
+# Notes:
+#   - Will exit the script if an invalid argument(s) is/are provided with exit codes
 #
 # @arg $1 string SoT (source of truth) file path; assigned to the global 'LOCAL' for '$diff_command' to use
 # @arg $2 string target file path; assigned to the global 'REMOTE' for '$diff_command' to use
 # @arg $3 bool whether to also display the visual diff when the files differ (optional, default: true)
 #
-# @exitcode 0 the files differ
-# @exitcode 1 the files are identical
+# @exitcode success/positive=0: the files differ
+# @exitcode failure/negative=1: the files are identical
 #
 # @example
 #   are_different "$source_file" "$target_file" false
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 function are_different()
 {
-    local -i _rc="$success"
+    (( $# == 2 || $# == 3 ))        || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires two or three arguments (provided $#):" \
+                                                                        "  - the SoT file" \
+                                                                        "  - the target file" \
+                                                                        "  - an optional display-diff flag."
+    [[ -v 1 && -f $1 ]]             || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 1, the SoT file, to be an existing file (provided '${1:-<none>}')."
+    [[ -v 2 && -f $2 ]]             || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 2, the target file, to be an existing file (provided '${2:-<none>}')."
+    [[ ! -v 3 ]] || is_boolean "$3" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires optional argument 3, the display-diff flag, to be 'true' or 'false' (provided '${3:-<none>}')."
 
-    (( $# == 2 || $# == 3 )) || {
-        _rc="$err_invalid_arguments"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires two or three arguments (provided $#): the SoT file, target file, and optional display-diff flag."
-    }
-    [[ -v 1 && -f $1 ]] || {
-        _rc="$err_not_file"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the SoT file, to be an existing file (provided '${1-<missing>}')."
-    }
-    [[ -v 2 && -f $2 ]] || {
-        _rc="$err_not_file"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, the target file, to be an existing file (provided '${2-<missing>}')."
-    }
-    [[ ! -v 3 ]] || is_boolean "$3" || {
-        _rc="$err_argument_type"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires optional argument 3, the display-diff flag, to be 'true' or 'false' (provided '${3-<missing>}')."
-    }
-
-    (( _rc == success )) || return "$err_invalid_arguments"
+    exit_if_has_bugs
 
     local _display_diff=${3:-true}
 
@@ -541,100 +598,92 @@ function are_different()
     # compare fast, return fast, if no significant diffs; otherwise continue with the fancy diff tool of choice
     if diff -q -w -B "$LOCAL" "$REMOTE" > "$_ignore"; then
         trace_files "identical" "$LOCAL" "$REMOTE"
-        return 1
+        (( ++summary_identical_count ))
+        return "$negative"
     else
         trace_files "different" "$LOCAL" "$REMOTE"
         $_display_diff && eval "$diff_command"
-        return 0
+        (( ++summary_diff_count ))
+        return "$positive"
     fi
 }
 
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 # @description Runs the configured (or default) merge tool via '$merge_command' to merge the SoT file into the target
 # file in place. Follows the Git merge parameter naming convention ('LOCAL', 'REMOTE', 'MERGED', 'BASE') so that
 # '$merge_command' can reference these globals. Detects whether the merge actually changed the target file by comparing
 # a SHA-256 hash of the target file before and after running the tool.
 #
-# @arg $1 string target file path; assigned to the globals 'LOCAL' and 'MERGED' (the file the merge tool is expected to
-#   modify in place)
-# @arg $2 string SoT (source of truth) file path; assigned to the globals 'REMOTE' and 'BASE'
+# Notes:
+#   - Will exit the script if an invalid argument(s) is/are provided with exit codes
 #
-# @exitcode 0 the target file's content changed as a result of the merge
-# @exitcode 1 the target file's content is unchanged after the merge tool ran
+# @arg $1 string SoT (source of truth) file path; assigned to the globals 'REMOTE' and 'BASE'
+# @arg $2 string target file path; assigned to the globals 'LOCAL' and 'MERGED' (the file the merge tool is expected to
+#   modify in place)
+#
+# @exitcode success/positive=0: the target file's content changed as a result of the merge
+# @exitcode failure/negative=1: the target file's content is unchanged after the merge tool ran
 #
 # @example
-#   merge "$target_file" "$source_file"
-#-------------------------------------------------------------------------------
-# shellcheck disable=SC2034 # BASE appears unused. Verify use (or export if used externally).
+#   merge "$source_file" "$target_file"
+#---------------------------------------------------------------------------------------------
 function merge()
 {
-    local -i _rc="$success"
+    (( $# == 2 ))       || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
+                                                            "  - the SoT file" \
+                                                            "  - the target file"
+    [[ -v 1 && -f $1 ]] || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 1, the SoT file, to be an existing file (provided '${1:-<none>}')."
+    [[ -v 2 && -f $2 ]] || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 2, the target file, to be an existing file (provided '${2:-<none>}')."
 
-    (( $# == 2 )) || {
-        _rc="$err_invalid_arguments"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires exactly two arguments (provided $#): the target file and SoT file."
-    }
-    [[ -v 1 && -f $1 ]] || {
-        _rc="$err_not_file"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the target file, to be an existing file (provided '${1-<missing>}')."
-    }
-    [[ -v 2 && -f $2 ]] || {
-        _rc="$err_not_file"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, the SoT file, to be an existing file (provided '${2-<missing>}')."
-    }
-
-    (( _rc == success )) || return "$err_invalid_arguments"
+    exit_if_has_bugs
 
     # follow the git merge command parameters naming convention, so the eval command can use them correctly
-    LOCAL=$1
-    REMOTE=$2
-    MERGED=$1
-    BASE=$2
+    LOCAL=$2
+    REMOTE=$1
+    MERGED=$2
+    # BASE=$1 not used for now...
 
     before=$(sha256sum "$LOCAL")
     execute eval "$merge_command"
     after=$(sha256sum "$MERGED")
 
+    # shellcheck disable=SC2015 # Suppress warnings about using '&&' and '||' for control flow instead of 'if' statements
     [[ "$before" == "$after" ]] && {
         trace_files "not_changed" "$REMOTE" "$LOCAL"
-        return 1
+        (( ++summary_not_merged_count ))
+        return "$failure"
     } || {
         trace_files "merged" "$REMOTE" "$LOCAL"
-        return 0
+        (( ++summary_merged_count ))
+        return "$success"
     }
 }
 
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 # @description Copies the source file over the destination file, creating the destination directory first if it does
 # not already exist. Both the directory creation and the copy go through 'execute', so they are skipped (and only
 # printed) in dry-run mode.
 #
+# Notes:
+#   - Will exit the script if an invalid argument(s) is/are provided with exit codes
+#
 # @arg $1 string source file path to copy from
 # @arg $2 string destination file path to copy to
 #
-# @exitcode 0 the copy (or dry-run print) succeeded
+# @exitcode success/positive=0: the copy (or dry-run print) succeeded
 #
 # @example
 #   copy_file "$source_file" "$target_file"
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 function copy_file()
 {
-    local -i _rc="$success"
+    (( $# == 2 ))       || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
+                                                            "  - the source file path" \
+                                                            "  - destination file path."
+    [[ -v 1 && -f $1 ]] || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 1, the source file, to be an existing file (provided '${1:-<none>}')."
+    [[ -v 2 && -n $2 ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the destination file path, to be non-empty (provided '${2:-<none>}')."
 
-    (( $# == 2 )) || {
-        _rc="$err_invalid_arguments"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires exactly two arguments (provided $#): the source and destination file paths."
-    }
-    [[ -v 1 && -f $1 ]] || {
-        _rc="$err_not_file"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the source file, to be an existing file (provided '${1-<missing>}')."
-    }
-    [[ -n $2 ]] || {
-        _rc="$err_argument_value"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, the destination file path, to be non-empty (provided '${2-<missing>}')."
-    }
-
-    (( _rc == success )) || return "$err_invalid_arguments"
+    exit_if_has_bugs
 
     local _src_file="$1"
     local _dest_file="$2"
@@ -647,4 +696,5 @@ function copy_file()
     fi
     execute cp "$_src_file" "$_dest_file"
     trace_files "copied" "$_src_file" "$_dest_file"
+    (( ++summary_copied_count ))
 }

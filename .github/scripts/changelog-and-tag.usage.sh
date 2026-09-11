@@ -7,12 +7,15 @@ declare -xr script_name
 function usage_text()
 {
     local _long_text=$1
-    local _switches=""
-    local _vars=""
+    local _common_switches=""
+    local _common_vars=""
 
     if $_long_text; then
-        _switches="Switches:"$'\n'"$common_switches"
-        _vars=$common_vars
+        _common_vars=$common_vars
+        _common_switches="\
+
+Switches:
+$common_switches"
     fi
 
     cat << EOF
@@ -38,13 +41,12 @@ Options:
       --needs-empty-commit      'true' to create an empty commit before changelog/tag (used when
                                 promoting a prerelease-tagged HEAD to stable). Default: 'false'
                                 Initial value from \$NEEDS_EMPTY_COMMIT
-
-$_switches
+$_common_switches
 Environment Variables:
   RELEASE_TAG                   The tag to create (e.g., 'v1.2.3' or 'v1.2.3-preview.1')
   MINVERTAGPREFIX               Tag prefix (default: 'v')
   REASON                        Release reason (default: auto-detected from tag type)
   NEEDS_EMPTY_COMMIT            'true' or 'false' (default: 'false')
-$_vars
+$_common_vars
 EOF
 }

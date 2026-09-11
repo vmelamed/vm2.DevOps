@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-# shellcheck disable=SC2119
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
 
 set -euo pipefail
 
@@ -12,91 +13,59 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
-# shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
-{
-    source "$lib_dir/gh_core.sh"
-    source "$lib_dir/_git_vm2.sh"
-}
+# shellcheck disable=SC1091 # Not following
+source "$lib_dir/gh_core.sh"
 
-declare -rxi success     # The command completed successfully.
-declare -rxi failure     # A general, unspecified error occurred.
-declare -rxi err_tool_error
+# Declare variables defined in the core library.
+declare -x _ignore
 
-# default values for parameters
-declare -xr default_minver_tag_prefix='v'
-declare -xr default_minver_prerelease_id="preview.0"
+# Declare error codes defined in the core library
+declare -xri success     # The command completed successfully.
+declare -xri failure     # A general, unspecified error occurred.
+declare -xri err_tool_error
+declare -xri err_not_found
 
-# parameters with initial values from environment variables or defaults
+# Define CI common variables passed in as common dotnet arguments
+declare -x preprocessor_symbols
+declare -x configuration
+declare -x framework
+declare -x runtime
+declare -x artifacts
+declare -x minver_tag_prefix
+declare -x minver_prerelease_id
+declare -x gh_nuget_username
+declare -x gh_nuget_password
+
+# parameters specific to this script only with initial values from environment variables or defaults
 declare -x build_project=""
-declare -x configuration=${CONFIGURATION:-"$default_configuration"}
-declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-""}
-declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
-declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}
-declare -x gh_nuget_username=${GH_ACTOR:-""}
-declare -x gh_nuget_password=${GH_TOKEN:-""}
-declare -x artifacts=${ARTIFACTS_DIR:-"artifacts"}
 
-source "$script_dir/build.usage.sh"
 source "$script_dir/build.args.sh"
+source "$script_dir/build.usage.sh"
 
 get_arguments "$@"
-build_project=${build_project:-"$BUILD_PROJECT"}
+build_project=${build_project:-"${BUILD_PROJECT:-}"}
 
 # sanitize inputs
-is_safe_path "$build_project"                                             || true
-is_safe_configuration "$configuration"                                    || true
-validate_preprocessor_symbols preprocessor_symbols                        || true
-validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
-is_safe_input "$gh_nuget_username"                                        || true
-is_safe_path "$artifacts"                                                 || true
+is_safe_path "$build_project" || true
+if [[ -z $build_project ]]; then
+    # search for *.slnx|*.sln|*.csproj file in the current directory
+    build_project=$(find . -maxdepth 1 -type f \( -name "*.slnx" -o -name "*.sln" -o -name "*.csproj" \) | head -n 1)
+    [[ -n $build_project ]] || {
+        error -ec "$err_not_found" "No build project (*.slnx, *.sln, *.csproj) was specified or found in the current directory."
+        exit "$err_not_found"
+    }
+    trace "Auto-detected build project: $build_project"
+fi
+sanitize_common_dotnet_args "$build_project"
 
 exit_if_has_errors
 
-[[ -n $artifacts ]] &&
-    artifacts=$(get_artifacts_path "$build_project" "$artifacts")
-output_path=$(get_assembly_path "$build_project" "$artifacts" "$configuration")
-output_dir="${output_path%/*}"
-
 # freeze the parameters
 declare -xr build_project
-declare -xr configuration
-declare -xr preprocessor_symbols
-declare -xr minver_tag_prefix
-declare -xr minver_prerelease_id
-declare -xr gh_nuget_username
-declare -xr gh_nuget_password
-declare -xr artifacts
-declare -xr output_dir
 
-dump_vars --force --quiet \
-    --header "Build output directories:" \
-    artifacts \
-    output_dir
+update_nuget_sources_with_github_vm2 || error -ec $? "Updating the NuGet sources with GitHub packages from vm2 failed."
+dotnet_clean "$build_project"        || error -ec $? "Cleaning the build project failed."
+dotnet_restore "$build_project"      || error -ec $? "Restoring the build project failed."
+dotnet_build "$build_project"        || error -ec $? -sd 3 "Building the build project failed."
 
-# If credentials are provided, configure GitHub Packages NuGet source with GitHub authentication
-if [[ -n "$gh_nuget_username" && -n "$gh_nuget_password" ]]; then
-    execute dotnet nuget update source github.vm2 \
-                --username "$gh_nuget_username" \
-                --password "$gh_nuget_password" \
-                --store-password-in-clear-text \
-                --configfile NuGet.config
-fi
-
-# Restore dependencies
-execute dotnet restore --locked-mode
-
-# shellcheck disable=SC2034 # build_args appears unused. Verify use (or export if used externally). Passed as nameref.
-build_args=(
-    "$build_project" \
-    --no-restore \
-    --configuration "$configuration" \
-    --output "$output_dir" \
-    "-p:preprocessor_symbols=\"$preprocessor_symbols\"" \
-    "-p:MinVerTagPrefix=\"$minver_tag_prefix\"" \
-    "-p:MinVerPrereleaseIdentifiers=\"$minver_prerelease_id\""
-)
-
-# shellcheck disable=SC2034 # build_info appears unused. Verify use (or export if used externally).
-declare -A build_info=()
-
-dotnet_build build_args build_info
+exit_if_has_errors

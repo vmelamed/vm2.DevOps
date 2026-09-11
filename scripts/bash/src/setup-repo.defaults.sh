@@ -3,17 +3,19 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -rxi err_argument_value
+declare -xri err_argument_value
 
-declare -rxi admin_role_id=5
+declare -x vm2_devops_repo_name
+
+declare -xri admin_role_id=5
 
 declare -xr secret_str
 
-declare -xr missing_state="<missing>"
+declare -xr missing_state="<none>"
 declare -xr present_state=$secret_str
 declare -xr undefined_default="<undefined>"
 
-declare -rxA default_repo_settings=(
+declare -xrA default_repo_settings=(
     ["default_branch"]="main"
     ["delete_branch_on_merge"]=true
     ["allow_squash_merge"]=false
@@ -28,7 +30,7 @@ declare -rxA default_repo_settings=(
     ["visibility"]="public"
 )
 
-declare -rxa default_repo_settings_order=(
+declare -xra default_repo_settings_order=(
     "default_branch"
     "has_wiki"
     "has_issues"
@@ -43,12 +45,12 @@ declare -rxa default_repo_settings_order=(
     "visibility"
 )
 
-declare -rxA default_repo_permissions=(
+declare -xrA default_repo_permissions=(
     ["default_workflow_permissions"]="read"
     ["can_approve_pull_request_reviews"]=true
 )
 
-declare -rxA default_ruleset=(
+declare -xrA default_ruleset=(
     ["enforcement"]="active"
     ["repository_admin_bypass"]="present"
     ["deletion"]="present"
@@ -67,7 +69,7 @@ declare -rxA default_ruleset=(
     ["non_fast_forward"]="present"
 )
 
-declare -rxa default_ruleset_order=(            # UI: Order in which rules appear in the GitHub UI "Rulesets/main protection"
+declare -xra default_ruleset_order=(            # UI: Order in which rules appear in the GitHub UI "Rulesets/main protection"
     "enforcement"                               # Enforcement status: Active/Disabled ▾
     "repository_admin_bypass"                   # Bypass actors section
     "deletion"                                  # Restrict deletions
@@ -86,94 +88,130 @@ declare -rxa default_ruleset_order=(            # UI: Order in which rules appea
     "non_fast_forward"                          # Block force pushes
 )
 
-declare -rxa apps_with_secrets=(
+declare -xra apps_with_secrets=(
     "actions"
     "dependabot"
     "agents"
     "codespaces"
 )
 
-declare -rxa nuget_servers=(
+declare -xra nuget_servers=(
     "nuget"
     "github"
 )
 
-declare -rx default_nuget_server="${nuget_servers[0]}"
+declare -xr default_nuget_server
 
 declare -xA actions_secrets=(
     # GitHub tokens and secrets:
-    ["GH_PACKAGES_TOKEN"]="$secret_str"         # The GitHub Packages token used to update the local GitHub Packages (used by Dependabot)
+    ["GH_PACKAGES_TOKEN"]="$secret_str"         # The GitHub Packages token used to update the local GitHub Packages (used by
+                                                # Dependabot)
     ["NUGET_API_KEY"]="$secret_str"             # The NuGet API key for the selected NuGet server. Note that nuget.org uses a
-                                                # different authentication mechanism - Trusted Publishing (see https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing)
-    ["RELEASE_PAT"]="$secret_str"               # PAT for a user listed as a bypass actor (e.g. Admin) in the branch ruleset protecting main.
-                                                # Required to push changelog commits and version tags directly to main.
-    ["BENCH_DISPATCH_PAT"]="$secret_str"        # Fine-grained PAT with `Actions: write` + `Contents: read` on the package repos —
-                                                # used by `RebuildBenchHistory.yaml` to dispatch each repo's benchmark-history rebuild
-    ["CODECOV_TOKEN"]="$secret_str"             # Token used by Codecov to upload coverage reports - different for different projects
+                                                # different authentication mechanism - Trusted Publishing
+                                                # (see https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing)
+    ["RELEASE_PAT"]="$secret_str"               # PAT for a user listed as a bypass actor (e.g. Admin) in the branch ruleset
+                                                # protecting main. Required to push changelog commits and version tags directly
+                                                # to main
+    ["CODECOV_TOKEN"]="$secret_str"             # Token used by Codecov to upload coverage reports - different for different
+                                                # projects
     ["REPORTGENERATOR_LICENSE"]="$secret_str"   # License key used by ReportGenerator for generating coverage reports
     ["BENCHER_API_TOKEN"]="$secret_str"         # API token used by Bencher for authentication
+    ["BENCH_DISPATCH_PAT"]="$secret_str"        # Fine-grained PAT with `Actions: write` + `Contents: read` on the package repos.
+                                                # Used by `RebuildBenchHistory.yaml` to dispatch each repo's benchmark-history
+                                                # rebuild
 )
-declare -rxA dependabot_secrets=()
-declare -rxA agents_secrets=()
-declare -rxA codespaces_secrets=()
+declare -xrA dependabot_secrets=()
+declare -xrA agents_secrets=()
+declare -xrA codespaces_secrets=()
 
-declare -rxA actions_default_vars=(
-    ["ACTIONS_RUNNER_DEBUG"]=false
-    ["ACTIONS_STEP_DEBUG"]=false
-    ["ARTIFACTS_DIR"]="artifacts"
+declare -xrA actions_default_vars=(
+    # build:
     ["CONFIGURATION"]="Release"
-    ["DOTNET_VERSION"]="10.0.x"
+    ["FRAMEWORK"]="net10.0"
+    ["RUNTIME"]=""
+    ["ARTIFACTS_PATH"]="artifacts"
+    ["MINVERTAGPREFIX"]="v"
+    ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="preview.0"
+    # test:
+    ["MIN_COVERAGE_PCT"]="80"
+    # benchmark:
     ["MAX_REGRESSION_PCT"]="20"
     ["MAX_GEN1_COLLECTS"]="2"
     ["MAX_GEN2_COLLECTS"]="1"
-    ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="preview.0"
-    ["MINVERTAGPREFIX"]="v"
-    ["MIN_COVERAGE_PCT"]="80"
+    ["RESET_BENCHMARK_THRESHOLDS"]=false
+    # nuget:
     ["NUGET_SERVER"]="nuget"                # The default NuGet server to use for publishing packages. Can be 'nuget', 'github', or a custom server URL.
     ["NUGET_USERNAME"]="valo"               # The default username to use for the selected NuGet server. github - vmelamed, nuget - your NuGet.org username, custom server - as required.
-    ["RESET_BENCHMARK_THRESHOLDS"]=false
+    # debug:
     ["VERBOSE"]=false
+    # CI diagnostics
+    ["ACTIONS_RUNNER_DEBUG"]=false
+    ["ACTIONS_STEP_DEBUG"]=false
 )
 
-declare -rxA actions_var_validators=(
-    ["ACTIONS_RUNNER_DEBUG"]="validate_boolean"
-    ["ACTIONS_STEP_DEBUG"]="validate_boolean"
-    ["ARTIFACTS_DIR"]="is_safe_path"
+declare -xra actions_default_vars_order=(
+    "--Build:"
+    "CONFIGURATION"
+    "FRAMEWORK"
+    "RUNTIME"
+    "ARTIFACTS_PATH"
+    "MINVERTAGPREFIX"
+    "MINVERDEFAULTPRERELEASEIDENTIFIERS"
+    "--Test:"
+    "MIN_COVERAGE_PCT"
+    "--Benchmark:"
+    "MAX_REGRESSION_PCT"
+    "MAX_GEN1_COLLECTS"
+    "MAX_GEN2_COLLECTS"
+    "RESET_BENCHMARK_THRESHOLDS"
+    "--Nuget:"
+    "NUGET_SERVER"
+    "NUGET_USERNAME"
+    "--Trace:"
+    "VERBOSE"
+    "--CI Diagnostics:"
+    "ACTIONS_RUNNER_DEBUG"
+    "ACTIONS_STEP_DEBUG"
+)
+
+declare -xrA actions_var_validators=(
     ["CONFIGURATION"]="is_valid_configuration"
-    ["DOTNET_VERSION"]="is_valid_dotnet_version"
+    ["FRAMEWORK"]="is_valid_framework"
+    ["RUNTIME"]="is_valid_runtime"
+    ["ARTIFACTS_PATH"]="is_safe_valid_path"
+    ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="is_valid_minverPrereleaseId"
+    ["MINVERTAGPREFIX"]="validate_semverTagComponents"
+    # test
+    ["MIN_COVERAGE_PCT"]="is_valid_percentage"
+    # benchmark
     ["MAX_REGRESSION_PCT"]="is_valid_percentage"
     ["MAX_GEN1_COLLECTS"]="is_non_negative"
     ["MAX_GEN2_COLLECTS"]="is_non_negative"
-    ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="is_valid_minverPrereleaseId"
-    ["MINVERTAGPREFIX"]="validate_semverTagComponents"
-    ["MIN_COVERAGE_PCT"]="is_valid_percentage"
+    ["RESET_BENCHMARK_THRESHOLDS"]="is_boolean"
+    # nuget
     ["NUGET_SERVER"]="is_one_of_nuget_servers"
     ["NUGET_USERNAME"]="is_safe_input"
-    ["RESET_BENCHMARK_THRESHOLDS"]="validate_boolean"
-    ["VERBOSE"]="validate_boolean"
-)
-
-declare -xa default_local_git_settings_order=(
-    "core.hooksPath"
-    "commit.template"
-    "merge.ff"
-    "pull.rebase"
-    "fetch.prune"
-    "push.autoSetupRemote"
-    "rerere.enabled"
-    "rerere.autoUpdate"
-    "rebase.autoStash"
-    "merge.conflictstyle"
-    "push.useForceIfIncludes"
-    "tag.sort"
-    "merge.nugetlock.name"
-    "merge.nugetlock.driver"
+    # debug
+    ["VERBOSE"]="is_boolean"
+    # CI diagnostics
+    ["ACTIONS_RUNNER_DEBUG"]="is_boolean"
+    ["ACTIONS_STEP_DEBUG"]="is_boolean"
 )
 
 declare -xr VM2_REPOS
+declare -xr vm2_sot_repo_name
+declare -xr sot=$default_sot
 
-# shellcheck disable=SC2154
+# Placeholder only, built without validation (like core.hooksPath below) -- $VM2_REPOS may not be resolved yet at this
+# point (resolve_vm2_repos runs later, in setup-repo.sh). setup-repo.sh overwrites this entry with the properly
+# resolved $sot_path once $vm2_repos is fully resolved.
+declare sot_root="$VM2_REPOS/$vm2_sot_repo_name/templates/$sot/content"
+
 declare -xA default_local_git_settings=(
+    # Set the default branch name for new repositories. This ensures that all new repositories initialized locally will have a
+    # consistent default branch name "main".
+    ["init.defaultBranch"]="main"
+
     # Set the hooks path to a githooks directory in the vm2_devops_repo, which can contain custom Git hooks for the team. This
     # allows for consistent enforcement of policies and automation of tasks such as pre-commit checks, commit message
     # validation, or post-merge actions across all team members who clone the repository.
@@ -182,7 +220,7 @@ declare -xA default_local_git_settings=(
     # Set the commit template to a .gitmessage file located in the SOT directory, which can be customized by the user to provide
     # a consistent commit message format across the team. This helps ensure that all commits include necessary information such
     # as the type of change, scope, and a brief description, improving readability and traceability in the commit history.
-    ["commit.template"]="$(get_vm2_sot_path "$VM2_REPOS" "$sot")/.gitmessage"
+    ["commit.template"]="$sot_root/.gitmessage"
 
     # Enforce fast-forward merges to maintain linear history, which is required by the branch protection rules. If you need to
     # merge a PR with a merge commit, you can do so locally with 'git merge --no-ff'
@@ -236,77 +274,47 @@ declare -xA default_local_git_settings=(
     ["merge.nugetlock.driver"]='cp -f %B %A && echo "vm2: %P auto-resolved (took the incoming side) - regenerate with: dotnet restore --force-evaluate" >&2'
 )
 
-declare -rxi success                    # Operation completed successfully
-declare -rxi err_invalid_arguments      # The number of the arguments is invalid or more than one type of parameter error code is present
-declare -rxi err_not_directory          # Parameter value is not a directory
+declare -xa default_local_git_settings_order=(
+    "init.defaultBranch"
+    "core.hooksPath"
+    "commit.template"
+    "merge.ff"
+    "pull.rebase"
+    "fetch.prune"
+    "push.autoSetupRemote"
+    "rerere.enabled"
+    "rerere.autoUpdate"
+    "rebase.autoStash"
+    "merge.conflictstyle"
+    "push.useForceIfIncludes"
+    "tag.sort"
+    "merge.nugetlock.name"
+    "merge.nugetlock.driver"
+)
+
+declare -xri success                    # Operation completed successfully
+declare -xri err_invalid_arguments      # The number of the arguments is invalid or more than one type of parameter error code is present
+declare -xri err_not_directory          # Parameter value is not a directory
 
 declare -xri default_sot
 
-#-------------------------------------------------------------------------------
-# @description Finalizes the `default_local_git_settings` associative array by resolving the two entries whose values
-# depend on the caller's environment: `core.hooksPath` (derived from the vm2 repos parent directory) and
-# `commit.template` (derived from the source-of-truth directory). After computing these values, the array is
-# re-declared read-only so no later code can accidentally change the shared defaults.
-#
-# @arg $1 string Path to the parent directory where the `vm2.DevOps` repository is cloned (e.g. the value of
-#   $VM2_REPOS or the `--vm2-repos` option). Must be an existing directory.
-# @arg $2 string Path to the source-of-truth (SOT) directory, a.k.a. shared contents, e.g. `$VM2_REPOS/$default_sot`. Must be an
-#   existing directory.
-#
-# @exitcode 0 Success; `default_local_git_settings` updated and frozen.
-# @exitcode 2 Invalid arguments (wrong count, empty value, or a value that is not an existing directory).
-#-------------------------------------------------------------------------------
-function init_default_local_git_settings()
-{
-    local -i _rc="$success"
-
-    (( $# == 2 )) || {
-        _rc="$err_invalid_arguments"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires exactly 2 non-empty arguments (provided $#)."
-    }
-    [[ -v 1 && -d $1 ]]  || {
-        _rc="$err_not_directory"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the vm2 repositories parent, to be an existing directory (provided '${1-<missing>}')."
-    }
-    [[ -v 2 && -d $2 ]]  || {
-        _rc="$err_not_directory"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, the source-of-truth directory, to be an existing directory (provided '${2-<missing>}')."
-    }
-
-    (( _rc == success )) || return "$err_invalid_arguments"
-
-    local _repos=$1
-    local _shared=$2
-
-    # cement the paths in the default_local_git_settings that depend on the location of the vm2_repos ($1):
-    default_local_git_settings["core.hooksPath"]="$_repos/$vm2_devops_repo_name/scripts/githooks"
-    default_local_git_settings["commit.template"]="$_shared/.gitmessage"
-
-    declare -rxA default_local_git_settings
-}
-
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 # @description Checks if the given server is one of the valid NuGet servers.
 #
+# Notes:
+#   - Will exit the script if an invalid argument(s) is/are provided with exit codes
+#
 # @arg $1 string The server to check.
-# @stdout None.
-# @exitcode 0 The server is one of the valid NuGet servers.
-# @exitcode 2 Invalid arguments (wrong count or empty value).
-# @exitcode 1 The server is not one of the valid NuGet servers.
-#-------------------------------------------------------------------------------
+#
+# @exitcode success/positive=0: The server is one of the valid NuGet servers.
+# @exitcode failure/negative=1: The server is not one of the valid NuGet servers.
+#---------------------------------------------------------------------------------------------
 function is_one_of_nuget_servers()
 {
-    local -i _rc="$success"
+    (( $# == 1 ))                              || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the NuGet server to check."
+    [[ ! -v 1 ]] || is_valid_nuget_server "$1" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a valid NuGet server (provided '${1:-<none>}')."
 
-    (( $# == 1 )) || {
-        _rc="$err_invalid_arguments"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the NuGet server to check."
-    }
-    [[ -v 1 ]] && is_valid_nuget_server "$1" || {
-        _rc="$err_argument_value"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a valid NuGet server (provided '${1-<missing>}')."
-    }
+    exit_if_has_bugs
 
-    (( _rc == success )) || return "$err_invalid_arguments"
     is_in "$1" "${nuget_servers[@]}"
 }

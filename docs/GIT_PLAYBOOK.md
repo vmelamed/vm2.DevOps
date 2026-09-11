@@ -102,7 +102,7 @@ Never mix operations:
 ### Per-repo settings (enforced by setup-repo.sh)
 
 The per-repo Git settings are **enforced by `setup-repo.sh`** from the `default_local_git_settings` table in
-`scripts/bash/setup-repo.defaults.sh` — **that table is the source of truth**, not this document. Run `setup-repo.sh` after
+`scripts/bash/src/setup-repo.defaults.sh` — **that table is the source of truth**, not this document. Run `setup-repo.sh` after
 cloning a vm2 repo (or against an existing clone to re-sync). What it applies and why:
 
 | Setting                  | Value                                    | Why it matters                                                              |

@@ -2,7 +2,6 @@
 # Copyright (c) 2025-2026 Val Melamed
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
-# shellcheck disable=SC2154 # variables sourced from diff-shared.sh
 
 declare -xr common_switches
 declare -xr common_vars
@@ -11,12 +10,12 @@ declare -xr script_name
 function usage_text()
 {
     local _long_text=$1
-    local _switches=""
-    local _vars=""
+    local _common_switches=""
+    local _common_vars=""
 
     if $_long_text; then
-        _switches="Switches:"$'\n'"$common_switches"
-        _vars="$common_vars"
+        _common_switches="$common_switches"
+        _common_vars="$common_vars"
     fi
 
     cat << EOF
@@ -43,10 +42,6 @@ Options:
                                 Initial value from \$VM2_REPOS or '\$HOME/repos/vm2'.
   -s, --source-of-truth <sot>   The source-of-truth scenario to use. Must be one of the pre-defined
                                 scenarios in '\$VM2_REPOS/vm2.Templates/templates/'.
-  -a, --all-repos               Compare all pre-defined vm2 repositories under \$VM2_REPOS with the SoT,
-                                one by one. The set is defined in 'lib/core.sh'.
-  -d, --diff                    Compare files and display differences and equalities without taking any
-                                action. Can be combined with --all-repos.
   -f, --file <pattern>          A file name or a quoted glob pattern (quote glob patterns to prevent shell
                                 expansion). Only matching files are processed; the action is taken from
                                 the configuration. Can be specified multiple times to select multiple files.
@@ -62,10 +57,16 @@ Options:
   -fc, --file-copy <pattern>    Same as --file but overrides the action to 'copy' (no prompt).
   --summary <file>              Write the run summary to <file> in Markdown format. If not specified,
                                 a temporary file is created, displayed at the end, and then deleted.
-$_switches
+
+Switches:
+  -a, --all-repos               Compare all pre-defined vm2 repositories under \$VM2_REPOS with the SoT,
+                                one by one. The set is defined in 'lib/_constants.sh'.
+  -d, --diff                    Compare files and display differences and equalities without taking any
+                                action. Can be combined with --all-repos.
+$_common_switches
 Environment Variables:
   VM2_REPOS                     The parent directory where all vm2 repositories are cloned.
-$_vars
+$_common_vars
 Configuration Files:
   diff-shared.config.json       Located in the SoT directory. Defines the set of files with shared content,
                                 the default action for each, and the diff/merge tools to use.
@@ -73,9 +74,8 @@ Configuration Files:
                                 and diff/merge tools for that repository only.
 
 Examples:
-
   diff-shared.sh                The current directory is the target repository, and the SoT is determined by the configuration
-  diff-shared.sh vm2.Ulid       The script will try to resolve the target repo from the vm2 parent, e.g. $VM2_REPOS/vm2.Ulid
+  diff-shared.sh vm2.Ulid       The script will try to resolve the target repo from the vm2 parent, e.g. \$VM2_REPOS/vm2.Ulid
   diff-shared.sh vm2.Ulid vm2.SemVer
                                 The script will process both targets one after the other
   diff-shared.sh --all-repos    The script will process all known vm2 target repositories one after the other
@@ -90,8 +90,8 @@ Examples:
                                 The script will process all files matching the glob pattern *.props, and for each difference,
                                 it will ask the user whether to ignore, merge or copy the SoT file over the target file
   diff-shared.sh --file-copy ".editorconfig" --all-repos
-                                The script will copy .editorconfig from the SoT to all known target vm2 repositories without asking,
-                                if it is different or missing in the target repository
+                                The script will copy .editorconfig from the SoT to all known target vm2 repositories without
+                                asking, if it is different or missing in the target repository
   diff-shared.sh vm2.SemVer --file-copy "*.toml"
                                 The script will copy all .toml files from the SoT to the target repository without asking, if
                                 they are different or missing in the target repository

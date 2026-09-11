@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 # @description Moves all commits from a given commit SHA (inclusive) onwards on the current 'main' branch to a new branch,
 # then resets 'main' back to the commit before that SHA and force-pushes it. Use this to split a chain of commits that was
 # accidentally accumulated on 'main' into its own feature branch.
@@ -21,7 +21,7 @@
 # @arg $@ string Named options: '--commit-sha|-c <sha>' (required), '--branch|-b <name>' (required),
 #   '--check-out-new|-n' (optional switch).
 #
-# @exitcode 0 The commits were moved and 'main' was reset and force-pushed successfully, or the user declined to continue
+# @exitcode success/positive=0: The commits were moved and 'main' was reset and force-pushed successfully, or the user declined to continue
 #   (in which case the script exits with 1 — see the 'confirm' check below).
 # @exitcode non-zero Missing/invalid arguments, not on 'main', uncommitted changes present, or the commit SHA does not exist
 #   (see 'err_argument_value', 'err_tool_error' in '_error_codes.sh').
@@ -32,12 +32,12 @@
 #   move-commits-to-branch.sh --commit-sha ff5c2d182c0d3a01c1f1dfd66c9267f0569d9802 --branch feature/my-feature
 # @example
 #   move-commits-to-branch.sh -c ff5c2d1 -b feature/my-feature -n
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 set -euo pipefail
 
 script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
-lib_dir=$(realpath -e "$script_dir/lib")
+lib_dir=$(realpath -e "$script_dir/../lib")
 
 declare -xr script_name
 declare -xr script_dir
@@ -45,22 +45,25 @@ declare -xr lib_dir
 
 # shellcheck disable=SC1091
 source "$lib_dir/core.sh"
+
+declare -xri success
+declare -xri failure
+declare -xri positive
+declare -xri negative
+declare -xri err_invalid_arguments
+declare -xri err_argument_type
+declare -xri err_argument_value
+declare -xri err_invalid_nameref
+declare -xri err_missing_argument
+declare -xri err_too_many_arguments
+declare -xri err_unknown_argument
+declare -xri err_tool_error
+
+declare -x _ignore
+
 declare -x commit_sha=""
 declare -x new_branch=""
 declare -x check_out_new_branch=false
-
-declare -rxi success
-declare -rxi failure
-declare -rxi positive
-declare -rxi negative
-declare -rxi err_invalid_arguments
-declare -rxi err_argument_type
-declare -rxi err_argument_value
-declare -rxi err_invalid_nameref
-declare -rxi err_missing_argument
-declare -rxi err_too_many_arguments
-declare -rxi err_unknown_argument
-declare -rxi err_tool_error
 
 source "$script_dir/move-commits-to-branch.args.sh"
 source "$script_dir/move-commits-to-branch.usage.sh"
@@ -68,9 +71,9 @@ source "$script_dir/move-commits-to-branch.usage.sh"
 get_arguments "$@"
 
 # freeze the arguments
-declare -rx commit_sha
-declare -rx new_branch
-declare -rx check_out_new_branch
+declare -xr commit_sha
+declare -xr new_branch
+declare -xr check_out_new_branch
 
 if [[ -z "$commit_sha" || -z "$new_branch" ]]; then
     usage -ec "$err_argument_value" "The options '--commit-sha' and '--branch' are mandatory and cannot be null or empty"
@@ -93,7 +96,6 @@ if ! git diff-index --quiet HEAD --; then
     usage -ec "$err_tool_error" "You have uncommitted changes. Please commit or stash them first."
 fi
 # Verify the commit exists
-# shellcheck disable=SC2154
 if ! git cat-file -e "$commit_sha^{commit}" 2>"$_ignore"; then
     usage -ec "$err_argument_value" "Commit '$commit_sha' does not exist"
 fi
@@ -103,7 +105,7 @@ echo "Commits from $commit_sha onwards that would be moved to '$new_branch':"
 git log --oneline "$commit_sha^..$current_branch"
 echo ""
 if ! confirm "Do you want to continue?" "n"; then
-    exit 1
+    exit "$failure"
 fi
 
 echo ""

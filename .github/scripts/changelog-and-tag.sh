@@ -9,13 +9,16 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
-# shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
+# shellcheck disable=SC1091 # Not following
 source "$lib_dir/gh_core.sh"
 
-declare -rxi err_argument_value
-declare -rxi err_not_found
+declare -xri err_argument_value
+declare -xri err_not_found
 
-declare -xr default_minver_tag_prefix='v'
+declare -xr ci
+
+declare -xr default_minver_tag_prefix
+declare -xr semverTagReleaseRegex
 
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x tag=${TAG:-}
@@ -45,6 +48,8 @@ fi
 
 is_safe_reason "$reason" || true
 
+exit_if_has_errors
+
 declare -xr tag
 declare -xr reason
 declare -xr minver_tag_prefix
@@ -52,15 +57,12 @@ declare -xr is_release
 declare -xr is_prerelease
 declare -xr needs_empty_commit
 
-exit_if_has_errors
-
 if [[ -z "$GITHUB_REPOSITORY" || -z "$RELEASE_PAT" ]]; then
     error -ec "$err_argument_value" "GITHUB_REPOSITORY and/or RELEASE_PAT are not set."
-    exit 1
+    exit "$err_argument_value"
 fi
 
 # Configure git for CI
-# shellcheck disable=SC2154 # ci is referenced but not assigned.
 if $ci; then
     execute git config user.name vmelamed
     execute git config user.email vmelamed@users.noreply.github.com
@@ -95,11 +97,10 @@ else
         error -ec "$err_not_found" \
                   "Missing CHANGELOG.md in repo root. git-cliff uses --prepend and requires an existing file." \
                   "Create CHANGELOG.md (can be an empty file) and rerun."
-        exit 2
+        exit "$err_not_found"
     fi
 
     # Determine the commit range
-    # shellcheck disable=SC2154 # semverTagReleaseRegex is referenced but not assigned.
     if [[ "$is_release" == true ]]; then
         # For stable releases: range from last stable tag to HEAD
         last_ref=$(git tag --list "$minver_tag_prefix*" | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1 || echo "")
@@ -149,7 +150,7 @@ fi
 
 if ! execute git tag -a "$tag" -m "$tag_message" -m "Reason: $reason"; then
     error -ec "$err_argument_value" "Failed to create tag $tag (does it already exist?)"
-    exit 2
+    exit "$err_argument_value"
 fi
 
 execute git push origin "$tag"
