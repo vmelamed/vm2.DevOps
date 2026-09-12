@@ -94,11 +94,11 @@ if ! command -v -p gh &> "$_ignore"; then
     fi
 fi
 
-validate_json_array build_projects "$defaultBuildProjects" is_safe_existing_file                                  || true
-validate_json_array test_projects "$defaultTestProjects" is_safe_existing_file                                    || true
-validate_json_array benchmark_projects "$defaultBenchmarkProjects" is_safe_existing_file                          || true
-validate_json_array package_projects "$defaultPackageProjects" is_safe_existing_file                              || true
-validate_json_array runners_os "$defaultRunnersOs" is_safe_runner_os                                              || true
+validate_json_array build_projects "$defaultBuildProjects" is_safe_existing_file                                 || true
+validate_json_array test_projects "$defaultTestProjects" is_safe_existing_file                                   || true
+validate_json_array benchmark_projects "$defaultBenchmarkProjects" is_safe_existing_file                         || true
+validate_json_array package_projects "$defaultPackageProjects" is_safe_existing_file                             || true
+validate_json_array runners_os "$defaultRunnersOs" is_safe_runner_os                                             || true
 
 is_safe_min_coverage_pct "$min_coverage_pct"                                                                     || true
 (( min_coverage_pct >= 50 && min_coverage_pct <= 100 )) ||
@@ -117,7 +117,7 @@ is_safe_boolean "$reset_benchmark_thresholds"                                   
 is_safe_boolean "$skip_benchmarks"                                                                               || true
 is_safe_boolean "$skip_tests"                                                                                    || true
 is_safe_boolean "$skip_packages"                                                                                 || true
-sanitize_common_dotnet_args "$(jq -r '.[0]' <<< "$build_projects")"                                                  || true
+sanitize_common_dotnet_args "$(jq -r '.[0] // "."' <<< "$build_projects")"                                      || true
 
 dump_vars --quiet --force \
     --header "Validated Parameters" \
