@@ -114,7 +114,7 @@ EOF
 
 @test "resolve_github_app_ids: resolves and freezes all three app IDs" {
     _install_fake_gh_apps "$BATS_TEST_TMPDIR/bin"
-    run _sr "resolve_github_app_ids; declare -p actions_app_id dependabot_app_id codespaces_app_id" "$BATS_TEST_TMPDIR/bin:/usr/bin:/bin"
+    run _sr "resolve_github_app_ids; declare -p actions_app_id dependabot_app_id codespaces_app_id" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
     assert_success
     assert_output --partial 'actions_app_id="15368"'
     assert_output --partial 'dependabot_app_id="29110"'
@@ -123,7 +123,7 @@ EOF
 
 @test "resolve_github_app_ids: warns when a resolved app ID differs from the well-known expected value" {
     _install_fake_gh_apps "$BATS_TEST_TMPDIR/bin" 99999
-    run _sr "resolve_github_app_ids" "$BATS_TEST_TMPDIR/bin:/usr/bin:/bin"
+    run _sr "resolve_github_app_ids" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
     assert_success
     assert_output --partial "Unexpected GitHub Actions app ID: 99999 (expected 15368)"
 }
@@ -132,7 +132,7 @@ EOF
     mkdir -p "$BATS_TEST_TMPDIR/bin"
     printf '#!/usr/bin/env bash\nexit 1\n' > "$BATS_TEST_TMPDIR/bin/gh"
     chmod +x "$BATS_TEST_TMPDIR/bin/gh"
-    run _sr "resolve_github_app_ids" "$BATS_TEST_TMPDIR/bin:/usr/bin:/bin"
+    run _sr "resolve_github_app_ids" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
     assert_failure 1
     assert_output --partial "Failed to resolve GitHub Actions app ID"
     assert_output --partial "Failed to resolve Dependabot app ID"
@@ -159,7 +159,7 @@ if [[ "$*" == *".jobs.postrun-ci.name"* ]]; then echo "Postrun-CI"; exit 0; fi
 exit 1
 EOF
     chmod +x "$BATS_TEST_TMPDIR/bin/yq"
-    run _sr "ci_yaml='$BATS_TEST_TMPDIR/ci.yaml'; list_required_checks; declare -p required_checks" "$BATS_TEST_TMPDIR/bin:/usr/bin:/bin"
+    run _sr "ci_yaml='$BATS_TEST_TMPDIR/ci.yaml'; list_required_checks; declare -p required_checks" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
     assert_success
     assert_output --partial 'required_checks=([0]="Postrun-CI")'
 }
@@ -169,7 +169,7 @@ EOF
     mkdir -p "$BATS_TEST_TMPDIR/bin"
     printf '#!/usr/bin/env bash\nexit 1\n' > "$BATS_TEST_TMPDIR/bin/yq"
     chmod +x "$BATS_TEST_TMPDIR/bin/yq"
-    run _sr "ci_yaml='$BATS_TEST_TMPDIR/ci.yaml'; list_required_checks" "$BATS_TEST_TMPDIR/bin:/usr/bin:/bin"
+    run _sr "ci_yaml='$BATS_TEST_TMPDIR/ci.yaml'; list_required_checks" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
     assert_failure 1
     assert_output --partial "Failed to parse gate job name from CI.yaml"
 }
@@ -192,7 +192,7 @@ EOF
              jq_ruleset_id='.id'
              initialize_main_protection_rs_id
              echo \"RC=\$?\"
-             declare -p main_protection_rs_id path_main_protection_ruleset" "$BATS_TEST_TMPDIR/bin:/usr/bin:/bin"
+             declare -p main_protection_rs_id path_main_protection_ruleset" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
     assert_success
     assert_output --partial "RC=0"
     assert_output --partial 'main_protection_rs_id="42"'
@@ -217,7 +217,7 @@ EOF
              path_rulesets='repos/a/b/rulesets'
              jq_ruleset_id='.id'
              initialize_main_protection_rs_id
-             echo \"RC=\$?\"" "$BATS_TEST_TMPDIR/bin:/usr/bin:/bin"
+             echo \"RC=\$?\"" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
     assert_success
     assert_output --partial "RC=1"
 }
@@ -238,7 +238,7 @@ EOF
 
 @test "set_var: calls 'gh variable set' with the name, value, and target repo" {
     _install_fake_gh_logger "$BATS_TEST_TMPDIR/bin"
-    run _sr "repo='acme/myrepo'; set_var FOO bar; echo \"RC=\$?\"" "$BATS_TEST_TMPDIR/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
+    run _sr "repo='acme/myrepo'; set_var FOO bar; echo \"RC=\$?\"" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
     assert_success
     assert_output --partial "RC=0"
     run cat "$BATS_TEST_TMPDIR/calls.log"
@@ -247,7 +247,7 @@ EOF
 
 @test "set_var: warns and returns failure when the gh call fails" {
     _install_fake_gh_logger "$BATS_TEST_TMPDIR/bin"
-    run _sr "repo='acme/myrepo'; FAKE_GH_EXIT=1 set_var FOO bar; echo \"RC=\$?\"" "$BATS_TEST_TMPDIR/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
+    run _sr "repo='acme/myrepo'; FAKE_GH_EXIT=1 set_var FOO bar; echo \"RC=\$?\"" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
     assert_success
     assert_output --partial "Failed to set variable FOO"
     assert_output --partial "RC=1"
@@ -260,7 +260,7 @@ EOF
 
 @test "set_secret: calls 'gh secret set' with the name, value, app, and repo" {
     _install_fake_gh_logger "$BATS_TEST_TMPDIR/bin"
-    run _sr "repo='acme/myrepo'; set_secret NUGET_API_KEY topsecret actions; echo \"RC=\$?\"" "$BATS_TEST_TMPDIR/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
+    run _sr "repo='acme/myrepo'; set_secret NUGET_API_KEY topsecret actions; echo \"RC=\$?\"" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
     assert_success
     assert_output --partial "RC=0"
     run cat "$BATS_TEST_TMPDIR/calls.log"
@@ -274,7 +274,7 @@ EOF
 
 @test "delete_secret: calls 'gh secret delete' with the name, app, and repo" {
     _install_fake_gh_logger "$BATS_TEST_TMPDIR/bin"
-    run _sr "repo='acme/myrepo'; delete_secret NUGET_API_KEY actions; echo \"RC=\$?\"" "$BATS_TEST_TMPDIR/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
+    run _sr "repo='acme/myrepo'; delete_secret NUGET_API_KEY actions; echo \"RC=\$?\"" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
     assert_success
     assert_output --partial "RC=0"
     run cat "$BATS_TEST_TMPDIR/calls.log"
@@ -283,7 +283,7 @@ EOF
 
 @test "delete_secret: propagates the underlying failure code when the gh call fails" {
     _install_fake_gh_logger "$BATS_TEST_TMPDIR/bin"
-    run _sr "repo='acme/myrepo'; FAKE_GH_EXIT=1 delete_secret NUGET_API_KEY actions; echo \"RC=\$?\"" "$BATS_TEST_TMPDIR/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
+    run _sr "repo='acme/myrepo'; FAKE_GH_EXIT=1 delete_secret NUGET_API_KEY actions; echo \"RC=\$?\"" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
     assert_success
     assert_output --partial "Failed to delete secret NUGET_API_KEY"
     assert_output --partial "RC=1"
@@ -307,7 +307,7 @@ EOF
     run _sr "repo='acme/myrepo'
              path_repo='repos/acme/myrepo'
              jq_entries='to_entries[] | \"\(.key)=\(.value)\"'
-             configure_default_repo_settings" "$BATS_TEST_TMPDIR/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
+             configure_default_repo_settings" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
     assert_success
     run cat "$BATS_TEST_TMPDIR/calls.log"
     assert_line --index 1 "api -X PATCH repos/acme/myrepo -F allow_squash_merge=false"
@@ -328,7 +328,7 @@ EOF
     run _sr "repo='acme/myrepo'
              path_repo='repos/acme/myrepo'
              jq_entries='to_entries[] | \"\(.key)=\(.value)\"'
-             configure_default_repo_settings" "$BATS_TEST_TMPDIR/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
+             configure_default_repo_settings" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
     assert_success
     [[ $(wc -l < "$BATS_TEST_TMPDIR/calls.log") -eq 1 ]]
 }
@@ -350,7 +350,7 @@ EOF
     chmod +x "$BATS_TEST_TMPDIR/bin/gh"
     run _sr "path_permissions='repos/acme/myrepo/actions/permissions/workflow'
              jq_entries='to_entries[] | \"\(.key)=\(.value)\"'
-             configure_actions_permissions" "$BATS_TEST_TMPDIR/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
+             configure_actions_permissions" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
     assert_success
     run cat "$BATS_TEST_TMPDIR/calls.log"
     assert_output --partial "can_approve_pull_request_reviews=true"
@@ -377,7 +377,7 @@ EOF
              jq_vars='.variables[] | \"\(.name)=\(.value)\"'
              interactive_vars=false
              configure_variables
-             declare -p nuget_server" "$BATS_TEST_TMPDIR/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
+             declare -p nuget_server" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
     assert_success
     assert_output --partial 'nuget_server="github"'
     run cat "$BATS_TEST_TMPDIR/calls.log"
@@ -410,7 +410,7 @@ EOF
              path_repo='repos/acme/myrepo'
              jq_secret_names='.secrets[] | .name'
              interactive_secrets=false
-             configure_secrets actions nuget" "$BATS_TEST_TMPDIR/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
+             configure_secrets actions nuget" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
     assert_success
     assert_output --partial "Create secret: RELEASE_PAT"
     run cat "$BATS_TEST_TMPDIR/calls.log"
@@ -453,7 +453,7 @@ EOF
              branch='main'
              declare -a required_checks=('Postrun-CI')
              actions_app_id=15368
-             configure_branch_protection" "$BATS_TEST_TMPDIR/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
+             configure_branch_protection" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
     assert_success
     assert_output --partial "Creating new ruleset"
     run cat "$BATS_TEST_TMPDIR/calls.log"
@@ -476,7 +476,7 @@ EOF
              branch='main'
              declare -a required_checks=('Postrun-CI')
              actions_app_id=15368
-             configure_branch_protection" "$BATS_TEST_TMPDIR/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
+             configure_branch_protection" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
     assert_success
     assert_output --partial "Updating existing ruleset main protection (id: 99)"
     run cat "$BATS_TEST_TMPDIR/calls.log"

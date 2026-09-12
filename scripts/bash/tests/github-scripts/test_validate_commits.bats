@@ -43,7 +43,7 @@ _make_repo_with_commits() {
 
 _run_validate_commits() {
     local _dir="$1"; shift
-    env -i HOME="$HOME" PATH="/usr/bin:/bin" bash -c "cd '$_dir' && bash '$_validate_commits' $*"
+    env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" bash -c "cd '$_dir' && bash '$_validate_commits' $*"
 }
 
 # --- happy path ---------------------------------------------------------------------------
@@ -112,14 +112,14 @@ _run_validate_commits() {
 
 @test "validate-commits: falls back to the \$BASE_REF environment variable when --base-ref is not given" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "feat: fine"
-    run env -i HOME="$HOME" PATH="/usr/bin:/bin" BASE_REF=base bash -c "cd '$BATS_TEST_TMPDIR/repo' && bash '$_validate_commits' --quiet"
+    run env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" BASE_REF=base bash -c "cd '$BATS_TEST_TMPDIR/repo' && bash '$_validate_commits' --quiet"
     assert_success
     assert_output --partial "All commit messages follow Conventional Commits format"
 }
 
 @test "validate-commits: an explicit --base-ref overrides \$BASE_REF" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "feat: fine"
-    run env -i HOME="$HOME" PATH="/usr/bin:/bin" BASE_REF=does-not-exist bash -c "cd '$BATS_TEST_TMPDIR/repo' && bash '$_validate_commits' --base-ref base --quiet"
+    run env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" BASE_REF=does-not-exist bash -c "cd '$BATS_TEST_TMPDIR/repo' && bash '$_validate_commits' --base-ref base --quiet"
     assert_success
 }
 
@@ -141,7 +141,7 @@ _run_validate_commits() {
 
 @test "validate-commits: in CI mode (GITHUB_STEP_SUMMARY set), the same result also lands in the step summary file" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "not conventional"
-    run env -i HOME="$HOME" PATH="/usr/bin:/bin" GITHUB_ACTIONS=true GITHUB_STEP_SUMMARY="$BATS_TEST_TMPDIR/summary.md" \
+    run env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" GITHUB_ACTIONS=true GITHUB_STEP_SUMMARY="$BATS_TEST_TMPDIR/summary.md" \
         bash -c "cd '$BATS_TEST_TMPDIR/repo' && bash '$_validate_commits' --base-ref base --quiet"
     assert_failure
     assert_output --partial "Bad commit message: not conventional"

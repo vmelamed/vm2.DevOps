@@ -31,18 +31,20 @@ load '../helpers/setup'
 _src_dir="$(cd "$lib_dir/../src" && pwd)"
 _setup_repo="$_src_dir/setup-repo.sh"
 
-# Builds $1/bin as a full symlink mirror of every executable in /usr/bin (this system's real
-# tools), except the names listed in the remaining arguments -- so "command -v <name>" behaves
-# as though that tool were not installed, while every other tool (git, jq, yq, sed, mkdir, ...)
+# Builds $1/bin as a full symlink mirror of every executable in /usr/bin and /usr/local/bin
+# (this system's real tools -- jq and yq live in /usr/local/bin, not /usr/bin, on this box),
+# except the names listed in the remaining arguments -- so "command -v <name>" behaves as
+# though that tool were not installed, while every other tool (git, jq, yq, sed, mkdir, ...)
 # still works normally.
 _make_path_excluding() {
     local _dir="$1/bin"; shift
     local _exclude=("$@")
     mkdir -p "$_dir"
     local _f _name _skip _e
-    for _f in /usr/bin/*; do
+    for _f in /usr/local/bin/* /usr/bin/*; do
         [[ -f "$_f" && -x "$_f" ]] || continue
         _name="$(basename "$_f")"
+        [[ -e "$_dir/$_name" ]] && continue
         _skip=false
         for _e in "${_exclude[@]}"; do
             [[ "$_name" == "$_e" ]] && _skip=true && break

@@ -58,8 +58,9 @@ function to_stdout()
     local _line
     while IFS= read -r _line; do
         echo "$_line"
-        $GITHUB_ACTIONS &&
+        if $GITHUB_ACTIONS; then
             echo "$_line" >> "$GITHUB_STEP_SUMMARY"
+        fi
     done
 }
 
@@ -85,8 +86,9 @@ function to_stderr()
     local _line
     while IFS= read -r _line; do
         echo "$_line" >&2
-        $GITHUB_ACTIONS &&
+        if $GITHUB_ACTIONS; then
             echo "$_line" >> "$GITHUB_STEP_SUMMARY"
+        fi
     done
 }
 
@@ -112,8 +114,9 @@ function to_output()
     local _line
     while IFS= read -r _line; do
         echo "$_line"
-        $GITHUB_ACTIONS &&
+        if $GITHUB_ACTIONS; then
             echo "$_line" >> "$GITHUB_OUTPUT"
+        fi
     done
 }
 

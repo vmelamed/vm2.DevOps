@@ -20,7 +20,7 @@ load '../helpers/setup'
 _src_dir="$(cd "$lib_dir/../src" && pwd)"
 
 _sr() {
-    env -i HOME="$HOME" PATH="/usr/bin:/bin" bash -c "
+    env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" bash -c "
         source '$lib_dir/core.sh' --no-trap > /dev/null
         source '$_src_dir/setup-repo.defaults.sh'
         $1

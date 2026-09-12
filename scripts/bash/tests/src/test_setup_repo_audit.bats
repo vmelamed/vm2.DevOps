@@ -81,7 +81,7 @@ EOF
              declare -a summary=(0 0 0)
              compare_settings "repos/a/b" "to_entries[] | \"\(.key)=\(.value)\"" false expected summary
              echo "RC=$?"
-             declare -p summary' "$BATS_TEST_TMPDIR/bin:/usr/bin:/bin"
+             declare -p summary' "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
     assert_success
     assert_output --partial "✅"
     assert_output --partial "allow_rebase_merge"
@@ -98,7 +98,7 @@ EOF
     run _sr "declare -A expected=([\"NUGET_API_KEY\"]=\"\$secret_str\" [\"RELEASE_PAT\"]=\"\$secret_str\")
              declare -a summary=(0 0 0)
              compare_settings 'repos/a/secrets' '.secrets[] | \"\(.name)=\$secret_str\"' false expected summary
-             declare -p summary" "$BATS_TEST_TMPDIR/bin:/usr/bin:/bin"
+             declare -p summary" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
     assert_success
     assert_output --partial "🆗"
     assert_output --partial "NUGET_API_KEY"
@@ -114,7 +114,7 @@ EOF
     chmod +x "$BATS_TEST_TMPDIR/bin/gh"
     run _sr 'declare -A expected=(["x"]="y"); declare -a summary=(0 0 0)
              compare_settings "repos/a" "jq" false expected summary
-             echo "RC=$?"' "$BATS_TEST_TMPDIR/bin:/usr/bin:/bin"
+             echo "RC=$?"' "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
     assert_success
     assert_output --partial "Failed to fetch data from GitHub API"
     assert_output --partial "RC=66"
@@ -128,7 +128,7 @@ EOF
     _install_fake_gh_json "$BATS_TEST_TMPDIR/bin" '{"allow_squash_merge": true}'
     run _sr 'declare -A expected=(["allow_squash_merge"]="true")
              declare -a summary=(0 0 0)
-             compare_settings "repos/a" "to_entries[] | \"\(.key)=\(.value)\"" true expected summary' "$BATS_TEST_TMPDIR/bin:/usr/bin:/bin"
+             compare_settings "repos/a" "to_entries[] | \"\(.key)=\(.value)\"" true expected summary' "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
     assert_success
     assert_output --partial "Allow squash merge"
     refute_output --partial "allow_squash_merge"
@@ -139,7 +139,7 @@ EOF
     run _sr 'declare -A expected=(["allow_squash_merge"]="true" ["has_wiki"]="false")
              declare -a order=("--Header:" "has_wiki" "allow_squash_merge")
              declare -a summary=(0 0 0)
-             compare_settings "repos/a" "to_entries[] | \"\(.key)=\(.value)\"" false expected summary order' "$BATS_TEST_TMPDIR/bin:/usr/bin:/bin"
+             compare_settings "repos/a" "to_entries[] | \"\(.key)=\(.value)\"" false expected summary order' "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
     assert_success
     local _header_line _wiki_line _squash_line
     _header_line=$(grep -n "Header:" <<< "$output" | cut -d: -f1)

@@ -95,7 +95,7 @@ _make_repo_with_feature_branch() {
 
 _run_create_pr() {
     local _repo="$1"; shift
-    (cd "$_repo" && env -i HOME="$HOME" PATH="$_repo/fakebin:/usr/bin:/bin" bash "$_create_pr" "$@")
+    (cd "$_repo" && env -i HOME="$HOME" PATH="$_repo/fakebin:/usr/local/bin:/usr/bin:/bin" bash "$_create_pr" "$@")
 }
 
 # --- fallback template ---------------------------------------------------------------------
