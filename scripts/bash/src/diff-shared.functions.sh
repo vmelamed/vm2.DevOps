@@ -212,7 +212,7 @@ function parameterize()
                     # get the action from the command line arguments if provided, otherwise use the pre-configured action
                     _action="${selectors_actions[$_selector]}" || _action="${file_actions[_index]}"
                 # add the action to the list of matching actions if it is not already present
-                ! is_in "$_action" "${_matching_actions[@]}" && {
+                { (( ${#_matching_actions[@]} == 0 )) || ! is_in "$_action" "${_matching_actions[@]}"; } && {
                     _matching_actions+=("$_action")
                     trace "File '${source_files[_index]#${vm2_repos:-}/}' matches selector '${_selector:-<none>}' with action '${_action:-<none>}'."
                 }

@@ -21,7 +21,7 @@ function get_arguments()
 {
     local _option
 
-    while [[ $# -gt 0 ]]; do
+    while (( $# > 0 )); do
         # get the option and convert it to lower case
         _option="$1"; shift
         get_common_arg "$_option" && continue
@@ -32,36 +32,36 @@ function get_arguments()
                 ;;
 
             --artifact|-a )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                artifact_name="$1"; shift
                ;;
 
             --directory|-d )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 artifacts="$1"; shift
                 ;;
 
             --repository|-r )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 repository="$1"; shift
                 ;;
 
             --wf-id|-i )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 workflow_id="$1"; shift
                 workflow_name=""
                 workflow_path=""
                 ;;
 
             --wf-name|-n )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 workflow_id=""
                 workflow_name="$1"; shift
                 workflow_path=""
                 ;;
 
             --wf-path|-p )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 workflow_id=""
                 workflow_name="";
                 workflow_path="$1"; shift

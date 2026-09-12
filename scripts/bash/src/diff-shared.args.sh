@@ -28,7 +28,7 @@ function get_arguments()
     local __option
     local value
 
-    while [[ $# -gt 0 ]]; do
+    while (( $# > 0 )); do
         __option="$1"; shift
         if get_common_arg "$__option"; then
             continue
@@ -42,12 +42,12 @@ function get_arguments()
                 ;;
 
             --vm2-repos|-r )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for $__option"
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $__option"
                 vm2_repos="$1"; shift
                 ;;
 
             --source-of-truth|-s )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for $__option"
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $__option"
                 sot="$1"; shift
                 ;;
 
@@ -56,7 +56,7 @@ function get_arguments()
                 ;;
 
             --file*|-f* )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for $__option"
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $__option"
                 get_selector_action "$__option" "$1"; shift
                 ;;
 
@@ -65,11 +65,11 @@ function get_arguments()
                 ;;
 
             --summary )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for $__option"
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $__option"
                 summary_file="$1"; shift
                 ;;
 
-            * ) ! is_in "$value" "${target_repos[@]}" &&
+            * ) (( ${#target_repos[@]} == 0 )) || ! is_in "$value" "${target_repos[@]}" &&
                     target_repos+=("$value")
                 ;;
         esac
@@ -99,7 +99,11 @@ declare -xr action_copy
 
 function get_selector_action()
 {
-    [[ $# -eq 2 ]] || usage "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): option and file selector."
+    (( $# == 2 )) || bug "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#):" \
+                                "  - option" \
+                                "  - file selector"
+
+    exit_if_has_bugs
 
     local _option="$1"
     local _file_selector=$2
@@ -107,7 +111,7 @@ function get_selector_action()
 
     # get the action from the option name, e.g. --file-ask-to-merge => "ask-to-merge"
     [[ $_option =~ ^-(-file|f)(-?([a-z-]+))?$ ]] ||
-        usage -ec "$err_unknown_argument" "Unknown argument: $_option"
+        error -ec "$err_unknown_argument" "Unknown argument: $_option"
 
     # get the action and replace the dashes with spaces in the action name, e.g. "ask-to-merge" => "ask to merge"
     _action="${BASH_REMATCH[3]//-/ }"
@@ -124,12 +128,14 @@ function get_selector_action()
 
     # validate the action
     [[ -z $_action ]] || is_in "$_action" "${valid_actions[@]}" ||
-        usage -ec "$err_argument_value" "Invalid action: $_action. Valid actions are: $all_actions_str"
+        error -ec "$err_argument_value" "Invalid action: $_action. Valid actions are: $all_actions_str"
 
     trace "File selector '$_file_selector' with action '$_action'"
 
     [[ $_file_selector != -* ]] ||
-        usage -ec "$err_argument_value" "The argument '$_file_selector' does not appear to be a valid file selector."
+        error -ec "$err_argument_value" "The argument '$_file_selector' does not appear to be a valid file selector."
+
+    exit_if_has_errors
 
     # get the patterns that the action applies to, and remember the action for those files in the selectors_actions array
     selectors_actions[$_file_selector]="$_action"

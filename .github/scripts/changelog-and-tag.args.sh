@@ -20,7 +20,7 @@ function get_arguments()
 {
     local _option
 
-    while [[ $# -gt 0 ]]; do
+    while (( $# > 0 )); do
         _option="$1"; shift
         get_common_arg "$_option" && continue
         case "${_option,,}" in
@@ -29,22 +29,22 @@ function get_arguments()
                 ;;
 
             --tag|-t )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 tag="$1"; shift
                 ;;
 
             --minver-tag-prefix|-p )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 minver_tag_prefix="$1"; shift
                 ;;
 
             --reason|-r )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 reason="$1"; shift
                 ;;
 
             --needs-empty-commit )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 needs_empty_commit="$1"; shift
                 ;;
 

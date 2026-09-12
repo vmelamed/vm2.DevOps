@@ -31,7 +31,7 @@ function get_arguments()
 {
     local _option
 
-    while [[ $# -gt 0 ]]; do
+    while (( $# > 0 )); do
         _option="$1"; shift
         get_common_arg "$_option" && continue
         case "${_option,,}" in

@@ -33,7 +33,7 @@ source "$lib_dir/core.sh"
 
 declare __option
 
-while [[ $# -gt 0 ]]; do
+while (( $# > 0 )); do
     __option="$1"
     shift
     get_common_arg "$__option" || error "Invalid argument: $__option"

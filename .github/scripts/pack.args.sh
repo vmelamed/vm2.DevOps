@@ -19,7 +19,7 @@ function get_arguments()
 {
     local _option
 
-    while [[ $# -gt 0 ]]; do
+    while (( $# > 0 )); do
         # get the option and convert it to lower case
         _option="$1"
         shift

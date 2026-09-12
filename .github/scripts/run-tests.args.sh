@@ -18,7 +18,7 @@ function get_arguments()
 {
     local _option
 
-    while [[ $# -gt 0 ]]; do
+    while (( $# > 0 )); do
         # get the option and convert it to lower case
         _option="$1"
         shift
@@ -33,7 +33,7 @@ function get_arguments()
         case "${_option,,}" in
             # get the arguments specific to this script
             --min-coverage-pct|-min )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 min_coverage_pct=$1
                 shift
                 min_coverage_pct=$((min_coverage_pct + 0))  # ensure it's an integer

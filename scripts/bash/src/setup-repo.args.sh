@@ -48,7 +48,7 @@ function get_arguments()
 {
     local _option
 
-    while [[ $# -gt 0 ]]; do
+    while (( $# > 0 )); do
         _option="$1"; shift
         get_common_arg "$_option" && continue
 
@@ -57,37 +57,37 @@ function get_arguments()
                 ;;
 
             --vm2-repos )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing path after '$_option'."
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing path after '$_option'."
                 vm2_repos="$1"; shift
                 ;;
 
             --repo-name|-n )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing repository name after '$_option'."
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing repository name after '$_option'."
                 repo_name="$1"; shift
                 ;;
 
             --owner|-o )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing owner after '$_option'."
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing owner after '$_option'."
                 repo_owner="$1"; shift
                 ;;
 
             --branch|-b )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing branch name after '$_option'."
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing branch name after '$_option'."
                 branch="$1"; shift
                 ;;
 
             --visibility )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing visibility after '$_option'."
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing visibility after '$_option'."
                 visibility="$1"; shift
                 ;;
 
             --ruleset-name|-rs )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing the name of the ruleset for protecting the default branch after '$_option'."
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing the name of the ruleset for protecting the default branch after '$_option'."
                 main_protection_rs_name="$1"; shift
                 ;;
 
             --description )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing description after '$_option'."
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing description after '$_option'."
                 description="$1"; shift
                 ;;
 
