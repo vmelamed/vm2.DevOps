@@ -78,8 +78,8 @@ if ! command -v -p jq &> "$_ignore"; then
     fi
 else
     jq -V | to_stdout | grep -Eo 'jq-1\.8\.[0-9]+' &> "$_ignore" || {
-        warning "GitHub CLI 'jq' version 1.8.x is required. Upgrading 'jq' to version 1.8.1..."
-        curl -sLo /tmp/jq https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-linux-amd64
+        warning "GitHub CLI 'jq' version 1.8.x is required. Upgrading 'jq' to version 1.8.2..."
+        curl -sLo /tmp/jq https://github.com/jqlang/jq/releases/download/jq-1.8.2/jq-linux-amd64
         sudo install /tmp/jq /usr/local/bin/jq
         jq -V | to_stdout | grep -Eo 'jq-1\.8\.[0-9]+' &> "$_ignore" || {
             error -ec "$err_tool_not_found" "GitHub CLI 'jq' version 1.8.x is required. Please update 'jq' to version 1.8.x."
