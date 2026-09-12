@@ -16,7 +16,7 @@ declare -xr lib_dir
 # shellcheck disable=SC1091 # Not following
 source "$lib_dir/core.sh"
 
-# Adds SPDX headers to C# sources and bash scripts, skipping generated artifacts.
+# Adds SPDX headers to C# sources, bash scripts, and YAML files, skipping generated artifacts.
 
 #===============================
 # Imported constants
@@ -42,17 +42,21 @@ source "$script_dir/add-spdx.args.sh"
 source "$script_dir/add-spdx.usage.sh"
 
 #---------------------------------------------------------------------------------------------
-# @description Main script body: recursively scans a directory for '*.cs' and '*.sh' files and
-#   prepends an SPDX license-identifier header (with a copyright line) to any file that does
-#   not already contain one. C# generated artifacts ('obj/', 'bin/', 'AssemblyInfo.cs',
-#   '*.g.cs', '*.designer.cs') are skipped. UTF-8 BOMs on C# files are preserved ahead of the
-#   inserted header; on bash files with a shebang, the header is inserted after the shebang
-#   line rather than before it.
+# @description Main script body: recursively scans a directory for '*.cs', '*.sh', '*.yaml', and
+#   '*.yml' files and prepends an SPDX license-identifier header (with a copyright line) to any
+#   file that does not already contain one. C# generated artifacts ('obj/', 'bin/',
+#   'AssemblyInfo.cs', '*.g.cs', '*.designer.cs') are skipped. UTF-8 BOMs on C# files are
+#   preserved ahead of the inserted header; on bash files with a shebang, the header is
+#   inserted after the shebang line rather than before it. YAML files (workflows, dependabot.yml,
+#   etc.) use '#' comments just like bash and always have the header inserted at the top, since
+#   they have no shebang-equivalent line to skip past.
 #
 # Notes:
 #   - Bash files are matched purely by the '*.sh' extension; a bash file without a '.sh'
 #     extension (e.g. a shebang-only script named without an extension) is not discovered by
 #     the 'find' below.
+#   - Both '*.yaml' and '*.yml' are matched: GitHub requires the dependabot config specifically
+#     at '.github/dependabot.yml', so the two extensions coexist in this repo's conventions.
 #
 # @arg $@ string Named options:
 #   - '-l|--license <spdx-id>' (default: 'MIT')
@@ -71,6 +75,113 @@ source "$script_dir/add-spdx.usage.sh"
 # @example
 #   add-spdx.sh --dry-run
 #---------------------------------------------------------------------------------------------
+
+#---------------------------------------------------------------------------------------------
+# @description Prepends the SPDX header to a C# file, preserving a leading UTF-8 BOM (if any)
+#   ahead of it.
+#
+# @arg $1 string Path to an existing C# file with no SPDX header yet.
+#---------------------------------------------------------------------------------------------
+function add_spdx_csharp_file()
+{
+    local _file="$1"
+
+    # Check if file has UTF-8 BOM (0xEF 0xBB 0xBF)
+    if head -c 3 "$_file" | od -An -tx1 | grep -q "ef bb bf"; then
+        # Has BOM - preserve it at the start
+        local _bom _body
+        _bom=$(head -c 3 "$_file")
+        _body=$(tail -c +4 "$_file")
+        {
+            printf "%s" "$_bom"
+            printf "%s" "$cs_header"
+            printf "%s" "$_body"
+        } > "$_file.tmp" && mv "$_file.tmp" "$_file"
+    else
+        # No BOM - just prepend header
+        {
+            printf "%s" "$cs_header"
+            cat "$_file"
+        } > "$_file.tmp" && mv "$_file.tmp" "$_file"
+    fi
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Prepends the SPDX header to a bash file, inserting it after the shebang line
+#   when there is one, or at the very top otherwise.
+#
+# @arg $1 string Path to an existing bash file with no SPDX header yet.
+#---------------------------------------------------------------------------------------------
+function add_spdx_bash_file()
+{
+    local _file="$1"
+    local _first_line
+
+    _first_line=$(head -n 1 "$_file")
+    {
+        if [[ "$_first_line" =~ ^#! ]]; then
+            # Has shebang - insert after it
+            echo "$_first_line"
+            printf "%s" "$bash_header"
+            tail -n +2 "$_file"
+        else
+            # No shebang - insert at top
+            printf "%s" "$bash_header"
+            cat "$_file"
+        fi
+    } > "$_file.tmp" && mv "$_file.tmp" "$_file"
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Prepends the SPDX header to a YAML file. Always inserted at the top: unlike bash
+#   scripts, YAML has no shebang-equivalent line to insert after.
+#
+# @arg $1 string Path to an existing YAML file with no SPDX header yet.
+#---------------------------------------------------------------------------------------------
+function add_spdx_yaml_file()
+{
+    local _file="$1"
+
+    {
+        printf "%s" "$bash_header"
+        cat "$_file"
+    } > "$_file.tmp" && mv "$_file.tmp" "$_file"
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Drives one file through the skip/dry-run/write decision shared by all file types,
+#   updating the 'processed'/'skipped'/'modified' counters and delegating the actual header
+#   insertion to the given writer function.
+#
+# @arg $1 string Name of the writer function to call when the file needs a header
+#   ('add_spdx_csharp_file', 'add_spdx_bash_file', or 'add_spdx_yaml_file').
+# @arg $2 string Path to the file to process.
+#---------------------------------------------------------------------------------------------
+function process_file()
+{
+    local _writer="$1"
+    local _file="$2"
+    local _rel=".${_file#"$root"}"
+
+    trace "Processing $_file"
+    (( ++processed ))
+
+    if grep -q "SPDX-License-Identifier" "$_file"; then
+        info "Skipping (has header): $_rel"
+        (( ++skipped ))
+        return
+    fi
+
+    if is_dry_run; then
+        info "Would add header to: $_rel"
+        return
+    fi
+
+    "$_writer" "$_file"
+
+    info "Added header to: $_rel"
+    (( ++modified ))
+}
 
 get_arguments "$@"
 
@@ -94,42 +205,7 @@ skipped=0
 
 # Process C# files
 while IFS= read -r -d '' file; do
-    trace "Processing $file"
-
-    processed=$((processed + 1))
-    rel=".${file#"$root"}"
-
-    if grep -q "SPDX-License-Identifier" "$file"; then
-        info "Skipping (has header): $rel"
-        skipped=$((skipped + 1))
-        continue
-    fi
-
-    if is_dry_run; then
-        info "Would add header to: $rel"
-        continue
-    fi
-
-    # Check if file has UTF-8 BOM (0xEF 0xBB 0xBF)
-    if head -c 3 "$file" | od -An -tx1 | grep -q "ef bb bf"; then
-        # Has BOM - preserve it at the start
-        bom=$(head -c 3 "$file")
-        body=$(tail -c +4 "$file")
-        {
-            printf "%s" "$bom"
-            printf "%s" "$cs_header"
-            printf "%s" "$body"
-        } > "$file.tmp" && mv "$file.tmp" "$file"
-    else
-        # No BOM - just prepend header
-        {
-            printf "%s" "$cs_header"
-            cat "$file"
-        } > "$file.tmp" && mv "$file.tmp" "$file"
-    fi
-
-    info "Added header to: $rel"
-    modified=$((modified + 1))
+    process_file add_spdx_csharp_file "$file"
 done < <(find "$root" -type f -name '*.cs' \
             ! -path '*/obj/*' \
             ! -path '*/bin/*' \
@@ -139,40 +215,13 @@ done < <(find "$root" -type f -name '*.cs' \
 
 # Process bash files
 while IFS= read -r -d '' file; do
-    trace "Processing $file"
-
-    processed=$((processed + 1))
-    rel=".${file#"$root"}"
-
-    if grep -q "SPDX-License-Identifier" "$file"; then
-        info "Skipping (has header): $rel"
-        skipped=$((skipped + 1))
-        continue
-    fi
-
-    if is_dry_run; then
-        info "Would add header to: $rel"
-        continue
-    fi
-
-    # Read first line to check for shebang
-    first_line=$(head -n 1 "$file")
-    {
-        if [[ "$first_line" =~ ^#! ]]; then
-            # Has shebang - insert after it
-            echo "$first_line"
-            printf "%s" "$bash_header"
-            tail -n +2 "$file"
-        else
-            # No shebang - insert at top
-            printf "%s" "$bash_header"
-            cat "$file"
-        fi
-    }  > "$file.tmp" && mv "$file.tmp" "$file"
-
-    info "Added header to: $rel"
-    modified=$(( modified + 1 ))
+    process_file add_spdx_bash_file "$file"
 done < <(find "$root" -type f -name '*.sh' -print0)
+
+# Process YAML files (workflows, dependabot.yml, etc.)
+while IFS= read -r -d '' file; do
+    process_file add_spdx_yaml_file "$file"
+done < <(find "$root" -type f \( -name '*.yaml' -o -name '*.yml' \) -print0)
 
 if is_dry_run; then
     info "Summary (dry run): scanned=$processed, would modify=$((processed - skipped)), skipped=$skipped"

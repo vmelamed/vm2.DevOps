@@ -638,7 +638,7 @@ function configure_secrets()
             _exists=true
             if $_delete; then
                 trace "Deleting secret: $_name"
-                delete_secret "$_name" "$_app"
+                delete_secret "$_name" "$_app" || true
             fi
             ! $interactive_secrets && (( ++_skipped )) && continue
         else
@@ -782,7 +782,7 @@ function delete_secret()
     }
 
     restore_state _core_state
-    return "$success"
+    return "$_rc"
 }
 
 #---------------------------------------------------------------------------------------------

@@ -205,7 +205,7 @@ declare -xr sot=$default_sot
 # Placeholder only, built without validation (like core.hooksPath below) -- $VM2_REPOS may not be resolved yet at this
 # point (resolve_vm2_repos runs later, in setup-repo.sh). setup-repo.sh overwrites this entry with the properly
 # resolved $sot_path once $vm2_repos is fully resolved.
-declare sot_root="$VM2_REPOS/$vm2_sot_repo_name/templates/$sot/content"
+declare sot_root="${VM2_REPOS:-}/$vm2_sot_repo_name/templates/$sot/content"
 
 declare -xA default_local_git_settings=(
     # Set the default branch name for new repositories. This ensures that all new repositories initialized locally will have a
@@ -215,7 +215,7 @@ declare -xA default_local_git_settings=(
     # Set the hooks path to a githooks directory in the vm2_devops_repo, which can contain custom Git hooks for the team. This
     # allows for consistent enforcement of policies and automation of tasks such as pre-commit checks, commit message
     # validation, or post-merge actions across all team members who clone the repository.
-    ["core.hooksPath"]="$VM2_REPOS/$vm2_devops_repo_name/scripts/githooks"
+    ["core.hooksPath"]="${VM2_REPOS:-}/$vm2_devops_repo_name/scripts/githooks"
 
     # Set the commit template to a .gitmessage file located in the SOT directory, which can be customized by the user to provide
     # a consistent commit message format across the team. This helps ensure that all commits include necessary information such

@@ -30,10 +30,10 @@ function usage_text()
     cat << EOF
 Usage: $script_name [<repo-directory>...] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch>]*
 
-Recursively scans a directory for '*.cs' and '*.sh' files and prepends an SPDX license-identifier header (with a copyright line)
-to any file that does not already contain one. C# generated artifacts ('obj/', 'bin/', 'AssemblyInfo.cs', '*.g.cs',
-'*.designer.cs') are skipped. UTF-8 BOMs on C# files are preserved ahead of the inserted header; on bash files with a shebang,
-the header is inserted after the shebang line.
+Recursively scans a directory for '*.cs', '*.sh', '*.yaml', and '*.yml' files and prepends an SPDX license-identifier header
+(with a copyright line) to any file that does not already contain one. C# generated artifacts ('obj/', 'bin/',
+'AssemblyInfo.cs', '*.g.cs', '*.designer.cs') are skipped. UTF-8 BOMs on C# files are preserved ahead of the inserted header;
+on bash files with a shebang, the header is inserted after the shebang line. YAML files always get the header at the top.
 
 Arguments:
   <directory>                   The directory to scan (optional, default: current directory)
