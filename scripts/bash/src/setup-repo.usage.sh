@@ -29,13 +29,11 @@ function usage_text()
     local _common_vars=""
 
     local _shared='<unresolved SOT>'
-    get_vm2_sot_path "$vm2_repos" "$sot" _shared
 
     if $_long_text; then
         _common_switches="$common_switches"
         _common_vars="\
 
-Environment Variables:
 $common_vars"
     fi
 
@@ -108,7 +106,9 @@ Switches:
                                 and policies. Use this option alone when the repository already exists and is linked to a GitHub
                                 repository and none of the --interactive-* options are specified. In any other case, the script
                                 will run its normal course and will display the audit at the end anyway.
-$_common_switches$_common_vars
+$_common_switches
+Environment Variables:
+$_common_vars
 Examples:
   $script_name ~/repos/vm2.Glob
   $script_name \$VM2_REPOS/vm2.Glob --interactive-secrets --verbose

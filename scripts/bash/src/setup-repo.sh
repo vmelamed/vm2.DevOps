@@ -76,30 +76,28 @@ declare -xr key_repo
 declare -xr key_repo_id
 declare -xr key_default_branch
 
-source "$script_dir/setup-repo.defaults.sh"
-source "$script_dir/setup-repo.args.sh"
-source "$script_dir/setup-repo.usage.sh"
-source "$script_dir/setup-repo.functions.sh"
-source "$script_dir/setup-repo.audit.sh"
-
-declare -xr sot
-declare -xA default_local_git_settings
-declare -xra default_local_git_settings_order
-
-get_arguments "$@"
-
-#---------------------------------------------------------------------------------------------
+#=============================================================================================
 # Check the prerequisites
-#---------------------------------------------------------------------------------------------
+#=============================================================================================
 
 command -v jq &> "$_ignore"  || error -ec "$err_tool_not_found" "'jq' is not installed. Please install it first."
 command -v gh &> "$_ignore"  || error -ec "$err_tool_not_found" "'gh' is not installed. Please install it first."
 gh auth status &> "$_ignore" || error -ec "$err_tool_not_found" "'gh' is not authenticated. Run 'gh auth login' first."
-command -v yq &> "$_ignore"  || error -ec "$err_tool_not_found" "'yq' is not installed. Please install it first."
+command -v yq &> "$_ignore"  || error -ec "$err_tool_not_found" "'yq' is not installed. Please install 'yq' by Mike Farah: " \
+                                                                "wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O ~/.local/bin/yq4 &&" \
+                                                                " chmod +x ~/.local/bin/yq4"
 [[ $(yq --version) =~ https://github\.com/mikefarah/yq/ ]] ||
                                 error -ec "$err_tool_not_found" "This script requires 'yq' by Mike Farah: " \
                                                                 "wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O ~/.local/bin/yq4 &&" \
                                                                 " chmod +x ~/.local/bin/yq4"
+
+#=============================================================================================
+# Gather the CLI arguments:
+#=============================================================================================
+source "$script_dir/setup-repo.args.sh"
+source "$script_dir/setup-repo.usage.sh"
+
+get_arguments "$@"
 
 #=============================================================================================
 # Find and validate vm2_repos, SOT, DevOps directories:
@@ -108,16 +106,16 @@ declare -xi rc="$success"
 
 resolve_vm2_repos "$vm2_repos" vm2_repos || true
 exit_if_has_errors
+readonly vm2_repos
+
 trace "All vm2 repositories are expected to be in '$vm2_repos'"
 
-# make sure that $default_local_git_settings is fully initialized with the vm2.DevOps hooks and SOT .gitmessage
-declare -x sot_path
-get_vm2_sot_path "$vm2_repos" "$sot" sot_path
+source "$script_dir/setup-repo.defaults.sh"
+source "$script_dir/setup-repo.functions.sh"
+source "$script_dir/setup-repo.audit.sh"
 
-# cement the paths in the default_local_git_settings that depend on the location of the vm2_repos ($1):
-default_local_git_settings["core.hooksPath"]="$vm2_repos/$vm2_devops_repo_name/scripts/githooks"
-default_local_git_settings["commit.template"]="$sot_path/.gitmessage"
 declare -xrA default_local_git_settings
+declare -xra default_local_git_settings_order
 
 declare -x _ci_yaml="$vm2_repos/$vm2_devops_repo_name/.github/workflows/_ci.yaml"
 [[ -s "$_ci_yaml" ]] ||

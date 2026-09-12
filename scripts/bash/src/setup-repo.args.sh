@@ -146,5 +146,6 @@ function get_arguments()
     )
 
     dump_vars "${args[@]}"
+
     usage_if_requested
 }

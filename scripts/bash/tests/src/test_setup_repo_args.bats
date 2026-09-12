@@ -7,14 +7,16 @@
 # Mirrors the approach used for diff-shared.args.sh: each test sources core.sh and the file(s)
 # under test in a fresh, ambient-environment-free bash subshell.
 #
-# setup-repo.usage.sh's usage_text() calls get_vm2_sot_path("$vm2_repos", "$sot", ...)
-# unconditionally, so any test that can reach usage() (an unknown/missing-value option, too
-# many positional args, or -h/--help) needs vm2_repos and sot to already hold real,
-# resolvable values -- exactly as the real setup-repo.sh guarantees by assigning
-# vm2_repos="${VM2_REPOS:-$HOME/repos/vm2}" and sourcing setup-repo.defaults.sh (which sets
-# sot) BEFORE ever calling get_arguments(). Skipping that setup in a test would crash inside
-# usage_text() itself with an unrelated bug about an empty argument -- not a real defect, just
-# a precondition the isolated test must replicate.
+# setup-repo.args.sh and setup-repo.usage.sh are self-contained (get_arguments() and
+# usage_text() need only the variables/functions the args parser itself declares and core.sh's
+# library) -- setup-repo.defaults.sh is deliberately NOT sourced here, matching the real
+# setup-repo.sh's own order: it parses arguments FIRST (so --vm2-repos can override the
+# default), only resolving and freezing vm2_repos afterward, and sources setup-repo.defaults.sh
+# later still. Sourcing defaults.sh here would freeze vm2_repos readonly (it declares
+# 'declare -xr vm2_repos', matching the real script's precondition that vm2_repos is already
+# resolved by the time defaults.sh loads) before get_arguments() ever runs, so a test
+# exercising --vm2-repos would crash on "vm2_repos: readonly variable" instead of exercising
+# real behavior.
 
 bats_require_minimum_version 1.5.0
 
@@ -27,7 +29,6 @@ _src_dir="$(cd "$lib_dir/../src" && pwd)"
 _sr() {
     env -i HOME="$HOME" PATH="/usr/bin:/bin" bash -c "
         source '$lib_dir/core.sh' --no-trap > /dev/null
-        source '$_src_dir/setup-repo.defaults.sh'
         source '$_src_dir/setup-repo.args.sh'
         source '$_src_dir/setup-repo.usage.sh'
         declare -a arguments=()
