@@ -99,6 +99,14 @@ source "$script_dir/setup-repo.usage.sh"
 
 get_arguments "$@"
 
+# declare -x branch=$default_branch
+
+readonly interactive_vars
+readonly interactive_secrets
+readonly configure_local
+readonly audit
+readonly description
+
 #=============================================================================================
 # Find and validate vm2_repos, SOT, DevOps directories:
 #=============================================================================================
@@ -145,7 +153,7 @@ trace "Repository path: '$repo_path'"
 #=============================================================================================
 
 declare -A repo_state=()
-declare -x suggest_repo_name=''
+declare -x suggested_repo_name=''
 declare -x ci_yaml=''
 
 get_repo_state "$repo_path" repo_state
@@ -159,6 +167,7 @@ if has_local_repo repo_state; then
         [[ -s "$repo_path/.github/workflows/CI.yaml" ]] ||
             usage -ec "$err_repo_with_no_ci" "The git-detected repository path '$repo_path' is missing .github/workflows/CI.yaml." \
                                              "Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2.NewPkg' to create a valid directory structure."
+        readonly repo_path
         trace "repo_path='$repo_path' from git-detected repository root"
     fi
     info "Git repository working tree root => $repo_path"
@@ -171,10 +180,10 @@ if has_local_repo repo_state; then
         repo_name="${repo_state[$key_name]}"
         repo="${repo_state[$key_repo]}"
 
-        declare -xr repo_url
-        declare -xr repo_owner
-        declare -xr repo_name
-        declare -xr repo
+        readonly repo_url
+        readonly repo_owner
+        readonly repo_name
+        readonly repo
 
         info "GitHub repository                => $repo"
 
@@ -192,16 +201,16 @@ if has_local_repo repo_state; then
 fi
 
 if ! has_local_repo repo_state || ! has_remote_repo repo_state; then
-    suggest_repo_name=$(basename "$repo_path")
-    trace "Will suggest '$suggest_repo_name' from basename repo_path as a repo name and repo description during repo creation if needed."
+    suggested_repo_name=$(basename "$repo_path")
+    trace "Will suggest '$suggested_repo_name' from basename repo_path as a repo name and repo description during repo creation if needed."
 
-    declare -xr suggest_repo_name
+    readonly suggested_repo_name
 fi
 
 ci_yaml="$repo_path/.github/workflows/CI.yaml"
 trace "ci_yaml='$ci_yaml' from \$repo_path"
 
-declare -xr ci_yaml
+readonly ci_yaml
 
 #=============================================================================================
 # Final validation of the inputs and assumptions before we start making any changes or API calls:
@@ -225,6 +234,8 @@ if $audit; then
     ! $interactive_secrets && ! $interactive_vars        || error -ec "$err_logic_error" "Secrets and variables cannot be interactively set during audit." \
                                                                                          "Please remove the '--interactive-secrets' and '--interactive-vars' options when running the script with '--audit'."
 fi
+
+readonly visibility
 
 exit_if_has_errors
 
@@ -305,7 +316,7 @@ if ! has_remote_repo repo_state; then
     #===========================================================================
     info "Creating GitHub repository..."
 
-    [[ -n $repo_name ]] || enter_value "GitHub Repository name" repo_name "$suggest_repo_name" false validate_gh_repo_name
+    [[ -n $repo_name ]] || enter_value "GitHub Repository name" repo_name "$suggested_repo_name" false validate_gh_repo_name
     repo="$repo_owner/$repo_name"
     repo=${repo#/} # remove leading slash if repo_owner is empty
 
