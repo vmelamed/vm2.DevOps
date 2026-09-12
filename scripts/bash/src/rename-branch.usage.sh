@@ -26,12 +26,10 @@ function usage_text()
     if $_long_text; then
         _common_switches="\
 
-Switches:
 $common_switches"
 
         _common_vars="\
 
-Environment Variables:
 $common_vars"
     fi
 
@@ -42,6 +40,9 @@ Renames a Git branch both locally and remotely.
 Arguments:
   <old_branch_name>             The name of the existing branch to be renamed. If not specified, the current branch is used.
   <new_branch_name>             The new name for the branch. This must be a valid Git branch name and must not already exist.
-$_common_switches$_common_vars
+Switches:
+$_common_switches
+Environment Variables:
+$_common_vars
 EOF
 }

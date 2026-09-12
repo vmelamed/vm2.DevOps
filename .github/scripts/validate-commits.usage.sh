@@ -25,7 +25,6 @@ $common_switches"
 
         _common_vars="\
 
-Environment Variables:
 $common_vars"
     fi
 
@@ -61,7 +60,9 @@ Description:
 
 Options:
   -b, --base-ref <ref>          Required. Git ref to compare against (e.g. origin/main, a SHA, or a tag).
-$_common_switches$_common_vars
+$_common_switches
+Environment Variables:
+$_common_vars
 Examples:
   $script_name --base-ref origin/main
   $script_name --base-ref v1.0.0 --verbose

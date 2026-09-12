@@ -27,7 +27,6 @@ function usage_text()
         _common_switches="$common_switches"
         _common_vars="\
 
-Environment Variables:
 $common_vars"
     fi
 
@@ -47,7 +46,9 @@ Options:
 
 Switches:
   -n, --check-out-new           After moving the commits, check out the new branch.
-$_common_switches$_common_vars
+$_common_switches
+Environment Variables:
+$_common_vars
 Examples:
   $script_name --commit-sha ff5c2d182c0d3a01c1f1dfd66c9267f0569d9802 --branch feature/my-feature
   $script_name -c ff5c2d1 -b feature/my-feature -n

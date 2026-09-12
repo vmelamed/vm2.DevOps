@@ -31,7 +31,6 @@ $common_switches"
 
         _common_vars="\
 
-Environment Variables:
 $common_vars"
     fi
 
@@ -52,7 +51,9 @@ Arguments:
               '--delete'
 Options:
   --delete    Delete the tag following the option.
-$_common_switches$_common_vars
+$_common_switches
+Environment Variables:
+$_common_vars
 Examples:
   $script_name v3.1.0-preview.5 v3.1.1-preview.2
   $script_name --delete v3.1.0-preview.4

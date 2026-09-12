@@ -221,17 +221,18 @@ function usage_text()
     if $_long_text; then
         _common_switches="\
 
-Switches:
 $common_switches"
 
         _common_vars="\
 
-Environment Variables:
 $common_vars"
     fi
 
     cat << EOF
 OVERRIDE THE FUNCTION usage_text() IN THE CALLING SCRIPT '$script_name' TO PROVIDE CUSTOM USAGE INFORMATION.
-$_common_switches$_common_vars
+Switches:
+$_common_switches
+Environment Variables:
+$_common_vars
 EOF
 }
