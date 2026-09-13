@@ -57,7 +57,7 @@ declare -xr is_release
 declare -xr is_prerelease
 declare -xr needs_empty_commit
 
-if [[ -z "$GITHUB_REPOSITORY" || -z "$RELEASE_PAT" ]]; then
+if [[ -z "${GITHUB_REPOSITORY:-}" || -z "${RELEASE_PAT:-}" ]]; then
     error -ec "$err_argument_value" "GITHUB_REPOSITORY and/or RELEASE_PAT are not set."
     exit "$err_argument_value"
 fi
