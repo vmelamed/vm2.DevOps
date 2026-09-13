@@ -47,7 +47,7 @@ declare -xr default_preprocessor_symbols=''
 # @description The default value for the `--framework` option (target framework moniker) of
 #   the `dotnet build` command.
 #---------------------------------------------------------------------------------------------
-declare -xr default_tfm="net10.0"
+declare -xr default_tfm=''
 
 #---------------------------------------------------------------------------------------------
 # @description The default value for the `--runtime` option (runtime identifier) of the

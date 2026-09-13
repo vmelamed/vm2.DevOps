@@ -768,7 +768,7 @@ function is_safe_configuration()
     return "$positive"
 }
 
-declare -xr tfm_regex="^net[1-9][0-9]*\.[0-9]+(-([a-z]+)([1-9][0-9.]*)?)?$"
+declare -xr tfm_regex="^(net[1-9][0-9]*\.[0-9]+(-([a-z]+)([1-9][0-9.]*)?)?|[[:space:]]*)$"
 #---------------------------------------------------------------------------------------------
 # @description Tests if a string is a valid Target Framework Moniker (TFM).
 #
@@ -785,7 +785,7 @@ function is_valid_framework()
     __test_with_regex "$@" "$tfm_regex"
 }
 
-declare -xr known_tfms=(net9.0 net10.0)
+declare -xr known_tfms=("" net9.0 net10.0)
 #---------------------------------------------------------------------------------------------
 # @description Validates that a Target Framework Moniker (TFM) is a valid identifier. Depends
 #   on `is_valid_framework`.

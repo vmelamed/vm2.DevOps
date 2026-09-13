@@ -18,7 +18,7 @@ load '../helpers/setup'
 }
 
 @test "defaults: framework, artifacts, minver-tag-prefix have their documented defaults" {
-    [[ $framework == net10.0 ]]
+    [[ $framework == '' ]]
     [[ $artifacts == artifacts ]]
     [[ $minver_tag_prefix == v ]]
 }
