@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
 set -euo pipefail
 
 script_name=$(basename "${BASH_SOURCE[0]}")
@@ -15,7 +18,7 @@ source "$lib_dir/gh_core.sh"
 declare -xri err_tool_error
 declare -xri err_logic_error
 
-declare -xr _ignore
+declare -x _ignore
 declare -xr semverReleaseRegex
 declare -xr semverPrereleaseRegex
 declare -xr semverTagReleaseRegex
