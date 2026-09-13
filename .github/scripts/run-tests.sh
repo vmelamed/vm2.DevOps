@@ -234,11 +234,6 @@ execute reportgenerator \
     minimumCoverageThresholds:branchCoverage="$min_branch_coverage_pct" \
     minimumCoverageThresholds:methodCoverage="$min_method_coverage_pct" || rc=$?
 
-$glow_present && [[ -s "$coverage_reports_dir/SummaryGithub.md" ]] &&
-    glow -w 150 "$coverage_reports_dir/SummaryGithub.md" ||
-[[ -s "$coverage_reports_dir/Summary.txt" ]] &&
-    cat "$coverage_reports_dir/Summary.txt"
-
 if [[ -s "$coverage_reports_dir/Summary.txt" ]]; then
     if $glow_present; then
         glow -w 150 "$coverage_reports_dir/SummaryGithub.md"
