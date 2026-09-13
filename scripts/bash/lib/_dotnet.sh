@@ -807,7 +807,7 @@ function dotnet_build()
     dotnet build "${_dotnet_args[@]}" > "$_output_file" 2>&1 || _rc=$? # capture the output for extract and display
 
     (( _rc == success )) ||
-        error -ec "$err_tool_error" "Building '$_project' failed." | to_summary
+        error -ec "$err_tool_error" "Building '$_project' failed."
 
     local -A __build_info
     local _build_info_name=${2:-__build_info}
@@ -821,7 +821,7 @@ function dotnet_build()
     rm -f "$_output_file" || true
 
     (( _rc_extract == success )) || {
-        error -ec "$_rc_extract" "Failed to extract build information from the output of 'dotnet build'." | to_summary
+        error -ec "$_rc_extract" "Failed to extract build information from the output of 'dotnet build'."
         return "$_rc_extract"
     }
 
@@ -925,8 +925,8 @@ function dotnet_pack()
 
     dump_vars --quiet --header "Returning Properties:" "${!_properties}"
 
-    [[ -s $_package ]] || error -ec "$err_tool_error" "Package '$_package' not found or empty." | to_summary
-    [[ -s $_symbols ]] || error -ec "$err_tool_error" "Package '$_symbols' not found or empty." | to_summary
+    [[ -s $_package ]] || error -ec "$err_tool_error" "Package '$_package' not found or empty."
+    [[ -s $_symbols ]] || error -ec "$err_tool_error" "Package '$_symbols' not found or empty."
     exit_if_has_errors
 }
 
