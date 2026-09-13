@@ -74,7 +74,7 @@ exit_if_has_errors
 
 package=${properties["PackagePath"]}
 symbols=${properties["SymbolsPath"]}
-version=${properties["Version"]}
+version=${properties["PackageVersion"]}
 id=${properties["PackageId"]}
 
 if is_semverRelease "$version"; then

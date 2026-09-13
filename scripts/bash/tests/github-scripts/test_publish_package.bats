@@ -4,17 +4,14 @@
 
 # Characterization tests for .github/scripts/publish-package.sh, as it behaves TODAY.
 #
-# KNOWN BUG (reported, deliberately left unfixed for now -- see "documents a known crash"
-# below): line 77 reads `version=${properties["Version"]}`, but dotnet_pack's returned
-# associative array key is "PackageVersion" (confirmed correct in pack.sh, which reads
-# `_pack_properties[PackageVersion]`). Since "Version" is never set, this crashes with an
-# "unbound variable" error under set -u on EVERY invocation that reaches that line -- i.e. the
-# script currently cannot successfully publish anything. Only the argument-parsing and
-# early-validation paths (which run before that line) are otherwise testable right now.
+# Was previously broken (crashed on every invocation): line 77 read
+# `version=${properties["Version"]}`, but dotnet_pack's returned associative array key is
+# "PackageVersion" -- since "Version" was never set, this crashed with "unbound variable" under
+# set -u. Fixed to `properties["PackageVersion"]`; this file now exercises the real (working)
+# behavior end to end.
 #
 # Real `dotnet` is faked exactly as in pack.sh's tests (pack/msbuild/nuget subcommands), with
-# matching pre-created .nupkg/.snupkg files -- reused here only for the crash-documentation
-# test, since nothing past the crash point is currently reachable.
+# matching pre-created .nupkg/.snupkg files.
 
 bats_require_minimum_version 1.5.0
 
@@ -71,17 +68,63 @@ _run_publish() {
     "
 }
 
-# --- known bug, documented -------------------------------------------------------------------
+# --- happy path ---------------------------------------------------------------------------
 
-@test "publish-package: documents a known crash -- properties[Version] should be properties[PackageVersion]" {
+@test "publish-package: with an API key, pushes to NuGet.org and reports the release summary" {
+    _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
+    _install_fake_dotnet_and_package "$BATS_TEST_TMPDIR/repo"
+    run _run_publish "$BATS_TEST_TMPDIR/repo" 'NUGET_API_KEY=secret' src/App/App.csproj
+    assert_success
+    assert_output --partial "were released to NuGet.org"
+    assert_output --partial "App.1.2.3.nupkg"
+    assert_output --partial "Stable release of App"
+
+    run cat "$BATS_TEST_TMPDIR/repo/dotnet.log"
+    assert_output --partial "nuget push"
+    assert_output --partial "--source https://api.nuget.org/v3/index.json"
+    assert_output --partial "--api-key secret"
+}
+
+@test "publish-package: without an API key, does NOT push and says so in the summary" {
     _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
     _install_fake_dotnet_and_package "$BATS_TEST_TMPDIR/repo"
     run _run_publish "$BATS_TEST_TMPDIR/repo" '' src/App/App.csproj
-    assert_failure
-    assert_output --partial 'properties["Version"]: unbound variable'
+    assert_success
+    assert_output --partial "were **NOT** released to NuGet.org"
+
+    run cat "$BATS_TEST_TMPDIR/repo/dotnet.log"
+    refute_output --partial "nuget push"
 }
 
-# --- validation failures (run before the crash point, so these work today) -------------------
+@test "publish-package: --nuget-server github pushes to GitHub Packages under the given --repo-owner" {
+    _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
+    _install_fake_dotnet_and_package "$BATS_TEST_TMPDIR/repo"
+    run _run_publish "$BATS_TEST_TMPDIR/repo" 'NUGET_API_KEY=secret' --nuget-server github --repo-owner acme src/App/App.csproj
+    assert_success
+    assert_output --partial "were released to GitHub Packages"
+
+    run cat "$BATS_TEST_TMPDIR/repo/dotnet.log"
+    assert_output --partial "--source https://nuget.pkg.github.com/acme/index.json"
+}
+
+@test "publish-package: a prerelease package version gets the pre-release summary header and default reason" {
+    _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
+    _install_fake_dotnet_and_package "$BATS_TEST_TMPDIR/repo" App "1.2.3-preview.1"
+    run _run_publish "$BATS_TEST_TMPDIR/repo" 'NUGET_API_KEY=secret' src/App/App.csproj
+    assert_success
+    assert_output --partial "Pre-release Summary"
+    assert_output --partial "Pre-release of App"
+}
+
+@test "publish-package: an explicit --reason overrides the default" {
+    _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
+    _install_fake_dotnet_and_package "$BATS_TEST_TMPDIR/repo"
+    run _run_publish "$BATS_TEST_TMPDIR/repo" 'NUGET_API_KEY=secret' --reason "'custom reason'" src/App/App.csproj
+    assert_success
+    assert_output --partial "custom reason"
+}
+
+# --- validation failures ---------------------------------------------------------------------
 
 @test "publish-package: rejects a package project path that does not exist" {
     _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
@@ -112,6 +155,13 @@ _run_publish() {
     run _run_publish "$BATS_TEST_TMPDIR/repo" '' --nuget-server bogus src/App/App.csproj
     assert_failure
     assert_output --partial "Invalid NuGet server: bogus"
+}
+
+@test "publish-package: reports a failed NuGet push" {
+    _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
+    _install_fake_dotnet_and_package "$BATS_TEST_TMPDIR/repo"
+    run _run_publish "$BATS_TEST_TMPDIR/repo" 'NUGET_API_KEY=secret FAKE_DOTNET_NUGET_EXIT=1' src/App/App.csproj
+    assert_failure
 }
 
 # --- argument handling ---------------------------------------------------------------------
@@ -146,4 +196,19 @@ _run_publish() {
     run _run_publish "$BATS_TEST_TMPDIR/repo" '' -h
     assert_success
     assert_output --partial "Usage:"
+}
+
+# --- CI parity ------------------------------------------------------------------------------
+
+@test "publish-package: in CI mode, the release summary also lands in the step summary file" {
+    _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
+    _install_fake_dotnet_and_package "$BATS_TEST_TMPDIR/repo"
+    run env -i HOME="$HOME" PATH="$BATS_TEST_TMPDIR/repo/fakebin:/usr/local/bin:/usr/bin:/bin" \
+        DOTNET_CALL_LOG="$BATS_TEST_TMPDIR/repo/dotnet.log" NUGET_API_KEY=secret \
+        GITHUB_ACTIONS=true GITHUB_STEP_SUMMARY="$BATS_TEST_TMPDIR/summary.md" \
+        bash -c "cd '$BATS_TEST_TMPDIR/repo' && bash '$_publish_package' --quiet src/App/App.csproj"
+    assert_success
+
+    run cat "$BATS_TEST_TMPDIR/summary.md"
+    assert_output --partial "were released to NuGet.org"
 }
