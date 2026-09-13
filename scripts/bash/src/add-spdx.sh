@@ -77,33 +77,29 @@ source "$script_dir/add-spdx.usage.sh"
 #---------------------------------------------------------------------------------------------
 
 #---------------------------------------------------------------------------------------------
-# @description Prepends the SPDX header to a C# file, preserving a leading UTF-8 BOM (if any)
-#   ahead of it.
+# @description Prepends the SPDX header to a C# file, stripping a leading UTF-8 BOM (if any):
+#   the vm2 convention is plain UTF-8 (no BOM), enforced via '.editorconfig' ('charset =
+#   utf-8'), so a stray BOM left over from a classic-Visual-Studio-created file is cleaned up
+#   as a side effect of adding the header.
 #
 # @arg $1 string Path to an existing C# file with no SPDX header yet.
 #---------------------------------------------------------------------------------------------
 function add_spdx_csharp_file()
 {
     local _file="$1"
+    local _body
 
-    # Check if file has UTF-8 BOM (0xEF 0xBB 0xBF)
+    # Check if file has a UTF-8 BOM (0xEF 0xBB 0xBF) and skip past it if so
     if head -c 3 "$_file" | od -An -tx1 | grep -q "ef bb bf"; then
-        # Has BOM - preserve it at the start
-        local _bom _body
-        _bom=$(head -c 3 "$_file")
         _body=$(tail -c +4 "$_file")
-        {
-            printf "%s" "$_bom"
-            printf "%s" "$cs_header"
-            printf "%s" "$_body"
-        } > "$_file.tmp" && mv "$_file.tmp" "$_file"
     else
-        # No BOM - just prepend header
-        {
-            printf "%s" "$cs_header"
-            cat "$_file"
-        } > "$_file.tmp" && mv "$_file.tmp" "$_file"
+        _body=$(cat "$_file")
     fi
+
+    {
+        printf "%s" "$cs_header"
+        printf "%s" "$_body"
+    } > "$_file.tmp" && chmod --reference="$_file" "$_file.tmp" && mv "$_file.tmp" "$_file"
 }
 
 #---------------------------------------------------------------------------------------------
@@ -129,7 +125,7 @@ function add_spdx_bash_file()
             printf "%s" "$bash_header"
             cat "$_file"
         fi
-    } > "$_file.tmp" && mv "$_file.tmp" "$_file"
+    } > "$_file.tmp" && chmod --reference="$_file" "$_file.tmp" && mv "$_file.tmp" "$_file"
 }
 
 #---------------------------------------------------------------------------------------------
@@ -145,7 +141,7 @@ function add_spdx_yaml_file()
     {
         printf "%s" "$bash_header"
         cat "$_file"
-    } > "$_file.tmp" && mv "$_file.tmp" "$_file"
+    } > "$_file.tmp" && chmod --reference="$_file" "$_file.tmp" && mv "$_file.tmp" "$_file"
 }
 
 #---------------------------------------------------------------------------------------------
