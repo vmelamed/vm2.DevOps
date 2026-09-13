@@ -114,7 +114,7 @@ _run_validate_input() {
         'TEST_PROJECTS="[\"does-not-exist.csproj\"]" RUNNERS_OS="[\"bogus-os\"]" MAX_GEN1_COLLECTS=-5' \
         --quiet
     assert_failure
-    assert_output --partial "The path 'does-not-exist.csproj' is not valid"
+    assert_output --partial "The path 'does-not-exist.csproj' does not exist"
     assert_output --partial "The runner OS 'bogus-os' is not allowed"
     assert_output --partial "max-gen1-collects must be a non-negative integer"
     assert_output --partial "5 error(s) encountered"
