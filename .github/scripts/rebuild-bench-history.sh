@@ -39,6 +39,7 @@ get_arguments "$@"
 # Resolve the GitHub owner: --owner, else $GITHUB_REPOSITORY_OWNER (set by Actions), else derive from this repo's remote.
 [[ -n "$owner" ]] || owner="${GITHUB_REPOSITORY_OWNER:-}"
 if [[ -z "$owner" ]]; then
+    declare self_root
     root_working_tree "$script_dir" self_root || true
     if [[ -n "${self_root:-}" ]]; then
         declare -A self_state=()
