@@ -46,7 +46,6 @@ get_arguments "$@"
 build_project=${build_project:-"${BUILD_PROJECT:-}"}
 
 # sanitize inputs
-is_safe_path "$build_project" || true
 if [[ -z $build_project ]]; then
     # search for *.slnx|*.sln|*.csproj file in the current directory
     build_project=$(find . -maxdepth 1 -type f \( -name "*.slnx" -o -name "*.sln" -o -name "*.csproj" \) | head -n 1)

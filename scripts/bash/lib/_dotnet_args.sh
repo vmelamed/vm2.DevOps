@@ -258,7 +258,7 @@ function sanitize_common_dotnet_args()
     is_safe_runtime "$runtime"                                                || true
     is_safe_valid_path "$artifacts"                                           || true
     validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
-    get_artifacts_path "$1" artifacts                                         || true
+    is_safe_path "$1" && get_artifacts_path "$1" artifacts                    || true
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     [[ -v gh_nuget_username ]] && {
         is_safe_input "$gh_nuget_username"                                    || true
