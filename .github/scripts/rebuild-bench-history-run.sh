@@ -104,7 +104,7 @@ declare -ri total=$(( ${#benchmark_projects[@]} * repeat ))
 declare project
 for project in "${benchmark_projects[@]}"; do
     for (( i=1; i <= repeat; i++ )); do
-        to_stdout "▶ [$project] run $i of $repeat (Bencher branch '$bencher_branch')..."
+        echo "▶ [$project] run $i of $repeat (Bencher branch '$bencher_branch')..." | to_stdout
 
         if ! run-benchmarks.sh \
                 "$project" \
