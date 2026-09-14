@@ -6,8 +6,11 @@
 declare -xr script_name
 declare -xr lib_dir
 
+declare -xri success
 declare -xri err_missing_argument
 declare -xri err_unknown_argument
+
+declare -x ci
 
 declare -x delete_mode
 declare -x del_tag
@@ -56,13 +59,30 @@ function get_arguments()
                 ;;
         esac
     done
+
+    dump_args
+
     usage_if_requested
-    dump_vars \
-        --header "Arguments of $script_name:" \
-        --core-state \
-        delete_mode \
-        old_tag \
-        new_tag \
-        del_tag \
-        # add var names above this line
+}
+
+# shellcheck disable=SC2120 # dump_args references arguments, but none are ever passed.
+function dump_args()
+{
+    ! $ci && ! is_verbose && return "$success"
+
+    local -a _args=(
+        --force
+        --quiet
+        --header "Arguments for $script_name:"
+
+        delete_mode
+        old_tag
+        new_tag
+        del_tag
+
+        --header "Core State:"
+        --core-state
+    )
+
+    dump_vars "${_args[@]}" "$@"
 }

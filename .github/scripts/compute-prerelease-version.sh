@@ -23,13 +23,12 @@ declare -xri err_tool_error
 declare -xri err_argument_value
 
 # default constants for parameters
-declare -xr default_minver_tag_prefix
 declare -xr default_minver_prerelease_id
 
 declare -xr default_reason="pre-release"
 
 # parameters with initial values from environment variables or defaults
-declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
+declare -x minver_tag_prefix
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}
 declare -x reason=${REASON:-"$default_reason"}
 
@@ -41,6 +40,7 @@ get_arguments "$@"
 # Sanitize inputs
 validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
 is_safe_reason "$reason" || true
+#!!!!!!!sanitize_common_dotnet_args
 
 # freeze the parameters
 declare -xr minver_tag_prefix

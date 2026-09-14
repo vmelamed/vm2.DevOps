@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
 #---------------------------------------------------------------------------------------------
 # @description Moves all commits from a given commit SHA (inclusive) onwards on the current 'main' branch to a new branch,
 # then resets 'main' back to the commit before that SHA and force-pushes it. Use this to split a chain of commits that was

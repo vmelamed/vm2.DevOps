@@ -466,6 +466,7 @@ function set_table_format()
 # indexes for a state array (used by save_state and restore_state)
 declare -xr key_pid="PID"
 declare -xr key_subshell_pid="Subshell_PID"
+declare -xr key_ci="CI"
 declare -xr key_quiet="Quiet"
 declare -xr key_verbose="Verbose"
 declare -xr key_dry_run="Dry_Run"
@@ -559,6 +560,7 @@ function save_state()
 
     __state[$key_pid]=$BASHPID
     __state[$key_subshell_pid]=${BASH_SUBSHELL:-0}
+    __state[$key_ci]="$ci"
     __state[$key_ignore]=$_ignore
     __state[$key_table_format]=$(get_table_format)
     __state[$key_errors]=$(get_errors)

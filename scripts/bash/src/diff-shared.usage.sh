@@ -3,23 +3,23 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr common_switches
-declare -xr common_vars
+declare -xr common_args_usage
 declare -xr script_name
 
 function usage_text()
 {
-    local _long_text=$1
-    local _common_switches=""
-    local _common_vars=""
+    (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
+    is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1:-<none>})."
+    exit_if_has_bugs
 
-    if $_long_text; then
-        _common_switches="$common_switches"
-        _common_vars="$common_vars"
-    fi
+    local _long_text=$1
+    local _common_args=''
+
+    $_long_text  &&  _common_args=$common_args_usage || _common_args=''
 
     cat << EOF
-Usage: $script_name [<repo-directory>...] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch>]*
+Usage:
+  $script_name [<repo-directory>...] [--<long option> <value> | -<short option> <value> | --<long switch> | -<short switch>]*
 
 Compares a pre-defined set of files with shared content in one or more target repositories against the corresponding
 source-of-truth (SoT) files listed in ${script_name%.sh}.config.json in the SoT directory, for the scenario specified
@@ -63,10 +63,10 @@ Switches:
                                 one by one. The set is defined in 'lib/_constants.sh'.
   -d, --diff                    Compare files and display differences and equalities without taking any
                                 action. Can be combined with --all-repos.
-$_common_switches
+
 Environment Variables:
   VM2_REPOS                     The parent directory where all vm2 repositories are cloned.
-$_common_vars
+$_common_args
 Configuration Files:
   diff-shared.config.json       Located in the SoT directory. Defines the set of files with shared content,
                                 the default action for each, and the diff/merge tools to use.

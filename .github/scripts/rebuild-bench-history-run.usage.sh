@@ -1,25 +1,26 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
 
-declare -xr common_switches
-declare -xr common_vars
+
+declare -xr common_args_usage
 declare -xr script_name
 
 function usage_text()
 {
-    local _long_text=$1
-    local _common_switches=""
-    local _common_vars=""
+    (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
+    is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1:-<none>})."
+    exit_if_has_bugs
 
-    if $_long_text; then
-        _common_vars=$common_vars
-        _common_switches="
-Switches:
-$common_switches"
-    fi
+    local _long_text=$1
+    local _common_args=''
+
+    $_long_text  &&  _common_args=$common_args_usage || _common_args=''
 
     cat << EOF
-Usage: $script_name [<bm-project-path>] | [--<long option> <value> | -<short option> <value> |
-                                            --<long switch> | -<short switch> ]*
+Usage:
+  $script_name [<bm-project>] | [--<long option> <value> | -<short option> <value> | --<long switch> | -<short switch> ]*
+
 Re-records a benchmark's results to Bencher.dev N times to rebuild its performance history (e.g. after a runner-image
 change or a benchmark restructure invalidates the old baseline). Each repetition is an independent process run, so the
 recorded spread reflects the real run-to-run variance. Results are recorded only: NO thresholds are applied and the run
@@ -27,7 +28,7 @@ never fails on an alert. All parameters are optional if the corresponding enviro
 arguments take precedence.
 
 Arguments:
-  <benchmark-project-path>      The path to the benchmark project file.
+  <bm-project>      The path to the benchmark project file.
                                 Initial value from \$BENCHMARK_PROJECT environment variable (see below)
 
 Options:
@@ -55,7 +56,7 @@ Options:
                                 Initial value from \$BENCHER_BRANCH or default 'main'
   -ad, --bencher-adapter        The Bencher.dev adapter used to parse the results
                                 Initial value from \$BENCHER_ADAPTER or default 'c_sharp_dot_net'
-$_common_switches
+
 Environment Variables:
   BENCHER_API_TOKEN             Bencher.dev API token used to upload results (required)
   BENCHMARK_PROJECT             Path to the benchmark project file
@@ -70,6 +71,6 @@ Environment Variables:
   BENCHER_TESTBED               Bencher.dev testbed name
   BENCHER_BRANCH                Bencher.dev branch (default 'main')
   BENCHER_ADAPTER               Bencher.dev adapter (default 'c_sharp_dot_net')
-$_common_vars
+$_common_args
 EOF
 }

@@ -1,24 +1,25 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
 
-declare -xr common_switches
-declare -xr common_vars
+
+declare -xr common_args_usage
 declare -xr script_name
 
 function usage_text()
 {
-    local _long_text=$1
-    local _common_switches=""
-    local _common_vars=""
+    (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
+    is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1:-<none>})."
+    exit_if_has_bugs
 
-    if $_long_text; then
-        _common_vars=$common_vars
-        _common_switches="
-Switches:
-$common_switches"
-    fi
+    local _long_text=$1
+    local _common_args=''
+
+    $_long_text  &&  _common_args=$common_args_usage || _common_args=''
 
     cat << EOF
-Usage: $script_name [--<long option> <value> | -<short option> <value> | --<long switch> | -<short switch> ]*
+Usage:
+  $script_name [--<long option> <value> | -<short option> <value> | --<long switch> | -<short switch> ]*
 
 Fans out a benchmark-history rebuild across all vm2 repositories that have a 'benchmarks/' directory. For each such repo it
 triggers that repo's 'RebuildBenchHistory.yaml' workflow (via 'gh workflow run -f repeat=N'), which re-records the benchmark
@@ -40,13 +41,13 @@ Options:
                                 Initial value from \$REPEAT or default 10
   -w, --workflow                The per-repo workflow file to dispatch in each target repository
                                 Default 'RebuildBenchHistory.yaml'
-$_common_switches
+
 Environment Variables:
   BENCH_DISPATCH_PAT            Fine-grained PAT ('Actions: write' + 'Contents: read' on the target repos) used to
                                 authenticate 'gh'. Optional - falls back to \$GH_TOKEN or the ambient 'gh auth'.
   GH_TOKEN                      Token used by 'gh' (set automatically from BENCH_DISPATCH_PAT when that is provided)
   GITHUB_REPOSITORY_OWNER       The GitHub owner of the target repositories (set automatically inside Actions)
   REPEAT                        How many independent runs to record per benchmark
-$_common_vars
+$_common_args
 EOF
 }

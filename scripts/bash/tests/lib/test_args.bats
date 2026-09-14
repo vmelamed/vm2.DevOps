@@ -100,9 +100,9 @@ load '../helpers/setup'
 
 @test "usage: shows the long usage text (including common switches) only when \$1 is true" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; source '$lib_dir/_args.sh'; usage true"
-    assert_output --partial "Switches:"
+    assert_output --partial "Common switches:"
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; source '$lib_dir/_args.sh'; usage false"
-    refute_output --partial "Switches:"
+    refute_output --partial "Common switches:"
 }
 
 # --- usage_text (default placeholder implementation) ---------------------------------------------
@@ -116,9 +116,9 @@ load '../helpers/setup'
 
 @test "usage_text: includes Switches and Environment Variables sections only when \$1 is true" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; source '$lib_dir/_args.sh'; usage_text true"
-    assert_output --partial "Switches:"
-    assert_output --partial "Environment Variables:"
+    assert_output --partial "Common switches:"
+    assert_output --partial "Common environment variables:"
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; source '$lib_dir/_args.sh'; usage_text false"
-    refute_output --partial "Switches:"
-    refute_output --partial "Environment Variables:"
+    refute_output --partial "Common switches:"
+    refute_output --partial "Common environment variables:"
 }

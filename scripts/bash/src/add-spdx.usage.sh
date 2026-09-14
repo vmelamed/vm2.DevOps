@@ -3,8 +3,7 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr common_switches
-declare -xr common_vars
+declare -xr common_args_usage
 declare -xr script_name
 
 #---------------------------------------------------------------------------------------------
@@ -18,17 +17,18 @@ declare -xr script_name
 #---------------------------------------------------------------------------------------------
 function usage_text()
 {
-    local _long_text=$1
-    local _common_switches=""
-    local _common_vars=""
+    (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
+    is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1:-<none>})."
+    exit_if_has_bugs
 
-    if $_long_text; then
-        _common_switches="$common_switches"
-        _common_vars="$common_vars"
-    fi
+    local _long_text=$1
+    local _common_args=''
+
+    $_long_text  &&  _common_args=$common_args_usage || _common_args=''
 
     cat << EOF
-Usage: $script_name [<repo-directory>...] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch>]*
+Usage:
+  $script_name [<repo-directory>...] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch>]*
 
 Recursively scans a directory for '*.cs', '*.sh', '*.yaml', and '*.yml' files and prepends an SPDX license-identifier header
 (with a copyright line) to any file that does not already contain one. C# generated artifacts ('obj/', 'bin/',
@@ -41,10 +41,8 @@ Arguments:
 Options:
   -l, --license <spdx-id>       Specify the SPDX license identifier (optional, default: 'MIT')
 
-Switches:
-$_common_switches
 Environment Variables:
   LICENSE                       The SPDX license identifier to use (optional, default: 'MIT')
-$_common_vars
+$_common_args
 EOF
 }

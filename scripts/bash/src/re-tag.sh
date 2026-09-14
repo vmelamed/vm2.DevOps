@@ -78,7 +78,7 @@ if [[ "$delete_mode" == false ]]; then
     existing_sha=$(git rev-list -n1 "$new_tag" 2>"$_ignore") && usage -ec "$err_argument_value" "Tag '$new_tag' already exists → commit ${existing_sha:0:12}."
     info "Tag '$old_tag' → commit ${commit:0:12}"
 else
-    commit=$(git rev-list -n1 "$del_tag" 2>"$_ignore") || usage -ec "$err_argument_value" "Tag '$del_tag' not found locally."
+    commit=$(git rev-list -n1 "$del_tag" 2>"$_ignore")       || usage -ec "$err_argument_value" "Tag '$del_tag' not found locally."
     info "Tag '$del_tag' → commit ${commit:0:12}"
 fi
 

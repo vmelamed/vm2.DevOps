@@ -44,7 +44,8 @@ source "$script_dir/run-benchmarks.usage.sh"
 source "$script_dir/run-benchmarks.args.sh"
 
 get_arguments "$@"
-benchmark_project=${benchmark_project:-"${BENCHMARK_PROJECT:-}"}
+is_verbose || dump_args "--force"
+benchmark_project="${benchmark_project:-"${BENCHMARK_PROJECT:-}"}"
 
 # validate input parameters
 is_safe_existing_path "$benchmark_project"   || true

@@ -6,9 +6,12 @@
 declare -xr script_name
 declare -xr lib_dir
 
+declare -xri success
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
+
+declare -xr ci
 
 #---------------------------------------------------------------------------------------------
 # @description Parses the command-line arguments for 'rename-branch.sh'. Delegates common switches (help, quiet, verbose,
@@ -50,11 +53,27 @@ function get_arguments()
                 ;;
         esac
     done
-    dump_vars \
-        --header "Arguments for $script_name:" \
-        --core-state \
-        old_branch_name \
-        new_branch_name
-        # add var names above this line
+
+    dump_args
     usage_if_requested
+}
+
+# shellcheck disable=SC2120 # dump_args references arguments, but none are ever passed.
+function dump_args()
+{
+    ! $ci && ! is_verbose && return "$success"
+
+    local -a _args=(
+        --force
+        --quiet
+        --header "Arguments for $script_name:"
+
+        old_branch_name
+        new_branch_name
+
+        --header "Core State:"
+        --core-state
+    )
+
+    dump_vars "${_args[@]}" "$@"
 }

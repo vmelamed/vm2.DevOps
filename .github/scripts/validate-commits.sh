@@ -29,7 +29,7 @@ declare -xra allowed_commit_types
 declare -x base_ref=${BASE_REF:-}
 
 get_arguments "$@"
-
+is_verbose || dump_args "--force"
 exit_if_has_errors
 
 # Build the type alternation: feat|fix|perf|...

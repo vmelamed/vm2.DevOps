@@ -3,19 +3,18 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr common_switches
-declare -xr common_vars
+declare -xr common_args_usage
 declare -xr script_name
 
-declare -x vm2_repos
-declare -x sot
 declare -xr vm2_devops_repo_name
+declare -xr vm2_sot_repo_name
+declare -xr default_sot
 
 #---------------------------------------------------------------------------------------------
 # @description Builds and prints the full `--help` text for `setup-repo.sh` to stdout: usage line, description of
 # what the script does, parameters, options, switches, examples, and the list of local Git settings the script
-# configures. When `$1` is `true`, the shared switches and environment-variable sections (`$common_switches`,
-# `$common_vars`) are appended as well.
+# configures. When `$1` is `true`, the shared switches and environment-variable sections
+# (`$common_args_usage`) are appended as well.
 #
 # @arg $1 bool When `true`, include the shared/common switches and environment variables sections in the output.
 #
@@ -24,21 +23,20 @@ declare -xr vm2_devops_repo_name
 #---------------------------------------------------------------------------------------------
 function usage_text()
 {
+    (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
+    is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1:-<none>})."
+    exit_if_has_bugs
+
     local _long_text=$1
-    local _common_switches=""
-    local _common_vars=""
+    local _common_args=''
+
+    $_long_text  &&  _common_args=$common_args_usage || _common_args=''
 
     local _shared='<unresolved SOT>'
 
-    if $_long_text; then
-        _common_switches="$common_switches"
-        _common_vars="\
-
-$common_vars"
-    fi
-
     cat << EOF
-Usage: $script_name [<repo-directory>] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
+Usage:
+  $script_name [<repo-directory>] [ --<long option> <value> | -<short option> <value> | --<long switch> | -<short switch> ]*
 
 Bootstrap and configure a repository for a vm2 package project. This script assumes that the project has already been created
 locally, e.g. using 'dotnet new vm2.NewPkg' and has all the common files, including the *edited* GitHub Actions workflow *.yaml
@@ -106,9 +104,7 @@ Switches:
                                 and policies. Use this option alone when the repository already exists and is linked to a GitHub
                                 repository and none of the --interactive-* options are specified. In any other case, the script
                                 will run its normal course and will display the audit at the end anyway.
-$_common_switches
-Environment Variables:
-$_common_vars
+$_common_args
 Examples:
   $script_name ~/repos/vm2.Glob
   $script_name \$VM2_REPOS/vm2.Glob --interactive-secrets --verbose
@@ -118,7 +114,7 @@ Examples:
 Configured local Git settings:
   core.hooksPath                Set to '\$VM2_REPOS/$vm2_devops_repo_name/scripts/githooks'
                                 Tells Git where to find repository hook scripts (e.g. pre-commit, commit-msg).
-  commit.template               Set to '$_shared/.gitmessage'
+  commit.template               Set to '\$VM2_REPOS/$vm2_sot_repo_name/templates/$default_sot/content/.gitmessage/.gitmessage'
                                 Specifies the default commit message template shown when creating commits.
   pull.rebase                   Set to 'true'
                                 Makes 'git pull' rebase local commits on top of upstream changes instead of merging.

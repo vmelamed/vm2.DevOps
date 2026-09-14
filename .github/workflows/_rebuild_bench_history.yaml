@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
 name: "_rebuild_bench_history (Reusable: re-record benchmark history to Bencher.dev)"
 
 # Re-records a benchmark's results to Bencher.dev N times to rebuild its performance history -- e.g. after a runner-image

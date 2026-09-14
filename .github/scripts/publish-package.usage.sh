@@ -3,8 +3,7 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr common_switches
-declare -xr common_vars
+declare -xr common_args_usage
 declare -xr script_name
 
 declare -xr common_dotnet_parameters
@@ -12,20 +11,19 @@ declare -xr common_dotnet_vars
 
 function usage_text()
 {
+    (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
+    is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1:-<none>})."
+    exit_if_has_bugs
+
     local _long_text=$1
-    local _common_switches=""
-    local _common_vars=""
+    local _common_args=''
 
-    if $_long_text; then
-        _common_vars=$common_vars
-        _common_switches="\
-
-Switches:
-$common_switches"
-    fi
+    $_long_text  &&  _common_args=$common_args_usage || _common_args=''
 
     cat << EOF
-Usage: $script_name [<package-project>] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
+Usage:
+  $script_name [<package-project>] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
+
 Packages and publishes NuGet packages to the specified server
 
 Arguments:
@@ -49,7 +47,7 @@ Options:
                                 \$GITHUB_REPOSITORY_OWNER environment variable. Required only if publishing to GitHub Packages
                                 Initial value from the \$GITHUB_REPOSITORY_OWNER environment variable or "vmelamed".
 $common_dotnet_parameters
-$_common_switches
+
 Environment Variables:
   PACKAGE_PROJECT               Project/solution paths to package and publish.
   REASON                        Reason for triggering the release
@@ -62,6 +60,6 @@ Environment Variables:
                                 Initial value from \$SAVE_ARTIFACTS or default false.
   NUGET_API_KEY                 The NuGet API key for the selected NuGet server. Mandatory.
 $common_dotnet_vars
-$_common_vars
+$_common_args
 EOF
 }

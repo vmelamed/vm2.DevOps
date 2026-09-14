@@ -99,8 +99,6 @@ source "$script_dir/setup-repo.usage.sh"
 
 get_arguments "$@"
 
-# declare -x branch=$default_branch
-
 readonly interactive_vars
 readonly interactive_secrets
 readonly configure_local

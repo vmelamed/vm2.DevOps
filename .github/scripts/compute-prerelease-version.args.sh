@@ -9,6 +9,9 @@ declare -xr lib_dir
 declare -x minver_tag_prefix
 declare -x minver_prerelease_id
 
+declare -x ci
+
+declare -xri success
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
@@ -47,14 +50,28 @@ function get_arguments()
         esac
     done
 
-    dump_vars --force --quiet \
-        --header "Arguments for $script_name:" \
-        --core-state \
-        minver_tag_prefix \
-        minver_prerelease_id \
-        reason \
-        --header "other:" \
-        ci
+    dump_args
 
     usage_if_requested
+}
+
+# shellcheck disable=SC2120 # dump_args references arguments, but none are ever passed.
+function dump_args()
+{
+    ! $ci && ! is_verbose && return "$success"
+
+    local -a _args=(
+        --force
+        --quiet
+        --header "Arguments for $script_name:"
+
+        minver_tag_prefix
+        minver_prerelease_id
+        reason
+
+        --header "Core State:"
+        --core-state
+    )
+
+    dump_vars "${_args[@]}" "$@"
 }

@@ -68,6 +68,7 @@ source "$script_dir/validate-input.usage.sh"
 source "$script_dir/validate-input.args.sh"
 
 get_arguments "$@"
+is_verbose || dump_args "--force"
 
 # Check for required dependencies (jq and gh) and attempt to install them if not found
 if ! command -v -p jq &> "$_ignore"; then

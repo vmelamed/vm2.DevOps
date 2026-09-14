@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
 
-declare -xr common_switches
-declare -xr common_vars
+
+declare -xr common_args_usage
 declare -xr script_name
 
 declare -xr common_dotnet_parameters
@@ -10,14 +12,14 @@ declare -xr common_dotnet_output
 
 function usage_text()
 {
-    local _long_text=$1
-    local _common_switches=""
-    local _common_vars=""
+    (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
+    is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1:-<none>})."
+    exit_if_has_bugs
 
-    if $_long_text; then
-        _common_switches=$'\n'"Switches:"$'\n'"$common_switches"
-        _common_vars=$common_vars
-    fi
+    local _long_text=$1
+    local _common_args=''
+
+    $_long_text  &&  _common_args=$common_args_usage || _common_args=''
 
     cat << EOF
 Usage: $script_name [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
@@ -78,7 +80,6 @@ Options:
                                 Whether to skip packing projects. Expected 'true' or 'false'
                                 Initial value from \$SKIP_PACKAGES or default 'false'
 $common_dotnet_parameters
-$_common_switches
 Environment Variables:
   BUILD_PROJECTS                JSON array of paths to projects to build
   TEST_PROJECTS                 JSON array of paths to test projects to run
@@ -94,7 +95,6 @@ Environment Variables:
   SKIP_TESTS                    Whether to skip running tests
   SKIP_PACKAGES                 Whether to skip packing projects
 $common_dotnet_vars
-$_common_vars
 Outputs (to GITHUB_OUTPUT):
   build-projects                JSON array of paths to projects to build
   test-projects                 JSON array of paths to test projects to run
@@ -110,5 +110,6 @@ Outputs (to GITHUB_OUTPUT):
   skip-tests                    Whether to skip running tests
   skip-packages                 Whether to skip packing projects
 $common_dotnet_output
+$_common_args
 EOF
 }

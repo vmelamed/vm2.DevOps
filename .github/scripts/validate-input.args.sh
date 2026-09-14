@@ -5,9 +5,12 @@
 
 declare -xr script_name
 
+declare -xri success
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
+
+declare -x ci
 
 declare -x build_projects
 declare -x test_projects
@@ -129,25 +132,40 @@ function get_arguments()
         esac
     done
 
-    dump_vars --force --quiet \
-        --header "Arguments of $script_name:" \
-        --core-state \
-        build_projects \
-        test_projects \
-        benchmark_projects \
-        package_projects \
-        --common-dotnet-args \
-        runners_os \
-        min_coverage_pct \
-        max_regression_pct \
-        max_gen1_collects \
-        max_gen2_collects \
-        reset_benchmark_thresholds \
-        skip_benchmarks \
-        skip_tests \
-        skip_packages \
-        --header "other:" \
-        ci
+    dump_args
 
     usage_if_requested
+}
+
+# shellcheck disable=SC2120 # dump_args references arguments, but none are ever passed.
+function dump_args()
+{
+    ! $ci && ! is_verbose && return "$success"
+
+    local -a _args=(
+        --force
+        --quiet
+        --header "Arguments for $script_name:"
+
+        build_projects
+        test_projects
+        benchmark_projects
+        package_projects
+        runners_os
+        min_coverage_pct
+        max_regression_pct
+        max_gen1_collects
+        max_gen2_collects
+        reset_benchmark_thresholds
+        skip_benchmarks
+        skip_tests
+        skip_packages
+        --header "\`dotnet <command>\` CLI Arguments:"
+        --common-dotnet-args
+
+        --header "Core State:"
+        --core-state
+    )
+
+    dump_vars "${_args[@]}" "$@"
 }

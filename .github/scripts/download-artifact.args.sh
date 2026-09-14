@@ -6,9 +6,12 @@
 declare -xr script_name
 declare -xr lib_dir
 
+declare -xri success
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
+
+declare -x ci
 
 declare -x artifact_name
 declare -x artifacts
@@ -73,17 +76,31 @@ function get_arguments()
         esac
     done
 
-    dump_vars --force --quiet \
-        --header "Arguments for $script_name:" \
-        --core-state \
-        artifact_name \
-        artifacts \
-        repository \
-        workflow_id \
-        workflow_name \
-        workflow_path \
-        --header "other:" \
-        ci
+    dump_args
 
     usage_if_requested
+}
+
+# shellcheck disable=SC2120 # dump_args references arguments, but none are ever passed.
+function dump_args()
+{
+    ! $ci && ! is_verbose && return "$success"
+
+    local -a _args=(
+        --force
+        --quiet
+        --header "Arguments for $script_name:"
+
+        artifact_name
+        artifacts
+        repository
+        workflow_id
+        workflow_name
+        workflow_path
+
+        --header "Core State:"
+        --core-state
+    )
+
+    dump_vars "${_args[@]}" "$@"
 }

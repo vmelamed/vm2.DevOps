@@ -68,8 +68,10 @@ declare -x summary_file=""      # the file where the summary of the differences 
 #===============================
 declare -x action_ignore action_merge_or_copy action_ask_to_merge action_ask_to_copy action_merge action_copy
 declare -xa arguments=(         # array of all arguments for logging and debugging purposes
-    selectors_actions
+    vm2_repos
+    sot
     target_repos
+    selectors_actions
     diff_only
     summary_file
 )

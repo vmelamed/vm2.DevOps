@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
 set -euo pipefail
 
 script_name=$(basename "${BASH_SOURCE[0]}")

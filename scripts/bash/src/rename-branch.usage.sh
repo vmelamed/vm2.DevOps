@@ -3,8 +3,7 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr common_switches
-declare -xr common_vars
+declare -xr common_args_usage
 declare -xr script_name
 
 #---------------------------------------------------------------------------------------------
@@ -19,30 +18,24 @@ declare -xr script_name
 #---------------------------------------------------------------------------------------------
 function usage_text()
 {
+    (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
+    is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1:-<none>})."
+    exit_if_has_bugs
+
     local _long_text=$1
-    local _common_switches=""
-    local _common_vars=""
+    local _common_args=''
 
-    if $_long_text; then
-        _common_switches="\
-
-$common_switches"
-
-        _common_vars="\
-
-$common_vars"
-    fi
+    $_long_text  &&  _common_args=$common_args_usage || _common_args=''
 
     cat << EOF
-Usage: $script_name [<old_branch_name>] <new_branch_name>
+Usage:
+  $script_name [<old_branch_name>] <new_branch_name> [ --<long switch> | -<short switch> ]*
+
 Renames a Git branch both locally and remotely.
 
 Arguments:
   <old_branch_name>             The name of the existing branch to be renamed. If not specified, the current branch is used.
   <new_branch_name>             The new name for the branch. This must be a valid Git branch name and must not already exist.
-Switches:
-$_common_switches
-Environment Variables:
-$_common_vars
+$_common_args
 EOF
 }

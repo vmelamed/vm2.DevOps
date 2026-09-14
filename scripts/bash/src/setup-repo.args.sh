@@ -6,10 +6,12 @@
 declare -xr script_name
 declare -xr lib_dir
 
+declare -xri success
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
 
+declare -x ci
 declare -x vm2_repos
 declare -x repo_name
 declare -x repo_path
@@ -117,19 +119,29 @@ function get_arguments()
                 audit=true
                 ;;
 
-            * ) if [[ -z "$repo_path" ]]; then
-                    repo_path="$_option"
-                else
+            * ) if [[ -n "$repo_path" ]]; then
                     usage -ec "$err_too_many_arguments" "Too many positional arguments (project directory or repository name): $_option"
                 fi
+                repo_path="$_option"
                 ;;
         esac
     done
 
-    local -a args=(
+    dump_args
+
+    usage_if_requested
+}
+
+# shellcheck disable=SC2120 # dump_args references arguments, but none are ever passed.
+function dump_args()
+{
+    ! $ci && ! is_verbose && return "$success"
+
+    local -a _args=(
+        --force
         --quiet
-        --header "Arguments of $script_name:"
-        --core-state
+        --header "Arguments for $script_name:"
+
         vm2_repos
         repo_path
         repo_owner
@@ -143,9 +155,10 @@ function get_arguments()
         interactive_vars
         interactive_secrets
         audit
+
+        --header "Core State:"
+        --core-state
     )
 
-    dump_vars "${args[@]}"
-
-    usage_if_requested
+    dump_vars "${_args[@]}" "$@"
 }

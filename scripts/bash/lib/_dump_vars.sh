@@ -185,7 +185,7 @@ function _write_line()
 
     elif is_defined_variable "$1"; then
         local -n _var=$1
-        [[ $_is_secret == true ]] && _value="$secret_str" || _value="$_var"
+        [[ $_is_secret == true && -n  $_var ]] && _value="$secret_str" || _value="$_var"
         printf "$_format" "$_name" "$_value"
 
     elif $_has_name; then
@@ -319,6 +319,7 @@ function dump_vars()
                 # all options starting with '-' are already processed
                 ;;
         esac
+
         if (( $# > 0 )); then
             [[ $1 == -h || $1 == --header ]] && _next_is_header=true
             if $_curr_is_header; then

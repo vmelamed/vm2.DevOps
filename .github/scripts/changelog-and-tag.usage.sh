@@ -1,25 +1,25 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
 
-declare -xr common_switches
-declare -xr common_vars
+declare -xr common_args_usage
 declare -xr script_name
 
 function usage_text()
 {
+    (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
+    is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1:-<none>})."
+    exit_if_has_bugs
+
     local _long_text=$1
-    local _common_switches=""
-    local _common_vars=""
+    local _common_args=''
 
-    if $_long_text; then
-        _common_vars=$common_vars
-        _common_switches="\
-
-Switches:
-$common_switches"
-    fi
+    $_long_text  &&  _common_args=$common_args_usage || _common_args=''
 
     cat << EOF
-Usage: $script_name [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
+Usage:
+  $script_name [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
+
 Updates CHANGELOG.md using git-cliff, then creates and pushes a Git tag.
 
 Accepts both release tags (e.g., v1.2.3) and prerelease tags (e.g., v1.2.3-preview.1).
@@ -41,12 +41,12 @@ Options:
       --needs-empty-commit      'true' to create an empty commit before changelog/tag (used when
                                 promoting a prerelease-tagged HEAD to stable). Default: 'false'
                                 Initial value from \$NEEDS_EMPTY_COMMIT
-$_common_switches
+
 Environment Variables:
   RELEASE_TAG                   The tag to create (e.g., 'v1.2.3' or 'v1.2.3-preview.1')
   MINVERTAGPREFIX               Tag prefix (default: 'v')
   REASON                        Release reason (default: auto-detected from tag type)
   NEEDS_EMPTY_COMMIT            'true' or 'false' (default: 'false')
-$_common_vars
+$_common_args
 EOF
 }

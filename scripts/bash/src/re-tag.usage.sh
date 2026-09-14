@@ -3,8 +3,7 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr common_switches
-declare -xr common_vars
+declare -xr common_args_usage
 declare -xr script_name
 
 #---------------------------------------------------------------------------------------------
@@ -19,24 +18,18 @@ declare -xr script_name
 #---------------------------------------------------------------------------------------------
 function usage_text()
 {
+    (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
+    is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1:-<none>})."
+    exit_if_has_bugs
+
     local _long_text=$1
-    local _common_switches=""
-    local _common_vars=""
+    local _common_args=''
 
-    if $_long_text; then
-        _common_switches="\
-
-Switches:
-$common_switches"
-
-        _common_vars="\
-
-$common_vars"
-    fi
+    $_long_text  &&  _common_args=$common_args_usage || _common_args=''
 
     cat <<EOF
 Usage:
-  $script_name <old-tag> <new-tag> [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
+  $script_name <old-tag> <new-tag> [--<long option> <value> | -<short option> <value> | --<long switch> | -<short switch> ]*
   $script_name --delete <tag> [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
 
 Replaces an existing git tag with a new tag or if '--delete' is specified - deletes it. The old tag is deleted locally and on
@@ -51,9 +44,7 @@ Arguments:
               '--delete'
 Options:
   --delete    Delete the tag following the option.
-$_common_switches
-Environment Variables:
-$_common_vars
+$_common_args
 Examples:
   $script_name v3.1.0-preview.5 v3.1.1-preview.2
   $script_name --delete v3.1.0-preview.4

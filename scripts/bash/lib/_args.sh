@@ -170,7 +170,8 @@ function usage()
     exit "$_exit_code"
 }
 
-declare -xr common_switches="\
+declare -xr common_args_usage="
+Common switches:
   -v, --verbose                 Enables verbose output from tracing and variables dumps, e.g. in the 'dump_vars' function
                                 Overrides the initial value from the environment value \$VERBOSE or 'false'
   -x, --trace                   1) Sets the switch '--verbose'
@@ -191,9 +192,8 @@ declare -xr common_switches="\
   --help                        Displays longer version of the usage text - including all common flags
   -h | -?                       Displays shorter version of the usage text - without the common flags
                                 If you have both --help and -h|-? in your script, the last one wins.
-"
 
-declare -xr common_vars="\
+Common environment variables:
   VERBOSE                       Enables tracing and verbose output.
   DRY_RUN                       Does not execute commands that can change environments, i.e. have side effects.
   QUIET                         Suppresses all user prompts, assuming the default answers.
@@ -214,25 +214,17 @@ declare -xr common_vars="\
 #---------------------------------------------------------------------------------------------
 function usage_text()
 {
+    (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
+    is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1:-<none>})."
+    exit_if_has_bugs
+
     local _long_text=$1
-    local _common_switches=""
-    local _common_vars=""
+    local _common_args=''
 
-    if $_long_text; then
-        _common_switches="\
-
-$common_switches"
-
-        _common_vars="\
-
-$common_vars"
-    fi
+    $_long_text  &&  _common_args=$common_args_usage || _common_args=''
 
     cat << EOF
 OVERRIDE THE FUNCTION usage_text() IN THE CALLING SCRIPT '$script_name' TO PROVIDE CUSTOM USAGE INFORMATION.
-Switches:
-$_common_switches
-Environment Variables:
-$_common_vars
+$_common_args
 EOF
 }
