@@ -165,7 +165,7 @@ jobs:
 
       - name: Validate Conventional Commits
         if: github.event_name == 'pull_request'
-        run: validate-commits.sh --base-ref "origin/${{ github.base_ref }}"
+        run: validate-commits.sh "origin/${{ github.base_ref }}"
 
       # Run validation script to verify and normalize all inputs (inputs, env, vars, secrets, etc.)
       - name: Validate and normalize all inputs

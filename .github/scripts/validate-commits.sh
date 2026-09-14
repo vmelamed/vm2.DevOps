@@ -42,7 +42,7 @@ readonly cc_regex="^($types_pattern)(\(.+\))?!?: .+"
 
 # Determine the commit range
 if [[ -z "$base_ref" ]]; then
-    error -ec "$err_argument_value" "No base ref provided. Use --base-ref to specify the comparison point."
+    error -ec "$err_argument_value" "No base ref provided. Pass it as a positional argument or set \$BASE_REF."
     exit_if_has_errors
 fi
 

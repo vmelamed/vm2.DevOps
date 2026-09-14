@@ -50,14 +50,14 @@ _run_validate_commits() {
 
 @test "validate-commits: succeeds when every commit follows Conventional Commits" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "feat: add a thing" "fix(api): correct a bug" "chore(deps): bump deps"
-    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --base-ref base --quiet
+    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" base --quiet
     assert_success
     assert_output --partial "All commit messages follow Conventional Commits format"
 }
 
 @test "validate-commits: matches commit types case-insensitively" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "FEAT(api): add uppercase type"
-    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --base-ref base --quiet
+    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" base --quiet
     assert_success
 }
 
@@ -65,13 +65,13 @@ _run_validate_commits() {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" \
         "Merge branch 'x' into main" \
         "Revert \"feat: add a thing\""
-    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --base-ref base --quiet
+    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" base --quiet
     assert_success
 }
 
 @test "validate-commits: accepts a breaking-change '!' marker and a scoped type" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "refactor(core)!: redesign the API"
-    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --base-ref base --quiet
+    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" base --quiet
     assert_success
 }
 
@@ -79,7 +79,7 @@ _run_validate_commits() {
 
 @test "validate-commits: fails and reports every non-conforming commit message" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "not a valid message" "feat: this one is fine" "also bad"
-    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --base-ref base --quiet
+    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" base --quiet
     assert_failure
     assert_output --partial "Bad commit message: not a valid message"
     assert_output --partial "Bad commit message: also bad"
@@ -88,14 +88,14 @@ _run_validate_commits() {
 
 @test "validate-commits: rejects an unknown/unrecognized commit type" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "bogus: not a real type"
-    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --base-ref base --quiet
+    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" base --quiet
     assert_failure
     assert_output --partial "Bad commit message: bogus: not a real type"
 }
 
 @test "validate-commits: prints the remediation steps (rebase -i, force-push) on failure" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "not conventional"
-    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --base-ref base --quiet
+    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" base --quiet
     assert_failure
     assert_output --partial "git rebase -i base"
     assert_output --partial "git push --force-with-lease origin main"
@@ -103,23 +103,23 @@ _run_validate_commits() {
 
 # --- argument handling ---------------------------------------------------------------------
 
-@test "validate-commits: fails with a clear error when --base-ref is not given and \$BASE_REF is unset" {
+@test "validate-commits: fails with a clear error when no base-ref is given and \$BASE_REF is unset" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "feat: fine"
     run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --quiet
     assert_failure
     assert_output --partial "No base ref provided"
 }
 
-@test "validate-commits: falls back to the \$BASE_REF environment variable when --base-ref is not given" {
+@test "validate-commits: falls back to the \$BASE_REF environment variable when no base-ref is given" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "feat: fine"
     run env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" BASE_REF=base bash -c "cd '$BATS_TEST_TMPDIR/repo' && bash '$_validate_commits' --quiet"
     assert_success
     assert_output --partial "All commit messages follow Conventional Commits format"
 }
 
-@test "validate-commits: an explicit --base-ref overrides \$BASE_REF" {
+@test "validate-commits: an explicit positional base-ref overrides \$BASE_REF" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "feat: fine"
-    run env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" BASE_REF=does-not-exist bash -c "cd '$BATS_TEST_TMPDIR/repo' && bash '$_validate_commits' --base-ref base --quiet"
+    run env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" BASE_REF=does-not-exist bash -c "cd '$BATS_TEST_TMPDIR/repo' && bash '$_validate_commits' base --quiet"
     assert_success
 }
 
@@ -128,6 +128,13 @@ _run_validate_commits() {
     run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --bogus --quiet
     assert_failure
     assert_output --partial "Unknown argument: --bogus"
+}
+
+@test "validate-commits: rejects a second positional argument as too many arguments" {
+    _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "feat: fine"
+    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" base extra --quiet
+    assert_failure
+    assert_output --partial "Unknown argument: extra"
 }
 
 @test "validate-commits: -h prints usage and exits 0" {
@@ -142,7 +149,7 @@ _run_validate_commits() {
 @test "validate-commits: in CI mode (GITHUB_STEP_SUMMARY set), the same result also lands in the step summary file" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "not conventional"
     run env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" GITHUB_ACTIONS=true GITHUB_STEP_SUMMARY="$BATS_TEST_TMPDIR/summary.md" \
-        bash -c "cd '$BATS_TEST_TMPDIR/repo' && bash '$_validate_commits' --base-ref base --quiet"
+        bash -c "cd '$BATS_TEST_TMPDIR/repo' && bash '$_validate_commits' base --quiet"
     assert_failure
     assert_output --partial "Bad commit message: not conventional"
     run cat "$BATS_TEST_TMPDIR/summary.md"
