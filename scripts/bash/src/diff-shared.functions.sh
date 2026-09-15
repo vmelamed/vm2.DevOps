@@ -33,9 +33,12 @@ declare -xri err_not_file
 
 declare -x _ignore
 
+declare -xr vm2_sot_repo_name
+
 declare -x vm2_repos
 declare -x custom_config=""
 declare -x diff_only
+declare -x sot
 
 declare -xr action_ignore="ignore"
 declare -xr action_merge_or_copy="merge or copy"
@@ -147,6 +150,12 @@ function configure()
 
     # Populate the arrays
     local -i _index=0
+
+    # shellcheck disable=SC2034
+    local vm2_sot_shared="$vm2_sot_repo_name/templates/$sot/content"
+    # shellcheck disable=SC2034
+    local target_file_path=$2
+
     local _source_file _target_file _file_action
 
     while IFS='=' read -r _source_file _target_file _file_action; do

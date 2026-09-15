@@ -127,6 +127,28 @@ EOF
     assert_output --partial "file_actions=([0]=\"copy\")"
 }
 
+@test "configure: expands the real \${vm2_repos}/\${vm2_sot_shared}/\${target_file_path} macros used in the production config (regression)" {
+    # Was previously broken: 'vm2_sot_shared' and 'target_file_path' were never 'local'-declared
+    # inside configure(), so the eval-based macro expansion of a real diff-shared.config.json
+    # entry (which uses exactly these three macro names, not the '$1'/'$2' shorthand the test
+    # above uses) silently expanded to empty strings under 'set -u', or picked up a stale value
+    # left over from a previous configure() call in the same process.
+    mkdir -p "$BATS_TEST_TMPDIR/sot_config" \
+             "$BATS_TEST_TMPDIR/vm2_repos/vm2.Templates/templates/AddNewPackage/content" \
+             "$BATS_TEST_TMPDIR/target"
+    echo "hello" > "$BATS_TEST_TMPDIR/vm2_repos/vm2.Templates/templates/AddNewPackage/content/a.txt"
+    cat > "$BATS_TEST_TMPDIR/sot_config/diff-shared.config.json" <<'JSON'
+{"diff":{"tool":"","command":""},
+ "merge":{"tool":"","command":""},
+ "files":[{"sourceFile":"${vm2_repos}/${vm2_sot_shared}/a.txt","targetFile":"${target_file_path}/a.txt","action":"copy"}]}
+JSON
+    run _ds "declare vm2_repos='$BATS_TEST_TMPDIR/vm2_repos'; declare sot='AddNewPackage'; declare -a source_files=() target_files=() file_actions=(); configure '$BATS_TEST_TMPDIR/sot_config' '$BATS_TEST_TMPDIR/target'; declare -p source_files target_files file_actions"
+    assert_success
+    assert_output --partial "source_files=([0]=\"$BATS_TEST_TMPDIR/vm2_repos/vm2.Templates/templates/AddNewPackage/content/a.txt\")"
+    assert_output --partial "target_files=([0]=\"$BATS_TEST_TMPDIR/target/a.txt\")"
+    assert_output --partial "file_actions=([0]=\"copy\")"
+}
+
 # =====================================================================================
 # get_tools()
 # =====================================================================================
