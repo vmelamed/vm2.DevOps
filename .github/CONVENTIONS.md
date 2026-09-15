@@ -1,11 +1,54 @@
 # vm2 Shared Conventions
 
+<!-- TOC tocDepth:2..3 chapterDepth:2..6 -->
+
+- [vm2 Shared Conventions](#vm2-shared-conventions)
+  - [For AI Coding Assistants](#for-ai-coding-assistants)
+    - [Code Generation and File Editing](#code-generation-and-file-editing)
+    - [PR Review](#pr-review)
+    - [Language and Writing Quality](#language-and-writing-quality)
+  - [Project Structure](#project-structure)
+  - [Dependency Management](#dependency-management)
+  - [Bash](#bash)
+    - [Variables and Dynamic Scope](#variables-and-dynamic-scope)
+    - [Function Parameter Validation](#function-parameter-validation)
+  - [General C# Coding Conventions](#general-c-coding-conventions)
+  - [Async](#async)
+  - [Services (if applicable)](#services-if-applicable)
+  - [Error Handling](#error-handling)
+    - [The `Do` / `TryDo` dual pattern](#the-do--trydo-dual-pattern)
+    - [`Result<T>` and railway-oriented programming (ROP)](#resultt-and-railway-oriented-programming-rop)
+    - [API surface vs. inner workings](#api-surface-vs-inner-workings)
+  - [Testing](#testing)
+  - [Performance Benchmarks](#performance-benchmarks)
+  - [Performance](#performance)
+  - [Security](#security)
+  - [Naming](#naming)
+  - [AOT and Trimming](#aot-and-trimming)
+  - [Git and PR Hygiene](#git-and-pr-hygiene)
+  - [Documentation](#documentation)
+  - [References](#references)
+    - [Markdown](#markdown)
+  - [File Modification](#file-modification)
+  - [CI / GitHub Actions](#ci--github-actions)
+  - [Build Configuration, TFMs, RIDs, and Preprocessor Symbols](#build-configuration-tfms-rids-and-preprocessor-symbols)
+
+<!-- /TOC -->
+
 The *vm2* family of repositories (packages, solutions, etc.) **share a common set of conventions** for the directory
 structure, project structure, coding style, documentation style, Git and PR hygiene, and more. This file documents these
 shared conventions to ensure **consistency across all repositories** and to provide guidance for contributors.
 
 The key words **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, and **MAY** in this document are to be interpreted as
 described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119).
+
+> [!IMPORTANT]
+> **These are defaults with reasons, not dogma.** Always question a rule rather than obey it reflexively: a rule
+> earns the burden of proof for *following* it, and an exception earns the burden of proof for *breaking* it — adjudicate
+> each case on its merits, not on the rule's authority. You **MAY** break any convention here when you can articulate why
+> its underlying reason does not apply to the case at hand — but you **MUST** record that rationale in writing (a code
+> comment, the `CLAUDE.md`, or the PR description), so the exception is a documented, auditable decision rather than
+> silent drift. An undocumented deviation is a violation; a documented, well-argued one is the process working.
 
 > [!NOTE]
 > This file is **copied identically to each repo's `.github/` directory** via `diff-shared.sh`.
@@ -74,6 +117,74 @@ The project owner is a non-native English speaker.
 - **Build with `dotnet restore --use-lock-file ... && dotnet build --no-restore ...`**
 - When dependencies change: update `Directory.Packages.props`, **AND** then run `dotnet restore --force-evaluate`, commit both files
 - Dependabot watches `Directory.Packages.props`; after merging a Dependabot PR, run `dotnet restore --force-evaluate` (also done by `RefreshLockFiles.yaml` and `AutoMerge.yaml`)
+
+## Bash
+
+### Variables and Dynamic Scope
+
+- Function-local variable names MUST begin with `_`. Bash uses dynamic scope: a called function can read and modify the
+  caller's locals unless it declares a local variable with the same name. The prefix reduces accidental collisions with
+  globals and environment variables; it does not eliminate collisions between functions.
+- A nameref (`local -n`) MUST have a name distinct from the target name and from locals in callers that may be visible
+  through dynamic scope. In particular, a function receiving a target variable name MUST NOT give its nameref the same
+  name commonly used by callers; that can create a circular nameref.
+- Validate a variable name before creating a nameref to it. Create the nameref only after the parameter-validation gate.
+- When iterating over variable names, use indirect expansion (`${!_name}`) rather than assigning successive targets to a
+  nameref declared outside the loop. Assigning to such a nameref writes through to its current target; it does not
+  reliably re-target the reference.
+- Remember that the left side of a pipeline executes in a subshell. A function that mutates a variable through a nameref
+  MUST run in the current shell; pass input through redirection or process substitution instead of piping into it.
+
+### Function Parameter Validation
+
+Reusable functions MUST accumulate all useful parameter errors and pass one validation gate before business logic:
+
+```bash
+function example()
+{
+    local -i _rc="$success"
+
+    (( $# == 1 || $# == 2 )) || {
+        _rc="$err_invalid_arguments"
+        error -ec "$_rc" "${FUNCNAME[0]}() requires one or two arguments (provided $#)."
+    }
+    [[ -v 1 && -n $1 ]] || {
+        _rc="$err_argument_value"
+        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the input name, to be non-empty (provided '${1-<missing>}')."
+    }
+    [[ ! -v 2 || $2 =~ ^(true|false)$ ]] || {
+        _rc="$err_argument_type"
+        error -ec "$_rc" "${FUNCNAME[0]}() requires optional argument 2 to be 'true' or 'false' (provided '${2-<missing>}')."
+    }
+
+    (( _rc == success )) || return "$err_invalid_arguments"
+
+    local _input=$1
+    local _flag=${2:-false}
+    # business logic
+}
+```
+
+- Check overall arity separately with `$#`. Do not return immediately after the arity check: report independently useful
+  errors for missing or invalid arguments as well.
+- Test a required positional parameter with `[[ -v N && predicate ]]`. Test an optional parameter with
+  `[[ ! -v N || predicate ]]`. The existence check MUST precede expansion of `$N`, so validation remains safe under
+  `set -u`.
+- Commands cannot be invoked inside `[[ ... ]]`. Guard command predicates explicitly, for example:
+  `[[ -v 1 ]] && is_defined_array "$1" || { ...; }`.
+- Each failed check MUST log the specific applicable error code (`$err_argument_type`, `$err_argument_value`,
+  `$err_invalid_nameref`, and so on). After all checks, the validation gate MUST return the generic
+  `$err_invalid_arguments`, so callers need only one sentinel for a bad call.
+- Error messages MUST identify the argument number, its role, and the expected constraint. Render a possibly absent
+  value with `${N-<missing>}`; never expand an unguarded positional parameter merely to report an error.
+- Do not assign required positional parameters to locals, create namerefs, or perform business logic before the gate.
+- Validation of global or environment state is a precondition check, not argument validation. It MAY use the same
+  accumulate-then-gate shape, but MUST return the code that describes the failed precondition, commonly
+  `$err_logic_error`, rather than `$err_invalid_arguments`.
+- A parser that consumes arguments with `shift` MAY use multiple validation gates, one before each dependent phase.
+- Top-level CLI parsers and configuration functions that intentionally terminate through `usage()` or
+  `exit_if_has_errors()` MUST retain that process-exit behavior. They SHOULD accumulate errors with `error` calls and
+  invoke the exit gate once; do not convert them into reusable return-based functions.
 
 ## General C# Coding Conventions
 
@@ -236,6 +347,19 @@ exceptions, and never references `vm2.Functional`; `TryDo` is for consumers who 
 - Mock only external collaborators (I/O, time, random, repository, bus); never mock value objects
 - Strive for 80% code coverage on critical paths; prioritize meaningful tests over coverage numbers
 - Upload coverage to Codecov
+- **Equality-contract tests for every value type.** Any type that defines value equality (`record`,
+  `record struct`, or a `struct`/`class` overriding `Equals`/`GetHashCode`/`==`) **MUST** have tests pinning the
+  contract: reflexivity, symmetry, transitivity, `Equals`/`==` agreement, and `GetHashCode` consistency (equal
+  values hash equal). A type that is **not** meant to be compared MUST make that explicit (do not silently rely on
+  the reflection-based `ValueType.Equals` fallback — it boxes and is a hidden performance trap). This applies to
+  domain value objects and to library primitives alike.
+- **Algebraic-law tests for every monadic (or otherwise law-bearing) type.** A type that claims to be a monad,
+  functor, applicative, monoid, etc. **MUST** have tests proving the corresponding laws hold — for a monad: functor
+  identity (`m.Map(x => x) == m`), left identity (`Return(a).Bind(f) == f(a)`), right identity (`m.Bind(Return) == m`),
+  associativity, and `Map`/`Bind` consistency (`m.Map(f) == m.Bind(x => Return(f(x)))`). These are trivial to verify
+  for simple types and essential for complex ones (e.g. a parser's `Bind`); write them **regardless**, as executable
+  specification. Prefer `[Theory]` with representative functions/inputs for simple types; reach for property-based
+  generation (FsCheck/CsCheck) where the input space is large.
 
 ## Performance Benchmarks
 
@@ -330,8 +454,9 @@ rationale in README/CHANGELOG/PR.
   avoid unexplained placeholders. A reader must be able to paste the example and have it compile
 - Standard references block:
 
-      ## References
-      - [Title](URL) — Author or organization
+## References
+
+- [Title](URL) — Author or organization
 
 ### Markdown
 
@@ -346,7 +471,7 @@ rationale in README/CHANGELOG/PR.
 - **Edit shared files at their canonical source, never in a consumer repo.** Files synced by `diff-shared.sh` (mapped in
   `diff-shared.config.json`) are sourced from `vm2.Templates` (the `AddNewPackage` content). Edit the canonical copy
   first, then propagate with `diff-shared.sh`.
-  - Action **`copy`** (`.editorconfig`, `.gitignore`, `.gitattributes`, `CONVENTIONS.md`, `global.json`,
+  - Action **`copy`** (`.editorconfig`, `.gitignore`, `.gitattributes`, `.gitmessage`, `CONVENTIONS.md`, `global.json`,
     `LICENSE`, `NuGet.config`, `dependabot.yml`, the `cliff.*` configs, and several workflows — see the config for the
     authoritative list): **100% shared and overwritten verbatim.** A direct edit in a consumer repo MUST NOT be made —
     the next `diff-shared.sh` run silently clobbers it.
@@ -370,6 +495,31 @@ When adding a new project, register it in `.github/workflows/CI.yaml`:
 | `PACKAGE_PROJECTS`   | Projects to pack as NuGet packages    |
 
 Also add the project to the `.slnx` solution file under the appropriate folder.
+
+## Build Configuration, TFMs, RIDs, and Preprocessor Symbols
+
+- **`Directory.Build.props` is the single source of truth for `TargetFramework` and the artifacts layout**
+  (`ArtifactsPath`, `UseArtifactsOutput`). Workflows and scripts MUST NOT duplicate or override these — they read
+  build output locations, they do not decide them.
+- **The Runtime Identifier (RID) is deliberately left unset (`""`) today.** Every package builds portable,
+  framework-dependent, OS/architecture-agnostic output — no `RuntimeIdentifier` is set anywhere, and the
+  `runtime-identifier` workflow input exists but defaults to unspecified. This is why `runner-os` (and the
+  `runners-os` matrix in `_ci.yaml`) currently only selects which OS *runs* the build/test/benchmark step; it has no
+  effect on the artifact itself, since the output is the same regardless of runner. The input exists precisely so
+  this can change later: **when AOT publishing is introduced, RID becomes mandatory and MUST be derived from the
+  runner**, not hardcoded once for all of them (e.g. `ubuntu-latest` → `linux-x64`, `windows-latest` → `win-x64`,
+  `macos-latest` → `osx-arm64`). Treat `runner-os` as the future RID axis already in place, waiting for AOT to need
+  it.
+- **`Configuration` defaults to `Release`.** Workflow logic MUST NOT branch on or override `Configuration`; it is a
+  manual/CLI override knob (`workflow_dispatch`, local `dotnet build -c ...`) for the rare case a human needs a
+  Debug build, not something CI decides automatically. There is currently no scenario that justifies CI choosing
+  anything else.
+- **Keep the number of CI-driven preprocessor symbols to a minimum.** Today there is exactly one: `SHORT_RUN`,
+  auto-defined by `Directory.Build.props` for local benchmark builds and added explicitly in CI only for a `push` to
+  a non-main branch with no open PR yet (a faster, less comprehensive benchmark run; the PR-triggered run does the
+  full one). Every other CI path (`pull_request`, `workflow_dispatch`, `push` to `main`) leaves
+  `preprocessor-symbols` empty. Adding a new symbol is a deliberate ecosystem-wide decision, not a per-repo
+  convenience — propose it here first.
 
 ---
 *Canonical source: `vm2.Templates/templates/AddNewPackage/content/.github/CONVENTIONS.md`*
