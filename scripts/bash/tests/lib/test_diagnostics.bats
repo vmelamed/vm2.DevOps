@@ -21,13 +21,13 @@ load '../helpers/setup'
 }
 
 @test "error: increments the error counter and is reflected by has_errors/get_errors" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; error 'boom' 2>/dev/null; get_errors"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; error 'boom' 2>/dev/null; get_errors"
     assert_success
     assert_output "1"
 }
 
 @test "set_errors: sets the counter to a specific value" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; set_errors 5; get_errors"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; set_errors 5; get_errors"
     assert_output "5"
 }
 
@@ -39,7 +39,7 @@ load '../helpers/setup'
 }
 
 @test "reset_errors: sets the counter back to 0" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; set_errors 5; reset_errors; get_errors"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; set_errors 5; reset_errors; get_errors"
     assert_output "0"
 }
 
@@ -51,7 +51,7 @@ load '../helpers/setup'
 }
 
 @test "exit_if_has_bugs: exits 254 and reports the count when bugs are recorded" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; bug 'oops' 2>/dev/null; exit_if_has_bugs"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; bug 'oops' 2>/dev/null; exit_if_has_bugs"
     assert_failure 254
 }
 
@@ -63,19 +63,19 @@ load '../helpers/setup'
 }
 
 @test "exit_if_has_errors: exits 1 and shows usage text when errors are present (default)" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; source '$lib_dir/_args.sh'; function usage_text() { echo MARKER_USAGE_TEXT; }; error 'boom' 2>/dev/null; exit_if_has_errors"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_args.sh'; function usage_text() { echo MARKER_USAGE_TEXT; }; error 'boom' 2>/dev/null; exit_if_has_errors"
     assert_failure 1
     assert_output --partial "MARKER_USAGE_TEXT"
 }
 
 @test "exit_if_has_errors: exits 253 (err_has_errors) and skips usage text when \$1 is false" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; source '$lib_dir/_args.sh'; function usage_text() { echo MARKER_USAGE_TEXT; }; error 'boom' 2>/dev/null; exit_if_has_errors false"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_args.sh'; function usage_text() { echo MARKER_USAGE_TEXT; }; error 'boom' 2>/dev/null; exit_if_has_errors false"
     assert_failure 253
     refute_output --partial "MARKER_USAGE_TEXT"
 }
 
 @test "exit_if_has_errors: translates the error code in its message instead of leaking a bare number" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; source '$lib_dir/_args.sh'; function usage_text() { :; }; error 'boom' 2>/dev/null; exit_if_has_errors"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_args.sh'; function usage_text() { :; }; error 'boom' 2>/dev/null; exit_if_has_errors"
     assert_failure 1
     assert_output --partial "There are errors recorded in the global error counter"
     refute_line "253"
@@ -92,7 +92,7 @@ load '../helpers/setup'
 }
 
 @test "bug: prints to stderr with the bug prefix and increments the bug counter" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; bug 'contract violated' 2>&1 1>/dev/null"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; bug 'contract violated' 2>&1 1>/dev/null"
     [[ "$output" == *"something"* ]] || [[ "$output" == *"contract violated"* ]]
 }
 
@@ -115,7 +115,7 @@ load '../helpers/setup'
     assert_success
     refute_output --partial "hidden trace line"
 
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; set_verbose; trace 'visible trace line' 2>&1"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; set_verbose; trace 'visible trace line' 2>&1"
     assert_output --partial "visible trace line"
 }
 
@@ -135,7 +135,7 @@ load '../helpers/setup'
 # --- warning_var -------------------------------------------------------------------------------
 
 @test "warning_var: sets the referenced variable to the default and prints a warning" {
-    run --separate-stderr bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; v=''; warning_var v 'v not specified' 'fallback'; echo \"\$v\""
+    run --separate-stderr bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; v=''; warning_var v 'v not specified' 'fallback'; echo \"\$v\""
     assert_success
     assert_output "fallback"
     [[ "$stderr" == *"v not specified"* ]]
@@ -156,7 +156,7 @@ load '../helpers/setup'
 }
 
 @test "show_stack: prints frames when explicitly forced to true" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; function outer() { show_stack 0 5 true; }; outer"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; function outer() { show_stack 0 5 true; }; outer"
     assert_success
     assert_output --partial "outer"
 }

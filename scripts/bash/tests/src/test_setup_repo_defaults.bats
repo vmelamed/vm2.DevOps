@@ -21,7 +21,7 @@ _src_dir="$(cd "$lib_dir/../src" && pwd)"
 
 _sr() {
     env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" bash -c "
-        source '$lib_dir/core.sh' --no-trap > /dev/null
+        source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
         source '$_src_dir/setup-repo.defaults.sh'
         $1
     "

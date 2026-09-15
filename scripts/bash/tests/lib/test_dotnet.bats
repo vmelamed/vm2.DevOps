@@ -47,7 +47,7 @@ setup() {
 # --- convert_dotnet_args_to_msbuild_args -------------------------------------------------------
 
 @test "convert_dotnet_args_to_msbuild_args: converts known options and passes the project through" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare -a msb=(); convert_dotnet_args_to_msbuild_args msb proj.csproj --configuration Release -c Debug --self-contained; printf '%s\n' \"\${msb[@]}\""
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -a msb=(); convert_dotnet_args_to_msbuild_args msb proj.csproj --configuration Release -c Debug --self-contained; printf '%s\n' \"\${msb[@]}\""
     assert_success
     assert_line --index 0 "proj.csproj"
     assert_line --index 1 '-property:Configuration="Release"'
@@ -56,24 +56,24 @@ setup() {
 }
 
 @test "convert_dotnet_args_to_msbuild_args: drops @remove-mapped options like --no-build" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare -a msb=(); convert_dotnet_args_to_msbuild_args msb proj.csproj --no-build --no-restore; printf '%s\n' \"\${msb[@]}\""
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -a msb=(); convert_dotnet_args_to_msbuild_args msb proj.csproj --no-build --no-restore; printf '%s\n' \"\${msb[@]}\""
     assert_success
     assert_output "proj.csproj"
 }
 
 @test "convert_dotnet_args_to_msbuild_args: passes an unrecognized option through unchanged" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare -a msb=(); convert_dotnet_args_to_msbuild_args msb proj.csproj --some-unknown-flag; printf '%s\n' \"\${msb[@]}\""
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -a msb=(); convert_dotnet_args_to_msbuild_args msb proj.csproj --some-unknown-flag; printf '%s\n' \"\${msb[@]}\""
     assert_success
     assert_line --index 1 "--some-unknown-flag"
 }
 
 @test "convert_dotnet_args_to_msbuild_args: fails on the removed --os/--arch options" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare -a msb=(); convert_dotnet_args_to_msbuild_args msb proj.csproj --os linux"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -a msb=(); convert_dotnet_args_to_msbuild_args msb proj.csproj --os linux"
     assert_failure 3
 }
 
 @test "convert_dotnet_args_to_msbuild_args: fails when an option requiring a value is given last" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare -a msb=(); convert_dotnet_args_to_msbuild_args msb proj.csproj --configuration"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -a msb=(); convert_dotnet_args_to_msbuild_args msb proj.csproj --configuration"
     assert_failure 6
 }
 
@@ -86,7 +86,7 @@ setup() {
 
 @test "extract_dotnet_build_info: parses properties, result, warnings, and errors from build output" {
     run bash -c "
-        source '$lib_dir/core.sh' --no-trap > /dev/null
+        source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
         declare -A info=()
         extract_dotnet_build_info '$_fake_csproj' 0 info <<'EOF'
   Configuration=Release
@@ -114,7 +114,7 @@ EOF
 
 @test "extract_dotnet_build_info: drops per-project keys (TargetPath, PackageId) for solution builds" {
     run bash -c "
-        source '$lib_dir/core.sh' --no-trap > /dev/null
+        source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
         _fake_slnx='$BATS_TEST_TMPDIR/fake.slnx'
         echo fake > \"\$_fake_slnx\"
         declare -A info=()
@@ -145,7 +145,7 @@ EOF
 
 @test "display_dotnet_build_summary: prints a summary without crashing on a minimal build-info array" {
     run bash -c "
-        source '$lib_dir/core.sh' --no-trap > /dev/null
+        source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
         declare -A info=([build_result]=succeeded [ExitCode]=0 [Version]=1.2.3)
         display_dotnet_build_summary info
     "
@@ -155,7 +155,7 @@ EOF
 }
 
 @test "display_dotnet_build_summary: bug-exits on a non-associative-array argument" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare -a arr=(); display_dotnet_build_summary arr"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -a arr=(); display_dotnet_build_summary arr"
     assert_failure 254
 }
 
@@ -182,7 +182,7 @@ EOF
 }
 
 @test "get_target_path: bug-exits on a non-existent .csproj project (regression: was silently bypassed by a -v \$1 typo)" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare target=''; get_target_path 'totally-not-a-real-file.csproj' target"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare target=''; get_target_path 'totally-not-a-real-file.csproj' target"
     assert_failure 254
 }
 

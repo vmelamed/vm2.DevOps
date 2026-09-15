@@ -80,7 +80,7 @@ load '../helpers/setup'
     declare -A arr=([a]=1)
     run --separate-stderr timeout 5 bash -c '
         # shellcheck disable=SC2154 # lib_dir is referenced but not assigned.
-        source "'"$lib_dir"'/core.sh" --no-trap > /dev/null
+        source "'"$lib_dir"'/core.sh" --no-trap > /dev/null 2>&1
         declare -A arr=([a]=1)
         is_defined_associative_array arr
     '

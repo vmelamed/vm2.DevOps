@@ -52,7 +52,7 @@ lib_dir="$(cd "$_setup_dir/../../lib" && pwd)"
 # Captured as two separate subshells (not one combined dump split with bash's `%%`/`#*` glob
 # operators): those operators are pathologically slow on a ~150KB string (~8s per test file
 # load), while `sed`'s linear-time exclude/rewrite below is effectively instant.
-_lib_funcs="$(env -i HOME="$HOME" PATH="$PATH" bash -c 'source "$1/core.sh" --no-trap > /dev/null; declare -f' _ "$lib_dir")"
+_lib_funcs="$(env -i HOME="$HOME" PATH="$PATH" bash -c 'source "$1/core.sh" --no-trap > /dev/null 2>&1; declare -f' _ "$lib_dir")"
 
 # Captured via a before/after `compgen -v` diff, not `declare -p -x`: several library modules
 # (e.g. __verbose/__quiet/__dry_run/__table_format in _core_state.sh) are deliberately
@@ -63,7 +63,7 @@ _lib_funcs="$(env -i HOME="$HOME" PATH="$PATH" bash -c 'source "$1/core.sh" --no
 # present in the "before" snapshot.
 _lib_vars="$(env -i HOME="$HOME" PATH="$PATH" bash -c '
     _vm2_before_vars=$(compgen -v)
-    source "$1/core.sh" --no-trap > /dev/null
+    source "$1/core.sh" --no-trap > /dev/null 2>&1
     comm -13 <(printf "%s\n" "$_vm2_before_vars" | sort) <(compgen -v | sort) |
         grep -vE "^(_vm2_before_vars|script_name|script_dir|lib_dir|__VM2_LIB_[A-Z_]+_SH_LOADED)$" |
         while IFS= read -r _vm2_name; do declare -p "$_vm2_name" 2>/dev/null; done

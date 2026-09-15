@@ -23,7 +23,7 @@ _sr() {
     local _path="${2:-/usr/bin:/bin}"
     local _gh_call_log="${3:-}"
     env -i HOME="$HOME" PATH="$_path" GH_CALL_LOG="$_gh_call_log" bash -c "
-        source '$lib_dir/core.sh' --no-trap > /dev/null
+        source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
         source '$_src_dir/setup-repo.defaults.sh'
         source '$_src_dir/setup-repo.functions.sh'
         $1

@@ -73,7 +73,7 @@ setup() {
 # --- initialize_repo_state -----------------------------------------------------------------------
 
 @test "initialize_repo_state: populates every predefined key with an empty string" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare -A state=(); initialize_repo_state state; for k in \"\${!state[@]}\"; do echo \"\$k=[\${state[\$k]}]\"; done | sort"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); initialize_repo_state state; for k in \"\${!state[@]}\"; do echo \"\$k=[\${state[\$k]}]\"; done | sort"
     assert_success
     assert_line "name=[]"
     assert_line "owner=[]"
@@ -83,14 +83,14 @@ setup() {
 }
 
 @test "initialize_repo_state: bug-exits on a non-associative-array argument" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare -a arr=(); initialize_repo_state arr"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -a arr=(); initialize_repo_state arr"
     assert_failure 254
 }
 
 # --- get_repo_state (local git only, full_info=false to avoid network calls) --------------------
 
 @test "get_repo_state: populates local fields for the real vm2.DevOps repo, without calling the GitHub API" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare -A state=(); get_repo_state '$_repo_root' state false; echo \"root=[\${state[root]}]\"; echo \"owner=[\${state[owner]}]\"; echo \"name=[\${state[name]}]\"; echo \"repo_id=[\${state[repo_id]}]\""
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); get_repo_state '$_repo_root' state false; echo \"root=[\${state[root]}]\"; echo \"owner=[\${state[owner]}]\"; echo \"name=[\${state[name]}]\"; echo \"repo_id=[\${state[repo_id]}]\""
     assert_success
     assert_output --partial "root=[$_repo_root]"
     assert_output --partial "name=[vm2.DevOps]"
@@ -110,32 +110,32 @@ setup() {
 # --- has_local_repo / has_remote_repo / has_github_remote ---------------------------------------
 
 @test "has_local_repo / has_remote_repo: true for the real vm2.DevOps repo state" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare -A state=(); get_repo_state '$_repo_root' state false; has_local_repo state"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); get_repo_state '$_repo_root' state false; has_local_repo state"
     assert_success
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare -A state=(); get_repo_state '$_repo_root' state false; has_remote_repo state"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); get_repo_state '$_repo_root' state false; has_remote_repo state"
     assert_success
 }
 
 @test "has_local_repo: false for a freshly-initialized (empty) repo state" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare -A state=(); initialize_repo_state state; has_local_repo state"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); initialize_repo_state state; has_local_repo state"
     assert_failure 1
 }
 
 @test "has_github_remote: false without full repo-id info (full_info=false never populates it)" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare -A state=(); get_repo_state '$_repo_root' state false; has_github_remote state"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); get_repo_state '$_repo_root' state false; has_github_remote state"
     assert_failure 1
 }
 
 # --- read_repo_state / print_repo_state ----------------------------------------------------------
 
 @test "read_repo_state: deserializes key=value lines into the repo state" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare -A state=(); read_repo_state state < <(printf 'owner=acme\nname=widget\n'); echo \"owner=[\${state[owner]}] name=[\${state[name]}]\""
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); read_repo_state state < <(printf 'owner=acme\nname=widget\n'); echo \"owner=[\${state[owner]}] name=[\${state[name]}]\""
     assert_success
     assert_output "owner=[acme] name=[widget]"
 }
 
 @test "print_repo_state: prints every predefined key" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare -A state=(); initialize_repo_state state; state[owner]=acme; print_repo_state state"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); initialize_repo_state state; state[owner]=acme; print_repo_state state"
     assert_success
     assert_output --partial "owner: acme"
     assert_output --partial "root:"
@@ -163,7 +163,7 @@ setup() {
 }
 
 @test "root_working_tree: resolves the real repo root" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare root=''; root_working_tree '$_repo_root/scripts' root; echo \"\$root\""
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare root=''; root_working_tree '$_repo_root/scripts' root; echo \"\$root\""
     assert_success
     assert_output "$_repo_root"
 }
@@ -175,7 +175,7 @@ setup() {
 }
 
 @test "root_working_tree: bug-exits on a directory outside any Git work tree" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare root=''; root_working_tree /tmp root"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare root=''; root_working_tree /tmp root"
     assert_failure 254
 }
 
@@ -236,7 +236,7 @@ setup() {
 }
 
 @test "execute_gh_with_retry: honors dry-run without invoking gh for real" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; set_dry_run; execute_gh_with_retry 3 2 repo delete some/nonexistent-repo --yes"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; set_dry_run; execute_gh_with_retry 3 2 repo delete some/nonexistent-repo --yes"
     assert_success
     assert_output --partial "dry-run"
 }
@@ -247,7 +247,7 @@ setup() {
 }
 
 @test "execute_gh_api_with_retry: honors dry-run without invoking gh for real" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; set_dry_run; execute_gh_api_with_retry 3 2 repos/acme/nonexistent"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; set_dry_run; execute_gh_api_with_retry 3 2 repos/acme/nonexistent"
     assert_success
     assert_output --partial "dry-run"
 }

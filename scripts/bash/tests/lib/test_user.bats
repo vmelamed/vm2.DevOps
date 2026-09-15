@@ -14,7 +14,7 @@ load '../helpers/setup'
 # --- press_any_key ------------------------------------------------------------------------
 
 @test "press_any_key: returns immediately without prompting when quiet" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; set_quiet; press_any_key" < /dev/null
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; set_quiet; press_any_key" < /dev/null
     assert_success
     refute_output --partial "Press any key to continue"
 }
@@ -23,7 +23,7 @@ load '../helpers/setup'
     # read -p only ever displays its prompt when stdin is a real terminal (per bash(1)), which
     # is never true under bats -- so the prompt text itself isn't observable here; this checks
     # the actual behavior instead: it reads one key and returns.
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; press_any_key; echo done" <<< "x"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; press_any_key; echo done" <<< "x"
     assert_success
     assert_output --partial "done"
 }
@@ -31,29 +31,29 @@ load '../helpers/setup'
 # --- confirm --------------------------------------------------------------------------------
 
 @test "confirm: quiet mode returns the default (y) without prompting" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; set_quiet; confirm 'Proceed?'"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; set_quiet; confirm 'Proceed?'"
     assert_success
 }
 
 @test "confirm: quiet mode honors an explicit 'n' default" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; set_quiet; confirm 'Proceed?' n"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; set_quiet; confirm 'Proceed?' n"
     assert_failure 1
 }
 
 @test "confirm: reads y/n from stdin when not quiet" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; echo y | confirm 'Proceed?'"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; echo y | confirm 'Proceed?'"
     assert_success
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; echo n | confirm 'Proceed?'"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; echo n | confirm 'Proceed?'"
     assert_failure 1
 }
 
 @test "confirm: empty input falls back to the default" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; echo '' | confirm 'Proceed?' n"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; echo '' | confirm 'Proceed?' n"
     assert_failure 1
 }
 
 @test "confirm: re-prompts on invalid input until a valid y/n is given" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; printf 'maybe\ny\n' | confirm 'Proceed?'"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; printf 'maybe\ny\n' | confirm 'Proceed?'"
     assert_success
     assert_output --partial "Please enter one of Y or N"
 }
@@ -71,7 +71,7 @@ load '../helpers/setup'
 # --- enter_value ------------------------------------------------------------------------------
 
 @test "enter_value: quiet mode echoes the default without prompting" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; set_quiet; declare v=''; enter_value 'Name' v 'default-val'"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; set_quiet; declare v=''; enter_value 'Name' v 'default-val'"
     assert_success
     assert_output "default-val"
 }
@@ -80,20 +80,20 @@ load '../helpers/setup'
     # `<<<` (herestring), not a pipe: enter_value writes into $v via a nameref, and the right
     # side of a pipe runs in a subshell -- that write would be lost (see the file-level warning
     # at the top of _diagnostics.sh about piping into functions that set variables).
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare v=''; enter_value 'Name' v <<< 'typed-value'; echo \"[\$v]\""
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare v=''; enter_value 'Name' v <<< 'typed-value'; echo \"[\$v]\""
     assert_success
     assert_output --partial "[typed-value]"
 }
 
 @test "enter_value: empty input falls back to the default" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare v=''; enter_value 'Name' v 'fallback' <<< ''; echo \"[\$v]\""
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare v=''; enter_value 'Name' v 'fallback' <<< ''; echo \"[\$v]\""
     assert_success
     assert_output --partial "[fallback]"
 }
 
 @test "enter_value: re-prompts until the validation function accepts the input" {
     run bash -c "
-        source '$lib_dir/core.sh' --no-trap > /dev/null
+        source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
         function only_abc() { [[ \$1 == abc ]]; }
         declare v=''
         enter_value 'Name' v '' false only_abc <<< \$'wrong\nabc'
@@ -109,13 +109,13 @@ load '../helpers/setup'
 }
 
 @test "enter_value: bug-exits on a non-boolean secret flag" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare v=''; enter_value 'Name' v '' maybe"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare v=''; enter_value 'Name' v '' maybe"
     assert_failure 254
 }
 
 @test "enter_value: bug-exits when the default value itself fails validation" {
     run bash -c "
-        source '$lib_dir/core.sh' --no-trap > /dev/null
+        source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
         function only_abc() { [[ \$1 == abc ]]; }
         declare v=''
         enter_value 'Name' v 'not-abc' false only_abc
@@ -126,25 +126,25 @@ load '../helpers/setup'
 # --- choose -----------------------------------------------------------------------------------
 
 @test "choose: quiet mode returns the first (default) option without prompting" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; set_quiet; declare c=''; choose 'Pick one:' c A B C; echo \"\$c\""
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; set_quiet; declare c=''; choose 'Pick one:' c A B C; echo \"\$c\""
     assert_success
     assert_output "1"
 }
 
 @test "choose: reads a valid numeric choice from stdin" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare c=''; choose 'Pick one:' c A B C <<< 2; echo \"[\$c]\""
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare c=''; choose 'Pick one:' c A B C <<< 2; echo \"[\$c]\""
     assert_success
     assert_output --partial "[2]"
 }
 
 @test "choose: empty input falls back to the default (1)" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare c=''; choose 'Pick one:' c A B C <<< ''; echo \"[\$c]\""
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare c=''; choose 'Pick one:' c A B C <<< ''; echo \"[\$c]\""
     assert_success
     assert_output --partial "[1]"
 }
 
 @test "choose: re-prompts on an out-of-range or non-numeric choice" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare c=''; choose 'Pick one:' c A B C <<< \$'abc\n99\n2'; echo \"[\$c]\""
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare c=''; choose 'Pick one:' c A B C <<< \$'abc\n99\n2'; echo \"[\$c]\""
     assert_success
     assert_output --partial "Invalid choice"
     assert_output --partial "[2]"

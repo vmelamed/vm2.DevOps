@@ -41,11 +41,11 @@ load '../helpers/setup'
 }
 
 @test "ltrim_var/rtrim_var/trim_var: trim the referenced variable in place" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; v='  hi  '; ltrim_var v; echo \"[\$v]\""
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; v='  hi  '; ltrim_var v; echo \"[\$v]\""
     assert_output "[hi  ]"
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; v='  hi  '; rtrim_var v; echo \"[\$v]\""
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; v='  hi  '; rtrim_var v; echo \"[\$v]\""
     assert_output "[  hi]"
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; v='  hi  '; trim_var v; echo \"[\$v]\""
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; v='  hi  '; trim_var v; echo \"[\$v]\""
     assert_output "[hi]"
 }
 
@@ -126,47 +126,47 @@ load '../helpers/setup'
 }
 
 @test "is_safe_existing_path: succeeds for an existing path, fails for a non-existent one" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; cd '$lib_dir' && is_safe_existing_path core.sh"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; cd '$lib_dir' && is_safe_existing_path core.sh"
     assert_success
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; cd '$lib_dir' && is_safe_existing_path definitely/does/not/exist.txt"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; cd '$lib_dir' && is_safe_existing_path definitely/does/not/exist.txt"
     assert_failure 19
 }
 
 @test "is_safe_existing_directory: succeeds for a directory, fails for a file" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; cd '$lib_dir/..' && is_safe_existing_directory lib"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; cd '$lib_dir/..' && is_safe_existing_directory lib"
     assert_success
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; cd '$lib_dir' && is_safe_existing_directory core.sh"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; cd '$lib_dir' && is_safe_existing_directory core.sh"
     assert_failure 17
 }
 
 @test "is_safe_existing_file: succeeds for a non-empty file, fails for a directory" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; cd '$lib_dir' && is_safe_existing_file core.sh"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; cd '$lib_dir' && is_safe_existing_file core.sh"
     assert_success
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; cd '$lib_dir/..' && is_safe_existing_file lib"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; cd '$lib_dir/..' && is_safe_existing_file lib"
     assert_failure
 }
 
 # --- validate_json_array ------------------------------------------------------------------------
 
 @test "validate_json_array: normalizes a JSON array of strings, trimming and de-duplicating" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; v='[\" a \", \"b\", \"b\"]'; validate_json_array v; echo \"\$v\""
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; v='[\" a \", \"b\", \"b\"]'; validate_json_array v; echo \"\$v\""
     assert_success
     assert_output '["a","b"]'
 }
 
 @test "validate_json_array: converts a JSON string into a single-item array" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; v='\"hello\"'; validate_json_array v; echo \"\$v\""
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; v='\"hello\"'; validate_json_array v; echo \"\$v\""
     assert_success
     assert_output '["hello"]'
 }
 
 @test "validate_json_array: rejects a JSON object (caught by is_safe_input's brace check before it reaches jq)" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; v='{\"a\":1}'; validate_json_array v"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; v='{\"a\":1}'; validate_json_array v"
     assert_failure 12
 }
 
 @test "validate_json_array: validates each item via the provided validator function" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; v='[\"ubuntu-latest\", \"not-a-runner\"]'; validate_json_array v '' is_safe_runner_os"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; v='[\"ubuntu-latest\", \"not-a-runner\"]'; validate_json_array v '' is_safe_runner_os"
     assert_failure 11
 }
 
@@ -214,19 +214,19 @@ load '../helpers/setup'
 }
 
 @test "validate_nuget_server: resolves 'nuget' to NuGet.org's name and URL" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; s=nuget; name=''; url=''; validate_nuget_server s name url; echo \"\$name|\$url\""
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; s=nuget; name=''; url=''; validate_nuget_server s name url; echo \"\$name|\$url\""
     assert_success
     assert_output "NuGet.org|https://api.nuget.org/v3/index.json"
 }
 
 @test "validate_nuget_server: resolves 'github' using \$repo_owner" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; repo_owner=acme; s=github; name=''; url=''; validate_nuget_server s name url; echo \"\$name|\$url\""
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; repo_owner=acme; s=github; name=''; url=''; validate_nuget_server s name url; echo \"\$name|\$url\""
     assert_success
     assert_output "GitHub Packages|https://nuget.pkg.github.com/acme/index.json"
 }
 
 @test "validate_nuget_server: fails on an invalid server moniker" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; s='not-a-server'; name=''; url=''; validate_nuget_server s name url"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; s='not-a-server'; name=''; url=''; validate_nuget_server s name url"
     assert_failure 4
 }
 
@@ -262,7 +262,7 @@ load '../helpers/setup'
 }
 
 @test "validate_runtime: lower-cases and trims the referenced variable" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; r='  LINUX-X64  '; validate_runtime r; echo \"[\$r]\""
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; r='  LINUX-X64  '; validate_runtime r; echo \"[\$r]\""
     assert_success
     assert_output "[linux-x64]"
 }
@@ -270,19 +270,19 @@ load '../helpers/setup'
 # --- validate_preprocessor_symbols -----------------------------------------------------------
 
 @test "validate_preprocessor_symbols: accepts empty input" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; s=''; validate_preprocessor_symbols s; echo \"[\$s]\""
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; s=''; validate_preprocessor_symbols s; echo \"[\$s]\""
     assert_success
     assert_output "[]"
 }
 
 @test "validate_preprocessor_symbols: normalizes separators to semicolons and dedupes consecutive separators" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; s='DEBUG, TRACE:: FOO'; validate_preprocessor_symbols s; echo \"[\$s]\""
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; s='DEBUG, TRACE:: FOO'; validate_preprocessor_symbols s; echo \"[\$s]\""
     assert_success
     assert_output "[DEBUG;TRACE;FOO]"
 }
 
 @test "validate_preprocessor_symbols: rejects an invalid symbol" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; s='1BAD'; validate_preprocessor_symbols s"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; s='1BAD'; validate_preprocessor_symbols s"
     assert_failure 4
 }
 
