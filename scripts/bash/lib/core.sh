@@ -172,7 +172,7 @@ if ! "$__no_traps" && ! "$debugger"; then
     trap on_err ERR
     trap on_exit EXIT
 else
-    echo "Traps are disabled due to --no-trap option or debugger being active."
+    echo "Traps are disabled due to --no-trap option or debugger being active." >&2
 fi
 
 #---------------------------------------------------------------------------------------------
