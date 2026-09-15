@@ -65,7 +65,7 @@ _make_local_repo() {
 
 @test "validate_repo_root: fails with err_repo_with_no_ci for a repo with no .github/workflows" {
     run bash -c "
-        source '$lib_dir/core.sh' --no-trap > /dev/null
+        source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
         parent='$BATS_TEST_TMPDIR/norepo-parent'
         mkdir -p \"\$parent/some-repo\"
         git -C \"\$parent/some-repo\" init --quiet --initial-branch=main
@@ -83,7 +83,7 @@ _make_local_repo() {
     local parent="$BATS_TEST_TMPDIR/wrongbranch-parent"
     mkdir -p "$parent"
     _make_local_repo "$parent/some-repo"
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; validate_repo_root some-repo '$parent' not-main"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; validate_repo_root some-repo '$parent' not-main"
     assert_failure 84
 }
 
@@ -91,15 +91,32 @@ _make_local_repo() {
     local parent="$BATS_TEST_TMPDIR/good-parent"
     mkdir -p "$parent"
     _make_local_repo "$parent/some-repo"
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; validate_repo_root some-repo '$parent' main"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; validate_repo_root some-repo '$parent' main"
     assert_success
 }
 
 # --- resolve_vm2_repos (formal validation only -- the real success path hits real repos) --------
+#
+# resolve_vm2_repos() takes 1 to 4 positional arguments: the vm2_repos directory, the output
+# nameref, and two optional branch names ($3 for vm2.DevOps, $4 for vm2.Templates/SoT) that
+# override the "current branch" default -- e.g. diff-shared.sh's --not-main passes '' for both
+# (accept whatever branch each repo is on), while setup-repo.sh always passes 'main' 'main'.
 
 @test "resolve_vm2_repos: bug-exits with too many arguments" {
-    run resolve_vm2_repos "a" "b" "c"
+    run resolve_vm2_repos "a" "b" "c" "d" "e"
     assert_failure 254
+}
+
+@test "resolve_vm2_repos: accepts 3 or 4 arguments without an arity bug" {
+    # nonexistent directory still bug-exits, but for the directory reason, not an arity mismatch --
+    # proving 3 and 4 arguments are both within the now-valid 1-4 range.
+    run resolve_vm2_repos "/definitely/not/a/real/path" vm2_repos "main"
+    assert_failure 254
+    assert_output --partial "requires argument 1 to be an existing directory"
+
+    run resolve_vm2_repos "/definitely/not/a/real/path" vm2_repos "main" "main"
+    assert_failure 254
+    assert_output --partial "requires argument 1 to be an existing directory"
 }
 
 @test "resolve_vm2_repos: bug-exits on a non-existent directory argument" {
@@ -112,16 +129,36 @@ _make_local_repo() {
     assert_failure 254
 }
 
+@test "resolve_vm2_repos: rejects an invalid branch name in argument 3 (devops branch)" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_git_vm2.sh'; declare vm2_repos=''; resolve_vm2_repos '' vm2_repos '..bad..branch..'"
+    assert_failure 1
+    assert_output --partial "requires argument 3 to be a valid branch name if provided (provided '..bad..branch..')"
+}
+
+@test "resolve_vm2_repos: rejects an invalid branch name in argument 4 (SoT/vm2.Templates branch)" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_git_vm2.sh'; declare vm2_repos=''; resolve_vm2_repos '' vm2_repos '' '..bad..branch..'"
+    assert_failure 1
+    assert_output --partial "requires argument 4 to be a valid branch name if provided (provided '..bad..branch..')"
+}
+
+@test "resolve_vm2_repos: an empty branch name in argument 3 or 4 is accepted (means 'current branch')" {
+    # empty string is explicitly allowed (skips validate_branch_name) -- only reaches the directory
+    # bug, never a branch-related error.
+    run resolve_vm2_repos "/definitely/not/a/real/path" vm2_repos "" ""
+    assert_failure 254
+    refute_output --partial "valid branch name"
+}
+
 # --- search_repo_dir (real, read-only against the vm2.DevOps checkout) --------------------------
 
 @test "search_repo_dir: finds a known real subdirectory inside a Git repository" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare found=''; search_repo_dir '$_repo_root/..' 'vm2.DevOps/scripts/bash/lib' found; realpath -e \"\$found\""
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare found=''; search_repo_dir '$_repo_root/..' 'vm2.DevOps/scripts/bash/lib' found; realpath -e \"\$found\""
     assert_success
     assert_output "$lib_dir"
 }
 
 @test "search_repo_dir: fails with err_not_found for a name that doesn't exist" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare found=''; search_repo_dir '$_repo_root/..' 'definitely-not-a-real-subdir-xyz' found"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare found=''; search_repo_dir '$_repo_root/..' 'definitely-not-a-real-subdir-xyz' found"
     assert_failure 9
 }
 
@@ -138,7 +175,7 @@ _make_local_repo() {
 # --- resolve_repo_root (real, read-only) ----------------------------------------------------------
 
 @test "resolve_repo_root: resolves the vm2.DevOps repo root and found directory" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare root='' found=''; resolve_repo_root '$_repo_root/..' 'vm2.DevOps' root found; realpath -e \"\$root\"; realpath -e \"\$found\""
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare root='' found=''; resolve_repo_root '$_repo_root/..' 'vm2.DevOps' root found; realpath -e \"\$root\"; realpath -e \"\$found\""
     assert_success
     assert_line "$_repo_root"
     [[ $(echo "$output" | wc -l) -eq 2 ]]
@@ -152,7 +189,7 @@ _make_local_repo() {
 # --- get_vm2_sot_path -------------------------------------------------------------------------
 
 @test "get_vm2_sot_path: bug-exits when the vm2_repos parent argument is empty (regression: was compounding two bugs for one problem)" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare sot=''; get_vm2_sot_path '' AddNewPackage sot"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare sot=''; get_vm2_sot_path '' AddNewPackage sot"
     assert_failure 254
     output_lines_count=$(grep -c "🪲" <<< "$output")
     [[ $output_lines_count -eq 1 ]]
@@ -165,7 +202,7 @@ _make_local_repo() {
 
 @test "get_vm2_sot_path: resolves the SoT path when it exists on disk" {
     run bash -c "
-        source '$lib_dir/core.sh' --no-trap > /dev/null
+        source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
         parent='$BATS_TEST_TMPDIR/sot-parent'
         mkdir -p \"\$parent/vm2.Templates/templates/AddNewPackage/content\"
         declare sot=''
@@ -178,7 +215,7 @@ _make_local_repo() {
 
 @test "get_vm2_sot_path: fails when the SoT directory does not exist" {
     run bash -c "
-        source '$lib_dir/core.sh' --no-trap > /dev/null
+        source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
         parent='$BATS_TEST_TMPDIR/sot-parent-missing'
         mkdir -p \"\$parent\"
         declare sot=''
@@ -195,7 +232,7 @@ _make_local_repo() {
 # --- get_artifacts_path (real, read-only) ---------------------------------------------------------
 
 @test "get_artifacts_path: resolves a relative artifacts path against the real repo root" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null; declare art='artifacts'; get_artifacts_path '$lib_dir/core.sh' art; echo \"\$art\""
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare art='artifacts'; get_artifacts_path '$lib_dir/core.sh' art; echo \"\$art\""
     assert_success
     assert_output "$_repo_root/artifacts"
 }

@@ -179,14 +179,12 @@ function validate_gh_repo_description()
 #---------------------------------------------------------------------------------------------
 function validate_branch_name()
 {
-    local -i _rc="$success"
-
     (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the repository branch name to validate."
 
     exit_if_has_bugs
 
     git check-ref-format --branch "$1" &> "$_ignore" || {
-        _rc="$err_argument_value"
+        local _rc="$err_argument_value"
         error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a valid Git branch name (provided '${1:-<none>}'). See https://git-scm.com/docs/git-check-ref-format for details."
         return "$_rc"
     }

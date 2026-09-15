@@ -62,6 +62,7 @@ declare -xa target_repos=()     # the target repositories specified as arguments
 declare -xA selectors_actions=() # array [file] => [action string] for files specified on the CLI with --file* options
 declare -x diff_only="false"    # if true, only show the differences without asking the user to take any actions. This is useful for CI validation of the shared content. In this mode, the actions are ignored and the summary file will not contain the Action column.
 declare -x summary_file=""      # the file where the summary of the differences and actions will be written. If not specified, a temporary file will be created.
+declare -x not_main="false"    # both vm2.DevOps and SoT repositories must be on the main branch by default, otherwise on their respective current branches
 
 #===============================
 # Script shared variables:
@@ -74,6 +75,7 @@ declare -xa arguments=(         # array of all arguments for logging and debuggi
     selectors_actions
     diff_only
     summary_file
+    not_main
 )
 
 # this is the data model of the script. Bash does not have complex data structures, so we use parallel arrays to store the
@@ -107,7 +109,10 @@ is_in "$sot" "${sources_of_truth[@]}" || {
 #===============================
 declare -xi rc="$success"
 
-resolve_vm2_repos "$vm2_repos" vm2_repos || rc=$?
+declare branches
+$not_main && branches='' || branches='main'
+
+resolve_vm2_repos "$vm2_repos" vm2_repos "$branches" "$branches" || rc=$?
 (( rc == success )) || usage "Could not resolve the path of the vm2 repositories directory from the specified value of '$vm2_repos'."
 trace "All vm2 repositories are expected to be in '$vm2_repos'"
 
@@ -122,7 +127,6 @@ rc="$success"
 declare sot_path
 get_vm2_sot_path "$vm2_repos" "$sot" sot_path || rc=$?
 (( rc == success )) || usage -ec "$rc" "Could not find the source of truth directory for the specified template '$sot' in the expected location in '$vm2_repos'."
-trace "The source of truth directory for the '$sot' template is expected in '$sot_path'"
 
 declare -xr vm2_repos
 declare -xr sot
@@ -139,10 +143,10 @@ declare -a sot_dump_vars=(
     --header "Configuration for SoT $sot:"
     vm2_repos
     sot_path
-    --header "Core State:"
-    --core-state
     --header "Arguments:"
     "${arguments[@]}"
+    --header "Core State:"
+    --core-state
 )
 
 dump_vars "${sot_dump_vars[@]}"

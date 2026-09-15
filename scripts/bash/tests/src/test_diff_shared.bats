@@ -475,6 +475,26 @@ EOF
     assert_output --partial "summary_file=\"$BATS_TEST_TMPDIR/sum.md\""
 }
 
+@test "get_arguments: --not-main/-nm sets not_main, defaulting unset otherwise" {
+    run _ds --with-args "declare -a arguments=(); set_quiet
+                          get_arguments --not-main
+                          declare -p not_main"
+    assert_success
+    assert_output --partial 'not_main="true"'
+
+    run _ds --with-args "declare -a arguments=(); set_quiet
+                          get_arguments -nm
+                          declare -p not_main"
+    assert_success
+    assert_output --partial 'not_main="true"'
+
+    run _ds --with-args "declare -a arguments=(); set_quiet
+                          get_arguments myrepo
+                          declare -p not_main"
+    assert_success
+    refute_output --partial 'not_main="true"'
+}
+
 @test "get_arguments: --file* option variants map to the right action via get_selector_action" {
     run _ds --with-args "declare -a arguments=(); set_quiet
                           get_arguments --file-ignore '*.yaml' --file-copy '*.props'

@@ -169,16 +169,18 @@ declare -a vm2_repos_instructions=(
 #   2) the environment variable $VM2_REPOS, or
 #   3) the parent directory of vm2.DevOps's own repository root (via get_devops_parent).
 #
-# Once resolved, validates that the directory is the parent of both the vm2.DevOps and vm2.Templates repositories, that
-# each is on the "main" branch, and that each is at or ahead of its latest stable tag.
+# Once resolved, validates that the directory is the parent of both the vm2.DevOps and vm2.Templates repositories, and that
+# each is on the respective branch specified by @arg3 and @arg4, and that each is at or ahead of its latest stable tag.
 #
 # Notes:
 #   - Despite the exit-code table below (inherited from validate_repo_root), the "behind latest stable tag" warning
 #     messages in this function can never actually fire.
 #
 # @arg $1 string the directory to use as the parent directory of all vm2 repos (optional, default: $VM2_REPOS, or the
-#   parent directory of vm2.DevOps's repository root). Usually used with a parameter like '--vm2-repos' on the command line.
+#   parent directory of vm2.DevOps's repository root). Usually used with a parameter like '--vm2-repos' on the command line
 # @arg $2 nameref to a variable to receive the resolved vm2_repos directory
+# @arg $3 string the branch name for the vm2.DevOps repository (optional, default: the current branch).
+# @arg $4 string the branch name for the vm2.Templates repository (optional, default: the current branch).
 #
 # @exitcode success/positive=0: the vm2_repos directory was successfully resolved and validated
 # @exitcode err_not_directory=17: the parameter, $VM2_REPOS, or the resolved default is not a valid, existing directory
@@ -193,15 +195,23 @@ declare -a vm2_repos_instructions=(
 # shellcheck disable=SC2120
 function resolve_vm2_repos()
 {
-    (( $# <= 2 ))                            || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() takes 1 or 2 arguments ($# provided):" \
+    (( $# >= 1 && $# <= 4 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() takes 1 to 4 arguments ($# provided):" \
                                                                                     "  - the directory that is a parent to all vm2 repositories" \
-                                                                                    "  - name of a variable to receive the resolved vm2_repos directory"
+                                                                                    "  - name of a variable to receive the resolved vm2_repos directory" \
+                                                                                    "  - the branch name for the vm2.DevOps repository (optional, default: the current branch)." \
+                                                                                    "  - the branch name for the vm2.Templates repository (optional, default: the current branch)."
     [[ ! -v 1 || -z "$1" || -d "$1" ]]       || bug -ec "$err_not_directory" "${FUNCNAME[0]}() requires argument 1 to be an existing directory if provided (provided '${1:-<none>}')."
     [[ ! -v 2 ]] || is_defined_variable "$2" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to be a variable name to store the resolved vm2_repos directory (provided '${2:-<none>}')."
 
     exit_if_has_bugs
 
-    local -n _vm2_repos="$2"
+    [[ ! -v 3 || -z "$3" ]] || validate_branch_name "$3" || error -ec "$err_invalid_branch" "${FUNCNAME[0]}() requires argument 3 to be a valid branch name if provided (provided '${3:-<none>}')."
+    [[ ! -v 4 || -z "$4" ]] || validate_branch_name "$4" || error -ec "$err_invalid_branch" "${FUNCNAME[0]}() requires argument 4 to be a valid branch name if provided (provided '${4:-<none>}')."
+
+    exit_if_has_errors
+
+    local _devops_branch=${3:-}
+    local _sot_branch=${4:-}
 
     # try to resolve vm2 from the
     #   1) argument $1 (usually coming from a script command line option --vm2-repos)
@@ -209,10 +219,12 @@ function resolve_vm2_repos()
     #   3) the lib/ directory
     #   4) the hardcoded default location ${HOME}/repos/vm2_repos
     # in this order of preference:
+
     local _source=""
+    local _repos="$1"
+    local -n _vm2_repos="$2"
 
     # #1:
-    local _repos="$1"
     if [[ -n "$_repos" && -d "$_repos" ]]; then
         trace "vm2_repos='$_repos' from argument '$1'"
     # #2:
@@ -239,21 +251,21 @@ function resolve_vm2_repos()
     }
 
     # 1) validate that $vm2_repos is the parent directory of the git repository vm2.DevOps;
-    # 2) it is on the main branch;
+    # 2) it is on the specified branch;
     # 3) it is at or ahead of the latest stable tag:
     local -i _rc="$success"
-    validate_repo_root "$vm2_devops_repo_name" "$_repos" "main" || {
+    validate_repo_root "$vm2_devops_repo_name" "$_repos" "$_devops_branch" || {
         _rc=$?
-        error -ec "$err_logic_error" "The main branch of the repository '$vm2_devops_repo_name' is not in a clean state:" \
+        error -ec "$err_logic_error" "The branch '$_devops_branch' of the repository '$vm2_devops_repo_name' does not appear in a clean state:" \
                                      "$(error_message "$_rc")"
     }
 
     # validate that $vm2_repos is the parent directory of the git repository vm2.Templates;
     # it is on the main branch;
     # and it is at or ahead of the latest stable tag:
-    validate_repo_root "$vm2_sot_repo_name" "$_repos" "main" || {
+    validate_repo_root "$vm2_sot_repo_name" "$_repos" "$_sot_branch" || {
         _rc=$?
-        error -ec "$err_logic_error" "The main branch of the repository '$vm2_sot_repo_name' is not in a clean state:" \
+        error -ec "$err_logic_error" "The branch '$_sot_branch' of the repository '$vm2_sot_repo_name' does not appear in a clean state:" \
                                      "$(error_message "$_rc")"
     }
 

@@ -63,6 +63,8 @@ Switches:
                                 one by one. The set is defined in 'lib/_constants.sh'.
   -d, --diff                    Compare files and display differences and equalities without taking any
                                 action. Can be combined with --all-repos.
+  -nm, --not-main               Both vm2.DevOps and SoT repositories will use their respective current branches instead of the
+                                main branch.
 
 Environment Variables:
   VM2_REPOS                     The parent directory where all vm2 repositories are cloned.

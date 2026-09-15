@@ -110,7 +110,7 @@ readonly description
 #=============================================================================================
 declare -xi rc="$success"
 
-resolve_vm2_repos "$vm2_repos" vm2_repos || true
+resolve_vm2_repos "$vm2_repos" vm2_repos 'main' 'main' || true
 exit_if_has_errors
 readonly vm2_repos
 

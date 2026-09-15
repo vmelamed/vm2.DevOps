@@ -19,6 +19,7 @@ declare -xr all_actions_str
 
 declare -x  vm2_repos
 declare -x  sot
+declare -x  not_main
 declare -xa target_repos            # the target repositories specified as arguments. If not specified, the current directory is used as the only target repo.
 declare -xA selectors_actions       # array [file] => [action string] for files specified on the CLI with --file* options
 declare -x  diff_only
@@ -70,6 +71,10 @@ function get_arguments()
             --summary )
                 (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $__option"
                 summary_file="$1"; shift
+                ;;
+
+            --not-main|-nm )
+                not_main=true
                 ;;
 
             * ) (( ${#target_repos[@]} == 0 )) || ! is_in "$value" "${target_repos[@]}" &&
