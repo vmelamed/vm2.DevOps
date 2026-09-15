@@ -25,9 +25,6 @@ inputs:
   dotnet-version:
     description: .NET SDK version.
     default: 10.0.x
-  configuration:
-    description: Build configuration.
-    default: Release
   preprocessor-symbols:
     description: Preprocessor symbols (semicolon/space/comma-separated) from the repo env.
     default: ""
@@ -73,9 +70,6 @@ inputs:
   dispatch-skip-packages:
     description: Skip packages execution from workflow_dispatch input.
     default: "false"
-  artifacts-dir:
-    description: Artifacts directory relative to the repository root.
-    default: "artifacts"
 
 outputs:
   build-projects:
@@ -96,9 +90,6 @@ outputs:
   dotnet-version:
     description: .NET SDK version.
     value: ${{ steps.gather.outputs.dotnet-version }}
-  configuration:
-    description: Build configuration.
-    value: ${{ steps.gather.outputs.configuration }}
   preprocessor-symbols:
     description: Resolved preprocessor symbols.
     value: ${{ steps.gather.outputs.preprocessor-symbols }}
@@ -135,9 +126,6 @@ outputs:
   skip-push:
     description: Whether to skip push-triggered CI (true when an open PR exists for the branch).
     value: ${{ steps.gather.outputs.skip-push }}
-  artifacts-dir:
-    description: Artifacts directory relative to the repository root.
-    value: ${{ steps.gather.outputs.artifacts-dir }}
 
 runs:
   using: composite
@@ -161,7 +149,6 @@ runs:
         package_projects='${{ inputs.package-projects || '[]' }}'
         runners_os='${{ inputs.runners-os || '["ubuntu-latest"]' }}'
         dotnet_version='${{ inputs.dotnet-version }}'
-        configuration='${{ inputs.configuration }}'
         preprocessor_symbols='${{ inputs.preprocessor-symbols }}'
         min_coverage_pct='${{ inputs.min-coverage-pct }}'
         max_regression_pct='${{ inputs.max-regression-pct }}'
@@ -174,7 +161,6 @@ runs:
         skip_tests='false'
         skip_packages='false'
         skip_push='false'
-        artifacts_dir='${{ inputs.artifacts-dir || 'artifacts' }}'
 
         # depending on the event:
 
@@ -254,7 +240,6 @@ runs:
             package_projects \
             runners_os \
             dotnet_version \
-            configuration \
             preprocessor_symbols \
             min_coverage_pct \
             max_regression_pct \
@@ -266,5 +251,4 @@ runs:
             skip_benchmarks \
             skip_tests \
             skip_packages \
-            skip_push \
-            artifacts_dir
+            skip_push
