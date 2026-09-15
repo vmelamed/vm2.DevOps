@@ -22,9 +22,6 @@ inputs:
   runners-os:
     description: JSON array of runner OS-es.
     default: "[ubuntu-latest]"
-  dotnet-version:
-    description: .NET SDK version.
-    default: 10.0.x
   preprocessor-symbols:
     description: Preprocessor symbols (semicolon/space/comma-separated) from the repo env.
     default: ""
@@ -87,9 +84,6 @@ outputs:
   runners-os:
     description: JSON array of runner OS-es.
     value: ${{ steps.gather.outputs.runners-os }}
-  dotnet-version:
-    description: .NET SDK version.
-    value: ${{ steps.gather.outputs.dotnet-version }}
   preprocessor-symbols:
     description: Resolved preprocessor symbols.
     value: ${{ steps.gather.outputs.preprocessor-symbols }}
@@ -131,7 +125,7 @@ runs:
   using: composite
   steps:
     - name: Setup DevOps environment variables
-      uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
+      uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
 
     - name: Gather argument values depending on the event
       id: gather
@@ -148,7 +142,6 @@ runs:
         benchmark_projects='${{ inputs.benchmark-projects || '[]' }}'
         package_projects='${{ inputs.package-projects || '[]' }}'
         runners_os='${{ inputs.runners-os || '["ubuntu-latest"]' }}'
-        dotnet_version='${{ inputs.dotnet-version }}'
         preprocessor_symbols='${{ inputs.preprocessor-symbols }}'
         min_coverage_pct='${{ inputs.min-coverage-pct }}'
         max_regression_pct='${{ inputs.max-regression-pct }}'
@@ -239,7 +232,6 @@ runs:
             benchmark_projects \
             package_projects \
             runners_os \
-            dotnet_version \
             preprocessor_symbols \
             min_coverage_pct \
             max_regression_pct \

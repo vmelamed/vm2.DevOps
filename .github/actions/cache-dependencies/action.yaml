@@ -5,10 +5,6 @@ name: Cache .NET Packages
 description: Caches .NET packages to speed up build times
 
 inputs:
-  dotnet-version:
-    description: .NET SDK version to install
-    required: true
-
   runner-os:
     description: Runner OS for cache key scoping
     required: true
@@ -37,10 +33,9 @@ runs:
 
       # Install .NET SDK with built-in NuGet package caching
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: ${{ inputs.dotnet-version }}
-          dotnet-quality: 'ga'
+          global-json-file: global.json
           cache: true
           cache-dependency-path: |
             **/packages.lock.json
