@@ -54,6 +54,7 @@ declare -x description=""
 declare -x use_ssh=true
 declare -x use_https=false
 declare -x repo_owner=${ORGANIZATION:-$default_repo_owner}
+declare -x current_branch=false
 
 declare -x vm2_repos="${VM2_REPOS:-$HOME/repos/vm2}"
 declare -x repo_name=""
@@ -110,7 +111,10 @@ readonly description
 #=============================================================================================
 declare -xi rc="$success"
 
-resolve_vm2_repos "$vm2_repos" vm2_repos 'main' 'main' || true
+declare branches
+$current_branch && branches='' || branches='main'
+
+resolve_vm2_repos "$vm2_repos" vm2_repos "$branches" "$branches" || true
 exit_if_has_errors
 readonly vm2_repos
 

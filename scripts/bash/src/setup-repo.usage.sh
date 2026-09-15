@@ -104,6 +104,8 @@ Switches:
                                 and policies. Use this option alone when the repository already exists and is linked to a GitHub
                                 repository and none of the --interactive-* options are specified. In any other case, the script
                                 will run its normal course and will display the audit at the end anyway.
+  -cb, --current-branch         Both vm2.DevOps and SoT repositories will use their respective current branches instead of the
+                                main branch.
 $_common_args
 Examples:
   $script_name ~/repos/vm2.Glob

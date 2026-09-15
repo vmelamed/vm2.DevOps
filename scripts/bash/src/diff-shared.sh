@@ -62,7 +62,7 @@ declare -xa target_repos=()     # the target repositories specified as arguments
 declare -xA selectors_actions=() # array [file] => [action string] for files specified on the CLI with --file* options
 declare -x diff_only="false"    # if true, only show the differences without asking the user to take any actions. This is useful for CI validation of the shared content. In this mode, the actions are ignored and the summary file will not contain the Action column.
 declare -x summary_file=""      # the file where the summary of the differences and actions will be written. If not specified, a temporary file will be created.
-declare -x not_main="false"    # both vm2.DevOps and SoT repositories must be on the main branch by default, otherwise on their respective current branches
+declare -x current_branch="false"    # both vm2.DevOps and SoT repositories must be on the main branch by default, otherwise on their respective current branches
 
 #===============================
 # Script shared variables:
@@ -75,7 +75,7 @@ declare -xa arguments=(         # array of all arguments for logging and debuggi
     selectors_actions
     diff_only
     summary_file
-    not_main
+    current_branch
 )
 
 # this is the data model of the script. Bash does not have complex data structures, so we use parallel arrays to store the
@@ -110,7 +110,7 @@ is_in "$sot" "${sources_of_truth[@]}" || {
 declare -xi rc="$success"
 
 declare branches
-$not_main && branches='' || branches='main'
+$current_branch && branches='' || branches='main'
 
 resolve_vm2_repos "$vm2_repos" vm2_repos "$branches" "$branches" || rc=$?
 (( rc == success )) || usage "Could not resolve the path of the vm2 repositories directory from the specified value of '$vm2_repos'."

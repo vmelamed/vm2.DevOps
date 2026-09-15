@@ -125,13 +125,13 @@ declare -xrA agents_secrets=()
 declare -xrA codespaces_secrets=()
 
 declare -xrA actions_default_vars=(
+    # general:
+    ["DOTNET_VERSION"]="10.0.x"
     # build:
-    ["CONFIGURATION"]="Release"
-    ["FRAMEWORK"]="net10.0"
-    ["RUNTIME"]=""
-    ["ARTIFACTS_PATH"]="artifacts"
-    ["MINVERTAGPREFIX"]="v"
-    ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="preview.0"
+    # ["CONFIGURATION"]="Release"
+    # ["FRAMEWORK"]="net10.0"
+    # ["RUNTIME"]=""
+    # ["ARTIFACTS_PATH"]="artifacts"
     # test:
     ["MIN_COVERAGE_PCT"]="80"
     # benchmark:
@@ -140,6 +140,8 @@ declare -xrA actions_default_vars=(
     ["MAX_GEN2_COLLECTS"]="1"
     ["RESET_BENCHMARK_THRESHOLDS"]=false
     # nuget:
+    ["MINVERTAGPREFIX"]="v"
+    ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="preview.0"
     ["NUGET_SERVER"]="nuget"                # The default NuGet server to use for publishing packages. Can be 'nuget', 'github', or a custom server URL.
     ["NUGET_USERNAME"]="valo"               # The default username to use for the selected NuGet server. github - vmelamed, nuget - your NuGet.org username, custom server - as required.
     # debug:
@@ -150,13 +152,13 @@ declare -xrA actions_default_vars=(
 )
 
 declare -xra actions_default_vars_order=(
+    "--.NET:"
+    "DOTNET_VERSION"
     "--Build:"
-    "CONFIGURATION"
-    "FRAMEWORK"
-    "RUNTIME"
-    "ARTIFACTS_PATH"
-    "MINVERTAGPREFIX"
-    "MINVERDEFAULTPRERELEASEIDENTIFIERS"
+    # "CONFIGURATION"
+    # "FRAMEWORK"
+    # "RUNTIME"
+    # "ARTIFACTS_PATH"
     "--Test:"
     "MIN_COVERAGE_PCT"
     "--Benchmark:"
@@ -165,6 +167,8 @@ declare -xra actions_default_vars_order=(
     "MAX_GEN2_COLLECTS"
     "RESET_BENCHMARK_THRESHOLDS"
     "--Nuget:"
+    "MINVERTAGPREFIX"
+    "MINVERDEFAULTPRERELEASEIDENTIFIERS"
     "NUGET_SERVER"
     "NUGET_USERNAME"
     "--Trace:"
@@ -175,12 +179,11 @@ declare -xra actions_default_vars_order=(
 )
 
 declare -xrA actions_var_validators=(
-    ["CONFIGURATION"]="is_valid_configuration"
-    ["FRAMEWORK"]="is_valid_framework"
-    ["RUNTIME"]="is_valid_runtime"
-    ["ARTIFACTS_PATH"]="is_safe_valid_path"
-    ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="is_valid_minverPrereleaseId"
-    ["MINVERTAGPREFIX"]="validate_semverTagComponents"
+    ["DOTNET_VERSION"]="is_valid_dotnet_version"
+    # ["CONFIGURATION"]="is_valid_configuration"
+    # ["FRAMEWORK"]="is_valid_framework"
+    # ["RUNTIME"]="is_valid_runtime"
+    # ["ARTIFACTS_PATH"]="is_safe_valid_path"
     # test
     ["MIN_COVERAGE_PCT"]="is_valid_percentage"
     # benchmark
@@ -189,6 +192,8 @@ declare -xrA actions_var_validators=(
     ["MAX_GEN2_COLLECTS"]="is_non_negative"
     ["RESET_BENCHMARK_THRESHOLDS"]="is_boolean"
     # nuget
+    ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="is_valid_minverPrereleaseId"
+    ["MINVERTAGPREFIX"]="validate_semverTagComponents"
     ["NUGET_SERVER"]="is_one_of_nuget_servers"
     ["NUGET_USERNAME"]="is_safe_input"
     # debug

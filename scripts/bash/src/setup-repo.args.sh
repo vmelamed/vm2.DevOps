@@ -27,6 +27,7 @@ declare -x main_protection_rs_name
 declare -x description
 declare -x use_ssh
 declare -x use_https
+declare -x current_branch
 
 #---------------------------------------------------------------------------------------------
 # @description Parses the command-line arguments of `setup-repo.sh`, populating the script-level variables declared
@@ -117,6 +118,10 @@ function get_arguments()
 
             --audit|-a )
                 audit=true
+                ;;
+
+            --current-branch|-cb )
+                current_branch=true
                 ;;
 
             * ) if [[ -n "$repo_path" ]]; then
