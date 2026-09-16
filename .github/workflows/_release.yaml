@@ -84,6 +84,8 @@ jobs:
       # action .github/actions/scripts/action.yaml for both local and external calls
       - name: Setup DevOps environment variables
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
+        with:
+          ref: big-bang
 
       - name: Validate and compute release version
         id: version
@@ -109,6 +111,8 @@ jobs:
 
       - name: Setup DevOps environment variables
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
+        with:
+          ref: big-bang
 
       - name: Install git-cliff
         uses: taiki-e/install-action@v2
@@ -171,6 +175,8 @@ jobs:
 
       - name: Setup DevOps environment variables
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
+        with:
+          ref: big-bang
 
       - name: Setup .NET and the dependencies cache
         uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@big-bang

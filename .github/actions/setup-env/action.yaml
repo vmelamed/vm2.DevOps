@@ -4,25 +4,25 @@
 name: Setup DevOps Environment
 description: Provides access to vm2.DevOps bash scripts for CI/CD workflows
 
+inputs:
+  ref:
+    description: >-
+      Git ref (branch, tag, or SHA) of vm2.DevOps to check out for the bash library/scripts.
+      MUST match the ref this action itself is invoked with (e.g. '@big-bang'), since a
+      composite action cannot introspect its own invocation ref via the github context.
+    required: false
+    default: main
+
 runs:
   using: composite
   steps:
-    - name: Capture this action's own ref
-      # github.action_ref reflects whichever action is currently executing -- if captured any
-      # later than this, the nested actions/checkout step below would overwrite it with ITS OWN
-      # ref ("v7") before its own `with:` block gets to read it. Must run first, before any
-      # nested `uses:` step in this composite action.
-      if: github.repository != 'vmelamed/vm2.DevOps'
-      shell: bash
-      run: echo "VM2_DEVOPS_ACTION_REF=${{ github.action_ref }}" >> "$GITHUB_ENV"
-
     - name: Checkout vm2.DevOps scripts
       # Clone only the scripts from vm2.DevOps and invoke functions from scripts/bash/lib
       if: github.repository != 'vmelamed/vm2.DevOps'
       uses: actions/checkout@v7
       with:
         repository: vmelamed/vm2.DevOps
-        ref: ${{ env.VM2_DEVOPS_ACTION_REF }}
+        ref: ${{ inputs.ref }}
         path: vm2-devops
         persist-credentials: false
         sparse-checkout: |+

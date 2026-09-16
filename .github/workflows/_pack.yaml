@@ -78,6 +78,8 @@ jobs:
       # action .github/actions/scripts/action.yaml for both local and external calls
       - name: Setup DevOps
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
+        with:
+          ref: big-bang
 
       - name: Setup .NET and the dependencies cache
         uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@big-bang

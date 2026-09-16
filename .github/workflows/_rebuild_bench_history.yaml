@@ -98,6 +98,8 @@ jobs:
 
       - name: Setup DevOps environment variables
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
+        with:
+          ref: big-bang
 
       - name: Setup .NET and the dependencies cache
         uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@big-bang
