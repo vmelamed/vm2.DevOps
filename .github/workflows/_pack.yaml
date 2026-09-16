@@ -108,7 +108,7 @@ jobs:
         if: ${{ !inputs.skip-build-cache }}
         shell: bash
         run: |
-          find . -type d -path "*/bin/${{ inputs.configuration }}" -print -quit | grep -q . || {
+          [[ -d artifacts ]] || {
               echo "::error::No built artifacts were downloaded from the build job."
               exit 1
           }
