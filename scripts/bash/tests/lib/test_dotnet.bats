@@ -204,6 +204,9 @@ EOF
 # CLI.
 
 # Installs a fake 'dotnet' on $PATH that logs its arguments and exits with $1 (default 0).
+# Rejects any option 'dotnet nuget update source' does not really support (regression guard --
+# a real dotnet CLI rejected --no-logo here with exit 1, which a permissive stub would have
+# silently accepted and never caught).
 _install_fake_dotnet_nuget() {
     local _exit_code="${1:-0}"
     local _dir="$BATS_TEST_TMPDIR/fakebin"
@@ -211,6 +214,17 @@ _install_fake_dotnet_nuget() {
     cat > "$_dir/dotnet" <<EOF
 #!/usr/bin/env bash
 echo "\$*" >> "$BATS_TEST_TMPDIR/dotnet.log"
+if [[ "\$1 \$2 \$3" == "nuget update source" ]]; then
+    shift 3
+    while (( \$# > 0 )); do
+        case "\$1" in
+            -s|--source|-u|--username|-p|--password|--valid-authentication-types|--protocol-version|--configfile) shift 2 ;;
+            --store-password-in-clear-text|--allow-insecure-connections|--force-english-output|-h|-\\?|--help) shift ;;
+            github.vm2) shift ;;
+            *) echo "Unrecognized command or argument '\$1'." >&2; exit 1 ;;
+        esac
+    done
+fi
 exit $_exit_code
 EOF
     chmod +x "$_dir/dotnet"

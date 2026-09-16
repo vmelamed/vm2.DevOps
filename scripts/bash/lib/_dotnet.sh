@@ -353,7 +353,6 @@ function update_nuget_sources_with_github_vm2()
     }
 
     execute dotnet nuget update source github.vm2 \
-                --no-logo \
                 --configfile NuGet.config \
                 --username "$_gh_nuget_username" \
                 --password "$_gh_nuget_password" \
