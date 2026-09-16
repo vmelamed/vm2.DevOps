@@ -13,6 +13,7 @@ runs:
       uses: actions/checkout@v7
       with:
         repository: vmelamed/vm2.DevOps
+        ref: ${{ github.action_ref }}
         path: vm2-devops
         persist-credentials: false
         sparse-checkout: |+
