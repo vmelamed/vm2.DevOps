@@ -26,10 +26,10 @@ declare -x common_dotnet_args_to_output
 
 # Define CI common variables passed in as common CI arguments
 declare -x preprocessor_symbols
-declare -x configuration
-declare -x framework
-declare -x runtime
-declare -x artifacts
+# declare -x configuration
+# declare -x framework
+# declare -x runtime
+# declare -x artifacts
 declare -x minver_tag_prefix
 declare -x minver_prerelease_id
 declare -x gh_nuget_username
@@ -118,26 +118,36 @@ is_safe_boolean "$reset_benchmark_thresholds"                                   
 is_safe_boolean "$skip_benchmarks"                                                                               || true
 is_safe_boolean "$skip_tests"                                                                                    || true
 is_safe_boolean "$skip_packages"                                                                                 || true
-sanitize_common_dotnet_args "$(jq -r '.[0] // "."' <<< "$build_projects")"                                      || true
+sanitize_common_dotnet_args "$(jq -r '.[0] // "."' <<< "$build_projects")"                                       || true
 
-dump_vars --quiet --force \
-    --header "Validated Parameters" \
-    build_projects \
-    test_projects \
-    benchmark_projects \
-    package_projects \
-    runners_os \
-    min_coverage_pct \
-    max_regression_pct \
-    max_gen1_collects \
-    max_gen2_collects \
-    reset_benchmark_thresholds \
-    skip_benchmarks \
-    skip_tests \
-    skip_packages \
-    --blank \
-    --common-dotnet-args \
-    | to_summary
+declare -ra dump_vars_args=(
+    --quiet
+    --force
+    --header "Validated Parameters"
+    --header "Hosts:"
+    runners_os
+    --header "Projects:"
+    build_projects
+    test_projects
+    benchmark_projects
+    package_projects
+    --header "\`dotnet <command>\` CLI Arguments:"
+    --common-dotnet-args
+    --header "Coverage and Regression Parameters:"
+    min_coverage_pct
+    max_regression_pct
+    max_gen1_collects
+    max_gen2_collects
+    --line
+    reset_benchmark_thresholds
+    skip_benchmarks
+    skip_tests
+    skip_packages
+    --header "Core State:"
+    --core-state
+)
+
+dump_vars "${dump_vars_args[@]}" | to_summary
 
 exit_if_has_errors
 info "✅ All parameters validated successfully"

@@ -158,6 +158,7 @@ _run_validate_input() {
 
 # --- tool prerequisites ---------------------------------------------------------------------
 
+# bats test_tags=tool-check
 @test "validate-input: fails with a clear error when jq cannot be found or installed" {
     _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
     mkdir -p "$BATS_TEST_TMPDIR/bin"
@@ -177,6 +178,7 @@ _run_validate_input() {
     assert_output --partial "'jq' was not found and could not install it"
 }
 
+# bats test_tags=tool-check
 @test "validate-input: fails with a clear error when gh cannot be found or installed" {
     _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
     mkdir -p "$BATS_TEST_TMPDIR/bin"

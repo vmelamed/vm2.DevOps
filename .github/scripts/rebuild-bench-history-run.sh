@@ -27,7 +27,6 @@ declare -xri err_unknown_argument
 declare -x _ignore
 
 declare -xr default_minver_tag_prefix
-declare -xr default_minver_prerelease_id
 
 declare -xri default_repeat=10
 

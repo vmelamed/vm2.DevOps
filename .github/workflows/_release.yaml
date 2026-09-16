@@ -13,16 +13,6 @@ on:
         type: string
         default: "[]"
 
-      target-framework:
-        description: Version of .NET SDK to use (cannot be null or empty string, default 10.0.x)
-        type: string
-        required: true
-
-      configuration:
-        description: The type of build to produce, e.g. Release vs Debug. Cannot be null or empty!
-        type: string
-        default: Release
-
       preprocessor-symbols:
         description: Preprocessor symbols to pass to the compiler
         type: string
@@ -30,11 +20,6 @@ on:
 
       minver-tag-prefix:
         description: "Prefix for git tags to be recognized by MinVer (default 'v')"
-        type: string
-        required: true
-
-      minver-prerelease-id:
-        description: Prefix for the prerelease tag, e.g. 'preview.0', 'alpha', 'beta', 'rc', etc. (cannot be null or empty string, default 'preview.0')
         type: string
         required: true
 
@@ -75,8 +60,8 @@ permissions:
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
-  ARTIFACTS_PATH: ${{ vars.ARTIFACTS_PATH || 'artifacts' }}
   VERBOSE: ${{ vars.VERBOSE || false }}
+  DOTNET_VERSION: ${{ vars.DOTNET_VERSION }}
 
 jobs:
   compute-version:
@@ -98,7 +83,7 @@ jobs:
       # Clone only the scripts from vm2.DevOps, so that we can run the composite
       # action .github/actions/scripts/action.yaml for both local and external calls
       - name: Setup DevOps environment variables
-        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
+        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
 
       - name: Validate and compute release version
         id: version
@@ -123,7 +108,7 @@ jobs:
           token: ${{ secrets.RELEASE_PAT }}
 
       - name: Setup DevOps environment variables
-        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
+        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
 
       - name: Install git-cliff
         uses: taiki-e/install-action@v2
@@ -185,12 +170,12 @@ jobs:
           filter: tree:0
 
       - name: Setup DevOps environment variables
-        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
+        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
 
       - name: Setup .NET and the dependencies cache
-        uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@main
+        uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@big-bang
         with:
-          target-framework: ${{ inputs.target-framework }}
+          dotnet-version: ${{ vars.DOTNET_VERSION }}
           runner-os: ubuntu-latest
           github-token: ${{ github.token }}
           github-actor: ${{ github.actor }}
@@ -230,8 +215,7 @@ jobs:
               --define "${{ inputs.preprocessor-symbols }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
               --reason "${{ needs.compute-version.outputs.reason }}" \
-              --nuget-server "${{ inputs.nuget-server }}" \
-              --artifacts "$ARTIFACTS_PATH"
+              --nuget-server "${{ inputs.nuget-server }}"
 
       - name: Upload package artifact
         uses: actions/upload-artifact@v7

@@ -716,7 +716,7 @@ function validate_nuget_server()
     return "$_rc"
 }
 
-declare -xr build_config_regex="^[A-Za-z_][A-Za-z0-9_]*$"
+declare -xr build_config_regex="^([A-Za-z_][A-Za-z0-9_]*)?$"
 #---------------------------------------------------------------------------------------------
 # @description Tests if a build configuration name is a valid identifier.
 #
@@ -762,7 +762,7 @@ function is_safe_configuration()
         return "$negative"
     }
 
-    is_in "$1" "${known_configurations[@]}" ||
+    [[ -z $1 ]] || is_in "$1" "${known_configurations[@]}" ||
         warning -ec "$err_argument_value" "The configuration '$1' is not among the known configurations: ${known_configurations[*]}."
 
     return "$positive"

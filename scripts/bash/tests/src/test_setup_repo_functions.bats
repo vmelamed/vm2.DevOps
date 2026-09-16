@@ -367,7 +367,7 @@ EOF
 #!/usr/bin/env bash
 echo "$*" >> "$GH_CALL_LOG"
 if [[ "$1 $2" == "api --paginate" ]]; then
-    echo '{"variables":[{"name":"CONFIGURATION","value":"Release"},{"name":"NUGET_SERVER","value":"github"}]}' | jq -r '.variables[] | "\(.name)=\(.value)"'
+    echo '{"variables":[{"name":"VERBOSE","value":"true"},{"name":"NUGET_SERVER","value":"github"}]}' | jq -r '.variables[] | "\(.name)=\(.value)"'
 fi
 exit 0
 EOF
@@ -381,9 +381,9 @@ EOF
     assert_success
     assert_output --partial 'nuget_server="github"'
     run cat "$BATS_TEST_TMPDIR/calls.log"
-    refute_output --partial "variable set CONFIGURATION"
+    refute_output --partial "variable set VERBOSE"
     refute_output --partial "variable set NUGET_SERVER"
-    assert_output --partial "variable set FRAMEWORK --body net10.0 -R acme/myrepo"
+    assert_output --partial "variable set MINVERTAGPREFIX --body v -R acme/myrepo"
 }
 
 # =====================================================================================

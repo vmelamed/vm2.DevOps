@@ -50,6 +50,7 @@ function dump_args()
         --header "Arguments for $script_name:"
 
         build_project
+
         --header "\`dotnet <command>\` CLI Arguments:"
         --common-dotnet-args
 

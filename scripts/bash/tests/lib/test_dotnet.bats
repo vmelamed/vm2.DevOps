@@ -190,3 +190,86 @@ EOF
     run get_target_path "$_fake_csproj"
     assert_failure 254
 }
+
+# --- update_nuget_sources_with_github_vm2 ------------------------------------------------------
+#
+# Credential precedence (highest to lowest): explicit positional args > $gh_nuget_username/
+# $gh_nuget_password globals > $GH_ACTOR/$GH_TOKEN env vars -- the CI path sets GH_ACTOR/GH_TOKEN
+# from github.actor/github.token; standalone runs rely on NuGet.config's own stored credentials
+# and simply never call this function with any credentials available.
+#
+# Every test explicitly unsets GH_ACTOR/GH_TOKEN/gh_nuget_username/gh_nuget_password first: bats
+# inherits the invoking shell's real environment (unlike the isolated env -i subshells used
+# elsewhere in this file), and the developer's own shell commonly has GH_TOKEN set for the 'gh'
+# CLI.
+
+# Installs a fake 'dotnet' on $PATH that logs its arguments and exits with $1 (default 0).
+_install_fake_dotnet_nuget() {
+    local _exit_code="${1:-0}"
+    local _dir="$BATS_TEST_TMPDIR/fakebin"
+    mkdir -p "$_dir"
+    cat > "$_dir/dotnet" <<EOF
+#!/usr/bin/env bash
+echo "\$*" >> "$BATS_TEST_TMPDIR/dotnet.log"
+exit $_exit_code
+EOF
+    chmod +x "$_dir/dotnet"
+    PATH="$_dir:$PATH"
+}
+
+@test "update_nuget_sources_with_github_vm2: warns and succeeds when no credentials are available anywhere" {
+    unset GH_ACTOR GH_TOKEN gh_nuget_username gh_nuget_password
+    run update_nuget_sources_with_github_vm2
+    assert_success
+    assert_output --partial "GitHub NuGet source credentials are not provided"
+}
+
+@test "update_nuget_sources_with_github_vm2: falls back to \$GH_ACTOR/\$GH_TOKEN when no globals or arguments are given" {
+    unset gh_nuget_username gh_nuget_password
+    export GH_ACTOR="ci-actor"
+    export GH_TOKEN="ci-token"
+    _install_fake_dotnet_nuget
+    run update_nuget_sources_with_github_vm2
+    assert_success
+    run cat "$BATS_TEST_TMPDIR/dotnet.log"
+    assert_output --partial "--username ci-actor"
+    assert_output --partial "--password ci-token"
+}
+
+@test "update_nuget_sources_with_github_vm2: \$gh_nuget_username/\$gh_nuget_password globals take precedence over \$GH_ACTOR/\$GH_TOKEN" {
+    export GH_ACTOR="ci-actor"
+    export GH_TOKEN="ci-token"
+    gh_nuget_username="global-user"
+    gh_nuget_password="global-pass"
+    _install_fake_dotnet_nuget
+    run update_nuget_sources_with_github_vm2
+    assert_success
+    run cat "$BATS_TEST_TMPDIR/dotnet.log"
+    assert_output --partial "--username global-user"
+    assert_output --partial "--password global-pass"
+}
+
+@test "update_nuget_sources_with_github_vm2: explicit positional arguments take precedence over globals and env vars" {
+    unset GH_ACTOR GH_TOKEN
+    gh_nuget_username="global-user"
+    gh_nuget_password="global-pass"
+    _install_fake_dotnet_nuget
+    run update_nuget_sources_with_github_vm2 "arg-user" "arg-pass"
+    assert_success
+    run cat "$BATS_TEST_TMPDIR/dotnet.log"
+    assert_output --partial "--username arg-user"
+    assert_output --partial "--password arg-pass"
+}
+
+@test "update_nuget_sources_with_github_vm2: bug-exits when only one positional argument is given" {
+    run update_nuget_sources_with_github_vm2 "only-user"
+    assert_failure 254
+}
+
+@test "update_nuget_sources_with_github_vm2: reports err_tool_error when 'dotnet nuget update source' fails" {
+    unset GH_ACTOR GH_TOKEN
+    _install_fake_dotnet_nuget 1
+    run update_nuget_sources_with_github_vm2 "user" "pass"
+    assert_failure 66
+    assert_output --partial "Failed to update the NuGet sources with GitHub packages from vm2"
+}

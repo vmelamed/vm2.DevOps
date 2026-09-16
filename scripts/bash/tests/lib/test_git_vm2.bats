@@ -237,6 +237,12 @@ _make_local_repo() {
     assert_output "$_repo_root/artifacts"
 }
 
+@test "get_artifacts_path: an empty incoming value defaults to 'artifacts' instead of resolving to the repo root (regression: was rm -rf-ing the wrong directory)" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare art=''; get_artifacts_path '$lib_dir/core.sh' art; echo \"\$art\""
+    assert_success
+    assert_output "$_repo_root/artifacts"
+}
+
 @test "get_artifacts_path: bug-exits on a non-existent argument 1" {
     run get_artifacts_path "/definitely/not/a/real/path" art
     assert_failure 254

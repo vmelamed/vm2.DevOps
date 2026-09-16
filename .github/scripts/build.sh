@@ -27,14 +27,14 @@ declare -xri err_not_found
 
 # Define CI common variables passed in as common dotnet arguments
 declare -x preprocessor_symbols
-declare -x configuration
-declare -x framework
-declare -x runtime
-declare -x artifacts
 declare -x minver_tag_prefix
 declare -x minver_prerelease_id
 declare -x gh_nuget_username
 declare -x gh_nuget_password
+declare -x configuration
+declare -x framework
+declare -x runtime
+declare -x artifacts
 
 # parameters specific to this script only with initial values from environment variables or defaults
 declare -x build_project=""

@@ -16,36 +16,10 @@ on:
         type: string
         default: ubuntu-latest
 
-      configuration:
-        description: The type of build to produce, e.g. Release vs Debug, default - Release
-        type: string
-        default: Release
-
-      target-framework:
-        description: |
-          Target framework moniker (e.g. net10.0). Optional, default - unspecified, i.e. as specified in the project, or in the nearest Directory.Build.props
-        type: string
-        default: ''
-
-      runtime-identifier:
-        description: Runtime identifier (RID) for the target platform. Optional, default unspecified
-        type: string
-        required: false
-
       preprocessor-symbols:
         description: Preprocessor symbols to pass to the compiler (default - none)
         type: string
         default: ""
-
-      minver-tag-prefix:
-        description: MinVer tag prefix to use for version calculation. Cannot be null or empty!
-        type: string
-        default: v
-
-      minver-prerelease-id:
-        description: MinVer pre-release identifiers to use for version calculation. Cannot be null or empty!
-        type: string
-        default: preview.0
 
 permissions:
   contents: read
@@ -54,6 +28,8 @@ permissions:
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
+  MINVERTAGPREFIX: ${{ vars.MINVERTAGPREFIX }}
+  MINVERDEFAULTPRERELEASEIDENTIFIERS: ${{ vars.MINVERDEFAULTPRERELEASEIDENTIFIERS }}
   GH_TOKEN: ${{ github.token }}
   GH_ACTOR: ${{ github.actor }}
   VERBOSE: ${{ vars.VERBOSE || false }}
@@ -75,15 +51,14 @@ jobs:
           filter: tree:0
 
       - name: Setup DevOps environment variables
-        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
+        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
 
       - name: Setup .NET and the dependencies cache
-        uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@main
+        uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@big-bang
         with:
-          target-framework: ${{ inputs.target-framework }}
           runner-os: ${{ inputs.runner-os }}
-          github-token: ${{ github.token }}
           github-actor: ${{ github.actor }}
+          github-token: ${{ github.token }}
 
       - name: Build
         id: build
@@ -91,7 +66,6 @@ jobs:
         run: |
           build.sh \
               "${{ inputs.build-project }}" \
-              --configuration "${{ inputs.configuration }}" \
               --define "${{ inputs.preprocessor-symbols }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
               --minver-prerelease-id "${{ inputs.minver-prerelease-id }}"
@@ -141,10 +115,10 @@ jobs:
         run: |
           # bin/<config> for the jobs that execute binaries (test, benchmarks); obj/ for the jobs that re-enter
           # MSBuild with --no-build (pack needs the intermediate assembly and generated nuspec inputs).
-          readarray -t bin_dirs < <(find . -type d -path "*/bin/${{ inputs.configuration }}" -prune -print)
+          readarray -t bin_dirs < <(find . -type d -path "*/bin/Release" -prune -print)
           readarray -t obj_dirs < <(find . -type d -name obj -prune -print)
           [[ ${#bin_dirs[@]} -gt 0 ]] || {
-              echo "::error::Build produced no output in bin/${{ inputs.configuration }}."
+              echo "::error::Build produced no output in bin/Release."
               exit 1
           }
           tar czf built-artifacts.tar.gz --exclude='*.tmp' "${bin_dirs[@]}" "${obj_dirs[@]}"
@@ -152,5 +126,5 @@ jobs:
       - name: Upload built artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: built-artifacts-${{ runner.os }}-${{ inputs.configuration }}-${{ steps.slug.outputs.slug }}-${{ github.run_id }}
+          name: built-artifacts-${{ runner.os }}-${{ steps.slug.outputs.slug }}-${{ github.run_id }}
           path: built-artifacts.tar.gz

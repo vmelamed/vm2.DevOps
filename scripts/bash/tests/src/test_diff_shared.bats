@@ -497,24 +497,24 @@ EOF
     assert_output --partial "summary_file=\"$BATS_TEST_TMPDIR/sum.md\""
 }
 
-@test "get_arguments: --not-main/-nm sets not_main, defaulting unset otherwise" {
+@test "get_arguments: --current-branch/-cb sets not_main, defaulting unset otherwise" {
     run _ds --with-args "declare -a arguments=(); set_quiet
-                          get_arguments --not-main
-                          declare -p not_main"
+                          get_arguments --current-branch
+                          declare -p current_branch"
     assert_success
-    assert_output --partial 'not_main="true"'
+    assert_output --partial 'current_branch="true"'
 
     run _ds --with-args "declare -a arguments=(); set_quiet
-                          get_arguments -nm
-                          declare -p not_main"
+                          get_arguments -cb
+                          declare -p current_branch"
     assert_success
-    assert_output --partial 'not_main="true"'
+    assert_output --partial 'current_branch="true"'
 
     run _ds --with-args "declare -a arguments=(); set_quiet
                           get_arguments myrepo
-                          declare -p not_main"
+                          declare -p current_branch"
     assert_success
-    refute_output --partial 'not_main="true"'
+    refute_output --partial 'current_branch="true"'
 }
 
 @test "get_arguments: --file* option variants map to the right action via get_selector_action" {

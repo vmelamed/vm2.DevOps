@@ -14,12 +14,12 @@ load '../helpers/setup'
 # --- default values --------------------------------------------------------------------------
 
 @test "defaults: configuration is Debug outside CI" {
-    [[ $configuration == Debug ]]
+    [[ -z $configuration ]]
 }
 
 @test "defaults: framework, artifacts, minver-tag-prefix have their documented defaults" {
-    [[ $framework == '' ]]
-    [[ $artifacts == artifacts ]]
+    [[ -z $framework ]]
+    [[ -z $artifacts ]]
     [[ $minver_tag_prefix == v ]]
 }
 
@@ -88,7 +88,7 @@ load '../helpers/setup'
 
 @test "common_dotnet_to_output: writes key=value pairs for each common dotnet variable" {
     run bash -c "source '$lib_dir/gh_core.sh' --no-trap > /dev/null 2>&1; common_dotnet_to_output"
-    assert_output --partial "configuration=Debug"
-    assert_output --partial "artifacts=artifacts"
+    assert_output --partial "configuration="
+    assert_output --partial "artifacts="
     assert_output --partial "minver-tag-prefix=v"
 }

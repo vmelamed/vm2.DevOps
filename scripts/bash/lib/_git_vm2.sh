@@ -400,7 +400,6 @@ function resolve_repo_root()
                                                                                     "  - the name of the variable to store the absolute path of the found directory"
 
     [[ ! -v 1 || -d $1 ]]                    || bug -ec "$err_not_directory" "${FUNCNAME[0]}() requires argument 1, the repositories parent directory, to be an existing directory (provided '${1:-<none>}')."
-    [[ ! -v 2 || -z $2 || -e $2 ]]           || bug -ec "$err_not_directory" "${FUNCNAME[0]}() requires argument 2, the path to a directory inside the vm2 repository working tree, to be an existing path (provided '${2:-<none>}')."
     [[ ! -v 3 ]] || is_defined_variable "$3" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3, the name of a variable to store the absolute path of the root of the Git repository containing the found directory (provided '${3:-<none>}')."
     [[ ! -v 4 ]] || is_defined_variable "$4" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 4, the name of a variable to store the absolute path of the found directory (provided '${4:-<none>}')."
 
@@ -572,6 +571,8 @@ function get_artifacts_path()
     }
 
     local -n _artifacts_path="$2"
+
+    [[ -n $_artifacts_path ]] || _artifacts_path="artifacts"
 
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     if [[ $_artifacts_path == /* ]]; then

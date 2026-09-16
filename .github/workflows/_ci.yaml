@@ -37,21 +37,6 @@ on:
         type: string
         default: ""
 
-      configuration:
-        description: The type of build to produce, e.g. Release vs Debug. Cannot be null or empty!
-        type: string
-        default: Release
-
-      target-framework:
-        description: Version of .NET SDK to use. Cannot be null or empty!.
-        type: string
-        default: 10.0.x
-
-      runtime-id:
-        description: Runtime identifier for the build (e.g., 'linux-x64')
-        type: string
-        default: ''
-
       min-coverage-pct:
         description: Minimum acceptable code coverage percentage. Cannot be 0, null or empty!
         type: number
@@ -117,7 +102,6 @@ on:
 
 env:
   VERBOSE: ${{ vars.VERBOSE || false }}
-  ARTIFACTS_PATH: ${{ vars.ARTIFACTS_PATH || 'artifacts' }}
 
 concurrency:
   group: ci-${{ github.workflow_ref }}
@@ -134,8 +118,6 @@ jobs:
       benchmark-projects: ${{ steps.validate.outputs.benchmark-projects }}
       package-projects: ${{ steps.validate.outputs.package-projects }}
       runners-os: ${{ steps.validate.outputs.runners-os }}
-      target-framework: ${{ steps.validate.outputs.target-framework }}
-      configuration: ${{ steps.validate.outputs.configuration }}
       preprocessor-symbols: ${{ steps.validate.outputs.preprocessor-symbols }}
       min-coverage-pct: ${{ steps.validate.outputs.min-coverage-pct }}
       max-regression-pct: ${{ steps.validate.outputs.max-regression-pct }}
@@ -148,7 +130,6 @@ jobs:
       skip-tests: ${{ steps.validate.outputs.skip-tests }}
       skip-packages: ${{ steps.validate.outputs.skip-packages }}
       skip-push: ${{ steps.validate.outputs.skip-push }}
-      artifacts: ${{ steps.validate.outputs.artifacts }}
 
     steps:
       # Clone the repository to access validation scripts
@@ -158,10 +139,10 @@ jobs:
           fetch-depth: 0
 
       - name: Setup DevOps
-        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
+        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
 
       - name: Setup jq
-        uses: vmelamed/vm2.DevOps/.github/actions/setup-jq@main
+        uses: vmelamed/vm2.DevOps/.github/actions/setup-jq@big-bang
 
       - name: Validate Conventional Commits
         if: github.event_name == 'pull_request'
@@ -178,8 +159,6 @@ jobs:
               --package-projects            '${{ inputs.package-projects }}' \
               --runners-os                  '${{ inputs.runners-os }}' \
               --define                      '${{ inputs.preprocessor-symbols }}' \
-              --configuration               '${{ inputs.configuration }}' \
-              --target-framework            '${{ inputs.target-framework }}' \
               --min-coverage-pct            '${{ inputs.min-coverage-pct }}' \
               --max-regression-pct          '${{ inputs.max-regression-pct }}' \
               --max-gen1-collects           '${{ inputs.max-gen1-collects }}' \
@@ -189,8 +168,7 @@ jobs:
               --reset-benchmark-thresholds  '${{ inputs.reset-benchmark-thresholds }}' \
               --skip-benchmarks             '${{ inputs.skip-benchmarks }}' \
               --skip-tests                  '${{ inputs.skip-tests }}' \
-              --skip-packages               '${{ inputs.skip-packages }}' \
-              --artifacts                   '${{ env.ARTIFACTS_PATH }}'
+              --skip-packages               '${{ inputs.skip-packages }}'
 
   # Build the project and cache artifacts for downstream tests/benchmark jobs
   build:
@@ -203,12 +181,10 @@ jobs:
         build-project: ${{ fromJSON(needs.validate-input.outputs.build-projects) }}
         runner-os: ${{ fromJSON(needs.validate-input.outputs.runners-os) }}
     if: fromJSON(needs.validate-input.outputs.build-projects)[0] != null
-    uses: vmelamed/vm2.DevOps/.github/workflows/_build.yaml@main
+    uses: vmelamed/vm2.DevOps/.github/workflows/_build.yaml@big-bang
     with:
       build-project: ${{ matrix.build-project }}
       runner-os: ${{ matrix.runner-os }}
-      target-framework: ${{ needs.validate-input.outputs.target-framework }}
-      configuration: ${{ needs.validate-input.outputs.configuration }}
       preprocessor-symbols: ${{ needs.validate-input.outputs.preprocessor-symbols }}
       minver-tag-prefix: ${{ needs.validate-input.outputs.minver-tag-prefix }}
       minver-prerelease-id: ${{ needs.validate-input.outputs.minver-prerelease-id }}
@@ -228,7 +204,7 @@ jobs:
     if: >-
       fromJSON(needs.validate-input.outputs.test-projects)[0] != null &&
       needs.validate-input.outputs.skip-tests == 'false'
-    uses: vmelamed/vm2.DevOps/.github/workflows/_test.yaml@main
+    uses: vmelamed/vm2.DevOps/.github/workflows/_test.yaml@big-bang
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       REPORTGENERATOR_LICENSE: ${{ secrets.REPORTGENERATOR_LICENSE }}
@@ -239,8 +215,6 @@ jobs:
     with:
       test-projects: ${{ needs.validate-input.outputs.test-projects }}
       runner-os: ${{ matrix.runner-os }}
-      target-framework: ${{ needs.validate-input.outputs.target-framework }}
-      configuration: ${{ needs.validate-input.outputs.configuration }}
       preprocessor-symbols: ${{ needs.validate-input.outputs.preprocessor-symbols }}
       min-coverage-pct: ${{ fromJSON(needs.validate-input.outputs.min-coverage-pct) }}
       minver-tag-prefix: ${{ needs.validate-input.outputs.minver-tag-prefix }}
@@ -262,7 +236,7 @@ jobs:
       fromJSON(needs.validate-input.outputs.benchmark-projects)[0] != null &&
       (github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip bm]')) &&
       needs.validate-input.outputs.skip-benchmarks == 'false'
-    uses: vmelamed/vm2.DevOps/.github/workflows/_benchmarks.yaml@main
+    uses: vmelamed/vm2.DevOps/.github/workflows/_benchmarks.yaml@big-bang
     secrets:
       BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
     permissions:
@@ -273,8 +247,6 @@ jobs:
     with:
       benchmark-project: ${{ matrix.benchmark-project }}
       runner-os: ${{ matrix.runner-os }}
-      target-framework: ${{ needs.validate-input.outputs.target-framework }}
-      configuration: ${{ needs.validate-input.outputs.configuration }}
       preprocessor-symbols: ${{ needs.validate-input.outputs.preprocessor-symbols }}
       minver-tag-prefix: ${{ needs.validate-input.outputs.minver-tag-prefix }}
       minver-prerelease-id: ${{ needs.validate-input.outputs.minver-prerelease-id }}
@@ -299,12 +271,10 @@ jobs:
       fromJSON(inputs.package-projects)[0] != null &&
       (needs.build.result == 'success' || needs.build.result == 'skipped') &&
       needs.validate-input.outputs.skip-packages == 'false'
-    uses: vmelamed/vm2.DevOps/.github/workflows/_pack.yaml@main
+    uses: vmelamed/vm2.DevOps/.github/workflows/_pack.yaml@big-bang
     with:
       package-project: ${{ matrix.package-project }}
       runner-os: ${{ matrix.runner-os }}
-      target-framework: ${{ needs.validate-input.outputs.target-framework }}
-      configuration: ${{ needs.validate-input.outputs.configuration }}
       preprocessor-symbols: ${{ needs.validate-input.outputs.preprocessor-symbols }}
       minver-tag-prefix: ${{ needs.validate-input.outputs.minver-tag-prefix }}
       minver-prerelease-id: ${{ needs.validate-input.outputs.minver-prerelease-id }}
