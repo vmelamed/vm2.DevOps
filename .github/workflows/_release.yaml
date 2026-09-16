@@ -175,7 +175,6 @@ jobs:
       - name: Setup .NET and the dependencies cache
         uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@big-bang
         with:
-          dotnet-version: ${{ vars.DOTNET_VERSION }}
           runner-os: ubuntu-latest
           github-token: ${{ github.token }}
           github-actor: ${{ github.actor }}

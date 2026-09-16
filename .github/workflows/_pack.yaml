@@ -83,7 +83,6 @@ jobs:
         uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@big-bang
         with:
           runner-os: ${{ inputs.runner-os }}
-          dotnet-version: ${{ vars.DOTNET_VERSION }}
           github-token: ${{ github.token }}
           github-actor: ${{ github.actor }}
 

@@ -176,7 +176,6 @@ jobs:
       - name: Setup .NET and the dependencies cache
         uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@big-bang
         with:
-          dotnet-version: ${{ vars.DOTNET_VERSION }}
           runner-os: ubuntu-latest
           github-token: ${{ github.token }}
           github-actor: ${{ github.actor }}
@@ -220,10 +219,17 @@ jobs:
           RUN_ID: ${{ github.run_id }}
         shell: bash
         run: |
+          source $DEVOPS_LIB_DIR/gh_core.sh
+
           artifact_ids=$(
-              gh api "repos/$GH_REPO/actions/runs/$RUN_ID/artifacts" --paginate \
+              gh api "repos/$GH_REPO/actions/runs/$RUN_ID/artifacts" \
+              --paginate \
               --jq '.artifacts[] | select(.name | startswith("nuget-packages-")) | .id' |
               paste -sd, -
           )
-          echo "artifact-ids=$artifact_ids" # to the logs
-          echo "artifact-ids=$artifact_ids" >> "$GITHUB_OUTPUT"
+          {
+            printf "### Collected artifact IDs:\n\n"
+            printf "artifact-ids=$artifact_ids\n"
+          } | to_stdout
+
+          args_to_github_output artifact_ids

@@ -60,7 +60,7 @@ permissions:
   packages: read # Required for downloading dependencies and tools
 
 env:
-  ARTIFACTS_PATH: ${{ vars.ARTIFACTS_PATH || 'artifacts' }}
+  ARTIFACTS_PATH: artifacts
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   VERBOSE: ${{ vars.VERBOSE || false }}
@@ -102,7 +102,6 @@ jobs:
       - name: Setup .NET and the dependencies cache
         uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@big-bang
         with:
-          target-framework: ${{ inputs.target-framework }}
           runner-os: ${{ inputs.runner-os }}
           github-token: ${{ github.token }}
           github-actor: ${{ github.actor }}
