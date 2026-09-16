@@ -68,9 +68,7 @@ jobs:
         run: |
           build.sh \
               "${{ inputs.build-project }}" \
-              --define "${{ inputs.preprocessor-symbols }}" \
-              --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
-              --minver-prerelease-id "${{ inputs.minver-prerelease-id }}"
+              --define "${{ inputs.preprocessor-symbols }}"
 
       - name: Detect SDK drift on failure
         if: failure()
