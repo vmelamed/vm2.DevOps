@@ -874,8 +874,7 @@ function dotnet_pack()
     # execute the dotnet pack command and process its output
     trace "Executing: dotnet pack ${_dotnet_args[*]}"
     # PACK
-    # TEMP DEBUG: output un-suppressed to diagnose a live CI failure -- revert before merging.
-    execute dotnet pack "${_dotnet_args[@]}" || _rc=$?
+    execute dotnet pack "${_dotnet_args[@]}" > "$_ignore" 2>&1 || _rc=$?
     [[ $_rc == "$dotnet_success" ]] || error -ec "$err_tool_error" "Packing '$_project' failed." "$(get_dotnet_error_message "$_rc")"
     exit_if_has_errors
 
