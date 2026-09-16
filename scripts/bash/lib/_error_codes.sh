@@ -11,7 +11,7 @@
 
 # Circular include guard
 (( ${__VM2_LIB_ERROR_CODES_SH_LOADED:-0} == 1 )) && return 0
-declare -xri __VM2_LIB_ERROR_CODES_SH_LOADED=1
+declare -ri __VM2_LIB_ERROR_CODES_SH_LOADED=1
 
 declare -x bug_prefix
 

@@ -25,7 +25,7 @@
 
 # Circular include guard
 (( ${__VM2_LIB_CONSTANTS_SH_LOADED:-0} == 1 )) && return 0
-declare -xr __VM2_LIB_CONSTANTS_SH_LOADED=1
+declare -r __VM2_LIB_CONSTANTS_SH_LOADED=1
 
 #---------------------------------------------------------------------------------------------
 # @description A list of the current vm2 projects. The vm2 repositories are expected to be

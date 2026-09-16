@@ -12,7 +12,7 @@
 
 # Circular include guard
 (( ${__VM2_LIB_GH_CORE_SH_LOADED:-0} == 1 )) && return 0
-declare -xri __VM2_LIB_GH_CORE_SH_LOADED=1
+declare -ri __VM2_LIB_GH_CORE_SH_LOADED=1
 
 declare -x script_name
 declare -x script_dir
