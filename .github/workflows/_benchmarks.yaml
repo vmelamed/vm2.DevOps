@@ -77,6 +77,8 @@ permissions:
   pull-requests: write # Required for Bencher to comment on PRs
 
 env:
+  # this must be the same across all jobs and steps below.
+  # We must know where to find the artifacts and where to download/upload to/from across all jobs and steps here.
   ARTIFACTS_PATH: artifacts
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
@@ -118,8 +120,6 @@ jobs:
 
       - name: Setup DevOps environment variables
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
-        with:
-          ref: big-bang
 
       - name: Setup .NET and the dependencies cache
         uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@big-bang
@@ -130,7 +130,7 @@ jobs:
 
       # Retrieve compiled binaries from the build job. Artifacts (not the cache) are the intra-run handoff:
       # the cache gives no read-after-write guarantee within a run.
-      - name: Download build artifacts
+      - name: Download built artifacts
         uses: actions/download-artifact@v8
         with:
           pattern: built-artifacts-${{ runner.os }}-*
@@ -145,7 +145,7 @@ jobs:
       - name: Verify build artifacts were downloaded
         shell: bash
         run: |
-          [[ -d artifacts ]] || {
+          [[ -d $ARTIFACTS_PATH ]] || {
               echo "::error::No build artifacts were downloaded from the build job."
               exit 1
           }
@@ -168,7 +168,7 @@ jobs:
               --define "${{ inputs.preprocessor-symbols }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
               --minver-prerelease-id "${{ inputs.minver-prerelease-id }}" \
-              --artifacts "$ARTIFACTS_PATH"
+              --artifacts-path "$ARTIFACTS_PATH"
 
           trace "Benchmarks completed. Preparing to upload results to Bencher.dev with max regression threshold of ±${{ inputs.max-regression-pct }}%."
 
@@ -325,7 +325,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: benchmark-results-${{ inputs.runner-os }}
-          path: $ARTIFACTS_PATH/benchmarks
+          path: ${{ env.ARTIFACTS_PATH }}/benchmarks
           if-no-files-found: warn
           overwrite: true
 

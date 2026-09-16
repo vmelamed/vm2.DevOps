@@ -53,6 +53,9 @@ permissions:
   packages: read
 
 env:
+  # this must be the same across all jobs and steps below.
+  # We must know where to find the artifacts and where to download/upload to/from across all jobs and steps here.
+  ARTIFACTS_PATH: artifacts
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   DOTNET_VERSION: ${{ vars.DOTNET_VERSION }}
@@ -78,8 +81,6 @@ jobs:
       # action .github/actions/scripts/action.yaml for both local and external calls
       - name: Setup DevOps
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
-        with:
-          ref: big-bang
 
       - name: Setup .NET and the dependencies cache
         uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@big-bang
@@ -108,7 +109,7 @@ jobs:
         if: ${{ !inputs.skip-build-cache }}
         shell: bash
         run: |
-          [[ -d artifacts ]] || {
+          [[ -d $ARTIFACTS_PATH ]] || {
               echo "::error::No built artifacts were downloaded from the build job."
               exit 1
           }

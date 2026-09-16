@@ -140,8 +140,6 @@ jobs:
 
       - name: Setup DevOps
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
-        with:
-          ref: big-bang
 
       - name: Setup jq
         uses: vmelamed/vm2.DevOps/.github/actions/setup-jq@big-bang

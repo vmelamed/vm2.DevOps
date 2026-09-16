@@ -58,10 +58,12 @@ permissions:
   contents: write
 
 env:
+  # this must be the same across all jobs and steps below.
+  # We must know where to find the artifacts and where to download/upload to/from across all jobs and steps here.
+  ARTIFACTS_PATH: artifacts
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   VERBOSE: ${{ vars.VERBOSE || false }}
-  DOTNET_VERSION: ${{ vars.DOTNET_VERSION }}
 
 jobs:
   compute-version:
@@ -84,8 +86,6 @@ jobs:
       # action .github/actions/scripts/action.yaml for both local and external calls
       - name: Setup DevOps environment variables
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
-        with:
-          ref: big-bang
 
       - name: Validate and compute release version
         id: version
@@ -111,8 +111,6 @@ jobs:
 
       - name: Setup DevOps environment variables
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
-        with:
-          ref: big-bang
 
       - name: Install git-cliff
         uses: taiki-e/install-action@v2
@@ -175,8 +173,6 @@ jobs:
 
       - name: Setup DevOps environment variables
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
-        with:
-          ref: big-bang
 
       - name: Setup .NET and the dependencies cache
         uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@big-bang
@@ -226,6 +222,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: nuget-packages-${{ needs.compute-version.outputs.release-tag }}-${{ hashFiles(matrix.project) }}
-          path: artifacts/packages/*.nupkg
+          path: ${{ env.ARTIFACTS_PATH }}/packages/*.nupkg
           if-no-files-found: ignore
           overwrite: true

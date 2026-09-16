@@ -30,8 +30,6 @@ jobs:
     steps:
       - name: Setup DevOps
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
-        with:
-          ref: big-bang
 
       - name: Delete matching caches
         shell: bash

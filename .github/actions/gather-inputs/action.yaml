@@ -7,13 +7,6 @@ description: >-
   and exposes them as step outputs for the pre-run-ci job.
 
 inputs:
-  ref:
-    description: >-
-      Git ref (branch, tag, or SHA) of vm2.DevOps to check out for the bash library/scripts,
-      passed through to the internal setup-env call. MUST match the ref this action itself is
-      invoked with (e.g. '@big-bang').
-    required: false
-    default: main
   build-projects:
     description: JSON array of solution/project paths to build.
     default: "[]"
@@ -133,8 +126,6 @@ runs:
   steps:
     - name: Setup DevOps environment variables
       uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
-      with:
-        ref: ${{ inputs.ref }}
 
     - name: Gather argument values depending on the event
       id: gather
