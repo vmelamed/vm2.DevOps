@@ -71,6 +71,8 @@ env:
   ARTIFACTS_PATH: artifacts
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
+  GH_TOKEN: ${{ github.token }}
+  GH_ACTOR: ${{ github.actor }}
   VERBOSE: ${{ vars.VERBOSE || false }}
 
 jobs:
