@@ -28,7 +28,6 @@ declare -x preprocessor_symbols
 declare -x configuration
 declare -x framework
 declare -x runtime
-declare -x artifacts
 declare -x minver_tag_prefix
 declare -x minver_prerelease_id
 declare -x gh_nuget_username
@@ -62,10 +61,13 @@ declare -xr package_project
 declare -xr build
 
 if $build; then
-    dotnet_restore "$package_project"
+    update_nuget_sources_with_github_vm2   || error -ec $? "Updating the NuGet sources with GitHub packages from vm2 failed."
     exit_if_has_errors
-
-    dotnet_build "$package_project"
+    dotnet_clean "$package_project"        || error -ec $? "Cleaning the build project failed."
+    exit_if_has_errors
+    dotnet_restore "$package_project"      || error -ec $? "Restoring the build project failed."
+    exit_if_has_errors
+    dotnet_build "$package_project"        || error -ec $? -sd 3 "Building the build project failed."
     exit_if_has_errors
 fi
 

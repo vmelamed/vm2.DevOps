@@ -34,7 +34,6 @@ declare -x gh_nuget_password
 declare -x configuration
 declare -x framework
 declare -x runtime
-declare -x artifacts
 
 # parameters specific to this script only with initial values from environment variables or defaults
 declare -x build_project=""
@@ -63,8 +62,10 @@ exit_if_has_errors
 declare -xr build_project
 
 update_nuget_sources_with_github_vm2 || error -ec $? "Updating the NuGet sources with GitHub packages from vm2 failed."
+exit_if_has_errors
 dotnet_clean "$build_project"        || error -ec $? "Cleaning the build project failed."
+exit_if_has_errors
 dotnet_restore "$build_project"      || error -ec $? "Restoring the build project failed."
+exit_if_has_errors
 dotnet_build "$build_project"        || error -ec $? -sd 3 "Building the build project failed."
-
 exit_if_has_errors

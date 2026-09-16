@@ -166,7 +166,7 @@ _run_build() {
     [[ ! -e "$BATS_TEST_TMPDIR/repo/calls.log" ]]
 }
 
-@test "build: reports a failed clean, and still attempts restore and build" {
+@test "build: reports a failed clean, and does not attempt restore or build" {
     _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
     _install_fake_dotnet "$BATS_TEST_TMPDIR/repo"
     run _run_build "$BATS_TEST_TMPDIR/repo" 'FAKE_DOTNET_CLEAN_EXIT=1' App.csproj
@@ -175,11 +175,11 @@ _run_build() {
 
     run cat "$BATS_TEST_TMPDIR/repo/calls.log"
     assert_line --index 0 --partial "clean App.csproj"
-    assert_line --index 1 --partial "restore App.csproj"
-    assert_line --index 2 --partial "build App.csproj"
+    refute_output --partial "restore App.csproj"
+    refute_output --partial "build App.csproj"
 }
 
-@test "build: reports a failed restore, and still attempts build" {
+@test "build: reports a failed restore, and does not attempt build" {
     _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
     _install_fake_dotnet "$BATS_TEST_TMPDIR/repo"
     run _run_build "$BATS_TEST_TMPDIR/repo" 'FAKE_DOTNET_RESTORE_EXIT=1' App.csproj
@@ -187,7 +187,7 @@ _run_build() {
     assert_output --partial "Restoring the build project failed"
 
     run cat "$BATS_TEST_TMPDIR/repo/calls.log"
-    assert_line --index 2 --partial "build App.csproj"
+    refute_output --partial "build App.csproj"
 }
 
 @test "build: reports a failed build" {

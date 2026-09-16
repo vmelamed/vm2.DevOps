@@ -91,16 +91,17 @@ _run_pack() {
     refute_output --partial "^build "
 }
 
-@test "pack: --build true restores and builds before packing" {
+@test "pack: --build true cleans, restores, and builds before packing" {
     _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
     _install_fake_dotnet_and_package "$BATS_TEST_TMPDIR/repo"
     run _run_pack "$BATS_TEST_TMPDIR/repo" '' --build true src/App/App.csproj
     assert_success
 
     run cat "$BATS_TEST_TMPDIR/repo/dotnet.log"
-    assert_line --index 0 --partial "restore src/App/App.csproj"
-    assert_line --index 1 --partial "build src/App/App.csproj"
-    assert_line --index 2 --partial "pack src/App/App.csproj"
+    assert_line --index 0 --partial "clean src/App/App.csproj"
+    assert_line --index 1 --partial "restore src/App/App.csproj"
+    assert_line --index 2 --partial "build src/App/App.csproj"
+    assert_line --index 3 --partial "pack src/App/App.csproj"
 }
 
 @test "pack: --reason is included as a package release note and reflected in the summary" {

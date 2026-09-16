@@ -81,6 +81,8 @@ env:
   ARTIFACTS_PATH: artifacts
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
+  GH_TOKEN: ${{ github.token }}
+  GH_ACTOR: ${{ github.actor }}
   PREPROCESSOR_SYMBOLS: ${{ vars.PREPROCESSOR_SYMBOLS || '' }}
   MINVER_TAG_PREFIX: ${{ vars.MINVER_TAG_PREFIX || 'v' }}
   MINVER_PRERELEASE_ID: ${{ vars.MINVER_PRERELEASE_ID || 'preview.0' }}
