@@ -94,7 +94,7 @@ jobs:
         if: ${{ !inputs.skip-build-cache }}
         uses: actions/download-artifact@v8
         with:
-          pattern: built-artifacts-${{ runner.os }}-${{ inputs.configuration }}-*
+          pattern: built-artifacts-${{ runner.os }}-*
           path: downloaded/
 
       - name: Extract built artifacts

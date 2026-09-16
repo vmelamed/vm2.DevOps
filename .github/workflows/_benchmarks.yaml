@@ -133,7 +133,7 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v8
         with:
-          pattern: build-artifacts-${{ runner.os }}-${{ inputs.configuration }}-*
+          pattern: built-artifacts-${{ runner.os }}-*
           path: downloaded/
 
       - name: Extract build artifacts

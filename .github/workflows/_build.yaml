@@ -113,15 +113,14 @@ jobs:
       - name: Archive built artifacts
         shell: bash
         run: |
-          # bin/<config> for the jobs that execute binaries (test, benchmarks); obj/ for the jobs that re-enter
-          # MSBuild with --no-build (pack needs the intermediate assembly and generated nuspec inputs).
-          readarray -t bin_dirs < <(find . -type d -path "*/bin/Release" -prune -print)
-          readarray -t obj_dirs < <(find . -type d -name obj -prune -print)
-          [[ ${#bin_dirs[@]} -gt 0 ]] || {
-              echo "::error::Build produced no output in bin/Release."
+          # UseArtifactsOutput=true (Directory.Build.props) consolidates bin/obj/package/publish for every
+          # project under a single artifacts/ tree at the repo root, regardless of Configuration -- so archive
+          # that whole tree rather than globbing per-project bin/obj paths (which no longer exist there).
+          [[ -d artifacts ]] || {
+              echo "::error::Build produced no output in artifacts/."
               exit 1
           }
-          tar czf built-artifacts.tar.gz --exclude='*.tmp' "${bin_dirs[@]}" "${obj_dirs[@]}"
+          tar czf built-artifacts.tar.gz --exclude='*.tmp' artifacts/
 
       - name: Upload built artifacts
         uses: actions/upload-artifact@v7
