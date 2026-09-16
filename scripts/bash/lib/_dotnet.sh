@@ -29,8 +29,6 @@ declare -xri err_not_file
 declare -xr ci
 declare -x _ignore
 declare -x glow_present
-declare -xra valid_verbosities
-declare -xr default_verbosity
 
 
 #=============================================================================================

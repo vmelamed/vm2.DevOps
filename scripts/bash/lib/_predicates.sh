@@ -274,6 +274,8 @@ declare -x non_positive_regex="^($negative_rex|$zero_rex)\$"
 declare -x integer_regex="^$integer_rex\$"
 declare -x decimal_regex="^($decimal_rex)\$"
 declare -x bool_regex="^$bool_rex\$"
+declare -x dotnet_version_rex='([0-9]+\.[0-9]+\.[0-9]+)|([0-9]+\.[0-9]+(\.x)?)|([0-9]+(\.x)?)|([0-9]+\.[0-9]+\.[0-9]+x)|latest'
+declare -x dotnet_version_regex="^$dotnet_version_rex\$"
 
 declare -xr base64_regex="^($base64_char_rex{4})*($base64_char_rex{3}=|$base64_char_rex{2}==)?\$"
 
@@ -560,4 +562,9 @@ function is_valid_secret()
     exit_if_has_bugs
 
     [[ -n $1 && ! $1 =~ [[:cntrl:]] ]]
+}
+
+function is_valid_dotnet_version()
+{
+    __test_with_regex "$@" "$dotnet_version_regex"
 }
