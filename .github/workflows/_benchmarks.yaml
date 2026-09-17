@@ -277,8 +277,10 @@ jobs:
               BENCHER_ARGS+=(--thresholds-reset)
           fi
 
-          # Add all benchmark result files
-          for file in "$ARTIFACTS_PATH/benchmarks/results/*-report-full-compressed.json"; do
+          # Add all benchmark result files. The glob MUST be unquoted here so the shell expands
+          # it to the matching files -- quoting it turns the loop into a single iteration over
+          # the literal, non-existent pattern string, silently adding no --file argument at all.
+          for file in "$ARTIFACTS_PATH"/benchmarks/results/*-report-full-compressed.json; do
               if [[ -s "$file" ]]; then
                   trace "Adding benchmark result file: $file"
                   BENCHER_ARGS+=(--file "$file")
