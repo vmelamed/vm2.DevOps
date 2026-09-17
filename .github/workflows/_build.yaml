@@ -101,30 +101,26 @@ jobs:
       # this run. Artifacts -- not the cache -- are the intra-run handoff mechanism: the cache service is designed for
       # cross-run reuse and gives no read-after-write guarantee, so a freshly saved entry may not be visible to a lookup
       # seconds later (observed 2026-06-11: 4/4 deterministic restore misses ~25s after a verified save).
-      # The slug keeps artifact names unique across the build matrix legs (artifact names are immutable per run).
-      - name: Compute build artifact slug
-        id: slug
-        shell: bash
-        env:
-          BUILD_PROJECT: ${{ inputs.build-project }}
-        run: |
-          slug=$(printf '%s' "$BUILD_PROJECT" | tr -c 'A-Za-z0-9.\n' '-')
-          echo "slug=${slug:-root}" >> "$GITHUB_OUTPUT"
-
+      #
+      # Scoped to this leg's own artifacts-project-name subfolder (bin/obj), not the whole $ARTIFACTS_PATH tree: the
+      # build matrix now fans out per-project, and `dotnet build` transitively rebuilds project references into the
+      # SAME shared tree, so every leg that depends on another project would otherwise re-upload that project's
+      # output too, duplicated across every dependent leg's own artifact.
       - name: Archive built artifacts
         shell: bash
+        env:
+          ARTIFACTS_PROJECT_NAME: ${{ steps.build.outputs.artifacts-project-name }}
         run: |
-          # UseArtifactsOutput=true (Directory.Build.props) consolidates bin/obj/package/publish for every
-          # project under a single $ARTIFACTS_PATH/ tree at the repo root, regardless of Configuration -- so archive
-          # that whole tree rather than globbing per-project bin/obj paths (which no longer exist there).
-          [[ -d $ARTIFACTS_PATH ]] || {
-              echo "::error::Build produced no output in $ARTIFACTS_PATH/."
+          bin_dir="$ARTIFACTS_PATH/bin/$ARTIFACTS_PROJECT_NAME"
+          obj_dir="$ARTIFACTS_PATH/obj/$ARTIFACTS_PROJECT_NAME"
+          [[ -d $bin_dir ]] || {
+              echo "::error::Build produced no output in $bin_dir/."
               exit 1
           }
-          tar czf built-artifacts.tar.gz --exclude='*.tmp' $ARTIFACTS_PATH/
+          tar czf built-artifacts.tar.gz --exclude='*.tmp' "$bin_dir" "$obj_dir"
 
       - name: Upload built artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: built-artifacts-${{ runner.os }}-${{ steps.slug.outputs.slug }}-${{ github.run_id }}
+          name: built-artifacts-${{ runner.os }}-${{ steps.build.outputs.artifacts-project-name }}-${{ github.run_id }}
           path: built-artifacts.tar.gz

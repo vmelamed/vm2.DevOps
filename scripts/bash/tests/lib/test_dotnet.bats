@@ -287,3 +287,106 @@ EOF
     assert_failure 66
     assert_output --partial "Failed to update the NuGet sources with GitHub packages from vm2"
 }
+
+# --- list_solution_projects / expand_solution_projects ---------------------------------------
+#
+# A solution-level `dotnet build` always resolves its own "solution configuration" (Debug,
+# unless -c is given) and passes it to every project as an explicit global MSBuild property,
+# silently overriding Directory.Build.props's IsCI-based Configuration default -- confirmed
+# live against a real repo. So build-projects keeps accepting a solution file for developer
+# convenience, but it gets expanded into its constituent projects before the build matrix fans
+# out, so each project builds independently and Directory.Build.props stays the source of truth.
+
+# Installs a fake 'dotnet' on $PATH whose 'sln <sln-name> list' case echoes the fixed two-line
+# header real `dotnet sln list` always prints, followed by the given project paths. <sln-name>
+# MUST match exactly what the caller passes to `dotnet sln <sln-name> list` (i.e. the same
+# string the test itself passes to list_solution_projects/expand_solution_projects) -- it is
+# NOT a filesystem path to create; create the actual (dummy-content) solution file separately.
+_install_fake_dotnet_sln() {
+    local _dir="$BATS_TEST_TMPDIR/fakebin"
+    mkdir -p "$_dir"
+    local _sln_name=$1; shift
+    {
+        echo '#!/usr/bin/env bash'
+        echo "if [[ \"\$1 \$2 \$3\" == \"sln $_sln_name list\" ]]; then"
+        echo '    echo "Project(s)"'
+        echo '    echo "----------"'
+        local _p
+        for _p in "$@"; do
+            echo "    echo '$_p'"
+        done
+        echo 'fi'
+    } > "$_dir/dotnet"
+    chmod +x "$_dir/dotnet"
+    PATH="$_dir:$PATH"
+}
+
+@test "list_solution_projects: lists a solution's projects, resolved relative to the current directory" {
+    mkdir -p "$BATS_TEST_TMPDIR/repo/sub"
+    echo fake > "$BATS_TEST_TMPDIR/repo/sub/App.slnx"
+    _install_fake_dotnet_sln "sub/App.slnx" "src/App/App.csproj" "tests/App.Tests/App.Tests.csproj"
+
+    run bash -c "cd '$BATS_TEST_TMPDIR/repo' && source '$lib_dir/gh_core.sh' --no-trap > /dev/null 2>&1 && declare -a p=(); list_solution_projects sub/App.slnx p; printf '%s\n' \"\${p[@]}\""
+    assert_success
+    assert_line --index 0 "sub/src/App/App.csproj"
+    assert_line --index 1 "sub/tests/App.Tests/App.Tests.csproj"
+}
+
+@test "list_solution_projects: fails when 'dotnet sln list' returns no projects" {
+    echo fake > "$BATS_TEST_TMPDIR/Empty.slnx"
+    _install_fake_dotnet_sln "Empty.slnx"
+
+    run bash -c "cd '$BATS_TEST_TMPDIR' && source '$lib_dir/gh_core.sh' --no-trap > /dev/null 2>&1 && declare -a p=(); list_solution_projects Empty.slnx p"
+    assert_failure 66
+    assert_output --partial "'dotnet sln Empty.slnx list' returned no projects"
+}
+
+@test "list_solution_projects: bug-exits on a non-existent solution file" {
+    run list_solution_projects "/definitely/not/a/real.slnx" p
+    assert_failure 254
+}
+
+@test "list_solution_projects: bug-exits with the wrong argument count" {
+    run list_solution_projects "$_fake_csproj"
+    assert_failure 254
+}
+
+@test "expand_solution_projects: expands a solution entry into its constituent projects" {
+    echo fake > "$BATS_TEST_TMPDIR/App.slnx"
+    _install_fake_dotnet_sln "App.slnx" "src/App/App.csproj" "tests/App.Tests/App.Tests.csproj"
+
+    run bash -c "cd '$BATS_TEST_TMPDIR' && source '$lib_dir/gh_core.sh' --no-trap > /dev/null 2>&1 && projects='[\"App.slnx\"]'; expand_solution_projects projects; echo \"\$projects\""
+    assert_success
+    assert_output '["src/App/App.csproj","tests/App.Tests/App.Tests.csproj"]'
+}
+
+@test "expand_solution_projects: leaves non-solution entries unchanged" {
+    run bash -c "source '$lib_dir/gh_core.sh' --no-trap > /dev/null 2>&1 && projects='[\"src/App/App.csproj\"]'; expand_solution_projects projects; echo \"\$projects\""
+    assert_success
+    assert_output '["src/App/App.csproj"]'
+}
+
+@test "expand_solution_projects: de-duplicates a project listed both standalone and via a solution" {
+    echo fake > "$BATS_TEST_TMPDIR/App.slnx"
+    _install_fake_dotnet_sln "App.slnx" "src/App/App.csproj" "tests/App.Tests/App.Tests.csproj"
+
+    run bash -c "cd '$BATS_TEST_TMPDIR' && source '$lib_dir/gh_core.sh' --no-trap > /dev/null 2>&1 && projects='[\"src/App/App.csproj\", \"App.slnx\"]'; expand_solution_projects projects; echo \"\$projects\""
+    assert_success
+    assert_output '["src/App/App.csproj","tests/App.Tests/App.Tests.csproj"]'
+}
+
+@test "expand_solution_projects: passes an empty array through unchanged (regression: printf with a zero-element array still emits one empty line)" {
+    run bash -c "source '$lib_dir/gh_core.sh' --no-trap > /dev/null 2>&1 && projects='[]'; expand_solution_projects projects; echo \"\$projects\""
+    assert_success
+    assert_output '[]'
+}
+
+@test "expand_solution_projects: bug-exits with the wrong argument count" {
+    run expand_solution_projects
+    assert_failure 254
+}
+
+@test "expand_solution_projects: bug-exits on an undefined variable name" {
+    run expand_solution_projects not_a_defined_var
+    assert_failure 254
+}

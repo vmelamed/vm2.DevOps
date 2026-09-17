@@ -67,5 +67,15 @@ dotnet_clean "$build_project"        || error -ec $? "Cleaning the build project
 exit_if_has_errors
 dotnet_restore "$build_project"      || error -ec $? "Restoring the build project failed."
 exit_if_has_errors
-dotnet_build "$build_project"        || error -ec $? -sd 3 "Building the build project failed."
+
+declare -A build_info=()
+dotnet_build "$build_project" build_info || error -ec $? -sd 3 "Building the build project failed."
 exit_if_has_errors
+
+# Expose the project's own artifacts-layout subfolder name (e.g. artifacts/bin/<name>/), so the
+# caller can archive/upload only this project's own output instead of the whole shared
+# artifacts/ tree -- important when the caller builds one project per matrix leg: every leg
+# transitively rebuilds its own project references into the SAME shared tree, so scoping the
+# archive to just this leg's own subfolder avoids uploading duplicate, overlapping content.
+declare -x artifacts_project_name=${build_info[$key_artifacts_project_name]:-}
+args_to_github_output artifacts_project_name

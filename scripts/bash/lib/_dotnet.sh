@@ -105,6 +105,15 @@ declare -xr key_platform='Platform'
 declare -xr key_artifacts_path='ArtifactsPath'
 
 #---------------------------------------------------------------------------------------------
+# @description The key used in the build associative arrays with the respective value of the
+#   per-project subfolder name under the artifacts layout's `bin`/`obj`/`publish` directories
+#   (e.g. `artifacts/bin/<ArtifactsProjectName>/<configuration>/`). Defaults to
+#   `$(MSBuildProjectName)` (the project file's own base name, not `$(AssemblyName)`) when
+#   `UseArtifactsOutput=true`. Printed by the vm2 `PrintVersion` target in `Directory.Build.props`.
+#---------------------------------------------------------------------------------------------
+declare -xr key_artifacts_project_name='ArtifactsProjectName'
+
+#---------------------------------------------------------------------------------------------
 # @description Array of keys representing some of the build keys that are used by the
 #   `dotnet_build` function.
 #---------------------------------------------------------------------------------------------
@@ -115,6 +124,7 @@ declare -xra build_keys=(
     "$key_runtime_identifier"
     "$key_platform"
     "$key_artifacts_path"
+    "$key_artifacts_project_name"
 )
 
 #=============================================================================================
@@ -980,4 +990,98 @@ function get_target_path()
 
     local -n _target_path=$2
     _target_path=$(dotnet msbuild "${_msbuild_args[@]}" 2> "$_ignore") || return $?
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Lists the constituent project paths of a solution file (*.sln or *.slnx) via
+#   `dotnet sln <file> list`, skipping the fixed two-line header ("Project(s)" and the
+#   underline) that command always prints. `dotnet sln list` reports paths relative to the
+#   solution file's own directory; this function re-resolves them relative to the current
+#   directory instead, so callers get paths consistent with the rest of the codebase's
+#   repo-root-relative convention regardless of where the solution file itself lives.
+#
+# @arg $1 string Path to an existing, non-empty solution file (*.sln or *.slnx).
+# @arg $2 nameref to an indexed array variable that will receive the list of project paths.
+#
+# @exitcode success/positive=0: the solution's projects were listed successfully.
+# @exitcode err_tool_error=66: `dotnet sln $1 list` failed, or returned no projects.
+#---------------------------------------------------------------------------------------------
+function list_solution_projects()
+{
+    (( $# == 2 ))                                  || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#):" \
+                                                                                        "  - path to a solution file (*.sln or *.slnx)" \
+                                                                                        "  - name of an indexed array variable to receive the list of project paths"
+    [[ ! -v 1 ]] || [[ $1 == *.@(sln|slnx) && -s $1 ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be an existing, non-empty solution file (provided '${1:-<none>}')."
+    [[ ! -v 2 ]] || is_defined_array "$2"          || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to name a declared indexed-array variable (provided '${2:-<none>}')."
+
+    exit_if_has_bugs
+
+    local _solution=$1
+    local _proj_dir
+    _proj_dir=$(dirname "$_solution")
+
+    local -n _out=$2
+    _out=()
+
+    local _proj
+    while IFS= read -r _proj; do
+        [[ -n $_proj ]] || continue
+        _out+=("$(realpath -m --relative-to=. "$_proj_dir/$_proj")")
+    done < <(dotnet sln "$_solution" list 2>"$_ignore" | tail -n +3)
+
+    (( ${#_out[@]} > 0 )) || {
+        error -ec "$err_tool_error" "${FUNCNAME[0]}() 'dotnet sln $_solution list' returned no projects."
+        return "$err_tool_error"
+    }
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Expands any solution file (*.sln or *.slnx) entries in a JSON array of
+#   project/solution paths into their constituent project paths, via list_solution_projects().
+#   Non-solution entries pass through unchanged. Lets CI's build-projects input keep accepting a
+#   solution file for developer convenience (and to guarantee no project is left out of the
+#   build matrix) while the actual build matrix fans out per-project -- required for
+#   Directory.Build.props's IsCI-conditional Configuration default to apply: a solution-level
+#   `dotnet build` always resolves its own "solution configuration" (Debug, unless -c is given)
+#   and passes it to every child project as an explicit global MSBuild property, which silently
+#   overrides Directory.Build.props's conditional regardless of IsCI.
+#
+# @arg $1 nameref to a variable containing a JSON array of project/solution paths. The expanded,
+#   de-duplicated JSON array is stored back into that variable.
+#
+# @exitcode success/positive=0: every solution entry (if any) was expanded successfully.
+# @exitcode err_tool_error=66: list_solution_projects() failed for one of the solution entries.
+#---------------------------------------------------------------------------------------------
+function expand_solution_projects()
+{
+    (( $# == 1 ))                             || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 argument (provided $#):" \
+                                                                                    "  - the name of a variable containing a JSON array of project/solution paths"
+    [[ ! -v 1 ]] || is_defined_variable "$1"  || bug -ec "$err_missing_argument" "${FUNCNAME[0]}() requires argument 1 to name a declared variable (provided '${1:-<none>}')."
+
+    exit_if_has_bugs
+
+    local -n _projects=$1
+    local -a _expanded=()
+    local _entry
+    local -i _rc=$success
+
+    while IFS= read -r _entry; do
+        if [[ $_entry == *.@(sln|slnx) ]]; then
+            local -a _sln_projects=()
+            list_solution_projects "$_entry" _sln_projects || { _rc=$?; continue; }
+            _expanded+=("${_sln_projects[@]}")
+        else
+            _expanded+=("$_entry")
+        fi
+    done < <(jq -r '.[]' <<< "$_projects")
+
+    if (( _rc == success )); then
+        if (( ${#_expanded[@]} > 0 )); then
+            _projects=$(printf '%s\n' "${_expanded[@]}" | jq -R . | jq -sc 'unique')
+        else
+            _projects='[]'
+        fi
+    fi
+
+    return "$_rc"
 }
