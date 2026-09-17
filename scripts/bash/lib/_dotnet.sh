@@ -1027,7 +1027,11 @@ function list_solution_projects()
     while IFS= read -r _proj; do
         [[ -n $_proj ]] || continue
         _out+=("$(realpath -m --relative-to=. "$_proj_dir/$_proj")")
-    done < <(dotnet sln "$_solution" list 2>"$_ignore" | tail -n +3)
+    # `dotnet sln list`'s own output is a fixed two-line header ("Project(s)" then a matching
+    # dashed underline) followed by the project paths -- but on some runners `dotnet` prints
+    # extra diagnostic lines (e.g. SDK resolution info) BEFORE that, so skip everything up to
+    # and including the dashed separator line itself, rather than assuming a fixed line count.
+    done < <(dotnet sln "$_solution" list 2>"$_ignore" | sed -n '/^-\+$/,$p' | tail -n +2)
 
     (( ${#_out[@]} > 0 )) || {
         error -ec "$err_tool_error" "${FUNCNAME[0]}() 'dotnet sln $_solution list' returned no projects."

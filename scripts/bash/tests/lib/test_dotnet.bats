@@ -332,6 +332,28 @@ _install_fake_dotnet_sln() {
     assert_line --index 1 "sub/tests/App.Tests/App.Tests.csproj"
 }
 
+@test "list_solution_projects: tolerates extra preamble lines before the header (regression: live CI runners print SDK diagnostics before 'dotnet sln list''s own output, e.g. '10.0.111 [/usr/share/dotnet/sdk]')" {
+    local _dir="$BATS_TEST_TMPDIR/fakebin"
+    mkdir -p "$_dir"
+    {
+        echo '#!/usr/bin/env bash'
+        echo 'if [[ "$1 $2 $3" == "sln App.slnx list" ]]; then'
+        echo '    echo "10.0.111 [/usr/share/dotnet/sdk]"'
+        echo '    echo "Project(s)"'
+        echo '    echo "----------"'
+        echo '    echo "src/App/App.csproj"'
+        echo 'fi'
+    } > "$_dir/dotnet"
+    chmod +x "$_dir/dotnet"
+    PATH="$_dir:$PATH"
+    echo fake > "$BATS_TEST_TMPDIR/App.slnx"
+
+    run bash -c "cd '$BATS_TEST_TMPDIR' && source '$lib_dir/gh_core.sh' --no-trap > /dev/null 2>&1 && declare -a p=(); list_solution_projects App.slnx p; printf '%s\n' \"\${p[@]}\""
+    assert_success
+    assert_line --index 0 "src/App/App.csproj"
+    refute_output --partial "10.0.111"
+}
+
 @test "list_solution_projects: fails when 'dotnet sln list' returns no projects" {
     echo fake > "$BATS_TEST_TMPDIR/Empty.slnx"
     _install_fake_dotnet_sln "Empty.slnx"
