@@ -1023,6 +1023,13 @@ function list_solution_projects()
     local -n _out=$2
     _out=()
 
+    # Capture combined stdout+stderr (rather than discarding stderr) so that a failure or an
+    # unexpected output shape can be reported with the tool's own diagnostic text, instead of
+    # a bare "returned no projects" that gives no clue why.
+    local _sln_output
+    local -i _sln_rc=$success
+    _sln_output=$(dotnet sln "$_solution" list 2>&1) || _sln_rc=$?
+
     local _proj
     while IFS= read -r _proj; do
         [[ -n $_proj ]] || continue
@@ -1031,10 +1038,12 @@ function list_solution_projects()
     # dashed underline) followed by the project paths -- but on some runners `dotnet` prints
     # extra diagnostic lines (e.g. SDK resolution info) BEFORE that, so skip everything up to
     # and including the dashed separator line itself, rather than assuming a fixed line count.
-    done < <(dotnet sln "$_solution" list 2>"$_ignore" | sed -n '/^-\+$/,$p' | tail -n +2)
+    done < <(sed -n '/^-\+$/,$p' <<< "$_sln_output" | tail -n +2)
 
     (( ${#_out[@]} > 0 )) || {
-        error -ec "$err_tool_error" "${FUNCNAME[0]}() 'dotnet sln $_solution list' returned no projects."
+        error -ec "$err_tool_error" "${FUNCNAME[0]}() 'dotnet sln $_solution list' returned no projects (exit code $_sln_rc)." \
+                                    "Raw output:" \
+                                    "$_sln_output"
         return "$err_tool_error"
     }
 }
