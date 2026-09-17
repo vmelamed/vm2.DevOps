@@ -178,10 +178,16 @@ function sanitize_common_dotnet_args()
     is_safe_configuration "$configuration"                                    || true
     is_safe_framework "$framework"                                            || true
     is_safe_runtime "$runtime"                                                || true
-    if [[ -n $artifacts ]]; then
-        is_safe_valid_path "$artifacts"                                           || true
-        is_safe_path "$1" && get_artifacts_path "$1" artifacts                    || true
-    fi
+    # $artifacts is always resolved to a concrete, absolute path here -- this is a documented
+    # contract (see --artifacts-path's own help text above: "...or the default 'artifacts'"),
+    # and build.sh/pack.sh/run-tests.sh/run-benchmarks.sh genuinely need a concrete, resolved
+    # path for their own filesystem bookkeeping (locating coverage files, archiving output,
+    # etc.), independent of whether that value is also ever passed to `dotnet` as an explicit
+    # -property:ArtifactsPath= override. (validate-input.sh, the one caller that doesn't want
+    # that override forced downstream, never actually forwards this resolved value to any
+    # dotnet invocation in the first place, so there's nothing to protect there.)
+    [[ -z $artifacts ]] || is_safe_valid_path "$artifacts"                    || true
+    is_safe_path "$1" && get_artifacts_path "$1" artifacts                    || true
 
     # freeze the common dotnet arguments -- `readonly` (a POSIX special builtin), not `declare
     # -r`, is required here: this runs inside a function body, and `declare -r` without `-g`

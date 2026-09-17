@@ -614,12 +614,12 @@ function display_dotnet_build_summary()
     exit_if_has_bugs
 
     local -n _build_info=$1
-    local _table_format
-    if $ci || $glow_present; then
-        _table_format="--markdown"
-    else
-        _table_format="--graphical"
-    fi
+    local _table_format="--graphical"
+    # if $ci || $glow_present; then
+    #     _table_format="--markdown"
+    # else
+    #     _table_format="--graphical"
+    # fi
 
     local Package_Output_Path=${_build_info[$key_package_output_path]:-N/A}
     local Package_ID=${_build_info[$key_package_id]:-N/A}

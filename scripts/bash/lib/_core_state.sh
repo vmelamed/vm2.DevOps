@@ -75,13 +75,13 @@ declare -xr default_verbose=false
 declare -xr default_dry_run=false
 declare -xr default__ignore="/dev/null"
 declare -xra table_formats=("graphical" "markdown")
-declare -x default_table_format
-if $ci; then
-    default_table_format="markdown"
-else
-    default_table_format="graphical"
-fi
-declare -xr default_table_format
+declare -xr default_table_format="graphical"
+# if $ci; then
+#     default_table_format="markdown"
+# else
+#     default_table_format="graphical"
+# fi
+# declare -xr default_table_format
 
 #=============================================================================================
 # Verbose mode

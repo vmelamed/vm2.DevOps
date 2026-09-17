@@ -79,22 +79,22 @@ declare -xr semverTagReleaseRegex="^$minverTagPrefixRex$semverReleaseRex$"
 function print_semver_regexes()
 {
     dump_vars \
-    --quiet \
-    --force \
-    --header "Semantic Version Components" \
-    majorLabelRex \
-    minorLabelRex \
-    patchLabelRex \
-    prereleaseLabelRex \
-    buildLabelRex \
-    --header "Semantic Versions" \
-    semverPrereleaseRex \
-    semverReleaseRex \
-    semverRex \
-    --header "Semantic Version/MinVer Tags" \
-    semverTagRegex \
-    semverTagReleaseRegex \
-    semverTagPrereleaseRegex
+        --quiet \
+        --force \
+        --header "Semantic Version Components" \
+        majorLabelRex \
+        minorLabelRex \
+        patchLabelRex \
+        prereleaseLabelRex \
+        buildLabelRex \
+        --header "Semantic Versions" \
+        semverPrereleaseRex \
+        semverReleaseRex \
+        semverRex \
+        --header "Semantic Version/MinVer Tags" \
+        semverTagRegex \
+        semverTagReleaseRegex \
+        semverTagPrereleaseRegex
 }
 
 #---------------------------------------------------------------------------------------------

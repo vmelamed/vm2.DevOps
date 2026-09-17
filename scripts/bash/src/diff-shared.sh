@@ -138,8 +138,6 @@ declare -xr summary_file
 
 declare -a sot_dump_vars=(
     --quiet
-    # --force
-    --graphical
     --header "Configuration for SoT $sot:"
     vm2_repos
     sot_path
@@ -216,8 +214,6 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
 
     target_dump_vars=(
         --quiet
-        # --force
-        --graphical
         --header "Configuration for Target '$target':"
         diff_tool
         diff_command
@@ -364,8 +360,9 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
     echo "" >> "$summary_file"
 done # repositories loop
 
-dump_vars --force --quiet \
-    --markdown \
+dump_vars \
+    --force \
+    --quiet \
     --header "Total counts:" \
     --name "Different"  summary_diff_count \
     --name "Identical"  summary_identical_count \

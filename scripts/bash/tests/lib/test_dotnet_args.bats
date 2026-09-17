@@ -84,10 +84,12 @@ load '../helpers/setup'
     assert_failure 254
 }
 
-@test "sanitize_common_dotnet_args: leaves \$artifacts empty when not explicitly set (regression: must not silently inject an ArtifactsPath override Directory.Build.props never asked for)" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; sanitize_common_dotnet_args '$lib_dir/core.sh'; echo \"[\$artifacts]\""
+@test "sanitize_common_dotnet_args: resolves \$artifacts to the documented 'artifacts' default (relative to the repo root) when not explicitly set" {
+    mkdir -p "$BATS_TEST_TMPDIR/repo"
+    touch "$BATS_TEST_TMPDIR/repo/project.csproj"
+    run bash -c "cd '$BATS_TEST_TMPDIR/repo' && git init -q && source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; sanitize_common_dotnet_args project.csproj; echo \"\$artifacts\""
     assert_success
-    assert_output --partial "[]"
+    assert_output --regexp "^/.*/repo/artifacts$"
 }
 
 @test "sanitize_common_dotnet_args: resolves an explicitly-given \$artifacts to an absolute path" {
