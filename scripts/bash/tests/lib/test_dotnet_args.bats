@@ -84,6 +84,20 @@ load '../helpers/setup'
     assert_failure 254
 }
 
+@test "sanitize_common_dotnet_args: leaves \$artifacts empty when not explicitly set (regression: must not silently inject an ArtifactsPath override Directory.Build.props never asked for)" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; sanitize_common_dotnet_args '$lib_dir/core.sh'; echo \"[\$artifacts]\""
+    assert_success
+    assert_output --partial "[]"
+}
+
+@test "sanitize_common_dotnet_args: resolves an explicitly-given \$artifacts to an absolute path" {
+    mkdir -p "$BATS_TEST_TMPDIR/repo"
+    touch "$BATS_TEST_TMPDIR/repo/project.csproj"
+    run bash -c "cd '$BATS_TEST_TMPDIR/repo' && git init -q && source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; artifacts=myartifacts; sanitize_common_dotnet_args project.csproj; echo \"\$artifacts\""
+    assert_success
+    assert_output --regexp "^/.*/repo/myartifacts$"
+}
+
 # --- common_dotnet_to_output (requires gh_core.sh, not just core.sh) ---------------------------
 
 @test "common_dotnet_to_output: writes key=value pairs for each common dotnet variable" {

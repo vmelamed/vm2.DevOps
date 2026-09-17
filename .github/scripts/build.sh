@@ -61,21 +61,44 @@ exit_if_has_errors
 # freeze the parameters
 declare -xr build_project
 
-update_nuget_sources_with_github_vm2 || error -ec $? "Updating the NuGet sources with GitHub packages from vm2 failed."
+update_nuget_sources_with_github_vm2     || error -ec $? "Updating the NuGet sources with GitHub packages from vm2 failed."
 exit_if_has_errors
-dotnet_clean "$build_project"        || error -ec $? "Cleaning the build project failed."
+dotnet_clean "$build_project"            || error -ec $? "Cleaning the build project failed."
 exit_if_has_errors
-dotnet_restore "$build_project"      || error -ec $? "Restoring the build project failed."
+dotnet_restore "$build_project"          || error -ec $? "Restoring the build project failed."
 exit_if_has_errors
 
 declare -A build_info=()
 dotnet_build "$build_project" build_info || error -ec $? -sd 3 "Building the build project failed."
 exit_if_has_errors
 
-# Expose the project's own artifacts-layout subfolder name (e.g. artifacts/bin/<name>/), so the
-# caller can archive/upload only this project's own output instead of the whole shared
-# artifacts/ tree -- important when the caller builds one project per matrix leg: every leg
-# transitively rebuilds its own project references into the SAME shared tree, so scoping the
-# archive to just this leg's own subfolder avoids uploading duplicate, overlapping content.
-declare -x artifacts_project_name=${build_info[$key_artifacts_project_name]:-}
-args_to_github_output artifacts_project_name
+# Expose the artifacts-layout subfolder name(s) (e.g. artifacts/bin/<name>/) this leg's build actually produced, so the
+# caller can archive/upload only that output instead of the whole shared artifacts/ tree -- important because a leg may
+# transitively rebuild project references into the SAME shared tree, so scoping the archive avoids uploading duplicate,
+# overlapping content across legs.
+#
+# A single project build has exactly one ArtifactsProjectName (already captured in build_info). A solution build produces
+# one per constituent project -- extract_dotnet_build_info() deliberately drops that key for solutions (the raw build
+# output has one PrintVersion firing per project, so a single captured value would just be whichever project happened to
+# build last), so enumerate the solution's own projects and query each one's real ArtifactsProjectName directly.
+declare -a artifacts_project_names=()
+if [[ $build_project == *.@(sln|slnx) ]]; then
+    declare -a sln_projects=()
+    list_solution_projects "$build_project" sln_projects || error -ec $? "Failed to enumerate the constituent projects of '$build_project'."
+    exit_if_has_errors
+
+    declare sln_proj
+    for sln_proj in "${sln_projects[@]}"; do
+        declare artifacts_project_name=''
+        get_msbuild_property "$sln_proj" ArtifactsProjectName artifacts_project_name ||
+            error -ec $? "Failed to determine the artifacts-project-name for '$sln_proj'."
+        artifacts_project_names+=("$artifacts_project_name")
+    done
+    exit_if_has_errors
+else
+    artifacts_project_names=("${build_info[$key_artifacts_project_name]:-}")
+fi
+
+declare artifacts_project_name_json
+artifacts_project_name_json=$(printf '%s\n' "${artifacts_project_names[@]}" | jq -R . | jq -sc .)
+printf "artifacts-project-name=%s\n" "$artifacts_project_name_json" | to_output

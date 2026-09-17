@@ -194,6 +194,7 @@ jobs:
       build-project: ${{ matrix.build-project }}
       runner-os: ${{ matrix.runner-os }}
       preprocessor-symbols: ${{ needs.validate-input.outputs.preprocessor-symbols }}
+      job-index: ${{ strategy.job-index }}
 
   # Run unit tests with code coverage analysis
   test:

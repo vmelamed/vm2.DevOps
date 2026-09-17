@@ -112,7 +112,7 @@ EOF
     assert_line "errors=0"
 }
 
-@test "extract_dotnet_build_info: drops per-project keys (TargetPath, PackageId) for solution builds" {
+@test "extract_dotnet_build_info: drops per-project keys (TargetPath, PackageId, ArtifactsProjectName) for solution builds" {
     run bash -c "
         source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
         _fake_slnx='$BATS_TEST_TMPDIR/fake.slnx'
@@ -121,14 +121,17 @@ EOF
         extract_dotnet_build_info \"\$_fake_slnx\" 0 info <<'EOF'
   TargetPath=/some/path/out.dll
   PackageId=vm2.Fake
+  ArtifactsProjectName=Fake
 Build succeeded.
 EOF
         [[ -v info[TargetPath] ]] && echo 'TargetPath still present' || echo 'TargetPath removed'
         [[ -v info[PackageId] ]] && echo 'PackageId still present' || echo 'PackageId removed'
+        [[ -v info[ArtifactsProjectName] ]] && echo 'ArtifactsProjectName still present' || echo 'ArtifactsProjectName removed'
     "
     assert_success
     assert_line "TargetPath removed"
     assert_line "PackageId removed"
+    assert_line "ArtifactsProjectName removed"
 }
 
 @test "extract_dotnet_build_info: bug-exits on a non-project/solution argument 1" {
@@ -188,6 +191,103 @@ EOF
 
 @test "get_target_path: bug-exits with the wrong argument count" {
     run get_target_path "$_fake_csproj"
+    assert_failure 254
+}
+
+# --- get_msbuild_property / get_msbuild_properties -------------------------------------------
+#
+# Deliberate exception to this file's "dotnet-invoking functions get bug-exit-only tests here"
+# convention: these two are cheap, no-build static queries (unlike dotnet_clean/build/pack), and
+# a permissive fake `dotnet` that always echoes canned output regardless of its actual argv --
+# the style used elsewhere in this suite -- would not have caught either real bug found live
+# against the real vm2.Ulid repo while reviewing this code: the nameref bound to $2 (the property
+# NAME string) instead of $3 (the caller's own output variable), and -getProperty:'s value being
+# wrapped in literal quote characters, which makes real `dotnet msbuild` (unlike `dotnet build`)
+# silently print nothing at all. So the fake here discriminates on the actual -getProperty: value.
+
+# Installs a fake 'dotnet' whose 'msbuild ... -getProperty:<names>' case mimics dotnet msbuild's
+# two real output shapes (plain value for one property, {"Properties": {...}} JSON for two or
+# more, semicolon-joined) and, like the real tool, prints nothing if the value contains a quote
+# character -- a regression guard for the quoting bug above.
+_install_fake_dotnet_msbuild() {
+    local _dir="$BATS_TEST_TMPDIR/fakebin"
+    mkdir -p "$_dir"
+    cat > "$_dir/dotnet" <<'EOF'
+#!/usr/bin/env bash
+[[ "$1" == "msbuild" ]] || exit 0
+for _arg in "$@"; do
+    [[ $_arg == -getProperty:* ]] || continue
+    _props=${_arg#-getProperty:}
+    [[ $_props != *'"'* ]] || exit 0
+    if [[ $_props == *';'* ]]; then
+        IFS=';' read -ra _names <<< "$_props"
+        echo '{'
+        echo '  "Properties": {'
+        for i in "${!_names[@]}"; do
+            _comma=','
+            (( i == ${#_names[@]} - 1 )) && _comma=''
+            echo "    \"${_names[$i]}\": \"VALUE_${_names[$i]}\"$_comma"
+        done
+        echo '  }'
+        echo '}'
+    else
+        echo "VALUE_${_props}"
+    fi
+    exit 0
+done
+EOF
+    chmod +x "$_dir/dotnet"
+    PATH="$_dir:$PATH"
+}
+
+@test "get_msbuild_property: retrieves a single property's plain-text value" {
+    _install_fake_dotnet_msbuild
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare v=''; get_msbuild_property '$_fake_csproj' Configuration v; echo \"[\$v]\""
+    assert_success
+    assert_output --partial "[VALUE_Configuration]"
+}
+
+@test "get_msbuild_properties: retrieves two or more properties as name/value pairs (regression: -getProperty's value must not be quoted)" {
+    _install_fake_dotnet_msbuild
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A p=(); get_msbuild_properties '$_fake_csproj' p TargetPath Configuration; for k in \"\${!p[@]}\"; do echo \"\$k=\${p[\$k]}\"; done | sort"
+    assert_success
+    assert_line "Configuration=VALUE_Configuration"
+    assert_line "TargetPath=VALUE_TargetPath"
+}
+
+@test "get_msbuild_property: bug-exits on a non-existent .csproj project" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare v=''; get_msbuild_property 'totally-not-a-real-file.csproj' Configuration v"
+    assert_failure 254
+}
+
+@test "get_msbuild_property: bug-exits on an invalid property name" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare v=''; get_msbuild_property '$_fake_csproj' 'not a name' v"
+    assert_failure 254
+}
+
+@test "get_msbuild_property: bug-exits with the wrong argument count" {
+    run get_msbuild_property "$_fake_csproj" Configuration
+    assert_failure 254
+}
+
+@test "get_msbuild_properties: bug-exits on a non-existent .csproj project" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A p=(); get_msbuild_properties 'totally-not-a-real-file.csproj' p Configuration TargetPath"
+    assert_failure 254
+}
+
+@test "get_msbuild_properties: reports an invalid property name (regression: must validate every name in \$3.., not just \$3)" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A p=(); get_msbuild_properties '$_fake_csproj' p Configuration 'not a name'"
+    assert_failure 4
+    assert_output --partial "'not a name'"
+}
+
+@test "get_msbuild_properties: bug-exits with fewer than 2 property names" {
+    run get_msbuild_properties "$_fake_csproj" p OnlyOneProperty
+    assert_failure 254
+}
+
+@test "get_msbuild_properties: bug-exits with the wrong argument count" {
+    run get_msbuild_properties "$_fake_csproj"
     assert_failure 254
 }
 

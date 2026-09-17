@@ -21,6 +21,14 @@ on:
         type: string
         default: ""
 
+      job-index:
+        description: >-
+          The calling job's own matrix leg index (the caller's strategy.job-index -- this
+          reusable workflow runs as its own job, with no matrix of its own, so it cannot read
+          that context directly). Used only to name this leg's uploaded artifact uniquely.
+        type: number
+        default: 0
+
 permissions:
   contents: read
   packages: read
@@ -97,30 +105,41 @@ jobs:
               } >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      # Make the compiled binaries and intermediate files available to the downstream jobs (test, benchmarks, pack) of
-      # this run. Artifacts -- not the cache -- are the intra-run handoff mechanism: the cache service is designed for
-      # cross-run reuse and gives no read-after-write guarantee, so a freshly saved entry may not be visible to a lookup
-      # seconds later (observed 2026-06-11: 4/4 deterministic restore misses ~25s after a verified save).
+      # Make the compiled binaries and intermediate files available to the downstream jobs (test, benchmarks, pack) of this run.
+      # Artifacts -- not the cache -- are the intra-run handoff mechanism: the cache service is designed for cross-run reuse and
+      # gives no read-after-write guarantee, so a freshly saved entry may not be visible to a lookup seconds later (observed
+      # 2026-06-11: 4/4 deterministic restore misses ~25s after a verified save).
       #
-      # Scoped to this leg's own artifacts-project-name subfolder (bin/obj), not the whole $ARTIFACTS_PATH tree: the
-      # build matrix now fans out per-project, and `dotnet build` transitively rebuilds project references into the
-      # SAME shared tree, so every leg that depends on another project would otherwise re-upload that project's
-      # output too, duplicated across every dependent leg's own artifact.
+      # Scoped to this leg's own artifacts-project-name subfolder(s) (bin/obj), not the whole $ARTIFACTS_PATH tree: a leg's
+      # build-project may be an individual project (one name) or a whole solution (one name per constituent project, since
+      # build-projects may freely mix both), and `dotnet build` transitively rebuilds project references into the SAME
+      # shared tree, so every leg that depends on another project would otherwise re-upload that project's output too,
+      # duplicated across every dependent leg's own artifact.
       - name: Archive built artifacts
         shell: bash
         env:
-          ARTIFACTS_PROJECT_NAME: ${{ steps.build.outputs.artifacts-project-name }}
+          ARTIFACTS_PROJECT_NAMES: ${{ steps.build.outputs.artifacts-project-name }}
         run: |
-          bin_dir="$ARTIFACTS_PATH/bin/$ARTIFACTS_PROJECT_NAME"
-          obj_dir="$ARTIFACTS_PATH/obj/$ARTIFACTS_PROJECT_NAME"
-          [[ -d $bin_dir ]] || {
-              echo "::error::Build produced no output in $bin_dir/."
-              exit 1
-          }
-          tar czf built-artifacts.tar.gz --exclude='*.tmp' "$bin_dir" "$obj_dir"
+          declare -a names
+          mapfile -t names < <(jq -r '.[]' <<< "$ARTIFACTS_PROJECT_NAMES")
 
+          declare -a dirs=()
+          for name in "${names[@]}"; do
+              bin_dir="$ARTIFACTS_PATH/bin/$name"
+              obj_dir="$ARTIFACTS_PATH/obj/$name"
+              [[ -d $bin_dir ]] || {
+                  echo "::error::Build produced no output in $bin_dir/."
+                  exit 1
+              }
+              dirs+=("$bin_dir" "$obj_dir")
+          done
+          tar czf built-artifacts.tar.gz --exclude='*.tmp' "${dirs[@]}"
+
+      # Named by this matrix leg's own index, not by project/solution content: a leg may cover one project or several (a
+      # whole solution), so there's no single clean name to embed here -- the index is always unique across the matrix
+      # regardless of what a leg builds.
       - name: Upload built artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: built-artifacts-${{ runner.os }}-${{ steps.build.outputs.artifacts-project-name }}-${{ github.run_id }}
+          name: built-artifacts-${{ runner.os }}-${{ inputs.job-index }}-${{ github.run_id }}
           path: built-artifacts.tar.gz

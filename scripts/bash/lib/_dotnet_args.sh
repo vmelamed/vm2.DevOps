@@ -178,8 +178,10 @@ function sanitize_common_dotnet_args()
     is_safe_configuration "$configuration"                                    || true
     is_safe_framework "$framework"                                            || true
     is_safe_runtime "$runtime"                                                || true
-    [[ -z $artifacts ]] || is_safe_valid_path "$artifacts"                    || true
-    is_safe_path "$1" && get_artifacts_path "$1" artifacts                    || true
+    if [[ -n $artifacts ]]; then
+        is_safe_valid_path "$artifacts"                                           || true
+        is_safe_path "$1" && get_artifacts_path "$1" artifacts                    || true
+    fi
 
     # freeze the common dotnet arguments -- `readonly` (a POSIX special builtin), not `declare
     # -r`, is required here: this runs inside a function body, and `declare -r` without `-g`

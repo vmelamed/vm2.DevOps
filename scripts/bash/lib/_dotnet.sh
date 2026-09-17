@@ -580,9 +580,14 @@ function extract_dotnet_build_info()
 
     if [[ $_project_file != *.csproj ]]; then
         # remove project specific properties for solutions - there are multiple projects and the properties
-        # override each other - not useful
+        # override each other - not useful. ArtifactsProjectName is per-project too (defaults to each
+        # project's own MSBuildProjectName), so the last one seen in the build output would silently and
+        # misleadingly look like a single answer -- callers that need every constituent project's own
+        # ArtifactsProjectName for a solution build must enumerate them via list_solution_projects() and
+        # query each one individually (e.g. via get_msbuild_property()), not read it from here.
         unset "_extracted[$key_target_path]"
         unset "_extracted[$key_package_id]"
+        unset "_extracted[$key_artifacts_project_name]"
     fi
 
     restore_state state
@@ -944,6 +949,143 @@ function dotnet_pack()
 #
 #
 # @arg $1 string _csproj - path to a .csproj file
+# @arg $2 string property_name - the name of the property whose value should be retrieved
+# @arg $3 nameref to a variable to receive the value of the property
+#
+# @exitcode success/positive=0: the assembly file exists and is not empty
+#
+# @stdout the full path of the produced assembly (it may not exist yet), e.g.:
+#   /path/to/repo-root/artifacts/bin/Ulid/release/Ulid.dll or
+#   /path/to/repo-root/artifacts/bin/GlobTool/debug/GlobTool (Linux executable)
+#
+# @example
+#   declare target_path
+#   get_target_path $project target_path
+#---------------------------------------------------------------------------------------------
+function get_msbuild_property()
+{
+    (( $# == 3 ))                                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires 3 arguments (provided $#):" \
+                                                                                        "  - path to a .csproj file" \
+                                                                                        "  - name of the property whose value should be retrieved" \
+                                                                                        "  - nameref to a variable to receive the value of the property"
+    [[ ! -v 1 ]] || [[ $1 == *.csproj && -s $1 ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the project, to be an existing, non-empty .csproj file (provided '${1:-<none>}')."
+    [[ ! -v 2 ]] || is_variable_name "$2"         || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the name of the property whose value should be retrieved, to be a valid property name (provided '${2:-<none>}')."
+    [[ ! -v 3 ]] || is_defined_variable "$3"      || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 3, the name of a variable to receive the value of the property, to be a defined variable (provided '${3:-<none>}')."
+
+    exit_if_has_bugs
+
+    local _project="$1"
+    local -a _dotnet_args
+    _dotnet_args=(
+        "$_project"
+        --no-logo
+        --verbosity minimal
+        "-getProperty:$2" # put the MSBuild command that gets the property in the msbuild arguments - this is da secret sauce!
+    )
+    # add the common dotnet parameters
+    [[ -n $configuration ]]        && _dotnet_args+=("--configuration" "$configuration")
+    [[ -n $framework ]]            && _dotnet_args+=("--framework" "$framework")
+    [[ -n $runtime ]]              && _dotnet_args+=("--runtime" "$runtime")
+    [[ -n $artifacts ]]            && _dotnet_args+=("--artifacts-path" "$artifacts")
+    [[ -n $minver_tag_prefix ]]    && _dotnet_args+=("-property:MinVerTagPrefix=\"$minver_tag_prefix\"")
+    [[ -n $minver_prerelease_id ]] && _dotnet_args+=("-property:MinVerPrereleaseIdentifiers=\"$minver_prerelease_id\"")
+    [[ -n $preprocessor_symbols ]] && _dotnet_args+=("-property:preprocessor_symbols=\"$preprocessor_symbols\"")
+
+    local -a _msbuild_args=()
+    convert_dotnet_args_to_msbuild_args _msbuild_args "${_dotnet_args[@]}" || return $?
+
+    local -n _property=$3
+    _property=$(dotnet msbuild "${_msbuild_args[@]}" 2> "$_ignore") || return $?
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Gets the values of two or more MSBuild properties for a .NET project, via
+#   `dotnet msbuild -getProperty:<Prop1>;<Prop2>;...`, without building the project (a static
+#   evaluation). Use `get_msbuild_property()` instead when only one property is needed --
+#   `dotnet msbuild` returns a plain string for a single `-getProperty`, but a JSON object
+#   (`{"Properties": {...}}`) once two or more are requested, so the two cases need different
+#   parsing and are kept as separate functions rather than one with divergent output shapes.
+#
+# @arg $1 string _csproj - path to a .csproj file
+# @arg $2 nameref to an associative-array variable to receive the property name/value pairs
+# @arg $3.. string names of the properties whose values should be retrieved (at least 2 --
+#   use `get_msbuild_property()` for exactly 1)
+#
+# @exitcode success/positive=0: the properties were retrieved successfully.
+# @exitcode err_argument_value=4: an invalid property name was given.
+#
+# @example
+#   declare -A props
+#   get_msbuild_properties "$project" props TargetPath Configuration ArtifactsPath
+#---------------------------------------------------------------------------------------------
+function get_msbuild_properties()
+{
+    (( $# > 3 ))                                      || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires at least 4 arguments (provided $#):" \
+                                                                                        "  - path to a .csproj file" \
+                                                                                        "  - nameref to an associative-array variable to receive the property name/value pairs" \
+                                                                                        "  - names of two or more properties whose values should be retrieved"
+    [[ ! -v 1 ]] || [[ $1 == *.csproj && -s $1 ]]     || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the project, to be an existing, non-empty .csproj file (provided '${1:-<none>}')."
+    [[ ! -v 2 ]] || is_defined_associative_array "$2" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the name of an associative array variable to receive the property names and values (provided '${2:-<none>}')."
+
+    exit_if_has_bugs
+
+    local _project="$1"
+    # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
+    local -n _properties=$2
+
+    shift 2
+
+    local _property
+    local _all_properties=''
+    local _first=true
+    local _errs
+    _errs=$(get_errors)
+
+    for _property in "$@"; do
+        is_variable_name "$_property" || error -ec "$err_argument_value" "${FUNCNAME[0]}() requires all property names to be valid variable names (provided '$_property')."
+        $_first && _first=false || _all_properties+=';'
+        _all_properties+="$_property"
+    done
+
+    (( _errs != $(get_errors) )) && return "$err_argument_value"
+
+    local -a _dotnet_args
+    _dotnet_args=(
+        "$_project"
+        --no-logo
+        --verbosity minimal
+        "-getProperty:$_all_properties" # put the MSBuild command that gets the property in the msbuild arguments - this is da secret sauce!
+    )
+    # add the common dotnet parameters
+    [[ -n $configuration ]]        && _dotnet_args+=("--configuration" "$configuration")
+    [[ -n $framework ]]            && _dotnet_args+=("--framework" "$framework")
+    [[ -n $runtime ]]              && _dotnet_args+=("--runtime" "$runtime")
+    [[ -n $artifacts ]]            && _dotnet_args+=("--artifacts-path" "$artifacts")
+    [[ -n $minver_tag_prefix ]]    && _dotnet_args+=("-property:MinVerTagPrefix=\"$minver_tag_prefix\"")
+    [[ -n $minver_prerelease_id ]] && _dotnet_args+=("-property:MinVerPrereleaseIdentifiers=\"$minver_prerelease_id\"")
+    [[ -n $preprocessor_symbols ]] && _dotnet_args+=("-property:preprocessor_symbols=\"$preprocessor_symbols\"")
+
+    local -a _msbuild_args=()
+    convert_dotnet_args_to_msbuild_args _msbuild_args "${_dotnet_args[@]}" || return $?
+
+    local _json=''
+    _json=$(dotnet msbuild "${_msbuild_args[@]}" 2> "$_ignore") || return $?
+
+    _properties=()
+
+    local _key _value
+    while IFS='=' read -r _key _value; do
+        _properties["$_key"]="$_value"
+    done < <(jq -r '.Properties | to_entries[] | "\(.key)=\(.value)"'  <<< "$_json")
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Gets the full path to the assembly that was or would be produced by
+#   `dotnet build` using a .NET project and the common dotnet arguments, without actually building
+#   the project.
+#
+#
+# @arg $1 string _csproj - path to a .csproj file
 # @arg $2 nameref to a variable to receive the full path to the assembly that was or would be
 #   produced
 #
@@ -967,29 +1109,7 @@ function get_target_path()
 
     exit_if_has_bugs
 
-    local _project="$1"
-    local -a _dotnet_args
-    _dotnet_args=(
-        "$_project"
-        --no-logo
-        --no-restore
-        --verbosity minimal
-        -getProperty:TargetPath # put the MSBuild command that gets the property "TargetPath" in the msbuild arguments - this is da secret sauce!
-    )
-    # add the common dotnet parameters
-    [[ -n $configuration ]]        && _dotnet_args+=("--configuration" "$configuration")
-    [[ -n $framework ]]            && _dotnet_args+=("--framework" "$framework")
-    [[ -n $runtime ]]              && _dotnet_args+=("--runtime" "$runtime")
-    [[ -n $artifacts ]]            && _dotnet_args+=("--artifacts-path" "$artifacts")
-    [[ -n $minver_tag_prefix ]]    && _dotnet_args+=("-property:MinVerTagPrefix=\"$minver_tag_prefix\"")
-    [[ -n $minver_prerelease_id ]] && _dotnet_args+=("-property:MinVerPrereleaseIdentifiers=\"$minver_prerelease_id\"")
-    [[ -n $preprocessor_symbols ]] && _dotnet_args+=("-property:preprocessor_symbols=\"$preprocessor_symbols\"")
-
-    local -a _msbuild_args=()
-    convert_dotnet_args_to_msbuild_args _msbuild_args "${_dotnet_args[@]}" || return $?
-
-    local -n _target_path=$2
-    _target_path=$(dotnet msbuild "${_msbuild_args[@]}" 2> "$_ignore") || return $?
+    get_msbuild_property "$1" "TargetPath" "$2"
 }
 
 #---------------------------------------------------------------------------------------------

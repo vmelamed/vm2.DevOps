@@ -95,19 +95,16 @@ if ! command -v -p gh &> "$_ignore"; then
     fi
 fi
 
-if validate_json_array build_projects "$defaultBuildProjects" is_safe_existing_file; then
-    # Keep accepting a solution file for build-projects (developer convenience, and it guarantees
-    # no project is left out of the build), but expand it into its constituent projects here: the
-    # actual build matrix fans out per-project, since a solution-level `dotnet build` always
-    # resolves its own "solution configuration" (Debug, unless -c is given) and passes it to every
-    # project as an explicit global MSBuild property, silently overriding Directory.Build.props's
-    # IsCI-based Configuration default regardless of IsCI's own value. Gated on validate_json_array's
-    # own success (not a broad exit_if_has_errors) so an unrelated earlier failure doesn't skip
-    # accumulating the rest of this script's validations -- but a failed/unsafe build_projects value
-    # itself must not be handed to `dotnet sln` here, which would just produce a confusing secondary
-    # error with no new information.
-    expand_solution_projects build_projects || true
-fi
+#   Build-projects may freely mix individual project paths and solution files: the build matrix
+#   (_ci.yaml/_build.yaml) fans out over whatever's in this array as-is, one leg per entry,
+#   whether that's a whole solution or a single project. A solution build now correctly resolves
+#   Configuration in CI via Directory.Solution.props (see that file's own comment for why a
+#   solution-level `dotnet build` used to silently resolve Configuration to "Debug" regardless of
+#   Directory.Build.props's IsCI-conditioned default), so expanding a solution into its
+#   constituent projects here is no longer necessary to work around that bug -- it's now purely
+#   an opt-in choice a consumer repo's own CI.yaml can make (via expand_solution_projects(), kept
+#   in _dotnet.sh) for finer-grained parallel matrix legs, not something vm2.DevOps forces.
+validate_json_array build_projects "$defaultBuildProjects" is_safe_existing_file                                 || true
 validate_json_array test_projects "$defaultTestProjects" is_safe_existing_file                                   || true
 validate_json_array benchmark_projects "$defaultBenchmarkProjects" is_safe_existing_file                         || true
 validate_json_array package_projects "$defaultPackageProjects" is_safe_existing_file                             || true
