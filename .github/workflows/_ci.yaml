@@ -141,6 +141,14 @@ jobs:
       - name: Setup DevOps
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
 
+      # Needed for `dotnet sln <file> list`, used by validate-input.sh to expand a solution
+      # entry in build-projects into its constituent projects. No NuGet caching/auth here --
+      # this job never restores or builds, it only needs the SDK binary itself.
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
       - name: Setup jq
         uses: vmelamed/vm2.DevOps/.github/actions/setup-jq@big-bang
 
