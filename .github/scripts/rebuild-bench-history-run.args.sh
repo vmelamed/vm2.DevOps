@@ -15,7 +15,6 @@ declare -x ci
 
 declare -x benchmark_project
 declare -xi repeat
-declare -x configuration
 declare -x preprocessor_symbols
 declare -x minver_tag_prefix
 declare -x minver_prerelease_id
@@ -42,11 +41,6 @@ function get_arguments()
                 repeat="$1"; shift
                 ;;
 
-            --configuration|-c )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                configuration="$1"; shift
-                ;;
-
             --define|-d )
                 (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 preprocessor_symbols="$1"; shift
@@ -62,7 +56,7 @@ function get_arguments()
                 minver_prerelease_id="$1"; shift
                 ;;
 
-            --artifacts|-a )
+            --artifacts-path|-a )
                 (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 artifacts="$1"; shift
                 ;;
@@ -111,7 +105,6 @@ function dump_args()
 
         benchmark_project
         repeat
-        configuration
         preprocessor_symbols
         minver_tag_prefix
         minver_prerelease_id

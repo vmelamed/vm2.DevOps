@@ -34,9 +34,6 @@ Options:
   -r, --reason <reason text>    Reason for release (e.g., "prerelease", "stable release", "hotfix", etc.). The reason is also
                                 added as a release note in the package metadata.
                                 Initial value from \$REASON or default "release build".
-  -s, --save-artifacts [true|false]
-                                Whether the package(s) should be uploaded as workflow artifact(s) as well.
-                                Initial value from \$SAVE_ARTIFACTS or default false.
   -n, --nuget-server <NuGet moniker>
                                 NuGet server to push the packages to. Valid values are, "nuget" for NuGet.org, "github" for
                                 GitHub Packages, or a custom server URL for pushing to.
@@ -56,8 +53,6 @@ Environment Variables:
                                 (default: 'nuget').
   GITHUB_REPOSITORY_OWNER       The owner of the GitHub repository
                                 (default: 'vmelamed').
-  SAVE_ARTIFACTS                Whether the package(s) will be uploaded as workflow artifacts as well
-                                Initial value from \$SAVE_ARTIFACTS or default false.
   NUGET_API_KEY                 The NuGet API key for the selected NuGet server. Mandatory.
 $common_dotnet_vars
 $_common_args

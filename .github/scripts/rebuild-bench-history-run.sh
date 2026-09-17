@@ -32,7 +32,6 @@ declare -xri default_repeat=10
 
 declare -x benchmark_project=""
 declare -xi repeat=${REPEAT:-$default_repeat}
-declare -x configuration=${CONFIGURATION:-"Release"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-}
@@ -63,7 +62,6 @@ fi
 (( ${#benchmark_projects[@]} > 0 )) || error -ec "$err_argument_value" "No benchmark projects found under 'benchmarks/' and none specified."
 
 # Validate the rest of the inputs (accumulate all problems, then bail once).
-is_safe_configuration "$configuration"                                    || true
 validate_preprocessor_symbols preprocessor_symbols                        || true
 validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
 is_safe_valid_path "$artifacts"                                           || true
@@ -80,7 +78,6 @@ results_dir="$artifacts_benchmarks_dir/results"
 
 # Freeze variables
 declare -xr benchmark_project
-declare -xr configuration
 declare -xr preprocessor_symbols
 declare -xr minver_tag_prefix
 declare -xr minver_prerelease_id
@@ -107,11 +104,9 @@ for project in "${benchmark_projects[@]}"; do
 
         if ! run-benchmarks.sh \
                 "$project" \
-                --configuration "$configuration" \
                 --define "$preprocessor_symbols" \
                 --minver-tag-prefix "$minver_tag_prefix" \
-                --minver-prerelease-id "$minver_prerelease_id" \
-                --artifacts "$artifacts_benchmarks_dir"; then
+                --minver-prerelease-id "$minver_prerelease_id"; then
             warning "Benchmark run $i of '$project' failed; skipping the Bencher upload for this iteration."
             continue
         fi

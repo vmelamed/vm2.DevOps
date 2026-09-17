@@ -43,7 +43,6 @@ declare -x package_project=""
 declare -x reason=${REASON:-}
 declare -x nuget_server=${NUGET_SERVER:-"$default_nuget_server"}
 declare -x repo_owner=${GITHUB_REPOSITORY_OWNER:-"$default_repo_owner"}
-declare -x save_artifacts=${SAVE_ARTIFACTS:-false}
 declare -x server_api_key=${NUGET_API_KEY:-}
 
 declare nuget_server_name
@@ -101,7 +100,6 @@ declare git_tag="$minver_tag_prefix$version"
     echo "  - $(basename "$package")"
     echo "  - $(basename "$symbols")"
     echo ""
-    [[ "$save_artifacts" == true ]] && echo "Will be saved as workflow artifacts to $artifacts."
     echo ""
     echo "| $summary_header   |                    |"
     echo "|:------------------|:-------------------|"

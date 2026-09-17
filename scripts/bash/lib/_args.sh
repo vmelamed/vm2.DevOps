@@ -2,7 +2,6 @@
 # Copyright (c) 2025-2026 Val Melamed
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
-# shellcheck disable=SC2089,SC2090
 
 #=============================================================================================
 # This script defines the common arguments for the vm2 bash scripts: quiet, verbose,

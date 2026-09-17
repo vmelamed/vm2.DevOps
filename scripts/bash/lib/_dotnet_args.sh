@@ -75,7 +75,7 @@ declare -xra common_dotnet_args_to_output=(
 #   Long- and short-form options and switches are recognized. Calling scripts should ensure
 #   that there are no short- or long-form options collisions with the rest of the options. For
 #   example, they may have a first matching expression case like:
-#   `-d|-c|-f|-r|-a|-mp|-mi|--define|--configuration|--framework|--runtime|--artifacts|--minver-tag-prefix|--minver-prerelease-id|--nuget-username--nuget-password ) ;;`
+#   `-d|-c|-f|-r|-a|-mp|-mi|--define|--configuration|--framework|--runtime|--artifacts-path|--minver-tag-prefix|--minver-prerelease-id|--nuget-username--nuget-password ) ;;`
 #   to satisfy this requirement, as they may no longer use any of these as their own option.
 #
 # Notes:

@@ -16,7 +16,6 @@ declare -x package_project
 declare -x reason
 declare -x nuget_server
 declare -x repo_owner
-declare -x save_artifacts
 
 function get_arguments()
 {
@@ -55,12 +54,6 @@ function get_arguments()
                 shift
                 ;;
 
-            --save-artifacts|-s )
-                (( $# > 0 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                save_artifacts="$1"
-                shift
-                ;;
-
             # do not use the common options - they were already processed by get_common_arg and get_common_dotnet_arg:
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
                 ;;
@@ -93,7 +86,6 @@ function dump_args()
         reason
         nuget_server
         repo_owner
-        save_artifacts
         --header "\`dotnet <command>\` CLI Arguments:"
         --common-dotnet-args
 

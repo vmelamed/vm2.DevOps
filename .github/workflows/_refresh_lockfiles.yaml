@@ -48,10 +48,9 @@ jobs:
           ref: ${{ inputs.base-branch || github.event.repository.default_branch }}
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
-          target-framework: ${{ inputs.target-framework }}
-          dotnet-quality: ga
+          global-json-file: global.json
 
       - name: Authenticate with GitHub Packages
         if: ${{ env.GH_PACKAGES_TOKEN != '' }}
