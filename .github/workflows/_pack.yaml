@@ -114,11 +114,6 @@ jobs:
               exit 1
           }
 
-      - name: TEMP DEBUG list artifacts tree
-        shell: bash
-        run: |
-          find "$ARTIFACTS_PATH" -type f | sort
-
       - name: Pack
         id: pack
         shell: bash
