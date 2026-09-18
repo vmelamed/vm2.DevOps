@@ -464,6 +464,7 @@ function set_table_format()
     exit_if_has_bugs
 
     __table_format="${1,,}"
+    trace -sd 10 "Table format set to: $__table_format"
 }
 
 #=============================================================================================

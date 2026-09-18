@@ -252,10 +252,12 @@ function dump_vars()
         restore_state _core_state &&
         return "$success"
 
-    local _fmt
+    local _fmt=''
 
     get_table_format _fmt
     _current_table=$_fmt
+
+    trace -sd 10 "Current table format: ${!_current_table}"
 
     # for the proper behavior of this function change some global flags (to be restored before returning from the function)
     local _top=true  # is this the top header?
