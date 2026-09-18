@@ -235,7 +235,7 @@ function dump_vars()
     local _fmt=''
 
     get_table_format _fmt
-    trace -sd 10 "Current table format: ${!_current_table}"
+    trace -sd 10 "Current table format: $_fmt"
 
     # save the current global state - to be restored before returning from the function
     local -A _core_state=()
@@ -256,8 +256,6 @@ function dump_vars()
     ! is_verbose &&
         restore_state _core_state &&
         return "$success"
-
-    local _fmt=''
 
     get_table_format _fmt
     _current_table=$_fmt
