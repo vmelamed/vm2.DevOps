@@ -456,7 +456,7 @@ function set_table_format()
 
     exit_if_has_bugs
 
-    trace -sd 3 "Setting table format to: '${1,,}'"
+    trace -sd 10 "Setting table format to: '${1,,}'"
     __table_format="${1,,}"
 }
 

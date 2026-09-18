@@ -254,7 +254,7 @@ function dump_vars()
 
     #
     _current_table=$(get_table_format)
-    trace -sd 3 "Using current table: '${!_current_table}'"
+    trace -sd 10 "Using current table: '${!_current_table}'"
 
     # for the proper behavior of this function change some global flags (to be restored before returning from the function)
     local _top=true  # is this the top header?
