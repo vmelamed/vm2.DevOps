@@ -64,7 +64,6 @@ Options:
                                 Reset Bencher's stored thresholds instead of testing against them (use when a
                                 degradation is expected and the new baseline should replace the old one).
                                 Initial value from \$RESET_THRESHOLDS or default 'false'.
-$common_args_usage
 
 Environment Variables:
   RESULTS_DIR                   Directory containing the benchmark JSON results.
