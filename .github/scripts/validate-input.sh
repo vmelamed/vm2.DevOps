@@ -132,6 +132,7 @@ is_safe_boolean "$skip_benchmarks"                                              
 is_safe_boolean "$skip_packages"                                                                                 || true
 sanitize_common_dotnet_args "$(jq -r '.[0] // "."' <<< "$build_projects")"                                       || true
 
+declare _table_fmt
 $ci && _table_fmt="--markdown" || _table_fmt="--graphical"
 
 declare -ra dump_vars_args=(

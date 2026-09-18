@@ -232,6 +232,11 @@ function dump_vars()
 {
     (( $# == 0 )) && return "$success"
 
+    local _fmt=''
+
+    get_table_format _fmt
+    trace -sd 10 "Current table format: ${!_current_table}"
+
     # save the current global state - to be restored before returning from the function
     local -A _core_state=()
     save_state _core_state
