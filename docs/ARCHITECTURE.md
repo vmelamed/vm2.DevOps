@@ -31,6 +31,10 @@
   - [NuGet Package Cache (dual-layer)](#nuget-package-cache-dual-layer)
   - [Build Artifact Handoff (workflow artifacts, not cache)](#build-artifact-handoff-workflow-artifacts-not-cache)
   - [Cache Cleanup](#cache-cleanup)
+- [Benchmark Threshold Management](#benchmark-threshold-management)
+  - [Per-run threshold reset (`reset-benchmark-thresholds`)](#per-run-threshold-reset-reset-benchmark-thresholds)
+  - [Rebuilding benchmark history](#rebuilding-benchmark-history)
+  - [When to use which](#when-to-use-which)
 - [Script Distribution](#script-distribution)
 - [NuGet Authentication](#nuget-authentication)
 - [Actions Secrets](#actions-secrets)
@@ -481,6 +485,60 @@ This intra-run handoff deliberately does **not** use the Actions cache: the cach
 
 The `_clear_cache.yaml` workflow provides emergency cleanup. It restricts deletions to three allowlisted prefixes: `nuget-`,
 `build-artifacts-`, and `bencher-cli-`. (The `build-artifacts-` prefix is legacy — these caches are no longer created; the prefix remains allowlisted only to purge leftover entries until they age out.)
+
+## Benchmark Threshold Management
+
+Bencher.dev tracks benchmark results over time and alerts on regressions by comparing a run's numbers against
+**thresholds it computes from previously recorded history** (percentage thresholds from the recorded variance;
+static thresholds, like GC-collection caps, from a fixed number). Two independent mechanisms exist for managing
+those thresholds, at very different scales — a lightweight per-run escape valve, and a heavier deliberate rebuild.
+
+### Per-run threshold reset (`reset-benchmark-thresholds`)
+
+A boolean that threads through the whole CI call chain for a single dispatch:
+
+```text
+CI.yaml (workflow_dispatch input)
+  → _ci.yaml (workflow_call input, sanitized by validate-input.sh)
+    → _benchmarks.yaml (workflow_call input, per benchmark-project × runner-os matrix leg)
+      → upload-bencher-results.sh --reset-thresholds true|false
+        → adds --thresholds-reset to the `bencher run` invocation
+```
+
+Normal CI runs test the new benchmark numbers *against* Bencher's already-stored thresholds and fail/alert on
+regression. When a change legitimately shifts performance (a new safety check, a different allocation pattern) and
+that one run should not alert, flip this to `true` for that dispatch. Bencher then takes this run's own numbers as
+the new baseline going forward, instead of comparing against the old one. It is a single data point, immediate,
+opt-in, and scoped only to the run it is set on — routine housekeeping, not a structural operation.
+
+### Rebuilding benchmark history
+
+Bencher's percentage/static thresholds need **recorded variance across multiple runs** to mean anything — a single
+`--thresholds-reset` point gives it no spread to learn "normal" from. A full history rebuild is needed whenever the
+entire baseline goes stale: a runner-image upgrade, new hardware, or a benchmark restructure. The chain, bottom-up:
+
+- **`rebuild-bench-history-run.sh`** (the actual work) — discovers every `*.csproj` under `benchmarks/` (or takes
+  one explicitly via `--benchmark-project`), and for each, loops `--repeat` times (default 10). Each iteration is
+  an independent process run of `run-benchmarks.sh` (a fresh build the first time, since this workflow restores no
+  build-artifact cache), then uploads the JSON result via a **bare** `bencher run` — deliberately no
+  `--threshold-*`, no `--err`, so one noisy iteration never aborts the loop. Record-only.
+- **`_rebuild_bench_history.yaml`** (reusable workflow, lives in vm2.DevOps) — installs the Bencher CLI, checks
+  out, sets up .NET, then calls the script above with the right `--bencher-project`/`--bencher-testbed`/
+  `--bencher-branch`.
+- **`RebuildBenchHistory.yaml`** (per-repo entry point, e.g. in vm2.Ulid) — the actual `workflow_dispatch` trigger
+  a human clicks (UI or phone), with a `repeat` input. Identical copy in every package repo; a repo with no
+  `benchmarks/` simply has nothing to do.
+- **`rebuild-bench-history.sh`** (fan-out convenience, vm2.DevOps-only) — loops the hardcoded `vm2_repositories`
+  list (`_constants.sh`), probes each repo's GitHub API for a `benchmarks/` directory, and for each hit, dispatches
+  *that* repo's own `RebuildBenchHistory.yaml` via `gh workflow run ... -f repeat=N`. Fire-and-forget: it does not
+  wait, and every repo's rebuild proceeds independently in its own Actions.
+
+### When to use which
+
+| Situation                                                                    | Mechanism                    |
+| :--------------------------------------------------------------------------- | :--------------------------- |
+| One PR/run has an expected, understood regression                            | `reset-benchmark-thresholds` |
+| The whole baseline is stale (runner change, new hardware, benchmark rewrite) | Rebuild benchmark history    |
 
 ## Script Distribution
 
