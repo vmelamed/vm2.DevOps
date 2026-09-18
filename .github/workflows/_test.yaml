@@ -66,9 +66,6 @@ permissions:
   pull-requests: write # to comment test results on PRs
 
 env:
-  # this must be the same across all jobs and steps below.
-  # We must know where to find the artifacts and where to download/upload to/from across all jobs and steps here.
-  ARTIFACTS_PATH: artifacts
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   GH_TOKEN: ${{ github.token }}
@@ -105,12 +102,29 @@ jobs:
           github-token: ${{ github.token }}
           github-actor: ${{ github.actor }}
 
+      # Resolve ArtifactsPath from Directory.Build.props (the sole owner of this value -- see
+      # CONVENTIONS.md) via a static MSBuild evaluation against a project already available as
+      # this job's own input, rather than duplicating or hardcoding the "artifacts" default here.
+      - name: Resolve artifacts path
+        id: artifacts
+        shell: bash
+        run: |
+          source $DEVOPS_LIB_DIR/gh_core.sh
+
+          first_test_project=$(echo '${{ inputs.test-projects }}' | jq -r '.[0]')
+          declare artifacts_path=''
+          get_msbuild_property "$first_test_project" ArtifactsPath artifacts_path ||
+              error -ec $? "Failed to resolve ArtifactsPath from '$first_test_project'."
+          exit_if_has_errors
+
+          args_to_github_output artifacts_path
+
       # Retrieve compiled binaries from the build workflow to avoid recompilation. Artifacts (not the cache) are the
       # intra-run handoff: the cache gives no read-after-write guarantee within a run.
       - name: Download built artifacts
         uses: actions/download-artifact@v8
         with:
-          pattern: built-artifacts-${{ runner.os }}-*
+          pattern: built-artifacts-${{ runner.os }}-${{ github.run_id }}-*
           path: downloaded/
 
       - name: Extract built artifacts
@@ -122,6 +136,7 @@ jobs:
         id: run-tests
         shell: bash
         env:
+          ARTIFACTS_PATH: ${{ steps.artifacts.outputs.artifacts-path }}
           REPORTGENERATOR_LICENSE: ${{ secrets.REPORTGENERATOR_LICENSE }}
           TEST_VAR: test-value
         run: |

@@ -34,9 +34,6 @@ permissions:
   packages: read
 
 env:
-  # this must be the same across all jobs and steps below.
-  # We must know where to find the artifacts and where to download/upload to/from across all jobs and steps here.
-  ARTIFACTS_PATH: artifacts
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   MINVERTAGPREFIX: ${{ vars.MINVERTAGPREFIX }}
@@ -110,30 +107,20 @@ jobs:
       # gives no read-after-write guarantee, so a freshly saved entry may not be visible to a lookup seconds later (observed
       # 2026-06-11: 4/4 deterministic restore misses ~25s after a verified save).
       #
-      # Scoped to this leg's own artifacts-project-name subfolder(s) (bin/obj), not the whole $ARTIFACTS_PATH tree: a leg's
-      # build-project may be an individual project (one name) or a whole solution (one name per constituent project, since
-      # build-projects may freely mix both), and `dotnet build` transitively rebuilds project references into the SAME
-      # shared tree, so every leg that depends on another project would otherwise re-upload that project's output too,
-      # duplicated across every dependent leg's own artifact.
+      # Archives the whole bin/obj tree rather than scoping to this leg's own build-project name(s): `dotnet build`
+      # transitively rebuilds project references into the same shared artifacts/ tree, and a referenced project need not be
+      # listed in build-projects itself, so name-scoping could silently omit output another job actually needs. Grabbing
+      # everything can duplicate bytes across legs that share a reference, but never drops anything the build produced.
       - name: Archive built artifacts
         shell: bash
         env:
-          ARTIFACTS_PROJECT_NAMES: ${{ steps.build.outputs.artifacts-project-name }}
+          ARTIFACTS_PATH: ${{ steps.build.outputs.artifacts-path }}
         run: |
-          declare -a names
-          mapfile -t names < <(jq -r '.[]' <<< "$ARTIFACTS_PROJECT_NAMES")
-
-          declare -a dirs=()
-          for name in "${names[@]}"; do
-              bin_dir="$ARTIFACTS_PATH/bin/$name"
-              obj_dir="$ARTIFACTS_PATH/obj/$name"
-              [[ -d $bin_dir ]] || {
-                  echo "::error::Build produced no output in $bin_dir/."
-                  exit 1
-              }
-              dirs+=("$bin_dir" "$obj_dir")
-          done
-          tar czf built-artifacts.tar.gz --exclude='*.tmp' "${dirs[@]}"
+          [[ -d $ARTIFACTS_PATH/bin ]] || {
+              echo "::error::Build produced no output in $ARTIFACTS_PATH/bin/."
+              exit 1
+          }
+          tar czf built-artifacts.tar.gz --exclude='*.tmp' "$ARTIFACTS_PATH/bin" "$ARTIFACTS_PATH/obj"
 
       # Named by this matrix leg's own index, not by project/solution content: a leg may cover one project or several (a
       # whole solution), so there's no single clean name to embed here -- the index is always unique across the matrix
@@ -141,5 +128,5 @@ jobs:
       - name: Upload built artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: built-artifacts-${{ runner.os }}-${{ inputs.job-index }}-${{ github.run_id }}
           path: built-artifacts.tar.gz
+          name: built-artifacts-${{ runner.os }}-${{ github.run_id }}-${{ inputs.job-index }}

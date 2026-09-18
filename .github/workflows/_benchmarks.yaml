@@ -77,9 +77,6 @@ permissions:
   pull-requests: write # Required for Bencher to comment on PRs
 
 env:
-  # this must be the same across all jobs and steps below.
-  # We must know where to find the artifacts and where to download/upload to/from across all jobs and steps here.
-  ARTIFACTS_PATH: artifacts
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   GH_TOKEN: ${{ github.token }}
@@ -130,12 +127,29 @@ jobs:
           github-token: ${{ github.token }}
           github-actor: ${{ github.actor }}
 
+      # Resolve ArtifactsPath from Directory.Build.props (the sole owner of this value -- see
+      # CONVENTIONS.md) via a static MSBuild evaluation against the benchmark project already
+      # available as this job's own input, rather than duplicating or hardcoding the "artifacts"
+      # default here.
+      - name: Resolve artifacts path
+        id: artifacts
+        shell: bash
+        run: |
+          source $DEVOPS_LIB_DIR/gh_core.sh
+
+          declare artifacts_path=''
+          get_msbuild_property "${{ inputs.benchmark-project }}" ArtifactsPath artifacts_path ||
+              error -ec $? "Failed to resolve ArtifactsPath from '${{ inputs.benchmark-project }}'."
+          exit_if_has_errors
+
+          args_to_github_output artifacts_path
+
       # Retrieve compiled binaries from the build job. Artifacts (not the cache) are the intra-run handoff:
       # the cache gives no read-after-write guarantee within a run.
       - name: Download built artifacts
         uses: actions/download-artifact@v8
         with:
-          pattern: built-artifacts-${{ runner.os }}-*
+          pattern: built-artifacts-${{ runner.os }}-${{ github.run_id }}-*
           path: downloaded/
 
       - name: Extract build artifacts
@@ -146,19 +160,21 @@ jobs:
       # A pattern download does not fail on zero matches, so verify explicitly (the equivalent of fail-on-cache-miss)
       - name: Verify build artifacts were downloaded
         shell: bash
+        env:
+          ARTIFACTS_PATH: ${{ steps.artifacts.outputs.artifacts-path }}
         run: |
           [[ -d $ARTIFACTS_PATH ]] || {
               echo "::error::No build artifacts were downloaded from the build job."
               exit 1
           }
 
-      # Run benchmarks using BenchmarkDotNet and export JSON results
+      # Run benchmarks using BenchmarkDotNet and export JSON results. run-benchmarks.sh resolves its own
+      # ArtifactsPath (same Directory.Build.props-backed default every script in this framework uses) and
+      # reports the results directory it produced as its own 'results-dir' output -- no need to pass it in
+      # or duplicate it here.
       - name: Run BenchmarkDotNet benchmarks
         id: run-benchmarks
         shell: bash
-        env:
-          BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
-          GH_TOKEN: ${{ github.token }}
         run: |
           source "$DEVOPS_LIB_DIR/gh_core.sh"
 
@@ -169,10 +185,19 @@ jobs:
               --configuration "${{ inputs.configuration }}" \
               --define "${{ inputs.preprocessor-symbols }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
-              --minver-prerelease-id "${{ inputs.minver-prerelease-id }}" \
-              --artifacts-path "$ARTIFACTS_PATH"
+              --minver-prerelease-id "${{ inputs.minver-prerelease-id }}"
 
-          trace "Benchmarks completed. Preparing to upload results to Bencher.dev with max regression threshold of ±${{ inputs.max-regression-pct }}%."
+      # Upload the results collected above to Bencher.dev, tracking regressions and posting PR/summary results.
+      - name: Upload benchmark results to Bencher.dev
+        shell: bash
+        env:
+          RESULTS_DIR: ${{ steps.run-benchmarks.outputs.results-dir }}
+          BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          source "$DEVOPS_LIB_DIR/gh_core.sh"
+
+          trace "Preparing to upload results to Bencher.dev with max regression threshold of ±${{ inputs.max-regression-pct }}%."
 
           # Calculate thresholds as decimals (e.g., 10% -> LOWER_THRESHOLD=0.90, 10% -> UPPER_THRESHOLD=0.10)
           LOWER_THRESHOLD=$(echo "scale=4; ${{ inputs.max-regression-pct }} / 100" | bc)
@@ -280,7 +305,7 @@ jobs:
           # Add all benchmark result files. The glob MUST be unquoted here so the shell expands
           # it to the matching files -- quoting it turns the loop into a single iteration over
           # the literal, non-existent pattern string, silently adding no --file argument at all.
-          for file in "$ARTIFACTS_PATH"/benchmarks/results/*-report-full-compressed.json; do
+          for file in "$RESULTS_DIR"/*-report-full-compressed.json; do
               if [[ -s "$file" ]]; then
                   trace "Adding benchmark result file: $file"
                   BENCHER_ARGS+=(--file "$file")
@@ -288,8 +313,8 @@ jobs:
           done
 
           if [[ $verbose == "true" ]]; then
-              trace "Looking for benchmark result files matching: $ARTIFACTS_PATH/benchmarks/results/*-report-full-compressed.json:"
-              trace "$(ls -l $ARTIFACTS_PATH/benchmarks/results/*-report-full-compressed.json)"
+              trace "Looking for benchmark result files matching: $RESULTS_DIR/*-report-full-compressed.json:"
+              trace "$(ls -l $RESULTS_DIR/*-report-full-compressed.json)"
 
               declare -a sanitized_bencher_args=("${BENCHER_ARGS[@]}")
 
@@ -329,7 +354,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: benchmark-results-${{ inputs.runner-os }}
-          path: ${{ env.ARTIFACTS_PATH }}/benchmarks
+          path: ${{ steps.artifacts.outputs.artifacts-path }}/benchmarks
           if-no-files-found: warn
           overwrite: true
 

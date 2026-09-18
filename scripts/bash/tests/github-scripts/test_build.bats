@@ -39,23 +39,8 @@ case "$1" in
     restore) exit "${FAKE_DOTNET_RESTORE_EXIT:-0}" ;;
     build)
         echo "Build succeeded."
-        [[ -n ${FAKE_ARTIFACTS_PROJECT_NAME:-} ]] && echo "ArtifactsProjectName=$FAKE_ARTIFACTS_PROJECT_NAME"
+        [[ -n ${FAKE_ARTIFACTS_PATH:-} ]] && echo "ArtifactsPath=$FAKE_ARTIFACTS_PATH"
         exit "${FAKE_DOTNET_BUILD_EXIT:-0}"
-        ;;
-    sln)
-        # $2 = solution file, $3 = 'list' -- FAKE_SLN_PROJECTS is a semicolon-separated list of
-        # project paths (bash arrays can't cross the exec boundary into this fake script).
-        echo "Project(s)"
-        echo "----------"
-        IFS=';' read -ra _sln_projects <<< "${FAKE_SLN_PROJECTS:-}"
-        printf '%s\n' "${_sln_projects[@]}"
-        exit 0
-        ;;
-    msbuild)
-        # get_msbuild_property calls this as: dotnet msbuild <project> --no-logo --verbosity
-        # minimal -getProperty:<name> [common dotnet args...] -- $2 is always the project path.
-        echo "ArtifactsProjectName_for_$(basename "$2" .csproj)"
-        exit 0
         ;;
     *) exit 0 ;;
 esac
@@ -70,19 +55,6 @@ _make_repo_with_project() {
     git -C "$_dir" config user.email "test@test.local"
     git -C "$_dir" config user.name "test"
     echo '<Project />' > "$_dir/App.csproj"
-    git -C "$_dir" add -A
-    git -C "$_dir" commit --quiet -m "init"
-}
-
-_make_repo_with_solution() {
-    local _dir="$1"
-    mkdir -p "$_dir/src/App" "$_dir/tests/App.Tests"
-    git -C "$_dir" init --quiet
-    git -C "$_dir" config user.email "test@test.local"
-    git -C "$_dir" config user.name "test"
-    echo '<Solution />' > "$_dir/App.slnx"
-    echo '<Project />' > "$_dir/src/App/App.csproj"
-    echo '<Project />' > "$_dir/tests/App.Tests/App.Tests.csproj"
     git -C "$_dir" add -A
     git -C "$_dir" commit --quiet -m "init"
 }
@@ -174,28 +146,12 @@ _run_build() {
     refute_line --partial "nuget update source"
 }
 
-@test "build: reports a single project build's own artifacts-project-name as a one-element JSON array" {
+@test "build: reports the build's resolved artifacts-path" {
     _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
     _install_fake_dotnet "$BATS_TEST_TMPDIR/repo"
-    run _run_build "$BATS_TEST_TMPDIR/repo" 'FAKE_ARTIFACTS_PROJECT_NAME=App' App.csproj
+    run _run_build "$BATS_TEST_TMPDIR/repo" 'FAKE_ARTIFACTS_PATH=artifacts' App.csproj
     assert_success
-    assert_output --partial 'artifacts-project-name=["App"]'
-}
-
-@test "build: a solution build enumerates every constituent project's own artifacts-project-name (regression: extract_dotnet_build_info() drops this key for solutions, since a single captured value would just be whichever project happened to build last)" {
-    _make_repo_with_solution "$BATS_TEST_TMPDIR/repo"
-    _install_fake_dotnet "$BATS_TEST_TMPDIR/repo"
-    run _run_build "$BATS_TEST_TMPDIR/repo" \
-        'FAKE_SLN_PROJECTS="src/App/App.csproj;tests/App.Tests/App.Tests.csproj"' \
-        App.slnx
-    assert_success
-    assert_output --partial 'artifacts-project-name=["ArtifactsProjectName_for_App","ArtifactsProjectName_for_App.Tests"]'
-
-    run cat "$BATS_TEST_TMPDIR/repo/calls.log"
-    assert_line --index 0 --partial "clean App.slnx"
-    assert_output --partial "sln App.slnx list"
-    assert_output --partial "msbuild src/App/App.csproj"
-    assert_output --partial "msbuild tests/App.Tests/App.Tests.csproj"
+    assert_output --partial 'artifacts-path=artifacts'
 }
 
 # --- failures --------------------------------------------------------------------------------

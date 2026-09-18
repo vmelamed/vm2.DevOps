@@ -53,9 +53,6 @@ permissions:
   packages: read
 
 env:
-  # this must be the same across all jobs and steps below.
-  # We must know where to find the artifacts and where to download/upload to/from across all jobs and steps here.
-  ARTIFACTS_PATH: artifacts
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   DOTNET_VERSION: ${{ vars.DOTNET_VERSION }}
@@ -95,7 +92,7 @@ jobs:
         if: ${{ !inputs.skip-build-cache }}
         uses: actions/download-artifact@v8
         with:
-          pattern: built-artifacts-${{ runner.os }}-*
+          pattern: built-artifacts-${{ runner.os }}-${{ github.run_id }}-*
           path: downloaded/
 
       - name: Extract built artifacts
@@ -104,16 +101,9 @@ jobs:
         run: |
           find downloaded/ -name '*.tar.gz' -exec tar xzf {} \;
 
-      # A pattern download does not fail on zero matches, so verify explicitly (the equivalent of fail-on-cache-miss)
-      - name: Verify built artifacts were downloaded
-        if: ${{ !inputs.skip-build-cache }}
-        shell: bash
-        run: |
-          [[ -d $ARTIFACTS_PATH ]] || {
-              echo "::error::No built artifacts were downloaded from the build job."
-              exit 1
-          }
-
+      # No separate "verify artifacts were downloaded" check here: pack.sh resolves its own expected build
+      # output path and builds the project itself when that output is missing (e.g. --skip-build-cache
+      # callers, or a download that came back empty).
       - name: Pack
         id: pack
         shell: bash

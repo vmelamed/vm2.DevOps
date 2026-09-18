@@ -60,7 +60,14 @@ declare -xr package_project
 # declare -xr reason
 declare -xr build
 
-if $build; then
+declare -x pack_exec_path
+get_target_path "$package_project" pack_exec_path
+declare -xr pack_exec_path
+
+# Build when explicitly requested (--build), or when the artifacts directory has no build output for this
+# project yet -- e.g. --skip-build-cache callers (template packages) that never download a prior build.
+if $build || [[ ! -s $pack_exec_path ]]; then
+    [[ -s $pack_exec_path ]] || warning "Build output '$pack_exec_path' was not found in the artifacts directory. Building the project before packing..."
     update_nuget_sources_with_github_vm2   || error -ec $? "Updating the NuGet sources with GitHub packages from vm2 failed."
     exit_if_has_errors
     dotnet_clean "$package_project"        || error -ec $? "Cleaning the build project failed."
@@ -68,6 +75,8 @@ if $build; then
     dotnet_restore "$package_project"      || error -ec $? "Restoring the build project failed."
     exit_if_has_errors
     dotnet_build "$package_project"        || error -ec $? -sd 3 "Building the build project failed."
+    exit_if_has_errors
+    [[ -s $pack_exec_path ]]               || error -ec "$err_tool_error" -sd 3 "After building, the output '$pack_exec_path' was still NOT FOUND."
     exit_if_has_errors
 fi
 

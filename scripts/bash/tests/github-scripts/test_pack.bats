@@ -9,11 +9,11 @@
 # setting the CI variables to confirm the summary lands there too.
 #
 # Real `dotnet` is faked: it logs every invocation to $DOTNET_CALL_LOG. Its `msbuild` case
-# (used by dotnet_pack to read back PackageOutputPath/PackageId/PackageVersion -- there is no
-# distinguishing -getProperty: flag for this call, unlike get_target_path's) prints those three
-# properties from $FAKE_PACKAGE_OUTPUT_PATH/$FAKE_PACKAGE_ID/$FAKE_PACKAGE_VERSION. The fixture
-# pre-creates the matching .nupkg/.snupkg files there, exactly as dotnet_pack expects to find
-# them after a real `dotnet pack`.
+# branches on the arguments: a `-getProperty:TargetPath` call (used by pack.sh's own
+# already-built check, via get_target_path) prints $FAKE_TARGET_PATH; any other `msbuild` call
+# (dotnet_pack reading back PackageOutputPath/PackageId/PackageVersion) prints those three
+# properties from $_id/$_version. The fixture pre-creates the matching .nupkg/.snupkg files, and
+# an already-built $FAKE_TARGET_PATH, exactly as pack.sh expects to find them without rebuilding.
 
 bats_require_minimum_version 1.5.0
 
@@ -34,17 +34,29 @@ _install_fake_dotnet_and_package() {
     echo fake > "$_dir/pkgout/$_id.$_version.nupkg"
     echo fake > "$_dir/pkgout/$_id.$_version.snupkg"
 
+    # Default: report an already-built target, so happy-path tests don't trigger pack.sh's
+    # auto-build fallback. Tests exercising that fallback override FAKE_TARGET_PATH themselves.
+    echo fake > "$_dir/App.dll"
+
     cat > "$_dir/fakebin/dotnet" <<EOF
 #!/usr/bin/env bash
 echo "\$*" >> "\$DOTNET_CALL_LOG"
 case "\$1" in
     pack)    exit "\${FAKE_DOTNET_PACK_EXIT:-0}" ;;
+    clean)   exit "\${FAKE_DOTNET_CLEAN_EXIT:-0}" ;;
     restore) exit "\${FAKE_DOTNET_RESTORE_EXIT:-0}" ;;
     build)   exit "\${FAKE_DOTNET_BUILD_EXIT:-0}" ;;
     msbuild)
-        echo "PackageOutputPath=$_dir/pkgout"
-        echo "PackageId=$_id"
-        echo "PackageVersion=$_version"
+        case "\$*" in
+            *-getProperty:TargetPath*)
+                echo "\${FAKE_TARGET_PATH:-$_dir/App.dll}"
+                ;;
+            *)
+                echo "PackageOutputPath=$_dir/pkgout"
+                echo "PackageId=$_id"
+                echo "PackageVersion=$_version"
+                ;;
+        esac
         exit "\${FAKE_DOTNET_MSBUILD_EXIT:-0}"
         ;;
     *) exit 0 ;;
@@ -86,9 +98,28 @@ _run_pack() {
     assert_output --partial "v1.2.3"
 
     run cat "$BATS_TEST_TMPDIR/repo/dotnet.log"
-    assert_line --index 0 --partial "pack src/App/App.csproj"
+    assert_line --index 0 --partial "-getProperty:TargetPath"
+    assert_line --index 1 --partial "pack src/App/App.csproj"
     refute_output --partial "restore"
     refute_output --partial "^build "
+}
+
+@test "pack: attempts a build before packing when the target output is missing (e.g. --skip-build-cache), and reports if it is still not found" {
+    _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
+    _install_fake_dotnet_and_package "$BATS_TEST_TMPDIR/repo"
+    # deliberately do NOT create the target file -- FAKE_TARGET_PATH points nowhere, and the fake
+    # `dotnet build` (like the real one, here) never creates it either.
+    run _run_pack "$BATS_TEST_TMPDIR/repo" "FAKE_TARGET_PATH=$BATS_TEST_TMPDIR/repo/does-not-exist.dll" src/App/App.csproj
+    assert_failure
+    assert_output --partial "was not found in the artifacts directory. Building the project before packing"
+    assert_output --partial "still NOT FOUND"
+
+    run cat "$BATS_TEST_TMPDIR/repo/dotnet.log"
+    assert_line --index 0 --partial "-getProperty:TargetPath"
+    assert_line --index 1 --partial "clean src/App/App.csproj"
+    assert_line --index 2 --partial "restore src/App/App.csproj"
+    assert_line --index 3 --partial "build src/App/App.csproj"
+    refute_output --partial "pack src/App/App.csproj"
 }
 
 @test "pack: --build true cleans, restores, and builds before packing" {
@@ -98,10 +129,11 @@ _run_pack() {
     assert_success
 
     run cat "$BATS_TEST_TMPDIR/repo/dotnet.log"
-    assert_line --index 0 --partial "clean src/App/App.csproj"
-    assert_line --index 1 --partial "restore src/App/App.csproj"
-    assert_line --index 2 --partial "build src/App/App.csproj"
-    assert_line --index 3 --partial "pack src/App/App.csproj"
+    assert_line --index 0 --partial "-getProperty:TargetPath"
+    assert_line --index 1 --partial "clean src/App/App.csproj"
+    assert_line --index 2 --partial "restore src/App/App.csproj"
+    assert_line --index 3 --partial "build src/App/App.csproj"
+    assert_line --index 4 --partial "pack src/App/App.csproj"
 }
 
 @test "pack: --reason is included as a package release note and reflected in the summary" {
@@ -151,15 +183,23 @@ _run_pack() {
 @test "pack: fails when the produced package files are missing" {
     _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
     mkdir -p "$BATS_TEST_TMPDIR/repo/fakebin"
+    echo fake > "$BATS_TEST_TMPDIR/repo/App.dll"
     cat > "$BATS_TEST_TMPDIR/repo/fakebin/dotnet" <<EOF
 #!/usr/bin/env bash
 echo "\$*" >> "\$DOTNET_CALL_LOG"
 case "\$1" in
     pack) exit 0 ;;
     msbuild)
-        echo "PackageOutputPath=$BATS_TEST_TMPDIR/repo/nonexistent"
-        echo "PackageId=App"
-        echo "PackageVersion=1.2.3"
+        case "\$*" in
+            *-getProperty:TargetPath*)
+                echo "$BATS_TEST_TMPDIR/repo/App.dll"
+                ;;
+            *)
+                echo "PackageOutputPath=$BATS_TEST_TMPDIR/repo/nonexistent"
+                echo "PackageId=App"
+                echo "PackageVersion=1.2.3"
+                ;;
+        esac
         exit 0
         ;;
     *) exit 0 ;;
