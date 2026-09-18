@@ -254,6 +254,7 @@ function dump_vars()
 
     #
     _current_table=$(get_table_format)
+    trace "Using current table: $_current_table"
 
     # for the proper behavior of this function change some global flags (to be restored before returning from the function)
     local _top=true  # is this the top header?
@@ -325,8 +326,8 @@ function dump_vars()
             if $_curr_is_header; then
                 if $_next_is_header; then
                     $_top &&
-                        printf "${_current_table["bot_top_header"]}" ||    # finish the top or middle header and start the sub-header section
-                        printf "${_current_table["top_sub_header"]}"
+                        printf "${_current_table["top_sub_header"]}" || # finish the top or middle header and start the sub-header section
+                        printf "${_current_table["bot_top_header"]}"
                 else
                     $_top &&
                         printf "${_current_table["bot_top_header"]}" || # finish the top header

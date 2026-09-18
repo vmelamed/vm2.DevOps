@@ -429,7 +429,7 @@ declare __table_format=$default_table_format
 #---------------------------------------------------------------------------------------------
 function get_table_format()
 {
-    printf "%s" "$__table_format"
+    printf "%s" "$__table_format\n"
 }
 
 #---------------------------------------------------------------------------------------------
@@ -456,6 +456,7 @@ function set_table_format()
 
     exit_if_has_bugs
 
+    trace "Setting table format to: ${1,,}"
     __table_format="${1,,}"
 }
 
