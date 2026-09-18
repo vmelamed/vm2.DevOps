@@ -19,6 +19,7 @@ declare -xri err_invalid_arguments
 declare -xri err_missing_argument
 
 declare -xr secret_str
+declare -xr default_table_format
 
 # shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
 declare -A graphical=(
@@ -61,9 +62,6 @@ declare -A markdown=(
     ["blank_spc_line"]="|                                          |                                                                                  |\n"
     ["bot_bot_header"]=""
 )
-
-# The name of the current table being used for output formatting: either "graphical" or "markdown"
-declare -n _current_table
 
 # ref. the common dotnet variables
 declare -x preprocessor_symbols
@@ -108,9 +106,12 @@ declare -xra dump_common_dotnet_args=(
 #---------------------------------------------------------------------------------------------
 function _write_title()
 {
-    (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 argument (provided $#) - the table header text."
+    (( $# == 2 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 argument (provided $#) - the table header text."
 
     exit_if_has_bugs
+
+    local -n _current_table=''
+    get_table_format _current_table
 
     # shellcheck disable=SC2059 # Don't use variables in the printf format string. Use printf "..%s.." "$foo".
     printf "${_current_table["fmt_top_header"]}" "$1"
@@ -155,6 +156,9 @@ function _write_line()
     [[ ! -v 2 ]] || is_boolean "$2"                          || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 2, the secret-masking flag, to be 'true' or 'false' (provided '${2:-<none>}')."
 
     exit_if_has_bugs
+
+    local -n _current_table=''
+    get_table_format _current_table
 
     local _format _format_i
     _format=${_current_table["fmt_left_value"]}
@@ -232,10 +236,6 @@ function dump_vars()
 {
     (( $# == 0 )) && return "$success"
 
-    local _fmt0=''
-
-    get_table_format _fmt0
-
     # save the current global state - to be restored before returning from the function
     local -A _core_state=()
     save_state _core_state
@@ -256,15 +256,8 @@ function dump_vars()
         restore_state _core_state &&
         return "$success"
 
-    local _fmt=''
-
-    get_table_format _fmt
-    _current_table=$_fmt
-
-    trace -sd 10 "Before dumping table format: $_fmt0"
-    trace -sd 10 "Stored table format: ${_core_state["Table_Format"]}"
-    trace -sd 10 "Current table format: $_fmt"
-    trace -sd 10 "_current_table is: ${!_current_table}"
+    local -n _current_table=''
+    get_table_format _current_table
 
     # for the proper behavior of this function change some global flags (to be restored before returning from the function)
     local _top=true  # is this the top header?
