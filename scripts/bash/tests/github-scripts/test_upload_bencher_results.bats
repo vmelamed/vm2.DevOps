@@ -126,6 +126,29 @@ _run_upload() {
     assert_output --partial "--branch main"
 }
 
+@test "upload-bencher-results: standalone (no GITHUB_* env, no --repository/--ref-name) derives them from the local git repo" {
+    local _repo="$BATS_TEST_TMPDIR/repo"
+    mkdir -p "$_repo"
+    git -C "$_repo" init --quiet
+    git -C "$_repo" config user.email "test@test.local"
+    git -C "$_repo" config user.name "test"
+    git -C "$_repo" commit --quiet --allow-empty -m init
+    git -C "$_repo" checkout --quiet -b feature/local-test
+    git -C "$_repo" remote add origin "https://github.com/vmelamed/vm2.DevOps.git"
+
+    _make_results_dir "$_repo/results"
+    _install_fake_bencher "$BATS_TEST_TMPDIR"
+    run env -i HOME="$HOME" PATH="$BATS_TEST_TMPDIR/fakebin:/usr/local/bin:/usr/bin:/bin" \
+        BENCHER_CALL_LOG="$BATS_TEST_TMPDIR/bencher.log" BENCHER_API_TOKEN=tok \
+        bash -c "cd '$_repo' && bash '$_upload' '$_repo/results'"
+    assert_success
+
+    run cat "$BATS_TEST_TMPDIR/bencher.log"
+    assert_output --partial "--project vm2-devops"
+    assert_output --partial "--testbed local"
+    assert_output --partial "--branch feature/local-test"
+}
+
 # --- alerts / failures ------------------------------------------------------------------------
 
 @test "upload-bencher-results: a detected alert warns and fails, but still surfaces bencher's output" {
@@ -167,13 +190,15 @@ _run_upload() {
     assert_output --partial "is not a directory"
 }
 
-@test "upload-bencher-results: requires --testbed" {
+@test "upload-bencher-results: defaults --testbed to 'local' outside of GitHub Actions" {
     _make_results_dir "$BATS_TEST_TMPDIR/results"
     _install_fake_bencher "$BATS_TEST_TMPDIR"
     run _run_upload "$BATS_TEST_TMPDIR/results" '' \
         --repository vmelamed/vm2.DevOps --event-name push --ref-name main
-    assert_failure
-    assert_output --partial "--testbed is required"
+    assert_success
+
+    run cat "$BATS_TEST_TMPDIR/bencher.log"
+    assert_output --partial "--testbed local"
 }
 
 @test "upload-bencher-results: rejects a --repository not in owner/repo form" {

@@ -20,6 +20,7 @@ source "$lib_dir/gh_core.sh"
 declare -xr ci
 declare -x _ignore
 declare -x secret_str
+declare -xr key_repo
 
 # Declare error codes defined in the core library
 declare -xri success
@@ -49,6 +50,24 @@ source "$script_dir/upload-bencher-results.usage.sh"
 source "$script_dir/upload-bencher-results.args.sh"
 
 get_arguments "$@"
+
+# Sensible standalone defaults for GitHub-context values that otherwise only exist automatically
+# inside GitHub Actions -- every vm2.DevOps CI script must also run cleanly from a developer
+# machine, so fall back to the local git remote/branch instead of forcing these to be typed in.
+[[ -n $event_name ]] || event_name="push"
+[[ -n $testbed ]]    || testbed="local"
+
+if [[ -z $repository ]]; then
+    declare _repo_root
+    _repo_root=$(git rev-parse --show-toplevel 2>"$_ignore") || true
+    if [[ -n ${_repo_root:-} ]]; then
+        declare -A _repo_state=()
+        get_repo_state "$_repo_root" _repo_state false || true
+        repository=${_repo_state[$key_repo]:-}
+    fi
+fi
+
+[[ -n $ref_name ]] || ref_name=$(git branch --show-current 2>"$_ignore") || true
 
 # validate the values of the variables. results_dir is NOT run through is_safe_path/is_safe_existing_path: those
 # reject absolute paths by design (the framework's convention for user-facing --artifacts-path-style inputs), but

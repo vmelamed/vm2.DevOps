@@ -29,23 +29,23 @@ Arguments:
                                 Initial value from the \$RESULTS_DIR environment variable.
 
 Options:
-  --testbed <name>              Bencher testbed name (typically the runner OS). Required.
-                                Initial value from \$TESTBED.
+  --testbed <name>              Bencher testbed name (typically the runner OS).
+                                Initial value from \$TESTBED, or the default 'local' outside of GitHub Actions.
   --repository <owner/repo>     GitHub repository in 'owner/repo' form, used to derive the Bencher project slug
                                 (e.g. 'vmelamed/vm2.DevOps' -> 'vm2-devops').
-                                Initial value from \$REPOSITORY, or the \$GITHUB_REPOSITORY environment variable that
-                                GitHub Actions sets automatically.
+                                Initial value from \$REPOSITORY, the \$GITHUB_REPOSITORY environment variable that GitHub
+                                Actions sets automatically, or else derived from the local git remote 'origin'.
   --event-name <name>           The triggering GitHub event name (e.g. 'push', 'pull_request', 'workflow_dispatch').
-                                Initial value from \$EVENT_NAME, or the \$GITHUB_EVENT_NAME environment variable that
-                                GitHub Actions sets automatically.
-  --ref-name <name>             The Git ref name (e.g. 'main', a feature branch). Used as the Bencher branch outside
-                                of pull requests.
-                                Initial value from \$REF_NAME, or the \$GITHUB_REF_NAME environment variable that
-                                GitHub Actions sets automatically.
-  --head-ref <name>             The pull request's own head branch name. Only meaningful (and required) when
-                                --event-name is 'pull_request'.
-                                Initial value from \$HEAD_REF, or the \$GITHUB_HEAD_REF environment variable that
-                                GitHub Actions sets automatically.
+                                Initial value from \$EVENT_NAME, the \$GITHUB_EVENT_NAME environment variable that GitHub
+                                Actions sets automatically, or else the default 'push' outside of GitHub Actions.
+  --ref-name <name>             The Git ref name (e.g. 'main', a feature branch). Used as the Bencher branch outside of pull
+                                requests.
+                                Initial value from \$REF_NAME, the \$GITHUB_REF_NAME environment variable that GitHub Actions
+                                sets automatically, or else the current local git branch.
+  --head-ref <name>             The pull request's own head branch name. Only meaningful (and required) when --event-name is
+                                'pull_request'.
+                                Initial value from \$HEAD_REF, or the \$GITHUB_HEAD_REF environment variable that GitHub Actions
+                                sets automatically.
   --pr-number <n>               The pull request number. Required when --event-name is 'pull_request'.
                                 Initial value from \$PR_NUMBER.
   --pr-base-sha <sha>           The commit SHA the pull request branched from. Required when --event-name is
@@ -77,9 +77,9 @@ Environment Variables:
   MAX_REGRESSION_PCT            Maximum acceptable performance regression percentage (default: '20').
   MAX_GEN1_COLLECTS             Maximum acceptable Gen1 GC collections per 1000 ops (default: '2').
   MAX_GEN2_COLLECTS             Maximum acceptable Gen2 GC collections per 1000 ops (default: '1').
-  RESET_THRESHOLDS               When 'true', reset Bencher's stored thresholds instead of testing against them
+  RESET_THRESHOLDS              When 'true', reset Bencher's stored thresholds instead of testing against them
                                 (default: 'false').
-  BENCHER_API_TOKEN              Bencher.dev API token. Required.
+  BENCHER_API_TOKEN             Bencher.dev API token. Required.
   GH_TOKEN                      GitHub token, used to authenticate Bencher's PR comments/checks. Required only
                                 when --event-name is 'pull_request'.
 $_common_args
