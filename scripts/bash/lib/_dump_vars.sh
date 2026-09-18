@@ -106,7 +106,7 @@ declare -xra dump_common_dotnet_args=(
 #---------------------------------------------------------------------------------------------
 function _write_title()
 {
-    (( $# == 2 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 argument (provided $#) - the table header text."
+    (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 argument (provided $#) - the table header text."
 
     exit_if_has_bugs
 
