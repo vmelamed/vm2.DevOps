@@ -252,3 +252,16 @@ EOF
     assert_output --partial "Packages Built Successfully"
     assert_output --partial "App.1.2.3.nupkg"
 }
+
+@test "pack: reports the resolved package output directory as an output" {
+    _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
+    _install_fake_dotnet_and_package "$BATS_TEST_TMPDIR/repo"
+    run env -i HOME="$HOME" PATH="$BATS_TEST_TMPDIR/repo/fakebin:/usr/local/bin:/usr/bin:/bin" \
+        DOTNET_CALL_LOG="$BATS_TEST_TMPDIR/repo/dotnet.log" \
+        GITHUB_ACTIONS=true GITHUB_OUTPUT="$BATS_TEST_TMPDIR/output.txt" \
+        bash -c "cd '$BATS_TEST_TMPDIR/repo' && bash '$_pack' --quiet src/App/App.csproj"
+    assert_success
+
+    run cat "$BATS_TEST_TMPDIR/output.txt"
+    assert_output --partial "package-output-path=$BATS_TEST_TMPDIR/repo/pkgout"
+}

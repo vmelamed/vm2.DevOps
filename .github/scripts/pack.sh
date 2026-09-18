@@ -84,6 +84,12 @@ declare -A _pack_properties=()
 dotnet_pack "$package_project" "$reason" "_pack_properties"
 exit_if_has_errors
 
+# Expose the resolved package output directory (from dotnet_pack's own MSBuild query above) so callers can locate
+# the produced .nupkg/.snupkg without duplicating or guessing the "artifacts/packages" convention themselves.
+# shellcheck disable=SC2034
+declare package_output_path="${_pack_properties[PackageOutputPath]}"
+args_to_github_output package_output_path
+
 {
     echo "### ✅ Packages Built Successfully"
     echo ""
