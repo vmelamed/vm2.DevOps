@@ -102,23 +102,6 @@ jobs:
           github-token: ${{ github.token }}
           github-actor: ${{ github.actor }}
 
-      # Resolve ArtifactsPath from Directory.Build.props (the sole owner of this value -- see
-      # CONVENTIONS.md) via a static MSBuild evaluation against a project already available as
-      # this job's own input, rather than duplicating or hardcoding the "artifacts" default here.
-      - name: Resolve artifacts path
-        id: artifacts
-        shell: bash
-        run: |
-          source $DEVOPS_LIB_DIR/gh_core.sh
-
-          first_test_project=$(echo '${{ inputs.test-projects }}' | jq -r '.[0]')
-          declare artifacts_path=''
-          get_msbuild_property "$first_test_project" ArtifactsPath artifacts_path ||
-              error -ec $? "Failed to resolve ArtifactsPath from '$first_test_project'."
-          exit_if_has_errors
-
-          args_to_github_output artifacts_path
-
       # Retrieve compiled binaries from the build workflow to avoid recompilation. Artifacts (not the cache) are the
       # intra-run handoff: the cache gives no read-after-write guarantee within a run.
       - name: Download built artifacts
@@ -132,22 +115,17 @@ jobs:
         run: |
           find downloaded/ -name '*.tar.gz' -exec tar xzf {} \;
 
-      - name: Verify the artifacts were restored and run the tests
+      # No separate "verify artifacts were downloaded" check here: run-tests.sh resolves its own expected
+      # test executable path and rebuilds the project itself when that output is missing (e.g. a download
+      # that came back empty).
+      - name: Run tests
         id: run-tests
         shell: bash
         env:
-          ARTIFACTS_PATH: ${{ steps.artifacts.outputs.artifacts-path }}
           REPORTGENERATOR_LICENSE: ${{ secrets.REPORTGENERATOR_LICENSE }}
           TEST_VAR: test-value
         run: |
           source $DEVOPS_LIB_DIR/gh_core.sh
-
-          if [[ -d $ARTIFACTS_PATH ]]; then
-              info "Built artifacts found at: $ARTIFACTS_PATH/"
-          else
-              error "No built artifacts were downloaded from the build job."
-              exit 1
-          fi
 
           # Parse test projects JSON array and run each test project
 

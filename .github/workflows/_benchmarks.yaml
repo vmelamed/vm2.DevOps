@@ -157,21 +157,11 @@ jobs:
         run: |
           find downloaded/ -name '*.tar.gz' -exec tar xzf {} \;
 
-      # A pattern download does not fail on zero matches, so verify explicitly (the equivalent of fail-on-cache-miss)
-      - name: Verify build artifacts were downloaded
-        shell: bash
-        env:
-          ARTIFACTS_PATH: ${{ steps.artifacts.outputs.artifacts-path }}
-        run: |
-          [[ -d $ARTIFACTS_PATH ]] || {
-              echo "::error::No build artifacts were downloaded from the build job."
-              exit 1
-          }
-
-      # Run benchmarks using BenchmarkDotNet and export JSON results. run-benchmarks.sh resolves its own
-      # ArtifactsPath (same Directory.Build.props-backed default every script in this framework uses) and
-      # reports the results directory it produced as its own 'results-dir' output -- no need to pass it in
-      # or duplicate it here.
+      # Run benchmarks using BenchmarkDotNet and export JSON results. No separate "verify artifacts were
+      # downloaded" check here: run-benchmarks.sh resolves its own expected benchmark executable path and
+      # rebuilds the project itself when that output is missing (e.g. a download that came back empty), and
+      # reports the results directory it produced as its own 'results-dir' output -- no need to pass anything
+      # in or duplicate it here.
       - name: Run BenchmarkDotNet benchmarks
         id: run-benchmarks
         shell: bash
