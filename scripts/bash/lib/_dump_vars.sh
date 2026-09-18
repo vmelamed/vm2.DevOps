@@ -262,7 +262,7 @@ function dump_vars()
     _current_table=$_fmt
 
     trace -sd 10 "Before dumping table format: $_fmt0"
-    trace -sd 10 "Stored table format: ${_core_state["table_format"]}"
+    trace -sd 10 "Stored table format: ${_core_state["Table_Format"]}"
     trace -sd 10 "Current table format: $_fmt"
     trace -sd 10 "_current_table is: ${!_current_table}"
 
