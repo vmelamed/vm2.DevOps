@@ -110,8 +110,9 @@ function _write_title()
 
     exit_if_has_bugs
 
-    local -n _current_table=''
-    get_table_format _current_table
+    local _current_table_name=''
+    get_table_format _current_table_name
+    local -n _current_table=$_current_table_name
 
     # shellcheck disable=SC2059 # Don't use variables in the printf format string. Use printf "..%s.." "$foo".
     printf "${_current_table["fmt_top_header"]}" "$1"
@@ -157,8 +158,9 @@ function _write_line()
 
     exit_if_has_bugs
 
-    local -n _current_table=''
-    get_table_format _current_table
+    local _current_table_name=''
+    get_table_format _current_table_name
+    local -n _current_table=$_current_table_name
 
     local _format _format_i
     _format=${_current_table["fmt_left_value"]}
@@ -256,8 +258,9 @@ function dump_vars()
         restore_state _core_state &&
         return "$success"
 
-    local -n _current_table=''
-    get_table_format _current_table
+    local _current_table_name=''
+    get_table_format _current_table_name
+    local -n _current_table=$_current_table_name
 
     # for the proper behavior of this function change some global flags (to be restored before returning from the function)
     local _top=true  # is this the top header?
