@@ -31,10 +31,10 @@ load '../helpers/setup'
 }
 
 @test "get_common_arg: recognizes -gr/-md and sets table format" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; get_common_arg -md; get_table_format"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; get_common_arg -md; declare format=''; get_table_format format; echo \"\$format\""
     assert_success
     assert_output "markdown"
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; get_common_arg -gr; get_table_format"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; get_common_arg -gr; declare format=''; get_table_format format; echo \"\$format\""
     assert_success
     assert_output "graphical"
 }

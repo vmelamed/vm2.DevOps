@@ -101,14 +101,24 @@ load '../helpers/setup'
 
 # --- table format -----------------------------------------------------------------------------
 
+@test "get_table_format: exits with failure when no arguments are provided" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; get_table_format"
+    assert_failure 254
+}
+
+@test "get_table_format: exits with failure when given an invalid argument" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; get_table_format 123"
+    assert_failure 254
+}
+
 @test "get_table_format: 'graphical' by default outside CI" {
-    run get_table_format
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare format=''; get_table_format format; echo \"\$format\""
     assert_success
     assert_output "graphical"
 }
 
 @test "set_table_format: accepts 'markdown' and 'graphical', case-insensitively" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; set_table_format MarkDown; get_table_format"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; set_table_format MarkDown; declare format=''; get_table_format format; echo \"\$format\""
     assert_success
     assert_output "markdown"
 }
@@ -136,7 +146,9 @@ load '../helpers/setup'
         is_verbose && echo verbose=true || echo verbose=false
         is_quiet && echo quiet=true || echo quiet=false
         is_dry_run && echo dry_run=true || echo dry_run=false
-        get_table_format
+        declare format=''
+        get_table_format format
+        echo \"\$format\"
     "
     assert_success
     assert_line --index 0 "verbose=true"

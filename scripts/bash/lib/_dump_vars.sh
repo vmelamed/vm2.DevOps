@@ -253,10 +253,9 @@ function dump_vars()
         return "$success"
 
     local _fmt
-    _fmt=$(get_table_format)
-    trace -sd 10 "Using current table: '$_fmt'"
+
+    get_table_format _fmt
     _current_table=$_fmt
-    trace -sd 10 "Using current table: '${!_current_table}'"
 
     # for the proper behavior of this function change some global flags (to be restored before returning from the function)
     local _top=true  # is this the top header?

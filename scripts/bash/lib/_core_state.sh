@@ -420,16 +420,23 @@ declare __table_format=$default_table_format
 #---------------------------------------------------------------------------------------------
 # @description Returns the current table format setting.
 #
-# @stdout string The current table format ("graphical" or "markdown").
+# @arg $1 nameref The name of the variable to store the current table format in.
 #
 # @exitcode success/positive=0
 #
 # @example
-#   current_format=$(get_table_format)
+#   get_table_format current_format
 #---------------------------------------------------------------------------------------------
 function get_table_format()
 {
-    echo "$__table_format"
+    (( $# == 1 ))                               || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one parameter ($# provided):" \
+                                                                                    "  - the name of the variable to store the current table format in."
+    [[ ! -v 1 ]] || is_defined_variable "$1"    || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires a declared variable name as its argument: '${1:-<none>}'."
+
+    exit_if_has_bugs
+
+    local -n _ret_format=$1
+    _ret_format="$__table_format"
 }
 
 #---------------------------------------------------------------------------------------------
@@ -457,7 +464,6 @@ function set_table_format()
     exit_if_has_bugs
 
     __table_format="${1,,}"
-    trace -sd 10 "Set table format to: '$__table_format'"
 }
 
 #=============================================================================================
@@ -559,11 +565,15 @@ function save_state()
 
     exit_if_has_bugs
 
+    local _current_table_format
+
+    get_table_format _current_table_format
+
     __state[$key_pid]=$BASHPID
     __state[$key_subshell_pid]=${BASH_SUBSHELL:-0}
     __state[$key_ci]="$ci"
     __state[$key_ignore]=$_ignore
-    __state[$key_table_format]=$(get_table_format)
+    __state[$key_table_format]=$_current_table_format
     __state[$key_errors]=$(get_errors)
     is_quiet          && __state[$key_quiet]=true   || __state[$key_quiet]=false
     is_verbose        && __state[$key_verbose]=true || __state[$key_verbose]=false
