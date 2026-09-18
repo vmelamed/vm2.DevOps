@@ -235,11 +235,13 @@ function dump_vars()
     local _fmt=''
 
     get_table_format _fmt
-    trace -sd 10 "Current table format: $_fmt"
+    trace -sd 10 "Before dumping table format: $_fmt"
 
     # save the current global state - to be restored before returning from the function
     local -A _core_state=()
     save_state _core_state
+
+    trace -sd 10 "Stored table format: ${_core_state["table_format"]}"
 
     set +x
     local _flag
