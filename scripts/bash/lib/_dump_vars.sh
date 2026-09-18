@@ -252,7 +252,10 @@ function dump_vars()
         restore_state _core_state &&
         return "$success"
 
-    _current_table=$(get_table_format)
+    local _fmt
+    _fmt=$(get_table_format)
+    trace -sd 10 "Using current table: '$_fmt'"
+    _current_table=$_fmt
     trace -sd 10 "Using current table: '${!_current_table}'"
 
     # for the proper behavior of this function change some global flags (to be restored before returning from the function)
