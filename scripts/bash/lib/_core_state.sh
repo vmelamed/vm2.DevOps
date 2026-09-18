@@ -456,7 +456,7 @@ function set_table_format()
 
     exit_if_has_bugs
 
-    trace "Setting table format to: ${1,,}"
+    trace "Setting table format to: '${1,,}' (${BASH_SOURCE[1]:-} ${BASH_LINENO[0]:-})"
     __table_format="${1,,}"
 }
 
