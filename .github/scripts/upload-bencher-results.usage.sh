@@ -31,8 +31,8 @@ Arguments:
 Options:
   --testbed <name>              Bencher testbed name (typically the runner OS).
                                 Initial value from \$TESTBED, or the default 'local' outside of GitHub Actions.
-  --repository <owner/repo>     GitHub repository in 'owner/repo' form, used to derive the Bencher project slug
-                                (e.g. 'vmelamed/vm2.DevOps' -> 'vm2-devops').
+  --repository <owner/repo>     GitHub repository in 'owner/repo' form, used to derive the Bencher project slug (e.g.
+                                'vmelamed/vm2.DevOps' -> 'vm2-devops').
                                 Initial value from \$REPOSITORY, the \$GITHUB_REPOSITORY environment variable that GitHub
                                 Actions sets automatically, or else derived from the local git remote 'origin'.
   --event-name <name>           The triggering GitHub event name (e.g. 'push', 'pull_request', 'workflow_dispatch').
@@ -48,17 +48,16 @@ Options:
                                 sets automatically.
   --pr-number <n>               The pull request number. Required when --event-name is 'pull_request'.
                                 Initial value from \$PR_NUMBER.
-  --pr-base-sha <sha>           The commit SHA the pull request branched from. Required when --event-name is
-                                'pull_request'.
+  --pr-base-sha <sha>           The commit SHA the pull request branched from. Required when --event-name is 'pull_request'.
                                 Initial value from \$PR_BASE_SHA.
-  --max-regression-pct <pct>    Maximum acceptable performance regression, as a percentage (0-100). Applied as a
-                                percentage threshold to latency, throughput, and allocation.
+  --max-regression-pct <pct>    Maximum acceptable performance regression, as a percentage (0-100). Applied as a percentage
+                                threshold to latency, throughput, and allocation.
                                 Initial value from \$MAX_REGRESSION_PCT or default '20'.
-  --max-gen1-collects <n>       Maximum acceptable Gen1 GC collections per 1000 operations. Applied as a static
-                                (absolute) upper threshold, not a percentage.
+  --max-gen1-collects <n>       Maximum acceptable Gen1 GC collections per 1000 operations. Applied as a static (absolute) upper
+                                threshold, not a percentage.
                                 Initial value from \$MAX_GEN1_COLLECTS or default '2'.
-  --max-gen2-collects <n>       Maximum acceptable Gen2 GC collections per 1000 operations. Applied as a static
-                                (absolute) upper threshold, not a percentage.
+  --max-gen2-collects <n>       Maximum acceptable Gen2 GC collections per 1000 operations. Applied as a static (absolute) upper
+                                threshold, not a percentage.
                                 Initial value from \$MAX_GEN2_COLLECTS or default '1'.
   --reset-thresholds [true|false]
                                 Reset Bencher's stored thresholds instead of testing against them (use when a
