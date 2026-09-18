@@ -181,162 +181,22 @@ jobs:
       - name: Upload benchmark results to Bencher.dev
         shell: bash
         env:
-          RESULTS_DIR: ${{ steps.run-benchmarks.outputs.results-dir }}
           BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          source "$DEVOPS_LIB_DIR/gh_core.sh"
-
-          trace "Preparing to upload results to Bencher.dev with max regression threshold of ±${{ inputs.max-regression-pct }}%."
-
-          # Calculate thresholds as decimals (e.g., 10% -> LOWER_THRESHOLD=0.90, 10% -> UPPER_THRESHOLD=0.10)
-          LOWER_THRESHOLD=$(echo "scale=4; ${{ inputs.max-regression-pct }} / 100" | bc)
-          UPPER_THRESHOLD=$(echo "scale=4; ${{ inputs.max-regression-pct }} / 100" | bc)
-
-          # Compute Bencher project slug from repository name, e.g., vmelamed/vm2.DevOps -> vm2-devops
-          REPO_NAME="${{ github.repository }}"
-          BENCHER_SLUG=$(echo "${REPO_NAME#*/}" | tr '[:upper:]' '[:lower:]' | tr '.' '-')
-
-          reset_benchmark_thresholds="${{ inputs.reset-benchmark-thresholds }}"
-
-          bencher_static=(
-              --project "$BENCHER_SLUG"
-              --token "$BENCHER_API_TOKEN"
-              --testbed "${{ inputs.runner-os }}"
-              --adapter c_sharp_dot_net
-              # --iter/--fold only matter when more than one result file is uploaded in a single run (Bencher treats each
-              # --file as a separate iteration). BenchmarkDotNet's --join normally yields one file, so these are usually
-              # inert; when multiple files do appear, median folds them. We avoid mean because Bencher discourages it here.
-              --iter 1
-              --fold median
-              --err
-          )
-
-          threshold_latency=(
-              --threshold-measure latency
-              --threshold-test percentage
-              --threshold-max-sample-size 64
-              --threshold-lower-boundary _
-              --threshold-upper-boundary "$UPPER_THRESHOLD"
-          )
-
-          threshold_throughput=(
-              --threshold-measure throughput
-              --threshold-test percentage
-              --threshold-max-sample-size 64
-              --threshold-lower-boundary "$LOWER_THRESHOLD"
-              --threshold-upper-boundary _
-          )
-
-          threshold_allocated=(
-              --threshold-measure allocated
-              --threshold-test percentage
-              --threshold-max-sample-size 64
-              --threshold-lower-boundary _
-              --threshold-upper-boundary "$UPPER_THRESHOLD"
-          )
-
-          threshold_gen1_collects=(
-              --threshold-measure gen1-collects
-              --threshold-test static
-              --threshold-lower-boundary _
-              --threshold-upper-boundary "${{ inputs.max-gen1-collects }}"
-          )
-
-          threshold_gen2_collects=(
-              --threshold-measure gen2-collects
-              --threshold-test static
-              --threshold-lower-boundary _
-              --threshold-upper-boundary "${{ inputs.max-gen2-collects }}"
-          )
-
-          # Build bencher run command
-          BENCHER_ARGS=(
-              ${bencher_static[@]}
-              ${threshold_latency[@]}
-              ${threshold_throughput[@]}
-              ${threshold_allocated[@]}
-              ${threshold_gen1_collects[@]}
-              ${threshold_gen2_collects[@]}
-          )
-
-          # if on PR - add PR data
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-              # The PR branch is tracked as its own ephemeral branch, forked from main with main's thresholds cloned onto it:
-              pr_base_sha="${{ github.event.pull_request.base.sha || '' }}"
-              BENCHER_ARGS+=(
-                --branch "${{ github.head_ref }}"
-                --start-point main
-                --start-point-clone-thresholds
-                --start-point-reset                # rebuilds the branch from the start point every run — compare "PR vs main"
-                --start-point-hash "$pr_base_sha"  # pin the baseline to the exact commit the PR branched from
-                --github-actions "$GH_TOKEN"       # authenticate to GitHub for commenting on the PR and creating checks
-                --ci-number "${{ github.event.pull_request.number }}"
-              )
-          elif [[ "${{ github.ref_name }}" != "main" ]]; then
-              BENCHER_ARGS+=(
-                # fork-from-main, this branch accumulates history across pushes
-                --branch "${{ github.ref_name }}"
-                --start-point main
-                --start-point-clone-thresholds
-              )
-          else
-              BENCHER_ARGS+=(
-                --branch main
-              )
-          fi
-
-          # Only reset thresholds when explicitly requested
-          if [[ "$reset_benchmark_thresholds" == "true" ]]; then
-              trace "Resetting Bencher thresholds (reset_thresholds=true)"
-              BENCHER_ARGS+=(--thresholds-reset)
-          fi
-
-          # Add all benchmark result files. The glob MUST be unquoted here so the shell expands
-          # it to the matching files -- quoting it turns the loop into a single iteration over
-          # the literal, non-existent pattern string, silently adding no --file argument at all.
-          for file in "$RESULTS_DIR"/*-report-full-compressed.json; do
-              if [[ -s "$file" ]]; then
-                  trace "Adding benchmark result file: $file"
-                  BENCHER_ARGS+=(--file "$file")
-              fi
-          done
-
-          if [[ $verbose == "true" ]]; then
-              trace "Looking for benchmark result files matching: $RESULTS_DIR/*-report-full-compressed.json:"
-              trace "$(ls -l $RESULTS_DIR/*-report-full-compressed.json)"
-
-              declare -a sanitized_bencher_args=("${BENCHER_ARGS[@]}")
-
-              for i in "${!sanitized_bencher_args[@]}"; do
-                  if [[ "${sanitized_bencher_args[$i]}" == "--token" ||
-                        "${sanitized_bencher_args[$i]}" == "--github-actions" ]] &&
-                     (( i + 1 < ${#sanitized_bencher_args[@]} )); then
-                      sanitized_bencher_args[$((i + 1))]="$secret_str"
-                  fi
-              done
-
-              trace "Running command: bencher run ${sanitized_bencher_args[*]}"
-          fi
-
-          # Capture Bencher's output so we can echo it to the log and tell threshold alerts apart from
-          # transport failures. set +e so a non-zero bencher (alerts via --err, or a real failure) does
-          # not abort the step before we read its exit code.
-          set +e
-          bencher_output=$(bencher run "${BENCHER_ARGS[@]}" 2>&1); bencher_rc=$?
-          set -e
-
-          printf '%s\n' "$bencher_output"   # surface bencher's output in the job log
-
-          if [[ $bencher_rc -eq 0 ]]; then
-              info "The upload to Bencher completed successfully with no alerts."
-          elif [[ "$bencher_output" == *"Alerts detected"* ]]; then
-              warning "Bencher uploaded results but detected threshold alerts."
-              exit "$bencher_rc"
-          else
-              error "Bencher run failed before completing successfully."
-              exit "$bencher_rc"
-          fi
+          upload-bencher-results.sh \
+              "${{ steps.run-benchmarks.outputs.results-dir }}" \
+              --testbed "${{ inputs.runner-os }}" \
+              --repository "${{ github.repository }}" \
+              --event-name "${{ github.event_name }}" \
+              --ref-name "${{ github.ref_name }}" \
+              --head-ref "${{ github.head_ref }}" \
+              --pr-number "${{ github.event.pull_request.number }}" \
+              --pr-base-sha "${{ github.event.pull_request.base.sha }}" \
+              --max-regression-pct "${{ inputs.max-regression-pct }}" \
+              --max-gen1-collects "${{ inputs.max-gen1-collects }}" \
+              --max-gen2-collects "${{ inputs.max-gen2-collects }}" \
+              --reset-thresholds "${{ inputs.reset-benchmark-thresholds }}"
 
       # Upload benchmark results as workflow artifacts for manual inspection
       - name: Upload benchmark results artifact
