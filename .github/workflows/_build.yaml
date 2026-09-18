@@ -111,6 +111,12 @@ jobs:
       # transitively rebuilds project references into the same shared artifacts/ tree, and a referenced project need not be
       # listed in build-projects itself, so name-scoping could silently omit output another job actually needs. Grabbing
       # everything can duplicate bytes across legs that share a reference, but never drops anything the build produced.
+      #
+      # ArtifactsPath (from Directory.Build.props, via build.sh's own output) is an ABSOLUTE path. Archiving with -C
+      # <parent-of-artifacts> stores members as relative paths (artifacts/bin/..., artifacts/obj/...) so a plain `tar xzf`
+      # in a downstream job's freshly checked-out repo (same relative layout, different absolute path) extracts them to
+      # the right place. Archiving the absolute paths directly would extract nested under the downstream job's own
+      # absolute path prefix instead -- tar only strips a member's leading '/', not a whole matching absolute prefix.
       - name: Archive built artifacts
         shell: bash
         env:
@@ -120,7 +126,9 @@ jobs:
               echo "::error::Build produced no output in $ARTIFACTS_PATH/bin/."
               exit 1
           }
-          tar czf built-artifacts.tar.gz --exclude='*.tmp' "$ARTIFACTS_PATH/bin" "$ARTIFACTS_PATH/obj"
+          tar czf built-artifacts.tar.gz --exclude='*.tmp' \
+              -C "$(dirname "$ARTIFACTS_PATH")" \
+              "$(basename "$ARTIFACTS_PATH")/bin" "$(basename "$ARTIFACTS_PATH")/obj"
 
       # Named by this matrix leg's own index, not by project/solution content: a leg may cover one project or several (a
       # whole solution), so there's no single clean name to embed here -- the index is always unique across the matrix
