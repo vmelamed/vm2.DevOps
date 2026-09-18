@@ -70,12 +70,15 @@ Options:
   -r, --reset-benchmark-thresholds [true|false]
                                 Whether to reset Bencher thresholds if some degradation is expected. Expected 'true' or 'false'
                                 Initial value from \$RESET_BENCHMARK_THRESHOLDS or default 'false'
-  -sb, --skip-benchmarks [true|false]
-                                Whether to skip running benchmarks. Expected 'true' or 'false'
-                                Initial value from \$SKIP_BENCHMARKS or default 'false'
+  -st, --skip-build [true|false]
+                                Whether to skip building. Expected 'true' or 'false'
+                                Initial value from \$SKIP_BUILD or default 'false'
   -st, --skip-tests [true|false]
                                 Whether to skip running tests. Expected 'true' or 'false'
                                 Initial value from \$SKIP_TESTS or default 'false'
+  -sbm, --skip-benchmarks [true|false]
+                                Whether to skip running benchmarks. Expected 'true' or 'false'
+                                Initial value from \$SKIP_BENCHMARKS or default 'false'
   -sp, --skip-packages [true|false]
                                 Whether to skip packing projects. Expected 'true' or 'false'
                                 Initial value from \$SKIP_PACKAGES or default 'false'
@@ -91,8 +94,9 @@ Environment Variables:
   MAX_GEN1_COLLECTS             Maximum acceptable Gen1 GC collections per 1000 operations
   MAX_GEN2_COLLECTS             Maximum acceptable Gen2 GC collections per 1000 operations
   RESET_BENCHMARK_THRESHOLDS    Whether to reset Bencher thresholds if some degradation is expected
-  SKIP_BENCHMARKS               Whether to skip running benchmarks
+  SKIP_BUILD                    Whether to skip building
   SKIP_TESTS                    Whether to skip running tests
+  SKIP_BENCHMARKS               Whether to skip running benchmarks
   SKIP_PACKAGES                 Whether to skip packing projects
 $common_dotnet_vars
 Outputs (to GITHUB_OUTPUT):
@@ -106,8 +110,9 @@ Outputs (to GITHUB_OUTPUT):
   max-gen1-collects             Maximum acceptable Gen1 GC collections per 1000 operations
   max-gen2-collects             Maximum acceptable Gen2 GC collections per 1000 operations
   reset-benchmark-thresholds    Whether to reset Bencher thresholds if some degradation is expected
-  skip-benchmarks               Whether to skip running benchmarks
+  skip-build                    Whether to skip building
   skip-tests                    Whether to skip running tests
+  skip-benchmarks               Whether to skip running benchmarks
   skip-packages                 Whether to skip packing projects
 $common_dotnet_output
 $_common_args

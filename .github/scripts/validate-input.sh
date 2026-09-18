@@ -45,8 +45,9 @@ declare -r defaultMaxRegressionPct=20
 declare -r defaultMaxGen1Collects=2
 declare -r defaultMaxGen2Collects=1
 declare -r defaultResetBenchmarkThresholds=false
-declare -r defaultSkipBenchmarks=false
 declare -r defaultSkipTests=false
+declare -r defaultSkipBuild=false
+declare -r defaultSkipBenchmarks=false
 declare -r defaultSkipPackages=false
 
 # CI Variables that will be passed as environment variables
@@ -60,8 +61,9 @@ declare -x max_regression_pct=${MAX_REGRESSION_PCT:-$defaultMaxRegressionPct}
 declare -x max_gen1_collects=${MAX_GEN1_COLLECTS:-$defaultMaxGen1Collects}
 declare -x max_gen2_collects=${MAX_GEN2_COLLECTS:-$defaultMaxGen2Collects}
 declare -x reset_benchmark_thresholds=${RESET_BENCHMARK_THRESHOLDS:-$defaultResetBenchmarkThresholds}
-declare -x skip_benchmarks=${SKIP_BENCHMARKS:-$defaultSkipBenchmarks}
+declare -x skip_build=${SKIP_BUILD:-$defaultSkipBuild}
 declare -x skip_tests=${SKIP_TESTS:-$defaultSkipTests}
+declare -x skip_benchmarks=${SKIP_BENCHMARKS:-$defaultSkipBenchmarks}
 declare -x skip_packages=${SKIP_PACKAGES:-$defaultSkipPackages}
 
 source "$script_dir/validate-input.usage.sh"
@@ -124,8 +126,9 @@ is_safe_integer "$max_gen2_collects"                                            
     error -ec "$err_argument_value" "max-gen2-collects must be a non-negative integer (got '$max_gen2_collects')."
 
 is_safe_boolean "$reset_benchmark_thresholds"                                                                    || true
-is_safe_boolean "$skip_benchmarks"                                                                               || true
+is_safe_boolean "$skip_build"                                                                                    || true
 is_safe_boolean "$skip_tests"                                                                                    || true
+is_safe_boolean "$skip_benchmarks"                                                                               || true
 is_safe_boolean "$skip_packages"                                                                                 || true
 sanitize_common_dotnet_args "$(jq -r '.[0] // "."' <<< "$build_projects")"                                       || true
 
@@ -152,8 +155,9 @@ declare -ra dump_vars_args=(
     max_gen2_collects
     --line
     reset_benchmark_thresholds
-    skip_benchmarks
+    skip_build
     skip_tests
+    skip_benchmarks
     skip_packages
     --header "Core State:"
     --core-state
@@ -176,7 +180,8 @@ args_to_github_output \
     max_gen1_collects \
     max_gen2_collects \
     reset_benchmark_thresholds \
-    skip_benchmarks \
+    skip_build \
     skip_tests \
+    skip_benchmarks \
     skip_packages \
     "${common_dotnet_args_to_output[@]}"

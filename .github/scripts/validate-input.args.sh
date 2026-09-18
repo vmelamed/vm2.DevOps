@@ -22,8 +22,9 @@ declare -x max_regression_pct
 declare -x max_gen1_collects
 declare -x max_gen2_collects
 declare -x reset_benchmark_thresholds
-declare -x skip_benchmarks
 declare -x skip_tests
+declare -x skip_build
+declare -x skip_benchmarks
 declare -x skip_packages
 
 function get_arguments()
@@ -103,15 +104,21 @@ function get_arguments()
                 shift;
                 ;;
 
-            --skip-benchmarks|-sb )
+            --skip-build|-sb )
                 (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                skip_benchmarks="$1"
+                skip_build="$1"
                 shift;
                 ;;
 
             --skip-tests|-st )
                 (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 skip_tests="$1"
+                shift;
+                ;;
+
+            --skip-benchmarks|-sbm )
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                skip_benchmarks="$1"
                 shift;
                 ;;
 
@@ -157,8 +164,9 @@ function dump_args()
         max_gen1_collects
         max_gen2_collects
         reset_benchmark_thresholds
-        skip_benchmarks
+        skip_build
         skip_tests
+        skip_benchmarks
         skip_packages
         --header "\`dotnet <command>\` CLI Arguments:"
         --common-dotnet-args

@@ -72,6 +72,11 @@ on:
         type: boolean
         default: false
 
+      skip-build:
+        description: Set to "true" to skip build execution.
+        type: boolean
+        default: false
+
       skip-tests:
         description: Set to "true" to skip tests execution and related steps (e.g. code coverage collection and comments).
         type: boolean
@@ -126,8 +131,9 @@ jobs:
       minver-tag-prefix: ${{ steps.validate.outputs.minver-tag-prefix }}
       minver-prerelease-id: ${{ steps.validate.outputs.minver-prerelease-id }}
       reset-benchmark-thresholds: ${{ steps.validate.outputs.reset-benchmark-thresholds }}
-      skip-benchmarks: ${{ steps.validate.outputs.skip-benchmarks }}
+      skip-build: ${{ steps.validate.outputs.skip-build }}
       skip-tests: ${{ steps.validate.outputs.skip-tests }}
+      skip-benchmarks: ${{ steps.validate.outputs.skip-benchmarks }}
       skip-packages: ${{ steps.validate.outputs.skip-packages }}
       skip-push: ${{ steps.validate.outputs.skip-push }}
 
@@ -174,8 +180,9 @@ jobs:
               --minver-tag-prefix           '${{ inputs.minver-tag-prefix }}' \
               --minver-prerelease-id        '${{ inputs.minver-prerelease-id }}' \
               --reset-benchmark-thresholds  '${{ inputs.reset-benchmark-thresholds }}' \
-              --skip-benchmarks             '${{ inputs.skip-benchmarks }}' \
+              --skip-build                  '${{ inputs.skip-build }}' \
               --skip-tests                  '${{ inputs.skip-tests }}' \
+              --skip-benchmarks             '${{ inputs.skip-benchmarks }}' \
               --skip-packages               '${{ inputs.skip-packages }}'
 
   # Build the project and cache artifacts for downstream tests/benchmark jobs
@@ -188,7 +195,9 @@ jobs:
       matrix:
         build-project: ${{ fromJSON(needs.validate-input.outputs.build-projects) }}
         runner-os: ${{ fromJSON(needs.validate-input.outputs.runners-os) }}
-    if: fromJSON(needs.validate-input.outputs.build-projects)[0] != null
+    if: >-
+        fromJSON(needs.validate-input.outputs.build-projects)[0] != null &&
+        needs.validate-input.outputs.skip-build == 'false'
     uses: vmelamed/vm2.DevOps/.github/workflows/_build.yaml@big-bang
     with:
       build-project: ${{ matrix.build-project }}
