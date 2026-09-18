@@ -232,10 +232,9 @@ function dump_vars()
 {
     (( $# == 0 )) && return "$success"
 
-    local _fmt=''
+    local _fmt0=''
 
-    get_table_format _fmt
-    trace -sd 10 "Before dumping table format: $_fmt"
+    get_table_format _fmt0
 
     # save the current global state - to be restored before returning from the function
     local -A _core_state=()
@@ -259,10 +258,14 @@ function dump_vars()
         restore_state _core_state &&
         return "$success"
 
+    local _fmt=''
+
     get_table_format _fmt
     _current_table=$_fmt
 
-    trace -sd 10 "Current table format: ${!_current_table}"
+    trace -sd 10 "Before dumping table format: $_fmt0"
+    trace -sd 10 "Current table format: $_fmt"
+    trace -sd 10 "_current_table is: ${!_current_table}"
 
     # for the proper behavior of this function change some global flags (to be restored before returning from the function)
     local _top=true  # is this the top header?
