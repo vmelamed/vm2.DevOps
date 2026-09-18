@@ -129,10 +129,12 @@ is_safe_boolean "$skip_tests"                                                   
 is_safe_boolean "$skip_packages"                                                                                 || true
 sanitize_common_dotnet_args "$(jq -r '.[0] // "."' <<< "$build_projects")"                                       || true
 
+$ci && _table_fmt="--markdown" || _table_fmt="--graphical"
+
 declare -ra dump_vars_args=(
     --quiet
     --force
-    --markdown
+    "$_table_fmt"
     --header "Validated Parameters"
     --header "Hosts:"
     runners_os

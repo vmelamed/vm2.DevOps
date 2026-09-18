@@ -134,7 +134,7 @@ _run_setup_repo() {
 # Tool prerequisite checks
 # =====================================================================================
 
-# # bats test_tags=tool-check
+# bats test_tags=tool-check
 @test "setup-repo: fails when 'jq' is not installed" {
     local _bin; _bin="$(_make_path_excluding "$BATS_TEST_TMPDIR/nojq" jq)"
     _install_fake_gh_auth_only "$BATS_TEST_TMPDIR/gh-bin"
@@ -145,7 +145,7 @@ _run_setup_repo() {
     assert_output --partial "'jq' is not installed"
 }
 
-# # bats test_tags=tool-check
+# bats test_tags=tool-check
 @test "setup-repo: fails when 'gh' is not installed" {
     local _bin; _bin="$(_make_path_excluding "$BATS_TEST_TMPDIR/nogh" gh)"
     _make_vm2_repos_fixture "$BATS_TEST_TMPDIR/vm2repos"
@@ -155,7 +155,7 @@ _run_setup_repo() {
     assert_output --partial "'gh' is not installed"
 }
 
-# # bats test_tags=tool-check
+# bats test_tags=tool-check
 @test "setup-repo: fails when 'gh' is not authenticated" {
     local _bin; _bin="$(_make_path_excluding "$BATS_TEST_TMPDIR/nogh" gh)"
     mkdir -p "$BATS_TEST_TMPDIR/gh-bin"
@@ -168,7 +168,7 @@ _run_setup_repo() {
     assert_output --partial "'gh' is not authenticated"
 }
 
-# # bats test_tags=tool-check
+# bats test_tags=tool-check
 @test "setup-repo: fails when 'yq' is not installed" {
     local _bin; _bin="$(_make_path_excluding "$BATS_TEST_TMPDIR/noyq" yq)"
     _install_fake_gh_auth_only "$BATS_TEST_TMPDIR/gh-bin"
@@ -183,7 +183,7 @@ _run_setup_repo() {
 # vm2_repos / SoT / _ci.yaml resolution
 # =====================================================================================
 
-# # bats test_tags=tool-check
+# bats test_tags=tool-check
 @test "setup-repo: fails when the vm2.DevOps repo has no _ci.yaml reusable workflow" {
     local _bin; _bin="$(_make_path_excluding "$BATS_TEST_TMPDIR/bin")"
     _install_fake_gh_auth_only "$BATS_TEST_TMPDIR/gh-bin"
@@ -199,7 +199,7 @@ _run_setup_repo() {
 # Final validation block
 # =====================================================================================
 
-# # bats test_tags=tool-check
+# bats test_tags=tool-check
 @test "setup-repo: fails when the target has a .github/workflows dir but no CI.yaml file in it" {
     # resolve_repo_root()'s own check is coarser -- it only requires the '.github/workflows'
     # DIRECTORY to exist, so a repo with that directory but no CI.yaml file specifically
@@ -220,7 +220,7 @@ _run_setup_repo() {
     assert_output --partial "missing .github/workflows/CI.yaml"
 }
 
-# # bats test_tags=tool-check
+# bats test_tags=tool-check
 @test "setup-repo: fails on an invalid branch name" {
     local _bin; _bin="$(_make_path_excluding "$BATS_TEST_TMPDIR/bin")"
     _install_fake_gh_auth_only "$BATS_TEST_TMPDIR/gh-bin"
@@ -231,7 +231,7 @@ _run_setup_repo() {
     assert_output --partial "Invalid branch name"
 }
 
-# # bats test_tags=tool-check
+# bats test_tags=tool-check
 @test "setup-repo: fails on an invalid visibility" {
     local _bin; _bin="$(_make_path_excluding "$BATS_TEST_TMPDIR/bin")"
     _install_fake_gh_auth_only "$BATS_TEST_TMPDIR/gh-bin"
@@ -242,7 +242,7 @@ _run_setup_repo() {
     assert_output --partial "Invalid visibility 'bogus'"
 }
 
-# # bats test_tags=tool-check
+# bats test_tags=tool-check
 @test "setup-repo: --audit without a GitHub remote fails (cannot audit an unlinked repo)" {
     local _bin; _bin="$(_make_path_excluding "$BATS_TEST_TMPDIR/bin")"
     _install_fake_gh_auth_only "$BATS_TEST_TMPDIR/gh-bin"
@@ -253,7 +253,7 @@ _run_setup_repo() {
     assert_output --partial "not linked to a GitHub remote"
 }
 
-# # bats test_tags=tool-check
+# bats test_tags=tool-check
 @test "setup-repo: --audit combined with --interactive-vars fails (cannot prompt during a read-only audit)" {
     local _bin; _bin="$(_make_path_excluding "$BATS_TEST_TMPDIR/bin")"
     _install_fake_gh_auth_only "$BATS_TEST_TMPDIR/gh-bin"

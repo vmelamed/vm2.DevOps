@@ -72,6 +72,7 @@ _run_rebuild() {
 
 # --- happy path ---------------------------------------------------------------------------
 
+# bats test_tags=TODO
 @test "rebuild-bench-history-run: records the given project once and reports success (does not hang)" {
     _install_fakes "$BATS_TEST_TMPDIR"
     _make_benchmark_project "$BATS_TEST_TMPDIR"
@@ -81,6 +82,7 @@ _run_rebuild() {
     assert_output --partial "Recorded **1** of **1** runs"
 }
 
+# bats test_tags=TODO
 @test "rebuild-bench-history-run: auto-discovers every *.csproj under benchmarks/, excluding bin/obj" {
     _install_fakes "$BATS_TEST_TMPDIR"
     _make_benchmark_project "$BATS_TEST_TMPDIR" App1
@@ -108,6 +110,7 @@ _run_rebuild() {
     assert_output --partial "No data points were recorded to Bencher"
 }
 
+# bats test_tags=TODO
 @test "rebuild-bench-history-run: fails overall only when NO data points were recorded across all runs" {
     _install_fakes "$BATS_TEST_TMPDIR"
     _make_benchmark_project "$BATS_TEST_TMPDIR"
@@ -188,6 +191,7 @@ EOF
 
 # --- CI parity ------------------------------------------------------------------------------
 
+# bats test_tags=TODO
 @test "rebuild-bench-history-run: in CI mode, the summary also lands in the step summary file" {
     _install_fakes "$BATS_TEST_TMPDIR"
     _make_benchmark_project "$BATS_TEST_TMPDIR"

@@ -614,7 +614,7 @@ function display_dotnet_build_summary()
     exit_if_has_bugs
 
     local -n _build_info=$1
-    $ci && _table_format="--markdown" || _table_format="--graphical"
+    $ci && _table_fmt="--markdown" || _table_fmt="--graphical"
 
     local Package_Output_Path=${_build_info[$key_package_output_path]:-N/A}
     local Package_ID=${_build_info[$key_package_id]:-N/A}
@@ -631,7 +631,7 @@ function display_dotnet_build_summary()
     local -a _dump_vars_args=(
         --force
         --quiet
-        "$_table_format"
+        "$_table_fmt"
         --header "Configuration:"
         --name "Project"                    "${_build_info[$key_project]:-N/A}"
         --name "Configuration"              "${_build_info[$key_configuration]:-Debug}"
