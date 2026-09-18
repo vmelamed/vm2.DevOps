@@ -188,7 +188,7 @@ jobs:
         run: |
           pack.sh \
               "${{ matrix.project }}" \
-              --build \
+              --build true \
               --define "${{ inputs.preprocessor-symbols }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
               --minver-prerelease-id "${{ inputs.minver-prerelease-id }}" \
