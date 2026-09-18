@@ -213,6 +213,9 @@ jobs:
     outputs:
       artifact-ids: ${{ steps.collect.outputs.artifact-ids }}
     steps:
+      - name: Setup DevOps environment variables
+        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
+
       - name: Collect artifact IDs
         id: collect
         env:
