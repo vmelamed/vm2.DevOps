@@ -44,7 +44,7 @@ source "$script_dir/run-benchmarks.usage.sh"
 source "$script_dir/run-benchmarks.args.sh"
 
 get_arguments "$@"
-is_verbose || dump_args "--force"
+! is_verbose || dump_args "--force"
 benchmark_project="${benchmark_project:-"${BENCHMARK_PROJECT:-}"}"
 
 # validate input parameters

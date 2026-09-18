@@ -510,8 +510,7 @@ function __message()
 
         if $_first_part; then
             if (( _depth > 0 )); then
-                printf "%s%s (%s):\n" "$_prefix" "${BASH_SOURCE[3]:-}" "${BASH_LINENO[2]:-}"
-                printf "           %s\n" "$__part"
+                printf "%s%s @ %s(%s):\n" "$_prefix" "$__part" "${BASH_SOURCE[3]:-}" "${BASH_LINENO[2]:-}"
             else
                 printf "%s%s\n" "$_prefix" "$__part"
             fi

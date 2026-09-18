@@ -55,7 +55,7 @@ source "$script_dir/run-tests.usage.sh"
 source "$script_dir/run-tests.args.sh"
 
 get_arguments "$@"
-is_verbose || dump_args "--force"
+! is_verbose || dump_args "--force"
 test_project=${test_project:-"${TEST_PROJECT:-}"}
 
 # validate the values of the variables common for many vm2.DevOps scripts,

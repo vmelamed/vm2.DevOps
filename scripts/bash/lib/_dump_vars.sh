@@ -252,7 +252,6 @@ function dump_vars()
         restore_state _core_state &&
         return "$success"
 
-    #
     _current_table=$(get_table_format)
     trace -sd 10 "Using current table: '${!_current_table}'"
 
