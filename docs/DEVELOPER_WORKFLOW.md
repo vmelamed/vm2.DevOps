@@ -424,10 +424,9 @@ with no useful diagnostic beyond "This branch can't be rebased."
    or resolves cleanly, the block is GitHub-side, not a real content conflict.
 2. Check the API directly to confirm: `gh api repos/<owner>/<repo>/pulls/<number> --jq '{mergeable, mergeable_state, rebaseable}'`.
    `mergeable: true` with `rebaseable: false` confirms this exact situation.
-3. Use **"Squash and merge"** instead of "Rebase and merge" — it still produces a single linear commit on `main`
-   (compliant with the linear-history ruleset above) and is not subject to the same block, since it does not
-   require GitHub to replay each individual commit.
-4. Accept the loss of per-commit granularity on `main` for that PR, or write a squash-commit message that
+3. This repository disables squash merging, so do not rely on this fallback; split the branch into smaller PRs or ask an administrator to
+   explicitly change the ruleset before merging.
+4. If squash merging is explicitly enabled, accept the loss of per-commit granularity on `main` or write a squash-commit message that
    summarizes the individual commits it collapses.
 
 ---
