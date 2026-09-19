@@ -40,10 +40,6 @@ on:
         type: string
         default: nuget
 
-      nuget-username:
-        description: "Username for the NuGet server"
-        type: string
-
       sha:
         description: >-
           Exact git SHA to compute the version from and tag. When triggered automatically via workflow_run, pass
@@ -62,8 +58,10 @@ on:
 
       NUGET_API_KEY:
         description: >-
-          Token for authentication to the NuGet server - must be issued by the selected nuget-server. Not used for 'nuget'
-          (NuGet.org trusted publishing uses OIDC instead).
+          Token for authentication to the NuGet server. For 'nuget' (NuGet.org), the caller must obtain this itself via
+          NuGet/login's OIDC trusted-publishing exchange -- job_workflow_ref for a reusable workflow names the workflow FILE
+          that is running, not the repository that called it, so this workflow can never satisfy a trust policy scoped to the
+          caller's own repository. For 'github'/a custom URL, the caller passes its own static secret instead.
         required: false
 
 concurrency:
@@ -74,7 +72,6 @@ permissions:
   contents: write
   packages: write
   actions: read
-  id-token: write # Required for authentication with the NuGet server
 
 env:
   DOTNET_NOLOGO: true
@@ -246,8 +243,7 @@ jobs:
       - collect-artifacts
     runs-on: ubuntu-latest
     permissions:
-      actions: read   # Required to read workflow run artifact IDs
-      id-token: write # Required for authentication with the NuGet server
+      actions: read # Required to read workflow run artifact IDs
     steps:
       # This job never builds anything -- it only downloads .nupkg files the package-and-publish matrix already
       # produced and pushes them -- so "packages" here is just a local staging directory for this job's own
@@ -264,18 +260,16 @@ jobs:
           path: packages
           merge-multiple: true
 
-      - name: Authenticate with NuGet.org trusted publishing to get steps.nuget-login.outputs.NUGET_API_KEY
-        if: inputs.nuget-server == 'nuget'
-        id: nuget-login
-        uses: NuGet/login@v1
-        with:
-          user: ${{ inputs.nuget-username }}
-
       - name: Setup DevOps environment variables
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
 
+      # No NuGet/login step here: for 'nuget' (NuGet.org), the caller already obtained secrets.NUGET_API_KEY itself
+      # via its own OIDC trusted-publishing exchange (see the NUGET_API_KEY secret description above) -- this job
+      # just uses whatever key it was handed, uniformly, regardless of server.
       - name: Publish NuGet prerelease packages
         shell: bash
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         run: |
           source $DEVOPS_LIB_DIR/gh_core.sh
 
@@ -287,32 +281,26 @@ jobs:
               nuget )
                   server_name="NuGet.org"
                   server_url="https://api.nuget.org/v3/index.json"
-                  nuget_api_key="${{ steps.nuget-login.outputs.NUGET_API_KEY }}"
                   ;;
               github )
                   server_name="GitHub Packages"
                   server_url="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
-                  nuget_api_key="${{ secrets.NUGET_API_KEY }}"
-                  [[ -n "$nuget_api_key" ]] ||
-                      error -ec "$err_missing_argument" "No API key provided for server '$server_name'"
                   ;;
               http://*|https://* )
                   server_name="$nuget_server"
                   server_url="$nuget_server"
-                  nuget_api_key="${{ secrets.NUGET_API_KEY }}"
-                  [[ -n "$nuget_api_key" ]] ||
-                      error -ec "$err_missing_argument" "No API key provided for server '$server_name'"
                   ;;
               * )
                   error "Unsupported NuGet server: '$nuget_server'. Supported values: 'nuget', 'github', 'custom URL'."
                   ;;
           esac
+          [[ -n $NUGET_API_KEY ]] || error -ec "$err_missing_argument" "No API key provided for server '$server_name'"
           exit_if_has_errors
 
           for pkg in "$artifacts_dir"/*.nupkg; do
               trace "Publishing package: $pkg"
               dotnet nuget push "$pkg" \
                   --source "$server_url" \
-                  --api-key "$nuget_api_key" \
+                  --api-key "$NUGET_API_KEY" \
                   --skip-duplicate
           done
