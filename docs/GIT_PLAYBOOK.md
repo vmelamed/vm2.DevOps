@@ -1,5 +1,29 @@
 # Git Playbook (Rebase-First)
 
+<!-- TOC tocDepth:2..3 chapterDepth:2..6 -->
+
+- [Git Playbook (Rebase-First)](#git-playbook-rebase-first)
+  - [1) Personal Git Playbook](#1-personal-git-playbook)
+    - [Start of day (per repo)](#start-of-day-per-repo)
+    - [Before writing new code on a feature branch](#before-writing-new-code-on-a-feature-branch)
+    - [During development](#during-development)
+    - [Before push / PR update](#before-push--pr-update)
+    - [After a rebase (the death-spiral rule)](#after-a-rebase-the-death-spiral-rule)
+    - [Conflict protocol (when VS Code looks inconsistent)](#conflict-protocol-when-vs-code-looks-inconsistent)
+    - [Golden rule](#golden-rule)
+  - [2) Safe Git Config + Aliases](#2-safe-git-config--aliases)
+    - [Per-repo settings (enforced by setup-repo.sh)](#per-repo-settings-enforced-by-setup-reposh)
+    - [Global aliases](#global-aliases)
+  - [3) Branch Policy for vm2 Repos](#3-branch-policy-for-vm2-repos)
+    - [Branch lifecycle](#branch-lifecycle)
+    - [PR shape](#pr-shape)
+    - [Update cadence](#update-cadence)
+    - [Conflict policy](#conflict-policy)
+    - [Merge readiness gates](#merge-readiness-gates)
+  - [Quick 10-Command Cheat Sheet](#quick-10-command-cheat-sheet)
+
+<!-- /TOC -->
+
 This playbook is optimized for solo/low-concurrency repos and for a rebase-first workflow.
 
 ## 1) Personal Git Playbook
@@ -105,20 +129,20 @@ The per-repo Git settings are **enforced by `setup-repo.sh`** from the `default_
 `scripts/bash/src/setup-repo.defaults.sh` — **that table is the source of truth**, not this document. Run `setup-repo.sh` after
 cloning a vm2 repo (or against an existing clone to re-sync). What it applies and why:
 
-| Setting                  | Value                                    | Why it matters                                                              |
-|--------------------------|------------------------------------------|------------------------------------------------------------------------------|
-| `core.hooksPath`         | `$VM2_REPOS/vm2.DevOps/scripts/githooks` | shared Git hooks across all vm2 repos                                         |
-| `commit.template`        | SoT `.gitmessage`                        | Conventional Commits template on every commit                                 |
-| `merge.ff`               | `only`                                   | refuses non-fast-forward merges → linear history                              |
-| `pull.rebase`            | `true`                                   | aligns pull behavior with the rebase-first flow                               |
-| `fetch.prune`            | `true`                                   | removes stale remote refs                                                     |
-| `push.autoSetupRemote`   | `true`                                   | the first push of a new branch sets up tracking automatically                 |
-| `rerere.enabled`         | `true`                                   | remembers and reapplies repeated conflict resolutions                         |
-| `rerere.autoUpdate`      | `true`                                   | also **stages** rerere's auto-resolutions — replayed conflicts sail through   |
-| `rebase.autoStash`       | `true`                                   | auto-stash/reapply a dirty tree around rebase — no interruptions              |
+| Setting                  | Value                                    | Why it matters                                         |
+|--------------------------|------------------------------------------|--------------------------------------------------------|
+| `core.hooksPath`         | `$VM2_REPOS/vm2.DevOps/scripts/githooks` | shared Git hooks across all vm2 repos                  |
+| `commit.template`        | SoT `.gitmessage`                        | Conventional Commits template on every commit          |
+| `merge.ff`               | `only`                                   | refuses non-fast-forward merges → linear history       |
+| `pull.rebase`            | `true`                                   | aligns pull behavior with the rebase-first flow        |
+| `fetch.prune`            | `true`                                   | removes stale remote refs                              |
+| `push.autoSetupRemote`   | `true`                                   | the first push of a new branch sets up tracking automatically |
+| `rerere.enabled`         | `true`                                   | remembers and reapplies repeated conflict resolutions  |
+| `rerere.autoUpdate`      | `true`                                   | also **stages** rerere's auto-resolutions — replayed conflicts sail through |
+| `rebase.autoStash`       | `true`                                   | auto-stash/reapply a dirty tree around rebase — no interruptions |
 | `merge.conflictstyle`    | `zdiff3`                                 | conflict hunks include the common base — see *what changed*, not just results |
 | `push.useForceIfIncludes`| `true`                                   | `--force-with-lease` also fails if the remote moved while you were rebasing   |
-| `tag.sort`               | `version:refname`                        | `git tag` lists `v1.10.0` after `v1.9.0`, not before it                       |
+| `tag.sort`               | `version:refname`                        | `git tag` lists `v1.10.0` after `v1.9.0`               |
 | `merge.nugetlock.*`      | custom merge driver                      | auto-resolves `packages.lock.json` conflicts by taking the incoming side (bound via `.gitattributes`); regenerate with `dotnet restore --force-evaluate` |
 
 ### Global aliases
@@ -137,15 +161,15 @@ git config --global alias.rbabort "rebase --abort"
 git config --global alias.pushf "push --force-with-lease"
 ```
 
-| Alias                             | Use it for                                                                                |
-|-----------------------------------|--------------------------------------------------------------------------------------------|
-| `git st`                          | quick status                                                                                |
-| `git lg`                          | history graph                                                                               |
-| `git last`                        | what did I just commit?                                                                     |
-| `git undo`                        | un-commit the last commit, keep the changes staged                                          |
-| `git sync`                        | fetch + rebase onto fresh `origin/main` in one move                                         |
-| `git preflight`                   | start-of-day / pre-push check: status, branch, ahead/behind, rebase-in-progress             |
-| `git rbcontinue` / `git rbabort`  | continue / abort a rebase                                                                   |
+| Alias                             | Use it for                                                                               |
+|-----------------------------------|------------------------------------------------------------------------------------------|
+| `git st`                          | quick status                                                                             |
+| `git lg`                          | history graph                                                                            |
+| `git last`                        | what did I just commit?                                                                  |
+| `git undo`                        | un-commit the last commit, keep the changes staged                                       |
+| `git sync`                        | fetch + rebase onto fresh `origin/main` in one move                                      |
+| `git preflight`                   | start-of-day / pre-push check: status, branch, ahead/behind, rebase-in-progress          |
+| `git rbcontinue` / `git rbabort`  | continue / abort a rebase                                                                |
 | `git pushf`                       | **the only correct push after a rebase** (`--force-with-lease` + `useForceIfIncludes` guard)|
 
 ## 3) Branch Policy for vm2 Repos
