@@ -35,7 +35,6 @@
     - [Variables](#variables)
     - [Copilot Code Review](#copilot-code-review)
   - [Repository Setup using `setup-repo.sh`](#repository-setup-using-setup-reposh)
-  - [Running the Script `local-git-config.sh`](#running-the-script-local-git-configsh)
 
 <!-- /TOC -->
 
@@ -592,17 +591,3 @@ audit result may look like this:
 
 ℹ️  INFO: Audit of https://github.com/vmelamed/vm2.SemVer completed.
 ```
-
-## Running the Script `local-git-config.sh`
-
-This is a one-time setup script that configures local git settings for the repository, such as hooks and pull
-behavior.  It configures the repository with optional but highly recommended settings for a smooth development
-experience, including:
-
-| Setting                  | Value  | Purpose                                                    |
-| :----------------------- | :----- | :--------------------------------------------------------- |
-| `core.hooksPath`         | (path) | Points to shared commit-msg hook in vm2.DevOps             |
-| `commit.template`        | (path) | Commit message template with allowed types                 |
-| `pull.rebase`            | `true` | `git pull` rebases instead of creating merge commits       |
-| `fetch.prune`            | `true` | Auto-removes stale remote-tracking branches on fetch/pull  |
-| `push.autoSetupRemote`   | `true` | First push of a new branch auto-sets upstream tracking     |
