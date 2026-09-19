@@ -28,10 +28,10 @@ function get_arguments()
         get_common_arg "${_option,,}" &&
             continue
 
-        (( $# >= 1 )) &&
-            get_common_dotnet_arg "$_option" "$1" &&
-            shift &&
+        get_common_dotnet_arg "$_option" "${1:-}" && {
+            (( $# >= 1 )) && shift
             continue
+        }
 
         case "${_option,,}" in
             # get the arguments specific to this script
@@ -45,7 +45,7 @@ function get_arguments()
             # do not use the common options - they were already processed by get_common_arg and get_common_dotnet_arg:
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
                 ;;
-            -d|-c|-f|-r|-a|-mp|-mi|--define|--configuration|--framework|--runtime|--artifacts-path|--minver-tag-prefix|--minver-prerelease-id|--nuget-username|--nuget-password )
+            -c|--define|--configuration|--framework|--runtime|--artifacts-path|--minver-tag-prefix|--minver-prerelease-id|--nuget-username|--nuget-password )
                 ;;
 
             * ) [[ -z $test_project ]] || usage -sd 3 -ec "$err_too_many_arguments" "Multiple test projects specified. Unknown option: $_option"

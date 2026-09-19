@@ -64,6 +64,10 @@ _make_benchmark_project() {
 _run_rebuild() {
     local _dir="$1"; shift
     local _env_vars="$1"; shift
+    # rebuild-bench-history-run.sh resolves $artifacts via get_artifacts_path, which requires a
+    # real Git working tree (as a real CI checkout always is) -- git init the sandbox so it
+    # matches that, rather than the plain scratch directory bats gives us by default.
+    git -C "$_dir" init -q
     timeout 20 env -i HOME="$HOME" PATH="$_dir/fakebin:/usr/local/bin:/usr/bin:/bin" \
         RUN_BENCHMARKS_CALL_LOG="$_dir/rb.log" BENCHER_CALL_LOG="$_dir/bencher.log" bash -c "
             cd '$_dir' && $_env_vars bash '$_rebuild_run' $*
@@ -158,6 +162,7 @@ EOF
 
 @test "rebuild-bench-history-run: fails cleanly when the bencher CLI is not on PATH" {
     _make_benchmark_project "$BATS_TEST_TMPDIR"
+    git -C "$BATS_TEST_TMPDIR" init -q
     run timeout 15 env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" BENCHER_API_TOKEN=tok bash -c "
         cd '$BATS_TEST_TMPDIR' && bash '$_rebuild_run' --quiet --repeat 1 --bencher-project p --bencher-testbed t
     "
@@ -195,6 +200,7 @@ EOF
 @test "rebuild-bench-history-run: in CI mode, the summary also lands in the step summary file" {
     _install_fakes "$BATS_TEST_TMPDIR"
     _make_benchmark_project "$BATS_TEST_TMPDIR"
+    git -C "$BATS_TEST_TMPDIR" init -q
     run timeout 20 env -i HOME="$HOME" PATH="$BATS_TEST_TMPDIR/fakebin:/usr/local/bin:/usr/bin:/bin" \
         RUN_BENCHMARKS_CALL_LOG="$BATS_TEST_TMPDIR/rb.log" BENCHER_CALL_LOG="$BATS_TEST_TMPDIR/bencher.log" \
         BENCHER_API_TOKEN=tok GITHUB_ACTIONS=true GITHUB_STEP_SUMMARY="$BATS_TEST_TMPDIR/summary.md" \

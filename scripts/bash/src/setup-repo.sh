@@ -398,6 +398,12 @@ if $configure_local; then
     done
 
     info "...local git settings configured."
+
+    if [[ -f "$repo_path/.gitmodules" ]]; then
+        info "Initializing git submodules..."
+        execute git -C "$repo_path" submodule update --init --recursive
+        info "...git submodules initialized."
+    fi
 fi
 
 #=============================================================================================

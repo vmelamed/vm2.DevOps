@@ -60,9 +60,6 @@ permissions:
   packages: read # Required for downloading dependencies and tools
 
 env:
-  # this must be the same across all jobs and steps below.
-  # We must know where to find the artifacts and where to download/upload to/from across all jobs and steps here.
-  ARTIFACTS_PATH: artifacts
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   VERBOSE: ${{ vars.VERBOSE || false }}
@@ -111,6 +108,7 @@ jobs:
       # Build once (first iteration) then re-run + record N times. No build-artifacts cache restore on purpose:
       # this workflow runs standalone, so run-benchmarks.sh builds the project on the first iteration.
       - name: Rebuild benchmark history
+        id: rebuild-bench-history
         shell: bash
         env:
           BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
@@ -130,7 +128,6 @@ jobs:
               --define "${{ inputs.preprocessor-symbols }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
               --minver-prerelease-id "${{ inputs.minver-prerelease-id }}" \
-              --artifacts "$ARTIFACTS_PATH" \
               --bencher-project "$BENCHER_SLUG" \
               --bencher-testbed "${{ inputs.runner-os }}" \
               --bencher-branch "${{ inputs.bencher-branch }}"
@@ -141,6 +138,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: rebuild-bench-history-${{ inputs.runner-os }}
-          path: ${{ env.ARTIFACTS_PATH }}/benchmarks
+          path: ${{ steps.rebuild-bench-history.outputs.artifacts }}/benchmarks
           if-no-files-found: warn
           overwrite: true

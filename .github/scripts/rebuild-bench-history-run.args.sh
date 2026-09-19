@@ -18,7 +18,6 @@ declare -xi repeat
 declare -x preprocessor_symbols
 declare -x minver_tag_prefix
 declare -x minver_prerelease_id
-declare -x artifacts
 declare -x bencher_project
 declare -x bencher_testbed
 declare -x bencher_branch
@@ -54,11 +53,6 @@ function get_arguments()
             --minver-prerelease-id|-mi )
                 (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 minver_prerelease_id="$1"; shift
-                ;;
-
-            --artifacts-path|-a )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                artifacts="$1"; shift
                 ;;
 
             --bencher-project|-bp )
@@ -108,7 +102,6 @@ function dump_args()
         preprocessor_symbols
         minver_tag_prefix
         minver_prerelease_id
-        artifacts
         bencher_project
         bencher_testbed
         bencher_branch

@@ -24,10 +24,10 @@ function get_arguments()
         get_common_arg "$_option" &&
             continue
 
-        (( $# >= 1 )) &&
-            get_common_dotnet_arg "$_option" "$1" &&
-            shift &&
+        get_common_dotnet_arg "$_option" "${1:-}" && {
+            (( $# >= 1 )) && shift
             continue
+        }
 
         [[ "$_option" != -* ]]  || usage -ec "$err_unknown_argument" "Unknown option: $_option"
         [[ -z $build_project ]] || usage -ec "$err_too_many_arguments" "Multiple build projects specified. Unknown option: $_option"

@@ -10,11 +10,6 @@ name: _refresh_lockfiles (Reusable workflow)
 on:
   workflow_call:
     inputs:
-      target-framework:
-        description: .NET SDK version pattern (e.g. "10.0.x")
-        type: string
-        default: "10.0.x"
-
       runner-os:
         description: Runner OS
         type: string

@@ -16,11 +16,6 @@ on:
         type: string
         default: ubuntu-latest
 
-      target-framework:
-        description: Version of .NET SDK to use (default 10.0.x)
-        type: string
-        default: 10.0.x
-
       configuration:
         description: The type of build to produce, e.g. Release vs Debug (default Release)
         type: string

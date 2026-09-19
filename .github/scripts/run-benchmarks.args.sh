@@ -25,10 +25,10 @@ function get_arguments()
         get_common_arg "$_option" &&
             continue
 
-        (( $# >= 1 )) &&
-            get_common_dotnet_arg "$_option" "$1" &&
-            shift &&
+        get_common_dotnet_arg "$_option" "${1:-}" && {
+            (( $# >= 1 )) && shift
             continue
+        }
 
         [[ -z $benchmark_project ]] ||
             usage -ec "$err_too_many_arguments" "Multiple benchmark projects specified. Unknown option: $_option"

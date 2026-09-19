@@ -116,9 +116,14 @@ These own the version-bump logic and are the highest-risk scripts in the repo.
 ### Wire-up
 
 Add `tests/` to the repo root.
-Run `bats tests/` in the CI workflow from [item 2](#2-add-a-ci-workflow-for-vm2devops-itself--critical).
+Run `bats tests/` in the CI workflow from [item 2](#2-add-a-ci-workflow-for-vm2devops-itself--critical). That workflow's
+`actions/checkout` step MUST set `submodules: true` (or `recursive`) -- a default checkout does not fetch submodule
+content, and the `.bats` files' `load '../libs/...'` calls will fail to find `bats-support`/`bats-assert`/`bats-file`
+otherwise.
 Install BATS and helpers via `git submodule` under `tests/libs/`
-(same pattern as other repos that use git submodules for dev tooling).
+(same pattern as other repos that use git submodules for dev tooling). Locally, `setup-repo.sh` already runs
+`git submodule update --init --recursive` after configuring local git settings, so a normal `setup-repo.sh` run
+covers this; a plain `git clone` without `--recurse-submodules` will not.
 
 ---
 

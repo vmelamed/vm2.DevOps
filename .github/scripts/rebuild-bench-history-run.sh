@@ -35,7 +35,6 @@ declare -xi repeat=${REPEAT:-$default_repeat}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-}
-declare -x artifacts=${ARTIFACTS_PATH:-"artifacts"}
 declare -x bencher_project=${BENCHER_PROJECT:-}
 declare -x bencher_testbed=${BENCHER_TESTBED:-}
 declare -x bencher_branch=${BENCHER_BRANCH:-"main"}
@@ -64,7 +63,6 @@ fi
 # Validate the rest of the inputs (accumulate all problems, then bail once).
 validate_preprocessor_symbols preprocessor_symbols                        || true
 validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
-is_safe_valid_path "$artifacts"                                           || true
 is_safe_integer "$repeat"                                                 || true
 (( repeat >= 1 ))                                                         || error -ec "$err_argument_value" "repeat must be a positive integer (got '$repeat')."
 [[ -n "$bencher_project" ]]                                               || error -ec "$err_missing_argument" "Bencher project (--bencher-project) is required."
@@ -72,6 +70,10 @@ is_safe_integer "$repeat"                                                 || tru
 [[ -n "${BENCHER_API_TOKEN:-}" ]]                                         || error -ec "$err_missing_argument" "The BENCHER_API_TOKEN environment variable is required."
 
 exit_if_has_errors
+
+declare artifacts
+
+get_artifacts_path "${benchmark_projects[0]}" artifacts
 
 artifacts_benchmarks_dir=$artifacts/benchmarks
 results_dir="$artifacts_benchmarks_dir/results"
@@ -150,3 +152,5 @@ done
 (( uploaded > 0 )) || error -ec "$err_logic_error" "No data points were recorded to Bencher."
 
 exit_if_has_errors
+
+args_to_github_output artifacts

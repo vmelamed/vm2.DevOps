@@ -70,12 +70,14 @@ declare -xra common_dotnet_args_to_output=(
 
 #---------------------------------------------------------------------------------------------
 # @description Processes one github-scripts-common command-line (`--define`,
-#   `--configuration`, `framework`, `--runtime`, `--artifacts`, `--minver-tag-prefix`,
+#   `--configuration`/`-c`, `--framework`, `--runtime`, `--artifacts-path`, `--minver-tag-prefix`,
 #   `--minver-prerelease-id`, `--nuget-username`, `--nuget-password`) argument and its value.
-#   Long- and short-form options and switches are recognized. Calling scripts should ensure
-#   that there are no short- or long-form options collisions with the rest of the options. For
-#   example, they may have a first matching expression case like:
-#   `-d|-c|-f|-r|-a|-mp|-mi|--define|--configuration|--framework|--runtime|--artifacts-path|--minver-tag-prefix|--minver-prerelease-id|--nuget-username--nuget-password ) ;;`
+#   Only `--configuration` has a short form (`-c`); every other common option is long-form only,
+#   to keep single letters free for callers to use for their own options without colliding with
+#   this shared set. Calling scripts should ensure that there are no collisions with `-c` or any
+#   of the long option names above. For example, they may have a first matching expression case
+#   like:
+#   `-c|--define|--configuration|--framework|--runtime|--artifacts-path|--minver-tag-prefix|--minver-prerelease-id|--nuget-username|--nuget-password ) ;;`
 #   to satisfy this requirement, as they may no longer use any of these as their own option.
 #
 # Notes:
@@ -107,22 +109,26 @@ function get_common_dotnet_arg()
 
     exit_if_has_bugs
 
+    local _rc="$success"
+
     case "${1,,}" in
             # do not use the common options - they should be processed by get_common_arg:
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown ) ;;
 
             # get the values of the variables common for many vm2.DevOps scripts,
-            --define|-d                ) preprocessor_symbols=$2 ;;
-            --minver-tag-prefix|-mp    ) minver_tag_prefix="$2" ;;
-            --minver-prerelease-id|-mi ) minver_prerelease_id="$2" ;;
-            --nuget-username           ) gh_nuget_username="$2" ;;
-            --nuget-password           ) gh_nuget_password="$2" ;;
-            --configuration|-c         ) configuration=$2 ;;
-            --framework|-f             ) framework="$2" ;;
-            --runtime|-r               ) runtime="$2" ;;
-            --artifacts-path|-a        ) artifacts=$2 ;;
+            --define                   ) [[ -n $2 ]] && preprocessor_symbols=$2   || _rc="$err_missing_argument" ;;
+            --minver-tag-prefix        ) [[ -n $2 ]] && minver_tag_prefix="$2"    || _rc="$err_missing_argument" ;;
+            --minver-prerelease-id     ) [[ -n $2 ]] && minver_prerelease_id="$2" || _rc="$err_missing_argument" ;;
+            --nuget-username           ) [[ -n $2 ]] && gh_nuget_username="$2"    || _rc="$err_missing_argument" ;;
+            --nuget-password           ) [[ -n $2 ]] && gh_nuget_password="$2"    || _rc="$err_missing_argument" ;;
+            --configuration|-c         ) [[ -n $2 ]] && configuration=$2          || _rc="$err_missing_argument" ;;
+            --framework                ) [[ -n $2 ]] && framework="$2"            || _rc="$err_missing_argument" ;;
+            --runtime                  ) [[ -n $2 ]] && runtime="$2"              || _rc="$err_missing_argument" ;;
+            --artifacts-path           ) [[ -n $2 ]] && artifacts=$2              || _rc="$err_missing_argument" ;;
             *                          ) return "$negative" ;;
     esac
+
+    (( _rc == "$success" )) || usage -ec "$_rc" "The value for the argument '$1' is missing."
 
     return "$positive" # it was a common argument and was processed
 }

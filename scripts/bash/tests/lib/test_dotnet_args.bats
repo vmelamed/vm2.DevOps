@@ -33,10 +33,33 @@ load '../helpers/setup'
     assert_output "Release"
 }
 
-@test "get_common_dotnet_arg: recognizes --artifacts-path/-a and sets \$artifacts" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; get_common_dotnet_arg -a myartifacts; echo \"\$artifacts\""
+@test "get_common_dotnet_arg: recognizes --artifacts-path (long form only) and sets \$artifacts" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; get_common_dotnet_arg --artifacts-path myartifacts; echo \"\$artifacts\""
     assert_success
     assert_output "myartifacts"
+}
+
+@test "get_common_dotnet_arg: only --configuration has a short form -- -d/-f/-r/-a/-mp/-mi are no longer recognized" {
+    local _opt
+    for _opt in -d -f -r -a -mp -mi; do
+        run get_common_dotnet_arg "$_opt" "some-value"
+        assert_failure 1
+    done
+}
+
+@test "get_common_dotnet_arg: a recognized option with a missing value fails with a clear error, not silently" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; get_common_dotnet_arg --configuration ''"
+    assert_failure
+    assert_output --partial "The value for the argument '--configuration' is missing."
+}
+
+@test "get_common_dotnet_arg: an unrecognized/positional argument with no more tokens does NOT trigger the missing-value check" {
+    # regression: the value-presence check must run only for options this function actually
+    # recognizes -- otherwise a trailing positional argument (e.g. a project path) that happens
+    # to be the last token on the command line gets falsely flagged as "value is missing".
+    run get_common_dotnet_arg "some/positional/path.csproj" ""
+    assert_failure 1
+    refute_output --partial "is missing"
 }
 
 @test "get_common_dotnet_arg: recognizes --nuget-username/--nuget-password" {

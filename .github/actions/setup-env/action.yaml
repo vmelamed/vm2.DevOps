@@ -17,8 +17,10 @@ runs:
       if: github.repository != 'vmelamed/vm2.DevOps'
       shell: bash
       run: |
+        # Strip the known action subpath from the end, not the first "/" from the front, so a
+        # ref that itself contains a slash (e.g. "feature/lockfile-refresh") survives intact.
         ref="${GITHUB_ACTION_PATH#*/_actions/*/*/}"
-        ref="${ref%%/*}"
+        ref="${ref%/.github/actions/setup-env}"
         echo "VM2_DEVOPS_REF=$ref" >> "$GITHUB_ENV"
 
     - name: Checkout vm2.DevOps scripts

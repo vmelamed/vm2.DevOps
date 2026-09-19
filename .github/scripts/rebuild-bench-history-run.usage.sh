@@ -41,10 +41,6 @@ Options:
                                 Initial value from \$MINVERTAGPREFIX environment variable or 'v'
   -mi, --minver-prerelease-id   Default semver pre-release identifiers for MinVer (e.g., 'preview.0')
                                 Initial value from \$MINVERDEFAULTPRERELEASEIDENTIFIERS environment variable or 'preview.0'
-  -a, --artifacts-path          Specifies the directory where to create the benchmark artifacts.
-                                Initial value: '<solution root>/artifacts' (the benchmark artifacts will be saved in a
-                                'benchmarks' subdirectory within this directory and the results will be saved in the
-                                'artifacts/benchmarks/results' subdirectory within this directory).
   -bp, --bencher-project        The Bencher.dev project slug to record results to (required)
                                 Initial value from \$BENCHER_PROJECT
   -tb, --bencher-testbed        The Bencher.dev testbed name (e.g., the runner OS) (required)
@@ -58,7 +54,6 @@ Environment Variables:
   BENCHER_API_TOKEN             Bencher.dev API token used to upload results (required)
   BENCHMARK_PROJECT             Path to the benchmark project file
   REPEAT                        Number of independent runs to record
-  ARTIFACTS_PATH                Directory where benchmark artifacts will be created (see --artifacts-path option above)
   PREPROCESSOR_SYMBOLS          Pre-processor symbols to define when building the benchmark project
   MINVERTAGPREFIX               Git tag prefix used by MinVer (e.g., 'v')
   MINVERDEFAULTPRERELEASEIDENTIFIERS
