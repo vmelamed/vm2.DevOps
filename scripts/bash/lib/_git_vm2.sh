@@ -545,6 +545,13 @@ function get_vm2_sot_path()
 #
 # @exitcode success/positive=0: if the absolute path to the artifacts directory is successfully determined,
 #   non-zero otherwise.
+#
+# Note for test authors: this function requires argument 1 to sit inside a real Git working tree
+# (it bug-exits via root_working_tree() otherwise). A bats sandbox built from a plain scratch
+# directory is NOT a Git working tree by default -- `git init -q "$sandbox_dir"` it first, or any
+# script that transitively calls this (via sanitize_common_dotnet_args, common to every script
+# using the common dotnet arguments) will fail with "the current directory must be a path to a
+# directory inside a Git repository working tree" instead of exercising the behavior under test.
 #---------------------------------------------------------------------------------------------
 function get_artifacts_path()
 {

@@ -12,6 +12,7 @@
   - [Bash](#bash)
     - [Variables and Dynamic Scope](#variables-and-dynamic-scope)
     - [Function Parameter Validation](#function-parameter-validation)
+    - [Argument-Dispatcher Precondition Ordering](#argument-dispatcher-precondition-ordering)
   - [General C# Coding Conventions](#general-c-coding-conventions)
   - [Async](#async)
   - [Services (if applicable)](#services-if-applicable)
@@ -185,6 +186,25 @@ function example()
 - Top-level CLI parsers and configuration functions that intentionally terminate through `usage()` or
   `exit_if_has_errors()` MUST retain that process-exit behavior. They SHOULD accumulate errors with `error` calls and
   invoke the exit gate once; do not convert them into reusable return-based functions.
+
+### Argument-Dispatcher Precondition Ordering
+
+Bash argument parsers commonly chain several optional handlers, each claiming the tokens it recognizes and returning
+failure for the rest, so the caller can fall through to the next one (e.g. a script's own `case` block trying
+`get_common_arg`, then a shared `get_common_*_arg`, then its own options). In this shape:
+
+- **Determine applicability before validating shape.** A handler MUST decide whether an option belongs to it (a
+  `case`/pattern match on the option's *name*) before it inspects or requires anything about the option's *value*.
+  Checking a value's presence or format ahead of that membership check makes the handler misfire on inputs that were
+  never meant for it — for example, an ordinary positional argument that happens to be the last token on the command
+  line gets treated as "my option, and its value is missing," when it is not this handler's option at all.
+- A handler in this chain has exactly one legitimate way to say "not mine": return failure without touching the
+  value or any option-specific state. It has exactly one legitimate way to say "mine, but malformed": having matched
+  the option name, *then* validate the value and report a specific, actionable error.
+- When adding or removing a value-taking option from such a dispatcher, also update any downstream no-op reservation
+  list (a `case` arm like `-a|-c|-f|... ) ;;` that exists purely to reserve those letters/names so a later `case` arm
+  in the same function does not shadow the shared handler). A stale reservation silently swallows a letter the shared
+  handler no longer claims, or fails to reserve one it newly does.
 
 ## General C# Coding Conventions
 
@@ -500,7 +520,17 @@ Also add the project to the `.slnx` solution file under the appropriate folder.
 
 - **`Directory.Build.props` is the single source of truth for `TargetFramework` and the artifacts layout**
   (`ArtifactsPath`, `UseArtifactsOutput`). Workflows and scripts MUST NOT duplicate or override these — they read
-  build output locations, they do not decide them.
+  build output locations, they do not decide them. This extends to every CLI flag and environment variable that
+  threads one of these build-controlled values through a script (`--configuration`/`CONFIGURATION`,
+  `--framework`/`FRAMEWORK`, `--runtime`/`RUNTIME`, `--artifacts-path`/`ARTIFACTS_PATH`, and any
+  `dotnet-version`/`target-framework` workflow input): these exist as escape valves for a rare, deliberate exception,
+  not as a general-purpose override mechanism. If a script or workflow ends up setting one of these to something
+  other than its resolved default, that MUST be justified in writing — a comment at the override site, or the PR
+  description — not merely "because the parameter is there." `Configuration`'s own narrow exception (below) is the
+  model to follow: a named, human-triggered escape hatch with a stated reason, not a value CI computes or forwards by
+  default. Conversely, an input or CLI flag that no caller ever sets to anything but the default is not a reserved
+  knob — it is dead weight that has silently drifted from what the workflow actually does; remove it rather than
+  leave it standing.
 - **The Runtime Identifier (RID) is deliberately left unset (`""`) today.** Every package builds portable,
   framework-dependent, OS/architecture-agnostic output — no `RuntimeIdentifier` is set anywhere, and the
   `runtime-identifier` workflow input exists but defaults to unspecified. This is why `runner-os` (and the

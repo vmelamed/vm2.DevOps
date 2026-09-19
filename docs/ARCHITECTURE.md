@@ -23,6 +23,7 @@
       - [CI Scripts (`/.github/actions/scripts/`)](#ci-scripts-githubactionsscripts)
       - [Composite Action (`action.yaml`)](#composite-action-actionyaml)
       - [Bash Library (`/scripts/bash/lib/`)](#bash-library-scriptsbashlib)
+      - [Testing the Bash Library and Scripts](#testing-the-bash-library-and-scripts)
       - [Design of the Library Outputs](#design-of-the-library-outputs)
         - [Logging Functions](#logging-functions)
         - [Free Form Output to the GitHub Step Summary](#free-form-output-to-the-github-step-summary)
@@ -336,6 +337,38 @@ A shared function library sourced by scripts at startup.
 
 Scripts source the GitHub Actions helpers `gh_core.sh` (which chains into `core.sh`) and then source additional `_*.sh` modules
 as needed.
+
+#### Testing the Bash Library and Scripts
+
+Tests live in `scripts/bash/tests/` (`lib/` for the library, `src/` for dev utilities, `github-scripts/` for the
+`.github/scripts/` action scripts), run with [Bats-core](https://github.com/bats-core/bats-core). `bats-support`,
+`bats-assert`, and `bats-file` are Git submodules under `scripts/bash/tests/libs/` — a plain clone leaves them empty;
+`setup-repo.sh` runs `git submodule update --init --recursive` to populate them (a clean CI checkout that ever runs
+`bats` will need the equivalent `submodules: true` on its own `actions/checkout` step).
+
+Two conventions worth calling out, both learned from real, previously-passing-for-the-wrong-reason tests:
+
+- **A test double must replicate the real script's actual default-resolution behavior, not a simplified contract it
+  never implements.** `test_rebuild_bench_history_run.bats`'s fake `run-benchmarks.sh` waited for an `--artifacts`
+  flag to know where to write its fake results — but the real `rebuild-bench-history-run.sh` never passes that flag;
+  both scripts independently resolve the same `artifacts` default via `get_artifacts_path`, relying on sharing a CWD
+  rather than an explicit hand-off. The fake had no access to that shared resolution, so the flag it waited for never
+  arrived, and it silently never wrote a result — hidden until the underlying resolution logic changed for an
+  unrelated reason and the failure finally surfaced. Fix the fake to reproduce the same default, not to invent an
+  easier contract.
+- **Any sandbox exercising `get_artifacts_path` (directly, or transitively via `sanitize_common_dotnet_args`, which
+  every script using the common dotnet arguments calls) must be a real Git working tree.** A bats scratch directory
+  is not one by default; `git init -q` it first. See the doc comment on `get_artifacts_path` in `_git_vm2.sh` for the
+  exact failure this produces otherwise.
+
+This connects to the `ArtifactsPath`/`TargetFramework`/RID governance rule in
+[CONVENTIONS.md](../.github/CONVENTIONS.md#build-configuration-tfms-rids-and-preprocessor-symbols): the common
+dotnet-argument surface (`--configuration`, `--framework`, `--runtime`, `--artifacts-path` and their env-var
+counterparts) exists as a deliberate, narrow escape valve, not a general override mechanism. Two concrete violations
+of that rule were found and fixed in the same pass that produced the testing lessons above: `_rebuild_bench_history.yaml`
+was still passing a `--artifacts` flag the parser no longer accepted, and `_pack.yaml`/`_refresh_lockfiles.yaml`/`_test.yaml`
+each carried a `target-framework` input that no step ever consumed. Both had silently drifted from what the workflow
+actually did; both are the shape of thing the CONVENTIONS.md rule exists to catch before it ships.
 
 #### Design of the Library Outputs
 
