@@ -131,7 +131,7 @@ runs:
   using: composite
   steps:
     - name: Setup DevOps environment variables
-      uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
+      uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
 
     - name: Gather argument values depending on the event
       id: gather

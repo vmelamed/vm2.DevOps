@@ -118,10 +118,10 @@ jobs:
           filter: tree:0
 
       - name: Setup DevOps environment variables
-        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
+        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
 
       - name: Setup .NET and the dependencies cache
-        uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@big-bang
+        uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@main
         with:
           runner-os: ${{ inputs.runner-os }}
           github-token: ${{ github.token }}

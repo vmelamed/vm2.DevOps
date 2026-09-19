@@ -108,7 +108,7 @@ jobs:
       # Clone only the scripts from vm2.DevOps, so that we can run the composite
       # action .github/actions/scripts/action.yaml for both local and external calls
       - name: Setup DevOps environment variables
-        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
+        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
 
       - name: Verify HEAD matches the CI-validated SHA; Validate and compute prerelease version
         id: compute-prerelease-version
@@ -174,10 +174,10 @@ jobs:
           fetch-depth: 0
 
       - name: Setup DevOps environment variables
-        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
+        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
 
       - name: Setup .NET and the dependencies cache
-        uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@big-bang
+        uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@main
         with:
           runner-os: ubuntu-latest
           github-token: ${{ github.token }}
@@ -215,7 +215,7 @@ jobs:
       artifact-ids: ${{ steps.collect.outputs.artifact-ids }}
     steps:
       - name: Setup DevOps environment variables
-        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
+        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
 
       - name: Collect artifact IDs
         id: collect

@@ -77,10 +77,10 @@ jobs:
       # Clone only the scripts from vm2.DevOps, so that we can run the composite
       # action .github/actions/scripts/action.yaml for both local and external calls
       - name: Setup DevOps
-        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
+        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
 
       - name: Setup .NET and the dependencies cache
-        uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@big-bang
+        uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@main
         with:
           runner-os: ${{ inputs.runner-os }}
           github-token: ${{ github.token }}

@@ -18,7 +18,6 @@
     - [run-tests.sh](#run-testssh)
     - [run-benchmarks.sh](#run-benchmarkssh)
     - [pack.sh](#packsh)
-    - [publish-package.sh](#publish-packagesh)
     - [compute-release-version.sh](#compute-release-versionsh)
     - [compute-prerelease-version.sh](#compute-prerelease-versionsh)
     - [changelog-and-tag.sh](#changelog-and-tagsh)
@@ -388,26 +387,6 @@ Validates that a project can be packed into a NuGet package (dry-run, no publish
 | `--define`               | `-d`  | `""`        | Preprocessor symbols           |
 | `--minver-tag-prefix`    | `-mp` | `v`         | MinVer tag prefix              |
 | `--minver-prerelease-id` | `-mi` | `preview.0` | MinVer pre-release identifiers |
-
----
-
-### publish-package.sh
-
-Builds, packs, and pushes a NuGet package to the specified server.
-
-**Called by:** `_prerelease.yaml`, `_release.yaml`
-
-| Option                   | Short | Default                    | Description                                    |
-| :----------------------- | :---- | :------------------------- | :--------------------------------------------- |
-| `--package-project`      | `-pp` | —                          | Path to the project to package                 |
-| `--define`               | `-d`  | `""`                       | Preprocessor symbols                           |
-| `--minver-tag-prefix`    | `-mp` | `v`                        | MinVer tag prefix                              |
-| `--minver-prerelease-id` | `-mi` | `preview.0`                | MinVer pre-release identifiers                 |
-| `--reason`               | `-r`  | `release build`            | Reason for release (added to package metadata) |
-| `--nuget-server`         | `-n`  | `github`                   | Target: `github`, `nuget`, or a custom URI     |
-| `--artifacts-saved`      | `-a`  | `false`                    | Upload packages as workflow artifacts          |
-| `--artifacts-dir`        | `-ad` | `artifacts/pack`           | Directory for saved artifacts                  |
-| `--repo-owner`           | `-o`  | `$GITHUB_REPOSITORY_OWNER` | Repo owner (for GitHub Packages)               |
 
 ---
 

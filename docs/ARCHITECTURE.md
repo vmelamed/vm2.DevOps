@@ -2,44 +2,45 @@
 
 <!-- TOC tocDepth:2..5 chapterDepth:2..6 -->
 
-- [Layers](#layers)
-  - [Layer 1: Consumer Workflows](#layer-1-consumer-workflows)
-    - [Push De-dupe Logic](#push-de-dupe-logic)
-    - [Gathering Inputs](#gathering-inputs)
-  - [Layer 2: Reusable Workflows](#layer-2-reusable-workflows)
-    - [CI Pipeline (`_ci.yaml`)](#ci-pipeline-_ciyaml)
-      - [Build (`_build.yaml`)](#build-_buildyaml)
-      - [Test (`_test.yaml`)](#test-_testyaml)
-      - [Benchmarks (`_benchmarks.yaml`)](#benchmarks-_benchmarksyaml)
-      - [Pack (`_pack.yaml`)](#pack-_packyaml)
-      - [Gate Job Pattern (`postrun-ci`)](#gate-job-pattern-postrun-ci)
-    - [Prerelease (`_prerelease.yaml`)](#prerelease-_prereleaseyaml)
-    - [Release (`_release.yaml`)](#release-_releaseyaml)
-      - [Example Walkthrough](#example-walkthrough)
-      - [Prerelease Guard](#prerelease-guard)
-    - [Clear Cache (`_clear_cache.yaml`)](#clear-cache-_clear_cacheyaml)
-  - [Layer 3: Bash Scripts](#layer-3-bash-scripts)
-    - [CI Scripts (`/.github/actions/scripts/`)](#ci-scripts-githubactionsscripts)
-    - [Composite Action (`action.yaml`)](#composite-action-actionyaml)
-    - [Bash Library (`/scripts/bash/lib/`)](#bash-library-scriptsbashlib)
-    - [Design of the Library Outputs](#design-of-the-library-outputs)
-      - [Logging Functions](#logging-functions)
-      - [Communicating Key-Value Pairs to Downstream Jobs via GitHub Actions Output](#communicating-key-value-pairs-to-downstream-jobs-via-github-actions-output)
-      - [Free Form Output to the GitHub Step Summary](#free-form-output-to-the-github-step-summary)
-    - [Utility Scripts (`/scripts/bash/src/`)](#utility-scripts-scriptsbashsrc)
-- [Caching Strategy](#caching-strategy)
-  - [NuGet Package Cache (dual-layer)](#nuget-package-cache-dual-layer)
-  - [Build Artifact Handoff (workflow artifacts, not cache)](#build-artifact-handoff-workflow-artifacts-not-cache)
-  - [Cache Cleanup](#cache-cleanup)
-- [Benchmark Threshold Management](#benchmark-threshold-management)
-  - [Per-run threshold reset (`reset-benchmark-thresholds`)](#per-run-threshold-reset-reset-benchmark-thresholds)
-  - [Rebuilding benchmark history](#rebuilding-benchmark-history)
-  - [When to use which](#when-to-use-which)
-- [Script Distribution](#script-distribution)
-- [NuGet Authentication](#nuget-authentication)
-- [Actions Secrets](#actions-secrets)
-- [Dependabot Secrets](#dependabot-secrets)
-- [Naming Conventions](#naming-conventions)
+- [Architecture](#architecture)
+  - [Layers](#layers)
+    - [Layer 1: Consumer Workflows](#layer-1-consumer-workflows)
+      - [Push De-dupe Logic](#push-de-dupe-logic)
+      - [Gathering Inputs](#gathering-inputs)
+    - [Layer 2: Reusable Workflows](#layer-2-reusable-workflows)
+      - [CI Pipeline (`_ci.yaml`)](#ci-pipeline-_ciyaml)
+        - [Build (`_build.yaml`)](#build-_buildyaml)
+        - [Test (`_test.yaml`)](#test-_testyaml)
+        - [Benchmarks (`_benchmarks.yaml`)](#benchmarks-_benchmarksyaml)
+        - [Pack (`_pack.yaml`)](#pack-_packyaml)
+        - [Gate Job Pattern (`postrun-ci`)](#gate-job-pattern-postrun-ci)
+      - [Prerelease (`_prerelease.yaml`)](#prerelease-_prereleaseyaml)
+      - [Release (`_release.yaml`)](#release-_releaseyaml)
+        - [Example Walkthrough](#example-walkthrough)
+        - [Prerelease Guard](#prerelease-guard)
+      - [Clear Cache (`_clear_cache.yaml`)](#clear-cache-_clear_cacheyaml)
+    - [Layer 3: Bash Scripts](#layer-3-bash-scripts)
+      - [CI Scripts (`/.github/actions/scripts/`)](#ci-scripts-githubactionsscripts)
+      - [Composite Action (`action.yaml`)](#composite-action-actionyaml)
+      - [Bash Library (`/scripts/bash/lib/`)](#bash-library-scriptsbashlib)
+      - [Design of the Library Outputs](#design-of-the-library-outputs)
+        - [Logging Functions](#logging-functions)
+        - [Free Form Output to the GitHub Step Summary](#free-form-output-to-the-github-step-summary)
+        - [Communicating Key-Value Pairs to Downstream Jobs via GitHub Actions Output](#communicating-key-value-pairs-to-downstream-jobs-via-github-actions-output)
+      - [Utility Scripts (`/scripts/bash/src/`)](#utility-scripts-scriptsbashsrc)
+  - [Caching Strategy](#caching-strategy)
+    - [NuGet Package Cache (dual-layer)](#nuget-package-cache-dual-layer)
+    - [Build Artifact Handoff (workflow artifacts, not cache)](#build-artifact-handoff-workflow-artifacts-not-cache)
+    - [Cache Cleanup](#cache-cleanup)
+  - [Benchmark Threshold Management](#benchmark-threshold-management)
+    - [Per-run threshold reset (`reset-benchmark-thresholds`)](#per-run-threshold-reset-reset-benchmark-thresholds)
+    - [Rebuilding benchmark history](#rebuilding-benchmark-history)
+    - [When to use which](#when-to-use-which)
+  - [Script Distribution](#script-distribution)
+  - [NuGet Authentication](#nuget-authentication)
+  - [Actions Secrets](#actions-secrets)
+  - [Dependabot Secrets](#dependabot-secrets)
+  - [Naming Conventions](#naming-conventions)
 
 <!-- /TOC -->
 
@@ -58,7 +59,7 @@ vm2.DevOps provides CI/CD automation framework for .NET NuGet packages through a
 ├─────────────────────────────────────────────────────────┤
 │  Bash Scripts  (vm2.DevOps/.github/actions/scripts/)    │
 │  build · run-tests · run-benchmarks · pack              │
-│  validate-input · publish-package · changelog-and-tag   │
+│  validate-input · changelog-and-tag                     │
 │  compute-release-version · download-artifact            │
 ├─────────────────────────────────────────────────────────┤
 │  Bash Library  (vm2.DevOps/scripts/bash/lib/)           │
@@ -87,17 +88,25 @@ CI.yaml ───────┬───────► actions/gather-inputs/a
                                    ├──► _build.yaml ───────► build.sh ──────────────────────►
                                    ├──► _test.yaml ────────► run-tests.sh ──────────────────►
                                    ├──► _benchmarks.yaml ──► run-benchmarks.sh ─────────────►
-                                   └──► _pack.yaml ────────► pack.s ────────────────────────►
+                                   └──► _pack.yaml ────────► pack.sh ───────────────────────►
 
 Prerelease.yaml ───────► _prerelease.yaml ───────────────┬─► compute-prerelease-version.sh ─►
                                                          ├─► changelog-and-tag.sh ──────────►
-                                                         └─► publish-package.s ─────────────►
+                                                         └─► pack.sh ───────────────────────►
 
 Release.yaml ──────────► _release.yaml ──────────────────┬─► compute-release-version.sh ────►
                                                          ├─► changelog-and-tag.sh ──────────►
-                                                         └─► publish-package.sh ────────────►
+                                                         └─► pack.sh ───────────────────────►
 
 ```
+
+The actual `dotnet nuget push` is not shown above: it runs back in each *consumer's own* `Prerelease.yaml`/`Release.yaml`
+(their own `publish-prerelease`/`publish-release` job), not in a vm2.DevOps script. NuGet.org trusted publishing validates
+the OIDC token's `job_workflow_ref` claim against the workflow file requesting it, which for a reusable workflow always
+names the reusable workflow itself, never the repository that called it — so a shared `_prerelease.yaml`/`_release.yaml`
+can never satisfy a trust policy scoped to a consumer's own repo, and the login (and therefore the push) must happen there
+instead. See [NuGet Authentication](#nuget-authentication) below, and `_prerelease.yaml`'s own comments, for the full
+reasoning.
 
 #### Push De-dupe Logic
 
@@ -214,26 +223,36 @@ postrun-ci:
 #### Prerelease (`_prerelease.yaml`)
 
 Triggered automatically when CI succeeds after a PR merge to main (a workflow_run on the CI workflow, gated to push events on
-main with conclusion == 'success'). Can also be triggered manually via workflow_dispatch. Three sequential jobs:
+main with conclusion == 'success'). Can also be triggered manually via workflow_dispatch. `_prerelease.yaml` owns everything
+up to (but not including) the actual NuGet push:
 
-1. **compute-version** — Calls `compute-prerelease-version.sh` to determine the next prerelease version from conventional
-   commits.
-1. **changelog-and-tag** — Calls `changelog-and-tag.sh` to update `CHANGELOG.md` using `cliff.prerelease.toml`, commit, and
-   create the prerelease tag.
-1. **package** — Checks out the prerelease tag, then calls `pack.sh` to build and pack the prerelease package to the ***artifacts*** directory.
-1. **publish** — Calls `publish.sh` to push the prerelease package to the configured NuGet server. Note that for `nuget.org` the script uses Trusted Publishing but for the other repositories (GitHub Packages) it still uses standard authentication via `NUGETY_KEY_API`.
+1. **prepare-prerelease** — Calls `compute-prerelease-version.sh` to determine the next prerelease version from conventional
+   commits, then `changelog-and-tag.sh` to update `CHANGELOG.md` (via `cliff.prerelease.toml`) and create the prerelease tag.
+1. **package-and-publish** — Matrix over `package-projects`. Checks out the prerelease tag, calls `pack.sh --build true` to
+   build and pack each project into its own resolved `ArtifactsPath` (never a hardcoded default — see
+   [CONVENTIONS.md](../.github/CONVENTIONS.md)), and uploads the `.nupkg`/`.snupkg` as a workflow artifact.
+1. **collect-artifacts** — Gathers the uploaded artifacts' IDs via `gh api` and exposes them as this reusable workflow's own
+   `artifact-ids` output.
+
+The actual `dotnet nuget push` happens back in the *consumer's own* `Prerelease.yaml` (its `publish-release`-style job):
+it downloads the artifacts by ID, authenticates with NuGet.org trusted publishing (or uses `NUGET_API_KEY` for GitHub
+Packages/a custom server), and pushes. See [NuGet Authentication](#nuget-authentication) for why the login can't happen
+inside `_prerelease.yaml` itself.
 
 #### Release (`_release.yaml`)
 
 > [!IMPORTANT] Manual dispatch.
 
-Three sequential jobs:
+Same shape as `_prerelease.yaml`, for a stable release:
 
 1. **compute-version** — Calls `compute-release-version.sh` to determine the stable version from conventional commits.
 1. **changelog-and-tag** — Calls `changelog-and-tag.sh` to update the changelog using `cliff.release-header.toml` and create the
    release Git tag.
-1. **package** — Checks out the release tag, then calls `pack.sh` to build and pack the stable release package to the ***artifacts*** directory.
-1. **publish** — Calls `publish.sh` to push the prerelease package to the configured NuGet server. Note that for `nuget.org` the script uses Trusted Publishing but for the other repositories (GitHub Packages) it still uses standard authentication via `NUGETY_KEY_API` (see [Release Process](RELEASE_PROCESS.md#release-process)).
+1. **package-and-publish** — Matrix over `package-projects`. Checks out the release tag, calls `pack.sh --build true` to
+   build and pack each project, and uploads the `.nupkg`/`.snupkg` as a workflow artifact.
+1. **collect-artifacts** — Gathers the uploaded artifacts' IDs and exposes them as this workflow's `artifact-ids` output.
+
+As with Prerelease, the actual push happens in the consumer's own `Release.yaml`.
 
 ##### Example Walkthrough
 
@@ -275,19 +294,18 @@ than three if the script has more complex logical separation needs:
 
 The CI scripts:
 
-| Script                          | Called by                     | Purpose                                       |
-| :------------------------------ | :---------------------------- | :-------------------------------------------- |
-| `validate-commits.sh`           | `_ci`                         | Validate commit messages Conventional Commits |
-| `validate-input.sh`             | `_ci`                         | Validate and normalize workflow inputs        |
-| `build.sh`                      | `_build`                      | Compile .NET projects                         |
-| `run-tests.sh`                  | `_test`                       | Run tests and collect coverage                |
-| `run-benchmarks.sh`             | `_benchmarks`                 | Run BenchmarkDotNet benchmarks                |
-| `pack.sh`                       | `_pack`                       | Validate NuGet packaging                      |
-| `publish-package.sh`            | `_prerelease`, `_release`     | Build, pack, and push NuGet packages          |
-| `compute-prerelease-version.sh` | `_prerelease`                 | Determine prerelease version from commits     |
-| `compute-release-version.sh`    | `_release`                    | Determine stable release version from commits |
-| `changelog-and-tag.sh`          | `_prerelease`, `_release`     | Update changelog and create Git tag           |
-| `download-artifact.sh`          | (not used in CI)              | Download and extract remote artifacts         |
+| Script                          | Called by                          | Purpose                                                          |
+| :------------------------------ | :--------------------------------- | :--------------------------------------------------------------- |
+| `validate-commits.sh`           | `_ci`                              | Validate commit messages Conventional Commits                    |
+| `validate-input.sh`             | `_ci`                              | Validate and normalize workflow inputs                           |
+| `build.sh`                      | `_build`                           | Compile .NET projects                                            |
+| `run-tests.sh`                  | `_test`                            | Run tests and collect coverage                                   |
+| `run-benchmarks.sh`             | `_benchmarks`                      | Run BenchmarkDotNet benchmarks                                   |
+| `pack.sh`                       | `_pack`, `_prerelease`, `_release` | Validate packaging (`_pack`); build+pack for publishing (others) |
+| `compute-prerelease-version.sh` | `_prerelease`                      | Determine prerelease version from commits                        |
+| `compute-release-version.sh`    | `_release`                         | Determine stable release version from commits                    |
+| `changelog-and-tag.sh`          | `_prerelease`, `_release`          | Update changelog and create Git tag                              |
+| `download-artifact.sh`          | (not used in CI)                   | Download and extract remote artifacts                            |
 
 #### Composite Action (`action.yaml`)
 

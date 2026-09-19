@@ -37,13 +37,13 @@ workflow that gathers inputs and delegates to the reusable layer:
                           │               _benchmarks.yaml ─────────────► run-benchmarks.sh
                           │               _pack.yaml ───────────────────► pack.sh
                           │
-                     _prerelease.yaml ──────────────────────────────────► compute-release-version.sh
+                     _prerelease.yaml ──────────────────────────────────► compute-prerelease-version.sh
                           │                                               changelog-and-tag.sh
-                          │                                               publish-package.sh
+                          │                                               pack.sh
                           │
                      _release.yaml ─────────────────────────────────────► compute-release-version.sh
                           │                                               changelog-and-tag.sh
-                          │                                               publish-package.sh
+                          │                                               pack.sh
                           │
                      _clear_cache.yaml
 
@@ -55,7 +55,11 @@ or via `dotnet new vm2pkg`. These gather inputs from repository variables, secre
 **Layer 2 — Reusable workflows** (in `vm2.DevOps/.github/workflows/`):
 Orchestrate the CI/CD pipeline. `_ci.yaml` validates inputs and fans out to `_build.yaml`,
 `_test.yaml`, `_benchmarks.yaml`, and `_pack.yaml` using matrix strategies. `_prerelease.yaml`
-and `_release.yaml` handle package publishing.
+and `_release.yaml` compute the version, update the changelog, tag, and build/pack each package.
+The actual `dotnet nuget push` happens back in the *consumer's own* `Prerelease.yaml`/`Release.yaml`
+(not shown here) — NuGet.org trusted publishing validates the OIDC token's `job_workflow_ref`
+against the workflow file that requests it, which for a reusable workflow always names the
+reusable workflow itself, never its caller, so the login has to happen in the consumer repo.
 
 **Layer 3 — Bash scripts** (in `vm2.DevOps/.github/actions/scripts/`):
 Each script follows a three-file convention: `script.sh` (main), `script.usage.sh` (help text),
