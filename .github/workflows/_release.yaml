@@ -28,16 +28,6 @@ on:
         type: string
         required: true
 
-      nuget-server:
-        description: NuGet server to publish to (nuget or github)
-        type: string
-        required: true
-
-      nuget-username:
-        description: "Username for the NuGet server"
-        type: string
-        default: nuget
-
     secrets:
       RELEASE_PAT:
         description: >-
@@ -45,10 +35,12 @@ on:
           Required to push changelog commits and version tags directly to main.
         required: true
 
-      NUGET_API_KEY:
+    outputs:
+      artifact-ids:
         description: >-
-          Token for authentication to the NuGet server - must be issued by the selected nuget-server.
-        required: false
+          Comma-separated list of artifact IDs for the uploaded package artifacts, if any. Empty string if no artifacts were
+          uploaded.
+        value: ${{ jobs.collect-artifacts.outputs.artifact-ids }}
 
 concurrency:
   group: release-${{ github.ref }}
@@ -56,11 +48,10 @@ concurrency:
 
 permissions:
   contents: write
+  packages: write
+  actions: read
 
 env:
-  # this must be the same across all jobs and steps below.
-  # We must know where to find the artifacts and where to download/upload to/from across all jobs and steps here.
-  ARTIFACTS_PATH: artifacts
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   VERBOSE: ${{ vars.VERBOSE || false }}
@@ -125,20 +116,8 @@ jobs:
         run: |
           source $DEVOPS_LIB_DIR/gh_core.sh
 
-          release_pat='${{ secrets.RELEASE_PAT }}'
-          [[ -n $release_pat ]] || error "secrets.RELEASE_PAT is not set"
-          release_pat='${{ env.RELEASE_PAT }}'
-          [[ -n $release_pat ]] || error "env.RELEASE_PAT is not set"
-          release_pat="$RELEASE_PAT"
-          [[ -n $release_pat ]] || error "RELEASE_PAT is not set"
-
-          github_repository='${{ github.repository }}'
-          [[ -n $github_repository ]] || error "github.repository is not set"
-          github_repository='${{ env.GITHUB_REPOSITORY }}'
-          [[ -n $github_repository ]] || error "env.GITHUB_REPOSITORY is not set"
-          github_repository="$GITHUB_REPOSITORY"
-          [[ -n $github_repository ]] || error "GITHUB_REPOSITORY is not set"
-
+          [[ -n $RELEASE_PAT ]]       || error "secrets.RELEASE_PAT, or env.RELEASE_PAT, or RELEASE_PAT is not set"
+          [[ -n $GITHUB_REPOSITORY ]] || error "github.repository(?), or env.GITHUB_REPOSITORY, or GITHUB_REPOSITORY is not set"
           exit_if_has_errors
 
           changelog-and-tag.sh \
@@ -147,17 +126,20 @@ jobs:
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
               --needs-empty-commit "${{ needs.compute-version.outputs.needs-empty-commit }}"
 
+  # Build (only) each project and upload it as a workflow artifact. Publishing does NOT happen here: NuGet.org's
+  # trusted-publishing OIDC trust policy validates the job_workflow_ref claim, which for a reusable workflow names
+  # the workflow FILE that is running -- _release.yaml (in vm2.DevOps) -- not the repository that called it, so it
+  # can never satisfy a trust policy scoped to the calling repo's own workflow file. The calling workflow downloads
+  # these artifacts and does the actual NuGet login + push itself, where job_workflow_ref correctly matches its own
+  # trust policy. See _prerelease.yaml for the same reasoning and shape.
   package-and-publish:
-    name: Build and Publish Release
+    name: Publish Release Package to NuGet server and/or Save Package Artifacts
     if: fromJSON(inputs.package-projects)[0] != null
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs:
       - compute-version
       - changelog-and-tag
-    permissions:
-      packages: write
-      id-token: write # Required for authentication with the NuGet server
     strategy:
       fail-fast: false
       matrix:
@@ -181,47 +163,57 @@ jobs:
           github-token: ${{ github.token }}
           github-actor: ${{ github.actor }}
 
-      - name: Authenticate with NuGet.org trusted publishing to get steps.nuget-login.outputs.NUGET_API_KEY
-        id: nuget-login
-        if: inputs.nuget-server == 'nuget'
-        uses: NuGet/login@v1
-        with:
-          user: ${{ inputs.nuget-username }}
-
-      - name: Build, Package and Publish release to NuGet server
-        id: publish
+      - name: Build package (release)
+        id: package
         shell: bash
-        env:
-          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY || secrets.NUGET_API_KEY }}
         run: |
-          source $DEVOPS_LIB_DIR/gh_core.sh
-
-          nuget_api_key=${{ steps.nuget-login.outputs.NUGET_API_KEY }}
-          if [[ $nuget_server == 'nuget' && -z $nuget_api_key ]]; then
-              error "steps.nuget-login.outputs.NUGET_API_KEY is not set"
-          fi
-
-          nuget_api_key=${{ secrets.NUGET_API_KEY }}
-          if [[ $nuget_server != 'nuget' && -z $nuget_api_key ]]; then
-              error "secrets.NUGET_API_KEY is not set"
-          fi
-
-          nuget_api_key=$NUGET_API_KEY
-          [[ -n $nuget_api_key ]] || error "NUGET_API_KEY is not set"
-
-          exit_if_has_errors
-
-          publish-package.sh \
+          pack.sh \
               "${{ matrix.project }}" \
+              --build true \
               --define "${{ inputs.preprocessor-symbols }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
-              --reason "${{ needs.compute-version.outputs.reason }}" \
-              --nuget-server "${{ inputs.nuget-server }}"
+              --reason "${{ needs.compute-version.outputs.reason }}"
 
       - name: Upload package artifact
+        id: upload-artifact
         uses: actions/upload-artifact@v7
         with:
           name: nuget-packages-${{ needs.compute-version.outputs.release-tag }}-${{ hashFiles(matrix.project) }}
-          path: ${{ env.ARTIFACTS_PATH }}/packages/*.nupkg
-          if-no-files-found: ignore
+          path: ${{ steps.package.outputs.package-output-path }}/*.nupkg
+          if-no-files-found: error
           overwrite: true
+
+  collect-artifacts:
+    name: Collect package artifact IDs
+    needs: package-and-publish
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    outputs:
+      artifact-ids: ${{ steps.collect.outputs.artifact-ids }}
+    steps:
+      - name: Setup DevOps environment variables
+        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
+
+      - name: Collect artifact IDs
+        id: collect
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        shell: bash
+        run: |
+          source $DEVOPS_LIB_DIR/gh_core.sh
+
+          artifact_ids=$(
+              gh api "repos/$GH_REPO/actions/runs/$RUN_ID/artifacts" \
+              --paginate \
+              --jq '.artifacts[] | select(.name | startswith("nuget-packages-")) | .id' |
+              paste -sd, -
+          )
+          {
+            printf "### Collected artifact IDs:\n\n"
+            printf "artifact-ids=$artifact_ids\n"
+          } | to_stdout
+
+          args_to_github_output artifact_ids
