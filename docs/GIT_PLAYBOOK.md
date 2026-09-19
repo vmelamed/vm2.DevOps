@@ -20,6 +20,7 @@
     - [Update cadence](#update-cadence)
     - [Conflict policy](#conflict-policy)
     - [Merge readiness gates](#merge-readiness-gates)
+  - [4) No Big Bang Merges!](#4-no-big-bang-merges)
   - [Quick 10-Command Cheat Sheet](#quick-10-command-cheat-sheet)
 
 <!-- /TOC -->
@@ -207,6 +208,30 @@ git config --global alias.pushf "push --force-with-lease"
 2. CI green
 3. Coverage thresholds understood
 4. PR shows no stale conflict state after latest push
+
+## 4) No Big Bang Merges!
+
+"Prefer smaller PRs" above isn't just about reviewability — a branch that grows too large before merging can hit a
+GitHub-side limit that has nothing to do with actual conflicts.
+
+**What happened:** `vm2.DevOps` PR #27 ("big-bang," 119 commits accumulated over several days) showed
+`mergeable: true` / `mergeable_state: clean`, but `rebaseable: false`. A local `git rebase origin/main` was a
+complete no-op — `origin/main` was already an ancestor, so there was nothing to replay and nothing that could
+conflict — yet `gh pr merge --rebase` still failed with `GraphQL: This branch can't be rebased`. GitHub does not
+document the exact `rebaseable` criteria (it's a separate computation from `mergeable`); community reports point to
+roughly 100 commits as a practical threshold above which "Rebase and merge" starts refusing PRs with no real
+conflicts.
+
+**Rule of thumb:** if a branch is approaching on the order of 100 commits before you even open the PR, split the
+work into multiple smaller PRs. Don't let one branch become a "big bang" merge.
+
+**If you hit it anyway:**
+
+1. Confirm it's not a real conflict: `git fetch origin && git rebase origin/main` — a no-op or clean resolve means
+   the block is GitHub-side.
+2. Confirm via the API: `gh api repos/<owner>/<repo>/pulls/<number> --jq '{mergeable, mergeable_state, rebaseable}'`.
+3. Use **Squash and merge** instead — still one linear commit on `main` (compliant with the linear-history
+   ruleset), and not subject to the same block since GitHub doesn't need to replay every individual commit.
 
 ## Quick 10-Command Cheat Sheet
 

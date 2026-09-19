@@ -19,6 +19,7 @@
     - [Changelog-Only Cleanup PR](#changelog-only-cleanup-pr)
   - [Linear History and Rebase](#linear-history-and-rebase)
     - [Why Linear History](#why-linear-history)
+    - [No Big Bang Merges!](#no-big-bang-merges)
   - [Conventional Commits](#conventional-commits)
     - [Commit Message Format](#commit-message-format)
     - [How Commits Drive Automation](#how-commits-drive-automation)
@@ -396,6 +397,38 @@ All repositories enforce **linear history** via branch rulesets. This means:
   commit appears exactly once, in order.
 - **Version calculation is deterministic** — MinVer counts commits from the last tag along a
   single path.
+
+### No Big Bang Merges!
+
+Enforced linear history means every PR eventually needs a clean **rebase** replay onto `main` — whether via
+GitHub's "Rebase and merge" button or an equivalent squash. A long-lived branch that accumulates a very large
+number of commits before opening (or merging) its PR risks GitHub refusing that replay outright, independent of
+whether the changes actually conflict with anything.
+
+This happened for real: `vm2.DevOps` PR #27 ("big-bang," 119 commits accumulated over several days of
+work) reported `mergeable: true` / `mergeable_state: clean` via the GitHub API, but `rebaseable: false`. A local
+`git rebase origin/main` was a complete no-op (`origin/main` was already an ancestor — nothing to replay, nothing
+that could conflict), and `gh pr merge --rebase` still failed with `GraphQL: This branch can't be rebased`. GitHub
+does not document the exact criteria for `rebaseable`; it is a separate internal computation from `mergeable`, and
+community reports describe the same symptom on other large PRs, with one GitHub Community thread naming ~100
+commits as a practical threshold above which "Rebase and merge" starts refusing PRs that have no real conflicts.
+
+**Takeaway: keep PRs small enough to rebase-merge.** If a branch is approaching on the order of 100 commits before
+it is even opened as a PR, split the work into multiple smaller PRs rather than letting it grow into one "big bang"
+PR — not just for reviewability, but because GitHub's own rebase-merge machinery may simply refuse it later,
+with no useful diagnostic beyond "This branch can't be rebased."
+
+**If you hit this anyway:**
+
+1. Confirm there's no real conflict: `git fetch origin && git rebase origin/main` on your branch. If it's a no-op
+   or resolves cleanly, the block is GitHub-side, not a real content conflict.
+2. Check the API directly to confirm: `gh api repos/<owner>/<repo>/pulls/<number> --jq '{mergeable, mergeable_state, rebaseable}'`.
+   `mergeable: true` with `rebaseable: false` confirms this exact situation.
+3. Use **"Squash and merge"** instead of "Rebase and merge" — it still produces a single linear commit on `main`
+   (compliant with the linear-history ruleset above) and is not subject to the same block, since it does not
+   require GitHub to replay each individual commit.
+4. Accept the loss of per-commit granularity on `main` for that PR, or write a squash-commit message that
+   summarizes the individual commits it collapses.
 
 ---
 
