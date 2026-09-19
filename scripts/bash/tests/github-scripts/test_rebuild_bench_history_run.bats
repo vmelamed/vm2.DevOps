@@ -31,15 +31,15 @@ _install_fakes() {
     mkdir -p "$_dir"
     cat > "$_dir/run-benchmarks.sh" <<'EOF'
 #!/usr/bin/env bash
+# The real rebuild-bench-history-run.sh never passes --artifacts/--artifacts-path to
+# run-benchmarks.sh -- both scripts independently resolve the same default ("artifacts",
+# relative to the Git repo root) via get_artifacts_path. This fake has no access to that shared
+# library, so it reproduces the same default directly, relative to its own CWD (which the real
+# invocation never changes, so it matches the repo root the harness git-init'd).
 echo "$*" >> "$RUN_BENCHMARKS_CALL_LOG"
-_artifacts="" _prev=""
-for a in "$@"; do
-    [[ "$_prev" == "--artifacts" ]] && _artifacts="$a"
-    _prev="$a"
-done
-if [[ "${FAKE_RUN_BENCHMARKS_EXIT:-0}" == "0" && -n "$_artifacts" ]]; then
-    mkdir -p "$_artifacts/results"
-    echo '{}' > "$_artifacts/results/App-report-full-compressed.json"
+if [[ "${FAKE_RUN_BENCHMARKS_EXIT:-0}" == "0" ]]; then
+    mkdir -p artifacts/benchmarks/results
+    echo '{}' > artifacts/benchmarks/results/App-report-full-compressed.json
 fi
 exit "${FAKE_RUN_BENCHMARKS_EXIT:-0}"
 EOF
