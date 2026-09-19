@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
 name: Gather CI Inputs
 description: >-
   Collects CI parameters from repo env, repository vars, and workflow_dispatch inputs,
@@ -19,12 +22,6 @@ inputs:
   runners-os:
     description: JSON array of runner OS-es.
     default: "[ubuntu-latest]"
-  dotnet-version:
-    description: .NET SDK version.
-    default: 10.0.x
-  configuration:
-    description: Build configuration.
-    default: Release
   preprocessor-symbols:
     description: Preprocessor symbols (semicolon/space/comma-separated) from the repo env.
     default: ""
@@ -61,18 +58,18 @@ inputs:
   dispatch-reset-benchmark-thresholds:
     description: Reset benchmark thresholds flag from workflow_dispatch input.
     default: "false"
-  dispatch-skip-benchmarks:
-    description: Skip benchmarks execution and related steps (e.g. Bencher regression comments) from workflow_dispatch input.
+  dispatch-skip-build:
+    description: Skip building execution and related steps from workflow_dispatch input.
     default: "false"
   dispatch-skip-tests:
     description: Skip tests execution and related steps (e.g. code coverage collection and comments) from workflow_dispatch input.
     default: "false"
+  dispatch-skip-benchmarks:
+    description: Skip benchmarks execution and related steps (e.g. Bencher regression comments) from workflow_dispatch input.
+    default: "false"
   dispatch-skip-packages:
     description: Skip packages execution from workflow_dispatch input.
     default: "false"
-  artifacts-dir:
-    description: Artifacts directory relative to the repository root.
-    default: "artifacts"
 
 outputs:
   build-projects:
@@ -90,12 +87,6 @@ outputs:
   runners-os:
     description: JSON array of runner OS-es.
     value: ${{ steps.gather.outputs.runners-os }}
-  dotnet-version:
-    description: .NET SDK version.
-    value: ${{ steps.gather.outputs.dotnet-version }}
-  configuration:
-    description: Build configuration.
-    value: ${{ steps.gather.outputs.configuration }}
   preprocessor-symbols:
     description: Resolved preprocessor symbols.
     value: ${{ steps.gather.outputs.preprocessor-symbols }}
@@ -120,21 +111,21 @@ outputs:
   reset-benchmark-thresholds:
     description: Whether to reset benchmark thresholds.
     value: ${{ steps.gather.outputs.reset-benchmark-thresholds }}
-  skip-benchmarks:
-    description: Whether to skip benchmarks execution and related steps (e.g. Bencher regression comments).
-    value: ${{ steps.gather.outputs.skip-benchmarks }}
+  skip-build:
+    description: Whether to skip build execution.
+    value: ${{ steps.gather.outputs.skip-build }}
   skip-tests:
     description: Whether to skip tests execution and related steps (e.g. code coverage collection and comments).
     value: ${{ steps.gather.outputs.skip-tests }}
+  skip-benchmarks:
+    description: Whether to skip benchmarks execution and related steps (e.g. Bencher regression comments).
+    value: ${{ steps.gather.outputs.skip-benchmarks }}
   skip-packages:
     description: Whether to skip packages execution.
     value: ${{ steps.gather.outputs.skip-packages }}
   skip-push:
     description: Whether to skip push-triggered CI (true when an open PR exists for the branch).
     value: ${{ steps.gather.outputs.skip-push }}
-  artifacts-dir:
-    description: Artifacts directory relative to the repository root.
-    value: ${{ steps.gather.outputs.artifacts-dir }}
 
 runs:
   using: composite
@@ -157,8 +148,6 @@ runs:
         benchmark_projects='${{ inputs.benchmark-projects || '[]' }}'
         package_projects='${{ inputs.package-projects || '[]' }}'
         runners_os='${{ inputs.runners-os || '["ubuntu-latest"]' }}'
-        dotnet_version='${{ inputs.dotnet-version }}'
-        configuration='${{ inputs.configuration }}'
         preprocessor_symbols='${{ inputs.preprocessor-symbols }}'
         min_coverage_pct='${{ inputs.min-coverage-pct }}'
         max_regression_pct='${{ inputs.max-regression-pct }}'
@@ -167,11 +156,11 @@ runs:
         minver_tag_prefix='${{ inputs.minver-tag-prefix }}'
         minver_prerelease_id='${{ inputs.minver-prerelease-id }}'
         reset_benchmark_thresholds='${{ inputs.reset-benchmark-thresholds || 'false' }}'
-        skip_benchmarks='false'
+        skip_build='false'
         skip_tests='false'
+        skip_benchmarks='false'
         skip_packages='false'
         skip_push='false'
-        artifacts_dir='${{ inputs.artifacts-dir || 'artifacts' }}'
 
         # depending on the event:
 
@@ -232,8 +221,9 @@ runs:
             # Get the values from the UI inputs of workflow_dispatch event.
             preprocessor_symbols="$preprocessor_symbols;${{ inputs.dispatch-preprocessor-symbols }}"
             reset_benchmark_thresholds="${{ inputs.dispatch-reset-benchmark-thresholds }}"
-            skip_benchmarks="${{ inputs.dispatch-skip-benchmarks }}"
+            skip_build="${{ inputs.dispatch-skip-build }}"
             skip_tests="${{ inputs.dispatch-skip-tests }}"
+            skip_benchmarks="${{ inputs.dispatch-skip-benchmarks }}"
             skip_packages="${{ inputs.dispatch-skip-packages }}"
 
         else
@@ -250,8 +240,6 @@ runs:
             benchmark_projects \
             package_projects \
             runners_os \
-            dotnet_version \
-            configuration \
             preprocessor_symbols \
             min_coverage_pct \
             max_regression_pct \
@@ -260,8 +248,8 @@ runs:
             minver_tag_prefix \
             minver_prerelease_id \
             reset_benchmark_thresholds \
-            skip_benchmarks \
+            skip_build \
             skip_tests \
+            skip_benchmarks \
             skip_packages \
-            skip_push \
-            artifacts_dir
+            skip_push

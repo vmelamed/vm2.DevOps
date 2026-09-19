@@ -1,55 +1,47 @@
-#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
 
-declare -xr common_switches
-declare -xr common_vars
+# shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
+
+declare -xr common_args_usage
 declare -xr script_name
+
+declare -xr common_dotnet_parameters
+declare -xr common_dotnet_vars
 
 function usage_text()
 {
-    local _long_text=$1
-    local _switches=""
-    local _vars=""
+    (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
+    is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1:-<none>})."
+    exit_if_has_bugs
 
-    if $_long_text; then
-        _switches=$'\n'"Switches:"$'\n'"$common_switches"
-        _vars="$common_vars"
-    fi
+    local _long_text=$1
+    local _common_args=''
+
+    $_long_text  &&  _common_args=$common_args_usage || _common_args=''
 
     cat << EOF
-Usage: $script_name [<test-project-path>] | [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
+Usage:
+  $script_name [<test-project>] | [--<long option> <value> | -<short option> <value> | --<long switch> | -<short switch> ]*
+
 Runs the tests in the specified test project and collects code coverage information. It assumes that the solution folder is two
 levels up from the project directory, i.e., <solution-root>/tests/<test-project-dir>/<test-project>.csproj. All parameters are
-optional if the corresponding environment variables are set. If both are specified, the command line arguments take precedence
+optional if the corresponding environment variables are set. If both are specified, the command line arguments take precedence.
 
 Arguments:
-  <test-project-path>           The path to the test project file.
-                                Initial value from \$TEST_PROJECT environment variable (see below)
+  <test-project>           The path to the test project file.
+                                Overrides the initial value from the environment value \$TEST_PROJECT environment variable
 
 Options:
-  -c, --configuration           Specifies the build configuration to use ('Debug' or 'Release')
-                                Initial value from \$CONFIGURATION or default 'Release'
-  -d, --define                  Defines one or more user-defined pre-processor symbols to be used when building the test
-                                project, e.g. 'STAGING'. You can specify this option multiple times to define multiple symbols
-                                Initial value from \$PREPROCESSOR_SYMBOLS or default ''
-  -min, --min-coverage-pct      Specifies the minimum acceptable code coverage percentage (50-100)
-                                Initial value from \$MIN_COVERAGE_PCT or default 80
-  -mp, --minver-tag-prefix      Specifies the tag prefix used by MinVer (e.g., 'v')
-                                Initial value from \$MINVERTAGPREFIX environment variable or 'v'
-  -mi, --minver-prerelease-id   Default semver pre-release identifiers for MinVer (e.g., 'preview.0', 'alpha', 'beta', 'rc1', etc.)
-                                Initial value from \$MINVERDEFAULTPRERELEASEIDENTIFIERS environment variable or 'preview.0'
-  -a, --artifacts               Specifies the root directory for test artifacts, such as test results, coverage reports, and
-                                summaries. Artifacts are stored in a subdirectory named after the test project:
-                                <artifacts-root>/tests/<test-project-name>/*
-                                Initial value: \$ARTIFACTS_DIR or 'artifacts'
-$_switches
+$common_dotnet_parameters
+
 Environment Variables:
   TEST_PROJECT                  Path to the test project file
-  ARTIFACTS_DIR                 Directory relative to the repository root where to create the script's artifacts
-  CONFIGURATION                 Build configuration ('Release' or 'Debug')
-  PREPROCESSOR_SYMBOLS          Pre-processor symbols to define when building the test project
   MIN_COVERAGE_PCT              Minimum acceptable code coverage percentage
-$_vars
-Outputs (to GITHUB_OUTPUT):
-  results-dir                   The directory where test results are stored
+$common_dotnet_vars
+
+Outputs (to \$GITHUB_OUTPUT or stdout):
+  results-dir                   The directory where the test results are stored
+$_common_args
 EOF
 }

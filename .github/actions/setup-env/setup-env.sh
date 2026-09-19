@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
 # Determines the correct paths and adds DevOps scripts to PATH.
 # Works for both internal (vm2.DevOps) and external repos.
 

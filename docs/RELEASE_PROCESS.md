@@ -68,7 +68,9 @@ The tag prefix is `v` (e.g. `v1.2.3`), configured via the `MINVERTAGPREFIX` repo
 | Prerelease | PR merge → push to `main` → CI success (automated)  | `X.Y.Z-preview.N` (computed)      | Preview       |
 | Release    | Manual `workflow_dispatch`                          | `X.Y.Z` (computed)                | Stable        |
 
-Both flows share the same `changelog-and-tag.sh` and `publish-package.sh` scripts for changelog updates, tagging, and publishing.
+Both flows share the same `changelog-and-tag.sh` and `pack.sh` scripts for changelog updates, tagging, and publishing. Note that
+the actual publishing of the NuGet packages happens in the top-level consumer workflows (`Prerelease.yaml` and `Release.yaml`).
+This is a requirement of the NuGet.org trusted publishing model, which mandates that authentication and the actual push to the package repository occur in the consumer's workflow rather than within the reusable workflows themselves.
 
 ## Prerelease Flow
 

@@ -1,63 +1,55 @@
-#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
 
-declare -xr common_switches
-declare -xr common_vars
+# shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
+
+declare -xr common_args_usage
 declare -xr script_name
 
+declare -xr common_dotnet_parameters
+declare -xr common_dotnet_vars
+
+#---------------------------------------------------------------------------------------------
 # @description Outputs the usage text for this script to stdout.
 #
-# @arg $1 bool Whether to include the long-form help text (switches and environment variables list).
+# @arg $1 bool Whether to include the long-form help text (switches and environment variables
+#   list).
 #
 # @stdout The usage/help text for this script.
 #
 # @example
 #   usage_text true
+#---------------------------------------------------------------------------------------------
 function usage_text()
 {
-    local _long_text=$1
-    local _switches=""
-    local _vars=""
+    (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
+    is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1:-<none>})."
+    exit_if_has_bugs
 
-    if $_long_text; then
-        _switches="Switches:"$'\n'"$common_switches"
-        _vars=$common_vars
-    fi
+    local _long_text=$1
+    local _common_args=''
+
+    $_long_text  &&  _common_args=$common_args_usage || _common_args=''
 
     cat << EOF
-Usage: $script_name [<project|solution>] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
+Usage:
+  $script_name [<project|solution>] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
 
-Builds a solution or project specified with the positional argument <project|solution> (see below for details).
+Builds a solution or project specified with the positional argument <project|solution> (see below for details). All parameters
+are optional if the corresponding environment variables are set. If both are specified, the command line arguments take
+precedence.
 
 Arguments:
   <project|solution>            Path to the project to be built. Can be empty string, in which case the solution in the
-                                repository root will be built
-                                Initial value from \$BUILD_PROJECT
+                                repository root will be built.
+                                Overrides the initial value from the environment value \$BUILD_PROJECT.
+
 Options:
-  -c, --configuration           Build configuration ('Release' or 'Debug')
-                                Initial value from \$CONFIGURATION or default 'Release'
-  -d, --define                  Defines one or more user-defined, space, comma, or semicolon-separated pre-processor symbols.
-                                Initial value from \$PREPROCESSOR_SYMBOLS or default ''
-  -mp, --minver-tag-prefix      Specifies the git tag prefix used by MinVer (e.g., 'v')
-                                Initial value from \$MINVERTAGPREFIX or 'v'
-  -mi, --minver-prerelease-id   Default semver pre-release identifiers used by MinVer (e.g., 'preview.0')
-                                Initial value from \$MINVERDEFAULTPRERELEASEIDENTIFIERS or 'preview.0'
-  --nuget-username              Username for authenticating with the NuGet repository if needed
-                                Initial value from \$GH_ACTOR or ''
-  --nuget-password              Password or token for authenticating with the NuGet repository if needed
-                                Initial value from \$GH_TOKEN or ''
-  -a, --artifacts               Artifacts main directory. The built artifacts will be stored in the subdirectory 'build'.
-                                Initial value from \$ARTIFACTS_DIR or default './artifacts'.
-$_switches
+$common_dotnet_parameters
+
 Environment Variables:
   BUILD_PROJECT                 Path to the solution/project to build
-  CONFIGURATION                 Build configuration ('Release' or 'Debug')
-  PREPROCESSOR_SYMBOLS          Pre-processor symbols for compilation
-  MINVERTAGPREFIX               Prefix for MinVer version git tags
-  MINVERDEFAULTPRERELEASEIDENTIFIERS
-                                Default semver pre-release identifiers for MinVer
-  GH_ACTOR                      Username for authenticating with the NuGet repository if needed
-  GH_TOKEN                      Password or token for authenticating with the NuGet repository if needed
-  GITHUB_STEP_SUMMARY           Path to the file to which step summary is written
-$_vars
+$common_dotnet_vars
+$_common_args
 EOF
 }

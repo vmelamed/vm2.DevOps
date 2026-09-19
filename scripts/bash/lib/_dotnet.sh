@@ -3,398 +3,1215 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-#-------------------------------------------------------------------------------
-# This script defines functions for extracting build information from the output of a 'dotnet build -v d' command.
-# It sets global exported variables with the extracted information.
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
+# This script defines functions for extracting build information from the output of a 'dotnet
+# build -v d' command. It sets global exported variables with the extracted information.
+#---------------------------------------------------------------------------------------------
 
 # Circular include guard
 (( ${__VM2_LIB_DOTNET_SH_LOADED:-0} == 1 )) && return 0
-declare -gr __VM2_LIB_DOTNET_SH_LOADED=1
+declare -ri __VM2_LIB_DOTNET_SH_LOADED=1
 
-declare -rxi success
-declare -rxi failure
-declare -rxi err_invalid_arguments
-declare -rxi err_argument_value
-declare -rxi err_invalid_nameref
-declare -rxi err_missing_argument
-declare -rxi err_tool_error
-declare -rxi err_logic_error
+declare -xri success
+declare -xri failure
+declare -xri positive
+declare -xri negative
+declare -xri err_invalid_arguments
+declare -xri err_argument_value
+declare -xri err_argument_type
+declare -xri err_invalid_nameref
+declare -xri err_missing_argument
+declare -xri err_tool_error
+declare -xri err_logic_error
+declare -xri err_not_found
+declare -xri err_not_file
 
-declare -rx ci
+declare -xr ci
+declare -x _ignore
+declare -x glow_present
 
-$ci && default_configuration="Release" || default_configuration="Debug"
-default_tfm="net10.0"
 
-declare -rx default_configuration
-declare -rx default_tfm
+#=============================================================================================
+# Build keys used in the build and build result associative arrays:
+#=============================================================================================
 
-# export global variables that hold the keys of the associative array with the build information
-declare -rx key_warnings_count='warnings_count'
-declare -rx key_errors_count='errors_count'
-declare -rx key_build_result='build_result'
-declare -rx key_assembly_version='assembly_version'
-declare -rx key_file_version='file_version'
-declare -rx key_informational_version='informational_version'
-declare -rx key_version='version'
-declare -rx key_package_version='package_version'
+#---------------------------------------------------------------------------------------------
+# @description The key used in the build associative arrays with the respective value of the
+#   project name.
+#---------------------------------------------------------------------------------------------
+declare -xr key_project='Project'
 
-declare -arx build_info_keys=(
+#---------------------------------------------------------------------------------------------
+# @description The key used in the build associative arrays with respective values like
+#   `"Debug"` or `"Release"`. The value is usually specified on the `dotnet` command line with
+#   the switch `--configuration`, or `-property:Configuration=<value>`. If not specified, the
+#   default value is set to "Release" in CI/CD environments ($ci == true), otherwise -
+#   "Debug".
+#---------------------------------------------------------------------------------------------
+declare -xr key_configuration='Configuration'
+
+#---------------------------------------------------------------------------------------------
+# @description The key used in the build associative arrays with respective values -
+#   semicolon-separated list of valid target framework monikers (TFMs), like
+#   `"net9.0;net10.0"`.The value MUST be specified in the respective `Directory.Build.props`,
+#   or defined/overridden in project files (`*.csproj`). It does not have a default value.
+#---------------------------------------------------------------------------------------------
+declare -xr key_target_frameworks='TargetFrameworks'
+
+#---------------------------------------------------------------------------------------------
+# @description The key used in the build associative arrays with respective values of a valid
+#   target framework monikers (TFMs), like `net9.0` or `net10.0`. For single-targeting
+#   projects the value CAN be specified in the respective `Directory.Build.props`, or
+#   defined/overridden in project files (`*.csproj`) that SHOULD NOT use `TargetFrameworks`.
+#   For multi-targeting projects it may be specified on the `dotnet` command line with the
+#   switch `--target` or `-property:TargetFramework=<value>` but the value must be one of the
+#   'TargetFrameworks'. Specifying the key and value for multi-targeting projects ensures that
+#   only one build/pack/publish process is executed with the specified target framework.
+#---------------------------------------------------------------------------------------------
+declare -xr key_target_framework='TargetFramework'
+
+#---------------------------------------------------------------------------------------------
+# @description The key used in the build associative arrays with respective value of a valid
+#   runtime identifier (RIDs), like `linux-x64` or `win-x64`. It is usually specified on the
+#   `dotnet` command line with the switch `--runtime`, or
+#   `-property:RuntimeIdentifier=<value>`. Not specifying it means the build will produce a
+#   platform-agnostic output.
+#---------------------------------------------------------------------------------------------
+declare -xr key_runtime_identifier='RuntimeIdentifier'
+
+#---------------------------------------------------------------------------------------------
+# @description The key used in the build associative arrays with respective value of the
+#   platform, like `AnyCPU`, `x64`, or `x86`. It is either derived from `RuntimeIdentifier`
+#   (the vm2 default) or specified on the `dotnet` command line with the switch `--platform`,
+#   or `-property:Platform=<value>`. Not specifying it means the build will use the default
+#   platform.
+#---------------------------------------------------------------------------------------------
+declare -xr key_platform='Platform'
+
+#---------------------------------------------------------------------------------------------
+# @description The key used in the build associative arrays with respective value of the path
+#   where build artifacts are stored. Usually specified in the respective
+#   `Directory.Build.props`, defined/overridden in project files (`*.csproj`), or specified on
+#   the `dotnet` command line with the switch `--artifacts-path` or
+#   `-property:ArtifactsPath=<value>`.
+#
+#   NOTE: This key-value pair works the best when specified in `Directory.Build.props` along
+#   the artifacts layout property `<UseArtifactsPath>true</UseArtifactsPath>`. In this case,
+#   if not specified, the default value of this property is `artifacts`.
+#
+#   NOTE: `<UseArtifactsPath>true</UseArtifactsPath>` specified in `Directory.Build.props` is
+#   the adopted convention for the vm2 build system.
+#---------------------------------------------------------------------------------------------
+declare -xr key_artifacts_path='ArtifactsPath'
+
+#---------------------------------------------------------------------------------------------
+# @description The key used in the build associative arrays with the respective value of the
+#   per-project subfolder name under the artifacts layout's `bin`/`obj`/`publish` directories
+#   (e.g. `artifacts/bin/<ArtifactsProjectName>/<configuration>/`). Defaults to
+#   `$(MSBuildProjectName)` (the project file's own base name, not `$(AssemblyName)`) when
+#   `UseArtifactsOutput=true`. Printed by the vm2 `PrintVersion` target in `Directory.Build.props`.
+#---------------------------------------------------------------------------------------------
+declare -xr key_artifacts_project_name='ArtifactsProjectName'
+
+#---------------------------------------------------------------------------------------------
+# @description Array of keys representing some of the build keys that are used by the
+#   `dotnet_build` function.
+#---------------------------------------------------------------------------------------------
+declare -xra build_keys=(
+    "$key_project"
+    "$key_configuration"
+    "$key_target_framework"
+    "$key_runtime_identifier"
+    "$key_platform"
+    "$key_artifacts_path"
+    "$key_artifacts_project_name"
+)
+
+#=============================================================================================
+# Build result keys used in the build result associative arrays:
+#=============================================================================================
+
+#---------------------------------------------------------------------------------------------
+# @description The key used in the build result associative arrays with
+#   respective value like `"succeeded"` or `"FAILED"`
+#---------------------------------------------------------------------------------------------
+declare -xr key_build_result='build_result'
+
+#---------------------------------------------------------------------------------------------
+# @description The key used in the build result associative arrays specifying
+#   the number of errors encountered during the build.
+#---------------------------------------------------------------------------------------------
+declare -xr key_errors_count='errors_count'
+
+#---------------------------------------------------------------------------------------------
+# @description The key used in the build result associative arrays specifying
+#   the number of warnings encountered during the build.
+#---------------------------------------------------------------------------------------------
+declare -xr key_warnings_count='warnings_count'
+
+#---------------------------------------------------------------------------------------------
+# @description The key used in the build result associative arrays specifying
+#   the built assembly's absolute path.
+#   E.g. /home/runner/work/vm2.Ulid/artifacts/bin/Ulid/release/Ulid.dll
+#---------------------------------------------------------------------------------------------
+declare -xr key_target_path='TargetPath'
+
+#---------------------------------------------------------------------------------------------
+# @description The key used in the build result associative arrays specifying
+#   the exit code of the build process.
+#---------------------------------------------------------------------------------------------
+declare -xr key_exit_code='ExitCode'
+
+#---------------------------------------------------------------------------------------------
+# @description The key used in the build result associative arrays specifying
+#   the message associated with the exit code of the build process.
+#---------------------------------------------------------------------------------------------
+declare -xr key_exit_message='ExitMessage'
+
+#---------------------------------------------------------------------------------------------
+# @description Array of keys representing some of the build result keys that are used by the
+#   functions `dotnet_build`, `extract_dotnet_build_info, and `display_dotnet_build_summary`.
+#---------------------------------------------------------------------------------------------
+declare -xra result_keys=(
     "$key_build_result"
     "$key_errors_count"
     "$key_warnings_count"
-    "$key_version"
+    "$key_target_path"
+    "$key_exit_code"
+    "$key_exit_message"
+)
+
+#=============================================================================================
+# Version information keys used in the build result associative arrays:
+#=============================================================================================
+
+#---------------------------------------------------------------------------------------------
+# @description The key used in the build result associative arrays specifying
+#   the assembly version string (usually <major>.0.0.0, e.g. `5.0.0.0`).
+#---------------------------------------------------------------------------------------------
+declare -xr key_assembly_version='AssemblyVersion'
+
+#---------------------------------------------------------------------------------------------
+# @description The key used in the build result associative arrays specifying
+#   the assembly version string (usually <major>.<minor>.<patch>.0, e.g.
+#   `5.2.2.0`).
+#---------------------------------------------------------------------------------------------
+declare -xr key_file_version='FileVersion'
+
+#---------------------------------------------------------------------------------------------
+# @description The key used in the build result associative arrays specifying
+#   the assembly version string (usually SemVer with build metadata, e.g.
+#   `5.2.2-preview.8.2+f360cddbf3f63f7f0fdcfe52e24fd87dac5472ef`).
+#---------------------------------------------------------------------------------------------
+declare -xr key_informational_version='InformationalVersion'
+
+#---------------------------------------------------------------------------------------------
+# @description The key used in the build result associative arrays specifying
+#   the version string. (usually SemVer without build metadata, e.g.
+#   `5.2.2-preview.8.2`).
+#---------------------------------------------------------------------------------------------
+declare -xr key_version='Version'
+
+#---------------------------------------------------------------------------------------------
+# @description Array of keys representing some of the version information keys that are used
+#   by the `dotnet_build()`, `extract_dotnet_build_info(), and
+#   `display_dotnet_build_summary()` functions.
+#---------------------------------------------------------------------------------------------
+declare -xra version_keys=(
     "$key_assembly_version"
     "$key_file_version"
     "$key_informational_version"
+    "$key_version"
+)
+
+#=============================================================================================
+# Version information keys used in the build result associative arrays:
+#=============================================================================================
+
+#---------------------------------------------------------------------------------------------
+# @description The key used in the build result associative arrays specifying
+#   the absolute path to the built package output directory.
+#   E.g. /home/runner/work/vm2.Ulid/artifacts/package/...
+#---------------------------------------------------------------------------------------------
+declare -xr key_package_output_path='PackageOutputPath'
+
+#---------------------------------------------------------------------------------------------
+# @description The key used in the build result associative arrays specifying
+#   the package version string. (usually SemVer without build metadata, e.g.
+#   `5.2.2-preview.8.2`).
+#---------------------------------------------------------------------------------------------
+declare -xr key_package_version='PackageVersion'
+
+#---------------------------------------------------------------------------------------------
+# @description The key used in the build result associative arrays specifying
+#   the built package ID. E.g. vm2.Ulid.
+#---------------------------------------------------------------------------------------------
+declare -xr key_package_id='PackageId'
+
+declare -xra package_keys=(
+    "$key_package_output_path"
+    "$key_package_id"
     "$key_package_version"
 )
 
-#-------------------------------------------------------------------------------
-# @description Builds a .NET project using the provided build arguments and captures build information.
+declare -xa build_info_keys=()
+build_info_keys+=("${build_keys[@]}")
+build_info_keys+=("${result_keys[@]}")
+build_info_keys+=("${version_keys[@]}")
+build_info_keys+=("${package_keys[@]}")
+declare -xra build_info_keys
+
+# known return codes from the `dotnet` command
+declare -xri dotnet_success=0                       # Build succeeded; no errors or warnings were reported
+declare -xri dotnet_failure=1                       # Unknown error or catch-all error; check the build output for details
+declare -xri dotnet_err_test_failure=2              # At least one test failure occurred (if running tests as part of build)
+declare -xri dotnet_err_test_aborted=3              # Test session was aborted (e.g., by Ctrl+C)
+declare -xri dotnet_err_invalid_setup=4             # Invalid setup of used extensions (e.g., test adapters)
+declare -xri dotnet_err_invalid_cmd_line=5          # Invalid command-line arguments to the test app
+declare -xri dotnet_err_test_session_failed=7       # Test session crashed or failed to complete
+declare -xri dotnet_err_no_test_ran=8               # Zero tests ran (no tests found or configured)
+declare -xri dotnet_err_min_exec_policy_violated=9  # Minimum execution policy for tests was violated
+declare -xri dotnet_err_test_framework_failure=10   # Test framework or adapter failed to run due to infrastructure issues
+declare -xri dotnet_err_proc_exit=11                # Dependent process exited; test process will exit too
+declare -xri dotnet_err_unsupported_protocol=12     # Client does not support any supported protocol versions
+declare -xri dotnet_err_max_failed_tests=13         # Maximum failed tests reached (if limit was set)
+declare -xri dotnet_err_unknown=256                 # Unknown dotnet error code
+
+declare -xrA dotnet_err_messages=(
+    [$dotnet_success]="Build succeeded; no errors or warnings were reported"
+    [$dotnet_failure]="Unknown error or catch-all error; check the build output for details"
+    [$dotnet_err_test_failure]="At least one test failure occurred (if running tests as part of build)"
+    [$dotnet_err_test_aborted]="Test session was aborted (e.g., by Ctrl+C)"
+    [$dotnet_err_invalid_setup]="Invalid setup of used extensions (e.g., test adapters)"
+    [$dotnet_err_invalid_cmd_line]="Invalid command-line arguments to the test app"
+    [$dotnet_err_test_session_failed]="Test session crashed or failed to complete"
+    [$dotnet_err_no_test_ran]="Zero tests ran (no tests found or configured)"
+    [$dotnet_err_min_exec_policy_violated]="Minimum execution policy for tests was violated"
+    [$dotnet_err_test_framework_failure]="Test framework or adapter failed to run due to infrastructure issues"
+    [$dotnet_err_proc_exit]="Dependent process exited; test process will exit too"
+    [$dotnet_err_unsupported_protocol]="Client does not support any supported protocol versions"
+    [$dotnet_err_max_failed_tests]="Maximum failed tests reached (if limit was set)"
+    [$dotnet_err_unknown]="Unknown dotnet error code"
+)
+
+#---------------------------------------------------------------------------------------------
+# @description Gets the error message corresponding to a dotnet error code.
 #
-# @param $1 The name of an array with arguments to pass to 'dotnet build'. Required.
-# @param $2 The name of an associative array to receive the build information (optional).
 #
-# @return Returns 0 on success, or an error code on failure. If @param $2 is provided, it will be populated with the build
-#   information.
+# @arg $1 int The dotnet error code.
 #
-# @stdout will contain the build information as a stream of key=value lines.
-#-------------------------------------------------------------------------------
-function dotnet_build()
+# @exitcode success/positive=0: The error message was retrieved successfully.
+#
+# @stdout string The error message corresponding to the provided dotnet error code.
+#
+# @example
+#   get_dotnet_error_message 1
+#---------------------------------------------------------------------------------------------
+function get_dotnet_error_message()
 {
-    local -A _internal_build_info=()
-    local -i _rc=$success
+    (( $# == 1 ))                        || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 argument:" \
+                                                                                "  - a non-negative integer error code returned from dotnet commands"
+    [[ ! -v 1 ]] || is_non_negative "$1" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 1 to be a positive integer error code from 1 to 255 with a corresponding dotnet error message (provided '${1:-<none>}')"
 
-    (( $# == 1 || $# == 2 )) || {
-        _rc="$err_invalid_arguments"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires one or two arguments (provided $#):" \
-                                                 "  1) the name of an array with arguments to pass to 'dotnet build'" \
-                                                 "  2) the name of an associative array to receive the build information (optional)"
-    }
+    exit_if_has_bugs
 
-    if [[ -v 1 ]] && is_defined_array "$1"; then
-        local -n _validated_build_args=$1
-        (( ${#_validated_build_args[@]} > 0 )) || {
-            _rc="$err_argument_value"
-            error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires the array named by argument 1 to contain at least one 'dotnet build' argument (provided '$1')."
-        }
-    else
-        _rc="$err_invalid_nameref"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to name an indexed array of 'dotnet build' arguments (provided '${1-<missing>}')."
-    fi
-
-    [[ ! -v 2 || -z $2 ]] || is_defined_associative_array "$2" || {
-        _rc="$err_invalid_nameref"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires optional argument 2 to name an associative array that will receive build information (provided '${2-<missing>}')."
-    }
-
-    (( _rc == success )) || return "$err_invalid_arguments"
-
-    local -n _build_args=$1
-    local _build_info_name=${2:-_internal_build_info}
-
-    local _build_project=''
-    local -i _i
-    local _arg
-    local -i _v_index=-2
-    local _v_value=''
-
-    # make sure we have a project file and verbosity level is specified as detailed
-    for (( _i=0; _i < "${#_build_args[@]}"; _i++ )); do
-        _arg="${_build_args[_i]}"
-        [[ $_arg == *.@(csproj|sln|slnx) && -s $_arg ]] && _build_project="$_arg" ||
-        [[ $_arg == --verbosity ]] && _v_index=$_i
-        (( _i == _v_index + 1 )) && [[ $_arg == @(quiet|q|minimal|m|detailed|d|diagnostic|diag) ]] && _build_args[_i]="detailed" && _v_value="detailed"
-    done
-
-    [[ -n $_build_project ]] || {
-        error -sd 3 -ec "$err_argument_value" "Could not find the project argument in the build arguments array. It must be an existing file with a suffix '.csproj'."
-        return "$err_argument_value"
-    }
-
-    # ensure verbosity is set to detailed
-    if [[ $_v_value != "detailed" ]]; then
-        (( _v_index >= 0 )) && unset "_build_args[_v_index]"
-        _build_args+=(--verbosity detailed)
-    fi
-
-    local -n _build_info=$_build_info_name
-    _build_info=()
-
-    local _output_file
-    _output_file=$(mktemp) || return "$err_tool_error"
-
-    execute dotnet build "${_build_args[@]}" >"$_output_file" 2>&1 ||
-        error sd 3 -ec "$err_tool_error" "Building '$_build_project' failed." | to_summary
-
-    extractDotnetBuildInfo "$_build_info_name" <"$_output_file" ||
-        error -sd 3 -ec "$err_logic_error" "Failed to extract build information from 'dotnet build' output." | to_summary
-
-    rm -f -- "$_output_file"
-
-    displayDotnetBuildSummary "$_build_info_name" | to_summary
-
-    return "$_rc"
+    local -i _ec=$1
+    [[ -v dotnet_err_messages[$1] ]] || _ec=$dotnet_err_unknown
+    echo "$1: ${dotnet_err_messages[$_ec]}"
 }
 
-#-------------------------------------------------------------------------------
-# @description Extracts build information from the output of a 'dotnet build' command and populates the specified associative
-#   array with the results.
+# reference variables common for most vm2.DevOps scripts that are
+# set usually from CLI arguments (below), environment variables, or defaults
+# consider the following variables a contract for the names of the named options acquired by
+# get_common_gh_action_arg
+declare -x preprocessor_symbols
+declare -x configuration
+declare -x framework
+declare -x runtime
+declare -x artifacts
+declare -x minver_tag_prefix
+declare -x minver_prerelease_id
+declare -x gh_nuget_username
+declare -x gh_nuget_password
+
+#---------------------------------------------------------------------------------------------
+# @description Updates the NuGet sources with GitHub Packages from vm2.
 #
-# @param $1 The name of an associative array to receive the build information.
+# @arg $1 string NuGet source username (optional, if provided, $2 also MUST be provided, defaults to $GH_ACTOR in CI)
+# @arg $2 string NuGet source password (optional, if $1 is provided, $2 also MUST be provided, otherwise MUST not be provided, defaults to $GH_TOKEN in CI)
 #
-# @exitcode 0 always
-#-------------------------------------------------------------------------------
-# shellcheck disable=SC2004  # $/${} is unnecessary on arithmetic variables.
-function extractDotnetBuildInfo()
+# @exitcode success/positive=0: The NuGet source was updated, or no credentials were provided (a warning is logged instead).
+# @exitcode err_tool_error=66: If 'dotnet nuget update source' failed.
+#---------------------------------------------------------------------------------------------
+function update_nuget_sources_with_github_vm2()
 {
     local -i _rc=$success
 
-    (( $# == 1 )) || {
-        _rc="$err_invalid_arguments"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of an associative array that will receive build information."
+    (( $# == 0 || $# == 2 ))                     || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() accepts either 0 or 2 arguments (provided $#):" \
+                                                                                        "  - NuGet source username (in CI defaults to \$GH_ACTOR)" \
+                                                                                        "  - NuGet source password (in CI defaults to \$GH_TOKEN)"
+    [[ ! -v 1 && ! -v 2 || -n "$1" && -n "$2" ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() The arguments should either be not provided or both must be provided and non-empty."
+
+    exit_if_has_bugs
+
+    local _gh_nuget_username=${1:-${gh_nuget_username:-${GH_ACTOR:-}}}
+    local _gh_nuget_password=${2:-${gh_nuget_password:-${GH_TOKEN:-}}}
+
+    [[ -n $_gh_nuget_username && -n $_gh_nuget_password ]] || {
+        warning "${FUNCNAME[0]}() GitHub NuGet source credentials are not provided. Did not update the NuGet sources with GitHub packages from vm2."
+        return "$success"
     }
 
-    [[ -v 1 ]] && is_defined_associative_array "$1" || {
-        _rc="$err_invalid_nameref"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to name an associative array that will receive build information (provided '${1-<missing>}')."
+    execute dotnet nuget update source github.vm2 \
+                --configfile NuGet.config \
+                --username "$_gh_nuget_username" \
+                --password "$_gh_nuget_password" \
+                --store-password-in-clear-text || {
+        _rc=$?
+        error -ec "$err_tool_error" "${FUNCNAME[0]}() Failed to update the NuGet sources with GitHub packages from vm2." \
+                         "$(get_dotnet_error_message "$_rc")"
+        return "$err_tool_error"
     }
+}
 
-    (( _rc == success )) || return "$err_invalid_arguments"
+declare -xrA dotnet_args_to_msbuild_args=(
+    [--configuration]="-property:Configuration=\"%s\""
+    [-c]="-property:Configuration=\"%s\""
 
-    local -n _extracted=$1
+    [--framework]="-property:TargetFramework=\"%s\""
+    [-f]="-property:TargetFramework=\"%s\""
 
+    [--runtime]="-property:RuntimeIdentifier=\"%s\""
+    [-r]="-property:RuntimeIdentifier=\"%s\""
+
+    [--artifacts-path]="-property:ArtifactsPath=\"%s\""
+
+    [--use-current-runtime]="-property:UseCurrentRuntimeIdentifier=true"
+    [-ucr]="-property:UseCurrentRuntimeIdentifier=true"
+
+    [--no-self-contained]="-property:SelfContained=false"
+    [--self-contained]="-property:SelfContained=true"
+    [--sc]="-property:SelfContained=true"
+
+    [--no-dependencies]="-property:BuildProjectReferences=false"
+
+    [--verbosity]="-verbosity:%s"
+    [-v]="-verbosity:%s"
+
+    [--interactive]="-interactive"
+    [-nologo]="-noLogo:true"
+    [--no-logo]="-noLogo:true"
+
+    [--output]="-property:OutputPath=\"%s\"|@warning Please, use artifacts output layout: --artifacts-path <ARTIFACTS_PATH>"
+    [-o]="-property:OutputPath=\"%s\"|@warning Please, use artifacts output layout: --artifacts-path <ARTIFACTS_PATH>"
+
+    [--version-suffix]="-property:VersionSuffix=\"%s\"|@warning Please, use the MinVer features and properties."
+    [-vs]="-property:VersionSuffix=\"%s\"|@warning Please, use the MinVer features and properties."
+
+    [--os]="@remove \"%s\"|@error Please, use '--runtime <RID>' instead of '--arch <ARCH> --os <OS>'."
+    [--arch]="@remove \"%s\"|@error Please, use '--runtime <RID> instead of '--arch <ARCH> --os <OS>'."
+
+    [--no-build]="@remove"
+    [--no-restore]="@remove"
+    [--no-incremental]="@remove"
+    [--disable-build-servers]="@remove"
+)
+
+#---------------------------------------------------------------------------------------------
+# @description Converts the `dotnet <command>` arguments in the arguments $2..$N to the
+#   corresponding `dotnet msbuild` arguments, e.g., converts `"--configuration" "Release"` to
+#   `"--property:Configuration=Release"` based on the `dotnet_args_to_msbuild_args` mapping.
+#   The converted results are placed in the output $1 array.
+#
+# @arg $1 nameref to the array variable in which MSBuild arguments and properties will be
+#   placed
+# @arg $@ string the `dotnet <command>` arguments to be converted to MSBuild arguments and properties
+#
+# @exitcode success/positive=0: All arguments were converted successfully.
+# @exitcode err_missing_argument=6: An option that requires a value (e.g. `--configuration`) was
+#   the last argument, with no value following it.
+# @exitcode err_argument_type=3: An option that has been removed from `dotnet` in favor of
+#   another (e.g. `--os`/`--arch` in favor of `--runtime`) was used.
+#---------------------------------------------------------------------------------------------
+function convert_dotnet_args_to_msbuild_args()
+{
+    (( $# > 1 ))                                  || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires more than one, arguments (provided $#):" \
+                                                                                        "  - the name of the array variable to receive the MSBuild arguments" \
+                                                                                        "  - the 'dotnet <command>' arguments to be converted"
+    [[ ! -v 1 ]] || is_defined_indexed_array "$1" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be the name of an indexed array variable to which the build arguments will be added (provided '${1:-<none>}')."
+
+    exit_if_has_bugs
+
+    local -n _msb_args=$1
+    shift
+
+    local _dot_option
+    local _arg
+    local _replacement
+    local -a _replacement_parts
+    local _part
+    local _msb_option
+    local _remove=false
+
+    trace "Converting 'dotnet <restore/build/pack>...' arguments to 'dotnet msbuild ...' arguments."
+    while (( $# > 0 )); do
+        _dot_option=$1
+        shift
+        # if the curr.param is project file or directory - add it as is
+        [[ $_dot_option == *.@(csproj|slnx|sln) || -d $_dot_option ]] &&
+            _msb_args+=("$_dot_option") &&
+            trace "  Added '$_dot_option' - project, solution, or directory." &&
+            continue
+
+        [[ ! -v dotnet_args_to_msbuild_args[$_dot_option] ]] &&
+            _msb_args+=("$_dot_option") &&
+            trace "  Added '$_dot_option' as is." &&
+            continue
+
+        # get the replacement string for the current dotnet option
+        _replacement=${dotnet_args_to_msbuild_args[$_dot_option]}
+
+        # does this option require an argument? - if the replacement string contains '%s', it does and it must be the next argument.
+        if [[ $_replacement == *%s* ]]; then
+            (( $# == 0 )) && error -ec "$err_missing_argument" "Missing argument for option '$_dot_option'" && return "$err_missing_argument"
+            _arg=$1
+            shift
+        else
+            _arg=''
+        fi
+
+        _replacement_parts=()
+        _remove=false
+        _msb_option=''
+
+        IFS='|' read -r -a _replacement_parts <<< "$_replacement"
+
+        for _part in "${_replacement_parts[@]}"; do
+            # process the instructions
+            [[ $_part == @remove* ]]  && _remove=true                && continue
+            [[ $_part == @warning* ]] && warning "${_part#@warning}" && continue
+            [[ $_part == @error* ]]   && error -ec "$err_argument_type" "${_part#@error}" && return "$err_argument_type"
+
+            # otherwise the current _part is a format string for printf and the argument is _arg
+            # shellcheck disable=SC2059 # Don't use variables in the printf format string.
+            printf -v _msb_option -- "$_part" "$_arg"
+        done
+
+        if [[ -n $_msb_option ]] && ! $_remove; then
+            _msb_args+=("$_msb_option")
+            trace "  Replaced '$_dot_option $_arg' with '$_msb_option'."
+        else
+            trace "  ⚠️ Removed '$_dot_option $_arg'"
+        fi
+    done
+}
+
+declare -xr property_value_rex='^[[:space:]]*([[:alpha:]_][[:alnum:]_]*)=(.*)$'
+declare -xr build_result_rex='^[[:space:]]*Build (succeeded|FAILED).*$'
+declare -xr count_errors_rex='^[[:space:]]*([0-9]+) (Error|Warning).*$'
+
+#---------------------------------------------------------------------------------------------
+# @description Extracts build information from the output of a 'dotnet build' command and
+#   populates the specified associative array with the results at indexes from the
+#   `$build_info_keys` array.
+#
+#
+# @arg $1 string The project file path for which the build information is being extracted
+# @arg $2 int The result code from 'dotnet build'
+# @arg $3 nameref to an associative array variable to receive the build information
+#
+# @stdin The standard input from which to read the build output, e.g. dotnet build --verbosity minimal
+#
+# @exitcode success/positive=0
+#---------------------------------------------------------------------------------------------
+function extract_dotnet_build_info()
+{
+    (( $# == 3 ))                                       || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly three arguments (provided $#):" \
+                                                                                            "  - the name of an associative array that will receive build information" \
+                                                                                            "  - the result code from 'dotnet build'" \
+                                                                                            "  - the name of an associative array variable to receive the build information"
+    [[ ! -v 1 || $1 == *.@(slnx|sln|csproj) && -s $1 ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a project or solution file path (provided '${1:-<none>}')."
+    [[ ! -v 2 ]] || is_non_negative "$2"                || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 2 to be an exit code - non-negative number (provided '${2:-<none>}')."
+    [[ ! -v 3 ]] || is_defined_associative_array "$3"   || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to name an associative array that will receive build information (provided '${3:-<none>}')."
+
+    exit_if_has_bugs
+
+    local _project_file="$1"
+    local _build_result="$2"
+    local -n _extracted=$3
+
+    # shellcheck disable=SC2004 # Variable: key_project, key_exit_code, key_exit_message, key_build_result, key_warnings_count, key_errors_count - defined elsewhere
     _extracted=(
+        [$key_project]="$_project_file"
+        [$key_exit_code]=$2
+        [$key_exit_message]=$(get_dotnet_error_message "$2")
         [$key_build_result]='Unknown'
         [$key_warnings_count]=0
         [$key_errors_count]=0
-        [$key_assembly_version]=''
-        [$key_file_version]=''
-        [$key_informational_version]=''
-        [$key_version]=''
-        [$key_package_version]=''
     )
 
-    local _restoreShopt
-    _restoreShopt=$(shopt -p nocasematch) || true
-    shopt -s nocasematch
+    # shellcheck disable=SC2034 # state appears unused. Verify use (or export if used externally).
+    local -A state=()
+    save_state state
+    set_case_sensitive false
 
-    local _line
+    local _line _property
+    local _echo=false
+    # shellcheck disable=SC2004 # Variable: _line, _property, _echo, _extracted, key_build_result, key_warnings_count, key_errors_count - defined elsewhere
     while IFS= read -r _line; do
-        if [[ $_line =~ Build\ (succeeded|FAILED) ]]; then
+        if [[ $_line =~ $property_value_rex ]]; then
+            _property="${BASH_REMATCH[1]}"
+            if is_in "$_property" "${build_info_keys[@]}"; then
+                # we are interested in this property - store its value in the associative array
+                _extracted["$_property"]=$(rtrim "${BASH_REMATCH[2]}")
+            fi
+        elif [[ $_line =~ $build_result_rex ]]; then
+            # get the build result from the matched line
             _extracted[$key_build_result]="${BASH_REMATCH[1]}"
-        elif [[ $_line =~ ([0-9]+)\ Warning ]]; then
-            _extracted[$key_warnings_count]=${BASH_REMATCH[1]}
-        elif [[ $_line =~ ([0-9]+)\ Error ]]; then
-            _extracted[$key_errors_count]=${BASH_REMATCH[1]}
-        elif [[ $_line =~ AssemblyVersion:\ ([[:alnum:][:punct:]]+) ]]; then
-            _extracted[$key_assembly_version]=${BASH_REMATCH[1]}
-        elif [[ $_line =~ FileVersion:\ ([[:alnum:][:punct:]]+) ]]; then
-            _extracted[$key_file_version]=${BASH_REMATCH[1]}
-        elif [[ $_line =~ InformationalVersion:\ ([[:alnum:][:punct:]]+) ]]; then
-            _extracted[$key_informational_version]=${BASH_REMATCH[1]}
-        elif [[ $_line =~ Version:\ ([[:alnum:][:punct:]]+) ]]; then
-            _extracted[$key_version]=${BASH_REMATCH[1]}
-        elif [[ $_line =~ PackageVersion:\ ([[:alnum:][:punct:]]+) ]]; then
-            _extracted[$key_package_version]=${BASH_REMATCH[1]}
+            _echo=true
+        elif [[ $_line =~ $count_errors_rex ]]; then
+            # get the errors count from the matched line
+            [[ ${BASH_REMATCH[2]} == "Error" ]] &&
+                _extracted[$key_errors_count]=${BASH_REMATCH[1]} ||
+                _extracted[$key_warnings_count]=${BASH_REMATCH[1]}
         fi
+        $_echo && is_verbose && echo "$_line"
     done
 
-    # shellcheck disable=SC2154 # _ignore is referenced but not assigned.
-    eval "$_restoreShopt" &> "$_ignore"
-
-    if [[ ${_extracted[$key_build_result]} == FAILED ]]; then
-        _extracted[$key_assembly_version]='N/A'
-        _extracted[$key_file_version]='N/A'
-        _extracted[$key_informational_version]='N/A'
-        _extracted[$key_version]='N/A'
-        _extracted[$key_package_version]='N/A'
+    if [[ $_project_file != *.csproj ]]; then
+        # remove project specific properties for solutions - there are multiple projects and the properties
+        # override each other - not useful. ArtifactsProjectName is per-project too (defaults to each
+        # project's own MSBuildProjectName), so the last one seen in the build output would silently and
+        # misleadingly look like a single answer -- callers that need every constituent project's own
+        # ArtifactsProjectName for a solution build must enumerate them via list_solution_projects() and
+        # query each one individually (e.g. via get_msbuild_property()), not read it from here.
+        unset "_extracted[$key_target_path]"
+        unset "_extracted[$key_package_id]"
+        unset "_extracted[$key_artifacts_project_name]"
     fi
+
+    restore_state state
 }
 
-#-------------------------------------------------------------------------------
-# @description Displays a formatted summary of build information stored in an associative array.
+#---------------------------------------------------------------------------------------------
+# @description Displays a formatted summary of build information stored in an associative
+#   array.
 #
-# @param $1 The name of an associative array containing the build information to display.
 #
-# @exitcode 0 always
+# @arg $1 nameref to an associative array variable to put the build information into.
 #
-# @stdout "Build Results" header followed by a formatted table (via dump_vars) with the build result, warning/error counts, and
-#   version information
-#-------------------------------------------------------------------------------
-function displayDotnetBuildSummary()
+# @exitcode success/positive=0: The function executed successfully
+#
+# @stdout Formatted table (via dump_vars) with the build result, warning/error counts, version
+#   information, packages, target paths, etc.
+#---------------------------------------------------------------------------------------------
+function display_dotnet_build_summary()
 {
-    local -i _rc=$success
+    (( $# == 1 ))                                     || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#):" \
+                                                                                            "  - the name of an associative array variable containing the build information"
+    [[ ! -v 1 ]] || is_defined_associative_array "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name an associative array containing build information (provided '${1:-<none>}')."
 
-    (( $# == 1 )) || {
-        _rc="$err_invalid_arguments"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of an associative array containing build information."
-    }
-
-    [[ -v 1 ]] && is_defined_associative_array "$1" || {
-        _rc="$err_invalid_nameref"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to name an associative array containing build information (provided '${1-<missing>}')."
-    }
-
-    (( _rc == success )) || return "$err_invalid_arguments"
+    exit_if_has_bugs
 
     local -n _build_info=$1
 
-    local _build_result=${_build_info[$key_build_result]:-Unknown}
+    local Package_Output_Path=${_build_info[$key_package_output_path]:-N/A}
+    local Package_ID=${_build_info[$key_package_id]:-N/A}
+    local Package_Version=${_build_info[$key_package_version]:-N/A}
+    local Package_Path
+    [[ $Package_ID != "N/A" ]] &&
+        Package_Path="${Package_Output_Path%/}/${Package_ID}.${Package_Version}.nupkg" ||
+        Package_Path="N/A"
+    local Symbols_Package_Path
+    [[ $Package_ID != "N/A" ]] &&
+        Symbols_Package_Path="${Package_Output_Path%/}/${Package_ID}.${Package_Version}.snupkg" ||
+        Symbols_Package_Path="N/A"
 
-    local _errors_count=${_build_info[$key_errors_count]:-0}
-    local _warnings_count=${_build_info[$key_warnings_count]:-0}
+    local _tbl_fmt
+    $ci && _tbl_fmt="--markdown" || _tbl_fmt="--graphical"
 
-    local _assembly_version=${_build_info[$key_assembly_version]:-N/A}
-    local _file_version=${_build_info[$key_file_version]:-N/A}
-    local _informational_version=${_build_info[$key_informational_version]:-N/A}
-    local _version=${_build_info[$key_version]:-N/A}
-    local _package_version=${_build_info[$key_package_version]:-N/A}
+    local -a _dump_vars_args=(
+        --force
+        --quiet
+        "$_tbl_fmt"
+        --header "Configuration:"
+        --name "Project"                    "${_build_info[$key_project]:-N/A}"
+        --name "Configuration"              "${_build_info[$key_configuration]:-Debug}"
+        --name "Target Framework"           "${_build_info[$key_target_framework]:-}"
+        --name "Runtime ID"                 "${_build_info[$key_runtime_identifier]:-}"
+        --name "Artifacts Path"             "${_build_info[$key_artifacts_path]:-}"
+        --header "Build Summary:"
+        --name "Dotnet Exit Code"           "${_build_info[$key_exit_code]:-Unknown}"
+        --name "Dotnet Exit Message"        "${_build_info[$key_exit_message]:-Unknown}"
+        --blank
+        --name "Build Result"               "${_build_info[$key_build_result]:-Unknown}"
+        --name "Errors"                     "${_build_info[$key_errors_count]:--}"
+        --name "Warnings"                   "${_build_info[$key_warnings_count]:--}"
+        --header "Version:"
+        --name "Version"                    "${_build_info[$key_version]:-N/A}"
+        --name "Assembly Version"           "${_build_info[$key_assembly_version]:-N/A}"
+        --name "File Version"               "${_build_info[$key_file_version]:-N/A}"
+        --name "Informational Version"      "${_build_info[$key_informational_version]:-N/A}"
+        --header "Outputs:"
+        --name "Target Path"                "${_build_info[$key_target_path]:-N/A}"
+        --header "Package:"
+        --name "Packages Output Path"       "$Package_Output_Path"
+        --name "Package ID"                 "$Package_ID"
+        --name "Version"                    "$Package_Version"
+        --name "Package Path"               "$Package_Path"
+        --name "Symbols Package Path"       "$Symbols_Package_Path"
+    )
 
-    echo "Build Results"
-    dump_vars --force --quiet \
-        --header "Dotnet Build Summary:" \
-        _build_result \
-        --line \
-        _errors_count \
-        _warnings_count \
-        --header "Version Information:" \
-        _assembly_version \
-        _file_version \
-        _version \
-        _package_version \
-        _informational_version
+    dump_vars "${_dump_vars_args[@]}"
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Cleans a .NET project or solution using the common dotnet arguments.
+#
+#
+# @arg $1 The path to the project or solution file to clean.
+#
+# @exitcode success/positive=0: If the clean operation is successful.
+# @exitcode err_tool_error=66: If 'dotnet clean' failed.
+#
+# @stderr error messages if the clean operation fails.
+#---------------------------------------------------------------------------------------------
+function dotnet_clean()
+{
+    (( $# == 1 ))                                             || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#):" \
+                                                                                                    "  - the path to the project which will be cleaned"
+    [[ ! -v 1 ]] || [[ $1 == *.@(csproj|slnx|sln) && -s $1 ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a project or solution file path (provided '${1:-<none>}')."
+
+    exit_if_has_bugs
+
+    local _project="$1"
+    local -a _dotnet_args
+    _dotnet_args=(
+        "$_project"
+        "--no-logo"
+        "--verbosity" "quiet"
+    )
+    [[ -n $configuration ]]        && _dotnet_args+=("--configuration" "$configuration")
+    [[ -n $framework ]]            && _dotnet_args+=("--framework" "$framework")
+    [[ -n $runtime ]]              && _dotnet_args+=("--runtime" "$runtime")
+    [[ -n $artifacts ]]            && _dotnet_args+=("--artifacts-path" "$artifacts")
+
+    trace "Executing: dotnet clean ${_dotnet_args[*]}"
+    # CLEAN the project using dotnet build
+    local -i _rc="$success"
+    execute dotnet clean "${_dotnet_args[@]}" > "$_ignore" 2>&1 || _rc=$?
+
+    [[ $_rc == "$dotnet_success" ]] || {
+        error -ec "$err_tool_error" "Cleaning '$_project' failed: ($_rc)." \
+                                    "$(get_dotnet_error_message "$_rc")"
+        return "$err_tool_error"
+    }
 
     return "$success"
 }
 
-#-------------------------------------------------------------------------------
-# @description Returns the full path to the assembly produced by a .NET project.
+#---------------------------------------------------------------------------------------------
+# @description Restores the dependencies of a .NET project for the current runtime
+#   environment captured in the common dotnet arguments $runtime and $artifacts.
 #
 # Notes:
-#   - Configuration and TFM are read from the *.csproj first, then from the nearest Directory.Build.props found by
-#     walking up from the project directory; the defaults ($default_configuration and $default_tfm, e.g. "Debug"/"Release"
-#     and "net10.0") are used when neither file specifies a value.
-#   - AssemblyName falls back to the *.csproj filename without the extension.
-#   - OutputType "Exe" -> *.exe on Windows, no suffix on Linux. Any other OutputType -> *.dll on any OS.
+#   - The function uses the common dotnet arguments such as $runtime and $artifacts.
 #
-# @arg $1 string csproj - path to the *.csproj file
-# @arg $2 string artifacts - optional path to the artifacts directory where a dotnet build should put its outputs
-# @arg $3 string configuration - optional build configuration, if not specified will read from *.csproj, or
-#   Directory.Build.props, or the default: in CI - Release, otherwise Debug. If specified, $2 also MUST be specified.
+# @arg $1 string - the path to the .csproj file of the project.
 #
-# @exitcode 0 ($success) the assembly file exists and is not empty
-# @exitcode 1 ($failure) the assembly path was resolved but the file does not exist yet (the path is still written to stdout)
-# @exitcode 2 ($err_invalid_arguments) wrong number of arguments
-# @exitcode 4 ($err_argument_value) the argument is empty or not a valid, existing *.csproj file
+# @exitcode success/positive=0: if the restore operation succeeded.
+# @exitcode err_tool_error=66: If 'dotnet restore' failed.
 #
-# @stdout the full path to the produced assembly (e.g. /path/to/proj/bin/Debug/net10.0/vm2.Ulid.dll)
+# @stderr error messages if the restore operation fails.
 #
 # @example
-#   path=$(get_assembly_path src/vm2.Ulid/Ulid.csproj)
-#-------------------------------------------------------------------------------
-function get_assembly_path() {
+#   dotnet_restore src/vm2.Ulid/Ulid.csproj
+#---------------------------------------------------------------------------------------------
+function dotnet_restore()
+{
+    (( $# == 1 ))                                             || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#):" \
+                                                                                                    "  - the path to the project which dependencies will be restored"
+    [[ ! -v 1 ]] || [[ $1 == *.@(csproj|slnx|sln) && -s $1 ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a project or solution file path (provided '${1:-<none>}')."
+
+    exit_if_has_bugs
+
+    local _project="$1"
+    local -a _dotnet_args
+    _dotnet_args=(
+        "$_project"
+        "--no-logo"
+        "--locked-mode"
+        "--verbosity" "quiet"
+    )
+    [[ -n $runtime ]]   && _dotnet_args+=("--runtime" "$runtime")
+    [[ -n $artifacts ]] && _dotnet_args+=("--artifacts-path" "$artifacts")
+
+    trace "Executing: dotnet restore ${_dotnet_args[*]}"
+    # RESTORE
     local -i _rc="$success"
+    execute dotnet restore "${_dotnet_args[@]}" > "$_ignore" 2>&1 || _rc=$?
 
-    (( $# >= 1 && $# <= 3 )) || {
-        _rc="$err_invalid_arguments"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires one, two, or three arguments (provided $#):" \
-                              " 1) the path to a *.csproj file" \
-                              " 2) the path to the artifacts directory (optional)" \
-                              " 3) build configuration (optional)"
+    [[ $_rc == "$dotnet_success" ]] || {
+        error -ec "$err_tool_error" "Restoring '$_project' failed: ($_rc)." \
+                                    "$(get_dotnet_error_message "$_rc")"
+        return "$err_tool_error"
     }
 
-    [[ -v 1 && -s $1 && $1 == *.csproj ]] || {
-        _rc="$err_argument_value"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be an existing, non-empty .csproj file (provided '${1-<missing>}')."
+    return "$success"
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Builds a .NET project or solution using the common dotnet arguments. Captures build
+#   output information in an associative array with keys from the `$build_info_keys` array.
+#
+# Notes:
+#   - The function DOES NOT RESTORE dependencies - they must be restored separately using
+#     `dotnet_restore` or downloaded from a cache in CI before invoking this function.
+#
+# @arg $1 name of the project to build.
+# @arg $2 nameref to an associative array variable to receive the build information. Optional.
+#   Even if not provided, the build information will be captured internally and displayed in
+#   the log.
+#
+# @exitcode success/positive=0: if the build operation succeeded.
+# @exitcode err_tool_error=66: if an external command failed, e.g., 'dotnet build'.
+#---------------------------------------------------------------------------------------------
+function dotnet_build()
+{
+    (( $# <= 2 ))                                             || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires no more than two arguments (provided $#):" \
+                                                                                                    "  - path to the project or solution file to build" \
+                                                                                                    "  - name of an associative array to receive the build information (optional)"
+    [[ ! -v 1 ]] || [[ $1 == *.@(csproj|slnx|sln) && -s $1 ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a project or solution file path (provided '${1:-<none>}')."
+    [[ ! -v 2 ]] || is_defined_associative_array "$2"         || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires optional argument 2 to name an associative array that will receive the build information (provided '${2:-<none>}')."
+
+    exit_if_has_bugs
+
+    local _project=$1 # the project or solution file to build
+    local -i _rc=$success
+
+    local _output_file
+    _output_file=$(mktemp) || {
+        _rc=$?
+        error -ec "$err_tool_error" "Failed to create a temporary output file." "$(get_dotnet_error_message "$_rc")"
+        return "$err_tool_error"
     }
-    [[ ! -v 3 || -v 2 ]] || {
-        _rc="$err_missing_argument"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, the artifacts directory, when argument 3, the build configuration, is provided."
+
+    declare -a _dotnet_args
+    _dotnet_args=(
+        "$_project"
+        --no-logo
+        --no-restore
+        --verbosity minimal
+    )
+    [[ -n $configuration ]]        && _dotnet_args+=("--configuration" "$configuration")
+    [[ -n $framework ]]            && _dotnet_args+=("--framework" "$framework")
+    [[ -n $runtime ]]              && _dotnet_args+=("--runtime" "$runtime")
+    [[ -n $artifacts ]]            && _dotnet_args+=("--artifacts-path" "$artifacts")
+    [[ -n $minver_tag_prefix ]]    && _dotnet_args+=("-property:MinVerTagPrefix=\"$minver_tag_prefix\"")
+    [[ -n $minver_prerelease_id ]] && _dotnet_args+=("-property:MinVerPrereleaseIdentifiers=\"$minver_prerelease_id\"")
+    [[ -n $preprocessor_symbols ]] && _dotnet_args+=("-property:preprocessor_symbols=\"$preprocessor_symbols\"")
+
+    trace "Executing: dotnet build ${_dotnet_args[*]}"
+    # BUILD the project using dotnet build
+    dotnet build "${_dotnet_args[@]}" > "$_output_file" 2>&1 || _rc=$? # capture the output for extract and display
+
+    (( _rc == success )) ||
+        error -ec "$err_tool_error" "Building '$_project' failed."
+
+    local -A __build_info
+    local _build_info_name=${2:-__build_info}
+    local -n _build_info=$_build_info_name
+
+    _build_info=()
+    local _rc_extract=$success
+
+    # EXTRACT and DISPLAY the build information from the output of 'dotnet build'
+    extract_dotnet_build_info "$_project" "$_rc" "$_build_info_name" < "$_output_file" || _rc_extract=$?
+    rm -f "$_output_file" || true
+
+    (( _rc_extract == success )) || {
+        error -ec "$_rc_extract" "Failed to extract build information from the output of 'dotnet build'."
+        return "$_rc_extract"
     }
 
-    (( _rc == success )) || return "$err_invalid_arguments"
+    display_dotnet_build_summary "$_build_info_name" | to_summary
 
-    local _csproj="$1"
-    local _artifacts="${2:-}"
-    local _build_configuration="${3:-}"
+    (( _rc == success )) && return "$success" || return "$err_tool_error"
+}
 
-    _csproj=$(realpath -e "$1")
-    trace "Resolving assembly path for project: $_csproj"
+#---------------------------------------------------------------------------------------------
+# @description Packs a .NET project using the common dotnet arguments, assuming that the project
+#   has already been built.
+#
+# @arg $1 string The path to a .csproj file. Note that it must exist and be a valid project
+#   file.
+# @arg $2 string Package release notes, can be empty string.
+# @arg $3 nameref to an associative array variable that will store the properties of the
+#   produced packages, including the paths to the built package and symbols at keys
+#   respectively "PackagePath" and "SymbolsPath".
+#
+# @exitcode success/positive=0: The operation was successful.
+# @exitcode err_tool_error=66: If 'dotnet pack' failed.
+#---------------------------------------------------------------------------------------------
+function dotnet_pack()
+{
+    (( $# == 3 ))                                     || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 3 arguments (provided $#):" \
+                                                                                            "  - path to a .csproj file" \
+                                                                                            "  - package release notes (can be empty string)" \
+                                                                                            "  - nameref to an associative array variable that will store the properties of the produced packages"
+    [[ ! -v 1 ]] || [[ $1 == *.csproj && -s "$1" ]]   || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a valid project (.csproj) file (provided '${1:-<none>}')."
+    [[ ! -v 3 ]] || is_defined_associative_array "$3" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to be the name of a defined variable (provided '${3:-<none>}')."
 
-    local _proj_dir
-    _proj_dir=$(dirname "$_csproj")
-    proj_name=$(basename "$_csproj" .csproj)
-    trace "Project directory: $_proj_dir"
+    exit_if_has_bugs
 
-    local _output_dir
+    local _project=$1
+    local _reason=${2:-}
 
-    [[ -n "$_artifacts" ]] &&
-        _output_dir="${_artifacts%/}/$proj_name" ||
-        _output_dir="$_proj_dir/bin"
+    # pack arguments for the dotnet pack command are a subset of the build arguments
+    local -i _rc=$success
+    declare -a _dotnet_args
+    _dotnet_args=(
+        "$_project"
+        --no-logo
+        --no-build
+        --verbosity minimal
+    )
+    [[ -n $configuration ]]        && _dotnet_args+=("--configuration" "$configuration")
+    [[ -n $runtime ]]              && _dotnet_args+=("--runtime" "$runtime")
+    [[ -n $artifacts ]]            && _dotnet_args+=("--artifacts-path" "$artifacts")
+    [[ -n $minver_tag_prefix ]]    && _dotnet_args+=("-property:MinVerTagPrefix=\"$minver_tag_prefix\"")
+    [[ -n $minver_prerelease_id ]] && _dotnet_args+=("-property:MinVerPrereleaseIdentifiers=\"$minver_prerelease_id\"")
+    [[ -n $reason ]]               && _dotnet_args+=("-property:PackageReleaseNotes=\"$reason\"")
 
-    # Find the nearest Directory.Build.props by walking up from the project directory
-    local _dir_build_props=""
-    local _search_dir="$_proj_dir"
-    while [[ "$_search_dir" != "/" ]]; do
-        if [[ -f "$_search_dir/Directory.Build.props" ]]; then
-            _dir_build_props="$_search_dir/Directory.Build.props"
-            break
-        fi
-        _search_dir=$(dirname "$_search_dir")
+    # execute the dotnet pack command and process its output
+    trace "Executing: dotnet pack ${_dotnet_args[*]}"
+    # PACK
+    execute dotnet pack "${_dotnet_args[@]}" > "$_ignore" 2>&1 || _rc=$?
+    [[ $_rc == "$dotnet_success" ]] || error -ec "$err_tool_error" "Packing '$_project' failed." "$(get_dotnet_error_message "$_rc")"
+    exit_if_has_errors
+
+    declare -a _msbuild_args=()
+    convert_dotnet_args_to_msbuild_args _msbuild_args "${_dotnet_args[@]}" || {
+        _rc=$?
+        error -ec "$_rc" "Converting 'dotnet pack' arguments to MSBuild arguments failed for '$_project'."
+    }
+    exit_if_has_errors
+
+    trace "Executing: \"dotnet msbuild ${_msbuild_args[*]}\":"
+    # MSBUILD to find the packages paths
+    local _msbuild_output=''
+    _msbuild_output=$(dotnet msbuild "${_msbuild_args[@]}") || _rc=$?
+    [[ $_rc == "$dotnet_success" ]] || error -ec "$err_tool_error" "Executing MSBuild for '$_project' failed." "$(get_dotnet_error_message "$_rc")"
+    exit_if_has_errors
+
+    local -n _properties=$3
+    local _property='' _value=''
+    local _path='' _id='' _version=''
+    local line
+    while IFS= read -r line; do
+        [[ $line =~ ^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]] && {
+            _property="${BASH_REMATCH[1]}"
+
+            _value="${BASH_REMATCH[2]}"
+            rtrim_var _value
+
+            _properties["$_property"]="$_value"
+
+            [[ $_property == "PackageOutputPath" ]] && _path="$_value"    ||
+            [[ $_property == "PackageId" ]]         && _id="$_value"      ||
+            [[ $_property == "PackageVersion" ]]    && _version="$_value"
+        }
+    done <<< "$_msbuild_output"
+
+    local _packs_path_and_name
+    _packs_path_and_name="$(realpath "$_path")/${_id}.${_version}"
+
+    local _package="${_packs_path_and_name}.nupkg"
+    local _symbols="${_packs_path_and_name}.snupkg"
+
+    _properties["PackagePath"]="$_package"
+    _properties["SymbolsPath"]="$_symbols"
+
+    dump_vars --quiet --header "Returning Properties:" "${!_properties}"
+
+    [[ -s $_package ]] || error -ec "$err_tool_error" "Package '$_package' not found or empty."
+    [[ -s $_symbols ]] || error -ec "$err_tool_error" "Package '$_symbols' not found or empty."
+    exit_if_has_errors
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Gets the full path to the assembly that was or would be produced by
+#   `dotnet build` using a .NET project and the common dotnet arguments, without actually building
+#   the project.
+#
+#
+# @arg $1 string _csproj - path to a .csproj file
+# @arg $2 string property_name - the name of the property whose value should be retrieved
+# @arg $3 nameref to a variable to receive the value of the property
+#
+# @exitcode success/positive=0: the assembly file exists and is not empty
+#
+# @stdout the full path of the produced assembly (it may not exist yet), e.g.:
+#   /path/to/repo-root/artifacts/bin/Ulid/release/Ulid.dll or
+#   /path/to/repo-root/artifacts/bin/GlobTool/debug/GlobTool (Linux executable)
+#
+# @example
+#   declare target_path
+#   get_target_path $project target_path
+#---------------------------------------------------------------------------------------------
+function get_msbuild_property()
+{
+    (( $# == 3 ))                                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires 3 arguments (provided $#):" \
+                                                                                        "  - path to a .csproj file" \
+                                                                                        "  - name of the property whose value should be retrieved" \
+                                                                                        "  - nameref to a variable to receive the value of the property"
+    [[ ! -v 1 ]] || [[ $1 == *.csproj && -s $1 ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the project, to be an existing, non-empty .csproj file (provided '${1:-<none>}')."
+    [[ ! -v 2 ]] || is_variable_name "$2"         || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the name of the property whose value should be retrieved, to be a valid property name (provided '${2:-<none>}')."
+    [[ ! -v 3 ]] || is_defined_variable "$3"      || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 3, the name of a variable to receive the value of the property, to be a defined variable (provided '${3:-<none>}')."
+
+    exit_if_has_bugs
+
+    local _project="$1"
+    local -a _dotnet_args
+    _dotnet_args=(
+        "$_project"
+        --no-logo
+        --verbosity minimal
+        "-getProperty:$2" # put the MSBuild command that gets the property in the msbuild arguments - this is da secret sauce!
+    )
+    # add the common dotnet parameters
+    [[ -n $configuration ]]        && _dotnet_args+=("--configuration" "$configuration")
+    [[ -n $framework ]]            && _dotnet_args+=("--framework" "$framework")
+    [[ -n $runtime ]]              && _dotnet_args+=("--runtime" "$runtime")
+    [[ -n $artifacts ]]            && _dotnet_args+=("--artifacts-path" "$artifacts")
+    [[ -n $minver_tag_prefix ]]    && _dotnet_args+=("-property:MinVerTagPrefix=\"$minver_tag_prefix\"")
+    [[ -n $minver_prerelease_id ]] && _dotnet_args+=("-property:MinVerPrereleaseIdentifiers=\"$minver_prerelease_id\"")
+    [[ -n $preprocessor_symbols ]] && _dotnet_args+=("-property:preprocessor_symbols=\"$preprocessor_symbols\"")
+
+    local -a _msbuild_args=()
+    convert_dotnet_args_to_msbuild_args _msbuild_args "${_dotnet_args[@]}" || return $?
+
+    local -n _property=$3
+    _property=$(dotnet msbuild "${_msbuild_args[@]}" 2> "$_ignore") || return $?
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Gets the values of two or more MSBuild properties for a .NET project, via
+#   `dotnet msbuild -getProperty:<Prop1>;<Prop2>;...`, without building the project (a static
+#   evaluation). Use `get_msbuild_property()` instead when only one property is needed --
+#   `dotnet msbuild` returns a plain string for a single `-getProperty`, but a JSON object
+#   (`{"Properties": {...}}`) once two or more are requested, so the two cases need different
+#   parsing and are kept as separate functions rather than one with divergent output shapes.
+#
+# @arg $1 string _csproj - path to a .csproj file
+# @arg $2 nameref to an associative-array variable to receive the property name/value pairs
+# @arg $3.. string names of the properties whose values should be retrieved (at least 2 --
+#   use `get_msbuild_property()` for exactly 1)
+#
+# @exitcode success/positive=0: the properties were retrieved successfully.
+# @exitcode err_argument_value=4: an invalid property name was given.
+#
+# @example
+#   declare -A props
+#   get_msbuild_properties "$project" props TargetPath Configuration ArtifactsPath
+#---------------------------------------------------------------------------------------------
+function get_msbuild_properties()
+{
+    (( $# > 3 ))                                      || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires at least 4 arguments (provided $#):" \
+                                                                                        "  - path to a .csproj file" \
+                                                                                        "  - nameref to an associative-array variable to receive the property name/value pairs" \
+                                                                                        "  - names of two or more properties whose values should be retrieved"
+    [[ ! -v 1 ]] || [[ $1 == *.csproj && -s $1 ]]     || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the project, to be an existing, non-empty .csproj file (provided '${1:-<none>}')."
+    [[ ! -v 2 ]] || is_defined_associative_array "$2" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the name of an associative array variable to receive the property names and values (provided '${2:-<none>}')."
+
+    exit_if_has_bugs
+
+    local _project="$1"
+    # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
+    local -n _properties=$2
+
+    shift 2
+
+    local _property
+    local _all_properties=''
+    local _first=true
+    local _errs
+    _errs=$(get_errors)
+
+    for _property in "$@"; do
+        is_variable_name "$_property" || error -ec "$err_argument_value" "${FUNCNAME[0]}() requires all property names to be valid variable names (provided '$_property')."
+        $_first && _first=false || _all_properties+=';'
+        _all_properties+="$_property"
     done
-    trace "Nearest 'Directory.Build.props': ${_dir_build_props:-None}"
 
-    # TFM: *.csproj → Directory.Build.props → "net10.0"
-    local _tfm=""
-    _tfm=$(grep -oPm1 '(?<=<TargetFramework>)[^<]+' "$_csproj" 2>"$_ignore") ||
-    _tfm=$(grep -oPm1 '(?<=<TargetFrameworks>)[^<]+' "$_csproj" 2>"$_ignore") || true
+    (( _errs != $(get_errors) )) && return "$err_argument_value"
 
-    if [[ -z "$_tfm" && -n "$_dir_build_props" ]]; then
-        _tfm=$(grep -oPm1 '(?<=<TargetFramework>)[^<]+' "$_dir_build_props" 2>"$_ignore") ||
-        _tfm=$(grep -oPm1 '(?<=<TargetFrameworks>)[^<]+' "$_dir_build_props" 2>"$_ignore") || true
-    fi
+    local -a _dotnet_args
+    _dotnet_args=(
+        "$_project"
+        --no-logo
+        --verbosity minimal
+        "-getProperty:$_all_properties" # put the MSBuild command that gets the property in the msbuild arguments - this is da secret sauce!
+    )
+    # add the common dotnet parameters
+    [[ -n $configuration ]]        && _dotnet_args+=("--configuration" "$configuration")
+    [[ -n $framework ]]            && _dotnet_args+=("--framework" "$framework")
+    [[ -n $runtime ]]              && _dotnet_args+=("--runtime" "$runtime")
+    [[ -n $artifacts ]]            && _dotnet_args+=("--artifacts-path" "$artifacts")
+    [[ -n $minver_tag_prefix ]]    && _dotnet_args+=("-property:MinVerTagPrefix=\"$minver_tag_prefix\"")
+    [[ -n $minver_prerelease_id ]] && _dotnet_args+=("-property:MinVerPrereleaseIdentifiers=\"$minver_prerelease_id\"")
+    [[ -n $preprocessor_symbols ]] && _dotnet_args+=("-property:preprocessor_symbols=\"$preprocessor_symbols\"")
 
-    if [[ "$_tfm" == *";"* ]]; then
-        warning "Multiple TFMs found in '$(basename "$_csproj")'. Using the last one: '${_tfm##*;}'."
-        _tfm="${_tfm##*;}"
-    fi
-    [[ -n "$_tfm" ]] || _tfm=$default_tfm
-    _tfm="${_tfm//[[:space:]]/}"
-    trace "Using TFM: $_tfm"
+    local -a _msbuild_args=()
+    convert_dotnet_args_to_msbuild_args _msbuild_args "${_dotnet_args[@]}" || return $?
 
-    # Configuration: *.csproj → Directory.Build.props → $default_configuration
-    if [[ -z $_build_configuration ]]; then
-        _build_configuration=$(grep -oPm1 '(?<=<Configuration>)[^<]+' "$_csproj" 2>"$_ignore") || true
-        if [[ -z "$_build_configuration" && -n "$_dir_build_props" ]]; then
-            _build_configuration=$(grep -oPm1 '(?<=<Configuration>)[^<]+' "$_dir_build_props" 2>"$_ignore") || true
+    local _json=''
+    _json=$(dotnet msbuild "${_msbuild_args[@]}" 2> "$_ignore") || return $?
+
+    _properties=()
+
+    local _key _value
+    while IFS='=' read -r _key _value; do
+        _properties["$_key"]="$_value"
+    done < <(jq -r '.Properties | to_entries[] | "\(.key)=\(.value)"'  <<< "$_json")
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Gets the full path to the assembly that was or would be produced by
+#   `dotnet build` using a .NET project and the common dotnet arguments, without actually building
+#   the project.
+#
+#
+# @arg $1 string _csproj - path to a .csproj file
+# @arg $2 nameref to a variable to receive the full path to the assembly that was or would be
+#   produced
+#
+# @exitcode success/positive=0: the assembly file exists and is not empty
+#
+# @stdout the full path of the produced assembly (it may not exist yet), e.g.:
+#   /path/to/repo-root/artifacts/bin/Ulid/release/Ulid.dll or
+#   /path/to/repo-root/artifacts/bin/GlobTool/debug/GlobTool (Linux executable)
+#
+# @example
+#   declare target_path
+#   get_target_path $project target_path
+#---------------------------------------------------------------------------------------------
+function get_target_path()
+{
+    (( $# == 2 ))                                  || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
+                                                                                        "  - path to a .csproj file" \
+                                                                                        "  - nameref to a variable to receive the full path to the assembly that was or would be produced"
+    [[ ! -v 1 ]] || [[ $1 == *.csproj && -s $1 ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the project, to be an existing, non-empty .csproj file (provided '${1:-<none>}')."
+    [[ ! -v 2 ]] || is_defined_variable "$2"      || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the variable name to receive the full path to the assembly, to be a defined variable (provided '${2:-<none>}')."
+
+    exit_if_has_bugs
+
+    get_msbuild_property "$1" "TargetPath" "$2"
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Lists the constituent project paths of a solution file (*.sln or *.slnx) via
+#   `dotnet sln <file> list`, skipping the fixed two-line header ("Project(s)" and the
+#   underline) that command always prints. `dotnet sln list` reports paths relative to the
+#   solution file's own directory; this function re-resolves them relative to the current
+#   directory instead, so callers get paths consistent with the rest of the codebase's
+#   repo-root-relative convention regardless of where the solution file itself lives.
+#
+# @arg $1 string Path to an existing, non-empty solution file (*.sln or *.slnx).
+# @arg $2 nameref to an indexed array variable that will receive the list of project paths.
+#
+# @exitcode success/positive=0: the solution's projects were listed successfully.
+# @exitcode err_tool_error=66: `dotnet sln $1 list` failed, or returned no projects.
+#---------------------------------------------------------------------------------------------
+function list_solution_projects()
+{
+    (( $# == 2 ))                                  || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#):" \
+                                                                                        "  - path to a solution file (*.sln or *.slnx)" \
+                                                                                        "  - name of an indexed array variable to receive the list of project paths"
+    [[ ! -v 1 ]] || [[ $1 == *.@(sln|slnx) && -s $1 ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be an existing, non-empty solution file (provided '${1:-<none>}')."
+    [[ ! -v 2 ]] || is_defined_array "$2"          || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to name a declared indexed-array variable (provided '${2:-<none>}')."
+
+    exit_if_has_bugs
+
+    local _solution=$1
+    local _proj_dir
+    _proj_dir=$(dirname "$_solution")
+
+    local -n _out=$2
+    _out=()
+
+    # Capture combined stdout+stderr (rather than discarding stderr) so that a failure or an
+    # unexpected output shape can be reported with the tool's own diagnostic text, instead of
+    # a bare "returned no projects" that gives no clue why.
+    local _sln_output
+    local -i _sln_rc=$success
+    _sln_output=$(dotnet sln "$_solution" list 2>&1) || _sln_rc=$?
+
+    local _proj
+    while IFS= read -r _proj; do
+        [[ -n $_proj ]] || continue
+        _out+=("$(realpath -m --relative-to=. "$_proj_dir/$_proj")")
+    # `dotnet sln list`'s own output is a fixed two-line header ("Project(s)" then a matching
+    # dashed underline) followed by the project paths -- but on some runners `dotnet` prints
+    # extra diagnostic lines (e.g. SDK resolution info) BEFORE that, so skip everything up to
+    # and including the dashed separator line itself, rather than assuming a fixed line count.
+    done < <(sed -n '/^-\+$/,$p' <<< "$_sln_output" | tail -n +2)
+
+    (( ${#_out[@]} > 0 )) || {
+        error -ec "$err_tool_error" "${FUNCNAME[0]}() 'dotnet sln $_solution list' returned no projects (exit code $_sln_rc)." \
+                                    "Raw output:" \
+                                    "$_sln_output"
+        return "$err_tool_error"
+    }
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Expands any solution file (*.sln or *.slnx) entries in a JSON array of
+#   project/solution paths into their constituent project paths, via list_solution_projects().
+#   Non-solution entries pass through unchanged. Lets CI's build-projects input keep accepting a
+#   solution file for developer convenience (and to guarantee no project is left out of the
+#   build matrix) while the actual build matrix fans out per-project -- required for
+#   Directory.Build.props's IsCI-conditional Configuration default to apply: a solution-level
+#   `dotnet build` always resolves its own "solution configuration" (Debug, unless -c is given)
+#   and passes it to every child project as an explicit global MSBuild property, which silently
+#   overrides Directory.Build.props's conditional regardless of IsCI.
+#
+# @arg $1 nameref to a variable containing a JSON array of project/solution paths. The expanded,
+#   de-duplicated JSON array is stored back into that variable.
+#
+# @exitcode success/positive=0: every solution entry (if any) was expanded successfully.
+# @exitcode err_tool_error=66: list_solution_projects() failed for one of the solution entries.
+#---------------------------------------------------------------------------------------------
+function expand_solution_projects()
+{
+    (( $# == 1 ))                             || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 argument (provided $#):" \
+                                                                                    "  - the name of a variable containing a JSON array of project/solution paths"
+    [[ ! -v 1 ]] || is_defined_variable "$1"  || bug -ec "$err_missing_argument" "${FUNCNAME[0]}() requires argument 1 to name a declared variable (provided '${1:-<none>}')."
+
+    exit_if_has_bugs
+
+    local -n _projects=$1
+    local -a _expanded=()
+    local _entry
+    local -i _rc=$success
+
+    while IFS= read -r _entry; do
+        if [[ $_entry == *.@(sln|slnx) ]]; then
+            local -a _sln_projects=()
+            list_solution_projects "$_entry" _sln_projects || { _rc=$?; continue; }
+            _expanded+=("${_sln_projects[@]}")
+        else
+            _expanded+=("$_entry")
         fi
-        _build_configuration=${_build_configuration:-${default_configuration}}
+    done < <(jq -r '.[]' <<< "$_projects")
+
+    if (( _rc == success )); then
+        if (( ${#_expanded[@]} > 0 )); then
+            _projects=$(printf '%s\n' "${_expanded[@]}" | jq -R . | jq -sc 'unique')
+        else
+            _projects='[]'
+        fi
     fi
-    _build_configuration="${_build_configuration//[[:space:]]/}"
-    trace "Using Configuration: $_build_configuration"
 
-    # AssemblyName: *.csproj → filename without extension
-    local _assembly_name=""
-    _assembly_name=$(grep -oPm1 '(?<=<AssemblyName>)[^<]+' "$_csproj" 2>"$_ignore") || true
-    [[ -n "$_assembly_name" ]] || _assembly_name=$(basename "${_csproj%.*}")
-    _assembly_name="${_assembly_name//[[:space:]]/}"
-    trace "Using AssemblyName: $_assembly_name"
-
-    # OutputType: determines the file suffix
-    local _output_type=""
-    _output_type=$(grep -oPm1 '(?<=<OutputType>)[^<]+' "$_csproj" 2>"$_ignore") || true
-    _output_type="${_output_type//[[:space:]]/}"
-
-    local _suffix
-    if [[ "${_output_type,,}" == "exe" ]]; then
-        is_windows && _suffix=".exe" || _suffix=""
-    else
-        _suffix=".dll"
-    fi
-    trace "Using 'OutputType': ${_output_type:-None} → suffix: '$_suffix'"
-    trace "Assembly path: $_output_dir/$_build_configuration/$_tfm/$_assembly_name$_suffix"
-
-    echo "$_output_dir/$_build_configuration/$_tfm/$_assembly_name$_suffix"
+    return "$_rc"
 }

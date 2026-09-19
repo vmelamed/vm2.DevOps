@@ -9,11 +9,11 @@
       - [Gathering Inputs](#gathering-inputs)
     - [Layer 2: Reusable Workflows](#layer-2-reusable-workflows)
       - [CI Pipeline (`_ci.yaml`)](#ci-pipeline-_ciyaml)
-      - [Build (`_build.yaml`)](#build-_buildyaml)
-      - [Gate Job Pattern (`postrun-ci`)](#gate-job-pattern-postrun-ci)
-      - [Test (`_test.yaml`)](#test-_testyaml)
-      - [Benchmarks (`_benchmarks.yaml`)](#benchmarks-_benchmarksyaml)
-      - [Pack (`_pack.yaml`)](#pack-_packyaml)
+        - [Build (`_build.yaml`)](#build-_buildyaml)
+        - [Test (`_test.yaml`)](#test-_testyaml)
+        - [Benchmarks (`_benchmarks.yaml`)](#benchmarks-_benchmarksyaml)
+        - [Pack (`_pack.yaml`)](#pack-_packyaml)
+        - [Gate Job Pattern (`postrun-ci`)](#gate-job-pattern-postrun-ci)
       - [Prerelease (`_prerelease.yaml`)](#prerelease-_prereleaseyaml)
       - [Release (`_release.yaml`)](#release-_releaseyaml)
         - [Example Walkthrough](#example-walkthrough)
@@ -23,17 +23,25 @@
       - [CI Scripts (`/.github/actions/scripts/`)](#ci-scripts-githubactionsscripts)
       - [Composite Action (`action.yaml`)](#composite-action-actionyaml)
       - [Bash Library (`/scripts/bash/lib/`)](#bash-library-scriptsbashlib)
-      - [Utility Scripts (`/scripts/bash/`)](#utility-scripts-scriptsbash)
+      - [Testing the Bash Library and Scripts](#testing-the-bash-library-and-scripts)
+      - [Design of the Library Outputs](#design-of-the-library-outputs)
+        - [Logging Functions](#logging-functions)
+        - [Free Form Output to the GitHub Step Summary](#free-form-output-to-the-github-step-summary)
+        - [Communicating Key-Value Pairs to Downstream Jobs via GitHub Actions Output](#communicating-key-value-pairs-to-downstream-jobs-via-github-actions-output)
+      - [Utility Scripts (`/scripts/bash/src/`)](#utility-scripts-scriptsbashsrc)
   - [Caching Strategy](#caching-strategy)
     - [NuGet Package Cache (dual-layer)](#nuget-package-cache-dual-layer)
     - [Build Artifact Handoff (workflow artifacts, not cache)](#build-artifact-handoff-workflow-artifacts-not-cache)
     - [Cache Cleanup](#cache-cleanup)
+  - [Benchmark Threshold Management](#benchmark-threshold-management)
+    - [Per-run threshold reset (`reset-benchmark-thresholds`)](#per-run-threshold-reset-reset-benchmark-thresholds)
+    - [Rebuilding benchmark history](#rebuilding-benchmark-history)
+    - [When to use which](#when-to-use-which)
   - [Script Distribution](#script-distribution)
   - [NuGet Authentication](#nuget-authentication)
   - [Actions Secrets](#actions-secrets)
   - [Dependabot Secrets](#dependabot-secrets)
   - [Naming Conventions](#naming-conventions)
-    - [`args_to_github_output` — Automatic Name Translation](#args_to_github_output--automatic-name-translation)
 
 <!-- /TOC -->
 
@@ -52,7 +60,7 @@ vm2.DevOps provides CI/CD automation framework for .NET NuGet packages through a
 ├─────────────────────────────────────────────────────────┤
 │  Bash Scripts  (vm2.DevOps/.github/actions/scripts/)    │
 │  build · run-tests · run-benchmarks · pack              │
-│  validate-input · publish-package · changelog-and-tag   │
+│  validate-input · changelog-and-tag                     │
 │  compute-release-version · download-artifact            │
 ├─────────────────────────────────────────────────────────┤
 │  Bash Library  (vm2.DevOps/scripts/bash/lib/)           │
@@ -62,7 +70,11 @@ vm2.DevOps provides CI/CD automation framework for .NET NuGet packages through a
 
 ### Layer 1: Consumer Workflows
 
-The GitHub Actions workflows at this level originate at **`vm2.Templates/templates/AddNewPackage/content/.github/workflows/`**. They are practically copied to every new vm2 repo's `.github/workflows` when it is created with `dotnet install new vm2pkg`. These are the thin, per-repo entry points. Changes at this layer (although quite stable these days) must be kept in sync with the template's original. This is achieved by executing the standalone script `diff-shared.sh`. The script compares and then copies or merges the source-of-truth template files into the files with shared content, like the workloads at this level. Each consumer workflow sets repo-specific parameters (project paths, coverage thresholds, etc.) and delegates to a reusable workflow via GitHub Actions property `uses: vmelamed/vm2.DevOps/.github/workflows/_*.yaml@main`. For example, `CI.yaml` calls
+The GitHub Actions workflows at this level originate at **`vm2.Templates/templates/AddNewPackage/content/.github/workflows/`** - the source of truth (*SOT*). They are practically copied to every new vm2 repo's `.github/workflows` when it is created with `dotnet install new vm2pkg`. These are the thin, per-repo entry points.
+
+Changes in the workflow templates must be kept in sync with the template's original SOT and vice versa (although the SOT is quite stable these days). This is achieved by executing the standalone script `diff-shared.sh`. The script compares and then copies or merges the source-of-truth template files into the files with shared content, like the workloads at this level.
+
+Each consumer workflow sets repo-specific parameters (project paths, coverage thresholds, etc.) and delegates to a reusable workflow via GitHub Actions property `uses: vmelamed/vm2.DevOps/.github/workflows/_*.yaml@main`. For example, `CI.yaml` calls
 `_ci.yaml`, `Prerelease.yaml` calls `_prerelease.yaml`, and so on, see the diagram below.
 
 ```text
@@ -77,17 +89,25 @@ CI.yaml ───────┬───────► actions/gather-inputs/a
                                    ├──► _build.yaml ───────► build.sh ──────────────────────►
                                    ├──► _test.yaml ────────► run-tests.sh ──────────────────►
                                    ├──► _benchmarks.yaml ──► run-benchmarks.sh ─────────────►
-                                   └──► _pack.yaml ────────► pack.s ────────────────────────►
+                                   └──► _pack.yaml ────────► pack.sh ───────────────────────►
 
 Prerelease.yaml ───────► _prerelease.yaml ───────────────┬─► compute-prerelease-version.sh ─►
                                                          ├─► changelog-and-tag.sh ──────────►
-                                                         └─► publish-package.s ─────────────►
+                                                         └─► pack.sh ───────────────────────►
 
 Release.yaml ──────────► _release.yaml ──────────────────┬─► compute-release-version.sh ────►
                                                          ├─► changelog-and-tag.sh ──────────►
-                                                         └─► publish-package.sh ────────────►
+                                                         └─► pack.sh ───────────────────────►
 
 ```
+
+The actual `dotnet nuget push` is not shown above: it runs back in each *consumer's own* `Prerelease.yaml`/`Release.yaml`
+(their own `publish-prerelease`/`publish-release` job), not in a vm2.DevOps script. NuGet.org trusted publishing validates
+the OIDC token's `job_workflow_ref` claim against the workflow file requesting it, which for a reusable workflow always
+names the reusable workflow itself, never the repository that called it — so a shared `_prerelease.yaml`/`_release.yaml`
+can never satisfy a trust policy scoped to a consumer's own repo, and the login (and therefore the push) must happen there
+instead. See [NuGet Authentication](#nuget-authentication) below, and `_prerelease.yaml`'s own comments, for the full
+reasoning.
 
 #### Push De-dupe Logic
 
@@ -136,7 +156,7 @@ _ci.yaml ─┬─────────────────────�
 
 Concurrency group `ci-${{ github.workflow_ref }}` cancels in-progress runs on new pushes.
 
-#### Build (`_build.yaml`)
+##### Build (`_build.yaml`)
 
 1. Checks out repository with full history (`fetch-depth: 0`) for MinVer version calculation.
 1. Restores NuGet packages (dual-layer cache — see [Caching Strategy](#2-caching-strategy)).
@@ -144,7 +164,30 @@ Concurrency group `ci-${{ github.workflow_ref }}` cancels in-progress runs on ne
 1. Uploads the build outputs as a workflow artifact named `build-artifacts-{os}-{configuration}-{project-slug}`
    (`retention-days: 1`) for the downstream jobs of the same run.
 
-#### Gate Job Pattern (`postrun-ci`)
+##### Test (`_test.yaml`)
+
+1. Restores build artifacts from the build cache.
+1. Iterates test projects (parsed from the JSON array via `jq`).
+1. Calls `run-tests.sh` for each project.
+1. Generates coverage reports with ReportGenerator.
+1. Uploads coverage to Codecov.
+1. Posts a PR comment with test results and coverage details.
+1. Publishes GitHub Check annotations via `dorny/test-reporter`.
+
+##### Benchmarks (`_benchmarks.yaml`)
+
+1. Restores build artifacts from the build cache.
+1. Caches the Bencher CLI binary.
+1. Calls `run-benchmarks.sh` (BenchmarkDotNet).
+1. Tracks results via `bencher run` using a percentage threshold test (`max-regression-pct`, default 20%).
+1. Posts a PR comment with benchmark results.
+
+##### Pack (`_pack.yaml`)
+
+1. Restores build artifacts from the build cache.
+1. Calls `pack.sh` to validate NuGet packaging succeeds.
+
+##### Gate Job Pattern (`postrun-ci`)
 
 With reusable workflows and matrix strategies, GitHub Actions produces check names that include the workflow prefix, matrix parameters, inner job names, and event suffixes — making them impossible to predict for branch-protection required checks. For example, a single test matrix job might appear as `Run CI: Build, Test, Benchmark, Pack / Run tests (ubuntu-latest) (pull_request)`.
 
@@ -178,52 +221,39 @@ postrun-ci:
 - The gate job name is extracted by `setup-repo.sh` → `detect_required_checks()` which parses the consumer's CI.yaml for the
   gate job's name: property and registers it in the branch ruleset
 
-#### Test (`_test.yaml`)
-
-1. Restores build artifacts from the build cache.
-1. Iterates test projects (parsed from the JSON array via `jq`).
-1. Calls `run-tests.sh` for each project.
-1. Generates coverage reports with ReportGenerator.
-1. Uploads coverage to Codecov.
-1. Posts a PR comment with test results and coverage details.
-1. Publishes GitHub Check annotations via `dorny/test-reporter`.
-
-#### Benchmarks (`_benchmarks.yaml`)
-
-1. Restores build artifacts from the build cache.
-1. Caches the Bencher CLI binary.
-1. Calls `run-benchmarks.sh` (BenchmarkDotNet).
-1. Tracks results via `bencher run` using a percentage threshold test (`max-regression-pct`, default 20%).
-1. Posts a PR comment with benchmark results.
-
-#### Pack (`_pack.yaml`)
-
-1. Restores build artifacts from the build cache.
-1. Calls `pack.sh` to validate NuGet packaging succeeds.
-
 #### Prerelease (`_prerelease.yaml`)
 
 Triggered automatically when CI succeeds after a PR merge to main (a workflow_run on the CI workflow, gated to push events on
-main with conclusion == 'success'). Can also be triggered manually via workflow_dispatch. Three sequential jobs:
+main with conclusion == 'success'). Can also be triggered manually via workflow_dispatch. `_prerelease.yaml` owns everything
+up to (but not including) the actual NuGet push:
 
-1. **compute-version** — Calls `compute-prerelease-version.sh` to determine the next prerelease version from conventional
-   commits.
-1. **changelog-and-tag** — Calls `changelog-and-tag.sh` to update `CHANGELOG.md` using `cliff.prerelease.toml`, commit, and
-   create the prerelease tag.
-1. **package** — Checks out the prerelease tag, then calls `pack.sh` to build and pack the prerelease package to the ***artifacts*** directory.
-1. **publish** — Calls `publish.sh` to push the prerelease package to the configured NuGet server. Note that for `nuget.org` the script uses Trusted Publishing but for the other repositories (GitHub Packages) it still uses standard authentication via `NUGETY_KEY_API`.
+1. **prepare-prerelease** — Calls `compute-prerelease-version.sh` to determine the next prerelease version from conventional
+   commits, then `changelog-and-tag.sh` to update `CHANGELOG.md` (via `cliff.prerelease.toml`) and create the prerelease tag.
+1. **package-and-publish** — Matrix over `package-projects`. Checks out the prerelease tag, calls `pack.sh --build true` to
+   build and pack each project into its own resolved `ArtifactsPath` (never a hardcoded default — see
+   [CONVENTIONS.md](../.github/CONVENTIONS.md)), and uploads the `.nupkg`/`.snupkg` as a workflow artifact.
+1. **collect-artifacts** — Gathers the uploaded artifacts' IDs via `gh api` and exposes them as this reusable workflow's own
+   `artifact-ids` output.
+
+The actual `dotnet nuget push` happens back in the *consumer's own* `Prerelease.yaml` (its `publish-release`-style job):
+it downloads the artifacts by ID, authenticates with NuGet.org trusted publishing (or uses `NUGET_API_KEY` for GitHub
+Packages/a custom server), and pushes. See [NuGet Authentication](#nuget-authentication) for why the login can't happen
+inside `_prerelease.yaml` itself.
 
 #### Release (`_release.yaml`)
 
 > [!IMPORTANT] Manual dispatch.
 
-Three sequential jobs:
+Same shape as `_prerelease.yaml`, for a stable release:
 
 1. **compute-version** — Calls `compute-release-version.sh` to determine the stable version from conventional commits.
 1. **changelog-and-tag** — Calls `changelog-and-tag.sh` to update the changelog using `cliff.release-header.toml` and create the
    release Git tag.
-1. **package** — Checks out the release tag, then calls `pack.sh` to build and pack the stable release package to the ***artifacts*** directory.
-1. **publish** — Calls `publish.sh` to push the prerelease package to the configured NuGet server. Note that for `nuget.org` the script uses Trusted Publishing but for the other repositories (GitHub Packages) it still uses standard authentication via `NUGETY_KEY_API` (see [Release Process](RELEASE_PROCESS.md#release-process)).
+1. **package-and-publish** — Matrix over `package-projects`. Checks out the release tag, calls `pack.sh --build true` to
+   build and pack each project, and uploads the `.nupkg`/`.snupkg` as a workflow artifact.
+1. **collect-artifacts** — Gathers the uploaded artifacts' IDs and exposes them as this workflow's `artifact-ids` output.
+
+As with Prerelease, the actual push happens in the consumer's own `Release.yaml`.
 
 ##### Example Walkthrough
 
@@ -244,9 +274,7 @@ If there were also a `refactor(core)!: rewrite engine`:
 
 ##### Prerelease Guard
 
-If the latest prerelease tag is `v1.5.0-preview.3` but the commit-based calculation yields
-`v1.3.0`, the script adopts `1.5.0` from the prerelease instead. This prevents publishing a
-stable version with a lower number than an already-published prerelease.
+If the latest prerelease tag is `v1.5.0-preview.3` but the commit-based calculation yields `v1.3.0`, the script adopts `1.5.0` from the prerelease instead. This prevents publishing a stable version with a lower number than an already-published prerelease.
 
 #### Clear Cache (`_clear_cache.yaml`)
 
@@ -267,29 +295,24 @@ than three if the script has more complex logical separation needs:
 
 The CI scripts:
 
-| Script                          | Called by                     | Purpose                                       |
-| :------------------------------ | :---------------------------- | :-------------------------------------------- |
-| `validate-commits.sh`           | `_ci`                         | Validate commit messages Conventional Commits |
-| `validate-input.sh`             | `_ci`                         | Validate and normalize workflow inputs        |
-| `build.sh`                      | `_build`                      | Compile .NET projects                         |
-| `run-tests.sh`                  | `_test`                       | Run tests and collect coverage                |
-| `run-benchmarks.sh`             | `_benchmarks`                 | Run BenchmarkDotNet benchmarks                |
-| `pack.sh`                       | `_pack`                       | Validate NuGet packaging                      |
-| `publish-package.sh`            | `_prerelease`, `_release`     | Build, pack, and push NuGet packages          |
-| `compute-prerelease-version.sh` | `_prerelease`                 | Determine prerelease version from commits     |
-| `compute-release-version.sh`    | `_release`                    | Determine stable release version from commits |
-| `changelog-and-tag.sh`          | `_prerelease`, `_release`     | Update changelog and create Git tag           |
-| `download-artifact.sh`          | (not used in CI)              | Download and extract remote artifacts         |
+| Script                          | Called by                          | Purpose                                                          |
+| :------------------------------ | :--------------------------------- | :--------------------------------------------------------------- |
+| `validate-commits.sh`           | `_ci`                              | Validate commit messages Conventional Commits                    |
+| `validate-input.sh`             | `_ci`                              | Validate and normalize workflow inputs                           |
+| `build.sh`                      | `_build`                           | Compile .NET projects                                            |
+| `run-tests.sh`                  | `_test`                            | Run tests and collect coverage                                   |
+| `run-benchmarks.sh`             | `_benchmarks`                      | Run BenchmarkDotNet benchmarks                                   |
+| `pack.sh`                       | `_pack`, `_prerelease`, `_release` | Validate packaging (`_pack`); build+pack for publishing (others) |
+| `compute-prerelease-version.sh` | `_prerelease`                      | Determine prerelease version from commits                        |
+| `compute-release-version.sh`    | `_release`                         | Determine stable release version from commits                    |
+| `changelog-and-tag.sh`          | `_prerelease`, `_release`          | Update changelog and create Git tag                              |
+| `download-artifact.sh`          | (not used in CI)                   | Download and extract remote artifacts                            |
 
 #### Composite Action (`action.yaml`)
 
-The file `.github/actions/scripts/action.yaml` is a composite action that adds both the scripts
-directory and the bash library directory to `$PATH`, and exports `$DEVOPS_SCRIPTS_DIR` and
-`$DEVOPS_LIB_DIR` for reference.
+The file `.github/actions/scripts/action.yaml` is a composite action that adds both the scripts directory and the bash library directory to `$PATH`, and exports `$DEVOPS_SCRIPTS_DIR` and `$DEVOPS_LIB_DIR` for reference.
 
-Every workflow checks out the vm2.DevOps repo (sparse-checkout of `scripts/bash/lib` and
-`.github/actions/scripts`) and then invokes this action, making all scripts and library functions
-available for the rest of the job.
+Every workflow checks out the vm2.DevOps repo (sparse-checkout of `scripts/bash/lib` and `.github/actions/scripts`) and then invokes this action, making all scripts and library functions available for the rest of the job.
 
 #### Bash Library (`/scripts/bash/lib/`)
 
@@ -315,7 +338,163 @@ A shared function library sourced by scripts at startup.
 Scripts source the GitHub Actions helpers `gh_core.sh` (which chains into `core.sh`) and then source additional `_*.sh` modules
 as needed.
 
-#### Utility Scripts (`/scripts/bash/`)
+#### Testing the Bash Library and Scripts
+
+Tests live in `scripts/bash/tests/` (`lib/` for the library, `src/` for dev utilities, `github-scripts/` for the
+`.github/scripts/` action scripts), run with [Bats-core](https://github.com/bats-core/bats-core). `bats-support`,
+`bats-assert`, and `bats-file` are Git submodules under `scripts/bash/tests/libs/` — a plain clone leaves them empty;
+`setup-repo.sh` runs `git submodule update --init --recursive` to populate them (a clean CI checkout that ever runs
+`bats` will need the equivalent `submodules: true` on its own `actions/checkout` step).
+
+Two conventions worth calling out, both learned from real, previously-passing-for-the-wrong-reason tests:
+
+- **A test double must replicate the real script's actual default-resolution behavior, not a simplified contract it
+  never implements.** `test_rebuild_bench_history_run.bats`'s fake `run-benchmarks.sh` waited for an `--artifacts`
+  flag to know where to write its fake results — but the real `rebuild-bench-history-run.sh` never passes that flag;
+  both scripts independently resolve the same `artifacts` default via `get_artifacts_path`, relying on sharing a CWD
+  rather than an explicit hand-off. The fake had no access to that shared resolution, so the flag it waited for never
+  arrived, and it silently never wrote a result — hidden until the underlying resolution logic changed for an
+  unrelated reason and the failure finally surfaced. Fix the fake to reproduce the same default, not to invent an
+  easier contract.
+- **Any sandbox exercising `get_artifacts_path` (directly, or transitively via `sanitize_common_dotnet_args`, which
+  every script using the common dotnet arguments calls) must be a real Git working tree.** A bats scratch directory
+  is not one by default; `git init -q` it first. See the doc comment on `get_artifacts_path` in `_git_vm2.sh` for the
+  exact failure this produces otherwise.
+
+This connects to the `ArtifactsPath`/`TargetFramework`/RID governance rule in
+[CONVENTIONS.md](../.github/CONVENTIONS.md#build-configuration-tfms-rids-and-preprocessor-symbols): the common
+dotnet-argument surface (`--configuration`, `--framework`, `--runtime`, `--artifacts-path` and their env-var
+counterparts) exists as a deliberate, narrow escape valve, not a general override mechanism. Two concrete violations
+of that rule were found and fixed in the same pass that produced the testing lessons above: `_rebuild_bench_history.yaml`
+was still passing a `--artifacts` flag the parser no longer accepted, and `_pack.yaml`/`_refresh_lockfiles.yaml`/`_test.yaml`
+each carried a `target-framework` input that no step ever consumed. Both had silently drifted from what the workflow
+actually did; both are the shape of thing the CONVENTIONS.md rule exists to catch before it ships.
+
+#### Design of the Library Outputs
+
+The diagnostic outputs are designed to be human-readable in the logs, but also machine-readable for automated testing. The library provides functions to dump variables, print stack traces, and log messages with different severity levels (`trace`, `info`, `warning`, `error`).
+
+##### Logging Functions
+
+The four logging functions (`trace`, `info`, `warning`, `error`) are designed to be used in scripts to log messages with different severity levels. Each function reads from `stdin`  or from parameters and writes to the appropriate output stream (`stdout` or `stderr`). For better comprehension and maintainability, they add log level visual emojis, dump of the call stack, etc.
+
+```text
+❌  ERROR: /home/valo/repos/vm2/vm2.DevOps/scripts/bash/lib/_predicates.sh (104): 5: An argument has an invalid nameref (e.g., expected a valid variable name reference but got an invalid one).
+           is_defined_array() requires argument 1 to be a valid indexed-array variable name (provided 'tests/Ulid/Ulid.Tests.csproj').
+    - get_target_path      (/home/valo/repos/vm2/vm2.DevOps/scripts/bash/lib/_dotnet.sh: 799)
+    - main                 (/home/valo/repos/vm2/vm2.DevOps/.github/scripts/run-tests.sh: 169)
+```
+
+The library logging is based on four central functions that read from `stdin` and write to `stdout`, `stderr`, and optionally to the GitHub Actions step summary file and actions logs, implementing a `tee`-like behavior. The goal of the functions is to abstract the logging mechanism so that scripts can log messages without worrying about the underlying output streams and at the same time to satisfy the logging requirements.
+
+When the scripts are executing locally, the requirements are standard: log to the familiar `stdout` and `stderr` streams. But when the scripts are executing in GitHub Actions, the requirements are different: log to the GitHub Actions step summary file and to the actions logs. Yes, the logs are interleaved with GH step summary outputs, which improves the maintainability. The library logging functions handle this automatically, so that scripts can log messages without worrying about the underlying output streams. To achieve this goal, the library uses streaming helpers functions: `to_stdout`, `to_stderr`, `to_traceout` that implement their interface contracts differently, depending on the execution context (local vs GitHub Actions).
+
+On the local machine, the consuming script simply sources the core `source "lib/core.sh"` and the logging functions are implemented in `_diagnostics.sh` rather trivially:
+
+```bash
+function to_stdout() {
+    local _line
+    while IFS= read -r _line; do echo "$_line"; done
+}
+```
+
+The four logging functions write to the appropriate helper and in turn they write to the appropriate output stream:
+
+```text
+info()    ─────► to_stdout()   ─────► stdout
+warning() ─────► to_stderr()   ─────► stderr
+error()   ─────► to_stderr()   ─────► stderr
+trace()   ─────► to_traceout() ─────► stderr
+```
+
+If you need to write a script for both local and GitHub Actions contexts, you must source different core file: `gh_core.sh`, which in turn sources `core.sh` and `_diagnostics.sh`. This script implements the same interface contract (overrides the `to_*` functions), but implements them differently. Now the `to_*` functions write to the GitHub Step Summary AND to the standard devices (which on GitHub are mapped to the action log files), similar to `tee`. Now the mapping of the logging functions is:
+
+```text
+trace()   ─────► to_traceout() ──┬──► stderr (log)
+                                 └──► github_step_summary
+
+info()    ─────► to_stdout()   ──┬──► stdout (log)
+                                 └──► github_step_summary
+
+warning() ─────► to_stderr()   ──┬──► stderr (log)
+                                 └──► github_step_summary
+
+error()   ─────► to_stderr()   ──┬──► stderr (log)
+                                 └──► github_step_summary
+
+trace()   ─────► to_traceout() ──┬──► stderr (log)
+                                 └──► $trace_to_summary?
+                                             │
+                                            Yes
+                                             └──► github_step_summary
+
+```
+
+The overriding code is:
+
+```bash
+function to_stdout() {
+    local _line
+    while IFS= read -r _line; do
+        echo "$_line"
+        echo "$_line" >> "$github_step_summary"
+    done
+}
+```
+
+It turned out that having traces in the summary was not that helpful in a long run. That's why there is a switch `$trace_to_summary`, that can be turned on and off:
+
+```bash
+declare -x github_step_summary=${GITHUB_STEP_SUMMARY:-"$_ignore"} # _ignore is "/dev/null"
+declare -x trace_to_summary=${TRACE_TO_SUMMARY:-false}
+
+function to_traceout() {
+    local _line
+    while IFS= read -r _line; do
+        echo "$_line" >&2
+        $trace_to_summary && echo "$_line" >> "$github_step_summary"
+    done
+    return "$success"
+}
+```
+
+As you can see the functions do not write to the GitHub Step Summary file directly, but they write to a variable `$github_step_summary` that is set in `gh_core.sh`. It's value depends on the context: if the script is running in GitHub Actions, it points to the GitHub Step Summary file, otherwise it points to `/dev/null`. This way the logging functions can be used in both contexts without any changes.
+
+##### Free Form Output to the GitHub Step Summary
+
+In the same spirit the library provides a function `to_summary` that writes markdown text to the GitHub Step Summary file. The helper `to_summary` writes to either to `to_stdout` or to the `glow` application. The function is used to write free-form markdown text (e.g. tables) to the GitHub Step Summary file or render it to the console via `glow`.
+
+##### Communicating Key-Value Pairs to Downstream Jobs via GitHub Actions Output
+
+The requirements are:
+
+1. In the GitHub Actions environment the jobs MUST be able to send key-value pairs to the downstream jobs via the GitHub Actions output stream `$GITHUB_OUTPUT`.
+1. The key-value pairs need to be logged also in the action's logs or to `stdout` in the standalone case for better maintainability.
+1. If the values are stored in bash variables, the names of the variables and the keys of the corresponding key-value pairs can be different only by naming conventions: the bash variables MUST be in `snake_case`; and the keys - in `kebab-case` (see [Naming Conventions](#naming-conventions)). E.g. the var `build_projects` should be written as `build-projects` key. The mechanism MUST be able to take a list of variable names (namerefs) and write them as `<key>=<value>` to `$GITHUB_OUTPUT`.
+
+These requirements are implemented in the function `args_to_github_output` which takes a list of variable names, transforms the names to keys, and writes the &lt;key&gt;=&lt;variable value&gt; strings to `$GITHUB_OUTPUT`. The function also logs the key-value pairs to `stdout` for better maintainability. Both of these outputs are done via the function `to_output` which is similar to the logging `to_*` functions, but it writes to `stdout` and to `$GITHUB_OUTPUT` in GitHub Actions or to `/dev/null` if standalone.
+
+```bash
+source $DEVOPS_LIB_DIR/gh_core.sh
+
+build_projects='["vm2.Ulid.slnx"]'
+test_projects='["tests/Ulid/Ulid.Tests.csproj", "tests/UlidTool/UlidTool.Tests.csproj"]'
+runners_os='["ubuntu-latest"]'
+
+args_to_github_output build_projects test_projects runners_os
+```
+
+Outputs:
+
+```text
+build-projects=["vm2.Ulid.slnx"]
+test-projects=["tests/Ulid/Ulid.Tests.csproj", "tests/UlidTool/UlidTool.Tests.csproj"]
+runners-os=["ubuntu-latest"]
+```
+
+These kebab-case keys are then referenced in the workflow's `outputs:` map and passed to reusable workflows as `with: inputs`.
+
+#### Utility Scripts (`/scripts/bash/src/`)
 
 Development-time scripts not used in CI:
 
@@ -349,20 +528,68 @@ The build pipeline uses a dual-layer NuGet cache and a build artifact cache.
 
 ### Build Artifact Handoff (workflow artifacts, not cache)
 
-The build job uploads the compiled outputs (`**/bin/{config}` and `**/obj`) as a **workflow artifact** named
-`build-artifacts-{os}-{configuration}-{project-slug}` with `retention-days: 1`. Downstream jobs (test, benchmarks, pack)
-download it by pattern (`merge-multiple: true`) to avoid rebuilding.
+The build job uploads the compiled outputs (`**/bin/{config}` and `**/obj`) as a **workflow artifact** named `build-artifacts-{os}-{configuration}-{project-slug}` with `retention-days: 1`. Downstream jobs (test, benchmarks, pack) download it by pattern (`merge-multiple: true`) to avoid rebuilding.
 
-This intra-run handoff deliberately does **not** use the Actions cache: the cache service is designed for cross-run reuse
-and gives no read-after-write guarantee — a freshly saved entry may not be visible to a lookup seconds later (observed
-2026-06-11: 4/4 deterministic restore misses ~25s after a verified save, while the same key restored fine hours later).
-Workflow artifacts are synchronous and scoped to the run.
+This intra-run handoff deliberately does **not** use the Actions cache: the cache service is designed for cross-run reuse and gives no read-after-write guarantee — a freshly saved entry may not be visible to a lookup seconds later (observed   2026-06-11: 4/4 deterministic restore misses ~25s after a verified save, while the same key restored fine hours later). Workflow artifacts are synchronous and scoped to the run.
 
 ### Cache Cleanup
 
 The `_clear_cache.yaml` workflow provides emergency cleanup. It restricts deletions to three allowlisted prefixes: `nuget-`,
-`build-artifacts-`, and `bencher-cli-`. (The `build-artifacts-` prefix is legacy — these caches are no longer created; the
-prefix remains allowlisted only to purge leftover entries until they age out.)
+`build-artifacts-`, and `bencher-cli-`. (The `build-artifacts-` prefix is legacy — these caches are no longer created; the prefix remains allowlisted only to purge leftover entries until they age out.)
+
+## Benchmark Threshold Management
+
+Bencher.dev tracks benchmark results over time and alerts on regressions by comparing a run's numbers against
+**thresholds it computes from previously recorded history** (percentage thresholds from the recorded variance;
+static thresholds, like GC-collection caps, from a fixed number). Two independent mechanisms exist for managing
+those thresholds, at very different scales — a lightweight per-run escape valve, and a heavier deliberate rebuild.
+
+### Per-run threshold reset (`reset-benchmark-thresholds`)
+
+A boolean that threads through the whole CI call chain for a single dispatch:
+
+```text
+CI.yaml (workflow_dispatch input)
+  → _ci.yaml (workflow_call input, sanitized by validate-input.sh)
+    → _benchmarks.yaml (workflow_call input, per benchmark-project × runner-os matrix leg)
+      → upload-bencher-results.sh --reset-thresholds true|false
+        → adds --thresholds-reset to the `bencher run` invocation
+```
+
+Normal CI runs test the new benchmark numbers *against* Bencher's already-stored thresholds and fail/alert on
+regression. When a change legitimately shifts performance (a new safety check, a different allocation pattern) and
+that one run should not alert, flip this to `true` for that dispatch. Bencher then takes this run's own numbers as
+the new baseline going forward, instead of comparing against the old one. It is a single data point, immediate,
+opt-in, and scoped only to the run it is set on — routine housekeeping, not a structural operation.
+
+### Rebuilding benchmark history
+
+Bencher's percentage/static thresholds need **recorded variance across multiple runs** to mean anything — a single
+`--thresholds-reset` point gives it no spread to learn "normal" from. A full history rebuild is needed whenever the
+entire baseline goes stale: a runner-image upgrade, new hardware, or a benchmark restructure. The chain, bottom-up:
+
+- **`rebuild-bench-history-run.sh`** (the actual work) — discovers every `*.csproj` under `benchmarks/` (or takes
+  one explicitly via `--benchmark-project`), and for each, loops `--repeat` times (default 10). Each iteration is
+  an independent process run of `run-benchmarks.sh` (a fresh build the first time, since this workflow restores no
+  build-artifact cache), then uploads the JSON result via a **bare** `bencher run` — deliberately no
+  `--threshold-*`, no `--err`, so one noisy iteration never aborts the loop. Record-only.
+- **`_rebuild_bench_history.yaml`** (reusable workflow, lives in vm2.DevOps) — installs the Bencher CLI, checks
+  out, sets up .NET, then calls the script above with the right `--bencher-project`/`--bencher-testbed`/
+  `--bencher-branch`.
+- **`RebuildBenchHistory.yaml`** (per-repo entry point, e.g. in vm2.Ulid) — the actual `workflow_dispatch` trigger
+  a human clicks (UI or phone), with a `repeat` input. Identical copy in every package repo; a repo with no
+  `benchmarks/` simply has nothing to do.
+- **`rebuild-bench-history.sh`** (fan-out convenience, vm2.DevOps-only) — loops the hardcoded `vm2_repositories`
+  list (`_constants.sh`), probes each repo's GitHub API for a `benchmarks/` directory, and for each hit, dispatches
+  *that* repo's own `RebuildBenchHistory.yaml` via `gh workflow run ... -f repeat=N`. Fire-and-forget: it does not
+  wait, and every repo's rebuild proceeds independently in its own Actions.
+
+### When to use which
+
+| Situation                                                                    | Mechanism                    |
+| :--------------------------------------------------------------------------- | :--------------------------- |
+| One PR/run has an expected, understood regression                            | `reset-benchmark-thresholds` |
+| The whole baseline is stale (runner change, new hardware, benchmark rewrite) | Rebuild benchmark history    |
 
 ## Script Distribution
 
@@ -418,34 +645,4 @@ Consistent naming transforms flow across the layers:
 | Script parameters          | `--lower-kebab-case`      | `--max-regression-pct`  |
 | Script variables           | `lower_snake_case`        | `max_regression_pct`    |
 
-### `args_to_github_output` — Automatic Name Translation
-
-The `args_to_github_output` function (defined in `gh_core.sh`) bridges the naming gap between bash scripts and GitHub Actions.
-It takes a list of bash variable names in `snake_case`, converts each to `kebab-case` (replacing `_` with `-`), and writes them
-to `$GITHUB_OUTPUT`.
-
-Every consumer workflow's `gather-params` step uses this function:
-
-```bash
-source $DEVOPS_LIB_DIR/gh_core.sh
-
-build_projects='...'
-test_projects='...'
-runners_os='...'
-
-args_to_github_output \
-    build_projects \
-    test_projects \
-    runners_os
-```
-
-This outputs:
-
-```text
-build-projects=...
-test-projects=...
-runners-os=...
-```
-
-These kebab-case keys are then referenced in the workflow's outputs: map and passed to reusable workflows as with: inputs. This
-function is used in every consumer workflow template (CI, Prerelease, Release).
+---

@@ -1,8 +1,13 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
 name: "Rebuild Benchmark History (fan-out)"
 
-# Manually triggered (UI/phone) fan-out: dispatches each vm2 repo's own RebuildBenchHistory.yaml to re-record its benchmark
-# history to Bencher.dev. Fire-and-forget -- it kicks off the per-repo runs and returns; the rebuilds proceed in each repo's
-# own Actions. Use after a runner-image change or a benchmark restructure invalidates the existing baselines.
+# Manually triggered (UI/phone) fan-out across every vm2 repository that has a 'benchmarks/' directory. For each
+# such repo, dispatches that repo's own 'RebuildBenchHistory.yaml' workflow (which calls _rebuild_bench_history.yaml
+# in this repo), re-recording its benchmark history to Bencher.dev N times. Fire-and-forget: this workflow
+# dispatches the per-repo runs and returns immediately -- the rebuilds proceed independently in each repo's own
+# Actions. See docs/ARCHITECTURE.md#benchmark-threshold-management for the full picture.
 
 on:
   workflow_dispatch:
@@ -13,7 +18,7 @@ on:
         default: 10
 
 permissions:
-  contents: read # Only to check out vm2.DevOps for its scripts; cross-repo dispatch uses BENCH_DISPATCH_PAT, not GITHUB_TOKEN.
+  contents: read
 
 jobs:
   fan-out:
@@ -26,11 +31,12 @@ jobs:
       - name: Setup DevOps environment variables
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
 
-      - name: Dispatch rebuilds (fire-and-forget)
+      # GH_TOKEN here is BENCH_DISPATCH_PAT, not the default GITHUB_TOKEN: dispatching a workflow in ANOTHER
+      # repository requires a token with Actions:write on that repo, which the default token does not have. See
+      # docs/CONFIGURATION.md#actions-secrets for how this secret is provisioned (vm2.DevOps only).
+      - name: Fan out benchmark-history rebuild
         shell: bash
         env:
-          # BENCH_DISPATCH_PAT: fine-grained PAT with 'Actions: write' + 'Contents: read' on the target repos.
-          # The default GITHUB_TOKEN cannot trigger workflows in other repositories, hence the PAT.
           GH_TOKEN: ${{ secrets.BENCH_DISPATCH_PAT }}
         run: |
           rebuild-bench-history.sh --repeat "${{ inputs.repeat }}"

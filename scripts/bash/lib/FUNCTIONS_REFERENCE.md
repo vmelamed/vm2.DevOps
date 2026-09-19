@@ -388,11 +388,11 @@ Validates .NET version input format.
 
 .NET build tooling support.
 
-### extractDotnetBuildInfo()
+### extract_dotnet_build_info()
 
 Parses detailed dotnet build/pack output from stdin, sets global version/result variables, and emits `key=value` pairs to stdout.
 
-### displayDotnetBuildSummary()
+### display_dotnet_build_summary()
 
 Reads `key=value` build info from stdin and prints a formatted summary table via `dump_vars`.
 

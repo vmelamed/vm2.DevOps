@@ -1,15 +1,35 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
 name: Setup DevOps Environment
 description: Provides access to vm2.DevOps bash scripts for CI/CD workflows
 
 runs:
   using: composite
   steps:
+    - name: Determine this action's own ref
+      # GitHub extracts a composite action from a tarball into
+      # .../_actions/<owner>/<repo>/<ref>/<action-subpath> -- there's no .git directory there to
+      # query, and github.action_ref reflects whichever NESTED action is currently executing
+      # (confirmed live: it read "v7", the pinned version of the actions/checkout step below,
+      # not this action's own ref), so the path is the only reliable signal for "what ref was
+      # THIS action invoked with".
+      if: github.repository != 'vmelamed/vm2.DevOps'
+      shell: bash
+      run: |
+        # Strip the known action subpath from the end, not the first "/" from the front, so a
+        # ref that itself contains a slash (e.g. "feature/lockfile-refresh") survives intact.
+        ref="${GITHUB_ACTION_PATH#*/_actions/*/*/}"
+        ref="${ref%/.github/actions/setup-env}"
+        echo "VM2_DEVOPS_REF=$ref" >> "$GITHUB_ENV"
+
     - name: Checkout vm2.DevOps scripts
       # Clone only the scripts from vm2.DevOps and invoke functions from scripts/bash/lib
       if: github.repository != 'vmelamed/vm2.DevOps'
       uses: actions/checkout@v7
       with:
         repository: vmelamed/vm2.DevOps
+        ref: ${{ env.VM2_DEVOPS_REF }}
         path: vm2-devops
         persist-credentials: false
         sparse-checkout: |+

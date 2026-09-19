@@ -4,30 +4,28 @@
 
 set -euo pipefail
 
-# shellcheck disable=SC2119
-
 script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../../scripts/bash/lib")
-declare -r script_name
-declare -r script_dir
-declare -r lib_dir
+
+declare -xr script_name
+declare -xr script_dir
+declare -xr lib_dir
 
 # shellcheck disable=SC1091 # Not following: ./core.sh: openBinaryFile: does not exist (No such file or directory)
 source "$lib_dir/gh_core.sh"
 
-declare -rxa vm2_repositories
-declare -rx key_owner
+declare -xra vm2_repositories
+declare -xr key_owner
 
-declare -rxi success
-declare -rxi err_argument_value
-declare -rxi err_tool_error
+declare -xri success
+declare -xri err_argument_value
+declare -xri err_tool_error
 
 declare -x _ignore
-declare -x dry_run
 
-declare -rix default_repeat=10
-declare -rx default_workflow="RebuildBenchHistory.yaml"
+declare -xri default_repeat=10
+declare -xr default_workflow="RebuildBenchHistory.yaml"
 
 declare -x owner=""
 declare -xi repeat=${REPEAT:-$default_repeat}
@@ -41,7 +39,8 @@ get_arguments "$@"
 # Resolve the GitHub owner: --owner, else $GITHUB_REPOSITORY_OWNER (set by Actions), else derive from this repo's remote.
 [[ -n "$owner" ]] || owner="${GITHUB_REPOSITORY_OWNER:-}"
 if [[ -z "$owner" ]]; then
-    self_root=$(root_working_tree "$script_dir") || true
+    declare self_root
+    root_working_tree "$script_dir" self_root || true
     if [[ -n "${self_root:-}" ]]; then
         declare -A self_state=()
         get_repo_state "$self_root" self_state false || true
@@ -49,17 +48,18 @@ if [[ -z "$owner" ]]; then
     fi
 fi
 
-(( repeat >= 1 )) || error -ec "$err_argument_value" "repeat must be a positive integer (got '$repeat')."
-[[ -n "$owner" ]] || error -ec "$err_argument_value" "Could not determine the GitHub owner. Pass --owner or set \$GITHUB_REPOSITORY_OWNER."
+(( repeat >= 1 ))           || error -ec "$err_argument_value" "repeat must be a positive integer (got '$repeat')."
+[[ -n "$owner" ]]           || error -ec "$err_argument_value" "Could not determine the GitHub owner. Pass --owner or set \$GITHUB_REPOSITORY_OWNER."
 command -v gh &> "$_ignore" || error -ec "$err_tool_error" "The GitHub CLI 'gh' was not found on PATH."
+
 exit_if_has_errors
 
-declare -rx owner
+declare -xr owner
 
 # Authentication: in a workflow the caller exports the BENCH_DISPATCH_PAT secret as GH_TOKEN; locally, export
 # BENCH_DISPATCH_PAT yourself (it is an env var, NOT a repo secret) or rely on the ambient 'gh auth' credentials.
 [[ -z "${BENCH_DISPATCH_PAT:-}" ]] || export GH_TOKEN="${GH_TOKEN:-$BENCH_DISPATCH_PAT}"
-[[ -n "${GH_TOKEN:-}" ]] || warning "Neither \$GH_TOKEN nor \$BENCH_DISPATCH_PAT is set; relying on the ambient 'gh auth' credentials."
+[[ -n "${GH_TOKEN:-}" ]]           || warning "Neither \$GH_TOKEN nor \$BENCH_DISPATCH_PAT is set; relying on the ambient 'gh auth' credentials."
 
 declare -i dispatched=0
 declare -i no_bench=0
@@ -97,6 +97,6 @@ dispatched_list=""
     echo "  dispatched : $dispatched$dispatched_list"
     echo "  no benchmarks/skipped : $no_bench"
     echo "  failed : $failed"
-    $dry_run &&
+    is_dry_run &&
     echo "  (dry run — workflows were NOT dispatched; the benchmarks/ probe still ran)" || true
 } | to_summary

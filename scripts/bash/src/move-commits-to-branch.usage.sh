@@ -1,0 +1,54 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
+# shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
+
+declare -xr common_args_usage
+declare -xr script_name
+
+#---------------------------------------------------------------------------------------------
+# @description Builds and prints the usage/help text for 'move-commits-to-branch.sh'. When '$1' is true, appends the common
+# switches and environment variables sections; otherwise prints only the short usage summary.
+#
+# @arg $1 bool Whether to include the long-form help (common switches and environment variables sections).
+#
+# @exitcode success/positive=0
+#
+# @stdout The usage text for 'move-commits-to-branch.sh'.
+#---------------------------------------------------------------------------------------------
+function usage_text()
+{
+    (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
+    is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1:-<none>})."
+    exit_if_has_bugs
+
+    local _long_text=$1
+    local _common_args=''
+
+    $_long_text  &&  _common_args=$common_args_usage || _common_args=''
+
+    cat << EOF
+Usage:
+  $script_name [ --<long option> <value> | -<short option> <value> | --<long switch> | -<short switch> ]*
+
+Moves commits from a specified commit SHA onwards to a new branch, resetting the main branch to the commit before the specified
+SHA. This will:
+  1. Create new branch <new_branch> with all current commits
+  2. Reset main to commit BEFORE <commit_sha>
+  3. Push the new branch to the origin (GitHub)
+  4. Force push main to the origin (GitHub)
+  5. If --check-out-new is specified, check out the new branch
+
+Options:
+  -c, --commit-sha <commit-sha> The commit SHA from which to move commits to the new branch.
+  -b, --branch <new-branch>     The name of the new branch to create and move commits to.
+
+Switches:
+  -n, --check-out-new           After moving the commits, check out the new branch.
+$_common_args
+Examples:
+  $script_name --commit-sha ff5c2d182c0d3a01c1f1dfd66c9267f0569d9802 --branch feature/my-feature
+  $script_name -c ff5c2d1 -b feature/my-feature -n
+EOF
+
+}

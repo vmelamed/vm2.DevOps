@@ -4,32 +4,29 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr common_switches
-declare -xr common_vars
+declare -xr common_args_usage
 declare -xr script_name
 
-declare -arx allowed_commit_types
+declare -xra allowed_commit_types
 
 function usage_text()
 {
+    (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
+    is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1:-<none>})."
+    exit_if_has_bugs
+
     local _long_text=$1
-    local _switches=""
-    local _vars=""
+    local _common_args=''
 
-    if $_long_text; then
-
-        _switches=$'\n'"Switches:"$'\n'"$common_switches"
-        _vars=$'\n'"Environment Variables:"$'\n'"$common_vars"
-
-    fi
+    $_long_text  &&  _common_args=$common_args_usage || _common_args=''
 
     local _types
-    _types=$(printf '%s | ' "${allowed_commit_types[@]}")
+    printf -v _types -- '%s | ' "${allowed_commit_types[@]}"
     _types=${_types% | }
 
     cat << EOF
 Usage:
-  $script_name --base-ref <ref> [options]
+  $script_name [<base-ref>] [--<long option> <value> | -<short option> <value> | --<long switch> | -<short switch> ]*
 
 Description:
   Validates that all commit messages between <base-ref> and HEAD follow the Conventional Commits specification
@@ -53,11 +50,12 @@ Description:
     fix(ui):    correct button alignment on homepage
     chore(ci):  update GitHub Actions workflow
 
-Options:
-  -b, --base-ref <ref>          Required. Git ref to compare against (e.g. origin/main, a SHA, or a tag).
-$_switches$_vars
+Argument:
+  <base-ref>                         Required. Git ref to compare against (e.g. origin/main, a SHA, or a tag).
+
+$_common_args
 Examples:
-    $script_name --base-ref origin/main
-    $script_name --base-ref v1.0.0 --verbose
+  $script_name origin/main
+  $script_name v1.0.0 --verbose
 EOF
 }

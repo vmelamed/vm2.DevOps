@@ -4,28 +4,29 @@
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 # shellcheck disable=SC1091 # Disable warnings for word splitting and globbing issues in the following source commands.
 
-#-------------------------------------------------------------------------------
+#=============================================================================================
 # This script defines functions and regular expressions for working with semantic versions (SemVer) and MinVer tags.
 # It includes functions for validating and comparing semantic versions, parsing version components.
-#-------------------------------------------------------------------------------
+#=============================================================================================
 
 # Circular include guard
 (( ${__VM2_LIB_SEMVER_SH_LOADED:-0} == 1 )) && return 0
-declare -gr __VM2_LIB_SEMVER_SH_LOADED=1
+declare -ri __VM2_LIB_SEMVER_SH_LOADED=1
 
-declare -rxi success
-declare -rxi failure
-declare -rxi positive
-declare -rxi negative
-declare -rxi err_invalid_arguments
-declare -rxi err_argument_type
-declare -rxi err_argument_value
+declare -xri success
+declare -xri failure
+declare -xri positive
+declare -xri negative
+declare -xri err_invalid_arguments
+declare -xri err_argument_type
+declare -xri err_argument_value
+
+declare -x _ignore
 
 if [[ ! -v lib_dir || -z "$lib_dir" ]]; then
     lib_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 fi
 
-# shellcheck disable=SC2154 # _ignore is referenced but not assigned.
 if ! declare -pF "error" > "$_ignore"; then
     source "$lib_dir/_diagnostics.sh"
 fi
@@ -55,94 +56,98 @@ declare -xr minverTagPrefixRegex="^$minverTagPrefixRex$"
 declare -xr minverPrereleaseIdRegex="^$minverPrereleaseIdRex$"
 
 # Regular expressions that test if a string contains a git tag with semantic version and MinVer prefix (e.g. v1.2.3-alpha.3)
-declare -rx semverTagRex="$minverTagPrefixRex$semverRex"
-declare -rx semverTagPrereleaseRex="$minverTagPrefixRex$semverPrereleaseRex"
-declare -rx semverTagReleaseRex="$minverTagPrefixRex$semverReleaseRex"
+declare -xr semverTagRex="$minverTagPrefixRex$semverRex"
+declare -xr semverTagPrereleaseRex="$minverTagPrefixRex$semverPrereleaseRex"
+declare -xr semverTagReleaseRex="$minverTagPrefixRex$semverReleaseRex"
 
 # Regular expressions that test if a string is a git tag with semantic version (e.g. v1.2.3-alpha.3)
-declare -rx semverTagRegex="^$minverTagPrefixRex$semverRex$"
-declare -rx semverTagPrereleaseRegex="^$minverTagPrefixRex$semverPrereleaseRex$"
-declare -rx semverTagReleaseRegex="^$minverTagPrefixRex$semverReleaseRex$"
+declare -xr semverTagRegex="^$minverTagPrefixRex$semverRex$"
+declare -xr semverTagPrereleaseRegex="^$minverTagPrefixRex$semverPrereleaseRex$"
+declare -xr semverTagReleaseRegex="^$minverTagPrefixRex$semverReleaseRex$"
 
+#---------------------------------------------------------------------------------------------
+# @description Dumps the SemVer/MinVer regular expression constants to stdout, grouped by
+#   category, via `dump_vars`.
+#
+# @noargs
+#
+# @stdout Formatted table of the regex constants (see `dump_vars`).
+#
+# @example
+#   print_semver_regexes
+#---------------------------------------------------------------------------------------------
 function print_semver_regexes()
 {
-    dump_vars --quiet --force \
-    --header "Semantic Version Components" \
-    majorLabelRex \
-    minorLabelRex \
-    patchLabelRex \
-    prereleaseLabelRex \
-    buildLabelRex \
-    --header "Semantic Versions" \
-    semverPrereleaseRex \
-    semverReleaseRex \
-    semverRex \
-    --header "Semantic Version/MinVer Tags" \
-    semverTagRegex \
-    semverTagReleaseRegex \
-    semverTagPrereleaseRegex \
-
+    dump_vars \
+        --quiet \
+        --force \
+        --header "Semantic Version Components" \
+        majorLabelRex \
+        minorLabelRex \
+        patchLabelRex \
+        prereleaseLabelRex \
+        buildLabelRex \
+        --header "Semantic Versions" \
+        semverPrereleaseRex \
+        semverReleaseRex \
+        semverRex \
+        --header "Semantic Version/MinVer Tags" \
+        semverTagRegex \
+        semverTagReleaseRegex \
+        semverTagPrereleaseRegex
 }
 
-#-------------------------------------------------------------------------------
-# @description Validates the MinVer tag prefix and (optionally) the MinVer prerelease identifier template against their
-# expected regular expressions.
+#---------------------------------------------------------------------------------------------
+# @description Validates the MinVer tag prefix and (optionally) the MinVer prerelease
+#   identifier template against their expected regular expressions.
 #
 # Notes:
-#   - Unlike most other `validate_*` functions in this codebase, this one takes plain string values, not nameref-s.
+#   - Unlike most other `validate_*` functions in this codebase, this one takes plain string
+#     values, not nameref-s.
 #
 # @arg $1 string The MinVer tag prefix (e.g., "v", "ver.", "release-").
-# @arg $2 string The MinVer default prerelease identifier template (e.g., "preview.0", as in 1.2.3-preview.11). Optional.
+# @arg $2 string The MinVer default prerelease identifier template (e.g., "preview.0", as in
+#   1.2.3-preview.11). Optional.
 #
-# @exitcode 0 Both arguments (or just the prefix, if $2 is omitted) are valid.
-# @exitcode 2 One or both arguments are invalid, or the wrong number of arguments was provided.
+# @exitcode success/positive=0: Both arguments (or just the prefix, if $2 is omitted) are valid.
 #
 # @example
 #   validate_semverTagComponents "v" "preview.0"
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 function validate_semverTagComponents()
 {
-    local -i _rc=$success
+    (( $# == 1 || $# == 2 ))                                || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one or two arguments (provided $#):" \
+                                                                                                "  - the SemVer tag prefix used by MinVer" \
+                                                                                                "  - default prerelease identifier template, optional"
+    [[ ! -v 1 || $1 =~ $minverTagPrefixRegex ]]             || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the MinVer tag prefix, to match '$minverTagPrefixRegex' (provided '${1:-<none>}'). Did you pass a variable name instead of its value?"
+    [[ ! -v 2 || -z $2 || $2 =~ $minverPrereleaseIdRegex ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires optional argument 2, the MinVer prerelease identifier template, to match '$minverPrereleaseIdRegex' (provided '${2:-<none>}'). Did you pass a variable name instead of its value?"
 
-    (( $# == 1 || $# == 2 )) || {
-        _rc=$err_invalid_arguments
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires one or two arguments (provided $#): the SemVer tag prefix used by MinVer and an optional default prerelease identifier template."
-    }
-    [[ -v 1 && $1 =~ $minverTagPrefixRegex ]] || {
-        _rc=$err_argument_value
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the MinVer tag prefix, to match '$minverTagPrefixRegex' (provided '${1-<missing>}'). Did you pass a variable name instead of its value?"
-    }
-    [[ ! -v 2 || $2 =~ $minverPrereleaseIdRegex ]] || {
-        _rc=$err_argument_value
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires optional argument 2, the MinVer prerelease identifier template, to match '$minverPrereleaseIdRegex' (provided '${2-<missing>}'). Did you pass a variable name instead of its value?"
-    }
-
-    (( _rc == success )) || return "$err_invalid_arguments"
-    return "$success"
+    exit_if_has_bugs
 }
 
 # semver components indexes in BASH_REMATCH
-declare -irx semver_major=1
-declare -irx semver_minor=2
-declare -irx semver_patch=3
-declare -irx semver_prerelease=4
-declare -irx semver_build=5
+declare -xri semver_major=1
+declare -xri semver_minor=2
+declare -xri semver_patch=3
+declare -xri semver_prerelease=4
+declare -xri semver_build=5
 
-declare -rxi success
-declare -rxi failure
+declare -xri success
+declare -xri failure
 
 # RETURN CODES THAT SHOULD NOT BE REUSED FOR OTHER PURPOSES:
-declare -rxi err_invalid_arguments
-declare -rxi err_argument_type
-declare -rxi err_argument_value
+declare -xri err_invalid_arguments
+declare -xri err_argument_type
+declare -xri err_argument_value
 
 # comparison result constants
-declare -irx rc_equal=$success
-declare -irx rc_greater_than=1
-declare -irx rc_less_than=255
+declare -xri rc_equal=$success
+declare -xri rc_greater_than=1
+declare -xri rc_less_than=255
 
-#-------------------------------------------------------------------------------
-# @description Compares two semantic versions according to the Semantic Versioning 2.0.0 specification.
+#---------------------------------------------------------------------------------------------
+# @description Compares two semantic versions according to the Semantic
+#   Versioning 2.0.0 specification.
 #
 # Notes:
 #   - Build metadata is ignored in comparisons, per the semver spec.
@@ -150,11 +155,9 @@ declare -irx rc_less_than=255
 # @arg $1 string The first semantic version to compare.
 # @arg $2 string The second semantic version to compare.
 #
-# @exitcode 0 ($rc_equal) version1 == version2.
-# @exitcode 1 ($rc_greater_than) version1 > version2.
-# @exitcode 255 ($rc_less_than) version1 < version2.
-# @exitcode 2 ($err_invalid_arguments) Wrong argument count.
-# @exitcode 4 ($err_argument_value) Either version1 or version2 fails to match $semverRegex.
+# @exitcode rc_equal=0/success: version1 == version2.
+# @exitcode rc_greater_than=1/failure: version1 > version2.
+# @exitcode rc_less_than=255: version1 < version2.
 #
 # @example
 #   compare_semver "1.2.3" "1.2.4"
@@ -164,25 +167,16 @@ declare -irx rc_less_than=255
 #     "$rc_greater_than")  echo "1.2.3 > 1.2.4" ;;
 #     * )                  error -ec $? -ds 3 "Error comparing versions" ;;
 #   esac
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 function compare_semver()
 {
-    local -i _rc=$success
+    (( $# == 2 ))                      || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
+                                                                            "  - the first semantic versions to compare" \
+                                                                            "  - second semantic versions to compare"
+    [[ ! -v 1 || $1 =~ $semverRegex ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a valid Semantic Versioning 2.0.0 string (provided '${1:-<none>}')."
+    [[ ! -v 2 || $2 =~ $semverRegex ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2 to be a valid Semantic Versioning 2.0.0 string (provided '${2:-<none>}')."
 
-    (( $# == 2 )) || {
-        _rc="$err_invalid_arguments"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires exactly two arguments (provided $#): the first and second semantic versions."
-    }
-    [[ -v 1 && $1 =~ $semverRegex ]] || {
-        _rc="$err_argument_value"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a valid Semantic Versioning 2.0.0 string (provided '${1-<missing>}')."
-    }
-    [[ -v 2 && $2 =~ $semverRegex ]] || {
-        _rc="$err_argument_value"
-        error -sd 3 -ec "$_rc" "${FUNCNAME[0]}() requires argument 2 to be a valid Semantic Versioning 2.0.0 string (provided '${2-<missing>}')."
-    }
-
-    (( _rc == success )) || return "$err_invalid_arguments"
+    exit_if_has_bugs
 
     if [[ "$1" == "$2" ]]; then
         return "$rc_equal"
@@ -288,246 +282,200 @@ function compare_semver()
     return "$rc_equal"
 }
 
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 # @description Tests whether two semantic versions are equal.
 #
 # @arg $1 string The first semantic version string.
 # @arg $2 string The second semantic version string.
 #
-# @exitcode 0 version1 == version2.
-# @exitcode 1 version1 != version2.
-# @exitcode 2 Wrong argument count.
-# @exitcode 4 Either version1 or version2 is not a valid semver string (propagated from compare_semver).
+# @exitcode success/positive=0: version1 == version2.
+# @exitcode failure/negative=1: version1 != version2.
 #
 # @example
 #   if semver_equal "1.2.3" "1.2.3"; then echo "Versions are equal"; fi
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 function semver_equal()
 {
-    local -i _rc=$rc_equal
+    local -i _rc="$success"
 
-    (( $# == 2 )) || {
-        _rc=$err_invalid_arguments
-        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
-    }
-
-    (( _rc == rc_equal )) || return "$err_invalid_arguments"
-
-    compare_semver "$1" "$2" || _rc=$?
+    compare_semver "$@" || _rc=$?
 
     if (( _rc == rc_equal )); then
         return "$success"
     elif (( _rc == rc_greater_than || _rc == rc_less_than )); then
         return "$failure"
     else
-        # Propagate invalid-arguments error from compare_semver, or any other unexpected error code.
+        # Unreachable in practice: compare_semver() exits the process (via bug/exit_if_has_bugs)
+        # on invalid input rather than returning an error code to us.
         return "$_rc"
     fi
 }
 
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 # @description Tests whether the first semantic version is greater than the second.
 #
 # @arg $1 string The first semantic version string.
 # @arg $2 string The second semantic version string.
 #
-# @exitcode 0 version1 > version2.
-# @exitcode 1 version1 <= version2.
-# @exitcode 2 Wrong argument count.
-# @exitcode 4 Either version1 or version2 is not a valid semver string (propagated from compare_semver).
+# @exitcode success/positive=0: version1 > version2.
+# @exitcode failure/negative=1: version1 <= version2.
 #
 # @example
 #   if semver_greaterThan "1.2.3" "1.2.2"; then echo "Version 1 is greater"; fi
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 function semver_greaterThan()
 {
-    local -i _rc=$rc_equal
+    local -i _rc="$success"
 
-    (( $# == 2 )) || {
-        _rc=$err_invalid_arguments
-        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
-    }
-
-    (( _rc == rc_equal )) || return "$err_invalid_arguments"
-
-    compare_semver "$1" "$2" || _rc=$?
+    compare_semver "$@" || _rc=$?
 
     if (( _rc == rc_greater_than )); then
         return "$success"
     elif (( _rc == rc_equal || _rc == rc_less_than )); then
         return "$failure"
     else
-        # Propagate invalid-arguments error from compare_semver, or any other unexpected error code.
+        # Unreachable in practice: compare_semver() exits the process (via bug/exit_if_has_bugs)
+        # on invalid input rather than returning an error code to us.
         return "$_rc"
     fi
 }
 
-#-------------------------------------------------------------------------------
-# @description Tests whether the first semantic version is greater than or equal to the second.
+#---------------------------------------------------------------------------------------------
+# @description Tests whether the first semantic version is greater than or equal to the
+#   second.
 #
 # @arg $1 string The first semantic version string.
 # @arg $2 string The second semantic version string.
 #
-# @exitcode 0 version1 >= version2.
-# @exitcode 1 version1 < version2.
-# @exitcode 2 Wrong argument count.
-# @exitcode 4 Either version1 or version2 is not a valid semver string (propagated from compare_semver).
+# @exitcode success/positive=0: version1 >= version2.
+# @exitcode failure/negative=1: version1 < version2.
 #
 # @example
 #   if semver_greaterThanOrEqual "1.2.3" "1.2.2"; then echo "Version 1 is greater or equal"; fi
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 function semver_greaterThanOrEqual()
 {
-    local -i _rc=$rc_equal
+    local -i _rc="$success"
 
-    (( $# == 2 )) || {
-        _rc=$err_invalid_arguments
-        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
-    }
-
-    (( _rc == rc_equal )) || return "$err_invalid_arguments"
-
-    compare_semver "$1" "$2" || _rc=$?
+    compare_semver "$@" || _rc=$?
 
     if (( _rc == rc_equal || _rc == rc_greater_than )); then
         return "$success"
     elif (( _rc == rc_less_than )); then
         return "$failure"
     else
-        # Propagate invalid-arguments error from compare_semver, or any other unexpected error code.
+        # Unreachable in practice: compare_semver() exits the process (via bug/exit_if_has_bugs)
+        # on invalid input rather than returning an error code to us.
         return "$_rc"
     fi
 }
 
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 # @description Tests whether the first semantic version is less than the second.
 #
 # @arg $1 string The first semantic version string.
 # @arg $2 string The second semantic version string.
 #
-# @exitcode 0 version1 < version2.
-# @exitcode 1 version1 >= version2.
-# @exitcode 2 Wrong argument count.
-# @exitcode 4 Either version1 or version2 is not a valid semver string (propagated from compare_semver).
+# @exitcode success/positive=0: version1 < version2.
+# @exitcode failure/negative=1: version1 >= version2.
 #
 # @example
 #   if semver_lessThan "1.2.3" "1.2.4"; then echo "Version 1 is less"; fi
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 function semver_lessThan()
 {
-    local -i _rc=$rc_equal
+    local -i _rc="$success"
 
-    (( $# == 2 )) || {
-        _rc=$err_invalid_arguments
-        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
-    }
-
-    (( _rc == rc_equal )) || return "$err_invalid_arguments"
-
-    compare_semver "$1" "$2" || _rc=$?
+    compare_semver "$@" || _rc=$?
 
     if (( _rc == rc_less_than )); then
         return "$success"
     elif (( _rc == rc_equal || _rc == rc_greater_than )); then
         return "$failure"
     else
-        # Propagate invalid-arguments error from compare_semver, or any other unexpected error code.
+        # Unreachable in practice: compare_semver() exits the process (via bug/exit_if_has_bugs)
+        # on invalid input rather than returning an error code to us.
         return "$_rc"
     fi
 }
 
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 # @description Tests whether the first semantic version is less than or equal to the second.
 #
 # @arg $1 string The first semantic version string.
 # @arg $2 string The second semantic version string.
 #
-# @exitcode 0 version1 <= version2.
-# @exitcode 1 version1 > version2.
-# @exitcode 2 Wrong argument count.
-# @exitcode 4 Either version1 or version2 is not a valid semver string (propagated from compare_semver).
+# @exitcode success/positive=0: version1 <= version2.
+# @exitcode failure/negative=1: version1 > version2.
 #
 # @example
 #   if semver_lessThanOrEqual "1.2.3" "1.2.4"; then echo "Version 1 is less or equal"; fi
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 function semver_lessThanOrEqual()
 {
-    local -i _rc=$rc_equal
+    local -i _rc="$success"
 
-    (( $# == 2 )) || {
-        _rc=$err_invalid_arguments
-        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#): version1 and version2."
-    }
-
-    (( _rc == rc_equal )) || return "$err_invalid_arguments"
-
-    compare_semver "$1" "$2" || _rc=$?
+    compare_semver "$@" || _rc=$?
 
     if (( _rc == rc_equal || _rc == rc_less_than )); then
         return "$success"
     elif (( _rc == rc_greater_than )); then
         return "$failure"
     else
-        # Propagate invalid-arguments error from compare_semver, or any other unexpected error code.
+        # Unreachable in practice: compare_semver() exits the process (via bug/exit_if_has_bugs)
+        # on invalid input rather than returning an error code to us.
         return "$_rc"
     fi
 }
 
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 # @description Tests whether the argument is a valid semantic version (SemVer 2.0.0 format).
 #
 # Notes:
-#   - On success, `BASH_REMATCH` holds the captured groups. Index into it with `$semver_major`, `$semver_minor`,
-#     `$semver_patch`, `$semver_prerelease`, and `$semver_build`.
+#   - On success, `BASH_REMATCH` holds the captured groups. Index into it with
+#     `$semver_major`, `$semver_minor`, `$semver_patch`, `$semver_prerelease`, and
+#     `$semver_build`.
 #
 # @arg $1 string The string to test.
 #
-# @exitcode 0 A valid semver.
-# @exitcode 1 Not a valid semver.
-# @exitcode 2 Invalid arguments (wrong argument count).
+# @exitcode success/positive=0: A valid semver.
+# @exitcode failure/negative=1: Not a valid semver.
 #
 # @example
 #   if is_semver "$version"; then
 #     major=${BASH_REMATCH[$semver_major]}
 #     minor=${BASH_REMATCH[$semver_minor]}
 #   fi
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 function is_semver()
 {
-    (( $# == 1 )) || {
-        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): the version."
-        return "$err_invalid_arguments"
-    }
-    [[ "$1" =~ $semverRegex ]]
+    __test_with_regex "$@" "$semverRegex"
 }
 
-#-------------------------------------------------------------------------------
-# @description Tests whether the argument is a valid semver tag (with the configured MinVer prefix).
+#---------------------------------------------------------------------------------------------
+# @description Tests whether the argument is a valid semver tag (with the configured MinVer
+#   prefix).
 #
 # Notes:
 #   - On success, `BASH_REMATCH` holds the captured groups.
-#   - `$semverTagRegex` is set once at file-load time from the fixed placeholder pattern `$minverTagPrefixRex`.
+#   - `$semverTagRegex` is set once at file-load time from the fixed placeholder pattern
+#     `$minverTagPrefixRex`.
 #
 # @arg $1 string The git tag string to test.
 #
-# @exitcode 0 A valid semver tag.
-# @exitcode 1 Not a valid semver tag.
-# @exitcode 2 Invalid arguments (wrong argument count).
+# @exitcode success/positive=0: A valid semver tag.
+# @exitcode failure/negative=1: Not a valid semver tag.
 #
 # @example
 #   validate_semverTagComponents "v"
 #   if is_semverTag "v1.2.3"; then echo "Valid tag"; fi
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 function is_semverTag()
 {
-    (( $# == 1 )) || {
-        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): the semver tag."
-        return "$err_invalid_arguments"
-    }
-    [[ "$1" =~ $semverTagRegex ]]
+    __test_with_regex "$@" "$semverTagRegex"
 }
 
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 # @description Tests whether the argument is a valid semver prerelease version.
 #
 # Notes:
@@ -535,95 +483,79 @@ function is_semverTag()
 #
 # @arg $1 string The string to test.
 #
-# @exitcode 0 A valid semver prerelease.
-# @exitcode 1 Not a valid semver prerelease.
-# @exitcode 2 Invalid arguments (wrong argument count).
+# @exitcode success/positive=0: A valid semver prerelease.
+# @exitcode failure/negative=1: Not a valid semver prerelease.
 #
 # @example
 #   if is_semverPrerelease "1.2.3-alpha.1"; then echo "Valid prerelease"; fi
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 function is_semverPrerelease()
 {
-    (( $# == 1 )) || {
-        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): the semver prerelease."
-        return "$err_invalid_arguments"
-    }
-    [[ "$1" =~ $semverPrereleaseRegex ]]
+    __test_with_regex "$@" "$semverPrereleaseRegex"
 }
 
-#-------------------------------------------------------------------------------
-# @description Tests whether the argument is a valid semver prerelease tag (with the configured MinVer prefix).
+#---------------------------------------------------------------------------------------------
+# @description Tests whether the argument is a valid semver prerelease tag (with the
+#   configured MinVer prefix).
 #
 # Notes:
 #   - On success, `BASH_REMATCH` holds the captured groups.
-#   - `$semverTagPrereleaseRegex` is set once at file-load time from the fixed placeholder pattern `$minverTagPrefixRex`.
+#   - `$semverTagPrereleaseRegex` is set once at file-load time from the fixed placeholder
+#     pattern `$minverTagPrefixRex`.
 #
 # @arg $1 string The git tag string to test.
 #
-# @exitcode 0 A valid semver prerelease tag.
-# @exitcode 1 Not a valid semver prerelease tag.
-# @exitcode 2 Invalid arguments (wrong argument count).
+# @exitcode success/positive=0: A valid semver prerelease tag.
+# @exitcode failure/negative=1: Not a valid semver prerelease tag.
 #
 # @example
 #   validate_semverTagComponents "v"
 #   if is_semverPrereleaseTag "v1.2.3-beta.2"; then echo "Valid prerelease tag"; fi
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 function is_semverPrereleaseTag()
 {
-    (( $# == 1 )) || {
-        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): the semver prerelease tag."
-        return "$err_invalid_arguments"
-    }
-    [[ "$1" =~ $semverTagPrereleaseRegex ]]
+    __test_with_regex "$@" "$semverTagPrereleaseRegex"
 }
 
-#-------------------------------------------------------------------------------
-# @description Tests whether the argument is a valid semver release version (without a prerelease identifier).
+#---------------------------------------------------------------------------------------------
+# @description Tests whether the argument is a valid semver release version (without a
+#   prerelease identifier).
 #
 # Notes:
 #   - On success, `BASH_REMATCH` holds the captured groups.
 #
 # @arg $1 string The string to test.
 #
-# @exitcode 0 A valid semver release version.
-# @exitcode 1 Not a valid semver release version.
-# @exitcode 2 Invalid arguments (wrong argument count).
+# @exitcode success/positive=0: A valid semver release version.
+# @exitcode failure/negative=1: Not a valid semver release version.
 #
 # @example
 #   if is_semverRelease "1.2.3"; then echo "Valid release version"; fi
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 function is_semverRelease()
 {
-    (( $# == 1 )) || {
-        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 argument (provided $#): the version."
-        return "$err_invalid_arguments"
-    }
-    [[ "$1" =~ $semverReleaseRegex ]]
+    __test_with_regex "$@" "$semverReleaseRegex"
 }
 
-#-------------------------------------------------------------------------------
-# @description Tests whether the argument is a valid semver release tag (with the configured MinVer prefix, no
-# prerelease identifier).
+#---------------------------------------------------------------------------------------------
+# @description Tests whether the argument is a valid semver release tag (with the configured
+#   MinVer prefix, no prerelease identifier).
 #
 # Notes:
 #   - On success, `BASH_REMATCH` holds the captured groups.
-#   - `$semverTagReleaseRegex` is set once at file-load time from the fixed placeholder pattern `$minverTagPrefixRex`.
+#   - `$semverTagReleaseRegex` is set once at file-load time from the fixed placeholder
+#     pattern `$minverTagPrefixRex`.
 #
 # @arg $1 string The git tag string to test.
 #
-# @exitcode 0 A valid semver release tag.
-# @exitcode 1 Not a valid semver release tag.
-# @exitcode 2 Invalid arguments (wrong argument count).
+# @exitcode success/positive=0: A valid semver release tag.
+# @exitcode failure/negative=1: Not a valid semver release tag.
 #
 # @example
 #   validate_semverTagComponents "v"
 #   if is_semverReleaseTag "v1.2.3"; then echo "Valid release tag"; fi
-#-------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------
 function is_semverReleaseTag()
 {
-    (( $# == 1 )) || {
-        error -sd 3 -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 argument: the semver release tag."
-        return "$err_invalid_arguments"
-    }
-    [[ "$1" =~ $semverTagReleaseRegex ]]
+    __test_with_regex "$@" "$semverTagReleaseRegex"
 }

@@ -1,26 +1,34 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
 set -euo pipefail
 
 script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../../scripts/bash/lib")
-declare -r script_name
-declare -r script_dir
-declare -r lib_dir
 
-# shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
+declare -xr script_name
+declare -xr script_dir
+declare -xr lib_dir
+
+# shellcheck disable=SC1091 # Not following
 source "$lib_dir/gh_core.sh"
 
-declare -rxi err_tool_error
-declare -rxi err_argument_value
+declare -x _ignore
+declare -xr semverTagReleaseRegex
+declare -xr semverTagPrereleaseRegex
+
+declare -xri err_tool_error
+declare -xri err_argument_value
 
 # default constants for parameters
-declare -xr default_minver_tag_prefix='v'
-declare -xr default_minver_prerelease_id="preview.0"
+declare -xr default_minver_prerelease_id
+
 declare -xr default_reason="pre-release"
 
 # parameters with initial values from environment variables or defaults
-declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
+declare -x minver_tag_prefix
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}
 declare -x reason=${REASON:-"$default_reason"}
 
@@ -32,6 +40,7 @@ get_arguments "$@"
 # Sanitize inputs
 validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
 is_safe_reason "$reason" || true
+#!!!!!!!sanitize_common_dotnet_args
 
 # freeze the parameters
 declare -xr minver_tag_prefix
@@ -57,11 +66,21 @@ exit_if_has_errors
 # Find the latest stable and prerelease tags
 # ============================================================================
 
-# shellcheck disable=SC2154 # semverTagReleaseRegex is referenced but not assigned.
-latest_stable_tag=$(git tag --list "$minver_tag_prefix*" | grep -E "$semverTagReleaseRegex" | sort -V | tail -n1 || echo "")
+latest_stable_tag=$(
+    git tag --list "$minver_tag_prefix*" |
+    grep -E "$semverTagReleaseRegex" |
+    sort -V |
+    tail -n1 ||
+    echo ""
+)
 
-# shellcheck disable=SC2154 # semverTagPrereleaseRegex is referenced but not assigned.
-latest_prerelease_tag=$(git tag --list "$minver_tag_prefix*" | grep -E "$semverTagPrereleaseRegex" | sort -V | tail -n1 || echo "")
+latest_prerelease_tag=$(
+    git tag --list "$minver_tag_prefix*" |
+    grep -E "$semverTagPrereleaseRegex" |
+    sort -V |
+    tail -n1 ||
+    echo ""
+)
 
 trace "Latest stable tag: ${latest_stable_tag:-<none>}"
 trace "Latest prerelease tag: ${latest_prerelease_tag:-<none>}"
@@ -84,7 +103,7 @@ if is_semverRelease "$latest_stable_ver"; then
     patch=${BASH_REMATCH[$semver_patch]}
     if ((major <= 0 || minor < 0 || patch < 0)); then
         error -ec "$err_argument_value" "Invalid version numbers in latest stable tag '$latest_stable_ver': $major.$minor.$patch"
-        exit 2
+        exit "$err_argument_value"
     fi
     trace "Base version from latest stable: $major.$minor.$patch"
 else
@@ -92,10 +111,10 @@ else
 fi
 
 last_stable_ref="${latest_stable_tag:-$(git rev-list --max-parents=0 HEAD)}"
-# shellcheck disable=SC2154 # _ignore is referenced but not assigned.
 commits=$(git log "$last_stable_ref"..HEAD --pretty=format:"%s%n%b" 2>"$_ignore" || echo "")
 
 # Determine bump type from conventional commits
+# KEEP IN SYNC WITH vm2.DevOps/scripts/bash/lib/_constants.sh AND vm2.Templates/templates/AddNewPackage/content/.gitmessage!
 if echo "$commits" | grep -qiE '^[a-z]+(\(.+\))?!:'; then
     major=$((major + 1))
     minor=0
@@ -105,7 +124,7 @@ elif echo "$commits" | grep -qiE '^feat(\(.+\))?:'; then
     minor=$((minor + 1))
     patch=0
     bump_type="minor (new features detected)"
-elif echo "$commits" | grep -qiE '^(fix|perf|security|remove|revert)(\(.+\))?:'; then
+elif echo "$commits" | grep -qiE '^(fix|perf|security|doc|docs|deps|revert|remove|refactor)(\(.+\))?:'; then
     patch=$((patch + 1))
     bump_type="patch (fixes or other changes detected)"
 else
@@ -139,7 +158,6 @@ fi
 # ============================================================================
 
 prerelease_counter=1
-
 
 if [[ -n "$latest_prerelease_ver" ]] && is_semverPrerelease "$latest_prerelease_ver"; then
     # Extract the base version from the latest prerelease tag

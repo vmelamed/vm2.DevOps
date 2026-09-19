@@ -82,8 +82,8 @@ Orchestrates the full CI pipeline: validate → build → test / benchmarks / pa
 | `preprocessor-symbols` | `string` | no       | `""`                 | Semicolon-separated preprocessor symbols.                             |
 | `min-coverage-pct`     | `number` | no       | `80`                 | Minimum acceptable code coverage percentage.                          |
 | `max-regression-pct`   | `number` | no       | `20`                 | Maximum acceptable performance regression percentage.                 |
-| `max-gen1-collects`    | `number` | no       | `2`                  | Max Gen1 GC collections per 1000 ops (Bencher static threshold).       |
-| `max-gen2-collects`    | `number` | no       | `1`                  | Max Gen2 GC collections per 1000 ops (Bencher static threshold).       |
+| `max-gen1-collects`    | `number` | no       | `2`                  | Max Gen1 GC collections per 1000 ops (Bencher static threshold).      |
+| `max-gen2-collects`    | `number` | no       | `1`                  | Max Gen2 GC collections per 1000 ops (Bencher static threshold).      |
 | `minver-tag-prefix`    | `string` | no       | `v`                  | MinVer tag prefix for version calculation.                            |
 | `minver-prerelease-id` | `string` | no       | `preview.0`          | MinVer default pre-release identifiers.                               |
 
@@ -102,13 +102,13 @@ Orchestrates the full CI pipeline: validate → build → test / benchmarks / pa
 
 ### Jobs
 
-| Job              | Needs            | Matrix                               | Condition                                                |
-| :--------------- | :--------------- | :----------------------------------- | :------------------------------------------------------- |
-| `validate-input` | —                | —                                    | Always                                                   |
-| `build`          | `validate-input` | `runners-os × build-projects`        | Always                                                   |
-| `test`           | `build`          | `runners-os`                         | `test-projects` is not `["__skip__"]`                    |
-| `benchmarks`     | `build`          | `runners-os × benchmark-projects`    | Not `["__skip__"]`; also skipped on push with `[skip bm]`|
-| `pack`           | `build`          | `runners-os × package-projects`      | `package-projects` is not `["__skip__"]`                 |
+| Job              | Needs            | Matrix                               | Condition                                                 |
+| :--------------- | :--------------- | :----------------------------------- | :-------------------------------------------------------- |
+| `validate-input` | —                | —                                    | Always                                                    |
+| `build`          | `validate-input` | `runners-os × build-projects`        | Always                                                    |
+| `test`           | `build`          | `runners-os`                         | `test-projects` is not `["__skip__"]`                     |
+| `benchmarks`     | `build`          | `runners-os × benchmark-projects`    | Not `["__skip__"]`; also skipped on push with `[skip bm]` |
+| `pack`           | `build`          | `runners-os × package-projects`      | `package-projects` is not `["__skip__"]`                  |
 
 ---
 
@@ -118,15 +118,15 @@ Compiles the project and caches build artifacts for downstream jobs.
 
 ### Inputs
 
-| Input                  | Type     | Required | Default         | Description                                     |
-| :--------------------- | :------- | :------- | :-------------- | :---------------------------------------------- |
-| `build-project`        | `string` | no       | —               | Path to project to build. Auto-detects if empty.|
-| `runner-os`            | `string` | no       | `ubuntu-latest` | Runner OS.                                      |
-| `dotnet-version`       | `string` | no       | `10.0.x`        | .NET SDK version.                               |
-| `configuration`        | `string` | no       | `Release`       | Build configuration.                            |
-| `preprocessor-symbols` | `string` | no       | `""`            | Preprocessor symbols.                           |
-| `minver-tag-prefix`    | `string` | no       | `v`             | MinVer tag prefix.                              |
-| `minver-prerelease-id` | `string` | no       | `preview.0`     | MinVer pre-release identifiers.                 |
+| Input                  | Type     | Required | Default         | Description                                      |
+| :--------------------- | :------- | :------- | :-------------- | :----------------------------------------------- |
+| `build-project`        | `string` | no       | —               | Path to project to build. Auto-detects if empty. |
+| `runner-os`            | `string` | no       | `ubuntu-latest` | Runner OS.                                       |
+| `dotnet-version`       | `string` | no       | `10.0.x`        | .NET SDK version.                                |
+| `configuration`        | `string` | no       | `Release`       | Build configuration.                             |
+| `preprocessor-symbols` | `string` | no       | `""`            | Preprocessor symbols.                            |
+| `minver-tag-prefix`    | `string` | no       | `v`             | MinVer tag prefix.                               |
+| `minver-prerelease-id` | `string` | no       | `preview.0`     | MinVer pre-release identifiers.                  |
 
 ### Permissions
 
@@ -135,10 +135,10 @@ Compiles the project and caches build artifacts for downstream jobs.
 
 ### Cache Keys and Artifacts
 
-| Mechanism                     | Name / Key Pattern                                                   |
-| :---------------------------- | :------------------------------------------------------------------- |
-| NuGet cache (weekly)          | `nuget-{os}-{YYYY-WVV}-{lockfile-hash}`                              |
-| Build artifacts (workflow artifact, `retention-days: 1`) | `build-artifacts-{os}-{configuration}-{project-slug}` |
+| Mechanism                                                | Name / Key Pattern                                                   |
+| :------------------------------------------------------- | :------------------------------------------------------------------- |
+| NuGet cache (weekly)                                     | `nuget-{os}-{YYYY-WVV}-{lockfile-hash}`                              |
+| Build artifacts (workflow artifact, `retention-days: 1`) | `build-artifacts-{os}-{configuration}-{project-slug}`                |
 
 ### Script
 
@@ -152,17 +152,17 @@ Runs tests, generates coverage reports, uploads to Codecov, and posts PR comment
 
 ### Inputs
 
-| Input                  | Type     | Required | Default         | Description                                        |
-| :--------------------- | :------- | :------- | :-------------- | :------------------------------------------------- |
-| `test-projects`        | `string` | **yes**  | —               | JSON array of test project paths.                  |
-| `test-subject`         | `string` | no       | —               | Name of the project under test (inferred if empty).|
-| `runner-os`            | `string` | no       | `ubuntu-latest` | Runner OS.                                         |
-| `dotnet-version`       | `string` | no       | `10.0.x`        | .NET SDK version.                                  |
-| `configuration`        | `string` | no       | `Release`       | Build configuration.                               |
-| `preprocessor-symbols` | `string` | no       | `""`            | Preprocessor symbols.                              |
-| `min-coverage-pct`     | `number` | no       | `80`            | Minimum acceptable code coverage percentage.       |
-| `minver-tag-prefix`    | `string` | no       | `v`             | MinVer tag prefix.                                 |
-| `minver-prerelease-id` | `string` | no       | `preview.0`     | MinVer pre-release identifiers.                    |
+| Input                  | Type     | Required | Default         | Description                                         |
+| :--------------------- | :------- | :------- | :-------------- | :-------------------------------------------------- |
+| `test-projects`        | `string` | **yes**  | —               | JSON array of test project paths.                   |
+| `test-subject`         | `string` | no       | —               | Name of the project under test (inferred if empty). |
+| `runner-os`            | `string` | no       | `ubuntu-latest` | Runner OS.                                          |
+| `dotnet-version`       | `string` | no       | `10.0.x`        | .NET SDK version.                                   |
+| `configuration`        | `string` | no       | `Release`       | Build configuration.                                |
+| `preprocessor-symbols` | `string` | no       | `""`            | Preprocessor symbols.                               |
+| `min-coverage-pct`     | `number` | no       | `80`            | Minimum acceptable code coverage percentage.        |
+| `minver-tag-prefix`    | `string` | no       | `v`             | MinVer tag prefix.                                  |
+| `minver-prerelease-id` | `string` | no       | `preview.0`     | MinVer pre-release identifiers.                     |
 
 ### Secrets
 
@@ -226,15 +226,15 @@ Validates that projects can be packed into NuGet packages.
 
 ### Inputs
 
-| Input                  | Type     | Required | Default         | Description                    |
-| :--------------------- | :------- | :------- | :-------------- | :----------------------------- |
-| `package-project`      | `string` | **yes**  | —               | Path to the project to pack.   |
-| `runner-os`            | `string` | no       | `ubuntu-latest` | Runner OS.                     |
-| `dotnet-version`       | `string` | no       | `10.0.x`        | .NET SDK version.              |
-| `configuration`        | `string` | no       | `Release`       | Build configuration.           |
-| `preprocessor-symbols` | `string` | no       | `""`            | Preprocessor symbols.          |
-| `minver-tag-prefix`    | `string` | no       | `v`             | MinVer tag prefix.             |
-| `minver-prerelease-id` | `string` | no       | `preview.0`     | MinVer pre-release identifiers.|
+| Input                  | Type     | Required | Default         | Description                     |
+| :--------------------- | :------- | :------- | :-------------- | :------------------------------ |
+| `package-project`      | `string` | **yes**  | —               | Path to the project to pack.    |
+| `runner-os`            | `string` | no       | `ubuntu-latest` | Runner OS.                      |
+| `dotnet-version`       | `string` | no       | `10.0.x`        | .NET SDK version.               |
+| `configuration`        | `string` | no       | `Release`       | Build configuration.            |
+| `preprocessor-symbols` | `string` | no       | `""`            | Preprocessor symbols.           |
+| `minver-tag-prefix`    | `string` | no       | `v`             | MinVer tag prefix.              |
+| `minver-prerelease-id` | `string` | no       | `preview.0`     | MinVer pre-release identifiers. |
 
 ### Permissions
 
@@ -253,16 +253,16 @@ Computes a prerelease version, updates the changelog, tags, and publishes a prer
 
 ### Inputs
 
-| Input                   | Type      | Required | Default       | Description                                               |
-| :---------------------- | :-------- | :------- | :------------ | :-------------------------------------------------------- |
-| `package-projects`      | `string`  | no       | `[""]`        | JSON array of project paths to package and publish.       |
-| `dotnet-version`        | `string`  | no       | `10.0.x`      | .NET SDK version.                                         |
-| `preprocessor-symbols`  | `string`  | no       | `""`          | Preprocessor symbols.                                     |
-| `minver-tag-prefix`     | `string`  | no       | `v`           | MinVer tag prefix.                                        |
-| `minver-prerelease-id`  | `string`  | no       | `preview.0`   | Pre-release identifier (e.g., `preview.0`, `alpha`, `rc`).|
-| `reason`                | `string`  | no       | `""`          | Reason for manual pre-release.                            |
-| `nuget-server`          | `string`  | no       | `nuget`       | Target NuGet server (`nuget`, `github`, or a URI).        |
-| `save-package-artifacts`| `boolean` | no       | `false`       | Upload packages as workflow artifacts.                    |
+| Input                    | Type      | Required | Default       | Description                                                |
+| :----------------------- | :-------- | :------- | :------------ | :--------------------------------------------------------- |
+| `package-projects`       | `string`  | no       | `[""]`        | JSON array of project paths to package and publish.        |
+| `dotnet-version`         | `string`  | no       | `10.0.x`      | .NET SDK version.                                          |
+| `preprocessor-symbols`   | `string`  | no       | `""`          | Preprocessor symbols.                                      |
+| `minver-tag-prefix`      | `string`  | no       | `v`           | MinVer tag prefix.                                         |
+| `minver-prerelease-id`   | `string`  | no       | `preview.0`   | Pre-release identifier (e.g., `preview.0`, `alpha`, `rc`). |
+| `reason`                 | `string`  | no       | `""`          | Reason for manual pre-release.                             |
+| `nuget-server`           | `string`  | no       | `nuget`       | Target NuGet server (`nuget`, `github`, or a URI).         |
+| `save-package-artifacts` | `boolean` | no       | `false`       | Upload packages as workflow artifacts.                     |
 
 ### Secrets
 
@@ -303,12 +303,12 @@ that belongs to a user (e.g. Admin) configured as a **bypass actor** in the bran
 
 #### What happens if this is misconfigured
 
-| Symptom                                                                | Cause                                     |
-|------------------------------------------------------------------------|-------------------------------------------|
-| `_prerelease.yaml` fails with "push declined"                          | PAT owner not in bypass list              |
-| `_prerelease.yaml` fails with "Resource not accessible by integration" | PAT lacks `Contents: write` permission    |
-| `_release.yaml` creates tag but changelog push fails                   | PAT expired or revoked                    |
-| Everything works on `workflow_dispatch` but fails on auto-trigger      | Wrong PAT scope (classic vs fine-grained) |
+| Symptom                                                                  | Cause                                       |
+| ------------------------------------------------------------------------ | ------------------------------------------- |
+| `_prerelease.yaml` fails with "push declined"                            | PAT owner not in bypass list                |
+| `_prerelease.yaml` fails with "Resource not accessible by integration"   | PAT lacks `Contents: write` permission      |
+| `_release.yaml` creates tag but changelog push fails                     | PAT expired or revoked                      |
+| Everything works on `workflow_dispatch` but fails on auto-trigger        | Wrong PAT scope (classic vs fine-grained)   |
 
 #### ⚠️ Security considerations
 
@@ -332,41 +332,40 @@ that belongs to a user (e.g. Admin) configured as a **bypass actor** in the bran
 
 ### Jobs
 
-| Job                    | Needs                                    | Description                                           |
-| :--------------------- | :--------------------------------------- | :---------------------------------------------------- |
-| `compute-version`      | —                                        | Determines prerelease version from conventional commits|
-| `changelog-and-tag`    | `compute-version`                        | Updates CHANGELOG.md and creates prerelease Git tag    |
-| `package-and-publish`  | `compute-version`, `changelog-and-tag`   | Checks out tag, builds, packs, and pushes to NuGet     |
+| Job                   | Needs                  | Description                                                                 |
+| :-------------------- | :--------------------- | :-------------------------------------------------------------------------- |
+| `prepare-prerelease`  | —                      | Computes the prerelease version, updates CHANGELOG.md, creates the tag      |
+| `package-and-publish` | `prepare-prerelease`   | Checks out the tag and builds+packs each project (does **not** push)        |
+| `collect-artifacts`   | `package-and-publish`  | Collects the uploaded package artifacts' IDs into the `artifact-ids` output |
+
+The actual `dotnet nuget push` happens in the *consumer's* own `Prerelease.yaml` (its
+`publish-prerelease` job), which downloads the artifacts by the IDs above — see
+[Architecture](ARCHITECTURE.md#nuget-authentication) for why.
 
 ### Scripts
 
-`compute-prerelease-version.sh`, `changelog-and-tag.sh`, `publish-package.sh`
+`compute-prerelease-version.sh`, `changelog-and-tag.sh`, `pack.sh`
 
 ---
 
 ## _release.yaml
 
-Computes a stable release version, updates the changelog, tags, and publishes.
+Computes a stable release version, updates the changelog, tags, and builds/packs each project for publishing.
 
 ### Inputs
 
-| Input                   | Type      | Required | Default | Description                                               |
-| :---------------------- | :-------- | :------- | :------ | :-------------------------------------------------------- |
-| `dotnet-version`        | `string`  | **yes**  | —       | .NET SDK version.                                         |
-| `package-projects`      | `string`  | **yes**  | —       | JSON array of project paths to package and publish.       |
-| `preprocessor-symbols`  | `string`  | **yes**  | —       | Preprocessor symbols.                                     |
-| `minver-tag-prefix`     | `string`  | **yes**  | —       | MinVer tag prefix.                                        |
-| `minver-prerelease-id`  | `string`  | **yes**  | —       | Pre-release identifier.                                   |
-| `reason`                | `string`  | **yes**  | —       | Reason for the release.                                   |
-| `nuget-server`          | `string`  | **yes**  | —       | Target NuGet server.                                      |
-| `save-package-artifacts`| `boolean` | **yes**  | —       | Upload packages as workflow artifacts.                    |
+| Input                  | Type     | Required | Default | Description                                                |
+| :--------------------- | :------- | :------- | :------ | :--------------------------------------------------------- |
+| `package-projects`     | `string` | no       | `[]`    | JSON array of project paths to package and publish.        |
+| `preprocessor-symbols` | `string` | **yes**  | —       | Preprocessor symbols.                                      |
+| `minver-tag-prefix`    | `string` | **yes**  | —       | MinVer tag prefix.                                         |
+| `reason`               | `string` | **yes**  | —       | Reason for the release.                                    |
 
 ### Secrets
 
-| Secret                 | Required | Description                                          |
-| :--------------------- | :------- | :--------------------------------------------------- |
-| `NUGET_API_KEY`        | no       | NuGet server API key for pushing packages.           |
-| `RELEASE_PAT`          | **yes**  | PAT with `contents:write` for pushing to main        |
+| Secret        | Required | Description                                     |
+| :------------ | :------- | :---------------------------------------------- |
+| `RELEASE_PAT` | **yes**  | PAT with `contents:write` for pushing to main   |
 
 ### ⚠️ `RELEASE_PAT` — Special Setup Required
 
@@ -376,23 +375,30 @@ required for both prerelease and stable release workflows.
 ### Permissions
 
     contents: write
+    packages: write
+    actions: read
 
 ### Concurrency
 
-    group: ci-${{ github.ref }}
-    cancel-in-progress: true
+    group: release-${{ github.ref }}
+    cancel-in-progress: false
 
 ### Jobs
 
-| Job                 | Needs                                 | Description                                         |
-| :------------------ | :------------------------------------ | :-------------------------------------------------- |
-| `compute-version`   | —                                     | Determines stable version from conventional commits |
-| `changelog-and-tag` | `compute-version`                     | Finalizes CHANGELOG.md and creates Git tag          |
-| `release`           | `compute-version`, `changelog-and-tag`| Checks out tag, builds, packs, and publishes        |
+| Job                   | Needs                                     | Description                                                                 |
+| :-------------------- | :---------------------------------------- | :-------------------------------------------------------------------------- |
+| `compute-version`     | —                                         | Determines the stable version from conventional commits                     |
+| `changelog-and-tag`   | `compute-version`                         | Finalizes CHANGELOG.md and creates the Git tag                              |
+| `package-and-publish` | `compute-version`, `changelog-and-tag`    | Checks out the tag and builds+packs each project (does **not** push)        |
+| `collect-artifacts`   | `package-and-publish`                     | Collects the uploaded package artifacts' IDs into the `artifact-ids` output |
+
+The actual `dotnet nuget push` happens in the *consumer's* own `Release.yaml` (its
+`publish-release` job), which downloads the artifacts by the IDs above — see
+[Architecture](ARCHITECTURE.md#nuget-authentication) for why.
 
 ### Scripts
 
-`compute-release-version.sh`, `changelog-and-tag.sh`, `publish-package.sh`
+`compute-release-version.sh`, `changelog-and-tag.sh`, `pack.sh`
 
 ---
 
@@ -422,16 +428,16 @@ thresholds, no `--err` — a noisy point never fails the run.
 
 ### Inputs
 
-| Input                  | Type     | Required | Default     | Description                                          |
-| :--------------------- | :------- | :------- | :---------- | :--------------------------------------------------- |
-| `repeat`               | `number` | no       | `10`        | Independent runs to record per benchmark.            |
-| `runner-os`            | `string` | no       | `ubuntu-latest` | Runner OS.                                       |
-| `dotnet-version`       | `string` | no       | `10.0.x`    | .NET SDK version.                                    |
-| `configuration`        | `string` | no       | `Release`   | Build configuration.                                |
-| `preprocessor-symbols` | `string` | no       | `""`        | Preprocessor symbols (empty = full, non-SHORT_RUN).  |
-| `minver-tag-prefix`    | `string` | no       | `v`         | MinVer tag prefix.                                  |
-| `minver-prerelease-id` | `string` | no       | `preview.0` | MinVer pre-release identifiers.                     |
-| `bencher-branch`       | `string` | no       | `main`      | Bencher branch whose history is being rebuilt.       |
+| Input                  | Type     | Required | Default         | Description                                          |
+| :--------------------- | :------- | :------- | :-------------- | :--------------------------------------------------- |
+| `repeat`               | `number` | no       | `10`            | Independent runs to record per benchmark.            |
+| `runner-os`            | `string` | no       | `ubuntu-latest` | Runner OS.                                           |
+| `dotnet-version`       | `string` | no       | `10.0.x`        | .NET SDK version.                                    |
+| `configuration`        | `string` | no       | `Release`       | Build configuration.                                 |
+| `preprocessor-symbols` | `string` | no       | `""`            | Preprocessor symbols (empty = full, non-SHORT_RUN).  |
+| `minver-tag-prefix`    | `string` | no       | `v`             | MinVer tag prefix.                                   |
+| `minver-prerelease-id` | `string` | no       | `preview.0`     | MinVer pre-release identifiers.                      |
+| `bencher-branch`       | `string` | no       | `main`          | Bencher branch whose history is being rebuilt.       |
 
 ### Secrets
 
@@ -459,8 +465,8 @@ it dispatches the per-repo runs and returns; the rebuilds proceed in each repo's
 
 ### Secrets
 
-| Secret               | Required | Description                                                                 |
-| :------------------- | :------- | :-------------------------------------------------------------------------- |
+| Secret               | Required | Description                                                                                                                                |
+| :------------------- | :------- | :----------------------------------------------------------------------------------------------------------------------------------------- |
 | `BENCH_DISPATCH_PAT` | **yes**  | Fine-grained PAT (`Actions: write` + `Contents: read`) — set on vm2.DevOps only. See [CONFIGURATION.md](CONFIGURATION.md#actions-secrets). |
 
 ### Permissions

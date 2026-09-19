@@ -1,131 +1,104 @@
 #!/usr/bin/env bash
 
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
 set -euo pipefail
 
 script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../../scripts/bash/lib")
 
-declare -r script_name
-declare -r script_dir
-declare -r lib_dir
+declare -xr script_name
+declare -xr script_dir
+declare -xr lib_dir
 
-# shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
+# shellcheck disable=SC1091 # Not following
 source "$lib_dir/gh_core.sh"
 
-declare -xir success
-declare -xir failure
-declare -rxi err_tool_error
-declare -rxi err_logic_error
-declare -rxi err_argument_value
+# Declare error codes defined in the core library
+declare -xri success
+declare -xri err_tool_error
 
-# constants and default values
-declare -xr default_nuget_server="nuget"
-declare -xr default_minver_tag_prefix='v'
-declare -xr default_minver_prerelease_id="preview.0"
-declare -xr default_repo_owner="vmelamed"
+# Declare variables defined in the core library.
+declare -x _ignore
 
-declare -rx default_configuration
+# Define CI common variables passed in as common dotnet arguments
+declare -x preprocessor_symbols
+declare -x configuration
+declare -x framework
+declare -x runtime
+declare -x minver_tag_prefix
+declare -x minver_prerelease_id
+declare -x gh_nuget_username
+declare -x gh_nuget_password
 
-# parameters with initial values from environment variables or defaults
+# variables specific to this script only with initial values from environment variables or defaults
 declare -x package_project=""
-declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-""}
-declare -x configuration=${CONFIGURATION:-"$default_configuration"}
-declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
-declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}
 declare -x reason=${REASON:-}
 declare -x build=${BUILD:-false}
-declare -x artifacts=${ARTIFACTS_DIR:-artifacts}
 
 source "$script_dir/pack.usage.sh"
 source "$script_dir/pack.args.sh"
 
 get_arguments "$@"
-package_project=${package_project:-"$PACKAGE_PROJECT"}
+package_project=${package_project:-"${PACKAGE_PROJECT:-}"}
 
-# sanitize inputs
-is_safe_boolean "$build" || true
-is_safe_path "$artifacts" || true
-is_safe_path "$package_project" || true
-is_safe_configuration "$configuration" || true
-validate_preprocessor_symbols preprocessor_symbols || true
-validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
-is_safe_reason "$reason" || true
-
+# validate the values of the variables common for many vm2.DevOps scripts,
+# usually set from CLI arguments, environment variables, or defaults
+is_safe_existing_file "$package_project"       || true
+[[ $package_project == *.csproj ]]             || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)."
+is_safe_reason "$reason"                       || true
+is_safe_boolean "$build"                       || true
 exit_if_has_errors
 
-# create output directory for the packages
-declare -x output_dir="$artifacts/packages"
-execute mkdir -p "$output_dir"
-
-# restore the project if the build is requested, otherwise skip restore and build - assume they are done already
-$build && execute dotnet restore "$package_project" --locked-mode
-
-# prepare the arguments for the dotnet pack command
-dotnet_pack_arguments=(
-    "$package_project"
-    "--verbosity" "detailed"
-    "--configuration" "$configuration"
-    "--output" "$output_dir"
-    "--no-restore"
-    "-p:preprocessor_symbols=$preprocessor_symbols"
-    "-p:MinVerTagPrefix=$minver_tag_prefix"
-    "-p:MinVerPrereleaseIdentifiers=$minver_prerelease_id"
-    "-p:PackageReleaseNotes=\"$reason\""
-)
-$build || dotnet_pack_arguments+=(
-    "--no-build"
-)
-
-# build and pack the project
-temp_output=$(mktemp)
-build_info_output=$(mktemp)
-trap 'rm -f "$temp_output" "$build_info_output"' EXIT
-
-# execute the dotnet pack command and process its output
-rc=$success
-execute dotnet pack "${dotnet_pack_arguments[@]}" > "$temp_output" 2>&1 || rc=$?
-
-# Run extractDotnetBuildInfo directly in THIS shell (not as the left side of a pipe or inside a
-# $(...) command substitution, either of which would run it in a subshell and lose its variable
-# assignments) so it can populate $version, $package_version, etc. for use below. Its stdout (the
-# key=value pairs) is captured to a file and replayed into displayDotnetBuildSummary for the
-# human-readable report.
-declare -A build_info=()
-
-extractDotnetBuildInfo build_info < "$temp_output" || rc=$?
-displayDotnetBuildSummary build_info | to_summary
-
-[[ $rc == "$success" ]] ||
-    error -ec "$err_tool_error" "Packing '$package_project' failed."
+sanitize_common_dotnet_args "$package_project" || true
 exit_if_has_errors
 
-nupkg_count=$(find "$output_dir" -name "*.nupkg" | wc -l)
+# freeze the parameters
+declare -xr package_project
+# declare -xr reason
+declare -xr build
 
-declare -rx key_version
+declare -x pack_exec_path
+get_target_path "$package_project" pack_exec_path
+declare -xr pack_exec_path
 
-version=${build_info[$key_version]}
-
-if is_semverRelease "$version"; then
-    summary_header="Release Summary"
-    reason="${reason:="stable release"}"
-else
-    summary_header="Pre-release Summary"
-    reason="${reason:="pre-release"}"
+# Build when explicitly requested (--build), or when the artifacts directory has no build output for this
+# project yet -- e.g. --skip-build-cache callers (template packages) that never download a prior build.
+if $build || [[ ! -s $pack_exec_path ]]; then
+    [[ -s $pack_exec_path ]] || warning "Build output '$pack_exec_path' was not found in the artifacts directory. Building the project before packing..."
+    update_nuget_sources_with_github_vm2   || error -ec $? "Updating the NuGet sources with GitHub packages from vm2 failed."
+    exit_if_has_errors
+    dotnet_clean "$package_project"        || error -ec $? "Cleaning the build project failed."
+    exit_if_has_errors
+    dotnet_restore "$package_project"      || error -ec $? "Restoring the build project failed."
+    exit_if_has_errors
+    dotnet_build "$package_project"        || error -ec $? -sd 3 "Building the build project failed."
+    exit_if_has_errors
+    [[ -s $pack_exec_path ]]               || error -ec "$err_tool_error" -sd 3 "After building, the output '$pack_exec_path' was still NOT FOUND."
+    exit_if_has_errors
 fi
 
+declare -A _pack_properties=()
+dotnet_pack "$package_project" "$reason" "_pack_properties"
+exit_if_has_errors
+
+# Expose the resolved package output directory (from dotnet_pack's own MSBuild query above) so callers can locate
+# the produced .nupkg/.snupkg without duplicating or guessing the "artifacts/packages" convention themselves.
+# shellcheck disable=SC2034
+declare package_output_path="${_pack_properties[PackageOutputPath]}"
+args_to_github_output package_output_path
+
 {
-    [[ $nupkg_count == 1 ]] &&
-        echo "### ✅ 1 Package Built Successfully" ||
-        echo "### ✅ $nupkg_count Packages Built Successfully"
+    echo "### ✅ Packages Built Successfully"
     echo ""
-    echo "| $summary_header   |                |"
-    echo "|:------------------|:---------------|"
-    echo "| Version           | $version       |"
-    echo "| Reason            | $reason        |"
+    echo "| Packages             |                                                       |"
+    echo "|:---------------------|:------------------------------------------------------|"
+    echo "| Package Id           | ${_pack_properties[PackageId]}                        |"
+    echo "| Version              | ${_pack_properties[PackageVersion]}                   |"
+    echo "| Package Path         | ${_pack_properties[PackagePath]}                      |"
+    echo "| Symbols Package Path | ${_pack_properties[SymbolsPath]}                      |"
+    echo "| Git Tag              | $minver_tag_prefix${_pack_properties[PackageVersion]} |"
     echo ""
-    echo "Packages:"
-    for f in "$output_dir"/*.nupkg; do
-        [[ -f "$f" ]] && echo "  - $(basename "$f")"
-    done
 } | to_summary
