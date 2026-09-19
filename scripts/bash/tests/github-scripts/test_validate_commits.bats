@@ -81,23 +81,28 @@ _run_validate_commits() {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "not a valid message" "feat: this one is fine" "also bad"
     run _run_validate_commits "$BATS_TEST_TMPDIR/repo" base --quiet
     assert_failure
-    assert_output --partial "Bad commit message: not a valid message"
-    assert_output --partial "Bad commit message: also bad"
-    refute_output --partial "Bad commit message: feat: this one is fine"
+    # Each bad subject is now prefixed with its abbreviated commit hash (e.g. "f5437c44 not a
+    # valid message"), so match on the subject text rather than the old exact "prefix: subject".
+    assert_output --regexp "Bad commit message: [0-9a-f]{8} not a valid message"
+    assert_output --regexp "Bad commit message: [0-9a-f]{8} also bad"
+    refute_output --partial "feat: this one is fine"
 }
 
 @test "validate-commits: rejects an unknown/unrecognized commit type" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "bogus: not a real type"
     run _run_validate_commits "$BATS_TEST_TMPDIR/repo" base --quiet
     assert_failure
-    assert_output --partial "Bad commit message: bogus: not a real type"
+    assert_output --regexp "Bad commit message: [0-9a-f]{8} bogus: not a real type"
 }
 
 @test "validate-commits: prints the remediation steps (rebase -i, force-push) on failure" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "not conventional"
     run _run_validate_commits "$BATS_TEST_TMPDIR/repo" base --quiet
     assert_failure
-    assert_output --partial "git rebase -i base"
+    # The rebase now starts at the offending commit's own parent (a full SHA + "^"), not the
+    # literal base-ref name -- tighter than "git rebase -i base" but not textually identical to it.
+    assert_output --regexp "git rebase -i [0-9a-f]{40}\^"
+    assert_output --partial "Commits needing reword"
     assert_output --partial "git push --force-with-lease origin main"
 }
 
@@ -151,7 +156,7 @@ _run_validate_commits() {
     run env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" GITHUB_ACTIONS=true GITHUB_STEP_SUMMARY="$BATS_TEST_TMPDIR/summary.md" \
         bash -c "cd '$BATS_TEST_TMPDIR/repo' && bash '$_validate_commits' base --quiet"
     assert_failure
-    assert_output --partial "Bad commit message: not conventional"
+    assert_output --regexp "Bad commit message: [0-9a-f]{8} not conventional"
     run cat "$BATS_TEST_TMPDIR/summary.md"
-    assert_output --partial "Bad commit message: not conventional"
+    assert_output --regexp "Bad commit message: [0-9a-f]{8} not conventional"
 }
