@@ -230,8 +230,8 @@ work into multiple smaller PRs. Don't let one branch become a "big bang" merge.
 1. Confirm it's not a real conflict: `git fetch origin && git rebase origin/main` — a no-op or clean resolve means
    the block is GitHub-side.
 2. Confirm via the API: `gh api repos/<owner>/<repo>/pulls/<number> --jq '{mergeable, mergeable_state, rebaseable}'`.
-3. Use **Squash and merge** instead — still one linear commit on `main` (compliant with the linear-history
-   ruleset), and not subject to the same block since GitHub doesn't need to replay every individual commit.
+3. This repository disables squash merging; split the work into smaller PRs or have an administrator explicitly change the ruleset before
+   merging instead of relying on this fallback.
 
 ## Quick 10-Command Cheat Sheet
 
