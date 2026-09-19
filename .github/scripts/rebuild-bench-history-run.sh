@@ -4,41 +4,37 @@
 
 set -euo pipefail
 
-# shellcheck disable=SC2119
-
 script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../../scripts/bash/lib")
-declare -r script_name
-declare -r script_dir
-declare -r lib_dir
 
-# shellcheck disable=SC1091 # Not following: ./gh_core.sh: openBinaryFile: does not exist (No such file or directory)
+declare -xr script_name
+declare -xr script_dir
+declare -xr lib_dir
+
+# shellcheck disable=SC1091 # Not following
 source "$lib_dir/gh_core.sh"
 
-declare -rxi success
-declare -rxi failure
-declare -rxi err_tool_error
-declare -rxi err_logic_error
-declare -rxi err_argument_value
-declare -rxi err_missing_argument
-declare -rxi err_too_many_arguments
-declare -rxi err_unknown_argument
+declare -xri success
+declare -xri failure
+declare -xri err_tool_error
+declare -xri err_logic_error
+declare -xri err_argument_value
+declare -xri err_missing_argument
+declare -xri err_too_many_arguments
+declare -xri err_unknown_argument
 
 declare -x _ignore
-declare -x dry_run
 
-declare -rx default_minver_tag_prefix='v'
-declare -rx default_minver_prerelease_id="preview.0"
-declare -rix default_repeat=10
+declare -xr default_minver_tag_prefix
+
+declare -xri default_repeat=10
 
 declare -x benchmark_project=""
 declare -xi repeat=${REPEAT:-$default_repeat}
-declare -x configuration=${CONFIGURATION:-"Release"}
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
-declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}
-declare -x artifacts_dir=${ARTIFACTS_DIR:-"artifacts"}
+declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-}
 declare -x bencher_project=${BENCHER_PROJECT:-}
 declare -x bencher_testbed=${BENCHER_TESTBED:-}
 declare -x bencher_branch=${BENCHER_BRANCH:-"main"}
@@ -65,24 +61,25 @@ fi
 (( ${#benchmark_projects[@]} > 0 )) || error -ec "$err_argument_value" "No benchmark projects found under 'benchmarks/' and none specified."
 
 # Validate the rest of the inputs (accumulate all problems, then bail once).
-is_safe_configuration "$configuration" || true
-validate_preprocessor_symbols preprocessor_symbols || true
+validate_preprocessor_symbols preprocessor_symbols                        || true
 validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
-is_safe_path "$artifacts_dir" || true
-is_safe_integer "$repeat" || true
-(( repeat >= 1 )) || error -ec "$err_argument_value" "repeat must be a positive integer (got '$repeat')."
-[[ -n "$bencher_project" ]] || error -ec "$err_missing_argument" "Bencher project (--bencher-project) is required."
-[[ -n "$bencher_testbed" ]] || error -ec "$err_missing_argument" "Bencher testbed (--bencher-testbed) is required."
-[[ -n "${BENCHER_API_TOKEN:-}" ]] || error -ec "$err_missing_argument" "The BENCHER_API_TOKEN environment variable is required."
+is_safe_integer "$repeat"                                                 || true
+(( repeat >= 1 ))                                                         || error -ec "$err_argument_value" "repeat must be a positive integer (got '$repeat')."
+[[ -n "$bencher_project" ]]                                               || error -ec "$err_missing_argument" "Bencher project (--bencher-project) is required."
+[[ -n "$bencher_testbed" ]]                                               || error -ec "$err_missing_argument" "Bencher testbed (--bencher-testbed) is required."
+[[ -n "${BENCHER_API_TOKEN:-}" ]]                                         || error -ec "$err_missing_argument" "The BENCHER_API_TOKEN environment variable is required."
 
 exit_if_has_errors
 
-artifacts_benchmarks_dir=$artifacts_dir/benchmarks
+declare artifacts
+
+get_artifacts_path "${benchmark_projects[0]}" artifacts
+
+artifacts_benchmarks_dir=$artifacts/benchmarks
 results_dir="$artifacts_benchmarks_dir/results"
 
 # Freeze variables
 declare -xr benchmark_project
-declare -xr configuration
 declare -xr preprocessor_symbols
 declare -xr minver_tag_prefix
 declare -xr minver_prerelease_id
@@ -94,10 +91,9 @@ declare -xr bencher_branch
 declare -xr bencher_adapter
 declare -xri repeat
 
-command -v bencher &> "$_ignore" || {
-    error -ec "$err_tool_error" "The 'bencher' CLI was not found on PATH."
-    exit_if_has_errors
-}
+command -v bencher &> "$_ignore" || error -ec "$err_tool_error" "The 'bencher' CLI was not found on PATH."
+
+exit_if_has_errors
 
 # Re-record each benchmark project $repeat times. Each iteration is an independent process run, so the recorded spread
 # captures the real run-to-run variance of the runner -- exactly the history a statistical threshold needs to learn "normal".
@@ -106,20 +102,17 @@ declare -ri total=$(( ${#benchmark_projects[@]} * repeat ))
 declare project
 for project in "${benchmark_projects[@]}"; do
     for (( i=1; i <= repeat; i++ )); do
-        to_stdout "▶ [$project] run $i of $repeat (Bencher branch '$bencher_branch')..."
+        echo "▶ [$project] run $i of $repeat (Bencher branch '$bencher_branch')..." | to_stdout
 
         if ! run-benchmarks.sh \
                 "$project" \
-                --configuration "$configuration" \
                 --define "$preprocessor_symbols" \
                 --minver-tag-prefix "$minver_tag_prefix" \
-                --minver-prerelease-id "$minver_prerelease_id" \
-                --artifacts "$artifacts_benchmarks_dir"; then
+                --minver-prerelease-id "$minver_prerelease_id"; then
             warning "Benchmark run $i of '$project' failed; skipping the Bencher upload for this iteration."
             continue
         fi
 
-        # shellcheck disable=SC2206 # word splitting is intentional - the glob expands to the result file(s)
         json_files=("$results_dir"/*-report-full-compressed.json)
         if [[ ! -f "${json_files[0]}" ]]; then
             warning "No JSON results found after run $i of '$project' in '$results_dir'; skipping the Bencher upload."
@@ -156,7 +149,8 @@ done
     echo "Recorded **$uploaded** of **$total** runs ($repeat per project)."
 } | to_summary
 
-(( uploaded > 0 )) || {
-    error -ec "$err_logic_error" "No data points were recorded to Bencher."
-    exit_if_has_errors
-}
+(( uploaded > 0 )) || error -ec "$err_logic_error" "No data points were recorded to Bencher."
+
+exit_if_has_errors
+
+args_to_github_output artifacts

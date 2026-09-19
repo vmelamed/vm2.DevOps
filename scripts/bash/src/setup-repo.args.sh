@@ -1,0 +1,169 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
+# shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
+
+declare -xr script_name
+declare -xr lib_dir
+
+declare -xri success
+declare -xri err_missing_argument
+declare -xri err_too_many_arguments
+declare -xri err_unknown_argument
+
+declare -x ci
+declare -x vm2_repos
+declare -x repo_name
+declare -x repo_path
+declare -x repo_owner
+declare -x repo
+declare -x visibility
+declare -x branch
+declare -x interactive_vars
+declare -x interactive_secrets
+declare -x configure_local
+declare -x audit
+declare -x main_protection_rs_name
+declare -x description
+declare -x use_ssh
+declare -x use_https
+declare -x current_branch
+
+#---------------------------------------------------------------------------------------------
+# @description Parses the command-line arguments of `setup-repo.sh`, populating the script-level variables declared
+# at the top of this file (`vm2_repos`, `repo_path`, `owner`, `visibility`, `branch`, `interactive_vars`,
+# `interactive_secrets`, `configure_local`, `audit`, `main_protection_rs_name`, `description`, `use_ssh`,
+# `use_https`). Common switches (`-h`, `-v`, `-q`, `-x`, `-y`, etc.) are delegated to `get_common_arg` first. The
+# first (and only) positional argument is taken as `repo_path`; a second positional argument triggers a usage error.
+# On completion, calls `usage_if_requested` (exits the process if `--help` was seen) and `dump_vars` (prints the
+# parsed values in verbose mode).
+#
+# Notes:
+#   - This is a top-level CLI argument parser (see the "Parameter and Precondition Validation Pattern" in
+#     CLAUDE.md): it exits the process via `usage()` on bad input rather than returning an error code.
+#
+# @arg $@ string Command-line arguments passed to `setup-repo.sh`.
+#
+# @exitcode success/positive=0: All arguments parsed successfully (function returns normally; `usage()` exits the process directly on
+#   error or on `--help`).
+#---------------------------------------------------------------------------------------------
+function get_arguments()
+{
+    local _option
+
+    while (( $# > 0 )); do
+        _option="$1"; shift
+        get_common_arg "$_option" && continue
+
+        case "${_option,,}" in
+            -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
+                ;;
+
+            --vm2-repos )
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing path after '$_option'."
+                vm2_repos="$1"; shift
+                ;;
+
+            --repo-name|-n )
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing repository name after '$_option'."
+                repo_name="$1"; shift
+                ;;
+
+            --owner|-o )
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing owner after '$_option'."
+                repo_owner="$1"; shift
+                ;;
+
+            --branch|-b )
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing branch name after '$_option'."
+                branch="$1"; shift
+                ;;
+
+            --visibility )
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing visibility after '$_option'."
+                visibility="$1"; shift
+                ;;
+
+            --ruleset-name|-rs )
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing the name of the ruleset for protecting the default branch after '$_option'."
+                main_protection_rs_name="$1"; shift
+                ;;
+
+            --description )
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing description after '$_option'."
+                description="$1"; shift
+                ;;
+
+            --ssh|-s )
+                use_ssh=true
+                use_https=false
+                ;;
+
+            --https|-t )
+                use_ssh=false
+                use_https=true
+                ;;
+
+            --interactive-vars|-iv )
+                interactive_vars=true
+                ;;
+
+            --interactive-secrets|-is )
+                interactive_secrets=true
+                ;;
+
+            --skip-local-config|-slc )
+                configure_local=false
+                ;;
+
+            --audit|-a )
+                audit=true
+                ;;
+
+            --current-branch|-cb )
+                current_branch=true
+                ;;
+
+            * ) if [[ -n "$repo_path" ]]; then
+                    usage -ec "$err_too_many_arguments" "Too many positional arguments (project directory or repository name): $_option"
+                fi
+                repo_path="$_option"
+                ;;
+        esac
+    done
+
+    dump_args
+
+    usage_if_requested
+}
+
+# shellcheck disable=SC2120 # dump_args references arguments, but none are ever passed.
+function dump_args()
+{
+    ! $ci && ! is_verbose && return "$success"
+
+    local -a _args=(
+        --force
+        --quiet
+        --header "Arguments for $script_name:"
+
+        vm2_repos
+        repo_path
+        repo_owner
+        repo_name
+        visibility
+        branch
+        main_protection_rs_name
+        description
+        use_ssh
+        use_https
+        interactive_vars
+        interactive_secrets
+        audit
+
+        --header "Core State:"
+        --core-state
+    )
+
+    dump_vars "${_args[@]}" "$@"
+}

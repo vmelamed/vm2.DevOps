@@ -4,6 +4,7 @@
 
 - [Configuration](#configuration)
   - [Configuration Layers](#configuration-layers)
+  - [Build Configuration Philosophy](#build-configuration-philosophy)
   - [GitHub Repository Variables](#github-repository-variables)
   - [GitHub Repository Secrets](#github-repository-secrets)
     - [Actions Secrets](#actions-secrets)
@@ -49,6 +50,34 @@ Settings flow through five layers, each overriding the previous:
 1. **GitHub repository variables** (`vars.*`) — Set in repo Settings → Secrets and variables → Actions → Variables.
 1. **Workflow `env:` block** — Per-repo values set directly in the consumer workflow YAML.
 1. **`workflow_dispatch` inputs** — Manual overrides when triggering a run from the UI.
+
+## Build Configuration Philosophy
+
+Four settings — Target Framework, Runtime Identifier, `Configuration`, and preprocessor symbols — are handled
+deliberately conservatively across the whole vm2 ecosystem. The terse, normative version of these rules lives in
+`.github/CONVENTIONS.md`'s "Build Configuration, TFMs, RIDs, and Preprocessor Symbols" section; here's the fuller
+story:
+
+- **Target Framework (TFM)** — `Directory.Build.props`, not the workflows or scripts, is the single source of
+  truth: `TargetFramework` defaults to `net10.0`. Every vm2 package targets exactly one TFM today; there is no
+  multi-targeting matrix yet.
+- **Runtime Identifier (RID)** — deliberately left unset (`""`) everywhere right now. Every package publishes
+  portable, framework-dependent, OS/architecture-agnostic output — the same build runs on any OS with a matching
+  .NET runtime installed. The `runtime-identifier` input already exists on `_build.yaml`/`_pack.yaml` (defaulting
+  to unspecified) precisely so this can change later without a redesign: when AOT publishing is introduced, RID
+  becomes mandatory and must be derived from the runner rather than fixed globally (e.g. `ubuntu-latest` →
+  `linux-x64`, `windows-latest` → `win-x64`, `macos-latest` → `osx-arm64`). Until then, `runner-os` (and the
+  `runners-os` matrix in `_ci.yaml`) only selects which OS *runs* the build/test/benchmark step — it has no effect
+  on the artifact produced, since there is no RID-specific output yet. Think of `runner-os` as the RID axis
+  already in place, waiting for AOT to need it.
+- **`Configuration`** — defaults to `Release` everywhere; CI never branches on it or overrides it. It is a manual
+  override knob (`workflow_dispatch`, or a local `dotnet build -c Debug`) for a human who needs a Debug build, not
+  something the pipeline decides for itself. There is no scenario today that justifies CI choosing anything else.
+- **Preprocessor symbols** — kept to the bare minimum. Today there is exactly one: `SHORT_RUN`.
+  `Directory.Build.props` auto-defines it for local benchmark builds (a fast dev loop by default), and CI adds it
+  explicitly only for a `push` to a non-main branch with no open PR yet — see
+  [CI Behavior by Event Type](#ci-behavior-by-event-type) below. Every other CI path leaves `preprocessor-symbols`
+  empty. Introducing a second symbol is an ecosystem-wide decision, not a per-repo convenience.
 
 ## GitHub Repository Variables
 
@@ -173,7 +202,8 @@ git config --local push.autoSetupRemote true
 
 ## CI Behavior by Event Type
 
-The CI workflow template adjusts its behavior based on the trigger:
+The CI workflow template adjusts its behavior based on the trigger — this is the mechanical "what" behind the
+`SHORT_RUN` case described in [Build Configuration Philosophy](#build-configuration-philosophy) above.
 
 | Event                | Behavior                                                              |
 | :------------------- | :-------------------------------------------------------------------- |

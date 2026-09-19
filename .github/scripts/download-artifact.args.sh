@@ -6,21 +6,28 @@
 declare -xr script_name
 declare -xr lib_dir
 
-declare -rxi err_missing_argument
-declare -rxi err_too_many_arguments
-declare -rxi err_unknown_argument
+declare -xri success
+declare -xri err_missing_argument
+declare -xri err_too_many_arguments
+declare -xri err_unknown_argument
 
-# shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
+declare -x ci
+
+declare -x artifact_name
+declare -x artifacts
+declare -x repository
+declare -x workflow_id
+declare -x workflow_name
+declare -x workflow_path
+
 function get_arguments()
 {
     local _option
 
-    while [[ $# -gt 0 ]]; do
+    while (( $# > 0 )); do
         # get the option and convert it to lower case
         _option="$1"; shift
-        if get_common_arg "$_option"; then
-            continue
-        fi
+        get_common_arg "$_option" && continue
         # do not use short options -q -v -x -y
         case "${_option,,}" in
             # do not use the common options - they were already processed by get_common_arg:
@@ -28,36 +35,36 @@ function get_arguments()
                 ;;
 
             --artifact|-a )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                artifact_name="$1"; shift
                ;;
 
             --directory|-d )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                artifacts_dir="$1"; shift
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                artifacts="$1"; shift
                 ;;
 
             --repository|-r )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 repository="$1"; shift
                 ;;
 
             --wf-id|-i )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 workflow_id="$1"; shift
                 workflow_name=""
                 workflow_path=""
                 ;;
 
             --wf-name|-n )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 workflow_id=""
                 workflow_name="$1"; shift
                 workflow_path=""
                 ;;
 
             --wf-path|-p )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 workflow_id=""
                 workflow_name="";
                 workflow_path="$1"; shift
@@ -68,19 +75,32 @@ function get_arguments()
                 ;;
         esac
     done
+
+    dump_args
+
     usage_if_requested
-    dump_vars --force --quiet --markdown \
-        --header "Script Arguments:" \
-        dry_run \
-        verbose \
-        quiet \
-        --blank \
-        artifact_name \
-        artifacts_dir \
-        repository \
-        workflow_id \
-        workflow_name \
-        workflow_path \
-        --header "other:" \
-        ci
+}
+
+# shellcheck disable=SC2120 # dump_args references arguments, but none are ever passed.
+function dump_args()
+{
+    ! $ci && ! is_verbose && return "$success"
+
+    local -a _args=(
+        --force
+        --quiet
+        --header "Arguments for $script_name:"
+
+        artifact_name
+        artifacts
+        repository
+        workflow_id
+        workflow_name
+        workflow_path
+
+        --header "Core State:"
+        --core-state
+    )
+
+    dump_vars "${_args[@]}" "$@"
 }

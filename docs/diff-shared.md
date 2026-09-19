@@ -52,7 +52,7 @@ The action for each file is specified in:
 1. **All *vm2* repositories** (or at least `vm2.DevOps` and `vm2.Templates`) **are cloned under the same *parent directory*** that can be specified with:
    - the environment variable **`$VM2_REPOS`**
    - command line option **`--vm2-repos <parent-directory>`**
-   - defaults to the parent directory of the **root of the working tree of the `diff-shared.sh` script's Git repository**. E.g. if the path of the script is `$HOME/repos/vm2/vm2.DevOps/scripts/bash/diff-shared.sh`, and `$VM2_REPOS` and `--vm2-repos` are not defined or specified, then the default *vm2* parent is `$HOME/repos/vm2/` and the expected structure of the repositories under it is expected to be as follows:
+   - defaults to the parent directory of the **root of the working tree of the `diff-shared.sh` script's Git repository**. E.g. if the path of the script is `$HOME/repos/vm2/vm2.DevOps/scripts/bash/src/diff-shared.sh`, and `$VM2_REPOS` and `--vm2-repos` are not defined or specified, then the default *vm2* parent is `$HOME/repos/vm2/` and the expected structure of the repositories under it is expected to be as follows:
 
      ```text
      $HOME/repos/vm2/                         <------- the vm2 PARENT DIRECTORY of all vm2 repositories

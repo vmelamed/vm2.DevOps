@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
 name: _pack (Reusable workflow)
 
 on:
@@ -12,11 +15,6 @@ on:
         description: Runner OS
         type: string
         default: ubuntu-latest
-
-      dotnet-version:
-        description: Version of .NET SDK to use (default 10.0.x)
-        type: string
-        default: 10.0.x
 
       configuration:
         description: The type of build to produce, e.g. Release vs Debug (default Release)
@@ -52,6 +50,7 @@ permissions:
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_VERSION: ${{ vars.DOTNET_VERSION }}
   VERBOSE: ${{ vars.VERBOSE || false }}
 
 jobs:
@@ -78,7 +77,6 @@ jobs:
       - name: Setup .NET and the dependencies cache
         uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@main
         with:
-          dotnet-version: ${{ inputs.dotnet-version }}
           runner-os: ${{ inputs.runner-os }}
           github-token: ${{ github.token }}
           github-actor: ${{ github.actor }}
@@ -89,8 +87,7 @@ jobs:
         if: ${{ !inputs.skip-build-cache }}
         uses: actions/download-artifact@v8
         with:
-          pattern: built-artifacts-${{ runner.os }}-${{ inputs.configuration }}-*
-          merge-multiple: true
+          pattern: built-artifacts-${{ runner.os }}-${{ github.run_id }}-*
           path: downloaded/
 
       - name: Extract built artifacts
@@ -99,23 +96,15 @@ jobs:
         run: |
           find downloaded/ -name '*.tar.gz' -exec tar xzf {} \;
 
-      # A pattern download does not fail on zero matches, so verify explicitly (the equivalent of fail-on-cache-miss)
-      - name: Verify built artifacts were downloaded
-        if: ${{ !inputs.skip-build-cache }}
-        shell: bash
-        run: |
-          find . -type d -path "*/bin/${{ inputs.configuration }}" -print -quit | grep -q . || {
-              echo "::error::No built artifacts were downloaded from the build job."
-              exit 1
-          }
-
+      # No separate "verify artifacts were downloaded" check here: pack.sh resolves its own expected build
+      # output path and builds the project itself when that output is missing (e.g. --skip-build-cache
+      # callers, or a download that came back empty).
       - name: Pack
         id: pack
         shell: bash
         run: |
           pack.sh \
               "${{ inputs.package-project }}" \
-              --configuration "${{ inputs.configuration }}" \
               --define "${{ inputs.preprocessor-symbols }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
               --minver-prerelease-id "${{ inputs.minver-prerelease-id }}"

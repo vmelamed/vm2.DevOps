@@ -6,40 +6,40 @@
 declare -xr script_name
 declare -xr lib_dir
 
-declare -rxi err_missing_argument
-declare -rxi err_unknown_argument
+declare -xri success
+declare -xri err_missing_argument
+declare -xri err_unknown_argument
+
+declare -xr ci
 
 declare -x owner
 declare -xi repeat
 declare -x workflow
 
-# shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
 function get_arguments()
 {
     local _option
 
-    while [[ $# -gt 0 ]]; do
+    while (( $# > 0 )); do
         _option="$1"; shift
-        if get_common_arg "$_option"; then
-            continue
-        fi
+        get_common_arg "$_option" && continue
         case "${_option,,}" in
             # do not use the common options - they were already processed by get_common_arg:
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
             --owner|-o )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 owner="$1"; shift
                 ;;
 
             --repeat|-n )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 repeat="$1"; shift
                 ;;
 
             --workflow|-w )
-                [[ $# -ge 1 ]] || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 workflow="$1"; shift
                 ;;
 
@@ -47,14 +47,29 @@ function get_arguments()
                 ;;
         esac
     done
+
+    dump_args
+
     usage_if_requested
-    dump_vars --force --quiet \
-        --header "Script Arguments:" \
-        dry_run \
-        verbose \
-        quiet \
-        --blank \
-        owner \
-        repeat \
+}
+
+# shellcheck disable=SC2120 # dump_args references arguments, but none are ever passed.
+function dump_args()
+{
+    ! $ci && ! is_verbose && return "$success"
+
+    local -a _args=(
+        --force
+        --quiet
+        --header "Arguments for $script_name:"
+
+        owner
+        repeat
         workflow
+
+        --header "Core State:"
+        --core-state
+    )
+
+    dump_vars "${_args[@]}" "$@"
 }

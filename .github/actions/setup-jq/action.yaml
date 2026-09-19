@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
 name: Setup jq
 description: Installs jq 1.8.x (latest) to replace the default jq on the runner
 
@@ -5,7 +8,7 @@ inputs:
   version:
     description: jq version to install
     required: false
-    default: 1.8.1
+    default: 1.8.2
 
 runs:
   using: composite

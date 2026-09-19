@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
 name: _ci (Reusable workflow)
 
 on:
@@ -28,16 +31,6 @@ on:
         type: string
         default: >-
           ["ubuntu-latest"]
-
-      dotnet-version:
-        description: Version of .NET SDK to use. Cannot be null or empty!.
-        type: string
-        default: 10.0.x
-
-      configuration:
-        description: The type of build to produce, e.g. Release vs Debug. Cannot be null or empty!
-        type: string
-        default: Release
 
       preprocessor-symbols:
         description: Define preprocessor symbols to pass to the compiler
@@ -76,6 +69,11 @@ on:
 
       reset-benchmark-thresholds:
         description: Set to "true" to reset Bencher thresholds if some degradation is expected.
+        type: boolean
+        default: false
+
+      skip-build:
+        description: Set to "true" to skip build execution.
         type: boolean
         default: false
 
@@ -125,8 +123,6 @@ jobs:
       benchmark-projects: ${{ steps.validate.outputs.benchmark-projects }}
       package-projects: ${{ steps.validate.outputs.package-projects }}
       runners-os: ${{ steps.validate.outputs.runners-os }}
-      dotnet-version: ${{ steps.validate.outputs.dotnet-version }}
-      configuration: ${{ steps.validate.outputs.configuration }}
       preprocessor-symbols: ${{ steps.validate.outputs.preprocessor-symbols }}
       min-coverage-pct: ${{ steps.validate.outputs.min-coverage-pct }}
       max-regression-pct: ${{ steps.validate.outputs.max-regression-pct }}
@@ -135,8 +131,9 @@ jobs:
       minver-tag-prefix: ${{ steps.validate.outputs.minver-tag-prefix }}
       minver-prerelease-id: ${{ steps.validate.outputs.minver-prerelease-id }}
       reset-benchmark-thresholds: ${{ steps.validate.outputs.reset-benchmark-thresholds }}
-      skip-benchmarks: ${{ steps.validate.outputs.skip-benchmarks }}
+      skip-build: ${{ steps.validate.outputs.skip-build }}
       skip-tests: ${{ steps.validate.outputs.skip-tests }}
+      skip-benchmarks: ${{ steps.validate.outputs.skip-benchmarks }}
       skip-packages: ${{ steps.validate.outputs.skip-packages }}
       skip-push: ${{ steps.validate.outputs.skip-push }}
 
@@ -150,12 +147,20 @@ jobs:
       - name: Setup DevOps
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
 
+      # Needed for `dotnet sln <file> list`, used by validate-input.sh to expand a solution
+      # entry in build-projects into its constituent projects. No NuGet caching/auth here --
+      # this job never restores or builds, it only needs the SDK binary itself.
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
       - name: Setup jq
         uses: vmelamed/vm2.DevOps/.github/actions/setup-jq@main
 
       - name: Validate Conventional Commits
         if: github.event_name == 'pull_request'
-        run: validate-commits.sh --base-ref "origin/${{ github.base_ref }}"
+        run: validate-commits.sh "origin/${{ github.base_ref }}"
 
       # Run validation script to verify and normalize all inputs (inputs, env, vars, secrets, etc.)
       - name: Validate and normalize all inputs
@@ -167,8 +172,6 @@ jobs:
               --benchmark-projects          '${{ inputs.benchmark-projects }}' \
               --package-projects            '${{ inputs.package-projects }}' \
               --runners-os                  '${{ inputs.runners-os }}' \
-              --dotnet-version              '${{ inputs.dotnet-version }}' \
-              --configuration               '${{ inputs.configuration }}' \
               --define                      '${{ inputs.preprocessor-symbols }}' \
               --min-coverage-pct            '${{ inputs.min-coverage-pct }}' \
               --max-regression-pct          '${{ inputs.max-regression-pct }}' \
@@ -177,8 +180,9 @@ jobs:
               --minver-tag-prefix           '${{ inputs.minver-tag-prefix }}' \
               --minver-prerelease-id        '${{ inputs.minver-prerelease-id }}' \
               --reset-benchmark-thresholds  '${{ inputs.reset-benchmark-thresholds }}' \
-              --skip-benchmarks             '${{ inputs.skip-benchmarks }}' \
+              --skip-build                  '${{ inputs.skip-build }}' \
               --skip-tests                  '${{ inputs.skip-tests }}' \
+              --skip-benchmarks             '${{ inputs.skip-benchmarks }}' \
               --skip-packages               '${{ inputs.skip-packages }}'
 
   # Build the project and cache artifacts for downstream tests/benchmark jobs
@@ -191,16 +195,15 @@ jobs:
       matrix:
         build-project: ${{ fromJSON(needs.validate-input.outputs.build-projects) }}
         runner-os: ${{ fromJSON(needs.validate-input.outputs.runners-os) }}
-    if: fromJSON(needs.validate-input.outputs.build-projects)[0] != null
+    if: >-
+        fromJSON(needs.validate-input.outputs.build-projects)[0] != null &&
+        needs.validate-input.outputs.skip-build == 'false'
     uses: vmelamed/vm2.DevOps/.github/workflows/_build.yaml@main
     with:
       build-project: ${{ matrix.build-project }}
       runner-os: ${{ matrix.runner-os }}
-      dotnet-version: ${{ needs.validate-input.outputs.dotnet-version }}
-      configuration: ${{ needs.validate-input.outputs.configuration }}
       preprocessor-symbols: ${{ needs.validate-input.outputs.preprocessor-symbols }}
-      minver-tag-prefix: ${{ needs.validate-input.outputs.minver-tag-prefix }}
-      minver-prerelease-id: ${{ needs.validate-input.outputs.minver-prerelease-id }}
+      job-index: ${{ strategy.job-index }}
 
   # Run unit tests with code coverage analysis
   test:
@@ -228,8 +231,6 @@ jobs:
     with:
       test-projects: ${{ needs.validate-input.outputs.test-projects }}
       runner-os: ${{ matrix.runner-os }}
-      dotnet-version: ${{ needs.validate-input.outputs.dotnet-version }}
-      configuration: ${{ needs.validate-input.outputs.configuration }}
       preprocessor-symbols: ${{ needs.validate-input.outputs.preprocessor-symbols }}
       min-coverage-pct: ${{ fromJSON(needs.validate-input.outputs.min-coverage-pct) }}
       minver-tag-prefix: ${{ needs.validate-input.outputs.minver-tag-prefix }}
@@ -262,8 +263,6 @@ jobs:
     with:
       benchmark-project: ${{ matrix.benchmark-project }}
       runner-os: ${{ matrix.runner-os }}
-      dotnet-version: ${{ needs.validate-input.outputs.dotnet-version }}
-      configuration: ${{ needs.validate-input.outputs.configuration }}
       preprocessor-symbols: ${{ needs.validate-input.outputs.preprocessor-symbols }}
       minver-tag-prefix: ${{ needs.validate-input.outputs.minver-tag-prefix }}
       minver-prerelease-id: ${{ needs.validate-input.outputs.minver-prerelease-id }}
@@ -292,8 +291,6 @@ jobs:
     with:
       package-project: ${{ matrix.package-project }}
       runner-os: ${{ matrix.runner-os }}
-      dotnet-version: ${{ needs.validate-input.outputs.dotnet-version }}
-      configuration: ${{ needs.validate-input.outputs.configuration }}
       preprocessor-symbols: ${{ needs.validate-input.outputs.preprocessor-symbols }}
       minver-tag-prefix: ${{ needs.validate-input.outputs.minver-tag-prefix }}
       minver-prerelease-id: ${{ needs.validate-input.outputs.minver-prerelease-id }}

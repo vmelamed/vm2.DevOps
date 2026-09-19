@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
 name: _refresh_lockfiles (Reusable workflow)
 
 # Reusable workflow that refreshes NuGet lock files when SDK-implicit
@@ -7,11 +10,6 @@ name: _refresh_lockfiles (Reusable workflow)
 on:
   workflow_call:
     inputs:
-      dotnet-version:
-        description: .NET SDK version pattern (e.g. "10.0.x")
-        type: string
-        default: "10.0.x"
-
       runner-os:
         description: Runner OS
         type: string
@@ -45,10 +43,9 @@ jobs:
           ref: ${{ inputs.base-branch || github.event.repository.default_branch }}
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: ${{ inputs.dotnet-version }}
-          dotnet-quality: ga
+          global-json-file: global.json
 
       - name: Authenticate with GitHub Packages
         if: ${{ env.GH_PACKAGES_TOKEN != '' }}

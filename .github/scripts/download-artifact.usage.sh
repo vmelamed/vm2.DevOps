@@ -1,22 +1,26 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
 
-declare -xr common_switches
-declare -xr common_vars
+
+declare -xr common_args_usage
 declare -xr script_name
 
 function usage_text()
 {
-    local _long_text=$1
-    local _switches=""
-    local _vars=""
+    (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
+    is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1:-<none>})."
+    exit_if_has_bugs
 
-    if $_long_text; then
-        _switches=$'\n'"Switches:"$'\n'"$common_switches"
-        _vars="$common_vars"
-    fi
+    local _long_text=$1
+    local _common_args=''
+
+    $_long_text  &&  _common_args=$common_args_usage || _common_args=''
 
     cat << EOF
-Usage: $script_name [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
+Usage:
+  $script_name [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
+
 Tries to find and download the latest artifact created by previous runs of the specified workflow. All parameters are optional
 if the corresponding environment variables are set. If both are specified, the command line arguments take precedence
 
@@ -41,7 +45,7 @@ Note:
      variable WORKFLOW_NAME, WORKFLOW_PATH, and WORKFLOW_ID in that order
   2) If more than one --wf-* options are specified, only the last one is considered
   3) If one of the --wf-* options is specified, the environment variables will be ignored
-$_switches
+
 Environment Variables:
   ARTIFACT_NAME                 Name of the artifact to download
   ARTIFACT_DIR                  Directory where artifacts will be downloaded
@@ -49,6 +53,6 @@ Environment Variables:
   WORKFLOW_ID                   ID of the workflow
   WORKFLOW_NAME                 Name of the workflow
   WORKFLOW_PATH                 Path to the workflow file
-$_vars
+$_common_args
 EOF
 }

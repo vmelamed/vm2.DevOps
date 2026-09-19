@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
 name: _test (Reusable workflow)
 
 on:
@@ -17,11 +20,6 @@ on:
         description: Runner OS
         type: string
         default: ubuntu-latest
-
-      dotnet-version:
-        description: Version of .NET SDK to use (cannot be null or empty string, default 10.0.x)
-        type: string
-        default: 10.0.x
 
       configuration:
         description: The type of build to produce, e.g. Release vs Debug (cannot be null or empty string, default Release)
@@ -63,11 +61,10 @@ permissions:
   pull-requests: write # to comment test results on PRs
 
 env:
-  # this must be the same across all jobs and steps below.
-  # We must know where to find the artifacts and where to download/upload to/from across all jobs and steps here.
-  ARTIFACTS_DIR: ${{ vars.ARTIFACTS_DIR || 'artifacts' }}
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
+  GH_TOKEN: ${{ github.token }}
+  GH_ACTOR: ${{ github.actor }}
   VERBOSE: ${{ vars.VERBOSE || false }}
 
 jobs:
@@ -96,18 +93,16 @@ jobs:
       - name: Setup .NET and the dependencies cache
         uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@main
         with:
-          dotnet-version: ${{ inputs.dotnet-version }}
           runner-os: ${{ inputs.runner-os }}
           github-token: ${{ github.token }}
           github-actor: ${{ github.actor }}
 
-      # Retrieve compiled binaries from the build job to avoid recompilation. Artifacts (not the cache) are the
+      # Retrieve compiled binaries from the build workflow to avoid recompilation. Artifacts (not the cache) are the
       # intra-run handoff: the cache gives no read-after-write guarantee within a run.
       - name: Download built artifacts
         uses: actions/download-artifact@v8
         with:
-          pattern: built-artifacts-${{ runner.os }}-${{ inputs.configuration }}-*
-          merge-multiple: true
+          pattern: built-artifacts-${{ runner.os }}-${{ github.run_id }}-*
           path: downloaded/
 
       - name: Extract built artifacts
@@ -115,7 +110,10 @@ jobs:
         run: |
           find downloaded/ -name '*.tar.gz' -exec tar xzf {} \;
 
-      - name: Verify the artifacts were restored and run the tests
+      # No separate "verify artifacts were downloaded" check here: run-tests.sh resolves its own expected
+      # test executable path and rebuilds the project itself when that output is missing (e.g. a download
+      # that came back empty).
+      - name: Run tests
         id: run-tests
         shell: bash
         env:
@@ -123,19 +121,6 @@ jobs:
           TEST_VAR: test-value
         run: |
           source $DEVOPS_LIB_DIR/gh_core.sh
-
-          ARTIFACT_PATH=$(find . -type d -path "*/bin/${{ inputs.configuration }}" | head -n 1)
-
-          if [ -z "$ARTIFACT_PATH" ]; then
-              error "No built artifacts were downloaded from the build job."
-              exit 1
-          else
-              info "Built artifacts found at: $ARTIFACT_PATH"
-
-              # uncomment the next 2 lines if you want to debug the contents of the artifact path
-              # ls -la "$ARTIFACT_PATH"/**/*.*
-              # ls -la ./tests/**/bin/${{ inputs.configuration }}/*.*
-          fi
 
           # Parse test projects JSON array and run each test project
 
@@ -145,11 +130,9 @@ jobs:
             run-tests.sh \
                 "$test_project" \
                 --define "${{ inputs.preprocessor-symbols }}" \
-                --configuration "${{ inputs.configuration }}" \
                 --min-coverage-pct "${{ inputs.min-coverage-pct }}" \
                 --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
-                --minver-prerelease-id "${{ inputs.minver-prerelease-id }}" \
-                --artifacts "$ARTIFACTS_DIR"
+                --minver-prerelease-id "${{ inputs.minver-prerelease-id }}"
 
                 # This is the root artifacts directory. The script will create a subdirectory for each test project,
                 # e.g. artifacts/tests/results/<test-project-name>/*

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
 name: _build (Reusable workflow)
 
 on:
@@ -13,30 +16,18 @@ on:
         type: string
         default: ubuntu-latest
 
-      dotnet-version:
-        description: Version of .NET SDK to use (default 10.0.x)
-        type: string
-        default: 10.0.x
-
-      configuration:
-        description: The type of build to produce, e.g. Release vs Debug (default Release)
-        type: string
-        default: Release
-
       preprocessor-symbols:
         description: Preprocessor symbols to pass to the compiler (default - none)
         type: string
         default: ""
 
-      minver-tag-prefix:
-        description: MinVer tag prefix to use for version calculation. Cannot be null or empty!
-        type: string
-        default: v
-
-      minver-prerelease-id:
-        description: MinVer pre-release identifiers to use for version calculation. Cannot be null or empty!
-        type: string
-        default: preview.0
+      job-index:
+        description: >-
+          The calling job's own matrix leg index (the caller's strategy.job-index -- this
+          reusable workflow runs as its own job, with no matrix of its own, so it cannot read
+          that context directly). Used only to name this leg's uploaded artifact uniquely.
+        type: number
+        default: 0
 
 permissions:
   contents: read
@@ -45,6 +36,8 @@ permissions:
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
+  MINVERTAGPREFIX: ${{ vars.MINVERTAGPREFIX }}
+  MINVERDEFAULTPRERELEASEIDENTIFIERS: ${{ vars.MINVERDEFAULTPRERELEASEIDENTIFIERS }}
   GH_TOKEN: ${{ github.token }}
   GH_ACTOR: ${{ github.actor }}
   VERBOSE: ${{ vars.VERBOSE || false }}
@@ -71,10 +64,9 @@ jobs:
       - name: Setup .NET and the dependencies cache
         uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@main
         with:
-          dotnet-version: ${{ inputs.dotnet-version }}
           runner-os: ${{ inputs.runner-os }}
-          github-token: ${{ github.token }}
           github-actor: ${{ github.actor }}
+          github-token: ${{ github.token }}
 
       - name: Build
         id: build
@@ -82,10 +74,7 @@ jobs:
         run: |
           build.sh \
               "${{ inputs.build-project }}" \
-              --configuration "${{ inputs.configuration }}" \
-              --define "${{ inputs.preprocessor-symbols }}" \
-              --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
-              --minver-prerelease-id "${{ inputs.minver-prerelease-id }}"
+              --define "${{ inputs.preprocessor-symbols }}"
 
       - name: Detect SDK drift on failure
         if: failure()
@@ -113,35 +102,39 @@ jobs:
               } >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      # Make the compiled binaries and intermediate files available to the downstream jobs (test, benchmarks, pack) of
-      # this run. Artifacts -- not the cache -- are the intra-run handoff mechanism: the cache service is designed for
-      # cross-run reuse and gives no read-after-write guarantee, so a freshly saved entry may not be visible to a lookup
-      # seconds later (observed 2026-06-11: 4/4 deterministic restore misses ~25s after a verified save).
-      # The slug keeps artifact names unique across the build matrix legs (artifact names are immutable per run).
-      - name: Compute build artifact slug
-        id: slug
-        shell: bash
-        env:
-          BUILD_PROJECT: ${{ inputs.build-project }}
-        run: |
-          slug=$(printf '%s' "$BUILD_PROJECT" | tr -c 'A-Za-z0-9.\n' '-')
-          echo "slug=${slug:-root}" >> "$GITHUB_OUTPUT"
-
+      # Make the compiled binaries and intermediate files available to the downstream jobs (test, benchmarks, pack) of this run.
+      # Artifacts -- not the cache -- are the intra-run handoff mechanism: the cache service is designed for cross-run reuse and
+      # gives no read-after-write guarantee, so a freshly saved entry may not be visible to a lookup seconds later (observed
+      # 2026-06-11: 4/4 deterministic restore misses ~25s after a verified save).
+      #
+      # Archives the whole bin/obj tree rather than scoping to this leg's own build-project name(s): `dotnet build`
+      # transitively rebuilds project references into the same shared artifacts/ tree, and a referenced project need not be
+      # listed in build-projects itself, so name-scoping could silently omit output another job actually needs. Grabbing
+      # everything can duplicate bytes across legs that share a reference, but never drops anything the build produced.
+      #
+      # ArtifactsPath (from Directory.Build.props, via build.sh's own output) is an ABSOLUTE path. Archiving with -C
+      # <parent-of-artifacts> stores members as relative paths (artifacts/bin/..., artifacts/obj/...) so a plain `tar xzf`
+      # in a downstream job's freshly checked-out repo (same relative layout, different absolute path) extracts them to
+      # the right place. Archiving the absolute paths directly would extract nested under the downstream job's own
+      # absolute path prefix instead -- tar only strips a member's leading '/', not a whole matching absolute prefix.
       - name: Archive built artifacts
         shell: bash
+        env:
+          ARTIFACTS_PATH: ${{ steps.build.outputs.artifacts-path }}
         run: |
-          # bin/<config> for the jobs that execute binaries (test, benchmarks); obj/ for the jobs that re-enter
-          # MSBuild with --no-build (pack needs the intermediate assembly and generated nuspec inputs).
-          readarray -t bin_dirs < <(find . -type d -path "*/bin/${{ inputs.configuration }}" -prune -print)
-          readarray -t obj_dirs < <(find . -type d -name obj -prune -print)
-          [[ ${#bin_dirs[@]} -gt 0 ]] || {
-              echo "::error::Build produced no output in bin/${{ inputs.configuration }}."
+          [[ -d $ARTIFACTS_PATH/bin ]] || {
+              echo "::error::Build produced no output in $ARTIFACTS_PATH/bin/."
               exit 1
           }
-          tar czf built-artifacts.tar.gz --exclude='*.tmp' "${bin_dirs[@]}" "${obj_dirs[@]}"
+          tar czf built-artifacts.tar.gz --exclude='*.tmp' \
+              -C "$(dirname "$ARTIFACTS_PATH")" \
+              "$(basename "$ARTIFACTS_PATH")/bin" "$(basename "$ARTIFACTS_PATH")/obj"
 
+      # Named by this matrix leg's own index, not by project/solution content: a leg may cover one project or several (a
+      # whole solution), so there's no single clean name to embed here -- the index is always unique across the matrix
+      # regardless of what a leg builds.
       - name: Upload built artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: built-artifacts-${{ runner.os }}-${{ inputs.configuration }}-${{ github.run_id }}
           path: built-artifacts.tar.gz
+          name: built-artifacts-${{ runner.os }}-${{ github.run_id }}-${{ inputs.job-index }}

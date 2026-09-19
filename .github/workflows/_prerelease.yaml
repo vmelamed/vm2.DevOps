@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
 name: _prerelease (Reusable workflow)
 
 on:
@@ -5,20 +8,10 @@ on:
     inputs:
       package-projects:
         description: >-
-          JSON array of project/solution paths to package and publish, e.g. '["src/Project1/Project1.csproj", "src/Project2/Project2.csproj"]'.
-          If empty array, dotnet CLI will auto-detect root .sln, .slnx, or .csproj files.
+          JSON array of project/solution paths to package and publish, e.g. '["src/Project1/Project1.csproj",
+          "src/Project2/Project2.csproj"]'. If empty array, dotnet CLI will auto-detect root .sln, .slnx, or .csproj files.
         type: string
         default: "[]"
-
-      dotnet-version:
-        description: Version of .NET SDK to use (cannot be null or empty string, default 10.0.x)
-        type: string
-        default: 10.0.x
-
-      configuration:
-        description: The type of build to produce, e.g. Release vs Debug. Cannot be null or empty!
-        type: string
-        default: Release
 
       preprocessor-symbols:
         description: Preprocessor symbols to pass to the compiler
@@ -31,7 +24,9 @@ on:
         default: "v"
 
       minver-prerelease-id:
-        description: Prefix for the prerelease tag, e.g. 'preview.0', 'alpha', 'beta', 'rc', etc. (cannot be null or empty string, default 'preview.0')
+        description: >-
+          Prefix for the prerelease tag, e.g. 'preview.0', 'alpha', 'beta', 'rc', etc. (cannot be null or empty string, default
+          'preview.0')
         type: string
         default: "preview.0"
 
@@ -41,7 +36,7 @@ on:
         default: ""
 
       nuget-server:
-        description: "NuGet server to publish to (supported values for now: 'nuget' or 'github')"
+        description: "NuGet server to publish to ('nuget' or 'github')"
         type: string
         default: nuget
 
@@ -51,10 +46,9 @@ on:
 
       sha:
         description: >-
-          Exact git SHA to compute the version from and tag. When triggered automatically via
-          workflow_run, pass github.event.workflow_run.head_sha to pin the prerelease to the
-          CI-validated commit and prevent tagging an untested commit if another PR merges
-          in the window between CI completing and this workflow running.
+          Exact git SHA to compute the version from and tag. When triggered automatically via workflow_run, pass
+          github.event.workflow_run.head_sha to pin the prerelease to the CI-validated commit and prevent tagging an untested
+          commit if another PR merges in the window between CI completing and this workflow running.
           Defaults to HEAD when empty (safe for manual workflow_dispatch triggers).
         type: string
         default: ""
@@ -62,15 +56,15 @@ on:
     secrets:
       RELEASE_PAT:
         description: >-
-          PAT for a user listed as a bypass actor (e.g. Admin) in the branch ruleset protecting main.
-          Required to push changelog commits and version tags directly to main.
+          PAT for a user listed as a bypass actor (e.g. Admin) in the branch ruleset protecting main. Required to push changelog
+          commits and version tags directly to main.
         required: true
 
     outputs:
       artifact-ids:
         description: >-
-          Comma-separated list of artifact IDs for the uploaded package artifacts, if any.
-          Empty string if no artifacts were uploaded.
+          Comma-separated list of artifact IDs for the uploaded package artifacts, if any. Empty string if no artifacts were
+          uploaded.
         value: ${{ jobs.collect-artifacts.outputs.artifact-ids }}
 
 concurrency:
@@ -85,8 +79,8 @@ permissions:
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
-  ARTIFACTS_DIR: ${{ vars.ARTIFACTS_DIR || 'artifacts' }}
-  CONFIGURATION: ${{ vars.CONFIGURATION || 'Release' }}
+  GH_TOKEN: ${{ github.token }}
+  GH_ACTOR: ${{ github.actor }}
   PREPROCESSOR_SYMBOLS: ${{ vars.PREPROCESSOR_SYMBOLS || '' }}
   MINVER_TAG_PREFIX: ${{ vars.MINVER_TAG_PREFIX || 'v' }}
   MINVER_PRERELEASE_ID: ${{ vars.MINVER_PRERELEASE_ID || 'preview.0' }}
@@ -100,9 +94,9 @@ jobs:
     name: Compute Prerelease Version, Update CHANGELOG.md and Create Prerelease Tag
     runs-on: ubuntu-latest
     outputs:
-      prerelease-version: ${{ steps.version-tag-and-changelog.outputs.prerelease-version }}
-      prerelease-tag: ${{ steps.version-tag-and-changelog.outputs.prerelease-tag }}
-      reason: ${{ steps.version-tag-and-changelog.outputs.reason }}
+      prerelease-version: ${{ steps.compute-prerelease-version.outputs.prerelease-version }}
+      prerelease-tag: ${{ steps.compute-prerelease-version.outputs.prerelease-tag }}
+      reason: ${{ steps.compute-prerelease-version.outputs.reason }}
     steps:
       - name: Checkout (full history)
         uses: actions/checkout@v7
@@ -117,7 +111,7 @@ jobs:
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
 
       - name: Verify HEAD matches the CI-validated SHA; Validate and compute prerelease version
-        id: version-tag-and-changelog
+        id: compute-prerelease-version
         shell: bash
         run: |
           source "$DEVOPS_LIB_DIR/gh_core.sh"
@@ -156,12 +150,12 @@ jobs:
           exit_if_has_errors
 
           changelog-and-tag.sh \
-              --tag "${{ steps.version-tag-and-changelog.outputs.prerelease-tag }}" \
-              --reason "${{ steps.version-tag-and-changelog.outputs.reason }}" \
+              --tag "${{ steps.compute-prerelease-version.outputs.prerelease-tag }}" \
+              --reason "${{ steps.compute-prerelease-version.outputs.reason }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}"
 
   package-and-publish:
-    name: Publish Package (prerelease) to NuGet server and/or save package artifacts
+    name: Publish Prerelease Package to NuGet server and/or Save Package Artifacts
     if: fromJSON(inputs.package-projects)[0] != null
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -185,7 +179,6 @@ jobs:
       - name: Setup .NET and the dependencies cache
         uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@main
         with:
-          dotnet-version: ${{ inputs.dotnet-version }}
           runner-os: ubuntu-latest
           github-token: ${{ github.token }}
           github-actor: ${{ github.actor }}
@@ -196,13 +189,11 @@ jobs:
         run: |
           pack.sh \
               "${{ matrix.project }}" \
-              --build \
-              --configuration "${{ inputs.configuration }}" \
+              --build true \
               --define "${{ inputs.preprocessor-symbols }}" \
               --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
               --minver-prerelease-id "${{ inputs.minver-prerelease-id }}" \
-              --reason "${{ needs.prepare-prerelease.outputs.reason }}" \
-              --artifacts "$ARTIFACTS_DIR"
+              --reason "${{ needs.prepare-prerelease.outputs.reason }}"
 
       - name: Upload package artifact
         id: upload-artifact
@@ -210,7 +201,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: nuget-packages-${{ needs.prepare-prerelease.outputs.prerelease-tag }}-${{ hashFiles(matrix.project) }}
-          path: $ARTIFACTS_DIR/packages/*.nupkg
+          path: ${{ steps.package.outputs.package-output-path }}/*.nupkg
           if-no-files-found: error
           overwrite: true
 
@@ -223,6 +214,9 @@ jobs:
     outputs:
       artifact-ids: ${{ steps.collect.outputs.artifact-ids }}
     steps:
+      - name: Setup DevOps environment variables
+        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
+
       - name: Collect artifact IDs
         id: collect
         env:
@@ -231,10 +225,17 @@ jobs:
           RUN_ID: ${{ github.run_id }}
         shell: bash
         run: |
+          source $DEVOPS_LIB_DIR/gh_core.sh
+
           artifact_ids=$(
-              gh api "repos/$GH_REPO/actions/runs/$RUN_ID/artifacts" --paginate \
+              gh api "repos/$GH_REPO/actions/runs/$RUN_ID/artifacts" \
+              --paginate \
               --jq '.artifacts[] | select(.name | startswith("nuget-packages-")) | .id' |
               paste -sd, -
           )
-          echo "artifact-ids=$artifact_ids" # to the logs
-          echo "artifact-ids=$artifact_ids" >> "$GITHUB_OUTPUT"
+          {
+            printf "### Collected artifact IDs:\n\n"
+            printf "artifact-ids=$artifact_ids\n"
+          } | to_stdout
+
+          args_to_github_output artifact_ids

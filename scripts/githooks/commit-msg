@@ -11,7 +11,7 @@ set -euo pipefail
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../bash/lib")
 
-source "$lib_dir/core.sh"
+source "$lib_dir/core.sh" --no-trap
 
 # Allowed commit types — keep in sync with changelog/cliff.prerelease.toml commit_parsers
 declare -arx allowed_commit_types
