@@ -60,11 +60,12 @@ on:
           commits and version tags directly to main.
         required: true
 
-      NUGET_API_KEY:
+    outputs:
+      artifact-ids:
         description: >-
-          Token for authentication to the NuGet server - must be issued by the selected nuget-server. Not used for 'nuget'
-          (NuGet.org trusted publishing uses OIDC instead).
-        required: false
+          Comma-separated list of artifact IDs for the uploaded package artifacts, if any. Empty string if no artifacts were
+          uploaded.
+        value: ${{ jobs.collect-artifacts.outputs.artifact-ids }}
 
 concurrency:
   group: prerelease-${{ github.ref }}
@@ -74,7 +75,6 @@ permissions:
   contents: write
   packages: write
   actions: read
-  id-token: write # Required for authentication with the NuGet server
 
 env:
   DOTNET_NOLOGO: true
@@ -239,80 +239,3 @@ jobs:
           } | to_stdout
 
           args_to_github_output artifact_ids
-
-  publish-prerelease:
-    name: Publish NuGet prerelease packages
-    needs:
-      - collect-artifacts
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read   # Required to read workflow run artifact IDs
-      id-token: write # Required for authentication with the NuGet server
-    steps:
-      # This job never builds anything -- it only downloads .nupkg files the package-and-publish matrix already
-      # produced and pushes them -- so "packages" here is just a local staging directory for this job's own
-      # runner, not the Directory.Build.props-derived ArtifactsPath the rest of the pipeline uses for real build
-      # output.
-      #
-      # merge-multiple: true flattens all downloaded package artifacts into one directory -- without it, each
-      # artifact-id lands in its own nested subfolder (packages/<artifact-name>/*.nupkg), one level deeper than
-      # the flat packages/*.nupkg glob the publish step below expects.
-      - name: Download package artifact
-        uses: actions/download-artifact@v8
-        with:
-          artifact-ids: ${{ needs.collect-artifacts.outputs.artifact-ids }}
-          path: packages
-          merge-multiple: true
-
-      - name: Authenticate with NuGet.org trusted publishing to get steps.nuget-login.outputs.NUGET_API_KEY
-        if: inputs.nuget-server == 'nuget'
-        id: nuget-login
-        uses: NuGet/login@v1
-        with:
-          user: ${{ inputs.nuget-username }}
-
-      - name: Setup DevOps environment variables
-        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@big-bang
-
-      - name: Publish NuGet prerelease packages
-        shell: bash
-        run: |
-          source $DEVOPS_LIB_DIR/gh_core.sh
-
-          set -euo pipefail
-
-          artifacts_dir="packages"
-          nuget_server="${{ inputs.nuget-server }}"
-          case "$nuget_server" in
-              nuget )
-                  server_name="NuGet.org"
-                  server_url="https://api.nuget.org/v3/index.json"
-                  nuget_api_key="${{ steps.nuget-login.outputs.NUGET_API_KEY }}"
-                  ;;
-              github )
-                  server_name="GitHub Packages"
-                  server_url="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
-                  nuget_api_key="${{ secrets.NUGET_API_KEY }}"
-                  [[ -n "$nuget_api_key" ]] ||
-                      error -ec "$err_missing_argument" "No API key provided for server '$server_name'"
-                  ;;
-              http://*|https://* )
-                  server_name="$nuget_server"
-                  server_url="$nuget_server"
-                  nuget_api_key="${{ secrets.NUGET_API_KEY }}"
-                  [[ -n "$nuget_api_key" ]] ||
-                      error -ec "$err_missing_argument" "No API key provided for server '$server_name'"
-                  ;;
-              * )
-                  error "Unsupported NuGet server: '$nuget_server'. Supported values: 'nuget', 'github', 'custom URL'."
-                  ;;
-          esac
-          exit_if_has_errors
-
-          for pkg in "$artifacts_dir"/*.nupkg; do
-              trace "Publishing package: $pkg"
-              dotnet nuget push "$pkg" \
-                  --source "$server_url" \
-                  --api-key "$nuget_api_key" \
-                  --skip-duplicate
-          done
