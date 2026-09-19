@@ -8,7 +8,7 @@
         "ClearCache.yaml": "ignore",
         "RefreshLockFiles.yaml": "ignore",
         "AutoMerge.yaml": "ignore",
-        "RebuildBenchHistory.yaml": "ignore",
+        "Directory.Solution.props": "ignore",
         "Directory.Build.props": "ignore",
         "Directory.Packages.props": "ignore",
         "codecov.yaml": "ignore",
