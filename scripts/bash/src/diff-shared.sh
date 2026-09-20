@@ -60,7 +60,7 @@ declare -x vm2_sot_repo_name
 declare -x sot=$default_sot
 declare -xa target_repos=()     # the target repositories specified as arguments. If not specified, the current directory is used as the only target repo.
 declare -xA selectors_actions=() # array [file] => [action string] for files specified on the CLI with --file* options
-declare -x diff_only="false"    # if true, only show the differences without asking the user to take any actions. This is useful for CI validation of the shared content. In this mode, the actions are ignored and the summary file will not contain the Action column.
+declare -x diff_only="false"    # if true, only show the differences without asking the user to take any actions. This is useful for CI validation of the shared content.
 declare -x summary_file=""      # the file where the summary of the differences and actions will be written. If not specified, a temporary file will be created.
 declare -x current_branch="false"    # both vm2.DevOps and SoT repositories must be on the main branch by default, otherwise on their respective current branches
 
@@ -204,12 +204,12 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     $diff_only && {
         echo -e "### Target Repository: $target ($target_path)\n"
-        echo -e "| Source Path | Target Path | Filename | Difference | To do: | Default: |"
-        echo -e "|:------------|:------------|:---------|:-----------|:-------|:---------|"
+        echo -e "| Source Path | Target Path | Filename | Default: | Difference | To do: |"
+        echo -e "|:------------|:------------|:---------|:---------|:-----------|:-------|"
     } >> "$summary_file" || {
         echo -e "### Target Repository: $target ($target_path)\n"
-        echo -e "| Source Path | Target Path | Filename | Difference | Done:  | Default: |"
-        echo -e "|:------------|:------------|:---------|:-----------|:-------|:---------|"
+        echo -e "| Source Path | Target Path | Filename | Default: | Difference | Done:  |"
+        echo -e "|:------------|:------------|:---------|:---------|:-----------|:-------|"
     } >> "$summary_file"
 
     info "Target repository '$target' ($target_path)..."
@@ -357,7 +357,7 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
         filename="$(basename "$source_file")"
         source_path="$(dirname "$source_file")"
         target_path="$(dirname "$target_file")"
-        echo "| ${source_path#"$vm2_repos/"} | ${target_path#"$vm2_repos/"} | $filename | $difference | $action | $actions |" >> "$summary_file"
+        echo "| ${source_path#"$vm2_repos/"} | ${target_path#"$vm2_repos/"} | $filename | $actions | $difference | $action |" >> "$summary_file"
     done # SoT files loop
 
     echo "" >> "$summary_file"
@@ -366,6 +366,7 @@ done # repositories loop
 dump_vars \
     --force \
     --quiet \
+    --markdown \
     --header "Summary:" \
     --name "Different"  summary_diff_count \
     --name "Identical"  summary_identical_count \
