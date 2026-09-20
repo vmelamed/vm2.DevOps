@@ -636,7 +636,7 @@ function display_dotnet_build_summary()
         "$_tbl_fmt"
         --header "Configuration:"
         --name "Project"                    "${_build_info[$key_project]:-N/A}"
-        --name "Configuration"              "${_build_info[$key_configuration]:-Debug}"
+        --name "Configuration"              "${_build_info[$key_configuration]:-}"
         --name "Target Framework"           "${_build_info[$key_target_framework]:-}"
         --name "Runtime ID"                 "${_build_info[$key_runtime_identifier]:-}"
         --name "Artifacts Path"             "${_build_info[$key_artifacts_path]:-}"

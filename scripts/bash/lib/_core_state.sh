@@ -38,7 +38,6 @@ declare -xi err_logic_error             # An error occurred in the logic of the 
 initial_cwd=$(pwd)
 declare -xr initial_cwd
 
-
 #---------------------------------------------------------------------------------------------
 # @description: Indicates whether the script is running under a debugger, e.g. BashDb.
 #    SHOULD NOT BE OVERRIDDEN BY TOP-LEVEL SWITCHES AND OPTIONS!
@@ -76,12 +75,6 @@ declare -xr default_dry_run=false
 declare -xr default__ignore="/dev/null"
 declare -xra table_formats=("graphical" "markdown")
 declare -xr default_table_format="graphical"
-# if $ci; then
-#     default_table_format="markdown"
-# else
-#     default_table_format="graphical"
-# fi
-# declare -xr default_table_format
 
 #=============================================================================================
 # Verbose mode
