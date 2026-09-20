@@ -84,20 +84,20 @@ if [[ -d "$artifacts_benchmarks" && -n "$(ls -A "$artifacts_benchmarks")" ]]; th
                choice \
                    "Delete the directory and continue" \
                    "Rename the directory to '$renamed_artifacts_dir' and continue" \
-                   "Exit the script" || exit $?
+                   "Exit the script"
 
         trace "User selected option: $choice"
         case $choice in
-            1)  echo "Deleting the directory '$artifacts_benchmarks'..."
+            1)  warning "Deleting the directory '$artifacts_benchmarks'..."
                 execute rm -rf "$artifacts_benchmarks"
                 ;;
-            2)  echo "Renaming the directory '$artifacts_benchmarks' to '$renamed_artifacts_dir'..."
+            2)  info "Renaming the directory '$artifacts_benchmarks' to '$renamed_artifacts_dir'..."
                 execute mv "$artifacts_benchmarks" "$renamed_artifacts_dir"
                 ;;
-            3)  echo "Exiting the script."
+            3)  trace "Exiting the script."
                 exit 0
                 ;;
-            *)  echo "Invalid option $choice. Exiting."
+            *)  error -ns "Invalid option $choice. Exiting."
                 exit 2
                 ;;
         esac
@@ -154,17 +154,13 @@ else
     "$benchmark_exec_path" "${benchmark_args[@]}" || rc=$?
 fi
 
-if (( rc != 0 )); then
-    error -ec "$err_tool_error" "Tests failed in project '$benchmark_project' with exit code $rc."
-    exit "$err_tool_error"
-fi
+(( rc == 0 )) ||
+    exit_with_error -ec "$err_tool_error" "Tests failed in project '$benchmark_project' with exit code $rc."
 
 # Verify JSON results were created
 json_files=("$results_dir"/*-report-full-compressed.json)
-if [[ ! -f "${json_files[0]}" ]]; then
-    error -ec "$err_tool_error" "No JSON benchmark reports found in $results_dir"
-    exit "$err_tool_error"
-fi
+[[ -f "${json_files[0]}" ]] ||
+    exit_with_error -ec "$err_tool_error" "No JSON benchmark reports found in $results_dir"
 
 trace "Benchmark tests completed successfully. Found JSON benchmark results."
 {

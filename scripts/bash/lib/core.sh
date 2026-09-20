@@ -160,20 +160,29 @@ function on_err()
     return "$_rc"
 }
 
+
 declare __no_traps=false
 
 [[ -v 1 && -n $1 && ${1,,} == "--no-trap" ]] && __no_traps=true
 
-# By default all scripts trap DEBUG and EXIT to provide better error handling.
-# However, when running under a debugger, e.g. 'bashdb', trapping these signals
-# interferes with the debugging session.
-if ! "$__no_traps" && ! "$debugger"; then
+# By default all scripts trap DEBUG and EXIT to provide some feed back for unexpected exits.
+# To suppress the traps use the `--no-trap` command-line argument when you source core.sh.
+# Traps are also suppressed when running under a debugger or in a CI environment.
+if ! $__no_traps && ! $debugger && ! $ci; then
     # set the traps to see the last faulted command. However, they get in the way of debugging.
     trap on_err ERR
     trap on_exit EXIT
-else
-    echo "Traps are disabled due to --no-trap option or debugger being active." >&2
 fi
+
+#---------------------------------------------------------------------------------------------
+# @description Removes the ERR and EXIT traps set by core.sh.
+#   - Useful when the expected errors are handled already.
+#---------------------------------------------------------------------------------------------
+function remove_traps()
+{
+    trap - ERR
+    trap - EXIT
+}
 
 #---------------------------------------------------------------------------------------------
 # @description Depending on the value of $dry_run, either executes the given command or prints

@@ -254,8 +254,8 @@ if (( bencher_rc == 0 )); then
     info "The upload to Bencher completed successfully with no alerts."
 elif [[ $bencher_output == *"Alerts detected"* ]]; then
     warning "Bencher uploaded results but detected threshold alerts."
+    remove_traps
     exit "$bencher_rc"
 else
-    error -ec "$err_tool_error" "Bencher run failed before completing successfully."
-    exit "$bencher_rc"
+    exit_with_error -ec "$err_tool_error" "Bencher run failed before completing successfully."
 fi

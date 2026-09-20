@@ -58,25 +58,27 @@ if [[ -d "$artifacts" && -n "$(ls -A "$artifacts")" ]]; then
     renamed_artifacts_dir="$artifacts-$(date -u +"%Y%m%dT%H%M%S")"
 
     declare -r renamed_artifacts_dir
+    declare choice
 
     choose "The artifacts' directory '$artifacts' already exists. What do you want to do?" \
            choice \
                "Delete the directory and continue" \
                "Rename the directory to '$renamed_artifacts_dir' and continue" \
-               "Exit the script" || exit $?
+               "Exit the script"
 
     trace "User selected option: $choice"
     case $choice in
-        1)  echo "Deleting the directory '$artifacts'..."
+        1)  warning "Deleting the directory '$artifacts'..."
             execute rm -rf "$artifacts"
             ;;
-        2)  echo "Renaming the directory '$artifacts' to '$renamed_artifacts_dir'..."
+        2)  info "Renaming the directory '$artifacts' to '$renamed_artifacts_dir'..."
             execute mv "$artifacts" "$renamed_artifacts_dir"
             ;;
-        3)  echo "Exiting the script."
+        3)  trace "Exiting the script."
             exit 0
             ;;
-        *)  echo "Invalid option $choice. Exiting."
+        *)  error -ns "Invalid option $choice. Exiting."
+            remove_traps
             exit 2
             ;;
     esac
@@ -89,12 +91,10 @@ declare -x _ignore
 
 # install GitHub CLI and jq if not already installed
 if ! command -v -p jq &> "$_ignore" || ! command -v -p gh &> "$_ignore"; then
-    if execute sudo apt-get update && sudo apt-get install -y gh jq; then
-        info "GitHub CLI 'gh' and/or 'jq' successfully installed."
-    else
-        error -ec "$err_tool_not_found" "GitHub CLI 'gh' and/or 'jq' were not found and could not install them. Please have 'gh' and 'jq' installed."
-        exit "$err_tool_not_found"
-    fi
+    # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
+    execute sudo apt-get update && sudo apt-get install -y gh jq ||
+        exit_with_error -ec "$err_tool_not_found" "GitHub CLI 'gh' and/or 'jq' were not found and could not install them. Please have 'gh' and 'jq' installed."
+    info "GitHub CLI 'gh' and/or 'jq' successfully installed."
 fi
 
 declare -a runs
@@ -140,10 +140,8 @@ readarray -t runs < <(
         --json databaseId \
         --jq '.[].databaseId')
 
-if [[ ${#runs[@]} == 0 ]]; then
-    error -ec "$err_logic_error" "No successful runs found for the workflow '$workflow_id' in the repository '$repository'."
-    exit "$err_logic_error"
-fi
+(( ${#runs[@]} > 0 )) ||
+    exit_with_error -ec "$err_logic_error" "No successful runs found for the workflow '$workflow_id' in the repository '$repository'."
 
 # iterate over the runs and try to find and download the specified artifact
 # starting from the most recent one down to the oldest one
@@ -163,16 +161,13 @@ You may want to refresh the artifact. \
 E.g. re-run the benchmarks with --force-new-baseline or vars.FORCE_NEW_BASELINE" >&2
     fi
     trace "The artifact '$artifact_name' found in run $run. Downloading..."
-    if ! http_error=$(execute gh run download "$run" \
+    http_error=$(execute gh run download "$run" \
                                 --repo "$repository" \
                                 --name "$artifact_name" \
-                                --dir "$artifacts") ; then
-        error -ec "$err_tool_error" "Error while downloading '$artifact_name': $http_error"
-        exit "$err_tool_error"
-    fi
+                                --dir "$artifacts") ||
+        exit_with_error -ec "$err_tool_error" "Error while downloading '$artifact_name': $http_error"
     info "✅ The artifact '$artifact_name' successfully downloaded to directory '$artifacts'." >> "$GITHUB_STEP_SUMMARY"
     exit 0
 done
 
-error -ec "$err_logic_error" "The artifact '$artifact_name' was not found in the last ${#runs[@]} successful runs of the workflow '$workflow_name' in the repository '$repository'."
-exit "$err_logic_error"
+exit_with_error -ec "$err_logic_error" "The artifact '$artifact_name' was not found in the last ${#runs[@]} successful runs of the workflow '$workflow_name' in the repository '$repository'."

@@ -108,6 +108,7 @@ echo "Commits from $commit_sha onwards that would be moved to '$new_branch':"
 git log --oneline "$commit_sha^..$current_branch"
 echo ""
 if ! confirm "Do you want to continue?" "n"; then
+    remove_traps
     exit "$failure"
 fi
 

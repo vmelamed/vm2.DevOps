@@ -186,7 +186,12 @@ function to_summary()
 declare -xi __errors=0
 
 #---------------------------------------------------------------------------------------------
-# @description The shallowest bash call-stack depth at which an unflushed error was recorded.
+# @description The most recent error code recorded by the global error counter.
+#---------------------------------------------------------------------------------------------
+declare -xi __last_error=0
+
+#---------------------------------------------------------------------------------------------
+# @description The shallowest bash call-stack depth at which an un-flushed error was recorded.
 #   Mirrors `$__bugs_min_depth` -- see its documentation for the full rationale. Meaningless
 #   while `$__errors == 0`.
 #---------------------------------------------------------------------------------------------
@@ -246,6 +251,7 @@ function set_errors()
     exit_if_has_bugs
 
     __errors=$1
+    (( __errors == 0 || __last_error != 0 )) || __last_error=$failure # unspecified error
 }
 
 #---------------------------------------------------------------------------------------------
@@ -259,6 +265,7 @@ function set_errors()
 function reset_errors()
 {
     __errors=0
+    __last_error=$success
 }
 
 #=============================================================================================
@@ -320,8 +327,7 @@ function exit_if_has_bugs()
     __bugs=0            # clear before reporting: helpers called below (is_exit_code, __test_with_regex, etc.) also
     __bugs_min_depth=0  # follow the check-then-exit_if_has_bugs convention, and would otherwise see the stale
                         # count and recurse back into this same exit path indefinitely.
-    error -ec "$err_has_bugs" -ns "$_bugs bug(s) detected. Please fix the above issues and try again. Exiting the script immediately..."
-    exit "$err_has_bugs"
+    exit_with_error -ec "$err_has_bugs" -ns "$_bugs bug(s) detected. Please fix the above issues and try again. Exiting the script immediately..."
 }
 
 #---------------------------------------------------------------------------------------------
@@ -341,6 +347,7 @@ function usage()
     bug -ec "$err_not_overridden" "This implementation of usage() is meant to be a 'forward declaration'!" \
                                     "Either re-define usage() or source _args.sh." \
                                     "$@"
+    remove_traps
     exit "$failure";
 }
 
@@ -359,26 +366,30 @@ function usage()
 #---------------------------------------------------------------------------------------------
 function exit_if_has_errors()
 {
-    local _display_usage=true
-
     ! has_errors && return "$success"
 
     local -i _depth=${#FUNCNAME[@]}
     (( __errors_min_depth >= _depth )) || return "$success" # not mine to report -- defer to the ancestor whose validation block is still open
 
+    local _display_usage=true
     [[ -v 1 ]] && is_boolean "$1" && _display_usage="$1"
 
+    local -i _ec
+    (( __last_error != 0 )) && _ec=$__last_error || _ec=$err_has_errors
+
     local -i _errors=$__errors
-    __errors=0            # clear before reporting: guards against any future helper called below that follows
-    __errors_min_depth=0  # the check-then-exit_if_has_errors convention and would otherwise see the stale
-                          # count and recurse back into this same exit path (mirrors exit_if_has_bugs).
 
-    $_display_usage && usage -ec "$err_has_errors" -ns "$_errors error(s) encountered. Please fix the above issues and try again."
+    __errors=0           # clear before reporting: guards against any future helper called below that follows
+    __last_error=0       # the check-then-exit_if_has_errors convention and would otherwise see the stale
+    __errors_min_depth=0 # count and recurse back into this same exit path (mirrors exit_if_has_bugs).
+
+
     # exits with error message, code, and usage, if $_display_usage is true
+    $_display_usage && usage -ec "$_ec" -ns "$_errors error(s) encountered. Please fix the above issues and try again."
 
-    error -ec "$err_has_errors" -ns "$_errors error(s) encountered. Please fix the above issues and try again. Exiting the script immediately..."
-    exit "$err_has_errors"
-    # exits with error message and code (no usage) if $_display_usage is false
+    # otherwise, report the error and exit immediately
+
+    exit_with_error -ec "$_ec" -ns "$_errors error(s) encountered. Please fix the above issues and try again. Exiting the script immediately..."
 }
 
 #=============================================================================================
@@ -404,7 +415,7 @@ function exit_if_has_errors()
 #   line-by-line from `stdin`. May include the following named parameters (not in stdin!),
 #   interspersed anywhere among the message parts parameters:
 #     - `--error-code`|`-ec` followed by a positive error code -- translated to its error
-#       message (via `error_message()`) and substituted into the output in place of the flag and
+#       message (via `error_message()`) and substituted into the output in place of the flag
 #       and its argument. If occurs multiple times, every occurrence is translated and
 #       substituted into the output.
 #     - `--stack-skip`|`-ss` followed by an integer -- how many stack frames to skip before
@@ -413,8 +424,8 @@ function exit_if_has_errors()
 #     - `--stack-depth`|`-sd` followed by an integer -- how many stack frames to show below
 #       the message (default: all). May occur multiple times; only the last occurrence takes
 #       effect.
-#     - `--no-stack`|`-ns` do not dump the stack. May occur multiple times with
-#       `--stack-depth`/`-sd`; only the last occurrence takes effect.
+#     - `--no-stack`|`-ns` do not dump the stack. Shortcut for `--stack-depth 0`. May occur
+#       multiple times with `--stack-depth`/`-sd`; only the last occurrence takes effect.
 #
 # @exitcode success/positive=0: Message printed successfully.
 #
@@ -463,6 +474,7 @@ function __message()
                     shift
                     is_exit_code "$1" && _error_code="$1" && _message_parts+=("$(error_message "$_error_code")") ||
                         printf "%s Expected an error code (0..255) after the '--error-code' flag, provided: '%s'\n. Ignoring both arguments." "$bug_prefix" "$1"
+                    (( _error_code == 0 )) || __last_error=$_error_code
                 fi
                 ;;
 
@@ -583,6 +595,40 @@ function error()
 }
 
 #---------------------------------------------------------------------------------------------
+# @description Logs an error message to stderr (via `message`, prefixed with `$error_prefix`)
+# and exits immediately with the last error code or `$failure`.
+#
+# @arg $@ string Error message parts (optional -- if none are given, the message is read from
+#   stdin instead). May include the named parameters described in `message`:
+#     - `--error-code`/`-ec` followed by a positive error code -- translated to its error
+#       message and included in the output. May occur multiple times.
+#     - `--stack-skip`|`-ss` followed by an integer -- how many stack frames to skip before
+#       showing the stack (default: 2). May occur multiple times; only the last occurrence
+#       takes effect.
+#     - `--stack-depth`/`-sd` followed by an integer -- how many stack frames to show below
+#       the message (default: 0). If given more than once, only the last occurrence takes
+#       effect.
+#     - `--no-stack`|`-ns` do not dump the stack. May occur multiple times with
+#       `--stack-depth`/`-sd`; only the last occurrence takes effect.
+#
+# @exitcode failure/positive=non-zero: Exits with the last specified error code by `-ec` or
+#   `--error-code` after logging the error message. Note that it will always exit the script.
+#
+# @example
+#   exit_with_error -ec -ns "$err_not_file" "Invalid file specified."
+#---------------------------------------------------------------------------------------------
+function exit_with_error()
+{
+    error "$@"
+    remove_traps
+
+    local _ec=$__last_error
+    (( _ec != 0 )) || _ec=$failure
+
+    exit "$_ec"
+}
+
+#---------------------------------------------------------------------------------------------
 # @description Logs a bug message to stderr (via `message`, prefixed with `$bug_prefix`)
 # and increments the global bug counter. Should be used when there is an obvious bug in
 # the code.
@@ -659,6 +705,7 @@ function fatal_exit()
     done
 
     __message "$fatal_prefix" "$@" > >(to_stderr)
+    remove_traps
     exit "$_exit_code"
 }
 

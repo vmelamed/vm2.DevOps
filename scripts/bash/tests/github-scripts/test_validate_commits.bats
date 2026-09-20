@@ -115,6 +115,42 @@ _run_validate_commits() {
     assert_output --partial "No base ref provided"
 }
 
+@test "validate-commits: with no origin/HEAD, falls back to the merge-base with the upstream tracking branch" {
+    _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "feat: on main"
+    git -C "$BATS_TEST_TMPDIR/repo" checkout -q -b feature
+    echo more >> "$BATS_TEST_TMPDIR/repo/f.txt"
+    git -C "$BATS_TEST_TMPDIR/repo" commit --quiet -am "not conventional"
+    git -C "$BATS_TEST_TMPDIR/repo" branch --quiet --set-upstream-to=main feature
+    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --quiet
+    assert_failure
+    assert_output --regexp "Bad commit message: [0-9a-f]{8} not conventional"
+    # only the commit unique to 'feature' is in scope -- the one already on 'main' is not re-checked
+    refute_output --partial "on main"
+}
+
+@test "validate-commits: with no base-ref, prefers origin/HEAD over a same-named self-tracking upstream" {
+    # Regression: a feature branch normally pushed via 'git push -u origin <branch>' tracks a
+    # remote branch of the SAME name, not the trunk it forked from -- its merge-base with HEAD is
+    # HEAD itself, which would silently validate almost nothing. origin/HEAD (the actual default
+    # branch) MUST take priority over @{upstream} for this default, or bad commits go undetected.
+    _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "feat: on main"
+    # a dummy remote registration -- never fetched from; refs/remotes/origin/* are populated by
+    # hand below so --set-upstream-to accepts them as real remote-tracking branches.
+    git -C "$BATS_TEST_TMPDIR/repo" remote add origin "$BATS_TEST_TMPDIR/repo"
+    git -C "$BATS_TEST_TMPDIR/repo" update-ref refs/remotes/origin/main main
+    git -C "$BATS_TEST_TMPDIR/repo" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
+    git -C "$BATS_TEST_TMPDIR/repo" checkout -q -b feature
+    echo more >> "$BATS_TEST_TMPDIR/repo/f.txt"
+    git -C "$BATS_TEST_TMPDIR/repo" commit --quiet -am "not conventional"
+    # self-tracking upstream: origin/feature points at feature's own tip, same as a real 'git push -u'
+    git -C "$BATS_TEST_TMPDIR/repo" update-ref refs/remotes/origin/feature feature
+    git -C "$BATS_TEST_TMPDIR/repo" branch --quiet --set-upstream-to=origin/feature feature
+    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --quiet
+    assert_failure
+    assert_output --regexp "Bad commit message: [0-9a-f]{8} not conventional"
+    refute_output --partial "on main"
+}
+
 @test "validate-commits: falls back to the \$BASE_REF environment variable when no base-ref is given" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "feat: fine"
     run env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" BASE_REF=base bash -c "cd '$BATS_TEST_TMPDIR/repo' && bash '$_validate_commits' --quiet"

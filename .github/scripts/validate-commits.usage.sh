@@ -39,8 +39,7 @@ Description:
   description    = non-empty string ;
   body           = free-form text ;
 
-  Message type:       Required, one of: style build feat test tests fix refactor perf security doc docs chore revert remove ci
-                      devops
+  Message type:       Required, one of: $_types
   Scope:              Optional. A noun describing the section of the codebase affected by the change (e.g., 'api', 'ui', 'docs')
   Breaking Change:    Optional. '!' before ':' signals a breaking change
   Description:        Required. A short description of the change
@@ -51,10 +50,14 @@ Description:
     chore(ci):  update GitHub Actions workflow
 
 Argument:
-  <base-ref>                         Required. Git ref to compare against (e.g. origin/main, a SHA, or a tag).
+  <base-ref>                         Optional. Git ref to compare against (e.g. origin/main, a SHA, or a tag).
+                                      If omitted (and \$BASE_REF is unset), defaults to the merge-base with this
+                                      branch's upstream tracking branch (or origin/HEAD's target if none is set) --
+                                      i.e. commits since this branch diverged, not the repository's entire history.
 
 $_common_args
 Examples:
+  $script_name
   $script_name origin/main
   $script_name v1.0.0 --verbose
 EOF

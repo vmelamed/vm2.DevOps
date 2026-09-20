@@ -189,7 +189,7 @@ function error_message()
         show_stack 2 4 true
     }
 
-    (( _rc == success )) || exit "$_rc"
+    (( _rc == success )) || { remove_traps; exit "$_rc"; }
 
     [[ -v __error_messages[$1] ]] &&
         echo "$1: ${__error_messages[$1]}" ||
@@ -225,7 +225,7 @@ function error_name()
         show_stack 2 4 true
     }
 
-    (( _rc == success )) || exit "$_rc"
+    (( _rc == success )) || { remove_traps; exit "$_rc"; }
 
     [[ -v __error_names[$1] ]] &&
         echo "${__error_names[$1]}" ||

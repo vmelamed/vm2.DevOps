@@ -363,10 +363,7 @@ if ! has_remote_repo repo_state; then
     get_repo_state "$repo_path" repo_state || rc=$?
     dump_vars --quiet --header "Repository State 'repo_state':" repo_state
 
-    if [[ $rc -ne 0 ]]; then
-        error -ec "$rc" "Failed to get repository state after creation. The repository may have been created successfully, but the script cannot continue with configuration. Please check the repository at $repo_path."
-        exit "$rc"
-    fi
+    (( rc == 0 )) || exit_with_error -ec "$rc" "Failed to get repository state after creation. The repository may have been created successfully, but the script cannot continue with configuration. Please check the repository at $repo_path."
 
     repo_url="${repo_state[$key_url]}"
     repo_id="${repo_state[$key_repo_id]}"
