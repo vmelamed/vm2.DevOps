@@ -116,19 +116,21 @@ jobs:
         run: |
           source "$DEVOPS_LIB_DIR/gh_core.sh"
 
-          if [[ "${{ inputs.sha }}" != '' ]]; then
+          if [[ '${{ inputs.sha }}' != '' ]]; then
               actual_sha=$(git rev-parse HEAD)
-              if [[ "${{ inputs.sha }}" != '' && "$actual_sha" != "${{ inputs.sha }}" ]]; then
+              if [[ '${{ inputs.sha }}' != '' && "$actual_sha" != '${{ inputs.sha }}' ]]; then
                   error "Race condition detected: HEAD is $actual_sha but expected ${{ inputs.sha }}."
                   error "Another commit was pushed to main after CI completed. Re-run the Prerelease workflow."
                   exit 1
               fi
           fi
           git fetch --tags --force
-          compute-prerelease-version.sh \
-              --minver-tag-prefix '${{ inputs.minver-tag-prefix }}' \
-              --minver-prerelease-id '${{ inputs.minver-prerelease-id }}' \
-              --reason '${{ inputs.reason }}'
+          declare -a args=(
+              --minver-tag-prefix    '${{ inputs.minver-tag-prefix }}'
+              --minver-prerelease-id '${{ inputs.minver-prerelease-id }}'
+              --reason               '${{ inputs.reason }}'
+          )
+          compute-prerelease-version.sh "${args[@]}"
 
           # outputs: prerelease-version, prerelease-tag, reason
 
@@ -149,10 +151,12 @@ jobs:
           [[ -n $GITHUB_REPOSITORY ]] || error "github.repository(?), or env.GITHUB_REPOSITORY, or GITHUB_REPOSITORY is not set"
           exit_if_has_errors
 
-          changelog-and-tag.sh \
-              --tag "${{ steps.compute-prerelease-version.outputs.prerelease-tag }}" \
-              --reason "${{ steps.compute-prerelease-version.outputs.reason }}" \
-              --minver-tag-prefix "${{ inputs.minver-tag-prefix }}"
+          declare -a args=(
+              --tag               '${{ steps.compute-prerelease-version.outputs.prerelease-tag }}'
+              --reason            '${{ steps.compute-prerelease-version.outputs.reason }}'
+              --minver-tag-prefix '${{ inputs.minver-tag-prefix }}'
+          )
+          changelog-and-tag.sh "${args[@]}"
 
   package-and-publish:
     name: Publish Prerelease Package to NuGet server and/or Save Package Artifacts
@@ -187,13 +191,15 @@ jobs:
         id: package
         shell: bash
         run: |
-          pack.sh \
-              "${{ matrix.project }}" \
-              --build true \
-              --define "${{ inputs.preprocessor-symbols }}" \
-              --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
-              --minver-prerelease-id "${{ inputs.minver-prerelease-id }}" \
-              --reason "${{ needs.prepare-prerelease.outputs.reason }}"
+          declare -a args=(
+              '${{ matrix.project }}'
+              --build                true
+              --define               '${{ inputs.preprocessor-symbols }}'
+              --minver-tag-prefix    '${{ inputs.minver-tag-prefix }}'
+              --minver-prerelease-id '${{ inputs.minver-prerelease-id }}'
+              --reason               '${{ needs.prepare-prerelease.outputs.reason }}'
+          )
+          pack.sh "${args[@]}"
 
       - name: Upload package artifact
         id: upload-artifact

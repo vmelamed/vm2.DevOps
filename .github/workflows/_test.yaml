@@ -110,9 +110,6 @@ jobs:
         run: |
           find downloaded/ -name '*.tar.gz' -exec tar xzf {} \;
 
-      # No separate "verify artifacts were downloaded" check here: run-tests.sh resolves its own expected
-      # test executable path and rebuilds the project itself when that output is missing (e.g. a download
-      # that came back empty).
       - name: Run tests
         id: run-tests
         shell: bash
@@ -125,17 +122,17 @@ jobs:
           # Parse test projects JSON array and run each test project
 
           test_projects='${{ inputs.test-projects }}'
+          declare -a args=()
           while read -r test_project; do
-            trace "Running tests for: $test_project"
-            run-tests.sh \
-                "$test_project" \
-                --define "${{ inputs.preprocessor-symbols }}" \
-                --min-coverage-pct "${{ inputs.min-coverage-pct }}" \
-                --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
-                --minver-prerelease-id "${{ inputs.minver-prerelease-id }}"
-
-                # This is the root artifacts directory. The script will create a subdirectory for each test project,
-                # e.g. artifacts/tests/results/<test-project-name>/*
+              trace "Running tests for: $test_project"
+              args=(
+                  "$test_project"
+                  --define                '${{ inputs.preprocessor-symbols }}'
+                  --min-coverage-pct      '${{ inputs.min-coverage-pct }}'
+                  --minver-tag-prefix     '${{ inputs.minver-tag-prefix }}'
+                  --minver-prerelease-id  '${{ inputs.minver-prerelease-id }}'
+              )
+              run-tests.sh "${args[@]}"
           done < <(echo "$test_projects" | jq -r '.[]')
 
       - name: Generate coverage report

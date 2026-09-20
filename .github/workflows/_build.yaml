@@ -72,9 +72,7 @@ jobs:
         id: build
         shell: bash
         run: |
-          build.sh \
-              "${{ inputs.build-project }}" \
-              --define "${{ inputs.preprocessor-symbols }}"
+          build.sh '${{ inputs.build-project }}' --define '${{ inputs.preprocessor-symbols }}'
 
       - name: Detect SDK drift on failure
         if: failure()

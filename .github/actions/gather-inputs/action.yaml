@@ -180,7 +180,7 @@ runs:
             # how many open PRs exist for this branch?
 
             open_pr_count=$(gh pr list \
-                                  --repo "${{ github.repository }}" \
+                                  --repo '${{ github.repository }}' \
                                   --state open \
                                   --json headRefName \
                                   --jq 'map(select(.headRefName == "${{ github.ref_name }}")) | length') || {
@@ -216,15 +216,15 @@ runs:
             # E.g. for the input '["ubuntu-latest"]', the UI removes the inner quotes and it becomes
             # the invalid JSON:  '[ubuntu-latest]'.
 
-            runners_os=$(echo "${{ inputs.dispatch-runners-os }}" | jq -Rc 'split(",") | map(select(length > 0) | gsub("^\\s+|\\s+$";""))')
+            runners_os=$(echo '${{ inputs.dispatch-runners-os }}' | jq -Rc 'split(",") | map(select(length > 0) | gsub("^\\s+|\\s+$";""))')
 
             # Get the values from the UI inputs of workflow_dispatch event.
             preprocessor_symbols="$preprocessor_symbols;${{ inputs.dispatch-preprocessor-symbols }}"
-            reset_benchmark_thresholds="${{ inputs.dispatch-reset-benchmark-thresholds }}"
-            skip_build="${{ inputs.dispatch-skip-build }}"
-            skip_tests="${{ inputs.dispatch-skip-tests }}"
-            skip_benchmarks="${{ inputs.dispatch-skip-benchmarks }}"
-            skip_packages="${{ inputs.dispatch-skip-packages }}"
+            reset_benchmark_thresholds='${{ inputs.dispatch-reset-benchmark-thresholds }}'
+            skip_build='${{ inputs.dispatch-skip-build }}'
+            skip_tests='${{ inputs.dispatch-skip-tests }}'
+            skip_benchmarks='${{ inputs.dispatch-skip-benchmarks }}'
+            skip_packages='${{ inputs.dispatch-skip-packages }}'
 
         else
 

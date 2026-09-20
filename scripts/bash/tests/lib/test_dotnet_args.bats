@@ -47,19 +47,23 @@ load '../helpers/setup'
     done
 }
 
-@test "get_common_dotnet_arg: a recognized option with a missing value fails with a clear error, not silently" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; get_common_dotnet_arg --configuration ''"
-    assert_failure
-    assert_output --partial "The value for the argument '--configuration' is missing."
+@test "get_common_dotnet_arg: a recognized option given an explicitly empty value is accepted, not rejected" {
+    # This is the actual production bug this file's history is about: CI passes
+    # --define '${{ inputs.preprocessor-symbols }}', which is empty on every path except
+    # SHORT_RUN. The function only records option names and values; it does not judge them --
+    # that is sanitize_common_dotnet_args()'s job. Rejecting an empty (but present) value here
+    # broke every normal CI run.
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; get_common_dotnet_arg --define ''; echo \"[\$preprocessor_symbols]\""
+    assert_success
+    assert_output "[]"
 }
 
-@test "get_common_dotnet_arg: an unrecognized/positional argument with no more tokens does NOT trigger the missing-value check" {
-    # regression: the value-presence check must run only for options this function actually
-    # recognizes -- otherwise a trailing positional argument (e.g. a project path) that happens
-    # to be the last token on the command line gets falsely flagged as "value is missing".
+@test "get_common_dotnet_arg: an unrecognized/positional argument with an empty value is still not mine" {
+    # regression: membership (is this option name recognized at all?) must be decided before
+    # any value is inspected -- otherwise a positional argument (e.g. a project path) that
+    # happens to be paired with an empty next token could be misrouted into a value-setting arm.
     run get_common_dotnet_arg "some/positional/path.csproj" ""
     assert_failure 1
-    refute_output --partial "is missing"
 }
 
 @test "get_common_dotnet_arg: recognizes --nuget-username/--nuget-password" {

@@ -83,9 +83,12 @@ jobs:
         shell: bash
         run: |
           git fetch --tags --force
-          compute-release-version.sh \
-              --minver-tag-prefix '${{ inputs.minver-tag-prefix }}' \
-              --reason '${{ inputs.reason }}'
+
+          declare -a args=(
+              --minver-tag-prefix '${{ inputs.minver-tag-prefix }}'
+              --reason            '${{ inputs.reason }}'
+          )
+          compute-release-version.sh "${args[@]}"
 
   changelog-and-tag:
     name: Update CHANGELOG.md and Create Release Tag
@@ -120,11 +123,13 @@ jobs:
           [[ -n $GITHUB_REPOSITORY ]] || error "github.repository(?), or env.GITHUB_REPOSITORY, or GITHUB_REPOSITORY is not set"
           exit_if_has_errors
 
-          changelog-and-tag.sh \
-              --tag "${{ needs.compute-version.outputs.release-tag }}" \
-              --reason "${{ inputs.reason }}" \
-              --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
-              --needs-empty-commit "${{ needs.compute-version.outputs.needs-empty-commit }}"
+          declare -a args=(
+              --tag                '${{ needs.compute-version.outputs.release-tag }}'
+              --reason             '${{ inputs.reason }}'
+              --minver-tag-prefix  '${{ inputs.minver-tag-prefix }}'
+              --needs-empty-commit '${{ needs.compute-version.outputs.needs-empty-commit }}'
+          )
+          changelog-and-tag.sh "${args[@]}"
 
   # Build (only) each project and upload it as a workflow artifact. Publishing does NOT happen here: NuGet.org's
   # trusted-publishing OIDC trust policy validates the job_workflow_ref claim, which for a reusable workflow names
@@ -167,12 +172,14 @@ jobs:
         id: package
         shell: bash
         run: |
-          pack.sh \
-              "${{ matrix.project }}" \
-              --build true \
-              --define "${{ inputs.preprocessor-symbols }}" \
-              --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
-              --reason "${{ needs.compute-version.outputs.reason }}"
+          declare -a args=(
+              '${{ matrix.project }}'
+              --build             true
+              --define            '${{ inputs.preprocessor-symbols }}'
+              --minver-tag-prefix '${{ inputs.minver-tag-prefix }}'
+              --reason            '${{ needs.compute-version.outputs.reason }}'
+          )
+          pack.sh "${args[@]}"
 
       - name: Upload package artifact
         id: upload-artifact

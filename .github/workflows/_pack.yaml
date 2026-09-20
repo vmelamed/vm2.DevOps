@@ -103,8 +103,10 @@ jobs:
         id: pack
         shell: bash
         run: |
-          pack.sh \
-              "${{ inputs.package-project }}" \
-              --define "${{ inputs.preprocessor-symbols }}" \
-              --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
-              --minver-prerelease-id "${{ inputs.minver-prerelease-id }}"
+          declare -a args=(
+              '${{ inputs.package-project }}'
+              --define                '${{ inputs.preprocessor-symbols }}'
+              --minver-tag-prefix     '${{ inputs.minver-tag-prefix }}'
+              --minver-prerelease-id  '${{ inputs.minver-prerelease-id }}'
+          )
+          pack.sh "${args[@]}"
