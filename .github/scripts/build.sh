@@ -48,10 +48,8 @@ build_project=${build_project:-"${BUILD_PROJECT:-}"}
 if [[ -z $build_project ]]; then
     # search for *.slnx|*.sln|*.csproj file in the current directory
     build_project=$(find . -maxdepth 1 -type f \( -name "*.slnx" -o -name "*.sln" -o -name "*.csproj" \) | head -n 1)
-    [[ -n $build_project ]] || {
-        error -ec "$err_not_found" "No build project (*.slnx, *.sln, *.csproj) was specified or found in the current directory."
-        exit "$err_not_found"
-    }
+    [[ -n $build_project ]] ||
+        exit_with_error -ec "$err_not_found" "No build project (*.slnx, *.sln, *.csproj) was specified or found in the current directory."
     trace "Auto-detected build project: $build_project"
 fi
 is_safe_valid_path "$build_project"

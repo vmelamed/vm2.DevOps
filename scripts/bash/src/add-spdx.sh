@@ -37,6 +37,7 @@ declare -xri failure
 declare -xri positive
 declare -xri negative
 declare -xri err_invalid_arguments
+declare -xri err_not_directory
 
 source "$script_dir/add-spdx.args.sh"
 source "$script_dir/add-spdx.usage.sh"
@@ -182,7 +183,8 @@ function process_file()
 get_arguments "$@"
 
 [[ -n "$dir" ]] || dir="$initial_cwd"
-[[ -d "$dir" ]] || { echo "Directory not found: $dir" 1>&2; exit 1; }
+[[ -d "$dir" ]] || exit_with_error -ec "$err_not_directory" "Directory not found: $dir" 1>&2
+
 root=$(cd "$dir" && pwd)
 
 cs_header="// SPDX-License-Identifier: $license

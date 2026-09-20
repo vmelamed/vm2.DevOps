@@ -130,20 +130,21 @@ if [[ -d "$artifacts_test_dir" && -n "$(ls -A "$artifacts_test_dir")" ]]; then
                choice \
                    "Delete the directory and continue" \
                    "Rename the directory to '$renamed_artifacts_dir' and continue" \
-                   "Exit the script" || exit $?
+                   "Exit the script"
 
         trace "User selected option: '$choice'"
         case $choice in
-            1)  info "Deleting the directory '$artifacts_test_dir'..."
+            1)  warning "Deleting the directory '$artifacts_test_dir'..."
                 execute rm -rf "$artifacts_test_dir"
                 ;;
             2)  info "Renaming the directory '$artifacts_test_dir' to '$renamed_artifacts_dir'..."
                 execute mv "$artifacts_test_dir" "$renamed_artifacts_dir"
                 ;;
-            3)  info "Exiting the script."
+            3)  trace "Exiting the script."
                 exit 0
                 ;;
             *)  error -sd 3 -ec "$err_unknown_argument" "Invalid option '$choice'. Exiting."
+                remove_traps
                 exit "$err_unknown_argument"
                 ;;
         esac
@@ -196,14 +197,10 @@ else
     # *.exe or *. (Linux)
     "$test_exec_path" "${test_args[@]}" || rc=$?
 fi
-if (( rc != 0 )); then
-    error -ec "$err_tool_error" "Tests failed in project '$test_project' with exit code $rc."
-    exit "$err_tool_error"
-fi
-if [[ ! -s "$coverage_source_path" ]]; then
-    error -ec "$err_tool_error" "Coverage file '$coverage_source_path' not found or is empty."
-    exit "$err_tool_error"
-fi
+(( rc == 0 )) ||
+    exit_with_error -ec "$err_tool_error" "Tests failed in project '$test_project' with exit code $rc."
+[[ -s "$coverage_source_path" ]] ||
+    exit_with_error -ec "$err_tool_error" "Coverage file '$coverage_source_path' not found or is empty."
 
 if $ci; then
     # Set outputs for merged coverage
@@ -250,4 +247,5 @@ if [[ "$uninstall_reportgenerator" = true ]]; then
     execute dotnet tool uninstall dotnet-reportgenerator-globaltool --global
 fi
 
+remove_traps
 exit "$rc"

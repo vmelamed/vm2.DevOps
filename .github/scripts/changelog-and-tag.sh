@@ -60,10 +60,8 @@ declare -xr is_release
 declare -xr is_prerelease
 declare -xr needs_empty_commit
 
-if [[ -z "${GITHUB_REPOSITORY:-}" || -z "${RELEASE_PAT:-}" ]]; then
-    error -ec "$err_argument_value" "GITHUB_REPOSITORY and/or RELEASE_PAT are not set."
-    exit "$err_argument_value"
-fi
+[[ -n "${GITHUB_REPOSITORY:-}" && -n "${RELEASE_PAT:-}" ]] ||
+    exit_with_error -ec "$err_argument_value" "GITHUB_REPOSITORY and/or RELEASE_PAT are not set."
 
 # Configure git for CI
 if $ci; then
@@ -96,12 +94,10 @@ if [[ ! -s "$cliff_config" ]]; then
     warning "Missing $cliff_config; skipping changelog update."
 else
     # Fail fast: changelog bootstrapping should be explicit in repo setup.
-    if [[ ! -f CHANGELOG.md ]]; then
-        error -ec "$err_not_found" \
+    [[ -f CHANGELOG.md ]] ||
+        exit_with_error -ec "$err_not_found" \
                   "Missing CHANGELOG.md in repo root. git-cliff uses --prepend and requires an existing file." \
                   "Create CHANGELOG.md (can be an empty file) and rerun."
-        exit "$err_not_found"
-    fi
 
     # Determine the commit range
     if [[ "$is_release" == true ]]; then
@@ -151,10 +147,8 @@ if [[ "$is_prerelease" == true ]]; then
     tag_message="Prerelease $tag"
 fi
 
-if ! execute git tag -a "$tag" -m "$tag_message" -m "Reason: $reason"; then
-    error -ec "$err_argument_value" "Failed to create tag $tag (does it already exist?)"
-    exit "$err_argument_value"
-fi
+execute git tag -a "$tag" -m "$tag_message" -m "Reason: $reason" ||
+    exit_with_error -ec "$err_argument_value" "Failed to create tag $tag (does it already exist?)"
 
 execute git push origin "$tag"
 

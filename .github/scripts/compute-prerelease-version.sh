@@ -101,10 +101,8 @@ if is_semverRelease "$latest_stable_ver"; then
     major=${BASH_REMATCH[$semver_major]}
     minor=${BASH_REMATCH[$semver_minor]}
     patch=${BASH_REMATCH[$semver_patch]}
-    if ((major <= 0 || minor < 0 || patch < 0)); then
-        error -ec "$err_argument_value" "Invalid version numbers in latest stable tag '$latest_stable_ver': $major.$minor.$patch"
-        exit "$err_argument_value"
-    fi
+    ((major > 0 && minor >= 0 && patch >= 0)) ||
+        exit_with_error -ec "$err_argument_value" "Invalid version numbers in latest stable tag '$latest_stable_ver': $major.$minor.$patch"
     trace "Base version from latest stable: $major.$minor.$patch"
 else
     trace "No previous stable release found; starting at 0.0.0"
