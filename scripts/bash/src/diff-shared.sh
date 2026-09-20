@@ -94,6 +94,7 @@ declare -xi summary_merged_count=0
 declare -xi summary_not_merged_count=0
 declare -xi summary_copied_count=0
 declare -xi summary_ignore_count=0
+declare -xi summary_skipped_count=0
 
 #===============================
 # Script start:
@@ -265,6 +266,9 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
                         confirm "Target file '$target_file' does not exist. Do you want to copy it from '$source_file'?" "y" && {
                             copy_file "$source_file" "$target_file"
                             action="copied"
+                        } || {
+                            (( ++summary_skipped_count ))
+                            action="skipped"
                         }
                         ;;
 
@@ -317,15 +321,21 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
                                 action="copied"
                                 ;;
 
-                            * ) ;;
+                            * ) (( ++summary_skipped_count ))
+                                action="skipped"
+                                ;;
                         esac
                         ;;
 
                     "$action_ask_to_merge" )
+                        # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
                         confirm "Do you want to merge '$source_file' to file '$target_file'?" "n" && {
                             merge "$source_file" "$target_file" &&
                                 action="merged" ||
                                 action="not merged"
+                        } || {
+                            (( ++summary_skipped_count ))
+                            action="skipped"
                         }
                         ;;
 
@@ -336,9 +346,13 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
                         ;;
 
                     "$action_ask_to_copy" )
+                        # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
                         confirm "Do you want to copy '$source_file' to file '$target_file'?" "n" && {
                             copy_file "$source_file" "$target_file"
                             action="copied"
+                        } || {
+                            (( ++summary_skipped_count ))
+                            action="skipped"
                         }
                         ;;
 
@@ -363,17 +377,20 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
     echo "" >> "$summary_file"
 done # repositories loop
 
-dump_vars \
-    --force \
-    --quiet \
-    --markdown \
-    --header "Summary:" \
-    --name "Different"  summary_diff_count \
-    --name "Identical"  summary_identical_count \
-    --name "Merged"     summary_merged_count \
-    --name "Not Merged" summary_not_merged_count \
-    --name "Copied"     summary_copied_count \
-    --name "Ignored"    summary_ignore_count >> "$summary_file"
+declare -a args=(
+    --force
+    --quiet
+    --markdown
+    --header "Summary:"
+    --name "Different"  summary_diff_count
+    --name "Identical"  summary_identical_count
+    --name "Merged"     summary_merged_count
+    --name "Not Merged" summary_not_merged_count
+    --name "Copied"     summary_copied_count
+    --name "Skipped"    summary_skipped_count
+    --name "Ignored"    summary_ignore_count
+)
+dump_vars "${args[@]}" >> "$summary_file"
 
 declare -x glow_present
 
