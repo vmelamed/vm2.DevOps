@@ -357,7 +357,7 @@ function update_nuget_sources_with_github_vm2()
     local _gh_nuget_username=${1:-${gh_nuget_username:-${GH_ACTOR:-}}}
     local _gh_nuget_password=${2:-${gh_nuget_password:-${GH_TOKEN:-}}}
 
-    [[ -n $_gh_nuget_username && -n $_gh_nuget_password ]] || {
+    [[ -z $_gh_nuget_username || -z $_gh_nuget_password ]] || {
         warning "${FUNCNAME[0]}() GitHub NuGet source credentials are not provided. Did not update the NuGet sources with GitHub packages from vm2."
         return "$success"
     }
