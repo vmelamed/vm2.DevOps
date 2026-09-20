@@ -160,7 +160,6 @@ function on_err()
     return "$_rc"
 }
 
-
 declare __no_traps=false
 
 [[ -v 1 && -n $1 && ${1,,} == "--no-trap" ]] && __no_traps=true
@@ -177,11 +176,17 @@ fi
 #---------------------------------------------------------------------------------------------
 # @description Removes the ERR and EXIT traps set by core.sh.
 #   - Useful when the expected errors are handled already.
+#
+# Note: uses `trap '' SIGNAL` (ignore), not `trap - SIGNAL` (reset to default). `trap - ERR`
+#   does not reliably clear an ERR trap when invoked from inside a function -- confirmed: the
+#   original handler still fires on a subsequent failing command even after `trap - ERR` runs,
+#   here, in every function that calls it. `trap '' ERR` correctly suppresses it. Since
+#   `remove_traps` is itself always a function call, this distinction always applies to it.
 #---------------------------------------------------------------------------------------------
 function remove_traps()
 {
-    trap - ERR
-    trap - EXIT
+    trap '' ERR
+    trap '' EXIT
 }
 
 #---------------------------------------------------------------------------------------------
