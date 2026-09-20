@@ -13,6 +13,7 @@
     - [Variables and Dynamic Scope](#variables-and-dynamic-scope)
     - [Function Parameter Validation](#function-parameter-validation)
     - [Argument-Dispatcher Precondition Ordering](#argument-dispatcher-precondition-ordering)
+    - [Long-Form Options in Script Bodies](#long-form-options-in-script-bodies)
   - [General C# Coding Conventions](#general-c-coding-conventions)
   - [Async](#async)
   - [Services (if applicable)](#services-if-applicable)
@@ -205,6 +206,36 @@ failure for the rest, so the caller can fall through to the next one (e.g. a scr
   list (a `case` arm like `-a|-c|-f|... ) ;;` that exists purely to reserve those letters/names so a later `case` arm
   in the same function does not shadow the shared handler). A stale reservation silently swallows a letter the shared
   handler no longer claims, or fails to reserve one it newly does.
+
+### Long-Form Options in Script Bodies
+
+When a script or function invokes another vm2.DevOps script or library function that itself accepts an option, use
+the option's **long form** (`--verbose`, `--header`, `--configuration`) in the checked-in call, not its short alias
+(`-v`, `-h`, `-c`). A long-form flag is self-documenting at the call site — a reader does not need to look up what
+`-md` means the way they might need to for `--markdown`. Short forms exist for fast, interactive, one-off terminal
+use, where brevity outweighs at-a-glance clarity; that tradeoff does not hold for a call site that is read far more
+often than it is typed.
+
+```bash
+# Preferred: long-form options make the call self-explanatory
+dump_vars --force --quiet --header "Arguments for $script_name:" package_project reason
+
+# Avoid: short forms make the reader go look up what -f/-q/-h mean
+dump_vars -f -q -h "Arguments for $script_name:" package_project reason
+```
+
+**Exception: the `message()`-family functions** (`error`, `warning`, `info`, `trace`, `bug`, `usage`,
+`exit_with_error`, `fatal_exit`). Their own options — `--error-code`/`-ec`, `--stack-depth`/`-sd`,
+`--no-stack`/`-ns`, `--stack-skip`/`-ss` — are used in **short** form throughout the codebase, by established
+convention: these calls appear at essentially every validation and error-reporting site in every script, and the
+short forms keep them visually compact, so the part that actually matters at each call site — the message text —
+stays the most prominent thing on the line.
+
+```bash
+# Exception: message()-family functions keep their short forms
+error -ec "$err_argument_value" "Bad commit message: $subject"
+usage -ec "$_rc" -sd 3 "Invalid argument value for the option <option_name>"
+```
 
 ## General C# Coding Conventions
 
