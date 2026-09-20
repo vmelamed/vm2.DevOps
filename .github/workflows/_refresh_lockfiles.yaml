@@ -51,8 +51,8 @@ jobs:
         if: ${{ env.GH_PACKAGES_TOKEN != '' }}
         run: |
           dotnet nuget update source github.vm2 \
-            --username ${{ github.actor }} \
-            --password ${{ env.GH_PACKAGES_TOKEN }} \
+            --username '${{ github.actor }}' \
+            --password '${{ env.GH_PACKAGES_TOKEN }}' \
             --store-password-in-clear-text
 
       - name: Restore with --force-evaluate

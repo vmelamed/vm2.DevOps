@@ -90,7 +90,9 @@ declare -xra common_dotnet_args_to_output=(
 #     `gh_nuget_username`, and `gh_nuget_password`.
 #
 # @arg $1 string The next command-line argument to process, e.g. `"--configuration"`.
-# @arg $2 string The value of the next command-line argument, e.g. `"Release"`.
+# @arg $2 string The value of the next command-line argument, e.g. `"Release"`. May be empty --
+#   this function records whatever value it is given without judging it; call
+#   `sanitize_common_dotnet_args` afterward to validate the accumulated values.
 #
 # @exitcode success/positive=0: The argument was a recognized common dotnet argument.
 # @exitcode failure/negative=1: The argument was not a common dotnet argument.
@@ -109,26 +111,31 @@ function get_common_dotnet_arg()
 
     exit_if_has_bugs
 
-    local _rc="$success"
-
+    # Accept $2 unconditionally, even empty -- this function only recognizes option NAMES and
+    # records their values; it does not judge whether a value is acceptable. That is
+    # sanitize_common_dotnet_args()'s job, run once after all parsing is done, using validators
+    # that already know which of these may be empty (e.g. --define/--runtime) and which may not.
+    # A separate "is $2 present" check here would be redundant with the arity check above (a
+    # caller passing fewer than 2 arguments is already a bug), and cannot distinguish "no token
+    # followed the option" from "a token followed and it was empty" regardless -- that
+    # distinction is already lost by the time this function sees $2, since "${1:-}" at the call
+    # site collapses both to "".
     case "${1,,}" in
             # do not use the common options - they should be processed by get_common_arg:
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown ) ;;
 
             # get the values of the variables common for many vm2.DevOps scripts,
-            --define                   ) [[ -n $2 ]] && preprocessor_symbols=$2   || _rc="$err_missing_argument" ;;
-            --minver-tag-prefix        ) [[ -n $2 ]] && minver_tag_prefix="$2"    || _rc="$err_missing_argument" ;;
-            --minver-prerelease-id     ) [[ -n $2 ]] && minver_prerelease_id="$2" || _rc="$err_missing_argument" ;;
-            --nuget-username           ) [[ -n $2 ]] && gh_nuget_username="$2"    || _rc="$err_missing_argument" ;;
-            --nuget-password           ) [[ -n $2 ]] && gh_nuget_password="$2"    || _rc="$err_missing_argument" ;;
-            --configuration|-c         ) [[ -n $2 ]] && configuration=$2          || _rc="$err_missing_argument" ;;
-            --framework                ) [[ -n $2 ]] && framework="$2"            || _rc="$err_missing_argument" ;;
-            --runtime                  ) [[ -n $2 ]] && runtime="$2"              || _rc="$err_missing_argument" ;;
-            --artifacts-path           ) [[ -n $2 ]] && artifacts=$2              || _rc="$err_missing_argument" ;;
+            --define                   ) preprocessor_symbols=$2   ;;
+            --minver-tag-prefix        ) minver_tag_prefix="$2"    ;;
+            --minver-prerelease-id     ) minver_prerelease_id="$2" ;;
+            --nuget-username           ) gh_nuget_username="$2"    ;;
+            --nuget-password           ) gh_nuget_password="$2"    ;;
+            --configuration|-c         ) configuration=$2          ;;
+            --framework                ) framework="$2"            ;;
+            --runtime                  ) runtime="$2"              ;;
+            --artifacts-path           ) artifacts=$2              ;;
             *                          ) return "$negative" ;;
     esac
-
-    (( _rc == "$success" )) || usage -ec "$_rc" "The value for the argument '$1' is missing."
 
     return "$positive" # it was a common argument and was processed
 }

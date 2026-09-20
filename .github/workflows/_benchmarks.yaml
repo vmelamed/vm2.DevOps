@@ -138,7 +138,7 @@ jobs:
           source $DEVOPS_LIB_DIR/gh_core.sh
 
           declare artifacts_path=''
-          get_msbuild_property "${{ inputs.benchmark-project }}" ArtifactsPath artifacts_path ||
+          get_msbuild_property '${{ inputs.benchmark-project }}' ArtifactsPath artifacts_path ||
               error -ec $? "Failed to resolve ArtifactsPath from '${{ inputs.benchmark-project }}'."
           exit_if_has_errors
 
@@ -170,12 +170,14 @@ jobs:
 
           trace "Running benchmarks for project: ${{ inputs.benchmark-project }} with configuration: ${{ inputs.configuration }} on runner OS: ${{ inputs.runner-os }}"
 
-          run-benchmarks.sh \
-              ${{ inputs.benchmark-project }} \
-              --configuration "${{ inputs.configuration }}" \
-              --define "${{ inputs.preprocessor-symbols }}" \
-              --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
-              --minver-prerelease-id "${{ inputs.minver-prerelease-id }}"
+          declare -a args=(
+              ${{ inputs.benchmark-project }}
+              --configuration        '${{ inputs.configuration }}'
+              --define               '${{ inputs.preprocessor-symbols }}'
+              --minver-tag-prefix    '${{ inputs.minver-tag-prefix }}'
+              --minver-prerelease-id '${{ inputs.minver-prerelease-id }}'
+          )
+          run-benchmarks.sh "${args[@]}"
 
       # Upload the results collected above to Bencher.dev, tracking regressions and posting PR/summary results.
       - name: Upload benchmark results to Bencher.dev
@@ -184,19 +186,21 @@ jobs:
           BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          upload-bencher-results.sh \
-              "${{ steps.run-benchmarks.outputs.results-dir }}" \
-              --testbed "${{ inputs.runner-os }}" \
-              --repository "${{ github.repository }}" \
-              --event-name "${{ github.event_name }}" \
-              --ref-name "${{ github.ref_name }}" \
-              --head-ref "${{ github.head_ref }}" \
-              --pr-number "${{ github.event.pull_request.number }}" \
-              --pr-base-sha "${{ github.event.pull_request.base.sha }}" \
-              --max-regression-pct "${{ inputs.max-regression-pct }}" \
-              --max-gen1-collects "${{ inputs.max-gen1-collects }}" \
-              --max-gen2-collects "${{ inputs.max-gen2-collects }}" \
-              --reset-thresholds "${{ inputs.reset-benchmark-thresholds }}"
+          declare -a args=(
+              '${{ steps.run-benchmarks.outputs.results-dir }}'
+              --testbed            '${{ inputs.runner-os }}'
+              --repository         '${{ github.repository }}'
+              --event-name         '${{ github.event_name }}'
+              --ref-name           '${{ github.ref_name }}'
+              --head-ref           '${{ github.head_ref }}'
+              --pr-number          '${{ github.event.pull_request.number }}'
+              --pr-base-sha        '${{ github.event.pull_request.base.sha }}'
+              --max-regression-pct '${{ inputs.max-regression-pct }}'
+              --max-gen1-collects  '${{ inputs.max-gen1-collects }}'
+              --max-gen2-collects  '${{ inputs.max-gen2-collects }}'
+              --reset-thresholds   '${{ inputs.reset-benchmark-thresholds }}'
+          )
+          upload-bencher-results.sh "${args[@]}"
 
       # Upload benchmark results as workflow artifacts for manual inspection
       - name: Upload benchmark results artifact
@@ -215,9 +219,9 @@ jobs:
         run: |
           source "$DEVOPS_LIB_DIR/gh_core.sh"
 
-          REPO_NAME="${{ github.repository }}"
+          REPO_NAME='${{ github.repository }}'
           BENCHER_SLUG=$(echo "${REPO_NAME#*/}" | tr '[:upper:]' '[:lower:]' | tr '.' '-')
-          BENCHER_BRANCH="${{ github.head_ref || github.ref_name }}"
+          BENCHER_BRANCH='${{ github.head_ref || github.ref_name }}'
 
           {
               echo "### 📊 Benchmark Results"

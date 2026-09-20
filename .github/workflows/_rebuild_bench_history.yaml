@@ -117,20 +117,22 @@ jobs:
           source "$DEVOPS_LIB_DIR/gh_core.sh"
 
           # Compute Bencher project slug from repository name, e.g. vmelamed/vm2.Ulid -> vm2-ulid
-          REPO_NAME="${{ github.repository }}"
+          REPO_NAME='${{ github.repository }}'
           BENCHER_SLUG=$(echo "${REPO_NAME#*/}" | tr '[:upper:]' '[:lower:]' | tr '.' '-')
 
           trace "Rebuilding history for all benchmarks in '${{ github.repository }}': ${{ inputs.repeat }} run(s) each -> Bencher project '$BENCHER_SLUG', branch '${{ inputs.bencher-branch }}'."
 
-          rebuild-bench-history-run.sh \
-              --repeat "${{ inputs.repeat }}" \
-              --configuration "${{ inputs.configuration }}" \
-              --define "${{ inputs.preprocessor-symbols }}" \
-              --minver-tag-prefix "${{ inputs.minver-tag-prefix }}" \
-              --minver-prerelease-id "${{ inputs.minver-prerelease-id }}" \
-              --bencher-project "$BENCHER_SLUG" \
-              --bencher-testbed "${{ inputs.runner-os }}" \
-              --bencher-branch "${{ inputs.bencher-branch }}"
+          declare -a args=(
+              --repeat                '${{ inputs.repeat }}'
+              --configuration         '${{ inputs.configuration }}'
+              --define                '${{ inputs.preprocessor-symbols }}'
+              --minver-tag-prefix     '${{ inputs.minver-tag-prefix }}'
+              --minver-prerelease-id  '${{ inputs.minver-prerelease-id }}'
+              --bencher-project       "$BENCHER_SLUG"
+              --bencher-testbed       '${{ inputs.runner-os }}'
+              --bencher-branch        '${{ inputs.bencher-branch }}'
+          )
+          rebuild-bench-history-run.sh "${args[@]}"
 
       # Upload the artifacts for manual inspection
       - name: Upload benchmark results artifact

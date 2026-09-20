@@ -166,24 +166,27 @@ jobs:
       - name: Validate and normalize all inputs
         id: validate
         run: |
-          validate-input.sh \
-              --build-projects              '${{ inputs.build-projects }}' \
-              --test-projects               '${{ inputs.test-projects }}' \
-              --benchmark-projects          '${{ inputs.benchmark-projects }}' \
-              --package-projects            '${{ inputs.package-projects }}' \
-              --runners-os                  '${{ inputs.runners-os }}' \
-              --define                      '${{ inputs.preprocessor-symbols }}' \
-              --min-coverage-pct            '${{ inputs.min-coverage-pct }}' \
-              --max-regression-pct          '${{ inputs.max-regression-pct }}' \
-              --max-gen1-collects           '${{ inputs.max-gen1-collects }}' \
-              --max-gen2-collects           '${{ inputs.max-gen2-collects }}' \
-              --minver-tag-prefix           '${{ inputs.minver-tag-prefix }}' \
-              --minver-prerelease-id        '${{ inputs.minver-prerelease-id }}' \
-              --reset-benchmark-thresholds  '${{ inputs.reset-benchmark-thresholds }}' \
-              --skip-build                  '${{ inputs.skip-build }}' \
-              --skip-tests                  '${{ inputs.skip-tests }}' \
-              --skip-benchmarks             '${{ inputs.skip-benchmarks }}' \
+          declare -a args=(
+              --build-projects              '${{ inputs.build-projects }}'
+              --test-projects               '${{ inputs.test-projects }}'
+              --benchmark-projects          '${{ inputs.benchmark-projects }}'
+              --package-projects            '${{ inputs.package-projects }}'
+              --runners-os                  '${{ inputs.runners-os }}'
+              --define                      '${{ inputs.preprocessor-symbols }}'
+              --min-coverage-pct            '${{ inputs.min-coverage-pct }}'
+              --max-regression-pct          '${{ inputs.max-regression-pct }}'
+              --max-gen1-collects           '${{ inputs.max-gen1-collects }}'
+              --max-gen2-collects           '${{ inputs.max-gen2-collects }}'
+              --minver-tag-prefix           '${{ inputs.minver-tag-prefix }}'
+              --minver-prerelease-id        '${{ inputs.minver-prerelease-id }}'
+              --reset-benchmark-thresholds  '${{ inputs.reset-benchmark-thresholds }}'
+              --skip-build                  '${{ inputs.skip-build }}'
+              --skip-tests                  '${{ inputs.skip-tests }}'
+              --skip-benchmarks             '${{ inputs.skip-benchmarks }}'
               --skip-packages               '${{ inputs.skip-packages }}'
+          )
+
+          validate-input.sh "${args[@]}"
 
   # Build the project and cache artifacts for downstream tests/benchmark jobs
   build:
