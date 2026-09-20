@@ -132,6 +132,32 @@ load '../helpers/setup'
     assert_failure 1
 }
 
+# --- exit_with_error -----------------------------------------------------------------------
+
+@test "exit_with_error: exits with the code given via -ec, logging via error (not fatal_exit)" {
+    run exit_with_error -ec 5 "some problem"
+    assert_failure 5
+    assert_output --partial "some problem"
+    assert_output --partial "ERROR"
+    refute_output --partial "FATAL"
+}
+
+@test "exit_with_error: defaults to failure/1 when no -ec is given" {
+    run exit_with_error "problem, no code"
+    assert_failure 1
+}
+
+@test "exit_with_error: removes the ERR/EXIT traps first, so no ON ERROR post-mortem noise follows" {
+    run env -i HOME="$HOME" PATH="$PATH" bash -c "
+        source '$lib_dir/core.sh' > /dev/null 2>&1
+        exit_with_error -ec 5 'boom'
+    "
+    assert_failure 5
+    assert_output --partial "boom"
+    refute_output --partial "ON ERROR post-mortem"
+    refute_output --partial "EXIT: the command"
+}
+
 # --- warning_var -------------------------------------------------------------------------------
 
 @test "warning_var: sets the referenced variable to the default and prints a warning" {
