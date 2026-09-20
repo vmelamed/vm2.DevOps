@@ -258,15 +258,20 @@ declare -xr common_dotnet_parameters="\
                                 managers may still need it, e.g. GitHub Packages.
   -c, --configuration (Release|Debug)
                                 Build configuration ('Release' or 'Debug').
-                                Overrides the initial value from the environment value \$CONFIGURATION or the default 'Release'.
+                                Overrides the initial value from the environment value \$CONFIGURATION or the default specified
+                                in the project file or Directory.Build.props file. Usually 'Debug' on a local machine or
+                                'Release' in CI and other automated build environments.
   -f, --framework <TFM>         Target framework moniker (TFM) for the build. E.g., 'net10.0'.
-                                Overrides the initial value from the environment value \$FRAMEWORK or the default ''
+                                Overrides the initial value from the environment value \$FRAMEWORK or the default specified in
+                                the project file or Directory.Build.props file.
   -r, --runtime <RID>           Runtime identifier for the build. E.g., 'linux-x64' or '' for CPU and OS agnostic builds.
-                                Overrides the initial value from the environment value \$RUNTIME or the default ''
+                                Overrides the initial value from the environment value \$RUNTIME or the default specified in
+                                the project file or Directory.Build.props file. Usually '' for CPU and OS agnostic builds.
   -a, --artifacts-path <path>   Path to the root directory of the produced artifacts from the builds. The path MUST be relative
                                 to the root of the Git repository's working tree.
-                                Overrides the initial value from the environment value \$ARTIFACTS_PATH or the default
-                                'artifacts'."
+                                Overrides the initial value from the environment value \$ARTIFACTS_PATH or the default specified
+                                in the project file or Directory.Build.props file. Usually 'artifacts' when artifact layout is
+                                setup is specified in the project file or Directory.Build.props file (see UseArtifactsOutput)."
 
 declare -xr common_dotnet_vars="\
   PREPROCESSOR_SYMBOLS          Semicolon, comma, or space-separated pre-processor symbols.
