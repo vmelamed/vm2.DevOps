@@ -199,15 +199,17 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
 
     exit_if_has_errors
 
+    declare source_path target_path filename
+
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     $diff_only && {
-        echo -e "### Target: $target ($target_path)\n"
-        echo -e "| Source of Truth File | Shared Content File | Difference | To do: |"
-        echo -e "|:---------------------|:--------------------|:-----------|:---------------|"
+        echo -e "### Target Repository: $target ($target_path)\n"
+        echo -e "| Source Path | Target Path | Filename | Difference | To do: | Default: |"
+        echo -e "|:------------|:------------|:---------|:-----------|:-------|:---------|"
     } >> "$summary_file" || {
-        echo -e "### Target: $target ($target_path)\n"
-        echo -e "| Source of Truth File | Shared Content File | Difference | Done: |"
-        echo -e "|:---------------------|:--------------------|:-----------|:-------------|"
+        echo -e "### Target Repository: $target ($target_path)\n"
+        echo -e "| Source Path | Target Path | Filename | Difference | Done:  | Default: |"
+        echo -e "|:------------|:------------|:---------|:-----------|:-------|:---------|"
     } >> "$summary_file"
 
     info "Target repository '$target' ($target_path)..."
@@ -277,84 +279,85 @@ for (( targets_index=0; targets_index < ${#target_repos[@]}; targets_index++ ));
                         ;;
                 esac
             fi
-            echo "| ${source_file#"$vm2_repos/"} | ${target_file#"$vm2_repos/"} | $difference | $action |" >> "$summary_file"
-            continue
-        fi
+        else
+            is_in "$actions" "$action_ignore" "$action_merge" "$action_copy" &&
+                show_diff=false ||
+                show_diff=true
+            $diff_only && show_diff=false
+            rc=$success
+            are_different "$source_file" "$target_file" "$show_diff" || rc=$?
 
-        is_in "$actions" "$action_ignore" "$action_merge" "$action_copy" &&
-            show_diff=false ||
-            show_diff=true
-        $diff_only && show_diff=false
-        rc=$success
-        are_different "$source_file" "$target_file" "$show_diff" || rc=$?
+            # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
+            (( rc == positive )) &&
+                { different=true;  difference=" ≠ different"; } ||
+                { different=false; difference=" = identical"; action="ignore"; }
 
-        # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-        (( rc == positive )) &&
-            { different=true;  difference=" ≠ different"; } ||
-            { different=false; difference=" = identical"; action="ignore"; }
+            if $different && ! $diff_only; then
+                action="ignored"
+                case $actions in
+                    "$action_ignore" )
+                        (( ++summary_ignore_count ))
+                        ;;
 
-        if $different && ! $diff_only; then
-            action="ignored"
-            case $actions in
-                "$action_ignore" )
-                    (( ++summary_ignore_count ))
-                    ;;
+                    "$action_merge_or_copy" )
+                        declare choice
+                        choose "What do you want to do?" \
+                            choice \
+                                    "Do nothing - continue" \
+                                    "Merge the files" \
+                                    "Copy '$source_file' file to '$target_file'"
+                        case $choice in
 
-                "$action_merge_or_copy" )
-                    declare choice
-                    choose "What do you want to do?" \
-                           choice \
-                                "Do nothing - continue" \
-                                "Merge the files" \
-                                "Copy '$source_file' file to '$target_file'"
-                    case $choice in
+                            2 ) merge "$source_file" "$target_file" &&
+                                    action="merged" ||
+                                    action="not merged"
+                                ;;
 
-                        2 ) merge "$source_file" "$target_file" &&
+                            3 ) copy_file "$source_file" "$target_file"
+                                action="copied"
+                                ;;
+
+                            * ) ;;
+                        esac
+                        ;;
+
+                    "$action_ask_to_merge" )
+                        confirm "Do you want to merge '$source_file' to file '$target_file'?" "n" && {
+                            merge "$source_file" "$target_file" &&
                                 action="merged" ||
                                 action="not merged"
-                            ;;
+                        }
+                        ;;
 
-                        3 ) copy_file "$source_file" "$target_file"
-                            action="copied"
-                            ;;
-
-                        * ) ;;
-                    esac
-                    ;;
-
-                "$action_ask_to_merge" )
-                    confirm "Do you want to merge '$source_file' to file '$target_file'?" "n" && {
+                    "$action_merge" )
                         merge "$source_file" "$target_file" &&
                             action="merged" ||
                             action="not merged"
-                    }
-                    ;;
+                        ;;
 
-                "$action_merge" )
-                    merge "$source_file" "$target_file" &&
-                        action="merged" ||
-                        action="not merged"
-                    ;;
+                    "$action_ask_to_copy" )
+                        confirm "Do you want to copy '$source_file' to file '$target_file'?" "n" && {
+                            copy_file "$source_file" "$target_file"
+                            action="copied"
+                        }
+                        ;;
 
-                "$action_ask_to_copy" )
-                    confirm "Do you want to copy '$source_file' to file '$target_file'?" "n" && {
+                    "$action_copy" )
                         copy_file "$source_file" "$target_file"
                         action="copied"
-                    }
-                    ;;
+                        ;;
 
-                "$action_copy" )
-                    copy_file "$source_file" "$target_file"
-                    action="copied"
-                    ;;
-
-                * ) error -ec "$err_logic_error" "Unknown action '$actions' for files '$source_file' and '$target_file'."
-                    action="error"
-                    press_any_key
-                    ;;
-            esac
+                    * ) error -ec "$err_logic_error" "Unknown action '$actions' for files '$source_file' and '$target_file'."
+                        action="error"
+                        press_any_key
+                        ;;
+                esac
+            fi
         fi
-        echo "| ${source_file#"$vm2_repos/$vm2_sot_repo_name/templates/"} | ${target_file#"$vm2_repos/"} | $difference | $action |" >> "$summary_file"
+        filename="$(basename "$source_file")"
+        source_path="$(dirname "$source_file")"
+        target_path="$(dirname "$target_file")"
+        echo "| ${source_path#"$vm2_repos/"} | ${target_path#"$vm2_repos/"} | $filename | $difference | $action | $actions |" >> "$summary_file"
     done # SoT files loop
 
     echo "" >> "$summary_file"
@@ -363,7 +366,7 @@ done # repositories loop
 dump_vars \
     --force \
     --quiet \
-    --header "Total counts:" \
+    --header "Summary:" \
     --name "Different"  summary_diff_count \
     --name "Identical"  summary_identical_count \
     --name "Merged"     summary_merged_count \
@@ -375,5 +378,5 @@ declare -x glow_present
 
 # shellcheck disable=SC2015 # A && B || C is not if-then-else. C may run when A is true but B is false.
 $glow_present &&
-    glow "$summary_file" -w 150 ||
+    glow "$summary_file" -w 180 ||
     cat "$summary_file"
