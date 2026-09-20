@@ -81,12 +81,14 @@ jobs:
       - name: Validate and compute release version
         id: version
         shell: bash
+        env:
+          REASON: ${{ inputs.reason }}
         run: |
           git fetch --tags --force
 
           declare -a args=(
               --minver-tag-prefix '${{ inputs.minver-tag-prefix }}'
-              --reason            '${{ inputs.reason }}'
+              --reason            "$REASON"
           )
           compute-release-version.sh "${args[@]}"
 

