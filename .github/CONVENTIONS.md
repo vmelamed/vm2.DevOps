@@ -617,7 +617,7 @@ separate parsing layer the GitHub Actions runner applies to a step's stdout, ind
   second "line" — and if that line happens to start with `::`, the runner treats it as a real command the workflow
   emitted, not as data. A reason like `"fine\n::error::fake failure"` turns one intended `::notice::` into a spoofed
   `::error::` annotation the workflow never wrote.
-- **Always escape with `escape_workflow_command_value` (`scripts/bash/lib/gh_core.sh`) before interpolating *any*
+- **Always escape with `gh_escape` (`scripts/bash/lib/gh_core.sh`) before interpolating *any*
   value into a workflow command — the same "always, no judgment call" default as the quoting rule above, and the
   same pre-approved-list exception** (`github.actor`, `github.event_name`, a literal boolean/numeric constant — the
   identical list, for the identical reason: nothing else is guaranteed free of CR/LF/`%`). Never `printf %q`.
@@ -630,13 +630,13 @@ separate parsing layer the GitHub Actions runner applies to a step's stdout, ind
   UI — correct, but needlessly unreadable.
 
   ```yaml
-  # Preferred: escape_workflow_command_value neutralizes only the characters that matter
+  # Preferred: gh_escape neutralizes only the characters that matter
   - name: Log manual trigger reason
     env:
       REASON: ${{ inputs.reason }}
     run: |
         source $DEVOPS_LIB_DIR/gh_core.sh
-        escaped_reason=$(escape_workflow_command_value "$REASON")
+        escaped_reason=$(gh_escape "$REASON")
         printf '::notice::Manual release triggered by %s. Reason: %s\n' '${{ github.actor }}' "$escaped_reason"
 
   # Avoid: printf %q also escapes ordinary punctuation, and stacking it on an
@@ -651,7 +651,7 @@ separate parsing layer the GitHub Actions runner applies to a step's stdout, ind
 - **This is a distinct risk from the shell-injection rule above and does not substitute for it.** A value can be
   perfectly safe from shell injection (properly routed through `env:`) and still carry an unescaped CR/LF into a
   workflow command. Apply both rules together wherever a value reaches a `printf`/`echo` that emits a `::` command:
-  `env:` for the shell, `escape_workflow_command_value` for the runner's command parser.
+  `env:` for the shell, `gh_escape` for the runner's command parser.
 
 ### GitHub Actions Expressions: `&&`/`||` Is Not If/Then/Else
 

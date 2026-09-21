@@ -161,10 +161,10 @@ fi
 # @stdout string The escaped value.
 #
 # @example
-#   escaped=$(escape_workflow_command_value "$REASON")
+#   escaped=$(gh_escape "$REASON")
 #   printf '::notice::Reason: %s\n' "$escaped"
 #---------------------------------------------------------------------------------------------
-function escape_workflow_command_value()
+function gh_escape()
 {
     (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to escape."
 
