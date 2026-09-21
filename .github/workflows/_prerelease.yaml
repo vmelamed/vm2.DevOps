@@ -146,6 +146,7 @@ jobs:
         env:
           RELEASE_PAT: ${{ secrets.RELEASE_PAT }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          REASON: ${{ steps.compute-prerelease-version.outputs.reason }}
         run: |
           source $DEVOPS_LIB_DIR/gh_core.sh
 
@@ -155,7 +156,7 @@ jobs:
 
           declare -a args=(
               --tag               '${{ steps.compute-prerelease-version.outputs.prerelease-tag }}'
-              --reason            '${{ steps.compute-prerelease-version.outputs.reason }}'
+              --reason            "$REASON"
               --minver-tag-prefix '${{ inputs.minver-tag-prefix }}'
           )
           changelog-and-tag.sh "${args[@]}"
@@ -192,6 +193,8 @@ jobs:
       - name: Build package (prerelease)
         id: package
         shell: bash
+        env:
+          REASON: ${{ needs.prepare-prerelease.outputs.reason }}
         run: |
           declare -a args=(
               '${{ matrix.project }}'
@@ -199,7 +202,7 @@ jobs:
               --define               '${{ inputs.preprocessor-symbols }}'
               --minver-tag-prefix    '${{ inputs.minver-tag-prefix }}'
               --minver-prerelease-id '${{ inputs.minver-prerelease-id }}'
-              --reason               '${{ needs.prepare-prerelease.outputs.reason }}'
+              --reason               "$REASON"
           )
           pack.sh "${args[@]}"
 

@@ -118,6 +118,7 @@ jobs:
         env:
           RELEASE_PAT: ${{ secrets.RELEASE_PAT }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          REASON: ${{ inputs.reason }}
         run: |
           source $DEVOPS_LIB_DIR/gh_core.sh
 
@@ -127,7 +128,7 @@ jobs:
 
           declare -a args=(
               --tag                '${{ needs.compute-version.outputs.release-tag }}'
-              --reason             '${{ inputs.reason }}'
+              --reason             "$REASON"
               --minver-tag-prefix  '${{ inputs.minver-tag-prefix }}'
               --needs-empty-commit '${{ needs.compute-version.outputs.needs-empty-commit }}'
           )
@@ -173,13 +174,15 @@ jobs:
       - name: Build package (release)
         id: package
         shell: bash
+        env:
+          REASON: ${{ needs.compute-version.outputs.reason }}
         run: |
           declare -a args=(
               '${{ matrix.project }}'
               --build             true
               --define            '${{ inputs.preprocessor-symbols }}'
               --minver-tag-prefix '${{ inputs.minver-tag-prefix }}'
-              --reason            '${{ needs.compute-version.outputs.reason }}'
+              --reason            "$REASON"
           )
           pack.sh "${args[@]}"
 
