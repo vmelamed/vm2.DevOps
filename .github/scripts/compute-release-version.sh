@@ -161,11 +161,13 @@ args_to_github_output \
   reason \
   needs_empty_commit
 
+gh_reason=$(gh_escape "$reason")
+
 # Summary
 {
     echo "## 🎯 Release Version: **$release_version**"
     echo "- Git Tag: \`$release_tag\`"
-    echo "- Reason: $reason"
+    echo "- Reason: $gh_reason"
     if [[ "$needs_empty_commit" == true ]]; then
         echo "- Promoting prerelease \`$head_tag\` → stable (empty commit will advance HEAD)"
     fi

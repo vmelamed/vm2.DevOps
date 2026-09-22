@@ -161,3 +161,21 @@ _run_compute_release() {
     assert_output --partial "release-version=1.0.0"
     assert_output --partial "release-tag=v1.0.0"
 }
+
+@test "compute-release-version: a reason containing '%' is workflow-command-escaped in the step summary" {
+    # '%' passes is_safe_reason (it is not a shell metacharacter), so it reaches the summary line
+    # unfiltered by argument validation -- gh_escape must still neutralize it there, since '%' has
+    # parsing significance for GitHub Actions workflow commands.
+    _make_fixture "$BATS_TEST_TMPDIR/repo"
+    run env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" \
+        GITHUB_ACTIONS=true GITHUB_STEP_SUMMARY="$BATS_TEST_TMPDIR/summary.md" GITHUB_OUTPUT="$BATS_TEST_TMPDIR/output.txt" \
+        bash -c "cd '$BATS_TEST_TMPDIR/repo' && bash '$_compute_release' --quiet --reason 'Fixed 50% of the bugs'"
+    assert_success
+
+    run cat "$BATS_TEST_TMPDIR/summary.md"
+    assert_output --partial "Fixed 50%25 of the bugs"
+    refute_output --partial "Fixed 50% of the bugs"
+
+    run cat "$BATS_TEST_TMPDIR/output.txt"
+    assert_output --partial "reason=Fixed 50% of the bugs"
+}

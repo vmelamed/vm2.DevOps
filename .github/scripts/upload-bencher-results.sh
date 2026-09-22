@@ -73,18 +73,18 @@ fi
 # reject absolute paths by design (the framework's convention for user-facing --artifacts-path-style inputs), but
 # this value is an internal, already-resolved absolute path handed off from run-benchmarks.sh's own output, not a
 # raw CLI/env path a caller is expected to type in relative form.
-[[ -n $results_dir ]]                       || error -ec "$err_missing_argument" "The results directory is required."
-[[ -d $results_dir ]]                       || error -ec "$err_argument_value" "The results directory '$results_dir' is not a directory."
-[[ -n $testbed ]]                           || error -ec "$err_missing_argument" "--testbed is required."
-[[ $repository == */* ]]                    || error -ec "$err_argument_value" "--repository must be in 'owner/repo' form (provided '${repository:-<none>}')."
-[[ -n $event_name ]]                        || error -ec "$err_missing_argument" "--event-name is required."
-[[ -n $ref_name ]]                          || error -ec "$err_missing_argument" "--ref-name is required."
+[[ -n $results_dir ]]                            || error -ec "$err_missing_argument" "The results directory is required."
+[[ -d $results_dir ]]                            || error -ec "$err_argument_value" "The results directory '$results_dir' is not a directory."
+[[ -n $testbed ]]                                || error -ec "$err_missing_argument" "--testbed is required."
+[[ $repository == */* ]]                         || error -ec "$err_argument_value" "--repository must be in 'owner/repo' form (provided '${repository:-<none>}')."
+[[ -n $event_name ]]                             || error -ec "$err_missing_argument" "--event-name is required."
+[[ -n $ref_name ]]                               || error -ec "$err_missing_argument" "--ref-name is required."
 is_safe_max_regression_pct "$max_regression_pct" || true
-is_safe_integer "$max_gen1_collects"        || true
-(( max_gen1_collects >= 0 ))                || error -ec "$err_argument_value" "--max-gen1-collects must be a non-negative integer (got '$max_gen1_collects')."
-is_safe_integer "$max_gen2_collects"        || true
-(( max_gen2_collects >= 0 ))                || error -ec "$err_argument_value" "--max-gen2-collects must be a non-negative integer (got '$max_gen2_collects')."
-is_safe_boolean "$reset_thresholds"         || true
+is_safe_integer "$max_gen1_collects"             || true
+(( max_gen1_collects >= 0 ))                     || error -ec "$err_argument_value" "--max-gen1-collects must be a non-negative integer (got '$max_gen1_collects')."
+is_safe_integer "$max_gen2_collects"             || true
+(( max_gen2_collects >= 0 ))                     || error -ec "$err_argument_value" "--max-gen2-collects must be a non-negative integer (got '$max_gen2_collects')."
+is_safe_boolean "$reset_thresholds"              || true
 
 if [[ $event_name == "pull_request" ]]; then
     [[ -n $head_ref ]]    || error -ec "$err_missing_argument" "--head-ref is required when --event-name is 'pull_request'."

@@ -938,7 +938,8 @@ function validate_preprocessor_symbols()
     local _symbol
 
     for _symbol in "${_symbol_array[@]}"; do
-        [[ -n $_symbol ]] || continue # tolerate consecutive separators
+        [[ -n $_symbol ]] ||
+            continue # tolerate consecutive separators in the input
         if is_variable_name "$_symbol"; then
             # symbol is valid, put it into the normalized list
             [[ -z $_normalized_symbols ]] && _normalized_symbols="$_symbol" || _normalized_symbols="$_normalized_symbols;$_symbol"

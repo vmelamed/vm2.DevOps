@@ -128,10 +128,6 @@ declare -xrA actions_default_vars=(
     # Build and Pack:
     ["MINVERTAGPREFIX"]="v"
     ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="preview.0"
-    # ["CONFIGURATION"]="Release"
-    # ["FRAMEWORK"]="net10.0"
-    # ["RUNTIME"]=""
-    # ["ARTIFACTS_PATH"]="artifacts"
     # Test:
     ["MIN_COVERAGE_PCT"]="80"
     # Benchmarks:
@@ -153,10 +149,6 @@ declare -xra actions_default_vars_order=(
     "--Build and Pack:"
     "MINVERTAGPREFIX"
     "MINVERDEFAULTPRERELEASEIDENTIFIERS"
-    # "CONFIGURATION"
-    # "FRAMEWORK"
-    # "RUNTIME"
-    # "ARTIFACTS_PATH"
     "--Test:"
     "MIN_COVERAGE_PCT"
     "--Benchmarks:"
@@ -178,10 +170,6 @@ declare -xrA actions_var_validators=(
     # Build and Pack
     ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="is_valid_minverPrereleaseId"
     ["MINVERTAGPREFIX"]="validate_semverTagComponents"
-    # ["CONFIGURATION"]="is_valid_configuration"
-    # ["FRAMEWORK"]="is_valid_framework"
-    # ["RUNTIME"]="is_valid_runtime"
-    # ["ARTIFACTS_PATH"]="is_safe_valid_path"
     # Test
     ["MIN_COVERAGE_PCT"]="is_valid_percentage"
     # Benchmarks

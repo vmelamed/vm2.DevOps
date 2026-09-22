@@ -63,6 +63,10 @@ fi
 # Validate the rest of the inputs (accumulate all problems, then bail once).
 validate_preprocessor_symbols preprocessor_symbols                        || true
 validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
+[[ $bencher_project =~ ^[a-zA-Z_][a-zA-Z0-9_.-]*$ ]]                      || error -ec "$err_argument_value" "The Bencher project '$bencher_project' is not a valid project name (slug)."
+[[ $bencher_testbed =~ ^[a-zA-Z_][a-zA-Z0-9_.-]*$ ]]                      || error -ec "$err_argument_value" "The Bencher testbed '$bencher_testbed' is not a valid testbed name."
+validate_branch_name "$bencher_branch"                                    || true
+is_variable_name "$bencher_adapter"                                       || error -ec "$err_argument_value" "The Bencher adapter '$bencher_adapter' is not a valid adapter name."
 is_safe_integer "$repeat"                                                 || true
 (( repeat >= 1 ))                                                         || error -ec "$err_argument_value" "repeat must be a positive integer (got '$repeat')."
 [[ -n "$bencher_project" ]]                                               || error -ec "$err_missing_argument" "Bencher project (--bencher-project) is required."
@@ -100,6 +104,7 @@ exit_if_has_errors
 declare -i uploaded=0
 declare -ri total=$(( ${#benchmark_projects[@]} * repeat ))
 declare project
+
 for project in "${benchmark_projects[@]}"; do
     for (( i=1; i <= repeat; i++ )); do
         echo "▶ [$project] run $i of $repeat (Bencher branch '$bencher_branch')..." | to_stdout

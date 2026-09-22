@@ -160,6 +160,52 @@ EOF
     assert_output --partial "repeat must be a positive integer"
 }
 
+@test "rebuild-bench-history-run: rejects a --bencher-project that is not a valid slug" {
+    _install_fakes "$BATS_TEST_TMPDIR"
+    _make_benchmark_project "$BATS_TEST_TMPDIR"
+    run _run_rebuild "$BATS_TEST_TMPDIR" 'BENCHER_API_TOKEN=tok' --quiet --repeat 1 --bencher-project 'bad!slug' --bencher-testbed t
+    assert_failure
+    assert_output --partial "The Bencher project 'bad!slug' is not a valid project name (slug)"
+}
+
+@test "rebuild-bench-history-run: rejects a --bencher-testbed that is not a valid slug" {
+    _install_fakes "$BATS_TEST_TMPDIR"
+    _make_benchmark_project "$BATS_TEST_TMPDIR"
+    run _run_rebuild "$BATS_TEST_TMPDIR" 'BENCHER_API_TOKEN=tok' --quiet --repeat 1 --bencher-project p --bencher-testbed 'bad!testbed'
+    assert_failure
+    assert_output --partial "The Bencher testbed 'bad!testbed' is not a valid testbed name"
+}
+
+@test "rebuild-bench-history-run: rejects a --bencher-branch that is not a valid Git branch name" {
+    _install_fakes "$BATS_TEST_TMPDIR"
+    _make_benchmark_project "$BATS_TEST_TMPDIR"
+    run _run_rebuild "$BATS_TEST_TMPDIR" 'BENCHER_API_TOKEN=tok' --quiet --repeat 1 --bencher-project p --bencher-testbed t --bencher-branch 'not..valid'
+    assert_failure
+    assert_output --partial "requires argument 1 to be a valid Git branch name"
+}
+
+@test "rebuild-bench-history-run: accepts the default --bencher-branch (main)" {
+    _install_fakes "$BATS_TEST_TMPDIR"
+    _make_benchmark_project "$BATS_TEST_TMPDIR"
+    run _run_rebuild "$BATS_TEST_TMPDIR" 'BENCHER_API_TOKEN=tok' --quiet --repeat 1 --bencher-project p --bencher-testbed t
+    assert_success
+}
+
+@test "rebuild-bench-history-run: rejects a --bencher-adapter that is not a valid adapter name" {
+    _install_fakes "$BATS_TEST_TMPDIR"
+    _make_benchmark_project "$BATS_TEST_TMPDIR"
+    run _run_rebuild "$BATS_TEST_TMPDIR" 'BENCHER_API_TOKEN=tok' --quiet --repeat 1 --bencher-project p --bencher-testbed t --bencher-adapter 'not-an-adapter!'
+    assert_failure
+    assert_output --partial "The Bencher adapter 'not-an-adapter!' is not a valid adapter name"
+}
+
+@test "rebuild-bench-history-run: accepts the default --bencher-adapter (c_sharp_dot_net)" {
+    _install_fakes "$BATS_TEST_TMPDIR"
+    _make_benchmark_project "$BATS_TEST_TMPDIR"
+    run _run_rebuild "$BATS_TEST_TMPDIR" 'BENCHER_API_TOKEN=tok' --quiet --repeat 1 --bencher-project p --bencher-testbed t
+    assert_success
+}
+
 @test "rebuild-bench-history-run: fails cleanly when the bencher CLI is not on PATH" {
     _make_benchmark_project "$BATS_TEST_TMPDIR"
     git -C "$BATS_TEST_TMPDIR" init -q

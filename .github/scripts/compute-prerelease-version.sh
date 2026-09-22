@@ -208,10 +208,11 @@ args_to_github_output \
     prerelease_tag \
     reason
 
+gh_reason=$(gh_escape "$reason")
 # Summary
 {
     echo "## 🏷️ Prerelease Version: **$prerelease_version**"
     echo "- Git Tag: \`$prerelease_tag\`"
     echo "- Bump: $bump_type"
-    echo "- Reason: $reason"
+    echo "- Reason: $gh_reason"
 } | to_summary

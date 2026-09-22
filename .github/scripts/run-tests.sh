@@ -163,13 +163,11 @@ if [[ ! -s $test_exec_path ]]; then
     if ! is_dry_run; then
         warning "Test executable '$test_exec_path' was not found in the artifacts directory. Rebuilding the test project..."
 
-        update_nuget_sources_with_github_vm2 || error -ec "$err_tool_error" "Updating the NuGet sources with GitHub packages from vm2 failed."
-        dotnet_clean "$test_project"         || error -ec "$err_tool_error" "Cleaning the test project failed."
-        dotnet_restore "$test_project"       || error -ec "$err_tool_error" "Restoring the test project failed."
-        dotnet_build "$test_project"         || error -ec "$err_tool_error" -sd 3 "Building the test project failed."
-        [[ -s $test_exec_path ]]             || error -ec "$err_tool_error" -sd 3 "After rebuilding the project, the test executable '$test_exec_path' was still NOT FOUND."
-
-        exit_if_has_errors
+        update_nuget_sources_with_github_vm2 || exit_with_error -ec "$err_tool_error" "Updating the NuGet sources with GitHub packages from vm2 failed."
+        dotnet_clean "$test_project"         || exit_with_error -ec "$err_tool_error" "Cleaning the test project failed."
+        dotnet_restore "$test_project"       || exit_with_error -ec "$err_tool_error" "Restoring the test project failed."
+        dotnet_build "$test_project"         || exit_with_error -ec "$err_tool_error" -sd 3 "Building the test project failed."
+        [[ -s $test_exec_path ]]             || exit_with_error -ec "$err_tool_error" -sd 3 "After rebuilding the project, the test executable '$test_exec_path' was still NOT FOUND."
     fi
 fi
 

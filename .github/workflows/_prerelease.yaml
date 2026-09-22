@@ -77,17 +77,16 @@ permissions:
   actions: read
 
 env:
-  DOTNET_NOLOGO: true
-  DOTNET_CLI_TELEMETRY_OPTOUT: true
-  GH_TOKEN: ${{ github.token }}
-  GH_ACTOR: ${{ github.actor }}
   PREPROCESSOR_SYMBOLS: ${{ vars.PREPROCESSOR_SYMBOLS || '' }}
   MINVER_TAG_PREFIX: ${{ vars.MINVER_TAG_PREFIX || 'v' }}
   MINVER_PRERELEASE_ID: ${{ vars.MINVER_PRERELEASE_ID || 'preview.0' }}
-  REASON: ${{ vars.REASON || '' }}
   NUGET_SERVER: ${{ vars.NUGET_SERVER || 'nuget' }}
   NUGET_USERNAME: ${{ vars.NUGET_USERNAME || '' }}
   VERBOSE: ${{ vars.VERBOSE || false }}
+  GH_TOKEN: ${{ github.token }}
+  GH_ACTOR: ${{ github.actor }}
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
   prepare-prerelease:

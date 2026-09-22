@@ -59,17 +59,12 @@ exit_if_has_errors
 
 # freeze the parameters
 declare -xr build_project
-
-update_nuget_sources_with_github_vm2     || error -ec $? "Updating the NuGet sources with GitHub packages from vm2 failed."
-exit_if_has_errors
-dotnet_clean "$build_project"            || error -ec $? "Cleaning the build project failed."
-exit_if_has_errors
-dotnet_restore "$build_project"          || error -ec $? "Restoring the build project failed."
-exit_if_has_errors
-
 declare -A build_info=()
-dotnet_build "$build_project" build_info || error -ec $? -sd 3 "Building the build project failed."
-exit_if_has_errors
+
+update_nuget_sources_with_github_vm2     || exit_with_error -ec $? "Updating the NuGet sources with GitHub packages from vm2 failed."
+dotnet_clean "$build_project"            || exit_with_error -ec $? "Cleaning the build project failed."
+dotnet_restore "$build_project"          || exit_with_error -ec $? "Restoring the build project failed."
+dotnet_build "$build_project" build_info || exit_with_error -ec $? -sd 3 "Building the build project failed."
 
 # Expose the resolved ArtifactsPath (from Directory.Build.props, already captured by dotnet_build() above) so callers
 # never need to hardcode or duplicate the "artifacts" default themselves.
