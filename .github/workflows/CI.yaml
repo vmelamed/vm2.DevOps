@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
+name: "CI: Build, Test, Benchmark, Pack"
+
+# vm2DevOps does not have a true CI workflow yet. This is just a placeholder for future CI jobs.
+# For now it is just calling the _ping.yaml reusable workflow.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  call_ping_workflow:
+    name: "Call _ping.yaml workflow"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping
+        id: ping
+        uses: vmelamed/vm2.DevOps/.github/workflows/_ping.yaml@main

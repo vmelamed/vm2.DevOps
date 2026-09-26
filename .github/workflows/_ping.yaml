@@ -2,8 +2,10 @@
 # Copyright (c) 2025-2026 Val Melamed
 
 name: _ping
+
 on:
   workflow_call: {}
+
 jobs:
   ping:
     runs-on: ubuntu-latest
