@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025-2026 Val Melamed
 
-name: "CI: Build, Test, Benchmark, Pack"
+name: "CI: For now just ping"
 
 # vm2DevOps does not have a true CI workflow yet. This is just a placeholder for future CI jobs.
 # For now it is just calling the _ping.yaml reusable workflow.
