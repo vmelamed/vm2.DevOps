@@ -10,10 +10,6 @@ on:
   workflow_dispatch: {}
 
 jobs:
-  call_ping_workflow:
-    name: "Call _ping.yaml workflow"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Ping
-        id: ping
-        uses: vmelamed/vm2.DevOps/.github/workflows/_ping.yaml@main
+  call_ping:
+    name: "Call Ping"
+    uses: vmelamed/vm2.DevOps/.github/workflows/_ping.yaml@main
