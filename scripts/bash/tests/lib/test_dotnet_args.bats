@@ -11,6 +11,12 @@ load '../libs/bats-support/load'
 load '../libs/bats-assert/load'
 load '../helpers/setup'
 
+# ShellCheck can't see that '../helpers/setup' transplants these into this file's scope at load
+# time. '-g' is required (see feedback_bats_declare_g_readonly memory for the root cause).
+declare -gx lib_dir
+declare -gxi failure
+declare -gxi err_invalid_arguments
+
 # --- default values --------------------------------------------------------------------------
 
 @test "defaults: configuration is Debug outside CI" {
@@ -43,7 +49,7 @@ load '../helpers/setup'
     local _opt
     for _opt in -d -f -r -a -mp -mi; do
         run get_common_dotnet_arg "$_opt" "some-value"
-        assert_failure 1
+        assert_failure "$failure"
     done
 }
 
@@ -63,7 +69,7 @@ load '../helpers/setup'
     # any value is inspected -- otherwise a positional argument (e.g. a project path) that
     # happens to be paired with an empty next token could be misrouted into a value-setting arm.
     run get_common_dotnet_arg "some/positional/path.csproj" ""
-    assert_failure 1
+    assert_failure "$failure"
 }
 
 @test "get_common_dotnet_arg: recognizes --nuget-username/--nuget-password" {
@@ -75,12 +81,12 @@ load '../helpers/setup'
 
 @test "get_common_dotnet_arg: returns failure for an unrecognized argument" {
     run get_common_dotnet_arg "--not-a-dotnet-flag" "value"
-    assert_failure 1
+    assert_failure "$failure"
 }
 
 @test "get_common_dotnet_arg: bug-exits with the wrong argument count" {
     run get_common_dotnet_arg "--configuration"
-    assert_failure 254
+    assert_failure "$err_invalid_arguments"
 }
 
 # --- sanitize_common_dotnet_args -------------------------------------------------------------
@@ -108,23 +114,49 @@ load '../helpers/setup'
 
 @test "sanitize_common_dotnet_args: bug-exits with the wrong argument count" {
     run sanitize_common_dotnet_args
-    assert_failure 254
+    assert_failure "$err_invalid_arguments"
 }
 
-@test "sanitize_common_dotnet_args: resolves \$artifacts to the documented 'artifacts' default (relative to the repo root) when not explicitly set" {
+@test "sanitize_common_dotnet_args: resolves \$artifacts via real MSBuild ArtifactsPath evaluation, per Directory.Build.props" {
+    # NOTE: get_artifacts_path() (moved from _git_vm2.sh into _dotnet.sh) is now a thin wrapper
+    # over get_msbuild_property() -- no bash-side "artifacts" fallback default anymore (that
+    # fallback was itself wrong: without Directory.Build.props/UseArtifactsOutput, a project's
+    # real outputs land in bin/<config>/... scattered per-project, not under a single artifacts/
+    # root, so silently claiming "<repo>/artifacts" there was misleading). vm2.DevOps is
+    # deliberately opinionated: a consumer project is expected to set UseArtifactsOutput=true via
+    # Directory.Build.props; this fixture mirrors that expectation instead of a bare .csproj.
     mkdir -p "$BATS_TEST_TMPDIR/repo"
-    touch "$BATS_TEST_TMPDIR/repo/project.csproj"
+    cat > "$BATS_TEST_TMPDIR/repo/Directory.Build.props" <<'EOF'
+<Project>
+  <PropertyGroup>
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+  </PropertyGroup>
+</Project>
+EOF
+    cat > "$BATS_TEST_TMPDIR/repo/project.csproj" <<'EOF'
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+</Project>
+EOF
     run bash -c "cd '$BATS_TEST_TMPDIR/repo' && git init -q && source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; sanitize_common_dotnet_args project.csproj; echo \"\$artifacts\""
     assert_success
     assert_output --regexp "^/.*/repo/artifacts$"
 }
 
-@test "sanitize_common_dotnet_args: resolves an explicitly-given \$artifacts to an absolute path" {
+@test "sanitize_common_dotnet_args: reports an error (does not absolutize) when an explicitly-given \$artifacts override resolves to a relative path" {
+    # get_artifacts_path() treats a relative ArtifactsPath the same as an empty one: the only
+    # blessed way to get an absolute value is UseArtifactsOutput=true (whose own SDK machinery
+    # always resolves it absolute) -- an explicit --artifacts-path/-property:ArtifactsPath=
+    # override that MSBuild echoes back as-given, still relative, is itself non-conformant and
+    # gets the same err_not_found treatment rather than being silently "fixed" by absolutizing
+    # it here (which would require guessing an ambiguous base path).
     mkdir -p "$BATS_TEST_TMPDIR/repo"
-    touch "$BATS_TEST_TMPDIR/repo/project.csproj"
+    echo "<Project />" > "$BATS_TEST_TMPDIR/repo/project.csproj"
     run bash -c "cd '$BATS_TEST_TMPDIR/repo' && git init -q && source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; artifacts=myartifacts; sanitize_common_dotnet_args project.csproj; echo \"\$artifacts\""
-    assert_success
-    assert_output --regexp "^/.*/repo/myartifacts$"
+    assert_output --partial "Failed to get correct artifacts path"
+    assert_output --partial "myartifacts"
 }
 
 # --- common_dotnet_to_output (requires gh_core.sh, not just core.sh) ---------------------------

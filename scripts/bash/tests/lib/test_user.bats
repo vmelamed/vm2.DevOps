@@ -11,6 +11,15 @@ load '../libs/bats-support/load'
 load '../libs/bats-assert/load'
 load '../helpers/setup'
 
+# ShellCheck can't see that '../helpers/setup' transplants these into this file's scope at load
+# time. '-g' is required (see feedback_bats_declare_g_readonly memory for the root cause).
+declare -gx lib_dir
+declare -gxi failure
+declare -gxi err_invalid_arguments
+declare -gxi err_argument_value
+declare -gxi err_argument_type
+declare -gxi err_invalid_nameref
+
 # --- press_any_key ------------------------------------------------------------------------
 
 @test "press_any_key: returns immediately without prompting when quiet" {
@@ -37,19 +46,19 @@ load '../helpers/setup'
 
 @test "confirm: quiet mode honors an explicit 'n' default" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; set_quiet; confirm 'Proceed?' n"
-    assert_failure 1
+    assert_failure "$failure"
 }
 
 @test "confirm: reads y/n from stdin when not quiet" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; echo y | confirm 'Proceed?'"
     assert_success
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; echo n | confirm 'Proceed?'"
-    assert_failure 1
+    assert_failure "$failure"
 }
 
 @test "confirm: empty input falls back to the default" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; echo '' | confirm 'Proceed?' n"
-    assert_failure 1
+    assert_failure "$failure"
 }
 
 @test "confirm: re-prompts on invalid input until a valid y/n is given" {
@@ -60,12 +69,12 @@ load '../helpers/setup'
 
 @test "confirm: bug-exits with the wrong argument count" {
     run confirm
-    assert_failure 254
+    assert_failure "$err_invalid_arguments"
 }
 
 @test "confirm: bug-exits on an invalid default response" {
     run confirm "Proceed?" "maybe"
-    assert_failure 254
+    assert_failure "$err_argument_value"
 }
 
 # --- enter_value ------------------------------------------------------------------------------
@@ -105,12 +114,12 @@ load '../helpers/setup'
 
 @test "enter_value: bug-exits on an undefined output variable" {
     run enter_value "Name" not_a_defined_var
-    assert_failure 254
+    assert_failure "$err_argument_value"
 }
 
 @test "enter_value: bug-exits on a non-boolean secret flag" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare v=''; enter_value 'Name' v '' maybe"
-    assert_failure 254
+    assert_failure "$err_argument_type"
 }
 
 @test "enter_value: bug-exits when the default value itself fails validation" {
@@ -120,7 +129,7 @@ load '../helpers/setup'
         declare v=''
         enter_value 'Name' v 'not-abc' false only_abc
     "
-    assert_failure 254
+    assert_failure "$err_argument_value"
 }
 
 # --- choose -----------------------------------------------------------------------------------
@@ -151,18 +160,21 @@ load '../helpers/setup'
 }
 
 @test "choose: bug-exits with fewer than four arguments" {
-    run choose "Pick one:" c A
-    assert_failure 254
+    # NOTE: 'c' must be a real pre-declared variable, or a second bug (arg-2 nameref) accumulates
+    # alongside the intended arity bug, and exit_if_has_bugs reports the LAST one recorded
+    # (err_invalid_nameref), not this test's intended err_invalid_arguments.
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare c=''; choose 'Pick one:' c A"
+    assert_failure "$err_invalid_arguments"
 }
 
 @test "choose: bug-exits on an empty choice text" {
     run choose "Pick one:" c A ""
-    assert_failure 254
+    assert_failure "$err_argument_value"
 }
 
 @test "choose: bug-exits on an undefined output variable" {
     run choose "Pick one:" not_a_defined_var A B
-    assert_failure 254
+    assert_failure "$err_invalid_nameref"
 }
 
 # --- print_sequence ---------------------------------------------------------------------------

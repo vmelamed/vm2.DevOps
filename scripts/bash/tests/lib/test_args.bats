@@ -11,6 +11,13 @@ load '../libs/bats-support/load'
 load '../libs/bats-assert/load'
 load '../helpers/setup'
 
+# ShellCheck can't see that '../helpers/setup' transplants these into this file's scope at load
+# time. '-g' is required (see feedback_bats_declare_g_readonly memory for the root cause).
+declare -gx lib_dir
+
+declare -gxi failure
+declare -gxi err_invalid_arguments
+
 # --- get_common_arg -----------------------------------------------------------------------------
 
 @test "get_common_arg: recognizes --verbose/-v and sets verbose mode" {
@@ -55,14 +62,14 @@ load '../helpers/setup'
 
 @test "get_common_arg: returns failure (not processed) for an unrecognized argument" {
     run get_common_arg "--not-a-common-flag"
-    assert_failure 1
+    assert_failure "$failure"
 }
 
 @test "get_common_arg: bug-exits with wrong argument count" {
     run get_common_arg
-    assert_failure 254
+    assert_failure "$err_invalid_arguments"
     run get_common_arg a b
-    assert_failure 254
+    assert_failure "$err_invalid_arguments"
 }
 
 # --- usage_if_requested --------------------------------------------------------------------------
@@ -88,7 +95,7 @@ load '../helpers/setup'
 
 @test "usage: exits 1 (failure) when error messages are given but no explicit exit code" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_args.sh'; usage true 'something went wrong'"
-    assert_failure 1
+    assert_failure "$failure"
     assert_output --partial "something went wrong"
 }
 

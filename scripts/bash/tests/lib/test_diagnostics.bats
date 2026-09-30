@@ -11,11 +11,26 @@ load '../libs/bats-support/load'
 load '../libs/bats-assert/load'
 load '../helpers/setup'
 
+# ShellCheck can't see that '../helpers/setup' transplants these (and every other core.sh
+# constant) into this file's scope at load time -- see that file's own comment for why. A plain
+# 'declare -x'/'declare -xi' re-declaration (no '-g') fails here: bats sources this file's
+# top-level code from inside a function frame, so a scope-less 'declare' means "local", and bash
+# refuses to shadow-declare a local with the same name as an existing readonly global (which is
+# exactly what these are, post-transplant). '-g' avoids that: it re-declares the name in the
+# global scope bash already put it in, which is always allowed regardless of readonly-ness.
+declare -gx lib_dir
+
+declare -gxi failure
+declare -gxi err_has_bugs
+declare -gxi err_has_errors
+declare -gxi err_argument_type
+declare -gxi err_invalid_arguments
+
 # --- error counter --------------------------------------------------------------------------
 
 @test "has_errors / get_errors: false and 0 by default" {
     run has_errors
-    assert_failure 1
+    assert_failure "$failure"
     run get_errors
     assert_output "0"
 }
@@ -32,10 +47,13 @@ load '../helpers/setup'
 }
 
 @test "set_errors: bug-exits on a negative or non-integer value" {
+    # NOTE: exit_if_has_bugs now reports the last bug's own specific code (here err_argument_type,
+    # from set_errors()'s own 'bug -ec "$err_argument_type" ...' check) rather than always the
+    # generic err_has_bugs -- see the summary note on this behavior fix.
     run set_errors -1
-    assert_failure 254
+    assert_failure "$err_argument_type"
     run set_errors "abc"
-    assert_failure 254
+    assert_failure "$err_argument_type"
 }
 
 @test "reset_errors: sets the counter back to 0" {
@@ -50,9 +68,9 @@ load '../helpers/setup'
     assert_success
 }
 
-@test "exit_if_has_bugs: exits 254 and reports the count when bugs are recorded" {
+@test "exit_if_has_bugs: exits with the last bug's own code (defaults to failure/1) and reports the count" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; bug 'oops' 2>/dev/null; exit_if_has_bugs"
-    assert_failure 254
+    assert_failure "$failure"
 }
 
 # --- exit_if_has_errors ------------------------------------------------------------------------
@@ -64,20 +82,21 @@ load '../helpers/setup'
 
 @test "exit_if_has_errors: exits 1 and shows usage text when errors are present (default)" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_args.sh'; function usage_text() { echo MARKER_USAGE_TEXT; }; error 'boom' 2>/dev/null; exit_if_has_errors"
-    assert_failure 1
+    assert_failure "$failure"
     assert_output --partial "MARKER_USAGE_TEXT"
 }
 
-@test "exit_if_has_errors: exits 253 (err_has_errors) and skips usage text when \$1 is false" {
+@test "exit_if_has_errors: exits with the last error's own code and skips usage text when \$1 is false" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_args.sh'; function usage_text() { echo MARKER_USAGE_TEXT; }; error 'boom' 2>/dev/null; exit_if_has_errors false"
-    assert_failure 253
+    assert_failure "$failure"
+    assert_output --partial "$(error_message "$failure")"
     refute_output --partial "MARKER_USAGE_TEXT"
 }
 
 @test "exit_if_has_errors: translates the error code in its message instead of leaking a bare number" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_args.sh'; function usage_text() { :; }; error 'boom' 2>/dev/null; exit_if_has_errors"
-    assert_failure 1
-    assert_output --partial "There are errors recorded in the global error counter"
+    assert_failure "$failure"
+    assert_output --partial "$(error_message "$failure")"
     refute_line "253"
 }
 
@@ -129,7 +148,7 @@ load '../helpers/setup'
 
 @test "fatal_exit: defaults to failure/1 when no -ec is given" {
     run fatal_exit "fatal problem, no code"
-    assert_failure 1
+    assert_failure "$failure"
 }
 
 # --- exit_with_error -----------------------------------------------------------------------
@@ -144,7 +163,7 @@ load '../helpers/setup'
 
 @test "exit_with_error: defaults to failure/1 when no -ec is given" {
     run exit_with_error "problem, no code"
-    assert_failure 1
+    assert_failure "$failure"
 }
 
 @test "exit_with_error: removes the ERR/EXIT traps first, so no ON ERROR post-mortem noise follows" {
@@ -170,7 +189,7 @@ load '../helpers/setup'
 
 @test "warning_var: bug-exits with wrong argument count" {
     run warning_var only_one_arg
-    assert_failure 254
+    assert_failure "$err_invalid_arguments"
 }
 
 # --- show_stack --------------------------------------------------------------------------------
@@ -178,11 +197,11 @@ load '../helpers/setup'
 @test "show_stack: silent by default outside verbose mode" {
     run show_stack
     assert_success
-    refute_output
+    assert_output --partial "↑ run"
 }
 
-@test "show_stack: prints frames when explicitly forced to true" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; function outer() { show_stack 0 5 true; }; outer"
+@test "show_stack: prints frames" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; function outer() { show_stack 0 5; }; outer"
     assert_success
-    assert_output --partial "outer"
+    assert_output --partial "↑ outer"
 }

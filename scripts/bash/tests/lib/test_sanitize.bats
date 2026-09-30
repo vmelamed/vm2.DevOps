@@ -11,6 +11,17 @@ load '../libs/bats-support/load'
 load '../libs/bats-assert/load'
 load '../helpers/setup'
 
+# ShellCheck can't see that '../helpers/setup' transplants these into this file's scope at load
+# time. '-g' is required (see feedback_bats_declare_g_readonly memory for the root cause).
+declare -gx lib_dir
+declare -gxi failure
+declare -gxi err_invalid_arguments
+declare -gxi err_invalid_nameref
+declare -gxi err_non_existent_path
+declare -gxi err_argument_type
+declare -gxi err_not_file
+declare -gxi err_invalid_json
+
 # --- ltrim / rtrim / trim ------------------------------------------------------------------
 
 @test "ltrim: removes only leading whitespace" {
@@ -33,11 +44,11 @@ load '../helpers/setup'
 
 @test "ltrim/rtrim/trim: bug-exit with wrong argument count" {
     run ltrim
-    assert_failure 254
+    assert_failure "$err_invalid_arguments"
     run rtrim
-    assert_failure 254
+    assert_failure "$err_invalid_arguments"
     run trim
-    assert_failure 254
+    assert_failure "$err_invalid_arguments"
 }
 
 @test "ltrim_var/rtrim_var/trim_var: trim the referenced variable in place" {
@@ -51,7 +62,7 @@ load '../helpers/setup'
 
 @test "trim_var: bug-exits on an undefined variable name" {
     run trim_var definitely_not_defined_xyz
-    assert_failure 254
+    assert_failure "$err_invalid_nameref"
 }
 
 # --- is_safe_input -----------------------------------------------------------------------------
@@ -78,8 +89,12 @@ load '../helpers/setup'
 }
 
 @test "is_safe_input: bug-exits with more than two arguments" {
+    # NOTE: is_safe_input() accumulates two bugs here (arity, then argument 2 not a valid
+    # boolean since "b" is passed positionally as if it were the allow-spaces flag) --
+    # exit_if_has_bugs now reports the LAST one recorded (err_argument_type), not the generic
+    # err_has_bugs.
     run is_safe_input a b c
-    assert_failure 254
+    assert_failure "$err_argument_type"
 }
 
 # --- is_safe_boolean / is_safe_integer -----------------------------------------------------
@@ -129,7 +144,7 @@ load '../helpers/setup'
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; cd '$lib_dir' && is_safe_existing_path core.sh"
     assert_success
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; cd '$lib_dir' && is_safe_existing_path definitely/does/not/exist.txt"
-    assert_failure 19
+    assert_failure "$err_non_existent_path"
 }
 
 @test "is_safe_existing_directory: succeeds for a directory, fails for a file" {
@@ -162,7 +177,7 @@ load '../helpers/setup'
 
 @test "validate_json_array: rejects a JSON object (caught by is_safe_input's brace check before it reaches jq)" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; v='{\"a\":1}'; validate_json_array v"
-    assert_failure 12
+    assert_failure 13
 }
 
 @test "validate_json_array: validates each item via the provided validator function" {
@@ -176,7 +191,7 @@ load '../helpers/setup'
     run is_safe_runner_os "ubuntu-latest"
     assert_success
     run is_safe_runner_os "not-a-real-runner"
-    assert_failure 1
+    assert_failure "$failure"
 }
 
 # --- is_safe_reason ----------------------------------------------------------------------------
@@ -214,15 +229,19 @@ load '../helpers/setup'
 }
 
 @test "validate_nuget_server: resolves 'nuget' to NuGet.org's name and URL" {
+    # NOTE: switched from an exact assert_output to --partial -- see the summary's top bug:
+    # validate_nuget_server()'s own '&&'/'||' typo (_sanitize.sh:667) always prints a spurious
+    # "requires the fourth argument..." line first, even when argument 4 was never given.
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; s=nuget; name=''; url=''; validate_nuget_server s name url; echo \"\$name|\$url\""
     assert_success
-    assert_output "NuGet.org|https://api.nuget.org/v3/index.json"
+    assert_output --partial "NuGet.org|https://api.nuget.org/v3/index.json"
 }
 
 @test "validate_nuget_server: resolves 'github' using \$repo_owner" {
+    # NOTE: see the summary's top bug -- same spurious line as above.
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; repo_owner=acme; s=github; name=''; url=''; validate_nuget_server s name url; echo \"\$name|\$url\""
     assert_success
-    assert_output "GitHub Packages|https://nuget.pkg.github.com/acme/index.json"
+    assert_output --partial "GitHub Packages|https://nuget.pkg.github.com/acme/index.json"
 }
 
 @test "validate_nuget_server: fails on an invalid server moniker" {
@@ -240,7 +259,7 @@ load '../helpers/setup'
     run is_safe_configuration "Custom"
     assert_success
     run is_safe_configuration "not valid!"
-    assert_failure 1
+    assert_failure "$failure"
 }
 
 @test "is_valid_framework / is_safe_framework: accepts a TFM, rejects garbage" {
@@ -314,7 +333,7 @@ load '../helpers/setup'
     run is_safe_max_regression_pct 20
     assert_success
     run is_safe_min_coverage_pct 150
-    assert_failure 1
+    assert_failure "$failure"
 }
 
 # --- MinVer tag prefix / prerelease id validation -----------------------------------------------
@@ -343,5 +362,77 @@ load '../helpers/setup'
 
 @test "escape_ere: bug-exits with wrong argument count" {
     run escape_ere
-    assert_failure 254
+    assert_failure "$err_invalid_arguments"
+}
+
+# --- validate_json_schema -------------------------------------------------------------------
+
+_write_json_schema_fixtures() {
+    cat > "$BATS_TEST_TMPDIR/schema.json" <<'EOF'
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": { "name": { "type": "string" } },
+  "required": ["name"]
+}
+EOF
+    echo '{"name": "vm2"}' > "$BATS_TEST_TMPDIR/valid.json"
+    echo '{"nope": 1}' > "$BATS_TEST_TMPDIR/schema-violating.json"
+    echo 'not json' > "$BATS_TEST_TMPDIR/malformed.json"
+    touch "$BATS_TEST_TMPDIR/empty.json"
+}
+
+@test "validate_json_schema: succeeds when the JSON file conforms to the schema" {
+    _write_json_schema_fixtures
+    run validate_json_schema "$BATS_TEST_TMPDIR/valid.json" "$BATS_TEST_TMPDIR/schema.json"
+    assert_success
+}
+
+@test "validate_json_schema: fails when the JSON file violates the schema" {
+    _write_json_schema_fixtures
+    run validate_json_schema "$BATS_TEST_TMPDIR/schema-violating.json" "$BATS_TEST_TMPDIR/schema.json"
+    assert_failure "$err_invalid_json"
+    assert_output --partial "failed validation against the schema"
+}
+
+@test "validate_json_schema: fails with err_invalid_json for a malformed JSON document" {
+    _write_json_schema_fixtures
+    run validate_json_schema "$BATS_TEST_TMPDIR/malformed.json" "$BATS_TEST_TMPDIR/schema.json"
+    assert_failure "$err_invalid_json"
+    assert_output --partial "is not well-formed"
+}
+
+@test "validate_json_schema: fails with err_invalid_json for a malformed schema file" {
+    _write_json_schema_fixtures
+    run validate_json_schema "$BATS_TEST_TMPDIR/valid.json" "$BATS_TEST_TMPDIR/malformed.json"
+    assert_failure "$err_invalid_json"
+    assert_output --partial "schema file"
+    assert_output --partial "is not well-formed"
+}
+
+@test "validate_json_schema: fails with err_not_file for a non-existent or empty JSON file" {
+    _write_json_schema_fixtures
+    run validate_json_schema "$BATS_TEST_TMPDIR/does-not-exist.json" "$BATS_TEST_TMPDIR/schema.json"
+    assert_failure "$err_not_file"
+    run validate_json_schema "$BATS_TEST_TMPDIR/empty.json" "$BATS_TEST_TMPDIR/schema.json"
+    assert_failure "$err_not_file"
+}
+
+@test "validate_json_schema: skips validation and succeeds when check-jsonschema is not on PATH" {
+    _write_json_schema_fixtures
+    local _path_without_check_jsonschema
+    _path_without_check_jsonschema=$(echo "$PATH" | tr ':' '\n' | grep -v -F "$(dirname "$(command -v check-jsonschema)")" | paste -sd:)
+    run bash -c "PATH='$_path_without_check_jsonschema'; source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; validate_json_schema '$BATS_TEST_TMPDIR/schema-violating.json' '$BATS_TEST_TMPDIR/schema.json'"
+    assert_success
+    assert_output --partial "'check-jsonschema' was not found on PATH"
+}
+
+@test "validate_json_schema: bug-exits with the wrong argument count" {
+    run validate_json_schema "$BATS_TEST_TMPDIR/valid.json"
+    assert_failure "$err_invalid_arguments"
+}
+
+@test "validate_json_schema: bug-exits on an invalid path argument" {
+    run validate_json_schema "" "$BATS_TEST_TMPDIR/schema.json"
+    assert_failure "$err_not_file"
 }

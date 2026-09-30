@@ -16,6 +16,17 @@ load '../libs/bats-support/load'
 load '../libs/bats-assert/load'
 load '../helpers/setup'
 
+# ShellCheck can't see that '../helpers/setup' transplants these into this file's scope at load
+# time. '-g' is required (see feedback_bats_declare_g_readonly memory for the root cause).
+declare -gx lib_dir
+declare -gxi failure
+declare -gxi err_invalid_arguments
+declare -gxi err_invalid_nameref
+declare -gxi err_argument_value
+declare -gxi err_argument_type
+declare -gxi err_not_directory
+declare -gxi err_not_git_directory
+
 setup() {
     _repo_root="$(cd "$lib_dir/../../.." && pwd)"
 }
@@ -33,7 +44,7 @@ setup() {
 
 @test "validate_gh_repo_owner: bug-exits with the wrong argument count" {
     run validate_gh_repo_owner
-    assert_failure 254
+    assert_failure "$err_invalid_arguments"
 }
 
 @test "validate_gh_repo_name: rejects empty, rejects .git suffix, accepts a valid name" {
@@ -67,7 +78,26 @@ setup() {
 
 @test "validate_branch_name: bug-exits with the wrong argument count" {
     run validate_branch_name
-    assert_failure 254
+    assert_failure "$err_invalid_arguments"
+}
+
+# --- is_valid_branch_name -------------------------------------------------------------------
+
+@test "is_valid_branch_name: true for a valid branch name, false for an invalid one" {
+    run is_valid_branch_name "feature/foo"
+    assert_success
+    run is_valid_branch_name "..bad..name"
+    assert_failure "$failure"
+}
+
+@test "is_valid_branch_name: false (not a bug) for an empty branch name" {
+    run is_valid_branch_name ""
+    assert_failure "$failure"
+}
+
+@test "is_valid_branch_name: bug-exits with the wrong argument count" {
+    run is_valid_branch_name
+    assert_failure "$err_invalid_arguments"
 }
 
 # --- initialize_repo_state -----------------------------------------------------------------------
@@ -84,7 +114,7 @@ setup() {
 
 @test "initialize_repo_state: bug-exits on a non-associative-array argument" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -a arr=(); initialize_repo_state arr"
-    assert_failure 254
+    assert_failure "$err_invalid_nameref"
 }
 
 # --- get_repo_state (local git only, full_info=false to avoid network calls) --------------------
@@ -98,13 +128,17 @@ setup() {
 }
 
 @test "get_repo_state: bug-exits on a non-existent directory" {
-    run get_repo_state "/definitely/not/a/real/path" state false
-    assert_failure 254
+    # NOTE: 'state' must be a real pre-declared associative array, or a second bug (arg-2
+    # nameref) accumulates alongside the intended arg-1 directory bug, and exit_if_has_bugs
+    # reports the LAST one recorded (err_invalid_nameref), not this test's intended
+    # err_not_directory.
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); get_repo_state '/definitely/not/a/real/path' state false"
+    assert_failure "$err_not_directory"
 }
 
 @test "get_repo_state: bug-exits with the wrong argument count" {
     run get_repo_state "$_repo_root"
-    assert_failure 254
+    assert_failure "$err_invalid_arguments"
 }
 
 # --- has_local_repo / has_remote_repo / has_github_remote ---------------------------------------
@@ -118,12 +152,12 @@ setup() {
 
 @test "has_local_repo: false for a freshly-initialized (empty) repo state" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); initialize_repo_state state; has_local_repo state"
-    assert_failure 1
+    assert_failure "$failure"
 }
 
 @test "has_github_remote: false without full repo-id info (full_info=false never populates it)" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); get_repo_state '$_repo_root' state false; has_github_remote state"
-    assert_failure 1
+    assert_failure "$failure"
 }
 
 # --- read_repo_state / print_repo_state ----------------------------------------------------------
@@ -142,10 +176,13 @@ setup() {
 }
 
 @test "print_repo_state: bug-exits with the wrong argument count (regression: was missing exit_if_has_bugs)" {
+    # NOTE: print_repo_state()'s nameref check (is_associative_array "$1") isn't '-v'-guarded, so
+    # it always runs even when $1 is simply missing, compounding a second bug (err_invalid_nameref)
+    # on top of the arity one -- exit_if_has_bugs reports the LAST one recorded either way.
     run print_repo_state
-    assert_failure 254
+    assert_failure "$err_invalid_nameref"
     run print_repo_state a b
-    assert_failure 254
+    assert_failure "$err_invalid_nameref"
 }
 
 # --- is_inside_work_tree / root_working_tree -----------------------------------------------------
@@ -154,12 +191,12 @@ setup() {
     run is_inside_work_tree "$_repo_root"
     assert_success
     run is_inside_work_tree /tmp
-    assert_failure 1
+    assert_failure "$failure"
 }
 
 @test "is_inside_work_tree: bug-exits on a non-existent directory" {
     run is_inside_work_tree "/definitely/not/a/real/path"
-    assert_failure 254
+    assert_failure "$err_not_directory"
 }
 
 @test "root_working_tree: resolves the real repo root" {
@@ -170,13 +207,13 @@ setup() {
 
 @test "root_working_tree: bug-exits on an invalid (empty) nameref, without a raw bash crash (regression)" {
     run root_working_tree "$_repo_root" ""
-    assert_failure 254
+    assert_failure "$err_invalid_nameref"
     refute_output --partial "not a valid identifier"
 }
 
 @test "root_working_tree: bug-exits on a directory outside any Git work tree" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare root=''; root_working_tree /tmp root"
-    assert_failure 254
+    assert_failure "$err_not_git_directory"
 }
 
 # --- should_fetch_for_latest_stable_tag (read-only against the real repo) -----------------------
@@ -188,12 +225,12 @@ setup() {
 
 @test "should_fetch_for_latest_stable_tag: bug-exits on an invalid branch name" {
     run should_fetch_for_latest_stable_tag "$_repo_root" "..bad..branch.."
-    assert_failure 254
+    assert_failure "$err_argument_value"
 }
 
 @test "should_fetch_for_latest_stable_tag: bug-exits with too many arguments" {
     run should_fetch_for_latest_stable_tag "$_repo_root" "main" "extra"
-    assert_failure 254
+    assert_failure "$err_invalid_arguments"
 }
 
 # --- get_latest_stable_tag_hash / is_after_latest_stable_tag / is_on_or_after_latest_stable_tag -
@@ -206,12 +243,12 @@ setup() {
 
 @test "get_latest_stable_tag_hash: bug-exits on a non-boolean fetch flag" {
     run get_latest_stable_tag_hash "$_repo_root" "maybe"
-    assert_failure 254
+    assert_failure "$err_argument_type"
 }
 
 @test "get_latest_stable_tag_hash: bug-exits with too many arguments" {
     run get_latest_stable_tag_hash "$_repo_root" false "extra"
-    assert_failure 254
+    assert_failure "$err_invalid_arguments"
 }
 
 @test "is_after_latest_stable_tag / is_on_or_after_latest_stable_tag: run cleanly against the real repo without fetching" {
@@ -225,14 +262,14 @@ setup() {
 
 @test "execute_gh_with_retry: bug-exits with too few arguments" {
     run execute_gh_with_retry 3 2
-    assert_failure 254
+    assert_failure "$err_invalid_arguments"
 }
 
 @test "execute_gh_with_retry: bug-exits on a non-natural max-attempts or delay" {
     run execute_gh_with_retry -1 2 repo view
-    assert_failure 254
+    assert_failure "$err_argument_type"
     run execute_gh_with_retry 3 -1 repo view
-    assert_failure 254
+    assert_failure "$err_argument_type"
 }
 
 @test "execute_gh_with_retry: honors dry-run without invoking gh for real" {
@@ -243,7 +280,7 @@ setup() {
 
 @test "execute_gh_api_with_retry: bug-exits with too few arguments" {
     run execute_gh_api_with_retry 3 2
-    assert_failure 254
+    assert_failure "$err_invalid_arguments"
 }
 
 @test "execute_gh_api_with_retry: honors dry-run without invoking gh for real" {
@@ -256,5 +293,5 @@ setup() {
 
 @test "ensure_fresh_git_state: bug-exits on an invalid branch name (via should_fetch_for_latest_stable_tag)" {
     run ensure_fresh_git_state "$_repo_root" "..bad..branch.."
-    assert_failure 254
+    assert_failure "$err_argument_value"
 }

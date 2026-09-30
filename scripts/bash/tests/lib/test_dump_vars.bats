@@ -14,6 +14,12 @@ load '../libs/bats-support/load'
 load '../libs/bats-assert/load'
 load '../helpers/setup'
 
+# ShellCheck can't see that '../helpers/setup' transplants these into this file's scope at load
+# time. '-g' is required (see feedback_bats_declare_g_readonly memory for the root cause).
+declare -gx lib_dir
+declare -gxi err_invalid_arguments
+declare -gxi err_argument_type
+
 # --- _write_title -------------------------------------------------------------------------
 
 @test "_write_title: prints the header text" {
@@ -24,7 +30,7 @@ load '../helpers/setup'
 
 @test "_write_title: bug-exits with the wrong argument count" {
     run _write_title
-    assert_failure 254
+    assert_failure "$err_invalid_arguments"
 }
 
 # --- _write_line ----------------------------------------------------------------------------
@@ -81,12 +87,12 @@ load '../helpers/setup'
 
 @test "_write_line: bug-exits with the wrong argument count" {
     run _write_line
-    assert_failure 254
+    assert_failure "$err_invalid_arguments"
 }
 
 @test "_write_line: bug-exits on a non-boolean secret flag" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; myvar=hello; _write_line myvar maybe"
-    assert_failure 254
+    assert_failure "$err_argument_type"
 }
 
 # --- dump_vars --------------------------------------------------------------------------------
