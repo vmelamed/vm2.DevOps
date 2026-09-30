@@ -28,6 +28,8 @@ declare -x description
 declare -x use_ssh
 declare -x use_https
 declare -x current_branch
+declare -x purge_vars
+declare -x purge_secrets
 
 #---------------------------------------------------------------------------------------------
 # @description Parses the command-line arguments of `setup-repo.sh`, populating the script-level variables declared
@@ -104,6 +106,14 @@ function get_arguments()
                 use_https=true
                 ;;
 
+            --audit|-a )
+                audit=true
+                ;;
+
+            --current-branch|-cb )
+                current_branch=true
+                ;;
+
             --interactive-vars|-iv )
                 interactive_vars=true
                 ;;
@@ -112,16 +122,26 @@ function get_arguments()
                 interactive_secrets=true
                 ;;
 
+            --interactive|-i )
+                interactive_vars=true
+                interactive_secrets=true
+                ;;
+
+            --purge-vars|-pv )
+                purge_vars=true
+                ;;
+
+            --purge-secrets|-ps )
+                purge_secrets=true
+                ;;
+
+            --purge|-p )
+                purge_vars=true
+                purge_secrets=true
+                ;;
+
             --skip-local-config|-slc )
                 configure_local=false
-                ;;
-
-            --audit|-a )
-                audit=true
-                ;;
-
-            --current-branch|-cb )
-                current_branch=true
                 ;;
 
             * ) if [[ -n "$repo_path" ]]; then
@@ -159,6 +179,9 @@ function dump_args()
         use_https
         interactive_vars
         interactive_secrets
+        purge_vars
+        purge_secrets
+        current_branch
         audit
 
         --header "Core State:"

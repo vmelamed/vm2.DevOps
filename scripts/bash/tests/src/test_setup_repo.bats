@@ -54,15 +54,26 @@ _make_path_excluding() {
     echo "$_dir"
 }
 
-# A fake 'gh' that only answers 'gh auth status' (needed by setup-repo.sh's own tool-prerequisite
-# check) -- every test in this file exits (via exit_if_has_errors in the final validation block,
-# or earlier) before setup-repo.sh makes any repository-specific 'gh api' call.
+# A fake 'gh' that answers 'gh auth status' (needed by setup-repo.sh's own tool-prerequisite
+# check) and the three global, repository-independent app-id lookups made unconditionally by
+# resolve_github_app_ids() (apps/github-actions, apps/dependabot, apps/codespaces) -- a real,
+# authenticated 'gh' resolves these regardless of whether the target repo has a GitHub remote,
+# so the fake must too, or a test that reaches resolve_github_app_ids() before its own exit point
+# (e.g. the --audit preconditions, which run after it) would fail on an unrelated, unfaked call
+# instead of exercising the precondition it's actually testing. Every other test in this file
+# exits (via exit_if_has_errors in the final validation block, or earlier) before setup-repo.sh
+# reaches resolve_github_app_ids() at all.
 _install_fake_gh_auth_only() {
     local _bindir="$1"
     mkdir -p "$_bindir"
     cat > "$_bindir/gh" <<'EOF'
 #!/usr/bin/env bash
 [[ "$1 $2" == "auth status" ]] && exit 0
+case "$*" in
+    *"apps/github-actions"*) echo 15368;  exit 0 ;;
+    *"apps/dependabot"*)     echo 29110;  exit 0 ;;
+    *"apps/codespaces"*)     echo 231849; exit 0 ;;
+esac
 echo "unexpected gh call: $*" >&2
 exit 1
 EOF
@@ -70,7 +81,7 @@ EOF
 }
 
 # Builds a minimal but valid $1/vm2.DevOps and $1/vm2.Templates -- both real git repos on
-# 'main' with '.github/workflows' present (satisfying validate_repo_root(), as used by
+# 'main' with '.github/workflows' present (satisfying __validate_repo_root(), as used by
 # test_git_vm2.bats), so resolve_vm2_repos() and get_vm2_sot_path() succeed against a
 # throwaway fixture instead of depending on this machine's actual ~/repos/vm2 checkout (which,
 # mid-development, may not even be on 'main').

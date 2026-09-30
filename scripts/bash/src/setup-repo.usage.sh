@@ -96,9 +96,23 @@ Switches:
                                 the last on the command line wins. If neither is used, the script will ask the user
                                 interactively with a default - SSH.
   -iv, --interactive-vars       Prompts the user to enter the values of the repository variables interactively, instead of using
-                                the default values. Can be used at anytime
+                                the default values. Cannot be combined with --audit.
   -is, --interactive-secrets    Prompts the user to enter the values of the repository secrets interactively, instead of
-                                creating them automatically with placeholder values. Can be used at anytime anytime
+                                creating them automatically with placeholder values. Cannot be combined with --audit.
+  -i, --interactive             Prompts the user to enter the values of the repository variables and secrets interactively,
+                                instead of using the default values or creating them automatically with placeholder values.
+                                Shortcut for specifying both '--interactive-vars' and '--interactive-secrets'. Cannot be
+                                combined with --audit.
+  -pv, --purge-vars             Deletes all unknown or obsolete repository variables. Cannot be combined with --audit. If
+                                combined with --interactive-vars or --interactive, the script will prompt the user for
+                                confirmation before deleting any repository variables.
+  -ps, --purge-secrets          Deletes all unknown or obsolete repository secrets. Cannot be combined with --audit. If
+                                combined with --interactive-secrets or --interactive, the script will prompt the user for
+                                confirmation before deleting any repository secrets.
+  -p, --purge                   Deletes all unknown or obsolete repository variables and secrets. Cannot be combined with
+                                --audit. If combined with --interactive-vars, --interactive-secrets, or --interactive, the
+                                script will prompt the user for confirmation before deleting any repository variables and/or
+                                secrets.
   -slc, --skip-local-config     Skips the local configuration of the repository. Can be used at anytime
   -a, --audit                   Displays a report of current vs expected state of the repository: variables, secrets, settings
                                 and policies. Use this option alone when the repository already exists and is linked to a GitHub
@@ -114,15 +128,15 @@ Examples:
   $script_name vm2.Glob --audit
 
 Configured local Git settings:
-  core.hooksPath                Set to '\$VM2_REPOS/$vm2_devops_repo_name/scripts/githooks'
+  core.hooksPath                '\$VM2_REPOS/$vm2_devops_repo_name/scripts/githooks'
                                 Tells Git where to find repository hook scripts (e.g. pre-commit, commit-msg).
-  commit.template               Set to '\$VM2_REPOS/$vm2_sot_repo_name/templates/$default_sot/content/.gitmessage'
+  commit.template               '\$VM2_REPOS/$vm2_sot_repo_name/templates/$default_sot/content/.gitmessage'
                                 Specifies the default commit message template shown when creating commits.
-  pull.rebase                   Set to 'true'
+  pull.rebase                   'true'
                                 Makes 'git pull' rebase local commits on top of upstream changes instead of merging.
-  fetch.prune                   Set to 'true'
+  fetch.prune                   'true'
                                 Automatically removes stale remote-tracking branches deleted on the remote.
-  push.autoSetupRemote          Set to 'true'
+  push.autoSetupRemote          'true'
                                 Auto-sets upstream tracking when pushing a new local branch for the first time.
 
 EOF

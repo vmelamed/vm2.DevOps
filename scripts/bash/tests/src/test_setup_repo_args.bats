@@ -57,7 +57,7 @@ _sr() {
 
 @test "get_arguments: a second positional argument fails with usage (too many arguments)" {
     run _sr "get_arguments repo1 repo2"
-    assert_failure 1
+    assert_failure "$failure"
     assert_output --partial "Too many positional arguments"
 }
 
@@ -116,7 +116,7 @@ _sr() {
 
 @test "get_arguments: fails with usage when a value-taking option is given without a value" {
     run _sr "get_arguments --owner"
-    assert_failure 1
+    assert_failure "$failure"
     assert_output --partial "Missing owner after '--owner'"
 }
 

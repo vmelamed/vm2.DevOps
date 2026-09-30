@@ -17,6 +17,15 @@ load '../libs/bats-support/load'
 load '../libs/bats-assert/load'
 load '../helpers/setup'
 
+# ShellCheck can't see that '../helpers/setup' transplants these into this file's scope at load
+# time. '-g' is required (see feedback_bats_declare_g_readonly memory for the root cause).
+declare -gx lib_dir
+declare -gxi failure
+declare -gxi err_argument_value
+declare -gxi err_invalid_nameref
+declare -gxi err_logic_error
+declare -gxi err_missing_argument
+
 _src_dir="$(cd "$lib_dir/../src" && pwd)"
 
 _sr() {
@@ -63,7 +72,7 @@ EOF
 
 @test "initialize_gh_paths: bug-exits (accumulating both) when repo and main_protection_rs_name are unset" {
     run _sr "initialize_gh_paths"
-    assert_failure 254
+    assert_failure "$err_logic_error"
     assert_output --partial "'repo' variable is not set"
     assert_output --partial "'main_protection_rs_name' variable is not set"
 }
@@ -88,13 +97,13 @@ EOF
 
 @test "initialize_jq_queries: bug-exits when main_protection_rs_name is unset" {
     run _sr "initialize_jq_queries"
-    assert_failure 254
+    assert_failure "$err_logic_error"
     assert_output --partial "'main_protection_rs_name' variable is not set"
 }
 
 @test "initialize_jq_queries: bug-exits when actions_app_id is not positive" {
     run _sr "main_protection_rs_name='x'; actions_app_id=0; initialize_jq_queries"
-    assert_failure 254
+    assert_failure "$err_logic_error"
     assert_output --partial "'actions_app_id' variable is not set or is invalid"
 }
 
@@ -133,7 +142,7 @@ EOF
     printf '#!/usr/bin/env bash\nexit 1\n' > "$BATS_TEST_TMPDIR/bin/gh"
     chmod +x "$BATS_TEST_TMPDIR/bin/gh"
     run _sr "resolve_github_app_ids" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
-    assert_failure 1
+    assert_failure "$failure"
     assert_output --partial "Failed to resolve GitHub Actions app ID"
     assert_output --partial "Failed to resolve Dependabot app ID"
     assert_output --partial "Failed to resolve Codespaces app ID"
@@ -170,7 +179,7 @@ EOF
     printf '#!/usr/bin/env bash\nexit 1\n' > "$BATS_TEST_TMPDIR/bin/yq"
     chmod +x "$BATS_TEST_TMPDIR/bin/yq"
     run _sr "ci_yaml='$BATS_TEST_TMPDIR/ci.yaml'; list_required_checks" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
-    assert_failure 1
+    assert_failure "$failure"
     assert_output --partial "Failed to parse gate job name from CI.yaml"
 }
 
@@ -180,7 +189,7 @@ EOF
 
 @test "initialize_main_protection_rs_id: bug-exits when preconditions (name, path_rulesets) are unset" {
     run _sr "initialize_main_protection_rs_id"
-    assert_failure 254
+    assert_failure "$err_logic_error"
 }
 
 @test "initialize_main_protection_rs_id: resolves and freezes the ruleset ID and derived path when found" {
@@ -227,13 +236,15 @@ EOF
 # =====================================================================================
 
 @test "set_var: bug-exits with the wrong argument count" {
+    # arg2 (the value) is also missing, so its own required-argument check
+    # (err_missing_argument) is the "last" bug reported, not the arity code.
     run _sr "set_var FOO"
-    assert_failure 254
+    assert_failure "$err_missing_argument"
 }
 
 @test "set_var: bug-exits on an empty variable name" {
     run _sr "set_var '' bar"
-    assert_failure 254
+    assert_failure "$err_argument_value"
 }
 
 @test "set_var: calls 'gh variable set' with the name, value, and target repo" {
@@ -249,13 +260,13 @@ EOF
     _install_fake_gh_logger "$BATS_TEST_TMPDIR/bin"
     run _sr "repo='acme/myrepo'; FAKE_GH_EXIT=1 set_var FOO bar; echo \"RC=\$?\"" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
     assert_success
-    assert_output --partial "Failed to set variable FOO"
+    assert_output --partial "Failed to create or assign a value to the variable FOO"
     assert_output --partial "RC=1"
 }
 
 @test "set_secret: bug-exits when the app is not a recognized value" {
     run _sr "set_secret NAME value bogus-app"
-    assert_failure 254
+    assert_failure "$err_argument_value"
 }
 
 @test "set_secret: calls 'gh secret set' with the name, value, app, and repo" {
@@ -269,7 +280,7 @@ EOF
 
 @test "delete_secret: bug-exits when the app is not a recognized value" {
     run _sr "delete_secret NAME bogus-app"
-    assert_failure 254
+    assert_failure "$err_argument_value"
 }
 
 @test "delete_secret: calls 'gh secret delete' with the name, app, and repo" {
@@ -353,7 +364,10 @@ EOF
              configure_actions_permissions" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
     assert_success
     run cat "$BATS_TEST_TMPDIR/calls.log"
-    assert_output --partial "can_approve_pull_request_reviews=true"
+    # the fake gh reports the CURRENT value as true, deliberately different from the real
+    # default (false, per default_repo_permissions) -- proving the PUT always uses the default,
+    # not whatever the current value on GitHub happens to be.
+    assert_output --partial "can_approve_pull_request_reviews=false"
     assert_output --partial "default_workflow_permissions=read"
 }
 
@@ -376,7 +390,8 @@ EOF
              path_repo='repos/acme/myrepo'
              jq_vars='.variables[] | \"\(.name)=\(.value)\"'
              interactive_vars=false
-             configure_variables
+             purge_vars=false
+             configure_variables actions
              declare -p nuget_server" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
     assert_success
     assert_output --partial 'nuget_server="github"'
@@ -391,8 +406,8 @@ EOF
 # =====================================================================================
 
 @test "configure_secrets: bug-exits on an unrecognized application name" {
-    run _sr "configure_secrets bogus-app nuget"
-    assert_failure 254
+    run _sr "configure_secrets bogus-app"
+    assert_failure "$err_argument_value"
 }
 
 @test "configure_secrets: deletes NUGET_API_KEY when it exists and the NuGet server is 'nuget', warns for missing secrets, and leaves other existing ones alone" {
@@ -410,7 +425,8 @@ EOF
              path_repo='repos/acme/myrepo'
              jq_secret_names='.secrets[] | .name'
              interactive_secrets=false
-             configure_secrets actions nuget" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
+             nuget_server=nuget
+             configure_secrets actions" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
     assert_success
     assert_output --partial "Create secret: RELEASE_PAT"
     run cat "$BATS_TEST_TMPDIR/calls.log"
@@ -419,9 +435,27 @@ EOF
 }
 
 @test "configure_secrets: is a no-op when the given app has no configured secrets" {
-    run _sr "configure_secrets dependabot nuget; echo RC=\$?"
+    run _sr "purge_secrets=false
+             nuget_server=nuget
+             configure_secrets dependabot; echo RC=\$?"
     assert_success
     assert_output "RC=0"
+}
+
+@test "configure_secrets: still queries current secrets for an app with no defaults when --purge-secrets is set" {
+    # The early return above is conditioned on 'not purging' as well as 'no defaults' -- when
+    # purge_secrets is true, there could still be unknown/obsolete secrets on GitHub worth
+    # listing and offering to delete, even though this app defines no secrets of its own.
+    _install_fake_gh_logger "$BATS_TEST_TMPDIR/bin"
+    run _sr "purge_secrets=true
+             interactive_secrets=false
+             nuget_server=nuget
+             configure_secrets dependabot; echo RC=\$?" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/gh.log"
+    assert_success
+    assert_output --partial "RC=0"
+
+    run cat "$BATS_TEST_TMPDIR/gh.log"
+    assert_output --partial "dependabot/secrets"
 }
 
 # =====================================================================================

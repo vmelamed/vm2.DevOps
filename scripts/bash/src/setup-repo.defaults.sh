@@ -3,17 +3,24 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
+declare -xri success                    # Operation completed successfully
+declare -xri err_invalid_arguments      # The number of the arguments is invalid or more than one type of parameter error code is present
 declare -xri err_argument_value
+declare -xri err_invalid_nameref
+declare -xri err_invalid_item
 
 declare -x vm2_devops_repo_name
 
 declare -xri admin_role_id=5
 
 declare -xr secret_str
+declare -xr default_nuget_server
 
 declare -xr missing_state="<none>"
 declare -xr present_state=$secret_str
 declare -xr undefined_default="<undefined>"
+
+declare -x nuget_server
 
 declare -xrA default_repo_settings=(
     ["default_branch"]="main"
@@ -47,7 +54,7 @@ declare -xra default_repo_settings_order=(
 
 declare -xrA default_repo_permissions=(
     ["default_workflow_permissions"]="read"
-    ["can_approve_pull_request_reviews"]=true
+    ["can_approve_pull_request_reviews"]=false
 )
 
 declare -xrA default_ruleset=(
@@ -88,43 +95,17 @@ declare -xra default_ruleset_order=(            # UI: Order in which rules appea
     "non_fast_forward"                          # Block force pushes
 )
 
-declare -xra apps_with_secrets=(
-    "actions"
-    "dependabot"
-    "agents"
-    "codespaces"
-)
-
 declare -xra nuget_servers=(
-    "nuget"
+    "$default_nuget_server" # "nuget"
     "github"
 )
 
-declare -xr default_nuget_server
-
-declare -xA actions_secrets=(
-    # GitHub tokens and secrets:
-    ["GH_PACKAGES_TOKEN"]="$secret_str"         # The GitHub Packages token used to update the local GitHub Packages (used by
-                                                # Dependabot)
-    ["NUGET_API_KEY"]="$secret_str"             # The NuGet API key for the selected NuGet server. Note that nuget.org uses a
-                                                # different authentication mechanism - Trusted Publishing
-                                                # (see https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing)
-    ["RELEASE_PAT"]="$secret_str"               # PAT for a user listed as a bypass actor (e.g. Admin) in the branch ruleset
-                                                # protecting main. Required to push changelog commits and version tags directly
-                                                # to main
-    ["CODECOV_TOKEN"]="$secret_str"             # Token used by Codecov to upload coverage reports - different for different
-                                                # projects
-    ["REPORTGENERATOR_LICENSE"]="$secret_str"   # License key used by ReportGenerator for generating coverage reports
-    ["BENCHER_API_TOKEN"]="$secret_str"         # API token used by Bencher for authentication
-    ["BENCH_DISPATCH_PAT"]="$secret_str"        # Fine-grained PAT with `Actions: write` + `Contents: read` on the package repos.
-                                                # Used by `RebuildBenchHistory.yaml` to dispatch each repo's benchmark-history
-                                                # rebuild
+declare -xra apps_with_vars=(
+    "actions"
+    "agents"
 )
-declare -xrA dependabot_secrets=()
-declare -xrA agents_secrets=()
-declare -xrA codespaces_secrets=()
 
-declare -xrA actions_default_vars=(
+declare -xA actions_vars_defaults=(
     # Build and Pack:
     ["MINVERTAGPREFIX"]="v"
     ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="preview.0"
@@ -136,8 +117,11 @@ declare -xrA actions_default_vars=(
     ["MAX_GEN2_COLLECTS"]="1"
     ["RESET_BENCHMARK_THRESHOLDS"]=false
     # NuGet:
-    ["NUGET_SERVER"]="nuget"                # The default NuGet server to use for publishing packages. Can be 'nuget', 'github', or a custom server URL.
-    ["NUGET_USERNAME"]="valo"               # The default username to use for the selected NuGet server. github - vmelamed, nuget - your NuGet.org username, custom server - as required.
+    ["NUGET_SERVER"]="$default_nuget_server"    # The default NuGet server to use for publishing packages. Can be 'nuget', 'github', or a custom server URL.
+    ["NUGET_USERNAME"]="valo"                   # The default username to use for the selected NuGet server:
+                                                #   - nuget - the NuGet.org username
+                                                #   - GitHub Packages uses the caller's token and does not need a username.
+                                                #   - Custom server - as required.
     # Trace:
     ["VERBOSE"]=false
     # GitHub Actions diagnostics
@@ -145,7 +129,7 @@ declare -xrA actions_default_vars=(
     ["ACTIONS_STEP_DEBUG"]=false
 )
 
-declare -xra actions_default_vars_order=(
+declare -xa actions_vars_order=(
     "--Build and Pack:"
     "MINVERTAGPREFIX"
     "MINVERDEFAULTPRERELEASEIDENTIFIERS"
@@ -157,6 +141,7 @@ declare -xra actions_default_vars_order=(
     "MAX_GEN2_COLLECTS"
     "RESET_BENCHMARK_THRESHOLDS"
     "--Nuget:"
+    # DO NOT PLACE NUGET_USERNAME before NUGET_SERVER!!!
     "NUGET_SERVER"
     "NUGET_USERNAME"
     "--Trace:"
@@ -166,7 +151,7 @@ declare -xra actions_default_vars_order=(
     "ACTIONS_STEP_DEBUG"
 )
 
-declare -xrA actions_var_validators=(
+declare -xA actions_vars_validators=(
     # Build and Pack
     ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="is_valid_minverPrereleaseId"
     ["MINVERTAGPREFIX"]="validate_semverTagComponents"
@@ -178,7 +163,7 @@ declare -xrA actions_var_validators=(
     ["MAX_GEN2_COLLECTS"]="is_non_negative"
     ["RESET_BENCHMARK_THRESHOLDS"]="is_boolean"
     # NuGet
-    ["NUGET_SERVER"]="is_one_of_nuget_servers"
+    ["NUGET_SERVER"]="is_valid_nuget_server"
     ["NUGET_USERNAME"]="is_safe_input"
     # Trace
     ["VERBOSE"]="is_boolean"
@@ -187,8 +172,283 @@ declare -xrA actions_var_validators=(
     ["ACTIONS_STEP_DEBUG"]="is_boolean"
 )
 
+declare -xA agents_vars_defaults=()
+declare -xa agents_vars_order=()
+declare -xA agents_vars_validators=()
+
+function validate_app_default_vars()
+{
+    (( $# == 1 ))                                     || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#):" \
+                                                                                          "  - the name of the application (e.g., actions)"
+    [[ ! -v 1 ]] || is_in "$1" "${apps_with_vars[@]}" || bug "${FUNCNAME[0]}() requires the argument to be one of (${apps_with_vars[*]}) - provided ${1:-<none>}."
+    exit_if_has_bugs
+
+    local _app=$1
+    local _vars_defaults_name="${_app,,}_vars_defaults"
+    local _vars_order_name="${_app,,}_vars_order"
+    local _vars_validators_name="${_app,,}_vars_validators"
+
+    is_associative_array "$_vars_defaults_name"       || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() the required associative array '$_vars_defaults_name' is not defined."
+    is_indexed_array "$_vars_order_name"              || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() the required indexed array '$_vars_order_name' is not defined."
+    is_associative_array "$_vars_validators_name"     || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() the required associative array '$_vars_validators_name' is not defined."
+    exit_if_has_bugs
+
+    local -n _app_vars_defaults=$_vars_defaults_name
+    local -n _app_vars_order=$_vars_order_name
+    local -n _app_vars_validators=$_vars_validators_name
+
+    is_empty_array "$_vars_defaults_name" && return
+
+    # make sure that default values, and display order are consistent: there is an entry for each default variable in the display order.
+    if [[ "${#_app_vars_order}" < ${#_app_vars_defaults[@]} ]]; then
+        warning "The number of elements in '$_vars_order_name' (${#_app_vars_order}) is less than the number of elements in '$_vars_defaults_name' (${#_app_vars_defaults}), assuming sorted order."
+        readarray -t "$_vars_order_name" < <(printf "%s\n" "${!_app_vars_defaults[@]}" | sort)
+    else
+        for _var in "${!_app_vars_defaults[@]}"; do
+            is_in "$_var" "${_app_vars_order[@]}" || {
+                warning "The variable '$_var' is not listed in the display order. Appending it at the end of the array."
+                _app_vars_order+=("$_var")
+            }
+        done
+    fi
+
+    # make sure that each default variable has a corresponding validator
+    local _validator _default_value
+    for _var in "${!_app_vars_defaults[@]}"; do
+        # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
+        [[ -v _app_vars_validators[$_var] ]] && {
+            _validator=${_app_vars_validators[$_var]}
+
+            is_function "$_validator" || [[ $_validator == "true" ]] || {
+                bug -ec "$err_invalid_item" "${FUNCNAME[0]}() '$_validator' is not a name of a defined function.";
+                continue;
+            }
+
+            _default_value=${_app_vars_defaults[$_var]}
+
+            $_validator "$_default_value" || {
+                bug -ec "$err_invalid_item" "${FUNCNAME[0]}() the default value '$_default_value' of the variable '$_var' is not pass the validator '$_validator'.";
+            }
+        } || {
+            bug -ec "$err_invalid_item" "There is no validator set for the variable '$_var'."
+        }
+    done
+    exit_if_has_bugs
+
+    readonly -A "$_vars_defaults_name"
+    readonly -a "$_vars_order_name"
+    readonly -A "$_vars_validators_name"
+}
+
+declare -xra apps_with_secrets=(
+    "actions"
+    "dependabot"
+    "codespaces"
+    # "agents"
+)
+
+declare -xra actions_secrets_order=(
+    "NUGET_API_KEY"                            # The NuGet API key for the selected NuGet server. Note that GitHub Packages use
+                                               # the callers's token; nuget.org uses Trusted Publishing and also does not need
+                                               # secret.
+                                               # (see https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing)
+    "GH_PACKAGES_TOKEN"                        # The GitHub Packages token used to update the local GitHub Packages (used by
+                                               # Dependabot)
+    "RELEASE_PAT"                              # PAT for a user listed as a bypass actor (e.g. Admin) in the branch ruleset
+                                               # protecting main. Required to push changelog commits and version tags directly
+                                               # to main
+    "REPORTGENERATOR_LICENSE"                  # License key used by ReportGenerator for generating coverage reports
+    "CODECOV_TOKEN"                            # Token used by Codecov to upload coverage reports - different for different
+                                               # projects
+    "BENCHER_API_TOKEN"                        # API token used by Bencher for authentication
+    "BENCH_DISPATCH_PAT"                       # Fine-grained PAT with `Actions: write` + `Contents: read` on the package repos.
+                                               # Used by `RebuildBenchHistory.yaml` to dispatch each repo's benchmark-history
+                                               # rebuild
+)
+declare -xra dependabot_secrets_order=()
+declare -xra agents_secrets_order=()
+declare -xra codespaces_secrets_order=()
+
+function validate_app_default_secrets()
+{
+    (( $# == 1 ))                                        || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#):" \
+                                                                                             "  - the name of the application (e.g., actions)"
+    [[ ! -v 1 ]] || is_in "$1" "${apps_with_secrets[@]}" || bug "${FUNCNAME[0]}() requires the argument to be one of (${apps_with_secrets[*]}) - provided ${1:-<none>}."
+
+    local _app=$1
+    local _app_secrets_order_name="${_app,,}_secrets_order"
+
+    is_indexed_array "$_app_secrets_order_name"          || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() the required indexed array '$_app_secrets_order_name' is not defined."
+    exit_if_has_bugs
+}
+
+declare -x defaults_validated=false
+
+#---------------------------------------------------------------------------------------------
+# @description Validates the the integrity of the default values for the applications'
+#   variables and secrets.
+#---------------------------------------------------------------------------------------------
+function validate_defaults()
+{
+    ! $defaults_validated || return "$success"
+
+    validate_app_default_vars actions
+    validate_app_default_vars agents         # agents are not used yet
+
+    validate_app_default_secrets actions
+    validate_app_default_secrets dependabot
+    validate_app_default_secrets agents      # agents are not used yet
+    validate_app_default_secrets codespaces  # codespaces are not used yet
+
+    defaults_validated=true
+    readonly defaults_validated
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Gets the default data for GH workflow variables 'vars': the default values, the
+#   default display order, and the default validators.
+#
+# @arg $1 application name, must be one of (actions agents)
+# @arg $2 the name of an associate array to receive the variables' default values
+# @arg $3 the name of an indexed array to receive the display order of variables
+# @arg $4 the name of an associative array to receive the names of the functions validating
+#   each variable (optional)
+#---------------------------------------------------------------------------------------------
+# shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
+# shellcheck disable=SC2004 # $/${} is unnecessary on arithmetic variables.
+function get_vars_defaults()
+{
+    (( $# == 3 || $# == 4 ))                          || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires three or four arguments (provided $#):" \
+                                                                                          "  - the name of the application (e.g., actions)" \
+                                                                                          "  - the name of the associative array that will receive the variables names and their default values" \
+                                                                                          "  - the name of the indexed array that will receive the variables display order" \
+                                                                                          "  - the name of the associative array that will receive the names of the variables' validation functions (optional)"
+    [[ ! -v 1 ]] || is_in "$1" "${apps_with_vars[@]}" || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1 to be a valid application name - provided: '$1'."
+    [[ ! -v 2 ]] || is_associative_array "$2"         || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 2 to be a valid associative array name to receive the variables names and their default values - provided: '$2'."
+    [[ ! -v 3 ]] || is_indexed_array "$3"             || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 3 to be a valid indexed array name to receive the variables display order - provided: '$3'."
+    [[ ! -v 4 ]] || is_associative_array "$4"         || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 4 to be a valid associative array name to receive the names of the variables' validation functions - provided: '$4'."
+    exit_if_has_bugs
+
+    local -r _app=$1
+    local -n __vars=$2
+    local -n __vars_order=$3
+
+    __vars=()
+    __vars_order=()
+    [[ ! -v 4 ]] || __vars_validators=()
+
+    local _vars_defaults_name="${_app,,}_vars_defaults"
+
+    ! is_empty_array "$_vars_defaults_name" || return "$success"
+
+    local -n __app_vars_defaults=$_vars_defaults_name
+
+    # copy the vars default values
+    local _var
+    local _validator
+
+    for _var in "${!__app_vars_defaults[@]}"; do
+
+        local _default_value=${__app_vars_defaults[$_var]}
+
+        if [[ $_app == "actions" ]]; then
+            case "$_var" in
+                "NUGET_SERVER" )
+                    __vars["$_var"]="$nuget_server"
+                    continue
+                    ;;
+
+                "NUGET_USERNAME")
+                    # If github - the current token is the full credentials - skip this entry; the others (nuget.org) do require a username - below
+                    [[ $nuget_server == "github" ]] && continue
+                    ;;
+
+                * ) ;;
+            esac
+        fi
+
+        __vars["$_var"]="$_default_value"
+    done
+
+    # copy the default vars display order
+    local _vars_order_name="${_app,,}_vars_order"
+    local -n _app_vars_order=$_vars_order_name
+
+    __vars_order=("${_app_vars_order[@]}")
+
+    if [[ -v 5 ]]; then
+        # copy the _vars_validators
+        local _vars_validators_name="${_app,,}_vars_validators"
+        local -n _app_vars_validators=$_vars_validators_name
+
+        local -n __vars_validators=$4
+
+        __vars_validators=()
+        for _var in "${!_app_vars_validators[@]}"; do
+            __vars_validators[$_var]=${_app_vars_validators[$_var]}
+        done
+    fi
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Gets the default data for GH workflow variables 'secrets': the default values, the
+#   default display order, and the default validators.
+#
+# @arg $1 application name, must be one of (actions agents)
+# @arg $2 the name of an indexed array to receive the secrets' names
+# @arg $3 the name of an indexed array to receive the display order of secrets
+# @arg $4 the name of an associative array to receive the names of the functions validating
+#   each secret (optional)
+#---------------------------------------------------------------------------------------------
+# shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
+# shellcheck disable=SC2004 # $/${} is unnecessary on arithmetic variables.
+function get_secrets_defaults()
+{
+    (( $# == 3 || $# == 4 ))                             || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires three or four arguments (provided $#):" \
+                                                                                             "  - the name of the application (e.g., actions)" \
+                                                                                             "  - the name of the associative array that will receive the secrets names and their default values" \
+                                                                                             "  - the name of the indexed array that will receive the secrets display order" \
+                                                                                             "  - the name of the associative array that will receive the names of the secrets' validation functions (optional)"
+    [[ ! -v 1 ]] || is_in "$1" "${apps_with_secrets[@]}" || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1 to be a valid application name as the first argument - provided: '$1'."
+    [[ ! -v 2 ]] || is_associative_array "$2"            || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 2 to be a valid associative array name to receive the secrets names and their default values - provided: '$2'."
+    [[ ! -v 3 ]] || is_indexed_array "$3"                || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 3 to be a valid indexed array name to receive the secrets display order - provided: '$3'."
+    [[ ! -v 4 ]] || is_associative_array "$4"            || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 4 to be a valid associative array name to receive the names of the secrets' validation functions - provided: '$4'."
+    exit_if_has_bugs
+
+    local -r _app=$1
+    local -n __secrets=$2
+    local -n __secrets_order=$3
+
+    __secrets=()
+    __secrets_order=()
+
+    local _app_secrets_order_name="${_app,,}_secrets_order"
+
+    ! is_empty_array "$_app_secrets_order_name" || return "$success"
+
+    local -n _app_secrets_order=$_app_secrets_order_name
+
+    local _secret
+    for _secret in "${_app_secrets_order[@]}"; do
+        [[ $_app == "actions" && $_secret == "NUGET_API_KEY" ]] &&
+        [[ $nuget_server == nuget || $nuget_server == github ]] && continue || true
+        __secrets[$_secret]=$secret_str
+    done
+
+    __secrets_order=("${_app_secrets_order[@]}")
+
+    if [[ -v 4 ]]; then
+        local -n __secrets_validators=$4
+
+        for _secret in "${_app_secrets_order[@]}"; do
+            __secrets_validators[$_secret]=is_valid_secret
+        done
+    fi
+}
+
 declare -xr vm2_repos
 declare -xr vm2_sot_repo_name
+declare -xr default_sot
 
 declare -xrA default_local_git_settings=(
     # Set the default branch name for new repositories. This ensures that all new repositories initialized locally will have a
@@ -274,30 +534,3 @@ declare -xa default_local_git_settings_order=(
     "merge.nugetlock.name"
     "merge.nugetlock.driver"
 )
-
-declare -xri success                    # Operation completed successfully
-declare -xri err_invalid_arguments      # The number of the arguments is invalid or more than one type of parameter error code is present
-declare -xri err_not_directory          # Parameter value is not a directory
-
-declare -xri default_sot
-
-#---------------------------------------------------------------------------------------------
-# @description Checks if the given server is one of the valid NuGet servers.
-#
-# Notes:
-#   - Will exit the script if an invalid argument(s) is/are provided with exit codes
-#
-# @arg $1 string The server to check.
-#
-# @exitcode success/positive=0: The server is one of the valid NuGet servers.
-# @exitcode failure/negative=1: The server is not one of the valid NuGet servers.
-#---------------------------------------------------------------------------------------------
-function is_one_of_nuget_servers()
-{
-    (( $# == 1 ))                              || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the NuGet server to check."
-    [[ ! -v 1 ]] || is_valid_nuget_server "$1" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a valid NuGet server (provided '${1:-<none>}')."
-
-    exit_if_has_bugs
-
-    is_in "$1" "${nuget_servers[@]}"
-}

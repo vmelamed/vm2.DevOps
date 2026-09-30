@@ -29,6 +29,9 @@ declare -x audit
 declare -x interactive_vars
 declare -x interactive_secrets
 declare -x main_protection_rs_name
+declare -x purge_vars
+declare -x purge_secrets
+declare -x nuget_server
 
 declare -xrA default_repo_settings
 declare -xra default_repo_settings_order
@@ -38,18 +41,17 @@ declare -xrA default_repo_permissions
 declare -xrA default_ruleset
 declare -xra default_ruleset_order
 
+declare -xra apps_with_vars
 declare -xra apps_with_secrets
-declare -xra nuget_servers
 declare -xr default_nuget_server
 
-declare -xA actions_secrets
+declare -xA actions_secrets_defaults
 declare -xrA dependabot_secrets
 declare -xrA agents_secrets
 declare -xrA codespaces_secrets
 
-declare -xrA actions_default_vars
-declare -xra actions_default_vars_order
-declare -xrA actions_var_validators
+declare -xra actions_vars_order
+declare -xrA actions_vars_validators
 
 declare -x ci_yaml
 declare -x _ci_yaml
@@ -88,17 +90,20 @@ declare -xr present_state
 declare -xr undefined_default
 
 #---------------------------------------------------------------------------------------------
-# @description Resolves the numeric GitHub App IDs for GitHub Actions, Dependabot, and Codespaces via the GitHub
-# API, storing them in `actions_app_id`, `dependabot_app_id`, and `codespaces_app_id`. These IDs are used to pin
-# required status checks and other GitHub-App-scoped settings to GitHub Actions specifically. Each resolved ID is
-# checked against its well-known expected value and a warning is logged if it differs (the vm2 GitHub Apps have
-# stable IDs across all repositories, so a mismatch likely signals an API change worth investigating).
+# @description Resolves the numeric GitHub App IDs for GitHub Actions, Dependabot, and
+#   Codespaces via the GitHub API, storing them in `actions_app_id`, `dependabot_app_id`, and
+#   `codespaces_app_id`. These IDs are used to pin required status checks and other
+#   GitHub-App-scoped settings to GitHub Actions specifically. Each resolved ID is checked
+#   against its well-known expected value and a warning is logged if it differs (the vm2
+#   GitHub Apps have stable IDs across all repositories, so a mismatch likely signals an API
+#   change worth investigating).
 #
 # Notes:
-#   - This function must run before `initialize_gh_paths()` and `initialize_jq_queries()`, since the latter rely on
-#     `actions_app_id` already being set -- calling it after would be a circular dependency.
+#   - This function must run before `initialize_gh_paths()` and `initialize_jq_queries()`,
+#     since the latter rely on `actions_app_id` already being set -- calling it after would be
+#     a circular dependency.
 #
-# @exitcode success/positive=0: All three app IDs resolved successfully.
+# @exitcode success=0: All three app IDs resolved successfully.
 # @exitcode (via exit_if_has_errors) Exits the process if any of the three API calls failed.
 #---------------------------------------------------------------------------------------------
 function resolve_github_app_ids()
@@ -106,18 +111,17 @@ function resolve_github_app_ids()
     # Resolve the GitHub Actions app ID dynamically via the API.
     # Used to pin required status checks to GitHub Actions specifically.
     # this function cannot be called before initialize_gh_paths() because the latter relies on the actions_app_id variable being set - circular dependency
-    actions_app_id=$(gh api --paginate apps/github-actions --jq '.id' 2>"$_ignore") || error -ec "$err_tool_error" "Failed to resolve GitHub Actions app ID from the API."
+    actions_app_id=$(gh api --paginate apps/github-actions --jq '.id' 2>"$_ignore") || error -ec "$err_tool_error" "${FUNCNAME[0]}() Failed to resolve GitHub Actions app ID from the API."
     trace "GitHub Actions app ID: $actions_app_id"
-    [[ "$actions_app_id" == "15368" ]] || warning "Unexpected GitHub Actions app ID: $actions_app_id (expected 15368). Required status check matching may not work correctly."
+    [[ "$actions_app_id" == "15368" ]]                                              || warning "Unexpected GitHub Actions app ID: $actions_app_id (expected 15368). Required status check matching may not work correctly."
 
-    dependabot_app_id=$(gh api --paginate apps/dependabot --jq '.id' 2>"$_ignore")  || error -ec "$err_tool_error" "Failed to resolve Dependabot app ID from the API."
+    dependabot_app_id=$(gh api --paginate apps/dependabot --jq '.id' 2>"$_ignore")  || error -ec "$err_tool_error" "${FUNCNAME[0]}() Failed to resolve Dependabot app ID from the API."
     trace "Dependabot app ID: $dependabot_app_id"
-    [[ "$dependabot_app_id" == "29110" ]] || warning "Unexpected Dependabot app ID: $dependabot_app_id (expected 29110). Required status check matching may not work correctly for Dependabot."
+    [[ "$dependabot_app_id" == "29110" ]]                                           || warning "Unexpected Dependabot app ID: $dependabot_app_id (expected 29110). Required status check matching may not work correctly for Dependabot."
 
-    codespaces_app_id=$(gh api --paginate apps/codespaces --jq '.id' 2>"$_ignore")  || error -ec "$err_tool_error" "Failed to resolve Codespaces app ID from the API."
+    codespaces_app_id=$(gh api --paginate apps/codespaces --jq '.id' 2>"$_ignore")  || error -ec "$err_tool_error" "${FUNCNAME[0]}() Failed to resolve Codespaces app ID from the API."
     trace "Codespaces app ID: $codespaces_app_id"
-    [[ "$codespaces_app_id" == "231849" ]] || warning "Unexpected Codespaces app ID: $codespaces_app_id (expected 231849). Required status check matching may not work correctly for Codespaces."
-
+    [[ "$codespaces_app_id" == "231849" ]]                                          || warning "Unexpected Codespaces app ID: $codespaces_app_id (expected 231849). Required status check matching may not work correctly for Codespaces."
     exit_if_has_errors
 
     # `readonly` (a POSIX special builtin), not `declare -r`: this runs inside a function body,
@@ -147,8 +151,8 @@ function list_required_checks()
     local _gate_name
 
     # Find the gate job: look for postrun-ci first, fall back to ci-gate
-    _gate_job=$(yq -r '.jobs | keys[] | select(test("postrun|ci-gate"))' "$ci_yaml" | head -n 1) || error -ec "$err_tool_error" "Failed to parse gate job from CI.yaml."
-    _gate_name=$(yq -r ".jobs.${_gate_job:-postrun-ci}.name" "$ci_yaml")                         || error -ec "$err_tool_error" "Failed to parse gate job name from CI.yaml."
+    _gate_job=$(yq -r '.jobs | keys[] | select(test("postrun|ci-gate"))' "$ci_yaml" | head -n 1) || error -ec "$err_tool_error" "${FUNCNAME[0]}() Failed to parse gate job from CI.yaml."
+    _gate_name=$(yq -r ".jobs.${_gate_job:-postrun-ci}.name" "$ci_yaml")                         || error -ec "$err_tool_error" "${FUNCNAME[0]}() Failed to parse gate job name from CI.yaml."
     exit_if_has_errors
 
     required_checks+=(
@@ -180,11 +184,8 @@ function list_required_checks()
 #---------------------------------------------------------------------------------------------
 function initialize_gh_paths()
 {
-    local -i _rc="$success"
-
-    [[ -n $repo ]]                    || bug -ec "$err_logic_error" "The 'repo' variable is not set. Cannot initialize GitHub paths."
-    [[ -n $main_protection_rs_name ]] || bug -ec "$err_logic_error" "The 'main_protection_rs_name' variable is not set. Cannot initialize GitHub paths."
-
+    [[ -n $repo ]]                    || bug -ec "$err_logic_error" "${FUNCNAME[0]}() The 'repo' variable is not set. Cannot initialize GitHub paths."
+    [[ -n $main_protection_rs_name ]] || bug -ec "$err_logic_error" "${FUNCNAME[0]}() The 'main_protection_rs_name' variable is not set. Cannot initialize GitHub paths."
     exit_if_has_bugs
 
     path_repo="repos/$repo"
@@ -229,10 +230,9 @@ function initialize_gh_paths()
 # shellcheck disable=SC2090 # Quotes/backslashes in this variable will not be respected.
 function initialize_jq_queries()
 {
-    [[ -n $main_protection_rs_name ]] || bug -ec "$err_logic_error" "The 'main_protection_rs_name' variable is not set. Cannot initialize jq queries."
-    (( actions_app_id > 0 ))          || bug -ec "$err_logic_error" "The 'actions_app_id' variable is not set or is invalid. Cannot initialize jq queries."
-    (( admin_role_id > 0 ))           || bug -ec "$err_logic_error" "The 'admin_role_id' variable is not set or is invalid. Cannot initialize jq queries."
-
+    [[ -n $main_protection_rs_name ]] || bug -ec "$err_logic_error" "${FUNCNAME[0]}() The 'main_protection_rs_name' variable is not set. Cannot initialize jq queries."
+    (( actions_app_id > 0 ))          || bug -ec "$err_logic_error" "${FUNCNAME[0]}() The 'actions_app_id' variable is not set or is invalid. Cannot initialize jq queries."
+    (( admin_role_id > 0 ))           || bug -ec "$err_logic_error" "${FUNCNAME[0]}() The 'admin_role_id' variable is not set or is invalid. Cannot initialize jq queries."
     exit_if_has_bugs
 
     jq_entries='to_entries[] | "\(.key)=\(.value)"'
@@ -303,9 +303,8 @@ def count_pr_checks_param(check): [.rules[] | select(.type == "required_status_c
 #---------------------------------------------------------------------------------------------
 function initialize_main_protection_rs_id()
 {
-    [[ -n $main_protection_rs_name ]] || bug -ec "$err_logic_error" "The 'main_protection_rs_name' variable is not set. Cannot initialize main protection ruleset ID."
-    [[ -n $path_rulesets ]]           || bug -ec "$err_logic_error" "The 'path_rulesets' variable is not set. Run initialize_gh_paths() first. Cannot initialize main protection ruleset ID."
-
+    [[ -n $main_protection_rs_name ]] || bug -ec "$err_logic_error" "${FUNCNAME[0]}() The 'main_protection_rs_name' variable is not set. Cannot initialize main protection ruleset ID."
+    [[ -n $path_rulesets ]]           || bug -ec "$err_logic_error" "${FUNCNAME[0]}() The 'path_rulesets' variable is not set. Run initialize_gh_paths() first. Cannot initialize main protection ruleset ID."
     exit_if_has_bugs
 
     # main_protection_rs_id is not 0 - already initialized
@@ -334,15 +333,36 @@ function initialize_main_protection_rs_id()
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Fetches the target repository's current settings and PATCHes any that differ from
-# `default_repo_settings` via the GitHub API. Booleans are sent as JSON (`-F`), other values as strings (`-f`).
-# Settings that already match the expected value are left untouched (no-op PATCH avoided when there is nothing to
-# change).
+# @description Retrieves the current NuGet server moniker for the repository and stores it in
+#   the global variable $nuget_server.
 #
-# @exitcode success/positive=0: Always (a failed PATCH call is logged as a warning, not surfaced as a non-zero exit code).
+# @exitcode success/positive=0: Always (a failure to retrieve the moniker is logged as a
+#   warning, not surfaced as a non-zero exit code).
+#---------------------------------------------------------------------------------------------
+function get_current_nuget_server()
+{
+    if [[ -z $repo_name ]]; then
+        nuget_server="$default_nuget_server"
+        return "$success"
+    fi
+
+    local _repo_owner=${repo_owner:-$default_repo_owner}
+
+    read -r nuget_server < <(execute_gh_api_with_retry 3 2 "repos/$_repo_owner/$repo_name/actions/variables/NUGET_SERVER" --jq .value 2> "$_ignore") ||
+        nuget_server=$default_nuget_server
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Fetches the target repository's current settings and PATCHes any that differ
+# from `default_repo_settings` via the GitHub API. Booleans are sent as JSON (`-F`), other
+# values as strings (`-f`). Settings that already match the expected value are left untouched
+# (no-op PATCH avoided when there is nothing to change).
 #
-# @stdout Progress/status messages via `info` ("Configuring repository settings...", "...repository settings
-#   configured.").
+# @exitcode success=0: Always (a failed PATCH call is logged as a warning, not
+#   surfaced as a non-zero exit code).
+#
+# @stdout Progress/status messages via `info` ("Configuring repository settings...",
+#   "...repository settings configured.").
 #---------------------------------------------------------------------------------------------
 function configure_default_repo_settings()
 {
@@ -437,18 +457,19 @@ function configure_actions_permissions()
     fi
 }
 
-declare -x nuget_server
-
 #---------------------------------------------------------------------------------------------
-# @description Reconciles the target repository's GitHub Actions variables against
-#   `actions_default_vars`.
+# @description Reconciles the target repository's GitHub Actions variables against the vars of
+#   the current application - $1.
 #   - In non-interactive mode (the default), creates any missing
 #     variable with its default value and leaves existing variables untouched.
 #   - In interactive mode (`$interactive_vars == true`), prompts the user for each variable's
 #     value (pre-filled with the current value if it exists, else with the default),
-#     validating input with the validator from `actions_var_validators`, and calls `set_var`
+#     validating input with the validator from `actions_vars_validators`, and calls `set_var`
 #     only when the entered value differs from the current one. Prints a summary of how many
 #     variables were set to a new value, set to their default, or left unmodified.
+#
+# @arg $1 string Application name; must be one of the entries in `apps_with_secrets` (`actions`, `dependabot`,
+#   `agents`, `codespaces`).
 #
 # @exitcode success/positive=0: Always (individual `set_var` failures are logged and skipped, not surfaced as a
 #   non-zero exit code).
@@ -456,32 +477,52 @@ declare -x nuget_server
 # @stdout Progress/status messages via `info`, and (in interactive mode) prompts via
 #   `enter_value`.
 #---------------------------------------------------------------------------------------------
+# shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
 function configure_variables()
 {
-    info "Configuring GitHub Actions variables..."
+    (( $# == 1 ))                                     || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#):" \
+                                                                                          "  - the name of the GitHub application being configured, e.g. actions"
+    [[ ! -v 1 ]] || is_in "$1" "${apps_with_vars[@]}" || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the application name, to be one of: ${apps_with_vars[*]} (provided '${1:-<none>}')."
+    exit_if_has_bugs
 
-    local _var _value
-    local -A _existing=()
+    local _app=${1,,}
+
+    local -A _vars_defaults
+    local -a _vars_order
+    local -A _vars_validators
+
+    # get the default values for the application's variables based on the current NuGet server
+    get_vars_defaults "${_app,,}" _vars_defaults _vars_order _vars_validators
+
+    # Nothing to reconcile and nothing to purge -- skip the API call entirely rather than fetch
+    # the app's current secrets just to discover there's nothing to do with them.
+    (( ${#_vars_defaults[@]} > 0 )) || $purge_vars || return "$success"
+
+    info "Configuring GitHub ${_app^} variables..."
+
+    # get the currently existing variables from the GitHub repository
+    local _var _value _exists _default
+    local -A _current=()
 
     while IFS='=' read -r _var _value; do
-        _existing["$_var"]="$_value"
-    done < <(execute_gh_api_with_retry 3 2 --paginate "$path_repo/actions/variables" -q "$jq_vars")
+        _current["$_var"]="$_value"
+    done < <(execute_gh_api_with_retry 3 2 --paginate "$path_repo/$_app/variables" -q "$jq_vars")
 
-    local _exists
     local _new_value=""
     local _default_value=""
-    local -i _skipped=0 _set_new=0 _set_default=0
+    local -i _skipped=0 _set_new=0 _set_default=0 _ignored=0 _deleted=0
 
-    for _var in "${actions_default_vars_order[@]}"; do
+    # work through the default vars
+    for _var in "${!_vars_defaults[@]}"; do
         if [[ $_var == --* ]]; then
             printf "    ➡️  %-38s %s\n" "${_var#--}" "────────────────────────────────────────────────────────────────────────"
             continue
         fi
 
-        _default_value="${actions_default_vars[$_var]}"
-        if [[ -v _existing[$_var] ]]; then
+        _default_value="${_vars_defaults[$_var]}"
+        if [[ -v _current[$_var] ]]; then
             _exists=true
-            _value="${_existing[$_var]:-}"
+            _value="${_current[$_var]:-}"
         else
             _exists=false;
             _value="";
@@ -489,57 +530,86 @@ function configure_variables()
 
         if $interactive_vars; then
             local _prompt="            Enter value for variable $_var"
-            local _default="$_default_value"
+            local _validator=${_vars_validators["$_var"]:-true}
 
-            # prompt the user for a value while showing them the current value (if it exists) and the default value (if it is different from the current value)
+            # prompt the user for a value while showing them the current value (if it exists) and
+            # the default value (if it is different from the current value)
             if $_exists; then
                 _default="$_value"
                 [[ $_default_value != "$_value" ]] && _prompt="$_prompt (default: '$_default_value')"
+            else
+                _default="$_default_value"
             fi
 
-            enter_value "$_prompt" _new_value "$_default" false "${actions_var_validators["$_var"]}"
+            enter_value "$_prompt" _new_value "$_default" false "$_validator"
 
             if [[ $_new_value != "$_value" ]]; then
                 # set the variable to the value
-                trace "Setting variable: $_var=$_new_value"
                 set_var "$_var" "$_new_value" || continue
+                trace "Setting variable: $_var=$_new_value"
                 # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-                [[ $_new_value == "$_default_value" ]] &&
-                    (( ++_set_default )) ||
-                    (( ++_set_new ))
+                [[ $_new_value == "$_default_value" ]] && (( ++_set_default )) || (( ++_set_new ))
+
             else
-                trace "Unchanged variable: $_var=$_value"
+                trace "Unchanged variable: '$_var==$_value'"
                 (( ++_skipped ))
             fi
         else
             if $_exists; then
-                trace "Unchanged variable: $_var=$_value"
+                trace "Unchanged variable: '$_var==$_value'"
                 (( ++_skipped ))
             else
-                # we are not in interactive mode and the var does not exist, so we will create it with its default value
-                trace "Creating a variable with its default value: $_var=$_default_value"
-                set_var "$_var" "$_default_value" && (( ++_set_default ))
+                trace "Creating a variable with its default value: '$_var=$_default_value'"
+                set_var "$_var" "$_default_value"
+                (( ++_set_default ))
             fi
         fi
 
-        # set the nuget server name for use by, e.g. configure_secrets()
-        [[ $_var == "NUGET_SERVER" ]] &&
+        # if the NuGet server has changed, update the global variable and refresh the defaults
+        if [[ $_var == "NUGET_SERVER" && "$_value" != "$nuget_server" ]]; then
             nuget_server="$_value"
+            get_vars_defaults "$_app" _vars_defaults _vars_order _vars_validators
+        fi
+    done
+
+    for _var in "${!_current[@]}"; do
+        if [[ ! -v _vars_defaults[$_var] ]]; then
+            if $purge_vars; then
+                if $interactive_vars; then
+                    if confirm "            Do you want to delete the unknown or obsolete variable '$_var'?" "n"; then
+                        trace "Deleting the unknown or obsolete variable '$_var'." && delete_var "$_var" && (( ++_deleted ))
+                    else
+                        trace "The unknown or obsolete variable '$_var' was not deleted." && (( ++_ignored ))
+                    fi
+                else
+                    trace "Deleting the unknown or obsolete variable '$_var'." && delete_var "$_var" && (( ++_deleted ))
+                fi
+            else
+                trace "Unknown or obsolete variable '$_var'."
+                (( ++_ignored ))
+            fi
+        fi
     done
 
     # display the summary
-    (( _set_new     == 1 )) && info "    1 variable was set to a new value."
-    (( _set_new      > 1 )) && info "    $_set_new variables were set to new values."
+    (( _set_new     == 1 )) && info "    1 variable was set to a new value."                        || true
+    (( _set_new      > 1 )) && info "    $_set_new variables were set to new values."               || true
 
-    (( _set_default == 1 )) && info "    1 variable was set to its default value."
+    (( _set_default == 1 )) && info "    1 variable was set to its default value."                  || true
+    (( _set_default  > 1 )) && info "    $_set_default variables were set to their default values." || true
 
-    (( _set_default  > 1 )) && info "    $_set_default variables were set to their default values."
+    (( _skipped     == 1 )) && info "    1 variable was not modified."                              || true
+    (( _skipped      > 1 )) && info "    $_skipped variables were not modified."                    || true
 
-    (( _skipped     == 1 )) && info "    1 variable was not modified."
-    (( _skipped      > 1 )) && info "    $_skipped variables were not modified."
+    (( _ignored     == 1 )) && info "    1 unknown or obsolete variable was ignored."               || true
+    (( _ignored      > 1 )) && info "    $_ignored unknown or obsolete variables were ignored."     || true
 
-    $interactive_vars       || info "  Run the script with option '--interactive-vars' or '-iv' to set new values for any of the Actions vars."
-    true
+    (( _deleted     == 1 )) && info "    1 unknown or obsolete variable was deleted."               || true
+    (( _deleted      > 1 )) && info "    $_deleted unknown or obsolete variables were deleted."     || true
+
+    (( _ignored     == 0 )) || info "  Run the script with option '--purge-vars' or '-pv' to delete the unknown variables." \
+                                    "  You may also add '--interactive-vars' or '-iv' to confirm the deletion of each unknown variable."
+    $interactive_vars       || info "  Run the script with option '--interactive-vars' or '-iv' to set new values or delete unknown and obsolete variables for any of the ${_app^} vars."
 }
 
 #---------------------------------------------------------------------------------------------
@@ -548,10 +618,10 @@ function configure_variables()
 # Notes:
 #   - Will exit the script if an invalid argument(s) is/are provided with exit codes
 #
-# @arg $1 string Name of the variable to set.
-# @arg $2 string Value to set the variable to.
+# @arg $1 string Name of the variable to create (if it does not exist).
+# @arg $2 string Value to assign to the variable.
 #
-# @exitcode success/positive=0: Variable set successfully.
+# @exitcode success=0: Variable set successfully.
 # @exitcode * Whatever `execute_gh_with_retry` returned on failure (logged as a warning, then propagated).
 #---------------------------------------------------------------------------------------------
 function set_var()
@@ -559,9 +629,8 @@ function set_var()
     (( $# == 2 ))       || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
                                                             "  - the variable name" \
                                                             "  - the variable value."
-    [[ -v 1 && -n $1 ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the variable name, to be non-empty (provided '${1:-<none>}')."
-    [[ -v 2 ]]          || bug -ec "$err_missing_argument" "${FUNCNAME[0]}() requires argument 2, the variable value, to be provided."
-
+    [[ -v 1 && -n $1 ]] || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the variable name, to be non-empty (provided '${1:-<none>}')."
+    [[ -v 2 ]]          || bug -ec "$err_missing_argument"  "${FUNCNAME[0]}() requires argument 2, the variable value, to be provided."
     exit_if_has_bugs
 
     local _name="$1"
@@ -571,7 +640,37 @@ function set_var()
     # create and/or set the secret value on GitHub
     execute_gh_with_retry 3 2 true variable set "$_name" --body "$_value" -R "$repo" || {
         _rc=$?
-        warning "Failed to set variable $_name. Run the script with '--verbose' to see more details and troubleshoot."
+        warning "Failed to create or assign a value to the variable $_name. Run the script with '--verbose' to see more details and troubleshoot."
+    }
+
+    return "$_rc"
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Deletes a single GitHub Actions repository variable via `gh variable delete`.
+#
+# @arg $1 string Name of the variable to delete.
+#
+# @exitcode success=0: Variable set successfully.
+# @exitcode * Whatever `execute_gh_with_retry` returned on failure (logged as a warning, then propagated).
+#---------------------------------------------------------------------------------------------
+function delete_var()
+{
+    (( $# == 1 ))         || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#):" \
+                                                              "  - the variable name"
+    [[ ! -v 1 || -n $1 ]] || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the variable name, to be non-empty (provided '${1:-<none>}')."
+    exit_if_has_bugs
+
+    local _name="$1"
+
+    trace "gh variable delete $_name --repo $repo"
+
+    local -i _rc=$success
+
+    # delete the variable on GitHub
+    execute_gh_with_retry 3 2 true variable delete "$_name" --repo "$repo" || {
+        _rc=$?
+        warning "Failed to delete variable $_name. Run the script with '--verbose' to see more details and troubleshoot." -ec "$_rc"
     }
 
     return "$_rc"
@@ -589,112 +688,113 @@ function set_var()
 #
 # @arg $1 string Application name; must be one of the entries in `apps_with_secrets` (`actions`, `dependabot`,
 #   `agents`, `codespaces`).
-# @arg $2 string NuGet server; must be one of the entries in `nuget_servers` (supported servers: `nuget`, `github`).
 #
-# @exitcode success/positive=0: including the case where the app has no configured secrets at all (returns immediately).
+# @exitcode success=0: including the case where the app has no configured secrets at all (returns immediately).
 #
 # @stdout Progress/status messages via `info`, and (in interactive mode) prompts via `enter_value`.
 #---------------------------------------------------------------------------------------------
 function configure_secrets()
 {
-    # validate the parameter - the application name: actions, dependabot, agents, or codespaces
-    local -i _rc="$success"
-
-    (( $# == 2 ))                                        || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
-                                                                                                "  - the application name" \
-                                                                                                "  - the NuGet server"
+    (( $# == 1 ))                                        || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#):" \
+                                                                                                "  - the application name"
     [[ ! -v 1 ]] || is_in "$1" "${apps_with_secrets[@]}" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the application name, to be one of: ${apps_with_secrets[*]} (provided '${1:-<none>}')."
-    [[ ! -v 2 ]] || is_in "$2" "${nuget_servers[@]}"     || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the NuGet server, to be one of: ${nuget_servers[*]} (provided '${2:-<none>}')."
-
-    local _app="$1"
-    local _secrets_array_name="${_app,,}_secrets"
-
-    is_defined_associative_array "$_secrets_array_name"  || bug -ec "$err_invalid_nameref" "The secrets array '$_secrets_array_name' for the application '$_app' is not defined. Cannot configure secrets for this application."
-
     exit_if_has_bugs
 
-    local -n _app_secrets=$_secrets_array_name
-    local _nuget_server="$2"
+    local _app=${1,,}
 
-    (( ${#_app_secrets[@]} > 0 )) ||
-        return "$success" # no secrets to set for this app - we are done
+    local -A _secrets_defaults
+    local -a _secrets_order
+    local -A _secrets_validators
+
+    get_secrets_defaults "$_app" _secrets_defaults _secrets_order _secrets_validators
+
+    # Nothing to reconcile and nothing to purge -- skip the API call entirely rather than fetch
+    # the app's current secrets just to discover there's nothing to do with them.
+    (( ${#_secrets_defaults[@]} > 0 )) || $purge_secrets || return "$success"
 
     info "Configuring ${_app^} secrets..."
 
-    # remember the current verbose and tracing settings so we can restore them after setting the secret(s)
-    local _name _value _exists _delete # about the current variable
-    local -i _skipped=0 _set_new=0 _need_new=0
-    local -a _ordered_names
-    local -a _existing
+    local -a _current
 
-    readarray -t _ordered_names < <(printf '%s\n' "${!_app_secrets[@]}" | sort)
-    readarray -t _existing < <(execute_gh_api_with_retry 3 2 --paginate "$path_repo/$_app/secrets" -q "$jq_secret_names")
+    readarray -t _current < <(execute_gh_api_with_retry 3 2 --paginate "$path_repo/$_app/secrets" -q "$jq_secret_names")
 
-    for _name in "${_ordered_names[@]}"; do
-        [[ $_name == "NUGET_API_KEY" && $_nuget_server == "nuget" ]] && _delete=true || _delete=false
+    local _secret _value _exists _default # about the current secret
+    local -i _skipped=0 _set_new=0 _need_new=0 _ignored=0 _deleted=0 # summary variables
 
-        # does the secret exists in GH?
-        if is_in "$_name" "${_existing[@]}"; then
-            _exists=true
-            if $_delete; then
-                trace "Deleting secret: $_name"
-                delete_secret "$_name" "$_app" || true
-            fi
-            ! $interactive_secrets && (( ++_skipped )) && continue
-        else
-            _exists=false
-        fi
-        $_delete && continue
+    for _secret in "${!_secrets_defaults[@]}"; do
+        is_in "$_secret" "${_current[@]}" && _exists=true || _exists=false
 
         # get the value for the secret or use the placeholder if we are not entering secrets interactively
         if $interactive_secrets; then
 
             # prompt the user for a (new) value of the secret
-            local _prompt="        Enter value for secret $_name"
-            local _default
+            local _prompt="        Enter value for secret $_secret"
+            local _validator="${_secrets_validators[$_secret]:-true}"
 
-            $_exists &&
-                _default="$secret_str" ||
-                _default=""
+            $_exists && _default="$secret_str" || _default=""
 
-            enter_value "$_prompt" _value "$_default" true is_safe_secret
+            enter_value "$_prompt" _value "$_default" true "$_validator"
 
             if [[ -n $_value && $_value != "$secret_str" ]]; then
-                echo "$secret_str"
-                set_secret "$_name" "$_value" "$_app" || continue
-                trace "Set value of secret: $_name"
+                echo "$secret_str" # display '••••••' - feedback that we've got the value and it is secret
+                set_secret "$_secret" "$_value" "$_app" || continue
+                trace "Set value of secret: $_secret"
                 (( ++_set_new ))
+
             elif [[ -n $_value && $_value == "$secret_str" ]]; then
                 echo ""
-                trace "Unchanged secret: $_name"
+                trace "Unchanged secret: $_secret"
                 (( ++_skipped ))
+
             elif [[ -z $_value ]]; then
-                warning "      Create secret: $_name."
+                warning "      Create secret: $_secret."
                 (( ++_need_new ))
             fi
         else
             # the secret exists in GH or it does not exist; but we are not in interactive mode, so either way skip it
             if $_exists; then
-                trace "Secret unchanged: $_name"
+                trace "Unchanged secret: $_secret"
                 (( ++_skipped ))
             else
-                warning "      Create secret: $_name."
+                warning "      Create secret: $_secret."
                 (( ++_need_new ))
             fi
         fi
     done
 
-    if $interactive_secrets; then
-        (( _set_new == 1 )) && info "    1 secret was set to a new value."
-        (( _set_new  > 1 )) && info "    $_set_new secrets were set to new values."
+    for _secret in "${_current[@]}"; do
+        if [[ ! -v _secrets_defaults[$_secret] ]]; then
+            if $purge_secrets; then
+                if $interactive_secrets; then
+                    if confirm "            Do you want to delete the unknown or obsolete secret '$_secret'?" "n"; then
+                        trace "Deleting the unknown or obsolete secret '$_secret'." && delete_secret "$_secret" "$_app" && (( ++_deleted ))
+                    else
+                        trace "The unknown or obsolete secret '$_secret' was not deleted." && (( ++_ignored ))
+                    fi
+                else
+                    trace "Deleting the unknown or obsolete secret '$_secret'." && delete_secret "$_secret" "$_app" && (( ++_deleted ))
+                fi
+            else
+                trace "Unknown or obsolete secret '$_secret'."
+                (( ++_ignored ))
+            fi
+        fi
+    done
 
-        (( _skipped == 1 )) && info "    1 secret was not modified."
-        (( _skipped  > 1 )) && info "    $_skipped secrets were not modified."
-    fi
+    (( _set_new == 1 )) && info "    1 secret was set to a new value."                                                                                  || true
+    (( _set_new  > 1 )) && info "    $_set_new secrets were set to new values."                                                                         || true
 
-    (( _need_new == 1 )) && warning "Run the script with option '--interactive-secrets' or '-is' to set the value for 1 ${_app^} secret."
-    (( _need_new  > 1 )) && warning "Run the script with option '--interactive-secrets' or '-is' to set the values for $_need_new ${_app^} secrets."
-    true
+    (( _skipped == 1 )) && info "    1 secret was not modified."                                                                                        || true
+    (( _skipped  > 1 )) && info "    $_skipped secrets were not modified."                                                                              || true
+
+    (( _ignored == 1 )) && info "    1 unknown or obsolete secret was ignored."                                                                         || true
+    (( _ignored  > 1 )) && info "    $_ignored unknown or obsolete secrets were ignored."                                                               || true
+
+    (( _deleted == 1 )) && info "    1 unknown or obsolete secret was deleted."                                                                         || true
+    (( _deleted  > 1 )) && info "    $_deleted unknown or obsolete secrets were deleted."                                                               || true
+
+    (( _need_new == 1 )) && warning "Run the script with option '--interactive-secrets' or '-is' to set the value of 1 ${_app^} secret."               || true
+    (( _need_new  > 1 )) && warning "Run the script with option '--interactive-secrets' or '-is' to set the values of $_need_new ${_app^} secrets."    || true
 }
 
 #---------------------------------------------------------------------------------------------
@@ -710,7 +810,7 @@ function configure_secrets()
 # @arg $2 string Plaintext value to set the secret to.
 # @arg $3 string GitHub App the secret belongs to (`actions`, `dependabot`, `agents`, or `codespaces`).
 #
-# @exitcode success/positive=0: Secret set successfully.
+# @exitcode success=0: Secret set successfully.
 # @exitcode * Whatever `execute_gh_with_retry` returned on failure (logged as a warning, then propagated).
 #---------------------------------------------------------------------------------------------
 function set_secret()
@@ -721,7 +821,6 @@ function set_secret()
                                                                                                 "  - the application"
     [[ ! -v 1 || -n $1 ]]                                || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the secret name, to be non-empty (provided '${1:-<none>}')."
     [[ ! -v 3 ]] || is_in "$3" "${apps_with_secrets[@]}" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 3, the application name, to be one of: ${apps_with_secrets[*]} (provided '${3:-<none>}')."
-
     exit_if_has_bugs
 
     local _name="$1"
@@ -750,6 +849,12 @@ function set_secret()
     return "$_rc"
 }
 
+#---------------------------------------------------------------------------------------------
+# @description Deletes a GitHub secret for a specified application within the repository.
+#
+# @exitcode success=0: The secret was successfully deleted or did not exist.
+# @exitcode failure!=0: An error occurred while attempting to delete the secret.
+#---------------------------------------------------------------------------------------------
 function delete_secret()
 {
     (( $# == 2 ))                                        || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
@@ -757,7 +862,6 @@ function delete_secret()
                                                                                                 "  - the application"
     [[ ! -v 1 || -n $1 ]]                                || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the secret name, to be non-empty (provided '${1:-<none>}')."
     [[ ! -v 2 ]] || is_in "$2" "${apps_with_secrets[@]}" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the application name, to be one of: ${apps_with_secrets[*]} (provided '${2:-<none>}')."
-
     exit_if_has_bugs
 
     local _name="$1"
@@ -786,16 +890,19 @@ function delete_secret()
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Creates (POST) or updates (PUT, if `initialize_main_protection_rs_id` finds one already exists) the
-# GitHub ruleset that protects the default branch: linear history, no force pushes, a required pull request with
-# rebase-only merges, and the required status checks collected in `required_checks`. After the API call, re-runs
-# `initialize_main_protection_rs_id` so `main_protection_rs_id`/`path_main_protection_ruleset` reflect a
-# newly-created ruleset (a no-op if the ruleset already existed and was just updated).
+# @description Creates (POST) or updates (PUT, if `initialize_main_protection_rs_id` finds one
+#   already exists) the GitHub ruleset that protects the default branch: linear history, no
+#   force pushes, a required pull request with rebase-only merges, and the required status
+#   checks collected in `required_checks`. After the API call, re-runs
+#   `initialize_main_protection_rs_id` so `main_protection_rs_id`/`path_main_protection_ruleset`
+#   reflect a newly-created ruleset (a no-op if the ruleset already existed and was just
+#   updated).
 #
-# @exitcode success/positive=0: Always (a failed API call from `execute_gh_api_with_retry` is not checked/propagated here).
+# @exitcode success=0: Always (a failed API call from `execute_gh_api_with_retry` is not
+#   checked/propagated here).
 #
-# @stdout Progress/status messages via `info` ("Configuring branch ruleset...", "Updating existing ruleset...", or
-#   "Creating new ruleset...").
+# @stdout Progress/status messages via `info` ("Configuring branch ruleset...", "Updating
+#   existing ruleset...", or "Creating new ruleset...").
 #---------------------------------------------------------------------------------------------
 function configure_branch_protection()
 {

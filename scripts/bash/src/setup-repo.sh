@@ -23,12 +23,11 @@ declare -xri err_repo_with_no_ci
 declare -xri err_not_git_directory
 declare -xri err_logic_error
 
-declare -xr repo_name_regex
-declare -xr repo_owner_regex
+declare -xr default_vm2_repos_path
 
 # defaults
 declare -xr default_repo_owner
-
+declare -xr default_nuget_server
 declare -xr default_visibility="public"
 declare -xr default_branch="main"
 declare -xr default_interactive=false
@@ -41,27 +40,28 @@ declare -x _ignore
 declare -xr vm2_devops_repo_name
 
 # start with default input
-declare -x repo_path=""
 declare -x visibility=$default_visibility
 declare -x branch=$default_branch
 declare -x interactive_vars=$default_interactive
 declare -x interactive_secrets=$default_interactive
+declare -x purge_vars=false
+declare -x purge_secrets=false
 declare -x configure_local=$default_configure_local
 declare -x audit=$default_audit
-declare -x main_protection_rs_name=""
+declare -x main_protection_rs_name=''
 declare -xi main_protection_rs_id=0
-declare -x description=""
+declare -x description=''
 declare -x use_ssh=true
 declare -x use_https=false
 declare -x repo_owner=${ORGANIZATION:-$default_repo_owner}
 declare -x current_branch=false
+declare -x nuget_server=$default_nuget_server
 
-declare -x vm2_repos="${VM2_REPOS:-$HOME/repos/vm2}"
-declare -x repo_name=""
-declare -x repo=""
-declare -x repo_url=""
-declare -x repo_id=""
-declare -x nuget_server=""
+declare -x vm2_repos="${VM2_REPOS:-$default_vm2_repos_path}"
+declare -x repo_name=''
+declare -x repo=''
+declare -x repo_url=''
+declare -x repo_id=''
 
 declare -xa required_checks=()
 declare -xi actions_app_id=0
@@ -77,6 +77,7 @@ declare -xr key_repo
 declare -xr key_repo_id
 declare -xr key_default_branch
 
+declare -x repo_path=''
 #=============================================================================================
 # Check the prerequisites
 #=============================================================================================
@@ -114,7 +115,7 @@ declare -xi rc="$success"
 declare branches
 $current_branch && branches='' || branches='main'
 
-resolve_vm2_repos "$vm2_repos" vm2_repos "$branches" "$branches" || true
+resolve_vm2_repos vm2_repos "$branches" "$branches" || true
 exit_if_has_errors
 readonly vm2_repos
 
@@ -123,6 +124,11 @@ trace "All vm2 repositories are expected to be in '$vm2_repos'"
 source "$script_dir/setup-repo.defaults.sh"
 source "$script_dir/setup-repo.functions.sh"
 source "$script_dir/setup-repo.audit.sh"
+
+#=============================================================================================
+# Check the integrity of the default data
+#=============================================================================================
+validate_defaults
 
 declare -xrA default_local_git_settings
 declare -xra default_local_git_settings_order
@@ -218,25 +224,17 @@ readonly ci_yaml
 # Final validation of the inputs and assumptions before we start making any changes or API calls:
 #=============================================================================================
 
-[[ -s "$ci_yaml" ]]                                      || error -ec "$err_logic_error" "The specified path '$repo_path' is not a valid project/repository root (missing .github/workflows/CI.yaml)." \
-                                                                                         "Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2pkg <name>' to create a valid directory."
-[[ -z $repo_name || $repo_name =~ $repo_name_regex ]]    || error -ec "$err_logic_error" "Could not determine repository name from the specified path '$repo_path' or the name is invalid." \
-                                                                                         "Please specify a valid path to the root of the project/repository using '--path <path>'."
-[[ -z $repo_owner || $repo_owner =~ $repo_owner_regex ]] || error -ec "$err_logic_error" "Could not determine repository owner from the specified path '$repo_path', or from the environment variable ORGANIZATION, or the owner name is invalid." \
-                                                                                         "Please specify a valid owner of the project/repository using '--owner <owner>' or set the ORGANIZATION environment variable."
-validate_branch_name "$branch" &> "$_ignore"             || error -ec "$err_logic_error" "Invalid branch name '$branch'." \
-                                                                                         "Please specify a valid branch name using '--branch <branch>'."
+[[ -s "$ci_yaml" ]]                                          || error -ec "$err_logic_error" "The specified path '$repo_path' is not a valid project/repository root (missing .github/workflows/CI.yaml)." \
+                                                                                             "Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2pkg <name>' to create a valid directory."
+[[ -z $repo_name ]] || validate_gh_repo_name "$repo_name"    || error -ec "$err_logic_error" "Could not determine repository name from the specified path '$repo_path' or the name is invalid." \
+                                                                                             "Please specify a valid path to the root of the project/repository using '--path <path>'."
+[[ -z $repo_owner ]] || validate_gh_repo_owner "$repo_owner" || error -ec "$err_logic_error" "Could not determine repository owner from the specified path '$repo_path', or from the environment variable ORGANIZATION, or the owner name is invalid." \
+                                                                                             "Please specify a valid owner of the project/repository using '--owner <owner>' or set the ORGANIZATION environment variable."
+validate_branch_name "$branch" &> "$_ignore"                 || error -ec "$err_logic_error" "Invalid branch name '$branch'." \
+                                                                                             "Please specify a valid branch name using '--branch <branch>'."
 visibility="${visibility,,}"
-is_in "$visibility" "public" "private"                   || error -ec "$err_logic_error" "Invalid visibility '$visibility'. Valid options are 'public', 'private', or 'internal'." \
-                                                                                         "Please specify a valid visibility using '--visibility <public|private|internal>'."
-if $audit; then
-    has_github_remote repo_state                         || error -ec "$err_logic_error" "The repository in '$repo_path' is not linked to a GitHub remote. Cannot perform audit." \
-                                                                                         "Please ensure that the repository is properly initialized and linked to GitHub before running the script with '--audit'."
-    # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-    ! $interactive_secrets && ! $interactive_vars        || error -ec "$err_logic_error" "Secrets and variables cannot be interactively set during audit." \
-                                                                                         "Please remove the '--interactive-secrets' and '--interactive-vars' options when running the script with '--audit'."
-fi
-
+is_in "$visibility" "public" "private"                       || error -ec "$err_logic_error" "Invalid visibility '$visibility'. Valid options are 'public', 'private', or 'internal'." \
+                                                                                             "Please specify a valid visibility using '--visibility <public|private|internal>'."
 readonly visibility
 
 exit_if_has_errors
@@ -245,17 +243,29 @@ resolve_github_app_ids
 
 list_required_checks
 
+has_github_remote repo_state && get_current_nuget_server
+
 #=============================================================================================
 # Audit
 #=============================================================================================
 
-$audit && {
+if $audit; then
+    has_github_remote repo_state                             || error -ec "$err_logic_error" "The repository in '$repo_path' is not linked to a GitHub remote. Cannot perform audit." \
+                                                                                             "Please ensure that the repository is properly initialized and linked to GitHub before running the script with '--audit'."
+    # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
+    ! $interactive_secrets && ! $interactive_vars            || error -ec "$err_logic_error" "Secrets and variables cannot be interactively set during audit." \
+                                                                                             "Please remove the '--interactive-secrets' and '--interactive-vars' options when running the script with '--audit'."
+    # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
+    ! $purge_secrets && ! $purge_vars                        || error -ec "$err_logic_error" "Secrets and variables cannot be purged during audit." \
+                                                                                             "Please remove the '--purge-secrets' and '--purge-vars' options when running the script with '--audit'."
+    exit_if_has_errors
+
     initialize_jq_queries
     initialize_gh_paths
     initialize_main_protection_rs_id || true
     audit_repo
     exit "$success"
-}
+fi
 
 #=============================================================================================
 # Initialize and configure the repository
@@ -274,7 +284,7 @@ declare -a undos=()
 #---------------------------------------------------------------------------------------------
 function undo_changes()
 {
-    (( ${#undos[@]} == 0 )) && return "$success"
+    is_empty_array undos && return "$success"
 
     echo "To undo the changes above, you can run the following commands:"
     local -i _index
@@ -387,11 +397,11 @@ if $configure_local; then
 
     info "Configuring local git settings..."
 
-    declare key value
-    for key in "${default_local_git_settings_order[@]}"; do
-        value="${default_local_git_settings[$key]}"
-        execute git -C "$repo_path" config --local "$key" "$value"
-        trace "$key set to '$value'."
+    declare _key value
+    for _key in "${default_local_git_settings_order[@]}"; do
+        value="${default_local_git_settings[$_key]}"
+        execute git -C "$repo_path" config --local "$_key" "$value"
+        trace "$_key set to '$value'."
     done
 
     info "...local git settings configured."
@@ -414,18 +424,14 @@ initialize_main_protection_rs_id || true
 configure_default_repo_settings
 configure_actions_permissions
 configure_branch_protection
-# it is important to configure variables before secrets!
-configure_variables
+
+# configure variables before secrets to know the NuGet server in use!
+configure_variables "actions"
 trace "NuGet server is: $nuget_server"
 
-declare -xA actions_secrets
+configure_secrets "actions"
+configure_secrets "dependabot"
 
-if [[ ${actions_default_vars["NUGET_SERVER"]} == 'nuget' && -v actions_secrets["NUGET_API_KEY"] ]]; then
-    # remove the NUGET_API_KEY secret if the NuGet server is set to 'nuget' - they use the Trusted Publishing now
-    unset 'actions_secrets["NUGET_API_KEY"]'
-fi
-configure_secrets "actions" "$nuget_server"
-configure_secrets "dependabot" "$nuget_server"
 echo ""
 audit_repo
 if [[ ${#undos[@]} -gt 0 ]]; then
