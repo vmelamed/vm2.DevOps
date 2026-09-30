@@ -16,10 +16,11 @@ declare -xr lib_dir
 # shellcheck disable=SC1091
 source "$lib_dir/core.sh"
 
+declare -xr default_vm2_repos_path
 declare -xra vm2_repositories
 declare -xr vm2_devops_repo_name
 
-declare -x vm2_repos="${VM2_REPOS:-$HOME/repos/vm2}"
+declare -x vm2_repos="${VM2_REPOS:-$default_vm2_repos_path}"
 declare -x repo
 
 #---------------------------------------------------------------------------------------------
@@ -42,7 +43,7 @@ declare -x repo
 # @stdout Output from 'gh workflow run', 'dotnet restore', 'git commit', 'gh run watch', and 'git push'.
 #
 # @example
-#   update_dependencies "$HOME/repos/vm2" "vm2.Glob"
+#   update_dependencies "$vm2_repos" "vm2.Glob"
 #---------------------------------------------------------------------------------------------
 function update_dependencies() {
     local _repos=$1

@@ -84,7 +84,7 @@ fi
 git fetch origin 1>"$_ignore" || usage -ec "$err_tool_error" "Failed to fetch from remote."
 
 # Check if it is a valid git branch name?
-git check-ref-format --branch "$new_branch_name" 1>"$_ignore" || usage -ec "$err_argument_value" "Invalid branch name '$new_branch_name'."
+is_valid_branch_name "$new_branch_name" || usage -ec "$err_argument_value" "Invalid branch name '$new_branch_name'."
 # Make sure that a local branch with the new name does not already exist:
 git show-ref --verify --quiet "refs/heads/$new_branch_name" 1>"$_ignore" && usage -ec "$err_argument_value" "Branch '$new_branch_name' already exists locally."
 
@@ -92,7 +92,7 @@ git show-ref --verify --quiet "refs/heads/$new_branch_name" 1>"$_ignore" && usag
 git show-ref --verify --quiet "refs/remotes/origin/$new_branch_name" 1>"$_ignore" && usage -ec "$err_argument_value" "Branch '$new_branch_name' already exists on remote."
 
 # valid name?
-git check-ref-format --branch "$old_branch_name" 1>"$_ignore" || usage -ec "$err_argument_value" "Invalid branch name '$old_branch_name'."
+is_valid_branch_name "$old_branch_name" || usage -ec "$err_argument_value" "Invalid branch name '$old_branch_name'."
 # Check if the old branch exists locally:
 git show-ref --verify --quiet "refs/heads/$old_branch_name" 1>"$_ignore" || usage -ec "$err_argument_value" "Branch '$old_branch_name' does not exist locally."
 # Check if the old branch exists remotely:
