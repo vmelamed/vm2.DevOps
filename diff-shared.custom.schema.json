@@ -1,0 +1,66 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "urn:schemas-vm-com:diff-shared.custom.schema.json",
+    "title": "diff-shared.custom.json",
+    "description": "Per-repository overrides for diff-shared.sh: repo-local diff/merge tool preferences and per-file action overrides, keyed by file name.",
+    "type": "object",
+    "properties": {
+        "diff": {
+            "$ref": "#/$defs/toolConfig",
+            "description": "This repository's preferred diff tool/command, overriding the source-of-truth default."
+        },
+        "merge": {
+            "$ref": "#/$defs/toolConfig",
+            "description": "This repository's preferred merge tool/command, overriding the source-of-truth default."
+        },
+        "action_overrides": {
+            "type": "object",
+            "description": "Per-file action overrides. Each key is a bare file NAME (not a path -- no directory separators), matching the base name of a files[].targetFile entry in diff-shared.config.json; each value overrides the default action for that file in this repository.",
+            "propertyNames": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^[^/\\\\]+$"
+            },
+            "additionalProperties": {
+                "$ref": "#/$defs/action"
+            }
+        }
+    },
+    "additionalProperties": true,
+    "$defs": {
+        "toolConfig": {
+            "type": "object",
+            "properties": {
+                "tool": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "The name of the tool as it would be invoked on PATH (e.g. 'delta', 'code')."
+                },
+                "command": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "The full command line template used to invoke the tool. May reference $LOCAL/$REMOTE (diff) or $LOCAL/$REMOTE positions (merge)."
+                }
+            },
+            "required": [
+                "tool",
+                "command"
+            ],
+            "additionalProperties": true
+        },
+        "action": {
+            "type": "string",
+            "description": "The action diff-shared.sh takes for a file when it differs from the source of truth.",
+            "enum": [
+                "ignore",
+                "merge or copy",
+                "ask to merge",
+                "merge",
+                "ask to copy",
+                "copy",
+                "copy shared",
+                "ask to copy shared"
+            ]
+        }
+    }
+}
