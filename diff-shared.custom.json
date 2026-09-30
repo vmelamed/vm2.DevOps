@@ -1,4 +1,5 @@
 {
+    "$schema": "diff-shared.custom.schema.json",
     "action_overrides": {
         "copilot-instructions.md": "ignore",
         "dependabot.yml": "ignore",
@@ -8,6 +9,7 @@
         "ClearCache.yaml": "ignore",
         "RefreshLockFiles.yaml": "ignore",
         "AutoMerge.yaml": "ignore",
+        ".editorconfig": "ignore",
         "Directory.Solution.props": "ignore",
         "Directory.Build.props": "ignore",
         "Directory.Packages.props": "ignore",
