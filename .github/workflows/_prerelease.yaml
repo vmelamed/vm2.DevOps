@@ -3,6 +3,10 @@
 
 name: _prerelease (Reusable workflow)
 
+# This reusable workflow builds the packages but does not publish them:
+# NuGet.org trusted publishing requires the push to happen in the calling
+# (top-level) workflow.
+
 on:
   workflow_call:
     inputs:
@@ -35,15 +39,6 @@ on:
         type: string
         default: ""
 
-      nuget-server:
-        description: "NuGet server to publish to ('nuget' or 'github')"
-        type: string
-        default: nuget
-
-      nuget-username:
-        description: "Username for the NuGet server"
-        type: string
-
       sha:
         description: >-
           Exact git SHA to compute the version from and tag. When triggered automatically via workflow_run, pass
@@ -73,15 +68,13 @@ concurrency:
 
 permissions:
   contents: write
-  packages: write
+  packages: read
   actions: read
 
 env:
   PREPROCESSOR_SYMBOLS: ${{ vars.PREPROCESSOR_SYMBOLS || '' }}
   MINVER_TAG_PREFIX: ${{ vars.MINVER_TAG_PREFIX || 'v' }}
   MINVER_PRERELEASE_ID: ${{ vars.MINVER_PRERELEASE_ID || 'preview.0' }}
-  NUGET_SERVER: ${{ vars.NUGET_SERVER || 'nuget' }}
-  NUGET_USERNAME: ${{ vars.NUGET_USERNAME || '' }}
   VERBOSE: ${{ vars.VERBOSE || false }}
   GH_TOKEN: ${{ github.token }}
   GH_ACTOR: ${{ github.actor }}
@@ -160,8 +153,8 @@ jobs:
           )
           changelog-and-tag.sh "${args[@]}"
 
-  package-and-publish:
-    name: Publish Prerelease Package to NuGet server and/or Save Package Artifacts
+  package:
+    name: Build a Prerelease Package
     if: fromJSON(inputs.package-projects)[0] != null
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -217,7 +210,7 @@ jobs:
 
   collect-artifacts:
     name: Collect package artifact IDs
-    needs: package-and-publish
+    needs: package
     runs-on: ubuntu-latest
     permissions:
       actions: read

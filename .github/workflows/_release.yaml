@@ -3,6 +3,10 @@
 
 name: _release (Reusable workflow)
 
+# This reusable workflow builds the packages but does not publish them:
+# NuGet.org trusted publishing requires the push to happen in the calling
+# (top-level) workflow.
+
 on:
   workflow_call:
     inputs:
@@ -48,7 +52,7 @@ concurrency:
 
 permissions:
   contents: write
-  packages: write
+  packages: read
   actions: read
 
 env:
@@ -139,8 +143,8 @@ jobs:
   # can never satisfy a trust policy scoped to the calling repo's own workflow file. The calling workflow downloads
   # these artifacts and does the actual NuGet login + push itself, where job_workflow_ref correctly matches its own
   # trust policy. See _prerelease.yaml for the same reasoning and shape.
-  package-and-publish:
-    name: Publish Release Package to NuGet server and/or Save Package Artifacts
+  package:
+    name: Build a Stable Package
     if: fromJSON(inputs.package-projects)[0] != null
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -196,7 +200,7 @@ jobs:
 
   collect-artifacts:
     name: Collect package artifact IDs
-    needs: package-and-publish
+    needs: package
     runs-on: ubuntu-latest
     permissions:
       actions: read

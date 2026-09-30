@@ -57,6 +57,7 @@ on:
 
 permissions:
   contents: read # to checkout the code
+  packages: read # to be able to build and restore NuGet packages
   checks: write # to create test result checks
   pull-requests: write # to comment test results on PRs
 
