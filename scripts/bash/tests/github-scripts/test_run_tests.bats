@@ -39,20 +39,29 @@ _run_tests="$_gh_scripts_dir/run-tests.sh"
 _install_fake_dotnet() {
     local _dir="$1/fakebin"
     mkdir -p "$_dir"
-    cat > "$_dir/dotnet" <<'EOF'
+    cat > "$_dir/dotnet" <<EOF
 #!/usr/bin/env bash
-echo "$*" >> "$DOTNET_CALL_LOG"
-case "$1" in
-    nuget)   exit "${FAKE_DOTNET_NUGET_EXIT:-0}" ;;
-    clean)   exit "${FAKE_DOTNET_CLEAN_EXIT:-0}" ;;
-    restore) exit "${FAKE_DOTNET_RESTORE_EXIT:-0}" ;;
+echo "\$*" >> "\$DOTNET_CALL_LOG"
+case "\$1" in
+    nuget)   exit "\${FAKE_DOTNET_NUGET_EXIT:-0}" ;;
+    clean)   exit "\${FAKE_DOTNET_CLEAN_EXIT:-0}" ;;
+    restore) exit "\${FAKE_DOTNET_RESTORE_EXIT:-0}" ;;
     tool)    exit 0 ;;
     build)
         echo "Build succeeded."
-        exit "${FAKE_DOTNET_BUILD_EXIT:-0}"
+        exit "\${FAKE_DOTNET_BUILD_EXIT:-0}"
         ;;
     msbuild)
-        echo "$FAKE_TARGET_PATH"
+        case "\$*" in
+            *-getProperty:ArtifactsPath*)
+                # sanitize_common_dotnet_args' own real-MSBuild ArtifactsPath evaluation
+                # (via get_artifacts_path): a single property value, like -getProperty:TargetPath.
+                echo "$1/artifacts"
+                ;;
+            *)
+                echo "\$FAKE_TARGET_PATH"
+                ;;
+        esac
         exit 0
         ;;
     *) exit 0 ;;

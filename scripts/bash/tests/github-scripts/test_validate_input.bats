@@ -51,7 +51,37 @@ _make_repo_with_project() {
     git -C "$_dir" init --quiet
     git -C "$_dir" config user.email "test@test.local"
     git -C "$_dir" config user.name "test"
-    echo '<Project />' > "$_dir/src/App.csproj"
+    # sanitize_common_dotnet_args() (reached via validate-input.sh) resolves $artifacts through a
+    # real MSBuild evaluation (get_artifacts_path), which requires UseArtifactsOutput=true and a
+    # real SDK-style project -- matching the same fixture shape used in test_dotnet_args.bats and
+    # test_dotnet.bats.
+    cat > "$_dir/Directory.Build.props" <<'EOF'
+<Project>
+  <PropertyGroup>
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+  </PropertyGroup>
+</Project>
+EOF
+    cat > "$_dir/src/App.csproj" <<'EOF'
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+</Project>
+EOF
+    # validate-input.sh auto-detects a project (find . -maxdepth 1 ...) to hand to
+    # sanitize_common_dotnet_args() when $build_projects is empty -- deliberately shallow, to
+    # match build.sh's own auto-detect and fail the same way build.sh would (see the CLAUDE.md
+    # discussion this fixture follows). A top-level project here lets tests whose real focus is
+    # something else (an empty build-projects array, out-of-range warnings, etc.) exercise that
+    # path successfully instead of incidentally hitting "no build projects found."
+    cat > "$_dir/App.csproj" <<'EOF'
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+</Project>
+EOF
     git -C "$_dir" add -A
     git -C "$_dir" commit --quiet -m "init"
 }
@@ -172,6 +202,14 @@ _run_validate_input() {
             builtin command \"\$@\"
         }
         export -f command
+        # is_tool_present() falls back to 'which' when 'command -v -p' fails, so 'which' must be
+        # faked the same way -- otherwise it silently finds the real jq/gh still on \$PATH.
+        which() {
+            if [[ \"\$1\" == 'jq' ]]; then return 1; fi
+            if [[ \"\$1\" == 'gh' ]]; then echo /usr/bin/gh; return 0; fi
+            /usr/bin/which \"\$@\"
+        }
+        export -f which
         cd '$BATS_TEST_TMPDIR/repo' && TEST_PROJECTS='[\"src/App.csproj\"]' bash '$_validate_input' --quiet
     "
     assert_failure
@@ -192,6 +230,14 @@ _run_validate_input() {
             builtin command \"\$@\"
         }
         export -f command
+        # is_tool_present() falls back to 'which' when 'command -v -p' fails, so 'which' must be
+        # faked the same way -- otherwise it silently finds the real jq/gh still on \$PATH.
+        which() {
+            if [[ \"\$1\" == 'jq' ]]; then echo /usr/local/bin/jq; return 0; fi
+            if [[ \"\$1\" == 'gh' ]]; then return 1; fi
+            /usr/bin/which \"\$@\"
+        }
+        export -f which
         cd '$BATS_TEST_TMPDIR/repo' && TEST_PROJECTS='[\"src/App.csproj\"]' bash '$_validate_input' --quiet
     "
     assert_failure

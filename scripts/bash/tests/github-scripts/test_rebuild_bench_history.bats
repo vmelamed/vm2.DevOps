@@ -96,7 +96,9 @@ _run_rebuild_history() {
     assert_output --partial "Dispatching 'RebuildBenchHistory.yaml' for 'acme/vm2.Glob' (repeat=3)"
     assert_output --partial "'acme/vm2.SemVer' has no 'benchmarks/' directory"
     assert_output --partial "dispatched : 2"
-    assert_output --partial "no benchmarks/skipped : 8"
+    # vm2_repositories currently has 11 entries (including vm2.DevOps itself); 2 report
+    # benchmarks/ here, so 9 are expected to be skipped.
+    assert_output --partial "no benchmarks/skipped : 9"
 }
 
 @test "rebuild-bench-history: a custom --workflow is dispatched instead of the default" {

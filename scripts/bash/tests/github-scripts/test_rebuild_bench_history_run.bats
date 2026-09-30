@@ -56,7 +56,24 @@ EOF
 _make_benchmark_project() {
     local _dir="$1" _name="${2:-App}"
     mkdir -p "$_dir/benchmarks/$_name"
-    echo '<Project />' > "$_dir/benchmarks/$_name/$_name.Benchmarks.csproj"
+    # rebuild-bench-history-run.sh resolves $artifacts through a real MSBuild evaluation
+    # (get_artifacts_path), which requires UseArtifactsOutput=true and a real SDK-style project
+    # -- matching the same fixture shape used in test_dotnet_args.bats and test_dotnet.bats. Only
+    # written once per repo dir, since multiple benchmark projects can share one repo root.
+    [[ -f "$_dir/Directory.Build.props" ]] || cat > "$_dir/Directory.Build.props" <<'EOF'
+<Project>
+  <PropertyGroup>
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+  </PropertyGroup>
+</Project>
+EOF
+    cat > "$_dir/benchmarks/$_name/$_name.Benchmarks.csproj" <<'EOF'
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+</Project>
+EOF
 }
 
 # $1 = repo dir, $2 = env-var assignments to prepend, $@ (rest) = CLI arguments. A 20s timeout

@@ -30,17 +30,27 @@ _build="$_gh_scripts_dir/build.sh"
 _install_fake_dotnet() {
     local _dir="$1/fakebin"
     mkdir -p "$_dir"
-    cat > "$_dir/dotnet" <<'EOF'
+    cat > "$_dir/dotnet" <<EOF
 #!/usr/bin/env bash
-echo "$*" >> "$DOTNET_CALL_LOG"
-case "$1" in
-    nuget)   exit "${FAKE_DOTNET_NUGET_EXIT:-0}" ;;
-    clean)   exit "${FAKE_DOTNET_CLEAN_EXIT:-0}" ;;
-    restore) exit "${FAKE_DOTNET_RESTORE_EXIT:-0}" ;;
+echo "\$*" >> "\$DOTNET_CALL_LOG"
+case "\$1" in
+    nuget)   exit "\${FAKE_DOTNET_NUGET_EXIT:-0}" ;;
+    clean)   exit "\${FAKE_DOTNET_CLEAN_EXIT:-0}" ;;
+    restore) exit "\${FAKE_DOTNET_RESTORE_EXIT:-0}" ;;
     build)
         echo "Build succeeded."
-        [[ -n ${FAKE_ARTIFACTS_PATH:-} ]] && echo "ArtifactsPath=$FAKE_ARTIFACTS_PATH"
-        exit "${FAKE_DOTNET_BUILD_EXIT:-0}"
+        [[ -n \${FAKE_ARTIFACTS_PATH:-} ]] && echo "ArtifactsPath=\$FAKE_ARTIFACTS_PATH"
+        exit "\${FAKE_DOTNET_BUILD_EXIT:-0}"
+        ;;
+    msbuild)
+        # sanitize_common_dotnet_args' own real-MSBuild ArtifactsPath evaluation (via
+        # get_artifacts_path): a single property value, matching a real Directory.Build.props
+        # with UseArtifactsOutput=true.
+        case "\$*" in
+            *-getProperty:ArtifactsPath*) echo "$_dir/artifacts" ;;
+            *) exit 0 ;;
+        esac
+        exit "\${FAKE_DOTNET_MSBUILD_EXIT:-0}"
         ;;
     *) exit 0 ;;
 esac
@@ -78,9 +88,10 @@ _run_build() {
     assert_success
 
     run cat "$BATS_TEST_TMPDIR/repo/calls.log"
-    assert_line --index 0 --partial "clean App.csproj"
-    assert_line --index 1 --partial "restore App.csproj"
-    assert_line --index 2 --partial "build App.csproj"
+    # index 0 is the real-MSBuild ArtifactsPath evaluation from sanitize_common_dotnet_args.
+    assert_line --index 1 --partial "clean App.csproj"
+    assert_line --index 2 --partial "restore App.csproj"
+    assert_line --index 3 --partial "build App.csproj"
 }
 
 @test "build: auto-detects the sole project file in the current directory when none is given" {
@@ -90,7 +101,7 @@ _run_build() {
     assert_success
 
     run cat "$BATS_TEST_TMPDIR/repo/calls.log"
-    assert_line --index 0 --partial "clean ./App.csproj"
+    assert_line --index 1 --partial "clean ./App.csproj"
 }
 
 @test "build: \$BUILD_PROJECT provides the project when no positional argument is given" {
@@ -101,7 +112,7 @@ _run_build() {
     assert_success
 
     run cat "$BATS_TEST_TMPDIR/repo/calls.log"
-    assert_line --index 0 --partial "clean Other.csproj"
+    assert_line --index 1 --partial "clean Other.csproj"
 }
 
 @test "build: a positional argument overrides \$BUILD_PROJECT" {
@@ -111,7 +122,7 @@ _run_build() {
     assert_success
 
     run cat "$BATS_TEST_TMPDIR/repo/calls.log"
-    assert_line --index 0 --partial "clean App.csproj"
+    assert_line --index 1 --partial "clean App.csproj"
 }
 
 @test "build: passes common dotnet arguments (e.g. --configuration) through to dotnet" {
@@ -121,8 +132,8 @@ _run_build() {
     assert_success
 
     run cat "$BATS_TEST_TMPDIR/repo/calls.log"
-    assert_line --index 0 --partial "--configuration Release"
-    assert_line --index 2 --partial "--configuration Release"
+    assert_line --index 1 --partial "--configuration Release"
+    assert_line --index 3 --partial "--configuration Release"
 }
 
 @test "build: updates the GitHub NuGet source when credentials are provided" {
@@ -132,15 +143,29 @@ _run_build() {
     assert_success
 
     run cat "$BATS_TEST_TMPDIR/repo/calls.log"
-    assert_line --index 0 --partial "nuget update source github.vm2"
+    assert_line --index 1 --partial "nuget update source github.vm2"
 }
 
-@test "build: warns but still succeeds when no NuGet credentials are provided" {
+@test "build: in CI mode, warns but still succeeds when no NuGet credentials are provided" {
+    # Outside CI, missing credentials are the normal case (a local dev relies on the machine's
+    # global NuGet.Config instead) -- update_nuget_sources_with_github_vm2() only warns when
+    # $ci is true, tracing silently otherwise. See the companion test right below for that path.
+    _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
+    _install_fake_dotnet "$BATS_TEST_TMPDIR/repo"
+    run _run_build "$BATS_TEST_TMPDIR/repo" 'CI=true' App.csproj
+    assert_success
+    assert_output --partial "GitHub NuGet source credentials are not provided"
+
+    run cat "$BATS_TEST_TMPDIR/repo/calls.log"
+    refute_line --partial "nuget update source"
+}
+
+@test "build: locally (non-CI), succeeds silently (no warning) when no NuGet credentials are provided" {
     _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
     _install_fake_dotnet "$BATS_TEST_TMPDIR/repo"
     run _run_build "$BATS_TEST_TMPDIR/repo" '' App.csproj
     assert_success
-    assert_output --partial "GitHub NuGet source credentials are not provided"
+    refute_output --partial "GitHub NuGet source credentials are not provided"
 
     run cat "$BATS_TEST_TMPDIR/repo/calls.log"
     refute_line --partial "nuget update source"
@@ -183,9 +208,13 @@ _run_build() {
     assert_output --partial "Cleaning the build project failed"
 
     run cat "$BATS_TEST_TMPDIR/repo/calls.log"
-    assert_line --index 0 --partial "clean App.csproj"
-    refute_output --partial "restore App.csproj"
-    refute_output --partial "build App.csproj"
+    # index 0 is now the real-MSBuild ArtifactsPath evaluation from sanitize_common_dotnet_args
+    # (reached via get_artifacts_path), which runs before the clean/restore/build sequence.
+    assert_line --index 1 --partial "clean App.csproj"
+    # regex-anchored, not --partial: "msbuild App.csproj" itself contains "build App.csproj" as a
+    # substring, so a plain --partial match on "restore"/"build" would false-positive on it.
+    refute_line --regexp '^restore App\.csproj'
+    refute_line --regexp '^build App\.csproj'
 }
 
 @test "build: reports a failed restore, and does not attempt build" {
@@ -196,7 +225,9 @@ _run_build() {
     assert_output --partial "Restoring the build project failed"
 
     run cat "$BATS_TEST_TMPDIR/repo/calls.log"
-    refute_output --partial "build App.csproj"
+    # regex-anchored, not --partial: "msbuild App.csproj" (from sanitize_common_dotnet_args'
+    # real-MSBuild ArtifactsPath evaluation) itself contains "build App.csproj" as a substring.
+    refute_line --regexp '^build App\.csproj'
 }
 
 @test "build: reports a failed build" {
