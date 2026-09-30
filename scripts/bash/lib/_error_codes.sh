@@ -15,7 +15,7 @@ declare -ri __VM2_LIB_ERROR_CODES_SH_LOADED=1
 
 declare -x bug_prefix
 
-# RETURN CODES THAT MUST NOT BE REUSED FOR OTHER PURPOSES:
+# RETURN CODES THAT SHOULD NOT BE REUSED FOR OTHER PURPOSES:
 declare -xri success=0                  # The command completed successfully.
 declare -xri failure=1                  # A general, unspecified error occurred.
 
@@ -24,6 +24,11 @@ declare -xri positive=0                 # Boolean return codes (truthy), you can
 declare -xri negative=1                 # Boolean return codes (falsy), you cannot use `return false` in bash but you can `return $negative`;
 
 declare -xri eof=1                      # Alias for failure: end-of-file is encountered  (e.g., when using the read command)
+
+# or comparison result constants
+declare -xri rc_equal=0
+declare -xri rc_greater_than=1
+declare -xri rc_less_than=255
 
 # RETURN CODES THAT SHOULD NOT BE REUSED FOR OTHER PURPOSES:
 declare -xri err_invalid_arguments=2    # The number of the arguments is invalid or the validation of one or more parameters failed
@@ -42,8 +47,9 @@ declare -xri err_invalid_item=14        # An item in a collection (e.g. JSON arr
 
 declare -xri err_not_file=16            # Parameter value is not a file
 declare -xri err_not_directory=17       # Parameter value is not a directory
-declare -xri err_invalid_path=18        # Parameter value is not a valid path (e.g., contains invalid characters, is too long, etc.)
-declare -xri err_non_existent_path=19   # Parameter value is a path that does not exist
+declare -xri err_invalid_file=18        # Parameter value is not a valid file or directory name (e.g., contains invalid characters, is too long, etc.)
+declare -xri err_invalid_path=19        # Parameter value is not a valid path (e.g., contains invalid characters, is too long, etc.)
+declare -xri err_non_existent_path=20   # Parameter value is a path that does not exist
 
 declare -xri err_not_overridden=64      # A function that should be overridden in the calling script (e.g. usage_text()) was not overridden
 declare -xri err_tool_not_found=65      # An external tool (e.g., jq, dotnet, etc.) that the script depends on was not found in the system
@@ -63,6 +69,7 @@ declare -xri err_not_current_commit=89  # The specified repository is not on the
 
 declare -xri time_out=128               # The command timed out (e.g., when using the read command)
 
+declare -xri err_unexpected_error=252   # An unexpected error occurred
 declare -xri err_has_errors=253         # There are errors recorded in the global error counter.
 declare -xri err_has_bugs=254           # There are bugs recorded in the global bug counter. Please, fix the problems above and try again. Exiting the script immediately...
 
@@ -88,6 +95,7 @@ declare -rA __error_messages=(
 
     [$err_not_file]="Parameter value is not a file."
     [$err_not_directory]="Parameter value is not a directory."
+    [$err_invalid_file]="Parameter value is not a valid file or directory name (e.g., contains invalid characters, is too long, etc.)"
     [$err_invalid_path]="Parameter value is not a valid path (e.g., contains invalid characters, is too long, etc.)"
     [$err_non_existent_path]="Parameter value is a path that does not exist."
 
@@ -109,6 +117,7 @@ declare -rA __error_messages=(
 
     [$time_out]="The command timed out."
 
+    [$err_unexpected_error]="An unexpected error occurred."
     ["$err_has_errors"]="There are errors recorded in the global error counter."
     ["$err_has_bugs"]="There are bugs recorded in the global bug counter. Please, fix the problems above and try again. Exiting the script immediately..."
     [$err_unknown]="An unknown error occurred."
@@ -134,6 +143,7 @@ declare -rA __error_names=(
 
     [$err_not_file]="\$err_not_file"
     [$err_not_directory]="\$err_not_directory"
+    [$err_invalid_file]="\$err_invalid_file"
     [$err_invalid_path]="\$err_invalid_path"
     [$err_non_existent_path]="\$err_non_existent_path"
 
@@ -155,6 +165,7 @@ declare -rA __error_names=(
 
     [$time_out]="\$time_out"
 
+    [$err_unexpected_error]="\$err_unexpected_error"
     [$err_has_errors]="\$err_has_errors"
     [$err_has_bugs]="\$err_has_bugs"
     [$err_unknown]="\$err_unknown"
@@ -179,17 +190,19 @@ function error_message()
         _rc="$err_invalid_arguments"
         # avoid calling the error function here to prevent recursion in case error_message is called from within error handling
         printf "%s ${FUNCNAME[0]}() requires exactly 1 argument: an error code (provided: $#).\n" "$bug_prefix"
-        show_stack 2 4 true
+        show_stack 2 4
     }
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     [[ ! -v 1 ]] || is_non_negative "$1" || {
         _rc="$err_argument_type"
         # avoid calling the error function here to prevent recursion in case error_message is called from within error handling
         printf "%s ${FUNCNAME[0]}() requires argument 1 to be an error code (0..255) (provided '${1:-<none>}')." "$bug_prefix"
-        show_stack 2 4 true
+        show_stack 2 4
     }
-
-    (( _rc == success )) || { remove_traps; exit "$_rc"; }
+    (( _rc == success )) || {
+        remove_traps;
+        exit "$_rc";
+    }
 
     [[ -v __error_messages[$1] ]] &&
         echo "$1: ${__error_messages[$1]}" ||
@@ -215,16 +228,15 @@ function error_name()
         _rc="$err_invalid_arguments"
         # avoid calling the error function here to prevent recursion in case error_message is called from within error handling
         printf "%s ${FUNCNAME[0]}() requires exactly 1 argument: an error code (provided: $#).\n" "$bug_prefix"
-        show_stack 2 4 true
+        show_stack 2 4
     }
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     [[ ! -v 1 ]] || is_non_negative "$1" || {
         _rc="$err_argument_type"
         # avoid calling the error function here to prevent recursion in case error_message is called from within error handling
         printf "%s ${FUNCNAME[0]}() requires argument 1 to be an error code (0..255) (provided '${1:-<none>}')." "$bug_prefix"
-        show_stack 2 4 true
+        show_stack 2 4
     }
-
     (( _rc == success )) || { remove_traps; exit "$_rc"; }
 
     [[ -v __error_names[$1] ]] &&

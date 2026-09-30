@@ -56,17 +56,6 @@ declare -xr debugger
 declare -xr ci=${CI:-${GITHUB_ACTIONS:-${TF_BUILD:-false}}}
 
 #---------------------------------------------------------------------------------------------
-# @description Checks if the `glow` command-line tool is installed on the system.
-# @default false
-# @type boolean
-#---------------------------------------------------------------------------------------------
-declare -x glow_present=false
-if command -v -p "glow" &> "/dev/null" || which "glow" &>"/dev/null"; then
-    glow_present=true
-fi
-declare -xr glow_present
-
-#---------------------------------------------------------------------------------------------
 # default values for the core state variables
 #---------------------------------------------------------------------------------------------
 declare -xr default_quiet=$ci
@@ -98,8 +87,8 @@ declare __verbose=$default_verbose
 #---------------------------------------------------------------------------------------------
 # @description Tests whether the script is in verbose mode.
 #
-# @exitcode success/positive=0: Verbose mode is on.
-# @exitcode failure/negative=1: Verbose mode is off.
+# @exitcode positive=0: Verbose mode is on.
+# @exitcode negative=1: Verbose mode is off.
 #
 # @example
 #   if is_verbose; then echo "Verbose mode is on"; else echo "Verbose mode is off"; fi
@@ -115,7 +104,7 @@ function is_verbose()
 # Notes:
 #   - Sets the global variable `$verbose` to `true`.
 #
-# @exitcode success/positive=0
+# @exitcode success=0
 #
 # @example
 #   set_verbose  # typically called when --verbose flag is passed
@@ -131,7 +120,7 @@ function set_verbose()
 # Notes:
 #   - Sets the global variable `$verbose` to `false`.
 #
-# @exitcode success/positive=0
+# @exitcode success=0
 #
 # @example
 #   unset_verbose  # typically called explicitly to disable verbose mode, allowing less detailed output
@@ -162,8 +151,8 @@ declare __quiet=$default_quiet
 #---------------------------------------------------------------------------------------------
 # @description Tests whether the script is in quiet mode.
 #
-# @exitcode success/positive=0: Quiet mode is on.
-# @exitcode failure/negative=1: Quiet mode is off.
+# @exitcode positive=0: Quiet mode is on.
+# @exitcode negative=1: Quiet mode is off.
 #
 # @example
 #   if is_quiet; then echo "Quiet mode is on"; else echo "Quiet mode is off"; fi
@@ -179,7 +168,7 @@ function is_quiet()
 # Notes:
 #   - Sets the global variable `$quiet` to `true`.
 #
-# @exitcode success/positive=0
+# @exitcode success=0
 #
 # @example
 #   set_quiet  # typically called when --quiet flag is passed
@@ -195,7 +184,7 @@ function set_quiet()
 # Notes:
 #   - Sets the global variable `$quiet` to `false`.
 #
-# @exitcode success/positive=0
+# @exitcode success=0
 #
 # @example
 #   unset_quiet  # typically called explicitly to disable quiet mode, allowing user prompts
@@ -225,8 +214,8 @@ declare __dry_run=$default_dry_run
 #---------------------------------------------------------------------------------------------
 # @description Tests whether the script is in dry-run mode.
 #
-# @exitcode success/positive=0: Dry-run mode is on.
-# @exitcode failure/negative=1: Dry-run mode is off.
+# @exitcode positive=0: Dry-run mode is on.
+# @exitcode negative=1: Dry-run mode is off.
 #
 # @example
 #   if is_dry_run; then echo "Dry-run mode is on"; else echo "Dry-run mode is off"; fi
@@ -242,7 +231,7 @@ function is_dry_run()
 # Notes:
 #   - Sets the global variable `$dry_run` to `true`.
 #
-# @exitcode success/positive=0
+# @exitcode success=0
 #
 # @example
 #   set_dry_run  # typically called when --dry-run flag is passed
@@ -258,7 +247,7 @@ function set_dry_run()
 # Notes:
 #   - Sets the global variable `$dry_run` to `false`.
 #
-# @exitcode success/positive=0
+# @exitcode success=0
 #
 # @example
 #   unset_dry_run  # typically called explicitly to disable dry-run mode, allowing actual
@@ -296,9 +285,9 @@ declare -x _ignore=$default__ignore
 #   - Redirecting to /dev/stdout is allowed but triggers a warning, since it can corrupt the
 #     output of any command whose stdout is captured or redirected.
 #
-# @arg $1 string file to redirect the ignored output to (optional, default: /dev/stderr)
+# @arg $1 string _file the file to redirect the ignored output to (optional, default: /dev/stderr)
 #
-# @exitcode success/positive=0
+# @exitcode success=0
 #
 # @example
 #   show_ignored_output /dev/stdout
@@ -311,16 +300,18 @@ function show_ignored_output()
 
     (( $# == 0 )) && _ignore=/dev/stderr && return "$success"
 
-    [[ ! $1 =~ ^(/dev/stdout|/dev/fd/1|/proc/self/fd/1)$ ]] ||
+    local _file=$1
+
+    [[ ! $_file =~ ^(/dev/stdout|/dev/fd/1|/proc/self/fd/1)$ ]] ||
         warning "Redirecting ignored output to '/stdout' may lead to unpredictable output results if it is also redirected or captured!"
 
-    _ignore=$1
+    _ignore=$_file
 }
 
 #---------------------------------------------------------------------------------------------
 # @description Restores the ignored output (held in $_ignore) to /dev/null.
 #
-# @exitcode success/positive=0
+# @exitcode success=0
 #---------------------------------------------------------------------------------------------
 function hide_ignored_output()
 {
@@ -345,7 +336,7 @@ function hide_ignored_output()
 #     arguments, therefore it is recommended to use this mode primarily for debugging purposes
 #     on a narrow scope or during specific debugging sessions.
 #
-# @exitcode success/positive=0
+# @exitcode success=0
 #
 # @example
 #   set_trace_enabled  # typically called when --trace flag is passed
@@ -382,8 +373,8 @@ function unset_trace_enabled()
 #---------------------------------------------------------------------------------------------
 # @description Tests whether tracing is enabled in the script.
 #
-# @exitcode success/positive=0: Trace is enabled.
-# @exitcode failure/negative=1: Trace is disabled
+# @exitcode positive=0: Trace is enabled.
+# @exitcode negative=1: Trace is disabled
 #
 # @example
 #   if is_trace_enabled; then echo "Trace is enabled."; else echo "Trace is disabled"; fi
@@ -415,17 +406,16 @@ declare __table_format=$default_table_format
 #
 # @arg $1 nameref The name of the variable to store the current table format in.
 #
-# @exitcode success/positive=0
+# @exitcode success=0
 #
 # @example
 #   get_table_format current_format
 #---------------------------------------------------------------------------------------------
 function get_table_format()
 {
-    (( $# == 1 ))                               || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one parameter ($# provided):" \
-                                                                                    "  - the name of the variable to store the current table format in."
-    [[ ! -v 1 ]] || is_defined_variable "$1"    || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires a declared variable name as its argument: '${1:-<none>}'."
-
+    (( $# == 1 ))                       || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one parameter ($# provided):" \
+                                                                            "  - the name of the variable to store the current table format in."
+    [[ ! -v 1 ]] || is_variable "$1"    || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires a declared variable name as its argument: '${1:-<none>}'."
     exit_if_has_bugs
 
     local -n _ret_format=$1
@@ -440,23 +430,25 @@ function get_table_format()
 #   - The format is matched case-insensitively; on success, sets the global variable
 #     `$table_format` to the lower-cased value.
 #
-# @arg $1 string The desired table format. Must be one of the values in `$table_formats`
-#   ("graphical" or "markdown").
+# @arg $1 string _table_format the desired table format. Must be one of the values in
+#   (`$table_formats`) - ("graphical" or "markdown").
 #
-# @exitcode success/positive=0: The format was valid and `$table_format` was updated.
+# @exitcode success=0: The format was valid and `$table_format` was updated.
 #
 # @example
 #   set_table_format "markdown"
 #---------------------------------------------------------------------------------------------
 function set_table_format()
 {
-    (( $# == 1 ))                                        || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one parameter ($# provided):" \
-                                                                                                "  - the table format, one of ${table_formats[*]}"
-    [[ ! -v 1 ]] || is_in "${1,,}" "${table_formats[@]}" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires its argument to be a valid table format '${1:-<none>}': must be one of ${table_formats[*]}."
+    (( $# == 1 ))                                                || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one parameter ($# provided):" \
+                                                                                                     "  - the table format, one of ${table_formats[*]}"
 
+    local _table_format="${1,,}"
+
+    [[ ! -v 1 ]] || is_in "$_table_format" "${table_formats[@]}" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires its argument to be a valid table format '${1:-<none>}': must be one of ${table_formats[*]}."
     exit_if_has_bugs
 
-    __table_format="${1,,}"
+    __table_format=$_table_format
 }
 
 #=============================================================================================
@@ -477,40 +469,7 @@ declare -xr key_errors="Errors_Count"
 declare -xr key_case_sensitivity="Case_Sensitivity"
 declare -xr key_glob_star="Glob_Star"
 declare -xr key_null_glob="Null_Glob"
-declare -xri state_length=12
-
-#---------------------------------------------------------------------------------------------
-# @description Internal helper used only by `save_state`/`restore_state`, to test whether $1
-#   names an existing associative array variable. `save_state`/`restore_state` must not call
-#   any other library function (other than `bug`/`exit_if_has_bugs`) -- in particular, they
-#   must never call `is_defined_associative_array`, which itself calls `save_state`, causing
-#   unbounded recursion. Uses only raw bash builtins.
-#
-# Notes:
-#   - This function is intended for internal use only.
-#   - It does not rely on any other library functions to avoid recursion issues.
-#   - It uses raw bash builtins to determine if the variable is an associative array.
-#
-# @arg $1 string Name of the variable to test.
-#
-# @exitcode success/positive=0: $1 names an existing associative array.
-# @exitcode failure/negative=1: otherwise.
-#---------------------------------------------------------------------------------------------
-function __is_state_array()
-{
-    local _was_nocasematch=false
-    shopt -q nocasematch && _was_nocasematch=true
-    $_was_nocasematch && shopt -u nocasematch
-
-    local _decl
-    _decl=$(declare -p "$1" 2>"$_ignore")
-    local -i _matched=1
-    [[ $_decl == "declare -A"* ]] && _matched=0
-
-    $_was_nocasematch && shopt -s nocasematch
-
-    return "$_matched"
-}
+declare -xri state_length=13
 
 #---------------------------------------------------------------------------------------------
 # @description Saves the current state of the global flags: quiet, verbose, dry-run,
@@ -532,7 +491,7 @@ function __is_state_array()
 #       `save_state` or by
 #     - reusing it only after it has been restored with `restore_state`
 #
-# @exitcode success/positive=0: State saved successfully.
+# @exitcode success=0: State saved successfully.
 #
 # @example
 #   local -A state
@@ -545,17 +504,15 @@ function __is_state_array()
 # shellcheck disable=SC2004 # $/${} is unnecessary on arithmetic variables.
 function save_state()
 {
-    (( $# == 1 ))                         || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() expects exactly one argument (provided $#):" \
-                                                                               "  - the name of an array variable that will store the saved state"
-    [[ ! -v 1 ]] || __is_state_array "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() expects its argument to be the name of an array variable that will store the saved state (provided '${1:-<none>}')."
-
+    (( $# == 1 ))                             || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() expects exactly one argument (provided $#):" \
+                                                                                  "  - the name of an array variable that will store the saved state"
+    [[ ! -v 1 ]] || is_associative_array "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() expects its argument to be the name of an array variable that will store the saved state (provided '${1:-<none>}')."
     exit_if_has_bugs
 
     local -n __state="$1"
 
     [[ ! -v __state[$key_pid] ]] || (( __state[$key_pid] == 0 ))                    || bug -ec "$err_logic_error" "${FUNCNAME[0]}() must be called with a unused or previously restored state."
     [[ ! -v __state[$key_subshell_pid] ]] || (( __state[$key_subshell_pid] == -1 )) || bug -ec "$err_logic_error" "${FUNCNAME[0]}() must be called with a unused or previously restored state."
-
     exit_if_has_bugs
 
     local _current_table_format
@@ -590,7 +547,7 @@ function save_state()
 # @arg $1 nameref `__state` name of the associative array variable previously populated by
 #   `save_state`.
 #
-# @exitcode success/positive=0: State restored successfully.
+# @exitcode success=0: State restored successfully.
 #
 # @example
 #   restore_state state  # typically called at the end of dump_vars
@@ -601,10 +558,9 @@ function restore_state()
 {
     local -i _rc=$success
 
-    (( $# == 1 ))                         || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() expects exactly one argument:" \
-                                                                                "  - the name of an array variable that will store the saved state"
-    [[ ! -v 1 ]] || __is_state_array "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() expects its argument to be the name of an associative array variable where 'save_state' has stored the global state (provided '${1:-<none>}')."
-
+    (( $# == 1 ))                             || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() expects exactly one argument:" \
+                                                                                  "  - the name of an array variable that will store the saved state"
+    [[ ! -v 1 ]] || is_associative_array "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() expects its argument to be the name of an associative array variable where 'save_state' has stored the global state (provided '${1:-<none>}')."
     exit_if_has_bugs
 
     # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
@@ -613,8 +569,7 @@ function restore_state()
     (( ${#__state[@]} >= state_length )) &&
     [[ -v __state[$key_pid] ]]           && (( __state[$key_pid] == BASHPID )) &&
     [[ -v __state[$key_subshell_pid] ]]  && (( __state[$key_subshell_pid] == ${BASH_SUBSHELL:-0} )) ||
-        bug -ec "$err_logic_error" "${FUNCNAME[0]}() must be called with a state previously stored by the function 'save_state' in this shell (and this sub-shell)."
-
+                                                 bug -ec "$err_logic_error" "${FUNCNAME[0]}() must be called with a state that was stored by 'save_state()' in this shell/sub-shell."
     exit_if_has_bugs
 
     __state[$key_pid]=0
@@ -632,41 +587,12 @@ function restore_state()
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Sets whether case sensitivity should be enabled or disabled.
-#
-# @arg $1 bool Whether case sensitivity should be enabled (`true`) or disabled (`false`).
-#
-# @exitcode success/positive=0
-#
-# @example
-#   local -A state
-#   save_state state
-#   set_case_sensitive true
-#   ...
-#   restore_state state
-#---------------------------------------------------------------------------------------------
-function set_case_sensitive()
-{
-    (( $# == 1 ))                            || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() expects exactly one argument:" \
-                                                                                  "  - a boolean value indicating whether case sensitivity should be enabled"
-    [[ ! -v 1 ]] || is_boolean "$1"          || bug -ec "$err_argument_type" "${FUNCNAME[0]}() expects the first argument to be a boolean value"
-    exit_if_has_bugs
-
-    local _case_sensitive=$1
-
-    if $_case_sensitive; then
-        shopt -u nocasematch || true
-    else
-        shopt -s nocasematch || true
-    fi
-}
-
-#---------------------------------------------------------------------------------------------
 # @description Sets whether the globstar option should be enabled or disabled.
 #
-# @arg $1 bool Whether the globstar option should be enabled (`true`) or disabled (`false`).
+# @arg $1 bool _enable Whether the globstar option should be enabled (`true`) or disabled
+#   (`false`).
 #
-# @exitcode success/positive=0
+# @exitcode success=0
 #
 # @example
 #   local -A state
@@ -677,9 +603,9 @@ function set_case_sensitive()
 #---------------------------------------------------------------------------------------------
 function set_glob_star()
 {
-    (( $# == 1 ))                            || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() expects exactly one argument:" \
-                                                                                  "  - a boolean value indicating whether the globstar option should be enabled"
-    [[ ! -v 1 ]] || is_boolean "$1"          || bug -ec "$err_argument_type" "${FUNCNAME[0]}() expects the first argument to be a boolean value"
+    (( $# == 1 ))                   || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() expects exactly one argument:" \
+                                                                         "  - a boolean value indicating whether the globstar option should be enabled"
+    [[ ! -v 1 ]] || is_boolean "$1" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() expects the first argument to be a boolean value"
     exit_if_has_bugs
 
     local _enable=$1
@@ -694,9 +620,10 @@ function set_glob_star()
 #---------------------------------------------------------------------------------------------
 # @description Sets whether the nullglob option should be enabled or disabled.
 #
-# @arg $1 bool Whether the nullglob option should be enabled (`true`) or disabled (`false`).
+# @arg $1 bool _enable Whether the nullglob option should be enabled (`true`) or disabled
+#   (`false`).
 #
-# @exitcode success/positive=0
+# @exitcode success=0
 #
 # @example
 #   local -A state
@@ -708,7 +635,7 @@ function set_glob_star()
 function set_null_glob()
 {
     (( $# == 1 ))                            || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() expects exactly one argument:" \
-                                                                                  "  - a boolean value indicating whether the nullglob option should be enabled"
+                                                                                 "  - a boolean value indicating whether the nullglob option should be enabled"
     [[ ! -v 1 ]] || is_boolean "$1"          || bug -ec "$err_argument_type" "${FUNCNAME[0]}() expects the first argument to be a boolean value"
     exit_if_has_bugs
 

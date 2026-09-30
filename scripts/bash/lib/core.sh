@@ -35,9 +35,9 @@ declare -xr lib_dir
 source "$lib_dir/_constants.sh"
 source "$lib_dir/_core_state.sh"
 source "$lib_dir/_error_codes.sh"
+source "$lib_dir/_predicates.sh"
 source "$lib_dir/_diagnostics.sh"
 source "$lib_dir/_args.sh"
-source "$lib_dir/_predicates.sh"
 source "$lib_dir/_semver.sh"
 source "$lib_dir/_sanitize.sh"
 source "$lib_dir/_dump_vars.sh"
@@ -69,46 +69,6 @@ if $ci; then
     set +x
 fi
 
-# get_devops_parent cache
-declare __devops_parent=''
-
-#---------------------------------------------------------------------------------------------
-# @description Returns the parent directory of the vm2.DevOps repository, which is expected to
-#   be the parent of ALL vm2.* projects, because, the vm2.DevOps repository should be cloned
-#   into the same parent directory as the other vm2.* repositories. This directory is often
-#   referred to as $VM2_REPOS, and is used by scripts that operate on multiple vm2.*
-#   repositories.
-#
-# Notes:
-#   - The function caches the result in a private variable to avoid repeated computation.
-#   - If the script is not located in a Git repository, or if the repository is in a detached
-#     HEAD state, the function will exit with an error.
-#
-# @stdout The absolute path of the parent directory of the vm2.DevOps repository.
-# @example
-#   parent_dir=$(get_devops_parent)
-#---------------------------------------------------------------------------------------------
-function get_devops_parent()
-{
-    if [[ -z $__devops_parent ]]; then
-        local _r
-
-        # shellcheck disable=SC2015
-        root_working_tree "$lib_dir" _r &&
-            __devops_parent=$(dirname "$_r" 2> "$_ignore") || {
-                bug -ec "$err_logic_error" "Failed to resolve the parent directory of the vm2.DevOps repo from the script directory '$lib_dir'." \
-                                           "Please ensure that the script is located in '$VM2_REPOS/vm2.DevOps/scripts/bash/lib' and" \
-                                           "that the repository is not in a detached HEAD state."
-                exit_if_has_bugs
-            }
-
-        # freeze it!
-        readonly __devops_parent
-    fi
-
-    echo "$__devops_parent"
-}
-
 declare -xr explicit_exit_regex='^(exit([[:space:]]+.*)?|source[[:space:]]+.*)$'
 
 #---------------------------------------------------------------------------------------------
@@ -125,11 +85,11 @@ declare -xr explicit_exit_regex='^(exit([[:space:]]+.*)?|source[[:space:]]+.*)$'
 #---------------------------------------------------------------------------------------------
 function on_exit()
 {
-    local _ec=$?
+    local -i _ec=$?
 
     set +x
     if (( _ec != "$success" )) && [[ ! ${BASH_COMMAND:-} =~ $explicit_exit_regex ]]; then
-        printf "❌  EXIT: the command '%s' failed with exit code %d\n" "${BASH_COMMAND:-<unknown>}" "$_ec" >&2
+        printf "$error_em  EXIT: the command '%s' failed with exit code %d\n" "${BASH_COMMAND:-<unknown>}" "$_ec" >&2
     fi
 
     cd "$initial_cwd" 2>/dev/null || true
@@ -151,12 +111,13 @@ function on_err()
     local -i _rc=$?
 
     {
-        echo "❌ ON ERROR post-mortem:"
-        echo "  - exit code: $_rc;"
-        echo "  - command:   '$BASH_COMMAND';"
-        echo "  - stack:"
-        show_stack 2 12 true
+        printf "$error_em  ON ERROR post-mortem:
+        - exit code: %s
+        - command:   '%s'
+        - call stack:\n" "$_rc" "$BASH_COMMAND"
+        show_stack 2 12
     } >&2
+
     return "$_rc"
 }
 
@@ -231,6 +192,12 @@ function execute()
 #   - If $3 is a valid boolean ('true' or 'false') it is consumed as the "ignore output" flag:
 #     when 'true', the command's `stdout` is redirected to `$_ignore` instead of the terminal.
 #     If $3 is not a boolean, it is treated as the start of the command to execute.
+#   - Consequence of the above: a command whose own name is literally 'true' or 'false' can never
+#     be retried -- it is always consumed as the output-suppression flag instead, leaving no
+#     command and causing an argument-count bug-exit. This is accepted, not a bug to fix: nothing
+#     sane would ever retry the literal command 'true' (always succeeds, retrying is pointless) or
+#     'false' (always fails identically, so every retry is wasted). If a real command ever needs
+#     that exact name, wrap it (`bash -c true`) to sidestep the ambiguity.
 #
 # @arg $1 int max_attempts - maximum number of attempts
 # @arg $2 int delay - delay in seconds between retries
@@ -327,7 +294,8 @@ function list_of_files()
     set_glob_star true
     set_null_glob true
 
-    local _list=("$1")
+    # shellcheck disable=SC2206 # intentionally unquoted: this glob-expands $1 into matching files
+    local _list=($1)
 
     printf "%s" "${_list[*]}"
 

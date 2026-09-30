@@ -17,8 +17,12 @@ declare -xri err_argument_type
 declare -xri err_invalid_nameref
 declare -xri err_invalid_arguments
 declare -xri err_missing_argument
+declare -xri err_unexpected_error
 
 declare -xr secret_str
+declare -xr space_ch
+declare -xr error_em
+
 declare -xr default_table_format
 
 # shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
@@ -35,7 +39,7 @@ declare -A graphical=(
     ["bot_mid_header"]="╟──────────────────────────────────────────┬──────────────────────────────────────────────────────────────────────────────────\n"
 
     ["fmt_left_value"]="║ %-40s │ %-80s\n"
-    ["fmt_ind__value"]="║   %-38s │   %-78s\n"
+    ["fmt_ind__value"]="║ $space_ch$space_ch%-38s │ $space_ch$space_ch%-78s\n"
 
     ["blank_dsh_line"]="╟──────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────\n"
     ["blank_spc_line"]="║                                          │                                                                                  \n"
@@ -56,7 +60,7 @@ declare -A markdown=(
     ["bot_mid_header"]="|──────────────────────────────────────────|──────────────────────────────────────────────────────────────────────────────────|\n"
 
     ["fmt_left_value"]="| %-40s | %-80s |\n"
-    ["fmt_ind__value"]="|   %-38s |   %-78s |\n"
+    ["fmt_ind__value"]="| $space_ch$space_ch%-38s | $space_ch$space_ch%-78s |\n"
 
     ["blank_dsh_line"]="|──────────────────────────────────────────|──────────────────────────────────────────────────────────────────────────────────|\n"
     ["blank_spc_line"]="|                                          |                                                                                  |\n"
@@ -107,15 +111,14 @@ declare -xra dump_common_dotnet_args=(
 function _write_title()
 {
     (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 argument (provided $#) - the table header text."
-
     exit_if_has_bugs
 
-    local _current_table_name=''
-    get_table_format _current_table_name
-    local -n _current_table=$_current_table_name
+    local _current_table_format_name=''
+    get_table_format _current_table_format_name
+    local -n _current_table_format=$_current_table_format_name
 
     # shellcheck disable=SC2059 # Don't use variables in the printf format string. Use printf "..%s.." "$foo".
-    printf "${_current_table["fmt_top_header"]}" "$1"
+    printf "${_current_table_format["fmt_top_header"]}" "$1"
 }
 
 #---------------------------------------------------------------------------------------------
@@ -127,10 +130,11 @@ function _write_title()
 #   - Internal helper used by `dump_vars`. Do not call directly — its signature and behavior
 #     may change without notice.
 #
-# @arg $1 nameref to the variable to display.
-# @arg $2 bool if true, prints the value of the `$secret_str` instead of the actual value
-# @arg $3 string name to display instead of the variable name. Optional if not provided, the
-#   variable's actual name is used.
+# @arg $1 nameref _name the name of the variable to display.
+# @arg $2 bool _is_secret if true, prints the value of the `$secret_str` instead of the
+#   actual value
+# @arg $3 string _name the name to display instead of the variable name. Optional if not
+#   provided, the variable's actual name - $1 is used.
 #
 # @exitcode success/positive=0
 #
@@ -147,30 +151,29 @@ function _write_line()
     local -i _rc="$success"
     local _has_name=false
 
-    (( $# == 2 || $# == 3 ))                                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires two or three arguments (provided $#):" \
-                                                                                                    "  - nameref to the variable to display" \
-                                                                                                    "  - bool, if true, masks the value with the \$secret_str placeholder instead of printing it." \
-                                                                                                    "  - string, optional name to display instead of the variable name."
+    (( $# == 2 || $# == 3 ))                            || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires two or three arguments (provided $#):" \
+                                                                                            "  - nameref to the variable to display" \
+                                                                                            "  - bool, if true, masks the value with the \$secret_str placeholder instead of printing it." \
+                                                                                            "  - string, optional name to display instead of the variable name."
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-    [[ ! -v 3 || -z $3 ]]           || _has_name=true
-    [[ ! -v 1 ]] || $_has_name      || is_variable_name "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be a valid variable name (provided '${1:-<none>}')."
-    [[ ! -v 2 ]] || is_boolean "$2"                          || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 2, the secret-masking flag, to be 'true' or 'false' (provided '${2:-<none>}')."
-
+    (( $# < 3 ))               || _has_name=true
+    [[ ! -v 1 ]] || $_has_name || is_variable_name "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be a valid variable name (provided '${1:-<none>}')."
+    [[ ! -v 2 ]] || is_boolean "$2"                     || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 2, the secret-masking flag, to be 'true' or 'false' (provided '${2:-<none>}')."
     exit_if_has_bugs
 
-    local _current_table_name=''
-    get_table_format _current_table_name
-    local -n _current_table=$_current_table_name
+    local _current_table_format_name=''
+    get_table_format _current_table_format_name
+    local -n _current_table_format=$_current_table_format_name
 
     local _format _format_i
-    _format=${_current_table["fmt_left_value"]}
-    _format_i=${_current_table["fmt_ind__value"]}
+    _format=${_current_table_format["fmt_left_value"]}
+    _format_i=${_current_table_format["fmt_ind__value"]}
 
     local _name=${3:-$1}
     local _value
     local _is_secret=$2
 
-    if is_defined_associative_array "$1"; then
+    if is_associative_array "$1"; then
         local -n _var=$1
         printf "$_format" "$_name" "${#_var[@]} entries:"
         local _key
@@ -178,7 +181,7 @@ function _write_line()
             printf "$_format_i" "$_key" "${_var[$_key]}"
         done
 
-    elif is_defined_indexed_array "$1"; then
+    elif is_indexed_array "$1"; then
         local -n _var=$1
         printf "$_format" "$_name" "${#_var[@]} items:"
         local -i _i
@@ -186,10 +189,10 @@ function _write_line()
             printf "$_format_i" "[$_i]:" "${_var[_i]}"
         done
 
-    elif is_defined_function "$1"; then
+    elif is_function "$1"; then
         printf "$_format" "$_name" "$1()"
 
-    elif is_defined_variable "$1"; then
+    elif is_variable "$1"; then
         local -n _var=$1
         [[ $_is_secret == true && -n  $_var ]] && _value="$secret_str" || _value="$_var"
         printf "$_format" "$_name" "$_value"
@@ -198,7 +201,7 @@ function _write_line()
         printf "$_format" "$_name" "$1"
 
     else
-        printf "$_format" "$_name" '❌  '"$_name"' is unbound, undefined, or invalid'
+        printf "$_format" "$_name" "$error_em  unbound, undefined, or invalid variable"
     fi
 }
 
@@ -212,8 +215,8 @@ function _write_line()
 #     -h, --header <text>   Display the header text and the table's dividing horizontal lines
 #                           Pass the top header text first — subsequent -h/--header
 #                           occurrences are treated as mid headers
-#     -n, --name            The next entry specifies a display name for the following value,
-#                           instead of the name of the variable
+#     -n, --name            The next entry specifies a display name for the following
+#                           variable, instead of its name
 #     -m, --markdown        Render the table in markdown format instead of the current format
 #     -g, --graphical       Render the table in graphical format instead of the current format
 #     -b, --blank           Display a blank line in the table
@@ -282,12 +285,12 @@ function dump_vars()
                 (( $# > 0 )) && {
                     _name=$1
                     shift
-                 } || _name="❌  missing name"
+                } || _name="$error_em  missing name"
                 ;;
 
             -h|--header )
                 _curr_is_header=true
-                _header_text="❌  The text of the header is missing"
+                _header_text="$error_em  The text of the header is missing"
                 (( $# > 0 )) && _header_text=$1 && shift
                 $_top &&
                     printf "${_current_table["fmt_top_header"]}" "$_header_text" ||
@@ -348,9 +351,7 @@ function dump_vars()
         fi
         _next_is_header=false
     done
-
     printf "${_current_table["bot_bot_header"]}";
-    sync
 
     press_any_key
     restore_state _core_state

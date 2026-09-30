@@ -22,8 +22,74 @@ declare -xri err_invalid_arguments
 declare -xri err_argument_type
 declare -xri err_argument_value
 declare -xri err_invalid_nameref
+declare -xri err_invalid_path
 
 declare -x _ignore
+
+#---------------------------------------------------------------------------------------------
+# @description Checks if the shell is case-sensitive.
+#
+# @exitcode positive=0: The shell is case-sensitive.
+# @exitcode negative=1: The shell is case-insensitive.
+#---------------------------------------------------------------------------------------------
+function is_case_sensitive()
+{
+    shopt -q nocasematch && return "$negative" || return "$positive"
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Sets the shell to case-insensitive mode.
+#---------------------------------------------------------------------------------------------
+function set_case_insensitive()
+{
+    shopt -s nocasematch || true
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Sets the shell to case-sensitive mode.
+#---------------------------------------------------------------------------------------------
+function set_case_sensitive()
+{
+    shopt -u nocasematch || true
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Sets the shell's match case sensitivity option based on the provided argument.
+#   Returns the previous state of the case sensitivity.
+#
+# @arg $1 boolean _new_case_sensitive - the desired new state for the shell's case sensitivity
+#   (true for case-sensitive mode, false - for case-insensitive). Optional, default is true.
+#
+# @exitcode positive=0: previously the shell matching was case sensitive
+# @exitcode negative=1: previously the shell matching was case insensitive
+#
+# @example
+#
+#   # Set the shell nocasematch option to off and save the previous state in _old_case_sensitive
+#   declare _old_case_sensitive
+#   set_case_sensitivity && _old_case_sensitive=true || _old_case_sensitive=false
+#
+#   # Restore the previous state of the nocasematch option.
+#   set_case_sensitivity "$_old_case_sensitive"
+#---------------------------------------------------------------------------------------------
+function set_case_sensitivity()
+{
+    (( $# <= 1 ))                   || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires at most one argument (provided $#): the desired new state for the shell's case sensitivity."
+    [[ ! -v 1 ]] || is_boolean "$1" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires a boolean argument (provided '$1'): the desired new state for the shell's case sensitivity."
+    exit_if_has_bugs
+
+    local _new_case_sensitive=${1:-true}
+    local _old_case_sensitive
+
+    is_case_sensitive && _old_case_sensitive=true || _old_case_sensitive=false
+
+    if [[ $_new_case_sensitive != "$_old_case_sensitive" ]]; then
+        # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
+        $_new_case_sensitive && set_case_sensitive || set_case_insensitive
+    fi
+
+    $_old_case_sensitive && return "$positive" || return "$negative"
+}
 
 declare -xr varNameRegex="^[A-Za-z_][A-Za-z0-9_]*$"
 #---------------------------------------------------------------------------------------------
@@ -40,7 +106,6 @@ declare -xr varNameRegex="^[A-Za-z_][A-Za-z0-9_]*$"
 function is_variable_name()
 {
     (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the variable to test."
-
     exit_if_has_bugs
 
     [[ $1 =~ $varNameRegex ]]
@@ -55,12 +120,11 @@ function is_variable_name()
 # @exitcode failure/negative=1: otherwise
 #
 # @example
-#   if is_defined_variable MY_VAR; then echo "MY_VAR is defined"; fi
+#   if is_variable MY_VAR; then echo "MY_VAR is defined"; fi
 #---------------------------------------------------------------------------------------------
-function is_defined_variable()
+function is_variable()
 {
     (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the variable to test."
-
     exit_if_has_bugs
 
     is_variable_name "$1" && declare -p "$1" &> "$_ignore"
@@ -76,23 +140,18 @@ function is_defined_variable()
 #
 # @example
 #   declare -a MY_ARRAY=(aaa bbb ccc)
-#   if is_defined_indexed_array MY_ARRAY; then echo "MY_ARRAY is defined"; fi
+#   if is_indexed_array MY_ARRAY; then echo "MY_ARRAY is defined"; fi
 #---------------------------------------------------------------------------------------------
-function is_defined_indexed_array()
+function is_indexed_array()
 {
     (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the indexed array variable to test."
-
     exit_if_has_bugs
 
     is_variable_name "$1" ||
         return "$negative"
 
-    # Toggle nocasematch directly (not via save_state/set_case_sensitive/restore_state): those
-    # predicates must stay independent of save_state, which itself depends on this file's
-    # is_defined_associative_array -- calling it back here would recurse indefinitely.
-    local _was_nocasematch=false
-    shopt -q nocasematch && _was_nocasematch=true
-    $_was_nocasematch && shopt -u nocasematch
+    declare _old_case_sensitive
+    set_case_sensitivity true && _old_case_sensitive=true || _old_case_sensitive=false
 
     local -i _rc="$positive"
     local _decl
@@ -101,7 +160,8 @@ function is_defined_indexed_array()
     [[ $_decl =~ ^declare\ -a ]] ||
         _rc="$negative"
 
-    $_was_nocasematch && shopt -s nocasematch
+    # Restore the previous state of the nocasematch option.
+    set_case_sensitivity "$_old_case_sensitive"
 
     return "$_rc"
 }
@@ -116,23 +176,18 @@ function is_defined_indexed_array()
 #
 # @example
 #   declare -A MY_ARRAY=([aaa]=aaa [bbb]=bbb [ccc]=ccc)
-#   if is_defined_associative_array MY_ARRAY; then echo "MY_ARRAY is defined"; fi
+#   if is_associative_array MY_ARRAY; then echo "MY_ARRAY is defined"; fi
 #---------------------------------------------------------------------------------------------
-function is_defined_associative_array()
+function is_associative_array()
 {
     (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the indexed array variable to test."
-
     exit_if_has_bugs
 
     is_variable_name "$1" ||
         return "$negative"
 
-    # Toggle nocasematch directly (not via save_state/set_case_sensitive/restore_state): those
-    # predicates must stay independent of save_state, which itself depends on this function --
-    # calling it back here would recurse indefinitely.
-    local _was_nocasematch=false
-    shopt -q nocasematch && _was_nocasematch=true
-    $_was_nocasematch && shopt -u nocasematch
+    declare _old_case_sensitive
+    set_case_sensitivity true && _old_case_sensitive=true || _old_case_sensitive=false
 
     local -i _rc="$positive"
     local _decl
@@ -141,7 +196,8 @@ function is_defined_associative_array()
     [[ $_decl =~ ^declare\ -A ]] ||
         _rc="$negative"
 
-    $_was_nocasematch && shopt -s nocasematch
+    # Restore the previous state of the nocasematch option.
+    set_case_sensitivity "$_old_case_sensitive"
 
     return "$_rc"
 }
@@ -157,24 +213,19 @@ function is_defined_associative_array()
 # @example
 #   declare -A MY_ASSOC_ARRAY=([aaa]=aaa [bbb]=bbb [ccc]=ccc)
 #   declare -a MY_INDEXED_ARRAY=(aaa bbb ccc)
-#   if is_defined_array MY_ASSOC_ARRAY; then echo "MY_ASSOC_ARRAY is defined"; fi
-#   if is_defined_array MY_INDEXED_ARRAY; then echo "MY_INDEXED_ARRAY is defined"; fi
+#   if is_array MY_ASSOC_ARRAY; then echo "MY_ASSOC_ARRAY is defined"; fi
+#   if is_array MY_INDEXED_ARRAY; then echo "MY_INDEXED_ARRAY is defined"; fi
 #---------------------------------------------------------------------------------------------
-function is_defined_array()
+function is_array()
 {
     (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the array variable to test."
-
     exit_if_has_bugs
 
     is_variable_name "$1" ||
         return "$negative"
 
-    # Toggle nocasematch directly (not via save_state/set_case_sensitive/restore_state): those
-    # predicates must stay independent of save_state, which itself depends on
-    # is_defined_associative_array -- calling it back here would recurse indefinitely.
-    local _was_nocasematch=false
-    shopt -q nocasematch && _was_nocasematch=true
-    $_was_nocasematch || shopt -s nocasematch # ensure case-insensitive for this check (-a or -A)
+    declare _old_case_sensitive
+    set_case_sensitivity false && _old_case_sensitive=true || _old_case_sensitive=false
 
     local -i _rc="$positive"
     local _decl
@@ -183,7 +234,8 @@ function is_defined_array()
     [[ $_decl =~ ^declare\ -a ]] || # -a or -A case insensitive!
         _rc="$negative"
 
-    $_was_nocasematch || shopt -u nocasematch
+    # Restore the previous state of the nocasematch option.
+    set_case_sensitivity "$_old_case_sensitive"
 
     return "$_rc"
 }
@@ -197,14 +249,13 @@ function is_defined_array()
 # @exitcode failure/negative=1: otherwise
 #
 # @example
-#   if is_array_empty MY_ARRAY; then echo "MY_ARRAY is empty"; fi
+#   if is_empty_array MY_ARRAY; then echo "MY_ARRAY is empty"; fi
 #---------------------------------------------------------------------------------------------
-function is_array_empty()
+function is_empty_array()
 {
 
-    (( $# == 1 ))         || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the array variable to test."
-    is_defined_array "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be the name of an indexed or an associative array variable (provided '${1:-<none>}')."
-
+    (( $# == 1 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the array variable to test."
+    [[ ! -v 1 ]] || is_array "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be the name of an indexed or an associative array variable (provided '${1:-<none>}')."
     exit_if_has_bugs
 
     local -n _array="$1"
@@ -221,12 +272,11 @@ function is_array_empty()
 # @exitcode failure/negative=1: otherwise
 #
 # @example
-#   if is_defined_function MY_FUNC; then echo "MY_FUNC is defined"; fi
+#   if is_function MY_FUNC; then echo "MY_FUNC is defined"; fi
 #---------------------------------------------------------------------------------------------
-function is_defined_function()
+function is_function()
 {
     (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name to test."
-
     exit_if_has_bugs
 
     is_variable_name "$1" ||
@@ -247,10 +297,7 @@ function is_defined_function()
 #---------------------------------------------------------------------------------------------
 function __test_with_regex()
 {
-    local -i _rc="$positive"
-
     (( $# == 2 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[1]}() requires exactly one argument (provided $(($#-1))): the value to test."
-
     exit_if_has_bugs
 
     [[  $1 =~ $2 ]]
@@ -284,8 +331,8 @@ declare -xr base64_regex="^($base64_char_rex{4})*($base64_char_rex{3}=|$base64_c
 #
 # @arg $1 string boolean - string to test
 #
-# @exitcode success/positive=0: the string is either 'true', or 'false'
-# @exitcode failure/negative=1: otherwise
+# @exitcode positive=0: the string is either 'true', or 'false'
+# @exitcode negative=1: otherwise
 #
 # @example
 #   if is_boolean "$flag"; then echo "flag is valid"; fi
@@ -301,8 +348,8 @@ function is_boolean()
 #
 # @arg $1 string number - string to test
 #
-# @exitcode success/positive=0: the string is a natural number
-# @exitcode failure/negative=1: otherwise
+# @exitcode positive=0: the string is a natural number
+# @exitcode negative=1: otherwise
 #
 # @example
 #   if is_natural "$apples"; then echo "apples is valid"; fi
@@ -318,8 +365,8 @@ function is_natural()
 #
 # @arg $1 string number - string to test
 #
-# @exitcode success/positive=0: the string is a non-negative integer
-# @exitcode failure/negative=1: otherwise
+# @exitcode positive=0: the string is a non-negative integer
+# @exitcode negative=1: otherwise
 #
 # @example
 #   if is_non_negative "$index"; then echo "Index is valid"; fi
@@ -334,8 +381,8 @@ function is_non_negative()
 #
 # @arg $1 string number - string to test
 #
-# @exitcode success/positive=0: the string is a valid exit code number
-# @exitcode failure/negative=1: otherwise
+# @exitcode positive=0: the string is a valid exit code number
+# @exitcode negative=1: otherwise
 #
 # @example
 #   if is_natural "$apples"; then echo "apples is valid"; fi
@@ -351,8 +398,8 @@ function is_exit_code()
 #
 # @arg $1 string number - string to test
 #
-# @exitcode success/positive=0: the string is a positive integer
-# @exitcode failure/negative=1: otherwise
+# @exitcode positive=0: the string is a positive integer
+# @exitcode negative=1: otherwise
 #
 # @example
 #   if is_positive "$count"; then echo "Count is positive"; fi
@@ -368,8 +415,8 @@ function is_positive()
 #
 # @arg $1 string number - string to test
 #
-# @exitcode success/positive=0: the string is a non-positive integer
-# @exitcode failure/negative=1: otherwise
+# @exitcode positive=0: the string is a non-positive integer
+# @exitcode negative=1: otherwise
 #
 # @example
 #   if is_non_positive "$delta"; then echo "Delta is non-positive"; fi
@@ -384,8 +431,8 @@ function is_non_positive()
 #
 # @arg $1 string number - string to test
 #
-# @exitcode success/positive=0: the string is a negative integer
-# @exitcode failure/negative=1: otherwise
+# @exitcode positive=0: the string is a negative integer
+# @exitcode negative=1: otherwise
 #
 # @example
 #   if is_negative "$offset"; then echo "Offset is negative"; fi
@@ -401,8 +448,8 @@ function is_negative()
 #
 # @arg $1 string number - string to test
 #
-# @exitcode success/positive=0: the string is an integer
-# @exitcode failure/negative=1: otherwise
+# @exitcode positive=0: the string is an integer
+# @exitcode negative=1: otherwise
 #
 # @example
 #   if is_integer "$value"; then echo "Value is an integer"; fi
@@ -423,8 +470,8 @@ function is_integer()
 #
 # @arg $1 string number - string to test
 #
-# @exitcode success/positive=0: the string matches the decimal-number pattern
-# @exitcode failure/negative=1: otherwise
+# @exitcode positive=0: the string matches the decimal-number pattern
+# @exitcode negative=1: otherwise
 #
 # @example
 #   if is_decimal "$price"; then echo "Price is valid"; fi
@@ -439,8 +486,8 @@ function is_decimal()
 #
 # @arg $1 string value - the value to test
 #
-# @exitcode success/positive=0: the value is a valid Base64 encoded string
-# @exitcode failure/negative=1: the value is not a valid Base64 encoded string
+# @exitcode positive=0: the value is a valid Base64 encoded string
+# @exitcode negative=1: the value is not a valid Base64 encoded string
 #
 # @example
 #   if is_base64 "$encoded_string"; then echo "Valid Base64"; fi
@@ -456,8 +503,8 @@ function is_base64()
 # @arg $1 string value - value to search for
 # @arg $@ string options - zero or more valid options to compare against
 #
-# @exitcode success/positive=0: the value was found among the options
-# @exitcode failure/negative=1: otherwise
+# @exitcode positive=0: the value was found among the options
+# @exitcode negative=1: otherwise
 #
 # @example
 #   if is_in "$color" "red" "green" "blue"; then echo "Valid color"; fi
@@ -467,7 +514,6 @@ function is_in()
     (( $# > 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires more than 1 arguments:" \
                                                         "  - the value to test" \
                                                         "  - options to compare against"
-
     exit_if_has_bugs
 
     local _sought="$1"; shift
@@ -494,8 +540,8 @@ declare -xr __is_windows
 #
 # @noargs
 #
-# @exitcode success/positive=0: running on Windows
-# @exitcode failure/negative=1: otherwise
+# @exitcode positive=0: running on Windows
+# @exitcode negative=1: otherwise
 #
 # @example
 #   if is_windows; then echo "Running on Windows"; fi
@@ -511,8 +557,8 @@ function is_windows()
 #
 # @arg $1 string name - the filename to test
 #
-# @exitcode success/positive=0: the filename is valid
-# @exitcode failure/negative=1: otherwise
+# @exitcode positive=0: the filename is valid
+# @exitcode negative=1: otherwise
 #
 # @example
 #   if is_valid_filename "$filename"; then echo "Valid filename"; fi
@@ -520,7 +566,6 @@ function is_windows()
 function is_valid_filename()
 {
     (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
-
     exit_if_has_bugs
 
     [[ -n $1 && $1 != */* && $1 != . && $1 != .. ]]
@@ -531,8 +576,8 @@ function is_valid_filename()
 #
 # @arg $1 string name - the path to test
 #
-# @exitcode success/positive=0: the path is valid
-# @exitcode failure/negative=1: otherwise
+# @exitcode positive=0: the path is valid
+# @exitcode negative=1: otherwise
 #
 # @example
 #   if is_valid_path "$path"; then echo "Valid path"; fi
@@ -540,7 +585,6 @@ function is_valid_filename()
 function is_valid_path()
 {
     (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
-
     exit_if_has_bugs
 
     pathchk -- "$1" &> "$_ignore"
@@ -552,13 +596,12 @@ function is_valid_path()
 #
 # @arg $1 string Candidate secret value to validate.
 #
-# @exitcode success/positive=0: The value contains no control characters.
-# @exitcode failure/negative=1: otherwise
+# @exitcode positive=0: The value contains no control characters.
+# @exitcode negative=1: otherwise
 #---------------------------------------------------------------------------------------------
 function is_valid_secret()
 {
     (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the secret value to validate."
-
     exit_if_has_bugs
 
     [[ -n $1 && ! $1 =~ [[:cntrl:]] ]]
@@ -567,4 +610,53 @@ function is_valid_secret()
 function is_valid_dotnet_version()
 {
     __test_with_regex "$@" "$dotnet_version_regex"
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Checks if a given tool is available..
+#
+# @arg $1 string Name of the tool to check.
+#
+# @exitcode positive=0: The tool is present.
+# @exitcode non-zero: The tool is not present.
+#---------------------------------------------------------------------------------------------
+function is_tool_present()
+{
+    (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#): the name of the tool to check"
+    exit_if_has_bugs
+
+    command -v -p "$1" &>"$_ignore" || which "$1" &>"$_ignore"
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Checks if a given string is valid JSON.
+#
+# @arg $1 string The JSON string to validate.
+#
+# @exitcode positive=0: The string is valid JSON.
+# @exitcode negative=1: The string is not valid JSON.
+#---------------------------------------------------------------------------------------------
+function is_valid_json()
+{
+    (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the JSON string to validate."
+    exit_if_has_bugs
+
+    jq empty <<< "$1" &> "$_ignore" && return "$positive" || return "$negative"
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Checks if a given file is valid JSON.
+#
+# @arg $1 string The JSON string to validate.
+#
+# @exitcode positive=0: The string is valid JSON.
+# @exitcode negative=1: The string is not valid JSON.
+#---------------------------------------------------------------------------------------------
+function is_valid_json_file()
+{
+    (( $# == 1 ))                      || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the JSON string to validate."
+    [[ ! -v 1 ]] || is_valid_path "$1" || bug -ec "$err_invalid_path" "${FUNCNAME[0]}() requires argument 1 to be a valid path (provided '${1:-<none>}')."
+    exit_if_has_bugs
+
+    jq empty "$1" &> "$_ignore" && return "$positive" || return "$negative"
 }

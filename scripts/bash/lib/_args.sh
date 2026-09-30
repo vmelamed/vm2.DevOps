@@ -50,8 +50,8 @@ declare usage_requested=""
 #
 # @arg $1 string The command-line argument to process.
 #
-# @exitcode success/positive=0: The argument was a common argument and was processed.
-# @exitcode failure/negative=1: The argument was not a common argument.
+# @exitcode positive=0: The argument was a common argument and was processed.
+# @exitcode negative=1: The argument was not a common argument.
 #
 # @example
 #   for arg in "$@"; do
@@ -62,7 +62,6 @@ declare usage_requested=""
 function get_common_arg()
 {
     (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one parameter ($# provided): the command-line argument to process"
-
     exit_if_has_bugs
 
     # the calling scripts should not use any of the common arguments options:
@@ -88,7 +87,7 @@ function get_common_arg()
 #
 # @noargs
 #
-# @exitcode success/positive=0: No usage was requested; execution continues normally.
+# @exitcode success=0: No usage was requested; execution continues normally.
 #
 # @example
 #   usage_if_requested
@@ -96,9 +95,9 @@ function get_common_arg()
 function usage_if_requested()
 {
     case "$usage_requested" in
-        short ) usage false;;
-        long  ) usage true;;
-        *     ) return 0;;
+        short ) usage false ;;
+        long  ) usage true ;;
+        *     ) return "$success" ;;
     esac
 }
 
@@ -116,11 +115,11 @@ function usage_if_requested()
 #     tracing state before exiting, so the usage text itself is never polluted by trace
 #     output.
 #
-# @arg $1 bool Whether to display the long (`true`) or the short (`false`) version of the
-#   usage text. The long version includes the common flags like verbose, quiet, etc.
+# @arg $1 bool _long_usage whether to display the long (`true`) or the short (`false`) version
+#   of the usage text. The long version includes the common flags like verbose, quiet, etc.
 #   Optional, default: `false`.
-# @arg $2 int The exit code to use when exiting. Optional, non-negative integer less than 256.
-#   Default: 0, or 1 if error messages are present (see @exitcode below).
+# @arg $2 int _exit_code the exit code to use when exiting. Optional, non-negative integer
+#   less than 256. Default: 0, or 1 if error messages are present (see @exitcode below).
 # @arg $@ strings Additional error message parts to display at the top of the output.
 #   Optional, if omitted, no message is shown. Supports the same named parameters as
 #    `message`/`error`:
@@ -130,8 +129,8 @@ function usage_if_requested()
 #     - `--stack-depth`/`-sd` followed by an integer -- how many stack frames to show
 #       (default: 1). If given more than once, only the last occurrence is used.
 #
-# @exitcode success/positive=0: No error messages were given, and $2 was omitted or 0.
-# @exitcode failure/negative=1: Error messages were given and $2 was omitted or 0 (the exit
+# @exitcode success=0: No error messages were given, and $2 was omitted or 0.
+# @exitcode failure=1: Error messages were given and $2 was omitted or 0 (the exit
 #   code is forced to $failure).
 # @exitcode N The exit code from $2, if it is a positive value (whether or not error messages
 #   are present).
@@ -145,10 +144,16 @@ function usage_if_requested()
 function usage()
 {
     local _long_usage=false
-    (( $# > 0 )) && is_boolean "$1" && _long_usage=$1 && shift
+    (( $# > 0 )) &&
+        is_boolean "$1" &&
+        _long_usage=$1 &&
+        shift
 
     local -i _exit_code=$success
-    (( $# > 0 )) && is_non_negative "$1" && _exit_code=$1 && shift
+    (( $# > 0 )) &&
+        is_non_negative "$1" &&
+        _exit_code=$1 &&
+        shift
 
     # the remaining arguments are error messages to display at the top of the usage text
     (( $# > 0 && _exit_code == success )) && _exit_code=$failure
@@ -205,17 +210,17 @@ Common environment variables:
 #   placeholder -- override it in each top-level script to show script-specific usage
 #   information.
 #
-# @arg $1 bool Whether to display the long (`true`) or short (`false`) version of the usage
-#   text. The long version includes the standard flags like verbose, quiet, etc. Optional,
-#   default: `false`.
+# @arg $1 bool _long_text whether to display the long (`true`) or short (`false`) version of
+#   the usage text. The long version includes the standard flags like verbose, quiet, etc.
+#   Optional, default: `false`.
 #
 # @stdout string The usage text (a placeholder message telling the script author to override
 #   this function, plus the common switches/environment variables section when $1 is `true`).
 #---------------------------------------------------------------------------------------------
 function usage_text()
 {
-    (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
-    is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1:-<none>})."
+    (( $# ==1 ))                    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
+    [[ ! -v 1 ]] || is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1:-<none>})."
     exit_if_has_bugs
 
     local _long_text=$1

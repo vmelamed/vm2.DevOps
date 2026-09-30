@@ -116,13 +116,24 @@ function print_semver_regexes()
 #---------------------------------------------------------------------------------------------
 function validate_semverTagComponents()
 {
-    (( $# == 1 || $# == 2 ))                                || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one or two arguments (provided $#):" \
-                                                                                                "  - the SemVer tag prefix used by MinVer" \
-                                                                                                "  - default prerelease identifier template, optional"
-    [[ ! -v 1 || $1 =~ $minverTagPrefixRegex ]]             || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the MinVer tag prefix, to match '$minverTagPrefixRegex' (provided '${1:-<none>}'). Did you pass a variable name instead of its value?"
-    [[ ! -v 2 || -z $2 || $2 =~ $minverPrereleaseIdRegex ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires optional argument 2, the MinVer prerelease identifier template, to match '$minverPrereleaseIdRegex' (provided '${2:-<none>}'). Did you pass a variable name instead of its value?"
-
+    (( $# == 1 || $# == 2 ))                      || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one or two arguments (provided $#):" \
+                                                                                      "  - the SemVer tag prefix used by MinVer" \
+                                                                                      "  - default prerelease identifier template, optional"
     exit_if_has_bugs
+
+    local -i _rc=$success
+
+    [[ $1 =~ $minverTagPrefixRegex ]]             || {
+        _rc=$err_argument_value
+        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the MinVer tag prefix, to match '$minverTagPrefixRegex' (provided '${1:-<none>}')."
+    }
+
+    [[ -z ${2:-} || $2 =~ $minverPrereleaseIdRegex ]] || {
+        _rc=$err_argument_value
+        error -ec "$_rc" "${FUNCNAME[0]}() requires optional argument 2, the MinVer prerelease identifier template, to match '$minverPrereleaseIdRegex' (provided '${2:-<none>}'). Did you pass a variable name instead of its value?"
+    }
+
+    return "$_rc"
 }
 
 # semver components indexes in BASH_REMATCH
@@ -141,9 +152,9 @@ declare -xri err_argument_type
 declare -xri err_argument_value
 
 # comparison result constants
-declare -xri rc_equal=$success
-declare -xri rc_greater_than=1
-declare -xri rc_less_than=255
+declare -xri rc_equal
+declare -xri rc_greater_than
+declare -xri rc_less_than
 
 #---------------------------------------------------------------------------------------------
 # @description Compares two semantic versions according to the Semantic
@@ -155,9 +166,10 @@ declare -xri rc_less_than=255
 # @arg $1 string The first semantic version to compare.
 # @arg $2 string The second semantic version to compare.
 #
-# @exitcode rc_equal=0/success: version1 == version2.
-# @exitcode rc_greater_than=1/failure: version1 > version2.
+# @exitcode rc_equal=0: version1 == version2.
+# @exitcode rc_greater_than=1: version1 > version2.
 # @exitcode rc_less_than=255: version1 < version2.
+# @exitcode err_argument_value=4: one of the provided arguments is not a valid Semantic Versioning 2.0.0 string.
 #
 # @example
 #   compare_semver "1.2.3" "1.2.4"
@@ -173,14 +185,21 @@ function compare_semver()
     (( $# == 2 ))                      || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
                                                                             "  - the first semantic versions to compare" \
                                                                             "  - second semantic versions to compare"
-    [[ ! -v 1 || $1 =~ $semverRegex ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a valid Semantic Versioning 2.0.0 string (provided '${1:-<none>}')."
-    [[ ! -v 2 || $2 =~ $semverRegex ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2 to be a valid Semantic Versioning 2.0.0 string (provided '${2:-<none>}')."
-
     exit_if_has_bugs
 
-    if [[ "$1" == "$2" ]]; then
-        return "$rc_equal"
-    fi
+    local -i _rc="$success"
+
+    [[ $1 =~ $semverRegex ]] || {
+        _rc=$err_argument_value
+        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a valid Semantic Versioning 2.0.0 string (provided '${1:-<none>}')."
+    }
+    [[ $2 =~ $semverRegex ]] || {
+        _rc=$err_argument_value
+        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 2 to be a valid Semantic Versioning 2.0.0 string (provided '${2:-<none>}')."
+    }
+    (( _rc != success )) && return "$_rc"
+
+    [[ $1 != "$2" ]] ||  return "$rc_equal"
 
     [[ "$1" =~ $semverRegex ]]
     local -i _major1=${BASH_REMATCH[$semver_major]}
@@ -301,12 +320,10 @@ function semver_equal()
     compare_semver "$@" || _rc=$?
 
     if (( _rc == rc_equal )); then
-        return "$success"
+        return "$positive"
     elif (( _rc == rc_greater_than || _rc == rc_less_than )); then
-        return "$failure"
+        return "$negative"
     else
-        # Unreachable in practice: compare_semver() exits the process (via bug/exit_if_has_bugs)
-        # on invalid input rather than returning an error code to us.
         return "$_rc"
     fi
 }
@@ -330,12 +347,10 @@ function semver_greaterThan()
     compare_semver "$@" || _rc=$?
 
     if (( _rc == rc_greater_than )); then
-        return "$success"
+        return "$positive"
     elif (( _rc == rc_equal || _rc == rc_less_than )); then
-        return "$failure"
+        return "$negative"
     else
-        # Unreachable in practice: compare_semver() exits the process (via bug/exit_if_has_bugs)
-        # on invalid input rather than returning an error code to us.
         return "$_rc"
     fi
 }
@@ -360,12 +375,10 @@ function semver_greaterThanOrEqual()
     compare_semver "$@" || _rc=$?
 
     if (( _rc == rc_equal || _rc == rc_greater_than )); then
-        return "$success"
+        return "$positive"
     elif (( _rc == rc_less_than )); then
-        return "$failure"
+        return "$negative"
     else
-        # Unreachable in practice: compare_semver() exits the process (via bug/exit_if_has_bugs)
-        # on invalid input rather than returning an error code to us.
         return "$_rc"
     fi
 }
@@ -389,12 +402,10 @@ function semver_lessThan()
     compare_semver "$@" || _rc=$?
 
     if (( _rc == rc_less_than )); then
-        return "$success"
+        return "$positive"
     elif (( _rc == rc_equal || _rc == rc_greater_than )); then
-        return "$failure"
+        return "$negative"
     else
-        # Unreachable in practice: compare_semver() exits the process (via bug/exit_if_has_bugs)
-        # on invalid input rather than returning an error code to us.
         return "$_rc"
     fi
 }
@@ -418,12 +429,10 @@ function semver_lessThanOrEqual()
     compare_semver "$@" || _rc=$?
 
     if (( _rc == rc_equal || _rc == rc_less_than )); then
-        return "$success"
+        return "$positive"
     elif (( _rc == rc_greater_than )); then
-        return "$failure"
+        return "$negative"
     else
-        # Unreachable in practice: compare_semver() exits the process (via bug/exit_if_has_bugs)
-        # on invalid input rather than returning an error code to us.
         return "$_rc"
     fi
 }

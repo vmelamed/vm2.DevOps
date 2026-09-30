@@ -106,9 +106,8 @@ declare -xra common_dotnet_args_to_output=(
 function get_common_dotnet_arg()
 {
     (( $# == 2 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires two arguments ($# provided):" \
-                                                        "  - the command-line option identifier" \
-                                                        "  - the command-line option value"
-
+                                                      "  - the command-line option identifier" \
+                                                      "  - the command-line option value"
     exit_if_has_bugs
 
     # Accept $2 unconditionally, even empty -- this function only recognizes option NAMES and
@@ -158,12 +157,13 @@ function get_common_dotnet_arg()
 #---------------------------------------------------------------------------------------------
 function sanitize_common_dotnet_args()
 {
-    local -i _validation_rc="$success"
+    local -i _rc="$success"
 
     (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument ($# provided):" \
-                                                        "  - a path to a project file (build, test, etc.)"
-
+                                                      "  - a path to a project file (build, test, etc.)"
     exit_if_has_bugs
+
+    local -i _rc=$success
 
     validate_preprocessor_symbols preprocessor_symbols                        || true
     validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
@@ -172,19 +172,19 @@ function sanitize_common_dotnet_args()
         is_safe_input "$gh_nuget_username"                                    || true
         if [[ -n $gh_nuget_username ]]; then
             [[ -v gh_nuget_password && -n $gh_nuget_password ]] || {
-                _validation_rc=$err_argument_value
-                error -ec "$_validation_rc" "If the GitHub username is present, then the GitHub password also must be present and not empty."
+                _rc=$err_argument_value
+                error -ec "$_rc" "If the GitHub username is present, then the GitHub password also must be present and not empty."
             }
         else
             [[ ! -v gh_nuget_password || -z $gh_nuget_password ]] || {
-                _validation_rc=$err_argument_value
-                error -ec "$_validation_rc" "If the GitHub username is not present or empty, then the GitHub password also must be either not present or empty."
+                _rc=$err_argument_value
+                error -ec "$_rc" "If the GitHub username is not present or empty, then the GitHub password also must be either not present or empty."
             }
         fi
     } || {
         [[ ! -v gh_nuget_password || -z $gh_nuget_password ]] || {
-            _validation_rc=$err_argument_value
-            error -ec "$_validation_rc" "If the GitHub username is not present or empty, then the GitHub password also must be either not present or empty."
+            _rc=$err_argument_value
+            error -ec "$_rc" "If the GitHub username is not present or empty, then the GitHub password also must be either not present or empty."
         }
     }
 
@@ -218,7 +218,7 @@ function sanitize_common_dotnet_args()
     readonly runtime
     readonly artifacts
 
-    return "$_validation_rc"
+    return "$_rc"
 }
 
 #---------------------------------------------------------------------------------------------

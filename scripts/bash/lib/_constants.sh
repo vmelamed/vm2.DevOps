@@ -37,6 +37,7 @@ declare -r __VM2_LIB_CONSTANTS_SH_LOADED=1
 #   dependencies on it from the other projects.
 #---------------------------------------------------------------------------------------------
 declare -xra vm2_repositories=(
+    "vm2.DevOps"
     "vm2.TestUtilities"
     "vm2.Templates"
     "vm2.Ulid"
@@ -48,6 +49,13 @@ declare -xra vm2_repositories=(
     "vm2.Abstractions"
     "vm2.Repository"
 )
+
+#---------------------------------------------------------------------------------------------
+# @description Specifies the default path to the parent directory of all vm2 repositories.
+#   Usually $VM2_REPOS is set to "$HOME/repos/vm2" but it might be different on other systems
+#   or environments (e.g. in CI/CD pipelines, other developers' machines, etc.).
+#---------------------------------------------------------------------------------------------
+declare -xr default_vm2_repos_path="$HOME/repos/vm2"
 
 #---------------------------------------------------------------------------------------------
 # @description Specifies the name of the `vm2.DevOps` repository
@@ -157,6 +165,8 @@ declare -xr left_arrow_ch='←'
 declare -xr right_arrow_ch='→'
 declare -xr up_arrow_ch='↑'
 declare -xr down_arrow_ch='↓'
+declare -xr space_ch=$'\xe2\x80\x82' # markdown does not collapse this space (EN SPACE, U+2002 -- \xHH bytes, not \u2002: the \u escape is locale-dependent and breaks under a POSIX/C locale, e.g. under bats or minimal CI images)
+
 # emojis
 declare -xr mask_em='🔒'
 declare -xr key_em='🔑'
@@ -176,23 +186,22 @@ declare -xr left_arrow_em='⬅️'
 declare -xr right_arrow_em='➡️'
 declare -xr up_arrow_em='⬆️'
 declare -xr down_arrow_em='⬇️'
+declare -xr trace_em='🐾'
 
 if [[ -t 1 ]]; then
-    declare -xr bold='\033[1m'
-    declare -xr reset='\033[0m'
-
-    declare -xr red='\033[0;31m'
-    declare -xr green='\033[0;32m'
-    declare -xr yellow='\033[1;33m'
-    declare -xr blue='\033[0;34m'
-    declare -xr bold_red='\033[1;31m'
-    declare -xr bold_green='\033[1;32m'
-    declare -xr bold_yellow='\033[1;33m'
-    declare -xr bold_blue='\033[1;34m'
-    declare -xr nc='\033[0m' # no color (reset)
+    declare -xr reset=$'\033[0m'
+    declare -xr bold=$'\033[1m'
+    declare -xr red=$'\033[0;31m'
+    declare -xr green=$'\033[0;32m'
+    declare -xr yellow=$'\033[1;33m'
+    declare -xr blue=$'\033[0;34m'
+    declare -xr bold_red=$'\033[1;31m'
+    declare -xr bold_green=$'\033[1;32m'
+    declare -xr bold_yellow=$'\033[1;33m'
+    declare -xr bold_blue=$'\033[1;34m'
 else
-    declare -xr bold=''
     declare -xr reset=''
+    declare -xr bold=''
     declare -xr red=''
     declare -xr green=''
     declare -xr yellow=''
@@ -201,5 +210,4 @@ else
     declare -xr bold_green=''
     declare -xr bold_yellow=''
     declare -xr bold_blue=''
-    declare -xr nc='' # no color (reset)
 fi

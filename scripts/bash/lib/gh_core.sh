@@ -121,29 +121,6 @@ function to_output()
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Determines the appropriate command to use for summary output based on the
-#   environment: outside CI, when `glow` is present, it uses `glow` for pretty printing of
-#   markdown. Otherwise (in CI, or when `glow` is absent), it uses `to_stdout`. Changes the
-#   behavior of `to_summary` without overriding it.
-#
-# Notes: consider this variable an implementation detail and never use directly. Instead
-#   redirect output to `to_summary` function
-#---------------------------------------------------------------------------------------------
-declare -xr glow_present
-declare -a __summary_output
-
-if ! $ci && $glow_present 2>&1; then
-    # redirect summary markdown to glow for pretty printing on the console
-    # there is no $GITHUB_STEP_SUMMARY in local runs
-    __summary_output=(glow -w 168)
-else
-    # redirect summary markdown to `to_stdout` (the GitHub Actions logs or the terminal output
-    # if not redirected externally) AND to the GitHub Actions step summary if present or
-    # /dev/null
-    __summary_output=(to_stdout)
-fi
-
-#---------------------------------------------------------------------------------------------
 # @description Escapes a value for safe inclusion in a GitHub Actions workflow command
 #   (`::notice::`, `::warning::`, `::error::`, etc.), per GitHub's own documented workflow
 #   command escaping: `%` -> `%25`, CR -> `%0D`, LF -> `%0A` (in that order, so a literal `%`
@@ -205,7 +182,7 @@ function args_to_github_output()
     local -i _argument_number=1
     for _var in "$@"; do
         is_variable_name "$_var" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument $_argument_number to be a valid variable name (provided '${_var-<none>}')."
-        (( _argument_number++ ))
+        (( ++_argument_number ))
     done
 
     exit_if_has_bugs
