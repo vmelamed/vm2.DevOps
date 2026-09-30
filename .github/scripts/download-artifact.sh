@@ -15,6 +15,8 @@ declare -xr lib_dir
 # shellcheck disable=SC1091 # Not following
 source "$lib_dir/gh_core.sh"
 
+declare -xr check_em
+
 declare -xri err_missing_argument
 declare -xri err_argument_type
 declare -xri err_tool_not_found
@@ -90,7 +92,7 @@ declare -x GITHUB_STEP_SUMMARY=${GITHUB_STEP_SUMMARY:-/dev/stdout}
 declare -x _ignore
 
 # install GitHub CLI and jq if not already installed
-if ! command -v -p jq &> "$_ignore" || ! command -v -p gh &> "$_ignore"; then
+if ! is_tool_present jq || ! is_tool_present jq ; then
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     execute sudo apt-get update && sudo apt-get install -y gh jq ||
         exit_with_error -ec "$err_tool_not_found" "GitHub CLI 'gh' and/or 'jq' were not found and could not install them. Please have 'gh' and 'jq' installed."
@@ -166,7 +168,7 @@ E.g. re-run the benchmarks with --force-new-baseline or vars.FORCE_NEW_BASELINE"
                                 --name "$artifact_name" \
                                 --dir "$artifacts") ||
         exit_with_error -ec "$err_tool_error" "Error while downloading '$artifact_name': $http_error"
-    info "✅ The artifact '$artifact_name' successfully downloaded to directory '$artifacts'." >> "$GITHUB_STEP_SUMMARY"
+    info "$check_em The artifact '$artifact_name' successfully downloaded to directory '$artifacts'." >> "$GITHUB_STEP_SUMMARY"
     exit 0
 done
 

@@ -20,7 +20,6 @@ source "$lib_dir/gh_core.sh"
 # Declare variables defined in the core library.
 declare -xr ci
 declare -x _ignore
-declare -xr glow_present
 
 # Declare error codes defined in the core library
 declare -xri success
@@ -63,10 +62,8 @@ test_project=${test_project:-"${TEST_PROJECT:-}"}
 is_safe_existing_file "$test_project"        || true
 [[ $test_project == *.csproj ]]              || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)."
 is_safe_min_coverage_pct "$min_coverage_pct" || true
-
-exit_if_has_errors
-
 sanitize_common_dotnet_args "$test_project"  || true
+exit_if_has_errors
 
 # other script specific variables
 # Derive the branch-coverage threshold from the line-coverage threshold, unless the caller
@@ -231,7 +228,7 @@ execute reportgenerator \
     minimumCoverageThresholds:methodCoverage="$min_method_coverage_pct" || rc=$?
 
 if [[ -s "$coverage_reports_dir/Summary.txt" ]]; then
-    if $glow_present; then
+    if is_tool_present glow; then
         glow -w 150 "$coverage_reports_dir/SummaryGithub.md"
     else
         cat "$coverage_reports_dir/Summary.txt"

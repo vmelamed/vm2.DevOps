@@ -16,6 +16,8 @@ declare -xr lib_dir
 # shellcheck disable=SC1091 # Not following
 source "$lib_dir/gh_core.sh"
 
+declare -xr check_em
+
 # Declare error codes defined in the core library
 declare -xri success
 declare -xri err_tool_error
@@ -86,7 +88,7 @@ declare package_output_path="${_pack_properties[PackageOutputPath]}"
 args_to_github_output package_output_path
 
 {
-    echo "### ✅ Packages Built Successfully"
+    echo "### $check_em Packages Built Successfully"
     echo ""
     echo "| Packages             |                                                       |"
     echo "|:---------------------|:------------------------------------------------------|"

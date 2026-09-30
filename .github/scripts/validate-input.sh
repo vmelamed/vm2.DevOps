@@ -16,6 +16,8 @@ declare -xr lib_dir
 # shellcheck disable=SC1091 # Not following
 source "$lib_dir/gh_core.sh"
 
+declare -xr check_em
+
 # Error code constants (defined in _error_codes.sh, re-declared here so ShellCheck sees them in scope)
 declare -xri err_argument_value
 declare -xri err_tool_not_found
@@ -73,7 +75,7 @@ get_arguments "$@"
 ! is_verbose || dump_args "--force"
 
 # Check for required dependencies (jq and gh) and attempt to install them if not found
-if ! command -v -p jq &> "$_ignore"; then
+if ! is_tool_present jq; then
     if execute sudo apt-get update && sudo apt-get install -y jq; then
         info "GitHub CLI 'jq' successfully installed."
     else
@@ -89,7 +91,7 @@ else
         }
     }
 fi
-if ! command -v -p gh &> "$_ignore"; then
+if ! is_tool_present gh; then
     if execute sudo apt-get update && sudo apt-get install -y gh; then
         info "GitHub CLI 'gh' successfully installed."
     else
@@ -130,7 +132,26 @@ is_safe_boolean "$skip_build"                                                   
 is_safe_boolean "$skip_tests"                                                                                    || true
 is_safe_boolean "$skip_benchmarks"                                                                               || true
 is_safe_boolean "$skip_packages"                                                                                 || true
-sanitize_common_dotnet_args "$(jq -r '.[0] // "."' <<< "$build_projects")"                                       || true
+
+declare _build_projects=$build_projects
+declare -i _build_projects_len
+
+_build_projects_len=$(jq 'length // 0' <<< "$_build_projects")
+
+if (( _build_projects_len == 0 )); then
+    declare _first
+    _first=$(find . -maxdepth 1 -type f \( -name "*.slnx" -o -name "*.sln" -o -name "*.csproj" \) | head -n 1)
+    if [[ -n $_first ]]; then
+        _build_projects="[\"$_first\"]"
+        _build_projects_len=1
+    else
+        error -ec "$err_argument_value" "No build projects specified and none found in the current directory."
+    fi
+fi
+
+if (( _build_projects_len > 0 )); then
+    sanitize_common_dotnet_args "$(jq -r '.[0] // "."' <<< "$_build_projects")"                                  || true
+fi
 
 declare _table_fmt
 $ci && _table_fmt="--markdown" || _table_fmt="--graphical"
@@ -165,9 +186,9 @@ declare -ra dump_vars_args=(
 )
 
 dump_vars "${dump_vars_args[@]}" | to_summary
-
 exit_if_has_errors
-info "✅ All parameters validated successfully"
+
+info "$check_em All parameters validated successfully"
 
 # Output all variables to GITHUB_OUTPUT for use in subsequent jobs
 args_to_github_output \

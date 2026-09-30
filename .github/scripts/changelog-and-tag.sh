@@ -15,6 +15,8 @@ declare -xr lib_dir
 # shellcheck disable=SC1091 # Not following
 source "$lib_dir/gh_core.sh"
 
+declare -xr check_em
+
 declare -xri err_argument_value
 declare -xri err_not_found
 
@@ -76,7 +78,7 @@ fi
 if [[ "$needs_empty_commit" == true ]]; then
     execute git commit --allow-empty -m "chore: promote to stable $tag [skip ci]"
     execute git push
-    info "✅ Empty commit created to advance HEAD past prerelease tag"
+    info "$check_em Empty commit created to advance HEAD past prerelease tag"
 fi
 
 # ============================================================================
@@ -132,7 +134,7 @@ else
         execute git add CHANGELOG.md
         execute git commit -m "chore: update changelog for $tag [skip ci]"
         execute git push --force-with-lease
-        info "✅ CHANGELOG updated and pushed"
+        info "$check_em CHANGELOG updated and pushed"
     else
         warning "No changelog changes to commit"
     fi
@@ -152,4 +154,4 @@ execute git tag -a "$tag" -m "$tag_message" -m "Reason: $reason" ||
 
 execute git push origin "$tag"
 
-info "✅ Tag $tag created and pushed"
+info "$check_em Tag $tag created and pushed"

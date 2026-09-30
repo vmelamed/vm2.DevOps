@@ -55,7 +55,7 @@ if [[ -n "$benchmark_project" ]]; then
 elif [[ -d benchmarks ]]; then
     readarray -t benchmark_projects < <(
         find benchmarks \
-            -type d \( -name bin -o -name obj -o -name BenchmarkDotNet.Artifacts \) -prune \
+            -type d \( -name bin -o -name obj -o -name .git -o -name BenchmarkDotNet.Artifacts \) -prune \
             -o -name '*.csproj' -print | sort)
 fi
 (( ${#benchmark_projects[@]} > 0 )) || error -ec "$err_argument_value" "No benchmark projects found under 'benchmarks/' and none specified."
@@ -78,6 +78,7 @@ exit_if_has_errors
 declare artifacts
 
 get_artifacts_path "${benchmark_projects[0]}" artifacts
+exit_if_has_errors
 
 artifacts_benchmarks_dir=$artifacts/benchmarks
 results_dir="$artifacts_benchmarks_dir/results"

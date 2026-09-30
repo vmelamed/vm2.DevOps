@@ -18,6 +18,8 @@ declare -xr lib_dir
 # shellcheck disable=SC1091 # Not following
 source "$lib_dir/gh_core.sh"
 
+declare -xr check_em
+
 declare -xri err_argument_value
 declare -x _ignore
 
@@ -111,4 +113,4 @@ if (( bad > 0 )); then
     exit "$err_argument_value"
 fi
 
-info "✅ All commit messages follow Conventional Commits format"
+info "$check_em All commit messages follow Conventional Commits format"

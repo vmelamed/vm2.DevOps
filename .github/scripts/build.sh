@@ -54,7 +54,6 @@ if [[ -z $build_project ]]; then
 fi
 is_safe_valid_path "$build_project"
 sanitize_common_dotnet_args "$build_project"
-
 exit_if_has_errors
 
 # freeze the parameters

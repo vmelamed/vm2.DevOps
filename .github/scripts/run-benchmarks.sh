@@ -17,6 +17,8 @@ declare -xr lib_dir
 source "$lib_dir/gh_core.sh"
 
 # Declare variables defined in the core library.
+declare -xr check_em
+
 declare -xr ci
 declare -x _ignore
 
@@ -162,7 +164,7 @@ json_files=("$results_dir"/*-report-full-compressed.json)
 
 trace "Benchmark tests completed successfully. Found JSON benchmark results."
 {
-    echo "✅ Benchmark tests completed successfully. Generated benchmark results:"
+    echo "$check_em Benchmark tests completed successfully. Generated benchmark results:"
     for file in "${json_files[@]}"; do
         echo "   - $(basename "$file")"
     done
