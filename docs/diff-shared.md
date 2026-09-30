@@ -7,6 +7,7 @@
   - [Assumptions](#assumptions)
   - [Diff and Merge Tools](#diff-and-merge-tools)
   - [Actions](#actions)
+    - [Shared Blocks: Syncing Part of a File](#shared-blocks-syncing-part-of-a-file)
     - [Configuring Actions in the Global Configuration File `diff-shared.config.json`](#configuring-actions-in-the-global-configuration-file-diff-sharedconfigjson)
     - [Customizing Actions with the Repository-Specific Configuration File `diff-shared.custom.json`](#customizing-actions-with-the-repository-specific-configuration-file-diff-sharedcustomjson)
   - [CLI Parameters](#cli-parameters)
@@ -130,7 +131,7 @@ The tools can be customized in the `diff` and `merge` sections of `diff-shared.c
 
 ## Actions
 
-There are 6 actions that can be taken when a file is missing or differs from the SoT:
+There are 8 actions that can be taken when a file is missing or differs from the SoT:
 
 - `ignore` — do nothing; just list the difference in the summary
 - `merge or copy` — display a menu and ask the user what to do:
@@ -141,6 +142,44 @@ There are 6 actions that can be taken when a file is missing or differs from the
 - `ask to copy` — ask the user whether to copy the SoT file over the target file (yes/no)
 - `merge` — open the merge tool, without prompting
 - `copy` — copy the SoT file over the target file, without prompting
+- `copy shared` — copy only the **shared block** (see below) from the SoT file into the target
+  file, without prompting; leaves the rest of the target file untouched
+- `ask to copy shared` — ask the user whether to copy the shared block (yes/no)
+
+### Shared Blocks: Syncing Part of a File
+
+Some files are neither fully shared nor fully private — they mix content that must stay in sync
+across repositories with content that is genuinely local to each one. For these, mark the shared
+portion with a pair of comment markers:
+
+```text
+private content, local to this repo
+<<<=== Beginning of shared content
+this part is kept in sync with the SoT
+another shared line
+===>>> End of shared content
+more private content, local to this repo
+```
+
+- The tokens `<<<===` and `===>>>` are matched as plain substrings anywhere on a line; any
+  trailing text (like the "Beginning of shared content" label above) is purely descriptive and
+  ignored.
+- Deliberately dash-free: XML/HTML comments (`<!-- ... -->`) forbid a literal `--` anywhere inside
+  the comment body, so a file that hides its markers inside such a comment (e.g. a `.md` or
+  `.props` file) needs markers that don't contain `--`.
+- Deliberately distinct from Git's own conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`, each a
+  run of a single repeated character). `<<<===`/`===>>>` mix `<`/`>` with `=`, so neither is ever
+  a substring of the other -- a file left with unresolved conflict markers is never mistaken for
+  one with a shared block, or vice versa.
+- The two marker lines themselves are delimiters, not content — everything **strictly between**
+  them is the shared block; everything **outside** them (before the begin marker and after the
+  end marker) is left entirely to the target repository.
+- Only **one** marker pair per file is supported. A file with zero, or more than one, well-formed
+  pair falls back to being treated as fully private for the `copy shared`/`ask to copy shared`
+  actions: `diff-shared.sh` warns and, for `copy shared`, opens the merge tool instead of
+  guessing — never a full-file copy, which could silently overwrite local content.
+- `merge or copy`/`ask to merge`/`ask to copy`/`merge`/`copy` ignore the markers entirely; they
+  compare and act on the whole file. The markers only matter to `copy shared`/`ask to copy shared`.
 
 ### Configuring Actions in the Global Configuration File `diff-shared.config.json`
 
@@ -159,22 +198,22 @@ This file is mandatory and must be located in the SoT directory. It defines the 
     "files": [
         {
             "sourceFile": "$vm2_repos/$vm2_sot_shared/.github/workflows/Release.yaml",
-            "targetFile": "$target_file_path/.github/workflows/Release.yaml",
+            "targetFile": "$target_repo_path/.github/workflows/Release.yaml",
             "action": "ask to merge"
         },
         {
             "sourceFile": "$vm2_repos/$vm2_sot_shared/.github/workflows/ClearCache.yaml",
-            "targetFile": "$target_file_path/.github/workflows/ClearCache.yaml",
+            "targetFile": "$target_repo_path/.github/workflows/ClearCache.yaml",
             "action": "copy"
         },
         {
             "sourceFile": "$vm2_repos/$vm2_sot_shared/.editorconfig",
-            "targetFile": "$target_file_path/.editorconfig",
+            "targetFile": "$target_repo_path/.editorconfig",
             "action": "ask to copy"
         },
         {
             "sourceFile": "$vm2_repos/$vm2_sot_shared/.gitignore",
-            "targetFile": "$target_file_path/.gitignore",
+            "targetFile": "$target_repo_path/.gitignore",
             "action": "copy"
         },
         ...
@@ -186,7 +225,7 @@ File paths may contain variables that the script resolves at runtime:
 
 - `$vm2_repos` — the vm2 parent directory, e.g. `/home/user/repos/vm2`
 - `$vm2_sot_shared` — path to the SoT files relative to the vm2 parent, e.g. `vm2.Templates/templates/AddNewPackage/content`
-- `$target_file_path` — path to the file in the target repository
+- `$target_repo_path` — path to the working tree root of the target repository
 
 The example above configures:
 
@@ -268,6 +307,8 @@ The script accepts one or more target repository paths as positional arguments:
   - `--file-merge <file-selector>` — overrides the configured action to `merge`
   - `--file-ask-to-copy <file-selector>` — overrides the configured action to `ask to copy`
   - `--file-copy <file-selector>` — overrides the configured action to `copy`
+  - `--file-copy-shared <file-selector>` — overrides the configured action to `copy shared`
+  - `--file-ask-to-copy-shared <file-selector>` — overrides the configured action to `ask to copy shared`
 - `--summary <file>` — write the script run summary to `<file>` in Markdown format. If not specified, a temporary file is created, displayed at the end of the run with `glow`, and then deleted.
 
 ### Switches

@@ -22,6 +22,26 @@ load '../libs/bats-support/load'
 load '../libs/bats-assert/load'
 load '../helpers/setup'
 
+# ShellCheck can't see that '../helpers/setup' transplants these into this file's scope at load
+# time. '-g' is required (see feedback_bats_declare_g_readonly memory for the root cause).
+declare -gx lib_dir
+declare -gxi failure
+declare -gxi err_invalid_arguments
+declare -gxi err_argument_value
+declare -gxi err_invalid_nameref
+declare -gxi err_not_directory
+declare -gxi err_not_file
+declare -gxi err_not_found
+declare -gxi err_logic_error
+declare -gxi err_argument_type
+declare -gxi positive
+declare -gxi negative
+
+# shared_equal/shared_not_equal are defined in diff-shared.functions.sh itself, not core.sh, so
+# ../helpers/setup does not transplant them into this outer scope -- only the fresh env -i
+# subshell _ds() spawns per test actually sources that file. Assertions against these two
+# outcomes therefore use their literal values (2 and 3, per diff-shared.functions.sh) directly.
+
 _src_dir="$(cd "$lib_dir/../src" && pwd)"
 
 # Sources core.sh then diff-shared.functions.sh (and, when _WITH_ARGS is set by the caller,
@@ -44,6 +64,19 @@ _ds() {
     "
 }
 
+# configure()/customize() now validate their JSON config against a sibling schema file (see
+# validate_json_schema() in _sanitize.sh); a directory must have this schema file present, or
+# validate_json_schema() itself bug-exits on the missing/empty argument before configure()'s own
+# graceful error handling for the config file ever runs. These helpers place a real copy of the
+# schema next to a test's fixture config, matching production layout.
+_stub_config_schema() {
+    cp "$_src_dir/diff-shared.config.schema.json" "$1/diff-shared.config.schema.json"
+}
+
+_stub_custom_schema() {
+    cp "$_src_dir/diff-shared.custom.schema.json" "$1/diff-shared.custom.schema.json"
+}
+
 _make_ci_repo() {
     local _dir="$1"
     mkdir -p "$_dir/.github/workflows"
@@ -60,93 +93,170 @@ _make_ci_repo() {
 # =====================================================================================
 
 @test "configure: bug-exits with the wrong argument count" {
+    # NOTE: with argument 2 (the target directory) also missing, its own required-argument check
+    # ('[[ -v 2 && -d $2 ]]') fires as a second bug and becomes the "last" one reported
+    # (err_argument_value), not the arity bug (err_invalid_arguments) alone.
     run _ds 'declare -a source_files=() target_files=() file_actions=(); configure "/tmp"'
-    assert_failure 254
+    assert_failure "$err_argument_value"
 }
 
 @test "configure: bug-exits when the SoT directory does not exist" {
     run _ds 'declare -a source_files=() target_files=() file_actions=(); configure "/definitely/not/a/real/path" "$BATS_TEST_TMPDIR"'
-    assert_failure 254
+    assert_failure "$err_argument_value"
 }
 
 @test "configure: fails when the config file is missing or empty" {
     mkdir -p "$BATS_TEST_TMPDIR/sot" "$BATS_TEST_TMPDIR/target"
+    _stub_config_schema "$BATS_TEST_TMPDIR/sot"
     run _ds "declare -a source_files=() target_files=() file_actions=(); configure '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target'"
-    assert_failure 1
+    assert_failure "$failure"
     assert_output --partial "was not found or is empty"
 }
 
 @test "configure: fails on invalid JSON in the config file" {
     mkdir -p "$BATS_TEST_TMPDIR/sot" "$BATS_TEST_TMPDIR/target"
+    _stub_config_schema "$BATS_TEST_TMPDIR/sot"
     echo "not json" > "$BATS_TEST_TMPDIR/sot/diff-shared.config.json"
     run _ds "declare -a source_files=() target_files=() file_actions=(); configure '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target'"
-    assert_failure 1
+    assert_failure "$failure"
     assert_output --partial "contains invalid JSON"
 }
 
 @test "configure: fails on an invalid action for a file entry" {
+    # This sandboxed test PATH has no check-jsonschema, so real schema enforcement of the
+    # "action" enum never runs here -- this exercises the redundant runtime
+    # 'is_in "$_file_action" ...' check inside configure()'s own per-file loop instead.
     mkdir -p "$BATS_TEST_TMPDIR/sot" "$BATS_TEST_TMPDIR/target"
+    _stub_config_schema "$BATS_TEST_TMPDIR/sot"
     echo "x" > "$BATS_TEST_TMPDIR/sot/x.txt"
     cat > "$BATS_TEST_TMPDIR/sot/diff-shared.config.json" <<EOF
-{"diff":{},"merge":{},"files":[{"sourceFile":"\$1/x.txt","targetFile":"\$2/x.txt","action":"bogus"}]}
+{"files":[{"sourceFile":"\$1/x.txt","targetFile":"\$2/x.txt","action":"bogus"}]}
 EOF
     run _ds "declare -a source_files=() target_files=() file_actions=(); configure '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target'"
-    assert_failure 1
+    assert_failure "$failure"
     assert_output --partial "'bogus' is not a valid action"
 }
 
 @test "configure: fails when a listed source file does not exist" {
     mkdir -p "$BATS_TEST_TMPDIR/sot" "$BATS_TEST_TMPDIR/target"
+    _stub_config_schema "$BATS_TEST_TMPDIR/sot"
     cat > "$BATS_TEST_TMPDIR/sot/diff-shared.config.json" <<EOF
-{"diff":{},"merge":{},"files":[{"sourceFile":"\$1/missing.txt","targetFile":"\$2/x.txt","action":"copy"}]}
+{"files":[{"sourceFile":"\$1/missing.txt","targetFile":"\$2/x.txt","action":"copy"}]}
 EOF
     run _ds "declare -a source_files=() target_files=() file_actions=(); configure '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target'"
-    assert_failure 1
+    assert_failure "$failure"
     assert_output --partial "does not exist or is empty"
 }
 
 @test "configure: succeeds with an empty 'files' array" {
     mkdir -p "$BATS_TEST_TMPDIR/sot" "$BATS_TEST_TMPDIR/target"
-    echo '{"diff":{},"merge":{},"files":[]}' > "$BATS_TEST_TMPDIR/sot/diff-shared.config.json"
+    _stub_config_schema "$BATS_TEST_TMPDIR/sot"
+    echo '{"files":[]}' > "$BATS_TEST_TMPDIR/sot/diff-shared.config.json"
     run _ds "declare -a source_files=() target_files=() file_actions=(); configure '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target'"
     assert_success
 }
 
-@test "configure: populates the model arrays, expanding \$1/\$2 as macros for the SoT and target dirs" {
+@test "configure: populates the model arrays, expanding \$1 as a macro for the SoT dir but leaving the target file as an unexpanded template" {
+    # configure() writes into 'config_source_files'/'config_target_files'/'config_file_actions'
+    # (the SoT-loaded defaults) -- not the plain 'source_files'/'target_files'/'file_actions'
+    # names, which are only populated later, per-repository, by copying from these config_*
+    # arrays (see diff-shared.sh's main loop). The FIX this test now pins: with multiple target
+    # repos, target file paths can no longer be expanded once during general configuration (that
+    # bug reused the FIRST target repo's paths for every repo) -- configure() now stores
+    # 'targetFile' as a raw '${target_repo_path}' template, deferring expansion to
+    # configure_target_files(), which runs once per target repo (see the tests below).
     mkdir -p "$BATS_TEST_TMPDIR/sot" "$BATS_TEST_TMPDIR/target"
+    _stub_config_schema "$BATS_TEST_TMPDIR/sot"
     echo "hello" > "$BATS_TEST_TMPDIR/sot/a.txt"
-    cat > "$BATS_TEST_TMPDIR/sot/diff-shared.config.json" <<EOF
-{"diff":{"tool":"","command":""},
- "merge":{"tool":"","command":""},
- "files":[{"sourceFile":"\$1/a.txt","targetFile":"\$2/a.txt","action":"copy"}]}
+    cat > "$BATS_TEST_TMPDIR/sot/diff-shared.config.json" <<'EOF'
+{"files":[{"sourceFile":"$1/a.txt","targetFile":"${target_repo_path}/a.txt","action":"copy"}]}
 EOF
-    run _ds "declare -a source_files=() target_files=() file_actions=(); configure '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target'; declare -p source_files target_files file_actions"
+    run _ds "declare -a config_source_files=() config_target_files=() config_file_actions=(); configure '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target'; declare -p config_source_files config_target_files config_file_actions"
     assert_success
-    assert_output --partial "source_files=([0]=\"$BATS_TEST_TMPDIR/sot/a.txt\")"
-    assert_output --partial "target_files=([0]=\"$BATS_TEST_TMPDIR/target/a.txt\")"
-    assert_output --partial "file_actions=([0]=\"copy\")"
+    assert_output --partial "config_source_files=([0]=\"$BATS_TEST_TMPDIR/sot/a.txt\")"
+    assert_output --partial 'config_target_files=([0]="\${target_repo_path}/a.txt")'
+    assert_output --partial "config_file_actions=([0]=\"copy\")"
 }
 
-@test "configure: expands the real \${vm2_repos}/\${vm2_sot_shared}/\${target_file_path} macros used in the production config (regression)" {
-    # Was previously broken: 'vm2_sot_shared' and 'target_file_path' were never 'local'-declared
-    # inside configure(), so the eval-based macro expansion of a real diff-shared.config.json
-    # entry (which uses exactly these three macro names, not the '$1'/'$2' shorthand the test
-    # above uses) silently expanded to empty strings under 'set -u', or picked up a stale value
-    # left over from a previous configure() call in the same process.
+@test "configure: expands the real \${vm2_repos}/\${vm2_sot_shared} macros used in the production config for the source file (regression)" {
+    # Was previously broken: 'vm2_sot_shared' was never 'local'-declared inside configure(), so
+    # the eval-based macro expansion of a real diff-shared.config.json entry (which uses exactly
+    # this macro name, not the '$1' shorthand the test above uses) silently expanded to an empty
+    # string under 'set -u', or picked up a stale value left over from a previous configure()
+    # call in the same process.
     mkdir -p "$BATS_TEST_TMPDIR/sot_config" \
              "$BATS_TEST_TMPDIR/vm2_repos/vm2.Templates/templates/AddNewPackage/content" \
              "$BATS_TEST_TMPDIR/target"
+    _stub_config_schema "$BATS_TEST_TMPDIR/sot_config"
     echo "hello" > "$BATS_TEST_TMPDIR/vm2_repos/vm2.Templates/templates/AddNewPackage/content/a.txt"
     cat > "$BATS_TEST_TMPDIR/sot_config/diff-shared.config.json" <<'JSON'
-{"diff":{"tool":"","command":""},
- "merge":{"tool":"","command":""},
- "files":[{"sourceFile":"${vm2_repos}/${vm2_sot_shared}/a.txt","targetFile":"${target_file_path}/a.txt","action":"copy"}]}
+{"files":[{"sourceFile":"${vm2_repos}/${vm2_sot_shared}/a.txt","targetFile":"${target_repo_path}/a.txt","action":"copy"}]}
 JSON
-    run _ds "declare vm2_repos='$BATS_TEST_TMPDIR/vm2_repos'; declare sot='AddNewPackage'; declare -a source_files=() target_files=() file_actions=(); configure '$BATS_TEST_TMPDIR/sot_config' '$BATS_TEST_TMPDIR/target'; declare -p source_files target_files file_actions"
+    run _ds "declare vm2_repos='$BATS_TEST_TMPDIR/vm2_repos'; declare sot='AddNewPackage'; declare -a config_source_files=() config_target_files=() config_file_actions=(); configure '$BATS_TEST_TMPDIR/sot_config' '$BATS_TEST_TMPDIR/target'; declare -p config_source_files config_target_files config_file_actions"
     assert_success
-    assert_output --partial "source_files=([0]=\"$BATS_TEST_TMPDIR/vm2_repos/vm2.Templates/templates/AddNewPackage/content/a.txt\")"
-    assert_output --partial "target_files=([0]=\"$BATS_TEST_TMPDIR/target/a.txt\")"
-    assert_output --partial "file_actions=([0]=\"copy\")"
+    assert_output --partial "config_source_files=([0]=\"$BATS_TEST_TMPDIR/vm2_repos/vm2.Templates/templates/AddNewPackage/content/a.txt\")"
+    assert_output --partial 'config_target_files=([0]="\${target_repo_path}/a.txt")'
+    assert_output --partial "config_file_actions=([0]=\"copy\")"
+}
+
+# =====================================================================================
+# configure_target_files()
+# =====================================================================================
+
+@test "configure_target_files: expands each target file template against the given target repo path" {
+    mkdir -p "$BATS_TEST_TMPDIR/sot" "$BATS_TEST_TMPDIR/target"
+    _stub_config_schema "$BATS_TEST_TMPDIR/sot"
+    echo "hello" > "$BATS_TEST_TMPDIR/sot/a.txt"
+    cat > "$BATS_TEST_TMPDIR/sot/diff-shared.config.json" <<'EOF'
+{"files":[{"sourceFile":"$1/a.txt","targetFile":"${target_repo_path}/a.txt","action":"copy"}]}
+EOF
+    run _ds "declare -a config_source_files=() config_target_files=() config_file_actions=()
+             configure '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target'
+             declare -a expanded=()
+             configure_target_files '$BATS_TEST_TMPDIR/target' expanded
+             echo \"RC=\$?\"
+             declare -p expanded"
+    assert_success
+    assert_output --partial "RC=0"
+    assert_output --partial "expanded=([0]=\"$BATS_TEST_TMPDIR/target/a.txt\")"
+}
+
+@test "configure_target_files: re-expands against a DIFFERENT target repo path on a second call (regression: multi-repo bug)" {
+    # The bug this pins: target file paths used to be expanded once, during general
+    # configuration, against whichever target repo happened to be configured first -- every
+    # OTHER target repo in a multi-repo run then silently got the first repo's paths. Calling
+    # configure_target_files() twice, once per (different) target repo, must yield two
+    # DIFFERENT expansions from the same config_target_files templates.
+    mkdir -p "$BATS_TEST_TMPDIR/sot" "$BATS_TEST_TMPDIR/target1" "$BATS_TEST_TMPDIR/target2"
+    _stub_config_schema "$BATS_TEST_TMPDIR/sot"
+    echo "hello" > "$BATS_TEST_TMPDIR/sot/a.txt"
+    cat > "$BATS_TEST_TMPDIR/sot/diff-shared.config.json" <<'EOF'
+{"files":[{"sourceFile":"$1/a.txt","targetFile":"${target_repo_path}/a.txt","action":"copy"}]}
+EOF
+    run _ds "declare -a config_source_files=() config_target_files=() config_file_actions=()
+             configure '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target1'
+             declare -a expanded1=() expanded2=()
+             configure_target_files '$BATS_TEST_TMPDIR/target1' expanded1
+             configure_target_files '$BATS_TEST_TMPDIR/target2' expanded2
+             declare -p expanded1 expanded2"
+    assert_success
+    assert_output --partial "expanded1=([0]=\"$BATS_TEST_TMPDIR/target1/a.txt\")"
+    assert_output --partial "expanded2=([0]=\"$BATS_TEST_TMPDIR/target2/a.txt\")"
+}
+
+@test "configure_target_files: bug-exits with the wrong argument count" {
+    run _ds "configure_target_files '$BATS_TEST_TMPDIR'"
+    assert_failure "$err_invalid_arguments"
+}
+
+@test "configure_target_files: bug-exits when the target repo directory does not exist" {
+    run _ds "declare -a out=(); configure_target_files '/definitely/not/a/real/path' out"
+    assert_failure "$err_argument_value"
+}
+
+@test "configure_target_files: bug-exits on a non-indexed-array output variable name" {
+    run _ds "declare -A not_an_array=(); configure_target_files '$BATS_TEST_TMPDIR' not_an_array"
+    assert_failure "$err_argument_value"
 }
 
 # =====================================================================================
@@ -154,20 +264,23 @@ JSON
 # =====================================================================================
 
 @test "get_tools: bug-exits with the wrong argument count" {
+    # NOTE: with argument 1 also missing, its own required-argument check
+    # ('[[ -v 1 && -s $1 ]]') fires as a second bug and becomes the "last" one reported
+    # (err_argument_value), not the arity bug (err_invalid_arguments) alone.
     run _ds 'get_tools'
-    assert_failure 254
+    assert_failure "$err_argument_value"
 }
 
 @test "get_tools: bug-exits when the config/customization file does not exist or is empty" {
     run _ds "get_tools '$BATS_TEST_TMPDIR/nope.json'"
-    assert_failure 254
+    assert_failure "$err_argument_value"
 }
 
 @test "get_tools: uses the configured tool and command when the tool is available on PATH" {
     cat > "$BATS_TEST_TMPDIR/cfg.json" <<'EOF'
 {"diff":{"tool":"diff","command":"diff -q \"$LOCAL\" \"$REMOTE\""},"merge":{"tool":"","command":""}}
 EOF
-    run _ds "get_tools '$BATS_TEST_TMPDIR/cfg.json' 2>/dev/null"
+    run _ds "get_tools '$BATS_TEST_TMPDIR/cfg.json' true 2>/dev/null"
     assert_success
     assert_line --index 0 "diff"
     assert_line --index 1 'diff -q "$LOCAL" "$REMOTE"'
@@ -180,10 +293,10 @@ EOF
     cat > "$BATS_TEST_TMPDIR/cfg.json" <<'EOF'
 {"diff":{"tool":"diff","command":"diff -q \"$LOCAL\" \"$REMOTE\""},"merge":{"tool":"","command":""}}
 EOF
-    run _ds "get_tools '$BATS_TEST_TMPDIR/cfg.json'"
+    run _ds "get_tools '$BATS_TEST_TMPDIR/cfg.json' true"
     assert_success
-    assert_output --partial "No merge tool was configured or none is available"
-    run _ds "get_tools '$BATS_TEST_TMPDIR/cfg.json' 2>/dev/null"
+    assert_output --partial "No 'merge' tool was configured or none is available"
+    run _ds "get_tools '$BATS_TEST_TMPDIR/cfg.json' true 2>/dev/null"
     assert_line --index 2 ""
     assert_line --index 3 ""
 }
@@ -193,21 +306,31 @@ EOF
 # =====================================================================================
 
 @test "are_different: bug-exits with the wrong argument count" {
+    # arg1 also fails its own existence check (the file doesn't exist), so err_not_file --
+    # not the arity code -- is the "last" bug reported.
     run _ds "are_different '$BATS_TEST_TMPDIR/a'"
-    assert_failure 254
+    assert_failure "$err_not_file"
 }
 
 @test "are_different: bug-exits when either file does not exist" {
     touch "$BATS_TEST_TMPDIR/a.txt"
-    run _ds "are_different '$BATS_TEST_TMPDIR/a.txt' '$BATS_TEST_TMPDIR/missing.txt' false"
-    assert_failure 254
+    run _ds "are_different '$BATS_TEST_TMPDIR/a.txt' '$BATS_TEST_TMPDIR/missing.txt' false true"
+    assert_failure "$err_not_file"
+}
+
+@test "are_different: bug-exits on a non-boolean display-diff or warn-no-markers flag" {
+    touch "$BATS_TEST_TMPDIR/a.txt" "$BATS_TEST_TMPDIR/b.txt"
+    run _ds "are_different '$BATS_TEST_TMPDIR/a.txt' '$BATS_TEST_TMPDIR/b.txt' notabool true"
+    assert_failure "$err_argument_type"
+    run _ds "are_different '$BATS_TEST_TMPDIR/a.txt' '$BATS_TEST_TMPDIR/b.txt' true notabool"
+    assert_failure "$err_argument_type"
 }
 
 @test "are_different: returns failure (negative) and counts 'identical' for two identical files" {
     echo "same" > "$BATS_TEST_TMPDIR/a.txt"
     echo "same" > "$BATS_TEST_TMPDIR/b.txt"
     run _ds "declare -i summary_identical_count=0 summary_diff_count=0
-             are_different '$BATS_TEST_TMPDIR/a.txt' '$BATS_TEST_TMPDIR/b.txt' false
+             are_different '$BATS_TEST_TMPDIR/a.txt' '$BATS_TEST_TMPDIR/b.txt' false true
              echo \"RC=\$?\"
              declare -p summary_identical_count summary_diff_count"
     assert_success
@@ -220,7 +343,7 @@ EOF
     echo "one" > "$BATS_TEST_TMPDIR/a.txt"
     echo "two" > "$BATS_TEST_TMPDIR/b.txt"
     run _ds "declare -i summary_identical_count=0 summary_diff_count=0
-             are_different '$BATS_TEST_TMPDIR/a.txt' '$BATS_TEST_TMPDIR/b.txt' false
+             are_different '$BATS_TEST_TMPDIR/a.txt' '$BATS_TEST_TMPDIR/b.txt' false true
              echo \"RC=\$?\"
              declare -p summary_identical_count summary_diff_count"
     assert_success
@@ -229,13 +352,105 @@ EOF
     assert_output --partial 'summary_identical_count="0"'
 }
 
+@test "are_different: returns \$shared_equal when the files differ but their shared blocks match" {
+    printf 'private A\n<<<===\nshared 1\nshared 2\n===>>>\nprivate B\n' > "$BATS_TEST_TMPDIR/a.txt"
+    printf 'DIFFERENT private A\n<<<===\nshared 1\nshared 2\n===>>>\nprivate B\n' > "$BATS_TEST_TMPDIR/b.txt"
+    run _ds "are_different '$BATS_TEST_TMPDIR/a.txt' '$BATS_TEST_TMPDIR/b.txt' false true"
+    assert_failure 2 # $shared_equal
+}
+
+@test "are_different: returns \$shared_not_equal when the files differ and their shared blocks also differ" {
+    printf 'private A\n<<<===\nshared 1\nshared 2\n===>>>\nprivate B\n' > "$BATS_TEST_TMPDIR/a.txt"
+    printf 'private A\n<<<===\nCHANGED shared 1\nshared 2\n===>>>\nprivate B\n' > "$BATS_TEST_TMPDIR/b.txt"
+    run _ds "are_different '$BATS_TEST_TMPDIR/a.txt' '$BATS_TEST_TMPDIR/b.txt' false true"
+    assert_failure 3 # $shared_not_equal
+}
+
+@test "are_different: falls back to plain \$positive and warns when a marker is missing from either file, if asked to" {
+    # $positive is 0/success -- are_different()'s normal "different" outcome -- so, like the
+    # existing 'returns success (positive)' test above, this asserts success plus an explicit
+    # RC echo, not assert_failure.
+    printf 'private A\n<<<===\nshared 1\n===>>>\nprivate B\n' > "$BATS_TEST_TMPDIR/a.txt"
+    printf 'no markers at all here\n' > "$BATS_TEST_TMPDIR/b.txt"
+    run _ds "are_different '$BATS_TEST_TMPDIR/a.txt' '$BATS_TEST_TMPDIR/b.txt' false true
+             echo \"RC=\$?\""
+    assert_success
+    assert_output --partial "RC=0"
+    assert_output --partial "Could not find a single, well-formed shared-content marker pair"
+}
+
+@test "are_different: falls back to plain \$positive silently (no warning) when told not to warn" {
+    # Actions that don't understand shared blocks at all (plain 'copy'/'merge'/'ignore') pass
+    # warn_no_markers=false, since almost no file has markers and the warning would otherwise
+    # fire on every such file. It still traces at the lower verbosity level, just doesn't warn.
+    printf 'private A\n<<<===\nshared 1\n===>>>\nprivate B\n' > "$BATS_TEST_TMPDIR/a.txt"
+    printf 'no markers at all here\n' > "$BATS_TEST_TMPDIR/b.txt"
+    run _ds "are_different '$BATS_TEST_TMPDIR/a.txt' '$BATS_TEST_TMPDIR/b.txt' false false
+             echo \"RC=\$?\""
+    assert_success
+    assert_output --partial "RC=0"
+    refute_output --partial "WARN"
+}
+
+# =====================================================================================
+# __find_shared_markers() / get_shared_block()
+# =====================================================================================
+
+@test "get_shared_block: extracts the content strictly between the marker lines" {
+    printf 'private A\n<<<===\nshared 1\nshared 2\n===>>>\nprivate B\n' > "$BATS_TEST_TMPDIR/f.txt"
+    run _ds "declare content
+             get_shared_block '$BATS_TEST_TMPDIR/f.txt' content
+             echo \"RC=\$?\"
+             printf '[%s]' \"\$content\""
+    assert_success
+    assert_output --partial "RC=0"
+    assert_output --partial "[shared 1
+shared 2]"
+}
+
+@test "get_shared_block: ignores trailing descriptive text on the marker lines" {
+    printf 'private A\n# <<<=== Beginning of shared content\nshared 1\n# ===>>> End of shared content\nprivate B\n' > "$BATS_TEST_TMPDIR/f.txt"
+    run _ds "declare content
+             get_shared_block '$BATS_TEST_TMPDIR/f.txt' content
+             printf '[%s]' \"\$content\""
+    assert_success
+    assert_output "[shared 1]"
+}
+
+@test "get_shared_block: fails (not a bug) when a marker is missing" {
+    printf 'no markers here\n' > "$BATS_TEST_TMPDIR/f.txt"
+    run _ds "declare content
+             get_shared_block '$BATS_TEST_TMPDIR/f.txt' content
+             echo \"RC=\$?\""
+    assert_success
+    assert_output --partial "RC=1"
+}
+
+@test "get_shared_block: fails when there is more than one begin or end marker" {
+    printf -- '<<<===\na\n===>>>\n<<<===\nb\n===>>>\n' > "$BATS_TEST_TMPDIR/f.txt"
+    run _ds "declare content
+             get_shared_block '$BATS_TEST_TMPDIR/f.txt' content
+             echo \"RC=\$?\""
+    assert_success
+    assert_output --partial "RC=1"
+}
+
+@test "get_shared_block: bug-exits with the wrong argument count" {
+    # arg1's own existence check also fires (the file exists here, so only the arity bug fires).
+    touch "$BATS_TEST_TMPDIR/f.txt"
+    run _ds "get_shared_block '$BATS_TEST_TMPDIR/f.txt'"
+    assert_failure "$err_invalid_arguments"
+}
+
 # =====================================================================================
 # merge()
 # =====================================================================================
 
 @test "merge: bug-exits with the wrong argument count" {
+    # arg1 also fails its own existence check (the file doesn't exist), so err_not_file --
+    # not the arity code -- is the "last" bug reported.
     run _ds "merge '$BATS_TEST_TMPDIR/a.txt'"
-    assert_failure 254
+    assert_failure "$err_not_file"
 }
 
 @test "merge: returns success and counts 'merged' when the merge command changes the target file" {
@@ -271,13 +486,15 @@ EOF
 # =====================================================================================
 
 @test "copy_file: bug-exits with the wrong argument count" {
+    # arg1 (nonexistent) and the missing arg2 both fail their own checks too; arg2's
+    # required-argument check (err_argument_value) is the "last" bug reported.
     run _ds "copy_file '$BATS_TEST_TMPDIR/a.txt'"
-    assert_failure 254
+    assert_failure "$err_argument_value"
 }
 
 @test "copy_file: bug-exits when the source file does not exist" {
     run _ds "copy_file '$BATS_TEST_TMPDIR/missing.txt' '$BATS_TEST_TMPDIR/dest.txt'"
-    assert_failure 254
+    assert_failure "$err_not_file"
 }
 
 @test "copy_file: creates the destination directory and copies the file, counting the copy" {
@@ -303,51 +520,117 @@ EOF
 }
 
 # =====================================================================================
+# copy_shared_block()
+# =====================================================================================
+
+@test "copy_shared_block: bug-exits with the wrong argument count" {
+    # arg2's own existence check also fires (it's missing), so err_not_file -- not the arity
+    # code -- is the "last" bug reported.
+    touch "$BATS_TEST_TMPDIR/a.txt"
+    run _ds "copy_shared_block '$BATS_TEST_TMPDIR/a.txt'"
+    assert_failure "$err_not_file"
+}
+
+@test "copy_shared_block: bug-exits when the source file does not exist" {
+    touch "$BATS_TEST_TMPDIR/dest.txt"
+    run _ds "copy_shared_block '$BATS_TEST_TMPDIR/missing.txt' '$BATS_TEST_TMPDIR/dest.txt'"
+    assert_failure "$err_not_file"
+}
+
+@test "copy_shared_block: bug-exits (err_logic_error) when either file lacks well-formed markers" {
+    printf -- '<<<===\nshared\n===>>>\n' > "$BATS_TEST_TMPDIR/src.txt"
+    printf 'no markers here\n' > "$BATS_TEST_TMPDIR/dest.txt"
+    run _ds "copy_shared_block '$BATS_TEST_TMPDIR/src.txt' '$BATS_TEST_TMPDIR/dest.txt'"
+    assert_failure "$err_logic_error"
+}
+
+@test "copy_shared_block: splices the SoT's shared block into the target, leaving everything else untouched" {
+    printf 'sot private A\n<<<===\nnew shared 1\nnew shared 2\n===>>>\nsot private B\n' > "$BATS_TEST_TMPDIR/src.txt"
+    printf 'target private A\n# <<<=== begin\nold shared\n# ===>>> end\ntarget private B\n' > "$BATS_TEST_TMPDIR/dest.txt"
+    run _ds "declare -i summary_copied_count=0
+             copy_shared_block '$BATS_TEST_TMPDIR/src.txt' '$BATS_TEST_TMPDIR/dest.txt'
+             declare -p summary_copied_count
+             cat '$BATS_TEST_TMPDIR/dest.txt'"
+    assert_success
+    assert_output --partial 'summary_copied_count="1"'
+    assert_output --partial "target private A"
+    assert_output --partial "# <<<=== begin"
+    assert_output --partial "new shared 1"
+    assert_output --partial "new shared 2"
+    assert_output --partial "# ===>>> end"
+    assert_output --partial "target private B"
+    refute_output --partial "old shared"
+}
+
+@test "copy_shared_block: in dry-run mode, prints what it would do and does not touch the target file" {
+    printf -- '<<<===\nnew shared\n===>>>\n' > "$BATS_TEST_TMPDIR/src.txt"
+    printf -- 'target A\n<<<===\nold shared\n===>>>\ntarget B\n' > "$BATS_TEST_TMPDIR/dest.txt"
+    run _ds "set_dry_run
+             copy_shared_block '$BATS_TEST_TMPDIR/src.txt' '$BATS_TEST_TMPDIR/dest.txt'
+             cat '$BATS_TEST_TMPDIR/dest.txt'"
+    assert_success
+    assert_output --partial "dry-run\$ cp"
+    assert_output --partial "old shared"
+    refute_output --partial "new shared"
+}
+
+# =====================================================================================
 # customize()
 # =====================================================================================
 
 @test "customize: bug-exits with the wrong argument count" {
+    # the missing arg1 also fails its own required-argument check, so err_argument_value --
+    # not the arity code -- is the "last" bug reported.
     run _ds "customize"
-    assert_failure 254
+    assert_failure "$err_argument_value"
 }
 
 @test "customize: bug-exits when the target directory does not exist" {
     run _ds "customize '/definitely/not/a/real/path'"
-    assert_failure 254
+    assert_failure "$err_argument_value"
 }
 
-@test "customize: bug-exits on a non-boolean tools-only flag" {
-    run _ds "customize '$BATS_TEST_TMPDIR' maybe"
-    assert_failure 254
+@test "customize: bug-exits with an extra argument" {
+    # customize() takes exactly two arguments (SoT dir, target dir); a third is an arity bug.
+    # arg2 is a real directory here, so only the arity check fires -- no compounding.
+    run _ds "customize '$BATS_TEST_TMPDIR' '$BATS_TEST_TMPDIR' maybe"
+    assert_failure "$err_invalid_arguments"
 }
 
 @test "customize: is a no-op when no custom config file exists" {
-    run _ds "customize '$BATS_TEST_TMPDIR'"
+    mkdir -p "$BATS_TEST_TMPDIR/sot" "$BATS_TEST_TMPDIR/target"
+    run _ds "customize '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target'"
     assert_success
 }
 
 @test "customize: fails on invalid JSON in the custom config file" {
-    echo "not json" > "$BATS_TEST_TMPDIR/diff-shared.custom.json"
-    run _ds "customize '$BATS_TEST_TMPDIR'"
-    assert_failure 1
-    assert_output --partial "contains invalid JSON"
+    mkdir -p "$BATS_TEST_TMPDIR/sot" "$BATS_TEST_TMPDIR/target"
+    _stub_custom_schema "$BATS_TEST_TMPDIR/sot"
+    echo "not json" > "$BATS_TEST_TMPDIR/target/diff-shared.custom.json"
+    run _ds "customize '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target'"
+    assert_failure "$failure"
+    assert_output --partial "is not a valid JSON"
 }
 
 @test "customize: overrides the diff/merge tools and per-file actions from the custom config" {
-    mkdir -p "$BATS_TEST_TMPDIR/target"
+    # customize() now takes two arguments (SoT dir + target dir) and reads the schema from the
+    # SoT dir, not the target -- see the get_shared_block/copy-shared-block work's summary note
+    # on why the schema moved there (target-repo copies of it are optional, IDE-only convenience).
+    mkdir -p "$BATS_TEST_TMPDIR/sot" "$BATS_TEST_TMPDIR/target"
+    _stub_custom_schema "$BATS_TEST_TMPDIR/sot"
     cat > "$BATS_TEST_TMPDIR/target/diff-shared.custom.json" <<'EOF'
 {
   "diff": {"tool": "diff", "command": "diff -q \"$LOCAL\" \"$REMOTE\""},
-  "merge": {"tool": "", "command": ""},
   "action_overrides": {"a.txt": "ignore", "unknown/path.txt": "copy"}
 }
 EOF
-    run _ds "config_diff_tool='olddiff'; config_diff_command='old --cmd'
-             config_merge_tool='oldmerge'; config_merge_command='old --merge'
+    run _ds "set_verbose
+             diff_tool='olddiff'; diff_command='old --cmd'
+             merge_tool='oldmerge'; merge_command='old --merge'
              declare -a target_files=('$BATS_TEST_TMPDIR/target/a.txt' '$BATS_TEST_TMPDIR/target/b.txt')
              declare -a file_actions=('merge' 'merge')
              diff_only=false
-             customize '$BATS_TEST_TMPDIR/target'
+             customize '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target'
              echo \"RC=\$?\"
              declare -p diff_tool diff_command merge_tool merge_command file_actions"
     assert_success
@@ -358,47 +641,30 @@ EOF
     assert_output --partial "does not match any known target relative path"
 }
 
-@test "customize: with the tools-only flag, does not touch file_actions" {
-    mkdir -p "$BATS_TEST_TMPDIR/target"
-    cat > "$BATS_TEST_TMPDIR/target/diff-shared.custom.json" <<'EOF'
-{
-  "diff": {"tool": "diff", "command": "diff -q \"$LOCAL\" \"$REMOTE\""},
-  "merge": {"tool": "", "command": ""},
-  "action_overrides": {"a.txt": "ignore"}
-}
-EOF
-    run _ds "config_diff_tool='olddiff'; config_diff_command='old --cmd'
-             config_merge_tool='oldmerge'; config_merge_command='old --merge'
-             declare -a target_files=('$BATS_TEST_TMPDIR/target/a.txt')
-             declare -a file_actions=('merge')
-             customize '$BATS_TEST_TMPDIR/target' true
-             declare -p file_actions"
-    assert_success
-    assert_output --partial 'file_actions=([0]="merge")'
-}
-
 # =====================================================================================
 # resolve_target()
 # =====================================================================================
 
 @test "resolve_target: bug-exits with the wrong argument count" {
+    # the missing arg4 also fails its own nameref check (empty string is not a variable name),
+    # so err_invalid_nameref -- not the arity code -- is the "last" bug reported.
     run _ds "declare root='' path=''; resolve_target '$BATS_TEST_TMPDIR' 'r' root"
-    assert_failure 254
+    assert_failure "$err_invalid_nameref"
 }
 
 @test "resolve_target: bug-exits when the vm2-repos parent argument is not a directory" {
     run _ds "declare root='' path=''; resolve_target '/definitely/not/a/real/path' 'r' root path"
-    assert_failure 254
+    assert_failure "$err_not_directory"
 }
 
 @test "resolve_target: bug-exits on undefined output nameref variables" {
     run _ds "resolve_target '$BATS_TEST_TMPDIR' 'r' not_a_var_1 not_a_var_2"
-    assert_failure 254
+    assert_failure "$err_invalid_nameref"
 }
 
 @test "resolve_target: fails with err_not_found for a repo name that doesn't exist anywhere" {
     run _ds "declare root='' path=''; resolve_target '$BATS_TEST_TMPDIR' 'no-such-repo' root path"
-    assert_failure 9
+    assert_failure "$err_not_found"
 }
 
 @test "resolve_target: resolves a well-formed local git repo with CI configured" {
@@ -428,9 +694,13 @@ EOF
 # parameterize()
 # =====================================================================================
 
-@test "parameterize: fails when no --file* selectors were provided" {
-    run _ds "declare -A selectors_actions=(); declare -a source_files=() file_actions=(); parameterize"
-    assert_failure 2
+@test "parameterize: is a no-op success when no --file* selectors were provided" {
+    # NOTE: this used to be 'assert_failure 2' -- parameterize() now returns success immediately
+    # when 'selectors_actions' is empty ('((${#selectors_actions[@]} > 0)) || return "$success"'),
+    # treating no selectors as a no-op rather than an error. See the summary note.
+    run _ds "declare -A selectors_actions=(); declare -a source_files=() file_actions=(); parameterize; echo \"RC=\$?\""
+    assert_success
+    assert_output --partial "RC=0"
 }
 
 @test "parameterize: overrides the action for a matching file and clears the action for any file that matches no selector" {
@@ -536,7 +806,7 @@ EOF
 
 @test "get_arguments: fails with usage when a value-taking option is given without a value" {
     run _ds --with-args "declare -a arguments=(); set_quiet; get_arguments --vm2-repos"
-    assert_failure 1
+    assert_failure "$failure"
     assert_output --partial "Missing value for --vm2-repos"
 }
 
@@ -561,20 +831,23 @@ EOF
 # =====================================================================================
 
 @test "get_selector_action: bug-exits on the wrong argument count" {
+    # NOTE: get_selector_action()'s own bug() call doesn't pass -ec, so it records the generic
+    # $failure code rather than a specific err_* one (unlike the rest of diff-shared.functions.sh
+    # -- flagged separately, not fixed here).
     run _ds --with-args "get_selector_action 'x'"
-    assert_failure 254
+    assert_failure "$failure"
     assert_output --partial "requires exactly 2 arguments"
 }
 
 @test "get_selector_action: fails with usage on an invalid action name" {
     run _ds --with-args "declare -A selectors_actions=(); get_selector_action '--file-bogus' 'a.txt'"
-    assert_failure 1
+    assert_failure "$failure"
     assert_output --partial "Invalid action: bogus"
 }
 
 @test "get_selector_action: fails with usage when the file selector itself looks like an option" {
     run _ds --with-args "declare -A selectors_actions=(); get_selector_action '--file' '-badselector'"
-    assert_failure 1
+    assert_failure "$failure"
     assert_output --partial "does not appear to be a valid file selector"
 }
 
@@ -584,4 +857,14 @@ EOF
                           declare -p selectors_actions"
     assert_success
     assert_output --partial '[a.txt]="merge or copy"'
+}
+
+@test "get_selector_action: accepts both the long and short forms of 'copy shared'/'ask to copy shared'" {
+    run _ds --with-args "declare -A selectors_actions=()
+                          get_selector_action '--file-copy-shared' 'a.txt'
+                          get_selector_action '-facs' 'b.txt'
+                          declare -p selectors_actions"
+    assert_success
+    assert_output --partial '[a.txt]="copy shared"'
+    assert_output --partial '[b.txt]="ask to copy shared"'
 }

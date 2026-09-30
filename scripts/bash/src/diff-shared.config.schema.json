@@ -1,0 +1,82 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "urn:schemas-vm-com:diff-shared.config.schema.json",
+    "title": "diff-shared.config.json",
+    "description": "Source-of-truth configuration for diff-shared.sh: the default diff/merge tools and the set of files with shared content across vm2 repositories.",
+    "type": "object",
+    "properties": {
+        "diff": {
+            "$ref": "#/$defs/toolConfig",
+            "description": "The default diff tool/command diff-shared.sh uses when neither a Git-configured nor a repo-customized diff tool is available."
+        },
+        "merge": {
+            "$ref": "#/$defs/toolConfig",
+            "description": "The default merge tool/command diff-shared.sh uses when neither a Git-configured nor a repo-customized merge tool is available."
+        },
+        "files": {
+            "type": "array",
+            "description": "The set of files with shared content, each mapping a canonical source-of-truth file to its target location and the default action to take.",
+            "items": {
+                "$ref": "#/$defs/fileEntry"
+            }
+        }
+    },
+    "additionalProperties": true,
+    "$defs": {
+        "toolConfig": {
+            "type": "object",
+            "properties": {
+                "tool": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "The name of the tool as it would be invoked on PATH (e.g. 'delta', 'code')."
+                },
+                "command": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "The full command line template used to invoke the tool. May reference $LOCAL/$REMOTE (diff) or $LOCAL/$REMOTE positions (merge)."
+                }
+            },
+            "required": [
+                "tool",
+                "command"
+            ],
+            "additionalProperties": true
+        },
+        "fileEntry": {
+            "type": "object",
+            "properties": {
+                "sourceFile": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Path to the canonical source-of-truth file, may contain ${variable} placeholders resolved by diff-shared.sh."
+                },
+                "targetFile": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Path to the corresponding file in the target repository, may contain ${variable} placeholders resolved by diff-shared.sh."
+                },
+                "action": {
+                    "type": "string",
+                    "description": "The default action diff-shared.sh takes for this file when it differs from the source of truth.",
+                    "enum": [
+                        "ignore",
+                        "merge or copy",
+                        "ask to merge",
+                        "merge",
+                        "ask to copy",
+                        "copy",
+                        "copy shared",
+                        "ask to copy shared"
+                    ]
+                }
+            },
+            "required": [
+                "sourceFile",
+                "targetFile",
+                "action"
+            ],
+            "additionalProperties": true
+        }
+    }
+}

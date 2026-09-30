@@ -117,14 +117,16 @@ The script compares one by one the source and the target files using a configura
 file is not found, or there are differences between the files, the tool takes an action depending on the configured, per-file
 default action. Here is the list of available action names and the resulting behaviors:
 
-| Action          | If the target file is different from the source: | If the target file does not exist: |
-|-----------------|--------------------------------------------------|------------------------------------|
-| `ignore`        | does nothing                                     | does nothing                       |
-| `merge or copy` | asks to copy, merge, or ignore                   | asks to copy or ignore             |
-| `ask to merge`  | asks to merge or ignore                          | asks to copy or ignore             |
-| `merge`         | merges source into target                        | copies the file                    |
-| `ask to copy`   | asks to copy or ignore                           | asks to copy or ignore             |
-| `copy`          | copies the file                                  | copies the file                    |
+| Action               | If the target file is different from the source:                    | If the target file does not exist: |
+|----------------------|---------------------------------------------------------------------|------------------------------------|
+| `ignore`             | does nothing                                                        | does nothing                       |
+| `merge or copy`      | asks to copy, merge, or ignore                                      | asks to copy or ignore             |
+| `ask to merge`       | asks to merge or ignore                                             | asks to copy or ignore             |
+| `merge`              | merges source into target                                           | copies the file                    |
+| `ask to copy`        | asks to copy or ignore                                              | asks to copy or ignore             |
+| `copy`               | copies the file                                                     | copies the file                    |
+| `copy shared`        | copies the shared block; merges instead if a marker is missing      | copies the whole file (bootstrap)  |
+| `ask to copy shared` | asks to copy the shared block; asks to merge if a marker is missing | asks to copy or ignore             |
 
 The script uses two configuration files with two different JSON formats:
 
@@ -144,12 +146,12 @@ The script uses two configuration files with two different JSON formats:
         "files": [
           {
             "sourceFile": "$vm2_repos/$vm2_sot_shared/.editorconfig",
-            "targetFile": "$target_file_path/.editorconfig",
+            "targetFile": "$target_repo_path/.editorconfig",
             "action": "copy"
           },
           {
             "sourceFile": "$vm2_repos/$vm2_sot_shared/.gitignore",
-            "targetFile": "$target_file_path/.gitignore",
+            "targetFile": "$target_repo_path/.gitignore",
             "action": "copy"
           },
           ...
@@ -281,6 +283,7 @@ Only runs on `pull_request` events.
 
 > [!NOTE]
 > The type keywords are defined in the vm2.DevOps script: [vm2.DevOps/scripts/bash/lib/_constants.sh](../vm2.DevOps/scripts/bash/lib/_constants.sh) and should be kept in sync with:
+>
 > - [vm2.Templates/templates/AddNewPackage/content/.gitmessage](../vm2.Templates/templates/AddNewPackage/content/.gitmessage)
 > - [vm2.Templates/changelog/cliff.prerelease.toml](../vm2.Templates/changelog/cliff.prerelease.toml)
 > - [vm2.Templates/changelog/cliff.release-header.toml](../vm2.Templates/changelog/cliff.release-header.toml)

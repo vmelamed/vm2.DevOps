@@ -6,6 +6,8 @@
 declare -xr common_args_usage
 declare -xr script_name
 
+declare -xr default_vm2_repos_path
+
 function usage_text()
 {
     (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
@@ -39,7 +41,7 @@ Arguments:
 
 Options:
   -r, --vm2-repos <dir>         The parent directory where all vm2 repositories are cloned.
-                                Initial value from \$VM2_REPOS or '\$HOME/repos/vm2'.
+                                Initial value from \$VM2_REPOS or '\$$default_vm2_repos_path'.
   -s, --source-of-truth <sot>   The source-of-truth scenario to use. Must be one of the pre-defined
                                 scenarios in '\$VM2_REPOS/vm2.Templates/templates/'.
   -f, --file <pattern>          A file name or a quoted glob pattern (quote glob patterns to prevent shell
@@ -55,6 +57,11 @@ Options:
   -fac, --file-ask-to-copy <pattern>
                                 Same as --file but overrides the action to 'ask to copy'.
   -fc, --file-copy <pattern>    Same as --file but overrides the action to 'copy' (no prompt).
+  -fcs, --file-copy-shared <pattern>
+                                Same as --file but overrides the action to 'copy shared' -- copies only the
+                                content between a '<<<===' / '===>>>' marker pair, without prompting.
+  -facs, --file-ask-to-copy-shared <pattern>
+                                Same as --file but overrides the action to 'ask to copy shared'.
   --summary <file>              Write the run summary to <file> in Markdown format. If not specified,
                                 a temporary file is created, displayed at the end, and then deleted.
 

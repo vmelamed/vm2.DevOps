@@ -77,7 +77,7 @@ function get_arguments()
                 current_branch=true
                 ;;
 
-            * ) (( ${#target_repos[@]} == 0 )) || ! is_in "$value" "${target_repos[@]}" &&
+            * ) is_empty_array target_repos || ! is_in "$value" "${target_repos[@]}" &&
                     target_repos+=("$value")
                 ;;
         esac
@@ -118,6 +118,8 @@ declare -xr action_ask_to_merge
 declare -xr action_merge
 declare -xr action_ask_to_copy
 declare -xr action_copy
+declare -xr action_copy_shared
+declare -xr action_ask_to_copy_shared
 
 function get_selector_action()
 {
@@ -139,25 +141,24 @@ function get_selector_action()
     _action="${BASH_REMATCH[3]//-/ }"
 
     case "$_action" in
-        "i"  | "$action_ignore" ) _action="$action_ignore" ;;
-        "mc" | "$action_merge_or_copy" ) _action="$action_merge_or_copy" ;;
-        "am" | "$action_ask_to_merge" ) _action="$action_ask_to_merge" ;;
-        "m"  | "$action_merge" ) _action="$action_merge" ;;
-        "ac" | "$action_ask_to_copy" ) _action="$action_ask_to_copy" ;;
-        "c"  | "$action_copy" ) _action="$action_copy" ;;
-        * ) ;;
+        "i"  | "$action_ignore"             ) _action="$action_ignore" ;;
+        "mc" | "$action_merge_or_copy"      ) _action="$action_merge_or_copy" ;;
+        "am" | "$action_ask_to_merge"       ) _action="$action_ask_to_merge" ;;
+        "m"  | "$action_merge"              ) _action="$action_merge" ;;
+        "ac" | "$action_ask_to_copy"        ) _action="$action_ask_to_copy" ;;
+        "c"  | "$action_copy"               ) _action="$action_copy" ;;
+        "cs" | "$action_copy_shared"        ) _action="$action_copy_shared" ;;
+        "acs"| "$action_ask_to_copy_shared" ) _action="$action_ask_to_copy_shared" ;;
+        ""                                  ) ;;
+        *                                   ) error -ec "$err_argument_value" "Invalid action: $_action. Valid actions are: $all_actions_str" ;;
     esac
-
-    # validate the action
-    [[ -z $_action ]] || is_in "$_action" "${valid_actions[@]}" ||
-        error -ec "$err_argument_value" "Invalid action: $_action. Valid actions are: $all_actions_str"
-
-    trace "File selector '$_file_selector' with action '$_action'"
 
     [[ $_file_selector != -* ]] ||
         error -ec "$err_argument_value" "The argument '$_file_selector' does not appear to be a valid file selector."
 
     exit_if_has_errors
+
+    trace "File selector '$_file_selector' with action '$_action'"
 
     # get the patterns that the action applies to, and remember the action for those files in the selectors_actions array
     selectors_actions[$_file_selector]="$_action"
