@@ -26,22 +26,24 @@
 ## CI/CD
 
 | Tool                         | Purpose                            | Link                                                     |
-|----------------              |------------------------------------|----------------------------------------------------------|
+|------------------------------|------------------------------------|----------------------------------------------------------|
 | GitHub Actions               | CI/CD workflows                    | [docs](https://docs.github.com/en/actions)               |
 | gh                           | GitHub CLI                         | [cli.github.com](https://cli.github.com)                 |
 
 ## Shell & Scripting
 
-| Tool                        | Purpose                             | Link                                                     |
-|-----------------------------|-------------------------------------|----------------------------------------------------------|
-| bash 4.2+                   | Script runtime                      | —                                                        |
-| shellcheck                  | Shell script linting                | [shellcheck.net](https://www.shellcheck.net)             |
-| bats-core                   | Bash Automated Testing System       | [github](https://github.com/bats-core/bats-core)         |
-| git                         | Version control                     | [git-scm.com](https://git-scm.com)                       |
-| jq                          | JSON processing                     | [jqlang.github.io](https://jqlang.github.io/jq/)         |
-| yq                          | YAML processing                     | [github](https://github.com/mikefarah/yq)                |
-| glow                        | Markdown rendering in terminal      | [github](https://github.com/charmbracelet/glow)          |
-| grep -P (PCRE)              | Pattern matching with Perl regex    | —                                                        |
-| diff (GNU diffutils)        | Compare files                       | [gnu.org](https://www.gnu.org/software/diffutils/)       |
-| delta (difftastic)          | Compare files *(recommended)*       | [github](https://github.com/dandavison/delta)            |
-| Visual Studio Code          | Merge files *(recommended)*         | [code.visualstudio.com](https://code.visualstudio.com)   |
+| Tool                 | Purpose                                     | Link                                                    |
+|----------------------|---------------------------------------------|---------------------------------------------------------|
+| bash 4.2+            | Script runtime                              | —                                                       |
+| shellcheck           | Shell script linting                        | [shellcheck.net](https://www.shellcheck.net)            |
+| bats-core            | Bash Automated Testing System               | [github](https://github.com/bats-core/bats-core)        |
+| git                  | Version control                             | [git-scm.com](https://git-scm.com)                      |
+| jq                   | JSON processing                             | [jqlang.github.io](https://jqlang.github.io/jq/)        |
+| yq                   | YAML processing                             | [github](https://github.com/mikefarah/yq)               |
+| glow                 | Markdown rendering in terminal              | [github](https://github.com/charmbracelet/glow)         |
+| grep -P (PCRE)       | Pattern matching with Perl regex            | —                                                       |
+| diff (GNU diffutils) | Compare files                               | [gnu.org](https://www.gnu.org/software/diffutils/)      |
+| delta (difftastic)   | Compare files *(recommended)*               | [github](https://github.com/dandavison/delta)           |
+| Visual Studio Code   | Merge files *(recommended)*                 | [code.visualstudio.com](https://code.visualstudio.com)  |
+| Python 3             | Runtime for `check-jsonschema` *(optional)* | [python.org](https://www.python.org)                    |
+| check-jsonschema     | JSON Schema validation *(optional)*         | [pypi.org](https://pypi.org/project/check-jsonschema/)  |
