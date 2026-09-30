@@ -38,6 +38,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
       - [Functions Modifying Variables](#functions-modifying-variables)
   - [Shared File Sync](#shared-file-sync)
   - [Documentation Reference](#documentation-reference)
+  - [Bash Conventions](#bash-conventions)
+    - [Variables and Dynamic Scope](#variables-and-dynamic-scope)
+    - [Function Parameter Validation](#function-parameter-validation)
+    - [Argument-Dispatcher Precondition Ordering](#argument-dispatcher-precondition-ordering)
+    - [Long-Form Options in Script Bodies](#long-form-options-in-script-bodies)
 
 <!-- /TOC -->
 
@@ -236,6 +241,16 @@ These types of errors are typically caused by user input or environmental condit
 - `error` has its own global counter and contributes to the final decision made by `exit_if_has_errors`
 - Since some runtime errors can be recovered from or a non-zero error code may not be reporting a failure but a condition that
   should be treated differently, depending on the context. In those cases, use the other global error count functions: `has_errors`, `get_errors`, `set_errors`, and `reset_errors` to control the error handling flow.
+- **`exit_if_has_errors` MUST NOT be called from `scripts/bash/lib/*.sh` library functions — only from top-level
+  scripts.** `exit_if_has_errors` hard-exits the process, which takes the decision to terminate away from whoever
+  is calling the library function — possibly another library function several layers up, not the top-level script
+  at all. A library function that accumulates `error`s MUST instead `return` a non-zero error code and let its own
+  caller decide whether to propagate, retry, or exit. This mirrors the `bug`/`error` (exception/`Result<T>`)
+  distinction exactly: `exit_if_has_bugs` staying in library code is correct even so, because a `bug` is a caller
+  contract violation with no possible recovery at any layer — same as an exception, it is fine, in fact necessary,
+  for it to abort immediately regardless of call depth. An `error`, like a `Result`, is a legitimate outcome the
+  caller is expected to branch on, and only a top-level script is in a position to decide "branch on it by exiting
+  the process."
 
 Because of the difference in the targeted audience for `bug` and `error` messages, `exit_if_has_bugs` just displays a summary
 message, whereas `exit_if_has_errors` displays a summary message *and* a short usage text. The usage text can be suppressed with an optional parameter: `exit_if_has_errors false`
@@ -410,3 +425,132 @@ Files that are canonical in `vm2.Templates` (`.editorconfig`, `.github/CONVENTIO
 | `docs/GITHUB_ACTIONS_CHEATSHEET.md`     | Short reference for GitHub Actions usage and best practices |
 | `docs/HARDENING.md`                     | Security hardening guidelines for the repository |
 | `docs/TOOLS.md`                         | Reference for tools used in the repository/CI-CD pipelines |
+
+## Bash Conventions
+
+> [!NOTE]
+> Moved here from the shared `.github/CONVENTIONS.md` (synced to every vm2 repo) because this content only matters
+> where bash is actually written and maintained — this repo. Canonical source of the move: `vm2.Templates/templates/AddNewPackage/content/.github/CONVENTIONS.md`.
+
+**In POSIX shell, `&&` and `||` have equal precedence and are left-associative — `&&` does NOT bind tighter than `||`
+the way it does in C-family languages, so `A || B && C` parses as `(A || B) && C`, not `A || (B && C)`.** A bare
+assignment (`_rc=value`) as the middle operand always "succeeds," so `cond || _rc=value && error ...` silently runs
+`error` unconditionally, regardless of `cond`. Use `cond || { _rc=value; error ...; }` instead whenever more than one
+statement must run on failure. See also
+[GitHub Actions Expressions: `&&`/`||` Is Not If/Then/Else](.github/CONVENTIONS.md#github-actions-expressions--is-not-ifthenelse)
+for the same trap in workflow YAML.
+
+### Variables and Dynamic Scope
+
+- Function-local variable names MUST begin with `_`. Bash uses dynamic scope: a called function can read and modify the
+  caller's locals unless it declares a local variable with the same name. The prefix reduces accidental collisions with
+  globals and environment variables; it does not eliminate collisions between functions.
+- A nameref (`local -n`) MUST have a name distinct from the target name and from locals in callers that may be visible
+  through dynamic scope. In particular, a function receiving a target variable name MUST NOT give its nameref the same
+  name commonly used by callers; that can create a circular nameref.
+- Validate a variable name before creating a nameref to it. Create the nameref only after the parameter-validation gate.
+- When iterating over variable names, use indirect expansion (`${!_name}`) rather than assigning successive targets to a
+  nameref declared outside the loop. Assigning to such a nameref writes through to its current target; it does not
+  reliably re-target the reference.
+- Remember that the left side of a pipeline executes in a subshell. A function that mutates a variable through a nameref
+  MUST run in the current shell; pass input through redirection or process substitution instead of piping into it.
+
+### Function Parameter Validation
+
+Reusable functions MUST accumulate all useful parameter errors and pass one validation gate before business logic:
+
+```bash
+function example()
+{
+    local -i _rc="$success"
+
+    (( $# == 1 || $# == 2 )) || {
+        _rc="$err_invalid_arguments"
+        error -ec "$_rc" "${FUNCNAME[0]}() requires one or two arguments (provided $#)."
+    }
+    [[ -v 1 && -n $1 ]] || {
+        _rc="$err_argument_value"
+        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the input name, to be non-empty (provided '${1-<missing>}')."
+    }
+    [[ ! -v 2 || $2 =~ ^(true|false)$ ]] || {
+        _rc="$err_argument_type"
+        error -ec "$_rc" "${FUNCNAME[0]}() requires optional argument 2 to be 'true' or 'false' (provided '${2-<missing>}')."
+    }
+
+    (( _rc == success )) || return "$err_invalid_arguments"
+
+    local _input=$1
+    local _flag=${2:-false}
+    # business logic
+}
+```
+
+- Check overall arity separately with `$#`. Do not return immediately after the arity check: report independently useful
+  errors for missing or invalid arguments as well.
+- Test a required positional parameter with `[[ -v N && predicate ]]`. Test an optional parameter with
+  `[[ ! -v N || predicate ]]`. The existence check MUST precede expansion of `$N`, so validation remains safe under
+  `set -u`.
+- Commands cannot be invoked inside `[[ ... ]]`. Guard command predicates explicitly, for example:
+  `[[ -v 1 ]] && is_defined_array "$1" || { ...; }`.
+- Each failed check MUST log the specific applicable error code (`$err_argument_type`, `$err_argument_value`,
+  `$err_invalid_nameref`, and so on). After all checks, the validation gate MUST return the generic
+  `$err_invalid_arguments`, so callers need only one sentinel for a bad call.
+- Error messages MUST identify the argument number, its role, and the expected constraint. Render a possibly absent
+  value with `${N-<missing>}`; never expand an unguarded positional parameter merely to report an error.
+- Do not assign required positional parameters to locals, create namerefs, or perform business logic before the gate.
+- Validation of global or environment state is a precondition check, not argument validation. It MAY use the same
+  accumulate-then-gate shape, but MUST return the code that describes the failed precondition, commonly
+  `$err_logic_error`, rather than `$err_invalid_arguments`.
+- A parser that consumes arguments with `shift` MAY use multiple validation gates, one before each dependent phase.
+- Top-level CLI parsers and configuration functions that intentionally terminate through `usage()` or
+  `exit_if_has_errors()` MUST retain that process-exit behavior. They SHOULD accumulate errors with `error` calls and
+  invoke the exit gate once; do not convert them into reusable return-based functions.
+
+### Argument-Dispatcher Precondition Ordering
+
+Bash argument parsers commonly chain several optional handlers, each claiming the tokens it recognizes and returning
+failure for the rest, so the caller can fall through to the next one (e.g. a script's own `case` block trying
+`get_common_arg`, then a shared `get_common_*_arg`, then its own options). In this shape:
+
+- **Determine applicability before validating shape.** A handler MUST decide whether an option belongs to it (a
+  `case`/pattern match on the option's *name*) before it inspects or requires anything about the option's *value*.
+  Checking a value's presence or format ahead of that membership check makes the handler misfire on inputs that were
+  never meant for it — for example, an ordinary positional argument that happens to be the last token on the command
+  line gets treated as "my option, and its value is missing," when it is not this handler's option at all.
+- A handler in this chain has exactly one legitimate way to say "not mine": return failure without touching the
+  value or any option-specific state. It has exactly one legitimate way to say "mine, but malformed": having matched
+  the option name, *then* validate the value and report a specific, actionable error.
+- When adding or removing a value-taking option from such a dispatcher, also update any downstream no-op reservation
+  list (a `case` arm like `-a|-c|-f|... ) ;;` that exists purely to reserve those letters/names so a later `case` arm
+  in the same function does not shadow the shared handler). A stale reservation silently swallows a letter the shared
+  handler no longer claims, or fails to reserve one it newly does.
+
+### Long-Form Options in Script Bodies
+
+When a script or function invokes another vm2.DevOps script or library function that itself accepts an option, use
+the option's **long form** (`--verbose`, `--header`, `--configuration`) in the checked-in call, not its short alias
+(`-v`, `-h`, `-c`). A long-form flag is self-documenting at the call site — a reader does not need to look up what
+`-md` means the way they might need to for `--markdown`. Short forms exist for fast, interactive, one-off terminal
+use, where brevity outweighs at-a-glance clarity; that tradeoff does not hold for a call site that is read far more
+often than it is typed.
+
+```bash
+# Preferred: long-form options make the call self-explanatory
+dump_vars --force --quiet --header "Arguments for $script_name:" package_project reason
+
+# Avoid: short forms make the reader go look up what -f/-q/-h mean
+dump_vars -f -q -h "Arguments for $script_name:" package_project reason
+```
+
+**Exception: the `message()`-family functions** (`error`, `warning`, `info`, `trace`, `bug`, `usage`,
+`exit_with_error`, `fatal_exit`). Their own options — `--error-code`/`-ec`, `--stack-depth`/`-sd`,
+`--no-stack`/`-ns`, `--stack-skip`/`-ss` — are used in **short** form throughout the codebase, by established
+convention: these calls appear at essentially every validation and error-reporting site in every script, and the
+short forms keep them visually compact, so the part that actually matters at each call site — the message text —
+stays the most prominent thing on the line.
+
+```bash
+# Exception: message()-family functions keep their short forms
+error -ec "$err_argument_value" "Bad commit message: $subject"
+usage -ec "$_rc" -sd 3 "Invalid argument value for the option <option_name>"
+```
