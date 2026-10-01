@@ -41,8 +41,12 @@ Options:
                                 '.github/workflows/run-benchmarks.yml'
                                 Initial value from \$WORKFLOW_PATH or default ''
 Note:
-  1) If none of the --wf-* options are specified, the script will try to find the workflow by the first non-empty environment
-     variable WORKFLOW_NAME, WORKFLOW_PATH, and WORKFLOW_ID in that order
+  1) The workflow is identified by whichever of \$WORKFLOW_ID, \$WORKFLOW_NAME, or \$WORKFLOW_PATH (or their --wf-id/
+     --wf-name/--wf-path equivalents) is non-empty, with \$WORKFLOW_ID taking precedence when set, then
+     \$WORKFLOW_NAME, then \$WORKFLOW_PATH. However, the script currently always re-queries the workflow ID via
+     'gh workflow list' using a filter built from the name/path; when only an id was given (no name or path), that
+     filter ends up empty, which does not reliably resolve back to the given id -- prefer --wf-name or --wf-path
+     until this is addressed.
   2) If more than one --wf-* options are specified, only the last one is considered
   3) If one of the --wf-* options is specified, the environment variables will be ignored
 

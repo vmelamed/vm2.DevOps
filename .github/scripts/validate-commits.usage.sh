@@ -50,10 +50,11 @@ Description:
     chore(ci):  update GitHub Actions workflow
 
 Argument:
-  <base-ref>                         Optional. Git ref to compare against (e.g. origin/main, a SHA, or a tag).
-                                      If omitted (and \$BASE_REF is unset), defaults to the merge-base with this
-                                      branch's upstream tracking branch (or origin/HEAD's target if none is set) --
-                                      i.e. commits since this branch diverged, not the repository's entire history.
+  <base-ref>                        Optional. Git ref to compare against (e.g. origin/main, a SHA, or a tag). If omitted (and
+                                    \$BASE_REF is unset), defaults to the merge-base with the repository's default branch
+                                    (origin/HEAD's target), falling back to this branch's own upstream tracking branch only if
+                                    no default branch can be discovered -- i.e. commits since this branch diverged, not the
+                                    repository's entire history.
 
 $_common_args
 Examples:

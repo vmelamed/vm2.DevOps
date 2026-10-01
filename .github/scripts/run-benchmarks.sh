@@ -141,7 +141,7 @@ benchmark_args=(
 )
 
 ##########################################
-### Run the tests with coverage collection
+### Run the benchmarks with JSON/markdown export
 ##########################################
 declare rc=$success
 

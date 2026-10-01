@@ -33,11 +33,17 @@ Arguments:
                                 Overrides the initial value from the environment value \$TEST_PROJECT environment variable
 
 Options:
+  -min, --min-coverage-pct <percentage>
+                                Minimum acceptable line code coverage percentage.
+                                Initial value from \$MIN_COVERAGE_PCT or default 80
 $common_dotnet_parameters
 
 Environment Variables:
   TEST_PROJECT                  Path to the test project file
-  MIN_COVERAGE_PCT              Minimum acceptable code coverage percentage
+  MIN_COVERAGE_PCT              Minimum acceptable line code coverage percentage (default: 80)
+  MIN_BRANCH_COVERAGE_PCT       Minimum acceptable branch code coverage percentage. Defaults to
+                                MIN_COVERAGE_PCT - 5 when not explicitly set (default: 75)
+  MIN_METHOD_COVERAGE_PCT       Minimum acceptable method code coverage percentage (default: 80)
 $common_dotnet_vars
 
 Outputs (to \$GITHUB_OUTPUT or stdout):

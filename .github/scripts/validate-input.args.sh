@@ -133,7 +133,7 @@ function get_arguments()
             # do not use the common options - they were already processed by get_common_arg and get_common_dotnet_arg:
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
                 ;;
-            -c|--define|--configuration|--framework|--runtime|--artifacts-path|--minver-tag-prefix|--minver-prerelease-id|--nuget-username|--nuget-password )
+            -c|-d|-tfm|-rid|--define|--configuration|--framework|--runtime|--artifacts-path|--minver-tag-prefix|--minver-prerelease-id|--nuget-username|--nuget-password )
                 ;;
 
             * ) usage -ec "$err_unknown_argument" "Unknown argument: $_option"

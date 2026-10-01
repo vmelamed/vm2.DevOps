@@ -104,6 +104,11 @@ declare query
 
 # get the workflow ID if not provided
 # query for the workflow ID using the name or path
+#
+# NOTE: this block only builds $query when $workflow_id was NOT already supplied (via --wf-id or
+# $WORKFLOW_ID); when it WAS supplied, the whole if-block is skipped and $query is left unset.
+# The unconditional 'gh workflow list ... --jq "$query"' below then still runs in that case, with
+# an empty jq filter -- it does not simply keep the caller-supplied $workflow_id as intended.
 if [[ -z "$workflow_id" ]]; then
     if [[ -n "$workflow_name" ]]; then
         query=".[] | select(.name==\"$workflow_name\").id"

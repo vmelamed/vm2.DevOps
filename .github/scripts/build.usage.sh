@@ -15,6 +15,8 @@ declare -xr common_dotnet_vars
 # @arg $1 bool Whether to include the long-form help text (switches and environment variables
 #   list).
 #
+# @exitcode success=0: Always.
+#
 # @stdout The usage/help text for this script.
 #
 # @example

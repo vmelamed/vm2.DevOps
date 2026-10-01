@@ -24,9 +24,11 @@ function usage_text()
 Usage:
   $script_name [<package project>] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
 
-Validates that a .NET project can be successfully packed into a NuGet package (dry-run pack without publishing). All parameters
-are optional if the corresponding environment variables are set. If both are specified, the command line arguments take
-precedence.
+Packs a .NET project into a NuGet package via 'dotnet pack', optionally building it first. Used both to validate that a project
+packs successfully (the CI 'Pack' job, with '--build false', the default -- the produced package is not built) and to
+produce the actual packages published by the Prerelease/Release workflows (with '--build true', packing a project that was not
+already built by this run, e.g. after checking out a release tag). All parameters are optional if the corresponding environment
+variables are set. If both are specified, the command line arguments take precedence.
 
 Arguments:
   <package project>             Path to the project to pack. The file must exist and cannot be empty.
@@ -36,7 +38,7 @@ Options:
   -r, --reason <reason text>    Reason for release (e.g., "prerelease", "stable release", "hotfix", etc.). The reason is also
                                 added as a release note in the package metadata.
                                 Initial value from \$REASON or default "release build".
-  -b, --build [true|false]      Whether to build the project before packing.
+  -b, --build [true|false]      Forces the build of the project before packing.
                                 Initial value from \$BUILD or default 'false'.
 $common_dotnet_parameters
 

@@ -70,7 +70,7 @@ Options:
   -r, --reset-benchmark-thresholds [true|false]
                                 Whether to reset Bencher thresholds if some degradation is expected. Expected 'true' or 'false'
                                 Initial value from \$RESET_BENCHMARK_THRESHOLDS or default 'false'
-  -st, --skip-build [true|false]
+  -sb, --skip-build [true|false]
                                 Whether to skip building. Expected 'true' or 'false'
                                 Initial value from \$SKIP_BUILD or default 'false'
   -st, --skip-tests [true|false]
