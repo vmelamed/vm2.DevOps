@@ -105,22 +105,22 @@ declare query
 # get the workflow ID if not provided
 # query for the workflow ID using the name or path
 #
-# NOTE: this block only builds $query when $workflow_id was NOT already supplied (via --wf-id or
-# $WORKFLOW_ID); when it WAS supplied, the whole if-block is skipped and $query is left unset.
-# The unconditional 'gh workflow list ... --jq "$query"' below then still runs in that case, with
-# an empty jq filter -- it does not simply keep the caller-supplied $workflow_id as intended.
+# NOTE: this block implements a precedence for determining the workflow ID:
+#       1. Use the provided workflow ID if available.
+#       2. Otherwise, use the workflow name if provided.
+#       3. Otherwise, use the workflow path if provided.
+#       4. If none of the above are provided, exit with an error.
 if [[ -z "$workflow_id" ]]; then
     if [[ -n "$workflow_name" ]]; then
         query=".[] | select(.name==\"$workflow_name\").id"
     elif [[ -n "$workflow_path" ]]; then
         query=".[] | select(.path==\"$workflow_path\").id"
     else
-        error -ec "$err_missing_argument" "Either the workflow id, the workflow name, or the workflow path must be specified."
+        exit_with_error -ec "$err_missing_argument" "Either the workflow id, the workflow name, or the workflow path must be specified."
     fi
-fi
-exit_if_has_errors
 
-workflow_id=$(execute gh workflow list --repo "$repository" --json "id,name,path" --jq "$query")
+    workflow_id=$(execute gh workflow list --repo "$repository" --json "id,name,path" --jq "$query")
+fi
 
 if is_dry_run; then
     workflow_id=1234567890
@@ -154,7 +154,7 @@ readarray -t runs < <(
 # starting from the most recent one down to the oldest one
 i=0
 for run in "${runs[@]}"; do
-    i=$((i + 1))
+    (( ++i ))
     trace "Checking run $run for the artifact '$artifact_name'..."
     query="any(.artifacts[]; .name==\"$artifact_name\")"
     if [[ $(gh api "repos/$repository/actions/runs/$run/artifacts" --jq "$query") != true ]]; then

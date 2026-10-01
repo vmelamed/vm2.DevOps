@@ -419,7 +419,7 @@ function get_vars_defaults()
 
     __vars_order=("${_app_vars_order[@]}")
 
-    if [[ -v 5 ]]; then
+    if [[ -v 4 ]]; then
         # copy the _vars_validators
         local _vars_validators_name="${_app,,}_vars_validators"
         local -n _app_vars_validators=$_vars_validators_name

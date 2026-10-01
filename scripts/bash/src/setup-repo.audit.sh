@@ -15,6 +15,7 @@ declare -xr warn_em
 declare -xr not_eq_em
 
 declare -xri success
+declare -xri failure
 declare -xri err_invalid_arguments
 declare -xri err_argument_value
 declare -xri err_argument_type
@@ -44,6 +45,11 @@ declare -xA default_local_git_settings
 declare -xa default_local_git_settings_order
 
 declare -x main_protection_rs_name
+
+declare -x path_repo
+declare -x path_permissions
+declare -x path_vars
+declare -x path_main_protection_ruleset
 
 declare -x jq_entries
 declare -x jq_secrets
@@ -227,17 +233,73 @@ function compare_settings()
     return 0
 }
 
-declare -x path_repo
-
-declare -x path_permissions
 declare -x path_rulesets
 
-declare -x path_actions_secrets
-declare -x path_dependabot_secrets
+function audit_branch_ruleset()
+{
+    local -i _rc=$success
+    local _rulesets_json
 
-declare -x path_vars
+    _rulesets_json=$(execute_gh_api_with_retry 3 2 --paginate "$path_rulesets") || true
 
-declare -x path_main_protection_ruleset
+    [[ -n "${_rulesets_json:-}" ]] || {
+        _rc=$failure
+        error -ec "$_rc" "Ruleset '$main_protection_rs_name' for branch '$branch' is missing"
+        return "$_rc"
+    }
+
+    local _ruleset_id
+
+    _ruleset_id=$(jq -r "$jq_ruleset_id" <<< "$_rulesets_json" 2>"$_ignore")
+
+    [[ -z "$_ruleset_id" ]] && {
+        _rc=$failure
+        error -ec "$_rc" "Ruleset '$main_protection_rs_name' for branch '$branch' does not exist"
+        return "$_rc";
+    }
+
+    echo "  $info_em  Ruleset '$main_protection_rs_name' for branch '$branch' (id: $_ruleset_id):"
+
+    compare_settings "$path_rulesets/$_ruleset_id" "$jq_ruleset_rules" true false default_ruleset _results default_ruleset_order || {
+        _rc=$?
+        error -ec "$_rc" "Failed to compare branch protection ruleset settings."
+        return "$_rc";
+    }
+}
+
+function audit_required_status_checks() {
+    local -i _rc=$success
+
+    is_empty_array required_checks && return "$_rc"
+
+    echo "      $info_em  Required status checks list:"
+
+    local _json
+    _json=$(execute_gh_api_with_retry 3 2 --paginate "$path_main_protection_ruleset") || {
+        _rc=$err_tool_error
+        error -ec "$_rc" "Failed to fetch data from GitHub API: $path_main_protection_ruleset."
+        return "$_rc"
+    }
+
+    local -a _present_checks=()
+    local _check
+
+    while read -r _check; do
+        _present_checks+=("$_check")
+    done < <(jq -r "$jq_status_checks" <<< "$_json")
+
+    for _check in "${required_checks[@]}"; do
+        if ! is_empty_array _present_checks && is_in "$_check" "${_present_checks[@]}"; then
+            printf "          $check_em  %-32s => present\n" "$_check"
+            (( ++_results["$key_matches"] ))
+        else
+            printf "          $error_em  %-32s => missing\n" "$_check"
+            (( ++_results["$key_missing"] ))
+        fi
+    done
+
+    return "$_rc"
+}
 
 #---------------------------------------------------------------------------------------------
 # @description Runs a full, read-only audit of the target GitHub repository against the vm2 conventions, comparing
@@ -272,14 +334,12 @@ function audit_repo()
     echo "  $info_em  Repository settings:"
     compare_settings "$path_repo" "$jq_entries" true false default_repo_settings _results default_repo_settings_order || {
         error -ec "$?" "Failed to compare repository settings."
-        return 2
     }
 
     # --- Actions permissions ---
     echo "  $info_em  Actions permissions:"
     compare_settings "$path_permissions" "$jq_entries" true false default_repo_permissions _results || {
         error -ec "$?" "Failed to compare repository permissions settings."
-        return 2
     }
 
     local _app
@@ -296,7 +356,6 @@ function audit_repo()
         echo "  $info_em  ${_app^} Variables:"
         compare_settings "$path_vars" "$jq_vars" false true _vars_defaults _results _vars_order || {
             error -ec "$?" "Failed to compare GitHub ${_app^} variables."
-            return 2
         }
     done
 
@@ -312,57 +371,14 @@ function audit_repo()
         echo "  $info_em  ${_app^} Secrets:"
         compare_settings "$path_repo/$_app/secrets" "$jq_secrets" false true _secrets_defaults _results _secrets_order || {
             error -ec "$?" "Failed to compare $_app secrets."
-            return 2
         }
     done
 
     # --- Branch ruleset ---
-    local _rulesets_json
-    _rulesets_json=$(execute_gh_api_with_retry 3 2 --paginate "$path_rulesets") || true
+    audit_branch_ruleset || true
 
-    if [[ -z "${_rulesets_json:-}" ]]; then
-        echo "  $error_em  Ruleset '$main_protection_rs_name' for branch '$branch' is missing"
-        exit 1
-    fi
-
-    local _ruleset_id
-    _ruleset_id=$(jq -r "$jq_ruleset_id" <<< "$_rulesets_json" 2>"$_ignore")
-
-    [[ -z "$_ruleset_id" ]] && {
-        echo "  $error_em  Ruleset '$main_protection_rs_name' for branch '$branch' does not exist"
-        exit 1;
-    }
-
-    echo "  $info_em  Ruleset '$main_protection_rs_name' for branch '$branch' (id: $_ruleset_id):"
-    compare_settings "$path_rulesets/$_ruleset_id" "$jq_ruleset_rules" true false default_ruleset _results default_ruleset_order || {
-        error -ec "$?" "Failed to compare branch protection ruleset settings."
-        return 2
-    }
-
-    if ! is_empty_array required_checks; then
-        echo "      $info_em  Required status checks list:"
-        local _json
-        _json=$(execute_gh_api_with_retry 3 2 --paginate "$path_main_protection_ruleset") || {
-            error -ec "$err_tool_error" "Failed to fetch data from GitHub API: $path_main_protection_ruleset."
-            return 2
-        }
-        local -a _present_checks=()
-        local _check
-
-        while read -r _check; do
-            _present_checks+=("$_check")
-        done < <(jq -r "$jq_status_checks" <<< "$_json")
-
-        for _check in "${required_checks[@]}"; do
-            if ! is_empty_array _present_checks && is_in "$_check" "${_present_checks[@]}"; then
-                printf "          $check_em  %-32s => present\n" "$_check"
-                (( ++_results["$key_matches"] ))
-            else
-                printf "          $error_em  %-32s => missing\n" "$_check"
-                (( ++_results["$key_missing"] ))
-            fi
-        done
-    fi
+    # --- Required status checks ---
+    audit_required_status_checks || true
 
     # --- Local Git Settings ---
     echo "  $info_em  Local Git Settings:"

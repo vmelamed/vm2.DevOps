@@ -21,34 +21,33 @@ function usage_text()
 Usage:
   $script_name [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
 
-Tries to find and download the latest artifact created by previous runs of the specified workflow. All parameters are optional
-if the corresponding environment variables are set. If both are specified, the command line arguments take precedence
+Tries to find and download the latest artifact created by a previous run of the specified workflow. Every parameter is
+optional if the corresponding environment variable is set instead; when a value is given both ways, the command-line
+argument takes precedence.
 
 Options:
-  -a, --artifact                Specifies the name of the artifact to download
+  -a, --artifact                Specifies the name of the artifact to download.
                                 Initial value from \$ARTIFACT_NAME
-  -d, --directory               The path to the artifact directory where to download the artifacts. If the directory does not
-                                exist, it will be created. If it exists and it is not empty, its contents will be clobbered
-                                without warning
+  -d, --directory               The directory to download the artifact into. Created if it does not exist; if it exists
+                                and is not empty, its contents are clobbered without warning.
                                 Initial value from \$ARTIFACT_DIR or default './BmArtifacts/baseline'
-  -r, --repository              Specifies the GitHub repository in the form 'owner/repo' where to find the workflow
+  -r, --repository              Specifies the GitHub repository, in the form 'owner/repo', where the workflow lives.
                                 Initial value from \$REPOSITORY
-  -i, --wf-id                   Specifies the ID of the workflow
+  -i, --wf-id                   Specifies the ID of the workflow.
                                 Initial value from \$WORKFLOW_ID or default ''
-  -n, --wf-name                 Specifies the name of the workflow as shown in the GitHub Actions UI
+  -n, --wf-name                 Specifies the name of the workflow, as shown in the GitHub Actions UI.
                                 Initial value from \$WORKFLOW_NAME
-  -p, --wf-path                 Specifies the path of the workflow file in the repository, e.g
-                                '.github/workflows/run-benchmarks.yml'
+  -p, --wf-path                 Specifies the path of the workflow file in the repository, e.g.
+                                '.github/workflows/run-benchmarks.yml'.
                                 Initial value from \$WORKFLOW_PATH or default ''
 Note:
-  1) The workflow is identified by whichever of \$WORKFLOW_ID, \$WORKFLOW_NAME, or \$WORKFLOW_PATH (or their --wf-id/
-     --wf-name/--wf-path equivalents) is non-empty, with \$WORKFLOW_ID taking precedence when set, then
-     \$WORKFLOW_NAME, then \$WORKFLOW_PATH. However, the script currently always re-queries the workflow ID via
-     'gh workflow list' using a filter built from the name/path; when only an id was given (no name or path), that
-     filter ends up empty, which does not reliably resolve back to the given id -- prefer --wf-name or --wf-path
-     until this is addressed.
-  2) If more than one --wf-* options are specified, only the last one is considered
-  3) If one of the --wf-* options is specified, the environment variables will be ignored
+  1) The workflow is identified by precedence: the workflow ID, if known, is used directly; otherwise the workflow
+     name is used to look it up; otherwise the workflow path is used. This precedence applies equally whether the
+     value came from \$WORKFLOW_ID/\$WORKFLOW_NAME/\$WORKFLOW_PATH or from --wf-id/--wf-name/--wf-path.
+  2) If more than one --wf-* option is given, only the last one on the command line is kept -- each --wf-* option
+     clears the other two.
+  3) Giving any --wf-* option on the command line clears the environment variables for the other two identifiers, so
+     only the identifier you specified is used.
 
 Environment Variables:
   ARTIFACT_NAME                 Name of the artifact to download

@@ -544,12 +544,14 @@ declare -xr count_errors_rex='^[[:space:]]*([0-9]+) (Error|Warning).*$'
 #   build reports them once per constituent project and only the last one read would otherwise
 #   be kept, which would misleadingly look like a single, authoritative answer.
 #
-# @arg $1 string The project or solution file path for which the build information is being
-#   extracted
-# @arg $2 int The result code from 'dotnet build'
-# @arg $3 nameref to an associative array variable to receive the build information
+# @arg $1 string _project_file The project or solution file path for which the build
+#   information is being extracted
+# @arg $2 int _build_result The result code from 'dotnet build'
+# @arg $3 nameref _extracted The name of an associative array variable to receive the build
+#   information
 #
-# @stdin The standard input from which to read the build output, e.g. dotnet build --verbosity minimal
+# @stdin The standard input from which to read the build output, e.g. dotnet build --verbosity
+#   minimal
 #
 # @exitcode success=0: The build information was extracted (always, once past the argument
 #   validation gate).
@@ -559,7 +561,7 @@ declare -xr count_errors_rex='^[[:space:]]*([0-9]+) (Error|Warning).*$'
 function extract_dotnet_build_info()
 {
     (( $# == 3 ))                               || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly three arguments (provided $#):" \
-                                                                                    "  - the name of an associative array that will receive build information" \
+                                                                                    "  - the project or solution file path for which the build information is being extracted" \
                                                                                     "  - the result code from 'dotnet build'" \
                                                                                     "  - the name of an associative array variable to receive the build information"
     [[ ! -v 2 ]] || is_non_negative "$2"        || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 2 to be an exit code - non-negative number (provided '${2:-<none>}')."
@@ -985,8 +987,8 @@ function dotnet_pack()
     trace "Executing: \"dotnet msbuild ${_msbuild_args[*]}\":"
     # MSBUILD to find the packages paths
     local _msbuild_output=''
-    _msbuild_output=$(dotnet msbuild "${_msbuild_args[@]}") || _rc=$?
-    (( _rc == dotnet_success )) || {
+    _msbuild_output=$(dotnet msbuild "${_msbuild_args[@]}") || {
+        _rc=$?
         error -ec "$err_tool_error" "Executing MSBuild for '$_project' failed." "$(get_dotnet_error_message "$_rc")"
         return "$err_tool_error"
     }
@@ -1092,7 +1094,12 @@ function get_msbuild_property()
     convert_dotnet_args_to_msbuild_args _msbuild_args "${_dotnet_args[@]}" || return $?
 
     local -n _property=$3
-    _property=$(dotnet msbuild "${_msbuild_args[@]}" 2> "$_ignore") || return $?
+    _property=$(dotnet msbuild "${_msbuild_args[@]}" 2> "$_ignore") || {
+        _rc=$?
+        error -ec "$err_tool_error" "Executing MSBuild for '$_project' failed." "$(get_dotnet_error_message "$_rc")"
+    }
+
+    return "$_rc"
 }
 
 #---------------------------------------------------------------------------------------------

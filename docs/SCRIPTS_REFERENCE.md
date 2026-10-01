@@ -517,7 +517,10 @@ Downloads the latest artifact from a previous workflow run.
 | `--wf-name`    | `-n`  | —                        | Workflow name (as shown in GitHub UI) |
 | `--wf-path`    | `-p`  | —                        | Workflow file path in the repo        |
 
-Workflow lookup priority: `--wf-name` > `--wf-path` > `--wf-id` (or the corresponding env vars).
+Workflow lookup priority: `--wf-id` > `--wf-name` > `--wf-path` (or the corresponding `WORKFLOW_ID`/`WORKFLOW_NAME`/
+`WORKFLOW_PATH` env vars). A workflow ID, once known, is used as-is; otherwise the script resolves one from the name
+or path via `gh workflow list`. Each `--wf-*` option clears the other two on the command line, so specifying more
+than one keeps only the last one given.
 
 ---
 

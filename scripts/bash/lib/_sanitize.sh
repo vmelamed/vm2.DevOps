@@ -881,14 +881,6 @@ function is_safe_runtime()
 # @description Lowercases the referenced Runtime Identifier (RID) in place and validates that
 #   it is safe to use, via `is_safe_runtime()`.
 #
-# Notes:
-#   - The `trim_var "${!_rid}"` call looks suspect: `${!_rid}` is bash indirect expansion, so
-#     it resolves to the value of a variable *named* by the (already-dereferenced) RID string,
-#     not to `$1` itself -- that is almost certainly not the intended way to trim the
-#     referenced variable in place, and the RID is likely not actually being trimmed of
-#     surrounding whitespace as the function's behavior might suggest. Left as-is
-#     (documentation-only pass); flagged here for a follow-up code fix.
-#
 # @arg $1 nameref to a variable containing the Runtime Identifier (RID) to validate.
 #
 # @exitcode success=0: The Runtime Identifier (RID) was lowercased and found safe.
@@ -903,6 +895,11 @@ function validate_runtime()
 
     local -n _rid="$1"
 
+    # since `_rid` is a nameref (`local -n`), `${!_rid}` uses bash's nameref-specific
+    # indirection rule and expands to the *name* of the variable `_rid` references (i.e.
+    # the original `$1`), not a second round of value-based indirection. That is exactly the
+    # variable-name argument `trim_var()` expects, so this correctly trims the caller's
+    # variable in place.
     _rid="${_rid,,}"
     trim_var "${!_rid}"
     is_safe_runtime "$_rid" || return "$?"
