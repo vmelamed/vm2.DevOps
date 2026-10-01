@@ -885,6 +885,17 @@ function dotnet_build()
 # @description Packs a .NET project using the common dotnet arguments, assuming that the project
 #   has already been built.
 #
+# Notes:
+#   - This always runs with '--no-build'. When '$configuration' is empty, 'dotnet build'/'dotnet
+#     msbuild' both fall back to 'Debug', but 'dotnet pack' falls back to 'Release' instead -- a
+#     divergent SDK-level default. Left unhandled, a caller that built without pinning a
+#     configuration (so the output landed under the 'debug' artifacts folder) would then have
+#     this function pack with the empty '$configuration', defaulting to 'Release' and looking for
+#     output under 'release' -- which '--no-build' can never produce, since it's not there. To
+#     avoid that, this function resolves the project's actual (already-built) 'Configuration' via
+#     'get_msbuild_property()' whenever '$configuration' is empty, so packing always agrees with
+#     whatever was just built, instead of silently diverging.
+#
 # @arg $1 string The path to a .csproj file. Note that it must exist and be a valid project
 #   file.
 # @arg $2 string Package release notes, can be empty string.
@@ -893,7 +904,8 @@ function dotnet_build()
 #   respectively "PackagePath" and "SymbolsPath".
 #
 # @exitcode success/positive=0: The operation was successful.
-# @exitcode err_tool_error=66: If 'dotnet pack' failed.
+# @exitcode err_tool_error=66: If 'dotnet pack' failed, or the project's 'Configuration' could
+#   not be resolved.
 #---------------------------------------------------------------------------------------------
 function dotnet_pack()
 {
@@ -915,6 +927,19 @@ function dotnet_pack()
     local _project=$1
     local _reason=${2:-}
 
+    # 'dotnet pack' defaults to 'Release' on its own, unlike the 'Debug' default shared by
+    # 'dotnet build' and 'dotnet msbuild' -- resolve the project's actual Configuration whenever
+    # the caller didn't pin one, so this --no-build pack always matches what was already built.
+    # See the function's doc comment above for the failure mode this avoids.
+    local _pack_configuration=$configuration
+    if [[ -z $_pack_configuration ]]; then
+        get_msbuild_property "$_project" "$key_configuration" _pack_configuration || {
+            _rc=$?
+            error -ec "$err_tool_error" "${FUNCNAME[0]}() Failed to resolve the 'Configuration' property for '$_project'."
+            return "$_rc"
+        }
+    fi
+
     # pack arguments for the dotnet pack command are a subset of the build arguments
     declare -a _dotnet_args
     _dotnet_args=(
@@ -922,8 +947,8 @@ function dotnet_pack()
         --no-logo
         --no-build
         --verbosity minimal
+        --configuration "$_pack_configuration"
     )
-    [[ -z $configuration ]]        || _dotnet_args+=("--configuration" "$configuration")
     [[ -z $runtime ]]              || _dotnet_args+=("--runtime" "$runtime")
     [[ -z $artifacts ]]            || _dotnet_args+=("--artifacts-path" "$artifacts")
     [[ -z $minver_tag_prefix ]]    || _dotnet_args+=("-property:MinVerTagPrefix=\"$minver_tag_prefix\"")

@@ -123,11 +123,11 @@ _sr() {
     assert_output --partial '"github"'
 }
 
-@test "apps_with_secrets lists the four expected GitHub Apps" {
+@test "apps_with_secrets lists the three expected GitHub Apps ('agents' is commented out, not used yet)" {
     run _sr 'printf "%s\n" "${apps_with_secrets[@]}"'
     assert_success
     assert_line "actions"
     assert_line "dependabot"
-    assert_line "agents"
     assert_line "codespaces"
+    refute_line "agents"
 }

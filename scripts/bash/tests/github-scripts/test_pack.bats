@@ -10,10 +10,13 @@
 #
 # Real `dotnet` is faked: it logs every invocation to $DOTNET_CALL_LOG. Its `msbuild` case
 # branches on the arguments: a `-getProperty:TargetPath` call (used by pack.sh's own
-# already-built check, via get_target_path) prints $FAKE_TARGET_PATH; any other `msbuild` call
-# (dotnet_pack reading back PackageOutputPath/PackageId/PackageVersion) prints those three
-# properties from $_id/$_version. The fixture pre-creates the matching .nupkg/.snupkg files, and
-# an already-built $FAKE_TARGET_PATH, exactly as pack.sh expects to find them without rebuilding.
+# already-built check, via get_target_path) prints $FAKE_TARGET_PATH; a `-getProperty:Configuration`
+# call (dotnet_pack() resolving the project's actual Configuration before packing, since
+# 'dotnet pack' on its own defaults to Release while 'dotnet build'/'dotnet msbuild' default to
+# Debug) prints "Release"; any other `msbuild` call (dotnet_pack reading back
+# PackageOutputPath/PackageId/PackageVersion) prints those three properties from $_id/$_version.
+# The fixture pre-creates the matching .nupkg/.snupkg files, and an already-built
+# $FAKE_TARGET_PATH, exactly as pack.sh expects to find them without rebuilding.
 
 bats_require_minimum_version 1.5.0
 
@@ -55,6 +58,10 @@ case "\$1" in
                 # sanitize_common_dotnet_args' own real-MSBuild ArtifactsPath evaluation
                 # (via get_artifacts_path): a single property value, like -getProperty:TargetPath.
                 echo "$_dir/artifacts"
+                ;;
+            *-getProperty:Configuration*)
+                # dotnet_pack()'s own pre-pack Configuration resolution (see file header comment).
+                echo "Release"
                 ;;
             *)
                 echo "PackageOutputPath=$_dir/pkgout"
@@ -105,7 +112,8 @@ _run_pack() {
     run cat "$BATS_TEST_TMPDIR/repo/dotnet.log"
     # index 0 is the real-MSBuild ArtifactsPath evaluation from sanitize_common_dotnet_args.
     assert_line --index 1 --partial "-getProperty:TargetPath"
-    assert_line --index 2 --partial "pack src/App/App.csproj"
+    assert_line --index 2 --partial "-getProperty:Configuration"
+    assert_line --index 3 --partial "pack src/App/App.csproj"
     refute_output --partial "restore"
     refute_output --partial "^build "
 }
@@ -141,7 +149,8 @@ _run_pack() {
     assert_line --index 2 --partial "clean src/App/App.csproj"
     assert_line --index 3 --partial "restore src/App/App.csproj"
     assert_line --index 4 --partial "build src/App/App.csproj"
-    assert_line --index 5 --partial "pack src/App/App.csproj"
+    assert_line --index 5 --partial "-getProperty:Configuration"
+    assert_line --index 6 --partial "pack src/App/App.csproj"
 }
 
 @test "pack: --reason is included as a package release note and reflected in the summary" {

@@ -152,15 +152,15 @@ declare -gxi err_argument_type
     assert_output --partial "Verbose"
 }
 
-@test "dump_vars: --common-dotnet-args dumps the common dotnet variables without clobbering a caller's own \$arg (regression)" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; arg='my-global-value'; dump_vars --force --quiet --common-dotnet-args; echo \"arg=[\$arg]\""
+@test "dump_vars: dump_common_dotnet_args dumps the common dotnet variables without clobbering a caller's own \$arg (regression)" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; arg='my-global-value'; dump_vars --force --quiet \"\${dump_common_dotnet_args[@]}\"; echo \"arg=[\$arg]\""
     assert_success
     assert_output --partial "configuration"
     assert_output --partial "arg=[my-global-value]"
 }
 
-@test "dump_vars: --common-dotnet-args masks the NuGet password" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; gh_nuget_password='topsecret'; dump_vars --force --quiet --common-dotnet-args"
+@test "dump_vars: dump_common_dotnet_args masks the NuGet password" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; gh_nuget_password='topsecret'; dump_vars --force --quiet \"\${dump_common_dotnet_args[@]}\""
     assert_success
     refute_output --partial "topsecret"
     assert_output --partial "gh_nuget_password"

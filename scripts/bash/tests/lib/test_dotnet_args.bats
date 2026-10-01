@@ -159,10 +159,10 @@ EOF
     assert_output --partial "myartifacts"
 }
 
-# --- common_dotnet_to_output (requires gh_core.sh, not just core.sh) ---------------------------
+# --- output_common_dotnet_args (requires gh_core.sh, not just core.sh) -------------------------
 
-@test "common_dotnet_to_output: writes key=value pairs for each common dotnet variable" {
-    run bash -c "source '$lib_dir/gh_core.sh' --no-trap > /dev/null 2>&1; common_dotnet_to_output"
+@test "output_common_dotnet_args: args_to_github_output writes key=value pairs for each common dotnet variable" {
+    run bash -c "source '$lib_dir/gh_core.sh' --no-trap > /dev/null 2>&1; args_to_github_output \"\${output_common_dotnet_args[@]}\""
     assert_output --partial "configuration="
     assert_output --partial "artifacts="
     assert_output --partial "minver-tag-prefix=v"

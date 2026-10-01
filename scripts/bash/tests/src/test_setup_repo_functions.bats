@@ -173,14 +173,28 @@ EOF
     assert_output --partial 'required_checks=([0]="Postrun-CI")'
 }
 
-@test "list_required_checks: fails when the gate job cannot be parsed from CI.yaml" {
+@test "list_required_checks: no gate job in CI.yaml is a silent no-op (e.g. vm2.DevOps itself has none yet), not an error" {
+    echo "jobs: {}" > "$BATS_TEST_TMPDIR/ci.yaml"
+    mkdir -p "$BATS_TEST_TMPDIR/bin"
+    cat > "$BATS_TEST_TMPDIR/bin/yq" <<'EOF'
+#!/usr/bin/env bash
+if [[ "$*" == *"keys[]"* ]]; then exit 0; fi
+exit 1
+EOF
+    chmod +x "$BATS_TEST_TMPDIR/bin/yq"
+    run _sr "ci_yaml='$BATS_TEST_TMPDIR/ci.yaml'; list_required_checks; declare -p required_checks" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
+    assert_success
+    assert_output --partial 'required_checks=()'
+}
+
+@test "list_required_checks: fails when the gate job's keys[] lookup itself fails" {
     echo "jobs: {}" > "$BATS_TEST_TMPDIR/ci.yaml"
     mkdir -p "$BATS_TEST_TMPDIR/bin"
     printf '#!/usr/bin/env bash\nexit 1\n' > "$BATS_TEST_TMPDIR/bin/yq"
     chmod +x "$BATS_TEST_TMPDIR/bin/yq"
-    run _sr "ci_yaml='$BATS_TEST_TMPDIR/ci.yaml'; list_required_checks" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
+    run _sr "set -o pipefail; ci_yaml='$BATS_TEST_TMPDIR/ci.yaml'; list_required_checks" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
     assert_failure "$failure"
-    assert_output --partial "Failed to parse gate job name from CI.yaml"
+    assert_output --partial "Failed to parse gate job from CI.yaml"
 }
 
 # =====================================================================================
