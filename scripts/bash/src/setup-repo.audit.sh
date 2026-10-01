@@ -29,23 +29,19 @@ declare -x repo
 declare -x branch
 declare -x required_checks
 
-declare -xr missing_state
-declare -xr present_state
-declare -xr undefined_default
 declare -xrA default_repo_settings
 declare -xra default_repo_settings_order
 declare -xrA default_repo_permissions
 declare -xrA default_ruleset
 declare -xra default_ruleset_order
+
+declare -xr missing_state='<none>'
+declare -xr present_state=$secret_str
+declare -xr undefined_default='<undefined>'
 declare -xa apps_with_vars
 declare -xa apps_with_secrets
 declare -xA default_local_git_settings
 declare -xa default_local_git_settings_order
-
-declare -xA actions_secrets_defaults
-declare -xrA dependabot_secrets
-declare -xrA agents_secrets
-declare -xrA codespaces_secrets
 
 declare -x main_protection_rs_name
 
@@ -55,9 +51,6 @@ declare -x jq_vars
 declare -x jq_ruleset_id
 declare -x jq_ruleset_rules
 declare -x jq_status_checks
-
-declare -x purge_vars=false
-declare -x purge_secrets=false
 
 declare -r key_matches="matches"
 declare -r key_diffs="diffs"
@@ -342,29 +335,30 @@ function audit_repo()
         return 2
     }
 
-    echo "      $info_em  Required status checks list:"
-    local _json
-    _json=$(execute_gh_api_with_retry 3 2 --paginate "$path_main_protection_ruleset") || {
-        error -ec "$err_tool_error" "Failed to fetch data from GitHub API: $path_main_protection_ruleset."
-        return 2
-    }
-    local -a _present_checks=()
-    local _check
+    if ! is_empty_array required_checks; then
+        echo "      $info_em  Required status checks list:"
+        local _json
+        _json=$(execute_gh_api_with_retry 3 2 --paginate "$path_main_protection_ruleset") || {
+            error -ec "$err_tool_error" "Failed to fetch data from GitHub API: $path_main_protection_ruleset."
+            return 2
+        }
+        local -a _present_checks=()
+        local _check
 
-    while read -r _check; do
-        _present_checks+=("$_check")
-    done < <(jq -r "$jq_status_checks" <<< "$_json")
+        while read -r _check; do
+            _present_checks+=("$_check")
+        done < <(jq -r "$jq_status_checks" <<< "$_json")
 
-    for _check in "${required_checks[@]}"; do
-        # [[ -z "$_check" || $_check == null ]] && continue
-        if is_in "$_check" "${_present_checks[@]}"; then
-            printf "          $check_em  %-32s => present\n" "$_check"
-            (( ++_results["$key_matches"] ))
-        else
-            printf "          $error_em  %-32s => missing\n" "$_check"
-            (( ++_results["$key_missing"] ))
-        fi
-    done
+        for _check in "${required_checks[@]}"; do
+            if ! is_empty_array _present_checks && is_in "$_check" "${_present_checks[@]}"; then
+                printf "          $check_em  %-32s => present\n" "$_check"
+                (( ++_results["$key_matches"] ))
+            else
+                printf "          $error_em  %-32s => missing\n" "$_check"
+                (( ++_results["$key_missing"] ))
+            fi
+        done
+    fi
 
     # --- Local Git Settings ---
     echo "  $info_em  Local Git Settings:"

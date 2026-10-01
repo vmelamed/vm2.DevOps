@@ -11,14 +11,8 @@ declare -xri err_invalid_item
 
 declare -x vm2_devops_repo_name
 
-declare -xri admin_role_id=5
-
 declare -xr secret_str
 declare -xr default_nuget_server
-
-declare -xr missing_state="<none>"
-declare -xr present_state=$secret_str
-declare -xr undefined_default="<undefined>"
 
 declare -x nuget_server
 
@@ -133,6 +127,10 @@ declare -xa actions_vars_order=(
     "--Build and Pack:"
     "MINVERTAGPREFIX"
     "MINVERDEFAULTPRERELEASEIDENTIFIERS"
+    "--Nuget:"
+    # DO NOT PLACE NUGET_USERNAME before NUGET_SERVER!!!
+    "NUGET_SERVER"
+    "NUGET_USERNAME"
     "--Test:"
     "MIN_COVERAGE_PCT"
     "--Benchmarks:"
@@ -140,15 +138,12 @@ declare -xa actions_vars_order=(
     "MAX_GEN1_COLLECTS"
     "MAX_GEN2_COLLECTS"
     "RESET_BENCHMARK_THRESHOLDS"
-    "--Nuget:"
-    # DO NOT PLACE NUGET_USERNAME before NUGET_SERVER!!!
-    "NUGET_SERVER"
-    "NUGET_USERNAME"
     "--Trace:"
     "VERBOSE"
     "--GitHub Actions diagnostics:"
     "ACTIONS_RUNNER_DEBUG"
     "ACTIONS_STEP_DEBUG"
+    "--Other:"
 )
 
 declare -xA actions_vars_validators=(
@@ -248,6 +243,7 @@ declare -xra apps_with_secrets=(
 )
 
 declare -xra actions_secrets_order=(
+    "--Build and Pack:"
     "NUGET_API_KEY"                            # The NuGet API key for the selected NuGet server. Note that GitHub Packages use
                                                # the callers's token; nuget.org uses Trusted Publishing and also does not need
                                                # secret.
@@ -257,9 +253,11 @@ declare -xra actions_secrets_order=(
     "RELEASE_PAT"                              # PAT for a user listed as a bypass actor (e.g. Admin) in the branch ruleset
                                                # protecting main. Required to push changelog commits and version tags directly
                                                # to main
+    "--Test:"
     "REPORTGENERATOR_LICENSE"                  # License key used by ReportGenerator for generating coverage reports
     "CODECOV_TOKEN"                            # Token used by Codecov to upload coverage reports - different for different
                                                # projects
+    "--Benchmarks:"
     "BENCHER_API_TOKEN"                        # API token used by Bencher for authentication
     "BENCH_DISPATCH_PAT"                       # Fine-grained PAT with `Actions: write` + `Contents: read` on the package repos.
                                                # Used by `RebuildBenchHistory.yaml` to dispatch each repo's benchmark-history
@@ -297,8 +295,8 @@ function validate_defaults()
 
     validate_app_default_secrets actions
     validate_app_default_secrets dependabot
-    validate_app_default_secrets agents      # agents are not used yet
     validate_app_default_secrets codespaces  # codespaces are not used yet
+    # validate_app_default_secrets agents      # agents are not used yet
 
     defaults_validated=true
     readonly defaults_validated

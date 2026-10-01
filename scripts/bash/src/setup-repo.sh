@@ -23,6 +23,9 @@ declare -xri err_repo_with_no_ci
 declare -xri err_not_git_directory
 declare -xri err_logic_error
 
+declare -x _ignore
+
+declare -xr vm2_devops_repo_name
 declare -xr default_vm2_repos_path
 
 # defaults
@@ -33,11 +36,6 @@ declare -xr default_branch="main"
 declare -xr default_interactive=false
 declare -xr default_configure_local=true
 declare -xr default_audit=false
-declare -xr default_sot # AddNewPackage
-
-declare -x _ignore
-
-declare -xr vm2_devops_repo_name
 
 # start with default input
 declare -x visibility=$default_visibility
@@ -63,10 +61,7 @@ declare -x repo=''
 declare -x repo_url=''
 declare -x repo_id=''
 
-declare -xa required_checks=()
-declare -xi actions_app_id=0
-declare -xi dependabot_app_id=0
-
+# repo state keys
 declare -xr key_root
 declare -xr key_url
 declare -xr key_schema

@@ -14,18 +14,14 @@ declare -xri err_argument_value
 declare -xri err_missing_argument
 declare -xri err_tool_error
 declare -xri err_logic_error
-declare -xri err_invalid_nameref
 
-declare -xri admin_role_id
+declare -xri admin_role_id=5
 
 declare -xr secret_str
 
 declare -x repo_name
-declare -x owner
 declare -x repo
-declare -x visibility
 declare -x branch
-declare -x audit
 declare -x interactive_vars
 declare -x interactive_secrets
 declare -x main_protection_rs_name
@@ -34,44 +30,23 @@ declare -x purge_secrets
 declare -x nuget_server
 
 declare -xrA default_repo_settings
-declare -xra default_repo_settings_order
-
 declare -xrA default_repo_permissions
-
-declare -xrA default_ruleset
-declare -xra default_ruleset_order
 
 declare -xra apps_with_vars
 declare -xra apps_with_secrets
 declare -xr default_nuget_server
 
-declare -xA actions_secrets_defaults
-declare -xrA dependabot_secrets
-declare -xrA agents_secrets
-declare -xrA codespaces_secrets
-
-declare -xra actions_vars_order
-declare -xrA actions_vars_validators
-
 declare -x ci_yaml
-declare -x _ci_yaml
 
-declare -xi actions_app_id
-declare -xi dependabot_app_id
-declare -xi codespaces_app_id
+declare -xi actions_app_id=0
+declare -xi dependabot_app_id=0
+declare -xi codespaces_app_id=0
 
-declare -xa required_checks
-
-declare -xr github_url_regex
-declare -xri url_authority
-declare -xri url_owner
-declare -xri url_name
+declare -xa required_checks=()
 
 declare -x path_repo
 declare -x path_actions_secrets
 declare -x path_dependabot_secrets
-declare -x path_agents_secrets
-declare -x path_codespaces_secrets
 declare -x path_permissions
 declare -x path_vars
 declare -x path_rulesets
@@ -84,10 +59,6 @@ declare -x jq_vars
 declare -x jq_ruleset_id
 declare -x jq_ruleset_rules
 declare -x jq_status_checks
-
-declare -xr missing_state
-declare -xr present_state
-declare -xr undefined_default
 
 #---------------------------------------------------------------------------------------------
 # @description Resolves the numeric GitHub App IDs for GitHub Actions, Dependabot, and
@@ -152,12 +123,12 @@ function list_required_checks()
 
     # Find the gate job: look for postrun-ci first, fall back to ci-gate
     _gate_job=$(yq -r '.jobs | keys[] | select(test("postrun|ci-gate"))' "$ci_yaml" | head -n 1) || error -ec "$err_tool_error" "${FUNCNAME[0]}() Failed to parse gate job from CI.yaml."
-    _gate_name=$(yq -r ".jobs.${_gate_job:-postrun-ci}.name" "$ci_yaml")                         || error -ec "$err_tool_error" "${FUNCNAME[0]}() Failed to parse gate job name from CI.yaml."
-    exit_if_has_errors
 
-    required_checks+=(
-        "$_gate_name"
-    )
+    if [[ -n "$_gate_job" ]]; then
+        _gate_name=$(yq -r ".jobs.${_gate_job:-postrun-ci}.name" "$ci_yaml")                     || error -ec "$err_tool_error" "${FUNCNAME[0]}() Failed to parse gate job name from CI.yaml."
+        required_checks+=("$_gate_name")
+    fi
+    exit_if_has_errors
 
     # `readonly` (a POSIX special builtin), not `declare -r`: this runs inside a function body,
     # and `declare -r` without `-g` only freezes a function-local shadow, leaving the real
@@ -464,7 +435,7 @@ function configure_actions_permissions()
 #     variable with its default value and leaves existing variables untouched.
 #   - In interactive mode (`$interactive_vars == true`), prompts the user for each variable's
 #     value (pre-filled with the current value if it exists, else with the default),
-#     validating input with the validator from `actions_vars_validators`, and calls `set_var`
+#     validating input with the validator from `_vars_validators`, and calls `set_var`
 #     only when the entered value differs from the current one. Prints a summary of how many
 #     variables were set to a new value, set to their default, or left unmodified.
 #
@@ -501,23 +472,25 @@ function configure_variables()
     info "Configuring GitHub ${_app^} variables..."
 
     # get the currently existing variables from the GitHub repository
-    local _var _value _exists _default
+    local _var _value
     local -A _current=()
 
     while IFS='=' read -r _var _value; do
         _current["$_var"]="$_value"
     done < <(execute_gh_api_with_retry 3 2 --paginate "$path_repo/$_app/variables" -q "$jq_vars")
 
+    local _exists _default
     local _new_value=""
     local _default_value=""
     local -i _skipped=0 _set_new=0 _set_default=0 _ignored=0 _deleted=0
 
     # work through the default vars
-    for _var in "${!_vars_defaults[@]}"; do
+    for _var in "${_vars_order[@]}"; do
         if [[ $_var == --* ]]; then
-            printf "    ➡️  %-38s %s\n" "${_var#--}" "────────────────────────────────────────────────────────────────────────"
+            $interactive_vars && printf "    ➡️  %-38s %s\n" "${_var#--}" "────────────────────────────────────────────────────────────────────────"
             continue
         fi
+        [[ -v _vars_defaults[$_var] ]] || continue
 
         _default_value="${_vars_defaults[$_var]}"
         if [[ -v _current[$_var] ]]; then
@@ -574,19 +547,25 @@ function configure_variables()
 
     for _var in "${!_current[@]}"; do
         if [[ ! -v _vars_defaults[$_var] ]]; then
+            # it's a purge candidate
             if $purge_vars; then
                 if $interactive_vars; then
                     if confirm "            Do you want to delete the unknown or obsolete variable '$_var'?" "n"; then
-                        trace "Deleting the unknown or obsolete variable '$_var'." && delete_var "$_var" && (( ++_deleted ))
+                        delete_var "$_var" &&
+                        (( ++_deleted )) &&
+                        trace "Deleted the unknown or obsolete variable '$_var'."
                     else
-                        trace "The unknown or obsolete variable '$_var' was not deleted." && (( ++_ignored ))
+                        (( ++_ignored )) &&
+                        trace "The unknown or obsolete variable '$_var' was not deleted."
                     fi
                 else
-                    trace "Deleting the unknown or obsolete variable '$_var'." && delete_var "$_var" && (( ++_deleted ))
+                    delete_var "$_var" &&
+                    (( ++_deleted )) &&
+                    warning "Deleted the unknown or obsolete variable '$_var'."
                 fi
             else
-                trace "Unknown or obsolete variable '$_var'."
-                (( ++_ignored ))
+                (( ++_ignored )) &&
+                warning "Unknown or obsolete variable '$_var'."
             fi
         fi
     done
@@ -696,7 +675,7 @@ function delete_var()
 function configure_secrets()
 {
     (( $# == 1 ))                                        || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#):" \
-                                                                                                "  - the application name"
+                                                                                             "  - the application name"
     [[ ! -v 1 ]] || is_in "$1" "${apps_with_secrets[@]}" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the application name, to be one of: ${apps_with_secrets[*]} (provided '${1:-<none>}')."
     exit_if_has_bugs
 
@@ -706,6 +685,7 @@ function configure_secrets()
     local -a _secrets_order
     local -A _secrets_validators
 
+    # get the default values for the application's secrets based on the current NuGet server
     get_secrets_defaults "$_app" _secrets_defaults _secrets_order _secrets_validators
 
     # Nothing to reconcile and nothing to purge -- skip the API call entirely rather than fetch
@@ -721,7 +701,13 @@ function configure_secrets()
     local _secret _value _exists _default # about the current secret
     local -i _skipped=0 _set_new=0 _need_new=0 _ignored=0 _deleted=0 # summary variables
 
-    for _secret in "${!_secrets_defaults[@]}"; do
+    for _secret in "${_secrets_order[@]}"; do
+        if [[ $_secret == --* ]]; then
+            $interactive_secrets && printf "    ➡️  %-38s %s\n" "${_secret#--}" "────────────────────────────────────────────────────────────────────────"
+            continue
+        fi
+        [[ -v _secrets_defaults[$_secret] ]] || continue
+
         is_in "$_secret" "${_current[@]}" && _exists=true || _exists=false
 
         # get the value for the secret or use the placeholder if we are not entering secrets interactively
@@ -764,37 +750,43 @@ function configure_secrets()
 
     for _secret in "${_current[@]}"; do
         if [[ ! -v _secrets_defaults[$_secret] ]]; then
+            # it's a purge candidate
             if $purge_secrets; then
                 if $interactive_secrets; then
                     if confirm "            Do you want to delete the unknown or obsolete secret '$_secret'?" "n"; then
-                        trace "Deleting the unknown or obsolete secret '$_secret'." && delete_secret "$_secret" "$_app" && (( ++_deleted ))
+                        delete_secret "$_secret" "$_app" &&
+                        (( ++_deleted )) &&
+                        trace "Deleted the unknown or obsolete secret '$_secret'."
                     else
-                        trace "The unknown or obsolete secret '$_secret' was not deleted." && (( ++_ignored ))
+                        (( ++_ignored )) &&
+                        trace "Did not delete unknown or obsolete secret '$_secret'."
                     fi
                 else
-                    trace "Deleting the unknown or obsolete secret '$_secret'." && delete_secret "$_secret" "$_app" && (( ++_deleted ))
+                    delete_secret "$_secret" "$_app" &&
+                    (( ++_deleted )) &&
+                    warning "Deleted the unknown or obsolete secret '$_secret'."
                 fi
             else
-                trace "Unknown or obsolete secret '$_secret'."
-                (( ++_ignored ))
+                (( ++_ignored )) &&
+                warning "Unknown or obsolete secret '$_secret'."
             fi
         fi
     done
 
-    (( _set_new == 1 )) && info "    1 secret was set to a new value."                                                                                  || true
-    (( _set_new  > 1 )) && info "    $_set_new secrets were set to new values."                                                                         || true
+    (( _set_new == 1 )) && info "    1 secret was set to a new value."                                                                              || true
+    (( _set_new  > 1 )) && info "    $_set_new secrets were set to new values."                                                                     || true
 
-    (( _skipped == 1 )) && info "    1 secret was not modified."                                                                                        || true
-    (( _skipped  > 1 )) && info "    $_skipped secrets were not modified."                                                                              || true
+    (( _skipped == 1 )) && info "    1 secret was not modified."                                                                                    || true
+    (( _skipped  > 1 )) && info "    $_skipped secrets were not modified."                                                                          || true
 
-    (( _ignored == 1 )) && info "    1 unknown or obsolete secret was ignored."                                                                         || true
-    (( _ignored  > 1 )) && info "    $_ignored unknown or obsolete secrets were ignored."                                                               || true
+    (( _ignored == 1 )) && info "    1 unknown or obsolete secret was ignored."                                                                     || true
+    (( _ignored  > 1 )) && info "    $_ignored unknown or obsolete secrets were ignored."                                                           || true
 
-    (( _deleted == 1 )) && info "    1 unknown or obsolete secret was deleted."                                                                         || true
-    (( _deleted  > 1 )) && info "    $_deleted unknown or obsolete secrets were deleted."                                                               || true
+    (( _deleted == 1 )) && info "    1 unknown or obsolete secret was deleted."                                                                     || true
+    (( _deleted  > 1 )) && info "    $_deleted unknown or obsolete secrets were deleted."                                                           || true
 
-    (( _need_new == 1 )) && warning "Run the script with option '--interactive-secrets' or '-is' to set the value of 1 ${_app^} secret."               || true
-    (( _need_new  > 1 )) && warning "Run the script with option '--interactive-secrets' or '-is' to set the values of $_need_new ${_app^} secrets."    || true
+    (( _need_new == 1 )) && warning "Run the script with option '--interactive-secrets' or '-is' to set the value of 1 ${_app^} secret."            || true
+    (( _need_new  > 1 )) && warning "Run the script with option '--interactive-secrets' or '-is' to set the values of $_need_new ${_app^} secrets." || true
 }
 
 #---------------------------------------------------------------------------------------------
