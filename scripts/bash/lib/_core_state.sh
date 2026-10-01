@@ -357,7 +357,7 @@ function set_trace_enabled()
 #   - Sets the global variable `$_ignore` to `/dev/null`.
 #   - Disables bash trace mode (`set +x`).
 #
-# @exitcode success/positive=0
+# @exitcode success=0
 #
 # @example
 #   unset_trace_enabled  # typically called explicitly to disable trace mode, allowing less

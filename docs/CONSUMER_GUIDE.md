@@ -202,8 +202,10 @@ xUnit, FluentAssertions, BenchmarkDotNet, and ReportGenerator.
 
 ### global.json
 
-Pins the .NET SDK version. Should match the `DOTNET_VERSION` repository variable (default `10.0.x`). Rarely needs changes after
-initial setup.
+Pins the .NET SDK version used by every workflow (`actions/setup-dotnet` reads it via `global-json-file: global.json`
+in the shared `cache-dependencies` composite action). This is the sole source of truth for the SDK version — there is
+no `dotnet-version` workflow input, and the `DOTNET_VERSION` repository variable is not currently consumed by any CI
+workflow. Rarely needs changes after initial setup.
 
 ### NuGet.config
 
@@ -251,8 +253,10 @@ env:
 ```
 
 > JSON arrays require double quotes around each string. Use the YAML block scalar `>` for
-> readability. An empty or omitted array means the stage is skipped. Use `["__skip__"]` as
-> an explicit sentinel if needed.
+> readability. An empty array (`[]`) or omitted variable means the stage is skipped — there is
+> no `["__skip__"]` sentinel any more; `validate-input.sh` defaults every project-list input to
+> `[]`, and the reusable workflow's job condition checks whether the array's first element is
+> `null`.
 
 ## Troubleshooting
 
@@ -272,12 +276,12 @@ Verify the appropriate `NUGET_API_KEY` secret is set for your configured `NUGET_
 
 ## Further Reading
 
-| Topic                     | Document                                            |
-| :------------------------ | :-------------------------------------------------- |
-| Architecture overview     | [ARCHITECTURE.md](ARCHITECTURE.md)                  |
-| Workflow details          | [WORKFLOWS_REFERENCE.md](WORKFLOWS_REFERENCE.md)    |
-| Script details            | [SCRIPTS_REFERENCE.md](SCRIPTS_REFERENCE.md)        |
-| All configuration options | [CONFIGURATION.md](CONFIGURATION.md)                |
-| Release process           | [RELEASE_PROCESS.md](RELEASE_PROCESS.md)            |
-| Cache management          | [CACHE_MANAGEMENT.md](CACHE_MANAGEMENT.md)          |
-| Error recovery            | [ERROR_RECOVERY.md](ERROR_RECOVERY.md)              |
+| Topic                     | Document                                         |
+| :------------------------ | :----------------------------------------------- |
+| Architecture overview     | [ARCHITECTURE.md](ARCHITECTURE.md)               |
+| Workflow details          | [WORKFLOWS_REFERENCE.md](WORKFLOWS_REFERENCE.md) |
+| Script details            | [SCRIPTS_REFERENCE.md](SCRIPTS_REFERENCE.md)     |
+| All configuration options | [CONFIGURATION.md](CONFIGURATION.md)             |
+| Release process           | [RELEASE_PROCESS.md](RELEASE_PROCESS.md)         |
+| Cache management          | [CACHE_MANAGEMENT.md](CACHE_MANAGEMENT.md)       |
+| Error recovery            | [ERROR_RECOVERY.md](ERROR_RECOVERY.md)           |

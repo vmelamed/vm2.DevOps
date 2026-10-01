@@ -21,9 +21,11 @@ declare -xr ci
 #
 # @arg $@ string Up to two positional arguments: '[<old_branch_name>] <new_branch_name>'.
 #
-# @exitcode success/positive=0: Arguments parsed successfully.
-# @exitcode non-zero A third positional argument was given ('err_too_many_arguments'), or help was requested (via
-#   'usage_if_requested').
+# @exitcode success=0: Arguments parsed successfully.
+# @exitcode err_too_many_arguments: A third positional argument was given.
+#
+# Note: 'usage_if_requested' exits the process directly (via 'usage') when '--help'/'-h'/'-?' was given; it does
+#   not return a code to this function's caller.
 #
 # @example
 #   get_arguments feature/new-name

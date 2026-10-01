@@ -28,7 +28,7 @@ declare -xri err_invalid_nameref
 # continuing. If the environment variable 'quiet' is true, skips the prompt and
 # returns immediately.
 #
-# @exitcode success/positive=0
+# @exitcode success=0: The prompt was shown and dismissed, or skipped entirely in quiet mode.
 #
 # @example
 #   press_any_key  # typically called after displaying information
@@ -50,8 +50,8 @@ function press_any_key()
 # @arg $2 string Default response if the user presses Enter: 'y' or 'n' (optional, default:
 #   'y').
 #
-# @exitcode success/positive=0: The response is 'y'.
-# @exitcode failure/negative=1: The response is 'n'.
+# @exitcode positive=0: The response is 'y'.
+# @exitcode negative=1: The response is 'n'.
 #
 # @example
 #   if confirm "Delete all files?" "n"; then
@@ -111,7 +111,8 @@ function confirm()
 #   if invalid; the user is re-prompted until a valid value is entered (optional, default:
 #   `true`, meaning no validation -- all values accepted).
 #
-# @exitcode success/positive=0: The input parameters are valid.
+# @exitcode success=0: A valid value (the user's input, or the default) was stored into the
+#   referenced variable.
 #
 # @example
 #   enter_value "Enter description (up to 350 characters)" description "test" false
@@ -188,8 +189,8 @@ function enter_value()
 # @arg $3..$@ strings two or more option texts. The first option is the default returned if 'quiet'
 #   is true or if the user just presses [Enter] without making a choice).
 #
-# @exitcode success/positive=0:
-# @exitcode err_invalid_arguments=2: Invalid arguments (fewer than 3 parameters).
+# @exitcode success=0: A choice was stored into the referenced variable (the default, in
+#   quiet mode or if the user pressed Enter without choosing).
 #
 # @example
 #   choose "Select environment:" choice "Development" "Staging" "Production"
@@ -270,7 +271,7 @@ function choose()
 #   --json-array|--json|--jq-array|-j
 #                                   Shorthand for --quote='"' --separator=', ' --paren='[]'.
 #
-# @exitcode success/positive=0
+# @exitcode success=0: The formatted sequence was printed.
 #
 # @stdout The formatted sequence.
 #

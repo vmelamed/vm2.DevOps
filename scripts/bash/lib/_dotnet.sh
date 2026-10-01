@@ -295,14 +295,16 @@ declare -xrA dotnet_err_messages=(
 )
 
 #---------------------------------------------------------------------------------------------
-# @description Gets the error message corresponding to a dotnet error code.
-#
+# @description Gets the error message corresponding to a dotnet error code. An unrecognized
+#   code falls back to the generic "Unknown dotnet error code" message rather than failing.
 #
 # @arg $1 int The dotnet error code.
 #
-# @exitcode success/positive=0: The error message was retrieved successfully.
+# @exitcode success=0: The error message was retrieved successfully (always, once past the
+#   argument-validation gate).
 #
-# @stdout string The error message corresponding to the provided dotnet error code.
+# @stdout string "<code>: <message>" -- the provided code followed by its corresponding dotnet
+#   error message (or the "unknown" message if the code is not recognized).
 #
 # @example
 #   get_dotnet_error_message 1
@@ -340,10 +342,13 @@ declare -xra dump_common_dotnet_args
 #---------------------------------------------------------------------------------------------
 # @description Updates the NuGet sources with GitHub Packages from vm2.
 #
-# @arg $1 string NuGet source username (optional, if provided, $2 also MUST be provided, defaults to $GH_ACTOR in CI)
-# @arg $2 string NuGet source password (optional, if $1 is provided, $2 also MUST be provided, otherwise MUST not be provided, defaults to $GH_TOKEN in CI)
+# @arg $1 string NuGet source username (optional, if provided, $2 also MUST be provided,
+#   defaults to $GH_ACTOR in CI)
+# @arg $2 string NuGet source password (optional, if $1 is provided, $2 also MUST be provided,
+#   otherwise MUST not be provided, defaults to $GH_TOKEN in CI)
 #
-# @exitcode success/positive=0: The NuGet source was updated, or no credentials were provided (a warning is logged instead).
+# @exitcode success=0: The NuGet source was updated, or no credentials were provided (a
+#   warning is logged instead).
 # @exitcode err_tool_error=66: If 'dotnet nuget update source' failed.
 #---------------------------------------------------------------------------------------------
 function update_nuget_sources_with_github_vm2()
@@ -432,9 +437,10 @@ declare -xrA dotnet_args_to_msbuild_args=(
 #
 # @arg $1 nameref to the array variable in which MSBuild arguments and properties will be
 #   placed
-# @arg $@ string the `dotnet <command>` arguments to be converted to MSBuild arguments and properties
+# @arg $@ string the `dotnet <command>` arguments to be converted to MSBuild arguments and
+#   properties
 #
-# @exitcode success/positive=0: All arguments were converted successfully.
+# @exitcode success=0: All arguments were converted successfully.
 # @exitcode err_missing_argument=6: An option that requires a value (e.g. `--configuration`) was
 #   the last argument, with no value following it.
 # @exitcode err_argument_type=3: An option that has been removed from `dotnet` in favor of
@@ -532,17 +538,23 @@ declare -xr count_errors_rex='^[[:space:]]*([0-9]+) (Error|Warning).*$'
 
 #---------------------------------------------------------------------------------------------
 # @description Extracts build information from the output of a 'dotnet build' command and
-#   populates the specified associative array with the results at indexes from the
-#   `$build_info_keys` array.
+#   populates the specified associative array with the results at keys from the
+#   `$build_info_keys` array. For a solution (not a single *.csproj), the per-project keys
+#   (`TargetPath`, `PackageId`, `ArtifactsProjectName`) are removed afterward, since a solution
+#   build reports them once per constituent project and only the last one read would otherwise
+#   be kept, which would misleadingly look like a single, authoritative answer.
 #
-#
-# @arg $1 string The project file path for which the build information is being extracted
+# @arg $1 string The project or solution file path for which the build information is being
+#   extracted
 # @arg $2 int The result code from 'dotnet build'
 # @arg $3 nameref to an associative array variable to receive the build information
 #
 # @stdin The standard input from which to read the build output, e.g. dotnet build --verbosity minimal
 #
-# @exitcode success/positive=0
+# @exitcode success=0: The build information was extracted (always, once past the argument
+#   validation gate).
+# @exitcode err_argument_value=4: argument 1 is not an existing, non-empty project or solution
+#   file.
 #---------------------------------------------------------------------------------------------
 function extract_dotnet_build_info()
 {
@@ -621,12 +633,11 @@ function extract_dotnet_build_info()
 
 #---------------------------------------------------------------------------------------------
 # @description Displays a formatted summary of build information stored in an associative
-#   array.
+#   array (as populated by `extract_dotnet_build_info()`).
 #
+# @arg $1 nameref to an associative array variable holding the build information to display.
 #
-# @arg $1 nameref to an associative array variable to put the build information into.
-#
-# @exitcode success/positive=0: The function executed successfully
+# @exitcode success=0: The function executed successfully.
 #
 # @stdout Formatted table (via dump_vars) with the build result, warning/error counts, version
 #   information, packages, target paths, etc.
@@ -696,7 +707,7 @@ function display_dotnet_build_summary()
 #
 # @arg $1 The path to the project or solution file to clean.
 #
-# @exitcode success/positive=0: If the clean operation is successful.
+# @exitcode success=0: If the clean operation is successful.
 # @exitcode err_tool_error=66: If 'dotnet clean' failed.
 #
 # @stderr error messages if the clean operation fails.
@@ -749,7 +760,7 @@ function dotnet_clean()
 #
 # @arg $1 string - the path to the .csproj file of the project.
 #
-# @exitcode success/positive=0: if the restore operation succeeded.
+# @exitcode success=0: if the restore operation succeeded.
 # @exitcode err_tool_error=66: If 'dotnet restore' failed.
 #
 # @stderr error messages if the restore operation fails.
@@ -808,7 +819,7 @@ function dotnet_restore()
 #   Even if not provided, the build information will be captured internally and displayed in
 #   the log.
 #
-# @exitcode success/positive=0: if the build operation succeeded.
+# @exitcode success=0: if the build operation succeeded.
 # @exitcode err_tool_error=66: if an external command failed, e.g., 'dotnet build'.
 #---------------------------------------------------------------------------------------------
 function dotnet_build()
@@ -903,7 +914,7 @@ function dotnet_build()
 #   produced packages, including the paths to the built package and symbols at keys
 #   respectively "PackagePath" and "SymbolsPath".
 #
-# @exitcode success/positive=0: The operation was successful.
+# @exitcode success=0: The operation was successful.
 # @exitcode err_tool_error=66: If 'dotnet pack' failed, or the project's 'Configuration' could
 #   not be resolved.
 #---------------------------------------------------------------------------------------------
@@ -1025,24 +1036,22 @@ function dotnet_pack()
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Gets the full path to the assembly that was or would be produced by
-#   `dotnet build` using a .NET project and the common dotnet arguments, without actually building
-#   the project.
-#
+# @description Gets the value of a single MSBuild property for a .NET project, via
+#   `dotnet msbuild -getProperty:<Prop>`, without building the project (a static evaluation).
+#   Use `get_msbuild_properties()` instead when two or more properties are needed in one call.
 #
 # @arg $1 string _csproj - path to a .csproj file
 # @arg $2 string property_name - the name of the property whose value should be retrieved
 # @arg $3 nameref to a variable to receive the value of the property
 #
-# @exitcode success/positive=0: the assembly file exists and is not empty
-#
-# @stdout the full path of the produced assembly (it may not exist yet), e.g.:
-#   /path/to/repo-root/artifacts/bin/Ulid/release/Ulid.dll or
-#   /path/to/repo-root/artifacts/bin/GlobTool/debug/GlobTool (Linux executable)
+# @exitcode success=0: the property value was retrieved successfully.
+# @exitcode err_argument_value=4: argument 1 is not an existing, non-empty project file.
+# @exitcode N propagated from `convert_dotnet_args_to_msbuild_args()` on failure, or the raw
+#   exit code of `dotnet msbuild` itself if it fails (not translated to `err_tool_error` here).
 #
 # @example
 #   declare target_path
-#   get_target_path $project target_path
+#   get_msbuild_property "$project" "$key_target_path" target_path
 #---------------------------------------------------------------------------------------------
 function get_msbuild_property()
 {
@@ -1099,7 +1108,7 @@ function get_msbuild_property()
 # @arg $3.. string names of the properties whose values should be retrieved (at least 2 --
 #   use `get_msbuild_property()` for exactly 1)
 #
-# @exitcode success/positive=0: the properties were retrieved successfully.
+# @exitcode success=0: the properties were retrieved successfully.
 # @exitcode err_argument_value=4: an invalid property name was given.
 #
 # @example
@@ -1176,21 +1185,19 @@ function get_msbuild_properties()
 #---------------------------------------------------------------------------------------------
 # @description Gets the full path to the assembly that was or would be produced by
 #   `dotnet build` using a .NET project and the common dotnet arguments, without actually building
-#   the project.
+#   the project. A thin wrapper around `get_msbuild_property()` for the `TargetPath` property.
 #
 # @arg $1 string _csproj - path to a .csproj file
 # @arg $2 nameref to a variable to receive the full path to the assembly that was or would be
 #   produced
 #
-# @exitcode success/positive=0: the assembly file exists and is not empty
-#
-# @stdout the full path of the produced assembly (it may not exist yet), e.g.:
-#   /path/to/repo-root/artifacts/bin/Ulid/release/Ulid.dll or
-#   /path/to/repo-root/artifacts/bin/GlobTool/debug/GlobTool (Linux executable)
+# @exitcode success=0: the target path was retrieved successfully.
+# @exitcode N propagated unchanged from `get_msbuild_property()` on failure (see its own
+#   @exitcode list).
 #
 # @example
 #   declare target_path
-#   get_target_path $project target_path
+#   get_target_path "$project" target_path
 #---------------------------------------------------------------------------------------------
 function get_target_path()
 {
@@ -1204,9 +1211,8 @@ function get_target_path()
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Gets the full path to the artifacts directory that were or would be produced by
-#   `dotnet build` using a .NET project and the common dotnet arguments, without actually building
-#   the project.
+# @description Gets the full path to the `ArtifactsPath` directory for a .NET project or
+#   solution, using the common dotnet arguments, without actually building the project.
 #
 # Notes:
 #   - ArtifactsPath is uniform across an entire repo (set once via UseArtifactsOutput=true in the
@@ -1217,18 +1223,18 @@ function get_target_path()
 #     the identical answer.
 #
 # @arg $1 string _csproj - path to a .csproj, .sln, or .slnx file
-# @arg $2 nameref to a variable to receive the full path to the assembly that was or would be
-#   produced
+# @arg $2 nameref to a variable to receive the full, absolute path to the `ArtifactsPath`
+#   directory
 #
-# @exitcode success/positive=0: the assembly file exists and is not empty
-#
-# @stdout the full path of the produced assembly (it may not exist yet), e.g.:
-#   /path/to/repo-root/artifacts/bin/Ulid/release/Ulid.dll or
-#   /path/to/repo-root/artifacts/bin/GlobTool/debug/GlobTool (Linux executable)
+# @exitcode success=0: the artifacts path was retrieved and is an absolute path.
+# @exitcode err_not_found: the resolved artifacts path is empty or not an absolute path (the
+#   project does not use the artifacts output layout -- see CONVENTIONS.md).
+# @exitcode N propagated from `list_solution_projects()` (for a solution input) or from
+#   `get_msbuild_property()` on failure.
 #
 # @example
-#   declare target_path
-#   get_target_path $project target_path
+#   declare artifacts_path
+#   get_artifacts_path "$project" artifacts_path
 #---------------------------------------------------------------------------------------------
 function get_artifacts_path()
 {
@@ -1271,7 +1277,7 @@ function get_artifacts_path()
 # @arg $1 string Path to an existing, non-empty solution file (*.sln or *.slnx).
 # @arg $2 nameref to an indexed array variable that will receive the list of project paths.
 #
-# @exitcode success/positive=0: the solution's projects were listed successfully.
+# @exitcode success=0: the solution's projects were listed successfully.
 # @exitcode err_tool_error=66: `dotnet sln $1 list` failed, or returned no projects.
 #---------------------------------------------------------------------------------------------
 function list_solution_projects()
@@ -1354,7 +1360,7 @@ function list_solution_projects()
 # @arg $1 nameref to a variable containing a JSON array of project/solution paths. The expanded,
 #   de-duplicated JSON array is stored back into that variable.
 #
-# @exitcode success/positive=0: every solution entry (if any) was expanded successfully.
+# @exitcode success=0: every solution entry (if any) was expanded successfully.
 # @exitcode err_tool_error=66: list_solution_projects() failed for one of the solution entries.
 #---------------------------------------------------------------------------------------------
 function expand_solution_projects()

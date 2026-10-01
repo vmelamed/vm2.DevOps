@@ -165,13 +165,14 @@ declare -xA selectors_actions
 # Notes:
 #   - Will exit the script if an invalid argument(s) is/are provided with exit codes.
 #
-# @arg $1 _file The configuration or customization file containing the diff and merge tool
-#   settings.
-# @arg $2 _use_defaults if the file does not provide any of the diff or the merge tools -
+# @arg $1 string _file - the configuration or customization file containing the diff and merge
+#   tool settings (must exist and be non-empty).
+# @arg $2 bool _use_defaults - if the file does not provide any of the diff or the merge tools -
 #   use the defaults: either from the Git configuration or from the script defaults.
 #
-# @exitcode success/positive=0: If the diff and merge tool commands are retrieved
-#   successfully.
+# @exitcode success=0: The diff and merge tool commands were retrieved successfully (this
+#   function does not itself fail at runtime; 'bug' aborts the process on a caller-contract
+#   violation before this point is reached).
 #
 # @stdout
 #   The retrieved diff and merge tool names and commands:
@@ -293,7 +294,7 @@ function get_tools()
 # @arg $1 string the SoT directory path (must exist and be a directory; the configuration file '$1/diff-shared.config.json' MUST
 #   exist, be non-empty, and contain valid JSON)
 # @arg $2 string the target repository directory path (must exist and be a directory)
-# @exitcode success/positive=0: configuration loaded and validated successfully
+# @exitcode success=0: configuration loaded and validated successfully
 #
 # @example
 #   configure "$sot_path" "$target_path"
@@ -415,8 +416,10 @@ function configure_target_files()
 #   exist, be non-empty, and contain valid JSON)
 # @arg $2 string target repository root directory path (must be an existing directory)
 #
-# @exitcode success/positive=0: customization applied successfully, or no custom configuration file was found
-# @exitcode failure/negative=1: the custom configuration file contains invalid JSON
+# @exitcode success=0: customization applied successfully, or no custom configuration file was found
+#
+# Note: an invalid customization JSON schema is reported via 'error' and exits the entire process via
+#   'exit_if_has_errors' -- it is not returned as a non-zero code to this function's caller.
 #
 # @example
 #   customize "$target_root" true
@@ -507,8 +510,17 @@ function customize()
 }
 
 #---------------------------------------------------------------------------------------------
-# @description: Changes the set of files and the respective file actions from the config
-#   file(s) based on the provided command line arguments.
+# @description Overrides the per-file actions in the global 'file_actions' array based on the '--file*' selectors
+#   collected on the command line (the global associative array 'selectors_actions'). For each configured source
+#   file, matches it against every selector pattern (a trailing-path glob, e.g. '*/<selector>'); if exactly one
+#   distinct action results from the matching selectors, applies it. If multiple selectors matched the same file
+#   with different actions, the file's action is cleared (set to empty) and a warning is issued, since it is
+#   ambiguous which action should apply. If no selector matched a file, its action is also cleared, so only
+#   explicitly selected files are processed afterwards. A no-op (returns immediately) when 'selectors_actions' is
+#   empty, i.e. no '--file*' options were given on the command line.
+#
+# @exitcode success=0: Always (even when no files matched any selector -- that case is reported via 'warning', not
+#   a non-zero return).
 #---------------------------------------------------------------------------------------------
 function parameterize()
 {
@@ -582,8 +594,10 @@ function parameterize()
 # @arg $3 string nameref to the variable to store the absolute path of the root of the target repository
 # @arg $4 string nameref to the variable to store the absolute path of the target repository directory
 #
-# @exitcode success/positive=0: the target repository directory is resolved and in a valid state
+# @exitcode success=0: the target repository directory is resolved and in a valid state
 # @exitcode err_not_directory=17: the target repository directory does not exist or is not a valid git repository with CI configured
+# @exitcode err_logic_error: the target repository is a git repository but is not in a clean working-tree state
+# @exitcode err_tool_error: 'git branch --show-current' failed against the resolved target repository (it appears corrupted)
 #---------------------------------------------------------------------------------------------
 function resolve_target()
 {
@@ -679,8 +693,8 @@ function trace_files()
 # @arg $2 string name of the variable to receive the begin marker's line number
 # @arg $3 string name of the variable to receive the end marker's line number
 #
-# @exitcode success/positive=0: exactly one well-formed marker pair was found
-# @exitcode failure/negative=1: no well-formed, single marker pair could be found
+# @exitcode positive=0: exactly one well-formed marker pair was found; the two nameref outputs were set.
+# @exitcode negative=1: no well-formed, single marker pair could be found; the nameref outputs were not set.
 #---------------------------------------------------------------------------------------------
 function __find_shared_markers()
 {
@@ -722,9 +736,9 @@ function __find_shared_markers()
 # @arg $1 string path to the file to scan
 # @arg $2 string name of the variable to receive the extracted shared block content
 #
-# @exitcode success/positive=0: exactly one well-formed marker pair was found; the shared block content
+# @exitcode positive=0: exactly one well-formed marker pair was found; the shared block content
 #   (possibly empty) was stored in the output variable
-# @exitcode failure/negative=1: no well-formed, single marker pair could be found
+# @exitcode negative=1: no well-formed, single marker pair could be found
 #
 # @example
 #   get_shared_block "$source_file" _shared_content || warning "..."
@@ -770,8 +784,8 @@ function get_shared_block()
 # @arg $3 bool _show_in_diff_tool whether to also display the visual diff when the files differ
 # @arg $4 bool _warn_no_markers whether to warn if shared-block markers are missing or malformed
 #
-# @exitcode failure/negative=1: the files are identical
-# @exitcode success/positive=0: the files differ, and either file lacks a well-formed shared-block marker pair
+# @exitcode negative=1: the files are identical
+# @exitcode positive=0: the files differ, and either file lacks a well-formed shared-block marker pair
 # @exitcode $shared_equal=2: the files differ, but their shared blocks (between the markers) are identical
 # @exitcode $shared_not_equal=3: the files differ, and their shared blocks also differ
 #
@@ -853,8 +867,8 @@ function are_different()
 # @arg $2 string target file path; assigned to the globals 'LOCAL' and 'MERGED' (the file the merge tool is expected to
 #   modify in place)
 #
-# @exitcode success/positive=0: the target file's content changed as a result of the merge
-# @exitcode failure/negative=1: the target file's content is unchanged after the merge tool ran
+# @exitcode success=0: the target file's content changed as a result of the merge
+# @exitcode failure=1: the target file's content is unchanged after the merge tool ran
 #
 # @example
 #   merge "$source_file" "$target_file"
@@ -902,7 +916,7 @@ function merge()
 # @arg $1 string source file path to copy from
 # @arg $2 string destination file path to copy to
 #
-# @exitcode success/positive=0: the copy (or dry-run print) succeeded
+# @exitcode success=0: the copy (or dry-run print) succeeded
 #
 # @example
 #   copy_file "$source_file" "$target_file"
@@ -946,7 +960,7 @@ function copy_file()
 # @arg $1 string SoT (source of truth) file path to copy the shared block from
 # @arg $2 string target file path to splice the shared block into, in place
 #
-# @exitcode success/positive=0: the splice (or dry-run print) succeeded
+# @exitcode success=0: the splice (or dry-run print) succeeded
 #
 # @example
 #   copy_shared_block "$source_file" "$target_file"

@@ -171,6 +171,23 @@ declare -xA agents_vars_defaults=()
 declare -xa agents_vars_order=()
 declare -xA agents_vars_validators=()
 
+#---------------------------------------------------------------------------------------------
+# @description Validates the consistency of one application's default-variable tables: '<app>_vars_defaults'
+#   (associative array of default values), '<app>_vars_order' (display order), and '<app>_vars_validators'
+#   (per-variable validator function names). Backfills a missing/short display order (alphabetically, with a
+#   warning) and appends any default variable missing from the display order. Every default variable must have an
+#   entry in '<app>_vars_validators' whose value is either a defined function name or the literal string 'true'
+#   (meaning "no validation"); that validator (when not 'true') is then run against the variable's own default
+#   value. On success, freezes all three tables as read-only. A no-op if '<app>_vars_defaults' is empty.
+#
+# @arg $1 string _app - the application name (must be one of '${apps_with_vars[@]}', e.g. 'actions').
+#
+# @exitcode success=0: The tables are consistent and were frozen (or '<app>_vars_defaults' was empty).
+#
+# Note: a caller-contract violation (unknown app, missing table, an undefined validator function, or a default
+#   value that fails its own validator) is reported via 'bug' and aborts the process via 'exit_if_has_bugs' --
+#   this function never returns a non-zero code to a caller.
+#---------------------------------------------------------------------------------------------
 function validate_app_default_vars()
 {
     (( $# == 1 ))                                     || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#):" \
@@ -267,6 +284,19 @@ declare -xra dependabot_secrets_order=()
 declare -xra agents_secrets_order=()
 declare -xra codespaces_secrets_order=()
 
+#---------------------------------------------------------------------------------------------
+# @description Validates that one application's secrets display-order table ('<app>_secrets_order') is defined.
+#   Unlike 'validate_app_default_vars', there are no default values or per-secret validators for secrets (secret
+#   values are never defaulted in source -- see 'get_secrets_defaults'), so there is nothing to backfill or freeze
+#   here beyond the existence check.
+#
+# @arg $1 string _app - the application name (must be one of '${apps_with_secrets[@]}', e.g. 'actions').
+#
+# @exitcode success=0: '<app>_secrets_order' is defined.
+#
+# Note: a caller-contract violation (unknown app, or '<app>_secrets_order' not defined) is reported via 'bug' and
+#   aborts the process via 'exit_if_has_bugs' -- this function never returns a non-zero code to a caller.
+#---------------------------------------------------------------------------------------------
 function validate_app_default_secrets()
 {
     (( $# == 1 ))                                        || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#):" \
@@ -283,8 +313,13 @@ function validate_app_default_secrets()
 declare -x defaults_validated=false
 
 #---------------------------------------------------------------------------------------------
-# @description Validates the the integrity of the default values for the applications'
-#   variables and secrets.
+# @description Validates the integrity of the default values for the applications' variables and secrets
+#   ('actions' and 'agents' for variables; 'actions', 'dependabot', and 'codespaces' for secrets -- 'agents'
+#   secrets are currently commented out of 'apps_with_secrets' since agents are not used yet). Idempotent: guarded
+#   by the global 'defaults_validated' flag, so repeated calls after the first are a no-op.
+#
+# @exitcode success=0: Always (validation failures are reported via 'bug' and abort the process directly via
+#   'exit_if_has_bugs' inside the called 'validate_app_default_vars'/'validate_app_default_secrets').
 #---------------------------------------------------------------------------------------------
 function validate_defaults()
 {
@@ -303,14 +338,24 @@ function validate_defaults()
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Gets the default data for GH workflow variables 'vars': the default values, the
-#   default display order, and the default validators.
+# @description Gets the default data for one application's GitHub Actions 'vars': the default values (copied from
+#   '<app>_vars_defaults') and the display order (copied from '<app>_vars_order'). For 'actions', 'NUGET_SERVER's
+#   default value is overridden with the current global '$nuget_server' (rather than the hardcoded table default),
+#   and 'NUGET_USERNAME' is dropped entirely when '$nuget_server' is 'github' (GitHub Packages authenticates with
+#   the caller's token and needs no username).
 #
-# @arg $1 application name, must be one of (actions agents)
-# @arg $2 the name of an associate array to receive the variables' default values
-# @arg $3 the name of an indexed array to receive the display order of variables
-# @arg $4 the name of an associative array to receive the names of the functions validating
-#   each variable (optional)
+# @arg $1 string _app - the application name (must be one of '${apps_with_vars[@]}', e.g. 'actions').
+# @arg $2 string __vars - name of an associative array to receive the variables' names and default values.
+# @arg $3 string __vars_order - name of an indexed array to receive the variables' display order.
+# @arg $4 string (optional) name of an associative array intended to receive the names of each variable's
+#   validation function.
+#
+# @exitcode success=0: Always (the output arrays were populated, or left empty if '<app>_vars_defaults' is empty).
+#
+# Note: despite '$4' being documented and validated as the destination for the per-variable validator names, the
+#   copy loop below is guarded by '[[ -v 5 ]]' rather than '[[ -v 4 ]]' -- since this function only ever accepts 3
+#   or 4 arguments, that condition can never be true, so '$4' (when given) is currently never actually populated.
+#   Contrast with the equivalent, correctly-guarded '[[ -v 4 ]]' check in 'get_secrets_defaults' below.
 #---------------------------------------------------------------------------------------------
 # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
 # shellcheck disable=SC2004 # $/${} is unnecessary on arithmetic variables.
@@ -389,14 +434,19 @@ function get_vars_defaults()
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Gets the default data for GH workflow variables 'secrets': the default values, the
-#   default display order, and the default validators.
+# @description Gets the default data for one application's GitHub secrets: a placeholder default value
+#   ('$secret_str') for each secret name listed in '<app>_secrets_order', the display order itself, and
+#   (optionally) 'is_valid_secret' as the validator for every secret. For 'actions', 'NUGET_API_KEY' is skipped
+#   entirely when the current '$nuget_server' is 'nuget' or 'github' -- neither needs a stored API key secret
+#   (trusted publishing for nuget.org, the caller's token for GitHub Packages).
 #
-# @arg $1 application name, must be one of (actions agents)
-# @arg $2 the name of an indexed array to receive the secrets' names
-# @arg $3 the name of an indexed array to receive the display order of secrets
-# @arg $4 the name of an associative array to receive the names of the functions validating
-#   each secret (optional)
+# @arg $1 string _app - the application name (must be one of '${apps_with_secrets[@]}', e.g. 'actions').
+# @arg $2 string __secrets - name of an associative array to receive the secrets' names and placeholder values.
+# @arg $3 string __secrets_order - name of an indexed array to receive the secrets' display order.
+# @arg $4 string (optional) name of an associative array to receive 'is_valid_secret' as every secret's
+#   validation function.
+#
+# @exitcode success=0: Always (the output arrays were populated, or left empty if '<app>_secrets_order' is empty).
 #---------------------------------------------------------------------------------------------
 # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
 # shellcheck disable=SC2004 # $/${} is unnecessary on arithmetic variables.

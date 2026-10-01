@@ -109,7 +109,7 @@ function print_semver_regexes()
 # @arg $2 string The MinVer default prerelease identifier template (e.g., "preview.0", as in
 #   1.2.3-preview.11). Optional.
 #
-# @exitcode success/positive=0: Both arguments (or just the prefix, if $2 is omitted) are valid.
+# @exitcode success=0: Both arguments (or just the prefix, if $2 is omitted) are valid.
 #
 # @example
 #   validate_semverTagComponents "v" "preview.0"
@@ -307,8 +307,10 @@ function compare_semver()
 # @arg $1 string The first semantic version string.
 # @arg $2 string The second semantic version string.
 #
-# @exitcode success/positive=0: version1 == version2.
-# @exitcode failure/negative=1: version1 != version2.
+# @exitcode positive=0: version1 == version2.
+# @exitcode negative=1: version1 != version2.
+# @exitcode err_argument_value=4: propagated from `compare_semver()` if either argument is not
+#   a valid Semantic Versioning 2.0.0 string.
 #
 # @example
 #   if semver_equal "1.2.3" "1.2.3"; then echo "Versions are equal"; fi
@@ -334,8 +336,10 @@ function semver_equal()
 # @arg $1 string The first semantic version string.
 # @arg $2 string The second semantic version string.
 #
-# @exitcode success/positive=0: version1 > version2.
-# @exitcode failure/negative=1: version1 <= version2.
+# @exitcode positive=0: version1 > version2.
+# @exitcode negative=1: version1 <= version2.
+# @exitcode err_argument_value=4: propagated from `compare_semver()` if either argument is not
+#   a valid Semantic Versioning 2.0.0 string.
 #
 # @example
 #   if semver_greaterThan "1.2.3" "1.2.2"; then echo "Version 1 is greater"; fi
@@ -362,8 +366,10 @@ function semver_greaterThan()
 # @arg $1 string The first semantic version string.
 # @arg $2 string The second semantic version string.
 #
-# @exitcode success/positive=0: version1 >= version2.
-# @exitcode failure/negative=1: version1 < version2.
+# @exitcode positive=0: version1 >= version2.
+# @exitcode negative=1: version1 < version2.
+# @exitcode err_argument_value=4: propagated from `compare_semver()` if either argument is not
+#   a valid Semantic Versioning 2.0.0 string.
 #
 # @example
 #   if semver_greaterThanOrEqual "1.2.3" "1.2.2"; then echo "Version 1 is greater or equal"; fi
@@ -389,8 +395,10 @@ function semver_greaterThanOrEqual()
 # @arg $1 string The first semantic version string.
 # @arg $2 string The second semantic version string.
 #
-# @exitcode success/positive=0: version1 < version2.
-# @exitcode failure/negative=1: version1 >= version2.
+# @exitcode positive=0: version1 < version2.
+# @exitcode negative=1: version1 >= version2.
+# @exitcode err_argument_value=4: propagated from `compare_semver()` if either argument is not
+#   a valid Semantic Versioning 2.0.0 string.
 #
 # @example
 #   if semver_lessThan "1.2.3" "1.2.4"; then echo "Version 1 is less"; fi
@@ -416,8 +424,10 @@ function semver_lessThan()
 # @arg $1 string The first semantic version string.
 # @arg $2 string The second semantic version string.
 #
-# @exitcode success/positive=0: version1 <= version2.
-# @exitcode failure/negative=1: version1 > version2.
+# @exitcode positive=0: version1 <= version2.
+# @exitcode negative=1: version1 > version2.
+# @exitcode err_argument_value=4: propagated from `compare_semver()` if either argument is not
+#   a valid Semantic Versioning 2.0.0 string.
 #
 # @example
 #   if semver_lessThanOrEqual "1.2.3" "1.2.4"; then echo "Version 1 is less or equal"; fi
@@ -447,8 +457,8 @@ function semver_lessThanOrEqual()
 #
 # @arg $1 string The string to test.
 #
-# @exitcode success/positive=0: A valid semver.
-# @exitcode failure/negative=1: Not a valid semver.
+# @exitcode positive=0: A valid semver.
+# @exitcode negative=1: Not a valid semver.
 #
 # @example
 #   if is_semver "$version"; then
@@ -472,8 +482,8 @@ function is_semver()
 #
 # @arg $1 string The git tag string to test.
 #
-# @exitcode success/positive=0: A valid semver tag.
-# @exitcode failure/negative=1: Not a valid semver tag.
+# @exitcode positive=0: A valid semver tag.
+# @exitcode negative=1: Not a valid semver tag.
 #
 # @example
 #   validate_semverTagComponents "v"
@@ -492,8 +502,8 @@ function is_semverTag()
 #
 # @arg $1 string The string to test.
 #
-# @exitcode success/positive=0: A valid semver prerelease.
-# @exitcode failure/negative=1: Not a valid semver prerelease.
+# @exitcode positive=0: A valid semver prerelease.
+# @exitcode negative=1: Not a valid semver prerelease.
 #
 # @example
 #   if is_semverPrerelease "1.2.3-alpha.1"; then echo "Valid prerelease"; fi
@@ -514,8 +524,8 @@ function is_semverPrerelease()
 #
 # @arg $1 string The git tag string to test.
 #
-# @exitcode success/positive=0: A valid semver prerelease tag.
-# @exitcode failure/negative=1: Not a valid semver prerelease tag.
+# @exitcode positive=0: A valid semver prerelease tag.
+# @exitcode negative=1: Not a valid semver prerelease tag.
 #
 # @example
 #   validate_semverTagComponents "v"
@@ -535,8 +545,8 @@ function is_semverPrereleaseTag()
 #
 # @arg $1 string The string to test.
 #
-# @exitcode success/positive=0: A valid semver release version.
-# @exitcode failure/negative=1: Not a valid semver release version.
+# @exitcode positive=0: A valid semver release version.
+# @exitcode negative=1: Not a valid semver release version.
 #
 # @example
 #   if is_semverRelease "1.2.3"; then echo "Valid release version"; fi
@@ -557,8 +567,8 @@ function is_semverRelease()
 #
 # @arg $1 string The git tag string to test.
 #
-# @exitcode success/positive=0: A valid semver release tag.
-# @exitcode failure/negative=1: Not a valid semver release tag.
+# @exitcode positive=0: A valid semver release tag.
+# @exitcode negative=1: Not a valid semver release tag.
 #
 # @example
 #   validate_semverTagComponents "v"

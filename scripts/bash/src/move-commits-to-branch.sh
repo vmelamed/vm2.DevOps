@@ -24,10 +24,10 @@
 # @arg $@ string Named options: '--commit-sha|-c <sha>' (required), '--branch|-b <name>' (required),
 #   '--check-out-new|-n' (optional switch).
 #
-# @exitcode success/positive=0: The commits were moved and 'main' was reset and force-pushed successfully, or the user declined to continue
-#   (in which case the script exits with 1 — see the 'confirm' check below).
-# @exitcode non-zero Missing/invalid arguments, not on 'main', uncommitted changes present, or the commit SHA does not exist
-#   (see 'err_argument_value', 'err_tool_error' in '_error_codes.sh').
+# @exitcode success=0: The commits were moved and 'main' was reset and force-pushed successfully.
+# @exitcode failure=1: The user declined the confirmation prompt (see the 'confirm' check below).
+# @exitcode err_argument_value: Missing/invalid arguments, not on 'main', or the commit SHA does not exist.
+# @exitcode err_tool_error: Uncommitted changes are present in the working tree.
 #
 # @stdout The list of commits that will be moved, a confirmation prompt, and progress/info messages for each step.
 #

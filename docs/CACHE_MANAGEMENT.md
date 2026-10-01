@@ -6,15 +6,15 @@ How NuGet dependency caching works in the vm2 CI/CD pipeline and how to manage i
 
 The pipeline uses a **multi-layer caching approach** to balance build speed with dependency freshness:
 
-| Layer                      | Mechanism                                                   | Status  |
-| :------------------------- | :---------------------------------------------------------- | :------ |
-| Package lock files         | `packages.lock.json` ensures deterministic restores         | Done    |
-| Dependabot                 | Weekly automated PRs for dependency updates                 | Done    |
-| Weekly cache rotation      | Calendar-week key in cache forces refresh every Monday      | Done    |
-| Manual cache clear         | `_clear_cache` workflow for emergency invalidation          | Done    |
-| Cache age monitoring       | Warn when cached packages are older than a threshold        | Planned |
-| Scheduled cache cleanup    | Automatic deletion of caches older than N days              | Planned |
-| Bencher CLI daily rotation | Daily date key in cache forces Bencher CLI refresh daily    | Done    |
+| Layer                      | Mechanism                                                | Status  |
+| :------------------------- | :------------------------------------------------------- | :------ |
+| Package lock files         | `packages.lock.json` ensures deterministic restores      | Done    |
+| Dependabot                 | Weekly automated PRs for dependency updates              | Done    |
+| Weekly cache rotation      | Calendar-week key in cache forces refresh every Monday   | Done    |
+| Manual cache clear         | `_clear_cache` workflow for emergency invalidation       | Done    |
+| Cache age monitoring       | Warn when cached packages are older than a threshold     | Planned |
+| Scheduled cache cleanup    | Automatic deletion of caches older than N days           | Planned |
+| Bencher CLI daily rotation | Daily date key in cache forces Bencher CLI refresh daily | Done    |
 
 ## How It Works
 
@@ -43,7 +43,9 @@ The pipeline uses a **multi-layer caching approach** to balance build speed with
 
 ### Weekly Cache Rotation
 
-All three CI workflows (`_build`, `_test`, `_benchmarks`) compute a weekly cache key:
+All four CI workflows that restore NuGet packages (`_build`, `_test`, `_benchmarks`, `_pack`) share this logic via the
+`cache-dependencies` composite action (`.github/actions/cache-dependencies/action.yaml`), which computes a weekly cache
+key:
 
 ```yaml
 - name: Get cache timestamp (weekly rotation)
@@ -95,10 +97,10 @@ The daily key ensures the CLI stays current (Bencher releases frequently) while 
 day. The restore-keys fallback allows a stale cache to be used if the daily key isn't found, avoiding a full download on every
 CI run.
 
-| Key                                | Matches                                |
-| ---------------------------------- | -------------------------------------- |
-|bencher-cli-{os}-{YYYYMMDD} (exact) | Same day, same OS                      |
-|bencher-cli-{os}- (fallback)        | Any day, same OS — reuses stale binary |
+| Key                                 | Matches                                |
+| :---------------------------------- | :------------------------------------- |
+| bencher-cli-{os}-{YYYYMMDD} (exact) | Same day, same OS                      |
+| bencher-cli-{os}- (fallback)        | Any day, same OS — reuses stale binary |
 
 ## Manual Cache Clear
 
@@ -111,11 +113,11 @@ gh workflow run "ClearCache.yaml" --repo "vmelamed/<repo>"
 
 Allowed patterns (enforced by allowlist):
 
-| Pattern              | What it clears          |
-| :------------------- | :---------------------- |
-| `nuget-`             | NuGet package caches    |
-| `build-artifacts-`   | Legacy build artifact caches (no longer created — build outputs now travel as workflow artifacts; prefix kept to purge leftovers) |
-| `bencher-cli-`       | Bencher CLI cache       |
+| Pattern            | What it clears                                                                                                                                                                         |
+| :----------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `nuget-`           | NuGet package caches                                                                                                                                                                   |
+| `built-artifacts-` | Legacy build artifact caches (no longer created — build outputs now travel as workflow artifacts under this same name prefix; prefix kept allowlisted to purge leftover cache entries) |
+| `bencher-cli-`     | Bencher CLI cache                                                                                                                                                                      |
 
 ## MTP v1 vs v2 Lock File Interaction
 
@@ -137,12 +139,12 @@ This is temporary until Visual Studio adopts MTP v2.
 
 ## Troubleshooting
 
-| Problem                                          | Solution                                                        |
-| :----------------------------------------------- | :-------------------------------------------------------------- |
-| Build fails with "restore failed in locked mode" | Run `dotnet restore --force-evaluate` and commit lock files     |
-| Cache size approaching 10 GB limit               | Run ClearCache workflow; consider reducing rotation period      |
-| First build of week is slow                      | Expected — weekly rotation downloads fresh packages             |
-| Dependabot PRs failing tests                     | Review changelog for breaking changes; update code accordingly  |
+| Problem                                          | Solution                                                       |
+| :----------------------------------------------- | :------------------------------------------------------------- |
+| Build fails with "restore failed in locked mode" | Run `dotnet restore --force-evaluate` and commit lock files    |
+| Cache size approaching 10 GB limit               | Run ClearCache workflow; consider reducing rotation period     |
+| First build of week is slow                      | Expected — weekly rotation downloads fresh packages            |
+| Dependabot PRs failing tests                     | Review changelog for breaking changes; update code accordingly |
 
 ## Further Reading
 

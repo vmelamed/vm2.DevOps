@@ -48,6 +48,8 @@ declare -xr GITHUB_OUTPUT=${GITHUB_OUTPUT:-"$_ignore"}
 #
 # @arg $@ nil No arguments; reads its input from stdin.
 #
+# @exitcode success=0: Every line from stdin was echoed (always).
+#
 # @stdout and \$GITHUB_STEP_SUMMARY string each line read from stdin unchanged.
 #
 # @example
@@ -76,6 +78,8 @@ function to_stdout()
 #
 # @arg $@ nil No arguments; reads its input from stdin.
 #
+# @exitcode success=0: Every line from stdin was echoed (always).
+#
 # @stderr string each line read from stdin unchanged.
 #
 # @example
@@ -103,6 +107,8 @@ function to_stderr()
 #   - In GitHub Actions, the output is appended also to the GitHub Actions output
 #
 # @arg $@ nil No arguments; reads its input from stdin.
+#
+# @exitcode success=0: Every line from stdin was echoed (always).
 #
 # @stdout string each line read from stdin unchanged.
 #
@@ -135,6 +141,9 @@ function to_output()
 #
 # @arg $1 string The value to escape.
 #
+# @exitcode success=0: The value was escaped and printed (always, once past the argument
+#   validation gate).
+#
 # @stdout string The escaped value.
 #
 # @example
@@ -161,6 +170,9 @@ function gh_escape()
 #   $GITHUB_OUTPUT function.
 #
 # @arg $@ nameref List of names of the variables (namerefs) to output.
+#
+# @exitcode success=0: The key=value pairs were output (always, once past the argument
+#   validation gate).
 #
 # @stdout and $GITHUB_OUTPUT (if in GH actions) "key=value" for each variable, via
 #   `to_output`.

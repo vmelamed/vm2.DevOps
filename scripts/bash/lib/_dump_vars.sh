@@ -77,7 +77,7 @@ declare -A markdown=(
 #
 # @arg $1 string Header text to display.
 #
-# @exitcode success/positive=0
+# @exitcode success=0: The line/header was printed (always, once past the argument validation gate).
 #
 # @stdout Formatted header line.
 #
@@ -112,7 +112,7 @@ function _write_title()
 # @arg $3 string _name the name to display instead of the variable name. Optional if not
 #   provided, the variable's actual name - $1 is used.
 #
-# @exitcode success/positive=0
+# @exitcode success=0: The line/header was printed (always, once past the argument validation gate).
 #
 # @stdout Formatted variable line showing the name and its value (or a placeholder for unbound
 #   or invalid names).
@@ -202,7 +202,8 @@ function _write_line()
 #     -q, --quiet           Skip the "press any key to continue" prompt, even if `$quiet` is false
 #     -f, --force           Dump the variables even if `$verbose` is not true
 #
-# @exitcode success/positive=0
+# @exitcode success=0: The table was printed (or nothing was printed, if `$verbose` is off and
+#   `--force` was not given, or if called with no arguments).
 #
 # @stdout Formatted table of variable names and values.
 #

@@ -68,6 +68,10 @@ declare __devops_parent=''
 #   - If the script is not located in a Git repository, or if the repository is in a detached
 #     HEAD state, the function will exit with an error.
 #
+# @exitcode success=0: The parent directory was resolved (or was already cached).
+# @exitcode err_logic_error=67: The parent directory could not be resolved (e.g. the script is
+#   not inside a Git working tree, or the repository is in a detached HEAD state).
+#
 # @stdout The absolute path of the parent directory of the vm2.DevOps repository.
 # @example
 #   parent_dir=$(get_devops_parent)
@@ -116,15 +120,20 @@ function get_devops_parent()
 #
 # Note: this function is internal and should not be called directly from outside the script.
 #
-# @exitcode success/positive=0: the repository directory exists and meets all the criteria above
-# @exitcode err_not_found=9: could not find the repository directory from $repo_name and $vm2_repos
+# @exitcode success=0: the repository directory exists and meets all the criteria above
+# @exitcode err_not_found=9: could not find the repository directory from $repo_name and
+#   $vm2_repos
 # @exitcode err_not_git_directory=80: the resolved path is not a Git repository
-# @exitcode err_not_git_root=81: the resolved path exists and is inside a Git repository, but is not the working tree root
-# @exitcode err_behind_latest_stable_tag=82: the repository is behind the latest stable tag of the specified branch
-# @exitcode err_repo_with_no_ci=85: the repository has no GitHub Actions workflows in '$repo_path/.github/workflows'
-# @exitcode err_invalid_branch=84: the repository is not on the expected branch (when $3 is given)
-# @exitcode err_not_current_commit=89: the repository exists and is on the expected branch, but is not at or ahead of the
-#   latest stable tag
+# @exitcode err_not_git_root=81: the resolved path exists and is inside a Git repository, but
+#   is not the working tree root
+# @exitcode err_behind_latest_stable_tag=82: the repository is behind the latest stable tag of
+#   the specified branch
+# @exitcode err_repo_with_no_ci=85: the repository has no GitHub Actions workflows in
+#   '$repo_path/.github/workflows'
+# @exitcode err_invalid_branch=84: the repository is not on the expected branch (when $3 is
+#   given)
+# @exitcode err_not_current_commit=89: the repository exists and is on the expected branch,
+#   but is not at or ahead of the latest stable tag
 #
 # @stdout the absolute path to the working tree root of the resolved repository
 #
@@ -137,10 +146,10 @@ function __validate_repo_root()
                                                                                            "  - repository name, or, the absolute or relative path to the repository, e.g. 'vm2.MyRepo' or './my_repos/vm2_packages/vm2.MyRepo'" \
                                                                                            "  - the parent directory of all vm2 repositories where the repository can be located as well (e.g. \$VM2_REPOS or \$(get_devops_parent))" \
                                                                                            "  - the branch to check against the latest stable tag (optional, default: the currently checked out branch)"
-    [[ ! -v 1 || -n $1 ]]                              || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the repository name or path, to be non-empty (provided '${1:-<none>}')."
-    [[ ! -v 2 || -d $2 ]]                              || bug -ec "$err_not_directory" "${FUNCNAME[0]}() requires argument 2, the vm2 repositories parent, to be a path to a directory resolved by 'resolve_vm2_repos()' (provided '${2:-<none>}')."
-    [[ ! -v 3 || -z $3 ]] || is_valid_branch_name "$3" || bug -ec "$err_invalid_branch" "${FUNCNAME[0]}() requires optional argument 3 to be a valid Git branch name (provided '${3:-<none>}')."
-    [[ ! -v 4 ]]          || is_boolean "$4"           || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires optional argument 4 to be 'true' or 'false' (provided '${4:-<none>}')."
+    [[ ! -v 1 || -n $1 ]]                              || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the repository name or path, to be non-empty (provided '${1:-<none>}')."
+    [[ ! -v 2 || -d $2 ]]                              || bug -ec "$err_not_directory"     "${FUNCNAME[0]}() requires argument 2, the vm2 repositories parent, to be a path to a directory resolved by 'resolve_vm2_repos()' (provided '${2:-<none>}')."
+    [[ ! -v 3 || -z $3 ]] || is_valid_branch_name "$3" || bug -ec "$err_invalid_branch"    "${FUNCNAME[0]}() requires optional argument 3 to be a valid Git branch name (provided '${3:-<none>}')."
+    [[ ! -v 4 ]]          || is_boolean "$4"           || bug -ec "$err_argument_type"     "${FUNCNAME[0]}() requires optional argument 4 to be 'true' or 'false' (provided '${4:-<none>}')."
     exit_if_has_bugs
 
     # Since this is an internal function, it is expected to be called only from within this script and not directly by the user,
@@ -237,13 +246,17 @@ declare -a vm2_repos_instructions=(
 #   all vm2 repos (can be empty, default: $VM2_REPOS, or the parent directory of vm2.DevOps's
 #   repository root). Usually used with a parameter like '--vm2-repos' on the command line.
 #   The resolved directory is returned back via the nameref provided in argument 1.
-# @arg $2 string the branch name for the vm2.DevOps repository (optional, default: the current branch).
-# @arg $3 string the branch name for the vm2.Templates repository (optional, default: the current branch).
+# @arg $2 string the branch name for the vm2.DevOps repository (optional, default: the current
+#   branch).
+# @arg $3 string the branch name for the vm2.Templates repository (optional, default: the
+#   current branch).
 #
-# @exitcode success/positive=0: the vm2_repos directory was successfully resolved and validated
-# @exitcode err_not_directory=17: the parameter, $VM2_REPOS, or the resolved default is not a valid, existing directory
-# @exitcode N propagated from __validate_repo_root (e.g. $err_not_found, $err_repo_with_no_ci, $err_behind_latest_stable_tag)
-#   if vm2.DevOps or vm2.Templates fail validation under the resolved directory
+# @exitcode success=0: the vm2_repos directory was successfully resolved and validated
+# @exitcode err_not_directory=17: the parameter, $VM2_REPOS, or the resolved default is not a
+#   valid, existing directory
+# @exitcode N propagated from __validate_repo_root (e.g. $err_not_found, $err_repo_with_no_ci,
+#   $err_behind_latest_stable_tag) if vm2.DevOps or vm2.Templates fail validation under the
+#   resolved directory
 #
 # @stdout the absolute path to the vm2_repos directory
 #
@@ -342,16 +355,19 @@ function resolve_vm2_repos()
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Internal helper used by resolve_repo_root. Searches for a directory with the given name (or relative
-# path) under a specified parent directory, skipping common noise directories (.git, node_modules, .cache, bin, obj,
-# TestResults, etc.) during the search.
+# @description Internal helper used by resolve_repo_root. Searches for a directory with the
+#   given name (or relative path) under a specified parent directory, skipping common noise
+#   directories (.git, node_modules, .cache, bin, obj, TestResults, etc.) during the search.
 #
-# @arg $1 string start_from - parent directory under which to search for the specified directory
+# @arg $1 string start_from - parent directory under which to search for the specified
+#   directory
 # @arg $2 string look_for - directory name or relative path to search for
 # @arg $3 nameref _result_dir - name of a variable to receive the resolved directory path
 #
-# @exitcode success/positive=0: exactly one matching directory is found, and it is inside a Git repository
-# @exitcode err_not_git_directory=80: err_not_git_directory: exactly one matching directory is found, but it is not inside a Git repository
+# @exitcode success=0: exactly one matching directory is found, and it is inside a Git
+#   repository
+# @exitcode err_not_git_directory=80: exactly one matching directory is found, but it is not
+#   inside a Git repository
 # @exitcode err_found_too_many=10: multiple matching directories are found
 # @exitcode err_not_found=9: no matching directory is found
 #
@@ -446,7 +462,7 @@ function __search_repo_dir()
 #   nearest ancestor with CI configuration -- or the found directory itself if none exists)
 # @arg $4 nameref to a variable to store the absolute path of the found directory
 #
-# @exitcode success/positive=0: exactly one matching directory with a Git repository is found
+# @exitcode success=0: exactly one matching directory with a Git repository is found
 #   and it has CI configuration
 # @exitcode err_not_found=9: no matching directory was found, neither under $vm2_repos nor
 #   under $HOME (fatal)
@@ -570,18 +586,20 @@ function resolve_repo_root()
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Resolves the path to the SoT (Source of Truth) shared content directory inside the vm2.Templates repository
-#   (named by $vm2_sot_repo_name), expected to be located under $vm2_repos.
+# @description Resolves the path to the SoT (Source of Truth) shared content directory inside
+#   the vm2.Templates repository (named by $vm2_sot_repo_name), expected to be located under
+#   $vm2_repos.
 #
-# @arg $1 string vm2_repos - the parent directory where all the vm2 repositories are cloned (required, non-empty, must be an
-#   existing directory)
-# @arg $2 string sot - the SoT directory name relative to the vm2.Templates repository (required, non-empty)
-# @arg $3 string _repo_root_ref - the name of the variable to store the absolute path of the path to the SoT shared content
-#   directory (required, non-empty)
+# @arg $1 string vm2_repos - the parent directory where all the vm2 repositories are cloned
+#   (required, non-empty, must be an existing directory)
+# @arg $2 string sot - the SoT directory name relative to the vm2.Templates repository
+#   (required, non-empty)
+# @arg $3 string _repo_root_ref - the name of the variable to store the absolute path of the
+#   path to the SoT shared content directory (required, non-empty)
 #
-# @exitcode success/positive=0: the SoT shared content directory is found at the expected location
-# @exitcode err_not_directory=17: the SoT shared content directory does not exist at the expected conventional location
-#   ('$vm2_repos/$vm2_sot_repo_name/templates/$sot/content')
+# @exitcode success=0: the SoT shared content directory is found at the expected location
+# @exitcode err_not_directory=17: the SoT shared content directory does not exist at the
+#   expected conventional location  ('$vm2_repos/$vm2_sot_repo_name/templates/$sot/content')
 #
 # @stdout the absolute path to the SoT shared content directory
 #

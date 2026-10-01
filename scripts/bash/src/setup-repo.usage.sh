@@ -18,7 +18,7 @@ declare -xr default_sot
 #
 # @arg $1 bool When `true`, include the shared/common switches and environment variables sections in the output.
 #
-# @exitcode success/positive=0
+# @exitcode success=0: Always.
 # @stdout The full help text for `setup-repo.sh`.
 #---------------------------------------------------------------------------------------------
 function usage_text()
@@ -127,17 +127,36 @@ Examples:
   $script_name vmelamed/vm2.TestUtilities --visibility private --ssh
   $script_name vm2.Glob --audit
 
-Configured local Git settings:
+Configured local Git settings (see 'default_local_git_settings' in setup-repo.defaults.sh for the authoritative list):
+  init.defaultBranch            'main'
+                                Sets the default branch name used by 'git init' for new repositories.
   core.hooksPath                '\$VM2_REPOS/$vm2_devops_repo_name/scripts/githooks'
                                 Tells Git where to find repository hook scripts (e.g. pre-commit, commit-msg).
   commit.template               '\$VM2_REPOS/$vm2_sot_repo_name/templates/$default_sot/content/.gitmessage'
                                 Specifies the default commit message template shown when creating commits.
+  merge.ff                      'only'
+                                Refuses non-fast-forward merges, keeping history linear (use 'git merge --no-ff' locally if needed).
   pull.rebase                   'true'
                                 Makes 'git pull' rebase local commits on top of upstream changes instead of merging.
   fetch.prune                   'true'
                                 Automatically removes stale remote-tracking branches deleted on the remote.
   push.autoSetupRemote          'true'
                                 Auto-sets upstream tracking when pushing a new local branch for the first time.
+  rerere.enabled                'true'
+                                Remembers and reapplies resolutions to repeated merge/rebase conflicts.
+  rerere.autoUpdate             'true'
+                                Also stages rerere's auto-resolved files, so a replayed conflict does not stop to 'git add'.
+  rebase.autoStash              'true'
+                                Automatically stashes and reapplies a dirty working tree around 'rebase'/'pull --rebase'.
+  merge.conflictstyle           'zdiff3'
+                                Shows the common-ancestor version in conflict hunks, not just the two diverging sides.
+  push.useForceIfIncludes       'true'
+                                Makes '--force-with-lease' also fail if the remote moved while you were rebasing.
+  tag.sort                      'version:refname'
+                                Lists 'git tag' output in version order (e.g. v1.10.0 after v1.9.0).
+  merge.nugetlock.*             custom merge driver
+                                Auto-resolves 'packages.lock.json' conflicts by taking the incoming side (bound via
+                                '.gitattributes'); regenerate with 'dotnet restore --force-evaluate' afterwards.
 
 EOF
 }

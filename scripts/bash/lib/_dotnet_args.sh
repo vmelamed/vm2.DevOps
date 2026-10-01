@@ -92,7 +92,7 @@ declare -xra dump_common_dotnet_args=(
 #   this shared set. Calling scripts should ensure that there are no collisions with `-c` or any
 #   of the long option names above. For example, they may have a first matching expression case
 #   like:
-#   `-c|--define|--configuration|--framework|--runtime|--artifacts-path|--minver-tag-prefix|--minver-prerelease-id|--nuget-username|--nuget-password ) ;;`
+#   `-c|-d|-tfm|-rid|--define|--configuration|--framework|--runtime|--artifacts-path|--minver-tag-prefix|--minver-prerelease-id|--nuget-username|--nuget-password ) ;;`
 #   to satisfy this requirement, as they may no longer use any of these as their own option.
 #
 # Notes:
@@ -109,8 +109,8 @@ declare -xra dump_common_dotnet_args=(
 #   this function records whatever value it is given without judging it; call
 #   `sanitize_common_dotnet_args` afterward to validate the accumulated values.
 #
-# @exitcode success/positive=0: The argument was a recognized common dotnet argument.
-# @exitcode failure/negative=1: The argument was not a common dotnet argument.
+# @exitcode positive=0: The argument was a recognized common dotnet argument.
+# @exitcode negative=1: The argument was not a common dotnet argument.
 #
 # @example
 #   for arg in "$@"; do
@@ -139,14 +139,14 @@ function get_common_dotnet_arg()
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown ) ;;
 
             # get the values of the variables common for many vm2.DevOps scripts,
-            --define                   ) preprocessor_symbols=$2   ;;
+            --define|-d                ) preprocessor_symbols=$2   ;;
             --minver-tag-prefix        ) minver_tag_prefix="$2"    ;;
             --minver-prerelease-id     ) minver_prerelease_id="$2" ;;
             --nuget-username           ) gh_nuget_username="$2"    ;;
             --nuget-password           ) gh_nuget_password="$2"    ;;
             --configuration|-c         ) configuration=$2          ;;
-            --framework                ) framework="$2"            ;;
-            --runtime                  ) runtime="$2"              ;;
+            --framework|-tfm           ) framework="$2"            ;;
+            --runtime|-rid             ) runtime="$2"              ;;
             --artifacts-path           ) artifacts=$2              ;;
             *                          ) return "$negative" ;;
     esac
@@ -162,7 +162,7 @@ function get_common_dotnet_arg()
 # @arg $1 string A path to a project file (build, test, etc.) from the list of projects. This
 #   is used to determine the artifacts path if it is not already set.
 #
-# @exitcode success/positive=0: The common dotnet arguments were sanitized and validated
+# @exitcode success=0: The common dotnet arguments were sanitized and validated
 #   successfully.
 # @exitcode err_argument_value=4: The GitHub NuGet username/password pairing is invalid (one
 #   is present without the other).
@@ -239,10 +239,10 @@ function sanitize_common_dotnet_args()
 declare -xr common_dotnet_parameters="\
   -d, --define <symbols>        Defines one or more semicolon, comma, or space-separated pre-processor symbols.
                                 Overrides the initial value from the environment value \$PREPROCESSOR_SYMBOLS or the default ''.
-  -mp, --minver-tag-prefix <prefix>
+  --minver-tag-prefix <prefix>
                                 Specifies the Git tag prefix used by MinVer. E.g., 'v' as in the tag v1.2.3.
                                 Overrides the initial value from the environment value \$MINVERTAGPREFIX or the default 'v'
-  -mi, --minver-prerelease-id <id>
+  --minver-prerelease-id <id>
                                 Specifies semver prerelease identifiers used by MinVer, E.g., 'preview.0' as in the semver
                                 'v1.2.3-preview.6', where MinVer automatically replaces preview.0 with preview.6.
                                 Overrides the initial value from the environment value \$MINVERDEFAULTPRERELEASEIDENTIFIERS or
@@ -255,17 +255,17 @@ declare -xr common_dotnet_parameters="\
                                 Note: nuget.org uses Trusted Publishing and does not need this value, whereas other package
                                 managers may still need it, e.g. GitHub Packages.
   -c, --configuration (Release|Debug)
-                                Build configuration ('Release' or 'Debug').
+                                Build configuration ('Release' or 'Debug'). The only common dotnet option with a short form.
                                 Overrides the initial value from the environment value \$CONFIGURATION or the default specified
                                 in the project file or Directory.Build.props file. Usually 'Debug' on a local machine or
                                 'Release' in CI and other automated build environments.
-  -f, --framework <TFM>         Target framework moniker (TFM) for the build. E.g., 'net10.0'.
+  -tfm, --framework <TFM>       Target framework moniker (TFM) for the build. E.g., 'net10.0'.
                                 Overrides the initial value from the environment value \$FRAMEWORK or the default specified in
                                 the project file or Directory.Build.props file.
-  -r, --runtime <RID>           Runtime identifier for the build. E.g., 'linux-x64' or '' for CPU and OS agnostic builds.
+  -rid, --runtime <RID>         Runtime identifier for the build. E.g., 'linux-x64' or '' for CPU and OS agnostic builds.
                                 Overrides the initial value from the environment value \$RUNTIME or the default specified in
                                 the project file or Directory.Build.props file. Usually '' for CPU and OS agnostic builds.
-  -a, --artifacts-path <path>   Path to the root directory of the produced artifacts from the builds. The path MUST be relative
+  --artifacts-path <path>        Path to the root directory of the produced artifacts from the builds. The path MUST be relative
                                 to the root of the Git repository's working tree.
                                 Overrides the initial value from the environment value \$ARTIFACTS_PATH or the default specified
                                 in the project file or Directory.Build.props file. Usually 'artifacts' when artifact layout is

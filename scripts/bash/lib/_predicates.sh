@@ -39,6 +39,8 @@ function is_case_sensitive()
 
 #---------------------------------------------------------------------------------------------
 # @description Sets the shell to case-insensitive mode.
+#
+# @exitcode success=0: Always.
 #---------------------------------------------------------------------------------------------
 function set_case_insensitive()
 {
@@ -47,6 +49,8 @@ function set_case_insensitive()
 
 #---------------------------------------------------------------------------------------------
 # @description Sets the shell to case-sensitive mode.
+#
+# @exitcode success=0: Always.
 #---------------------------------------------------------------------------------------------
 function set_case_sensitive()
 {
@@ -97,8 +101,8 @@ declare -xr varNameRegex="^[A-Za-z_][A-Za-z0-9_]*$"
 #
 # @arg $1 string variable_name - the name of the variable to test
 #
-# @exitcode success/positive=0: the string is a valid variable name
-# @exitcode failure/negative=1: otherwise
+# @exitcode positive=0: the string is a valid variable name
+# @exitcode negative=1: otherwise
 #
 # @example
 #   if is_variable_name "MY_VAR"; then echo "Valid variable name"; fi
@@ -116,8 +120,8 @@ function is_variable_name()
 #
 # @arg $1 string variable_name - name of the variable to test
 #
-# @exitcode success/positive=0: the variable is defined
-# @exitcode failure/negative=1: otherwise
+# @exitcode positive=0: the variable is defined
+# @exitcode negative=1: otherwise
 #
 # @example
 #   if is_variable MY_VAR; then echo "MY_VAR is defined"; fi
@@ -135,8 +139,8 @@ function is_variable()
 #
 # @arg $1 string variable_name - name of the array variable to test
 #
-# @exitcode success/positive=0: the strings is the name of a defined indexed array variable
-# @exitcode failure/negative=1: otherwise
+# @exitcode positive=0: the strings is the name of a defined indexed array variable
+# @exitcode negative=1: otherwise
 #
 # @example
 #   declare -a MY_ARRAY=(aaa bbb ccc)
@@ -171,8 +175,8 @@ function is_indexed_array()
 #
 # @arg $1 string variable_name - name of the array variable to test
 #
-# @exitcode success/positive=0: the strings is the name of a defined associative array variable
-# @exitcode failure/negative=1: otherwise
+# @exitcode positive=0: the strings is the name of a defined associative array variable
+# @exitcode negative=1: otherwise
 #
 # @example
 #   declare -A MY_ARRAY=([aaa]=aaa [bbb]=bbb [ccc]=ccc)
@@ -207,8 +211,8 @@ function is_associative_array()
 #
 # @arg $1 string variable_name - name of the array variable to test
 #
-# @exitcode success/positive=0: the strings is the name of a defined indexed or an associative array variable
-# @exitcode failure/negative=1: otherwise
+# @exitcode positive=0: the strings is the name of a defined indexed or an associative array variable
+# @exitcode negative=1: otherwise
 #
 # @example
 #   declare -A MY_ASSOC_ARRAY=([aaa]=aaa [bbb]=bbb [ccc]=ccc)
@@ -245,8 +249,8 @@ function is_array()
 #
 # @arg $1 string array_name - name of the array variable to test
 #
-# @exitcode success/positive=0: the array is empty
-# @exitcode failure/negative=1: otherwise
+# @exitcode positive=0: the array is empty
+# @exitcode negative=1: otherwise
 #
 # @example
 #   if is_empty_array MY_ARRAY; then echo "MY_ARRAY is empty"; fi
@@ -268,8 +272,8 @@ function is_empty_array()
 #
 # @arg $1 string name of the function to test
 #
-# @exitcode success/positive=0: the function is defined
-# @exitcode failure/negative=1: otherwise
+# @exitcode positive=0: the function is defined
+# @exitcode negative=1: otherwise
 #
 # @example
 #   if is_function MY_FUNC; then echo "MY_FUNC is defined"; fi
@@ -292,8 +296,8 @@ function is_function()
 # @arg $1 string value - the string to test
 # @arg $2 string regex - the regular expression to match against
 #
-# @exitcode success/positive=0: the string $1 matches the regex $2
-# @exitcode failure/negative=1: otherwise
+# @exitcode positive=0: the string $1 matches the regex $2
+# @exitcode negative=1: otherwise
 #---------------------------------------------------------------------------------------------
 function __test_with_regex()
 {
@@ -607,18 +611,31 @@ function is_valid_secret()
     [[ -n $1 && ! $1 =~ [[:cntrl:]] ]]
 }
 
+#---------------------------------------------------------------------------------------------
+# @description Tests if the parameter represents a valid .NET SDK version specifier, e.g. a
+#   full version (`10.0.100`), a major.minor with optional feature-band wildcard (`10.0`,
+#   `10.0.1xx`), a bare major (`10`), or the literal `latest`.
+#
+# @arg $1 string version - string to test
+#
+# @exitcode positive=0: the string is a valid .NET SDK version specifier
+# @exitcode negative=1: otherwise
+#
+# @example
+#   if is_valid_dotnet_version "$dotnet_version"; then echo "Valid"; fi
+#---------------------------------------------------------------------------------------------
 function is_valid_dotnet_version()
 {
     __test_with_regex "$@" "$dotnet_version_regex"
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Checks if a given tool is available..
+# @description Checks if a given tool is available on the `$PATH`.
 #
 # @arg $1 string Name of the tool to check.
 #
 # @exitcode positive=0: The tool is present.
-# @exitcode non-zero: The tool is not present.
+# @exitcode negative=1: The tool is not present.
 #---------------------------------------------------------------------------------------------
 function is_tool_present()
 {
@@ -645,12 +662,12 @@ function is_valid_json()
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Checks if a given file is valid JSON.
+# @description Checks if the file at a given path contains valid JSON.
 #
-# @arg $1 string The JSON string to validate.
+# @arg $1 string Path to the file to validate.
 #
-# @exitcode positive=0: The string is valid JSON.
-# @exitcode negative=1: The string is not valid JSON.
+# @exitcode positive=0: The file contains valid JSON.
+# @exitcode negative=1: The file does not contain valid JSON.
 #---------------------------------------------------------------------------------------------
 function is_valid_json_file()
 {

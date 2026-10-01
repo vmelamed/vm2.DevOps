@@ -75,7 +75,9 @@ See https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-auth
 #
 # @arg $1 string The repository owner to validate.
 #
-# @exitcode success/positive=0: If the repository owner is valid.
+# @exitcode success=0: If the repository owner is valid.
+# @exitcode err_argument_value=4: If the repository owner is not empty and does not match the
+#   GitHub owner/organization naming rules.
 #
 # @example
 #   if validate_gh_repo_owner "my-org"; then echo "Valid repo owner"; fi
@@ -108,7 +110,9 @@ function validate_gh_repo_owner()
 #
 # @arg $1 string The repository name to validate.
 #
-# @exitcode success/positive=0: If the repository name is valid.
+# @exitcode success=0: If the repository name is valid.
+# @exitcode err_argument_value=4: If the repository name is empty, ends with `.git`, or does
+#   not match the GitHub repository naming rules.
 #
 # @example
 #   if validate_gh_repo_name "my-repo"; then echo "Valid repo name"; fi
@@ -142,7 +146,9 @@ function validate_gh_repo_name()
 #
 # @arg $1 string The repository description to validate.
 #
-# @exitcode success/positive=0: If the repository description is valid.
+# @exitcode success=0: If the repository description is valid.
+# @exitcode err_argument_value=4: If the repository description is not between 3 and 350
+#   characters long.
 #
 # @example
 #   if validate_gh_repo_description "This is my repo"; then echo "Valid repo description"; fi
@@ -170,8 +176,8 @@ function validate_gh_repo_description()
 #
 # @arg $1 string _branch the branch name to validate.
 #
-# @exitcode success/positive=0: if the branch name is valid.
-# @exitcode err_invalid_branch=84: if the branch name is invalid.
+# @exitcode positive=0: if the branch name is valid.
+# @exitcode negative=1: if the branch name is invalid.
 #
 # @example
 #   if is_valid_branch_name "main"; then echo "Valid branch name"; fi
@@ -195,7 +201,8 @@ function is_valid_branch_name()
 #
 # @arg $1 string The repository branch name to validate.
 #
-# @exitcode success/positive=0: If the branch name is valid.
+# @exitcode success=0: If the branch name is valid.
+# @exitcode err_argument_value=4: If the branch name is not a valid Git ref name.
 #
 # @example
 #   if validate_branch_name "main"; then echo "Valid branch name"; fi
@@ -238,8 +245,8 @@ function validate_branch_name()
 # @arg $@ string The `gh` command and its arguments (subcommand, flags, etc.) — starts at $3
 #   or $4 depending on whether the optional `ignore_output` flag was given.
 #
-# @exitcode success/positive=0: If the command eventually succeeds.
-# @exitcode * Otherwise, the last exit code returned by `gh`, or `err_logic_error` if all
+# @exitcode success=0: If the command eventually succeeds.
+# @exitcode N Otherwise, the last exit code returned by `gh`, or `err_logic_error` if all
 #   retry attempts are exhausted.
 #
 # @example
@@ -342,8 +349,8 @@ function execute_gh_with_retry()
 # @arg $@ string The `gh api` route and its arguments — starts at $3 or $4 depending on
 #   whether the optional `ignore_output` flag was given.
 #
-# @exitcode success/positive=0: If the command eventually succeeds.
-# @exitcode * Otherwise, the last exit code returned by `gh api`, or `err_logic_error` if all
+# @exitcode success=0: If the command eventually succeeds.
+# @exitcode N Otherwise, the last exit code returned by `gh api`, or `err_logic_error` if all
 #   retry attempts are exhausted.
 #
 # @example
@@ -494,6 +501,9 @@ declare -xr jq_gh_repo_state="{
 #   keys with empty-string values.
 #
 # @arg $1 nameref to an associative array variable to be initialized as a repo state.
+#
+# @exitcode success=0: The array was initialized (always, once past the argument validation
+#   gate).
 #---------------------------------------------------------------------------------------------
 function initialize_repo_state()
 {
@@ -530,8 +540,9 @@ function initialize_repo_state()
 # @arg $3 bool If false, only retrieve the local Git repository state without querying the
 #   GitHub API (optional, default: true).
 #
-# @exitcode success/positive=0: On success, or when the directory has no local/GitHub repo state to report.
-# @exitcode failure/negative=1: If the GitHub API data does not match the local Git remote data.
+# @exitcode success=0: On success, or when the directory has no local/GitHub repo state to
+#   report.
+# @exitcode failure=1: If the GitHub API data does not match the local Git remote data.
 #
 # @example
 #   get_repo_state "/home/valo/repos/vm2.Glob" repo_state
@@ -614,8 +625,8 @@ function get_repo_state()
 #
 # @arg $1 nameref to an associative array variable holding the repo state.
 #
-# @exitcode success/positive=0: If the repo state has a local Git repository.
-# @exitcode failure/negative=1: If it does not.
+# @exitcode positive=0: If the repo state has a local Git repository.
+# @exitcode negative=1: If it does not.
 #---------------------------------------------------------------------------------------------
 function has_local_repo()
 {
@@ -634,8 +645,8 @@ function has_local_repo()
 #
 # @arg $1 nameref to an associative array variable holding the repo state.
 #
-# @exitcode success/positive=0: If the repo state has a remote Git repository.
-# @exitcode failure/negative=1: If it does not.
+# @exitcode positive=0: If the repo state has a remote Git repository.
+# @exitcode negative=1: If it does not.
 #---------------------------------------------------------------------------------------------
 function has_remote_repo()
 {
@@ -654,8 +665,8 @@ function has_remote_repo()
 #
 # @arg $1 nameref to an associative array variable holding the repo state.
 #
-# @exitcode success/positive=0: If the repo state has a remote GitHub repository.
-# @exitcode failure/negative=1: If it does not.
+# @exitcode positive=0: If the repo state has a remote GitHub repository.
+# @exitcode negative=1: If it does not.
 #---------------------------------------------------------------------------------------------
 function has_github_remote()
 {
@@ -674,6 +685,9 @@ function has_github_remote()
 #   keys are stored as-is (a trace warning is emitted for each).
 #
 # @arg $1 nameref to an associative array variable to receive the deserialized repo state.
+#
+# @exitcode success=0: The repo state was deserialized (always, once past the argument
+#   validation gate).
 #---------------------------------------------------------------------------------------------
 function read_repo_state()
 {
@@ -700,6 +714,9 @@ function read_repo_state()
 #
 # @arg $1 nameref to an associative array variable holding the repo state to be printed.
 #
+# @exitcode success=0: The repo state was printed (always, once past the argument validation
+#   gate).
+#
 # @stdout `Repository state:` followed by one `  key: value` line per predefined key.
 #---------------------------------------------------------------------------------------------
 function print_repo_state()
@@ -725,8 +742,8 @@ function print_repo_state()
 #
 # @arg $1 string Path to the directory to test (optional, default: `$initial_cwd`).
 #
-# @exitcode success/positive=0: If the directory is inside a Git working tree.
-# @exitcode failure/negative=1: If it is not.
+# @exitcode positive=0: If the directory is inside a Git working tree.
+# @exitcode negative=1: If it is not.
 #
 # @example
 #   if is_inside_work_tree "$PWD"; then echo "Inside Git repo"; fi
@@ -753,8 +770,9 @@ function is_inside_work_tree()
 # @arg $2 nameref `_repo_root` to a variable to store the absolute path of the root of
 #   the Git repository containing the found directory.
 #
-# @exitcode success/positive=0: The Git working tree root was resolved.
-# @exitcode failure/negative=1: `git rev-parse --show-toplevel` failed.
+# @exitcode success=0: The Git working tree root was resolved.
+# @exitcode err_not_git_directory=80: Argument 1 (or the current directory) is not inside of a
+#   Git working tree.
 #
 # @example
 #   root_working_tree "$PWD" _root
@@ -792,8 +810,8 @@ function root_working_tree()
 #   provided; default: `$initial_cwd`).
 # @arg $2 string _branch The branch to compare against (optional, default: `main`).
 #
-# @exitcode success/positive=0: If a fetch is recommended.
-# @exitcode failure/negative=1: If local metadata appears fresh.
+# @exitcode positive=0: If a fetch is recommended.
+# @exitcode negative=1: If local metadata appears fresh.
 #
 # @example
 #   if should_fetch_for_latest_stable_tag "$repo_dir"; then git fetch ...; fi
@@ -868,9 +886,10 @@ function should_fetch_for_latest_stable_tag()
 #   provided; default: `$initial_cwd`).
 # @arg $2 string The branch to compare against (optional, default: `main`).
 #
-# @exitcode success/positive=0: If no fetch was needed, or the fetch succeeded.
-# @exitcode * If `git fetch` failed, or if `should_fetch_for_latest_stable_tag` itself
-#   returned an error (e.g. invalid arguments, not a Git directory).
+# @exitcode success=0: If no fetch was needed, or the fetch succeeded.
+# @exitcode N If `git fetch` failed (`err_logic_error`), or if
+#   `should_fetch_for_latest_stable_tag` itself returned an error (e.g. invalid arguments, not
+#   a Git directory).
 #
 # @example
 #   ensure_fresh_git_state "$repo_dir"
@@ -908,8 +927,10 @@ function ensure_fresh_git_state()
 # @arg $1 string _dir path to a Git repository.
 # @arg $2 bool _should_fetch flag whether to ensure fresh Git status.
 #
-# @exitcode success/positive=0: On success.
-# @exitcode failure/negative=1: If no stable tags are found.
+# @exitcode success=0: On success.
+# @exitcode err_not_git_directory=80: Argument 1 is not inside a Git working tree.
+# @exitcode N propagated from `ensure_fresh_git_state()` if `$2` is true and fetching fails.
+# @exitcode failure=1: If no stable tags are found.
 #
 # @stdout The commit hash of the latest stable tag.
 #
@@ -963,17 +984,14 @@ function get_latest_stable_tag_hash()
 # @description Tests if the current commit in the specified directory is after the latest
 #   stable tag. Depends on `get_latest_stable_tag_hash`.
 #
-# Notes:
-#   - This function does not validate its own argument count directly; it relies entirely on
-#     `get_latest_stable_tag_hash` to reject bad arguments.
-#
 # @arg $1 string _dir path to a Git repository.
 # @arg $2 bool _should_fetch flag whether to ensure fresh Git status.
 #
-# @exitcode success/positive=0: If the current commit is after the latest stable tag.
-# @exitcode failure/negative=1: If it is not.
-# @exitcode * Whatever `get_latest_stable_tag_hash` returns on error (e.g. no stable tags,
-#   invalid arguments, not a Git directory).
+# @exitcode positive=0: If the current commit is after the latest stable tag.
+# @exitcode negative=1: If it is not.
+# @exitcode N Whatever `get_latest_stable_tag_hash` returns on error (e.g. no stable tags,
+#   not a Git directory) -- its own argument-count/type bugs are also caught by this
+#   function's identical, direct validation gate above.
 #
 # @example
 #   if is_after_latest_stable_tag "$repo_dir"; then echo "Beyond latest stable"; fi
@@ -1001,18 +1019,13 @@ function is_after_latest_stable_tag()
 # @description Tests if the current commit in the specified directory is on or after the
 #   latest stable tag. Depends on `get_latest_stable_tag_hash`.
 #
-# Notes:
-#   - Like `is_after_latest_stable_tag`, this function does not validate its own argument
-#     count directly; it relies entirely on `get_latest_stable_tag_hash` to reject bad
-#     arguments.
-#
 # @arg $1 string _dir path to a Git repository.
 # @arg $2 bool _should_fetch flag whether to ensure fresh Git status.
 #
-# @exitcode success/positive=0: If the current commit is on or after the latest stable tag.
-# @exitcode failure/negative=1: If it is before.
-# @exitcode * Whatever `get_latest_stable_tag_hash` returns on error (e.g. no stable tags,
-#   invalid arguments, not a Git directory).
+# @exitcode positive=0: If the current commit is on or after the latest stable tag.
+# @exitcode negative=1: If it is before.
+# @exitcode N Whatever `get_latest_stable_tag_hash` returns on error (e.g. no stable tags, not
+#   a Git directory).
 #
 # @example
 #   if is_on_or_after_latest_stable_tag "$repo_dir"; then echo "Ready for release"; fi

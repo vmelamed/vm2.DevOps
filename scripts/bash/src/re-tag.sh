@@ -50,9 +50,10 @@ get_arguments "$@"
 #   used).
 # @arg $@ string '--delete|-d <tag>' — deletes '<tag>' instead of renaming (delete mode).
 #
-# @exitcode success/positive=0: The tag was renamed or deleted successfully.
-# @exitcode non-zero Missing/invalid arguments, not a git repository, the old/deleted tag does not exist, or the new tag
-#   already exists (see 'err_invalid_arguments', 'err_argument_value', 'err_logic_error' in '_error_codes.sh').
+# @exitcode success=0: The tag was renamed or deleted successfully.
+# @exitcode err_invalid_arguments: The required old/new tag arguments are missing (rename mode).
+# @exitcode err_argument_value: The old/deleted tag does not exist locally, or the new tag already exists.
+# @exitcode err_logic_error: The current directory is not a git repository.
 #
 # @stdout Progress/info messages (resolved commit, deletion/creation/push confirmations).
 #
@@ -90,7 +91,7 @@ fi
 #
 # @arg $1 string The name of the tag to delete.
 #
-# @exitcode success/positive=0: The tag was deleted locally, and remotely if present there.
+# @exitcode success=0: The tag was deleted locally, and remotely if present there.
 #
 # @stdout Trace/warning messages about the local and remote deletion outcome.
 #

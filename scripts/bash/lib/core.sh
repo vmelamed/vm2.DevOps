@@ -80,7 +80,7 @@ declare -xr explicit_exit_regex='^(exit([[:space:]]+.*)?|source[[:space:]]+.*)$'
 #   - Registered automatically by core.sh via `trap on_exit EXIT` (unless $debugger is true).
 #   - Works cooperatively with on_err, which handles the ERR trap.
 #
-# @exitcode success/positive=0: the shell exited cleanly
+# @exitcode success=0: the shell exited cleanly
 # @exitcode N inherited from the exiting command (the trap does not change the exit code)
 #---------------------------------------------------------------------------------------------
 function on_exit()
@@ -157,7 +157,7 @@ function remove_traps()
 # @arg $1 string the command to execute
 # @arg $@ mixed additional arguments to pass to the command (optional)
 #
-# @exitcode success/positive=0: The command succeeded, or dry-run mode was active (command not
+# @exitcode success=0: The command succeeded, or dry-run mode was active (command not
 #   executed).
 # @exitcode N the executed command's own exit code, on failure
 #
@@ -205,7 +205,7 @@ function execute()
 #    `$_ignore` when true (optional)
 # @arg $@ mixed command and arguments to execute
 #
-# @exitcode success/positive=0: The command succeeded (including dry-run mode, where the
+# @exitcode success=0: The command succeeded (including dry-run mode, where the
 #   command is not executed).
 # @exitcode N the command's own exit code, after the final failed attempt
 #
@@ -270,6 +270,9 @@ function execute_with_retry()
 #
 # @arg $1 string file_pattern - glob pattern to match files (supports ** for recursive
 #    matching)
+#
+# @exitcode success=0: The glob was expanded and printed (always, once past the argument
+#   validation gate).
 #
 # @stdout space-separated list of matching files (empty if none match)
 #

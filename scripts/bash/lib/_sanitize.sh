@@ -39,6 +39,9 @@ declare -x repo_owner
 #
 # @arg $1 string The string to trim.
 #
+# @exitcode success=0: The trimmed string was printed (always, once past the argument
+#   validation gate).
+#
 # @stdout The string with leading whitespace removed.
 #
 # @example
@@ -57,9 +60,12 @@ function ltrim()
 #
 # @arg $1 nameref to a string variable to trim.
 #
+# @exitcode success=0: The variable was trimmed in place (always, once past the argument
+#   validation gate).
+#
 # @example
 #   declare var="  some string  "
-#   nltrim var
+#   ltrim_var var
 #---------------------------------------------------------------------------------------------
 function ltrim_var()
 {
@@ -76,6 +82,9 @@ function ltrim_var()
 # @description Trims trailing whitespace from a string.
 #
 # @arg $1 string The string to trim.
+#
+# @exitcode success=0: The trimmed string was printed (always, once past the argument
+#   validation gate).
 #
 # @stdout The string with trailing whitespace removed.
 #
@@ -94,6 +103,9 @@ function rtrim()
 # @description Trims trailing whitespaces from the value of a string variable.
 #
 # @arg $1 nameref to a string variable to trim.
+#
+# @exitcode success=0: The variable was trimmed in place (always, once past the argument
+#   validation gate).
 #
 # @example
 #   var="  some string  "
@@ -114,6 +126,9 @@ function rtrim_var()
 # @description Trims leading and trailing whitespace from a string.
 #
 # @arg $1 string The string to trim.
+#
+# @exitcode success=0: The trimmed string was printed (always, once past the argument
+#   validation gate).
 #
 # @stdout The string with leading and trailing whitespace removed.
 #
@@ -137,6 +152,9 @@ function trim()
 # @description Trims leading and trailing whitespaces from the value of a string variable.
 #
 # @arg $1 nameref to a string variable to trim.
+#
+# @exitcode success=0: The variable was trimmed in place (always, once past the argument
+#   validation gate).
 #
 # @example
 #   var="  some string  "
@@ -168,7 +186,7 @@ declare -rx dangerous_chars_and_whitespaces_regex='[;|&$`<>(){}[:space:]]'
 # @arg $1 string The input string to test.
 # @arg $2 bool If true, allows spaces in the input (optional, default: false).
 #
-# @exitcode success/positive=0: If the input is safe.
+# @exitcode positive=0: If the input is safe.
 # @exitcode err_unsafe_argument=11: An argument value is unsafe to use.
 #
 # @example
@@ -211,7 +229,7 @@ function is_safe_input()
 #
 # @arg $1 string The input string to test.
 #
-# @exitcode success/positive=0: If the input is a valid boolean.
+# @exitcode positive=0: If the input is a valid boolean.
 # @exitcode err_unsafe_argument=11: If the input is not safe.
 #
 # @example
@@ -237,7 +255,7 @@ function is_safe_boolean()
 #
 # @arg $1 string The input string to test.
 #
-# @exitcode success/positive=0: If the input is a valid integer.
+# @exitcode positive=0: If the input is a valid integer.
 # @exitcode err_unsafe_argument=11: If the input is not safe.
 #
 # @example
@@ -269,7 +287,7 @@ function is_safe_integer()
 #
 # @arg $1 string The file path to test (should be relative).
 #
-# @exitcode success/positive=0: If the path is safe.
+# @exitcode positive=0: If the path is safe.
 # @exitcode err_unsafe_argument=11: If the input is not safe.
 #
 # @example
@@ -317,8 +335,8 @@ function is_safe_path()
 #
 # @arg $1 string The file path to test (should be relative).
 #
-# @exitcode success/positive=0: If the path is valid and safe.
-# @exitcode failure/negative=1: If the path is not valid.
+# @exitcode positive=0: If the path is valid and safe.
+# @exitcode negative=1: If the path is not valid.
 # @exitcode err_unsafe_argument=11: If the input is not safe.
 #
 # @example
@@ -348,8 +366,8 @@ function is_safe_valid_path()
 #
 # @arg $1 string The file or directory path to test.
 #
-# @exitcode success/positive=0: If the path is valid, safe, and exists.
-# @exitcode failure/negative=1: If the path is invalid.
+# @exitcode positive=0: If the path is valid, safe, and exists.
+# @exitcode negative=1: If the path is invalid.
 # @exitcode err_unsafe_argument=11: If the input is not safe.
 # @exitcode err_non_existent_path=19: If the path does not exist.
 #
@@ -381,8 +399,8 @@ function is_safe_existing_path()
 #
 # @arg $1 string The directory path to test.
 #
-# @exitcode success/positive=0: If the path is safe, exists, and is a directory.
-# @exitcode failure/negative=1: Otherwise.
+# @exitcode positive=0: If the path is safe, exists, and is a directory.
+# @exitcode negative=1: Otherwise.
 #
 # @example
 #   if is_safe_existing_directory "$build_dir"; then cd "$build_dir"; fi
@@ -412,8 +430,8 @@ function is_safe_existing_directory()
 #
 # @arg $1 string The file path to test.
 #
-# @exitcode success/positive=0: If the path is safe, exists, and is a non-empty file.
-# @exitcode failure/negative=1: Otherwise.
+# @exitcode positive=0: If the path is safe, exists, and is a non-empty file.
+# @exitcode negative=1: Otherwise.
 #
 # @example
 #   if is_safe_existing_file "$script"; then bash "$script"; fi
@@ -452,7 +470,10 @@ function is_safe_existing_file()
 #   is valid, or a non-zero exit code if it is unsafe. When rejecting a value, the function
 #   may display an error message as well. Optional.
 #
-# @exitcode success/positive=0: If the input is valid JSON and all items are safe.
+# @exitcode success=0: If the input is valid JSON and all items are safe.
+# @exitcode err_unsafe_argument=11: If the input (or one of its items) is unsafe.
+# @exitcode err_invalid_json_array=13: If the input is not a JSON array of strings, an empty
+#   array, a JSON string, or null.
 #
 # @example
 #   validate_json_array runners '["ubuntu-latest"]' is_safe_runner_os
@@ -542,8 +563,8 @@ declare -xra allowed_runners_os=(
 #
 # @arg $1 string The runner OS name to validate.
 #
-# @exitcode success/positive=0: If the runner OS is valid.
-# @exitcode failure/negative=1: If the runner OS is empty or not in the allowed list.
+# @exitcode positive=0: If the runner OS is valid.
+# @exitcode negative=1: If the runner OS is empty or not in the allowed list.
 #
 # @example
 #   if is_safe_runner_os "ubuntu-latest"; then echo "Valid runner"; fi
@@ -577,8 +598,8 @@ function is_safe_runner_os()
 #
 # @arg $1 string The reason text to validate.
 #
-# @exitcode success/positive=0: If the reason is safe.
-# @exitcode failure/negative=1: If the reason is too long, contains unsafe characters, or looks like a command.
+# @exitcode positive=0: If the reason is safe.
+# @exitcode negative=1: If the reason is too long, contains unsafe characters, or looks like a command.
 #
 # @example
 #   if is_safe_reason "$user_reason"; then log_reason "$user_reason"; fi
@@ -621,8 +642,8 @@ declare -xr nugetServersRegex
 #
 # @arg $1 string The NuGet server URL or name to test.
 #
-# @exitcode success/positive=0: If the server can be a valid NuGet server.
-# @exitcode failure/negative=1: If the server is not a valid NuGet server.
+# @exitcode positive=0: If the server can be a valid NuGet server.
+# @exitcode negative=1: If the server is not a valid NuGet server.
 #
 # @example
 #   if is_valid_nuget_server "nuget"; then echo "Valid server"; fi
@@ -642,7 +663,7 @@ declare -xr default_nuget_server
 # @arg $3 nameref to a variable to receive the NuGet server's URL.
 # @arg $4 string The default server value (optional, default: `nuget`).
 #
-# @exitcode success/positive=0: On success.
+# @exitcode success=0: On success.
 # @exitcode err_argument_value=4: If the NuGet server moniker is not `nuget`, `github`, or a
 #   valid https:// URL.
 #
@@ -713,8 +734,8 @@ declare -xr build_config_regex="^([A-Za-z_][A-Za-z0-9_]*)?$"
 #
 # @arg $1 string The configuration name to test.
 #
-# @exitcode success/positive=0: If the configuration name is valid.
-# @exitcode failure/negative=1: If the configuration name is invalid.
+# @exitcode positive=0: If the configuration name is valid.
+# @exitcode negative=1: If the configuration name is invalid.
 #
 # @example
 #   if is_valid_configuration "$build_config"; then echo "Valid config"; fi
@@ -734,8 +755,8 @@ declare -xr known_configurations=(Debug Release)
 #
 # @arg $1 string The configuration name to validate.
 #
-# @exitcode success/positive=0: If the configuration name is valid.
-# @exitcode failure/negative=1: If the configuration name is invalid.
+# @exitcode positive=0: If the configuration name is valid.
+# @exitcode negative=1: If the configuration name is invalid.
 #
 # @example
 #   if is_safe_configuration "$build_config"; then echo "Valid config"; fi
@@ -762,13 +783,13 @@ declare -xr tfm_regex="^(net[1-9][0-9]*\.[0-9]+(-([a-z]+)([1-9][0-9.]*)?)?|[[:sp
 #---------------------------------------------------------------------------------------------
 # @description Tests if a string is a valid Target Framework Moniker (TFM).
 #
-# @arg $1 string The configuration name to validate.
+# @arg $1 string The TFM to validate.
 #
-# @exitcode success/positive=0: If the TFM is valid.
-# @exitcode failure/negative=1: If the TFM is invalid.
+# @exitcode positive=0: If the TFM is valid.
+# @exitcode negative=1: If the TFM is invalid.
 #
 # @example
-#   if is_valid_framework "$framework"; then echo "Valid config"; fi
+#   if is_valid_framework "$framework"; then echo "Valid TFM"; fi
 #---------------------------------------------------------------------------------------------
 function is_valid_framework()
 {
@@ -782,9 +803,8 @@ declare -xr known_tfms=("" net9.0 net10.0)
 #
 # @arg $1 string The TFM to validate.
 #
-# @exitcode success/positive=0: If the TFM is valid.
-# @exitcode failure/negative=1: If the TFM is invalid.
-# @exitcode err_argument_value=4: If the argument is not valid.
+# @exitcode positive=0: If the TFM is valid.
+# @exitcode err_argument_value=4: If the TFM is invalid.
 #
 # @example
 #   if is_safe_framework "$framework"; then echo "Valid TFM"; fi
@@ -811,13 +831,13 @@ declare -xr rid_regex="^(([a-z][a-z-]*[a-z])((\.[1-9][0-9]*)*)(-[a-z][0-9a-z]*)?
 #---------------------------------------------------------------------------------------------
 # @description Validates that a string is a valid Runtime Identifier (RID).
 #
-# @arg $1 string The configuration name to validate.
+# @arg $1 string The RID to validate.
 #
-# @exitcode success/positive=0: If the RID is valid.
-# @exitcode failure/negative=1: If the RID is invalid.
+# @exitcode positive=0: If the RID is valid.
+# @exitcode negative=1: If the RID is invalid.
 #
 # @example
-#   if is_valid_runtime "$runtime"; then echo "Valid config"; fi
+#   if is_valid_runtime "$runtime"; then echo "Valid RID"; fi
 #---------------------------------------------------------------------------------------------
 function is_valid_runtime()
 {
@@ -826,19 +846,18 @@ function is_valid_runtime()
 
 declare -xr known_runtimes=("" linux-x64 win-x64 osx-x64)
 #---------------------------------------------------------------------------------------------
-# @description Validates that a configuration name is a valid identifier. Depends on
-#   `is_valid_configuration`.
+# @description Validates that a Runtime Identifier (RID) is a valid identifier. Depends on
+#   `is_valid_runtime`. If the RID is valid but not one of `$known_runtimes`, issues a warning
+#   (not an error) rather than failing, so an unrecognized-but-well-formed RID is still
+#   accepted.
 #
-# Notes:
-#   - Must match the pattern `[[ $1 =~ ^[0-9a-z-]+$ ]]` (e.g. linux-x64).
+# @arg $1 string The Runtime Identifier (RID) to validate.
 #
-# @arg $1 string The configuration name to validate.
-#
-# @exitcode success/positive=0: If the runtime ID name is valid.
-# @exitcode err_argument_value=4: If the runtime ID is invalid.
+# @exitcode positive=0: If the RID is valid.
+# @exitcode err_argument_value=4: If the RID is invalid.
 #
 # @example
-#   if is_safe_configuration "$build_config"; then echo "Valid config"; fi
+#   if is_safe_runtime "$runtime"; then echo "Valid RID"; fi
 #---------------------------------------------------------------------------------------------
 function is_safe_runtime()
 {
@@ -859,13 +878,22 @@ function is_safe_runtime()
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Validates that a Runtime Identifier (RID) is safe to use and trims any
-#   any surrounding whitespace from the Runtime Identifier (RID).
+# @description Lowercases the referenced Runtime Identifier (RID) in place and validates that
+#   it is safe to use, via `is_safe_runtime()`.
+#
+# Notes:
+#   - The `trim_var "${!_rid}"` call looks suspect: `${!_rid}` is bash indirect expansion, so
+#     it resolves to the value of a variable *named* by the (already-dereferenced) RID string,
+#     not to `$1` itself -- that is almost certainly not the intended way to trim the
+#     referenced variable in place, and the RID is likely not actually being trimmed of
+#     surrounding whitespace as the function's behavior might suggest. Left as-is
+#     (documentation-only pass); flagged here for a follow-up code fix.
 #
 # @arg $1 nameref to a variable containing the Runtime Identifier (RID) to validate.
 #
-# @exitcode success/positive=0: If the Runtime Identifier (RID) is safe.
-# @exitcode failure/negative=1: If the Runtime Identifier (RID) is not safe.
+# @exitcode success=0: The Runtime Identifier (RID) was lowercased and found safe.
+# @exitcode N propagated from `is_safe_runtime()` (e.g. `err_argument_value`) if the lowercased
+#   RID is not safe.
 #---------------------------------------------------------------------------------------------
 function validate_runtime()
 {
@@ -891,8 +919,9 @@ function validate_runtime()
 # @arg $1 nameref to a variable containing the space/comma/colon/semicolon-separated symbols;
 #   updated in place.
 #
-# @exitcode success/positive=0: If all symbols are valid.
-# @exitcode failure/negative=1: If any symbol is invalid.
+# @exitcode success=0: All symbols are valid; the referenced variable was reformatted in place.
+# @exitcode err_argument_value=4: One or more symbols are invalid (every invalid symbol is
+#   reported via `error`, not just the first).
 #
 # @example
 #   preproc="DEBUG TRACE"
@@ -947,8 +976,9 @@ function validate_preprocessor_symbols()
 #
 # @arg $1 string Candidate secret value to validate.
 #
-# @exitcode success/positive=0: The value contains no control characters.
-# @exitcode failure/negative=1: The value contains at least one control character.
+# @exitcode positive=0: The value is non-empty and contains no control characters.
+# @exitcode err_argument_value=4: The value is empty, or contains at least one control
+#   character.
 #---------------------------------------------------------------------------------------------
 function is_safe_secret()
 {
@@ -966,8 +996,8 @@ function is_safe_secret()
 #
 # @arg $1 string The percentage to validate.
 #
-# @exitcode success/positive=0: If the percentage is valid.
-# @exitcode failure/negative=1: If the percentage is invalid.
+# @exitcode positive=0: If the percentage is valid.
+# @exitcode negative=1: If the percentage is invalid.
 #
 # @example
 #   if is_valid_percentage "50"; then echo "Valid percentage"; fi
@@ -988,8 +1018,8 @@ function is_valid_percentage()
 #
 # @arg $1 string The minimum coverage percentage to validate.
 #
-# @exitcode success/positive=0: If the percentage is valid.
-# @exitcode failure/negative=1: If the percentage is invalid.
+# @exitcode positive=0: If the percentage is valid.
+# @exitcode negative=1: If the percentage is invalid.
 #
 # @example
 #   if is_safe_min_coverage_pct "80"; then echo "Valid coverage percentage"; fi
@@ -1016,8 +1046,8 @@ function is_safe_min_coverage_pct()
 #
 # @arg $1 string The maximum regression percentage to validate.
 #
-# @exitcode success/positive=0: If the percentage is valid.
-# @exitcode failure/negative=1: If the percentage is invalid.
+# @exitcode positive=0: If the percentage is valid.
+# @exitcode negative=1: If the percentage is invalid.
 #
 # @example
 #   if is_safe_max_regression_pct "10"; then echo "Valid regression percentage"; fi
@@ -1038,18 +1068,19 @@ function is_safe_max_regression_pct()
 declare -xr minverTagPrefixRegex
 declare -xr minverPrereleaseIdRegex
 #---------------------------------------------------------------------------------------------
-# @description Validates the MinVer prerelease identifier format.
+# @description Tests if a string is a valid MinVer Git tag prefix (e.g. `v` as in `v1.2.3`).
 #
 # Notes:
-#   - Must match `$minverTagPrefixRegex` (the same as the SemVer prerelease label format).
+#   - Must match `$minverTagPrefixRegex` (`$minverTagPrefixRex` in `_semver.sh`): starts and
+#     ends with an alphanumeric or `_`, with `-`, `.`, `/` allowed in between.
 #
-# @arg $1 string The MinVer prerelease ID to validate.
+# @arg $1 string The MinVer tag prefix to validate.
 #
-# @exitcode success/positive=0: If the prerelease ID is valid.
-# @exitcode failure/negative=1: If the prerelease ID is invalid.
+# @exitcode positive=0: If the tag prefix is valid.
+# @exitcode negative=1: If the tag prefix is invalid.
 #
 # @example
-#   if is_valid_minverTagPrefix "alpha.1"; then echo "Valid prerelease ID"; fi
+#   if is_valid_minverTagPrefix "v"; then echo "Valid tag prefix"; fi
 #---------------------------------------------------------------------------------------------
 function is_valid_minverTagPrefix()
 {
@@ -1057,27 +1088,27 @@ function is_valid_minverTagPrefix()
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Validates the MinVer prerelease identifier format. Delegates to
+# @description Validates that a MinVer Git tag prefix is safe and well-formed. Delegates to
 #   `is_valid_minverTagPrefix`.
 #
 # Notes:
-#   - Must match `$minverTagPrefixRegex` (the same as the SemVer prerelease label format).
+#   - Must match `$minverTagPrefixRegex` (see `is_valid_minverTagPrefix`).
 #
-# @arg $1 string The MinVer prerelease ID to validate.
+# @arg $1 string The MinVer tag prefix to validate.
 #
-# @exitcode success/positive=0: If the prerelease ID is valid.
-# @exitcode failure/negative=1: If the prerelease ID is invalid.
+# @exitcode positive=0: If the tag prefix is valid.
+# @exitcode negative=1: If the tag prefix is invalid.
 #
 # @example
-#   if is_safe_minverTagPrefix "alpha.1"; then echo "Valid prerelease ID"; fi
+#   if is_safe_minverTagPrefix "v"; then echo "Valid tag prefix"; fi
 #---------------------------------------------------------------------------------------------
 function is_safe_minverTagPrefix()
 {
-    (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#): the MinVer prerelease ID to test."
+    (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#): the MinVer tag prefix to test."
     exit_if_has_bugs
 
     is_valid_minverTagPrefix "$@" || {
-        error -ec "$err_argument_value" "The prerelease ID '$1' is not valid."
+        error -ec "$err_argument_value" "The MinVer tag prefix '$1' is not valid."
         return "$negative"
     }
 }
@@ -1090,8 +1121,8 @@ function is_safe_minverTagPrefix()
 #
 # @arg $1 string The MinVer prerelease ID to validate.
 #
-# @exitcode success/positive=0: If the prerelease ID is valid.
-# @exitcode failure/negative=1: If the prerelease ID is invalid.
+# @exitcode positive=0: If the prerelease ID is valid.
+# @exitcode negative=1: If the prerelease ID is invalid.
 #
 # @example
 #   if is_valid_minverPrereleaseId "alpha.1"; then echo "Valid prerelease ID"; fi
@@ -1110,8 +1141,8 @@ function is_valid_minverPrereleaseId()
 #
 # @arg $1 string The MinVer prerelease ID to validate.
 #
-# @exitcode success/positive=0: If the prerelease ID is valid.
-# @exitcode failure/negative=1: If the prerelease ID is invalid.
+# @exitcode positive=0: If the prerelease ID is valid.
+# @exitcode negative=1: If the prerelease ID is invalid.
 #
 # @example
 #   if is_safe_minverPrereleaseId "alpha.1"; then echo "Valid prerelease ID"; fi
@@ -1136,7 +1167,8 @@ function is_safe_minverPrereleaseId()
 #
 # @arg $1 string The string to escape.
 #
-# @exitcode success/positive=0:
+# @exitcode success=0: The string was escaped and printed (always, once past the argument
+#   validation gate).
 #
 # @stdout The escaped string, with special ERE characters prefixed by a backslash.
 #
@@ -1161,10 +1193,11 @@ function escape_ere()
 # @arg $1 string Path to the JSON file to validate (must exist and be non-empty).
 # @arg $2 string Path to the JSON Schema file to validate against (must exist and be non-empty).
 #
-# @exitcode success/positive=0: The file is valid against the schema, or `check-jsonschema` is not
+# @exitcode success=0: The file is valid against the schema, or `check-jsonschema` is not
 #   installed (validation skipped, a warning is issued).
-# @exitcode $err_argument_value: The file failed schema validation; the validator's own error
-#   output is reported via 'error'.
+# @exitcode err_not_file=16: Argument 1 or 2 is not an existing, non-empty file.
+# @exitcode err_invalid_json=12: Argument 1 or 2 is not well-formed JSON, or the JSON file
+#   failed schema validation (the validator's own error output is reported via `error`).
 #
 # @example
 #   validate_json_schema "$_config_file" "$lib_dir/diff-shared.config.schema.json"

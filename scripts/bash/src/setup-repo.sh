@@ -274,7 +274,7 @@ declare -a undos=()
 # deleting a newly created GitHub repository or removing a remote) in LIFO order, so the user can copy-paste them
 # to manually roll back a failed or aborted run. No-op if nothing has been recorded yet.
 #
-# @exitcode success/positive=0
+# @exitcode success=0: Always.
 # @stdout The list of undo commands in LIFO order, wrapped in explanatory text -- or nothing if `undos` is empty.
 #---------------------------------------------------------------------------------------------
 function undo_changes()

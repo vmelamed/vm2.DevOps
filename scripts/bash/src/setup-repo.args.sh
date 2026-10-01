@@ -33,21 +33,24 @@ declare -x purge_secrets
 
 #---------------------------------------------------------------------------------------------
 # @description Parses the command-line arguments of `setup-repo.sh`, populating the script-level variables declared
-# at the top of this file (`vm2_repos`, `repo_path`, `owner`, `visibility`, `branch`, `interactive_vars`,
-# `interactive_secrets`, `configure_local`, `audit`, `main_protection_rs_name`, `description`, `use_ssh`,
-# `use_https`). Common switches (`-h`, `-v`, `-q`, `-x`, `-y`, etc.) are delegated to `get_common_arg` first. The
-# first (and only) positional argument is taken as `repo_path`; a second positional argument triggers a usage error.
-# On completion, calls `usage_if_requested` (exits the process if `--help` was seen) and `dump_vars` (prints the
-# parsed values in verbose mode).
+# at the top of this file (`vm2_repos`, `repo_path`, `repo_name`, `repo_owner`, `visibility`, `branch`,
+# `main_protection_rs_name`, `description`, `use_ssh`, `use_https`, `audit`, `current_branch`, `interactive_vars`,
+# `interactive_secrets`, `purge_vars`, `purge_secrets`, `configure_local`). Common switches (`-h`, `-v`, `-q`, `-x`,
+# `-y`, etc.) are delegated to `get_common_arg` first. The first (and only) positional argument is taken as
+# `repo_path`; a second positional argument triggers a usage error. On completion, calls `usage_if_requested` (exits
+# the process if `--help` was seen) and `dump_vars` (prints the parsed values in verbose mode).
 #
 # Notes:
 #   - This is a top-level CLI argument parser (see the "Parameter and Precondition Validation Pattern" in
 #     CLAUDE.md): it exits the process via `usage()` on bad input rather than returning an error code.
+#   - `--interactive|-i` sets both `interactive_vars` and `interactive_secrets`; `--purge|-p` sets both `purge_vars`
+#     and `purge_secrets`. Each pair also has its own standalone switch (`--interactive-vars|-iv`,
+#     `--interactive-secrets|-is`, `--purge-vars|-pv`, `--purge-secrets|-ps`).
 #
 # @arg $@ string Command-line arguments passed to `setup-repo.sh`.
 #
-# @exitcode success/positive=0: All arguments parsed successfully (function returns normally; `usage()` exits the process directly on
-#   error or on `--help`).
+# @exitcode success=0: All arguments parsed successfully (function returns normally; `usage()` exits the process
+#   directly on error or on `--help`).
 #---------------------------------------------------------------------------------------------
 function get_arguments()
 {

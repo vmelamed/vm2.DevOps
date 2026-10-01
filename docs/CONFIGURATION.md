@@ -45,10 +45,14 @@ How to configure the CI/CD pipelines for a consumer repository.
 Settings flow through five layers, each overriding the previous:
 
 1. **Scripts defaults** — Hardcoded defaults in the reusable scripts (e.g., `v`, or `preview.0`).
-1. **Workflow defaults** — Hardcoded defaults in reusable workflows (e.g., `dotnet-version: 10.0.x`, or `Release`).
+1. **Workflow defaults** — Hardcoded defaults in reusable workflows (e.g., `configuration: Release`).
 1. **GitHub repository variables** (`vars.*`) — Set in repo Settings → Secrets and variables → Actions → Variables.
 1. **Workflow `env:` block** — Per-repo values set directly in the consumer workflow YAML.
 1. **`workflow_dispatch` inputs** — Manual overrides when triggering a run from the UI.
+
+The .NET SDK version itself does not flow through this layering any more — it is pinned by the committed
+`global.json` in each repo (read via `global-json-file` in the shared `cache-dependencies` composite action), not by
+a `dotnet-version` workflow input or the `DOTNET_VERSION` repository variable.
 
 ## Build Configuration Philosophy
 
@@ -62,13 +66,12 @@ story:
   multi-targeting matrix yet.
 - **Runtime Identifier (RID)** — deliberately left unset (`""`) everywhere right now. Every package publishes
   portable, framework-dependent, OS/architecture-agnostic output — the same build runs on any OS with a matching
-  .NET runtime installed. The `runtime-identifier` input already exists on `_build.yaml`/`_pack.yaml` (defaulting
-  to unspecified) precisely so this can change later without a redesign: when AOT publishing is introduced, RID
-  becomes mandatory and must be derived from the runner rather than fixed globally (e.g. `ubuntu-latest` →
-  `linux-x64`, `windows-latest` → `win-x64`, `macos-latest` → `osx-arm64`). Until then, `runner-os` (and the
-  `runners-os` matrix in `_ci.yaml`) only selects which OS *runs* the build/test/benchmark step — it has no effect
-  on the artifact produced, since there is no RID-specific output yet. Think of `runner-os` as the RID axis
-  already in place, waiting for AOT to need it.
+  .NET runtime installed. There is no `runtime-identifier` input on any reusable workflow today; `runner-os` (and
+  the `runners-os` matrix in `_ci.yaml`) only selects which OS *runs* the build/test/benchmark step — it has no
+  effect on the artifact produced, since there is no RID-specific output yet. Think of `runner-os` as the RID axis
+  already in place, waiting for AOT to need it: when AOT publishing is introduced, RID becomes mandatory and must
+  be derived from the runner rather than fixed globally (e.g. `ubuntu-latest` → `linux-x64`, `windows-latest` →
+  `win-x64`, `macos-latest` → `osx-arm64`), and a `runtime-identifier` input would be added at that point.
 - **`Configuration`** — defaults to `Release` everywhere; CI never branches on it or overrides it. It is a manual
   override knob (`workflow_dispatch`, or a local `dotnet build -c Debug`) for a human who needs a Debug build, not
   something the pipeline decides for itself. There is no scenario today that justifies CI choosing anything else.
@@ -83,18 +86,18 @@ story:
 Optional. When set, they override the workflow defaults. All consumer templates read these
 via the `${{ vars.NAME || '<default>' }}` pattern.
 
-| Variable                             | Default       | Used by                    | Description                                    |
-| :----------------------------------- | :------------ | :------------------------- | :--------------------------------------------- |
-| `CONFIGURATION`                      | `Release`     | CI, Prerelease, Release    | Build configuration                            |
-| `DOTNET_VERSION`                     | `10.0.x`      | CI, Prerelease, Release    | .NET SDK version                               |
-| `MAX_REGRESSION_PCT`                 | `20`          | CI                         | Maximum benchmark regression percentage (0–50) |
-| `MINVERDEFAULTPRERELEASEIDENTIFIERS` | `preview.0`   | CI, Prerelease, Release    | MinVer default pre-release identifiers         |
-| `MINVERTAGPREFIX`                    | `v`           | CI, Prerelease, Release    | MinVer tag prefix                              |
-| `MIN_COVERAGE_PCT`                   | `80`          | CI                         | Minimum code coverage percentage (50–100)      |
-| `NUGET_SERVER`                       | `github`      | Prerelease, Release        | NuGet server: `github`, `nuget`, or URI        |
-| `RESET_BENCHMARK_THRESHOLDS`         | `false`       | CI                         | Whether to reset Bencher thresholds            |
-| `SAVE_PACKAGE_ARTIFACTS`             | `false`       | Prerelease                 | Upload packages as workflow artifacts          |
-| `VERBOSE`                            | `false`       | All                        | Enable verbose logging in scripts              |
+| Variable                             | Default     | Used by                 | Description                                                                                                                                                                                                                 |
+| :----------------------------------- | :---------- | :---------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CONFIGURATION`                      | `Release`   | *(not currently wired)* | Build configuration — not read by any current consumer workflow template; `Configuration` resolves from `Directory.Build.props`/the project instead (see [Build Configuration Philosophy](#build-configuration-philosophy)) |
+| `DOTNET_VERSION`                     | `10.0.x`    | *(not currently wired)* | .NET SDK version — the actual SDK version comes from the committed `global.json`; only `_pack.yaml` still reads this variable into an unused `env:` entry                                                                   |
+| `MAX_REGRESSION_PCT`                 | `20`        | CI                      | Maximum benchmark regression percentage (0–50)                                                                                                                                                                              |
+| `MINVERDEFAULTPRERELEASEIDENTIFIERS` | `preview.0` | CI, Prerelease, Release | MinVer default pre-release identifiers                                                                                                                                                                                      |
+| `MINVERTAGPREFIX`                    | `v`         | CI, Prerelease, Release | MinVer tag prefix                                                                                                                                                                                                           |
+| `MIN_COVERAGE_PCT`                   | `80`        | CI                      | Minimum code coverage percentage (50–100)                                                                                                                                                                                   |
+| `NUGET_SERVER`                       | `github`    | Prerelease, Release     | NuGet server: `github`, `nuget`, or URI (consumed entirely in the consumer's own Prerelease.yaml/Release.yaml, not in `_prerelease.yaml`/`_release.yaml`)                                                                   |
+| `RESET_BENCHMARK_THRESHOLDS`         | `false`     | CI                      | Whether to reset Bencher thresholds                                                                                                                                                                                         |
+| `SAVE_PACKAGE_ARTIFACTS`             | `false`     | Prerelease              | Upload packages as workflow artifacts                                                                                                                                                                                       |
+| `VERBOSE`                            | `false`     | All                     | Enable verbose logging in scripts                                                                                                                                                                                           |
 
 Also, for debugging purposes, you can define the GitHub standard variables ACTIONS_RUNNER_DEBUG and ACTIONS_STEP_DEBUG as
 repository variables.
@@ -105,13 +108,13 @@ repository variables.
 
 Set in repo Settings → Secrets and variables → Actions → Secrets.
 
-| Secret                     | Required by         | Description                                              |
-| :------------------------- | :------------------ | :------------------------------------------------------- |
-| `BENCHER_API_TOKEN`        | CI (benchmarks)     | Bencher.dev API token for benchmark tracking             |
-| `CODECOV_TOKEN`            | CI (test)           | Codecov API token for coverage uploads                   |
-| `NUGET_API_KEY`            | Prerelease, Release | The NuGet API key for the selected NuGet server          |
-| `REPORTGENERATOR_LICENSE`  | CI (test)           | ReportGenerator license key (optional, for Pro features) |
-| `RELEASE_PAT`              | Prerelease, Release | Fine-grained PAT with `contents: write` — required to push the changelog commit and tag to `main` (bypasses branch protection rulesets) |
+| Secret                    | Required by         | Description                                                                                                                             |
+| :------------------------ | :------------------ | :-------------------------------------------------------------------------------------------------------------------------------------- |
+| `BENCHER_API_TOKEN`       | CI (benchmarks)     | Bencher.dev API token for benchmark tracking                                                                                            |
+| `CODECOV_TOKEN`           | CI (test)           | Codecov API token for coverage uploads                                                                                                  |
+| `NUGET_API_KEY`           | Prerelease, Release | The NuGet API key for the selected NuGet server                                                                                         |
+| `REPORTGENERATOR_LICENSE` | CI (test)           | ReportGenerator license key (optional, for Pro features)                                                                                |
+| `RELEASE_PAT`             | Prerelease, Release | Fine-grained PAT with `contents: write` — required to push the changelog commit and tag to `main` (bypasses branch protection rulesets) |
 
 > [!NOTE]
 > **`BENCH_DISPATCH_PAT` is a vm2.DevOps-only secret** — set it on the **vm2.DevOps** repository, not on the package repos.
@@ -130,9 +133,9 @@ Set in repo Settings → Secrets and variables → Actions → Secrets.
 
 Set in repo Settings → Secrets and variables → Dependabot → Secrets.
 
-| Secret                       | Used by                       | Purpose                                                                           |
-| :--------------------------- | :---------------------------- | :-------------------------------------------------------------------------------- |
-| `GH_PACKAGES_TOKEN`          | `Dependabot`                  | The GitHub Packages token used by Dependabot to authenticate with GitHub Packages |
+| Secret              | Used by      | Purpose                                                                           |
+| :------------------ | :----------- | :-------------------------------------------------------------------------------- |
+| `GH_PACKAGES_TOKEN` | `Dependabot` | The GitHub Packages token used by Dependabot to authenticate with GitHub Packages |
 
 ## Per-Repo Configuration Files
 
@@ -174,22 +177,20 @@ Test runner (usually xUnit) configuration. Controls parallelism, culture, diagno
 
 ### Git Hooks
 
-| File                                                        | Purpose                                               |
-| :---------------------------------------------------------- | :---------------------------------------------------- |
-| `vm2.DevOps/scripts/githooks/commit-msg`                    | Validates Conventional Commits format at commit time  |
-| `vm2.Templates/templates/AddNewPackage/content/.gitmessage` | Commit message template with allowed types            |
+| File                                                        | Purpose                                              |
+| :---------------------------------------------------------- | :--------------------------------------------------- |
+| `vm2.DevOps/scripts/githooks/commit-msg`                    | Validates Conventional Commits format at commit time |
+| `vm2.Templates/templates/AddNewPackage/content/.gitmessage` | Commit message template with allowed types           |
 
 ### Local Git Settings
 
-Run once per clone to configure local git settings via `git config --local`:
-
-| Setting                  | Value  | Purpose                                                    |
-| :----------------------- | :----- | :--------------------------------------------------------- |
-| `core.hooksPath`         | (path) | Points to shared commit-msg hook in vm2.DevOps             |
-| `commit.template`        | (path) | Commit message template with allowed types                 |
-| `pull.rebase`            | `true` | `git pull` rebases instead of creating merge commits       |
-| `fetch.prune`            | `true` | Auto-removes stale remote-tracking branches on fetch/pull  |
-| `push.autoSetupRemote`   | `true` | First push of a new branch auto-sets upstream tracking     |
+`setup-repo.sh` configures these automatically from the `default_local_git_settings` table in
+`scripts/bash/src/setup-repo.defaults.sh` — that table (not this list) is the source of truth, and it has grown past
+just these five settings (it now also sets `init.defaultBranch`, `merge.ff`, `rerere.enabled`, `rerere.autoUpdate`,
+`rebase.autoStash`, `merge.conflictstyle`, `push.useForceIfIncludes`, `tag.sort`, and a `merge.nugetlock.*` driver).
+See [GIT_PLAYBOOK.md — Per-repo settings](GIT_PLAYBOOK.md#per-repo-settings-enforced-by-setup-reposh) for the full,
+current list and the reasoning behind each one. To configure the handful below manually (e.g. before running
+`setup-repo.sh`), run once per clone:
 
 ```bash
 git config --local core.hooksPath ~/repos/vm2/vm2.DevOps/scripts/githooks
@@ -204,20 +205,20 @@ git config --local push.autoSetupRemote true
 The CI workflow template adjusts its behavior based on the trigger — this is the mechanical "what" behind the
 `SHORT_RUN` case described in [Build Configuration Philosophy](#build-configuration-philosophy) above.
 
-| Event                | Behavior                                                              |
-| :------------------- | :-------------------------------------------------------------------- |
-| `push` to branch     | Adds `SHORT_RUN` preprocessor symbol; skipped if an open PR exists    |
-| `push` to main       | Full CI with default parameters                                       |
-| `pull_request`       | Full CI with default parameters                                       |
-| `pull_request_review`| Configured at the GitHub repo level (Copilot review)                  |
-| `workflow_dispatch`  | Accepts manual overrides for `runners-os` and `preprocessor-symbols`  |
+| Event                 | Behavior                                                             |
+| :-------------------- | :------------------------------------------------------------------- |
+| `push` to branch      | Adds `SHORT_RUN` preprocessor symbol; skipped if an open PR exists   |
+| `push` to main        | Full CI with default parameters                                      |
+| `pull_request`        | Full CI with default parameters                                      |
+| `pull_request_review` | Configured at the GitHub repo level (Copilot review)                 |
+| `workflow_dispatch`   | Accepts manual overrides for `runners-os` and `preprocessor-symbols` |
 
 Commit message keywords:
 
-| Keyword       | Effect                                    | Applies to     |
-| :------------ | :---------------------------------------- | :------------- |
-| `[skip ci]`   | Skip the entire CI run                    | `push` events  |
-| `[skip bm]`   | Skip benchmarks only                      | `push` events  |
+| Keyword     | Effect                 | Applies to    |
+| :---------- | :--------------------- | :------------ |
+| `[skip ci]` | Skip the entire CI run | `push` events |
+| `[skip bm]` | Skip benchmarks only   | `push` events |
 
 ## PR Gates and Checks
 
@@ -225,11 +226,11 @@ Commit message keywords:
 
 When CI runs, it creates these checks (visible in the PR Checks tab):
 
-| Check                                                 | Created by        |
-| :---------------------------------------------------- | :---------------- |
-| `Build / build ({os})`                                | `_build.yaml`     |
-| `Tests / test ({os}, {test-project})`                 | `_test.yaml`      |
-| `Benchmarks / benchmarks ({os}, {benchmark-project})` | `_benchmarks.yaml`|
+| Check                                                 | Created by         |
+| :---------------------------------------------------- | :----------------- |
+| `Build / build ({os})`                                | `_build.yaml`      |
+| `Tests / test ({os}, {test-project})`                 | `_test.yaml`       |
+| `Benchmarks / benchmarks ({os}, {benchmark-project})` | `_benchmarks.yaml` |
 
 ### Setting Up Branch Protection
 
@@ -328,7 +329,8 @@ env:
   PREPROCESSOR_SYMBOLS: ""              # Space/Colon/Semicolon-separated preprocessor symbols
 ```
 
-> [!NOTE] If any of the project arrays are empty, not set, or contains `["__skip__"]`, the corresponding CI steps will be skipped.
+> [!NOTE] If any of the project arrays are empty (`[]`) or not set, the corresponding CI steps will be skipped. There
+> is no `["__skip__"]` sentinel any more — an empty array is itself the skip signal.
 
 **`workflow_dispatch` inputs:**
 
@@ -359,10 +361,10 @@ env:
 
 **`workflow_dispatch` inputs:**
 
-| Input                  | Description                                   |
-| :--------------------- | :-------------------------------------------- |
-| `minver-prerelease-id` | Prerelease prefix (e.g., `preview`, `alpha`)  |
-| `reason`               | Reason for manual pre-release                 |
+| Input                  | Description                                  |
+| :--------------------- | :------------------------------------------- |
+| `minver-prerelease-id` | Prerelease prefix (e.g., `preview`, `alpha`) |
+| `reason`               | Reason for manual pre-release                |
 
 **Secrets passed to `_prerelease.yaml`:**
 
@@ -384,9 +386,9 @@ env:
 
 **`workflow_dispatch` inputs:**
 
-| Input    | Description                  |
-| :------- | :--------------------------- |
-| `reason` | Reason for manual release    |
+| Input    | Description               |
+| :------- | :------------------------ |
+| `reason` | Reason for manual release |
 
 **Secrets passed to `_release.yaml`:**
 
@@ -469,13 +471,13 @@ Click **Create** or **Save changes** to save the ruleset.
 
 **Settings → Secrets and variables → Actions → Secrets → New repository secret** for each:
 
-| Secret                    | Value                                             |
-| :------------------------ | :------------------------------------------------ |
-| `BENCHER_API_TOKEN`       | From [bencher.dev](https://bencher.dev) dashboard |
-| `CODECOV_TOKEN`           | From [codecov.io](https://codecov.io) dashboard   |
-| `NUGET_API_KEY`           | The NuGet API key for the selected NuGet server   |
+| Secret                    | Value                                                                                          |
+| :------------------------ | :--------------------------------------------------------------------------------------------- |
+| `BENCHER_API_TOKEN`       | From [bencher.dev](https://bencher.dev) dashboard                                              |
+| `CODECOV_TOKEN`           | From [codecov.io](https://codecov.io) dashboard                                                |
+| `NUGET_API_KEY`           | The NuGet API key for the selected NuGet server                                                |
 | `RELEASE_PAT`             | Fine-grained PAT with `contents:write` — owner must be added as bypass actor in branch ruleset |
-| `REPORTGENERATOR_LICENSE` | ReportGenerator Pro license key (optional)        |
+| `REPORTGENERATOR_LICENSE` | ReportGenerator Pro license key (optional)                                                     |
 
 ### Variables
 

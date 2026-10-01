@@ -54,6 +54,8 @@ declare -xri err_has_errors
 #
 # @arg $@ nil No arguments; reads its input from stdin.
 #
+# @exitcode success=0: Every line from stdin was echoed (always).
+#
 # @stdout string each line read from stdin unchanged.
 #
 # @example
@@ -79,6 +81,8 @@ function to_stdout()
 #
 # @arg $@ nil No arguments; reads its input from stdin.
 #
+# @exitcode success=0: Every line from stdin was echoed (always).
+#
 # @stderr string each line read from stdin unchanged.
 #
 # @example
@@ -103,6 +107,8 @@ function to_stderr()
 #     summary
 #
 # @arg $@ nil No arguments; reads its input from stdin.
+#
+# @exitcode success=0: Every line from stdin was echoed (always).
 #
 # @stdout string each line read from stdin unchanged.
 #
@@ -303,7 +309,7 @@ function exit_if_has_bugs()
 #
 # @arg $@ string Ignored -- forwarded to `bug` as part of the "not overridden" message.
 #
-# @exitcode failure/negative=1: Always -- this placeholder always exits.
+# @exitcode failure=1: Always -- this placeholder always exits.
 #---------------------------------------------------------------------------------------------
 function usage()
 {
@@ -548,7 +554,7 @@ declare -xr trace_prefix="$trace_em  TRACE: "
 #     - `--no-stack`|`-ns` do not dump the stack. May occur multiple times with
 #       `--stack-depth`/`-sd`; only the last occurrence takes effect.
 #
-# @exitcode success/positive=0: Message printed successfully.
+# @exitcode success=0: Message printed successfully.
 #
 # @example
 #   error "File not found: $filename"
@@ -592,8 +598,9 @@ function error()
 #     - `--no-stack`|`-ns` do not dump the stack. May occur multiple times with
 #       `--stack-depth`/`-sd`; only the last occurrence takes effect.
 #
-# @exitcode failure/positive=non-zero: Exits with the last specified error code by `-ec` or
-#   `--error-code` after logging the error message. Note that it will always exit the script.
+# @exitcode N: Never returns -- always exits the script, with the error code recorded by
+#   `error()` from `-ec`/`--error-code` (default `$failure` if that flag was not given), or
+#   `$err_has_errors` in the unlikely case that recorded code is itself 0.
 #
 # @example
 #   exit_with_error -ec -ns "$err_not_file" "Invalid file specified."
@@ -632,7 +639,7 @@ function exit_with_error()
 #     - `--no-stack`|`-ns` do not dump the stack. May occur multiple times with
 #       `--stack-depth`/`-sd`; only the last occurrence takes effect.
 #
-# @exitcode success/positive=0: Message printed successfully.
+# @exitcode success=0: Message printed successfully.
 #
 # @example
 #   error "File not found: $filename"
@@ -723,7 +730,7 @@ function fatal_exit()
 #     - `--no-stack`|`-ns` do not dump the stack. May occur multiple times with
 #       `--stack-depth`/`-sd`; only the last occurrence takes effect.
 #
-# @exitcode success/positive=0: Message printed successfully.
+# @exitcode success=0: Message printed successfully.
 #
 # @example
 #   warning "The option is deprecated"
@@ -759,7 +766,7 @@ function warning()
 #
 # @stdout string The formatted info message, prefixed with `$info_prefix`.
 #
-# @exitcode success/positive=0: Message printed successfully.
+# @exitcode success=0: Message printed successfully.
 #
 # @example
 #   info "Starting build process"
@@ -793,7 +800,7 @@ function info()
 #     - `--no-stack`|`-ns` do not dump the stack. May occur multiple times with
 #       `--stack-depth`/`-sd`; only the last occurrence takes effect.
 #
-# @exitcode success/positive=0: Message printed successfully.
+# @exitcode success=0: Message printed successfully.
 #
 # @example
 #   trace "Processing item: $item"
@@ -822,7 +829,7 @@ function trace()
 # @arg $2 string The warning message to display.
 # @arg $3 string The default value to assign to the variable.
 #
-# @exitcode success/positive=0: The variable was set successfully.
+# @exitcode success=0: The variable was set successfully.
 #
 # @example
 #   warning_var timeout "Timeout not specified." 30
@@ -853,7 +860,7 @@ function warning_var()
 # @arg $2 int How many stack frames to show. Optional, default: all remaining frames after the
 #   skip.
 #
-# @exitcode success/positive=0
+# @exitcode success=0
 #
 # @stdout string The formatted stack trace, one line per frame, showing function name, source
 #   file, and line number (consider redirecting to stderr at the call site).
@@ -925,6 +932,8 @@ readonly __summary_output
 #   variable.
 #
 # @arg $@ nil No arguments; reads its input from stdin.
+#
+# @exitcode success=0: The summary was printed (always).
 #
 # @stdout `## Summary` markdown heading followed by each message line.
 #

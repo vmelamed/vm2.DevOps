@@ -70,30 +70,39 @@ Orchestrates the full CI pipeline: validate → build → test / benchmarks / pa
 
 ### Inputs
 
-| Input                  | Type     | Required | Default              | Description                                                           |
-| :--------------------- | :------- | :------- | :------------------- | :-------------------------------------------------------------------- |
-| `build-projects`       | `string` | no       | —                    | JSON array of project/solution paths to build. Auto-detects if empty. |
-| `test-projects`        | `string` | no       | —                    | JSON array of test project paths. Skipped if empty.                   |
-| `benchmark-projects`   | `string` | no       | —                    | JSON array of benchmark project paths. Skipped if empty.              |
-| `package-projects`     | `string` | no       | —                    | JSON array of project paths to pack. Skipped if empty.                |
-| `runners-os`           | `string` | no       | `["ubuntu-latest"]`  | JSON array of runner OS monikers.                                     |
-| `dotnet-version`       | `string` | no       | `10.0.x`             | .NET SDK version.                                                     |
-| `configuration`        | `string` | no       | `Release`            | Build configuration.                                                  |
-| `preprocessor-symbols` | `string` | no       | `""`                 | Semicolon-separated preprocessor symbols.                             |
-| `min-coverage-pct`     | `number` | no       | `80`                 | Minimum acceptable code coverage percentage.                          |
-| `max-regression-pct`   | `number` | no       | `20`                 | Maximum acceptable performance regression percentage.                 |
-| `max-gen1-collects`    | `number` | no       | `2`                  | Max Gen1 GC collections per 1000 ops (Bencher static threshold).      |
-| `max-gen2-collects`    | `number` | no       | `1`                  | Max Gen2 GC collections per 1000 ops (Bencher static threshold).      |
-| `minver-tag-prefix`    | `string` | no       | `v`                  | MinVer tag prefix for version calculation.                            |
-| `minver-prerelease-id` | `string` | no       | `preview.0`          | MinVer default pre-release identifiers.                               |
+| Input                        | Type      | Required | Default             | Description                                                           |
+| :--------------------------- | :-------- | :------- | :------------------ | :-------------------------------------------------------------------- |
+| `build-projects`             | `string`  | no       | —                   | JSON array of project/solution paths to build. Auto-detects if empty. |
+| `test-projects`              | `string`  | no       | —                   | JSON array of test project paths. Skipped if empty.                   |
+| `benchmark-projects`         | `string`  | no       | —                   | JSON array of benchmark project paths. Skipped if empty.              |
+| `package-projects`           | `string`  | no       | —                   | JSON array of project paths to pack. Skipped if empty.                |
+| `runners-os`                 | `string`  | no       | `["ubuntu-latest"]` | JSON array of runner OS monikers.                                     |
+| `preprocessor-symbols`       | `string`  | no       | `""`                | Semicolon-separated preprocessor symbols.                             |
+| `min-coverage-pct`           | `number`  | no       | `80`                | Minimum acceptable code coverage percentage.                          |
+| `max-regression-pct`         | `number`  | no       | `20`                | Maximum acceptable performance regression percentage.                 |
+| `max-gen1-collects`          | `number`  | no       | `2`                 | Max Gen1 GC collections per 1000 ops (Bencher static threshold).      |
+| `max-gen2-collects`          | `number`  | no       | `1`                 | Max Gen2 GC collections per 1000 ops (Bencher static threshold).      |
+| `minver-tag-prefix`          | `string`  | no       | `v`                 | MinVer tag prefix for version calculation.                            |
+| `minver-prerelease-id`       | `string`  | no       | `preview.0`         | MinVer default pre-release identifiers.                               |
+| `reset-benchmark-thresholds` | `boolean` | no       | `false`             | Reset Bencher thresholds for this run (see ARCHITECTURE.md).          |
+| `skip-build`                 | `boolean` | no       | `false`             | Skip the `build` job entirely.                                        |
+| `skip-tests`                 | `boolean` | no       | `false`             | Skip the `test` job entirely.                                         |
+| `skip-benchmarks`            | `boolean` | no       | `false`             | Skip the `benchmarks` job entirely.                                   |
+| `skip-packages`              | `boolean` | no       | `false`             | Skip the `pack` job entirely.                                         |
+
+`_ci.yaml` no longer takes a `dotnet-version` or `configuration` input: the .NET SDK version comes from `global.json`,
+and `Configuration` is resolved by `Directory.Build.props`/the project itself (see
+[CONVENTIONS.md — Build Configuration](../.github/CONVENTIONS.md#build-configuration-tfms-rids-and-preprocessor-symbols)).
+See [ARCHITECTURE.md — Per-run threshold reset](ARCHITECTURE.md#per-run-threshold-reset-reset-benchmark-thresholds) for
+`reset-benchmark-thresholds`.
 
 ### Secrets
 
-| Secret                     | Required | Description                              |
-| :------------------------- | :------- | :--------------------------------------- |
-| `CODECOV_TOKEN`            | no       | Codecov API token for coverage uploads   |
-| `BENCHER_API_TOKEN`        | no       | Bencher.dev API token for benchmarks     |
-| `REPORTGENERATOR_LICENSE`  | no       | ReportGenerator license key              |
+| Secret                    | Required | Description                            |
+| :------------------------ | :------- | :------------------------------------- |
+| `CODECOV_TOKEN`           | no       | Codecov API token for coverage uploads |
+| `BENCHER_API_TOKEN`       | no       | Bencher.dev API token for benchmarks   |
+| `REPORTGENERATOR_LICENSE` | no       | ReportGenerator license key            |
 
 ### Concurrency
 
@@ -102,13 +111,17 @@ Orchestrates the full CI pipeline: validate → build → test / benchmarks / pa
 
 ### Jobs
 
-| Job              | Needs            | Matrix                               | Condition                                                 |
-| :--------------- | :--------------- | :----------------------------------- | :-------------------------------------------------------- |
-| `validate-input` | —                | —                                    | Always                                                    |
-| `build`          | `validate-input` | `runners-os × build-projects`        | Always                                                    |
-| `test`           | `build`          | `runners-os`                         | `test-projects` is not `["__skip__"]`                     |
-| `benchmarks`     | `build`          | `runners-os × benchmark-projects`    | Not `["__skip__"]`; also skipped on push with `[skip bm]` |
-| `pack`           | `build`          | `runners-os × package-projects`      | `package-projects` is not `["__skip__"]`                  |
+| Job              | Needs                     | Matrix                            | Condition                                                                             |
+| :--------------- | :------------------------ | :-------------------------------- | :------------------------------------------------------------------------------------ |
+| `validate-input` | —                         | —                                 | Always                                                                                |
+| `build`          | `validate-input`          | `runners-os × build-projects`     | `build-projects[0] != null` and `skip-build` is `false`                               |
+| `test`           | `validate-input`, `build` | `runners-os`                      | `test-projects[0] != null` and `skip-tests` is `false`                                |
+| `benchmarks`     | `validate-input`, `build` | `runners-os × benchmark-projects` | `benchmark-projects[0] != null`, no `[skip bm]` on push, `skip-benchmarks` is `false` |
+| `pack`           | `validate-input`, `build` | `runners-os × package-projects`   | `package-projects[0] != null`, `build` succeeded/skipped, `skip-packages` is `false`  |
+
+`build-projects`, `test-projects`, `benchmark-projects`, and `package-projects` are JSON arrays; `[0] != null` means
+the array's first element is not `null` — the convention `validate-input.sh` now uses to mean "nothing to do here,"
+replacing the earlier `["__skip__"]` sentinel.
 
 ---
 
@@ -118,15 +131,18 @@ Compiles the project and caches build artifacts for downstream jobs.
 
 ### Inputs
 
-| Input                  | Type     | Required | Default         | Description                                      |
-| :--------------------- | :------- | :------- | :-------------- | :----------------------------------------------- |
-| `build-project`        | `string` | no       | —               | Path to project to build. Auto-detects if empty. |
-| `runner-os`            | `string` | no       | `ubuntu-latest` | Runner OS.                                       |
-| `dotnet-version`       | `string` | no       | `10.0.x`        | .NET SDK version.                                |
-| `configuration`        | `string` | no       | `Release`       | Build configuration.                             |
-| `preprocessor-symbols` | `string` | no       | `""`            | Preprocessor symbols.                            |
-| `minver-tag-prefix`    | `string` | no       | `v`             | MinVer tag prefix.                               |
-| `minver-prerelease-id` | `string` | no       | `preview.0`     | MinVer pre-release identifiers.                  |
+| Input                  | Type     | Required | Default         | Description                                                                                                             |
+| :--------------------- | :------- | :------- | :-------------- | :---------------------------------------------------------------------------------------------------------------------- |
+| `build-project`        | `string` | no       | —               | Path to project to build. Auto-detects if empty.                                                                        |
+| `runner-os`            | `string` | no       | `ubuntu-latest` | Runner OS.                                                                                                              |
+| `preprocessor-symbols` | `string` | no       | `""`            | Preprocessor symbols.                                                                                                   |
+| `job-index`            | `number` | no       | `0`             | The calling job's own matrix leg index (`strategy.job-index`), used only to name this leg's uploaded artifact uniquely. |
+
+`_build.yaml` no longer takes `dotnet-version`, `configuration`, `minver-tag-prefix`, or `minver-prerelease-id` inputs.
+`build.sh` is invoked with only the project path and `--define`; the MinVer tag prefix/pre-release identifiers come
+from the `MINVERTAGPREFIX`/`MINVERDEFAULTPRERELEASEIDENTIFIERS` repo variables via `env:`, and `Configuration` is left
+to resolve from `Directory.Build.props`/the project itself (see
+[CONVENTIONS.md — Build Configuration](../.github/CONVENTIONS.md#build-configuration-tfms-rids-and-preprocessor-symbols)).
 
 ### Permissions
 
@@ -135,10 +151,10 @@ Compiles the project and caches build artifacts for downstream jobs.
 
 ### Cache Keys and Artifacts
 
-| Mechanism                                                | Name / Key Pattern                                                   |
-| :------------------------------------------------------- | :------------------------------------------------------------------- |
-| NuGet cache (weekly)                                     | `nuget-{os}-{YYYY-WVV}-{lockfile-hash}`                              |
-| Build artifacts (workflow artifact, `retention-days: 1`) | `build-artifacts-{os}-{configuration}-{project-slug}`                |
+| Mechanism                                                | Name / Key Pattern                                 |
+| :------------------------------------------------------- | :------------------------------------------------- |
+| NuGet cache (weekly)                                     | `nuget-{os}-{YYYY-WVV}-{lockfile-hash}`            |
+| Build artifacts (workflow artifact, `retention-days: 1`) | `built-artifacts-{runner.os}-{run_id}-{job-index}` |
 
 ### Script
 
@@ -157,7 +173,6 @@ Runs tests, generates coverage reports, uploads to Codecov, and posts PR comment
 | `test-projects`        | `string` | **yes**  | —               | JSON array of test project paths.                   |
 | `test-subject`         | `string` | no       | —               | Name of the project under test (inferred if empty). |
 | `runner-os`            | `string` | no       | `ubuntu-latest` | Runner OS.                                          |
-| `dotnet-version`       | `string` | no       | `10.0.x`        | .NET SDK version.                                   |
 | `configuration`        | `string` | no       | `Release`       | Build configuration.                                |
 | `preprocessor-symbols` | `string` | no       | `""`            | Preprocessor symbols.                               |
 | `min-coverage-pct`     | `number` | no       | `80`            | Minimum acceptable code coverage percentage.        |
@@ -166,10 +181,10 @@ Runs tests, generates coverage reports, uploads to Codecov, and posts PR comment
 
 ### Secrets
 
-| Secret                    | Required | Description                              |
-| :------------------------ | :------- | :--------------------------------------- |
-| `CODECOV_TOKEN`           | **yes**  | Codecov API token for coverage uploads   |
-| `REPORTGENERATOR_LICENSE` | no       | ReportGenerator license key              |
+| Secret                    | Required | Description                            |
+| :------------------------ | :------- | :------------------------------------- |
+| `CODECOV_TOKEN`           | **yes**  | Codecov API token for coverage uploads |
+| `REPORTGENERATOR_LICENSE` | no       | ReportGenerator license key            |
 
 ### Permissions
 
@@ -189,24 +204,27 @@ Runs BenchmarkDotNet benchmarks and tracks results via Bencher.dev.
 
 ### Inputs
 
-| Input                  | Type     | Required | Default         | Description                                       |
-| :--------------------- | :------- | :------- | :-------------- | :------------------------------------------------ |
-| `benchmark-project`    | `string` | **yes**  | —               | Path to the benchmark project.                    |
-| `runner-os`            | `string` | no       | `ubuntu-latest` | Runner OS.                                        |
-| `dotnet-version`       | `string` | no       | `10.0.x`        | .NET SDK version.                                 |
-| `configuration`        | `string` | no       | `Release`       | Build configuration.                              |
-| `preprocessor-symbols` | `string` | no       | `""`            | Preprocessor symbols.                             |
-| `minver-tag-prefix`    | `string` | no       | `v`             | MinVer tag prefix.                                |
-| `minver-prerelease-id` | `string` | no       | `preview.0`     | MinVer pre-release identifiers.                   |
-| `max-regression-pct`   | `number` | no       | `20`            | Maximum acceptable performance regression (%).    |
-| `max-gen1-collects`    | `number` | no       | `2`             | Max Gen1 GC collections / 1000 ops (static).      |
-| `max-gen2-collects`    | `number` | no       | `1`             | Max Gen2 GC collections / 1000 ops (static).      |
+| Input                        | Type      | Required | Default         | Description                                           |
+| :--------------------------- | :-------- | :------- | :-------------- | :---------------------------------------------------- |
+| `benchmark-project`          | `string`  | **yes**  | —               | Path to the benchmark project.                        |
+| `runner-os`                  | `string`  | no       | `ubuntu-latest` | Runner OS.                                            |
+| `target-framework`           | `string`  | no       | `10.0.x`        | Version of .NET SDK to use.                           |
+| `configuration`              | `string`  | no       | `Release`       | Build configuration.                                  |
+| `preprocessor-symbols`       | `string`  | no       | `""`            | Preprocessor symbols.                                 |
+| `minver-tag-prefix`          | `string`  | no       | `v`             | MinVer tag prefix.                                    |
+| `minver-prerelease-id`       | `string`  | no       | `preview.0`     | MinVer pre-release identifiers.                       |
+| `max-regression-pct`         | `number`  | no       | `20`            | Maximum acceptable performance regression (%).        |
+| `max-gen1-collects`          | `number`  | no       | `2`             | Max Gen1 GC collections / 1000 ops (static).          |
+| `max-gen2-collects`          | `number`  | no       | `1`             | Max Gen2 GC collections / 1000 ops (static).          |
+| `reset-benchmark-thresholds` | `boolean` | no       | `false`         | Reset Bencher thresholds if a regression is expected. |
+
+Note the input is `target-framework` here (not `dotnet-version` as in `_ci.yaml`'s own input before it was removed).
 
 ### Secrets
 
-| Secret              | Required | Description                          |
-| :------------------ | :------- | :----------------------------------- |
-| `BENCHER_API_TOKEN` | **yes**  | Bencher.dev API token                |
+| Secret              | Required | Description           |
+| :------------------ | :------- | :-------------------- |
+| `BENCHER_API_TOKEN` | **yes**  | Bencher.dev API token |
 
 ### Permissions
 
@@ -226,15 +244,17 @@ Validates that projects can be packed into NuGet packages.
 
 ### Inputs
 
-| Input                  | Type     | Required | Default         | Description                     |
-| :--------------------- | :------- | :------- | :-------------- | :------------------------------ |
-| `package-project`      | `string` | **yes**  | —               | Path to the project to pack.    |
-| `runner-os`            | `string` | no       | `ubuntu-latest` | Runner OS.                      |
-| `dotnet-version`       | `string` | no       | `10.0.x`        | .NET SDK version.               |
-| `configuration`        | `string` | no       | `Release`       | Build configuration.            |
-| `preprocessor-symbols` | `string` | no       | `""`            | Preprocessor symbols.           |
-| `minver-tag-prefix`    | `string` | no       | `v`             | MinVer tag prefix.              |
-| `minver-prerelease-id` | `string` | no       | `preview.0`     | MinVer pre-release identifiers. |
+| Input                  | Type      | Required | Default         | Description                                                                                                                 |
+| :--------------------- | :-------- | :------- | :-------------- | :-------------------------------------------------------------------------------------------------------------------------- |
+| `package-project`      | `string`  | **yes**  | —               | Path to the project to pack.                                                                                                |
+| `runner-os`            | `string`  | no       | `ubuntu-latest` | Runner OS.                                                                                                                  |
+| `configuration`        | `string`  | no       | `Release`       | Declared but not currently wired to `pack.sh` — `dotnet_pack()` resolves `Configuration` from the project itself.           |
+| `preprocessor-symbols` | `string`  | no       | `""`            | Preprocessor symbols.                                                                                                       |
+| `minver-tag-prefix`    | `string`  | no       | `v`             | MinVer tag prefix.                                                                                                          |
+| `minver-prerelease-id` | `string`  | no       | `preview.0`     | MinVer pre-release identifiers.                                                                                             |
+| `skip-build-cache`     | `boolean` | no       | `false`         | Skip downloading the build job's artifacts; build during pack instead (e.g. template packages with no separate build step). |
+
+`_pack.yaml` no longer takes a `dotnet-version` input.
 
 ### Permissions
 
@@ -253,23 +273,27 @@ Computes a prerelease version, updates the changelog, tags, and publishes a prer
 
 ### Inputs
 
-| Input                    | Type      | Required | Default       | Description                                                |
-| :----------------------- | :-------- | :------- | :------------ | :--------------------------------------------------------- |
-| `package-projects`       | `string`  | no       | `[""]`        | JSON array of project paths to package and publish.        |
-| `dotnet-version`         | `string`  | no       | `10.0.x`      | .NET SDK version.                                          |
-| `preprocessor-symbols`   | `string`  | no       | `""`          | Preprocessor symbols.                                      |
-| `minver-tag-prefix`      | `string`  | no       | `v`           | MinVer tag prefix.                                         |
-| `minver-prerelease-id`   | `string`  | no       | `preview.0`   | Pre-release identifier (e.g., `preview.0`, `alpha`, `rc`). |
-| `reason`                 | `string`  | no       | `""`          | Reason for manual pre-release.                             |
-| `nuget-server`           | `string`  | no       | `nuget`       | Target NuGet server (`nuget`, `github`, or a URI).         |
-| `save-package-artifacts` | `boolean` | no       | `false`       | Upload packages as workflow artifacts.                     |
+| Input                  | Type     | Required | Default     | Description                                                                                                                        |
+| :--------------------- | :------- | :------- | :---------- | :--------------------------------------------------------------------------------------------------------------------------------- |
+| `package-projects`     | `string` | no       | `[]`        | JSON array of project paths to package and publish. Auto-detects if empty.                                                         |
+| `preprocessor-symbols` | `string` | no       | `""`        | Preprocessor symbols.                                                                                                              |
+| `minver-tag-prefix`    | `string` | no       | `v`         | MinVer tag prefix.                                                                                                                 |
+| `minver-prerelease-id` | `string` | no       | `preview.0` | Pre-release identifier (e.g., `preview.0`, `alpha`, `rc`).                                                                         |
+| `reason`               | `string` | no       | `""`        | Reason for manual pre-release.                                                                                                     |
+| `sha`                  | `string` | no       | `""`        | Exact git SHA to compute the version from and tag (pins the prerelease to the CI-validated commit); defaults to `HEAD` when empty. |
+
+`_prerelease.yaml` no longer takes `dotnet-version`, `nuget-server`, or `save-package-artifacts` inputs — NuGet server
+selection and artifact-saving are handled entirely in the *consumer's own* `Prerelease.yaml` (its `env:` block), not
+threaded through this reusable workflow.
 
 ### Secrets
 
-| Secret                 | Required | Description                                          |
-| :--------------------- | :------- | :--------------------------------------------------- |
-| `NUGET_API_KEY`        | no       | NuGet server API key for pushing packages.           |
-| `RELEASE_PAT`          | **yes**  | PAT with `contents:write` for pushing to main        |
+| Secret        | Required | Description                                   |
+| :------------ | :------- | :-------------------------------------------- |
+| `RELEASE_PAT` | **yes**  | PAT with `contents:write` for pushing to main |
+
+`_prerelease.yaml` itself declares no `NUGET_API_KEY` secret — the actual NuGet push, and its API key, live in the
+consumer's own `Prerelease.yaml` job (see [Architecture — NuGet Authentication](ARCHITECTURE.md#nuget-authentication)).
 
 ### ⚠️ `RELEASE_PAT` — Special Setup Required
 
@@ -303,12 +327,12 @@ that belongs to a user (e.g. Admin) configured as a **bypass actor** in the bran
 
 #### What happens if this is misconfigured
 
-| Symptom                                                                  | Cause                                       |
-| ------------------------------------------------------------------------ | ------------------------------------------- |
-| `_prerelease.yaml` fails with "push declined"                            | PAT owner not in bypass list                |
-| `_prerelease.yaml` fails with "Resource not accessible by integration"   | PAT lacks `Contents: write` permission      |
-| `_release.yaml` creates tag but changelog push fails                     | PAT expired or revoked                      |
-| Everything works on `workflow_dispatch` but fails on auto-trigger        | Wrong PAT scope (classic vs fine-grained)   |
+| Symptom                                                                | Cause                                     |
+| :--------------------------------------------------------------------- | :---------------------------------------- |
+| `_prerelease.yaml` fails with "push declined"                          | PAT owner not in bypass list              |
+| `_prerelease.yaml` fails with "Resource not accessible by integration" | PAT lacks `Contents: write` permission    |
+| `_release.yaml` creates tag but changelog push fails                   | PAT expired or revoked                    |
+| Everything works on `workflow_dispatch` but fails on auto-trigger      | Wrong PAT scope (classic vs fine-grained) |
 
 #### ⚠️ Security considerations
 
@@ -324,19 +348,21 @@ that belongs to a user (e.g. Admin) configured as a **bypass actor** in the bran
 ### Permissions
 
     contents: write
+    packages: read
+    actions: read
 
 ### Concurrency
 
     group: prerelease-${{ github.ref }}
-    cancel-in-progress: true
+    cancel-in-progress: false
 
 ### Jobs
 
-| Job                   | Needs                  | Description                                                                 |
-| :-------------------- | :--------------------- | :-------------------------------------------------------------------------- |
-| `prepare-prerelease`  | —                      | Computes the prerelease version, updates CHANGELOG.md, creates the tag      |
-| `package-and-publish` | `prepare-prerelease`   | Checks out the tag and builds+packs each project (does **not** push)        |
-| `collect-artifacts`   | `package-and-publish`  | Collects the uploaded package artifacts' IDs into the `artifact-ids` output |
+| Job                  | Needs                | Description                                                                 |
+| :------------------- | :------------------- | :-------------------------------------------------------------------------- |
+| `prepare-prerelease` | —                    | Computes the prerelease version, updates CHANGELOG.md, creates the tag      |
+| `package`            | `prepare-prerelease` | Checks out the tag and builds+packs each project (does **not** push)        |
+| `collect-artifacts`  | `package`            | Collects the uploaded package artifacts' IDs into the `artifact-ids` output |
 
 The actual `dotnet nuget push` happens in the *consumer's* own `Prerelease.yaml` (its
 `publish-prerelease` job), which downloads the artifacts by the IDs above — see
@@ -354,18 +380,18 @@ Computes a stable release version, updates the changelog, tags, and builds/packs
 
 ### Inputs
 
-| Input                  | Type     | Required | Default | Description                                                |
-| :--------------------- | :------- | :------- | :------ | :--------------------------------------------------------- |
-| `package-projects`     | `string` | no       | `[]`    | JSON array of project paths to package and publish.        |
-| `preprocessor-symbols` | `string` | **yes**  | —       | Preprocessor symbols.                                      |
-| `minver-tag-prefix`    | `string` | **yes**  | —       | MinVer tag prefix.                                         |
-| `reason`               | `string` | **yes**  | —       | Reason for the release.                                    |
+| Input                  | Type     | Required | Default | Description                                         |
+| :--------------------- | :------- | :------- | :------ | :-------------------------------------------------- |
+| `package-projects`     | `string` | no       | `[]`    | JSON array of project paths to package and publish. |
+| `preprocessor-symbols` | `string` | **yes**  | —       | Preprocessor symbols.                               |
+| `minver-tag-prefix`    | `string` | **yes**  | —       | MinVer tag prefix.                                  |
+| `reason`               | `string` | **yes**  | —       | Reason for the release.                             |
 
 ### Secrets
 
-| Secret        | Required | Description                                     |
-| :------------ | :------- | :---------------------------------------------- |
-| `RELEASE_PAT` | **yes**  | PAT with `contents:write` for pushing to main   |
+| Secret        | Required | Description                                   |
+| :------------ | :------- | :-------------------------------------------- |
+| `RELEASE_PAT` | **yes**  | PAT with `contents:write` for pushing to main |
 
 ### ⚠️ `RELEASE_PAT` — Special Setup Required
 
@@ -375,7 +401,7 @@ required for both prerelease and stable release workflows.
 ### Permissions
 
     contents: write
-    packages: write
+    packages: read
     actions: read
 
 ### Concurrency
@@ -385,12 +411,12 @@ required for both prerelease and stable release workflows.
 
 ### Jobs
 
-| Job                   | Needs                                     | Description                                                                 |
-| :-------------------- | :---------------------------------------- | :-------------------------------------------------------------------------- |
-| `compute-version`     | —                                         | Determines the stable version from conventional commits                     |
-| `changelog-and-tag`   | `compute-version`                         | Finalizes CHANGELOG.md and creates the Git tag                              |
-| `package-and-publish` | `compute-version`, `changelog-and-tag`    | Checks out the tag and builds+packs each project (does **not** push)        |
-| `collect-artifacts`   | `package-and-publish`                     | Collects the uploaded package artifacts' IDs into the `artifact-ids` output |
+| Job                 | Needs                                  | Description                                                                 |
+| :------------------ | :------------------------------------- | :-------------------------------------------------------------------------- |
+| `compute-version`   | —                                      | Determines the stable version from conventional commits                     |
+| `changelog-and-tag` | `compute-version`                      | Finalizes CHANGELOG.md and creates the Git tag                              |
+| `package`           | `compute-version`, `changelog-and-tag` | Checks out the tag and builds+packs each project (does **not** push)        |
+| `collect-artifacts` | `package`                              | Collects the uploaded package artifacts' IDs into the `artifact-ids` output |
 
 The actual `dotnet nuget push` happens in the *consumer's* own `Release.yaml` (its
 `publish-release` job), which downloads the artifacts by the IDs above — see
@@ -408,10 +434,10 @@ Emergency cache cleanup with allowlisted prefixes.
 
 ### Inputs
 
-| Input            | Type     | Required | Default                    | Description                                                                          |
-| :--------------- | :------- | :------- | :------------------------- | :----------------------------------------------------------------------------------- |
-| `reason`         | `string` | no       | `Emergency cache cleanup`  | Reason for clearing cache.                                                           |
-| `cache-pattern`  | `string` | no       | `nuget-`                   | Cache key prefix to delete. Allowlist: `nuget-`, `build-artifacts-`, `bencher-cli-`. |
+| Input           | Type     | Required | Default                   | Description                                                                          |
+| :-------------- | :------- | :------- | :------------------------ | :----------------------------------------------------------------------------------- |
+| `reason`        | `string` | no       | `Emergency cache cleanup` | Reason for clearing cache.                                                           |
+| `cache-pattern` | `string` | no       | `nuget-`                  | Cache key prefix to delete. Allowlist: `nuget-`, `built-artifacts-`, `bencher-cli-`. |
 
 ### Permissions
 
@@ -428,22 +454,22 @@ thresholds, no `--err` — a noisy point never fails the run.
 
 ### Inputs
 
-| Input                  | Type     | Required | Default         | Description                                          |
-| :--------------------- | :------- | :------- | :-------------- | :--------------------------------------------------- |
-| `repeat`               | `number` | no       | `10`            | Independent runs to record per benchmark.            |
-| `runner-os`            | `string` | no       | `ubuntu-latest` | Runner OS.                                           |
-| `dotnet-version`       | `string` | no       | `10.0.x`        | .NET SDK version.                                    |
-| `configuration`        | `string` | no       | `Release`       | Build configuration.                                 |
-| `preprocessor-symbols` | `string` | no       | `""`            | Preprocessor symbols (empty = full, non-SHORT_RUN).  |
-| `minver-tag-prefix`    | `string` | no       | `v`             | MinVer tag prefix.                                   |
-| `minver-prerelease-id` | `string` | no       | `preview.0`     | MinVer pre-release identifiers.                      |
-| `bencher-branch`       | `string` | no       | `main`          | Bencher branch whose history is being rebuilt.       |
+| Input                  | Type     | Required | Default         | Description                                         |
+| :--------------------- | :------- | :------- | :-------------- | :-------------------------------------------------- |
+| `repeat`               | `number` | no       | `10`            | Independent runs to record per benchmark.           |
+| `runner-os`            | `string` | no       | `ubuntu-latest` | Runner OS.                                          |
+| `target-framework`     | `string` | no       | `10.0.x`        | Version of .NET SDK to use.                         |
+| `configuration`        | `string` | no       | `Release`       | Build configuration.                                |
+| `preprocessor-symbols` | `string` | no       | `""`            | Preprocessor symbols (empty = full, non-SHORT_RUN). |
+| `minver-tag-prefix`    | `string` | no       | `v`             | MinVer tag prefix.                                  |
+| `minver-prerelease-id` | `string` | no       | `preview.0`     | MinVer pre-release identifiers.                     |
+| `bencher-branch`       | `string` | no       | `main`          | Bencher branch whose history is being rebuilt.      |
 
 ### Secrets
 
-| Secret              | Required | Description                          |
-| :------------------ | :------- | :----------------------------------- |
-| `BENCHER_API_TOKEN` | **yes**  | Bencher.dev API token                |
+| Secret              | Required | Description           |
+| :------------------ | :------- | :-------------------- |
+| `BENCHER_API_TOKEN` | **yes**  | Bencher.dev API token |
 
 ### Script
 

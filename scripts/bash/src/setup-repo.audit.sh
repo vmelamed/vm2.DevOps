@@ -85,8 +85,8 @@ declare -r key_unknowns="unknowns"
 # @arg $7 nameref - the name of an indexed array variable containing the display order of the setting keys (optional, default:
 #   sort alphabetically).
 #
-# @exitcode success/positive=0: (including the case where `expected` is empty and the function returns immediately).
-# @exitcode err_tool_error=66: error after executing a tool - most likely a bug.
+# @exitcode success=0: (including the case where `expected` is empty and the function returns immediately).
+# @exitcode err_tool_error=66: Fetching settings from the GitHub API endpoint failed.
 #
 # @stdout One formatted line per compared key, prefixed with an emoji marker (match/present, difference, or
 #   missing).
@@ -246,9 +246,13 @@ declare -x path_main_protection_ruleset
 # `initialize_gh_paths`, `initialize_jq_queries`, and `resolve_github_app_ids` to have already run so the
 # `path_*`/`jq_*` variables and `required_checks` are populated.
 #
-# @exitcode success/positive=0: Audit completed and printed.
-# @exitcode failure/negative=1: The branch-protection ruleset for the configured branch is missing or could not be found (exits the
-#   whole script via `exit 1`, not just this function).
+# @exitcode success=0: Audit completed and printed.
+# @exitcode failure=1: The branch-protection ruleset for the configured branch is missing or could not be found. This
+#   terminates the whole script directly via a literal `exit 1`, not a `return` -- it is not a code this function's
+#   caller ever observes.
+# @exitcode 2: One of the internal `compare_settings` calls (settings, permissions, vars, secrets, or the ruleset
+#   itself) failed and reported an error. This is a bare numeric literal in the code, not a named `$err_*` constant
+#   -- it happens to coincide with the value of `err_invalid_arguments`, which is not its intended meaning here.
 #
 # @stdout A multi-section, emoji-annotated audit report (repository settings, Actions permissions, secrets per app,
 #   Actions variables, branch ruleset, required status checks, local Git settings) followed by a totals summary.

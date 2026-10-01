@@ -161,7 +161,7 @@ Concurrency group `ci-${{ github.workflow_ref }}` cancels in-progress runs on ne
 1. Checks out repository with full history (`fetch-depth: 0`) for MinVer version calculation.
 1. Restores NuGet packages (dual-layer cache — see [Caching Strategy](#2-caching-strategy)).
 1. Calls `build.sh` to compile the project.
-1. Uploads the build outputs as a workflow artifact named `build-artifacts-{os}-{configuration}-{project-slug}`
+1. Uploads the build outputs as a workflow artifact named `built-artifacts-{runner.os}-{run_id}-{job-index}`
    (`retention-days: 1`) for the downstream jobs of the same run.
 
 ##### Test (`_test.yaml`)
@@ -218,8 +218,9 @@ postrun-ci:
 - `needs` covers all upstream jobs so any failure is caught
 - Branch rulesets match against the bare check-run name (Postrun-CI), not the UI-decorated form
   (CI: Build, Test, Benchmark, Pack / Postrun-CI (pull_request))
-- The gate job name is extracted by `setup-repo.sh` → `detect_required_checks()` which parses the consumer's CI.yaml for the
-  gate job's name: property and registers it in the branch ruleset
+- The gate job name is extracted by `setup-repo.sh` → `list_required_checks()` which parses the consumer's CI.yaml for the
+  gate job's name: property and registers it in the branch ruleset. A consumer repo with no gate job yet (vm2.DevOps itself,
+  at present) is a silent no-op — `required_checks` stays empty rather than reporting an error.
 
 #### Prerelease (`_prerelease.yaml`)
 
@@ -278,7 +279,7 @@ If the latest prerelease tag is `v1.5.0-preview.3` but the commit-based calculat
 
 #### Clear Cache (`_clear_cache.yaml`)
 
-Emergency cleanup. Deletes caches matching an allowlisted prefix (`nuget-`, `build-artifacts-`, or `bencher-cli-`).
+Emergency cleanup. Deletes caches matching an allowlisted prefix (`nuget-`, `built-artifacts-`, or `bencher-cli-`).
 
 ### Layer 3: Bash Scripts
 
@@ -287,11 +288,11 @@ Emergency cleanup. Deletes caches matching an allowlisted prefix (`nuget-`, `bui
 Each CI script follows a **three-file pattern** for consistency and separation of concerns the files may be even more
 than three if the script has more complex logical separation needs:
 
-| File                | Purpose                          |
-| :------------------ | :------------------------------- |
-| `script.sh`         | Entry point — sources lib, runs  |
-| `script.usage.sh`   | `--help` text                    |
-| `script.args.sh`    | Argument parsing and validation  |
+| File              | Purpose                         |
+| :---------------- | :------------------------------ |
+| `script.sh`       | Entry point — sources lib, runs |
+| `script.usage.sh` | `--help` text                   |
+| `script.args.sh`  | Argument parsing and validation |
 
 The CI scripts:
 
@@ -318,25 +319,27 @@ Every workflow checks out the vm2.DevOps repo (sparse-checkout of `scripts/bash/
 
 A shared function library sourced by scripts at startup.
 
-| Module             | Role                                                                     |
-| :----------------- | :----------------------------------------------------------------------- |
-| `core.sh`          | General-purpose functions (logging, paths, variables)                    |
-| `gh_core.sh`       | GitHub Actions helpers — sources `core.sh`, `_sanitize.sh`, `_dotnet.sh` |
-| `_args.sh`         | Argument parsing utilities                                               |
-| `_constants.sh`    | Shared constants                                                         |
-| `_diagnostics.sh`  | Debug and diagnostic output                                              |
-| `_dotnet.sh`       | .NET SDK helpers                                                         |
-| `_dump_vars.sh`    | Variable dump for debugging                                              |
-| `_error_codes.sh`  | Standardized error codes for CI scripts                                  |
-| `_git_vm2.sh`      | Git repository helpers specific to vm2 repos                             |
-| `_git.sh`          | Git repository helpers                                                   |
-| `_predicates.sh`   | Boolean test functions                                                   |
-| `_sanitize.sh`     | Input sanitization                                                       |
-| `_semver.sh`       | Semantic versioning utilities                                            |
-| `_user.sh`         | User/identity helpers                                                    |
+| Module            | Role                                                                                                                                                                        |
+| :---------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `core.sh`         | General-purpose functions (logging, paths, variables) — sources every `_*.sh` module below directly                                                                         |
+| `gh_core.sh`      | GitHub Actions helpers — sources only `core.sh`; adds GH env vars and a few functions (`to_stdout`/`to_stderr`/`to_output` overrides, `gh_escape`, `args_to_github_output`) |
+| `_args.sh`        | Argument parsing utilities                                                                                                                                                  |
+| `_constants.sh`   | Shared constants                                                                                                                                                            |
+| `_core_state.sh`  | Common state variables (quiet, verbose, dry-run, trace modes)                                                                                                               |
+| `_diagnostics.sh` | Debug and diagnostic output                                                                                                                                                 |
+| `_dotnet.sh`      | .NET SDK helpers                                                                                                                                                            |
+| `_dotnet_args.sh` | Shared dotnet CLI argument parsing/defaults                                                                                                                                 |
+| `_dump_vars.sh`   | Variable dump for debugging                                                                                                                                                 |
+| `_error_codes.sh` | Standardized error codes for CI scripts                                                                                                                                     |
+| `_git_vm2.sh`     | Git repository helpers specific to vm2 repos                                                                                                                                |
+| `_git.sh`         | Git repository helpers                                                                                                                                                      |
+| `_predicates.sh`  | Boolean test functions                                                                                                                                                      |
+| `_sanitize.sh`    | Input sanitization                                                                                                                                                          |
+| `_semver.sh`      | Semantic versioning utilities                                                                                                                                               |
+| `_user.sh`        | User/identity helpers                                                                                                                                                       |
 
-Scripts source the GitHub Actions helpers `gh_core.sh` (which chains into `core.sh`) and then source additional `_*.sh` modules
-as needed.
+Scripts source `gh_core.sh` for the GitHub Actions environment, or `core.sh` directly for standalone scripts; either
+one pulls in every `_*.sh` module, so there is no need to source additional modules individually.
 
 #### Testing the Bash Library and Scripts
 
@@ -498,15 +501,16 @@ These kebab-case keys are then referenced in the workflow's `outputs:` map and p
 
 Development-time scripts not used in CI:
 
-| Script                      | Purpose                                    |
-| :-------------------------- | :----------------------------------------- |
-| `diff-shared.sh`            | Diff common files across vm2 repos         |
-| `local-git-config.sh`       | Bootstrap local Git config for vm2 work    |
-| `move-commits-to-branch.sh` | Move commits from one branch to another    |
-| `setup-repo.sh`             | Bootstrap and configure a new GitHub repo  |
-| `add-spdx.sh`               | Add SPDX license headers to source files   |
-| `retag.sh`                  | Recreate a Git tag at a different commit   |
-| `restore-force-eval.sh`     | Force re-evaluation of NuGet restore       |
+| Script                      | Purpose                                                      |
+| :-------------------------- | :----------------------------------------------------------- |
+| `diff-shared.sh`            | Diff common files across vm2 repos                           |
+| `move-commits-to-branch.sh` | Move commits from one branch to another                      |
+| `rename-branch.sh`          | Rename a branch locally and in the remote origin             |
+| `setup-repo.sh`             | Bootstrap and configure a new GitHub repo                    |
+| `add-spdx.sh`               | Add SPDX license headers to source files                     |
+| `re-tag.sh`                 | Recreate a Git tag at a different commit                     |
+| `update-dependencies.sh`    | Force re-evaluation of NuGet restore across vm2 repos        |
+| `create-pr.sh`              | `gh` alias (`gh create-pr`) — PR with commits auto-populated |
 
 These also follow the three-file pattern where applicable.
 
@@ -528,14 +532,18 @@ The build pipeline uses a dual-layer NuGet cache and a build artifact cache.
 
 ### Build Artifact Handoff (workflow artifacts, not cache)
 
-The build job uploads the compiled outputs (`**/bin/{config}` and `**/obj`) as a **workflow artifact** named `build-artifacts-{os}-{configuration}-{project-slug}` with `retention-days: 1`. Downstream jobs (test, benchmarks, pack) download it by pattern (`merge-multiple: true`) to avoid rebuilding.
+The build job archives the compiled outputs (`bin/` and `obj/` under the resolved `ArtifactsPath`) into a single
+`built-artifacts.tar.gz` and uploads it as a **workflow artifact** named
+`built-artifacts-{runner.os}-{run_id}-{job-index}` with `retention-days: 1`. Downstream jobs (test, benchmarks, pack)
+download all matching artifacts by pattern (`built-artifacts-{runner.os}-{run_id}-*`) and extract each tar archive to
+avoid rebuilding.
 
 This intra-run handoff deliberately does **not** use the Actions cache: the cache service is designed for cross-run reuse and gives no read-after-write guarantee — a freshly saved entry may not be visible to a lookup seconds later (observed   2026-06-11: 4/4 deterministic restore misses ~25s after a verified save, while the same key restored fine hours later). Workflow artifacts are synchronous and scoped to the run.
 
 ### Cache Cleanup
 
 The `_clear_cache.yaml` workflow provides emergency cleanup. It restricts deletions to three allowlisted prefixes: `nuget-`,
-`build-artifacts-`, and `bencher-cli-`. (The `build-artifacts-` prefix is legacy — these caches are no longer created; the prefix remains allowlisted only to purge leftover entries until they age out.)
+`built-artifacts-`, and `bencher-cli-`. (The `built-artifacts-` *cache* prefix is legacy — these caches are no longer created; the prefix remains allowlisted only to purge leftover entries until they age out. The current build-handoff mechanism uses this same string as a workflow *artifact* name, not a cache entry — see [Build Artifact Handoff](#build-artifact-handoff-workflow-artifacts-not-cache) above — so the two are unrelated despite sharing a prefix.)
 
 ## Benchmark Threshold Management
 
@@ -619,30 +627,30 @@ The `github.vm2` source is configured in each repo's `NuGet.config`.
 
 ## Actions Secrets
 
-| Secret                       | Used by                       | Purpose                                                       |
-| :--------------------------- | :---------------------------- | :------------------------------------------------------------ |
-| `REPORTGENERATOR_LICENSE`    | `_ci` → `_test`               | ReportGenerator license key                                   |
-| `CODECOV_TOKEN`              | `_ci` → `_test`               | Codecov upload token                                          |
-| `BENCHER_API_TOKEN`          | `_ci` → `_benchmarks`         | Bencher.dev tracking token                                    |
-| `BENCH_DISPATCH_PAT`         | `rebuild_bench_history.sh`    | PAT for dispatching benchmark history rebuilds (`repo` scope) |
-| `NUGET_API_KEY`              | `_prerelease`, `_release`     | NuGet API key for the selected NuGet server (except nuget.org)|
-| `GH_PACKAGES_TOKEN`          | `_refresh_lockfiles.sh`       | The GitHub Packages token used to update GitHub Packages      |
-| `RELEASE_PAT`                | `_prerelease`, `_release`     | Fine-grained PAT (`contents: write`) for pushing to `main` past branch protection |
+| Secret                    | Used by                    | Purpose                                                                           |
+| :------------------------ | :------------------------- | :-------------------------------------------------------------------------------- |
+| `REPORTGENERATOR_LICENSE` | `_ci` → `_test`            | ReportGenerator license key                                                       |
+| `CODECOV_TOKEN`           | `_ci` → `_test`            | Codecov upload token                                                              |
+| `BENCHER_API_TOKEN`       | `_ci` → `_benchmarks`      | Bencher.dev tracking token                                                        |
+| `BENCH_DISPATCH_PAT`      | `rebuild_bench_history.sh` | PAT for dispatching benchmark history rebuilds (`repo` scope)                     |
+| `NUGET_API_KEY`           | `_prerelease`, `_release`  | NuGet API key for the selected NuGet server (except nuget.org)                    |
+| `GH_PACKAGES_TOKEN`       | `_refresh_lockfiles.sh`    | The GitHub Packages token used to update GitHub Packages                          |
+| `RELEASE_PAT`             | `_prerelease`, `_release`  | Fine-grained PAT (`contents: write`) for pushing to `main` past branch protection |
 
 ## Dependabot Secrets
 
-| Secret                       | Used by                       | Purpose                                                       |
-| :--------------------------- | :---------------------------- | :------------------------------------------------------------ |
+| Secret | Used by | Purpose |
+| :----- | :------ | :------ |
 
 ## Naming Conventions
 
 Consistent naming transforms flow across the layers:
 
-| Layer                      | Convention                | Example                 |
-| :------------------------- | :------------------------ | :---------------------- |
-| GitHub repo vars           | `UPPER_SNAKE_CASE`        | `MAX_REGRESSION_PCT`    |
-| Workflow inputs            | `lower-kebab-case`        | `max-regression-pct`    |
-| Script parameters          | `--lower-kebab-case`      | `--max-regression-pct`  |
-| Script variables           | `lower_snake_case`        | `max_regression_pct`    |
+| Layer             | Convention           | Example                |
+| :---------------- | :------------------- | :--------------------- |
+| GitHub repo vars  | `UPPER_SNAKE_CASE`   | `MAX_REGRESSION_PCT`   |
+| Workflow inputs   | `lower-kebab-case`   | `max-regression-pct`   |
+| Script parameters | `--lower-kebab-case` | `--max-regression-pct` |
+| Script variables  | `lower_snake_case`   | `max_regression_pct`   |
 
 ---

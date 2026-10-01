@@ -102,13 +102,19 @@ function resolve_github_app_ids()
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Determines the single, stable "gate job" check name from the target repository's `CI.yaml` and
-# appends it to the `required_checks` array, then freezes the array read-only. See the inline comment below for why
-# a gate job (rather than the individual matrix job names) is what gets pinned as a required status check.
+# @description Determines the single, stable "gate job" check name from the target repository's `CI.yaml` (looking
+# for a job whose key matches `postrun|ci-gate`, preferring `postrun-ci` if present) and appends it to the
+# `required_checks` array, then freezes the array read-only. See the inline comment below for why a gate job
+# (rather than the individual matrix job names) is what gets pinned as a required status check.
 #
-# @exitcode success/positive=0: ; `required_checks` populated and frozen.
-# @exitcode (via exit_if_has_errors) Exits the process if the gate job or its name could not be parsed from
-#   `$ci_yaml`.
+# Notes:
+#   - If the target repository's `CI.yaml` has no job matching `postrun|ci-gate`, this is treated as a legitimate
+#     configuration (not every consumer repo is required to have a gate job yet): `required_checks` is left empty
+#     and frozen as such, silently -- no error or warning is raised.
+#
+# @exitcode success=0: `required_checks` populated (or left empty, if no gate job was found) and frozen.
+# @exitcode (via exit_if_has_errors) Exits the process if a gate job was found but 'yq' failed to parse its `name:`
+#   property from `$ci_yaml`.
 #---------------------------------------------------------------------------------------------
 function list_required_checks()
 {
@@ -151,7 +157,7 @@ function list_required_checks()
 #     this codebase, the final `return` uses `$err_logic_error`, the code that actually describes the failure, not
 #     `$err_invalid_arguments`.
 #
-# @exitcode success/positive=0: ; all `path_*` variables set and frozen read-only.
+# @exitcode success=0: All `path_*` variables set and frozen read-only.
 #---------------------------------------------------------------------------------------------
 function initialize_gh_paths()
 {
@@ -195,7 +201,7 @@ function initialize_gh_paths()
 #     `admin_role_id`), not on call arguments -- it takes no arguments. The final `return` uses `$err_logic_error`
 #     per the precondition-check pattern in this codebase.
 #
-# @exitcode success/positive=0: ; all `jq_*` variables set and frozen read-only.
+# @exitcode success=0: All `jq_*` variables set and frozen read-only.
 #---------------------------------------------------------------------------------------------
 # shellcheck disable=SC2089 # Quotes/backslashes will be treated literally. Use an array.
 # shellcheck disable=SC2090 # Quotes/backslashes in this variable will not be respected.
@@ -269,8 +275,8 @@ def count_pr_checks_param(check): [.rules[] | select(.type == "required_status_c
 #     "ruleset not found yet" sentinel (see `setup-repo.sh`'s `initialize_main_protection_rs_id || true` and
 #     `configure_branch_protection()`'s success/failure branch below), not as an argument or logic error.
 #
-# @exitcode success/positive=0: ; `main_protection_rs_id` and `path_main_protection_ruleset` set and frozen.
-# @exitcode failure/negative=1: The ruleset does not exist yet, or the GitHub API call failed.
+# @exitcode success=0: `main_protection_rs_id` and `path_main_protection_ruleset` set and frozen.
+# @exitcode failure=1: The ruleset does not exist yet, or the GitHub API call failed.
 #---------------------------------------------------------------------------------------------
 function initialize_main_protection_rs_id()
 {
@@ -307,7 +313,7 @@ function initialize_main_protection_rs_id()
 # @description Retrieves the current NuGet server moniker for the repository and stores it in
 #   the global variable $nuget_server.
 #
-# @exitcode success/positive=0: Always (a failure to retrieve the moniker is logged as a
+# @exitcode success=0: Always (a failure to retrieve the moniker is logged as a
 #   warning, not surfaced as a non-zero exit code).
 #---------------------------------------------------------------------------------------------
 function get_current_nuget_server()
@@ -384,7 +390,7 @@ function configure_default_repo_settings()
 # the permissions endpoint is a full-replace PUT, not a partial PATCH, so there is no per-key skip optimization
 # here. Booleans are sent as JSON (`-F`), other values as strings (`-f`).
 #
-# @exitcode success/positive=0: Always (a failed PUT call is logged as a warning, not surfaced as a non-zero exit code).
+# @exitcode success=0: Always (a failed PUT call is logged as a warning, not surfaced as a non-zero exit code).
 #
 # @stdout Progress/status messages via `info` ("Configuring Actions workflow permissions...", "...actions workflow
 #   permissions configured.").
@@ -429,24 +435,32 @@ function configure_actions_permissions()
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Reconciles the target repository's GitHub Actions variables against the vars of
-#   the current application - $1.
-#   - In non-interactive mode (the default), creates any missing
-#     variable with its default value and leaves existing variables untouched.
-#   - In interactive mode (`$interactive_vars == true`), prompts the user for each variable's
-#     value (pre-filled with the current value if it exists, else with the default),
-#     validating input with the validator from `_vars_validators`, and calls `set_var`
-#     only when the entered value differs from the current one. Prints a summary of how many
-#     variables were set to a new value, set to their default, or left unmodified.
+# @description Reconciles the target repository's GitHub Actions variables against the default vars of the given
+#   application ($1), and optionally purges variables that are neither a known default nor otherwise expected.
+#   No-op (returns immediately) if the application has no default variables and `$purge_vars` is false, to avoid an
+#   unnecessary API call.
+#   - In non-interactive mode (the default), creates any missing variable with its default value and leaves
+#     existing variables untouched.
+#   - In interactive mode (`$interactive_vars == true`), prompts the user for each variable's value (pre-filled
+#     with the current value if it exists, else with the default), validating input with the validator from
+#     `_vars_validators`, and calls `set_var` only when the entered value differs from the current one.
+#   - If `NUGET_SERVER`'s reconciled value differs from the current global `$nuget_server`, updates the global and
+#     re-fetches the default tables via `get_vars_defaults` (since several other defaults, e.g. `NUGET_USERNAME`,
+#     depend on which NuGet server is in effect).
+#   - Any existing variable that is not among the application's known defaults is a purge candidate: when
+#     `$purge_vars` is true, it is deleted via `delete_var` (asking for confirmation first when `$interactive_vars`
+#     is also true); otherwise it is left alone and reported as "unknown or obsolete" in the summary.
+#   - Prints a summary of how many variables were set to a new value, set to their default, left unmodified,
+#     ignored as unknown/obsolete, or deleted, followed by a hint about `--purge-vars`/`--interactive-vars` when
+#     applicable.
 #
-# @arg $1 string Application name; must be one of the entries in `apps_with_secrets` (`actions`, `dependabot`,
-#   `agents`, `codespaces`).
+# @arg $1 string Application name; must be one of the entries in `apps_with_vars` (currently `actions`, `agents`).
 #
-# @exitcode success/positive=0: Always (individual `set_var` failures are logged and skipped, not surfaced as a
-#   non-zero exit code).
+# @exitcode success=0: Always (individual `set_var`/`delete_var` failures are logged and skipped, not surfaced as a
+#   non-zero exit code), including the no-op early return when there is nothing to reconcile or purge.
 #
-# @stdout Progress/status messages via `info`, and (in interactive mode) prompts via
-#   `enter_value`.
+# @stdout Progress/status messages via `info`, (in interactive mode) prompts via `enter_value` and `confirm`, and a
+#   final summary of the reconciliation/purge counts.
 #---------------------------------------------------------------------------------------------
 # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
 function configure_variables()
@@ -630,7 +644,7 @@ function set_var()
 #
 # @arg $1 string Name of the variable to delete.
 #
-# @exitcode success=0: Variable set successfully.
+# @exitcode success=0: Variable deleted successfully.
 # @exitcode * Whatever `execute_gh_with_retry` returned on failure (logged as a warning, then propagated).
 #---------------------------------------------------------------------------------------------
 function delete_var()
@@ -656,21 +670,33 @@ function delete_var()
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Reconciles one GitHub App's repository secrets (Actions, Dependabot, agents, or Codespaces) against
-# the corresponding `<app>_secrets` associative array. Secret values themselves cannot be read back from GitHub, so
-# reconciliation is presence-only: an existing secret is left untouched, and a missing secret is either created
-# interactively (prompting the user, `$interactive_secrets == true`) or flagged with a warning asking the user to
-# create it (`$interactive_secrets == false`). Prints a summary of how many secrets were set or still need a value.
+# @description Reconciles one GitHub App's repository secrets against the corresponding `<app>_secrets_order` list,
+# and optionally purges secrets that are neither a known default nor otherwise expected. Secret values themselves
+# cannot be read back from GitHub, so reconciliation of known secrets is presence-only: an existing secret is left
+# untouched, and a missing secret is either created interactively (prompting the user, `$interactive_secrets ==
+# true`) or flagged with a warning asking the user to create it (`$interactive_secrets == false`). No-op (returns
+# immediately) if the application has no default secrets and `$purge_secrets` is false, to avoid an unnecessary API
+# call.
+#   - Any existing secret that is not among the application's known defaults is a purge candidate: when
+#     `$purge_secrets` is true, it is deleted via `delete_secret` (asking for confirmation first when
+#     `$interactive_secrets` is also true); otherwise it is left alone and reported as "unknown or obsolete".
+#   - Prints a summary of how many secrets were set, left unmodified, still need a value, ignored as
+#     unknown/obsolete, or deleted.
 #
 # Notes:
 #   - Will exit the script if an invalid argument(s) is/are provided with exit codes
+#   - `apps_with_secrets` currently lists `actions`, `dependabot`, and `codespaces`; `agents` is commented out there
+#     since agents are not used yet, so it is not presently a valid value for `$1` despite `agents_secrets_order`
+#     still existing as an (empty) table.
 #
-# @arg $1 string Application name; must be one of the entries in `apps_with_secrets` (`actions`, `dependabot`,
-#   `agents`, `codespaces`).
+# @arg $1 string Application name; must be one of the entries in `apps_with_secrets` (currently `actions`,
+#   `dependabot`, `codespaces`).
 #
-# @exitcode success=0: including the case where the app has no configured secrets at all (returns immediately).
+# @exitcode success=0: including the case where the app has no configured secrets at all and nothing to purge
+#   (returns immediately).
 #
-# @stdout Progress/status messages via `info`, and (in interactive mode) prompts via `enter_value`.
+# @stdout Progress/status messages via `info`/`warning`, (in interactive mode) prompts via `enter_value` and
+#   `confirm`, and a final summary of the reconciliation/purge counts.
 #---------------------------------------------------------------------------------------------
 function configure_secrets()
 {
@@ -790,17 +816,18 @@ function configure_secrets()
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Creates or updates a single GitHub repository secret for the given app (`actions`, `dependabot`,
-# `agents`, or `codespaces`) via `gh secret set`. Temporarily suppresses verbose/trace output and `set -x` around
-# the actual `gh` call so the secret's plaintext value is never written to logs, restoring the previous state
-# afterward regardless of success or failure.
+# @description Creates or updates a single GitHub repository secret for the given app (currently `actions`,
+# `dependabot`, or `codespaces` -- see `apps_with_secrets`) via `gh secret set`. Temporarily suppresses verbose/trace
+# output and `set -x` around the actual `gh` call so the secret's plaintext value is never written to logs,
+# restoring the previous state afterward regardless of success or failure.
 #
 # Notes:
 #   - Will exit the script if an invalid argument(s) is/are provided with exit codes
 #
 # @arg $1 string Name of the secret to set.
 # @arg $2 string Plaintext value to set the secret to.
-# @arg $3 string GitHub App the secret belongs to (`actions`, `dependabot`, `agents`, or `codespaces`).
+# @arg $3 string GitHub App the secret belongs to; must be one of `apps_with_secrets` (currently `actions`,
+#   `dependabot`, `codespaces`).
 #
 # @exitcode success=0: Secret set successfully.
 # @exitcode * Whatever `execute_gh_with_retry` returned on failure (logged as a warning, then propagated).
@@ -842,10 +869,17 @@ function set_secret()
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Deletes a GitHub secret for a specified application within the repository.
+# @description Deletes a GitHub secret for a specified application (currently `actions`, `dependabot`, or
+#   `codespaces` -- see `apps_with_secrets`) within the repository via `gh secret delete`. Temporarily suppresses
+#   verbose/trace output and `set -x` around the actual `gh` call, restoring the previous state afterward
+#   regardless of success or failure.
 #
-# @exitcode success=0: The secret was successfully deleted or did not exist.
-# @exitcode failure!=0: An error occurred while attempting to delete the secret.
+# @arg $1 string Name of the secret to delete.
+# @arg $2 string GitHub App the secret belongs to; must be one of `apps_with_secrets` (currently `actions`,
+#   `dependabot`, `codespaces`).
+#
+# @exitcode success=0: The secret was successfully deleted.
+# @exitcode * Whatever `execute_gh_with_retry` returned on failure (logged as a warning, then propagated).
 #---------------------------------------------------------------------------------------------
 function delete_secret()
 {

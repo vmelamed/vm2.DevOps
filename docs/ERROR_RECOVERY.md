@@ -8,7 +8,7 @@
     - [Version Computation Failed](#version-computation-failed)
     - [Changelog Committed But Tag Not Created](#changelog-committed-but-tag-not-created)
     - [NuGet Push Failed](#nuget-push-failed)
-    - [Changelog PR Creation Blocked](#changelog-pr-creation-blocked)
+    - [Changelog Push Blocked](#changelog-push-blocked)
   - [Stable Release Failures](#stable-release-failures)
   - [Branch Protection Bypass Failures](#branch-protection-bypass-failures)
     - [`RELEASE_PAT` Push Rejected](#release_pat-push-rejected)
@@ -35,8 +35,9 @@ Recovery procedures for common CI/CD failure scenarios.
 
 ## Prerelease Failures
 
-The prerelease workflow runs three sequential jobs: `compute-version` → `changelog-and-tag` → `package-and-publish`. Failure at
-each stage has different recovery procedures.
+The prerelease workflow runs two sequential jobs: `prepare-prerelease` (computes the version, then updates
+`CHANGELOG.md` and creates the tag) → `package` (checks out the tag, builds and packs). Failure at each stage has
+different recovery procedures.
 
 ### Version Computation Failed
 
@@ -59,25 +60,25 @@ git push origin main
 
 ### NuGet Push Failed
 
-The prerelease workflow does not create Git tags — MinVer computes the prerelease version from commit distance. A failed push
-has no side effects on Git state.
+The `prepare-prerelease` job already created and pushed the Git tag by this point; the NuGet push itself happens
+afterward, in the consumer's own `Prerelease.yaml`. A failed push has no further side effects on Git state beyond the
+tag and changelog commit already made.
 
 **Recovery:** Fix the cause (API key, network), then either:
 
 - Re-run the failed workflow job: `gh run rerun <run-id> --failed`
 - Or merge any new PR — the next prerelease will supersede the failed one
 
-### Changelog PR Creation Blocked
+### Changelog Push Blocked
 
-The prerelease changelog step creates a PR for the changelog update. If the repository doesn't allow GitHub Actions to create
-PRs, the step logs a warning but the publish still proceeds.
-
-**Recovery:** Enable Settings → Actions → General → Allow GitHub Actions to create and approve pull requests. Or update
-CHANGELOG.md manually.
+`changelog-and-tag.sh` commits the changelog update and pushes it (and the tag) **directly to `main`** using
+`RELEASE_PAT` — it does not open a pull request. If the push is rejected, this is a branch-protection/bypass
+configuration problem, not a PR-creation permission problem; see
+[Branch Protection Bypass Failures](#branch-protection-bypass-failures) below.
 
 ## Stable Release Failures
 
-The release workflow runs three sequential jobs: `compute-version` → `changelog-and-tag` → `package-and-publish`. Failure at
+The release workflow runs three sequential jobs: `compute-version` → `changelog-and-tag` → `package`. Failure at
 each stage has different recovery procedures.
 
 ## Branch Protection Bypass Failures
@@ -202,8 +203,8 @@ git push origin :refs/tags/vX.Y.Z
 
 ## Further Reading
 
-| Topic              | Document                                         |
-| :----------------- | :----------------------------------------------- |
-| Release process    | [RELEASE_PROCESS.md](RELEASE_PROCESS.md)         |
-| Cache management   | [CACHE_MANAGEMENT.md](CACHE_MANAGEMENT.md)       |
-| Configuration      | [CONFIGURATION.md](CONFIGURATION.md)             |
+| Topic            | Document                                   |
+| :--------------- | :----------------------------------------- |
+| Release process  | [RELEASE_PROCESS.md](RELEASE_PROCESS.md)   |
+| Cache management | [CACHE_MANAGEMENT.md](CACHE_MANAGEMENT.md) |
+| Configuration    | [CONFIGURATION.md](CONFIGURATION.md)       |

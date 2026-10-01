@@ -49,9 +49,12 @@ declare -x _ignore
 # @arg $2 string The new name for the branch. Required. Must be a valid Git branch name and must not already exist locally or
 #   on 'origin'.
 #
-# @exitcode success/positive=0: The branch was renamed and pushed successfully.
-# @exitcode non-zero Missing/invalid arguments, the branch names are identical, or a git operation failed (see
-#   'err_missing_argument', 'err_argument_value', 'err_tool_error' in '_error_codes.sh').
+# @exitcode success=0: The branch was renamed and pushed successfully.
+# @exitcode err_missing_argument: No new branch name was given, or the old branch name could not be determined
+#   (detached HEAD or not in a repo).
+# @exitcode err_argument_value: The branch names are identical, a name is not a valid Git branch name, the new
+#   name already exists (locally or on 'origin'), or the old name does not exist (locally or on 'origin').
+# @exitcode err_tool_error: A git operation ('fetch', 'branch -m', 'push', or 'branch --set-upstream-to') failed.
 #
 # @stdout Progress/info messages (e.g. the final "Branch '<old>' successfully renamed to '<new>'." confirmation).
 #

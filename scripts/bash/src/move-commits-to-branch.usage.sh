@@ -12,7 +12,7 @@ declare -xr script_name
 #
 # @arg $1 bool Whether to include the long-form help (common switches and environment variables sections).
 #
-# @exitcode success/positive=0
+# @exitcode success=0: Always.
 #
 # @stdout The usage text for 'move-commits-to-branch.sh'.
 #---------------------------------------------------------------------------------------------

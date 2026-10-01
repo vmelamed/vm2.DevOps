@@ -24,9 +24,12 @@ declare -x vm2_repos="${VM2_REPOS:-$default_vm2_repos_path}"
 declare -x repo
 
 #---------------------------------------------------------------------------------------------
-# @description Refreshes a single vm2 repository's NuGet lock files and pushes the update. Clears the repo's GitHub Actions
-# cache, deletes all local '*.lock.json' files, restores with '--force-evaluate' to regenerate them, commits the result,
-# waits for the triggered CI run to finish, and force-pushes with lease.
+# @description Refreshes a single vm2 repository's NuGet dependencies and lock files and pushes the update. First merges
+# the repo's 'Directory.Packages.props' with the SoT's version via 'diff-shared.sh --file-merge', then triggers (fire
+# -and-forget) the repo's 'ClearCache.yaml' workflow to clear its GitHub Actions cache, deletes all local
+# '*.lock.json' files, restores with '--force-evaluate' to regenerate them, commits the result, watches the most
+# recently started workflow run in the repo (expected to be the just-triggered 'ClearCache.yaml' run) to finish, and
+# force-pushes with lease.
 #
 # Notes:
 #   - Temporarily disables 'set -e' ('set +e') for the sequence of git/gh/dotnet calls, so a failure partway through
@@ -38,7 +41,7 @@ declare -x repo
 # @arg $1 string Path to the parent directory containing the vm2 repo clones.
 # @arg $2 string Name of the repository (subdirectory of '$1') to update.
 #
-# @exitcode success/positive=0: Always (errors inside the function are suppressed via 'set +e' rather than propagated).
+# @exitcode success=0: Always (errors inside the function are suppressed via 'set +e' rather than propagated).
 #
 # @stdout Output from 'gh workflow run', 'dotnet restore', 'git commit', 'gh run watch', and 'git push'.
 #
@@ -79,7 +82,7 @@ function update_dependencies() {
 #
 # @arg $@ none Takes no command-line arguments.
 #
-# @exitcode success/positive=0: Always (failures within 'update_dependencies' are swallowed per-repo; see its own doc comment).
+# @exitcode success=0: Always (failures within 'update_dependencies' are swallowed per-repo; see its own doc comment).
 #
 # @stdout Combined output of 'update_dependencies' for every processed repository.
 #---------------------------------------------------------------------------------------------

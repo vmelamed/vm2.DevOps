@@ -173,11 +173,23 @@ declare -rA __error_names=(
 
 #---------------------------------------------------------------------------------------------
 # @description Looks up an error code in the `_error_messages` associative array and prints
-# "<code>: <message>" to stdout.
+#   "<code>: <message>" to stdout. An unrecognized code falls back to the generic "unknown
+#   error" message instead of failing.
+#
+# Notes:
+#   - Deliberately does NOT use `bug`/`exit_if_has_bugs` for its own argument validation, to
+#     avoid recursion (this function is itself used to translate error codes for `bug`/`error`
+#     messages) -- it prints a bug-style message directly and exits the process immediately.
 #
 # @arg $1 int Error code (0-255) to look up.
 #
 # @stdout an error message string with format: "<code>: <message>" for the given error code.
+#
+# @exitcode success=0: The message was printed (always, once past argument validation).
+# @exitcode err_invalid_arguments=2: Never returns -- exits the process immediately if called
+#   with other than 1 argument.
+# @exitcode err_argument_type=3: Never returns -- exits the process immediately if argument 1
+#   is not a non-negative integer.
 #
 # @example
 #   error_message "$err_not_found"
@@ -211,11 +223,24 @@ function error_message()
 
 #---------------------------------------------------------------------------------------------
 # @description Prints the corresponding error name. Looks up the error code in the
-# `_error_names` associative array.
+# `_error_names` associative array. An unrecognized code prints the literal string
+#   "err_unknown" instead of failing.
+#
+# Notes:
+#   - Deliberately does NOT use `bug`/`exit_if_has_bugs` for its own argument validation, to
+#     avoid recursion (this function is itself used while translating error codes for
+#     `bug`/`error` messages) -- it prints a bug-style message directly and exits the process
+#     immediately.
 #
 # @arg $1 int Error code (0-255) to look up.
 #
 # @stdout "<name>" for the given error code.
+#
+# @exitcode success=0: The name was printed (always, once past argument validation).
+# @exitcode err_invalid_arguments=2: Never returns -- exits the process immediately if called
+#   with other than 1 argument.
+# @exitcode err_argument_type=3: Never returns -- exits the process immediately if argument 1
+#   is not a non-negative integer.
 #
 # @example
 #   error_name "$err_not_found"

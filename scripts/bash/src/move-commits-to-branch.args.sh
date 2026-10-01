@@ -24,9 +24,12 @@ declare -x check_out_new_branch
 #
 # @arg $@ string Named options: '--commit-sha|-c <sha>', '--branch|-b <name>', '--check-out-new|-n'.
 #
-# @exitcode success/positive=0: Arguments parsed successfully.
-# @exitcode non-zero A recognized option is missing its required value ('err_missing_argument'), an unrecognized argument
-#   was given ('err_unknown_argument'), or help was requested (via 'usage_if_requested').
+# @exitcode success=0: Arguments parsed successfully.
+# @exitcode err_missing_argument: A recognized option is missing its required value.
+# @exitcode err_unknown_argument: An unrecognized argument was given.
+#
+# Note: 'usage_if_requested' exits the process directly (via 'usage') when '--help'/'-h'/'-?' was given; it does not
+#   return a code to this function's caller.
 #
 # @example
 #   get_arguments --commit-sha ff5c2d1 --branch feature/my-feature

@@ -261,6 +261,12 @@ This file is optional and if present, it must be placed in the root of the targe
 
 In this example, the diff tool is overridden to plain `diff`, and three files are set to `ignore` regardless of the global configuration. File names in `action_overrides` are matched by name only, not by full path.
 
+> [!TIP]
+> Both `diff-shared.config.json` and `diff-shared.custom.json` have JSON Schemas (`diff-shared.config.schema.json` and
+> `diff-shared.custom.schema.json`, next to the scripts) for editor validation and autocomplete. Reference the schema
+> with a relative `$schema` path, e.g. `"$schema": "diff-shared.custom.schema.json"`, so editors like VS Code can
+> validate the file as you edit it.
+
 ## CLI Parameters
 
 ### Common CLI Parameters
@@ -313,10 +319,10 @@ The script accepts one or more target repository paths as positional arguments:
 
 ### Switches
 
-- `--all-repos` (`-a`) — compare all pre-defined vm2 repositories under the vm2 parent with the SoT, one by one. The set is defined in `lib/core.sh`.
+- `--all-repos` (`-a`) — compare all pre-defined vm2 repositories under the vm2 parent with the SoT, one by one. The set is defined in `lib/_constants.sh`.
 
     > [!WARNING]
-    > For this to work, every time you add a new repository to the vm2 parent, you must add it to `vm2_repositories` array in `$VM2_HOME/vm2.DevOps/scripts/bash/lib/core.sh`.
+    > For this to work, every time you add a new repository to the vm2 parent, you must add it to the `vm2_repositories` array in `$VM2_HOME/vm2.DevOps/scripts/bash/lib/_constants.sh`.
 
 - `--diff` (`-d`) — compare files and display differences and equalities without taking any action. Can be combined with `--all-repos`.
 

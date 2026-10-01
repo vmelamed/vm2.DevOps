@@ -36,31 +36,31 @@ vm2.DevOps contains three distinct categories of scripts:
 
 ## Sourcing Chains
 
-    CI Scripts:          script.sh → gh_core.sh ---→ core.sh → all _*.sh modules
-                                   ↘ _sanitize.sh
-                                   ↘ _dotnet.sh
+    CI Scripts:          script.sh → gh_core.sh → core.sh → all _*.sh modules
 
-    Utility Scripts:     script.sh ----------------→ core.sh → all _*.sh modules
+    Utility Scripts:     script.sh ----------→ core.sh → all _*.sh modules
 
-`core.sh` sources all component modules (`_constants.sh`, `_diagnostics.sh`, `_args.sh`,
-`_predicates.sh`, `_dump_vars.sh`, `_git.sh`, `_semver.sh`, `_user.sh`).
-
-`gh_core.sh` adds GitHub Actions–specific helpers on top, plus the CI specific `_sanitize.sh` and `_dotnet.sh`.
+`core.sh` sources every component module directly, including the ones that used to be CI-only (`_sanitize.sh`,
+`_dotnet.sh`, `_dotnet_args.sh`, `_git_vm2.sh`) — there is no longer a split between a "common" set sourced by
+`core.sh` and a "CI-specific" set added on top by `gh_core.sh`. `gh_core.sh` now only sources `core.sh` and adds
+GitHub Actions–specific environment variables (`GITHUB_ACTIONS`, `GITHUB_STEP_SUMMARY`, `GITHUB_OUTPUT`) and a
+handful of functions on top: it overrides `to_stdout`/`to_stderr`/`to_output` to also write to the GitHub Actions
+step summary/output files, and adds `gh_escape` and `args_to_github_output`.
 
 ### Common Switches
 
 All scripts (CI and utility) inherit these switches from the bash library:
 
-| Switch             | Short | Description                                               |
-| :----------------- | :---- | :-------------------------------------------------------- |
-| `--verbose`        | `-v`  | Enable verbose output, tracing, and dump outputs          |
-| `--trace`          | `-x`  | Verbose + bash `set -x`                                   |
-| `--dry-run`        | `-y`  | Show commands without executing state-changing operations |
-| `--quiet`          | `-q`  | Suppress interactive prompts (default in CI)              |
-| `--graphical`      | `-gr` | Dump tables in graphical format                           |
-| `--markdown`       | `-md` | Dump tables in markdown format (default in CI)            |
-| `--help`           |       | Long usage text including common switches                 |
-|                    | `-h`  | Short usage text                                          |
+| Switch        | Short | Description                                               |
+| :------------ | :---- | :-------------------------------------------------------- |
+| `--verbose`   | `-v`  | Enable verbose output, tracing, and dump outputs          |
+| `--trace`     | `-x`  | Verbose + bash `set -x`                                   |
+| `--dry-run`   | `-y`  | Show commands without executing state-changing operations |
+| `--quiet`     | `-q`  | Suppress interactive prompts (default in CI)              |
+| `--graphical` | `-gr` | Dump tables in graphical format                           |
+| `--markdown`  | `-md` | Dump tables in markdown format (default in CI)            |
+| `--help`      |       | Long usage text including common switches                 |
+|               | `-h`  | Short usage text                                          |
 
 ---
 
@@ -68,27 +68,32 @@ All scripts (CI and utility) inherit these switches from the bash library:
 
 Located in **`scripts/bash/lib/`**. The foundation layer sourced by all scripts.
 
-`core.sh` is the entry point — it sources all component modules automatically:
+`core.sh` is the entry point — it sources every component module directly:
 
     core.sh
      ├── _constants.sh
+     ├── _core_state.sh     (quiet/verbose/dry-run/trace state)
+     ├── _error_codes.sh    (error code constants)
+     ├── _predicates.sh     (boolean test functions)
      ├── _diagnostics.sh    (info, warning, error, trace)
      ├── _args.sh           (argument parsing, common switches, get_common_arg)
-     ├── _predicates.sh     (boolean test functions)
-     ├── _dump_vars.sh      (dump_vars for debugging)
-     ├── _git.sh            (Git repository helpers)
      ├── _semver.sh         (semver parsing, comparison, tag validation)
-     └── _user.sh           (user/identity helpers)
-
-`gh_core.sh` extends `core.sh` for the GitHub Actions environment:
-
-    gh_core.sh
-     ├── core.sh            (everything above)
      ├── _sanitize.sh       (input sanitization: is_safe_reason, etc.)
+     ├── _dump_vars.sh      (dump_vars for debugging)
+     ├── _user.sh           (user/identity helpers)
+     ├── _git.sh            (Git repository helpers)
+     ├── _git_vm2.sh        (Git helpers specific to vm2 repos)
+     ├── _dotnet_args.sh    (shared dotnet CLI argument parsing/defaults)
      └── _dotnet.sh         (.NET SDK helpers)
 
-See [FUNCTIONS_REFERENCE.md](../scripts/bash/lib/FUNCTIONS_REFERENCE.md) for the full list
-of 67 library functions.
+`gh_core.sh` only sources `core.sh` on top of that — it no longer adds any extra component modules — and then layers
+GitHub Actions–specific environment variables and a handful of functions:
+
+    gh_core.sh
+     └── core.sh            (everything above)
+
+See [FUNCTIONS_REFERENCE.md](../scripts/bash/lib/FUNCTIONS_REFERENCE.md) for the full list of library functions (the
+library has grown past the `.gitmessage`/CLAUDE.md-era count of 67; see that document for the current total).
 
 ---
 
@@ -118,7 +123,7 @@ file is not found, or there are differences between the files, the tool takes an
 default action. Here is the list of available action names and the resulting behaviors:
 
 | Action               | If the target file is different from the source:                    | If the target file does not exist: |
-|----------------------|---------------------------------------------------------------------|------------------------------------|
+| :------------------- | :------------------------------------------------------------------ | :--------------------------------- |
 | `ignore`             | does nothing                                                        | does nothing                       |
 | `merge or copy`      | asks to copy, merge, or ignore                                      | asks to copy or ignore             |
 | `ask to merge`       | asks to merge or ignore                                             | asks to copy or ignore             |
@@ -201,12 +206,26 @@ files and actions to take if the source and the target are different.
 
 **Command Line Options:**
 
-| Option                      | Short | Default      | Description                              |
-| :-------------------------- | :---- | :----------- | :--------------------------------------- |
-| `<repository-name-or-path>` |       | current dir  | Positional: repo name or path to compare |
-| `--vm2-repos`               | `-r`  | `$VM2_REPOS` | Parent directory of all repos            |
-| `--files`                   | `-f`  | all          | Comma-separated list of files or regex   |
-| `--minver-tag-prefix`       | `-mp` | `v`          | Tag prefix for detecting stable versions |
+| Option                                | Short   | Default      | Description                                                                              |
+| :------------------------------------ | :------ | :----------- | :--------------------------------------------------------------------------------------- |
+| `<repo-directory>...`                 |         | current dir  | Positional: one or more target repo names or paths to compare (repeatable)               |
+| `--vm2-repos`                         | `-r`    | `$VM2_REPOS` | Parent directory of all repos                                                            |
+| `--source-of-truth`                   | `-s`    | —            | The source-of-truth scenario to use (one of the scenarios in `vm2.Templates/templates/`) |
+| `--file <pattern>`                    | `-f`    | all          | File name or quoted glob; repeatable; action taken from the configuration                |
+| `--file-ignore <pattern>`             | `-fi`   | —            | Like `--file` but forces the action to `ignore`                                          |
+| `--file-merge-or-copy <pattern>`      | `-fmc`  | —            | Like `--file` but forces the action to `merge or copy`                                   |
+| `--file-ask-to-merge <pattern>`       | `-fam`  | —            | Like `--file` but forces the action to `ask to merge`                                    |
+| `--file-merge <pattern>`              | `-fm`   | —            | Like `--file` but forces the action to `merge`                                           |
+| `--file-ask-to-copy <pattern>`        | `-fac`  | —            | Like `--file` but forces the action to `ask to copy`                                     |
+| `--file-copy <pattern>`               | `-fc`   | —            | Like `--file` but forces the action to `copy`                                            |
+| `--file-copy-shared <pattern>`        | `-fcs`  | —            | Like `--file` but forces the action to `copy shared`                                     |
+| `--file-ask-to-copy-shared <pattern>` | `-facs` | —            | Like `--file` but forces the action to `ask to copy shared`                              |
+| `--summary <file>`                    |         | temp file    | Write the run summary to `<file>` in Markdown (shown and deleted if omitted)             |
+| `--all-repos`                         | `-a`    | —            | Compare all pre-defined vm2 repositories under `$VM2_REPOS` (set in `_constants.sh`)     |
+| `--diff`                              | `-d`    | —            | Compare and display differences only, taking no action                                   |
+| `--current-branch`                    | `-cb`   | —            | Use the current branch of vm2.DevOps/the SoT repo instead of `main`                      |
+
+There is no `--files` (comma-separated list) or `--minver-tag-prefix` option.
 
 ### move-commits-to-branch.sh
 
@@ -222,18 +241,21 @@ Moves commits from a specified SHA onward to a new branch, resetting main to the
 
 Renames a branch in the Git repository and in the remote origin.
 
-| Parameter:              | Description                       |
-|-------------------------|-----------------------------------|
-| `<current branch name>` | Positional 1: Current branch name |
-| `<new branch name>`     | Positional 2: New branch name     |
+| Parameter                             | Description                                                                    |
+| :------------------------------------ | :----------------------------------------------------------------------------- |
+| `<new-branch-name>`                   | One positional argument: renames the currently checked-out branch to this name |
+| `<old-branch-name> <new-branch-name>` | Two positional arguments: renames `<old-branch-name>` to `<new-branch-name>`   |
+
+A third positional argument is an error.
 
 ### Other Utilities
 
-| Script                  | Purpose                                    |
-| :---------------------- | :----------------------------------------- |
-| `add-spdx.sh`           | Add SPDX license headers to source files   |
-| `retag.sh`              | Recreate a Git tag at a different commit   |
-| `restore-force-eval.sh` | Force re-evaluation of NuGet restore       |
+| Script                   | Purpose                                                                                                                                                              |
+| :----------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `add-spdx.sh`            | Add SPDX license headers to source files                                                                                                                             |
+| `re-tag.sh`              | Recreate a Git tag at a different commit                                                                                                                             |
+| `update-dependencies.sh` | Force re-evaluation of NuGet restore (`dotnet restore --force-evaluate`) across vm2 repos                                                                            |
+| `create-pr.sh`           | `gh` alias (`gh create-pr`) — creates a PR with its body auto-populated from the commit list between the default branch and HEAD, merged into the repo's PR template |
 
 ## 3. CI Scripts
 
@@ -243,11 +265,11 @@ the GitHub Actions environment and source `gh_core.sh`.
 
 Each CI script follows a **three-file pattern**:
 
-| File               | Purpose                         |
-| :----------------- | :------------------------------ |
-| `script.sh`        | Entry point — sources lib, runs |
-| `script.usage.sh`  | `--help` text                   |
-| `script.args.sh`   | Argument parsing                |
+| File              | Purpose                         |
+| :---------------- | :------------------------------ |
+| `script.sh`       | Entry point — sources lib, runs |
+| `script.usage.sh` | `--help` text                   |
+| `script.args.sh`  | Argument parsing                |
 
 ---
 
@@ -258,28 +280,28 @@ Only runs on `pull_request` events.
 
 **Called by:** `_ci.yaml`
 
-| Option         | Short | Default | Description                              |
-| :------------- | :---- | :------ | :--------------------------------------- |
-| `--base-ref`   | `-b`  | —       | Git ref to compare against (e.g. `origin/main`) |
+| Option       | Short | Default | Description                                     |
+| :----------- | :---- | :------ | :---------------------------------------------- |
+| `--base-ref` | `-b`  | —       | Git ref to compare against (e.g. `origin/main`) |
 
 **Allowed types:** : `feat`, `fix`, `perf`, `security`, `doc`, `docs`, `deps`, `revert`, `remove`, `refactor`, `style`, `test`, `tests`, `ci`, `chore`
 
-|   Type:    | Use when:                                           | Bump:     |
-|:-----------| :-------------------------------------------------- | :-------- |
-| `!`        | Backwards incompatibility                           | major     |
-| `feat`     | New feature                                         | minor     |
-| `fix`      | Bug fix                                             | patch     |
-| `perf`     | Performance improvement                             | patch     |
-| `security` | Security fix or hardening                           | patch     |
-| `doc(s)`   | Documentation only                                  | patch     |
-| `deps`     | Dependencies changes                                | patch     |
-| `revert`   | Revert a previous commit                            | patch?    |
-| `remove`   | Remove feature or code                              | patch?    |
-| `refactor` | Code restructuring - no behavior change!            | patch?    |
-| `style`    | Formatting, whitespaces, etc. - no code change!     | n/a       |
-| `test(s)`  | Adding or updating unit, integration, perf. tests   | n/a       |
-| `ci`       | Build and CI/CD related changes                     | n/a       |
-| `chore`    | Insignificant build, tooling, config., etc.         | n/a       |
+| Type:      | Use when:                                         | Bump:  |
+| :--------- | :------------------------------------------------ | :----- |
+| `!`        | Backwards incompatibility                         | major  |
+| `feat`     | New feature                                       | minor  |
+| `fix`      | Bug fix                                           | patch  |
+| `perf`     | Performance improvement                           | patch  |
+| `security` | Security fix or hardening                         | patch  |
+| `doc(s)`   | Documentation only                                | patch  |
+| `deps`     | Dependencies changes                              | patch  |
+| `revert`   | Revert a previous commit                          | patch? |
+| `remove`   | Remove feature or code                            | patch? |
+| `refactor` | Code restructuring - no behavior change!          | patch? |
+| `style`    | Formatting, whitespaces, etc. - no code change!   | n/a    |
+| `test(s)`  | Adding or updating unit, integration, perf. tests | n/a    |
+| `ci`       | Build and CI/CD related changes                   | n/a    |
+| `chore`    | Insignificant build, tooling, config., etc.       | n/a    |
 
 > [!NOTE]
 > The type keywords are defined in the vm2.DevOps script: [vm2.DevOps/scripts/bash/lib/_constants.sh](../vm2.DevOps/scripts/bash/lib/_constants.sh) and should be kept in sync with:
@@ -297,20 +319,30 @@ downstream jobs.
 
 **Called by:** `_ci.yaml`
 
-| Option                   | Short  | Default              | Description                                  |
-| :----------------------- | :----- | :------------------- | :------------------------------------------- |
-| `--build-projects`       | `-bp`  | auto-detect          | JSON array of project paths to build         |
-| `--test-projects`        | `-tp`  | —                    | JSON array of test project paths             |
-| `--benchmark-projects`   | `-bmp` | —                    | JSON array of benchmark project paths        |
-| `--package-projects`     | `-pp`  | —                    | JSON array of project paths to pack          |
-| `--runners-os`           | `-os`  | `["ubuntu-latest"]`  | JSON array of runner OS monikers             |
-| `--dotnet-version`       | `-dn`  | `10.0.x`             | .NET SDK version                             |
-| `--configuration`        | `-c`   | `Release`            | Build configuration                          |
-| `--define`               | `-d`   | `""`                 | Preprocessor symbols                         |
-| `--min-coverage-pct`     | `-min` | `80`                 | Minimum code coverage (50–100)               |
-| `--max-regression-pct`   | `-max` | `20`                 | Maximum benchmark regression (0–50)          |
-| `--minver-tag-prefix`    | `-mp`  | `v`                  | MinVer tag prefix                            |
-| `--minver-prerelease-id` | `-mi`  | `preview.0`          | MinVer pre-release identifiers               |
+Only `--configuration` has a short form among the common dotnet options (`-c`); `--define`, `--minver-tag-prefix`,
+`--minver-prerelease-id`, `--framework`, `--runtime`, and `--artifacts-path` are long-form only (see
+`get_common_dotnet_arg()` in `scripts/bash/lib/_dotnet_args.sh`). There is no `--dotnet-version` option any more --
+the .NET SDK version comes from `global.json`, not a CI input.
+
+| Option                         | Short  | Default             | Description                           |
+| :----------------------------- | :----- | :------------------ | :------------------------------------ |
+| `--build-projects`             | `-bp`  | auto-detect         | JSON array of project paths to build  |
+| `--test-projects`              | `-tp`  | —                   | JSON array of test project paths      |
+| `--benchmark-projects`         | `-bmp` | —                   | JSON array of benchmark project paths |
+| `--package-projects`           | `-pp`  | —                   | JSON array of project paths to pack   |
+| `--runners-os`                 | `-os`  | `["ubuntu-latest"]` | JSON array of runner OS monikers      |
+| `--define`                     |        | `""`                | Preprocessor symbols                  |
+| `--min-coverage-pct`           | `-min` | `80`                | Minimum code coverage (50–100)        |
+| `--max-regression-pct`         | `-max` | `20`                | Maximum benchmark regression (0–50)   |
+| `--max-gen1-collects`          | `-g1`  | `2`                 | Max Gen1 GC collections per 1000 ops  |
+| `--max-gen2-collects`          | `-g2`  | `1`                 | Max Gen2 GC collections per 1000 ops  |
+| `--minver-tag-prefix`          |        | `v`                 | MinVer tag prefix                     |
+| `--minver-prerelease-id`       |        | `preview.0`         | MinVer pre-release identifiers        |
+| `--reset-benchmark-thresholds` | `-rt`  | `false`             | Reset Bencher thresholds for this run |
+| `--skip-build`                 | `-sb`  | `false`             | Skip the build job                    |
+| `--skip-tests`                 | `-st`  | `false`             | Skip the test job                     |
+| `--skip-benchmarks`            | `-sbm` | `false`             | Skip the benchmarks job               |
+| `--skip-packages`              | `-sp`  | `false`             | Skip the pack job                     |
 
 **Outputs:** All inputs echoed to `$GITHUB_OUTPUT` in `kebab-case` format.
 
@@ -322,15 +354,21 @@ Compiles a .NET project or solution.
 
 **Called by:** `_build.yaml`
 
-| Option                   | Short | Default         | Description                    |
-| :----------------------- | :---- | :-------------- | :----------------------------- |
-| `--build-project`        | `-bp` | auto-detect     | Path to project/solution       |
-| `--configuration`        | `-c`  | `Release`       | Build configuration            |
-| `--define`               | `-d`  | `""`            | Preprocessor symbols           |
-| `--minver-tag-prefix`    | `-mp` | `v`             | MinVer tag prefix              |
-| `--minver-prerelease-id` | `-mi` | `preview.0`     | MinVer pre-release identifiers |
-| `--nuget-username`       |       | `$GH_ACTOR`     | NuGet auth username            |
-| `--nuget-password`       |       | `$GH_TOKEN`     | NuGet auth token               |
+Only `--configuration` has a short form (`-c`) among the common dotnet options; `--define`, `--minver-tag-prefix`,
+`--minver-prerelease-id` are long-form only.
+
+| Option                   | Short | Default     | Description                    |
+| :----------------------- | :---- | :---------- | :----------------------------- |
+| `--build-project`        | `-bp` | auto-detect | Path to project/solution       |
+| `--configuration`        | `-c`  | `Release`   | Build configuration            |
+| `--define`               |       | `""`        | Preprocessor symbols           |
+| `--minver-tag-prefix`    |       | `v`         | MinVer tag prefix              |
+| `--minver-prerelease-id` |       | `preview.0` | MinVer pre-release identifiers |
+| `--nuget-username`       |       | `$GH_ACTOR` | NuGet auth username            |
+| `--nuget-password`       |       | `$GH_TOKEN` | NuGet auth token               |
+
+`_build.yaml` currently invokes `build.sh` with only the project path and `--define`; the MinVer and Configuration
+values are picked up from environment variables / `Directory.Build.props` rather than being passed explicitly.
 
 ---
 
@@ -341,15 +379,18 @@ Runs tests and collects code coverage. Assumes project layout:
 
 **Called by:** `_test.yaml`
 
-| Option                   | Short  | Default         | Description                          |
-| :----------------------- | :----- | :-------------- | :----------------------------------- |
-| `<test-project-path>`    |        | `$TEST_PROJECT` | Positional: path to test project     |
-| `--configuration`        | `-c`   | `Release`       | Build configuration                  |
-| `--define`               | `-d`   | `""`            | Preprocessor symbols                 |
-| `--min-coverage-pct`     | `-min` | `80`            | Minimum coverage percentage (50–100) |
-| `--minver-tag-prefix`    | `-mp`  | `v`             | MinVer tag prefix                    |
-| `--minver-prerelease-id` | `-mi`  | `preview.0`     | MinVer pre-release identifiers       |
-| `--artifacts`            | `-a`   | `TestArtifacts` | Artifacts output directory           |
+Only `--configuration` has a short form (`-c`) among the common dotnet options; `--define`, `--minver-tag-prefix`,
+`--minver-prerelease-id`, `--artifacts-path` are long-form only.
+
+| Option                   | Short  | Default                               | Description                                                        |
+| :----------------------- | :----- | :------------------------------------ | :----------------------------------------------------------------- |
+| `<test-project-path>`    |        | `$TEST_PROJECT`                       | Positional: path to test project                                   |
+| `--configuration`        | `-c`   | `Release`                             | Build configuration                                                |
+| `--define`               |        | `""`                                  | Preprocessor symbols                                               |
+| `--min-coverage-pct`     | `-min` | `80`                                  | Minimum coverage percentage (50–100)                               |
+| `--minver-tag-prefix`    |        | `v`                                   | MinVer tag prefix                                                  |
+| `--minver-prerelease-id` |        | `preview.0`                           | MinVer pre-release identifiers                                     |
+| `--artifacts-path`       |        | resolved from `Directory.Build.props` | Artifacts output directory (there is no `--artifacts`/`-a` option) |
 
 **Output:** `results-dir` → `$GITHUB_OUTPUT`
 
@@ -362,16 +403,19 @@ Runs BenchmarkDotNet benchmarks. Assumes layout:
 
 **Called by:** `_benchmarks.yaml`
 
-| Option                   | Short  | Default              | Description                           |
-| :----------------------- | :----- | :------------------- | :------------------------------------ |
-| `<bm-project-path>`      |        | `$BENCHMARK_PROJECT` | Positional: path to benchmark project |
-| `--configuration`        | `-c`   | `Release`            | Build configuration                   |
-| `--define`               | `-d`   | `""`                 | Preprocessor symbols                  |
-| `--max-regression-pct`   | `-max` | `20`                 | Max regression percentage (0–50)      |
-| `--minver-tag-prefix`    | `-mp`  | `v`                  | MinVer tag prefix                     |
-| `--minver-prerelease-id` | `-mi`  | `preview.0`          | MinVer pre-release identifiers        |
-| `--artifacts`            | `-a`   | `BenchmarkArtifacts` | Artifacts output directory            |
-| `--short-run`            | `-s`   | —                    | Shortcut for `--define SHORT_RUN`     |
+Only `--configuration` has a short form (`-c`) among the common dotnet options; `--define`, `--minver-tag-prefix`,
+`--minver-prerelease-id`, `--artifacts-path` are long-form only. There is no `--short-run`/`-s` option; `SHORT_RUN` is
+applied via `--define SHORT_RUN` instead (see the push de-dupe logic in ARCHITECTURE.md).
+
+| Option                   | Short  | Default                               | Description                           |
+| :----------------------- | :----- | :------------------------------------ | :------------------------------------ |
+| `<bm-project-path>`      |        | `$BENCHMARK_PROJECT`                  | Positional: path to benchmark project |
+| `--configuration`        | `-c`   | `Release`                             | Build configuration                   |
+| `--define`               |        | `""`                                  | Preprocessor symbols                  |
+| `--max-regression-pct`   | `-max` | `20`                                  | Max regression percentage (0–50)      |
+| `--minver-tag-prefix`    |        | `v`                                   | MinVer tag prefix                     |
+| `--minver-prerelease-id` |        | `preview.0`                           | MinVer pre-release identifiers        |
+| `--artifacts-path`       |        | resolved from `Directory.Build.props` | Artifacts output directory            |
 
 **Output:** `results-dir` → `$GITHUB_OUTPUT`
 
@@ -379,17 +423,26 @@ Runs BenchmarkDotNet benchmarks. Assumes layout:
 
 ### pack.sh
 
-Validates that a project can be packed into a NuGet package (dry-run, no publish).
+Validates that a project can be packed into a NuGet package (dry-run, no publish, unless `--build` is `true`).
 
 **Called by:** `_pack.yaml`
 
-| Option                   | Short | Default     | Description                    |
-| :----------------------- | :---- | :---------- | :----------------------------- |
-| `--package-project`      | `-pp` | —           | Path to the project to pack    |
-| `--configuration`        | `-c`  | `Release`   | Build configuration            |
-| `--define`               | `-d`  | `""`        | Preprocessor symbols           |
-| `--minver-tag-prefix`    | `-mp` | `v`         | MinVer tag prefix              |
-| `--minver-prerelease-id` | `-mi` | `preview.0` | MinVer pre-release identifiers |
+The project path is a positional argument, not `--package-project`/`-pp`. Only `--configuration` has a short form
+(`-c`) among the common dotnet options; `--define`, `--minver-tag-prefix`, `--minver-prerelease-id` are long-form
+only.
+
+| Option                   | Short | Default            | Description                                            |
+| :----------------------- | :---- | :----------------- | :----------------------------------------------------- |
+| `<package-project-path>` |       | `$PACKAGE_PROJECT` | Positional: path to the project to pack                |
+| `--reason`               | `-r`  | `release build`    | Reason for release; recorded as a package release note |
+| `--build`                | `-b`  | `false`            | Build the project before packing                       |
+| `--configuration`        | `-c`  | `Release`          | Build configuration                                    |
+| `--define`               |       | `""`               | Preprocessor symbols                                   |
+| `--minver-tag-prefix`    |       | `v`                | MinVer tag prefix                                      |
+| `--minver-prerelease-id` |       | `preview.0`        | MinVer pre-release identifiers                         |
+
+`dotnet_pack()` resolves the project's `Configuration` MSBuild property itself when `--configuration` is not given,
+since `dotnet pack` (unlike `dotnet build`/`dotnet msbuild`) defaults to `Release` on its own.
 
 ---
 
@@ -417,11 +470,11 @@ Determines the next prerelease version from conventional commit messages.
 
 **Called by:** `_prerelease.yaml`
 
-| Option                   | Short | Default      | Description                                            |
-| :----------------------- | :---- | :----------- | :----------------------------------------------------- |
-| `--minver-tag-prefix`    | `-mp` | `v`          | MinVer tag prefix                                      |
-| `--minver-prerelease-id` | `-mi` | `preview.0`  | MinVer pre-release identifiers (e.g., `preview.0`)     |
-| `--reason`               | `-r`  | `prerelease` | Reason for release                                     |
+| Option                   | Short | Default      | Description                                        |
+| :----------------------- | :---- | :----------- | :------------------------------------------------- |
+| `--minver-tag-prefix`    | `-mp` | `v`          | MinVer tag prefix                                  |
+| `--minver-prerelease-id` | `-mi` | `preview.0`  | MinVer pre-release identifiers (e.g., `preview.0`) |
+| `--reason`               | `-r`  | `prerelease` | Reason for release                                 |
 
 **Outputs:** `prerelease-version`, `prerelease-tag`, `reason` → `$GITHUB_OUTPUT`
 
@@ -440,11 +493,12 @@ Updates CHANGELOG.md via git-cliff, then creates and pushes the tag (release or 
 `changelog/cliff.prerelease.toml` (prerelease) in the repo. Config is auto-selected based
 on the tag type.
 
-| Option                | Short | Default          | Description                                                      |
-| :-------------------- | :---- | :--------------- | :--------------------------------------------------------------- |
-| `--tag`               | `-t`  | —                | Tag to create (e.g., `v1.2.3` or `v1.3.0-preview.1`)             |
-| `--minver-tag-prefix` | `-p`  | `v`              | MinVer tag prefix                                                |
-| `--reason`            | `-r`  | auto-detected    | Reason (included in tag annotation); defaults based on tag type  |
+| Option                 | Short | Default       | Description                                                                                              |
+| :--------------------- | :---- | :------------ | :------------------------------------------------------------------------------------------------------- |
+| `--tag`                | `-t`  | —             | Tag to create (e.g., `v1.2.3` or `v1.3.0-preview.1`)                                                     |
+| `--minver-tag-prefix`  | `-p`  | `v`           | MinVer tag prefix                                                                                        |
+| `--reason`             | `-r`  | auto-detected | Reason (included in tag annotation); defaults based on tag type                                          |
+| `--needs-empty-commit` |       | `false`       | `true` to create an empty commit before the changelog/tag (promoting a prerelease-tagged HEAD to stable) |
 
 ---
 
@@ -494,17 +548,20 @@ Per-repo run loop: discovers every benchmark project under `benchmarks/` (recurs
 
 **Called by:** `_rebuild_bench_history.yaml`
 
-| Option              | Short | Default              | Description                                        |
-| :------------------ | :---- | :------------------- | :------------------------------------------------- |
-| `<bm-project-path>` |       | `$BENCHMARK_PROJECT` | Positional: one project (else discover all)        |
-| `--repeat`          | `-n`  | `10`                 | Independent runs to record per benchmark           |
-| `--configuration`   | `-c`  | `Release`            | Build configuration                                |
-| `--define`          | `-d`  | `""`                 | Preprocessor symbols (empty = full, non-SHORT_RUN) |
-| `--artifacts`       | `-a`  | `BenchmarkArtifacts` | Artifacts output directory                         |
-| `--bencher-project` | `-bp` | `$BENCHER_PROJECT`   | Bencher project slug (required)                    |
-| `--bencher-testbed` | `-tb` | `$BENCHER_TESTBED`   | Bencher testbed (required)                         |
-| `--bencher-branch`  | `-br` | `main`               | Bencher branch to record to                        |
-| `--bencher-adapter` | `-ad` | `c_sharp_dot_net`    | Bencher adapter                                    |
+| Option                   | Short | Default              | Description                                        |
+| :----------------------- | :---- | :------------------- | :------------------------------------------------- |
+| `<bm-project-path>`      |       | `$BENCHMARK_PROJECT` | Positional: one project (else discover all)        |
+| `--repeat`               | `-n`  | `10`                 | Independent runs to record per benchmark           |
+| `--define`               | `-d`  | `""`                 | Preprocessor symbols (empty = full, non-SHORT_RUN) |
+| `--minver-tag-prefix`    | `-mp` | `v`                  | MinVer tag prefix                                  |
+| `--minver-prerelease-id` | `-mi` | `preview.0`          | MinVer pre-release identifiers                     |
+| `--bencher-project`      | `-bp` | `$BENCHER_PROJECT`   | Bencher project slug (required)                    |
+| `--bencher-testbed`      | `-tb` | `$BENCHER_TESTBED`   | Bencher testbed (required)                         |
+| `--bencher-branch`       | `-br` | `main`               | Bencher branch to record to                        |
+| `--bencher-adapter`      | `-ad` | `c_sharp_dot_net`    | Bencher adapter                                    |
+
+There is no `--configuration`/`-c` or `--artifacts`/`-a` option: this script does not take a Configuration override,
+and the artifacts path is resolved internally via `get_artifacts_path` from the project's own `Directory.Build.props`.
 
 **Auth:** `$BENCHER_API_TOKEN` (required).
 
@@ -517,22 +574,32 @@ sets secrets/variables, configures repo settings, Actions permissions, and branc
 
 **Requires:** `gh` (authenticated), `jq`
 
-| Option             | Short | Default     | Description                                                        |
-| :----------------- | :---- | :---------- | :----------------------------------------------------------------- |
-| parameter          |       | current dir | Path to the git repository root of working tree                    |
-| `--vm2-repos`      |       | `$VM2_REPOS`| Path to the directory containing all vm2 repositories              |
-| `--owner`          | `-o`  | `vmelamed`  | GitHub owner/org (used with `--name`)                              |
-| `--repo-name`      | `-n`  |             | The name of the GitHub repository                                  |
-| `--branch`         | `-b`  | `main`      | GitHub default branch                                              |
-| `--visibility`     |       | `public`    | `public` or `private`                                              |
-| `--ruleset-name`   | `-rs` |             | The name of the ruleset for protecting the default branch          |
-| `--description`    | `-d`  |             | Short description for the GitHub repository (max 350 chars)        |
-| `--ssh`            | `-s`  | true        | Use SSH URL for the remote origin                                  |
-| `--https`          | `-t`  | false       | Use HTTPS URL for the remote origin                                |
-| `--force-defaults` | `-f`  | false       | If the value of a repository variable is different from the default, assign it the default, without prompting for confirmation |
-| `--audit`          |       | —           | Read-only: report current vs expected settings, variables, secrets |
+| Option                  | Short  | Default      | Description                                                                                                             |
+| :---------------------- | :----- | :----------- | :---------------------------------------------------------------------------------------------------------------------- |
+| `<repo-directory>`      |        | current dir  | Positional: path to the git repository's working tree                                                                   |
+| `--vm2-repos`           |        | `$VM2_REPOS` | Path to the directory containing all vm2 repositories                                                                   |
+| `--owner`               | `-o`   | `vmelamed`   | GitHub owner/org for the repository                                                                                     |
+| `--repo-name`           | `-n`   |              | The name of the GitHub repository (prompted interactively if omitted)                                                   |
+| `--branch`              | `-b`   | `main`       | GitHub default branch                                                                                                   |
+| `--visibility`          |        | `public`     | `public` or `private`                                                                                                   |
+| `--ruleset-name`        | `-rs`  |              | The name of the ruleset for protecting the default branch                                                               |
+| `--description`         |        |              | Short description for the GitHub repository (max 350 chars)                                                             |
+| `--ssh`                 | `-s`   | true         | Use SSH for the remote origin (mutually exclusive with `--https`)                                                       |
+| `--https`               | `-t`   | false        | Use HTTPS for the remote origin                                                                                         |
+| `--interactive-vars`    | `-iv`  | false        | Prompt interactively for repository variable values instead of using defaults                                           |
+| `--interactive-secrets` | `-is`  | false        | Prompt interactively for repository secret values instead of placeholders                                               |
+| `--interactive`         | `-i`   | false        | Shortcut for `--interactive-vars` + `--interactive-secrets`                                                             |
+| `--purge-vars`          | `-pv`  | false        | Delete unknown or obsolete repository variables                                                                         |
+| `--purge-secrets`       | `-ps`  | false        | Delete unknown or obsolete repository secrets                                                                           |
+| `--purge`               | `-p`   | false        | Shortcut for `--purge-vars` + `--purge-secrets`                                                                         |
+| `--skip-local-config`   | `-slc` | false        | Skip configuring local Git settings                                                                                     |
+| `--audit`               | `-a`   | false        | Read-only: report current vs expected settings, variables, secrets (now also reports unknown/obsolete vars and secrets) |
+| `--current-branch`      | `-cb`  | false        | Use the current branch of vm2.DevOps/the SoT repo instead of `main`                                                     |
 
-Either `--repo` or `--name` is required (but not both).
+`--audit` is mutually exclusive with `--interactive-vars`, `--interactive-secrets`, `--interactive`, `--purge-vars`,
+`--purge-secrets`, and `--purge`. There is no `--repo`, `--name` (long form of `-n` is `--repo-name`), or
+`--force-defaults`/`-f` option any more; the latter's force-assign-defaults behavior is now covered by running
+without `--interactive-vars`/`--interactive-secrets`.
 
 See [CONFIGURATION.md — Repository Setup via UI](CONFIGURATION.md#repository-setup-via-ui) for the
 equivalent manual steps.

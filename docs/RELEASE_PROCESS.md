@@ -42,12 +42,12 @@ and stable releases are batched by human decision.
 
 All version numbers are derived from Git tags by [MinVer](https://github.com/adamralph/minver).
 
-| Aspect                         | Value                                                      |
-| :----------------------------- | :--------------------------------------------------------- |
-| NuGet package version          | Git tag (exact match for releases and prereleases)         |
-| `AssemblyInformationalVersion` | Full SemVer string including prerelease + commit metadata  |
-| `FileVersion`                  | `Major.Minor.Patch.0`                                      |
-| `AssemblyVersion`              | `Major.0.0.0` (MinVer default — keeps binding stable)      |
+| Aspect                         | Value                                                     |
+| :----------------------------- | :-------------------------------------------------------- |
+| NuGet package version          | Git tag (exact match for releases and prereleases)        |
+| `AssemblyInformationalVersion` | Full SemVer string including prerelease + commit metadata |
+| `FileVersion`                  | `Major.Minor.Patch.0`                                     |
+| `AssemblyVersion`              | `Major.0.0.0` (MinVer default — keeps binding stable)     |
 
 MinVer is declared once in `Directory.Build.props` (via Central Package Management) so all packable projects get it:
 
@@ -63,10 +63,10 @@ The tag prefix is `v` (e.g. `v1.2.3`), configured via the `MINVERTAGPREFIX` repo
 
 ## Two Publishing Flows
 
-| Flow       | Trigger                                             | Version Format                    | NuGet Package |
-| :--------- | :-------------------------------------------------- | :-------------------------------- | :------------ |
-| Prerelease | PR merge → push to `main` → CI success (automated)  | `X.Y.Z-preview.N` (computed)      | Preview       |
-| Release    | Manual `workflow_dispatch`                          | `X.Y.Z` (computed)                | Stable        |
+| Flow       | Trigger                                            | Version Format               | NuGet Package |
+| :--------- | :------------------------------------------------- | :--------------------------- | :------------ |
+| Prerelease | PR merge → push to `main` → CI success (automated) | `X.Y.Z-preview.N` (computed) | Preview       |
+| Release    | Manual `workflow_dispatch`                         | `X.Y.Z` (computed)           | Stable        |
 
 Both flows share the same `changelog-and-tag.sh` and `pack.sh` scripts for changelog updates, tagging, and publishing. Note that
 the actual publishing of the NuGet packages happens in the top-level consumer workflows (`Prerelease.yaml` and `Release.yaml`).
@@ -82,37 +82,34 @@ PR merged → push to main → CI workflow runs
                         Prerelease workflow
                               │
                               ↓
-                    ┌─────────────────────┐
-                    │  compute-version    │
-                    │  (job 1)            │
-                    │  * scan commits     │
-                    │  * determine bump   │
-                    │  * compute preview  │
-                    │    counter          │
-                    └─────────┬───────────┘
-                              │
-                              ↓
-                    ┌─────────────────────┐
-                    │  changelog-and-tag  │
-                    │  (job 2)            │
-                    │  * git-cliff with   │
-                    │    cliff.prerelease │
-                    │    .toml            │
-                    │  * commit + push    │
-                    │    CHANGELOG.md     │
-                    │  * git tag + push   │
-                    └─────────┬───────────┘
-                              │
-                              ↓
-                    ┌──────────────────────┐
-                    │ package-and-publish  │
-                    │  (job 3, per project)│
-                    │  * checkout tag      │
-                    │  * dotnet restore    │
-                    │  * dotnet pack       │
-                    │  * dotnet nuget push │
-                    └──────────────────────┘
+                    ┌───────────────────────┐
+                    │  prepare-prerelease   │
+                    │  (job 1)              │
+                    │  * scan commits       │
+                    │  * determine bump     │
+                    │  * compute preview    │
+                    │    counter            │
+                    │  * git-cliff with     │
+                    │    cliff.prerelease   │
+                    │    .toml              │
+                    │  * commit + push      │
+                    │    CHANGELOG.md       │
+                    │  * git tag + push     │
+                    └───────────┬───────────┘
+                                │
+                                ↓
+                    ┌───────────────────────┐
+                    │  package              │
+                    │  (job 2, per project) │
+                    │  * checkout tag       │
+                    │  * dotnet restore     │
+                    │  * dotnet pack        │
+                    │  * upload artifact    │
+                    └───────────────────────┘
 ```
+
+(The actual `dotnet nuget push` happens afterward, in the consumer's own `Prerelease.yaml`, not in this diagram's
+`package` job — see [Architecture — NuGet Authentication](ARCHITECTURE.md#nuget-authentication).)
 
 **Trigger guard** (in consumer `Prerelease.yaml`):
 
@@ -217,15 +214,17 @@ Manual workflow_dispatch (with manually entered and logged reason for release)
            │
            ↓
   ┌────────────────────┐
-  │  release           │
+  │  package           │
   │  (job 3, per       │
   │   project)         │
   │  * checkout tag    │
   │  * dotnet restore  │
   │  * dotnet pack     │
-  │  * dotnet nuget    │
-  │    push            │
+  │  * upload artifact │
   └────────────────────┘
+
+(The actual `dotnet nuget push` happens afterward, in the consumer's own `Release.yaml`, not in this `package` job —
+see [Architecture — NuGet Authentication](ARCHITECTURE.md#nuget-authentication).)
 ```
 
 ### Release Version Calculation Algorithm
@@ -299,38 +298,39 @@ Subsequent PR merges create prerelease packages automatically. The first stable 
 
 ## NuGet Server Selection
 
-The `NUGET_SERVER` variable (or `nuget-server` input) determines where packages are pushed:
+The `NUGET_SERVER` repository variable determines where packages are pushed. It is read entirely in the consumer's own
+`Prerelease.yaml`/`Release.yaml` (not as an input of `_prerelease.yaml`/`_release.yaml`, which no longer accept one):
 
-| Value      | Server                                             | API Key Secret           |
-| :--------- | :------------------------------------------------- | :----------------------- |
-| `github`   | `https://nuget.pkg.github.com/{owner}/index.json`  | `NUGET_API_KEY`          |
-| `nuget`    | `https://api.nuget.org/v3/index.json`              | `NUGET_API_KEY`          |
-| Custom URL | The URL as provided                                | `NUGET_API_KEY`          |
+| Value      | Server                                            | API Key Secret  |
+| :--------- | :------------------------------------------------ | :-------------- |
+| `github`   | `https://nuget.pkg.github.com/{owner}/index.json` | `NUGET_API_KEY` |
+| `nuget`    | `https://api.nuget.org/v3/index.json`             | `NUGET_API_KEY` |
+| Custom URL | The URL as provided                               | `NUGET_API_KEY` |
 
 ## Quick Reference
 
-| Action                          | How                                                                         |
-| :------------------------------ | :-------------------------------------------------------------------------- |
-| Trigger a prerelease            | Merge a PR to `main` (automatic after CI)                                   |
-| Trigger a manual prerelease     | Actions → Publish NuGet Pre-Release → Run workflow                          |
-| Trigger a stable release        | Actions → Publish NuGet Stable Release → Run workflow (provide reason)      |
-| Inspect version locally         | `dotnet build -c Release -p:MinVerVerbosity=detailed`                       |
-| Dry-run pack                    | `dotnet pack -c Release -o artifacts -p:MinVerTagPrefix=v`                  |
-| Force a prerelease without code | `git commit --allow-empty -m "chore: trigger prerelease" && git push`       |
-| Bootstrap first tag             | `git tag -a v0.1.0 -m "Initial baseline" && git push origin v0.1.0`         |
+| Action                          | How                                                                    |
+| :------------------------------ | :--------------------------------------------------------------------- |
+| Trigger a prerelease            | Merge a PR to `main` (automatic after CI)                              |
+| Trigger a manual prerelease     | Actions → Publish NuGet Pre-Release → Run workflow                     |
+| Trigger a stable release        | Actions → Publish NuGet Stable Release → Run workflow (provide reason) |
+| Inspect version locally         | `dotnet build -c Release -p:MinVerVerbosity=detailed`                  |
+| Dry-run pack                    | `dotnet pack -c Release -o artifacts -p:MinVerTagPrefix=v`             |
+| Force a prerelease without code | `git commit --allow-empty -m "chore: trigger prerelease" && git push`  |
+| Bootstrap first tag             | `git tag -a v0.1.0 -m "Initial baseline" && git push origin v0.1.0`    |
 
 ## Troubleshooting
 
-| Symptom                              | Cause                       | Fix                                                                            |
-| :----------------------------------- | :-------------------------- | :----------------------------------------------------------------------------- |
-| Version always `0.0.0-alpha.0`       | No reachable tag            | Create initial tag (`v0.1.0`)                                                  |
-| Prerelease not created after PR      | CI didn't succeed           | Check CI workflow run; fix failures                                            |
-| Wrong bump type (patch vs minor)     | Commit messages don't match | Use conventional commit format: `feat:` for minor, `fix:` for patch            |
-| Tag already exists error             | Duplicate release attempt   | Delete the tag, or release with a higher version                               |
-| HEAD already tagged (stable)         | Trying to re-release        | Branch `main` again, do a new PR, and release with a higher version            |
-| HEAD already tagged (prerelease)     | Promoting prerelease        | Handled automatically — an empty commit advances HEAD past the prerelease tag  |
-| NuGet push fails (401/403)           | Invalid or missing API key  | Verify the `NUGET_API_KEY` secret is issued by the configured `NUGET_SERVER`   |
-| Package version already exists       | Immutable NuGet versions    | Increment version; deprecate old package via NuGet.org UI                      |
+| Symptom                          | Cause                       | Fix                                                                           |
+| :------------------------------- | :-------------------------- | :---------------------------------------------------------------------------- |
+| Version always `0.0.0-alpha.0`   | No reachable tag            | Create initial tag (`v0.1.0`)                                                 |
+| Prerelease not created after PR  | CI didn't succeed           | Check CI workflow run; fix failures                                           |
+| Wrong bump type (patch vs minor) | Commit messages don't match | Use conventional commit format: `feat:` for minor, `fix:` for patch           |
+| Tag already exists error         | Duplicate release attempt   | Delete the tag, or release with a higher version                              |
+| HEAD already tagged (stable)     | Trying to re-release        | Branch `main` again, do a new PR, and release with a higher version           |
+| HEAD already tagged (prerelease) | Promoting prerelease        | Handled automatically — an empty commit advances HEAD past the prerelease tag |
+| NuGet push fails (401/403)       | Invalid or missing API key  | Verify the `NUGET_API_KEY` secret is issued by the configured `NUGET_SERVER`  |
+| Package version already exists   | Immutable NuGet versions    | Increment version; deprecate old package via NuGet.org UI                     |
 
 ### Branch Protection Bypass
 
