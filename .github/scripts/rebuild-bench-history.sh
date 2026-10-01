@@ -12,7 +12,6 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
-# shellcheck disable=SC1091 # Not following: ./core.sh: openBinaryFile: does not exist (No such file or directory)
 source "$lib_dir/gh_core.sh"
 
 declare -xra vm2_repositories

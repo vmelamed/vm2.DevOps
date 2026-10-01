@@ -45,9 +45,13 @@ declare -gxi err_invalid_arguments
     assert_output "myartifacts"
 }
 
-@test "get_common_dotnet_arg: only --configuration has a short form -- -d/-f/-r/-a/-mp/-mi are no longer recognized" {
+@test "get_common_dotnet_arg: -d/-c/-tfm/-rid are the only recognized short forms -- -a/-mp/-mi are not" {
     local _opt
-    for _opt in -d -f -r -a -mp -mi; do
+    for _opt in -d -c -tfm -rid; do
+        run get_common_dotnet_arg "$_opt" "some-value"
+        assert_success
+    done
+    for _opt in -a -mp -mi; do
         run get_common_dotnet_arg "$_opt" "some-value"
         assert_failure "$failure"
     done

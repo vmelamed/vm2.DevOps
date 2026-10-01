@@ -2,7 +2,6 @@
 # Copyright (c) 2025-2026 Val Melamed
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
-# shellcheck disable=SC1091 # Disable warnings for word splitting and globbing issues in the following source commands.
 
 #=============================================================================================
 # This script defines several GitHub specific constants, variables, and helper functions

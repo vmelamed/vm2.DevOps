@@ -26,9 +26,9 @@ declare -xri negative=1                 # Boolean return codes (falsy), you cann
 declare -xri eof=1                      # Alias for failure: end-of-file is encountered  (e.g., when using the read command)
 
 # or comparison result constants
-declare -xri rc_equal=0
-declare -xri rc_greater_than=1
-declare -xri rc_less_than=255
+declare -xri rc_equal=0                 # akin to 0 in signed integer comparison
+declare -xri rc_greater_than=1          # akin to 1 in signed integer comparison
+declare -xri rc_less_than=255           # akin to -1 in signed integer comparison
 
 # RETURN CODES THAT SHOULD NOT BE REUSED FOR OTHER PURPOSES:
 declare -xri err_invalid_arguments=2    # The number of the arguments is invalid or the validation of one or more parameters failed

@@ -1,7 +1,5 @@
+shell=bash
 external-sources=true
-source-path=$VM2_REPOS/vm2.DevOps/scripts/bash
-source-path=$VM2_REPOS/vm2.DevOps/scripts/bash/lib
-source-path=$VM2_REPOS/vm2.DevOps/.github/scripts
 enable=double-quote
 enable=check-sourced
 enable=add-default-case
@@ -11,3 +9,5 @@ enable=require-double-brackets
 enable=avoid-nullary-conditions
 enable=check-unassigned-uppercase
 disable=SC2119 # Use exit_if_has_errors "$@" if function's $1 should mean script's $1.
+disable=SC1091 # Every source target is resolved at runtime via real-path on BASH_SOURCE, not statically; a 'source=' directive
+               # resolves inconsistently between CLI and VSCode anyway.

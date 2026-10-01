@@ -255,7 +255,7 @@ declare -xr common_dotnet_parameters="\
                                 Note: nuget.org uses Trusted Publishing and does not need this value, whereas other package
                                 managers may still need it, e.g. GitHub Packages.
   -c, --configuration (Release|Debug)
-                                Build configuration ('Release' or 'Debug'). The only common dotnet option with a short form.
+                                Build configuration ('Release' or 'Debug').
                                 Overrides the initial value from the environment value \$CONFIGURATION or the default specified
                                 in the project file or Directory.Build.props file. Usually 'Debug' on a local machine or
                                 'Release' in CI and other automated build environments.
@@ -265,7 +265,7 @@ declare -xr common_dotnet_parameters="\
   -rid, --runtime <RID>         Runtime identifier for the build. E.g., 'linux-x64' or '' for CPU and OS agnostic builds.
                                 Overrides the initial value from the environment value \$RUNTIME or the default specified in
                                 the project file or Directory.Build.props file. Usually '' for CPU and OS agnostic builds.
-  --artifacts-path <path>        Path to the root directory of the produced artifacts from the builds. The path MUST be relative
+  --artifacts-path <path>       Path to the root directory of the produced artifacts from the builds. The path MUST be relative
                                 to the root of the Git repository's working tree.
                                 Overrides the initial value from the environment value \$ARTIFACTS_PATH or the default specified
                                 in the project file or Directory.Build.props file. Usually 'artifacts' when artifact layout is

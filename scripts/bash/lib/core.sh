@@ -2,12 +2,12 @@
 # Copyright (c) 2025-2026 Val Melamed
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
-# shellcheck disable=SC1091 # Disable warnings for word splitting and globbing issues in the following source commands.
 
 #=============================================================================================
-# This script defines a number of general purpose functions by means of sourcing other scripts from the same directory.
-# For the functions to be invocable by other scripts, this script must be sourced.
-# When fatal parameter errors are detected, the script invokes exit, which leads to exiting the current shell.
+# This script defines a number of general purpose functions by means of sourcing other scripts
+# from the same directory. For the functions to be invocable by other scripts, this script
+# must be sourced too. When fatal parameter errors are detected, the script invokes exit,
+# which leads to exiting the current shell.
 #=============================================================================================
 
 #=============================================================================================
@@ -56,6 +56,8 @@ declare -xri err_invalid_arguments
 declare -xri err_argument_type
 declare -xri err_not_git_directory
 declare -xri err_argument_value
+
+declare -xr error_em
 
 declare -xr default__ignore
 declare -xr debugger
@@ -192,15 +194,16 @@ function execute()
 #   - If $3 is a valid boolean ('true' or 'false') it is consumed as the "ignore output" flag:
 #     when 'true', the command's `stdout` is redirected to `$_ignore` instead of the terminal.
 #     If $3 is not a boolean, it is treated as the start of the command to execute.
-#   - Consequence of the above: a command whose own name is literally 'true' or 'false' can never
-#     be retried -- it is always consumed as the output-suppression flag instead, leaving no
-#     command and causing an argument-count bug-exit. This is accepted, not a bug to fix: nothing
-#     sane would ever retry the literal command 'true' (always succeeds, retrying is pointless) or
-#     'false' (always fails identically, so every retry is wasted). If a real command ever needs
-#     that exact name, wrap it (`bash -c true`) to sidestep the ambiguity.
+#   - Consequence of the above: a command whose own name is literally 'true' or 'false' can
+#     never be retried -- it is always consumed as the output-suppression flag instead,
+#     leaving no command and causing an argument-count bug-exit. This is accepted, not a bug
+#     to fix: nothing sane would ever retry the literal command 'true' (always succeeds,
+#     retrying is pointless) or 'false' (always fails identically, so every retry is wasted).
+#     If a real command ever needs that exact name, wrap it (`bash -c true`) to sidestep the
+#     ambiguity.
 #
-# @arg $1 int max_attempts - maximum number of attempts
-# @arg $2 int delay - delay in seconds between retries
+# @arg $1 int `_max_attempts` - maximum number of attempts
+# @arg $2 int `_delay` - delay in seconds between retries
 # @arg $3 bool ignore output - if boolean, redirect the command's stdout to
 #    `$_ignore` when true (optional)
 # @arg $@ mixed command and arguments to execute
@@ -218,8 +221,6 @@ function execute()
 #---------------------------------------------------------------------------------------------
 function execute_with_retry()
 {
-    local -i _rc=$success
-
     (( $# >= 3 ))                   || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires at least three arguments (provided $#):" \
                                                                         "  - maximum number of attempts" \
                                                                         "  - delay in seconds between retries" \
@@ -228,8 +229,8 @@ function execute_with_retry()
     [[ ! -v 1 ]] || is_natural "$1" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 1, the maximum attempt count, to be a natural number (provided '${1:-<none>}')."
     [[ ! -v 2 ]] || is_natural "$2" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 2, the retry delay in seconds, to be a natural number (provided '${2:-<none>}')."
 
-    local _max_attempts=$1; shift
-    local _delay=$1; shift
+    local -i _max_attempts=$1; shift
+    local -i _delay=$1; shift
     local _output="/dev/stdout"
 
     # shellcheck disable=SC2086
@@ -237,10 +238,7 @@ function execute_with_retry()
     is_boolean "$1" && shift
 
     (( $# >= 1 ))                   || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires a command after the maximum-attempt, the delay arguments, and the optional output-suppression flag."
-
     exit_if_has_bugs
-
-    local _attempt=0
 
     if is_dry_run; then
         echo "dry-run$ $*" >&2
@@ -249,12 +247,12 @@ function execute_with_retry()
 
     local IFS=" "
     trace "Executing with retry (${BASH_SOURCE[1]:-} ${BASH_LINENO[0]:-}): $*"
+
+    local -i _rc=$success
+    local -i _attempt=0
     until "$@" 1>"$_output"; do
         _rc=$?
-        _attempt=$((_attempt + 1))
-        if [[ $_attempt -ge $_max_attempts ]]; then
-            return "$_rc"
-        fi
+        (( ++_attempt < _max_attempts )) || return "$_rc"
         warning "Command failed (attempt $_attempt/$_max_attempts). Retrying in ${_delay}s."
         sleep "$_delay"
     done

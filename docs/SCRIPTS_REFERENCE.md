@@ -319,10 +319,10 @@ downstream jobs.
 
 **Called by:** `_ci.yaml`
 
-Only `--configuration` has a short form among the common dotnet options (`-c`); `--define`, `--minver-tag-prefix`,
-`--minver-prerelease-id`, `--framework`, `--runtime`, and `--artifacts-path` are long-form only (see
-`get_common_dotnet_arg()` in `scripts/bash/lib/_dotnet_args.sh`). There is no `--dotnet-version` option any more --
-the .NET SDK version comes from `global.json`, not a CI input.
+Among the common dotnet options, `--define` (`-d`), `--configuration` (`-c`), `--framework` (`-tfm`), and `--runtime`
+(`-rid`) have short forms; `--minver-tag-prefix`, `--minver-prerelease-id`, and `--artifacts-path` are long-form only
+(see `get_common_dotnet_arg()` in `scripts/bash/lib/_dotnet_args.sh`). There is no `--dotnet-version` option any more
+-- the .NET SDK version comes from `global.json`, not a CI input.
 
 | Option                         | Short  | Default             | Description                           |
 | :----------------------------- | :----- | :------------------ | :------------------------------------ |
@@ -331,7 +331,7 @@ the .NET SDK version comes from `global.json`, not a CI input.
 | `--benchmark-projects`         | `-bmp` | —                   | JSON array of benchmark project paths |
 | `--package-projects`           | `-pp`  | —                   | JSON array of project paths to pack   |
 | `--runners-os`                 | `-os`  | `["ubuntu-latest"]` | JSON array of runner OS monikers      |
-| `--define`                     |        | `""`                | Preprocessor symbols                  |
+| `--define`                     | `-d`   | `""`                | Preprocessor symbols                  |
 | `--min-coverage-pct`           | `-min` | `80`                | Minimum code coverage (50–100)        |
 | `--max-regression-pct`         | `-max` | `20`                | Maximum benchmark regression (0–50)   |
 | `--max-gen1-collects`          | `-g1`  | `2`                 | Max Gen1 GC collections per 1000 ops  |
@@ -354,14 +354,14 @@ Compiles a .NET project or solution.
 
 **Called by:** `_build.yaml`
 
-Only `--configuration` has a short form (`-c`) among the common dotnet options; `--define`, `--minver-tag-prefix`,
-`--minver-prerelease-id` are long-form only.
+Among the common dotnet options, `--define` (`-d`) and `--configuration` (`-c`) have short forms; `--minver-tag-prefix`
+and `--minver-prerelease-id` are long-form only.
 
 | Option                   | Short | Default     | Description                    |
 | :----------------------- | :---- | :---------- | :----------------------------- |
 | `--build-project`        | `-bp` | auto-detect | Path to project/solution       |
 | `--configuration`        | `-c`  | `Release`   | Build configuration            |
-| `--define`               |       | `""`        | Preprocessor symbols           |
+| `--define`               | `-d`  | `""`        | Preprocessor symbols           |
 | `--minver-tag-prefix`    |       | `v`         | MinVer tag prefix              |
 | `--minver-prerelease-id` |       | `preview.0` | MinVer pre-release identifiers |
 | `--nuget-username`       |       | `$GH_ACTOR` | NuGet auth username            |
@@ -379,14 +379,14 @@ Runs tests and collects code coverage. Assumes project layout:
 
 **Called by:** `_test.yaml`
 
-Only `--configuration` has a short form (`-c`) among the common dotnet options; `--define`, `--minver-tag-prefix`,
-`--minver-prerelease-id`, `--artifacts-path` are long-form only.
+Among the common dotnet options, `--define` (`-d`) and `--configuration` (`-c`) have short forms; `--minver-tag-prefix`,
+`--minver-prerelease-id`, and `--artifacts-path` are long-form only.
 
 | Option                   | Short  | Default                               | Description                                                        |
 | :----------------------- | :----- | :------------------------------------ | :----------------------------------------------------------------- |
 | `<test-project-path>`    |        | `$TEST_PROJECT`                       | Positional: path to test project                                   |
 | `--configuration`        | `-c`   | `Release`                             | Build configuration                                                |
-| `--define`               |        | `""`                                  | Preprocessor symbols                                               |
+| `--define`               | `-d`   | `""`                                  | Preprocessor symbols                                               |
 | `--min-coverage-pct`     | `-min` | `80`                                  | Minimum coverage percentage (50–100)                               |
 | `--minver-tag-prefix`    |        | `v`                                   | MinVer tag prefix                                                  |
 | `--minver-prerelease-id` |        | `preview.0`                           | MinVer pre-release identifiers                                     |
@@ -403,15 +403,15 @@ Runs BenchmarkDotNet benchmarks. Assumes layout:
 
 **Called by:** `_benchmarks.yaml`
 
-Only `--configuration` has a short form (`-c`) among the common dotnet options; `--define`, `--minver-tag-prefix`,
-`--minver-prerelease-id`, `--artifacts-path` are long-form only. There is no `--short-run`/`-s` option; `SHORT_RUN` is
-applied via `--define SHORT_RUN` instead (see the push de-dupe logic in ARCHITECTURE.md).
+Among the common dotnet options, `--define` (`-d`) and `--configuration` (`-c`) have short forms; `--minver-tag-prefix`,
+`--minver-prerelease-id`, and `--artifacts-path` are long-form only. There is no `--short-run`/`-s` option;
+`SHORT_RUN` is applied via `--define SHORT_RUN` instead (see the push de-dupe logic in ARCHITECTURE.md).
 
 | Option                   | Short  | Default                               | Description                           |
 | :----------------------- | :----- | :------------------------------------ | :------------------------------------ |
 | `<bm-project-path>`      |        | `$BENCHMARK_PROJECT`                  | Positional: path to benchmark project |
 | `--configuration`        | `-c`   | `Release`                             | Build configuration                   |
-| `--define`               |        | `""`                                  | Preprocessor symbols                  |
+| `--define`               | `-d`   | `""`                                  | Preprocessor symbols                  |
 | `--max-regression-pct`   | `-max` | `20`                                  | Max regression percentage (0–50)      |
 | `--minver-tag-prefix`    |        | `v`                                   | MinVer tag prefix                     |
 | `--minver-prerelease-id` |        | `preview.0`                           | MinVer pre-release identifiers        |
@@ -427,9 +427,9 @@ Validates that a project can be packed into a NuGet package (dry-run, no publish
 
 **Called by:** `_pack.yaml`
 
-The project path is a positional argument, not `--package-project`/`-pp`. Only `--configuration` has a short form
-(`-c`) among the common dotnet options; `--define`, `--minver-tag-prefix`, `--minver-prerelease-id` are long-form
-only.
+The project path is a positional argument, not `--package-project`/`-pp`. Among the common dotnet options, `--define`
+(`-d`) and `--configuration` (`-c`) have short forms; `--minver-tag-prefix` and `--minver-prerelease-id` are
+long-form only.
 
 | Option                   | Short | Default            | Description                                            |
 | :----------------------- | :---- | :----------------- | :----------------------------------------------------- |
@@ -437,7 +437,7 @@ only.
 | `--reason`               | `-r`  | `release build`    | Reason for release; recorded as a package release note |
 | `--build`                | `-b`  | `false`            | Build the project before packing                       |
 | `--configuration`        | `-c`  | `Release`          | Build configuration                                    |
-| `--define`               |       | `""`               | Preprocessor symbols                                   |
+| `--define`               | `-d`  | `""`               | Preprocessor symbols                                   |
 | `--minver-tag-prefix`    |       | `v`                | MinVer tag prefix                                      |
 | `--minver-prerelease-id` |       | `preview.0`        | MinVer pre-release identifiers                         |
 

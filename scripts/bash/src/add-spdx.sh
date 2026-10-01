@@ -13,7 +13,6 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
-# shellcheck disable=SC1091 # Not following
 source "$lib_dir/core.sh"
 
 # Adds SPDX headers to C# sources, bash scripts, and YAML files, skipping generated artifacts.

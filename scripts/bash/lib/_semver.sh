@@ -2,11 +2,12 @@
 # Copyright (c) 2025-2026 Val Melamed
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
-# shellcheck disable=SC1091 # Disable warnings for word splitting and globbing issues in the following source commands.
 
 #=============================================================================================
-# This script defines functions and regular expressions for working with semantic versions (SemVer) and MinVer tags.
-# It includes functions for validating and comparing semantic versions, parsing version components.
+# This script defines functions and regular expressions for working with semantic versions
+# (SemVer 2.0.0) and MinVer tags.
+# It includes functions for validating and comparing semantic versions, parsing version
+# components.
 #=============================================================================================
 
 # Circular include guard

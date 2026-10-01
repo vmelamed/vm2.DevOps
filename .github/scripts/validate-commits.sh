@@ -15,7 +15,6 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
-# shellcheck disable=SC1091 # Not following
 source "$lib_dir/gh_core.sh"
 
 declare -xr check_em

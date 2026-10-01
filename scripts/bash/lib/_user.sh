@@ -108,8 +108,8 @@ function confirm()
 #   keys, etc. (optional if last, default: `false`).
 # @arg $5 string `_validate_fn` name of a validation function, called with both the default
 #   value (if provided) and the user's input. It must return 0 if the value is valid, non-zero
-#   if invalid; the user is re-prompted until a valid value is entered (optional, default:
-#   `true`, meaning no validation -- all values accepted).
+#   if invalid; the user is re-prompted until a valid value is entered
+#   (optional, default: `true`, meaning no validation -- all values accepted).
 #
 # @exitcode success=0: A valid value (the user's input, or the default) was stored into the
 #   referenced variable.
@@ -128,10 +128,10 @@ function enter_value()
                                                                                             "  - default value (optional if the rest are not specified, default: '')" \
                                                                                             "  - boolean to suppress the echo of the input to the terminal (optional if the rest are not specified, default: false)" \
                                                                                             "  - the name of a validation function (optional, default: true)"
-    [[ ! -v 1 || -n $1 ]]                               || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the prompt, to be non-empty (provided '${1:-<none>}')."
-    [[ ! -v 2 ]] || is_variable "$2"                    || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the name of the variable to store the entered value, to be defined (provided '${2:-<none>}')."
-    [[ ! -v 4 ]] || is_boolean "$4"                     || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires optional argument 4, the secret-input flag, to be 'true' or 'false' (provided '${4:-<none>}')."
-    [[ ! -v 5 ]] || is_function "$5" || is_boolean "$5" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires optional argument 5 to name a defined value validation function (provided '${5:-<none>}')."
+    [[ ! -v 1 || -n $1 ]]                               || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the prompt, to be non-empty (provided '${1:-<none>}')."
+    [[ ! -v 2 ]] || is_variable "$2"                    || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2, the name of the variable to store the entered value, to be defined (provided '${2:-<none>}')."
+    [[ ! -v 4 ]] || is_boolean "$4"                     || bug -ec "$err_argument_type"     "${FUNCNAME[0]}() requires optional argument 4, the secret-input flag, to be 'true' or 'false' (provided '${4:-<none>}')."
+    [[ ! -v 5 ]] || is_function "$5" || is_boolean "$5" || bug -ec "$err_argument_type"     "${FUNCNAME[0]}() requires optional argument 5 to name a defined value validation function (provided '${5:-<none>}')."
 
     local _default=${3:-}
     local _validate_fn=${5:-true}
@@ -180,14 +180,15 @@ function enter_value()
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Displays a prompt and a list of options, and asks the user to choose one. If
-#   the environment variable 'quiet' is true, or if the user just presses [Enter] without making
-#   a choice, assumes the first option (the default).
+# @description Displays a prompt and a numbered list of options, and asks the user to choose
+#   one. If the environment variable 'quiet' is true, or if the user just presses [Enter]
+#   without making a choice, assumes the first option (the default) - 0.
 #
-# @arg $1 string The prompt to display before the options.
-# @arg $2 nameref to a variable name to store the user's choice.
-# @arg $3..$@ strings two or more option texts. The first option is the default returned if 'quiet'
-#   is true or if the user just presses [Enter] without making a choice).
+# @arg $1 string `_prompt` The prompt to display before the options.
+# @arg $2 nameref `_selection` to a variable name to store the user's choice number -
+#   from 0..$@-3 (from 0 to the total number of arguments minus three).
+# @arg $3..$@ strings `_options` two or more option texts. The first option is the default
+#   returned if 'quiet' is true or if the user just presses [Enter] without making a choice).
 #
 # @exitcode success=0: A choice was stored into the referenced variable (the default, in
 #   quiet mode or if the user pressed Enter without choosing).
@@ -205,11 +206,11 @@ function choose()
 {
 
     (( $# >= 4 ))                    || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires four or more arguments (provided $#):" \
-                                                                            "  - prompt" \
-                                                                            "  - the name of a variable to store the user's choice" \
-                                                                            "  - at least two choices (the first one is the default)"
-    [[ ! -v 1 || -n $1 ]]            || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the prompt, to be non-empty (provided '${1:-<none>}')."
-    [[ ! -v 2 ]] || is_variable "$2" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2, the name of the variable to store the user's choice, to be defined (provided '${2:-<none>}')."
+                                                                         "  - prompt" \
+                                                                         "  - the name of a variable to store the user's choice" \
+                                                                         "  - at least two choices (the first one is the default)"
+    [[ ! -v 1 || -n $1 ]]            || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the prompt, to be non-empty (provided '${1:-<none>}')."
+    [[ ! -v 2 ]] || is_variable "$2" || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 2, the name of the variable to store the user's choice, to be defined (provided '${2:-<none>}')."
 
     local -i _i
     for (( _i=3; _i<=$#; _i++ )); do
@@ -258,8 +259,8 @@ function choose()
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Prints a sequence of quoted values with a customizable quote, separator, and
-#   enclosing parentheses. Named parameters must come before the values.
+# @description Prints a sequence of quoted values with a customizable quote marks, separator,
+#   and enclosing parentheses. Named parameters must come before the values.
 #
 # @arg $@ mixed Named parameters (see below), followed by one or more positional
 # values to include in the sequence.
@@ -286,6 +287,8 @@ function print_sequence()
     local _quote="'"
     local _separator=","
     local _arg
+    local -a _values=()
+
     for _arg in "$@"; do
         case $_arg in
             --json-array|--json|--jq-array|-j )
@@ -294,9 +297,11 @@ function print_sequence()
                 _open_paren="["
                 _close_paren="]"
                 ;;
+
             --quote=*|-q=* )
                 _quote="${_arg#*=}"
                 ;;
+
             --separator=*|-s=* )
                 _separator="${_arg#*=}"
                 # Handle special values
@@ -306,54 +311,54 @@ function print_sequence()
                     *   ) ;;
                 esac
                 ;;
+
             --parenthesis=*|--paren=*|-p=* )
                 local _paren_val="${_arg#*=}"
                 case "$_paren_val" in
-                    \(|\)|\(\) ) # (|)|()
+                    \(|\)|\(\) ) # ( | ) | ()
                         _open_paren="("
                         _close_paren=")"
                         ;;
-                    \[|\]|\[\] ) # [|]|[]
+
+                    \[|\]|\[\] ) # [ | ] | []
                         _open_paren="["
                         _close_paren="]"
                         ;;
-                    \{|\}|\{\} ) # {|}|{}
+
+                    \{|\}|\{\} ) # { | } | {}
                         _open_paren="{"
                         _close_paren="}"
                         ;;
-                    nl|$'\n'|'\n' )
-                        # Handle special values
+
+                    nl|$'\n'|'\n' ) # Handle special values
                         _open_paren=$'\n'
                         _close_paren=$'\n'
                         ;;
-                    * )
-                        warning "Unknown paren type: ${_arg#*=}. Ignoring."
+
+                    * ) warning "Unknown paren type: ${_arg#*=}. Ignoring."
                         _open_paren=""
                         _close_paren=""
                         ;;
                 esac
                 ;;
-            * ) ;;
+
+            * ) _values+=("$_arg")
+                ;;
         esac
     done
 
-    local _first=true
     [[ -n "$_open_paren" ]] && printf "%s" "$_open_paren" || true
-    for _arg in "$@"; do
-        # skip only the recognized named parameters (matching the case patterns above), not any
-        # value that merely happens to start with '-' (e.g. a negative number).
-        case $_arg in
-            --json-array|--json|--jq-array|-j|--quote=*|-q=*|--separator=*|-s=*|--parenthesis=*|--paren=*|-p=* )
-                continue
-                ;;
-            * ) ;;
-        esac
+
+    local _first=true
+    local _value
+    for _value in "${_values[@]}"; do
         if $_first; then
-            printf "%s%s%s" "$_quote" "$_arg" "$_quote"
+            printf "%s%s%s" "$_quote" "$_value" "$_quote"
             _first=false
         else
-            printf "%s%s%s%s"  "$_separator" "$_quote" "$_arg" "$_quote"
+            printf "%s%s%s%s"  "$_separator" "$_quote" "$_value" "$_quote"
         fi
     done
+
     [[ -n "$_close_paren" ]] && printf "%s" "$_close_paren" || true
 }

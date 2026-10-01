@@ -13,7 +13,6 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
-# shellcheck disable=SC1091 # Not following
 source "$lib_dir/core.sh"
 
 #===============================
@@ -204,11 +203,20 @@ info "The Source of Truth '$sot' folder is in '$sot_path'"
 configure "$sot_path" "$target_path" || exit_with_error -ec "$err_logic_error" "Failed to load configuration from the SoT directory '$sot_path'."
 trace "Configured from SoT '$sot_path' for '$target_path'."
 
+declare -x config_diff_tool
+declare -x config_diff_command
+declare -x config_merge_tool
+declare -x config_merge_command
+
+declare -xa config_source_files    # array of the paths of the SoT files
+declare -xa config_target_files    # array of target paths TEMPLATES corresponding to the SoT files by index
+declare -xa config_file_actions    # array of default action strings corresponding to the SoT files by index
+
 declare -i targets_index
 declare target_root target_path
 
-declare diff_tool diff_command
-declare merge_tool merge_command
+declare -x diff_tool diff_command
+declare -x merge_tool merge_command
 
 declare -a source_files
 declare -a target_files
