@@ -27,6 +27,8 @@ declare -x skip_build
 declare -x skip_benchmarks
 declare -x skip_packages
 
+declare -xra dump_common_dotnet_args
+
 function get_arguments()
 {
     local _option
@@ -168,8 +170,8 @@ function dump_args()
         skip_tests
         skip_benchmarks
         skip_packages
-        --header "\`dotnet <command>\` CLI Arguments:"
-        --common-dotnet-args
+
+        "${dump_common_dotnet_args[@]}"
 
         --header "Core State:"
         --core-state

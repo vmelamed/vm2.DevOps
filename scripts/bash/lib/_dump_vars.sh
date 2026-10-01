@@ -67,30 +67,6 @@ declare -A markdown=(
     ["bot_bot_header"]=""
 )
 
-# ref. the common dotnet variables
-declare -x preprocessor_symbols
-declare -x configuration
-declare -x framework
-declare -x runtime
-declare -x artifacts
-declare -x minver_tag_prefix
-declare -x minver_prerelease_id
-declare -x gh_nuget_username
-declare -x gh_nuget_password
-
-# for use in dump_vars() as "${common_dotnet_args_to_output[@]}"
-declare -xra dump_common_dotnet_args=(
-    preprocessor_symbols
-    configuration
-    framework
-    runtime
-    artifacts
-    minver_tag_prefix
-    minver_prerelease_id
-    gh_nuget_username
-    --secret gh_nuget_password
-)
-
 #---------------------------------------------------------------------------------------------
 # @description Writes a header title line in the variable dump table, using the
 # current table format (graphical or markdown).
@@ -222,7 +198,6 @@ function _write_line()
 #     -b, --blank           Display a blank line in the table
 #     -l, --line            Display a dividing horizontal line in the table
 #     -s, --secret <name>   Dump the named variable with its value masked
-#     -ci, --common-dotnet-args  Dump the common dotnet arguments (see `dump_common_dotnet_args` array)
 #     -c, --core-state      Dump the core state (see `core_state` associative array)
 #     -q, --quiet           Skip the "press any key to continue" prompt, even if `$quiet` is false
 #     -f, --force           Dump the variables even if `$verbose` is not true
@@ -299,16 +274,6 @@ function dump_vars()
 
             -c|--core-state )
                 _write_line _core_state false
-                ;;
-
-            -ci|--common-dotnet-args )
-                _secret=false
-                local _arg
-                for _arg in "${dump_common_dotnet_args[@]}"; do
-                    [[ $_arg == @(-s|--secret) ]] && _secret=true && continue
-                    _write_line "$_arg" "$_secret"
-                    _secret=false
-                done
                 ;;
 
             -b|--blank )

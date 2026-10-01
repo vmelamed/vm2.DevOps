@@ -334,6 +334,9 @@ declare -x minver_prerelease_id
 declare -x gh_nuget_username
 declare -x gh_nuget_password
 
+# common dotnet arguments array, ready to put into dump_vars directly or into a larger array
+declare -xra dump_common_dotnet_args
+
 #---------------------------------------------------------------------------------------------
 # @description Updates the NuGet sources with GitHub Packages from vm2.
 #

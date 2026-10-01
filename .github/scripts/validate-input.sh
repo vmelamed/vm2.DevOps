@@ -24,7 +24,6 @@ declare -xri err_tool_not_found
 
 # Declare variables defined in the core library.
 declare -x _ignore
-declare -x common_dotnet_args_to_output
 
 # Define CI common variables passed in as common CI arguments
 declare -x preprocessor_symbols
@@ -67,6 +66,9 @@ declare -x skip_build=${SKIP_BUILD:-$defaultSkipBuild}
 declare -x skip_tests=${SKIP_TESTS:-$defaultSkipTests}
 declare -x skip_benchmarks=${SKIP_BENCHMARKS:-$defaultSkipBenchmarks}
 declare -x skip_packages=${SKIP_PACKAGES:-$defaultSkipPackages}
+
+declare -xra output_common_dotnet_args
+declare -xra dump_common_dotnet_args
 
 source "$script_dir/validate-input.usage.sh"
 source "$script_dir/validate-input.args.sh"
@@ -168,8 +170,7 @@ declare -ra dump_vars_args=(
     test_projects
     benchmark_projects
     package_projects
-    --header "\`dotnet <command>\` CLI Arguments:"
-    --common-dotnet-args
+    "${dump_common_dotnet_args[@]}"
     --header "Coverage and Regression Parameters:"
     min_coverage_pct
     max_regression_pct
@@ -206,4 +207,4 @@ args_to_github_output \
     skip_tests \
     skip_benchmarks \
     skip_packages \
-    "${common_dotnet_args_to_output[@]}"
+    "${output_common_dotnet_args[@]}"

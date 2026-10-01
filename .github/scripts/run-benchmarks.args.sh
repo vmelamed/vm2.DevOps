@@ -12,6 +12,8 @@ declare -xri err_unknown_argument
 
 declare -x ci
 
+declare -xra dump_common_dotnet_args
+
 # parameters specific to this script only with initial values from environment variables or defaults
 declare -x benchmark_project
 
@@ -53,9 +55,8 @@ function dump_args()
         --header "Arguments for $script_name:"
 
         benchmark_project
-        --header "\`dotnet <command>\` CLI Arguments:"
-        --common-dotnet-args
 
+        "${dump_common_dotnet_args[@]}"
         --header "Core State:"
         --core-state
     )

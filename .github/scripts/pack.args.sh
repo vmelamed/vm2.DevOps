@@ -18,6 +18,8 @@ declare -x package_project
 declare -x build
 declare -x reason
 
+declare -xra dump_common_dotnet_args
+
 function get_arguments()
 {
     local _option
@@ -80,8 +82,8 @@ function dump_args()
         package_project
         build
         reason
-        --header "\`dotnet <command>\` CLI Arguments:"
-        --common-dotnet-args
+
+        "${dump_common_dotnet_args[@]}"
 
         --header "Core State:"
         --core-state

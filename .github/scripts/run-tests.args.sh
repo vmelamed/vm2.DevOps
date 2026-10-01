@@ -17,6 +17,8 @@ declare -x test_project
 declare -xi min_coverage_pct
 declare -xi min_branch_coverage_pct
 
+declare -xra dump_common_dotnet_args
+
 function get_arguments()
 {
     local _option
@@ -72,8 +74,8 @@ function dump_args()
 
         test_project
         min_coverage_pct
-        --header "\`dotnet <command>\` CLI Arguments:"
-        --common-dotnet-args
+
+        "${dump_common_dotnet_args[@]}"
 
         --header "Core State:"
         --core-state

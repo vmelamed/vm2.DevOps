@@ -57,11 +57,26 @@ declare -x framework=${FRAMEWORK:-}                                             
 declare -x runtime=${RUNTIME:-}                                                                 # from Directory.Build.props
 declare -x artifacts=${ARTIFACTS_PATH:-}                                                        # from Directory.Build.props
 
-# for use in args_to_github_output() as "${common_dotnet_vars[@]}"
-declare -xra common_dotnet_args_to_output=(
+# for use in args_to_github_output() as "${output_common_dotnet_args[@]}"
+declare -xra output_common_dotnet_args=(
     preprocessor_symbols
     minver_tag_prefix
     minver_prerelease_id
+    configuration
+    framework
+    runtime
+    artifacts
+)
+
+ # common dotnet arguments array, ready to put into dump_vars directly or into a larger array
+declare -xra dump_common_dotnet_args=(
+    --header "Common Dotnet CLI Arguments:"
+    preprocessor_symbols
+    minver_tag_prefix
+    minver_prerelease_id
+    gh_nuget_username
+    --secret
+    gh_nuget_password
     configuration
     framework
     runtime
@@ -219,23 +234,6 @@ function sanitize_common_dotnet_args()
     readonly artifacts
 
     return "$_rc"
-}
-
-#---------------------------------------------------------------------------------------------
-# @description Outputs the common dotnet arguments (`preprocessor_symbols`, `configuration`,
-#   `framework`, `runtime`, `artifacts`, `minver_tag_prefix`, `minver_prerelease_id`) as
-#   "key=value" pairs, via `args_to_github_output`.
-#
-# @noargs
-#
-# @stdout and $GITHUB_OUTPUT (if in GH actions) "key=value" for each common dotnet variable.
-#
-# @example
-#   common_dotnet_to_output
-#---------------------------------------------------------------------------------------------
-function common_dotnet_to_output()
-{
-    args_to_github_output "${common_dotnet_args_to_output[@]}"
 }
 
 declare -xr common_dotnet_parameters="\

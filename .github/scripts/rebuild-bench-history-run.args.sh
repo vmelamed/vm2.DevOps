@@ -23,6 +23,8 @@ declare -x bencher_testbed
 declare -x bencher_branch
 declare -x bencher_adapter
 
+declare -xra dump_common_dotnet_args
+
 function get_arguments()
 {
     local _option
@@ -99,14 +101,12 @@ function dump_args()
 
         benchmark_project
         repeat
-        preprocessor_symbols
-        minver_tag_prefix
-        minver_prerelease_id
         bencher_project
         bencher_testbed
         bencher_branch
         bencher_adapter
 
+        "${dump_common_dotnet_args[@]}"
         --header "Core State:"
         --core-state
     )

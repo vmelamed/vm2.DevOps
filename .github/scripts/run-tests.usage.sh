@@ -22,14 +22,14 @@ function usage_text()
 
     cat << EOF
 Usage:
-  $script_name [<test-project>] | [--<long option> <value> | -<short option> <value> | --<long switch> | -<short switch> ]*
+  $script_name <test-project> | [--<long option> <value> | -<short option> <value> | --<long switch> | -<short switch> ]*
 
 Runs the tests in the specified test project and collects code coverage information. It assumes that the solution folder is two
 levels up from the project directory, i.e., <solution-root>/tests/<test-project-dir>/<test-project>.csproj. All parameters are
 optional if the corresponding environment variables are set. If both are specified, the command line arguments take precedence.
 
 Arguments:
-  <test-project>           The path to the test project file.
+  <test-project>                The path to the test project file.
                                 Overrides the initial value from the environment value \$TEST_PROJECT environment variable
 
 Options:
