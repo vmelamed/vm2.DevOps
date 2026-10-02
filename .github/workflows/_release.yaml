@@ -56,10 +56,14 @@ permissions:
   actions: read
 
 env:
-  VERBOSE: ${{ vars.VERBOSE || false }}
-  REASON: ${{ inputs.reason }}
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
+  PREPROCESSOR_SYMBOLS: ${{ vars.PREPROCESSOR_SYMBOLS || '' }}
+  MINVER_TAG_PREFIX: ${{ vars.MINVER_TAG_PREFIX || 'v' }}
+  REASON: ${{ inputs.reason }}
+  GH_TOKEN: ${{ github.token }}
+  GH_ACTOR: ${{ github.actor }}
+  VERBOSE: ${{ vars.VERBOSE || false }}
 
 jobs:
   compute-version:

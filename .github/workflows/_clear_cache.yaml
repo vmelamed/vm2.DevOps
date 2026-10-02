@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025-2026 Val Melamed
 
-﻿name: _clear_cache (Reusable workflow)
+name: _clear_cache (Reusable workflow)
 
 on:
   workflow_call:

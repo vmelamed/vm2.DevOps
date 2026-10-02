@@ -68,7 +68,9 @@ declare -xr pack_exec_path
 # Build when explicitly requested (--build), or when the artifacts directory has no build output for this
 # project yet -- e.g. --skip-build-cache callers (template packages) that never downloaded a prior build.
 if $build || [[ ! -s $pack_exec_path ]]; then
-    [[ -s $pack_exec_path ]] || warning "Build output '$pack_exec_path' was not found in the artifacts directory. Building the project before packing..."
+    [[ -s $pack_exec_path ||
+       $package_project == vm2.Templates* ]] || warning "Build output '$pack_exec_path' was not found in the artifacts directory. Building the project before packing..."
+    # The templates do not have a build phase, so it is natural that the build output would not exist.
     update_nuget_sources_with_github_vm2   || exit_with_error -ec $? "Updating the NuGet sources with GitHub packages from vm2 failed."
     dotnet_clean "$package_project"        || exit_with_error -ec $? "Cleaning the build project failed."
     dotnet_restore "$package_project"      || exit_with_error -ec $? "Restoring the build project failed."
