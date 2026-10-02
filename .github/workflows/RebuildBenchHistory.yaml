@@ -17,6 +17,9 @@ on:
         type: number
         default: 10
 
+env:
+  VERBOSE: ${{ vars.VERBOSE || false }}
+
 permissions:
   contents: read
 

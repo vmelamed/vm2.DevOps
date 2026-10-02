@@ -34,7 +34,8 @@ jobs:
     name: Refresh NuGet lock files
     runs-on: ${{ inputs.runner-os }}
     env:
-      GH_PACKAGES_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}   # ← here
+      GH_PACKAGES_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
+      VERBOSE: ${{ vars.VERBOSE || false }}
 
     steps:
       - name: Checkout

@@ -82,7 +82,7 @@ declare -xr default_table_format="graphical"
 # @default false
 # @type boolean
 #---------------------------------------------------------------------------------------------
-declare __verbose=$default_verbose
+declare __verbose=${VERBOSE:-$default_verbose}
 
 #---------------------------------------------------------------------------------------------
 # @description Tests whether the script is in verbose mode.
@@ -146,7 +146,7 @@ function unset_verbose()
 # @default false
 # @type boolean
 #---------------------------------------------------------------------------------------------
-declare __quiet=$default_quiet
+declare __quiet=${QUIET:-$default_quiet}
 
 #---------------------------------------------------------------------------------------------
 # @description Tests whether the script is in quiet mode.
@@ -209,7 +209,7 @@ function unset_quiet()
 # @default false
 # @type boolean
 #---------------------------------------------------------------------------------------------
-declare __dry_run=$default_dry_run
+declare __dry_run=${DRY_RUN:-$default_dry_run}
 
 #---------------------------------------------------------------------------------------------
 # @description Tests whether the script is in dry-run mode.
@@ -399,7 +399,7 @@ function is_trace_enabled()
 # @default in CI - "markdown", otherwise "graphical"
 # @type string with 2 valid values: "graphical" or "markdown"
 #---------------------------------------------------------------------------------------------
-declare __table_format=$default_table_format
+declare __table_format=${DUMP_FORMAT:-$default_table_format}
 
 #---------------------------------------------------------------------------------------------
 # @description Returns the current table format setting.
