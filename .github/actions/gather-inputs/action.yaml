@@ -164,7 +164,7 @@ runs:
         skip_packages='false'
         skip_push='false'
 
-        # depending on the event:
+        # override the input values depending on the event:
 
         if [[ '${{ github.event_name }}' == 'push' &&
               '${{ github.ref_name }}' != 'main' ]]; then
