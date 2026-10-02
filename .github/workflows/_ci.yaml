@@ -229,6 +229,7 @@ jobs:
       REPORTGENERATOR_LICENSE: ${{ secrets.REPORTGENERATOR_LICENSE }}
     permissions:
       contents: read
+      packages: read # Required to restore GitHub Packages NuGet packages
       pull-requests: write # Required to comment on PRs
       checks: write # Required to create GitHub Checks
     with:
