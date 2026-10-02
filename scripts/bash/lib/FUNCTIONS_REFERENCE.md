@@ -672,6 +672,16 @@ Resolves the path to the Source-of-Truth shared-content directory inside vm2.Tem
 
 ---
 
+## _xml.sh
+
+Generic XML value reading via `yq`'s XML support. Knows nothing about dotnet, MSBuild, or any other specific XML dialect.
+
+### get_xml_value()
+
+Reads a single element or attribute value out of an XML file by yq path expression (e.g. `.Project.PropertyGroup.IncludeSymbols`, or `.Project.ItemGroup.PackageReference.+@Version` for an attribute). A literal, single-file read -- does not resolve inherited values (e.g. from a project's `Directory.Build.props`) the way `get_msbuild_property()` does.
+
+---
+
 ## _dotnet_args.sh
 
 Common dotnet-CLI argument variables (`$configuration`, `$framework`, `$runtime`, `$artifacts`, MinVer settings, NuGet credentials) and their parsing/sanitization.
@@ -776,7 +786,7 @@ Outputs a `key=value` pair (kebab-case key) for each named variable to `$GITHUB_
 
 ## Summary
 
-### Total Functions: 191
+### Total Functions: 192
 
 | File               | Functions |
 |--------------------|----------:|
@@ -792,6 +802,7 @@ Outputs a `key=value` pair (kebab-case key) for each named variable to `$GITHUB_
 | _user.sh           |         5 |
 | _git.sh            |        21 |
 | _git_vm2.sh        |         6 |
+| _xml.sh            |         1 |
 | _dotnet_args.sh    |         2 |
 | _dotnet.sh         |        15 |
 | gh_core.sh         |         5 |

@@ -292,3 +292,19 @@ EOF
     run cat "$BATS_TEST_TMPDIR/output.txt"
     assert_output --partial "package-output-path=$BATS_TEST_TMPDIR/repo/pkgout"
 }
+
+@test "pack: a project with IncludeSymbols=false produces no snupkg and the summary doesn't crash on it" {
+    _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
+    cat > "$BATS_TEST_TMPDIR/repo/src/App/App.csproj" <<'CSPROJ'
+<Project>
+  <PropertyGroup>
+    <IncludeSymbols>false</IncludeSymbols>
+  </PropertyGroup>
+</Project>
+CSPROJ
+    _install_fake_dotnet_and_package "$BATS_TEST_TMPDIR/repo"
+    rm -f "$BATS_TEST_TMPDIR/repo/pkgout/App.1.2.3.snupkg"
+    run _run_pack "$BATS_TEST_TMPDIR/repo" '' src/App/App.csproj
+    assert_success
+    assert_output --partial "Packages Built Successfully"
+}

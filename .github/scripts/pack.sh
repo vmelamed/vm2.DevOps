@@ -96,7 +96,7 @@ args_to_github_output package_output_path
     echo "| Package Id           | ${_pack_properties[PackageId]}                        |"
     echo "| Version              | ${_pack_properties[PackageVersion]}                   |"
     echo "| Package Path         | ${_pack_properties[PackagePath]}                      |"
-    echo "| Symbols Package Path | ${_pack_properties[SymbolsPath]}                      |"
+    echo "| Symbols Package Path | ${_pack_properties[SymbolsPath]:-N/A (IncludeSymbols=false)}                      |"
     echo "| Git Tag              | $minver_tag_prefix${_pack_properties[PackageVersion]} |"
     echo ""
 } | to_summary

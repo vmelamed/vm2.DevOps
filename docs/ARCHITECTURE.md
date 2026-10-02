@@ -337,6 +337,7 @@ A shared function library sourced by scripts at startup.
 | `_sanitize.sh`    | Input sanitization                                                                                                                                                          |
 | `_semver.sh`      | Semantic versioning utilities                                                                                                                                               |
 | `_user.sh`        | User/identity helpers                                                                                                                                                       |
+| `_xml.sh`         | Generic XML value reading via `yq` (knows nothing about dotnet/MSBuild)                                                                                                     |
 
 Scripts source `gh_core.sh` for the GitHub Actions environment, or `core.sh` directly for standalone scripts; either
 one pulls in every `_*.sh` module, so there is no need to source additional modules individually.

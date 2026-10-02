@@ -909,12 +909,17 @@ function dotnet_build()
 #     'get_msbuild_property()' whenever '$configuration' is empty, so packing always agrees with
 #     whatever was just built, instead of silently diverging.
 #
+#   - "SymbolsPath" is only set (and only checked for existence) when the project's own
+#     'IncludeSymbols' element (read via 'get_xml_value()') is not literally 'false' -- a
+#     project that opts out of symbols (e.g. a template package with no compiled output) never
+#     produces a '.snupkg', so this function must not expect or report one for it.
+#
 # @arg $1 string The path to a .csproj file. Note that it must exist and be a valid project
 #   file.
 # @arg $2 string Package release notes, can be empty string.
 # @arg $3 nameref to an associative array variable that will store the properties of the
-#   produced packages, including the paths to the built package and symbols at keys
-#   respectively "PackagePath" and "SymbolsPath".
+#   produced packages, including the path to the built package at key "PackagePath", and (when
+#   applicable -- see Notes) the symbols package path at key "SymbolsPath".
 #
 # @exitcode success=0: The operation was successful.
 # @exitcode err_tool_error=66: If 'dotnet pack' failed, or the project's 'Configuration' could
@@ -1016,24 +1021,38 @@ function dotnet_pack()
     done <<< "$_msbuild_output"
 
     local _packs_path_and_name
+
     _packs_path_and_name="$(realpath "$_path")/${_id}.${_version}"
 
     local _package="${_packs_path_and_name}.nupkg"
-    local _symbols="${_packs_path_and_name}.snupkg"
 
-    _properties["PackagePath"]="$_package"
-    _properties["SymbolsPath"]="$_symbols"
-
-    dump_vars --quiet --header "Returning Properties:" "${!_properties}"
-
+   _properties["PackagePath"]="$_package"
     [[ -s $_package ]] || {
         _rc=$err_tool_error
         error -ec "$_rc" "Package '$_package' not found or empty."
     }
-    [[ -s $_symbols ]] || {
-        _rc=$err_tool_error
-        error -ec "$_rc" "Package '$_symbols' not found or empty."
-    }
+
+    # does it have symbols package and get their path
+    local _include_symbols=''
+
+    get_xml_value "$_project" '.Project.PropertyGroup.IncludeSymbols' _include_symbols
+
+    local should_have_symbols
+
+    [[ ${_include_symbols,,} == false ]] && should_have_symbols=false || should_have_symbols=true
+
+    if $should_have_symbols; then
+
+        local _symbols="${_packs_path_and_name}.snupkg"
+
+        _properties["SymbolsPath"]="$_symbols"
+
+        [[ -s $_symbols ]] ||
+            warning -ec "$err_tool_error" "Package '$_symbols' not found or empty."
+     fi
+
+    dump_vars --quiet --header "Returning Properties:" "${!_properties}"
+
     return "$_rc"
 }
 
