@@ -221,7 +221,7 @@ runs:
             runners_os=$(echo "$DISPATCH_RUNNERS_OS" | jq -Rc 'split(",") | map(select(length > 0) | gsub("^\\s+|\\s+$";""))')
 
             # Get the values from the UI inputs of workflow_dispatch event.
-            preprocessor_symbols="$preprocessor_symbols;$DISPATCH_PREPROCESSOR_SYMBOLS"
+            [[ -z $DISPATCH_PREPROCESSOR_SYMBOLS ]] || preprocessor_symbols="$preprocessor_symbols;$DISPATCH_PREPROCESSOR_SYMBOLS"
             reset_benchmark_thresholds='${{ inputs.dispatch-reset-benchmark-thresholds }}'
             skip_build='${{ inputs.dispatch-skip-build }}'
             skip_tests='${{ inputs.dispatch-skip-tests }}'

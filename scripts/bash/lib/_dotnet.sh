@@ -742,7 +742,11 @@ function dotnet_clean()
 
     trace "Executing: dotnet clean ${_dotnet_args[*]}"
     # CLEAN the project using dotnet build
-    execute dotnet clean "${_dotnet_args[@]}" > "$_ignore" 2>&1 || _rc=$?
+    if is_verbose; then
+        execute dotnet clean "${_dotnet_args[@]}" || _rc=$?
+    else
+        execute dotnet clean "${_dotnet_args[@]}" > "$_ignore" 2>&1 || _rc=$?
+    fi
 
     (( _rc == dotnet_success )) || {
         error -ec "$err_tool_error" "Cleaning '$_project' failed: ($_rc)." \
@@ -797,7 +801,11 @@ function dotnet_restore()
 
     trace "Executing: dotnet restore ${_dotnet_args[*]}"
     # RESTORE
-    execute dotnet restore "${_dotnet_args[@]}" > "$_ignore" 2>&1 || _rc=$?
+    if is_verbose; then
+        execute dotnet restore "${_dotnet_args[@]}" || _rc=$?
+    else
+        execute dotnet restore "${_dotnet_args[@]}" > "$_ignore" 2>&1 || _rc=$?
+    fi
 
     (( _rc == dotnet_success )) || {
         error -ec "$err_tool_error" "Restoring '$_project' failed: ($_rc)." \
@@ -867,6 +875,9 @@ function dotnet_build()
     trace "Executing: dotnet build ${_dotnet_args[*]}"
     # BUILD the project using dotnet build
     dotnet build "${_dotnet_args[@]}" > "$_output_file" 2>&1 || _rc=$? # capture the output for extract and display
+    if is_verbose; then
+        cat "$_output_file"
+    fi
 
     (( _rc == dotnet_success )) ||
         error -ec "$err_tool_error" "Building '$_project' failed: ($_rc)." \
@@ -976,7 +987,12 @@ function dotnet_pack()
     # execute the dotnet pack command and process its output
     trace "Executing: dotnet pack ${_dotnet_args[*]}"
     # PACK
-    execute dotnet pack "${_dotnet_args[@]}" > "$_ignore" 2>&1 || _rc=$?
+    if is_verbose; then
+        execute dotnet pack "${_dotnet_args[@]}" || _rc=$?
+    else
+        execute dotnet pack "${_dotnet_args[@]}" > "$_ignore" 2>&1 || _rc=$?
+    fi
+    
     (( _rc == dotnet_success )) || {
         error -ec "$err_tool_error" "Packing '$_project' failed." "$(get_dotnet_error_message "$_rc")"
         return "$err_tool_error"
