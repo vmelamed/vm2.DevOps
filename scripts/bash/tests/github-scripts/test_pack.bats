@@ -14,7 +14,11 @@
 # call (dotnet_pack() resolving the project's actual Configuration before packing, since
 # 'dotnet pack' on its own defaults to Release while 'dotnet build'/'dotnet msbuild' default to
 # Debug) prints "Release"; any other `msbuild` call (dotnet_pack reading back
-# PackageOutputPath/PackageId/PackageVersion) prints those three properties from $_id/$_version.
+# PackageOutputPath/PackageId/PackageVersion, plus IncludeSymbols -- mimicking the real
+# Directory.Build.props's PrintVersion target, which logs all of these together after a build)
+# prints those three properties from $_id/$_version, and an IncludeSymbols=... line only when a
+# test sets $FAKE_INCLUDE_SYMBOLS (existing tests that don't set it rely on dotnet_pack()'s own
+# default-to-true fallback when the property is absent from _properties).
 # The fixture pre-creates the matching .nupkg/.snupkg files, and an already-built
 # $FAKE_TARGET_PATH, exactly as pack.sh expects to find them without rebuilding.
 
@@ -67,6 +71,11 @@ case "\$1" in
                 echo "PackageOutputPath=$_dir/pkgout"
                 echo "PackageId=$_id"
                 echo "PackageVersion=$_version"
+                # Mimics Directory.Build.props's PrintVersion target (AfterTargets="Build"),
+                # which also logs IncludeSymbols alongside these -- only emitted when a test
+                # opts in, so existing tests (which rely on the default-to-true fallback) are
+                # unaffected.
+                [[ -z \${FAKE_INCLUDE_SYMBOLS:-} ]] || echo "IncludeSymbols=\$FAKE_INCLUDE_SYMBOLS"
                 ;;
         esac
         exit "\${FAKE_DOTNET_MSBUILD_EXIT:-0}"
@@ -293,18 +302,23 @@ EOF
     assert_output --partial "package-output-path=$BATS_TEST_TMPDIR/repo/pkgout"
 }
 
-@test "pack: a project with IncludeSymbols=false produces no snupkg and the summary doesn't crash on it" {
+@test "pack: when the MSBuild scrape reports IncludeSymbols=false, no snupkg is expected and the summary doesn't crash" {
     _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
-    cat > "$BATS_TEST_TMPDIR/repo/src/App/App.csproj" <<'CSPROJ'
-<Project>
-  <PropertyGroup>
-    <IncludeSymbols>false</IncludeSymbols>
-  </PropertyGroup>
-</Project>
-CSPROJ
+    _install_fake_dotnet_and_package "$BATS_TEST_TMPDIR/repo"
+    rm -f "$BATS_TEST_TMPDIR/repo/pkgout/App.1.2.3.snupkg"
+    run _run_pack "$BATS_TEST_TMPDIR/repo" 'FAKE_INCLUDE_SYMBOLS=false' src/App/App.csproj
+    assert_success
+    assert_output --partial "Packages Built Successfully"
+    assert_output --partial "N/A (IncludeSymbols=false)"
+    refute_output --partial "not found or empty"
+}
+
+@test "pack: when IncludeSymbols is absent from the scrape (e.g. an older Directory.Build.props), it defaults to true" {
+    _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
     _install_fake_dotnet_and_package "$BATS_TEST_TMPDIR/repo"
     rm -f "$BATS_TEST_TMPDIR/repo/pkgout/App.1.2.3.snupkg"
     run _run_pack "$BATS_TEST_TMPDIR/repo" '' src/App/App.csproj
     assert_success
     assert_output --partial "Packages Built Successfully"
+    assert_output --partial "not found or empty"
 }

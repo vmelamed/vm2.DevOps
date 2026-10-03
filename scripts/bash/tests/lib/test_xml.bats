@@ -88,6 +88,72 @@ EOF
     [[ -z $out ]]
 }
 
+# --- multi-match queries (e.g. several sibling elements of the same name) ------------------------
+
+@test "get_xml_value: a query matching several sibling elements (e.g. more than one PropertyGroup) does not error" {
+    cat > "$BATS_TEST_TMPDIR/multi.csproj" <<'EOF'
+<Project>
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+  <PropertyGroup Label="NuGet">
+    <IncludeSymbols>false</IncludeSymbols>
+  </PropertyGroup>
+</Project>
+EOF
+    declare out
+    run get_xml_value "$BATS_TEST_TMPDIR/multi.csproj" '.. | select(tag == "!!map" and has("IncludeSymbols")) | .IncludeSymbols' out
+    assert_success
+}
+
+@test "get_xml_value: a multi-PropertyGroup query finds the value regardless of which PropertyGroup declares it" {
+    cat > "$BATS_TEST_TMPDIR/multi.csproj" <<'EOF'
+<Project>
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+  <PropertyGroup Label="NuGet">
+    <IncludeSymbols>false</IncludeSymbols>
+  </PropertyGroup>
+</Project>
+EOF
+    out=''
+    get_xml_value "$BATS_TEST_TMPDIR/multi.csproj" '.. | select(tag == "!!map" and has("IncludeSymbols")) | .IncludeSymbols' out
+    [[ $out == "false" ]]
+}
+
+@test "get_xml_value: when several sibling elements match, the output variable gets the last one" {
+    cat > "$BATS_TEST_TMPDIR/multi.csproj" <<'EOF'
+<Project>
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+    <IncludeSymbols>true</IncludeSymbols>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <IncludeSymbols>false</IncludeSymbols>
+  </PropertyGroup>
+</Project>
+EOF
+    out=''
+    get_xml_value "$BATS_TEST_TMPDIR/multi.csproj" '.. | select(tag == "!!map" and has("IncludeSymbols")) | .IncludeSymbols' out
+    [[ $out == "false" ]]
+}
+
+@test "get_xml_value: a query with no sibling elements defining the target still resolves to empty, not an error" {
+    cat > "$BATS_TEST_TMPDIR/multi.csproj" <<'EOF'
+<Project>
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+  <PropertyGroup Label="NuGet">
+    <PackageId>Foo</PackageId>
+  </PropertyGroup>
+</Project>
+EOF
+    out='sentinel'
+    run get_xml_value "$BATS_TEST_TMPDIR/multi.csproj" '.. | select(tag == "!!map" and has("IncludeSymbols")) | .IncludeSymbols' out
+    assert_success
+}
+
 # --- error handling ------------------------------------------------------------------------------
 
 @test "get_xml_value: fails with err_tool_error when the file does not exist" {

@@ -35,6 +35,12 @@ declare -x _ignore
 #     instead.
 #   - A query that matches nothing in the document is not an error: `$3` is set to an empty
 #     string and the function still returns `$success`.
+#   - A query that matches more than one value (e.g. a path like
+#     '.. | select(has("SomeElement")) | .SomeElement', used specifically to be robust against
+#     sibling elements of the same name, such as a project with more than one `PropertyGroup`)
+#     yields one line per match, in document order; `$3` receives only the *last* line, on the
+#     theory that a later declaration is the one meant to take effect -- the same convention
+#     most XML-consuming tools (including MSBuild itself) use for repeated/overriding elements.
 #
 # @arg $1 string _xml_file - path to an existing, non-empty, readable XML file
 # @arg $2 string _query - a yq path expression, e.g. '.Project.PropertyGroup.IncludeSymbols'
@@ -76,6 +82,9 @@ function get_xml_value()
         error -ec "$err_tool_error" "${FUNCNAME[0]}() 'yq' failed to query '$_xml_file' with '$_query'."
         return "$err_tool_error"
     }
+
+    # A multi-match query yields one line per match, in document order; keep only the last.
+    _result=${_result##*$'\n'}
 
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     [[ $_result != "null" ]] && _value="$_result" || _value=""

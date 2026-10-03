@@ -920,10 +920,15 @@ function dotnet_build()
 #     'get_msbuild_property()' whenever '$configuration' is empty, so packing always agrees with
 #     whatever was just built, instead of silently diverging.
 #
-#   - "SymbolsPath" is only set (and only checked for existence) when the project's own
-#     'IncludeSymbols' element (read via 'get_xml_value()') is not literally 'false' -- a
-#     project that opts out of symbols (e.g. a template package with no compiled output) never
-#     produces a '.snupkg', so this function must not expect or report one for it.
+#   - "SymbolsPath" is only set (and only checked for existence) when the project's effective
+#     'IncludeSymbols' property is not literally 'false' -- a project that opts out of symbols
+#     (e.g. a template package with no compiled output) never produces a '.snupkg', so this
+#     function must not expect or report one for it. 'IncludeSymbols' is read from the same
+#     '_properties' scrape above (the shared 'Directory.Build.props' PrintVersion target already
+#     logs it alongside PackageOutputPath/PackageId/PackageVersion), not via a second MSBuild
+#     evaluation -- if it's ever missing from '_properties' (e.g. an older consumer repo that
+#     hasn't re-synced its 'Directory.Build.props' yet), this defaults to 'true' (assume symbols
+#     are expected, the common case) rather than silently skipping the check.
 #
 # @arg $1 string The path to a .csproj file. Note that it must exist and be a valid project
 #   file.
@@ -992,7 +997,7 @@ function dotnet_pack()
     else
         execute dotnet pack "${_dotnet_args[@]}" > "$_ignore" 2>&1 || _rc=$?
     fi
-    
+
     (( _rc == dotnet_success )) || {
         error -ec "$err_tool_error" "Packing '$_project' failed." "$(get_dotnet_error_message "$_rc")"
         return "$err_tool_error"
@@ -1049,15 +1054,15 @@ function dotnet_pack()
     }
 
     # does it have symbols package and get their path
-    local _include_symbols=''
+    #
+    # IncludeSymbols is already among the properties Directory.Build.props's own PrintVersion
+    # target logs (AfterTargets="Build"), so the scrape loop above already captured it into
+    # _properties -- no need for a second, separate MSBuild evaluation here.
+    local _include_symbols="${_properties[IncludeSymbols]:-}"
+    _include_symbols="${_include_symbols,,}"
+    _include_symbols="${_include_symbols:-true}"
 
-    get_xml_value "$_project" '.Project.PropertyGroup.IncludeSymbols' _include_symbols
-
-    local should_have_symbols
-
-    [[ ${_include_symbols,,} == false ]] && should_have_symbols=false || should_have_symbols=true
-
-    if $should_have_symbols; then
+    if $_include_symbols; then
 
         local _symbols="${_packs_path_and_name}.snupkg"
 
