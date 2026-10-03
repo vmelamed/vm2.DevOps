@@ -449,9 +449,14 @@ EOF
 }
 
 @test "configure_secrets: is a no-op when the given app has no configured secrets" {
+    # 'codespaces' is the only app left with a genuinely empty '*_secrets_order' -- 'dependabot'
+    # used to be the example here too, until it gained its own default (GH_PACKAGES_TOKEN, see
+    # feedback_forgot_dollar_on_boolean memory's sibling investigation). Using an app that still
+    # has defaults would fall through past the early return into the interactive enter_value()
+    # prompt loop, which spins forever reading EOF from this harness's closed stdin.
     run _sr "purge_secrets=false
              nuget_server=nuget
-             configure_secrets dependabot; echo RC=\$?"
+             configure_secrets codespaces; echo RC=\$?"
     assert_success
     assert_output "RC=0"
 }
@@ -464,12 +469,12 @@ EOF
     run _sr "purge_secrets=true
              interactive_secrets=false
              nuget_server=nuget
-             configure_secrets dependabot; echo RC=\$?" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/gh.log"
+             configure_secrets codespaces; echo RC=\$?" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/gh.log"
     assert_success
     assert_output --partial "RC=0"
 
     run cat "$BATS_TEST_TMPDIR/gh.log"
-    assert_output --partial "dependabot/secrets"
+    assert_output --partial "codespaces/secrets"
 }
 
 # =====================================================================================
