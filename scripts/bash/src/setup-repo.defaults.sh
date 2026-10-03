@@ -15,6 +15,7 @@ declare -xr secret_str
 declare -xr default_nuget_server
 
 declare -x nuget_server
+declare -x repo_name
 
 declare -xrA default_repo_settings=(
     ["default_branch"]="main"
@@ -486,6 +487,12 @@ function get_secrets_defaults()
     for _secret in "${_app_secrets_order[@]}"; do
         [[ $_app == "actions" && $_secret == "NUGET_API_KEY" ]] &&
         [[ $nuget_server == nuget || $nuget_server == github ]] && continue || true
+        # BENCH_DISPATCH_PAT dispatches RebuildBenchHistory-AllRepos.yaml, which exists only in vm2.DevOps -- no
+        # other repo ever needs it. Skipping it here (rather than just dropping it from actions_secrets_order) also
+        # means it stays a *known* secret for vm2.DevOps itself, so --purge-secrets there never treats it as
+        # "unknown or obsolete" and deletes it.
+        [[ $_app == "actions" && $_secret == "BENCH_DISPATCH_PAT" ]] &&
+        [[ $repo_name != "$vm2_devops_repo_name" ]] && continue || true
         __secrets[$_secret]=$secret_str
     done
 

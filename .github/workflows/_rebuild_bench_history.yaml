@@ -95,10 +95,21 @@ jobs:
           fetch-depth: 0
           filter: tree:0
 
+      # A repo generated with '--includeBenchmarks false' (or one that just never added any) has nothing to
+      # rebuild. Without this guard the job falls through to rebuild-bench-history-run.sh, which errors out on
+      # "no benchmark projects found" -- turning the documented "nothing to do" promise of the per-repo
+      # RebuildBenchHistory.yaml entry point into a failed run instead of a silent no-op.
+      - name: Check for benchmark projects
+        if: hashFiles('benchmarks/**/*.csproj') == ''
+        run: echo "::notice::No benchmark projects found under 'benchmarks/' -- nothing to rebuild for this repository. Skipping."
+        shell: bash
+
       - name: Setup DevOps environment variables
+        if: hashFiles('benchmarks/**/*.csproj') != ''
         uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
 
       - name: Setup .NET and the dependencies cache
+        if: hashFiles('benchmarks/**/*.csproj') != ''
         uses: vmelamed/vm2.DevOps/.github/actions/cache-dependencies@main
         with:
           runner-os: ${{ inputs.runner-os }}
@@ -109,6 +120,7 @@ jobs:
       # this workflow runs standalone, so run-benchmarks.sh builds the project on the first iteration.
       - name: Rebuild benchmark history
         id: rebuild-bench-history
+        if: hashFiles('benchmarks/**/*.csproj') != ''
         shell: bash
         env:
           BENCHER_BRANCH: ${{ inputs.bencher-branch }}
@@ -138,7 +150,7 @@ jobs:
 
       # Upload the artifacts for manual inspection
       - name: Upload benchmark results artifact
-        if: always()
+        if: always() && hashFiles('benchmarks/**/*.csproj') != ''
         uses: actions/upload-artifact@v7
         with:
           name: rebuild-bench-history-${{ inputs.runner-os }}
