@@ -340,19 +340,20 @@ exceptions, and never references `vm2.Functional`; `TryDo` is for consumers who 
 - Test projects — assembly: `<Package>.Tests`; namespace: `vm2.Tests.<Package>[.<Feature>]`. Note the placement of the `Tests` segment and the mirroring of the assembly structure: it helps avoiding symbol conflicts. Always `<OutputType>Exe</OutputType>` - xUnit v3 + MTP v2.
 - Benchmark projects — assembly: `<Package>.Benchmarks`; namespace: `vm2.Benchmarks.<Package>[.<Feature>]`. Note the placement of the `Benchmarks` segment and the mirroring of the assembly structure: it helps avoiding symbol conflicts. Always `<OutputType>Exe</OutputType>` - BenchmarkDotNet requires the default name for the entry point assembly.
 - Do not mix naming strategies within a single repository
-- **A URN, not a URL, is the preferred identifier for a resource that identifies a format or type rather than
-  fetches content** — a JSON Schema's `$schema`/`$id`, an XML namespace, or any similar self-identifying string
-  embedded in a data file (e.g. `urn:schemas-vm-com:Linq-Expressions-Serialization-Json`). A URN says "this is what
-  I am" without implying "you can GET this over the network," which a URL always does whether or not it is
-  intended to be fetched. That distinction is a real security boundary, not just a style preference: some
-  schema/XML tooling automatically dereferences a `$schema`/`$ref`/namespace URI it finds in a document — the same
-  class of hazard as XXE in XML parsers — so an attacker-influenced or later-hijacked URL embedded in data can turn
-  into an SSRF vector (an internal service, a cloud metadata endpoint, a `file://` path) the moment such a tool
-  processes the file. A URN is inert by construction: nothing in the URN scheme implies fetchability, so resolving
-  one to an actual local schema/resource requires an explicit, developer-controlled mapping (e.g. VSCode's
-  `json.schemas` workspace setting, matched by file glob) rather than an implicit network call baked into the data
-  itself. **Any other URI scheme used as a resource identifier (a real `http(s)://` URL, etc.) MUST be justified**
-  with a comment or documentation explaining why fetchability is actually wanted there.
+- **Use a URN for the unique identifier of a resource that we own and define** — an XML schema or namespace, a
+  serialization format, an encryption key, an organizational resource, etc. (e.g. `urn:schemas-vm-com:Linq-Expressions-Serialization-Json`).
+  A URN names the resource without implying it can be retrieved over the network, which a URL does. Storage keys are a
+  separate choice: a database key is usually a ULID or GUID, and the URN can serve as the external, human-meaningful identity.
+- **Identifiers of shared, registered dialects keep their official form.** A JSON Schema's `$schema` must be the
+  registered meta-schema URI (e.g. `https://json-schema.org/draft/2020-12/schema`), because validators match that exact
+  string. Replacing it with a repository URN would prevent the dialect from being recognized.
+- **Fetchability is a security decision, not a naming one.** Some schema and XML tooling automatically dereferences a
+  `$schema`, `$ref`, or namespace URI found in a document. That is the same class of hazard as XXE in XML parsers: an
+  attacker-influenced or later-hijacked URL can become an SSRF vector (an internal service, a cloud metadata endpoint,
+  a `file://` path) the moment such a tool processes the file. Resolve identifiers through an explicit,
+  developer-controlled mapping (e.g. VSCode's `json.schemas` setting, matched by file glob), not an implicit network call.
+- **Any other `http(s)://` identifier used for a resource MUST be justified** with a comment or documentation explaining
+  why it is needed and why automatic fetching is safe there.
 
 ## AOT and Trimming
 
