@@ -280,7 +280,13 @@ declare -xra actions_secrets_order=(
                                                # Used by `RebuildBenchHistory.yaml` to dispatch each repo's benchmark-history
                                                # rebuild
 )
-declare -xra dependabot_secrets_order=()
+declare -xra dependabot_secrets_order=(
+    "GH_PACKAGES_TOKEN"                        # Needed by dependabot.yml's own "github-packages" registry entry, so
+                                               # Dependabot can authenticate to check the private NuGet feed for
+                                               # updates. This is a SEPARATE secret store from Actions secrets, even
+                                               # for the identically-named secret -- see
+                                               # https://docs.github.com/en/code-security/dependabot/working-with-dependabot/configuring-access-to-private-registries-for-dependabot#storing-credentials-for-dependabot-to-use
+)
 declare -xra agents_secrets_order=()
 declare -xra codespaces_secrets_order=()
 

@@ -1,13 +1,15 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025-2026 Val Melamed
 
-name: "Rebuild Benchmark History (fan-out)"
+name: "Rebuild Benchmark History"
 
-# Manually triggered (UI/phone) fan-out across every vm2 repository that has a 'benchmarks/' directory. For each such repo,
-# dispatches that repo's own 'RebuildBenchHistory.yaml' workflow (which calls _rebuild_bench_history.yaml in this repo),
-# re-recording its benchmark history to Bencher.dev N times. Fire-and-forget: this workflow dispatches the per-repo runs and
-# returns immediately -- the rebuilds proceed independently in each repo's own Actions. See
-# docs/ARCHITECTURE.md#benchmark-threshold-management for the full picture.
+# Manually triggered (UI/mobile) per-repo entry point. Re-records this repo's benchmark history to Bencher.dev by running
+# every benchmark project under benchmarks/ N times (record-only: no thresholds; no failure on a noisy point). Use it when a
+# runner image change or a benchmark restructure invalidates the existing baseline. Shared and identical across repos -- a
+# repo with no benchmarks/ simply has nothing to do. See docs/ARCHITECTURE.md#benchmark-threshold-management for the full
+# picture, and the separate, vm2.DevOps-only "RebuildBenchHistory.yaml (fan-out)" workflow that dispatches this one across
+# every vm2 repo at once -- do not confuse the two; this file must stay the thin per-repo dispatcher, never the fan-out
+# coordinator.
 
 on:
   workflow_dispatch:
@@ -22,25 +24,12 @@ env:
 
 permissions:
   contents: read
+  packages: read # Required to restore GitHub Packages NuGet packages
 
 jobs:
-  fan-out:
-    name: Dispatch benchmark-history rebuilds
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup DevOps environment variables
-        uses: vmelamed/vm2.DevOps/.github/actions/setup-env@main
-
-      # GH_TOKEN here is BENCH_DISPATCH_PAT, not the default GITHUB_TOKEN: dispatching a workflow in ANOTHER repository requires
-      # a token with Actions:write on that repo, which the default token does not have. See
-      # docs/CONFIGURATION.md#actions-secrets for how this secret is provisioned (vm2.DevOps only).
-      - name: Fan out benchmark-history rebuild
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.BENCH_DISPATCH_PAT }}
-          REPEAT_BENCHMARKS: ${{ inputs.repeat }}
-        run: |
-          rebuild-bench-history.sh --repeat '$REPEAT_BENCHMARKS'
+  rebuild:
+    uses: vmelamed/vm2.DevOps/.github/workflows/_rebuild_bench_history.yaml@main
+    secrets:
+      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+    with:
+      repeat: ${{ fromJSON(inputs.repeat) }}
