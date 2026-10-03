@@ -41,5 +41,6 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.BENCH_DISPATCH_PAT }}
+          REPEAT_BENCHMARKS: ${{ inputs.repeat }}
         run: |
-          rebuild-bench-history.sh --repeat '${{ inputs.repeat }}'
+          rebuild-bench-history.sh --repeat '$REPEAT_BENCHMARKS'

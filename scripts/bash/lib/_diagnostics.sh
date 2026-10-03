@@ -810,7 +810,7 @@ function info()
 function trace()
 {
     is_verbose || return "$success"
-    __message "$trace_prefix" --no-stack "$@" > >(to_stderr)
+    __message "$trace_prefix" --no-stack "$@" >&2
 }
 
 #---------------------------------------------------------------------------------------------

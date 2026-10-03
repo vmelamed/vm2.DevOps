@@ -389,9 +389,9 @@ The four logging functions (`trace`, `info`, `warning`, `error`) are designed to
     - main                 (/home/valo/repos/vm2/vm2.DevOps/.github/scripts/run-tests.sh: 169)
 ```
 
-The library logging is based on four central functions that read from `stdin` and write to `stdout`, `stderr`, and optionally to the GitHub Actions step summary file and actions logs, implementing a `tee`-like behavior. The goal of the functions is to abstract the logging mechanism so that scripts can log messages without worrying about the underlying output streams and at the same time to satisfy the logging requirements.
+Three of the four central logging functions (`info`, `warning`, `error`) read from `stdin` and write to `stdout`/`stderr`, and -- in GitHub Actions -- also to the step summary file, implementing a `tee`-like behavior. `trace` is the deliberate exception: it always writes straight to `stderr` only, in both contexts, and never to the step summary (see below for why). The goal of the three tee-ing functions is to abstract the logging mechanism so that scripts can log messages without worrying about the underlying output streams and at the same time satisfy the logging requirements.
 
-When the scripts are executing locally, the requirements are standard: log to the familiar `stdout` and `stderr` streams. But when the scripts are executing in GitHub Actions, the requirements are different: log to the GitHub Actions step summary file and to the actions logs. Yes, the logs are interleaved with GH step summary outputs, which improves the maintainability. The library logging functions handle this automatically, so that scripts can log messages without worrying about the underlying output streams. To achieve this goal, the library uses streaming helpers functions: `to_stdout`, `to_stderr`, `to_traceout` that implement their interface contracts differently, depending on the execution context (local vs GitHub Actions).
+When the scripts are executing locally, the requirements are standard: log to the familiar `stdout` and `stderr` streams. But when the scripts are executing in GitHub Actions, the requirements are different: log to the GitHub Actions step summary file and to the actions logs. Yes, the logs are interleaved with GH step summary outputs, which improves the maintainability. The library logging functions handle this automatically, so that scripts can log messages without worrying about the underlying output streams. To achieve this goal, the library uses streaming helper functions, `to_stdout` and `to_stderr`, that implement their interface contracts differently depending on the execution context (local vs GitHub Actions).
 
 On the local machine, the consuming script simply sources the core `source "lib/core.sh"` and the logging functions are implemented in `_diagnostics.sh` rather trivially:
 
@@ -402,21 +402,18 @@ function to_stdout() {
 }
 ```
 
-The four logging functions write to the appropriate helper and in turn they write to the appropriate output stream:
+`info`/`warning`/`error` write to the appropriate helper and in turn to the appropriate output stream; `trace` writes directly to `stderr`, bypassing the helpers entirely:
 
 ```text
 info()    ─────► to_stdout()   ─────► stdout
 warning() ─────► to_stderr()   ─────► stderr
 error()   ─────► to_stderr()   ─────► stderr
-trace()   ─────► to_traceout() ─────► stderr
+trace()   ─────────────────────────► stderr   (always direct -- see below)
 ```
 
 If you need to write a script for both local and GitHub Actions contexts, you must source different core file: `gh_core.sh`, which in turn sources `core.sh` and `_diagnostics.sh`. This script implements the same interface contract (overrides the `to_*` functions), but implements them differently. Now the `to_*` functions write to the GitHub Step Summary AND to the standard devices (which on GitHub are mapped to the action log files), similar to `tee`. Now the mapping of the logging functions is:
 
 ```text
-trace()   ─────► to_traceout() ──┬──► stderr (log)
-                                 └──► github_step_summary
-
 info()    ─────► to_stdout()   ──┬──► stdout (log)
                                  └──► github_step_summary
 
@@ -426,12 +423,7 @@ warning() ─────► to_stderr()   ──┬──► stderr (log)
 error()   ─────► to_stderr()   ──┬──► stderr (log)
                                  └──► github_step_summary
 
-trace()   ─────► to_traceout() ──┬──► stderr (log)
-                                 └──► $trace_to_summary?
-                                             │
-                                            Yes
-                                             └──► github_step_summary
-
+trace()   ─────────────────────────► stderr (log only -- never github_step_summary)
 ```
 
 The overriding code is:
@@ -446,23 +438,9 @@ function to_stdout() {
 }
 ```
 
-It turned out that having traces in the summary was not that helpful in a long run. That's why there is a switch `$trace_to_summary`, that can be turned on and off:
+It turned out that having traces in the summary was not that helpful in the long run -- too much noise for a document meant to be read quickly. Earlier revisions of this library had a `to_traceout()` helper with a `$trace_to_summary` toggle to make this optional; that was eventually simplified to the current, simpler rule instead: `trace()` always writes a plain `>&2` and never touches the step summary at all, in either context, with no toggle to configure. If you need a trace line to also show up in the summary, use `info`/`warning` instead, or `to_summary` directly (see below).
 
-```bash
-declare -x github_step_summary=${GITHUB_STEP_SUMMARY:-"$_ignore"} # _ignore is "/dev/null"
-declare -x trace_to_summary=${TRACE_TO_SUMMARY:-false}
-
-function to_traceout() {
-    local _line
-    while IFS= read -r _line; do
-        echo "$_line" >&2
-        $trace_to_summary && echo "$_line" >> "$github_step_summary"
-    done
-    return "$success"
-}
-```
-
-As you can see the functions do not write to the GitHub Step Summary file directly, but they write to a variable `$github_step_summary` that is set in `gh_core.sh`. It's value depends on the context: if the script is running in GitHub Actions, it points to the GitHub Step Summary file, otherwise it points to `/dev/null`. This way the logging functions can be used in both contexts without any changes.
+The three tee-ing functions (`info`/`warning`/`error`) do not write to the GitHub Step Summary file directly, but to a variable `$github_step_summary` that is set in `gh_core.sh`. Its value depends on the context: if the script is running in GitHub Actions, it points to the GitHub Step Summary file, otherwise it points to `/dev/null`. This way the logging functions can be used in both contexts without any changes.
 
 ##### Free Form Output to the GitHub Step Summary
 
