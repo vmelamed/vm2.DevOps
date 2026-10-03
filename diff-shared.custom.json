@@ -8,6 +8,7 @@
         "Release.yaml": "ignore",
         "ClearCache.yaml": "ignore",
         "RefreshLockFiles.yaml": "ignore",
+        "RebuildBenchHistory.yaml": "ignore",
         "AutoMerge.yaml": "ignore",
         ".editorconfig": "ignore",
         "Directory.Solution.props": "ignore",

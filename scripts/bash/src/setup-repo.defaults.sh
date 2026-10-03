@@ -277,8 +277,8 @@ declare -xra actions_secrets_order=(
     "--Benchmarks:"
     "BENCHER_API_TOKEN"                        # API token used by Bencher for authentication
     "BENCH_DISPATCH_PAT"                       # Fine-grained PAT with `Actions: write` + `Contents: read` on the package repos.
-                                               # Used by `RebuildBenchHistory.yaml` to dispatch each repo's benchmark-history
-                                               # rebuild
+                                               # Used by `RebuildBenchHistory-AllRepos.yaml` to dispatch each repo's
+                                               # benchmark-history rebuild
 )
 declare -xra dependabot_secrets_order=(
     "GH_PACKAGES_TOKEN"                        # Needed by dependabot.yml's own "github-packages" registry entry, so

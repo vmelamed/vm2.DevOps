@@ -530,7 +530,7 @@ Fan-out dispatcher: triggers each vm2 repo's `RebuildBenchHistory.yaml` to re-re
 Selects repos by probing for a `benchmarks/` directory via `gh api` (no clones), so it runs identically from a CLI and from a
 workflow. Fire-and-forget — it dispatches the per-repo runs and returns.
 
-**Called by:** `RebuildBenchHistory.yaml` (vm2.DevOps); also runnable directly from a CLI.
+**Called by:** `RebuildBenchHistory-AllRepos.yaml` (vm2.DevOps); also runnable directly from a CLI.
 
 | Option       | Short | Default                              | Description                              |
 | :----------- | :---- | :----------------------------------- | :--------------------------------------- |

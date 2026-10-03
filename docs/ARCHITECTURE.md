@@ -566,10 +566,11 @@ entire baseline goes stale: a runner-image upgrade, new hardware, or a benchmark
 - **`RebuildBenchHistory.yaml`** (per-repo entry point, e.g. in vm2.Ulid) — the actual `workflow_dispatch` trigger
   a human clicks (UI or phone), with a `repeat` input. Identical copy in every package repo; a repo with no
   `benchmarks/` simply has nothing to do.
-- **`rebuild-bench-history.sh`** (fan-out convenience, vm2.DevOps-only) — loops the hardcoded `vm2_repositories`
-  list (`_constants.sh`), probes each repo's GitHub API for a `benchmarks/` directory, and for each hit, dispatches
-  *that* repo's own `RebuildBenchHistory.yaml` via `gh workflow run ... -f repeat=N`. Fire-and-forget: it does not
-  wait, and every repo's rebuild proceeds independently in its own Actions.
+- **`rebuild-bench-history.sh`** (fan-out convenience, vm2.DevOps-only, invoked by
+  `RebuildBenchHistory-AllRepos.yaml`) — loops the hardcoded `vm2_repositories` list (`_constants.sh`), probes each
+  repo's GitHub API for a `benchmarks/` directory, and for each hit, dispatches *that* repo's own
+  `RebuildBenchHistory.yaml` via `gh workflow run ... -f repeat=N`. Fire-and-forget: it does not wait, and every
+  repo's rebuild proceeds independently in its own Actions.
 
 ### When to use which
 
@@ -577,6 +578,30 @@ entire baseline goes stale: a runner-image upgrade, new hardware, or a benchmark
 | :--------------------------------------------------------------------------- | :--------------------------- |
 | One PR/run has an expected, understood regression                            | `reset-benchmark-thresholds` |
 | The whole baseline is stale (runner change, new hardware, benchmark rewrite) | Rebuild benchmark history    |
+
+### Rebuild Benchmark History — Quick Reference
+
+The scope of "Rebuild benchmark history" depends entirely on **which repo you dispatch it from** -- the two
+workflows look similar (same display name family) but do very different things, and must never be confused:
+
+| Action                             | Where                                                                                   | Scope                                                                                 |
+| :--------------------------------- | :--------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------ |
+| Rebuild **one repo's own** history | That repo -> Actions -> "Rebuild Benchmark History" -> Run workflow                     | Only that repo.                                                                       |
+| Rebuild **every** repo's history   | **vm2.DevOps only** -> Actions -> "Rebuild Benchmark History (fan-out)" -> Run workflow | Every repo in `vm2_repositories` with a top-level `benchmarks/` dir. Fire-and-forget. |
+
+Both take the same single input, `repeat` (default `10`): how many independent runs to record per benchmark.
+
+**This distinction is load-bearing, not cosmetic**: the per-repo workflow (`RebuildBenchHistory.yaml` in every
+package repo, scaffolded from `vm2.Templates`) MUST stay a thin dispatcher that calls `_rebuild_bench_history.yaml`
+directly for that repo alone. The fan-out coordinator (`RebuildBenchHistory-AllRepos.yaml`, a different, larger
+workflow that loops every repo and dispatches each one's own copy of the per-repo file) exists **only** in
+vm2.DevOps's own `.github/workflows/` — and is deliberately named differently from the per-repo file precisely so
+`diff-shared.sh`'s exact-basename matching can never confuse or overwrite one with the other (a real incident:
+`RebuildBenchHistory.yaml` used to be vm2.DevOps's own fan-out coordinator under the *same* name as the per-repo
+file, and a `diff-shared.sh` run once silently clobbered it with the generic per-repo content). If you're ever
+unsure which shape a given repo's file has, check for `uses:
+vmelamed/vm2.DevOps/.github/workflows/_rebuild_bench_history.yaml@main` in its `jobs:` block -- that line is only
+ever present in the correct, thin per-repo version.
 
 ## Script Distribution
 

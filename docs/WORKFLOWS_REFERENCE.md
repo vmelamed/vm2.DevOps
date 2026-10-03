@@ -54,7 +54,7 @@
     - [Inputs](#inputs-8)
     - [Secrets](#secrets-5)
     - [Script](#script-4)
-  - [RebuildBenchHistory.yaml (fan-out, in vm2.DevOps)](#rebuildbenchhistoryyaml-fan-out-in-vm2devops)
+  - [RebuildBenchHistory-AllRepos.yaml (fan-out, in vm2.DevOps)](#rebuildbenchhistory-allreposyaml-fan-out-in-vm2devops)
     - [Inputs](#inputs-9)
     - [Secrets](#secrets-6)
     - [Permissions](#permissions-7)
@@ -477,7 +477,7 @@ thresholds, no `--err` — a noisy point never fails the run.
 
 ---
 
-## RebuildBenchHistory.yaml (fan-out, in vm2.DevOps)
+## RebuildBenchHistory-AllRepos.yaml (fan-out, in vm2.DevOps)
 
 Manually dispatched (UI/phone) fan-out. Triggers each vm2 package repo's own `RebuildBenchHistory.yaml` (which calls
 `_rebuild_bench_history.yaml`). Selects targets by probing for a `benchmarks/` directory via `gh api`. **Fire-and-forget** —
