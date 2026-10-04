@@ -2,6 +2,7 @@
     "$schema": "diff-shared.custom.schema.json",
     "action_overrides": {
         "copilot-instructions.md": "ignore",
+        "PULL_REQUEST_TEMPLATE.md": "ignore",
         "dependabot.yml": "ignore",
         "CI.yaml": "ignore",
         "Prerelease.yaml": "ignore",

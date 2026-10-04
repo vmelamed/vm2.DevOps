@@ -15,9 +15,12 @@ declare -xri err_missing_argument
 declare -xri err_tool_error
 declare -xri err_logic_error
 
+declare -xr question_em
+
 declare -xri admin_role_id=5
 
 declare -xr secret_str
+declare -xr secret_placeholder
 
 declare -x repo_name
 declare -x repo
@@ -213,7 +216,7 @@ function initialize_jq_queries()
     exit_if_has_bugs
 
     jq_entries='to_entries[] | "\(.key)=\(.value)"'
-    jq_secrets='.secrets[] | "\(.name)='"$secret_str"'"'
+    jq_secrets='.secrets[] | "\(.name)='"$secret_placeholder"'"'
     jq_secret_names='.secrets[] | .name'
     jq_vars='.variables[] | "\(.name)=\(.value)"'
     jq_ruleset_id='.[] | select(.name == "'"$main_protection_rs_name"'") | .id // empty'
@@ -494,8 +497,8 @@ function configure_variables()
     done < <(execute_gh_api_with_retry 3 2 --paginate "$path_repo/$_app/variables" -q "$jq_vars")
 
     local _exists _default
-    local _new_value=""
-    local _default_value=""
+    local _new_value=''
+    local _default_value=''
     local -i _skipped=0 _set_new=0 _set_default=0 _ignored=0 _deleted=0
 
     # work through the default vars
@@ -504,6 +507,9 @@ function configure_variables()
             $interactive_vars && printf "    ➡️  %-38s %s\n" "${_var#--}" "────────────────────────────────────────────────────────────────────────"
             continue
         fi
+
+        # it is possible that a variable in the order array is not in the default values array - e.g. programmatically removed
+        # like NUGET_USERNAME which will be removed from the default values array if the NuGet server is GitHub Packages.
         [[ -v _vars_defaults[$_var] ]] || continue
 
         _default_value="${_vars_defaults[$_var]}"
@@ -512,7 +518,7 @@ function configure_variables()
             _value="${_current[$_var]:-}"
         else
             _exists=false;
-            _value="";
+            _value='';
         fi
 
         if $interactive_vars; then
@@ -564,7 +570,7 @@ function configure_variables()
             # it's a purge candidate
             if $purge_vars; then
                 if $interactive_vars; then
-                    if confirm "            Do you want to delete the unknown or obsolete variable '$_var'?" "n"; then
+                    if confirm "            $question_em  Do you want to delete the unknown or obsolete variable '$_var'?" "n"; then
                         delete_var "$_var" &&
                         (( ++_deleted )) &&
                         trace "Deleted the unknown or obsolete variable '$_var'."
@@ -732,6 +738,9 @@ function configure_secrets()
             $interactive_secrets && printf "    ➡️  %-38s %s\n" "${_secret#--}" "────────────────────────────────────────────────────────────────────────"
             continue
         fi
+
+        # it is possible that a secret in the order array is not in the default secrets array - e.g. programmatically removed
+        # like NUGET_API_KEY which will be removed from the default values array if the NuGet server is GitHub Packages or NuGet.org.
         [[ -v _secrets_defaults[$_secret] ]] || continue
 
         is_in "$_secret" "${_current[@]}" && _exists=true || _exists=false
@@ -743,17 +752,17 @@ function configure_secrets()
             local _prompt="        Enter value for secret $_secret"
             local _validator="${_secrets_validators[$_secret]:-true}"
 
-            $_exists && _default="$secret_str" || _default=""
+            $_exists && _default="$secret_placeholder" || _default=''
 
             enter_value "$_prompt" _value "$_default" true "$_validator"
 
-            if [[ -n $_value && $_value != "$secret_str" ]]; then
-                echo "$secret_str" # display '••••••' - feedback that we've got the value and it is secret
+            if [[ -n $_value && $_value != "$secret_placeholder" ]]; then
+                echo "$secret_str" # display '••••••' - UI feedback that we've got the value and it is secret
                 set_secret "$_secret" "$_value" "$_app" || continue
                 trace "Set value of secret: $_secret"
                 (( ++_set_new ))
 
-            elif [[ -n $_value && $_value == "$secret_str" ]]; then
+            elif [[ -n $_value && $_value == "$secret_placeholder" ]]; then
                 echo ""
                 trace "Unchanged secret: $_secret"
                 (( ++_skipped ))
@@ -779,7 +788,7 @@ function configure_secrets()
             # it's a purge candidate
             if $purge_secrets; then
                 if $interactive_secrets; then
-                    if confirm "            Do you want to delete the unknown or obsolete secret '$_secret'?" "n"; then
+                    if confirm "            $question_em  Do you want to delete the unknown or obsolete secret '$_secret'?" "n"; then
                         delete_secret "$_secret" "$_app" &&
                         (( ++_deleted )) &&
                         trace "Deleted the unknown or obsolete secret '$_secret'."

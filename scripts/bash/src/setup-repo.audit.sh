@@ -24,6 +24,7 @@ declare -xri err_tool_error
 
 declare -x _ignore
 declare -xr secret_str
+declare -xr secret_placeholder
 
 declare -x repo_path
 declare -x repo
@@ -64,13 +65,15 @@ declare -r key_missing="missing"
 declare -r key_unknowns="unknowns"
 
 #---------------------------------------------------------------------------------------------
-# @description Fetches the current settings from the GitHub API and compares them to the expected settings,
-# reporting matches, differences, and missing values (errors) to stdout in a formatted list.
+# @description Fetches the current settings from the GitHub API and compares them to the
+# expected settings, reporting matches, differences, and missing values (errors) to stdout in
+# a formatted list.
 #
-# For each key, the expected value is looked up in the `expected` associative array. If the expected value is the
-# secret placeholder (`$secret_str`), the comparison degrades to presence-only: the actual value is reported
-# as either present or missing, never compared for equality (this is how secrets, whose real values this script
-# never reads back, are audited). Otherwise the actual and expected values are compared for equality.
+# For each key, the expected value is looked up in the `expected` associative array. If the
+# expected value is the secret placeholder (`$secret_placeholder`), the comparison degrades to
+# presence-only: the actual value is reported as either present or missing, never compared for
+# equality (this is how secrets, whose real values this script never reads back, are audited).
+# Otherwise the actual and expected values are compared for equality.
 #
 # Notes:
 #   - Will exit the script if an invalid argument(s) is/are provided with exit codes
@@ -78,11 +81,13 @@ declare -r key_unknowns="unknowns"
 # @arg $1 string GitHub API endpoint path to fetch the settings from, e.g. `repos/$repo` or
 #   `repos/$repo/actions/permissions/workflow`.
 # @arg $2 string jq query used to transform the JSON response into `key=value` lines.
-# @arg $3 bool when `true`, in the following associative array, change the keys to sentence-capitalized with spaces instead of
-#   underscores (for UI readability), e.g. `allow_squash_merge` => `Allow squash merge`.
-# @arg $4 boolean when `true`, indicates that the unknown or obsolete values should be included in the comparison.
-# @arg $5 nameref to an associative array variable containing the expected key-value pairs, e.g. `default_repo_settings` or
-#   `default_repo_permissions`.
+# @arg $3 bool when `true`, in the associative array argument $5, changes the displayed keys
+#   to sentence-capitalized, space-separated instead of underscores, e.g.,
+#   `allow_squash_merge` => `Allow squash merge` (for UI readability).
+# @arg $4 boolean when `true`, indicates that the unknown or obsolete values should be
+#   included in the comparison.
+# @arg $5 nameref to an associative array variable containing the expected key-value pairs,
+#   e.g., `default_repo_settings` or `default_repo_permissions`.
 # @arg $6 nameref to an associative array variable to store the summary results in, keyed by:
 #   $key_matches   - number of exact matches
 #   $key_diffs     - number of differences
@@ -176,7 +181,7 @@ function compare_settings()
         fi
 
         _expected_value="${_expected_key_values[$_key]}"
-        if [[ $_expected_value == "$secret_str" ]]; then
+        if [[ $_expected_value == "$secret_placeholder" ]]; then
             _expected_value=$undefined_default # mask as undefined expected value (which it is)
             [[ -v _known_key_values[$_key] ]] &&
                 _actual_value=$present_state || # if the key exists, mark it as present, otherwise mark it as missing
@@ -302,22 +307,25 @@ function audit_required_status_checks() {
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Runs a full, read-only audit of the target GitHub repository against the vm2 conventions, comparing
-# repository settings, Actions workflow permissions, per-app secrets, Actions variables, the branch-protection
-# ruleset (and its required status checks), and the local Git config -- then prints a totals summary. Requires
-# `initialize_gh_paths`, `initialize_jq_queries`, and `resolve_github_app_ids` to have already run so the
-# `path_*`/`jq_*` variables and `required_checks` are populated.
+# @description Runs a full, read-only audit of the target GitHub repository against the vm2
+#   conventions, comparing repository settings, Actions workflow permissions, per-app secrets,
+#   Actions variables, the branch-protection ruleset (and its required status checks), and the
+#   local Git config -- then prints a totals summary. Requires `initialize_gh_paths`,
+#   `initialize_jq_queries`, and `resolve_github_app_ids` to have already run so the
+#   `path_*`/`jq_*` variables and `required_checks` are populated.
 #
 # @exitcode success=0: Audit completed and printed.
-# @exitcode failure=1: The branch-protection ruleset for the configured branch is missing or could not be found. This
-#   terminates the whole script directly via a literal `exit 1`, not a `return` -- it is not a code this function's
-#   caller ever observes.
-# @exitcode 2: One of the internal `compare_settings` calls (settings, permissions, vars, secrets, or the ruleset
-#   itself) failed and reported an error. This is a bare numeric literal in the code, not a named `$err_*` constant
-#   -- it happens to coincide with the value of `err_invalid_arguments`, which is not its intended meaning here.
+# @exitcode failure=1: The branch-protection ruleset for the configured branch is missing or
+#   could not be found. This terminates the whole script directly via a literal `exit 1`, not
+#   a `return` -- it is not a code this function's caller ever observes.
+# @exitcode 2: One of the internal `compare_settings` calls (settings, permissions, vars,
+#   secrets, or the ruleset itself) failed and reported an error. This is a bare numeric
+#   literal in the code, not a named `$err_*` constant -- it happens to coincide with the
+#   value of `err_invalid_arguments`, which is not its intended meaning here.
 #
-# @stdout A multi-section, emoji-annotated audit report (repository settings, Actions permissions, secrets per app,
-#   Actions variables, branch ruleset, required status checks, local Git settings) followed by a totals summary.
+# @stdout A multi-section, emoji-annotated audit report (repository settings, Actions
+#   permissions, secrets per app, Actions variables, branch ruleset, required status checks,
+#   local Git settings) followed by a totals summary.
 #---------------------------------------------------------------------------------------------
 function audit_repo()
 {

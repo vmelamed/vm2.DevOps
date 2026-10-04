@@ -17,6 +17,10 @@ declare -xr default_nuget_server
 declare -x nuget_server
 declare -x repo_name
 
+#===============================================================================
+# GitHub repository settings
+#===============================================================================
+
 declare -xrA default_repo_settings=(
     ["default_branch"]="main"
     ["delete_branch_on_merge"]=true
@@ -47,10 +51,18 @@ declare -xra default_repo_settings_order=(
     "visibility"
 )
 
+#===============================================================================
+# GitHub repository permissions settings
+#===============================================================================
+
 declare -xrA default_repo_permissions=(
     ["default_workflow_permissions"]="read"
     ["can_approve_pull_request_reviews"]=false
 )
+
+#===============================================================================
+# GitHub repository "main protection" ruleset
+#===============================================================================
 
 declare -xrA default_ruleset=(
     ["enforcement"]="active"
@@ -90,16 +102,23 @@ declare -xra default_ruleset_order=(            # UI: Order in which rules appea
     "non_fast_forward"                          # Block force pushes
 )
 
-declare -xra nuget_servers=(
-    "$default_nuget_server" # "nuget"
-    "github"
-)
+#===============================================================================
+# GitHub repository variables
+#===============================================================================
 
 declare -xra apps_with_vars=(
     "actions"
     "agents"
 )
 
+# The vars defaults for each application not only gives the default values for the variables
+# but also serves as a definition of the expected variables for the application. Some variables
+# may be optional depending on the application's configuration or environment, e.g.,
+# NUGET_USERNAME may not be required if the NuGet server is GitHub Packages. This is
+# controlled in the function that retrieves the default values for the application's
+# variables - see `get_vars_defaults()` below. That's why when iterating through the
+# variables' order, the code MUST check if the current var from the order exists in the
+# defaults array returned by `get_vars_defaults()`.
 declare -xA actions_vars_defaults=(
     # Build and Pack:
     ["MINVERTAGPREFIX"]="v"
@@ -173,21 +192,26 @@ declare -xa agents_vars_order=()
 declare -xA agents_vars_validators=()
 
 #---------------------------------------------------------------------------------------------
-# @description Validates the consistency of one application's default-variable tables: '<app>_vars_defaults'
-#   (associative array of default values), '<app>_vars_order' (display order), and '<app>_vars_validators'
-#   (per-variable validator function names). Backfills a missing/short display order (alphabetically, with a
-#   warning) and appends any default variable missing from the display order. Every default variable must have an
-#   entry in '<app>_vars_validators' whose value is either a defined function name or the literal string 'true'
-#   (meaning "no validation"); that validator (when not 'true') is then run against the variable's own default
-#   value. On success, freezes all three tables as read-only. A no-op if '<app>_vars_defaults' is empty.
+# @description Validates the consistency of an application's default-variable tables:
+#   '<app>_vars_defaults' (associative array of default values), '<app>_vars_order' (display
+#   order), and '<app>_vars_validators' (per-variable validator function names). Backfills a
+#   missing/short display order (alphabetically, with a warning) and appends any default
+#   variable missing from the display order. Every default variable must have an entry in
+#   '<app>_vars_validators' whose value is either a defined function name or the literal
+#   string 'true' (meaning "no validation"); that validator (when not 'true') is then run
+#   against the variable's own default value. On success, freezes all three tables as
+#   read-only. A no-op if '<app>_vars_defaults' is empty.
 #
-# @arg $1 string _app - the application name (must be one of '${apps_with_vars[@]}', e.g. 'actions').
+# @arg $1 string _app - the application name (must be one of '${apps_with_vars[@]}', e.g.
+#   'actions').
 #
-# @exitcode success=0: The tables are consistent and were frozen (or '<app>_vars_defaults' was empty).
+# @exitcode success=0: The tables are consistent and were frozen (or '<app>_vars_defaults' was
+#   empty).
 #
-# Note: a caller-contract violation (unknown app, missing table, an undefined validator function, or a default
-#   value that fails its own validator) is reported via 'bug' and aborts the process via 'exit_if_has_bugs' --
-#   this function never returns a non-zero code to a caller.
+# Note: a caller-contract violation (unknown app, missing table, an undefined validator
+#   function, or a default value that fails its own validator) is reported via 'bug' and
+#   aborts the process via 'exit_if_has_bugs' -- this function never returns a non-zero code
+#   to a caller.
 #---------------------------------------------------------------------------------------------
 function validate_app_default_vars()
 {
@@ -253,116 +277,25 @@ function validate_app_default_vars()
     readonly -A "$_vars_validators_name"
 }
 
-declare -xra apps_with_secrets=(
-    "actions"
-    "dependabot"
-    "codespaces"
-    # "agents"
-)
-
-declare -xra actions_secrets_order=(
-    "--Build and Pack:"
-    "NUGET_API_KEY"                            # The NuGet API key for the selected NuGet server. Note that GitHub Packages use
-                                               # the callers's token; nuget.org uses Trusted Publishing and also does not need
-                                               # secret.
-                                               # (see https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing)
-    "GH_PACKAGES_TOKEN"                        # The GitHub Packages token used to update the local GitHub Packages (used by
-                                               # Dependabot)
-    "RELEASE_PAT"                              # PAT for a user listed as a bypass actor (e.g. Admin) in the branch ruleset
-                                               # protecting main. Required to push changelog commits and version tags directly
-                                               # to main
-    "--Test:"
-    "REPORTGENERATOR_LICENSE"                  # License key used by ReportGenerator for generating coverage reports
-    "CODECOV_TOKEN"                            # Token used by Codecov to upload coverage reports - different for different
-                                               # projects
-    "--Benchmarks:"
-    "BENCHER_API_TOKEN"                        # API token used by Bencher for authentication
-    "BENCH_DISPATCH_PAT"                       # Fine-grained PAT with `Actions: write` + `Contents: read` on the package repos.
-                                               # Used by `RebuildBenchHistory-AllRepos.yaml` to dispatch each repo's
-                                               # benchmark-history rebuild
-)
-declare -xra dependabot_secrets_order=(
-    "GH_PACKAGES_TOKEN"                        # Needed by dependabot.yml's own "github-packages" registry entry, so
-                                               # Dependabot can authenticate to check the private NuGet feed for
-                                               # updates. This is a SEPARATE secret store from Actions secrets, even
-                                               # for the identically-named secret -- see
-                                               # https://docs.github.com/en/code-security/dependabot/working-with-dependabot/configuring-access-to-private-registries-for-dependabot#storing-credentials-for-dependabot-to-use
-)
-declare -xra agents_secrets_order=()
-declare -xra codespaces_secrets_order=()
-
 #---------------------------------------------------------------------------------------------
-# @description Validates that one application's secrets display-order table ('<app>_secrets_order') is defined.
-#   Unlike 'validate_app_default_vars', there are no default values or per-secret validators for secrets (secret
-#   values are never defaulted in source -- see 'get_secrets_defaults'), so there is nothing to backfill or freeze
-#   here beyond the existence check.
+# @description Gets the default data for the current repo application's GitHub Actions 'vars':
+#   the default values (copied mostly from '<app>_vars_defaults') and the display order
+#   (copied from '<app>_vars_order'). For 'actions', 'NUGET_SERVER's default value is
+#   overridden with the current global '$nuget_server' (rather than the hardcoded table
+#   default), and 'NUGET_USERNAME' is dropped entirely when '$nuget_server' is 'github'
+#   (GitHub Packages authenticates with the caller's token and needs no username).
 #
-# @arg $1 string _app - the application name (must be one of '${apps_with_secrets[@]}', e.g. 'actions').
+# @arg $1 string _app - the application name (must be one of '${apps_with_vars[@]}', e.g.
+#   'actions').
+# @arg $2 string __vars - name of an associative array to receive the variables' names and
+#   default values.
+# @arg $3 string __vars_order - name of an indexed array to receive the variables' display
+#   order.
+# @arg $4 string (optional) name of an associative array intended to receive the names of each
+#   variable's validation function.
 #
-# @exitcode success=0: '<app>_secrets_order' is defined.
-#
-# Note: a caller-contract violation (unknown app, or '<app>_secrets_order' not defined) is reported via 'bug' and
-#   aborts the process via 'exit_if_has_bugs' -- this function never returns a non-zero code to a caller.
-#---------------------------------------------------------------------------------------------
-function validate_app_default_secrets()
-{
-    (( $# == 1 ))                                        || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#):" \
-                                                                                             "  - the name of the application (e.g., actions)"
-    [[ ! -v 1 ]] || is_in "$1" "${apps_with_secrets[@]}" || bug "${FUNCNAME[0]}() requires the argument to be one of (${apps_with_secrets[*]}) - provided ${1:-<none>}."
-
-    local _app=$1
-    local _app_secrets_order_name="${_app,,}_secrets_order"
-
-    is_indexed_array "$_app_secrets_order_name"          || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() the required indexed array '$_app_secrets_order_name' is not defined."
-    exit_if_has_bugs
-}
-
-declare -x defaults_validated=false
-
-#---------------------------------------------------------------------------------------------
-# @description Validates the integrity of the default values for the applications' variables and secrets
-#   ('actions' and 'agents' for variables; 'actions', 'dependabot', and 'codespaces' for secrets -- 'agents'
-#   secrets are currently commented out of 'apps_with_secrets' since agents are not used yet). Idempotent: guarded
-#   by the global 'defaults_validated' flag, so repeated calls after the first are a no-op.
-#
-# @exitcode success=0: Always (validation failures are reported via 'bug' and abort the process directly via
-#   'exit_if_has_bugs' inside the called 'validate_app_default_vars'/'validate_app_default_secrets').
-#---------------------------------------------------------------------------------------------
-function validate_defaults()
-{
-    ! $defaults_validated || return "$success"
-
-    validate_app_default_vars actions
-    validate_app_default_vars agents         # agents are not used yet
-
-    validate_app_default_secrets actions
-    validate_app_default_secrets dependabot
-    validate_app_default_secrets codespaces  # codespaces are not used yet
-    # validate_app_default_secrets agents      # agents are not used yet
-
-    defaults_validated=true
-    readonly defaults_validated
-}
-
-#---------------------------------------------------------------------------------------------
-# @description Gets the default data for one application's GitHub Actions 'vars': the default values (copied from
-#   '<app>_vars_defaults') and the display order (copied from '<app>_vars_order'). For 'actions', 'NUGET_SERVER's
-#   default value is overridden with the current global '$nuget_server' (rather than the hardcoded table default),
-#   and 'NUGET_USERNAME' is dropped entirely when '$nuget_server' is 'github' (GitHub Packages authenticates with
-#   the caller's token and needs no username).
-#
-# @arg $1 string _app - the application name (must be one of '${apps_with_vars[@]}', e.g. 'actions').
-# @arg $2 string __vars - name of an associative array to receive the variables' names and default values.
-# @arg $3 string __vars_order - name of an indexed array to receive the variables' display order.
-# @arg $4 string (optional) name of an associative array intended to receive the names of each variable's
-#   validation function.
-#
-# @exitcode success=0: Always (the output arrays were populated, or left empty if '<app>_vars_defaults' is empty).
-#
-# Note: despite '$4' being documented and validated as the destination for the per-variable validator names, the
-#   copy loop below is guarded by '[[ -v 5 ]]' rather than '[[ -v 4 ]]' -- since this function only ever accepts 3
-#   or 4 arguments, that condition can never be true, so '$4' (when given) is currently never actually populated.
-#   Contrast with the equivalent, correctly-guarded '[[ -v 4 ]]' check in 'get_secrets_defaults' below.
+# @exitcode success=0: Always (the output arrays were populated, or left empty if
+#   '<app>_vars_defaults' is empty).
 #---------------------------------------------------------------------------------------------
 # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
 # shellcheck disable=SC2004 # $/${} is unnecessary on arithmetic variables.
@@ -440,18 +373,102 @@ function get_vars_defaults()
     fi
 }
 
+#===============================================================================
+# GitHub repository "main protection" ruleset
+#===============================================================================
+
+declare -xra apps_with_secrets=(
+    "actions"
+    "dependabot"
+    "codespaces"
+    # "agents"
+)
+
+declare -xr secret_placeholder=$secret_str
+
+# There is no application secrets defaults - only secrets order. The defaults MUST be
+# retrieved dynamically from the `get_secrets_defaults()` function. The defaults' values are
+# always the secret placeholder. Some secrets may be optional depending on the application's
+# configuration or environment, e.g., NUGET_API_KEY may not exist if the NuGet server is
+# GitHub Packages or NuGet.org. This is controlled by `get_secrets_defaults()`. That's why
+# when iterating through the secrets' order, the code MUST check if the current secret from
+# the order exists in the defaults array returned by `get_secrets_defaults()`.
+declare -xra actions_secrets_order=(
+    "--Build and Pack:"
+    "NUGET_API_KEY"                            # The NuGet API key for the selected NuGet server. Note that GitHub Packages use
+                                               # the callers's token; nuget.org uses Trusted Publishing and also does not need
+                                               # secret.
+                                               # (see https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing)
+    "GH_PACKAGES_TOKEN"                        # The GitHub Packages token used to update the local GitHub Packages (used by
+                                               # Dependabot)
+    "RELEASE_PAT"                              # PAT for a user listed as a bypass actor (e.g. Admin) in the branch ruleset
+                                               # protecting main. Required to push changelog commits and version tags directly
+                                               # to main
+    "--Test:"
+    "REPORTGENERATOR_LICENSE"                  # License key used by ReportGenerator for generating coverage reports
+    "CODECOV_TOKEN"                            # Token used by Codecov to upload coverage reports - different for different
+                                               # projects
+    "--Benchmarks:"
+    "BENCHER_API_TOKEN"                        # API token used by Bencher for authentication
+    "BENCH_DISPATCH_PAT"                       # Fine-grained PAT with `Actions: write` + `Contents: read` on the package repos.
+                                               # Used by `RebuildBenchHistory-AllRepos.yaml` to dispatch each repo's
+                                               # benchmark-history rebuild
+)
+declare -xra dependabot_secrets_order=(
+    "GH_PACKAGES_TOKEN"                        # Needed by dependabot.yml's own "github-packages" registry entry, so
+                                               # Dependabot can authenticate to check the private NuGet feed for
+                                               # updates. This is a SEPARATE secret store from Actions secrets, even
+                                               # for the identically-named secret -- see
+                                               # https://docs.github.com/en/code-security/dependabot/working-with-dependabot/configuring-access-to-private-registries-for-dependabot#storing-credentials-for-dependabot-to-use
+)
+declare -xra agents_secrets_order=()
+declare -xra codespaces_secrets_order=()
+
 #---------------------------------------------------------------------------------------------
-# @description Gets the default data for one application's GitHub secrets: a placeholder default value
-#   ('$secret_str') for each secret name listed in '<app>_secrets_order', the display order itself, and
-#   (optionally) 'is_valid_secret' as the validator for every secret. For 'actions', 'NUGET_API_KEY' is skipped
-#   entirely when the current '$nuget_server' is 'nuget' or 'github' -- neither needs a stored API key secret
+# @description Validates that one application's secrets display-order table
+#   ('<app>_secrets_order') is defined. Unlike 'validate_app_default_vars', there are
+#   no default values or per-secret validators for secrets (secret values are never defaulted
+#   in source -- see 'get_secrets_defaults'), so there is nothing to backfill or freeze here
+#   beyond the existence check.
+#
+# @arg $1 string _app - the application name (must be one of '${apps_with_secrets[@]}', e.g.
+#   'actions').
+#
+# @exitcode success=0: '<app>_secrets_order' is defined.
+#
+# Note: a caller-contract violation (unknown app, or '<app>_secrets_order' not defined) is
+#   reported via 'bug' and aborts the process via 'exit_if_has_bugs' -- this function never
+#   returns a non-zero code to a caller.
+#---------------------------------------------------------------------------------------------
+function validate_app_default_secrets()
+{
+    (( $# == 1 ))                                        || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#):" \
+                                                                                             "  - the name of the application (e.g., actions)"
+    [[ ! -v 1 ]] || is_in "$1" "${apps_with_secrets[@]}" || bug "${FUNCNAME[0]}() requires the argument to be one of (${apps_with_secrets[*]}) - provided ${1:-<none>}."
+
+    local _app=$1
+    local _app_secrets_order_name="${_app,,}_secrets_order"
+
+    is_indexed_array "$_app_secrets_order_name"          || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() the required indexed array '$_app_secrets_order_name' is not defined."
+    exit_if_has_bugs
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Gets the default data for one application's GitHub secrets: a placeholder
+#   default value ('secret_placeholder=$secret_str') for each secret name listed in
+#   '<app>_secrets_order', the display order itself, and (optionally) 'is_valid_secret' as the
+#   validator for every secret. For 'actions', 'NUGET_API_KEY' is skipped entirely when the
+#   current '$nuget_server' is 'nuget' or 'github' -- neither needs a stored API key secret
 #   (trusted publishing for nuget.org, the caller's token for GitHub Packages).
 #
-# @arg $1 string _app - the application name (must be one of '${apps_with_secrets[@]}', e.g. 'actions').
-# @arg $2 string __secrets - name of an associative array to receive the secrets' names and placeholder values.
-# @arg $3 string __secrets_order - name of an indexed array to receive the secrets' display order.
-# @arg $4 string (optional) name of an associative array to receive 'is_valid_secret' as every secret's
-#   validation function.
+# @arg $1 string _app - the application name (must be one of '${apps_with_secrets[@]}', e.g.
+#   'actions').
+# @arg $2 string __secrets - name of an associative array to receive the secrets' names and
+#   placeholder values.
+# @arg $3 string __secrets_order - name of an indexed array to receive the secrets' display
+#   order.
+# @arg $4 string (optional) name of an associative array to receive 'is_valid_secret' as every
+#   secret's validation function.
 #
 # @exitcode success=0: Always (the output arrays were populated, or left empty if '<app>_secrets_order' is empty).
 #---------------------------------------------------------------------------------------------
@@ -493,7 +510,7 @@ function get_secrets_defaults()
         # "unknown or obsolete" and deletes it.
         [[ $_app == "actions" && $_secret == "BENCH_DISPATCH_PAT" ]] &&
         [[ $repo_name != "$vm2_devops_repo_name" ]] && continue || true
-        __secrets[$_secret]=$secret_str
+        __secrets[$_secret]=$secret_placeholder
     done
 
     __secrets_order=("${_app_secrets_order[@]}")
@@ -506,6 +523,39 @@ function get_secrets_defaults()
         done
     fi
 }
+
+declare -x defaults_validated=false
+
+#---------------------------------------------------------------------------------------------
+# @description Validates the integrity of the default values for the applications' variables
+#   and secrets ('actions' and 'agents' for variables; 'actions', 'dependabot', and
+#   'codespaces' for secrets -- 'agents' secrets are currently commented out of
+#   'apps_with_secrets' since agents are not used yet). Idempotent: guarded by the global
+#   'defaults_validated' flag, so repeated calls after the first are a no-op.
+#
+# @exitcode success=0: Always (validation failures are reported via 'bug' and abort the
+#   process directly via 'exit_if_has_bugs' inside the called
+#   'validate_app_default_vars'/'validate_app_default_secrets').
+#---------------------------------------------------------------------------------------------
+function validate_defaults()
+{
+    ! $defaults_validated || return "$success"
+
+    validate_app_default_vars actions
+    validate_app_default_vars agents         # agents are not used yet
+
+    validate_app_default_secrets actions
+    validate_app_default_secrets dependabot
+    validate_app_default_secrets codespaces  # codespaces are not used yet
+    # validate_app_default_secrets agents      # agents are not used yet
+
+    defaults_validated=true
+    readonly defaults_validated
+}
+
+#===============================================================================
+# Local Git repository configuration defaults
+#===============================================================================
 
 declare -xr vm2_repos
 declare -xr vm2_sot_repo_name

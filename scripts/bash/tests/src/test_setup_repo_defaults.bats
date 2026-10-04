@@ -116,13 +116,6 @@ _sr() {
     refute_output --partial "MISSING FUNCTION"
 }
 
-@test "nuget_servers contains 'nuget' and 'github'" {
-    run _sr 'declare -p nuget_servers'
-    assert_success
-    assert_output --partial '"nuget"'
-    assert_output --partial '"github"'
-}
-
 @test "apps_with_secrets lists the three expected GitHub Apps ('agents' is commented out, not used yet)" {
     run _sr 'printf "%s\n" "${apps_with_secrets[@]}"'
     assert_success
