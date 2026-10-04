@@ -111,7 +111,7 @@ function _write_title()
 #   actual value
 # @arg $3 string _name the name to display instead of the variable name. Optional if not
 #   provided, the variable's actual name - $1 is used.
-#
+# @arg $4 bool _github_escape if true, applies GitHub escaping to the output.#
 # @exitcode success=0: The line/header was printed (always, once past the argument validation gate).
 #
 # @stdout Formatted variable line showing the name and its value (or a placeholder for unbound
@@ -127,14 +127,17 @@ function _write_line()
     local -i _rc="$success"
     local _has_name=false
 
-    (( $# == 2 || $# == 3 ))                            || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires two or three arguments (provided $#):" \
-                                                                                            "  - nameref to the variable to display" \
-                                                                                            "  - bool, if true, masks the value with the \$secret_str placeholder instead of printing it." \
-                                                                                            "  - string, optional name to display instead of the variable name."
+    (( $# == 4 ))                                        || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires four arguments (provided $#):" \
+                                                                                             "  - nameref to the variable to display" \
+                                                                                             "  - bool, if true, masks the value with the \$secret_str placeholder instead of printing it." \
+                                                                                             "  - string, the name to display instead of the variable name" \
+                                                                                             "  - bool, if true, applies GitHub escaping to the output"
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-    (( $# < 3 ))               || _has_name=true
-    [[ ! -v 1 ]] || $_has_name || is_variable_name "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be a valid variable name (provided '${1:-<none>}')."
-    [[ ! -v 2 ]] || is_boolean "$2"                     || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 2, the secret-masking flag, to be 'true' or 'false' (provided '${2:-<none>}')."
+    [[ ! -v 3  || -z "$3" ]] || _has_name=true
+    [[ ! -v 1 ]]  || $_has_name || is_variable_name "$1" || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 1 to be a valid variable name (provided '${1:-<none>}')."
+    [[ ! -v 2 ]]  || is_boolean "$2"                     || bug -ec "$err_argument_type"     "${FUNCNAME[0]}() requires argument 2, the secret-masking flag, to be 'true' or 'false' (provided '${2:-<none>}')."
+    [[ ! -v 3 ]]  || is_string "$3"                      || bug -ec "$err_argument_type"     "${FUNCNAME[0]}() requires argument 3, the display name, to be a string (provided '${3:-<none>}')."
+    [[ ! -v 4 ]]  || is_boolean "$4"                     || bug -ec "$err_argument_type"     "${FUNCNAME[0]}() requires argument 4, the GitHub escaping flag, to be 'true' or 'false' (provided '${4:-<none>}')."
     exit_if_has_bugs
 
     local _current_table_format_name=''
@@ -146,15 +149,17 @@ function _write_line()
     _format_i=${_current_table_format["fmt_ind__value"]}
 
     local _name=${3:-$1}
-    local _value
     local _is_secret=$2
+    local _github_escape=$4
+    local _value
 
     if is_associative_array "$1"; then
         local -n _var=$1
         printf "$_format" "$_name" "${#_var[@]} entries:"
         local _key
         for _key in "${!_var[@]}"; do
-            printf "$_format_i" "$_key" "${_var[$_key]}"
+            _github_escape && _value=$(github_escape "${_var[$_key]}") || _value=${_var[$_key]}
+            printf "$_format_i" "$_key" "$_value"
         done
 
     elif is_indexed_array "$1"; then
@@ -162,19 +167,18 @@ function _write_line()
         printf "$_format" "$_name" "${#_var[@]} items:"
         local -i _i
         for (( _i=0; _i < ${#_var[@]}; _i++ )); do
-            printf "$_format_i" "[$_i]:" "${_var[_i]}"
+            _github_escape && _value=$(github_escape "${_var[_i]}") || _value=${_var[_i]}
+            printf "$_format_i" "[$_i]:" "$_value"
         done
-
-    elif is_function "$1"; then
-        printf "$_format" "$_name" "$1()"
 
     elif is_variable "$1"; then
         local -n _var=$1
         [[ $_is_secret == true && -n  $_var ]] && _value="$secret_str" || _value="$_var"
+        _github_escape && _value=$(github_escape "$_value")
         printf "$_format" "$_name" "$_value"
 
-    elif $_has_name; then
-        printf "$_format" "$_name" "$1"
+    elif is_function "$1"; then
+        printf "$_format" "$_name" "$1()"
 
     else
         printf "$_format" "$_name" "$error_em  unbound, undefined, or invalid variable"
@@ -219,6 +223,7 @@ function dump_vars()
 
     # save the current global state - to be restored before returning from the function
     local -A _core_state=()
+    local _gh_escape=false
     save_state _core_state
 
     set +x
@@ -229,6 +234,7 @@ function dump_vars()
             -f|--force) set_verbose ;;
             -m|--markdown) set_table_format "markdown" ;;
             -g|--graphical) set_table_format "graphical" ;;
+            -e|--gh-escape ) _gh_escape=true ;;
             * ) ;;
         esac
     done
@@ -289,7 +295,7 @@ function dump_vars()
                 _secret=true
                 ;;
 
-            * ) _write_line "$_flag" "$_secret" "$_name"
+            * ) _write_line "$_flag" "$_secret" "$_name" "$_gh_escape"
                 _name=''
                 _secret=false
                 # all options starting with '-' are already processed
