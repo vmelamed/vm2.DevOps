@@ -161,6 +161,7 @@ declare -ra dump_vars_args=(
     --quiet
     --force
     "$_table_fmt"
+    --gh-escape
     --header "Validated Parameters"
     --header "Hosts:"
     runners_os
