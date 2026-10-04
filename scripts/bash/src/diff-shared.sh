@@ -340,7 +340,7 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
         # just the marked-off portion. Every non-identical outcome is still "different" for the purposes of
         # every OTHER action below; only 'copy shared'/'ask to copy shared' branch on the finer-grained code.
 
-        (( difference == negative || difference == shared_equal )) && different=false || different=true
+        (( difference == negative )) && different=false || different=true
 
         case $difference in
             "$positive" )
@@ -408,10 +408,10 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
                 "$action_copy_shared" )
                     case $difference in
                         "$shared_equal" )
-                            (( ++summary_shared_ignore_count )) &&              todo_or_done_txt="shared ignored" ;;
+                            (( ++summary_shared_ignore_count )) &&              todo_or_done_txt="ignored shared" ;;
 
                         "$shared_not_equal" )
-                            copy_shared_block "$source_file" "$target_file" &&  todo_or_done_txt="shared copied" ;;
+                            copy_shared_block "$source_file" "$target_file" &&  todo_or_done_txt="copied shared" ;;
 
                         * ) # shared-block markers missing/malformed in one of the files -- are_different()
                             # already warned; fall back to merge rather than risk clobbering private content
