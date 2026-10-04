@@ -23,9 +23,6 @@ declare -xr default_vm2_repos_path
 declare -x _ignore
 declare -xr default_sot
 declare -xra sources_of_truth
-declare -xra vm2_repositories
-declare -xr semverTagReleaseRegex
-declare -xr vm2_devops_repo_name
 
 declare -xr cross_ch
 declare -xr check_ch
@@ -34,29 +31,17 @@ declare -xr not_eq_ch
 
 # import outcomes and error codes
 declare -xri success
-declare -xri failure
 declare -xri positive
 declare -xri negative
-declare -xri err_invalid_arguments
-declare -xri err_argument_type
 declare -xri err_argument_value
-declare -xri err_not_found
-declare -xri err_not_file
-declare -xri err_not_directory
-declare -xri err_not_git_root
-declare -xri err_behind_latest_stable_tag
-declare -xri err_invalid_repo
-declare -xri err_found_too_many
-declare -xri err_repo_with_no_ci
-declare -xri err_dir_with_no_ci
-declare -xri err_not_git_directory
-declare -xri err_dir_with_ci
 declare -xri err_logic_error
 declare -xri err_unexpected_error
 
+source "$script_dir/diff-shared.configuration.sh"
 source "$script_dir/diff-shared.functions.sh"
 source "$script_dir/diff-shared.args.sh"
 source "$script_dir/diff-shared.usage.sh"
+source "$script_dir/diff-shared.summary.sh"
 
 #===============================
 # arguments:
@@ -97,18 +82,28 @@ declare -xa file_actions=()     # array of default action strings corresponding 
 #===============================
 # Summary variables:
 #===============================
-declare -xi summary_diff_count=0
+# Found in state:
 declare -xi summary_identical_count=0
-declare -xi summary_skipped_count=0
+declare -xi summary_diff_count=0
 declare -xi summary_ignore_count=0
+
+declare -xi summary_shared_identical_count=0
+declare -xi summary_shared_diff_count=0
+declare -xi summary_shared_ignore_count=0
+
+# Actions taken:
+declare -xi summary_skipped_count=0
 declare -xi summary_not_merged_count=0
 declare -xi summary_merged_count=0
 declare -xi summary_copied_count=0
-declare -xi summary_shared_in_sync_count=0
+
+declare -xi summary_shared_skipped_count=0
+declare -xi summary_shared_copied_count=0
 
 #===============================
 # Script start:
 #===============================
+
 get_arguments "$@"
 
 is_in "$sot" "${sources_of_truth[@]}" ||
@@ -209,7 +204,6 @@ declare -x config_merge_tool
 declare -x config_merge_command
 
 declare -xa config_source_files    # array of the paths of the SoT files
-declare -xa config_target_files    # array of target paths TEMPLATES corresponding to the SoT files by index
 declare -xa config_file_actions    # array of default action strings corresponding to the SoT files by index
 
 declare -i targets_index
@@ -255,6 +249,7 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
 
     add_summary_header "$target_path"
 
+    # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     for (( files_index=0; files_index < ${#source_files[@]}; files_index++ )); do
         # iterate through the source files for the current target repository
         source_file="${source_files[files_index]}"
@@ -292,8 +287,7 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
                         todo_or_done_txt="ignored"
                         ;;
 
-                    "$action_merge_or_copy" | "$action_ask_to_merge" | "$action_ask_to_copy" | "$action_ask_to_copy_shared" )
-                        # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
+                    "$action_merge_or_copy" | "$action_ask_to_merge" | "$action_ask_to_copy" | "$action_ask_to_copy_shared")
                         confirm "Target file '$target_file' does not exist. Do you want to copy it from '$source_file'?" "y" && {
                             copy_file "$source_file" "$target_file"
                             todo_or_done_txt="copied"
@@ -321,18 +315,21 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
             continue
         fi
 
-        declare show_in_diff_tool warn_no_markers
+        declare show_in_diff_tool=false warn_no_markers=false
         rc=$success
 
-        # if different, should we show the files in the diff tool?
-        is_in "$actions" "$action_ignore" "$action_merge" "$action_copy" "$action_copy_shared" &&
-            show_in_diff_tool=false ||
-            show_in_diff_tool=true
-
-        # if the action involves copying shared blocks, should we warn when no markers are found?
-        is_in "$actions" "$action_copy_shared" "$action_ask_to_copy_shared" &&
-            warn_no_markers=true ||
-            warn_no_markers=false
+        case $actions in
+            "$action_ignore"             ) ;;
+            "$action_merge_or_copy"      ) show_in_diff_tool=true  ;;
+            "$action_ask_to_merge"       ) show_in_diff_tool=true  ;;
+            "$action_merge"              ) ;;
+            "$action_ask_to_copy"        ) show_in_diff_tool=true  ;;
+            "$action_copy"               ) ;;
+            "$action_copy_shared"        ) warn_no_markers=true ;;
+            "$action_ask_to_copy_shared" ) show_in_diff_tool=true
+                                           warn_no_markers=true ;;
+            * ) error -ec "$err_logic_error" "Unknown action '$actions' for files '$source_file' and '$target_file'." ;;
+        esac
 
         # calculate the difference and if required: warn about missing markers and/or show the files in the diff tool
         difference=$positive
@@ -343,7 +340,7 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
         # just the marked-off portion. Every non-identical outcome is still "different" for the purposes of
         # every OTHER action below; only 'copy shared'/'ask to copy shared' branch on the finer-grained code.
 
-        (( difference == negative )) && different=false || different=true
+        (( difference == negative || difference == shared_equal )) && different=false || different=true
 
         case $difference in
             "$positive" )
@@ -353,18 +350,18 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
                 file_difference_txt=" $equals_ch identical"
                 ;;
             "$shared_equal" )
-                file_difference_txt=" $check_ch different (shared in sync)"
+                file_difference_txt=" $check_ch shared identical"
                 ;;
             "$shared_not_equal" )
-                file_difference_txt=" $cross_ch different (shared differs)"
+                file_difference_txt=" $cross_ch shared different"
                 ;;
             * ) error -ec "$err_unexpected_error" "Unexpected return code: $difference"
                 ;;
         esac
 
         if ! $different || $diff_only; then
-            $diff_only && todo_or_done_txt="$actions"       # actions are to be done
-            $different || todo_or_done_txt="$action_ignore" # if not different, override - nothing to do (ignore)
+            $diff_only && todo_or_done_txt="$actions"       # todo - actions MUST still to be done
+            $different || todo_or_done_txt="$action_ignore" # if not different, correct the todo - ignore
         else
             case $actions in
                 "$action_ignore" )
@@ -380,111 +377,76 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
                             "Merge the files" \
                             "Copy '$source_file' file to '$target_file'"
                     case $choice in
-                        2 ) merge "$source_file" "$target_file" &&
-                                todo_or_done_txt="merged" ||
-                                todo_or_done_txt="not merged"
-                            ;;
-
-                        3 ) copy_file "$source_file" "$target_file"
-                            todo_or_done_txt="copied"
-                            ;;
-
-                        * ) (( ++summary_skipped_count ))
-                            todo_or_done_txt="skipped"
-                            ;;
+                        2 ) merge "$source_file" "$target_file"     &&          todo_or_done_txt="merged" || todo_or_done_txt="not merged" ;;
+                        3 ) copy_file "$source_file" "$target_file" &&          todo_or_done_txt="copied" ;;
+                        * ) (( ++summary_skipped_count )) &&                    todo_or_done_txt="skipped" ;;
                     esac
                     ;;
 
                 "$action_ask_to_merge" )
-                    # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
                     confirm "Do you want to merge '$source_file' to file '$target_file'?" "n" && {
-                        merge "$source_file" "$target_file" &&
-                            todo_or_done_txt="merged" ||
-                            todo_or_done_txt="not merged"
+                        merge "$source_file" "$target_file" &&                  todo_or_done_txt="merged" || todo_or_done_txt="not merged"
                     } || {
-                        (( ++summary_skipped_count ))
-                        todo_or_done_txt="skipped"
+                        (( ++summary_skipped_count )) &&                        todo_or_done_txt="skipped"
                     }
                     ;;
 
                 "$action_merge" )
-                    merge "$source_file" "$target_file" &&
-                        todo_or_done_txt="merged" ||
-                        todo_or_done_txt="not merged"
-                    ;;
+                    merge "$source_file" "$target_file" &&                      todo_or_done_txt="merged" || todo_or_done_txt="not merged" ;;
 
                 "$action_ask_to_copy" )
-                    # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
                     confirm "Do you want to copy '$source_file' to file '$target_file'?" "n" && {
-                        copy_file "$source_file" "$target_file"
-                        todo_or_done_txt="copied"
+                        copy_file "$source_file" "$target_file" &&              todo_or_done_txt="copied"
                     } || {
-                        (( ++summary_skipped_count ))
-                        todo_or_done_txt="skipped"
+                        (( ++summary_skipped_count )) &&                        todo_or_done_txt="skipped"
                     }
                     ;;
 
                 "$action_copy" )
-                    copy_file "$source_file" "$target_file"
-                    todo_or_done_txt="copied"
-                    ;;
+                    copy_file "$source_file" "$target_file" &&                  todo_or_done_txt="copied" ;;
 
                 "$action_copy_shared" )
                     case $difference in
                         "$shared_equal" )
-                            (( ++summary_shared_in_sync_count ))
-                            todo_or_done_txt="shared in sync"
-                            ;;
+                            (( ++summary_shared_ignore_count )) &&              todo_or_done_txt="shared ignored" ;;
 
                         "$shared_not_equal" )
-                            copy_shared_block "$source_file" "$target_file"
-                            todo_or_done_txt="copied shared block"
-                            ;;
+                            copy_shared_block "$source_file" "$target_file" &&  todo_or_done_txt="shared copied" ;;
 
                         * ) # shared-block markers missing/malformed in one of the files -- are_different()
                             # already warned; fall back to merge rather than risk clobbering private content
                             # with a full-file copy
-                            merge "$source_file" "$target_file" &&
-                                todo_or_done_txt="merged" ||
-                                todo_or_done_txt="not merged"
-                            ;;
+                            merge "$source_file" "$target_file" &&              todo_or_done_txt="merged" || todo_or_done_txt="not merged" ;;
                     esac
                     ;;
 
                 "$action_ask_to_copy_shared" )
                     case $difference in
                         "$shared_equal" )
-                            (( ++summary_shared_in_sync_count ))
-                            todo_or_done_txt="shared in sync"
-                            ;;
+                            (( ++summary_shared_ignore_count )) &&              todo_or_done_txt="ignored shared" ;;
 
                         "$shared_not_equal" )
                             # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
                             confirm "Do you want to copy the shared block from '$source_file' to '$target_file'?" "n" && {
-                                copy_shared_block "$source_file" "$target_file"
-                                todo_or_done_txt="copied shared block"
+                                copy_shared_block "$source_file" "$target_file" &&
+                                                                                todo_or_done_txt="copied shared"
                             } || {
-                                (( ++summary_skipped_count ))
-                                todo_or_done_txt="skipped"
+                                (( ++summary_shared_skipped_count )) &&         todo_or_done_txt="skipped shared"
                             }
                             ;;
 
-                        * ) # shared-block markers missing/malformed -- fall back to asking to merge
-                            # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-                            confirm "Do you want to merge '$source_file' to file '$target_file'?" "n" && {
-                                merge "$source_file" "$target_file" &&
-                                    todo_or_done_txt="merged" ||
-                                    todo_or_done_txt="not merged"
+                        # shared-block markers missing/malformed -- fall back to asking to merge
+                        * ) confirm "Do you want to merge '$source_file' to file '$target_file'?" "n" && {
+                                merge "$source_file" "$target_file" &&          todo_or_done_txt="merged" || todo_or_done_txt="not merged"
                             } || {
-                                (( ++summary_skipped_count ))
-                                todo_or_done_txt="skipped"
+                                (( ++summary_skipped_count )) &&                todo_or_done_txt="skipped"
                             }
                             ;;
                     esac
                     ;;
 
                 * ) error -ec "$err_logic_error" "Unknown action '$actions' for files '$source_file' and '$target_file'."
-                    todo_or_done_txt="error!"
+                                                                                todo_or_done_txt="error!"
                     press_any_key
                     ;;
             esac
@@ -497,25 +459,4 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
     echo "" >> "$summary_file"
 done # repositories loop
 
-declare -a args=(
-    --force
-    --quiet
-    --markdown
-    --header "Summary:"
-    --name "Different"  summary_diff_count
-    --name "Identical"  summary_identical_count
-    --name "Skipped"    summary_skipped_count
-    --name "Ignored"    summary_ignore_count
-    --line
-    --name "Not Merged" summary_not_merged_count
-    --line
-    --name "Merged"     summary_merged_count
-    --name "Copied"     summary_copied_count
-    --name "Shared In Sync" summary_shared_in_sync_count
-)
-dump_vars "${args[@]}" >> "$summary_file"
-
-# shellcheck disable=SC2015 # A && B || C is not if-then-else. C may run when A is true but B is false.
-is_tool_present glow &&
-    glow "$summary_file" -w 180 ||
-    cat "$summary_file"
+summarize

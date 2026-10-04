@@ -387,6 +387,10 @@ rationale in README/CHANGELOG/PR.
   - `fix: correct null reference in UserService`
   - `feat(serialization): add IUtf8SpanFormattable implementation`
 - One logical concern per PR
+- **Review source files over 500 lines for possible splitting.** Length is a smell, not a verdict: a file with one
+  cohesive responsibility may stay long. Such a file SHOULD say so in its header comment, for example
+  `# length-review: keep together -- <one-sentence reason>`, so a reviewer (human or AI) knows the length is deliberate.
+  The PR description MAY also discuss the decision when it is worth a reviewer's attention.
 - **Credit AI co-authorship.** When an AI coding assistant materially contributed to a commit (wrote or substantially
   shaped the code, tests, or docs), add a `Co-Authored-By:` trailer at the end of the commit message naming the
   assistant, e.g. `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`. This keeps authorship honest and the
