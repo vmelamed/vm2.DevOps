@@ -48,14 +48,14 @@ _src_dir="$(cd "$lib_dir/../src" && pwd)"
 # also diff-shared.args.sh + diff-shared.usage.sh) inside a fresh env -i subshell, then runs
 # the caller-supplied bash snippet.
 _ds() {
-    local _extra=""
+    local _extra="source '$_src_dir/diff-shared.configuration.sh'
+                 source '$_src_dir/diff-shared.functions.sh'
+                 source '$_src_dir/diff-shared.summary.sh'"
     if [[ "${1:-}" == "--with-args" ]]; then
         shift
-        _extra="source '$_src_dir/diff-shared.functions.sh'
+        _extra+="
                  source '$_src_dir/diff-shared.args.sh'
                  source '$_src_dir/diff-shared.usage.sh'"
-    else
-        _extra="source '$_src_dir/diff-shared.functions.sh'"
     fi
     env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" bash -c "
         source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
@@ -547,12 +547,13 @@ shared 2]"
 @test "copy_shared_block: splices the SoT's shared block into the target, leaving everything else untouched" {
     printf 'sot private A\n<<<===\nnew shared 1\nnew shared 2\n===>>>\nsot private B\n' > "$BATS_TEST_TMPDIR/src.txt"
     printf 'target private A\n# <<<=== begin\nold shared\n# ===>>> end\ntarget private B\n' > "$BATS_TEST_TMPDIR/dest.txt"
-    run _ds "declare -i summary_copied_count=0
+    run _ds "declare -i summary_copied_count=0 summary_shared_copied_count=0
              copy_shared_block '$BATS_TEST_TMPDIR/src.txt' '$BATS_TEST_TMPDIR/dest.txt'
-             declare -p summary_copied_count
+             declare -p summary_copied_count summary_shared_copied_count
              cat '$BATS_TEST_TMPDIR/dest.txt'"
     assert_success
-    assert_output --partial 'summary_copied_count="1"'
+    assert_output --partial 'summary_copied_count="0"'
+    assert_output --partial 'summary_shared_copied_count="1"'
     assert_output --partial "target private A"
     assert_output --partial "# <<<=== begin"
     assert_output --partial "new shared 1"
