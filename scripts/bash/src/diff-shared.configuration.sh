@@ -50,13 +50,6 @@ declare -x config_diff_command=""
 declare -x config_merge_tool=""
 declare -x config_merge_command=""
 
-# These are the diff and merge tools and respective commands from the main config file.
-# Once read they are frozen and copied for every target repository.
-declare -x config_diff_tool=""
-declare -x config_diff_command=""
-declare -x config_merge_tool=""
-declare -x config_merge_command=""
-
 # These are the data model of the script from the main config file.
 # Once read they are also frozen and copied for every target repository.
 # Bash does not have complex data structures, so we use parallel arrays to store the

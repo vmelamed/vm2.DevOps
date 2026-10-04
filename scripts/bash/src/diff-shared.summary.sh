@@ -145,6 +145,7 @@ function summarize()
         --blank
         --name "Shared Skipped"   summary_shared_skipped_count
         --name "Shared Copied"    summary_shared_copied_count
+        --name "Shared Ignored"   summary_shared_ignore_count
     )
     dump_vars "${args[@]}" >> "$summary_file"
 
