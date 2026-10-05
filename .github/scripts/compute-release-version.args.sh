@@ -11,7 +11,7 @@ declare -xri err_missing_argument
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
 
-declare -x ci
+declare -xr ci
 
 declare -x minver_tag_prefix
 declare -x reason

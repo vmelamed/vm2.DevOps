@@ -40,8 +40,8 @@ declare -xra default_ruleset_order
 declare -xr missing_state='<none>'
 declare -xr present_state=$secret_str
 declare -xr undefined_default='<undefined>'
-declare -xa apps_with_vars
-declare -xa apps_with_secrets
+declare -xa gh_apps_with_vars
+declare -xa gh_apps_with_secrets
 declare -xA default_local_git_settings
 declare -xa default_local_git_settings_order
 
@@ -356,7 +356,7 @@ function audit_repo()
     local -A _vars_defaults
     local -a _vars_order
 
-    for _app in "${apps_with_vars[@]}"; do
+    for _app in "${gh_apps_with_vars[@]}"; do
         get_vars_defaults "${_app,,}" _vars_defaults _vars_order
 
         is_empty_array _vars_defaults && continue
@@ -371,7 +371,7 @@ function audit_repo()
     local -A _secrets_defaults
     local -a _secrets_order
 
-    for _app in "${apps_with_secrets[@]}"; do
+    for _app in "${gh_apps_with_secrets[@]}"; do
         get_secrets_defaults "${_app,,}" _secrets_defaults _secrets_order
 
         is_empty_array _secrets_defaults && continue

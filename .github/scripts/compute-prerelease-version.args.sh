@@ -9,7 +9,7 @@ declare -xr lib_dir
 declare -x minver_tag_prefix
 declare -x minver_prerelease_id
 
-declare -x ci
+declare -xr ci
 
 declare -xri success
 declare -xri err_missing_argument

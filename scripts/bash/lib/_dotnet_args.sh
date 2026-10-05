@@ -38,11 +38,6 @@ declare -xr default_minver_tag_prefix='v'
 #---------------------------------------------------------------------------------------------
 declare -xr default_minver_prerelease_id="preview.0"
 
-#---------------------------------------------------------------------------------------------
-# @description The default owner of the GitHub repository.
-#---------------------------------------------------------------------------------------------
-declare -xr default_repo_owner="vmelamed"
-
 # reference variables common for most vm2.DevOps scripts that are
 # set usually from CLI arguments (below), environment variables, or defaults
 # consider the following variables a contract for the names of the named options acquired by

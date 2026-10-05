@@ -595,6 +595,25 @@ function is_valid_path()
 }
 
 #---------------------------------------------------------------------------------------------
+# @description Checks whether a candidate secret name is valid: contains only alphanumeric
+#   characters and underscores, start with a letter or underscore, and does not start with
+#   'GITHUB_'.
+#
+# @arg $1 string Candidate secret name to validate.
+#
+# @exitcode positive=0: The secret name is valid.
+# @exitcode negative=1: The secret name is not valid.
+#   character.
+#---------------------------------------------------------------------------------------------
+function is_valid_secret_name()
+{
+    (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#): the GitHub secret name to test."
+    exit_if_has_bugs
+
+    is_variable_name "$1" && [[ $1 != GITHUB_* ]]
+}
+
+#---------------------------------------------------------------------------------------------
 # @description Checks whether a candidate secret value is safe to send to the GitHub API --
 # i.e. it contains no control characters.
 #

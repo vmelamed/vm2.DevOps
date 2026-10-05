@@ -106,10 +106,7 @@ declare -xra default_ruleset_order=(            # UI: Order in which rules appea
 # GitHub repository variables
 #===============================================================================
 
-declare -xra apps_with_vars=(
-    "actions"
-    "agents"
-)
+declare -xra gh_apps_with_vars
 
 # The vars defaults for each application not only gives the default values for the variables
 # but also serves as a definition of the expected variables for the application. Some variables
@@ -202,7 +199,7 @@ declare -xA agents_vars_validators=()
 #   against the variable's own default value. On success, freezes all three tables as
 #   read-only. A no-op if '<app>_vars_defaults' is empty.
 #
-# @arg $1 string _app - the application name (must be one of '${apps_with_vars[@]}', e.g.
+# @arg $1 string _app - the application name (must be one of '${gh_apps_with_vars[@]}', e.g.
 #   'actions').
 #
 # @exitcode success=0: The tables are consistent and were frozen (or '<app>_vars_defaults' was
@@ -217,7 +214,7 @@ function validate_app_default_vars()
 {
     (( $# == 1 ))                                     || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#):" \
                                                                                           "  - the name of the application (e.g., actions)"
-    [[ ! -v 1 ]] || is_in "$1" "${apps_with_vars[@]}" || bug "${FUNCNAME[0]}() requires the argument to be one of (${apps_with_vars[*]}) - provided ${1:-<none>}."
+    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_vars[@]}" || bug "${FUNCNAME[0]}() requires the argument to be one of (${gh_apps_with_vars[*]}) - provided ${1:-<none>}."
     exit_if_has_bugs
 
     local _app=$1
@@ -285,7 +282,7 @@ function validate_app_default_vars()
 #   default), and 'NUGET_USERNAME' is dropped entirely when '$nuget_server' is 'github'
 #   (GitHub Packages authenticates with the caller's token and needs no username).
 #
-# @arg $1 string _app - the application name (must be one of '${apps_with_vars[@]}', e.g.
+# @arg $1 string _app - the application name (must be one of '${gh_apps_with_vars[@]}', e.g.
 #   'actions').
 # @arg $2 string __vars - name of an associative array to receive the variables' names and
 #   default values.
@@ -306,7 +303,7 @@ function get_vars_defaults()
                                                                                           "  - the name of the associative array that will receive the variables names and their default values" \
                                                                                           "  - the name of the indexed array that will receive the variables display order" \
                                                                                           "  - the name of the associative array that will receive the names of the variables' validation functions (optional)"
-    [[ ! -v 1 ]] || is_in "$1" "${apps_with_vars[@]}" || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1 to be a valid application name - provided: '$1'."
+    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_vars[@]}" || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1 to be a valid application name - provided: '$1'."
     [[ ! -v 2 ]] || is_associative_array "$2"         || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 2 to be a valid associative array name to receive the variables names and their default values - provided: '$2'."
     [[ ! -v 3 ]] || is_indexed_array "$3"             || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 3 to be a valid indexed array name to receive the variables display order - provided: '$3'."
     [[ ! -v 4 ]] || is_associative_array "$4"         || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 4 to be a valid associative array name to receive the names of the variables' validation functions - provided: '$4'."
@@ -377,14 +374,7 @@ function get_vars_defaults()
 # GitHub repository "main protection" ruleset
 #===============================================================================
 
-declare -xra apps_with_secrets=(
-    "actions"
-    "dependabot"
-    "codespaces"
-    # "agents"
-)
-
-declare -xr secret_placeholder=$secret_str
+declare -xra gh_apps_with_secrets
 
 # There is no application secrets defaults - only secrets order. The defaults MUST be
 # retrieved dynamically from the `get_secrets_defaults()` function. The defaults' values are
@@ -431,7 +421,7 @@ declare -xra codespaces_secrets_order=()
 #   in source -- see 'get_secrets_defaults'), so there is nothing to backfill or freeze here
 #   beyond the existence check.
 #
-# @arg $1 string _app - the application name (must be one of '${apps_with_secrets[@]}', e.g.
+# @arg $1 string _app - the application name (must be one of '${gh_apps_with_secrets[@]}', e.g.
 #   'actions').
 #
 # @exitcode success=0: '<app>_secrets_order' is defined.
@@ -444,7 +434,7 @@ function validate_app_default_secrets()
 {
     (( $# == 1 ))                                        || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#):" \
                                                                                              "  - the name of the application (e.g., actions)"
-    [[ ! -v 1 ]] || is_in "$1" "${apps_with_secrets[@]}" || bug "${FUNCNAME[0]}() requires the argument to be one of (${apps_with_secrets[*]}) - provided ${1:-<none>}."
+    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_secrets[@]}" || bug "${FUNCNAME[0]}() requires the argument to be one of (${gh_apps_with_secrets[*]}) - provided ${1:-<none>}."
 
     local _app=$1
     local _app_secrets_order_name="${_app,,}_secrets_order"
@@ -461,7 +451,7 @@ function validate_app_default_secrets()
 #   current '$nuget_server' is 'nuget' or 'github' -- neither needs a stored API key secret
 #   (trusted publishing for nuget.org, the caller's token for GitHub Packages).
 #
-# @arg $1 string _app - the application name (must be one of '${apps_with_secrets[@]}', e.g.
+# @arg $1 string _app - the application name (must be one of '${gh_apps_with_secrets[@]}', e.g.
 #   'actions').
 # @arg $2 string __secrets - name of an associative array to receive the secrets' names and
 #   placeholder values.
@@ -481,7 +471,7 @@ function get_secrets_defaults()
                                                                                              "  - the name of the associative array that will receive the secrets names and their default values" \
                                                                                              "  - the name of the indexed array that will receive the secrets display order" \
                                                                                              "  - the name of the associative array that will receive the names of the secrets' validation functions (optional)"
-    [[ ! -v 1 ]] || is_in "$1" "${apps_with_secrets[@]}" || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1 to be a valid application name as the first argument - provided: '$1'."
+    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_secrets[@]}" || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1 to be a valid application name as the first argument - provided: '$1'."
     [[ ! -v 2 ]] || is_associative_array "$2"            || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 2 to be a valid associative array name to receive the secrets names and their default values - provided: '$2'."
     [[ ! -v 3 ]] || is_indexed_array "$3"                || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 3 to be a valid indexed array name to receive the secrets display order - provided: '$3'."
     [[ ! -v 4 ]] || is_associative_array "$4"            || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 4 to be a valid associative array name to receive the names of the secrets' validation functions - provided: '$4'."
@@ -530,7 +520,7 @@ declare -x defaults_validated=false
 # @description Validates the integrity of the default values for the applications' variables
 #   and secrets ('actions' and 'agents' for variables; 'actions', 'dependabot', and
 #   'codespaces' for secrets -- 'agents' secrets are currently commented out of
-#   'apps_with_secrets' since agents are not used yet). Idempotent: guarded by the global
+#   'gh_apps_with_secrets' since agents are not used yet). Idempotent: guarded by the global
 #   'defaults_validated' flag, so repeated calls after the first are a no-op.
 #
 # @exitcode success=0: Always (validation failures are reported via 'bug' and abort the

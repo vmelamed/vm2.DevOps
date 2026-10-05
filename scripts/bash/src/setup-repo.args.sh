@@ -6,30 +6,47 @@
 declare -xr script_name
 declare -xr lib_dir
 
+# vm2 error codes
 declare -xri success
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
+declare -xri err_logic_error
 
-declare -x ci
-declare -x vm2_repos
-declare -x repo_name
+declare -xr default_vm2_repos_path
+declare -xr default_default_branch
+
+# external defaults
+declare -xr default_repo_owner
+declare -xr default_nuget_server
+
+# external constants
+declare -xr ci
+declare -x _ignore
+
+# script defaults
+
+# script arguments
+declare -x vm2_repos=${VM2_REPOS:-$default_vm2_repos_path}
+declare -x repo_name=''
+declare -x repo_owner=${ORGANIZATION:-$default_repo_owner}
+declare -x branch=$default_default_branch
+declare -x visibility="public"
+declare -x main_protection_rs_name=''
+declare -x description=''
+declare -x use_ssh=true
+declare -x use_https=false
+declare -x current_branch=false
+declare -x audit=false
+declare -x interactive_vars=false
+declare -x interactive_secrets=false
+declare -x purge_vars=false
+declare -x purge_secrets=false
+declare -x configure_local=true
 declare -x repo_path
-declare -x repo_owner
+declare -x branches
+
 declare -x repo
-declare -x visibility
-declare -x branch
-declare -x interactive_vars
-declare -x interactive_secrets
-declare -x configure_local
-declare -x audit
-declare -x main_protection_rs_name
-declare -x description
-declare -x use_ssh
-declare -x use_https
-declare -x current_branch
-declare -x purge_vars
-declare -x purge_secrets
 
 #---------------------------------------------------------------------------------------------
 # @description Parses the command-line arguments of `setup-repo.sh`, populating the script-level variables declared
@@ -155,9 +172,26 @@ function get_arguments()
         esac
     done
 
+    validate_arguments
+
     dump_args
 
     usage_if_requested
+}
+
+function validate_arguments()
+{
+    $current_branch && branches='' || branches='main'
+
+    readonly current_branch
+    readonly branches
+    readonly interactive_vars
+    readonly interactive_secrets
+    readonly purge_vars
+    readonly purge_secrets
+    readonly configure_local
+    readonly audit
+    readonly description
 }
 
 # shellcheck disable=SC2120 # dump_args references arguments, but none are ever passed.

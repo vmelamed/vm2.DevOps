@@ -26,36 +26,35 @@ declare -x _ignore
 
 declare -xr vm2_devops_repo_name
 declare -xr default_vm2_repos_path
+declare -xr default_default_branch
 
 # defaults
-declare -xr default_repo_owner
 declare -xr default_nuget_server
-declare -xr default_visibility="public"
-declare -xr default_branch="main"
-declare -xr default_interactive=false
-declare -xr default_configure_local=true
-declare -xr default_audit=false
 
-# start with default input
-declare -x visibility=$default_visibility
-declare -x branch=$default_branch
-declare -x interactive_vars=$default_interactive
-declare -x interactive_secrets=$default_interactive
-declare -x purge_vars=false
-declare -x purge_secrets=false
-declare -x configure_local=$default_configure_local
-declare -x audit=$default_audit
-declare -x main_protection_rs_name=''
+# script parameters
+declare -x vm2_repos
+declare -x repo_name
+declare -x repo_owner
+declare -x branch
+declare -x visibility
+declare -x main_protection_rs_name
+declare -x description
+declare -x use_ssh
+declare -x use_https
+declare -x current_branch
+declare -x audit
+declare -x interactive_vars
+declare -x interactive_secrets
+declare -x purge_vars
+declare -x purge_secrets
+declare -x configure_local
+declare -x branches
+
+# script variables
+declare -xi rc="$success"
+
 declare -xi main_protection_rs_id=0
-declare -x description=''
-declare -x use_ssh=true
-declare -x use_https=false
-declare -x repo_owner=${ORGANIZATION:-$default_repo_owner}
-declare -x current_branch=false
 declare -x nuget_server=$default_nuget_server
-
-declare -x vm2_repos="${VM2_REPOS:-$default_vm2_repos_path}"
-declare -x repo_name=''
 declare -x repo=''
 declare -x repo_url=''
 declare -x repo_id=''
@@ -95,19 +94,10 @@ source "$script_dir/setup-repo.usage.sh"
 
 get_arguments "$@"
 
-readonly interactive_vars
-readonly interactive_secrets
-readonly configure_local
-readonly audit
-readonly description
-
 #=============================================================================================
 # Find and validate vm2_repos, SOT, DevOps directories:
 #=============================================================================================
 declare -xi rc="$success"
-
-declare branches
-$current_branch && branches='' || branches='main'
 
 resolve_vm2_repos vm2_repos "$branches" "$branches" || true
 exit_if_has_errors
@@ -296,7 +286,7 @@ if ! has_local_repo repo_state; then
     info "Initializing local git repository in '$repo_path'..."
 
     [[ -n "$branch" ]] ||
-        enter_value "Default branch name" branch "$default_branch" false validate_branch_name
+        enter_value "Default branch name" branch "$default_default_branch" false validate_branch_name
 
     if execute git -C "$repo_path" init >"$_ignore"; then
         undos+=("rm -rf '$repo_path/.git'")
