@@ -13,6 +13,7 @@
 declare -ri __VM2_LIB_USER_SH_LOADED=1
 
 declare -xr secret_str
+declare -xr secret_placeholder
 
 declare -xri success
 declare -xri failure
@@ -136,7 +137,8 @@ function enter_value()
     local _default=${3:-}
     local _validate_fn=${5:-true}
 
-    [[ -z $_default ]] || $_validate_fn "$_default"     || bug -ec "$err_argument_value" "The default value '$_default' does not pass the validation function '$_validate_fn'."
+    [[ -z $_default || $_default == "$secret_placeholder" ]] ||
+    $_validate_fn "$_default"                           || bug -ec "$err_argument_value" "The default value '$_default' does not pass the validation function '$_validate_fn'."
     exit_if_has_bugs
 
     is_quiet &&

@@ -35,8 +35,8 @@ declare -x nuget_server
 declare -xrA default_repo_settings
 declare -xrA default_repo_permissions
 
-declare -xra apps_with_vars
-declare -xra apps_with_secrets
+declare -xra gh_apps_with_vars
+declare -xra gh_apps_with_secrets
 declare -xr default_nuget_server
 
 declare -x ci_yaml
@@ -457,7 +457,7 @@ function configure_actions_permissions()
 #     ignored as unknown/obsolete, or deleted, followed by a hint about `--purge-vars`/`--interactive-vars` when
 #     applicable.
 #
-# @arg $1 string Application name; must be one of the entries in `apps_with_vars` (currently `actions`, `agents`).
+# @arg $1 string Application name; must be one of the entries in `gh_apps_with_vars` (currently `actions`, `agents`).
 #
 # @exitcode success=0: Always (individual `set_var`/`delete_var` failures are logged and skipped, not surfaced as a
 #   non-zero exit code), including the no-op early return when there is nothing to reconcile or purge.
@@ -470,7 +470,7 @@ function configure_variables()
 {
     (( $# == 1 ))                                     || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#):" \
                                                                                           "  - the name of the GitHub application being configured, e.g. actions"
-    [[ ! -v 1 ]] || is_in "$1" "${apps_with_vars[@]}" || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the application name, to be one of: ${apps_with_vars[*]} (provided '${1:-<none>}')."
+    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_vars[@]}" || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the application name, to be one of: ${gh_apps_with_vars[*]} (provided '${1:-<none>}')."
     exit_if_has_bugs
 
     local _app=${1,,}
@@ -691,11 +691,11 @@ function delete_var()
 #
 # Notes:
 #   - Will exit the script if an invalid argument(s) is/are provided with exit codes
-#   - `apps_with_secrets` currently lists `actions`, `dependabot`, and `codespaces`; `agents` is commented out there
+#   - `gh_apps_with_secrets` currently lists `actions`, `dependabot`, and `codespaces`; `agents` is commented out there
 #     since agents are not used yet, so it is not presently a valid value for `$1` despite `agents_secrets_order`
 #     still existing as an (empty) table.
 #
-# @arg $1 string Application name; must be one of the entries in `apps_with_secrets` (currently `actions`,
+# @arg $1 string Application name; must be one of the entries in `gh_apps_with_secrets` (currently `actions`,
 #   `dependabot`, `codespaces`).
 #
 # @exitcode success=0: including the case where the app has no configured secrets at all and nothing to purge
@@ -708,7 +708,7 @@ function configure_secrets()
 {
     (( $# == 1 ))                                        || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#):" \
                                                                                              "  - the application name"
-    [[ ! -v 1 ]] || is_in "$1" "${apps_with_secrets[@]}" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the application name, to be one of: ${apps_with_secrets[*]} (provided '${1:-<none>}')."
+    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_secrets[@]}" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the application name, to be one of: ${gh_apps_with_secrets[*]} (provided '${1:-<none>}')."
     exit_if_has_bugs
 
     local _app=${1,,}
@@ -826,7 +826,7 @@ function configure_secrets()
 
 #---------------------------------------------------------------------------------------------
 # @description Creates or updates a single GitHub repository secret for the given app (currently `actions`,
-# `dependabot`, or `codespaces` -- see `apps_with_secrets`) via `gh secret set`. Temporarily suppresses verbose/trace
+# `dependabot`, or `codespaces` -- see `gh_apps_with_secrets`) via `gh secret set`. Temporarily suppresses verbose/trace
 # output and `set -x` around the actual `gh` call so the secret's plaintext value is never written to logs,
 # restoring the previous state afterward regardless of success or failure.
 #
@@ -835,7 +835,7 @@ function configure_secrets()
 #
 # @arg $1 string Name of the secret to set.
 # @arg $2 string Plaintext value to set the secret to.
-# @arg $3 string GitHub App the secret belongs to; must be one of `apps_with_secrets` (currently `actions`,
+# @arg $3 string GitHub App the secret belongs to; must be one of `gh_apps_with_secrets` (currently `actions`,
 #   `dependabot`, `codespaces`).
 #
 # @exitcode success=0: Secret set successfully.
@@ -848,7 +848,7 @@ function set_secret()
                                                                                                 "  - the secret value" \
                                                                                                 "  - the application"
     [[ ! -v 1 || -n $1 ]]                                || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the secret name, to be non-empty (provided '${1:-<none>}')."
-    [[ ! -v 3 ]] || is_in "$3" "${apps_with_secrets[@]}" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 3, the application name, to be one of: ${apps_with_secrets[*]} (provided '${3:-<none>}')."
+    [[ ! -v 3 ]] || is_in "$3" "${gh_apps_with_secrets[@]}" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 3, the application name, to be one of: ${gh_apps_with_secrets[*]} (provided '${3:-<none>}')."
     exit_if_has_bugs
 
     local _name="$1"
@@ -879,12 +879,12 @@ function set_secret()
 
 #---------------------------------------------------------------------------------------------
 # @description Deletes a GitHub secret for a specified application (currently `actions`, `dependabot`, or
-#   `codespaces` -- see `apps_with_secrets`) within the repository via `gh secret delete`. Temporarily suppresses
+#   `codespaces` -- see `gh_apps_with_secrets`) within the repository via `gh secret delete`. Temporarily suppresses
 #   verbose/trace output and `set -x` around the actual `gh` call, restoring the previous state afterward
 #   regardless of success or failure.
 #
 # @arg $1 string Name of the secret to delete.
-# @arg $2 string GitHub App the secret belongs to; must be one of `apps_with_secrets` (currently `actions`,
+# @arg $2 string GitHub App the secret belongs to; must be one of `gh_apps_with_secrets` (currently `actions`,
 #   `dependabot`, `codespaces`).
 #
 # @exitcode success=0: The secret was successfully deleted.
@@ -896,7 +896,7 @@ function delete_secret()
                                                                                                 "  - the secret name" \
                                                                                                 "  - the application"
     [[ ! -v 1 || -n $1 ]]                                || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the secret name, to be non-empty (provided '${1:-<none>}')."
-    [[ ! -v 2 ]] || is_in "$2" "${apps_with_secrets[@]}" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the application name, to be one of: ${apps_with_secrets[*]} (provided '${2:-<none>}')."
+    [[ ! -v 2 ]] || is_in "$2" "${gh_apps_with_secrets[@]}" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the application name, to be one of: ${gh_apps_with_secrets[*]} (provided '${2:-<none>}')."
     exit_if_has_bugs
 
     local _name="$1"

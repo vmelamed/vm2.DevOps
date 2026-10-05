@@ -50,12 +50,29 @@ declare -xra vm2_repositories=(
     "vm2.Repository"
 )
 
+declare -xra gh_apps_with_vars=(
+    "actions"
+    "agents"
+)
+
+declare -xra gh_apps_with_secrets=(
+    "actions"
+    "dependabot"
+    "codespaces"
+    # "agents"
+)
+
 #---------------------------------------------------------------------------------------------
 # @description Specifies the default path to the parent directory of all vm2 repositories.
 #   Usually $VM2_REPOS is set to "$HOME/repos/vm2" but it might be different on other systems
 #   or environments (e.g. in CI/CD pipelines, other developers' machines, etc.).
 #---------------------------------------------------------------------------------------------
 declare -xr default_vm2_repos_path="$HOME/repos/vm2"
+
+#---------------------------------------------------------------------------------------------
+# @description The default owner of the GitHub repository.
+#---------------------------------------------------------------------------------------------
+declare -xr default_repo_owner="vmelamed"
 
 #---------------------------------------------------------------------------------------------
 # @description Specifies the name of the `vm2.DevOps` repository
@@ -150,6 +167,7 @@ declare -xra allowed_commit_types=(
 
 # characters
 declare -xr secret_str='••••••'
+declare -xr secret_placeholder=$secret_str
 declare -xr mask_ch='•'
 declare -xr check_ch='✓'
 declare -xr cross_ch='✗'

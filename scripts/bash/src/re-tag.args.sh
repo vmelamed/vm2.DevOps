@@ -10,7 +10,7 @@ declare -xri success
 declare -xri err_missing_argument
 declare -xri err_unknown_argument
 
-declare -x ci
+declare -xr ci
 
 declare -x delete_mode
 declare -x del_tag

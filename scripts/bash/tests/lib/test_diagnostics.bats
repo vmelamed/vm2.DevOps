@@ -81,20 +81,20 @@ declare -gxi err_invalid_arguments
 }
 
 @test "exit_if_has_errors: exits 1 and shows usage text when errors are present (default)" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_args.sh'; function usage_text() { echo MARKER_USAGE_TEXT; }; error 'boom' 2>/dev/null; exit_if_has_errors"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_core_args.sh'; function usage_text() { echo MARKER_USAGE_TEXT; }; error 'boom' 2>/dev/null; exit_if_has_errors"
     assert_failure "$failure"
     assert_output --partial "MARKER_USAGE_TEXT"
 }
 
 @test "exit_if_has_errors: exits with the last error's own code and skips usage text when \$1 is false" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_args.sh'; function usage_text() { echo MARKER_USAGE_TEXT; }; error 'boom' 2>/dev/null; exit_if_has_errors false"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_core_args.sh'; function usage_text() { echo MARKER_USAGE_TEXT; }; error 'boom' 2>/dev/null; exit_if_has_errors false"
     assert_failure "$failure"
     assert_output --partial "$(error_message "$failure")"
     refute_output --partial "MARKER_USAGE_TEXT"
 }
 
 @test "exit_if_has_errors: translates the error code in its message instead of leaking a bare number" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_args.sh'; function usage_text() { :; }; error 'boom' 2>/dev/null; exit_if_has_errors"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_core_args.sh'; function usage_text() { :; }; error 'boom' 2>/dev/null; exit_if_has_errors"
     assert_failure "$failure"
     assert_output --partial "$(error_message "$failure")"
     refute_line "253"

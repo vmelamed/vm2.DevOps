@@ -300,12 +300,12 @@ function exit_if_has_bugs()
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Should be overridden in the top level script by sourcing _args.sh, akin to
+# @description Should be overridden in the top level script by sourcing _core_args.sh, akin to
 #   a forward declaration in C/C++ for use within this script (e.g., `exit_if_has_errors()`).
-#   Local implementation of usage() to avoid circular dependency with _args.sh
+#   Local implementation of usage() to avoid circular dependency with _core_args.sh
 #
 # Note: This implementation of usage() is meant to be a 'forward declaration'! It should be
-#   overridden in the top-level script or by sourcing _args.sh.
+#   overridden in the top-level script or by sourcing _core_args.sh.
 #
 # @arg $@ string Ignored -- forwarded to `bug` as part of the "not overridden" message.
 #
@@ -314,7 +314,7 @@ function exit_if_has_bugs()
 function usage()
 {
     bug -ec "$err_not_overridden" "This implementation of usage() is meant to be a 'forward declaration'!" \
-                                    "Either re-define usage() or source _args.sh." \
+                                    "Either re-define usage() or source _core_args.sh." \
                                     "$@"
     remove_traps
     exit "$failure";

@@ -36,6 +36,8 @@ declare -xri err_invalid_branch
 declare -x _ignore
 declare -xr semverTagReleaseRegex
 
+declare -xr default_default_branch="main"
+
 # variables specific to this script only - regexes for validating GitHub repository URLs, owners, and names
 declare -xr gh_ssh_authority='git@github.com'                           # OK, it is actually the URI schema only, but we only support GitHub SSH URLs for now, so we can hardcode the authority and just call it that. This is the part of the URL before the owner/name, e.g. "git@github.com"
 declare -xr gh_https_authority='https://github.com'                     # OK, it is actually the URI schema + authority, but we only support GitHub HTTPS URLs for now, so we can hardcode the authority and just call it that. This is the part of the URL before the owner/name, e.g. "https://github.com"
@@ -207,7 +209,7 @@ function is_valid_branch_name()
 # @example
 #   if validate_branch_name "main"; then echo "Valid branch name"; fi
 # @example
-#   enter_value "Default branch name" branch_name "$default_branch" false validate_branch_name)
+#   enter_value "Default branch name" branch_name "$default_default_branch" false validate_branch_name)
 #---------------------------------------------------------------------------------------------
 function validate_branch_name()
 {
@@ -298,6 +300,7 @@ function execute_gh_with_retry()
 
         cat "$_stderr_file" >&2
         _message=$(cat "$_stderr_file") || true
+        (( ++_attempt ))
 
         # Check if error is transient - retry
         if [[ ! "$_message" =~ (rate.limit|server.error|timeout|temporarily.unavailable|try.again|502|503|504|connection.refused|network.error) ]]; then
@@ -306,7 +309,7 @@ function execute_gh_with_retry()
         fi
 
         # transient error - retry or give up
-        if (( ++_attempt < _max_attempts )); then
+        if (( _attempt < _max_attempts )); then
             # retry and reset rc to success to avoid returning a failure code if the last attempt fails with a transient error
             warning "'gh' command failed. Attempt: $_attempt/$_max_attempts. Retrying in ${_delay}s."
             sleep "$_delay"
@@ -406,6 +409,7 @@ function execute_gh_api_with_retry()
 
         _response=$(cat "$_stdout_file")           || true
         status=$(jq -r '.status' <<< "$_response") || true
+        (( ++_attempt ))
 
         # If no JSON status, check stderr for network/auth errors
         if [[ -z "$status" || "$status" == "null" ]]; then
@@ -432,7 +436,7 @@ function execute_gh_api_with_retry()
         fi
 
         # transient error - retry or give up
-        if (( ++_attempt < _max_attempts )); then
+        if (( _attempt < _max_attempts )); then
             # retry and reset rc to success to avoid returning a failure code if the last attempt fails with a transient error
             warning "'gh api' command failed. Attempt $_attempt/$_max_attempts. Retrying in ${_delay}s."
             sleep "$_delay"

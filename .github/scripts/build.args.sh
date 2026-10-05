@@ -9,7 +9,7 @@ declare -xri success
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
 
-declare -x ci
+declare -xr ci
 declare -xra dump_common_dotnet_args
 
 # parameters specific to this script only with initial values from environment variables or defaults

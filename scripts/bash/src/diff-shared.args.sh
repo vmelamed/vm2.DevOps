@@ -12,7 +12,7 @@ declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
 declare -xri err_argument_value
 
-declare -x ci
+declare -xr ci
 
 declare -xar valid_actions
 declare -xr all_actions_str
