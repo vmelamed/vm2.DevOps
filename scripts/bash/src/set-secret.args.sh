@@ -8,10 +8,8 @@ declare -xr lib_dir
 
 # constants from lib:
 declare -xri success
-declare -xri err_missing_argument
 declare -xri err_argument_value
 declare -xri err_too_many_arguments
-declare -xri err_unknown_argument
 
 declare -xra gh_apps_with_secrets
 
