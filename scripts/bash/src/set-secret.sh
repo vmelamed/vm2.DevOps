@@ -56,7 +56,7 @@ for repo in "${vm2_repositories[@]}"; do
         continue
     }
 
-    is_in "$secret_name" "${repo_secrets[@]}" && secret_exists=true || secret_exists=false
+    is_in_i "$secret_name" "${repo_secrets[@]}" && secret_exists=true || secret_exists=false
     $secret_exists || confirm "  Secret '$secret_name' is not present in repository '$repo_owner/$repo'. Do you want to create it?" || continue
 
     save_state core_state
