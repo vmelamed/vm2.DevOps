@@ -58,8 +58,12 @@ function update_dependencies() {
     # Run the diff-shared script to update dependencies in the repo's Directory.Packages.props file from the SoT
     "$_repos/vm2.DevOps/scripts/bash/src/diff-shared.sh" --vm2-repos "$_repos" --current-branch --file-merge Directory.Packages.props
 
-    # Clear the cache for this repository via the ClearCache workflow
-    gh workflow run "ClearCache.yaml" --repo "vmelamed/$_repo"
+    # Clear the cache for this repository via the ClearCache workflow, if the repository has one
+    local _run_id=''
+    if [[ -f .github/workflows/ClearCache.yaml ]]; then
+        gh workflow run "ClearCache.yaml" --repo "vmelamed/$_repo"
+        _run_id=$(gh run list --repo "vmelamed/$_repo" --workflow "ClearCache.yaml" --limit 1 --json databaseId --jq '.[0].databaseId')
+    fi
     rm ./**/packages.lock.json
     dotnet restore --force-evaluate
 
@@ -67,8 +71,9 @@ function update_dependencies() {
     git add ./**/packages.lock.json
     git commit -m "chore: update dependencies" || true
 
-    # Watch the triggered ClearCache workflow run to finish before pushing changes
-    gh run watch --repo "vmelamed/$_repo" || true
+    # Watch the triggered ClearCache workflow run to finish before pushing changes (by ID: 'gh run watch' without one
+    # opens an interactive picker that waits for input)
+    [[ -n $_run_id ]] && gh run watch "$_run_id" --repo "vmelamed/$_repo" --exit-status || true
 
     # Push the committed changes to the remote repository
     git push origin --force-with-lease
