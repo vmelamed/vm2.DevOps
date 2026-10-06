@@ -100,6 +100,10 @@ if ! is_dry_run; then
                 error -ec "$err_tool_error" "Failed to commit the package versions in '$name'."
         fi
     done
+
+    for name in "${targets[@]}"; do
+        refresh_lock_files "$vm2_repos/$name" || error -ec "$err_tool_error" "Failed to restore or commit packages.lock.json in '$name'."
+    done
     exit_if_has_errors false
 fi
 
