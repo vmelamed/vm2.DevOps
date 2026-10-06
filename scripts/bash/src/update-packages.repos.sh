@@ -30,7 +30,11 @@ function prepare_upgrade_branch()
         warning "Stashed local changes in '$_repo'. To restore them later: git -C '$_repo' switch '$_previous' && git -C '$_repo' stash pop"
     fi
 
-    git -C "$_repo" switch -c "$_branch" > /dev/null || return "$err_tool_error"
+    if git -C "$_repo" show-ref --verify --quiet "refs/heads/$_branch"; then
+        git -C "$_repo" switch "$_branch" > /dev/null || return "$err_tool_error"
+    else
+        git -C "$_repo" switch -c "$_branch" > /dev/null || return "$err_tool_error"
+    fi
 }
 
 #---------------------------------------------------------------------------------------------

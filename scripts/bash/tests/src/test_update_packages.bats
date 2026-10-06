@@ -213,3 +213,19 @@ _refresh() {
     run git -C "$BATS_TEST_TMPDIR/repo" log --oneline
     refute_output --partial "refresh packages.lock.json"
 }
+
+# --- prepare_upgrade_branch -------------------------------------------------------------------------
+
+@test "prepare_upgrade_branch: switches to an existing upgrade branch instead of failing" {
+    _lock_repo
+    git -C "$BATS_TEST_TMPDIR/repo" branch deps/update-packages-test
+    run env HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" bash -c "
+        source '$lib_dir/core.sh' --no-trap >/dev/null 2>&1
+        source '$_src_dir/update-packages.functions.sh'
+        source '$_src_dir/update-packages.repos.sh'
+        prepare_upgrade_branch '$BATS_TEST_TMPDIR/repo' deps/update-packages-test
+    "
+    assert_success
+    run git -C "$BATS_TEST_TMPDIR/repo" branch --show-current
+    assert_output "deps/update-packages-test"
+}
