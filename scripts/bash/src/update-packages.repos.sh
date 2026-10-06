@@ -149,9 +149,9 @@ function print_upgrade_summary()
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Runs 'dotnet restore --force-evaluate' in a repository and commits the regenerated 'packages.lock.json'
-#   files as a separate commit. Skipped, with a warning, when the repository already has uncommitted changes to lock
-#   files, so unrelated changes are never committed by mistake.
+# @description Deletes every 'packages.lock.json' in a repository, runs 'dotnet restore --force-evaluate' to regenerate
+#   them, and commits the result as a separate commit. The lock files are generated, never hand-edited, so their
+#   previous state does not matter.
 #
 # @arg $1 string Path to the repository's working tree.
 #
@@ -166,10 +166,7 @@ function refresh_lock_files()
 
     local _repo=$1
 
-    if [[ -n $(git -C "$_repo" status --porcelain -- '*packages.lock.json') ]]; then
-        warning "'$_repo' has uncommitted changes in packages.lock.json; skipped the lock-file refresh for it."
-        return "$success"
-    fi
+    find "$_repo" -name packages.lock.json -not -path '*/.git/*' -delete
 
     local _t0=$(now_us)
     (cd "$_repo" && dotnet restore --force-evaluate > /dev/null) && _restore_rc=0 || _restore_rc=$?
