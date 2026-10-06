@@ -56,7 +56,7 @@ function update_dependencies() {
     cd "$_repos/$_repo"
 
     # Run the diff-shared script to update dependencies in the repo's Directory.Packages.props file from the SoT
-    "$_repos/vm2.DevOps/scripts/bash/src/diff-shared.sh" --vm2-repos "$_repos" --file-merge Directory.Packages.props
+    "$_repos/vm2.DevOps/scripts/bash/src/diff-shared.sh" --vm2-repos "$_repos" --current-branch --file-merge Directory.Packages.props
 
     # Clear the cache for this repository via the ClearCache workflow
     gh workflow run "ClearCache.yaml" --repo "vmelamed/$_repo"
