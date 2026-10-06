@@ -195,14 +195,15 @@ _refresh() {
     assert_output ""
 }
 
-@test "refresh_lock_files: skips a repository that already has uncommitted lock-file changes" {
+@test "refresh_lock_files: regenerates lock files even when they had uncommitted changes" {
     _lock_repo
-    echo '{"unrelated":true}' > "$BATS_TEST_TMPDIR/repo/src/App/packages.lock.json"
+    echo '{"local-edit":true}' > "$BATS_TEST_TMPDIR/repo/src/App/packages.lock.json"
     _refresh
     assert_success
-    assert_output --partial "skipped the lock-file refresh"
-    run git -C "$BATS_TEST_TMPDIR/repo" log --oneline
-    refute_output --partial "refresh packages.lock.json"
+    run git -C "$BATS_TEST_TMPDIR/repo" status --porcelain
+    assert_output ""
+    run cat "$BATS_TEST_TMPDIR/repo/src/App/packages.lock.json"
+    assert_output --partial '"regenerated":true'
 }
 
 @test "refresh_lock_files: a repository without lock files gets no commit" {
