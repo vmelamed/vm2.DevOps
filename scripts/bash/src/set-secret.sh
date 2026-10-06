@@ -38,17 +38,25 @@ source "$script_dir/set-secret.usage.sh"
 get_arguments "$@"
 
 declare repo
+# shellcheck disable=SC2034 # core_state appears unused. Verify use (or export if used externally).
+declare -A core_state=()
 
 for repo in "${vm2_repositories[@]}"; do
     trace "In repository '$repo':"
     trace "  Getting a list of all current secrets for the repository '$repo'."
-    readarray -t repo_secrets < <(execute_gh_api_with_retry 3 2 --paginate "repos/$repo_owner/$repo/actions/secrets" -q '.secrets[] | .name')
+
+    readarray -t repo_secrets < <(execute_gh_api_with_retry 3 2 --paginate "repos/$repo_owner/$repo/$app/secrets" -q '.secrets[] | .name')
 
     is_in "$secret_name" "${repo_secrets[@]}" && secret_exists=true || secret_exists=false
+
     $secret_exists || confirm "  Secret '$secret_name' is not present in repository '$repo_owner/$repo'. Do you want to create it?" || continue
-    [[ -n "$secret_value" ]] || {
+
+    [[ -n $secret_value && $secret_value != "$secret_placeholder" ]] || {
+
         $secret_exists && default="$secret_placeholder" || default=''
+
         enter_value "  Enter value for secret '$secret_name'" secret_value "$default" true is_valid_secret
+
         # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
         [[ -n "$secret_value" && $secret_value != "$secret_placeholder" ]] && echo "$secret_str" || { echo ''; continue; }
     }
@@ -59,11 +67,27 @@ for repo in "${vm2_repositories[@]}"; do
     # }
 
     trace "  Setting the secret '$secret_name' for application '$app' in repository '$repo'..."
+
+    save_state core_state
+
+    unset_verbose
+    unset_trace_enabled
+    is_dry_run && __value=$secret_placeholder || __value=$secret_value
+    # This passes the plaintext secret into execute_gh_with_retry, whose trace at _git.sh:296 logs the complete argument list;
+    # --trace can also expand this call before the helper runs. Thus --verbose, --trace, and dry-run output can disclose the
+    # secret. Suppress verbose/xtrace before expanding the command and restore state afterward, following set_secret() at
+    # setup-repo.functions.sh:861-877, while logging only a placeholder.
+    execute_gh_with_retry 3 2 true secret set "$secret_name" --body "$__value" --app "$app" --repo "$repo_owner/$repo" || _rc=$?
+
+    restore_state core_state
+
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-    execute_gh_with_retry 3 2 true secret set "$secret_name" --body "$secret_value" --app "$app" --repo "$repo_owner/$repo" && {
+    $_rc && {
         trace "  Secret '$secret_name' set successfully."
     } || {
         _rc=$?
-        warning -ec "$_rc" "  Failed to set secret $secret_name for ${app^}. Run the script with '--verbose' to see more details and troubleshoot."
+        error -ec "$_rc" "  Failed to set secret $secret_name for ${app^}. Run the script with '--verbose' to see more details and troubleshoot."
     }
 done
+
+exit_if_has_errors

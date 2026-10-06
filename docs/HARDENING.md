@@ -83,10 +83,10 @@ Build the test suite bottom-up, from pure leaf modules to orchestrators:
 
 ### Layer 2 — I/O and argument parsing  *(touch env/stderr, no external processes)*
 
-`lib/_diagnostics.sh`, `lib/_args.sh`
+`lib/_diagnostics.sh`, `lib/_core_args.sh`
 
 - `_diagnostics.sh`: redirect stderr to a temp file; assert error/warn/info output format.
-- `_args.sh`: invoke argument-parse functions with crafted `$@` arrays; assert flag variables
+- `_core_args.sh`: invoke argument-parse functions with crafted `$@` arrays; assert flag variables
   are set correctly and that invalid input returns `err_invalid_arguments`.
 
 ### Layer 3 — Pure parts of external-process modules  *(no real git/gh needed)*
@@ -220,7 +220,7 @@ This creates avoidable rebase conflicts, especially at the top of `CHANGELOG.md`
 ## Summary Table
 
 | # | Item | Risk if ignored | Effort |
-|---|------|----------------|--------|
+| --- | ------ | ---------------- | -------- |
 | 1 | Branch protection | Direct-push breakage lands silently on main | Low – 5 min in repo settings |
 | 2 | CI for DevOps itself | Bad scripts reach main undetected | Medium – new workflow file |
 | 3 | Tag pinning for consumers | Any push to main can break all consumers | Medium – tagging + template update |

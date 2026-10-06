@@ -76,7 +76,7 @@ Located in **`scripts/bash/lib/`**. The foundation layer sourced by all scripts.
      ├── _error_codes.sh    (error code constants)
      ├── _predicates.sh     (boolean test functions)
      ├── _diagnostics.sh    (info, warning, error, trace)
-     ├── _args.sh           (argument parsing, common switches, get_common_arg)
+     ├── _core_args.sh           (argument parsing, common switches, get_common_arg)
      ├── _semver.sh         (semver parsing, comparison, tag validation)
      ├── _sanitize.sh       (input sanitization: is_safe_reason, etc.)
      ├── _dump_vars.sh      (dump_vars for debugging)

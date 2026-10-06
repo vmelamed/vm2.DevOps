@@ -610,7 +610,7 @@ function is_valid_secret_name()
     (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#): the GitHub secret name to test."
     exit_if_has_bugs
 
-    is_variable_name "$1" && [[ $1 != GITHUB_* ]]
+    is_variable_name "$1" && [[ ${1^^} != GITHUB_* ]]
 }
 
 #---------------------------------------------------------------------------------------------
