@@ -60,9 +60,16 @@ for name in "${scope[@]}"; do
     [[ -f $repo_file ]] && targets+=("$name") || trace "Skipping '$name': it has no Directory.Packages.props."
 done
 
+declare -A starting_branch=()
+base_branch=main
+(( on_current_branch == 1 )) && base_branch=''
+for name in "${targets[@]}"; do
+    starting_branch[$name]=$(git -C "$vm2_repos/$name" branch --show-current)
+done
+
 if ! is_dry_run; then
     for name in "${targets[@]}"; do
-        prepare_upgrade_branch "$vm2_repos/$name" "$branch" || error -ec "$err_tool_error" "Failed to create branch '$branch' in '$name'."
+        prepare_upgrade_branch "$vm2_repos/$name" "$branch" "$base_branch" || error -ec "$err_tool_error" "Failed to create branch '$branch' in '$name'."
     done
     exit_if_has_errors false
 fi
@@ -122,6 +129,14 @@ if ! is_dry_run; then
     exit_if_has_errors false
 fi
 
+if ! is_dry_run && (( on_current_branch == 1 )); then
+    for name in "${targets[@]}"; do
+        merge_back_to_starting_branch "$vm2_repos/$name" "${starting_branch[$name]}" "$branch" ||
+            error -ec "$err_tool_error" "Failed to merge '$branch' back into '${starting_branch[$name]}' in '$name'."
+    done
+    exit_if_has_errors false
+fi
+
 print_upgrade_summary "${summary_rows[@]}"
 
 ms() { local _us=$1; printf '%d.%01ds' $(( _us / 1000000 )) $(( (_us % 1000000) / 100000 )); }
@@ -136,7 +151,11 @@ info "  package searches      $search_count calls, $(ms "$search_us") total"
 if is_dry_run; then
     info "Dry run: no files were changed, no branches were created, and nothing was committed."
 else
-    info "Changes are committed on branch '$branch' in: ${targets[*]}. Nothing was pushed."
+    if (( on_current_branch == 1 )); then
+        info "Changes were merged into each repository's starting branch (${targets[*]}). Nothing was pushed."
+    else
+        info "Changes are committed on branch '$branch' in: ${targets[*]}. Nothing was pushed."
+    fi
 fi
 
 exit_if_has_errors

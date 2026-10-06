@@ -36,9 +36,15 @@ Parameters:
   <repository>                One or more repository names (default: all vm2 repositories). Including 'vm2.Templates'
                               also upgrades the shared block in the SoT and copies it to the repositories.
 
+Options:
+  --on-current-branch         Create the upgrade branch from each repository's current branch instead of 'main', and
+                              then fast-forward the current branch to the upgrade commits and delete the upgrade branch.
+                              Nothing is pushed in either case.
+
 Examples:
   $script_name
   $script_name --dry-run
+  $script_name --on-current-branch
   $script_name vm2.Ulid vm2.Glob
 $_common_args
 EOF

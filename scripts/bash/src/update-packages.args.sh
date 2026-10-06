@@ -16,6 +16,7 @@ declare -xr vm2_sot_repo_name
 
 # this script's arguments
 declare -a requested_repos=()
+declare -i on_current_branch=0
 
 function get_arguments()
 {
@@ -27,6 +28,10 @@ function get_arguments()
 
         case "${_option,,}" in
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
+                ;;
+
+            --on-current-branch )
+                on_current_branch=1
                 ;;
 
             * ) requested_repos+=("$_option")
