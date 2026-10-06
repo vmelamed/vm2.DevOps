@@ -156,3 +156,60 @@ FAKE
     assert_output --partial "1.0.8-preview.1"
     assert_output --partial "1.0.9"
 }
+
+# --- refresh_lock_files (temporary git repo, fake dotnet) ----------------------------------------
+
+_lock_repo() {
+    local _repo="$BATS_TEST_TMPDIR/repo"
+    mkdir -p "$_repo/src/App" "$BATS_TEST_TMPDIR/bin"
+    git -C "$_repo" init -q
+    git -C "$_repo" config user.email test@example.invalid
+    git -C "$_repo" config user.name test
+    echo '{"version":1,"old":true}' > "$_repo/src/App/packages.lock.json"
+    git -C "$_repo" add -A && git -C "$_repo" commit -q -m init
+    cat > "$BATS_TEST_TMPDIR/bin/dotnet" <<'FAKE'
+#!/usr/bin/env bash
+[[ $1 == restore ]] && echo '{"version":1,"regenerated":true}' > src/App/packages.lock.json
+exit 0
+FAKE
+    chmod +x "$BATS_TEST_TMPDIR/bin/dotnet"
+}
+
+_refresh() {
+    run env PATH="$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" HOME="$HOME" bash -c "
+        export PATH='$BATS_TEST_TMPDIR/bin':\"\$PATH\"
+        source '$lib_dir/core.sh' --no-trap >/dev/null 2>&1
+        source '$_src_dir/update-packages.functions.sh'
+        source '$_src_dir/update-packages.repos.sh'
+        refresh_lock_files '$BATS_TEST_TMPDIR/repo'
+    "
+}
+
+@test "refresh_lock_files: restores and commits the regenerated lock file as its own commit" {
+    _lock_repo
+    _refresh
+    assert_success
+    run git -C "$BATS_TEST_TMPDIR/repo" log --format=%s -1
+    assert_output "chore(deps): refresh packages.lock.json after Directory.Packages.props update"
+    run git -C "$BATS_TEST_TMPDIR/repo" status --porcelain
+    assert_output ""
+}
+
+@test "refresh_lock_files: skips a repository that already has uncommitted lock-file changes" {
+    _lock_repo
+    echo '{"unrelated":true}' > "$BATS_TEST_TMPDIR/repo/src/App/packages.lock.json"
+    _refresh
+    assert_success
+    assert_output --partial "skipped the lock-file refresh"
+    run git -C "$BATS_TEST_TMPDIR/repo" log --oneline
+    refute_output --partial "refresh packages.lock.json"
+}
+
+@test "refresh_lock_files: a repository without lock files gets no commit" {
+    _lock_repo
+    git -C "$BATS_TEST_TMPDIR/repo" rm -q src/App/packages.lock.json && git -C "$BATS_TEST_TMPDIR/repo" commit -q -m "drop locks"
+    _refresh
+    assert_success
+    run git -C "$BATS_TEST_TMPDIR/repo" log --oneline
+    refute_output --partial "refresh packages.lock.json"
+}

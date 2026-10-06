@@ -138,3 +138,34 @@ function print_upgrade_summary()
         printf '%-28s %-40s %-14s %-14s %s\n' "$_label" "$_package" "$_current" "$_new" "$_result"
     done
 }
+
+#---------------------------------------------------------------------------------------------
+# @description Runs 'dotnet restore --force-evaluate' in a repository and commits the regenerated 'packages.lock.json'
+#   files as a separate commit. Skipped, with a warning, when the repository already has uncommitted changes to lock
+#   files, so unrelated changes are never committed by mistake.
+#
+# @arg $1 string Path to the repository's working tree.
+#
+# @exitcode success=0: refreshed and committed, skipped, or nothing changed.
+# @exitcode err_tool_error: the restore or the commit failed.
+#---------------------------------------------------------------------------------------------
+function refresh_lock_files()
+{
+    (( $# == 1 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument: the repository path (provided $#)."
+    exit_if_has_bugs
+
+    local _repo=$1
+
+    if [[ -n $(git -C "$_repo" status --porcelain -- '*packages.lock.json') ]]; then
+        warning "'$_repo' has uncommitted changes in packages.lock.json; skipped the lock-file refresh for it."
+        return "$success"
+    fi
+
+    (cd "$_repo" && dotnet restore --force-evaluate > /dev/null) || return "$err_tool_error"
+
+    if [[ -z $(git -C "$_repo" ls-files -- '*packages.lock.json') && -z $(git -C "$_repo" ls-files --others --exclude-standard -- '*packages.lock.json') ]]; then
+        return "$success"
+    fi
+
+    commit_package_versions "$_repo" "chore(deps): refresh packages.lock.json after Directory.Packages.props update" '*packages.lock.json'
+}
