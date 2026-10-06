@@ -248,6 +248,25 @@ Renames a branch in the Git repository and in the remote origin.
 
 A third positional argument is an error.
 
+### set-secret.sh
+
+Creates or updates one repository secret for one GitHub application, in every vm2 repository (`$vm2_repositories`). It
+prompts for the value once and reuses it for every repository. Before creating a secret that does not exist yet, it asks
+for confirmation, separately for each repository. The value is not printed to the output.
+
+```bash
+set-secret.sh MY_SECRET --app actions
+```
+
+| Argument / option      | Short | Description                                                                  |
+| :--------------------- | :---- | :--------------------------------------------------------------------------- |
+| `<secret-name>`        | `-n`  | Name of the secret: a letter or underscore, then letters, digits, underscores |
+| `--app <name>`         | `-a`  | GitHub application: `actions` (default), `dependabot`, or `codespaces`       |
+| `--repo-owner <owner>` | `-o`  | Repository owner (default: `vmelamed`)                                       |
+| `--dry-run`            | `-y`  | Show what would be set, without calling `gh secret set`                      |
+
+**Auth:** the caller's `gh` login must be able to write secrets for the target application in each repository.
+
 ### Other Utilities
 
 | Script                   | Purpose                                                                                                                                                              |

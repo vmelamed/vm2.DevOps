@@ -56,7 +56,22 @@ setup-repo runs). The win is the standardized env contract + summary + dry-run, 
 `foreach-repo.sh -- setup-repo.sh --audit`.
 **Effort:** ~Half a day including docs.
 
-## 4. DevOps for vm2.DevOps — ShellCheck, tests, PR gates
+## 4. Secrets rotation discipline (start with `set-secret.sh`)
+
+**What:** Turn secret updates from ad-hoc terminal sessions into a repeatable, auditable rotation. `scripts/bash/src/set-secret.sh`
+already sets one secret across every vm2 repository for one GitHub application. The next steps: record each rotation (who, when,
+which secret, which repos) in a single log; add a `--dry-run`-verified "list what would change" pass before any write; and, later,
+a schedule-driven reminder for secrets nearing their rotation date (PAT expiry is the first candidate).
+
+**Why:** Several secrets (`RELEASE_PAT`, `BENCH_DISPATCH_PAT`, `GH_PACKAGES_TOKEN`, `BENCHER_API_TOKEN`) are long-lived PATs. Their
+expiry is invisible until a workflow fails, and the fix is a manual, undocumented sequence across ten repositories. A small,
+tested rotation tool is the cheapest first step toward a real discipline.
+
+**Trigger:** The first PAT expiry that breaks a workflow, or the first time a rotation needs more than one terminal session.
+**Effort:** Small for the log and the dry-run listing (a few hours with tests). Expiry reminders need a scheduled workflow: a
+separate, later decision.
+
+## 5. DevOps for vm2.DevOps — ShellCheck, tests, PR gates
 
 **What:** Give vm2.DevOps the same rigor it enforces on every other repo. Candidate pieces, roughly in value order:
 

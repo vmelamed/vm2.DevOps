@@ -515,9 +515,9 @@ function is_base64()
 #---------------------------------------------------------------------------------------------
 function is_in()
 {
-    (( $# > 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires more than 1 arguments:" \
-                                                        "  - the value to test" \
-                                                        "  - options to compare against"
+    (( $# >= 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires more than 1 arguments:" \
+                                                      "  - the value to test" \
+                                                      "  - options to compare against"
     exit_if_has_bugs
 
     local _sought="$1"; shift
