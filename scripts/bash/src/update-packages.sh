@@ -30,6 +30,10 @@ source "$script_dir/update-packages.usage.sh"
 
 get_arguments "$@"
 
+declare -gi search_us=0 search_count=0 restore_us=0
+now_us() { local _t=$EPOCHREALTIME; echo "${_t/./}"; }
+run_started_us=$(now_us)
+
 declare -a summary_rows=()
 declare -a scope=()
 declare -a targets=()
@@ -64,10 +68,14 @@ if ! is_dry_run; then
 fi
 
 # phase 1: the shared block in the SoT, then the fan-out to the repositories
+phase1_us=0 fanout_us=0 phase2_us=0 lock_us=0
+phase_start_us=$(now_us)
 if (( phase_one == 1 )); then
     update_section_versions "$shared_file" shared "$vm2_sot_repo_name (SoT)" summary_rows
     update_section_versions "$root_file" shared "$vm2_sot_repo_name (root)" summary_rows
 
+    phase1_us=$(( $(now_us) - phase_start_us ))
+    fanout_start_us=$(now_us)
     if ! is_dry_run; then
         for name in "${targets[@]}"; do
             [[ $name == "$vm2_sot_repo_name" ]] || fan_out_names+=("$name")
@@ -83,12 +91,18 @@ if (( phase_one == 1 )); then
     fi
 fi
 
+fanout_us=$(( $(now_us) - ${fanout_start_us:-$(now_us)} ))
+
 # phase 2: each repository's own section
+phase2_start_us=$(now_us)
 for name in "${targets[@]}"; do
     update_section_versions "$vm2_repos/$name/Directory.Packages.props" repo "$name" summary_rows
 done
 
+phase2_us=$(( $(now_us) - phase2_start_us ))
+
 if ! is_dry_run; then
+    lock_start_us=$(now_us)
     for name in "${targets[@]}"; do
         if [[ $name == "$vm2_sot_repo_name" ]] && (( phase_one == 1 )); then
             commit_package_versions "$vm2_repos/$name" "chore(deps): update NuGet package versions in Directory.Packages.props" \
@@ -101,6 +115,7 @@ if ! is_dry_run; then
         fi
     done
 
+    lock_us=$(( $(now_us) - lock_start_us ))
     for name in "${targets[@]}"; do
         refresh_lock_files "$vm2_repos/$name" || error -ec "$err_tool_error" "Failed to restore or commit packages.lock.json in '$name'."
     done
@@ -108,6 +123,15 @@ if ! is_dry_run; then
 fi
 
 print_upgrade_summary "${summary_rows[@]}"
+
+ms() { local _us=$1; printf '%d.%01ds' $(( _us / 1000000 )) $(( (_us % 1000000) / 100000 )); }
+info "Timing (seconds):"
+info "  total                 $(ms $(( $(now_us) - run_started_us )))"
+info "  phase 1 (SoT)         $(ms "$phase1_us")"
+info "  fan-out (diff-shared) $(ms "$fanout_us")"
+info "  phase 2 (repos)       $(ms "$phase2_us")"
+info "  lock refresh          $(ms "$lock_us")  (of which dotnet restore: $(ms "$restore_us"))"
+info "  package searches      $search_count calls, $(ms "$search_us") total"
 
 if is_dry_run; then
     info "Dry run: no files were changed, no branches were created, and nothing was committed."
