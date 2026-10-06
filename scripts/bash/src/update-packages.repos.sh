@@ -8,18 +8,19 @@
 #   the current HEAD. The stash is left in place; the caller is told how to restore it.
 #
 # @arg $1 string Path to the repository's working tree.
-# @arg $2 string Name of the branch to create.
+# @arg $2 string Name of the upgrade branch to create (or switch to, if it already exists).
+# @arg $3 string Base branch to create the upgrade branch from. Empty means the current branch.
 #
-# @exitcode success=0: the branch was created.
+# @exitcode success=0: the upgrade branch is checked out.
 # @exitcode err_tool_error: git failed.
 #---------------------------------------------------------------------------------------------
 function prepare_upgrade_branch()
 {
-    (( $# == 2 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires two arguments: the repository path and the branch name (provided $#)."
-    [[ -n $1 && -n $2 ]]          || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires both arguments to be non-empty."
+    (( $# == 3 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires three arguments: the repository path, the branch name, and the base branch (provided $#)."
+    [[ -n $1 && -n $2 ]]          || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires the repository path and the branch name to be non-empty."
     exit_if_has_bugs
 
-    local _repo=$1 _branch=$2 _previous
+    local _repo=$1 _branch=$2 _base=$3 _previous
 
     # already on the upgrade branch (e.g. a re-run after an interruption): nothing to prepare
     [[ $(git -C "$_repo" branch --show-current) == "$_branch" ]] && return "$success"
@@ -28,6 +29,10 @@ function prepare_upgrade_branch()
         _previous=$(git -C "$_repo" branch --show-current)
         git -C "$_repo" stash push --include-untracked --message "update-packages.sh: before $_branch" > /dev/null || return "$err_tool_error"
         warning "Stashed local changes in '$_repo'. To restore them later: git -C '$_repo' switch '$_previous' && git -C '$_repo' stash pop"
+    fi
+
+    if [[ -n $_base ]]; then
+        git -C "$_repo" switch "$_base" > /dev/null || return "$err_tool_error"
     fi
 
     if git -C "$_repo" show-ref --verify --quiet "refs/heads/$_branch"; then
@@ -178,4 +183,27 @@ function refresh_lock_files()
     fi
 
     commit_package_versions "$_repo" "chore(deps): refresh packages.lock.json after Directory.Packages.props update" '*packages.lock.json'
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Fast-forwards the starting branch to the upgrade commits and deletes the upgrade branch. Used with
+#   '--on-current-branch'. Nothing is pushed.
+#
+# @arg $1 string Path to the repository's working tree.
+# @arg $2 string The starting branch.
+# @arg $3 string The upgrade branch.
+#
+# @exitcode success=0: merged and deleted.
+# @exitcode err_tool_error: git failed (e.g., the starting branch can no longer be fast-forwarded).
+#---------------------------------------------------------------------------------------------
+function merge_back_to_starting_branch()
+{
+    (( $# == 3 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires three arguments: the repository path, the starting branch, and the upgrade branch (provided $#)."
+    exit_if_has_bugs
+
+    local _repo=$1 _start=$2 _branch=$3
+
+    git -C "$_repo" switch "$_start" > /dev/null || return "$err_tool_error"
+    git -C "$_repo" merge --ff-only --quiet "$_branch" || return "$err_tool_error"
+    git -C "$_repo" branch -d "$_branch" > /dev/null || return "$err_tool_error"
 }
