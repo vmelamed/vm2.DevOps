@@ -160,7 +160,7 @@ Exits the script (via `exit_with_error`) if any bugs were recorded by this funct
 
 ### usage()
 
-Forward-declaration placeholder for `usage()`, meant to be overridden by sourcing `_args.sh`; always bug-exits if not overridden.
+Forward-declaration placeholder for `usage()`, meant to be overridden by sourcing `_core_args.sh`; always bug-exits if not overridden.
 
 ### exit_if_has_errors()
 
@@ -212,7 +212,7 @@ Logs one or more lines under a `## Summary` markdown heading, via `$__summary_ou
 
 ---
 
-## _args.sh
+## _core_args.sh
 
 Common command-line argument parsing (`--verbose`, `--quiet`, `--trace`, `--dry-run`, `--graphical`, `--markdown`, `--help`/`-h`/`-?`) and the default `usage`/`usage_text` implementation.
 
@@ -794,7 +794,7 @@ Outputs a `key=value` pair (kebab-case key) for each named variable to `$GITHUB_
 | _core_state.sh     |        20 |
 | _error_codes.sh    |         2 |
 | _diagnostics.sh    |        21 |
-| _args.sh           |         4 |
+| _core_args.sh           |         4 |
 | _predicates.sh     |        31 |
 | _sanitize.sh       |        36 |
 | _semver.sh         |        14 |

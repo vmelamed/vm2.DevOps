@@ -95,7 +95,7 @@ See `docs/ARCHITECTURE.md` for the full design and `docs/WORKFLOWS_REFERENCE.md`
 | `.github/workflows/`   | Reusable workflows (`_ci.yaml`, `_build.yaml`, `_test.yaml`, etc.)   |
 | `.github/scripts/`     | CI/CD action scripts (three-file convention — see below)             |
 | `.github/actions/`     | Custom composite actions (`setup-env`, `cache-dependencies`, etc.)   |
-| `scripts/bash/lib/`    | Shared bash library (`_diagnostics.sh`, `_git.sh`, `_args.sh`, etc.) |
+| `scripts/bash/lib/`    | Shared bash library (`_diagnostics.sh`, `_git.sh`, `_core_args.sh`, etc.) |
 | `scripts/bash/src/`    | Local dev utility scripts (`diff-shared.sh`, `setup-repo.sh`, etc.)  |
 | `docs/`                | Reference documentation (15 `.md` files)                             |
 
@@ -153,7 +153,7 @@ All core library files live in `scripts/bash/lib/` and are sourced by scripts th
 | `_core_state.sh`  | Common state variables (quiet, verbose, dry-run, trace modes)    |
 | `_error_codes.sh` | Error code constants                                             |
 | `_diagnostics.sh` | Logging (`to_stdout`, `error`, `warning`, `trace`, etc.)         |
-| `_args.sh`        | Common argument parsing to initialize core state                 |
+| `_core_args.sh`        | Common argument parsing to initialize core state                 |
 | `_predicates.sh`  | Boolean checks (`is_array`, `is_positive`, etc.)                 |
 | `_semver.sh`      | Semantic versioning utilities                                    |
 | `_sanitize.sh`    | Input validation (`is_safe_path`, `is_safe_configuration`, etc.) |

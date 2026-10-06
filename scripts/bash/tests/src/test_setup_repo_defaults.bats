@@ -116,7 +116,7 @@ _sr() {
     refute_output --partial "MISSING FUNCTION"
 }
 
-@test "apps_with_secrets lists the three expected GitHub Apps ('agents' is commented out, not used yet)" {
+@test "gh_apps_with_secrets lists the three expected GitHub Apps ('agents' is commented out, not used yet)" {
     run _sr 'printf "%s\n" "${gh_apps_with_secrets[@]}"'
     assert_success
     assert_line "actions"

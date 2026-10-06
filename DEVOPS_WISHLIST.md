@@ -65,7 +65,7 @@ setup-repo runs). The win is the standardized env contract + summary + dry-run, 
 - **ShellCheck as a CI gate** over `scripts/bash/` and `.github/scripts/` — the IDE extension covers interactive editing;
   CI covers everything else (bulk edits, AI-generated changes, future contributors).
 - **Tests for the bash library** (e.g. bats-core) — 67 functions in `scripts/bash/lib/` with zero automated tests;
-  start with the highest-risk ones (`_sanitize.sh`, `_semver.sh`, `_args.sh`).
+  start with the highest-risk ones (`_sanitize.sh`, `_semver.sh`, `_core_args.sh`).
 - **PR gate** — a `Postrun-CI`-style required check on vm2.DevOps's own PRs running the above.
 - **(Bigger, separate decision)** Release channel for the reusable workflows: consumers reference `@main`, so every merge
   deploys fleet-wide instantly and a PR cannot exercise the very workflows it changes. Tagged refs (`@v1`) or a

@@ -13,20 +13,21 @@ declare -xr default_sot
 declare -xra gh_apps_with_secrets
 
 #---------------------------------------------------------------------------------------------
-# @description Builds and prints the full `--help` text for `setup-repo.sh` to stdout: usage line, description of
-# what the script does, parameters, options, switches, examples, and the list of local Git settings the script
-# configures. When `$1` is `true`, the shared switches and environment-variable sections
-# (`$common_args_usage`) are appended as well.
+# @description Builds and prints the full `--help` text for `set-secret.sh` to stdout: usage
+#   line, description of what the script does, parameters, options, switches, examples, and
+#   the list of local Git settings the script configures. When `$1` is `true`, the shared
+#   switches and environment-variable sections (`$common_args_usage`) are appended as well.
 #
-# @arg $1 bool When `true`, include the shared/common switches and environment variables sections in the output.
+# @arg $1 bool When `true`, include the shared/common switches and environment variables
+#   sections in the output.
 #
 # @exitcode success=0: Always.
-# @stdout The full help text for `setup-repo.sh`.
+# @stdout The full help text for `set-secret.sh`.
 #---------------------------------------------------------------------------------------------
 function usage_text()
 {
-    (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
-    is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1:-<none>})."
+    (( $# ==1 ))                     || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
+    [[ ! -v 1 ]]  || is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1:-<none>})."
     exit_if_has_bugs
 
     local _long_text=$1
@@ -41,9 +42,8 @@ Usage:
   For each vm2 repository updates or creates a secret for a specified GitHub application.
 
 Parameter:
-  <secret-name>               The name of the secret to update. MUST contains only
-                              alphanumeric characters and underscores, start with a letter or underscore, and does not start
-                              with 'GITHUB_'.
+  <secret-name>               The name of the secret to update. MUST contain only alphanumeric characters and underscores, start
+                              with a letter or underscore, and does not start with 'GITHUB_'.
 
 Options:
   -a, --app <value>           The application name. MUST be one of: ${gh_apps_with_secrets[*]}.

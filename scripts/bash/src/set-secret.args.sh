@@ -10,6 +10,7 @@ declare -xr lib_dir
 declare -xri success
 declare -xri err_argument_value
 declare -xri err_too_many_arguments
+declare -xri err_missing_argument
 
 declare -xra gh_apps_with_secrets
 
@@ -36,20 +37,21 @@ function get_arguments()
                 ;;
 
             -o|--repo-owner )
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $_option"
                 repo_owner="$1"; shift
                 ;;
 
             -a|--app )
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $_option"
                 app="$1"; shift
                 ;;
 
             -n|--secret-name )
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $_option"
                 secret_name="$1"; shift
                 ;;
 
-            * ) if [[ -n "$secret_name" ]]; then
-                    usage -ec "$err_too_many_arguments" "Too many positional arguments (secret name): $_option"
-                fi
+            * ) [[ -z "$secret_name" ]] || usage -ec "$err_too_many_arguments" "Too many positional arguments (secret name): $_option"
                 secret_name="$_option"
                 ;;
         esac
@@ -67,7 +69,7 @@ function validate_args()
 
     is_in "$app" "${gh_apps_with_secrets[@]}" || error -ec "$err_argument_value" "Invalid app specified: '$app'. Must be one of: ${gh_apps_with_secrets[*]}."
     is_valid_secret_name "$secret_name"    || error -ec "$err_argument_value" "Invalid secret name specified: '$secret_name'. "
-    exit_if_has_errors
+    exit_if_has_errors true
 
     readonly repo_owner app secret_name
 }

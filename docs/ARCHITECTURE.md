@@ -323,7 +323,7 @@ A shared function library sourced by scripts at startup.
 | :---------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `core.sh`         | General-purpose functions (logging, paths, variables) — sources every `_*.sh` module below directly                                                                         |
 | `gh_core.sh`      | GitHub Actions helpers — sources only `core.sh`; adds GH env vars and a few functions (`to_stdout`/`to_stderr`/`to_output` overrides, `gh_escape`, `args_to_github_output`) |
-| `_args.sh`        | Argument parsing utilities                                                                                                                                                  |
+| `_core_args.sh`        | Argument parsing utilities                                                                                                                                                  |
 | `_constants.sh`   | Shared constants                                                                                                                                                            |
 | `_core_state.sh`  | Common state variables (quiet, verbose, dry-run, trace modes)                                                                                                               |
 | `_diagnostics.sh` | Debug and diagnostic output                                                                                                                                                 |
