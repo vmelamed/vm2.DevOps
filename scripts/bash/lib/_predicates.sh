@@ -530,6 +530,41 @@ function is_in()
     return "$negative"
 }
 
+#---------------------------------------------------------------------------------------------
+# @description Tests if the first parameter equals one of the following parameters case
+#   insensitively.
+#
+# @arg $1 string value - value to search for
+# @arg $@ string options - zero or more valid options to compare against
+#
+# @exitcode positive=0: the value was found among the options
+# @exitcode negative=1: otherwise
+#
+# @example
+#   if is_in "$color" "red" "green" "blue"; then echo "Valid color"; fi
+#---------------------------------------------------------------------------------------------
+function is_in_i()
+{
+    (( $# >= 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires more than 1 arguments:" \
+                                                      "  - the value to test" \
+                                                      "  - options to compare against"
+    exit_if_has_bugs
+
+    local _sought="$1"; shift
+    local _v
+
+    local _old_case_sensitive
+
+    set_case_sensitivity && _old_case_sensitive=true || _old_case_sensitive=false
+    for _v in "$@"; do
+        [[ $_sought == "$_v" ]] &&
+            return "$positive"
+    done
+    set_case_sensitivity "$_old_case_sensitive"
+
+    return "$negative"
+}
+
 declare -x __os_name
 __os_name="$(uname -s)"
 declare -xr __os_name

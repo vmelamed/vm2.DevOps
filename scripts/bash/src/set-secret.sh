@@ -47,6 +47,8 @@ for repo in "${vm2_repositories[@]}"; do
     trace "In repository '$repo':"
     trace "  Getting a list of all current secrets for the repository '$repo'."
 
+    _rc=$success
+    # TODO: remove the process substitution and use a temp file instead
     readarray -t repo_secrets < <(execute_gh_api_with_retry 3 2 --paginate "repos/$repo_owner/$repo/$app/secrets" -q '.secrets[] | .name') || _rc=$?
 
     (( _rc == success )) || {
@@ -56,6 +58,9 @@ for repo in "${vm2_repositories[@]}"; do
 
     is_in "$secret_name" "${repo_secrets[@]}" && secret_exists=true || secret_exists=false
     $secret_exists || confirm "  Secret '$secret_name' is not present in repository '$repo_owner/$repo'. Do you want to create it?" || continue
+
+    save_state core_state
+    unset_trace_enabled
 
     [[ -n $secret_value && $secret_value != "$secret_placeholder" ]] || {
 
@@ -81,9 +86,6 @@ for repo in "${vm2_repositories[@]}"; do
     _rc=$success
     __value=$secret_value
 
-    save_state core_state
-
-    unset_trace_enabled
     is_dry_run && __value=$secret_placeholder
     # This passes the plaintext secret into execute_gh_with_retry, whose trace at _git.sh:296 logs the complete argument list;
     # --trace can also expand this call before the helper runs. Thus --verbose, --trace, and dry-run output can disclose the
