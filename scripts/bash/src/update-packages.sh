@@ -37,7 +37,6 @@ run_started_us=$(now_us)
 declare -a summary_rows=()
 declare -a scope=()
 declare -a targets=()
-declare -a fan_out_names=()
 
 declare -i phase_one=0
 declare sot_path shared_file root_file branch name repo_file
@@ -84,14 +83,11 @@ if (( phase_one == 1 )); then
     phase1_us=$(( $(now_us) - phase_start_us ))
     fanout_start_us=$(now_us)
     if ! is_dry_run; then
-        for name in "${targets[@]}"; do
-            [[ $name == "$vm2_sot_repo_name" ]] || fan_out_names+=("$name")
-        done
         if [[ ${#requested_repos[@]} == 0 ]]; then
             "$diff_shared_script" --vm2-repos "$vm2_repos" --current-branch --all-repos --file Directory.Packages.props --quiet ||
                 error -ec "$err_tool_error" "diff-shared.sh failed while copying the shared block to the repositories."
-        elif (( ${#fan_out_names[@]} > 0 )); then
-            "$diff_shared_script" --vm2-repos "$vm2_repos" --current-branch "${fan_out_names[@]}" --file Directory.Packages.props --quiet ||
+        elif (( ${#targets[@]} > 0 )); then
+            "$diff_shared_script" --vm2-repos "$vm2_repos" --current-branch "${targets[@]}" --file Directory.Packages.props --quiet ||
                 error -ec "$err_tool_error" "diff-shared.sh failed while copying the shared block to the repositories."
         fi
         exit_if_has_errors false
