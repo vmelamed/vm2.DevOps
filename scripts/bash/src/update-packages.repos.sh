@@ -187,7 +187,7 @@ function refresh_lock_files()
 
 #---------------------------------------------------------------------------------------------
 # @description Fast-forwards the starting branch to the upgrade commits and deletes the upgrade branch. Used with
-#   '--on-current-branch'. Nothing is pushed.
+#   '--current-branch' (-cb). Nothing is pushed.
 #
 # @arg $1 string Path to the repository's working tree.
 # @arg $2 string The starting branch.

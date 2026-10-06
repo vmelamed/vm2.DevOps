@@ -30,7 +30,7 @@ function get_arguments()
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
-            --on-current-branch )
+            --current-branch|-cb )
                 on_current_branch=1
                 ;;
 
