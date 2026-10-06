@@ -81,7 +81,7 @@ function update_section_versions()
     local -n _rows_ref=$4
     local -A _versions=()
     local -a _ids=() _found=()
-    local _id _current _selected _candidate _result _all_prerelease
+    local _id _current _selected _candidate _result _all_prerelease _query_rc
 
     read_package_versions "$_file" "$_section" _versions
     (( ${#_versions[@]} > 0 )) && readarray -t _ids < <(printf '%s\n' "${!_versions[@]}" | sort -f)
@@ -89,7 +89,12 @@ function update_section_versions()
     for _id in "${_ids[@]}"; do
         _current=${_versions[$_id]}
 
-        if ! query_package_versions "$_id" _found; then
+        local _t0=$(now_us)
+        query_package_versions "$_id" _found && _query_rc=0 || _query_rc=$?
+        search_us=$(( search_us + $(now_us) - _t0 ))
+        search_count=$(( search_count + 1 ))
+
+        if (( _query_rc != success )); then
             _rows_ref+=("$_label|$_id|$_current|-|search failed")
             continue
         fi
@@ -155,6 +160,7 @@ function print_upgrade_summary()
 #---------------------------------------------------------------------------------------------
 function refresh_lock_files()
 {
+    local _restore_rc
     (( $# == 1 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument: the repository path (provided $#)."
     exit_if_has_bugs
 
@@ -165,7 +171,10 @@ function refresh_lock_files()
         return "$success"
     fi
 
-    (cd "$_repo" && dotnet restore --force-evaluate > /dev/null) || return "$err_tool_error"
+    local _t0=$(now_us)
+    (cd "$_repo" && dotnet restore --force-evaluate > /dev/null) && _restore_rc=0 || _restore_rc=$?
+    restore_us=$(( restore_us + $(now_us) - _t0 ))
+    (( _restore_rc == 0 )) || return "$err_tool_error"
 
     if [[ -z $(git -C "$_repo" ls-files -- '*packages.lock.json') && -z $(git -C "$_repo" ls-files --others --exclude-standard -- '*packages.lock.json') ]]; then
         return "$success"
