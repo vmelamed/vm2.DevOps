@@ -843,12 +843,12 @@ function configure_secrets()
 #---------------------------------------------------------------------------------------------
 function set_secret()
 {
-    (( $# == 3 ))                                        || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly three arguments (provided $#):" \
+    (( $# == 3 ))                                           || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly three arguments (provided $#):" \
                                                                                                 "  - the secret name" \
                                                                                                 "  - the secret value" \
                                                                                                 "  - the application"
-    [[ ! -v 1 || -n $1 ]]                                || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the secret name, to be non-empty (provided '${1:-<none>}')."
-    [[ ! -v 3 ]] || is_in "$3" "${gh_apps_with_secrets[@]}" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 3, the application name, to be one of: ${gh_apps_with_secrets[*]} (provided '${3:-<none>}')."
+    [[ ! -v 1 || -n $1 ]]                                   || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the secret name, to be non-empty (provided '${1:-<none>}')."
+    [[ ! -v 3 ]] || is_in "$3" "${gh_apps_with_secrets[@]}" || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 3, the application name, to be one of: ${gh_apps_with_secrets[*]} (provided '${3:-<none>}')."
     exit_if_has_bugs
 
     local _name="$1"
@@ -858,22 +858,25 @@ function set_secret()
     # we have a new legitimate value for the secret that we need to create and/or set:
     trace "gh secret set $_name --body <secret> --app $_app --repo $repo"
 
-    local -A _core_state
-    save_state _core_state
-
-    # suppress all tracing to avoid revealing the secret value
-    unset_verbose
-    set +x
-
     local -i _rc=$success
+    local -A _core_state
+
+    save_state _core_state
+    # suppress all tracing to avoid revealing the secret value
+    unset_trace_enabled
+    is_dry_run && __value=$secret_placeholder || __value=$_value
+
 
     # create and/or set the secret value on GitHub
-    execute_gh_with_retry 3 2 true secret set "$_name" --body "$_value" --app "$_app" --repo "$repo" || {
-        _rc=$?
-        warning "Failed to set secret $_name for ${_app^}. Run the script with '--verbose' to see more details and troubleshoot." -ec "$_rc"
-    }
+    execute_gh_with_retry 3 2 true secret set "$_name" --body "$__value" --app "$_app" --repo "$repo" || _rc=$?
 
     restore_state _core_state
+
+    # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
+    (( _rc == success )) &&
+        trace "Secret '$_name' was set successfully." ||
+        warning "Failed to set secret $_name for ${_app^}. Run the script with '--verbose' to see more details and troubleshoot." -ec "$_rc"
+
     return "$_rc"
 }
 
@@ -905,13 +908,6 @@ function delete_secret()
     # we have a new legitimate value for the secret that we need to create and/or set:
     trace "gh secret delete $_name --app $_app --repo $repo"
 
-    local -A _core_state=()
-    save_state _core_state
-
-    # suppress all tracing to avoid revealing the secret value
-    unset_verbose
-    set +x
-
     local -i _rc=$success
 
     # delete the secret value on GitHub
@@ -920,7 +916,6 @@ function delete_secret()
         warning "Failed to delete secret $_name for ${_app^}. Run the script with '--verbose' to see more details and troubleshoot." -ec "$_rc"
     }
 
-    restore_state _core_state
     return "$_rc"
 }
 

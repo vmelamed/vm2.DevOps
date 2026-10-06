@@ -279,8 +279,13 @@ declare -gxi err_invalid_path
     assert_failure "$failure"
 }
 
-@test "is_in: bug-exits with fewer than 2 arguments" {
-    run is_in "only-one"
+@test "is_in: false for an empty option list (no options is a valid, empty set)" {
+    run is_in "anything"
+    assert_failure "$failure"
+}
+
+@test "is_in: bug-exits with no arguments" {
+    run is_in
     assert_failure "$err_invalid_arguments"
 }
 

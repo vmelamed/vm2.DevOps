@@ -546,6 +546,8 @@ function save_state()
 #
 # @arg $1 nameref `__state` name of the associative array variable previously populated by
 #   `save_state`.
+# @arg $2 bool `_restore_errors` Optional flag whether to restore or preserve the number of
+#   errors. Defaults to false - preserve (do not restore!) the number of errors.
 #
 # @exitcode success=0: State restored successfully.
 #
@@ -558,13 +560,16 @@ function restore_state()
 {
     local -i _rc=$success
 
-    (( $# == 1 ))                             || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() expects exactly one argument:" \
-                                                                                  "  - the name of an array variable that will store the saved state"
-    [[ ! -v 1 ]] || is_associative_array "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() expects its argument to be the name of an associative array variable where 'save_state' has stored the global state (provided '${1:-<none>}')."
+    (( $# == 1 || $# == 2 ))                  || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() expects exactly one argument:" \
+                                                                                  "  - the name of an array variable that will store the saved state" \
+                                                                                  "  - an optional flag whether to preserve/restore the number of errors"
+    [[ ! -v 1 ]] || is_associative_array "$1" || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() expects its argument to be the name of an associative array variable where 'save_state' has stored the global state (provided '${1:-<none>}')."
+    [[ ! -v 2 ]] || is_boolean "$2"           || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() expects its second argument to be a boolean indicating whether to preserve or restore the number of errors (provided '${2:-<none>}')."
     exit_if_has_bugs
 
     # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
     local -n __state=$1
+    local _restore_errors=${2:-false}
 
     (( ${#__state[@]} >= state_length )) &&
     [[ -v __state[$key_pid] ]]           && (( __state[$key_pid] == BASHPID )) &&
@@ -576,7 +581,7 @@ function restore_state()
     __state[$key_subshell_pid]=-1
     _ignore=${__state[$key_ignore]}
     set_table_format "${__state[$key_table_format]}"
-    set_errors "${__state[$key_errors]}"
+    $_restore_errors && set_errors "${__state[$key_errors]}"
     ${__state[$key_quiet]}   && set_quiet   || unset_quiet
     ${__state[$key_verbose]} && set_verbose || unset_verbose
     ${__state[$key_dry_run]} && set_dry_run || unset_dry_run

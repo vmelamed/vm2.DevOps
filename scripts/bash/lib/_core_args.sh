@@ -115,10 +115,10 @@ function usage_if_requested()
 #     tracing state before exiting, so the usage text itself is never polluted by trace
 #     output.
 #
-# @arg $1 bool _long_usage whether to display the long (`true`) or the short (`false`) version
+# @arg $1 bool `_long_usage` whether to display the long (`true`) or the short (`false`) version
 #   of the usage text. The long version includes the common flags like verbose, quiet, etc.
 #   Optional, default: `false`.
-# @arg $2 int _exit_code the exit code to use when exiting. Optional, non-negative integer
+# @arg $2 int `_exit_code` the exit code to use when exiting. Optional, non-negative integer
 #   less than 256. Default: 0, or 1 if error messages are present (see @exitcode below).
 # @arg $@ strings Additional error message parts to display at the top of the output.
 #   Optional, if omitted, no message is shown. Supports the same named parameters as
