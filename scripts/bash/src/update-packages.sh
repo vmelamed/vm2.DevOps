@@ -15,10 +15,10 @@ declare -xr lib_dir
 
 source "$lib_dir/core.sh"
 
-declare -xr edit_em='✏️'
-declare -xr check_em='✅'
-declare -xr no_entry_em='⛔'
-declare -xr error_em='❌'
+declare -xr edit_em
+declare -xr check_em
+declare -xr no_entry_em
+declare -xr error_em
 
 declare -xr default_vm2_repos_path
 declare -xr vm2_sot_repo_name
