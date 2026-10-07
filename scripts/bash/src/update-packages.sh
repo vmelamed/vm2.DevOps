@@ -51,7 +51,7 @@ declare -A mode=()
 declare -A reason=()
 declare -a warnings=()
 
-declare -i phase_one=0
+declare -i phase_one=0 _commit_rc=0
 declare sot_path shared_file root_file branch name repo_file m r _pr_link
 branch="deps/update-packages-$(date +%Y-%m-%d)"
 sot_path="$vm2_repos/$vm2_sot_repo_name"
@@ -163,10 +163,21 @@ if ! is_dry_run; then
         if [[ $name == "$vm2_sot_repo_name" ]] && (( phase_one == 1 )); then
             paths+=("templates/AddNewPackage/content/Directory.Packages.props")
         fi
-        commit_package_versions "$vm2_repos/$name" "chore(deps): update NuGet package versions in Directory.Packages.props" "${paths[@]}" ||
+
+        commit_package_versions "$vm2_repos/$name" "chore(deps): update NuGet package versions in Directory.Packages.props" "${paths[@]}" &&
+            _commit_rc=$success || _commit_rc=$?
+        if (( _commit_rc == negative )); then
+            reason[$name]="$check_em already up to date -- nothing to commit"
+            continue
+        elif (( _commit_rc != success )); then
             error -ec "$err_tool_error" "Failed to commit the package versions in '$name'."
-        git -C "$vm2_repos/$name" push --quiet -u origin "$branch" 2>"$_ignore" ||
+            continue
+        fi
+
+        git -C "$vm2_repos/$name" push --quiet -u origin "$branch" 2>"$_ignore" || {
             error -ec "$err_tool_error" "Failed to push '$branch' in '$name'."
+            continue
+        }
 
         if open_pull_request "$vm2_repos/$name" "$branch" _pr_link; then
             reason[$name]="📬 PR opened: $_pr_link -- please see it through"

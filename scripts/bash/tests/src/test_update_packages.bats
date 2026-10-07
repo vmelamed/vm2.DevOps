@@ -165,11 +165,14 @@ _lock_repo() {
     git -C "$_repo" init -q
     git -C "$_repo" config user.email test@example.invalid
     git -C "$_repo" config user.name test
+    echo '<Project />' > "$_repo/src/App/App.csproj"
     echo '{"version":1,"old":true}' > "$_repo/src/App/packages.lock.json"
     git -C "$_repo" add -A && git -C "$_repo" commit -q -m init
+    # Mirrors real 'dotnet restore': it regenerates a lock file only for a project that still exists, never for one
+    # whose project was removed.
     cat > "$BATS_TEST_TMPDIR/bin/dotnet" <<'FAKE'
 #!/usr/bin/env bash
-[[ $1 == restore ]] && echo '{"version":1,"regenerated":true}' > src/App/packages.lock.json
+[[ $1 == restore && -f src/App/App.csproj ]] && echo '{"version":1,"regenerated":true}' > src/App/packages.lock.json
 exit 0
 FAKE
     chmod +x "$BATS_TEST_TMPDIR/bin/dotnet"
@@ -206,7 +209,9 @@ _refresh() {
 
 @test "refresh_lock_files: a repository without lock files is left without any" {
     _lock_repo
-    git -C "$BATS_TEST_TMPDIR/repo" rm -q src/App/packages.lock.json && git -C "$BATS_TEST_TMPDIR/repo" commit -q -m "drop locks"
+    # Remove the whole project, not just its lock file: a real 'dotnet restore' only regenerates a lock file for a
+    # project that still exists, so this is what "no lock files to regenerate" actually means.
+    git -C "$BATS_TEST_TMPDIR/repo" rm -q -r src/App && git -C "$BATS_TEST_TMPDIR/repo" commit -q -m "drop project"
     _refresh
     assert_success
     run git -C "$BATS_TEST_TMPDIR/repo" status --porcelain
