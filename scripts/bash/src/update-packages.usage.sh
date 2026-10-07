@@ -6,6 +6,10 @@
 declare -xr common_args_usage
 declare -xr script_name
 
+# constants from lib:
+declare -xri err_invalid_arguments
+declare -xri err_argument_value
+
 #---------------------------------------------------------------------------------------------
 # @description Prints the usage text of 'update-packages.sh'.
 #
