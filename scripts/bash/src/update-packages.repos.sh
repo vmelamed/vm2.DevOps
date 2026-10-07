@@ -4,63 +4,102 @@
 # shellcheck disable=SC2148 # This file is intended to be sourced, not executed directly.
 
 #---------------------------------------------------------------------------------------------
-# @description Stashes any local changes in a repository (including untracked files) and creates the upgrade branch from
-#   the current HEAD. The stash is left in place; the caller is told how to restore it.
+# @description Decides how a repository may be changed. 'publish': on 'main', clean, and identical to 'origin/main' after
+#   a fetch, so a branch can be created, committed, and pushed. 'inplace': the files are edited in the current branch and
+#   nothing is committed. 'skip': uncommitted changes exist, so the repository is left untouched.
 #
 # @arg $1 string Path to the repository's working tree.
-# @arg $2 string Name of the upgrade branch to create (or switch to, if it already exists).
-# @arg $3 string Base branch to create the upgrade branch from. Empty means the current branch.
+# @arg $2 nameref Receives 'publish', 'inplace', or 'skip'.
+# @arg $3 nameref Receives a human-readable explanation for the summary.
 #
-# @exitcode success=0: the upgrade branch is checked out.
-# @exitcode err_tool_error: git failed.
+# @exitcode success=0: always.
 #---------------------------------------------------------------------------------------------
-function prepare_upgrade_branch()
+function classify_repo()
 {
-    (( $# == 3 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires three arguments: the repository path, the branch name, and the base branch (provided $#)."
-    [[ -n $1 && -n $2 ]]          || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires the repository path and the branch name to be non-empty."
+    (( $# == 3 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires three arguments: the repository path, the mode, and the reason (provided $#)."
     exit_if_has_bugs
 
-    local _repo=$1 _branch=$2 _base=$3 _previous
-
-    # already on the upgrade branch (e.g. a re-run after an interruption): nothing to prepare
-    [[ $(git -C "$_repo" branch --show-current) == "$_branch" ]] && return "$success"
+    local _repo=$1
+    local -n _mode_ref=$2 _reason_ref=$3
+    local _branch
 
     if [[ -n $(git -C "$_repo" status --porcelain) ]]; then
-        _previous=$(git -C "$_repo" branch --show-current)
-        git -C "$_repo" stash push --include-untracked --message "update-packages.sh: before $_branch" > /dev/null || return "$err_tool_error"
-        warning "Stashed local changes in '$_repo'. To restore them later: git -C '$_repo' switch '$_previous' && git -C '$_repo' stash pop"
+        _mode_ref=skip
+        _reason_ref="uncommitted changes; left untouched"
+        return "$success"
     fi
 
-    if [[ -n $_base ]]; then
-        git -C "$_repo" switch "$_base" > /dev/null || return "$err_tool_error"
+    _branch=$(git -C "$_repo" branch --show-current)
+    if [[ $_branch != main ]]; then
+        _mode_ref=inplace
+        _reason_ref="on branch '$_branch', not 'main'; edited in place, nothing committed"
+        return "$success"
     fi
 
-    if git -C "$_repo" show-ref --verify --quiet "refs/heads/$_branch"; then
-        git -C "$_repo" switch "$_branch" > /dev/null || return "$err_tool_error"
-    else
-        git -C "$_repo" switch -c "$_branch" > /dev/null || return "$err_tool_error"
+    if ! git -C "$_repo" remote get-url origin > /dev/null 2>&1; then
+        _mode_ref=inplace
+        _reason_ref="no 'origin' remote; edited in place, nothing committed"
+        return "$success"
     fi
+
+    if ! git -C "$_repo" fetch --quiet origin main > /dev/null 2>&1; then
+        _mode_ref=inplace
+        _reason_ref="could not fetch 'origin/main'; edited in place, nothing committed"
+        return "$success"
+    fi
+
+    if [[ $(git -C "$_repo" rev-list --count origin/main...main) != 0 ]]; then
+        _mode_ref=inplace
+        _reason_ref="not identical to 'origin/main'; edited in place, nothing committed"
+        return "$success"
+    fi
+
+    _mode_ref=publish
+    _reason_ref="on 'main', clean, identical to 'origin/main'"
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Commits the given files on the current branch of a repository, if they have changes.
+# @description Creates the upgrade branch from the current HEAD of a repository that is in 'publish' mode.
+#
+# @arg $1 string Path to the repository's working tree.
+# @arg $2 string Name of the upgrade branch.
+#
+# @exitcode success=0: the branch is checked out.
+# @exitcode err_tool_error: git failed (e.g., the branch already exists).
+#---------------------------------------------------------------------------------------------
+function start_publish_branch()
+{
+    (( $# == 2 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires two arguments: the repository path and the branch name (provided $#)."
+    exit_if_has_bugs
+
+    git -C "$1" switch -c "$2" > /dev/null || return "$err_tool_error"
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Commits the given paths on the current branch of a repository. A path pattern is staged only when it matches
+#   something that changed (modified, deleted, or new), so a pattern such as '*packages.lock.json' is harmless when no
+#   lock file changed.
 #
 # @arg $1 string Path to the repository's working tree.
 # @arg $2 string Commit message.
-# @arg $@ string Files to commit, relative to the repository root.
+# @arg $@ string Paths or patterns to commit, relative to the repository root.
 #
 # @exitcode success=0: committed, or nothing to commit.
 # @exitcode err_tool_error: git failed.
 #---------------------------------------------------------------------------------------------
 function commit_package_versions()
 {
-    (( $# >= 3 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires the repository path, the message, and at least one file (provided $#)."
+    (( $# >= 3 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires the repository path, the message, and at least one path (provided $#)."
     exit_if_has_bugs
 
-    local _repo=$1 _message=$2
+    local _repo=$1 _message=$2 _pathspec
     shift 2
 
-    git -C "$_repo" add -- "$@" || return "$err_tool_error"
+    for _pathspec in "$@"; do
+        if [[ -n $(git -C "$_repo" ls-files --modified --deleted --others --exclude-standard -- "$_pathspec") ]]; then
+            git -C "$_repo" add -A -- "$_pathspec" || return "$err_tool_error"
+        fi
+    done
     git -C "$_repo" diff --cached --quiet && return "$success"
     git -C "$_repo" commit --quiet -m "$_message" || return "$err_tool_error"
 }
@@ -154,56 +193,25 @@ function print_upgrade_summary()
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Deletes every 'packages.lock.json' in a repository, runs 'dotnet restore --force-evaluate' to regenerate
-#   them, and commits the result as a separate commit. The lock files are generated, never hand-edited, so their
-#   previous state does not matter.
+# @description Deletes every 'packages.lock.json' in a repository and runs 'dotnet restore --force-evaluate' to regenerate
+#   them. The lock files are generated, never hand-edited, so their previous state does not matter. Nothing is committed.
 #
 # @arg $1 string Path to the repository's working tree.
 #
-# @exitcode success=0: refreshed and committed, skipped, or nothing changed.
-# @exitcode err_tool_error: the restore or the commit failed.
+# @exitcode success=0: the lock files were regenerated.
+# @exitcode err_tool_error: the restore failed.
 #---------------------------------------------------------------------------------------------
 function refresh_lock_files()
 {
-    local _restore_rc
     (( $# == 1 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument: the repository path (provided $#)."
     exit_if_has_bugs
 
-    local _repo=$1
-
+    local _repo=$1 _restore_rc
     find "$_repo" -name packages.lock.json -not -path '*/.git/*' -delete
 
     local _t0=$(now_us)
     (cd "$_repo" && dotnet restore --force-evaluate > /dev/null) && _restore_rc=0 || _restore_rc=$?
     restore_us=$(( restore_us + $(now_us) - _t0 ))
     (( _restore_rc == 0 )) || return "$err_tool_error"
-
-    if [[ -z $(git -C "$_repo" ls-files -- '*packages.lock.json') && -z $(git -C "$_repo" ls-files --others --exclude-standard -- '*packages.lock.json') ]]; then
-        return "$success"
-    fi
-
-    commit_package_versions "$_repo" "chore(deps): refresh packages.lock.json after Directory.Packages.props update" '*packages.lock.json'
 }
 
-#---------------------------------------------------------------------------------------------
-# @description Fast-forwards the starting branch to the upgrade commits and deletes the upgrade branch. Used with
-#   '--current-branch' (-cb). Nothing is pushed.
-#
-# @arg $1 string Path to the repository's working tree.
-# @arg $2 string The starting branch.
-# @arg $3 string The upgrade branch.
-#
-# @exitcode success=0: merged and deleted.
-# @exitcode err_tool_error: git failed (e.g., the starting branch can no longer be fast-forwarded).
-#---------------------------------------------------------------------------------------------
-function merge_back_to_starting_branch()
-{
-    (( $# == 3 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires three arguments: the repository path, the starting branch, and the upgrade branch (provided $#)."
-    exit_if_has_bugs
-
-    local _repo=$1 _start=$2 _branch=$3
-
-    git -C "$_repo" switch "$_start" > /dev/null || return "$err_tool_error"
-    git -C "$_repo" merge --ff-only --quiet "$_branch" || return "$err_tool_error"
-    git -C "$_repo" branch -d "$_branch" > /dev/null || return "$err_tool_error"
-}

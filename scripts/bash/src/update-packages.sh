@@ -37,9 +37,12 @@ run_started_us=$(now_us)
 declare -a summary_rows=()
 declare -a scope=()
 declare -a targets=()
+declare -A mode=()
+declare -A reason=()
+declare -a warnings=()
 
 declare -i phase_one=0
-declare sot_path shared_file root_file branch name repo_file
+declare sot_path shared_file root_file branch name repo_file m r
 branch="deps/update-packages-$(date +%Y-%m-%d)"
 sot_path="$vm2_repos/$vm2_sot_repo_name"
 shared_file="$sot_path/templates/AddNewPackage/content/Directory.Packages.props"
@@ -59,81 +62,106 @@ for name in "${scope[@]}"; do
     [[ -f $repo_file ]] && targets+=("$name") || trace "Skipping '$name': it has no Directory.Packages.props."
 done
 
-declare -A starting_branch=()
-base_branch=main
-(( on_current_branch == 1 )) && base_branch=''
+# decide, before anything is written, how each repository may be changed
 for name in "${targets[@]}"; do
-    starting_branch[$name]=$(git -C "$vm2_repos/$name" branch --show-current)
+    classify_repo "$vm2_repos/$name" m r
+    mode[$name]=$m
+    reason[$name]=$r
 done
 
-if ! is_dry_run; then
-    for name in "${targets[@]}"; do
-        prepare_upgrade_branch "$vm2_repos/$name" "$branch" "$base_branch" || error -ec "$err_tool_error" "Failed to create branch '$branch' in '$name'."
-    done
-    exit_if_has_errors false
+# the shared block is copied from the SoT, so a skipped SoT means no fan-out at all
+if (( phase_one == 1 )) && [[ ${mode[$vm2_sot_repo_name]:-} == skip ]]; then
+    warnings+=("'$vm2_sot_repo_name' has uncommitted changes: the SoT and the fan-out were skipped.")
+    phase_one=0
 fi
 
+# a publish repository gets its upgrade branch now, before any file is written
+for name in "${targets[@]}"; do
+    [[ ${mode[$name]} == publish ]] || continue
+    if is_dry_run; then
+        continue
+    fi
+    if ! start_publish_branch "$vm2_repos/$name" "$branch"; then
+        mode[$name]=inplace
+        reason[$name]="could not create branch '$branch'; edited in place, nothing committed"
+    fi
+done
+
 # phase 1: the shared block in the SoT, then the fan-out to the repositories
-phase1_us=0 fanout_us=0 phase2_us=0 lock_us=0
+phase1_us=0 fanout_us=0 phase2_us=0 lock_us=0 commit_us=0
 phase_start_us=$(now_us)
 if (( phase_one == 1 )); then
     update_section_versions "$shared_file" shared "$vm2_sot_repo_name (SoT)" summary_rows
     update_section_versions "$root_file" shared "$vm2_sot_repo_name (root)" summary_rows
-
     phase1_us=$(( $(now_us) - phase_start_us ))
+
     fanout_start_us=$(now_us)
     if ! is_dry_run; then
-        if [[ ${#requested_repos[@]} == 0 ]]; then
-            "$diff_shared_script" --vm2-repos "$vm2_repos" --current-branch --all-repos --file Directory.Packages.props --quiet ||
-                error -ec "$err_tool_error" "diff-shared.sh failed while copying the shared block to the repositories."
-        elif (( ${#targets[@]} > 0 )); then
-            "$diff_shared_script" --vm2-repos "$vm2_repos" --current-branch "${targets[@]}" --file Directory.Packages.props --quiet ||
+        fan_out_names=()
+        for name in "${targets[@]}"; do
+            [[ ${mode[$name]} == skip ]] || fan_out_names+=("$name")
+        done
+        if (( ${#fan_out_names[@]} > 0 )); then
+            "$diff_shared_script" --vm2-repos "$vm2_repos" --current-branch "${fan_out_names[@]}" --file Directory.Packages.props --quiet ||
                 error -ec "$err_tool_error" "diff-shared.sh failed while copying the shared block to the repositories."
         fi
         exit_if_has_errors false
     fi
+    fanout_us=$(( $(now_us) - fanout_start_us ))
 fi
 
-fanout_us=$(( $(now_us) - ${fanout_start_us:-$(now_us)} ))
-
-# phase 2: each repository's own section
+# phase 2: each repository's own section, then the lock files
 phase2_start_us=$(now_us)
 for name in "${targets[@]}"; do
+    [[ ${mode[$name]} == skip ]] && continue
     update_section_versions "$vm2_repos/$name/Directory.Packages.props" repo "$name" summary_rows
 done
-
 phase2_us=$(( $(now_us) - phase2_start_us ))
 
 if ! is_dry_run; then
     lock_start_us=$(now_us)
     for name in "${targets[@]}"; do
-        if [[ $name == "$vm2_sot_repo_name" ]] && (( phase_one == 1 )); then
-            commit_package_versions "$vm2_repos/$name" "chore(deps): update NuGet package versions in Directory.Packages.props" \
-                "templates/AddNewPackage/content/Directory.Packages.props" "Directory.Packages.props" ||
-                error -ec "$err_tool_error" "Failed to commit the package versions in '$name'."
-        else
-            commit_package_versions "$vm2_repos/$name" "chore(deps): update NuGet package versions in Directory.Packages.props" \
-                "Directory.Packages.props" ||
-                error -ec "$err_tool_error" "Failed to commit the package versions in '$name'."
-        fi
+        [[ ${mode[$name]} == skip ]] && continue
+        refresh_lock_files "$vm2_repos/$name" || error -ec "$err_tool_error" "Failed to regenerate packages.lock.json in '$name'."
     done
-
     lock_us=$(( $(now_us) - lock_start_us ))
-    for name in "${targets[@]}"; do
-        refresh_lock_files "$vm2_repos/$name" || error -ec "$err_tool_error" "Failed to restore or commit packages.lock.json in '$name'."
-    done
     exit_if_has_errors false
-fi
 
-if ! is_dry_run && (( on_current_branch == 1 )); then
+    # only 'publish' repositories are committed and pushed
+    commit_start_us=$(now_us)
     for name in "${targets[@]}"; do
-        merge_back_to_starting_branch "$vm2_repos/$name" "${starting_branch[$name]}" "$branch" ||
-            error -ec "$err_tool_error" "Failed to merge '$branch' back into '${starting_branch[$name]}' in '$name'."
+        [[ ${mode[$name]} == publish ]] || continue
+        paths=("Directory.Packages.props" "*packages.lock.json")
+        if [[ $name == "$vm2_sot_repo_name" ]] && (( phase_one == 1 )); then
+            paths+=("templates/AddNewPackage/content/Directory.Packages.props")
+        fi
+        commit_package_versions "$vm2_repos/$name" "chore(deps): update NuGet package versions in Directory.Packages.props" "${paths[@]}" ||
+            error -ec "$err_tool_error" "Failed to commit the package versions in '$name'."
+        git -C "$vm2_repos/$name" push --quiet -u origin "$branch" ||
+            error -ec "$err_tool_error" "Failed to push '$branch' in '$name'."
     done
+    commit_us=$(( $(now_us) - commit_start_us ))
     exit_if_has_errors false
 fi
 
 print_upgrade_summary "${summary_rows[@]}"
+
+echo
+printf '%-22s %-10s %s\n' "REPOSITORY" "MODE" "STATUS"
+for name in "${targets[@]}"; do
+    printf '%-22s %-10s %s\n' "$name" "${mode[$name]}" "${reason[$name]}"
+done
+for w in "${warnings[@]}"; do
+    warning "$w"
+done
+for name in "${targets[@]}"; do
+    if [[ ${mode[$name]} == inplace ]]; then
+        warning "'$name' was edited in place: review the changes, commit them yourself if you want them."
+    fi
+    if [[ ${mode[$name]} == skip ]]; then
+        warning "'$name' was left untouched: commit or stash your changes, then run the script again."
+    fi
+done
 
 ms() { local _us=$1; printf '%d.%01ds' $(( _us / 1000000 )) $(( (_us % 1000000) / 100000 )); }
 info "Timing (seconds):"
@@ -142,16 +170,11 @@ info "  phase 1 (SoT)         $(ms "$phase1_us")"
 info "  fan-out (diff-shared) $(ms "$fanout_us")"
 info "  phase 2 (repos)       $(ms "$phase2_us")"
 info "  lock refresh          $(ms "$lock_us")  (of which dotnet restore: $(ms "$restore_us"))"
+info "  commit and push       $(ms "${commit_us:-0}")"
 info "  package searches      $search_count calls, $(ms "$search_us") total"
 
 if is_dry_run; then
-    info "Dry run: no files were changed, no branches were created, and nothing was committed."
-else
-    if (( on_current_branch == 1 )); then
-        info "Changes were merged into each repository's starting branch (${targets[*]}). Nothing was pushed."
-    else
-        info "Changes are committed on branch '$branch' in: ${targets[*]}. Nothing was pushed."
-    fi
+    info "Dry run: no files were changed, no branches were created, and nothing was committed or pushed."
 fi
 
 exit_if_has_errors

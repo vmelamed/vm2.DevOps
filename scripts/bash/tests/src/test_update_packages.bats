@@ -185,14 +185,14 @@ _refresh() {
     "
 }
 
-@test "refresh_lock_files: restores and commits the regenerated lock file as its own commit" {
+@test "refresh_lock_files: regenerates the lock file in place and commits nothing" {
     _lock_repo
     _refresh
     assert_success
-    run git -C "$BATS_TEST_TMPDIR/repo" log --format=%s -1
-    assert_output "chore(deps): refresh packages.lock.json after Directory.Packages.props update"
-    run git -C "$BATS_TEST_TMPDIR/repo" status --porcelain
-    assert_output ""
+    run git -C "$BATS_TEST_TMPDIR/repo" log --oneline
+    refute_output --partial "refresh packages.lock.json"
+    run cat "$BATS_TEST_TMPDIR/repo/src/App/packages.lock.json"
+    assert_output --partial '"regenerated":true'
 }
 
 @test "refresh_lock_files: regenerates lock files even when they had uncommitted changes" {
@@ -200,70 +200,93 @@ _refresh() {
     echo '{"local-edit":true}' > "$BATS_TEST_TMPDIR/repo/src/App/packages.lock.json"
     _refresh
     assert_success
-    run git -C "$BATS_TEST_TMPDIR/repo" status --porcelain
-    assert_output ""
     run cat "$BATS_TEST_TMPDIR/repo/src/App/packages.lock.json"
     assert_output --partial '"regenerated":true'
 }
 
-@test "refresh_lock_files: a repository without lock files gets no commit" {
+@test "refresh_lock_files: a repository without lock files is left without any" {
     _lock_repo
     git -C "$BATS_TEST_TMPDIR/repo" rm -q src/App/packages.lock.json && git -C "$BATS_TEST_TMPDIR/repo" commit -q -m "drop locks"
     _refresh
     assert_success
-    run git -C "$BATS_TEST_TMPDIR/repo" log --oneline
-    refute_output --partial "refresh packages.lock.json"
-}
-
-# --- prepare_upgrade_branch -------------------------------------------------------------------------
-
-@test "prepare_upgrade_branch: switches to an existing upgrade branch instead of failing" {
-    _lock_repo
-    git -C "$BATS_TEST_TMPDIR/repo" branch deps/update-packages-test
-    run env HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" bash -c "
-        source '$lib_dir/core.sh' --no-trap >/dev/null 2>&1
-        source '$_src_dir/update-packages.functions.sh'
-        source '$_src_dir/update-packages.repos.sh'
-        prepare_upgrade_branch '$BATS_TEST_TMPDIR/repo' deps/update-packages-test ''
-    "
-    assert_success
-    run git -C "$BATS_TEST_TMPDIR/repo" branch --show-current
-    assert_output "deps/update-packages-test"
-}
-
-@test "prepare_upgrade_branch: creates the upgrade branch from the given base, not from the current branch" {
-    _lock_repo
-    git -C "$BATS_TEST_TMPDIR/repo" switch -q -c feature
-    echo change > "$BATS_TEST_TMPDIR/repo/feature.txt"
-    git -C "$BATS_TEST_TMPDIR/repo" add -A && git -C "$BATS_TEST_TMPDIR/repo" commit -q -m "feature work"
-    git -C "$BATS_TEST_TMPDIR/repo" branch -q -f main HEAD~1
-    run env HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" bash -c "
-        source '$lib_dir/core.sh' --no-trap >/dev/null 2>&1
-        source '$_src_dir/update-packages.functions.sh'
-        source '$_src_dir/update-packages.repos.sh'
-        prepare_upgrade_branch '$BATS_TEST_TMPDIR/repo' deps/update-packages-test main
-    "
-    assert_success
-    run git -C "$BATS_TEST_TMPDIR/repo" log --oneline -1 --format=%s
-    assert_output "init"
-}
-
-@test "merge_back_to_starting_branch: fast-forwards the starting branch and deletes the upgrade branch" {
-    _lock_repo
-    git -C "$BATS_TEST_TMPDIR/repo" switch -q -c deps/update-packages-test
-    echo change > "$BATS_TEST_TMPDIR/repo/up.txt"
-    git -C "$BATS_TEST_TMPDIR/repo" add -A && git -C "$BATS_TEST_TMPDIR/repo" commit -q -m "upgrade"
-    run env HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" bash -c "
-        source '$lib_dir/core.sh' --no-trap >/dev/null 2>&1
-        source '$_src_dir/update-packages.functions.sh'
-        source '$_src_dir/update-packages.repos.sh'
-        merge_back_to_starting_branch '$BATS_TEST_TMPDIR/repo' main deps/update-packages-test
-    "
-    assert_success
-    run git -C "$BATS_TEST_TMPDIR/repo" branch --show-current
-    assert_output "main"
-    run git -C "$BATS_TEST_TMPDIR/repo" log --oneline -1 --format=%s
-    assert_output "upgrade"
-    run git -C "$BATS_TEST_TMPDIR/repo" branch --list 'deps/*'
+    run git -C "$BATS_TEST_TMPDIR/repo" status --porcelain
     assert_output ""
+}
+
+
+# --- classify_repo ----------------------------------------------------------------------------------
+
+# A clone of a bare 'origin', on 'main' and identical to it.
+_clone_repo() {
+    local _bare="$BATS_TEST_TMPDIR/origin.git" _repo="$BATS_TEST_TMPDIR/clone"
+    git init -q --bare -b main "$_bare"
+    git init -q -b main "$BATS_TEST_TMPDIR/seed"
+    git -C "$BATS_TEST_TMPDIR/seed" config user.email test@example.invalid
+    git -C "$BATS_TEST_TMPDIR/seed" config user.name test
+    echo one > "$BATS_TEST_TMPDIR/seed/file.txt"
+    git -C "$BATS_TEST_TMPDIR/seed" add -A && git -C "$BATS_TEST_TMPDIR/seed" commit -q -m init
+    git -C "$BATS_TEST_TMPDIR/seed" push -q "$_bare" main
+    git clone -q "$_bare" "$_repo"
+    git -C "$_repo" config user.email test@example.invalid
+    git -C "$_repo" config user.name test
+}
+
+_classify() {
+    run env HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" bash -c "
+        source '$lib_dir/core.sh' --no-trap >/dev/null 2>&1
+        source '$_src_dir/update-packages.functions.sh'
+        source '$_src_dir/update-packages.repos.sh'
+        classify_repo '$BATS_TEST_TMPDIR/clone' m r; echo \"\$m\"
+    "
+}
+
+@test "classify_repo: publish for a clean repository on main, identical to origin/main" {
+    _clone_repo
+    _classify
+    assert_success
+    assert_output "publish"
+}
+
+@test "classify_repo: skip when there are uncommitted changes" {
+    _clone_repo
+    echo dirty >> "$BATS_TEST_TMPDIR/clone/file.txt"
+    _classify
+    assert_output "skip"
+}
+
+@test "classify_repo: inplace when the current branch is not main" {
+    _clone_repo
+    git -C "$BATS_TEST_TMPDIR/clone" switch -q -c feature
+    _classify
+    assert_output "inplace"
+}
+
+@test "classify_repo: inplace when main has a local commit that origin does not have" {
+    _clone_repo
+    echo two > "$BATS_TEST_TMPDIR/clone/other.txt"
+    git -C "$BATS_TEST_TMPDIR/clone" add -A && git -C "$BATS_TEST_TMPDIR/clone" commit -q -m local
+    _classify
+    assert_output "inplace"
+}
+
+@test "classify_repo: inplace when there is no origin remote" {
+    _clone_repo
+    git -C "$BATS_TEST_TMPDIR/clone" remote remove origin
+    _classify
+    assert_output "inplace"
+}
+
+# --- start_publish_branch -----------------------------------------------------------------------
+
+@test "start_publish_branch: creates the upgrade branch from the current HEAD" {
+    _clone_repo
+    run env HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" bash -c "
+        source '$lib_dir/core.sh' --no-trap >/dev/null 2>&1
+        source '$_src_dir/update-packages.functions.sh'
+        source '$_src_dir/update-packages.repos.sh'
+        start_publish_branch '$BATS_TEST_TMPDIR/clone' deps/update-packages-test
+    "
+    assert_success
+    run git -C "$BATS_TEST_TMPDIR/clone" branch --show-current
+    assert_output "deps/update-packages-test"
 }
