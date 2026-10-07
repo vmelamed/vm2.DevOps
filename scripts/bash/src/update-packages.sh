@@ -222,14 +222,14 @@ is_tool_present glow &&
     glow "$summary_file" -w 180 ||
     cat "$summary_file"
 
-info "Timing (seconds):"
-info "  total                 $(ms $(( $(now_us) - run_started_us )))"
-info "  phase 1 (SoT)         $(ms "$phase1_us")"
-info "  fan-out (diff-shared) $(ms "$fanout_us")"
-info "  phase 2 (repos)       $(ms "$phase2_us")"
-info "  lock refresh          $(ms "$lock_us")  (of which dotnet restore: $(ms "$restore_us"))"
-info "  commit and push       $(ms "${commit_us:-0}")"
-info "  package searches      $search_count calls, $(ms "$search_us") total"
+trace "Timing (seconds):"
+trace "  total                 $(ms $(( $(now_us) - run_started_us )))"
+trace "  phase 1 (SoT)         $(ms "$phase1_us")"
+trace "  fan-out (diff-shared) $(ms "$fanout_us")"
+trace "  phase 2 (repos)       $(ms "$phase2_us")"
+trace "  lock refresh          $(ms "$lock_us")  (of which dotnet restore: $(ms "$restore_us"))"
+trace "  commit and push       $(ms "${commit_us:-0}")"
+trace "  package searches      $search_count calls, $(ms "$search_us") total"
 
 if is_dry_run; then
     info "Dry run: no files were changed, no branches were created, and nothing was committed or pushed."
