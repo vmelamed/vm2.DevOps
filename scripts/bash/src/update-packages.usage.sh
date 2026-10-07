@@ -29,22 +29,21 @@ Usage:
 
   Upgrades the NuGet package versions in 'Directory.Packages.props' to the newest stable version found in the
   configured NuGet sources, without downgrading. The shared block is upgraded in the SoT (vm2.Templates) first and then
-  copied to the repositories with 'diff-shared.sh'; each repository's own section is upgraded afterwards. Changes are
-  committed on a new branch 'deps/update-packages-<yyyy-mm-dd>'; local changes are stashed first. Nothing is pushed.
+  copied to the repositories with 'diff-shared.sh'; each repository's own section is upgraded afterwards.
+
+  A repository is changed in one of three ways:
+    publish  on 'main', clean, and identical to 'origin/main': a branch 'deps/update-packages-<yyyy-mm-dd>' is created,
+             the changes are committed there, and the branch is pushed (not 'main').
+    inplace  anything else: the files are edited in the current branch and nothing is committed. A warning says so.
+    skip     uncommitted changes exist: the repository is left untouched, with a warning.
 
 Parameters:
   <repository>                One or more repository names (default: all vm2 repositories). Including 'vm2.Templates'
                               also upgrades the shared block in the SoT and copies it to the repositories.
 
-Options:
-  --current-branch, -cb       Create the upgrade branch from each repository's current branch instead of 'main', and
-                              then fast-forward the current branch to the upgrade commits and delete the upgrade branch.
-                              Nothing is pushed in either case.
-
 Examples:
   $script_name
   $script_name --dry-run
-  $script_name --current-branch
   $script_name vm2.Ulid vm2.Glob
 $_common_args
 EOF
