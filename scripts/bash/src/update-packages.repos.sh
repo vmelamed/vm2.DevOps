@@ -72,7 +72,8 @@ function start_publish_branch()
     (( $# == 2 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires two arguments: the repository path and the branch name (provided $#)."
     exit_if_has_bugs
 
-    git -C "$1" switch -c "$2" > /dev/null || return "$err_tool_error"
+    git -C "$1" switch -c "$2" > "$_ignore" 2>&1 || return "$err_tool_error"
+    trace "Created and switched to branch '$2' in '$1'."
 }
 
 #---------------------------------------------------------------------------------------------
