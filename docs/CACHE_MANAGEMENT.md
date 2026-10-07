@@ -37,7 +37,8 @@ The pipeline uses a **multi-layer caching approach** to balance build speed with
   git push origin --force-with-lease
   ```
 
-  See also the script `vm2.DevOps/scripts/bash/src/update-dependencies.sh` in the repo root.
+  See also `update-packages.sh` (see [SCRIPTS_REFERENCE.md](SCRIPTS_REFERENCE.md#update-packagessh)), which upgrades
+  `Directory.Packages.props` versions across the vm2 repositories and regenerates their lock files as part of that.
 
 - Cache keys include `**/packages.lock.json`, so any dependency change invalidates the cache.
 

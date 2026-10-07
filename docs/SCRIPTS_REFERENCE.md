@@ -10,6 +10,8 @@
     - [diff-shared.sh](#diff-sharedsh)
     - [move-commits-to-branch.sh](#move-commits-to-branchsh)
     - [rename-branch.sh](#rename-branchsh)
+    - [set-secret.sh](#set-secretsh)
+    - [update-packages.sh](#update-packagessh)
     - [Other Utilities](#other-utilities)
   - [3. CI Scripts](#3-ci-scripts)
     - [validate-commits.sh](#validate-commitssh)
@@ -267,14 +269,53 @@ set-secret.sh MY_SECRET --app actions
 
 **Auth:** the caller's `gh` login must be able to write secrets for the target application in each repository.
 
+### update-packages.sh
+
+Upgrades the NuGet package versions in `Directory.Packages.props` to the newest stable version found in the configured
+NuGet sources (never a downgrade, never a prerelease). The shared block is upgraded in the SoT (`vm2.Templates`) first
+and fanned out to the repositories with `diff-shared.sh`; each repository's own section is upgraded afterwards.
+
+Versions are looked up with `dotnet package search <id> --exact-match --format json` against every source configured
+in the local `NuGet.config` (nuget.org and `github.vm2`); a package found in more than one source takes the highest
+stable version across all of them. Package IDs are matched case-insensitively (GitHub Packages returns them
+lowercased), but the casing already in the file is kept when a version is rewritten. Versions are compared with SemVer
+precedence (`scripts/bash/lib/_semver.sh`).
+
+```bash
+update-packages.sh
+update-packages.sh --dry-run
+update-packages.sh vm2.Ulid vm2.Glob
+update-packages.sh --summary /tmp/update-packages.md
+```
+
+Before writing anything, every target repository is classified:
+
+| Mode      | Condition                                                                            | Effect                                                                                                                                         |
+| :-------- | :----------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------- |
+| `publish` | on `main`, clean, identical to `origin/main`                                         | branch `deps/update-packages-<yyyy-mm-dd>` created, committed, and pushed; a PR is opened (`gh pr create`, or the existing open one is reused) |
+| `inplace` | anything else (a feature branch, a dirty-but-pushed state, no `origin` remote, etc.) | the files are edited in the current branch; nothing is committed                                                                               |
+| `skip`    | uncommitted changes exist                                                            | the repository is left completely untouched                                                                                                    |
+
+Every repository, regardless of mode, has its `packages.lock.json` files deleted and regenerated with
+`dotnet restore --force-evaluate` (they are generated, never hand-edited, so their previous state does not matter).
+Only `publish` repositories are committed and pushed.
+
+| Option             | Description                                                                                                                                            |
+| :----------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `<repository>...`  | One or more repository names (default: all vm2 repositories). Including `vm2.Templates` also upgrades the shared block in the SoT.                     |
+| `--summary <file>` | Write the run's Markdown summary to `<file>`. If omitted, a temporary file is created, rendered (via `glow`, falling back to `cat`), and then deleted. |
+
+The summary covers the package versions checked (current → new, or why not: already latest, prerelease only, not found
+in any source, search failed), each repository's mode and status (including the opened PR's URL), and a per-phase
+timing table.
+
 ### Other Utilities
 
-| Script                   | Purpose                                                                                                                                                              |
-| :----------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `add-spdx.sh`            | Add SPDX license headers to source files                                                                                                                             |
-| `re-tag.sh`              | Recreate a Git tag at a different commit                                                                                                                             |
-| `update-dependencies.sh` | Force re-evaluation of NuGet restore (`dotnet restore --force-evaluate`) across vm2 repos                                                                            |
-| `create-pr.sh`           | `gh` alias (`gh create-pr`) — creates a PR with its body auto-populated from the commit list between the default branch and HEAD, merged into the repo's PR template |
+| Script         | Purpose                                                                                                                                                              |
+| :------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `add-spdx.sh`  | Add SPDX license headers to source files                                                                                                                             |
+| `re-tag.sh`    | Recreate a Git tag at a different commit                                                                                                                             |
+| `create-pr.sh` | `gh` alias (`gh create-pr`) — creates a PR with its body auto-populated from the commit list between the default branch and HEAD, merged into the repo's PR template |
 
 ## 3. CI Scripts
 
