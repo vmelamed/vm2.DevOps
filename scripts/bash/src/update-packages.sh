@@ -102,6 +102,7 @@ if (( phase_one == 1 )); then
             [[ ${mode[$name]} == skip ]] || fan_out_names+=("$name")
         done
         if (( ${#fan_out_names[@]} > 0 )); then
+            info "Copying the shared block from the SoT to ${#fan_out_names[@]} repositor$([[ ${#fan_out_names[@]} == 1 ]] && echo y || echo ies) with diff-shared.sh..."
             "$diff_shared_script" --vm2-repos "$vm2_repos" --current-branch "${fan_out_names[@]}" --file Directory.Packages.props --quiet ||
                 error -ec "$err_tool_error" "diff-shared.sh failed while copying the shared block to the repositories."
         fi
@@ -127,7 +128,8 @@ if ! is_dry_run; then
     lock_us=$(( $(now_us) - lock_start_us ))
     exit_if_has_errors false
 
-    # only 'publish' repositories are committed and pushed
+    # only 'publish' repositories are committed, pushed, and get a pull request
+    declare -A pr_url=()
     commit_start_us=$(now_us)
     for name in "${targets[@]}"; do
         [[ ${mode[$name]} == publish ]] || continue
@@ -139,18 +141,20 @@ if ! is_dry_run; then
             error -ec "$err_tool_error" "Failed to commit the package versions in '$name'."
         git -C "$vm2_repos/$name" push --quiet -u origin "$branch" ||
             error -ec "$err_tool_error" "Failed to push '$branch' in '$name'."
+
+        pr_url[$name]=''
+        if open_pull_request "$vm2_repos/$name" "$branch" _pr_link; then
+            pr_url[$name]=$_pr_link
+            reason[$name]="📬 PR opened: $m -- please see it through"
+        else
+            warning "'$name': the branch was pushed, but opening a PR failed. Run 'gh pr create' in '$vm2_repos/$name'."
+            reason[$name]="pushed to '$branch', but the PR was not created -- open it yourself"
+        fi
     done
     commit_us=$(( $(now_us) - commit_start_us ))
     exit_if_has_errors false
 fi
 
-print_upgrade_summary "${summary_rows[@]}"
-
-echo
-printf '%-22s %-10s %s\n' "REPOSITORY" "MODE" "STATUS"
-for name in "${targets[@]}"; do
-    printf '%-22s %-10s %s\n' "$name" "${mode[$name]}" "${reason[$name]}"
-done
 for w in "${warnings[@]}"; do
     warning "$w"
 done
@@ -162,6 +166,39 @@ for name in "${targets[@]}"; do
         warning "'$name' was left untouched: commit or stash your changes, then run the script again."
     fi
 done
+
+summary_md=$(mktemp -p /tmp "update-packages-summary-$(date +%Y%m%d-%H%M%S)-XXXXXX.md")
+trap 'rm -f "$summary_md"' EXIT
+
+{
+    echo "## Package versions"
+    echo
+    echo "| Repository | Package | Current | New | Result |"
+    echo "|:-----------|:--------|:--------|:----|:-------|"
+    for row in "${summary_rows[@]}"; do
+        IFS='|' read -r _label _package _current _new _result <<< "$row"
+        echo "| $_label | $_package | $_current | $_new | $_result |"
+    done
+    echo
+    echo "## Repository status"
+    echo
+    echo "| Repository | Mode | Status |"
+    echo "|:-----------|:-----|:-------|"
+    for name in "${targets[@]}"; do
+        case "${mode[$name]}" in
+            publish ) glyph="✅" ;;
+            inplace ) glyph="✏️" ;;
+            skip    ) glyph="⛔" ;;
+            *       ) glyph="" ;;
+        esac
+        echo "| $name | $glyph ${mode[$name]} | ${reason[$name]} |"
+    done
+} >> "$summary_md"
+
+# shellcheck disable=SC2015 # A && B || C is not if-then-else. C may run when A is true but B is false.
+is_tool_present glow &&
+    glow "$summary_md" -w 180 ||
+    cat "$summary_md"
 
 ms() { local _us=$1; printf '%d.%01ds' $(( _us / 1000000 )) $(( (_us % 1000000) / 100000 )); }
 info "Timing (seconds):"

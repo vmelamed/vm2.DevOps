@@ -175,22 +175,6 @@ function update_section_versions()
     done
 }
 
-#---------------------------------------------------------------------------------------------
-# @description Prints the summary rows as a table.
-#
-# @arg $@ string Rows in the form 'label|package|current|new|result'.
-#
-# @stdout The table.
-#---------------------------------------------------------------------------------------------
-function print_upgrade_summary()
-{
-    local _row _label _package _current _new _result
-    printf '%-28s %-40s %-14s %-14s %s\n' "REPOSITORY" "PACKAGE" "CURRENT" "NEW" "RESULT"
-    for _row in "$@"; do
-        IFS='|' read -r _label _package _current _new _result <<< "$_row"
-        printf '%-28s %-40s %-14s %-14s %s\n' "$_label" "$_package" "$_current" "$_new" "$_result"
-    done
-}
 
 #---------------------------------------------------------------------------------------------
 # @description Deletes every 'packages.lock.json' in a repository and runs 'dotnet restore --force-evaluate' to regenerate
@@ -215,3 +199,34 @@ function refresh_lock_files()
     (( _restore_rc == 0 )) || return "$err_tool_error"
 }
 
+
+#---------------------------------------------------------------------------------------------
+# @description Opens a pull request for the upgrade branch, or finds the one already open for it. The branch must
+#   already be pushed.
+#
+# @arg $1 string Path to the repository's working tree.
+# @arg $2 string The upgrade branch (already pushed to 'origin').
+# @arg $3 nameref Receives the PR's URL on success; left empty on failure.
+#
+# @exitcode success=0: a PR is open for the branch (found or created).
+# @exitcode err_tool_error: 'gh' failed to find or create one.
+#---------------------------------------------------------------------------------------------
+function open_pull_request()
+{
+    (( $# == 3 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires three arguments: the repository path, the branch, and the URL output (provided $#)."
+    exit_if_has_bugs
+
+    local _repo=$1 _branch=$2
+    local -n _url_ref=$3
+    _url_ref=''
+
+    _url_ref=$(cd "$_repo" && gh pr list --head "$_branch" --state open --json url --jq '.[0].url // empty' 2>/dev/null) || true
+    [[ -n $_url_ref ]] && return "$success"
+
+    _url_ref=$(cd "$_repo" && gh pr create --head "$_branch" \
+        --title "chore(deps): update NuGet package versions in Directory.Packages.props" \
+        --body "Automated dependency upgrade (stable versions only, never a downgrade) by \`update-packages.sh\`." \
+        2>/dev/null) || true
+    [[ -n $_url_ref ]] && return "$success"
+    return "$err_tool_error"
+}
