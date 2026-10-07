@@ -188,9 +188,11 @@ declare -xr space_ch=$'\xe2\x80\x82' # markdown does not collapse this space (EN
 # emojis
 declare -xr mask_em='🔒'
 declare -xr key_em='🔑'
+declare -xr edit_em='✏️'
 declare -xr check_em='✅'
 declare -xr done_em='✔️'
 declare -xr fail_em='❌'
+declare -xr no_entry_em='⛔'
 declare -xr fatal_em='💀'
 declare -xr bug_em='🪲'
 declare -xr error_em='❌'

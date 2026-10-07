@@ -15,6 +15,11 @@ declare -xr lib_dir
 
 source "$lib_dir/core.sh"
 
+declare -xr edit_em='✏️'
+declare -xr check_em='✅'
+declare -xr no_entry_em='⛔'
+declare -xr error_em='❌'
+
 declare -xr default_vm2_repos_path
 declare -xr vm2_sot_repo_name
 declare -xra vm2_repositories
@@ -203,10 +208,10 @@ done
     echo "|:-----------|:-----|:-------|"
     for name in "${targets[@]}"; do
         case "${mode[$name]}" in
-            publish ) glyph="✅" ;;
-            inplace ) glyph="✏️" ;;
-            skip    ) glyph="⛔" ;;
-            *       ) glyph="" ;;
+            publish ) glyph=$check_em ;;
+            inplace ) glyph=$edit_em ;;
+            skip    ) glyph=$no_entry_em ;;
+            *       ) glyph=$error_em ;;
         esac
         echo "| $name | $glyph ${mode[$name]} | ${reason[$name]} |"
     done
