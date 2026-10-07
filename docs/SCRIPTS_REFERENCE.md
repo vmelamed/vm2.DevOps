@@ -296,9 +296,10 @@ Before writing anything, every target repository is classified:
 | `inplace` | anything else (a feature branch, a dirty-but-pushed state, no `origin` remote, etc.) | the files are edited in the current branch; nothing is committed                                                                               |
 | `skip`    | uncommitted changes exist                                                            | the repository is left completely untouched                                                                                                    |
 
-Every repository, regardless of mode, has its `packages.lock.json` files deleted and regenerated with
+Every `publish` or `inplace` repository has its `packages.lock.json` files deleted and regenerated with
 `dotnet restore --force-evaluate` (they are generated, never hand-edited, so their previous state does not matter).
-Only `publish` repositories are committed and pushed.
+A `skip` repository bypasses this entirely, consistent with being left untouched. Only `publish` repositories are
+committed and pushed.
 
 | Option             | Description                                                                                                                                            |
 | :----------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------- |

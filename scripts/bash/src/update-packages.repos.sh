@@ -5,7 +5,9 @@
 
 # constants from lib:
 declare -xri success
+declare -xri negative
 declare -xri err_invalid_arguments
+declare -xri err_argument_value
 declare -xri err_tool_error
 
 declare -xr fail_em
@@ -29,7 +31,13 @@ declare -x _ignore
 #---------------------------------------------------------------------------------------------
 function classify_repo()
 {
-    (( $# == 3 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires three arguments: the repository path, the mode, and the reason (provided $#)."
+    (( $# == 3 ))                    || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires three arguments (provided $#): " \
+                                                                         "  - the repository path" \
+                                                                         "  - the mode" \
+                                                                         "  - the reason"
+    [[ ! -v 1 || -d "$1" ]]          || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires a valid repository path as the first argument."
+    [[ ! -v 2 ]] || is_variable_name "$2" || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires a valid variable name as the second argument."
+    [[ ! -v 3 ]] || is_variable_name "$3" || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires a valid variable name as the third argument."
     exit_if_has_bugs
 
     local _repo=$1
@@ -72,18 +80,36 @@ function classify_repo()
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Creates the upgrade branch from the current HEAD of a repository that is in 'publish' mode.
+# @description Switches a repository that is in 'publish' mode to the upgrade branch, reusing it if a same-day rerun
+#   already created it (locally or on 'origin'), and creating it from the current HEAD only when neither exists.
+#   Reusing an existing branch rather than recreating it from 'main' avoids a later non-fast-forward push.
 #
 # @arg $1 string Path to the repository's working tree.
 # @arg $2 string Name of the upgrade branch.
 #
-# @exitcode success=0: the branch is checked out.
-# @exitcode err_tool_error: git failed (e.g., the branch already exists).
+# @exitcode success=0: the branch is checked out (new, or an existing local/remote one).
+# @exitcode err_tool_error: git failed.
 #---------------------------------------------------------------------------------------------
 function start_publish_branch()
 {
-    (( $# == 2 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires two arguments: the repository path and the branch name (provided $#)."
+    (( $# == 2 ))                             || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires two arguments (provided $#):" \
+                                                                                  "  - the repository path" \
+                                                                                  "  - the branch name"
+    [[ ! -v 1 || -d "$1" ]]                   || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires a valid repository path as the first argument."
+    [[ ! -v 2 ]] || is_valid_branch_name "$2" || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires a valid branch name as the second argument."
     exit_if_has_bugs
+
+    if git -C "$1" show-ref --verify --quiet "refs/heads/$2"; then
+        git -C "$1" switch "$2" > "$_ignore" 2>&1 || return "$err_tool_error"
+        trace "Switched to the existing local branch '$2' in '$1'."
+        return "$success"
+    fi
+
+    if git -C "$1" show-ref --verify --quiet "refs/remotes/origin/$2"; then
+        git -C "$1" switch -c "$2" --track "origin/$2" > "$_ignore" 2>&1 || return "$err_tool_error"
+        trace "Checked out the existing remote branch '$2' in '$1'."
+        return "$success"
+    fi
 
     git -C "$1" switch -c "$2" > "$_ignore" 2>&1 || return "$err_tool_error"
     trace "Created and switched to branch '$2' in '$1'."
@@ -98,7 +124,8 @@ function start_publish_branch()
 # @arg $2 string Commit message.
 # @arg $@ string Paths or patterns to commit, relative to the repository root.
 #
-# @exitcode success=0: committed, or nothing to commit.
+# @exitcode success=0: a new commit was made.
+# @exitcode negative=1: nothing had changed; no commit was made. The caller MUST NOT push or open a PR in this case.
 # @exitcode err_tool_error: git failed.
 #---------------------------------------------------------------------------------------------
 function commit_package_versions()
@@ -114,7 +141,7 @@ function commit_package_versions()
             git -C "$_repo" add -A -- "$_pathspec" || return "$err_tool_error"
         fi
     done
-    git -C "$_repo" diff --cached --quiet && return "$success"
+    git -C "$_repo" diff --cached --quiet && return "$negative"
     git -C "$_repo" commit --quiet -m "$_message" || return "$err_tool_error"
 }
 
@@ -132,7 +159,11 @@ function commit_package_versions()
 #---------------------------------------------------------------------------------------------
 function update_section_versions()
 {
-    (( $# == 4 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires four arguments: the file, the section, the label, and the rows array (provided $#)."
+    (( $# == 4 ))                                   || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires four arguments: the file, the section, the label, and the rows array (provided $#)."
+    [[ ! -v 1 || -f $1 ]]                           || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1 to be a path to an existing file (provided ${1:-<none>})."
+    [[ ! -v 2 || $2 == shared || $2 == repo ]]      || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2 to be 'shared' or 'repo' (provided ${2:-<none>})."
+    [[ ! -v 3 || -n $3 ]]                           || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 3, the label, to be non-empty."
+    [[ ! -v 4 ]] || is_variable_name "$4"           || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 4 to be the name of a variable (provided ${4:-<none>})."
     exit_if_has_bugs
 
     local _file=$1 _section=$2 _label=$3
@@ -203,15 +234,22 @@ function update_section_versions()
 function refresh_lock_files()
 {
     (( $# == 1 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument: the repository path (provided $#)."
+    [[ ! -v 1 || -d "$1" ]]       || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires a valid repository path as the first argument."
     exit_if_has_bugs
 
-    local _repo=$1 _restore_rc _t0
-    find "$_repo" -name packages.lock.json -not -path '*/.git/*' -delete
+    local -i _find_rc=$success _restore_rc=$success
+
+    local _repo=$1 _t0
+    find "$_repo" -name packages.lock.json -not -path '*/.git/*' -delete || {
+        _find_rc=$err_tool_error
+        error -ec "$_find_rc" "Failed to delete packages.lock.json files in repository '$_repo'."
+    }
 
     _t0=$(now_us)
     (cd "$_repo" && dotnet restore --force-evaluate > /dev/null) && _restore_rc=0 || _restore_rc=$?
     restore_us=$(( restore_us + $(now_us) - _t0 ))
-    (( _restore_rc == 0 )) || return "$err_tool_error"
+    # A successful restore MUST NOT mask an earlier failed deletion -- both have to succeed.
+    (( _find_rc == success && _restore_rc == success )) || return "$err_tool_error"
 }
 
 
@@ -228,7 +266,10 @@ function refresh_lock_files()
 #---------------------------------------------------------------------------------------------
 function open_pull_request()
 {
-    (( $# == 3 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires three arguments: the repository path, the branch, and the URL output (provided $#)."
+    (( $# == 3 ))                          || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires three arguments: the repository path, the branch, and the URL output (provided $#)."
+    [[ ! -v 1 || -d $1 ]]                  || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1 to be a valid repository path (provided ${1:-<none>})."
+    [[ ! -v 2 || -n $2 ]]                  || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2, the branch name, to be non-empty."
+    [[ ! -v 3 ]] || is_variable_name "$3"  || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 3 to be the name of a variable (provided ${3:-<none>})."
     exit_if_has_bugs
 
     local _repo=$1 _branch=$2
