@@ -68,7 +68,9 @@ for name in "${scope[@]}"; do
 done
 
 # decide, before anything is written, how each repository may be changed
+info "Checking the status of ${#targets[@]} repositories (branch, working tree, sync with origin/main)..."
 for name in "${targets[@]}"; do
+    info "  $name: checking..."
     classify_repo "$vm2_repos/$name" m r
     mode[$name]=$m
     reason[$name]=$r
@@ -81,6 +83,11 @@ if (( phase_one == 1 )) && [[ ${mode[$vm2_sot_repo_name]:-} == skip ]]; then
 fi
 
 # a publish repository gets its upgrade branch now, before any file is written
+publish_count=0
+for name in "${targets[@]}"; do
+    [[ ${mode[$name]} == publish ]] && (( ++publish_count ))
+done
+(( publish_count > 0 )) && info "Creating branch '$branch' in $publish_count repositor$([[ $publish_count == 1 ]] && echo y || echo ies)..."
 for name in "${targets[@]}"; do
     [[ ${mode[$name]} == publish ]] || continue
     if is_dry_run; then
@@ -96,6 +103,7 @@ done
 phase1_us=0 fanout_us=0 phase2_us=0 lock_us=0 commit_us=0
 phase_start_us=$(now_us)
 if (( phase_one == 1 )); then
+    info "Phase 1: checking the shared block's packages against NuGet (run with --trace to see each one)..."
     update_section_versions "$shared_file" shared "$vm2_sot_repo_name (SoT)" summary_rows
     update_section_versions "$root_file" shared "$vm2_sot_repo_name (root)" summary_rows
     phase1_us=$(( $(now_us) - phase_start_us ))
@@ -119,17 +127,21 @@ if (( phase_one == 1 )); then
 fi
 
 # phase 2: each repository's own section, then the lock files
+info "Phase 2: checking each repository's own packages against NuGet..."
 phase2_start_us=$(now_us)
 for name in "${targets[@]}"; do
     [[ ${mode[$name]} == skip ]] && continue
+    info "  $name: checking its own packages..."
     update_section_versions "$vm2_repos/$name/Directory.Packages.props" repo "$name" summary_rows
 done
 phase2_us=$(( $(now_us) - phase2_start_us ))
 
 if ! is_dry_run; then
+    info "Regenerating packages.lock.json in each repository (this runs 'dotnet restore --force-evaluate')..."
     lock_start_us=$(now_us)
     for name in "${targets[@]}"; do
         [[ ${mode[$name]} == skip ]] && continue
+        info "  $name: running dotnet restore --force-evaluate..."
         refresh_lock_files "$vm2_repos/$name" || error -ec "$err_tool_error" "Failed to regenerate packages.lock.json in '$name'."
     done
     lock_us=$(( $(now_us) - lock_start_us ))
@@ -137,9 +149,11 @@ if ! is_dry_run; then
 
     # only 'publish' repositories are committed, pushed, and get a pull request
     declare -A pr_url=()
+    (( publish_count > 0 )) && info "Committing, pushing, and opening pull requests for $publish_count repositor$([[ $publish_count == 1 ]] && echo y || echo ies)..."
     commit_start_us=$(now_us)
     for name in "${targets[@]}"; do
         [[ ${mode[$name]} == publish ]] || continue
+        info "  $name: committing, pushing, and opening a pull request..."
         paths=("Directory.Packages.props" "*packages.lock.json")
         if [[ $name == "$vm2_sot_repo_name" ]] && (( phase_one == 1 )); then
             paths+=("templates/AddNewPackage/content/Directory.Packages.props")
@@ -152,7 +166,7 @@ if ! is_dry_run; then
         pr_url[$name]=''
         if open_pull_request "$vm2_repos/$name" "$branch" _pr_link; then
             pr_url[$name]=$_pr_link
-            reason[$name]="📬 PR opened: $m -- please see it through"
+            reason[$name]="📬 PR opened: $_pr_link -- please see it through"
         else
             warning "'$name': the branch was pushed, but opening a PR failed. Run 'gh pr create' in '$vm2_repos/$name'."
             reason[$name]="pushed to '$branch', but the PR was not created -- open it yourself"
