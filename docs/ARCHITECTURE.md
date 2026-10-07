@@ -480,16 +480,16 @@ These kebab-case keys are then referenced in the workflow's `outputs:` map and p
 
 Development-time scripts not used in CI:
 
-| Script                      | Purpose                                                      |
-| :-------------------------- | :----------------------------------------------------------- |
-| `diff-shared.sh`            | Diff common files across vm2 repos                           |
-| `move-commits-to-branch.sh` | Move commits from one branch to another                      |
-| `rename-branch.sh`          | Rename a branch locally and in the remote origin             |
-| `setup-repo.sh`             | Bootstrap and configure a new GitHub repo                    |
-| `add-spdx.sh`               | Add SPDX license headers to source files                     |
-| `re-tag.sh`                 | Recreate a Git tag at a different commit                     |
-| `update-dependencies.sh`    | Force re-evaluation of NuGet restore across vm2 repos        |
-| `create-pr.sh`              | `gh` alias (`gh create-pr`) — PR with commits auto-populated |
+| Script                      | Purpose                                                                       |
+| :-------------------------- | :---------------------------------------------------------------------------- |
+| `diff-shared.sh`            | Diff common files across vm2 repos                                            |
+| `move-commits-to-branch.sh` | Move commits from one branch to another                                       |
+| `rename-branch.sh`          | Rename a branch locally and in the remote origin                              |
+| `setup-repo.sh`             | Bootstrap and configure a new GitHub repo                                     |
+| `add-spdx.sh`               | Add SPDX license headers to source files                                      |
+| `re-tag.sh`                 | Recreate a Git tag at a different commit                                      |
+| `update-packages.sh`        | Upgrade NuGet package versions in `Directory.Packages.props` across vm2 repos |
+| `create-pr.sh`              | `gh` alias (`gh create-pr`) — PR with commits auto-populated                  |
 
 These also follow the three-file pattern where applicable.
 
