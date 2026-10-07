@@ -146,7 +146,7 @@ if ! is_dry_run; then
         fi
         commit_package_versions "$vm2_repos/$name" "chore(deps): update NuGet package versions in Directory.Packages.props" "${paths[@]}" ||
             error -ec "$err_tool_error" "Failed to commit the package versions in '$name'."
-        git -C "$vm2_repos/$name" push --quiet -u origin "$branch" ||
+        git -C "$vm2_repos/$name" push --quiet -u origin "$branch" 2>"$_ignore" ||
             error -ec "$err_tool_error" "Failed to push '$branch' in '$name'."
 
         pr_url[$name]=''
