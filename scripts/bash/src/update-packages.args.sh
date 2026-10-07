@@ -16,6 +16,7 @@ declare -xr vm2_sot_repo_name
 
 # this script's arguments
 declare -a requested_repos=()
+declare -x summary_file=''
 
 function get_arguments()
 {
@@ -27,6 +28,11 @@ function get_arguments()
 
         case "${_option,,}" in
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
+                ;;
+
+            --summary )
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $_option"
+                summary_file="$1"; shift
                 ;;
 
             * ) requested_repos+=("$_option")

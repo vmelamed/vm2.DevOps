@@ -167,8 +167,10 @@ for name in "${targets[@]}"; do
     fi
 done
 
-summary_md=$(mktemp -p /tmp "update-packages-summary-$(date +%Y%m%d-%H%M%S)-XXXXXX.md")
-trap 'rm -f "$summary_md"' EXIT
+[[ -n $summary_file ]] || {
+    summary_file=$(mktemp -p /tmp "update-packages-summary-$(date +%Y%m%d-%H%M%S)-XXXXXX.md")
+    trap 'rm -f "$summary_file"' EXIT
+}
 
 {
     echo "## Package versions"
@@ -193,12 +195,12 @@ trap 'rm -f "$summary_md"' EXIT
         esac
         echo "| $name | $glyph ${mode[$name]} | ${reason[$name]} |"
     done
-} >> "$summary_md"
+} >> "$summary_file"
 
 # shellcheck disable=SC2015 # A && B || C is not if-then-else. C may run when A is true but B is false.
 is_tool_present glow &&
-    glow "$summary_md" -w 180 ||
-    cat "$summary_md"
+    glow "$summary_file" -w 180 ||
+    cat "$summary_file"
 
 ms() { local _us=$1; printf '%d.%01ds' $(( _us / 1000000 )) $(( (_us % 1000000) / 100000 )); }
 info "Timing (seconds):"
