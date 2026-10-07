@@ -134,6 +134,7 @@ function update_section_versions()
     for _id in "${_ids[@]}"; do
         _current=${_versions[$_id]}
 
+        trace "$_label: checking '$_id' (current: $_current)..."
         local _t0=$(now_us)
         query_package_versions "$_id" _found && _query_rc=0 || _query_rc=$?
         search_us=$(( search_us + $(now_us) - _t0 ))
