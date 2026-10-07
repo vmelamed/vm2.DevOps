@@ -47,7 +47,7 @@ declare -A reason=()
 declare -a warnings=()
 
 declare -i phase_one=0
-declare sot_path shared_file root_file branch name repo_file m r
+declare sot_path shared_file root_file branch name repo_file m r _pr_link
 branch="deps/update-packages-$(date +%Y-%m-%d)"
 sot_path="$vm2_repos/$vm2_sot_repo_name"
 shared_file="$sot_path/templates/AddNewPackage/content/Directory.Packages.props"
@@ -64,6 +64,7 @@ fi
 
 for name in "${scope[@]}"; do
     repo_file="$vm2_repos/$name/Directory.Packages.props"
+    # shellcheck disable=SC2015 # A && B || C is not if-then-else. C may run when A is true but B is false.
     [[ -f $repo_file ]] && targets+=("$name") || trace "Skipping '$name': it has no Directory.Packages.props."
 done
 
@@ -148,7 +149,6 @@ if ! is_dry_run; then
     exit_if_has_errors false
 
     # only 'publish' repositories are committed, pushed, and get a pull request
-    declare -A pr_url=()
     (( publish_count > 0 )) && info "Committing, pushing, and opening pull requests for $publish_count repositor$([[ $publish_count == 1 ]] && echo y || echo ies)..."
     commit_start_us=$(now_us)
     for name in "${targets[@]}"; do
@@ -163,9 +163,7 @@ if ! is_dry_run; then
         git -C "$vm2_repos/$name" push --quiet -u origin "$branch" 2>"$_ignore" ||
             error -ec "$err_tool_error" "Failed to push '$branch' in '$name'."
 
-        pr_url[$name]=''
         if open_pull_request "$vm2_repos/$name" "$branch" _pr_link; then
-            pr_url[$name]=$_pr_link
             reason[$name]="📬 PR opened: $_pr_link -- please see it through"
         else
             warning "'$name': the branch was pushed, but opening a PR failed. Run 'gh pr create' in '$vm2_repos/$name'."

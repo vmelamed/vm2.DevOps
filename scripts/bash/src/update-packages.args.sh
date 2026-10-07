@@ -9,6 +9,7 @@ declare -xr lib_dir
 # constants from lib:
 declare -xri success
 declare -xri err_argument_value
+declare -xri err_missing_argument
 
 declare -xra vm2_repositories
 
@@ -20,7 +21,7 @@ declare -x summary_file=''
 
 function get_arguments()
 {
-    local _option _repo
+    local _option
 
     while (( $# > 0 )); do
         _option="$1"; shift

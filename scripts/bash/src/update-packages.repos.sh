@@ -3,6 +3,12 @@
 
 # shellcheck disable=SC2148 # This file is intended to be sourced, not executed directly.
 
+# constants from lib:
+declare -xri success
+declare -xri err_invalid_arguments
+declare -xri err_tool_error
+declare -x _ignore
+
 #---------------------------------------------------------------------------------------------
 # @description Decides how a repository may be changed. 'publish': on 'main', clean, and identical to 'origin/main' after
 #   a fetch, so a branch can be created, committed, and pushed. 'inplace': the files are edited in the current branch and
@@ -126,7 +132,7 @@ function update_section_versions()
     local -n _rows_ref=$4
     local -A _versions=()
     local -a _ids=() _found=()
-    local _id _current _selected _candidate _result _all_prerelease _query_rc
+    local _id _current _selected _candidate _result _all_prerelease _query_rc _t0
 
     read_package_versions "$_file" "$_section" _versions
     (( ${#_versions[@]} > 0 )) && readarray -t _ids < <(printf '%s\n' "${!_versions[@]}" | sort -f)
@@ -135,7 +141,7 @@ function update_section_versions()
         _current=${_versions[$_id]}
 
         trace "$_label: checking '$_id' (current: $_current)..."
-        local _t0=$(now_us)
+        _t0=$(now_us)
         query_package_versions "$_id" _found && _query_rc=0 || _query_rc=$?
         search_us=$(( search_us + $(now_us) - _t0 ))
         search_count=$(( search_count + 1 ))
@@ -192,10 +198,10 @@ function refresh_lock_files()
     (( $# == 1 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument: the repository path (provided $#)."
     exit_if_has_bugs
 
-    local _repo=$1 _restore_rc
+    local _repo=$1 _restore_rc _t0
     find "$_repo" -name packages.lock.json -not -path '*/.git/*' -delete
 
-    local _t0=$(now_us)
+    _t0=$(now_us)
     (cd "$_repo" && dotnet restore --force-evaluate > /dev/null) && _restore_rc=0 || _restore_rc=$?
     restore_us=$(( restore_us + $(now_us) - _t0 ))
     (( _restore_rc == 0 )) || return "$err_tool_error"

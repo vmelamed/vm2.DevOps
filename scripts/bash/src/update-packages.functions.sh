@@ -3,6 +3,14 @@
 
 # shellcheck disable=SC2148 # This file is intended to be sourced, not executed directly.
 
+# constants from lib:
+declare -xri success
+declare -xri negative
+declare -xri err_invalid_arguments
+declare -xri err_argument_value
+declare -xri err_logic_error
+declare -xri err_tool_error
+
 #---------------------------------------------------------------------------------------------
 # @description Chooses the version a package should be upgraded to. Only stable release versions
 #   are considered. The result is the highest candidate that is strictly greater than the current
