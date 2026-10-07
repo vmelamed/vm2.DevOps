@@ -7,6 +7,13 @@
 declare -xri success
 declare -xri err_invalid_arguments
 declare -xri err_tool_error
+
+declare -xr fail_em
+declare -xr question_em
+declare -xr right_arrow_em
+declare -xr check_em
+declare -xr up_arrow_em
+
 declare -x _ignore
 
 #---------------------------------------------------------------------------------------------
@@ -147,11 +154,11 @@ function update_section_versions()
         search_count=$(( search_count + 1 ))
 
         if (( _query_rc != success )); then
-            _rows_ref+=("$_label|$_id|$_current|-|search failed")
+            _rows_ref+=("$_label|$_id|$_current|-|$fail_em search failed")
             continue
         fi
         if (( ${#_found[@]} == 0 )); then
-            _rows_ref+=("$_label|$_id|$_current|-|not found in any source")
+            _rows_ref+=("$_label|$_id|$_current|-|$question_em not found in any source")
             continue
         fi
 
@@ -164,20 +171,20 @@ function update_section_versions()
                 is_semverRelease "$_candidate" && _all_prerelease=false
             done
             if [[ $_all_prerelease == true ]]; then
-                _result="prerelease only"
+                _result="$right_arrow_em prerelease only"
             else
-                _result="already latest"
+                _result="$check_em already latest"
             fi
             _rows_ref+=("$_label|$_id|$_current|$_selected|$_result")
             continue
         fi
 
         if is_dry_run; then
-            _result="would update"
+            _result="$up_arrow_em would update"
         elif set_package_version "$_file" "$_section" "$_id" "$_selected"; then
-            _result="updated"
+            _result="$up_arrow_em updated"
         else
-            _result="failed to write"
+            _result="$fail_em failed to write"
         fi
         _rows_ref+=("$_label|$_id|$_current|$_selected|$_result")
     done
