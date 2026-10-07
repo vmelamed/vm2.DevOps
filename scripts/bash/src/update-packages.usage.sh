@@ -41,9 +41,14 @@ Parameters:
   <repository>                One or more repository names (default: all vm2 repositories). Including 'vm2.Templates'
                               also upgrades the shared block in the SoT and copies it to the repositories.
 
+Options:
+  --summary <file>             Write the run summary to <file> in Markdown format. If not specified, a temporary
+                              file is created, displayed at the end, and then deleted.
+
 Examples:
   $script_name
   $script_name --dry-run
+  $script_name --summary /tmp/update-packages.md
   $script_name vm2.Ulid vm2.Glob
 $_common_args
 EOF
