@@ -30,6 +30,11 @@ source "$script_dir/update-packages.usage.sh"
 
 get_arguments "$@"
 
+[[ -n $summary_file ]] || {
+    summary_file=$(mktemp -p /tmp "update-packages-summary-$(date +%Y%m%d-%H%M%S)-XXXXXX.md")
+    trap 'rm -f "$summary_file"' EXIT
+}
+
 declare -gi search_us=0 search_count=0 restore_us=0
 now_us() { local _t=$EPOCHREALTIME; echo "${_t/./}"; }
 run_started_us=$(now_us)
@@ -102,8 +107,10 @@ if (( phase_one == 1 )); then
             [[ ${mode[$name]} == skip ]] || fan_out_names+=("$name")
         done
         if (( ${#fan_out_names[@]} > 0 )); then
-            info "Copying the shared block from the SoT to ${#fan_out_names[@]} repositor$([[ ${#fan_out_names[@]} == 1 ]] && echo y || echo ies) with diff-shared.sh..."
-            "$diff_shared_script" --vm2-repos "$vm2_repos" --current-branch "${fan_out_names[@]}" --file Directory.Packages.props --quiet ||
+            diff_shared_cmd=("$diff_shared_script" --vm2-repos "$vm2_repos" --current-branch "${fan_out_names[@]}"
+                              --file Directory.Packages.props --summary "$summary_file" --quiet)
+            info "Running: ${diff_shared_cmd[*]}"
+            "${diff_shared_cmd[@]}" ||
                 error -ec "$err_tool_error" "diff-shared.sh failed while copying the shared block to the repositories."
         fi
         exit_if_has_errors false
@@ -167,10 +174,6 @@ for name in "${targets[@]}"; do
     fi
 done
 
-[[ -n $summary_file ]] || {
-    summary_file=$(mktemp -p /tmp "update-packages-summary-$(date +%Y%m%d-%H%M%S)-XXXXXX.md")
-    trap 'rm -f "$summary_file"' EXIT
-}
 
 {
     echo "## Package versions"
@@ -197,12 +200,28 @@ done
     done
 } >> "$summary_file"
 
+ms() { local _us=$1; printf '%d.%01ds' $(( _us / 1000000 )) $(( (_us % 1000000) / 100000 )); }
+
+{
+    echo
+    echo "## Timing"
+    echo
+    echo "| Step | Time |"
+    echo "|:-----|:-----|"
+    echo "| total | $(ms $(( $(now_us) - run_started_us ))) |"
+    echo "| phase 1 (SoT) | $(ms "$phase1_us") |"
+    echo "| fan-out (diff-shared) | $(ms "$fanout_us") |"
+    echo "| phase 2 (repos) | $(ms "$phase2_us") |"
+    echo "| lock refresh (of which \`dotnet restore\`) | $(ms "$lock_us") ($(ms "$restore_us")) |"
+    echo "| commit and push | $(ms "${commit_us:-0}") |"
+    echo "| package searches | $search_count calls, $(ms "$search_us") total |"
+} >> "$summary_file"
+
 # shellcheck disable=SC2015 # A && B || C is not if-then-else. C may run when A is true but B is false.
 is_tool_present glow &&
     glow "$summary_file" -w 180 ||
     cat "$summary_file"
 
-ms() { local _us=$1; printf '%d.%01ds' $(( _us / 1000000 )) $(( (_us % 1000000) / 100000 )); }
 info "Timing (seconds):"
 info "  total                 $(ms $(( $(now_us) - run_started_us )))"
 info "  phase 1 (SoT)         $(ms "$phase1_us")"
