@@ -109,7 +109,7 @@ done
 phase1_us=0 fanout_us=0 phase2_us=0 lock_us=0 commit_us=0
 phase_start_us=$(now_us)
 if (( phase_one == 1 )); then
-    info "Phase 1: checking the shared block's packages against NuGet (run with --trace to see each one)..."
+    info "Phase 1: checking the shared block's packages against NuGet (run with --verbose to see each one)..."
     update_section_versions "$shared_file" shared "$vm2_sot_repo_name (SoT)" summary_rows
     update_section_versions "$root_file" shared "$vm2_sot_repo_name (root)" summary_rows
     phase1_us=$(( $(now_us) - phase_start_us ))
