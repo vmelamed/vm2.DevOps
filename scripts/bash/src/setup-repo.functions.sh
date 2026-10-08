@@ -742,7 +742,7 @@ function configure_secrets()
     rm -f "$_temp" || true
 
     (( _rc == success )) || {
-        error -ec "$_rc" "  Failed to retrieve the list of secrets for the GitHub application '$_app' in repository '$repo_owner/$repo'."
+        error -ec "$_rc" "  Failed to retrieve the list of secrets for the GitHub application '$_app' in repository '$repo'."
         return "$_rc"
     }
 
