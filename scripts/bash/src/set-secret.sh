@@ -16,6 +16,7 @@ declare -xr lib_dir
 source "$lib_dir/core.sh"
 
 declare -xri err_argument_value
+declare -xri err_tool_error
 
 declare -x secret_str
 declare -x secret_placeholder
@@ -48,9 +49,17 @@ for repo in "${vm2_repositories[@]}"; do
     trace "  Getting a list of all current secrets for the repository '$repo'."
 
     _rc=$success
-    # TODO: remove the process substitution and use a temp file instead
-    readarray -t repo_secrets < <(execute_gh_api_with_retry 3 2 --paginate "repos/$repo_owner/$repo/$app/secrets" -q '.secrets[] | .name') || _rc=$?
 
+    declare _temp=''
+    _temp=$(mktemp) || {
+        _rc=$err_tool_error
+        error -ec "$_rc" "Failed to create a temporary file."
+        continue
+    }
+
+    execute_gh_api_with_retry 3 2 --paginate "repos/$repo_owner/$repo/$app/secrets" -q '.secrets[] | .name' > "$_temp" || _rc=$?
+    (( _rc != success ))  || readarray -t repo_secrets < "$_temp" || _rc=$err_tool_error
+    rm -f "$_temp" || true
     (( _rc == success )) || {
         error -ec "$_rc" "  Failed to retrieve the list of secrets for repository '$repo_owner/$repo'. Moving on to the next repository."
         continue

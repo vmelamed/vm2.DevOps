@@ -726,9 +726,25 @@ function configure_secrets()
 
     info "Configuring ${_app^} secrets..."
 
+    local -i _rc=$success
+    local _temp=''
+    _temp=$(mktemp) || {
+        _rc=$err_tool_error
+        error -ec "$_rc" "Failed to create a temporary file."
+        return "$_rc"
+    }
+
+    execute_gh_api_with_retry 3 2 --paginate "$path_repo/$_app/secrets" -q "$jq_secret_names" > "$_temp" || _rc=$?
+
     local -a _current
 
-    readarray -t _current < <(execute_gh_api_with_retry 3 2 --paginate "$path_repo/$_app/secrets" -q "$jq_secret_names")
+    (( _rc != success ))  || readarray -t _current < "$_temp" || _rc=$err_tool_error
+    rm -f "$_temp" || true
+
+    (( _rc == success )) || {
+        error -ec "$_rc" "  Failed to retrieve the list of secrets for the GitHub application '$_app' in repository '$repo_owner/$repo'."
+        return "$_rc"
+    }
 
     local _secret _value _exists _default # about the current secret
     local -i _skipped=0 _set_new=0 _need_new=0 _ignored=0 _deleted=0 # summary variables

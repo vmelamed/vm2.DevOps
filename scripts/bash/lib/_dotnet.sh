@@ -853,7 +853,7 @@ function dotnet_build()
     local _output_file
     _output_file=$(mktemp) || {
         _rc=$?
-        error -ec "$err_tool_error" "Failed to create a temporary output file." "$(get_dotnet_error_message "$_rc")"
+        error -ec "$err_tool_error" "Failed to create a temporary file."
         return "$err_tool_error"
     }
 
