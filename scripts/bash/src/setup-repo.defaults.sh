@@ -410,7 +410,7 @@ declare -xra dependabot_secrets_order=(
                                                # updates. This is a SEPARATE secret store from Actions secrets, even
                                                # for the identically-named secret -- see
                                                # https://docs.github.com/en/code-security/dependabot/working-with-dependabot/configuring-access-to-private-registries-for-dependabot#storing-credentials-for-dependabot-to-use
-                                               # MUST be MUST be a classic PAT, read:packages only.
+                                               # MUST be a classic PAT, read:packages only.
 )
 declare -xra agents_secrets_order=()
 declare -xra codespaces_secrets_order=()
