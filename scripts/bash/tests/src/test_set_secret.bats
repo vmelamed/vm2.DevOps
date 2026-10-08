@@ -4,7 +4,8 @@
 
 # Tests for scripts/bash/src/set-secret.sh, run as a subprocess. 'gh' is replaced by a fake on
 # PATH that records every call and answers the two commands the script uses:
-#   gh api ... (list the current secret names; FAKE_EXISTING, newline-separated)
+#   gh api ... (list the current secret names; FAKE_EXISTING, newline-separated; exit code from FAKE_LIST_EXIT,
+#               default 0 -- the names are printed even on failure, like a pagination that fails midway)
 #   gh secret set ... (exit code from FAKE_SET_EXIT, default 0)
 # The secret value and the Y/N answers come from stdin, the same way a person would type them.
 
@@ -29,7 +30,9 @@ setup() {
 echo "gh $*" >> "$GH_CALL_LOG"
 case "$*" in
     "secret set "*) exit "${FAKE_SET_EXIT:-0}" ;;
-    *"/secrets"*)     [[ -n ${FAKE_EXISTING:-} ]] && printf '%s\n' "$FAKE_EXISTING"; exit 0 ;;
+    *"/secrets"*)     [[ -n ${FAKE_EXISTING:-} ]] && printf '%s\n' "$FAKE_EXISTING"
+                      (( ${FAKE_LIST_EXIT:-0} == 0 )) || echo "HTTP 403: Resource not accessible by integration" >&2
+                      exit "${FAKE_LIST_EXIT:-0}" ;;
     *)                exit 0 ;;
 esac
 EOF
@@ -42,7 +45,7 @@ EOF
 _run_set_secret() {
     local _input=$1; shift
     run env -i HOME="$HOME" PATH="$_bin:/usr/local/bin:/usr/bin:/bin" GH_CALL_LOG="$_gh_log" \
-        FAKE_EXISTING="${FAKE_EXISTING:-}" FAKE_SET_EXIT="${FAKE_SET_EXIT:-0}" \
+        FAKE_EXISTING="${FAKE_EXISTING:-}" FAKE_SET_EXIT="${FAKE_SET_EXIT:-0}" FAKE_LIST_EXIT="${FAKE_LIST_EXIT:-0}" \
         bash -c "printf '$_input' | '$_script' \"\$@\"" _ "$@"
 }
 
@@ -126,4 +129,14 @@ _set_calls() {
     FAKE_EXISTING="MY_SECRET" FAKE_SET_EXIT=1 _run_set_secret 'hunter2\n' MY_SECRET --app actions
     assert_failure
     assert_output --partial "Failed to set secret MY_SECRET"
+}
+
+@test "set-secret: a failing secrets-list API call skips every repository and makes the script fail (regression: lost exit status)" {
+    # The fake still prints MY_SECRET before failing. When the list was read through a process substitution, the
+    # failure was lost, the partial list was trusted, and the secret was set anyway -- so any 'secret set' call here
+    # means the exit status of the list call is being dropped again.
+    FAKE_EXISTING="MY_SECRET" FAKE_LIST_EXIT=1 _run_set_secret 'hunter2\n' MY_SECRET --app actions
+    assert_failure
+    assert_output --partial "Failed to retrieve the list of secrets"
+    [[ $(_set_calls) -eq 0 ]]
 }

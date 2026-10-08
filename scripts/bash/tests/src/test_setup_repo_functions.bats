@@ -448,6 +448,36 @@ EOF
     refute_output --partial "secret set"
 }
 
+@test "configure_secrets: returns the failure of the secrets-list API call without reconciling anything (regression: lost exit status)" {
+    # The fake prints a partial list before failing. When the list was read through a process substitution, the
+    # failure was lost and the partial list was reconciled anyway -- NUGET_API_KEY would be deleted, RELEASE_PAT
+    # reported missing -- so any of those here means the exit status of the list call is being dropped again.
+    mkdir -p "$BATS_TEST_TMPDIR/bin"
+    cat > "$BATS_TEST_TMPDIR/bin/gh" <<'EOF'
+#!/usr/bin/env bash
+echo "$*" >> "$GH_CALL_LOG"
+if [[ "$1 $2" == "api --paginate" ]]; then
+    printf '%s\n' NUGET_API_KEY CODECOV_TOKEN
+    echo "HTTP 403: Resource not accessible by integration" >&2
+    exit 7
+fi
+exit 0
+EOF
+    chmod +x "$BATS_TEST_TMPDIR/bin/gh"
+    run _sr "repo='acme/myrepo'
+             path_repo='repos/acme/myrepo'
+             jq_secret_names='.secrets[] | .name'
+             interactive_secrets=false
+             nuget_server=nuget
+             configure_secrets actions; echo RC=\$?" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
+    assert_output --partial "Failed to retrieve the list of secrets"
+    assert_output --partial "RC=7"
+    refute_output --partial "Create secret:"
+    run cat "$BATS_TEST_TMPDIR/calls.log"
+    refute_output --partial "secret delete"
+    refute_output --partial "secret set"
+}
+
 @test "configure_secrets: is a no-op when the given app has no configured secrets" {
     # 'codespaces' is the only app left with a genuinely empty '*_secrets_order' -- 'dependabot'
     # used to be the example here too, until it gained its own default (GH_PACKAGES_TOKEN, see
