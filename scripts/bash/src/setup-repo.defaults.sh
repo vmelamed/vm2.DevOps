@@ -389,8 +389,8 @@ declare -xra actions_secrets_order=(
                                                # the callers's token; nuget.org uses Trusted Publishing and also does not need
                                                # secret.
                                                # (see https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing)
-    "GH_PACKAGES_TOKEN"                        # The GitHub Packages token used to update the local GitHub Packages (used by
-                                               # Dependabot). MUST be a classic PAT, read:packages only.
+    "GH_PACKAGES_TOKEN"                        # The GitHub Packages token used to update the local GitHub Packages (Dependabot
+                                               # reads its own copy). MUST be a classic PAT, read:packages only.
     "RELEASE_PAT"                              # PAT for a user listed as a bypass actor (e.g. Admin) in the branch ruleset
                                                # protecting main. Required to push changelog commits and version tags directly
                                                # to main
