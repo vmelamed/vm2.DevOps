@@ -390,7 +390,7 @@ declare -xra actions_secrets_order=(
                                                # secret.
                                                # (see https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing)
     "GH_PACKAGES_TOKEN"                        # The GitHub Packages token used to update the local GitHub Packages (used by
-                                               # Dependabot)
+                                               # Dependabot). MUST be a classic PAT, read:packages only.
     "RELEASE_PAT"                              # PAT for a user listed as a bypass actor (e.g. Admin) in the branch ruleset
                                                # protecting main. Required to push changelog commits and version tags directly
                                                # to main
@@ -402,7 +402,7 @@ declare -xra actions_secrets_order=(
     "BENCHER_API_TOKEN"                        # API token used by Bencher for authentication
     "BENCH_DISPATCH_PAT"                       # Fine-grained PAT with `Actions: write` + `Contents: read` on the package repos.
                                                # Used by `RebuildBenchHistory-AllRepos.yaml` to dispatch each repo's
-                                               # benchmark-history rebuild
+                                               # benchmark-history rebuild.
 )
 declare -xra dependabot_secrets_order=(
     "GH_PACKAGES_TOKEN"                        # Needed by dependabot.yml's own "github-packages" registry entry, so
@@ -410,6 +410,7 @@ declare -xra dependabot_secrets_order=(
                                                # updates. This is a SEPARATE secret store from Actions secrets, even
                                                # for the identically-named secret -- see
                                                # https://docs.github.com/en/code-security/dependabot/working-with-dependabot/configuring-access-to-private-registries-for-dependabot#storing-credentials-for-dependabot-to-use
+                                               # MUST be MUST be a classic PAT, read:packages only.
 )
 declare -xra agents_secrets_order=()
 declare -xra codespaces_secrets_order=()
