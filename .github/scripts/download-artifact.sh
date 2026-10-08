@@ -136,15 +136,23 @@ if ! is_natural "$workflow_id"; then
     exit_if_has_errors
 fi
 
+declare -i rc=$success
+declare _temp=''
+_temp=$(mktemp) || exit_with_error -ec "$err_tool_error" "Failed to create a temporary file."
+
 # get the IDs of the last 1000 successful runs of the specified workflow
-readarray -t runs < <(
-    gh run list \
-        --repo "$repository" \
-        --workflow "$workflow_id" \
-        --status success \
-        --limit 100 \
-        --json databaseId \
-        --jq '.[].databaseId')
+gh run list \
+    --repo "$repository" \
+    --workflow "$workflow_id" \
+    --status success \
+    --limit 100 \
+    --json databaseId \
+    --jq '.[].databaseId' > "$_temp" || rc=$?
+
+(( rc != success ))  || readarray -t runs < "$_temp" || rc=$err_tool_error
+rm -f "$_temp" || true
+
+(( rc == success ))  || exit_with_error -ec "$rc" "Failed to retrieve the list of runs for the workflow '$workflow_id' in the repository '$repository'."
 
 (( ${#runs[@]} > 0 )) ||
     exit_with_error -ec "$err_logic_error" "No successful runs found for the workflow '$workflow_id' in the repository '$repository'."
