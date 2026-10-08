@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025-2026 Val Melamed
+
+# vm2.DevOps-specific: GitHub Actions only. This repo has no .NET projects, so there is no nuget ecosystem and no
+# private-registry secret. Not synced from vm2.Templates -- see "dependabot.yml": "ignore" in diff-shared.custom.json.
+#
+# Unlike the package repos' NuGet policy, major versions are NOT ignored here: for actions a major bump (e.g.
+# actions/checkout v6 -> v7, usually a Node runtime change) is the normal kind of update.
+#
+# There is no AutoMerge.yaml and no CI gate in this repo, so these PRs are merged manually -- deliberately: an
+# auto-merged action bump would reach every consumer's pipeline untested.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directories:
+      - "/"                   # .github/workflows/
+      - "/.github/actions/*"  # composite actions -- their own action.yaml files pin actions too
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/New_York"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "ci"
+    # No 'labels:' on purpose: Dependabot only auto-creates its *default* labels ('dependencies' + the ecosystem
+    # label). Custom labels must already exist in the repo, or they are silently skipped.
