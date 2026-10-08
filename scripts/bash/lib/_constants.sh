@@ -33,8 +33,6 @@ declare -r __VM2_LIB_CONSTANTS_SH_LOADED=1
 #   library - `vm2.DevOps`, so that the projects can be easily found and referenced by the
 #   scripts without needing to search for them.
 #   This is useful for scripts that work across all vm2 projects, e.g. `diff-shared.sh`.
-#   `vm2.DevOps` is intentionally not included in this list, to avoid accidentally introducing
-#   dependencies on it from the other projects.
 #---------------------------------------------------------------------------------------------
 declare -xra vm2_repositories=(
     "vm2.DevOps"
