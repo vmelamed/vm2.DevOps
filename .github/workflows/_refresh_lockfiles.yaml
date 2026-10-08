@@ -72,6 +72,7 @@ jobs:
           fi
 
       - name: Create pull request
+        id: create-pr
         if: steps.changes.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v8
         with:
@@ -87,3 +88,23 @@ jobs:
             lock files.  This PR updates them via `dotnet restore --force-evaluate`.
           commit-message: "chore(deps): refresh NuGet lock files"
           labels: dependencies
+
+      # Deliberately fails the run whenever a refresh PR was opened or updated. The PR above is created with
+      # github.token, so GitHub's anti-recursion rule keeps it from triggering CI or AutoMerge.yaml -- it needs a
+      # human (close & reopen it to run CI, then merge). A failed *scheduled* run makes GitHub email the user who
+      # last edited the cron schedule, which turns this from "a PR nobody notices" into "an email you can't miss".
+      # A red X here therefore means "action required", not "broken". Drop this step once the PR is opened with a
+      # GitHub App token instead (see TODO: vm2-bot), at which point CI and auto-merge run on their own.
+      - name: Flag that the refresh PR needs attention
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          PR_URL: ${{ steps.create-pr.outputs.pull-request-url }}
+          PR_OPERATION: ${{ steps.create-pr.outputs.pull-request-operation }}
+        run: |
+          # Inline equivalent of gh_escape (gh_core.sh is not checked out in this job): neutralizes CR/LF/% so the
+          # values cannot inject workflow commands into the runner's stdout parser.
+          escape() { local _v=$1; _v=${_v//'%'/%25}; _v=${_v//$'\r'/%0D}; _v=${_v//$'\n'/%0A}; printf '%s' "$_v"; }
+
+          printf '::error::Lock files drifted - refresh PR %s: %s. Close and reopen it to run CI, then merge.\n' \
+                 "$(escape "${PR_OPERATION:-unknown}")" "$(escape "${PR_URL:-<no url>}")"
+          exit 1
