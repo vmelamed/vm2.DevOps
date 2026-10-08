@@ -77,7 +77,7 @@ jobs:
 
       - name: Cache Bencher CLI
         id: cache-bencher
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cargo/bin/bencher
           key: bencher-cli-${{ runner.os }}-${{ steps.cache-date.outputs.day }}
@@ -86,7 +86,7 @@ jobs:
 
       - name: Install Bencher CLI
         if: steps.cache-bencher.outputs.cache-hit != 'true'
-        uses: bencherdev/bencher@v0.6.8
+        uses: bencherdev/bencher@v0.6.13
 
       # Clone the repository with full Git history (MinVer needs it)
       - name: Checkout
