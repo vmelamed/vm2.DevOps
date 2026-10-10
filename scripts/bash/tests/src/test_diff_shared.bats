@@ -37,7 +37,7 @@ declare -gxi err_argument_type
 declare -gxi positive
 declare -gxi negative
 
-declare -xra vm2_repositories
+declare -gxa vm2_repositories
 
 # shared_equal/shared_not_equal are defined in diff-shared.functions.sh itself, not core.sh, so
 # ../helpers/setup does not transplant them into this outer scope -- only the fresh env -i
@@ -788,7 +788,7 @@ EOF
     assert_output --partial "summary_file=\"$BATS_TEST_TMPDIR/sum.md\""
 }
 
-@test "get_arguments: --vm2-repos, --source-of-truth, --diff, and --summary-file set the corresponding variables" {
+@test "get_arguments: --vm2-repos, --source-of-truth, --diff, and -sf set the corresponding variables" {
     run _ds --with-args "declare -a arguments=(); set_quiet
                           get_arguments --vm2-repos /some/path --source-of-truth AddNewPackage --diff -sf '$BATS_TEST_TMPDIR/sum.md'
                           declare -p vm2_repos sot diff_only summary_file"
