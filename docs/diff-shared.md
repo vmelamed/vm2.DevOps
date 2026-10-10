@@ -368,12 +368,13 @@ The script accepts one or more target repository paths as positional arguments:
   - `--file-copy <file-selector>` — overrides the configured action to `copy`
   - `--file-copy-shared <file-selector>` — overrides the configured action to `copy shared`
   - `--file-ask-to-copy-shared <file-selector>` — overrides the configured action to `ask to copy shared`
-- `--summary <file>` — write the script run summary to `<file>` in Markdown format. If not specified, a temporary file is
+
+- `--summary-file <file>` (`-sf`) — write the script run summary to `<file>` in Markdown format. If not specified, a temporary file is
   created, displayed at the end of the run with `glow`, and then deleted.
 
 ### Switches
 
-- `--all-repositories` (`-a`, `--all-repos`) — compare all pre-defined vm2 repositories under the vm2 parent with the SoT, one
+- `--all-repositories` (`-all`, `--all-repos`) — compare all pre-defined vm2 repositories under the vm2 parent with the SoT, one
   by one. The set is defined in `lib/_constants.sh`.
 
     > [!WARNING]

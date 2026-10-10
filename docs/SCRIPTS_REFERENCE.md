@@ -223,7 +223,7 @@ files and actions to take if the source and the target are different.
 | `--file-copy-shared <pattern>`        | `-fcs`  | —            | Like `--file` but forces the action to `copy shared`                                     |
 | `--file-ask-to-copy-shared <pattern>` | `-facs` | —            | Like `--file` but forces the action to `ask to copy shared`                              |
 | `--summary-file <file>`               | `-sf`   | temp file    | Write the run summary to `<file>` in Markdown (shown and deleted if omitted)             |
-| `--all-repositories`, `--all-repos`   | `-a`    | —            | Compare all pre-defined vm2 repositories under `$VM2_REPOS` (set in `_constants.sh`)     |
+| `--all-repositories`, `--all-repos`   | `-all`  | —            | Compare all pre-defined vm2 repositories under `$VM2_REPOS` (set in `_constants.sh`)     |
 | `--diff`                              | `-d`    | —            | Compare and display differences only, taking no action                                   |
 | `--current-branch`                    | `-cb`   | —            | Use the current branch of vm2.DevOps/the SoT repo instead of `main`                      |
 
