@@ -37,6 +37,8 @@ declare -gxi err_argument_type
 declare -gxi positive
 declare -gxi negative
 
+declare -xra vm2_repositories
+
 # shared_equal/shared_not_equal are defined in diff-shared.functions.sh itself, not core.sh, so
 # ../helpers/setup does not transplant them into this outer scope -- only the fresh env -i
 # subshell _ds() spawns per test actually sources that file. Assertions against these two
@@ -742,8 +744,6 @@ EOF
 # =====================================================================================
 # diff-shared.args.sh: get_arguments()
 # =====================================================================================
-
-declare -xra vm2_repositories
 
 @test "get_arguments: collects positional arguments as target repos, de-duplicated" {
     run _ds --with-args "declare -a arguments=(); set_quiet
