@@ -222,8 +222,8 @@ files and actions to take if the source and the target are different.
 | `--file-copy <pattern>`               | `-fc`   | —            | Like `--file` but forces the action to `copy`                                            |
 | `--file-copy-shared <pattern>`        | `-fcs`  | —            | Like `--file` but forces the action to `copy shared`                                     |
 | `--file-ask-to-copy-shared <pattern>` | `-facs` | —            | Like `--file` but forces the action to `ask to copy shared`                              |
-| `--summary <file>`                    |         | temp file    | Write the run summary to `<file>` in Markdown (shown and deleted if omitted)             |
-| `--all-repos`                         | `-a`    | —            | Compare all pre-defined vm2 repositories under `$VM2_REPOS` (set in `_constants.sh`)     |
+| `--summary-file <file>`               | `-sf`   | temp file    | Write the run summary to `<file>` in Markdown (shown and deleted if omitted)             |
+| `--all-repositories`, `--all-repos`   | `-a`    | —            | Compare all pre-defined vm2 repositories under `$VM2_REPOS` (set in `_constants.sh`)     |
 | `--diff`                              | `-d`    | —            | Compare and display differences only, taking no action                                   |
 | `--current-branch`                    | `-cb`   | —            | Use the current branch of vm2.DevOps/the SoT repo instead of `main`                      |
 
@@ -285,7 +285,7 @@ precedence (`scripts/bash/lib/_semver.sh`).
 update-packages.sh
 update-packages.sh --dry-run
 update-packages.sh vm2.Ulid vm2.Glob
-update-packages.sh --summary /tmp/update-packages.md
+update-packages.sh --summary-file /tmp/update-packages.md
 ```
 
 Before writing anything, every target repository is classified:
@@ -301,10 +301,10 @@ Every `publish` or `inplace` repository has its `packages.lock.json` files delet
 A `skip` repository bypasses this entirely, consistent with being left untouched. Only `publish` repositories are
 committed and pushed.
 
-| Option             | Description                                                                                                                                            |
-| :----------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `<repository>...`  | One or more repository names (default: all vm2 repositories). Including `vm2.Templates` also upgrades the shared block in the SoT.                     |
-| `--summary <file>` | Write the run's Markdown summary to `<file>`. If omitted, a temporary file is created, rendered (via `glow`, falling back to `cat`), and then deleted. |
+| Option                  | Description                                                                                                                                            |
+| :---------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `<repository>...`       | One or more repository names (default: all vm2 repositories). Including `vm2.Templates` also upgrades the shared block in the SoT.                     |
+| `--summary-file <file>` | Write the run's Markdown summary to `<file>`. If omitted, a temporary file is created, rendered (via `glow`, falling back to `cat`), and then deleted. |
 
 The summary covers the package versions checked (current → new, or why not: already latest, prerelease only, not found
 in any source, search failed), each repository's mode and status (including the opened PR's URL), and a per-phase

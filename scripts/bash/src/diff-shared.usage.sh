@@ -24,29 +24,28 @@ Usage:
   $script_name [<repo-directory>...] [--<long option> <value> | -<short option> <value> | --<long switch> | -<short switch>]*
 
 Compares a pre-defined set of files with shared content in one or more target repositories against the corresponding
-source-of-truth (SoT) files listed in ${script_name%.sh}.config.json in the SoT directory, for the scenario specified
-by --source-of-truth. Note that <repo-directory> does not need to be the root of the repository working tree — a deeper
-path works too. This is useful for multi-solution repositories or for repositories that contain a dotnet template project.
+source-of-truth (SoT) files listed in ${script_name%.sh}.config.json in the SoT directory, for the scenario specified by
+--source-of-truth. Note that <repo-directory> does not need to be the root of the repository working tree — a deeper path works
+too. This is useful for multi-solution repositories or for repositories that contain a dotnet template project.
 
-The root directories of all vm2 repositories are expected under the same parent directory, specified either by the
-environment variable \$VM2_REPOS or the --vm2-repos option.
+The root directories of all vm2 repositories are expected under the same parent directory, specified either by the environment
+variable \$VM2_REPOS or the --vm2-repos option.
 
 Arguments:
   <repo-directory>              The target repository for the operation. Can be:
                                 1) omitted — the current working directory is used
                                 2) a repository name (looked up under \$VM2_REPOS)
-                                3) an absolute or relative path to a directory that is the root of the
-                                   working tree or inside it
+                                3) an absolute or relative path to a directory that is the root of the working tree or inside it
                                 Multiple repositories can be specified as positional arguments.
 
 Options:
-  -r, --vm2-repos <dir>         The parent directory where all vm2 repositories are cloned.
-                                Initial value from \$VM2_REPOS or '\$$default_vm2_repos_path'.
-  -s, --source-of-truth <sot>   The source-of-truth scenario to use. Must be one of the pre-defined
-                                scenarios in '\$VM2_REPOS/vm2.Templates/templates/'.
-  -f, --file <pattern>          A file name or a quoted glob pattern (quote glob patterns to prevent shell
-                                expansion). Only matching files are processed; the action is taken from
-                                the configuration. Can be specified multiple times to select multiple files.
+  -r, --vm2-repos <dir>         The parent directory where all vm2 repositories are cloned. Initial value from \$VM2_REPOS or
+                                '\$$default_vm2_repos_path'.
+  -s, --source-of-truth <sot>   The source-of-truth scenario to use. Must be one of the pre-defined scenarios in
+                                '\$VM2_REPOS/vm2.Templates/templates/'.
+  -f, --file <pattern>          A file name or a quoted glob pattern (quote glob patterns to prevent shell expansion). Only
+                                matching files are processed; the action is taken from the configuration. Can be specified
+                                multiple times to select multiple files.
                                 Example: --file 'Directory.*.props' or -f '*.yaml'
   -fi, --file-ignore <pattern>  Same as --file but overrides the action to 'ignore'.
   -fmc, --file-merge-or-copy <pattern>
@@ -58,18 +57,19 @@ Options:
                                 Same as --file but overrides the action to 'ask to copy'.
   -fc, --file-copy <pattern>    Same as --file but overrides the action to 'copy' (no prompt).
   -fcs, --file-copy-shared <pattern>
-                                Same as --file but overrides the action to 'copy shared' -- copies only the
-                                content between a '<<<===' / '===>>>' marker pair, without prompting.
+                                Same as --file but overrides the action to 'copy shared' -- copies only the content between a
+                                '<<<===' / '===>>>' marker pair, without prompting.
   -facs, --file-ask-to-copy-shared <pattern>
                                 Same as --file but overrides the action to 'ask to copy shared'.
-  --summary <file>              Write the run summary to <file> in Markdown format. If not specified,
-                                a temporary file is created, displayed at the end, and then deleted.
+  -sf, --summary-file <file>    Write the run summary to <file> in Markdown format. If not specified, a temporary file is
+                                created, displayed at the end, and then deleted.
 
 Switches:
-  -a, --all-repos               Compare all pre-defined vm2 repositories under \$VM2_REPOS with the SoT,
-                                one by one. The set is defined in 'lib/_constants.sh'.
-  -d, --diff                    Compare files and display differences and equalities without taking any
-                                action. Can be combined with --all-repos.
+  -a, --all-repos, --all-repositories
+                                Compare all pre-defined vm2 repositories under \$VM2_REPOS with the SoT, one by one. The set is
+                                defined in 'lib/_constants.sh'.
+  -d, --diff                    Compare files and display differences and equalities without taking any action. Can be combined
+                                with --all-repos.
   -cb, --current-branch         Both vm2.DevOps and SoT repositories will use their respective current branches instead of the
                                 main branch.
 
@@ -77,10 +77,10 @@ Environment Variables:
   VM2_REPOS                     The parent directory where all vm2 repositories are cloned.
 $_common_args
 Configuration Files:
-  diff-shared.config.json       Located in the SoT directory. Defines the set of files with shared content,
-                                the default action for each, and the diff/merge tools to use.
-  diff-shared.custom.json       Optional. Located in the root of the target repository. Overrides actions
-                                and diff/merge tools for that repository only.
+  diff-shared.config.json       Located in the SoT directory. Defines the set of files with shared content, the default action
+                                for each, and the diff/merge tools to use.
+  diff-shared.custom.json       Optional. Located in the root of the target repository. Overrides actions and diff/merge tools
+                                for that repository only.
 
 Examples:
   diff-shared.sh                The current directory is the target repository, and the SoT is determined by the configuration

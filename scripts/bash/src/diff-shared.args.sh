@@ -55,7 +55,7 @@ function get_arguments()
                 sot="$1"; shift
                 ;;
 
-            --all-repos|-a )
+            --all-repositories|--all-repos|-a )
                 target_repos=("${vm2_repositories[@]}")
                 ;;
 
@@ -68,7 +68,7 @@ function get_arguments()
                 diff_only="true"
                 ;;
 
-            --summary )
+            --summary-file|-sf )
                 (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $__option"
                 summary_file="$1"; shift
                 ;;
