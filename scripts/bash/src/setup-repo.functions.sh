@@ -561,8 +561,8 @@ function configure_variables()
         fi
 
         # if the NuGet server has changed, update the global variable and refresh the defaults
-        if [[ $_var == "NUGET_SERVER" && -n $_new_value && "$_new_value" != "$nuget_server" ]]; then
-            nuget_server="$_new_value"
+        if [[ $_var == "NUGET_SERVER" && -n $_value && "$_value" != "$nuget_server" ]]; then
+            nuget_server="$_value"
             get_vars_defaults "$_app" _vars_defaults _vars_order _vars_validators
         fi
     done
