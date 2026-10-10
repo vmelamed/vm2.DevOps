@@ -27,6 +27,10 @@ How to set up a new .NET repository to use vm2.DevOps CI/CD automation.
 
 ## Prerequisites
 
+- Linux, or WSL on Windows: the vm2.DevOps tooling (`setup-repo.sh`, `diff-shared.sh`, `update-packages.sh`, etc.) is
+  bash-only and is not supported on native Windows. On Windows, install WSL and work inside it, with the repositories
+  cloned into the WSL file system (not under `/mnt/c`, where git and `dotnet` are much slower). The GitHub Actions
+  workflows themselves are unaffected: they run on GitHub's runners.
 - A .NET solution in `.slnx` format (migrate .sln files with `dotnet solution migrate` if needed)
 - GitHub repository with Actions enabled
 - Repository variables and secrets configured (see [CONFIGURATION.md](CONFIGURATION.md#github-repository-secrets))
