@@ -538,10 +538,11 @@ function configure_variables()
 
             if [[ $_new_value != "$_value" ]]; then
                 # set the variable to the value
-                set_var "$_var" "$_new_value" || continue
+                _value="$_new_value"
+                set_var "$_var" "$_value" || continue
                 trace "Setting variable: $_var=$_new_value"
                 # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-                [[ $_new_value == "$_default_value" ]] && (( ++_set_default )) || (( ++_set_new ))
+                [[ $_value == "$_default_value" ]] && (( ++_set_default )) || (( ++_set_new ))
 
             else
                 trace "Unchanged variable: '$_var==$_value'"
@@ -553,14 +554,15 @@ function configure_variables()
                 (( ++_skipped ))
             else
                 trace "Creating a variable with its default value: '$_var=$_default_value'"
-                set_var "$_var" "$_default_value"
+                _value="$_default_value"
+                set_var "$_var" "$_value"
                 (( ++_set_default ))
             fi
         fi
 
         # if the NuGet server has changed, update the global variable and refresh the defaults
-        if [[ $_var == "NUGET_SERVER" && "$_value" != "$nuget_server" ]]; then
-            nuget_server="$_value"
+        if [[ $_var == "NUGET_SERVER" && -n $_new_value && "$_new_value" != "$nuget_server" ]]; then
+            nuget_server="$_new_value"
             get_vars_defaults "$_app" _vars_defaults _vars_order _vars_validators
         fi
     done
