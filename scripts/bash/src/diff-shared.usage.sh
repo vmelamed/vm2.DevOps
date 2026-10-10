@@ -65,7 +65,7 @@ Options:
                                 created, displayed at the end, and then deleted.
 
 Switches:
-  -a, --all-repos, --all-repositories
+  -all, --all-repos, --all-repositories
                                 Compare all pre-defined vm2 repositories under \$VM2_REPOS with the SoT, one by one. The set is
                                 defined in 'lib/_constants.sh'.
   -d, --diff                    Compare files and display differences and equalities without taking any action. Can be combined
