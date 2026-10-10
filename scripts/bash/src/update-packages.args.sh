@@ -36,7 +36,8 @@ function get_arguments()
                 summary_file="$1"; shift
                 ;;
 
-            * ) requested_repos+=("$_option")
+            * ) is_empty_array target_repos || ! is_in "$_option" "${requested_repos[@]}" &&
+                    requested_repos+=("$_option")
                 ;;
         esac
     done
