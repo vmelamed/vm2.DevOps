@@ -191,7 +191,6 @@ function validate_arguments()
     readonly purge_secrets
     readonly configure_local
     readonly audit
-    readonly description
 }
 
 # shellcheck disable=SC2120 # dump_args references arguments, but none are ever passed.
