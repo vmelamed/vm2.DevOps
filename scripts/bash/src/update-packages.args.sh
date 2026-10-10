@@ -31,7 +31,7 @@ function get_arguments()
             -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
                 ;;
 
-            --summary )
+            -sf|--summary-file )
                 (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $_option"
                 summary_file="$1"; shift
                 ;;

@@ -105,6 +105,8 @@ _make_ci_repo() {
     assert_failure "$err_argument_value"
 }
 
+declare -xr BATS_TEST_TMPDIR
+
 @test "configure: fails when the config file is missing or empty" {
     mkdir -p "$BATS_TEST_TMPDIR/sot" "$BATS_TEST_TMPDIR/target"
     _stub_config_schema "$BATS_TEST_TMPDIR/sot"
@@ -741,6 +743,8 @@ EOF
 # diff-shared.args.sh: get_arguments()
 # =====================================================================================
 
+declare -xra vm2_repositories
+
 @test "get_arguments: collects positional arguments as target repos, de-duplicated" {
     run _ds --with-args "declare -a arguments=(); set_quiet
                           get_arguments myrepo myrepo otherrepo
@@ -757,9 +761,36 @@ EOF
     assert_output --partial "count=${#vm2_repositories[@]}"
 }
 
-@test "get_arguments: --vm2-repos, --source-of-truth, --diff, and --summary set the corresponding variables" {
+@test "get_arguments: --all-repositories populates target_repos from vm2_repositories" {
     run _ds --with-args "declare -a arguments=(); set_quiet
-                          get_arguments --vm2-repos /some/path --source-of-truth AddNewPackage --diff --summary '$BATS_TEST_TMPDIR/sum.md'
+                          get_arguments --all-repositories
+                          echo \"count=\${#target_repos[@]}\""
+    assert_success
+    assert_output --partial "count=${#vm2_repositories[@]}"
+}
+
+@test "get_arguments: -all populates target_repos from vm2_repositories" {
+    run _ds --with-args "declare -a arguments=(); set_quiet
+                          get_arguments -all
+                          echo \"count=\${#target_repos[@]}\""
+    assert_success
+    assert_output --partial "count=${#vm2_repositories[@]}"
+}
+
+@test "get_arguments: --vm2-repos, --source-of-truth, --diff, and --summary-file set the corresponding variables" {
+    run _ds --with-args "declare -a arguments=(); set_quiet
+                          get_arguments --vm2-repos /some/path --source-of-truth AddNewPackage --diff --summary-file '$BATS_TEST_TMPDIR/sum.md'
+                          declare -p vm2_repos sot diff_only summary_file"
+    assert_success
+    assert_output --partial 'vm2_repos="/some/path"'
+    assert_output --partial 'sot="AddNewPackage"'
+    assert_output --partial 'diff_only="true"'
+    assert_output --partial "summary_file=\"$BATS_TEST_TMPDIR/sum.md\""
+}
+
+@test "get_arguments: --vm2-repos, --source-of-truth, --diff, and --summary-file set the corresponding variables" {
+    run _ds --with-args "declare -a arguments=(); set_quiet
+                          get_arguments --vm2-repos /some/path --source-of-truth AddNewPackage --diff -sf '$BATS_TEST_TMPDIR/sum.md'
                           declare -p vm2_repos sot diff_only summary_file"
     assert_success
     assert_output --partial 'vm2_repos="/some/path"'
@@ -817,7 +848,7 @@ EOF
     assert_output --partial "Usage:"
 }
 
-@test "get_arguments: creates and later cleans up a temp summary file when --summary is not given (regression)" {
+@test "get_arguments: creates and later cleans up a temp summary file when --summary-file is not given (regression)" {
     # The trap is registered on EXIT of the subshell that get_arguments runs in; checking the
     # file's existence *inside* that same process (before EXIT fires) is what's observable here.
     run _ds --with-args "declare -a arguments=(); set_quiet

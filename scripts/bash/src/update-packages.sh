@@ -122,7 +122,7 @@ if (( phase_one == 1 )); then
         done
         if (( ${#fan_out_names[@]} > 0 )); then
             diff_shared_cmd=("$diff_shared_script" --vm2-repos "$vm2_repos" --current-branch "${fan_out_names[@]}"
-                              --file Directory.Packages.props --summary "$summary_file" --quiet)
+                              --file Directory.Packages.props --summary-file "$summary_file" --quiet)
             info "Running: ${diff_shared_cmd[*]}"
             "${diff_shared_cmd[@]}" ||
                 error -ec "$err_tool_error" "diff-shared.sh failed while copying the shared block to the repositories."

@@ -521,7 +521,7 @@ It can be safely re-run to fix any drift or misconfiguration that may occur over
 audit result may look like this:
 
 ```text
-❯ setup-repo.sh vm2.SemVer -a
+❯ setup-repo.sh vm2.SemVer -audit
 ℹ️  INFO: Git repository path            => /home/valo/repos/vm2/vm2.SemVer
 ℹ️  INFO: GitHub repository              => vmelamed/vm2.SemVer
 ℹ️  INFO: GitHub repository Id           => 1199917173

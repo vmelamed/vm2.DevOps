@@ -55,7 +55,7 @@ function get_arguments()
                 sot="$1"; shift
                 ;;
 
-            --all-repositories|--all-repos|-a )
+            --all-repositories|--all-repos|-all )
                 target_repos=("${vm2_repositories[@]}")
                 ;;
 
