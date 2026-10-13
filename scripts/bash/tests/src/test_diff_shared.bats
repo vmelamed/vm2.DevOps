@@ -842,6 +842,16 @@ EOF
     assert_output --partial "Missing value for --vm2-repos"
 }
 
+@test "get_arguments: rejects an unknown option instead of taking it as a target repository" {
+    # The '-* )' arm must stop parsing: '--bogus' never reaches target_repos, so the trailing 'declare -p' never runs.
+    # NOTE: usage() exits with $failure even though the arm passes '-ec "$err_unknown_argument"' -- usage() only takes
+    # a bare exit code; '-ec' reaches error() and affects the printed code only.
+    run _ds --with-args "declare -a arguments=(); set_quiet; get_arguments myrepo --bogus; declare -p target_repos"
+    assert_failure "$failure"
+    assert_output --partial "Unknown option: --bogus"
+    refute_output --partial "target_repos="
+}
+
 @test "get_arguments: -h prints usage and exits 0" {
     run _ds --with-args "declare -a arguments=(); set_quiet; get_arguments -h"
     assert_success

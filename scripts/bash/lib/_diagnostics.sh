@@ -603,7 +603,7 @@ function error()
 #   `$err_has_errors` in the unlikely case that recorded code is itself 0.
 #
 # @example
-#   exit_with_error -ec -ns "$err_not_file" "Invalid file specified."
+#   exit_with_error -ns -ec "$err_not_file" "Invalid file specified."
 #---------------------------------------------------------------------------------------------
 function exit_with_error()
 {
@@ -688,7 +688,7 @@ function bug()
 #   `$err_has_bugs` in the unlikely case that recorded code is itself 0.
 #
 # @example
-#   exit_with_bug -ec -ns "$err_not_file" "Invalid file specified."
+#   exit_with_bug -ec "$err_not_file" -ns "Invalid file specified."
 #---------------------------------------------------------------------------------------------
 function exit_with_bug()
 {

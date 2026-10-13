@@ -60,6 +60,16 @@ _sr() {
     assert_failure "$failure"
     assert_output --partial "Too many positional arguments"
 }
+
+@test "get_arguments: rejects an unknown option instead of taking it as the project directory" {
+    # The '-* )' arm must stop parsing before '--bogus' becomes repo_path, so the trailing 'declare -p' never runs.
+    run _sr "get_arguments --bogus
+              declare -p repo_path"
+    assert_failure "$failure"
+    assert_output --partial "Unknown option: --bogus"
+    refute_output --partial "repo_path="
+}
+
 @test "get_arguments: --owner, --branch, --visibility, --ruleset-name, and --description set the corresponding variables" {
     run _sr "get_arguments --owner acme --branch dev --visibility private --ruleset-name 'main protection' --description 'a repo'
               declare -p repo_owner branch visibility main_protection_rs_name description"
