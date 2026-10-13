@@ -26,9 +26,14 @@ declare -gxi err_argument_value
 declare -gxi err_argument_type
 declare -gxi err_not_directory
 declare -gxi err_not_git_directory
+declare -gxi err_root_not_repo_name
 
 setup() {
     _repo_root="$(cd "$lib_dir/../../.." && pwd)"
+    # Hermetic git: ignore the developer's ~/.gitconfig. E.g. a 'url.git@github.com:.insteadOf https://github.com/'
+    # rule makes 'git remote get-url' return SSH URLs for HTTPS remotes, which once hid an HTTPS-only bug in
+    # get_repo_state (the '.git' suffix was stripped for SSH only) -- the tests passed locally for the wrong reason.
+    export GIT_CONFIG_GLOBAL=/dev/null
 }
 
 # --- validate_gh_repo_owner / validate_gh_repo_name / validate_gh_repo_description --------------
@@ -139,6 +144,60 @@ setup() {
 @test "get_repo_state: bug-exits with the wrong argument count" {
     run get_repo_state "$_repo_root"
     assert_failure "$err_invalid_arguments"
+}
+
+# --- get_repo_state: the repository-identity convention (directory name == GitHub repository name) --
+# Each test builds a throw-away local repo under $BATS_TEST_TMPDIR -- 'git init' plus an 'origin' URL is all
+# get_repo_state needs with full_info=false (no commits, no network).
+
+# Creates the directory $1 under $BATS_TEST_TMPDIR as a git working tree, with the remote 'origin' set to $2 if given.
+_make_repo() {
+    # shellcheck disable=SC2154 # BATS_TEST_TMPDIR is set by bats for each test at run time
+    local _dir="$BATS_TEST_TMPDIR/$1"
+    mkdir -p "$_dir"
+    git -C "$_dir" init -q
+    [[ -z ${2:-} ]] || git -C "$_dir" remote add origin "$2"
+    echo "$_dir"
+}
+
+# Runs get_repo_state on $1 (full_info=false) and prints its exit code and the resolved repository name.
+_run_get_repo_state() {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); get_repo_state '$1' state false; echo \"rc=[\$?] name=[\${state[name]}]\""
+}
+
+@test "get_repo_state: succeeds when the directory name matches the GitHub repository name (HTTPS URL with .git)" {
+    _run_get_repo_state "$(_make_repo vm2.Sample https://github.com/vmelamed/vm2.Sample.git)"
+    assert_success
+    assert_output --partial "rc=[0] name=[vm2.Sample]"
+}
+
+@test "get_repo_state: succeeds when the directory name matches the GitHub repository name (HTTPS URL without .git)" {
+    _run_get_repo_state "$(_make_repo vm2.Sample https://github.com/vmelamed/vm2.Sample)"
+    assert_success
+    assert_output --partial "rc=[0] name=[vm2.Sample]"
+}
+
+@test "get_repo_state: succeeds when the directory name matches the GitHub repository name (SSH URL)" {
+    _run_get_repo_state "$(_make_repo vm2.Sample git@github.com:vmelamed/vm2.Sample.git)"
+    assert_success
+    assert_output --partial "rc=[0] name=[vm2.Sample]"
+}
+
+@test "get_repo_state: returns err_root_not_repo_name and reports an error when the names differ" {
+    _run_get_repo_state "$(_make_repo vm2.Renamed https://github.com/vmelamed/vm2.Sample.git)"
+    assert_output --partial "rc=[$err_root_not_repo_name] name=[vm2.Sample]"
+    assert_output --partial "The root directory name 'vm2.Renamed' does not match the repository name 'vm2.Sample'"
+}
+
+@test "get_repo_state: compares the names case-sensitively (the convention says 'including case')" {
+    _run_get_repo_state "$(_make_repo vm2.sample https://github.com/vmelamed/vm2.Sample.git)"
+    assert_output --partial "rc=[$err_root_not_repo_name] name=[vm2.Sample]"
+}
+
+@test "get_repo_state: succeeds with an empty name for a repo without a remote (e.g. before setup-repo.sh)" {
+    _run_get_repo_state "$(_make_repo vm2.NoRemote)"
+    assert_success
+    assert_output --partial "rc=[0] name=[]"
 }
 
 # --- has_local_repo / has_remote_repo / has_github_remote ---------------------------------------

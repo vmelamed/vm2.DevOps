@@ -8,6 +8,7 @@
     - [PR Review](#pr-review)
     - [Language and Writing Quality](#language-and-writing-quality)
   - [Project Structure](#project-structure)
+  - [Local Workspace](#local-workspace)
   - [Dependency Management](#dependency-management)
   - [Bash](#bash)
   - [General C# Coding Conventions](#general-c-coding-conventions)
@@ -109,6 +110,26 @@ The project owner is a non-native English speaker.
     - dependabot configuration (`dependabot.yml`)
     - issue and pull request templates (`ISSUE_TEMPLATE/` and `PULL_REQUEST_TEMPLATE.md`)
   - `.github/workflows/` — GitHub Actions CI/CD (`CI.yaml`, `Prerelease.yaml`, `Release.yaml`, `RefreshLockFiles.yaml`, `AutoMerge.yaml`, `ClearCache.yaml`, `RebuildBenchHistory.yaml`)
+
+## Local Workspace
+
+The vm2.DevOps tools assume one shared workstation layout:
+
+- **Linux, or WSL on Windows.** The tooling is bash-only. On Windows, work inside WSL with the clones in the WSL file
+  system, not under `/mnt/c`, where git and `dotnet` are much slower.
+- **`$VM2_REPOS`: one directory that contains all vm2 clones side by side** (default `$HOME/repos/vm2`). Export it in
+  your shell profile, e.g. `export VM2_REPOS="$HOME/repos/vm2"` in `~/.bashrc`. The scripts resolve it from
+  `--vm2-repos`, then `$VM2_REPOS`, then the parent of the vm2.DevOps clone, then the default; the vm2.Templates
+  post-actions use `$VM2_REPOS` directly, so it MUST be exported.
+- **vm2.DevOps and vm2.Templates MUST be cloned into `$VM2_REPOS`.** Most tools also require both to be on `main`,
+  clean, and up to date with `origin/main`; `--current-branch` relaxes that for testing only.
+- **Repository identity: the GitHub repository name is the source of truth.** A local clone's directory MUST have exactly
+  the same name as its GitHub repository, including case. Clone with `git clone https://github.com/vmelamed/<repo>.git`,
+  without a directory argument, into `$VM2_REPOS` (e.g. `$VM2_REPOS/vm2.Ulid`). The vm2.DevOps tools that work across
+  repositories read their list from `vm2_repositories` (`scripts/bash/lib/_constants.sh`) and use each entry both as the
+  directory name under `$VM2_REPOS` and as the GitHub repository name, so a clone under a different name is skipped by
+  some of them and mis-addressed by others. Compare the names case-sensitively: GitHub resolves repository names
+  case-insensitively, but Linux file systems do not.
 
 ## Dependency Management
 
@@ -335,6 +356,7 @@ exceptions, and never references `vm2.Functional`; `TryDo` is for consumers who 
 - **Package-first artifact identity**:
   - Package ID: `vm2.<Package>` or `vm2.<Package>.<Feature>`
   - Assembly name: `vm2.<Package>` or `vm2.<Package>.<Feature>`
+- Repository names: see [Local Workspace](#local-workspace) — the GitHub repository name is the source of truth
 - **Always set `<RootNamespace>` explicitly** in every `*.csproj`
 - **Always set `<OutputType>` explicitly** in every `*.csproj`
 - Test projects — assembly: `<Package>.Tests`; namespace: `vm2.Tests.<Package>[.<Feature>]`. Note the placement of the `Tests` segment and the mirroring of the assembly structure: it helps avoiding symbol conflicts. Always `<OutputType>Exe</OutputType>` - xUnit v3 + MTP v2.

@@ -643,7 +643,6 @@ sets secrets/variables, configures repo settings, Actions permissions, and branc
 | `<repo-directory>`      |        | current dir  | Positional: path to the git repository's working tree                                                                   |
 | `--vm2-repos`           |        | `$VM2_REPOS` | Path to the directory containing all vm2 repositories                                                                   |
 | `--owner`               | `-o`   | `vmelamed`   | GitHub owner/org for the repository                                                                                     |
-| `--repo-name`           | `-n`   |              | The name of the GitHub repository (prompted interactively if omitted)                                                   |
 | `--branch`              | `-b`   | `main`       | GitHub default branch                                                                                                   |
 | `--visibility`          |        | `public`     | `public` or `private`                                                                                                   |
 | `--ruleset-name`        | `-rs`  |              | The name of the ruleset for protecting the default branch                                                               |

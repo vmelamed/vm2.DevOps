@@ -29,6 +29,7 @@ declare -gxi err_not_directory
 declare -gxi err_invalid_branch
 declare -gxi err_not_found
 declare -gxi err_repo_with_no_ci
+declare -gxi err_repo_not_in_vm2_repos
 
 setup() {
     _repo_root="$(cd "$lib_dir/../../.." && pwd)"
@@ -204,10 +205,37 @@ _make_local_repo() {
 # --- resolve_repo_root (real, read-only) ----------------------------------------------------------
 
 @test "resolve_repo_root: resolves the vm2.DevOps repo root and found directory" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare root='' found=''; resolve_repo_root '$_repo_root/..' 'vm2.DevOps' root found; realpath -e \"\$root\"; realpath -e \"\$found\""
+    # Argument 1 MUST be a *resolved* vm2_repos (the contract: real callers pass resolve_vm2_repos' output, which is
+    # normalized with 'realpath -e') -- so normalize '$_repo_root/..' here the same way, rather than pass it raw.
+    local repos
+    repos=$(realpath -e "$_repo_root/..")
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare root='' found=''; resolve_repo_root '$repos' 'vm2.DevOps' root found; realpath -e \"\$root\"; realpath -e \"\$found\""
     assert_success
     assert_line "$_repo_root"
     [[ $(echo "$output" | wc -l) -eq 2 ]]
+}
+
+# The repository-identity convention: every clone lives DIRECTLY under $VM2_REPOS. HOME is pointed into the sandbox so
+# resolve_repo_root's fallback search under $HOME can never wander into the developer's real repositories.
+
+@test "resolve_repo_root: accepts a repository directly under vm2_repos" {
+    local parent
+    mkdir -p "$BATS_TEST_TMPDIR/direct-parent" "$BATS_TEST_TMPDIR/home"
+    parent=$(realpath -e "$BATS_TEST_TMPDIR/direct-parent")
+    _make_local_repo "$parent/vm2.Direct"
+    run env HOME="$BATS_TEST_TMPDIR/home" bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare root='' found=''; resolve_repo_root '$parent' 'vm2.Direct' root found; echo \"root=[\$root]\""
+    assert_success
+    assert_output --partial "root=[$parent/vm2.Direct]"
+}
+
+@test "resolve_repo_root: rejects a repository nested deeper than directly under vm2_repos (err_repo_not_in_vm2_repos)" {
+    local parent
+    mkdir -p "$BATS_TEST_TMPDIR/nested-parent" "$BATS_TEST_TMPDIR/home"
+    parent=$(realpath -e "$BATS_TEST_TMPDIR/nested-parent")
+    _make_local_repo "$parent/nested/vm2.Nested"
+    run env HOME="$BATS_TEST_TMPDIR/home" bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare root='' found=''; resolve_repo_root '$parent' 'vm2.Nested' root found"
+    assert_failure "$err_repo_not_in_vm2_repos"
+    assert_output --partial "is not under the expected VM2 repositories directory"
 }
 
 @test "resolve_repo_root: bug-exits with the wrong argument count" {

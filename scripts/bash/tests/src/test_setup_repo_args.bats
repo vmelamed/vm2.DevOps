@@ -60,7 +60,6 @@ _sr() {
     assert_failure "$failure"
     assert_output --partial "Too many positional arguments"
 }
-
 @test "get_arguments: --owner, --branch, --visibility, --ruleset-name, and --description set the corresponding variables" {
     run _sr "get_arguments --owner acme --branch dev --visibility private --ruleset-name 'main protection' --description 'a repo'
               declare -p repo_owner branch visibility main_protection_rs_name description"
@@ -73,10 +72,9 @@ _sr() {
 }
 
 @test "get_arguments: -n, -o, -b, and -rs are the short forms of the same options" {
-    run _sr "get_arguments -n myrepo -o acme -b dev -rs 'main protection'
-              declare -p repo_name repo_owner branch main_protection_rs_name"
+    run _sr "get_arguments -o acme -b dev -rs 'main protection'
+              declare -p repo_owner branch main_protection_rs_name"
     assert_success
-    assert_output --partial 'repo_name="myrepo"'
     assert_output --partial 'repo_owner="acme"'
     assert_output --partial 'branch="dev"'
     assert_output --partial 'main_protection_rs_name="main protection"'

@@ -68,6 +68,7 @@ declare -xa arguments=(         # array of all arguments for logging and debuggi
     target_repos
     selectors_actions
     diff_only
+    all_repos
     current_branch
     summary_file
 )
@@ -172,6 +173,7 @@ declare -a sot_dump_vars=(
 dump_vars "${sot_dump_vars[@]}"
 
 # Resolve and validate all repositories specified as arguments, and prepare the list of target files and actions for each of them:
+declare target=''
 declare target_root target_path
 declare -a target_roots=()
 declare -a target_paths=()
@@ -222,8 +224,14 @@ declare default_actions actions
 declare -i difference
 declare file_difference_txt todo_or_done_txt
 
+declare -A repo_state=()
+declare -xr key_name
+declare repo_name
+
 # iterate through the target repositories
 for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ )); do
+    target="${target_repos[targets_index]}"
+
     target_root="${target_roots[targets_index]}"
     target_path="${target_paths[targets_index]}"
 
@@ -457,6 +465,16 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
     done # SoT files loop
 
     echo "" >> "$summary_file"
+
+    get_repo_state "$target_root" repo_state false || true
+    repo_name=${repo_state[$key_name]}
+    if [[ -n "$repo_name" ]] && ! is_in "$repo_name" "${vm2_repositories[@]}"; then
+        warning "The repository '$repo_name' is not in the list 'vm2_repositories' (see \$VM2_REPOS/vm2.DevOps/scripts/bash/lib/_constants.sh)."  \
+                "Any vm2 script that works on all vm2 repositories or uses the '--all-repositories' switch will ignore the '$repo_name' in their operations." \
+                "If it SHOULD be included, ensure that '$repo_name' is added to the 'vm2_repositories' list."
+        press_any_key
+    fi
+
 done # repositories loop
 
 summarize

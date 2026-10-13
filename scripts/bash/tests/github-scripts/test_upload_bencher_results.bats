@@ -127,7 +127,9 @@ _run_upload() {
 }
 
 @test "upload-bencher-results: standalone (no GITHUB_* env, no --repository/--ref-name) derives them from the local git repo" {
-    local _repo="$BATS_TEST_TMPDIR/repo"
+    # The directory MUST be named after the GitHub repository in 'origin' below (repository-identity convention;
+    # get_repo_state reports err_root_not_repo_name otherwise).
+    local _repo="$BATS_TEST_TMPDIR/vm2.DevOps"
     mkdir -p "$_repo"
     git -C "$_repo" init --quiet
     git -C "$_repo" config user.email "test@test.local"

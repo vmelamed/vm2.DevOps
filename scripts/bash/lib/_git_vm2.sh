@@ -48,6 +48,7 @@ declare -xri err_invalid_branch
 declare -xri err_invalid_path
 declare -xri err_unknown
 declare -xri err_unexpected_error
+declare -xri err_repo_not_in_vm2_repos
 
 declare -xr default_vm2_repos_path
 declare -xr vm2_devops_repo_name
@@ -270,7 +271,7 @@ function resolve_vm2_repos()
                                                                                    "  - name of a variable to store the vm2_repos directory" \
                                                                                    "  - the branch name for the vm2.DevOps repository (optional, default: the current branch)." \
                                                                                    "  - the branch name for the vm2.Templates repository (optional, default: the current branch)."
-    [[ ! -v 1 ]] || is_variable "$1"           || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be a variable name to store the vm2_repos directory (provided '${2:-<none>}')."
+    [[ ! -v 1 ]] || is_variable "$1"           || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 1 to be a variable name to store the vm2_repos directory (provided '${2:-<none>}')."
     exit_if_has_bugs
 
     local -n _vm2_repos="$1"
@@ -533,16 +534,29 @@ function resolve_repo_root()
         # we found repo directory, find the root of the repository and check if it has CI configuration
         _in_repo_dir=$_found_dir
         root_working_tree "$_in_repo_dir" _repo_root || {
-            _rc="$err_invalid_repo"
+            _rc=$err_invalid_repo
             error -ec "$_rc" "Failed to get the root of the repository working tree for '$_in_repo_dir'."
             return "$_rc"    # get the root of the repo working tree
         }
-        [[ -d "$_repo_root/.github/workflows" ]] || _rc="$err_repo_with_no_ci"        # check if the repository has CI configuration (is it initialized with setup-repo.sh)?
+
+        # check if the root is under _repos (VM2_REPOS) as it should be
+        local _repo_root_parent
+        _repo_root_parent=$(realpath "$(dirname "$_repo_root")")
+
+        [[ $_repo_root_parent == "$_repos" ]] || {
+            _rc=$err_repo_not_in_vm2_repos
+            error "The repository root '$_repo_root' is not under the expected VM2 repositories directory '$_repos'."
+            return "$_rc"
+        }
+
+        # check if the repository has CI configuration (is it initialized with setup-repo.sh)?
+        [[ -d "$_repo_root/.github/workflows" ]] ||
+            _rc="$err_repo_with_no_ci"
     elif (( _rc == err_not_git_directory )); then
         # the directory exists but is not a git repository
         _dir=$_found_dir
         # walk the path up until we find a CI configuration
-        _rc="$err_dir_with_ci"
+        _rc=$err_dir_with_ci
         while [[ ! -d "$_found_dir/.github/workflows" ]]; do
             _found_dir=$(dirname "$_found_dir")
             [[ $_found_dir == "$HOME" ]] && _rc="$err_dir_with_no_ci" && break

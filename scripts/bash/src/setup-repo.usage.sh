@@ -75,9 +75,6 @@ Options:
   -o, --owner <owner>           GitHub user ID or organization that will own the GitHub repository. If omitted, the value will
                                 be taken from the environment variable ORGANIZATION or the default: 'vmelamed'. Used during
                                 linking the local repository to GitHub
-  -n, --repo-name <name>        Name of the GitHub repository to create. If not specified, the script will ask the user
-                                interactively, inferring the default name from the name of the repo directory. Used during
-                                linking the local repository to GitHub
   -d, --description <text>      Short description for the GitHub repository (max 350 chars). If not specified, the script will
                                 ask the user interactively with a default - the name of the repository. Used during linking
                                 the local repository to GitHub
