@@ -583,7 +583,7 @@ function error()
 
 #---------------------------------------------------------------------------------------------
 # @description Logs an error message to stderr (via `message`, prefixed with `$error_prefix`)
-# and exits immediately with the last error code or `$failure`.
+# and exits immediately with the last error code or `$err_has_errors`.
 #
 # @arg $@ string Error message parts (optional -- if none are given, the message is read from
 #   stdin instead). May include the named parameters described in `message`:
@@ -610,7 +610,7 @@ function exit_with_error()
     error "$@"
     remove_traps
 
-    local -i _ec=$__last_error
+    local -i _ec
     (( __last_error != success )) && _ec=$__last_error || _ec=$err_has_errors
 
     exit "$_ec"
@@ -664,6 +664,41 @@ function bug()
     local -i _depth=${#FUNCNAME[@]}
     (( __bugs == 0 || _depth < __bugs_min_depth )) && __bugs_min_depth=$_depth
     (( ++__bugs ))
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Logs a bug message to stderr (via `message`, prefixed with `$bug_prefix`)
+# and exits immediately with the last error code or `$err_has_bugs`.
+#
+# @arg $@ string Error message parts (optional -- if none are given, the message is read from
+#   stdin instead). May include the named parameters described in `message`:
+#     - `--error-code`/`-ec` followed by a positive error code -- translated to its error
+#       message and included in the output. May occur multiple times.
+#     - `--stack-skip`|`-ss` followed by an integer -- how many stack frames to skip before
+#       showing the stack (default: 2). May occur multiple times; only the last occurrence
+#       takes effect.
+#     - `--stack-depth`/`-sd` followed by an integer -- how many stack frames to show below
+#       the message (default: 0). If given more than once, only the last occurrence takes
+#       effect.
+#     - `--no-stack`|`-ns` do not dump the stack. May occur multiple times with
+#       `--stack-depth`/`-sd`; only the last occurrence takes effect.
+#
+# @exitcode N: Never returns -- always exits the script, with the error code recorded by
+#   `bug()` from `-ec`/`--error-code` (default `$failure` if that flag was not given), or
+#   `$err_has_bugs` in the unlikely case that recorded code is itself 0.
+#
+# @example
+#   exit_with_bug -ec -ns "$err_not_file" "Invalid file specified."
+#---------------------------------------------------------------------------------------------
+function exit_with_bug()
+{
+    bug "$@"
+    remove_traps
+
+    local -i _ec
+    (( __last_bug != success )) && _ec=$__last_bug || _ec=$err_has_bugs
+
+    exit "$_ec"
 }
 
 #---------------------------------------------------------------------------------------------

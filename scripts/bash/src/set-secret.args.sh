@@ -11,6 +11,8 @@ declare -xri success
 declare -xri err_argument_value
 declare -xri err_too_many_arguments
 declare -xri err_missing_argument
+declare -xri err_unknown_argument
+declare -xri err_logic_error
 
 declare -xra gh_apps_with_secrets
 
@@ -33,9 +35,6 @@ function get_arguments()
         get_common_arg "$_option" && continue
 
         case "${_option,,}" in
-            -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
-                ;;
-
             -o|--repo-owner )
                 (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $_option"
                 repo_owner="$1"; shift
@@ -49,6 +48,15 @@ function get_arguments()
             -n|--secret-name )
                 (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $_option"
                 secret_name="$1"; shift
+                ;;
+
+            # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
+            # (SC2221/SC2222) flag any script-specific arm that reuses one of them, and it bugs out if the lists drift apart.
+            -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
+                exit_with_bug -ec "$err_logic_error" "'$_option' should have been consumed by get_common_arg."
+                ;;
+
+            -*) usage -ec "$err_unknown_argument" "Unknown option: $_option"
                 ;;
 
             * ) [[ -z "$secret_name" ]] || usage -ec "$err_too_many_arguments" "Too many positional arguments (secret name): $_option"

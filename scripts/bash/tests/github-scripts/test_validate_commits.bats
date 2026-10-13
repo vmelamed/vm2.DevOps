@@ -168,7 +168,7 @@ _run_validate_commits() {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "feat: fine"
     run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --bogus --quiet
     assert_failure
-    assert_output --partial "Unknown argument: --bogus"
+    assert_output --partial "Unknown option: --bogus"
 }
 
 @test "validate-commits: rejects a second positional argument as too many arguments" {
