@@ -22,8 +22,7 @@ function get_arguments()
     while (( $# > 0 )); do
         _option="$1"
         shift
-        get_common_arg "$_option" &&
-            continue
+        get_common_arg "$_option" && continue
 
         get_common_dotnet_arg "$_option" "${1:-}" && {
             (( $# >= 1 )) && shift

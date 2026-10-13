@@ -11,6 +11,7 @@ declare -xri err_missing_argument
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
 declare -xri err_argument_value
+declare -xri err_logic_error
 
 declare -xr ci
 
@@ -29,30 +30,20 @@ declare -xa vm2_repositories
 
 function get_arguments()
 {
-    local value
-    local __option
-    local _repo
+    local _option
 
     while (( $# > 0 )); do
-        __option="$1"; shift
-        if get_common_arg "$__option"; then
-            continue
-        fi
+        _option="$1"; shift
+        get_common_arg "$_option" && continue
 
-        value="$__option"
-        __option=${__option,,}
-        case "$__option" in
-            # do not use the common options - they were already processed by get_common_arg:
-            -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
-                ;;
-
+        case ${_option,,} in
             --vm2-repos|-r )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $__option"
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $_option"
                 vm2_repos="$1"; shift
                 ;;
 
             --source-of-truth|-s )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $__option"
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $_option"
                 sot="$1"; shift
                 ;;
 
@@ -63,8 +54,8 @@ function get_arguments()
                 ;;
 
             --file*|-f* )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $__option"
-                get_selector_action "$__option" "$1"; shift
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $_option"
+                get_selector_action "$_option" "$1"; shift
                 ;;
 
             --diff|-d )
@@ -72,7 +63,7 @@ function get_arguments()
                 ;;
 
             --summary-file|-sf )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $__option"
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $_option"
                 summary_file="$1"; shift
                 ;;
 
@@ -80,7 +71,17 @@ function get_arguments()
                 current_branch=true
                 ;;
 
-            * ) is_in "$value" "${target_repos[@]}" || target_repos+=("$value")
+            # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
+            # (SC2221/SC2222) flag any script-specific arm that reuses one of them, and it bugs out if the lists drift apart.
+            -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
+                exit_with_bug -ec "$err_logic_error" "'$_option' should have been consumed by get_common_arg."
+                ;;
+
+            -*) usage -ec "$err_unknown_argument" "Unknown option: $_option"
+                ;;
+
+            * ) is_empty_array target_repos || ! is_in "$_option" "${target_repos[@]}" &&
+                    target_repos+=("$_option")
                 ;;
         esac
     done

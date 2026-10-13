@@ -78,9 +78,6 @@ function get_arguments()
         get_common_arg "$_option" && continue
 
         case "${_option,,}" in
-            -h|-\?|-v|-q|-x|-y|--help|--quiet|--verbose|--trace|--dry-run )
-                ;;
-
             --vm2-repos )
                 (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing path after '$_option'."
                 vm2_repos="$1"; shift
@@ -159,7 +156,18 @@ function get_arguments()
                 configure_local=false
                 ;;
 
-            * ) [[ -z "$repo_path" ]] || usage -ec "$err_too_many_arguments" "Too many positional arguments (project directory or repository name): $_option"
+            # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
+            # (SC2221/SC2222) flag any script-specific arm that reuses one of them, and it bugs out if the lists drift apart.
+            -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
+                exit_with_bug -ec "$err_logic_error" "'$_option' should have been consumed by get_common_arg."
+                ;;
+
+            -*) usage -ec "$err_unknown_argument" "Unknown option: $_option"
+                ;;
+
+            * ) if [[ -n "$repo_path" ]]; then
+                    usage -ec "$err_too_many_arguments" "Too many positional arguments (project directory or repository name): $_option"
+                fi
                 repo_path="$_option"
                 ;;
         esac

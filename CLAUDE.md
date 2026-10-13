@@ -520,10 +520,40 @@ failure for the rest, so the caller can fall through to the next one (e.g. a scr
 - A handler in this chain has exactly one legitimate way to say "not mine": return failure without touching the
   value or any option-specific state. It has exactly one legitimate way to say "mine, but malformed": having matched
   the option name, *then* validate the value and report a specific, actionable error.
-- When adding or removing a value-taking option from such a dispatcher, also update any downstream no-op reservation
-  list (a `case` arm like `-a|-c|-f|... ) ;;` that exists purely to reserve those letters/names so a later `case` arm
-  in the same function does not shadow the shared handler). A stale reservation silently swallows a letter the shared
-  handler no longer claims, or fails to reserve one it newly does.
+- **Reservation arms.** The shared handlers run *before* a script's own `case` (`get_common_arg "$_option" &&
+  continue`, likewise `get_common_dotnet_arg`), so their options never reach it. Each `case` still carries one
+  reservation arm per shared handler, listing exactly the options that handler consumes. The arm never runs; it is
+  there so ShellCheck (SC2221/SC2222) flags any script-specific arm that reuses one of those options. Its body is
+  `exit_with_bug -ec "$err_logic_error" …`, so if a stale list ever lets a token through, the run fails loudly
+  instead of swallowing the token. When a shared handler gains or loses an option, update its reservation arm in **every**
+  parser: a missing name loses the ShellCheck protection, and an extra one turns a now-unknown option into a bug
+  report instead of `-*)`'s "Unknown option".
+- **Reject unknown options explicitly; never let them fall through to the positional catch-all.** A parser that
+  accepts positional arguments MUST reject every token that starts with `-` and matched none of its options.
+  Otherwise a typo (`--all-repo`) or a removed option (`--repo-name`) is silently taken as a positional value, and
+  either fails later with a misleading message or, worse, succeeds. In a `case`-based parser, use a dedicated `-*)`
+  arm, placed **after** every specific option arm and immediately before `*)`: `case` takes the first matching arm, so
+  placed any higher, `-*)` would shadow real options. The arm keeps the two rules apart (unknown option vs. positional
+  argument) and is easy to add or remove. A positional value that genuinely starts with `-` must then be written as
+  `./-name`, the usual Unix convention.
+
+```bash
+            --summary-file|-sf )
+                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $_option"
+                summary_file="$1"; shift
+                ;;
+
+            -* ) usage -ec "$err_unknown_argument" "Unknown option: $_option"
+                ;;
+
+            * ) # positional arguments only -- every token starting with '-' was handled above
+                ...
+                ;;
+```
+
+A parser that is not a `case` (e.g. `build.args.sh`: a chain of `get_common_*_arg … && continue` and `[[ ]] ||`
+tests) puts the same check inline, before its positional handling:
+`[[ "$_option" != -* ]] || usage -ec "$err_unknown_argument" "Unknown option: $_option"`.
 
 ### Long-Form Options in Script Bodies
 
@@ -543,7 +573,7 @@ dump_vars -f -q -h "Arguments for $script_name:" package_project reason
 ```
 
 **Exception: the `message()`-family functions** (`error`, `warning`, `info`, `trace`, `bug`, `usage`,
-`exit_with_error`, `fatal_exit`). Their own options — `--error-code`/`-ec`, `--stack-depth`/`-sd`,
+`exit_with_error`, `exit_with_bug`, `fatal_exit`). Their own options — `--error-code`/`-ec`, `--stack-depth`/`-sd`,
 `--no-stack`/`-ns`, `--stack-skip`/`-ss` — are used in **short** form throughout the codebase, by established
 convention: these calls appear at essentially every validation and error-reporting site in every script, and the
 short forms keep them visually compact, so the part that actually matters at each call site — the message text —

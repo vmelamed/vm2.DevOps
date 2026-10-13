@@ -10,6 +10,7 @@ declare -xri success
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
+declare -xri err_logic_error
 
 declare -xr ci
 
@@ -34,9 +35,7 @@ function get_arguments()
     while (( $# > 0 )); do
         _option="$1"
         shift
-
-        get_common_arg "${_option,,}" &&
-            continue
+        get_common_arg "${_option,,}" && continue
 
         case "${_option,,}" in
             --testbed )
@@ -105,12 +104,16 @@ function get_arguments()
                 shift
                 ;;
 
-            # do not use the common options - they were already processed by get_common_arg:
+            # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
+            # (SC2221/SC2222) flag any script-specific arm that reuses one of them, and it bugs out if the lists drift apart.
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
+                exit_with_bug -ec "$err_logic_error" "'$_option' should have been consumed by get_common_arg."
+                ;;
+
+            -*) usage -ec "$err_unknown_argument" "Unknown option: $_option"
                 ;;
 
             * ) [[ -z $results_dir ]] || usage -ec "$err_too_many_arguments" "Multiple results directories specified. Unknown option: $_option"
-                [[ "$_option" != -* ]] || usage -ec "$err_unknown_argument" "Unknown option: $_option"
                 results_dir="$_option"
                 ;;
         esac

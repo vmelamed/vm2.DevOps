@@ -24,18 +24,15 @@ function get_arguments()
     while (( $# > 0 )); do
         _option="$1"
         shift
-        get_common_arg "$_option" &&
-            continue
+        get_common_arg "$_option" && continue
 
         get_common_dotnet_arg "$_option" "${1:-}" && {
             (( $# >= 1 )) && shift
             continue
         }
 
-        [[ -z $benchmark_project ]] ||
-            usage -ec "$err_too_many_arguments" "Multiple benchmark projects specified. Unknown option: $_option"
-        [[ "$_option" != -* ]] ||
-            usage -ec "$err_unknown_argument" "Unknown option: $_option"
+        [[ "$_option" != -* ]]      || usage -ec "$err_unknown_argument" "Unknown option: $_option"
+        [[ -z $benchmark_project ]] || usage -ec "$err_too_many_arguments" "Multiple benchmark projects specified. Unknown option: $_option"
         benchmark_project="$_option"
     done
 
