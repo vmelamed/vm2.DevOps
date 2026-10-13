@@ -29,8 +29,9 @@ declare -xa vm2_repositories
 
 function get_arguments()
 {
-    local __option
     local value
+    local __option
+    local _repo
 
     while (( $# > 0 )); do
         __option="$1"; shift
@@ -56,7 +57,9 @@ function get_arguments()
                 ;;
 
             --all-repositories|--all-repos|-all )
-                target_repos=("${vm2_repositories[@]}")
+                for _repo in "${vm2_repositories[@]}"; do
+                    is_in "$_repo" "${target_repos[@]}" || target_repos+=("$_repo")
+                done
                 ;;
 
             --file*|-f* )
@@ -77,8 +80,7 @@ function get_arguments()
                 current_branch=true
                 ;;
 
-            * ) is_empty_array target_repos || ! is_in "$value" "${target_repos[@]}" &&
-                    target_repos+=("$value")
+            * ) is_in "$value" "${target_repos[@]}" || target_repos+=("$value")
                 ;;
         esac
     done

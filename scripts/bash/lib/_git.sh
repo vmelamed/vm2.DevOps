@@ -31,6 +31,7 @@ declare -xri err_not_directory
 declare -xri err_not_git_directory
 declare -xri err_not_git_root
 declare -xri err_invalid_branch
+declare -xri err_root_not_repo_name
 
 # Declare variables defined in the core library.
 declare -x _ignore
@@ -87,7 +88,6 @@ See https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-auth
 function validate_gh_repo_owner()
 {
     (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the repository owner to validate."
-
     exit_if_has_bugs
 
     local -i _rc="$success"
@@ -124,7 +124,6 @@ function validate_gh_repo_owner()
 function validate_gh_repo_name()
 {
     (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the repository name to validate."
-
     exit_if_has_bugs
 
     local -i _rc="$success"
@@ -160,7 +159,6 @@ function validate_gh_repo_name()
 function validate_gh_repo_description()
 {
     (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the repository description to validate."
-
     exit_if_has_bugs
 
     local -i _rc="$success"
@@ -264,7 +262,6 @@ function execute_gh_with_retry()
                                                                             "  - <gh-command> [args...]"
     [[ ! -v 1 ]]  || is_natural "$1" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires the first argument to be a natural number: <max_attempts>"
     [[ ! -v 2 ]]  || is_natural "$2" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires the second argument to be a natural number: <delay> in seconds"
-
     exit_if_has_bugs
 
     local -i _rc="$success"
@@ -369,7 +366,6 @@ function execute_gh_api_with_retry()
                                                                                 "  - [args...] Arguments for the 'gh api' command"
     [[ ! -v 1 ]] || is_non_negative "$1" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires the first argument to be a natural number: <max_attempts>"
     [[ ! -v 2 ]] || is_non_negative "$2" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires the second argument to be a natural number: <delay> in seconds"
-
     exit_if_has_bugs
 
     local -i _rc="$success"
@@ -513,7 +509,6 @@ function initialize_repo_state()
 {
     (( $# == 1 ))                             || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable."
     [[ ! -v 1 ]] || is_associative_array "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name an associative array for repository state (provided '${1:-<none>}')."
-
     exit_if_has_bugs
 
     local -n _state="$1"
@@ -547,6 +542,8 @@ function initialize_repo_state()
 # @exitcode success=0: On success, or when the directory has no local/GitHub repo state to
 #   report.
 # @exitcode failure=1: If the GitHub API data does not match the local Git remote data.
+# @exitcode err_root_not_repo_name: If the specified root directory does not match the
+#   repository name derived from the GitHub URL.
 #
 # @example
 #   get_repo_state "/home/valo/repos/vm2.Glob" repo_state
@@ -560,37 +557,46 @@ function get_repo_state()
     [[ ! -v 1 || -d $1 ]]                     || bug -ec "$err_not_directory" "${FUNCNAME[0]}() requires argument 1 to be the existing root directory of the Git working tree (provided '${1:-<none>}')."
     [[ ! -v 2 ]] || is_associative_array "$2" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to name an associative array that will receive the repository state (provided '${2:-<none>}')."
     [[ ! -v 3 ]] || is_boolean "$3"           || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires optional argument 3, the full-information flag, to be 'true' or 'false' (provided '${3:-<none>}')."
-
     exit_if_has_bugs
 
-    local _full_info=${3:-true}
-
+    local -i _rc="$success"
+    local _root=$1
     # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
     local -n _state="$2" # associative array variable to receive the repo state, passed by nameref
+    local _full_info=${3:-true}
+
+    local _root_name
+
+    _root_name=$(basename "$_root")
+
+    # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
     initialize_repo_state "$2" # make sure we have all fields
 
     local _url
-    _state["$key_root"]=$(git -C "$1" rev-parse --show-toplevel 2>"$_ignore") || return "$success" # no local git repo
-    _url=$(git -C "$1" remote get-url origin 2>"$_ignore")                    || return "$success" # no origin remote
-    [[ -n $_url && $_url =~ $github_url_regex ]]                              || return "$success" # origin remote is not a GitHub URL
+    _state["$key_root"]=$(git -C "$_root" rev-parse --show-toplevel 2>"$_ignore") || return "$success" # no local git repo
+    _url=$(git -C "$_root" remote get-url origin 2>"$_ignore")                    || return "$success" # no origin remote
+    [[ -n $_url && $_url =~ $github_url_regex ]]                                  || return "$success" # origin remote is not a GitHub URL
 
     local _schema="${BASH_REMATCH[$url_schema]}"
     local _authority="${BASH_REMATCH[$url_authority]}"
     local _owner="${BASH_REMATCH[$url_owner]}"
     local _name="${BASH_REMATCH[$url_name]}"
+    _name=${_name%.git} # works for both schemas because repository names cannot end in ".git"
+    local _repo="$_owner/$_name"
 
     _state["$key_url"]=$_url
     _state["$key_schema"]=$_schema
     _state["$key_authority"]=$_authority
     _state["$key_owner"]=$_owner
-    if [[ $_schema == "$repo_ssh_schema_rex" ]]; then
-        _name=${_name%.git}
-    fi
-    local _repo="$_owner/$_name"
     _state["$key_name"]=$_name
     _state["$key_repo"]=$_repo
 
-    $_full_info || return "$success" # caller does not want full info - return with what we have from git, without trying to get GitHub API data
+    if [[ $_name != "$_root_name" ]]; then
+        _rc=$err_root_not_repo_name
+        error -ec "$err_root_not_repo_name" "The root directory name '$_root_name' does not match the repository name '$_name'."
+    fi
+
+    $_full_info || return "$_rc" # caller does not want full info - return with what we have from git, without trying to get GitHub API data
 
     local -A _gh_state
     local _k _v
@@ -598,8 +604,6 @@ function get_repo_state()
     while IFS='=' read -r _k _v; do
         _gh_state["$_k"]="$_v"
     done < <(execute_gh_api_with_retry 3 2 --paginate "repos/$_repo" -q "$jq_gh_repo_state")
-
-    local -i _rc="$success"
 
     # make sure all is kosher: the GitHub API data should match the local git remote data for the fields we care about
     # these are real logical problems that may occur if the git remote is misconfigured or the API is returning unexpected data,
@@ -610,8 +614,7 @@ function get_repo_state()
     [[ ${_gh_state["$key_owner"]} == "$_owner"                                              ]] &&
     [[ ${_gh_state["$key_name"]}  == "$_name"                                               ]] &&
     [[ ${_gh_state["$key_repo"]}  == "$_repo"                                               ]] &&
-    [[ -n ${_gh_state["$key_repo_id"]}                                                      ]] &&
-        _rc=$success || {
+    [[ -n ${_gh_state["$key_repo_id"]}                                                      ]] || {
         _rc=$failure
         error -ec "$err_logic_error" "GitHub API returned URLs '${_gh_state["$key_ssh_url"]}' and '${_gh_state["$key_https_url"]}' that do not match the git remote URL '$_url'."
     }

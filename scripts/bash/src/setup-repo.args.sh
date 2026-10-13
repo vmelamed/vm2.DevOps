@@ -86,11 +86,6 @@ function get_arguments()
                 vm2_repos="$1"; shift
                 ;;
 
-            --repo-name|-n )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing repository name after '$_option'."
-                repo_name="$1"; shift
-                ;;
-
             --owner|-o )
                 (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing owner after '$_option'."
                 repo_owner="$1"; shift
@@ -164,9 +159,7 @@ function get_arguments()
                 configure_local=false
                 ;;
 
-            * ) if [[ -n "$repo_path" ]]; then
-                    usage -ec "$err_too_many_arguments" "Too many positional arguments (project directory or repository name): $_option"
-                fi
+            * ) [[ -z "$repo_path" ]] || usage -ec "$err_too_many_arguments" "Too many positional arguments (project directory or repository name): $_option"
                 repo_path="$_option"
                 ;;
         esac

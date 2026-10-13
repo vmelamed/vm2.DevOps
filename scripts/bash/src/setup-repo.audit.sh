@@ -22,11 +22,14 @@ declare -xri err_argument_type
 declare -xri err_invalid_nameref
 declare -xri err_tool_error
 
+declare -xra vm2_repositories
 declare -x _ignore
 declare -xr secret_str
 declare -xr secret_placeholder
 
 declare -x repo_path
+declare -x repo_owner
+declare -x repo_name
 declare -x repo
 declare -x branch
 declare -x required_checks
@@ -419,6 +422,12 @@ $info_em  Totals:
     $not_eq_em  unknown:   %3d\n\n" "${_results[$key_matches]}" "${_results[$key_missing]}" "${_results[$key_diffs]}" "${_results[$key_unknowns]}"
     (( _results[$key_missing]  > 0 )) && echo "$warn_em  TODO: To fix the above discrepancies run the script without '--audit'." || true
     (( _results[$key_unknowns] > 0 )) && echo "$warn_em  TODO: To purge the unknown/obsolete variables and secrets run the script without '--audit' and with '--purge-vars' and/or '--purge_secrets', optionally with '--interactive-vars' and/or '--interactive-secrets'." || true
+
+    if ! is_in "$repo_name" "${vm2_repositories[@]}"; then
+        warning "The repository '$repo_name' is not in the list 'vm2_repositories' (see \$VM2_REPOS/vm2.DevOps/scripts/bash/lib/_constants.sh)."  \
+                "Any vm2 script that works on all vm2 repositories or uses the '--all-repositories' switch will ignore the '$repo_name' in their operations." \
+                "If it SHOULD be included, ensure that '$repo_name' is added to the 'vm2_repositories' list."
+    fi
 
     return "$success"
 }

@@ -21,6 +21,7 @@ declare -xri err_dir_with_ci
 declare -xri err_repo_with_no_ci
 declare -xri err_not_git_directory
 declare -xri err_logic_error
+declare -xri err_root_not_repo_name
 
 declare -x _ignore
 
@@ -33,7 +34,7 @@ declare -xr default_nuget_server
 
 # script parameters
 declare -x vm2_repos
-declare -x repo_name
+declare -x repo_name=''
 declare -x repo_owner
 declare -x branch
 declare -x visibility
@@ -71,6 +72,7 @@ declare -xr key_repo_id
 declare -xr key_default_branch
 
 declare -x repo_path=''
+declare -x root_name=''
 #=============================================================================================
 # Check the prerequisites
 #=============================================================================================
@@ -137,6 +139,8 @@ is_in "$rc" "$success" "$err_dir_with_ci" ||
 
 rc="$success"
 reset_errors
+root_name=$(basename "$repo_path")
+readonly root_name
 
 trace "Repository path: '$repo_path'"
 
@@ -148,7 +152,8 @@ declare -A repo_state=()
 declare -x suggested_repo_name=''
 declare -x ci_yaml=''
 
-get_repo_state "$repo_path" repo_state
+get_repo_state "$repo_path" repo_state || rc=$?
+(( rc != failure )) || usage -ec "$rc" "Failed to get the repository state for '$repo_path'."
 dump_vars --quiet --header "Repository State 'repo_state':" repo_state
 
 if has_local_repo repo_state; then
@@ -177,6 +182,18 @@ if has_local_repo repo_state; then
         readonly repo_name
         readonly repo
 
+        (( rc != err_root_not_repo_name )) ||
+        confirm "Do you want to continue despite the mismatch?" "N" ||
+        exit "$rc"
+
+        if ! is_in "$repo_name" "${vm2_repositories[@]}"; then
+            warning "The repository '$repo_name' is not in the list 'vm2_repositories' (see \$VM2_REPOS/vm2.DevOps/scripts/bash/lib/_constants.sh)."  \
+                    "Any vm2 script that works on all vm2 repositories or uses the '--all-repositories' switch will ignore the '$repo_name' in their operations." \
+                    "If it SHOULD be included, ensure that '$repo_name' is added to the 'vm2_repositories' list."
+        fi
+
+        info "GitHub repository owner          => $repo_owner"
+        info "GitHub repository name           => $repo_name"
         info "GitHub repository                => $repo"
 
         if has_github_remote repo_state; then
@@ -293,12 +310,12 @@ if ! has_local_repo repo_state; then
     fi
 
     info "  ...creating and checking out the default branch '$branch';"
-    execute git -C "$repo_path" checkout -b "$branch" >"$_ignore" 2>&1            && trace "'$branch' branch checked out"
+    execute git -C "$repo_path" checkout -b "$branch" >"$_ignore" 2>&1                      && trace "'$branch' branch checked out"
 
     info "  ...staging and committing existing files in '$repo_path';"
-    execute git -C "$repo_path" add . >"$_ignore"                                   && trace "Staged all existing files in '$repo_path' for commit."
+    execute git -C "$repo_path" add . >"$_ignore"                                           && trace "Staged all existing files in '$repo_path' for commit."
     if ! git -C "$repo_path" diff --cached --quiet; then
-        execute git -C "$repo_path" commit -m "chore: initial scaffold" >"$_ignore" && trace "Committed staged files to '$repo_path'."
+        execute git -C "$repo_path" commit -m "chore: initial scaffold" >"$_ignore"         && trace "Committed staged files to '$repo_path'."
     fi
 
     info "...initialized a new git repository in '$repo_path' in the default branch '$branch'."
@@ -312,7 +329,11 @@ if ! has_remote_repo repo_state; then
     #===========================================================================
     info "Creating GitHub repository..."
 
-    [[ -n $repo_name ]] || enter_value "GitHub Repository name" repo_name "$suggested_repo_name" false validate_gh_repo_name
+    [[ -n $repo_name ]] ||
+    confirm "Create the GitHub repository '$suggested_repo_name'?" "Y" ||
+    exit "$err_root_not_repo_name"
+
+    repo_name="${repo_name:-$suggested_repo_name}"
     repo="$repo_owner/$repo_name"
     repo=${repo#/} # remove leading slash if repo_owner is empty
 

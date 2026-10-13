@@ -468,8 +468,8 @@ function configure_actions_permissions()
 # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
 function configure_variables()
 {
-    (( $# == 1 ))                                     || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#):" \
-                                                                                          "  - the name of the GitHub application being configured, e.g. actions"
+    (( $# == 1 ))                                        || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#):" \
+                                                                                             "  - the name of the GitHub application being configured, e.g. actions"
     [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_vars[@]}" || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the application name, to be one of: ${gh_apps_with_vars[*]} (provided '${1:-<none>}')."
     exit_if_has_bugs
 

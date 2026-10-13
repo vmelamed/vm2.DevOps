@@ -66,6 +66,8 @@ declare -xri err_dir_with_ci=86         # The specified directory is not a root 
 declare -xri err_dir_with_no_ci=87      # The specified directory does not have a CI configuration in dir/.github/workflows (and is not in a Git repository)
 declare -xri err_not_repos_parent=88    # The specified vm2_repos directory is not the parent directory of the vm2 repositories. Please, ensure that the vm2 repositories are cloned into this directory or correct the parameter/environment variable.
 declare -xri err_not_current_commit=89  # The specified repository is not on the current commit of the expected branch
+declare -xri err_root_not_repo_name=90  # The specified root directory is not the same as the repository name (the local clone's directory name must match the GitHub repository name)
+declare -xri err_repo_not_in_vm2_repos=91   # The specified repository root is not under the expected VM2 repositories directory
 
 declare -xri time_out=128               # The command timed out (e.g., when using the read command)
 
@@ -114,6 +116,8 @@ declare -rA __error_messages=(
     [$err_dir_with_no_ci]="The specified directory does not have a CI configuration in dir/.github/workflows (and is not in a Git repository)."
     [$err_not_repos_parent]="The specified \$vm2_repos directory is not the parent directory for the vm2 repositories. Please ensure that the vm2 repositories are cloned into this directory or correct the parameter/environment variable."
     [$err_not_current_commit]="The specified repository is not on the current commit of the expected branch."
+    [$err_root_not_repo_name]="The specified root directory of the repository's working tree is not the same as the remote name of the repository (the local clone's directory name must match the GitHub repository name)."
+    [$err_repo_not_in_vm2_repos]="The specified repository root is not under the expected VM2 repositories directory."
 
     [$time_out]="The command timed out."
 
@@ -162,6 +166,8 @@ declare -rA __error_names=(
     [$err_dir_with_no_ci]="\$err_dir_with_no_ci"
     [$err_not_repos_parent]="\$err_not_repos_parent"
     [$err_not_current_commit]="\$err_not_current_commit"
+    [$err_root_not_repo_name]="\$err_root_not_repo_name"
+    [$err_repo_not_in_vm2_repos]="\$err_repo_not_in_vm2_repos"
 
     [$time_out]="\$time_out"
 
