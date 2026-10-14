@@ -9,6 +9,9 @@
     - [During development](#during-development)
     - [Before push / PR update](#before-push--pr-update)
     - [After a rebase (the death-spiral rule)](#after-a-rebase-the-death-spiral-rule)
+    - [Keeping a PR branch up to date (never merge `main` into it)](#keeping-a-pr-branch-up-to-date-never-merge-main-into-it)
+    - [Fixing commit messages](#fixing-commit-messages)
+    - [Viewing commit messages](#viewing-commit-messages)
     - [Conflict protocol (when VS Code looks inconsistent)](#conflict-protocol-when-vs-code-looks-inconsistent)
     - [Golden rule](#golden-rule)
   - [2) Safe Git Config + Aliases](#2-safe-git-config--aliases)
@@ -17,10 +20,12 @@
   - [3) Branch Policy for vm2 Repos](#3-branch-policy-for-vm2-repos)
     - [Branch lifecycle](#branch-lifecycle)
     - [PR shape](#pr-shape)
+    - [Parallel PRs on the same files](#parallel-prs-on-the-same-files)
     - [Update cadence](#update-cadence)
     - [Conflict policy](#conflict-policy)
     - [Merge readiness gates](#merge-readiness-gates)
   - [4) No Big Bang Merges!](#4-no-big-bang-merges)
+    - [If the cause is a merge commit](#if-the-cause-is-a-merge-commit)
   - [Quick 10-Command Cheat Sheet](#quick-10-command-cheat-sheet)
 
 <!-- /TOC -->
@@ -75,6 +80,67 @@ back into "unresolved conflicts". Repeat that loop a few times and it is 4:30am.
 2. Rebase **once, immediately before merging**, then merge right away — automation (Prerelease changelog commits,
    dependabot auto-merges) keeps moving `main`, so do not rebase and then walk away
 3. If the PR still shows conflicts after a `pushf`, stop and diagnose (`git preflight`) — do not re-rebase blindly
+
+### Keeping a PR branch up to date (never merge `main` into it)
+
+These repos only allow "Rebase and merge" and require linear history. A merge commit inside a feature branch breaks
+that: GitHub must drop the merge and replay the branch's commits one by one, and if any of them conflicts with `main`,
+the PR fails with **"This branch can't be rebased"** even though the tips merge cleanly.
+
+1. **Locally:** `git sync` (fetch + rebase onto `origin/main`), then `git pushf`
+1. **On GitHub:** the PR's **"Update branch"** button creates a **merge commit** by default. Open its dropdown and choose
+   **"Update with rebase"** instead
+1. Never `git pull origin main` (or "Sync" in VS Code) into a feature branch: both create the same merge commit
+
+If a merge commit got in anyway, see [If the cause is a merge commit](#if-the-cause-is-a-merge-commit) below.
+
+### Fixing commit messages
+
+`validate-commits.sh` rejects any commit whose subject does not follow Conventional Commits. Fix the message before
+pushing, or rewrite it afterwards.
+
+1. **If the commit was made on GitHub** (a "Commit suggestion" button, the Copilot agent), bring it down first, or the
+   rewrite below will not include it:
+
+   ```bash
+   git fetch origin
+   git pull --ff-only     # fast-forward only, never a merge
+   ```
+
+1. **The last commit:**
+
+   ```bash
+   git commit --amend                                   # edit the message in the editor
+   git commit --amend -m "fix: correct the -ec/-ns order"  # or set it directly
+   ```
+
+1. **An older commit:** `git rebase -i HEAD~N` (N = how far back), change `pick` to **`reword`** (or `r`) on each commit to
+   fix, save, then edit each message as Git opens it. The content stays the same; the SHAs of that commit and every
+   later one change.
+1. **Push with `git pushf`** — never "Sync", never `git pull`: the branch now shows "ahead N, behind N", and either of
+   them would merge the old commits right back in (the death spiral above)
+
+**Prevention:** GitHub's "Commit suggestion" dialog has an editable commit message field. Type the Conventional Commits
+message there before clicking *Commit*, and nothing needs rewriting afterwards.
+
+### Viewing commit messages
+
+```bash
+git log --oneline origin/main..HEAD                # this branch's commits: exactly what the PR will contain
+git log origin/main..HEAD --format='%h %s%n%b'     # subjects and bodies
+git show -s --format=%B HEAD~2                     # the full message of one commit (here: the 3rd from the top)
+git lg                                             # all branches, as a graph
+```
+
+`git log --oneline origin/main..HEAD` shows exactly the subjects `validate-commits.sh` will check in CI.
+
+**The messages from before a rewrite** are no longer in `git log`, but they are in the **reflog**, Git's local record of
+where `HEAD` has been (kept about 90 days by default):
+
+```bash
+git reflog --format='%h %gd %gs | %s'              # SHA, position, the action (commit/amend/rebase…), and the message
+git reset --hard <sha>                             # back to any earlier state, if a rewrite went wrong
+```
 
 ### Conflict protocol (when VS Code looks inconsistent)
 
@@ -187,6 +253,16 @@ git config --global alias.pushf "push --force-with-lease"
 2. Split large work into stacked PRs where possible
 3. Open draft PR early for CI signal
 
+### Parallel PRs on the same files
+
+Working on a second branch while the first PR is still open is fine. If both change the **same files**, though, the
+second one will conflict when it is rebased after the first merges. Either:
+
+1. **Merge the first PR before starting the second**, or
+1. **Start the second branch from the first** (`git switch -c second first`), a "stacked" PR. After the first one
+   merges, rebase the second onto `main` with `git rebase --onto origin/main first second`: only the second branch's own
+   commits are replayed, so there is nothing left to conflict.
+
 ### Update cadence
 
 1. Rebase at start of day: `git sync`
@@ -209,7 +285,7 @@ git config --global alias.pushf "push --force-with-lease"
 3. Coverage thresholds understood
 4. PR shows no stale conflict state after latest push
 
-## 4) No Big Bang Merges!
+## 4) No Big Bang Merges
 
 "Prefer smaller PRs" above isn't just about reviewability — a branch that grows too large before merging can hit a
 GitHub-side limit that has nothing to do with actual conflicts.
@@ -232,6 +308,38 @@ work into multiple smaller PRs. Don't let one branch become a "big bang" merge.
 2. Confirm via the API: `gh api repos/<owner>/<repo>/pulls/<number> --jq '{mergeable, mergeable_state, rebaseable}'`.
 3. This repository disables squash merging; split the work into smaller PRs or have an administrator explicitly change the ruleset before
    merging instead of relying on this fallback.
+
+### If the cause is a merge commit
+
+The other common cause of "This branch can't be rebased" is a **merge commit in the branch** ("Merge branch 'main' into
+…", from the PR's "Update branch" button or a `git pull`). GitHub has to drop the merge and replay the commits before it
+one by one, and the first one that conflicts with `main` stops it. Find it with:
+
+```bash
+git log --merges --oneline origin/main..origin/<branch>
+```
+
+**What happened:** `vm2.DevOps` PR #44 (14 commits) carried such a merge commit, and some of its early commits had
+already reached `main` as rebased copies with different SHAs, so replaying them conflicted at the very first one.
+
+**Fix:** if the branch already contains `main`'s current tip (that is what the merge commit did), collapse it into a single
+commit on top of `main`. Its content is exactly "`main` + your changes", so nothing is lost:
+
+```bash
+git switch <branch>
+git status -sb                                     # must show no ahead/behind against origin/<branch>
+git merge-base --is-ancestor origin/main HEAD && echo "safe: the branch contains main"
+git reset --soft origin/main                       # history = main; all of the branch's changes stay staged
+git commit                                         # one Conventional Commits message for the whole PR
+[[ $(git rev-parse HEAD^{tree}) == $(git rev-parse origin/<branch>^{tree}) ]] && echo "identical content"
+git pushf                                          # NOT Sync, NOT pull
+```
+
+The PR then shows one commit, and "Rebase and merge" works again. The cost is that the branch's individual commits
+become one; the PR's discussion on GitHub keeps the detail. If `merge-base --is-ancestor` fails, `main` has moved since the
+merge: run `git sync` first and resolve the conflicts, then repeat.
+
+To avoid it, see [Keeping a PR branch up to date](#keeping-a-pr-branch-up-to-date-never-merge-main-into-it).
 
 ## Quick 10-Command Cheat Sheet
 
