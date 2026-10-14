@@ -802,8 +802,8 @@ In the merge editor, use **Take Source** (the `main` version) for every section 
 ### A Merge Commit Appeared on Your Branch
 
 GitHub's "Update branch" button (the one that says "This branch is out of date") performs a
-**merge**, not a rebase. This creates a merge commit on your branch, which GitHub then refuses to
-rebase-merge. The fix:
+**merge** by default, not a rebase. This creates a merge commit on your branch, which GitHub then
+refuses to rebase-merge. The fix:
 
 ```bash
 # 1. Stash any uncommitted work
@@ -826,8 +826,13 @@ git stash pop
 ```
 
 > [!WARNING]
-> **Never click GitHub's "Update branch" button.** It creates a merge commit that breaks the
-> linear history requirement. Always rebase manually instead.
+> **Never click GitHub's "Update branch" button as is.** Its default creates a merge commit that
+> breaks the linear history requirement. Rebase manually instead, or open the button's dropdown and
+> choose **"Update with rebase"**. In the latter case GitHub rewrites the branch on its side, so
+> reset your local copy to it (`git fetch`, then `git reset --hard origin/<branch>` with a clean
+> working tree) before continuing to work on it. If the rebase keeps stopping on commits `main`
+> already has in another form, see the fallback in
+> [GIT_PLAYBOOK.md — If the cause is a merge commit](GIT_PLAYBOOK.md#if-the-cause-is-a-merge-commit).
 
 <details>
 <summary><strong>VS Code / Visual Studio</strong></summary>

@@ -24,7 +24,7 @@
     - [Update cadence](#update-cadence)
     - [Conflict policy](#conflict-policy)
     - [Merge readiness gates](#merge-readiness-gates)
-  - [4) No Big Bang Merges!](#4-no-big-bang-merges)
+  - [4) No Big Bang Merges](#4-no-big-bang-merges)
     - [If the cause is a merge commit](#if-the-cause-is-a-merge-commit)
   - [Quick 10-Command Cheat Sheet](#quick-10-command-cheat-sheet)
 
@@ -88,8 +88,10 @@ that: GitHub must drop the merge and replay the branch's commits one by one, and
 the PR fails with **"This branch can't be rebased"** even though the tips merge cleanly.
 
 1. **Locally:** `git sync` (fetch + rebase onto `origin/main`), then `git pushf`
-1. **On GitHub:** the PR's **"Update branch"** button creates a **merge commit** by default. Open its dropdown and choose
-   **"Update with rebase"** instead
+1. **On GitHub:** never click the PR's **"Update branch"** button as is: by default it creates a **merge commit**. If you
+   use it at all, open its dropdown and choose **"Update with rebase"**. GitHub then rewrites the branch on its side, so
+   your local copy is out of date: before working on it again, run `git fetch` and then
+   `git reset --hard origin/<branch>` (with a clean working tree, and no local commits you have not pushed)
 1. Never `git pull origin main` (or "Sync" in VS Code) into a feature branch: both create the same merge commit
 
 If a merge commit got in anyway, see [If the cause is a merge commit](#if-the-cause-is-a-merge-commit) below.
@@ -99,7 +101,8 @@ If a merge commit got in anyway, see [If the cause is a merge commit](#if-the-ca
 `validate-commits.sh` rejects any commit whose subject does not follow Conventional Commits. Fix the message before
 pushing, or rewrite it afterwards.
 
-1. **If the commit was made on GitHub** (a "Commit suggestion" button, the Copilot agent), bring it down first, or the
+1. **If the commit was made on GitHub** (for example with a PR's "Commit suggestion" button, or by the Copilot agent),
+   bring it down first, or the
    rewrite below will not include it:
 
    ```bash
@@ -132,15 +135,21 @@ git show -s --format=%B HEAD~2                     # the full message of one com
 git lg                                             # all branches, as a graph
 ```
 
-`git log --oneline origin/main..HEAD` shows exactly the subjects `validate-commits.sh` will check in CI.
+`git log --oneline origin/main..HEAD` lists the same commits `validate-commits.sh` checks in CI, except that the script
+skips subjects starting with `Merge` or `Revert`.
 
 **The messages from before a rewrite** are no longer in `git log`, but they are in the **reflog**, Git's local record of
-where `HEAD` has been (kept about 90 days by default):
+where `HEAD` has been. Commits a rewrite left behind are *unreachable*, and Git keeps their reflog entries for about
+**30 days** by default (`gc.reflogExpireUnreachable`), so recover them soon:
 
 ```bash
 git reflog --format='%h %gd %gs | %s'              # SHA, position, the action (commit/amend/rebase…), and the message
-git reset --hard <sha>                             # back to any earlier state, if a rewrite went wrong
+git branch recovered <sha>                         # recover an earlier state onto a new branch: nothing is overwritten
+git log --oneline recovered                        # inspect it, then use it (switch, cherry-pick, …) or delete it
 ```
+
+To make the current branch point at the recovered state instead, first make sure `git status` is clean, since
+`git reset --hard recovered` discards uncommitted changes.
 
 ### Conflict protocol (when VS Code looks inconsistent)
 
@@ -256,12 +265,14 @@ git config --global alias.pushf "push --force-with-lease"
 ### Parallel PRs on the same files
 
 Working on a second branch while the first PR is still open is fine. If both change the **same files**, though, the
-second one will conflict when it is rebased after the first merges. Either:
+second one risks conflicts when it is rebased after the first merges: Git merges changes to different parts of a file on
+its own, but changes to the same or neighboring lines stop the rebase. To avoid that, either:
 
 1. **Merge the first PR before starting the second**, or
 1. **Start the second branch from the first** (`git switch -c second first`), a "stacked" PR. After the first one
    merges, rebase the second onto `main` with `git rebase --onto origin/main first second`: only the second branch's own
-   commits are replayed, so there is nothing left to conflict.
+   commits are replayed, on top of changes they were written against, so conflicts are unlikely (they can still occur
+   if the first PR changed after you branched from it).
 
 ### Update cadence
 
@@ -312,32 +323,42 @@ work into multiple smaller PRs. Don't let one branch become a "big bang" merge.
 ### If the cause is a merge commit
 
 The other common cause of "This branch can't be rebased" is a **merge commit in the branch** ("Merge branch 'main' into
-…", from the PR's "Update branch" button or a `git pull`). GitHub has to drop the merge and replay the commits before it
-one by one, and the first one that conflicts with `main` stops it. Find it with:
+…", created by the PR's "Update branch" button or by a `git pull`). GitHub has to drop the merge and replay the commits
+before it one by one, and the first one that conflicts with `main` stops it. Find it with:
 
 ```bash
 git log --merges --oneline origin/main..origin/<branch>
 ```
 
-**What happened:** `vm2.DevOps` PR #44 (14 commits) carried such a merge commit, and some of its early commits had
-already reached `main` as rebased copies with different SHAs, so replaying them conflicted at the very first one.
+**First fix: rebase**, which drops the merge commit and keeps your commits. The steps are in DEVELOPER_WORKFLOW.md,
+section [A Merge Commit Appeared on Your Branch](DEVELOPER_WORKFLOW.md#a-merge-commit-appeared-on-your-branch).
 
-**Fix:** if the branch already contains `main`'s current tip (that is what the merge commit did), collapse it into a single
-commit on top of `main`. Its content is exactly "`main` + your changes", so nothing is lost:
+**Fallback: collapse the branch into one commit.** Use it when that rebase keeps stopping on commits `main` already has
+in another form. **What happened:** `vm2.DevOps` PR #44 (14 commits) carried a merge commit, and some of its early
+commits had already reached `main` as rebased copies with different SHAs, so replaying them conflicted at the very first
+one. If the branch contains `main`'s current tip (which is what the merge commit did), its content is exactly
+"`main` + your changes", and a single commit on top of `main` loses nothing:
 
 ```bash
-git switch <branch>
-git status -sb                                     # must show no ahead/behind against origin/<branch>
-git merge-base --is-ancestor origin/main HEAD && echo "safe: the branch contains main"
-git reset --soft origin/main                       # history = main; all of the branch's changes stay staged
-git commit                                         # one Conventional Commits message for the whole PR
-[[ $(git rev-parse HEAD^{tree}) == $(git rev-parse origin/<branch>^{tree}) ]] && echo "identical content"
-git pushf                                          # NOT Sync, NOT pull
+git switch <branch> && git fetch origin
+git status -sb             # STOP unless the tree is clean and there is no ahead/behind against origin/<branch>
+
+if git merge-base --is-ancestor origin/main HEAD; then
+    git reset --soft origin/main && git commit     # history = main; one Conventional Commits message for the whole PR
+else
+    echo "STOP: main has moved since the merge -- use the rebase fix above"
+fi
+
+# push ONLY if the new commit's content is identical to the old branch's
+if [[ $(git rev-parse HEAD^{tree}) == $(git rev-parse origin/<branch>^{tree}) ]]; then
+    git pushf                                      # NOT Sync, NOT pull
+else
+    echo "STOP: the content differs -- nothing was pushed; undo with: git reset --hard origin/<branch>"
+fi
 ```
 
 The PR then shows one commit, and "Rebase and merge" works again. The cost is that the branch's individual commits
-become one; the PR's discussion on GitHub keeps the detail. If `merge-base --is-ancestor` fails, `main` has moved since the
-merge: run `git sync` first and resolve the conflicts, then repeat.
+become one; the PR's discussion on GitHub keeps the detail.
 
 To avoid it, see [Keeping a PR branch up to date](#keeping-a-pr-branch-up-to-date-never-merge-main-into-it).
 
