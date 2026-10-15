@@ -28,6 +28,8 @@ declare -xri err_not_overridden
 declare -xri err_logic_error
 declare -xri err_invalid_nameref
 
+declare -xi __last_error    # from _diagnostics.sh: the code error() recorded from its --error-code/-ec (or $failure)
+
 
 #=============================================================================================
 # processing common command-line arguments
@@ -119,7 +121,8 @@ function usage_if_requested()
 #   of the usage text. The long version includes the common flags like verbose, quiet, etc.
 #   Optional, default: `false`.
 # @arg $2 int `_exit_code` the exit code to use when exiting. Optional, non-negative integer
-#   less than 256. Default: 0, or 1 if error messages are present (see @exitcode below).
+#   less than 256. Default: 0 without error messages; with error messages, the code of their
+#   first `--error-code`/`-ec`, or 1 (see @exitcode below).
 # @arg $@ strings Additional error message parts to display at the top of the output.
 #   Optional, if omitted, no message is shown. Supports the same named parameters as
 #    `message`/`error`:
@@ -130,16 +133,21 @@ function usage_if_requested()
 #       (default: 1). If given more than once, only the last occurrence is used.
 #
 # @exitcode success=0: No error messages were given, and $2 was omitted or 0.
-# @exitcode failure=1: Error messages were given and $2 was omitted or 0 (the exit
-#   code is forced to $failure).
 # @exitcode N The exit code from $2, if it is a positive value (whether or not error messages
 #   are present).
+# @exitcode N The code of the first `--error-code`/`-ec` among the error messages, if $2 was
+#   omitted -- the same rule as `exit_with_error`/`exit_with_bug`, so `usage -ec "$err_x" "…"`
+#   exits with `$err_x`.
+# @exitcode failure=1: Error messages were given, $2 was omitted or 0, and the messages carry no
+#   (non-zero) `--error-code`/`-ec`.
 #
 # @example
 #   usage true
 # @example
+#   usage -ec "$err_unknown_argument" "Unknown option: $_option"     # exits with $err_unknown_argument
+# @example
 #   usage "$err_invalid_arguments" -sd 3 -ec "$err_argument_value" "Invalid argument value for
-#   the option <option_name>"
+#   the option <option_name>"                                        # explicit $2 wins: $err_invalid_arguments
 #---------------------------------------------------------------------------------------------
 function usage()
 {
@@ -150,20 +158,28 @@ function usage()
         shift
 
     local -i _exit_code=$success
+    local _explicit_exit_code=false
     (( $# > 0 )) &&
         is_non_negative "$1" &&
         _exit_code=$1 &&
+        _explicit_exit_code=true &&
         shift
-
-    # the remaining arguments are error messages to display at the top of the usage text
-    (( $# > 0 && _exit_code == success )) && _exit_code=$failure
 
     # save the tracing state and disable tracing
     local -A _core_state=()
     save_state _core_state
     set +x
 
-    (( $# > 0 )) && error "$@"
+    # the remaining arguments are error messages to display at the top of the usage text
+    if (( $# > 0 )); then
+        error "$@"
+        # without an explicit (non-zero) exit code, exit with the code error() just recorded from the first
+        # --error-code/-ec (or $failure) -- the same rule as exit_with_error/exit_with_bug; with messages, never exit 0
+        if ! $_explicit_exit_code || (( _exit_code == success )); then
+            _exit_code=$__last_error
+        fi
+        (( _exit_code != success )) || _exit_code=$failure
+    fi
 
     echo ""
     usage_text "$_long_usage"

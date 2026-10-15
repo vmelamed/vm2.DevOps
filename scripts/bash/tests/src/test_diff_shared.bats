@@ -36,6 +36,9 @@ declare -gxi err_logic_error
 declare -gxi err_argument_type
 declare -gxi positive
 declare -gxi negative
+declare -gxi err_invalid_json
+declare -gxi err_missing_argument
+declare -gxi err_unknown_argument
 
 declare -gxa vm2_repositories
 
@@ -113,7 +116,7 @@ declare -xr BATS_TEST_TMPDIR
     mkdir -p "$BATS_TEST_TMPDIR/sot" "$BATS_TEST_TMPDIR/target"
     _stub_config_schema "$BATS_TEST_TMPDIR/sot"
     run _ds "declare -a source_files=() target_files=() file_actions=(); configure '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target'"
-    assert_failure "$failure"
+    assert_failure "$err_argument_value"
     assert_output --partial "was not found or is empty"
 }
 
@@ -122,7 +125,7 @@ declare -xr BATS_TEST_TMPDIR
     _stub_config_schema "$BATS_TEST_TMPDIR/sot"
     echo "not json" > "$BATS_TEST_TMPDIR/sot/diff-shared.config.json"
     run _ds "declare -a source_files=() target_files=() file_actions=(); configure '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target'"
-    assert_failure "$failure"
+    assert_failure "$err_argument_value"
     assert_output --partial "contains invalid JSON"
 }
 
@@ -137,7 +140,7 @@ declare -xr BATS_TEST_TMPDIR
 {"files":[{"sourceFile":"\$1/x.txt","targetFile":"\$2/x.txt","action":"bogus"}]}
 EOF
     run _ds "declare -a source_files=() target_files=() file_actions=(); configure '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target'"
-    assert_failure "$failure"
+    assert_failure "$err_argument_value"
     assert_output --partial "'bogus' is not a valid action"
 }
 
@@ -148,7 +151,7 @@ EOF
 {"files":[{"sourceFile":"\$1/missing.txt","targetFile":"\$2/x.txt","action":"copy"}]}
 EOF
     run _ds "declare -a source_files=() target_files=() file_actions=(); configure '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target'"
-    assert_failure "$failure"
+    assert_failure "$err_argument_value"
     assert_output --partial "does not exist or is empty"
 }
 
@@ -613,7 +616,7 @@ shared 2]"
     _stub_custom_schema "$BATS_TEST_TMPDIR/sot"
     echo "not json" > "$BATS_TEST_TMPDIR/target/diff-shared.custom.json"
     run _ds "customize '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target'"
-    assert_failure "$failure"
+    assert_failure "$err_invalid_json"
     assert_output --partial "is not a valid JSON"
 }
 
@@ -838,7 +841,7 @@ EOF
 
 @test "get_arguments: fails with usage when a value-taking option is given without a value" {
     run _ds --with-args "declare -a arguments=(); set_quiet; get_arguments --vm2-repos"
-    assert_failure "$failure"
+    assert_failure "$err_missing_argument"
     assert_output --partial "Missing value for --vm2-repos"
 }
 
@@ -847,7 +850,7 @@ EOF
     # NOTE: usage() exits with $failure even though the arm passes '-ec "$err_unknown_argument"' -- usage() only takes
     # a bare exit code; '-ec' reaches error() and affects the printed code only.
     run _ds --with-args "declare -a arguments=(); set_quiet; get_arguments myrepo --bogus; declare -p target_repos"
-    assert_failure "$failure"
+    assert_failure "$err_unknown_argument"
     assert_output --partial "Unknown option: --bogus"
     refute_output --partial "target_repos="
 }
@@ -883,13 +886,13 @@ EOF
 
 @test "get_selector_action: fails with usage on an invalid action name" {
     run _ds --with-args "declare -A selectors_actions=(); get_selector_action '--file-bogus' 'a.txt'"
-    assert_failure "$failure"
+    assert_failure "$err_argument_value"
     assert_output --partial "Invalid action: bogus"
 }
 
 @test "get_selector_action: fails with usage when the file selector itself looks like an option" {
     run _ds --with-args "declare -A selectors_actions=(); get_selector_action '--file' '-badselector'"
-    assert_failure "$failure"
+    assert_failure "$err_argument_value"
     assert_output --partial "does not appear to be a valid file selector"
 }
 

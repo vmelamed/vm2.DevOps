@@ -25,6 +25,7 @@ declare -gxi err_argument_value
 declare -gxi err_invalid_nameref
 declare -gxi err_logic_error
 declare -gxi err_missing_argument
+declare -gxi err_tool_error
 
 _src_dir="$(cd "$lib_dir/../src" && pwd)"
 
@@ -142,7 +143,7 @@ EOF
     printf '#!/usr/bin/env bash\nexit 1\n' > "$BATS_TEST_TMPDIR/bin/gh"
     chmod +x "$BATS_TEST_TMPDIR/bin/gh"
     run _sr "resolve_github_app_ids" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
-    assert_failure "$failure"
+    assert_failure "$err_tool_error"
     assert_output --partial "Failed to resolve GitHub Actions app ID"
     assert_output --partial "Failed to resolve Dependabot app ID"
     assert_output --partial "Failed to resolve Codespaces app ID"
@@ -193,7 +194,7 @@ EOF
     printf '#!/usr/bin/env bash\nexit 1\n' > "$BATS_TEST_TMPDIR/bin/yq"
     chmod +x "$BATS_TEST_TMPDIR/bin/yq"
     run _sr "set -o pipefail; ci_yaml='$BATS_TEST_TMPDIR/ci.yaml'; list_required_checks" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
-    assert_failure "$failure"
+    assert_failure "$err_tool_error"
     assert_output --partial "Failed to parse gate job from CI.yaml"
 }
 
