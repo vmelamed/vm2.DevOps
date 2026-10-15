@@ -567,9 +567,9 @@ function error()
     local -i _error=$failure
     local -i _i
 
-    for (( _i=0; _i<$#; _i++ )); do
-        if [[ "${!_i}" == "-ec" || "${!_i}" == "--error-code" ]]; then
-            (( ++_i < $# )) && _error="${!_i}"
+    for (( _i=1; _i<=$#; _i++ )); do
+        if [[ ${!_i} == "-ec" || ${!_i} == "--error-code" ]]; then
+            (( ++_i <= $# )) && _error=${!_i}
             break
         fi
     done
@@ -652,9 +652,9 @@ function bug()
     local -i _bug=$failure
     local -i _i
 
-    for (( _i=0; _i<$#; _i++ )); do
-        if [[ "${!_i}" == "-ec" || "${!_i}" == "--error-code" ]]; then
-            (( ++_i < $# )) && _bug="${!_i}"
+    for (( _i=1; _i<=$#; _i++ )); do
+        if [[ ${!_i} == "-ec" || ${!_i} == "--error-code" ]]; then
+            (( ++_i <= $# )) && _bug=${!_i}
             break
         fi
     done
