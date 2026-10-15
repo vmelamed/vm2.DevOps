@@ -17,6 +17,7 @@ declare -gx lib_dir
 
 declare -gxi failure
 declare -gxi err_invalid_arguments
+declare -gxi err_unknown_argument
 
 # --- get_common_arg -----------------------------------------------------------------------------
 
@@ -93,7 +94,7 @@ declare -gxi err_invalid_arguments
     assert_success
 }
 
-@test "usage: exits 1 (failure) when error messages are given but no explicit exit code" {
+@test "usage: exits 1 (failure) when error messages are given with neither an explicit exit code nor -ec" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_core_args.sh'; usage true 'something went wrong'"
     assert_failure "$failure"
     assert_output --partial "something went wrong"
@@ -103,6 +104,29 @@ declare -gxi err_invalid_arguments
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_core_args.sh'; usage true 42 'custom error'"
     assert_failure 42
     assert_output --partial "custom error"
+}
+
+# Without an explicit exit code, usage() exits with the code of the first --error-code/-ec among the messages -- the same
+# rule as exit_with_error/exit_with_bug. Every parser calls it as 'usage -ec "$err_x" "…"'.
+@test "usage: exits with the -ec code of the messages when no explicit exit code is given" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_core_args.sh'; usage -ec \"\$err_unknown_argument\" 'Unknown option: --bogus'"
+    assert_failure "$err_unknown_argument"
+    assert_output --partial "Unknown option: --bogus"
+}
+
+@test "usage: an explicit exit code wins over the -ec code of the messages" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_core_args.sh'; usage 42 -ec \"\$err_unknown_argument\" 'custom error'"
+    assert_failure 42
+}
+
+@test "usage: an explicit 0 alongside error messages falls back to the -ec code (never exits 0 with errors)" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_core_args.sh'; usage 0 -ec \"\$err_unknown_argument\" 'custom error'"
+    assert_failure "$err_unknown_argument"
+}
+
+@test "usage: -ec 0 alongside error messages exits 1 (failure), never 0" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_core_args.sh'; usage -ec 0 'custom error'"
+    assert_failure "$failure"
 }
 
 @test "usage: shows the long usage text (including common switches) only when \$1 is true" {

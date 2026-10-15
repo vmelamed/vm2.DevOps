@@ -24,6 +24,14 @@ load '../libs/bats-support/load'
 load '../libs/bats-assert/load'
 load '../helpers/setup'
 
+# ShellCheck can't see that '../helpers/setup' transplants these into this file's scope at load
+# time. '-g' is required (see feedback_bats_declare_g_readonly memory for the root cause).
+declare -gx lib_dir
+declare -gxi err_missing_argument
+declare -gxi err_too_many_arguments
+declare -gxi err_unknown_argument
+declare -gxi failure
+
 _src_dir="$(cd "$lib_dir/../src" && pwd)"
 
 _sr() {
@@ -57,7 +65,7 @@ _sr() {
 
 @test "get_arguments: a second positional argument fails with usage (too many arguments)" {
     run _sr "get_arguments repo1 repo2"
-    assert_failure "$failure"
+    assert_failure "$err_too_many_arguments"
     assert_output --partial "Too many positional arguments"
 }
 
@@ -65,7 +73,7 @@ _sr() {
     # The '-* )' arm must stop parsing before '--bogus' becomes repo_path, so the trailing 'declare -p' never runs.
     run _sr "get_arguments --bogus
               declare -p repo_path"
-    assert_failure "$failure"
+    assert_failure "$err_unknown_argument"
     assert_output --partial "Unknown option: --bogus"
     refute_output --partial "repo_path="
 }
@@ -124,7 +132,7 @@ _sr() {
 
 @test "get_arguments: fails with usage when a value-taking option is given without a value" {
     run _sr "get_arguments --owner"
-    assert_failure "$failure"
+    assert_failure "$err_missing_argument"
     assert_output --partial "Missing owner after '--owner'"
 }
 
