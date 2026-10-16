@@ -40,7 +40,7 @@ Arguments:
 
 Options:
   -r, --vm2-repos <dir>         The parent directory where all vm2 repositories are cloned. Initial value from \$VM2_REPOS or
-                                '\$$default_vm2_repos_path'.
+                                '$default_vm2_repos_path'.
   -s, --source-of-truth <sot>   The source-of-truth scenario to use. Must be one of the pre-defined scenarios in
                                 '\$VM2_REPOS/vm2.Templates/templates/'.
   -f, --file <pattern>          A file name or a quoted glob pattern (quote glob patterns to prevent shell expansion). Only
