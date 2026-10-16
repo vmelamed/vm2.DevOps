@@ -21,12 +21,21 @@ declare -xr all_actions_str
 declare -x  vm2_repos
 declare -x  sot
 declare -x  current_branch
-declare -xa target_repos            # the target repositories specified as arguments. If not specified, the current directory is used as the only target repo.
+    declare -xa target_repos        # the target repositories specified as arguments. If not specified, the current directory is used as the only target repo.
 declare -xA selectors_actions       # array [file] => [action string] for files specified on the CLI with --file* options
 declare -x  diff_only
 declare -x  summary_file
-declare -xa arguments               # array of all arguments for logging and debugging purposes
 declare -xa vm2_repositories
+declare -xa arguments=(             # array of all arguments for logging and debugging purposes
+    vm2_repos
+    sot
+    target_repos
+    selectors_actions
+    diff_only
+    all_repos
+    current_branch
+    summary_file
+)
 
 function get_arguments()
 {
@@ -42,10 +51,15 @@ function get_arguments()
                 vm2_repos="$1"; shift
                 ;;
 
-            --source-of-truth|-s )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $_option"
-                sot="$1"; shift
-                ;;
+            # -s|--source-of-truth )
+            #     (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $_option"
+            #     sot="$1"; shift
+            #     ;;
+            #
+            # When there is a second SoT add this to the usage text as well:
+            #
+            #  -s, --source-of-truth <sot>   The source-of-truth scenario to use. Must be one of the pre-defined scenarios in
+            #                                '\$VM2_REPOS/vm2.Templates/templates/'.
 
             --all-repositories|--all-repos|-all )
                 for _repo in "${vm2_repositories[@]}"; do

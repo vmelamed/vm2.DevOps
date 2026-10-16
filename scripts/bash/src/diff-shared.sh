@@ -62,16 +62,6 @@ declare -x action_ignore action_merge_or_copy action_ask_to_merge action_ask_to_
           action_copy_shared action_ask_to_copy_shared
 declare -xri shared_equal
 declare -xri shared_not_equal
-declare -xa arguments=(         # array of all arguments for logging and debugging purposes
-    vm2_repos
-    sot
-    target_repos
-    selectors_actions
-    diff_only
-    all_repos
-    current_branch
-    summary_file
-)
 
 # this is the data model of the script. Bash does not have complex data structures, so we use parallel arrays to store the
 # source files, target files and actions. The index of the arrays corresponds to the same file pair and action. For example,
