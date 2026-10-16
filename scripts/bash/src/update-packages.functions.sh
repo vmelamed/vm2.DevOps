@@ -90,9 +90,9 @@ function _props_line_in_section()
 function read_package_versions()
 {
     (( $# == 3 ))                                   || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires three arguments (provided $#):" \
-                                                                                         "  - the path to 'Directory.Packages.props'" \
-                                                                                         "  - the section ('shared' or 'repo')" \
-                                                                                         "  - the name of the variable that receives the versions"
+                                                                                        "  - the path to 'Directory.Packages.props'" \
+                                                                                        "  - the section ('shared' or 'repo')" \
+                                                                                        "  - the name of the variable that receives the versions"
     [[ ! -v 1 || -f $1 ]]                           || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1 to be a path to an existing file (provided ${1:-<none>})."
     [[ ! -v 2 || $2 == shared || $2 == repo ]]      || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2 to be 'shared' or 'repo' (provided ${2:-<none>})."
     [[ ! -v 3 ]] || is_variable_name "$3"           || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 3 to be the name of a variable (provided ${3:-<none>})."
@@ -110,6 +110,7 @@ function read_package_versions()
         [[ $_line =~ $_package_regex ]] || continue
         _id=${BASH_REMATCH[1]}
         _version=${BASH_REMATCH[2]}
+        # shellcheck disable=SC2004 # $/${} is unnecessary on arithmetic variables.
         _versions_ref[$_id]=$_version
     done < "$_file"
 }

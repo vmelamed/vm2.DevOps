@@ -10,6 +10,8 @@ declare -xr script_name
 declare -xri err_invalid_arguments
 declare -xri err_argument_value
 
+declare -xr default_vm2_repos_path
+
 #---------------------------------------------------------------------------------------------
 # @description Prints the usage text of 'update-packages.sh'.
 #
@@ -29,7 +31,7 @@ function usage_text()
 
     cat << EOF
 Usage:
-  $script_name [<repository> ...] [ --<long switch> | -<short switch> ]*
+  $script_name [<repository>]+ [ --<long switch> | -<short switch> ]*
 
   Upgrades the NuGet package versions in 'Directory.Packages.props' to the newest stable version found in the
   configured NuGet sources, without downgrading. The shared block is upgraded in the SoT (vm2.Templates) first and then
@@ -42,12 +44,14 @@ Usage:
     skip     uncommitted changes exist: the repository is left untouched, with a warning.
 
 Parameters:
-  <repository>                One or more repository names (default: all vm2 repositories). Including 'vm2.Templates'
-                              also upgrades the shared block in the SoT and copies it to the repositories.
+  <repository>                  One or more repository names (default: all vm2 repositories). Including 'vm2.Templates' also
+                                upgrades the shared block in the SoT and copies it to the repositories.
 
 Options:
-  -sf, --summary-file <file>  Write the run summary to <file> in Markdown format. If not specified, a temporary
-                              file is created, displayed at the end, and then deleted.
+  -r, --vm2-repos <dir>         The parent directory where all vm2 repositories are cloned. Initial value from \$VM2_REPOS or
+                                '$default_vm2_repos_path'.
+  -sf, --summary-file <file>    Write the run summary to <file> in Markdown format. If not specified, a temporary file is
+                                created, displayed at the end, and then deleted.
 
 Examples:
   $script_name
