@@ -51,6 +51,7 @@ declare -xri err_unexpected_error
 declare -xri err_repo_not_in_vm2_repos
 
 declare -xr default_vm2_repos_path
+declare -xr default_sot
 declare -xr vm2_devops_repo_name
 declare -xr vm2_sot_repo_name
 
@@ -243,14 +244,15 @@ declare -a vm2_repos_instructions=(
 #   - Despite the exit-code table below (inherited from __validate_repo_root), the "behind
 #     latest stable tag" warning messages in this function can never actually fire.
 #
-# @arg $1 nameref to a variable referencing the directory to use as the parent directory of
-#   all vm2 repos (can be empty, default: $VM2_REPOS, or the parent directory of vm2.DevOps's
-#   repository root). Usually used with a parameter like '--vm2-repos' on the command line.
-#   The resolved directory is returned back via the nameref provided in argument 1.
+# @arg $1 nameref to a variable referencing the path to the directory to use as the parent
+#   directory of all vm2 repositories (can be empty, default: $VM2_REPOS, or the parent
+#   directory of vm2.DevOps's repository root). Usually used with a parameter like
+#   '--vm2-repos' on the command line. The resolved directory is returned back via the nameref
+#   provided here - in argument 1.
 # @arg $2 string the branch name for the vm2.DevOps repository (optional, default: the current
-#   branch).
+#   branch). The function checks if the vm2.DevOps repository is on this branch.
 # @arg $3 string the branch name for the vm2.Templates repository (optional, default: the
-#   current branch).
+#   current branch). The function checks if the vm2.Templates repository is on this branch.
 #
 # @exitcode success=0: the vm2_repos directory was successfully resolved and validated
 # @exitcode err_not_directory=17: the parameter, $VM2_REPOS, or the resolved default is not a
@@ -258,8 +260,6 @@ declare -a vm2_repos_instructions=(
 # @exitcode N propagated from __validate_repo_root (e.g. $err_not_found, $err_repo_with_no_ci,
 #   $err_behind_latest_stable_tag) if vm2.DevOps or vm2.Templates fail validation under the
 #   resolved directory
-#
-# @stdout the absolute path to the vm2_repos directory
 #
 # @example
 #   resolve_vm2_repos vm2_repos "main" "main"
@@ -606,10 +606,10 @@ function resolve_repo_root()
 #
 # @arg $1 string vm2_repos - the parent directory where all the vm2 repositories are cloned
 #   (required, non-empty, must be an existing directory)
-# @arg $2 string sot - the SoT directory name relative to the vm2.Templates repository
-#   (required, non-empty)
-# @arg $3 string _repo_root_ref - the name of the variable to store the absolute path of the
+# @arg $2 string _repo_root_ref - the name of the variable to store the absolute path of the
 #   path to the SoT shared content directory (required, non-empty)
+# @arg $3 string sot - the SoT directory name relative to the vm2.Templates repository
+#   (optional, non-empty, defaults to '$default_sot')
 #
 # @exitcode success=0: the SoT shared content directory is found at the expected location
 # @exitcode err_not_directory=17: the SoT shared content directory does not exist at the
@@ -622,34 +622,35 @@ function resolve_repo_root()
 #---------------------------------------------------------------------------------------------
 function get_vm2_sot_path()
 {
-    (( $# == 3 ))                          || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() expects three arguments (provided $#):" \
-                                                                               "  - the parent directory of all vm2 repositories" \
-                                                                               "  - the SoT directory name relative to the vm2.Templates repository" \
-                                                                               "  - the name of the variable to store the absolute path of the path to the SoT shared content directory"
-    [[ ! -v 1 ]] || is_valid_path "$1"     || bug -ec "$err_invalid_path" "${FUNCNAME[0]}() requires argument 1, the vm2 repositories parent directory, to be a valid path (provided '${1:-<none>}')."
-    # if $1 is missing/empty it is already reported above, otherwise validate its value
-    [[ ! -v 2 ]] || is_valid_filename "$2" || bug -ec "$err_invalid_path" "${FUNCNAME[0]}() requires argument 2, the SoT directory name, to a valid directory name (provided '${2:-<none>}')."
-    [[ ! -v 3 ]] || is_variable "$3"       || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3, the name of the variable to store the absolute path of the path to the SoT shared content directory, to be defined (provided '${3:-<none>}')."
+    local _invalid_arg1="${FUNCNAME[0]}() requires argument 1, the vm2 repositories parent directory, to be a valid path (provided '${1:-<none>}'). Use the function resolve_vm2_repos()."
+
+    (( $# == 2 || $# == 3 ))               || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() expects two or three arguments (provided $#):" \
+                                                                               "  - the path to the parent directory of all vm2 repositories (use resolve_vm2_repos function, usually \$VM2_REPOS)" \
+                                                                               "  - the name of a variable to store the absolute path of the path to the source of truth (SoT)" \
+                                                                               "  - the SoT directory name (optional, defaults to '$default_sot')"
+    [[ ! -v 1 ]] || is_valid_path "$1"     || bug -ec "$err_invalid_path"      "$_invalid_arg1"
+    [[ ! -v 2 ]] || is_variable "$2"       || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 2, to be the name of a declared variable that will store the absolute path of the path to the SoT shared content directory (provided '${2:-<none>}')."
+    [[ ! -v 3 ]] || is_valid_filename "$3" || bug -ec "$err_invalid_path"      "${FUNCNAME[0]}() requires argument 3, to be the name of the source of truth (SoT) directory (provided '${3:-<none>}'). Optional, defaults to '$default_sot'."
     exit_if_has_bugs
 
     local -i _rc="$success"
 
     [[ -d $1 ]]                            || {
         _rc="$err_not_directory"
-        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be an existing directory (provided '${1:-<none>}')."
+        error -ec "$_rc" "$_invalid_arg1"
     }
     ((  _rc == success )) || return "$_rc"
 
-    local _repos="$1"
-    local _source="$2"
+    local _vm2_repos="$1"
+    local -n _vm2_sot="$2"
+    local _source="${3:-$default_sot}"
 
-    local -n _vm2_sot="$3"
-
-    _vm2_sot="$_repos/$vm2_sot_repo_name/templates/$_source/content"
+    _vm2_sot="$_vm2_repos/$vm2_sot_repo_name/templates/$_source/content"
 
     [[ -d "$_vm2_sot" ]] || {
         _rc="$err_not_directory"
         error -ec "$_rc" "The SoT shared content directory is not found at the expected conventional location '$_vm2_sot'. Please make sure it exists or correct the parameter/environment variable."
+        _vm2_sot=''
     }
 
     return "$_rc"

@@ -148,7 +148,7 @@ trace "All vm2 repositories are expected to be in '$vm2_repos'"
 rc="$success"
 
 declare sot_path
-get_vm2_sot_path "$vm2_repos" "$sot" sot_path || rc=$?
+get_vm2_sot_path "$vm2_repos" sot_path "$sot" || rc=$?
 (( rc == success )) || usage -ec "$rc" "Could not find the source of truth directory for the specified template '$sot' in the expected location in '$vm2_repos'."
 
 declare -xr vm2_repos

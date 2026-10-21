@@ -249,7 +249,7 @@ _make_local_repo() {
 # --- get_vm2_sot_path -------------------------------------------------------------------------
 
 @test "get_vm2_sot_path: bug-exits when the vm2_repos parent argument is empty (regression: was compounding two bugs for one problem)" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare sot=''; get_vm2_sot_path '' AddNewPackage sot"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare sot=''; get_vm2_sot_path '' sot AddNewPackage"
     assert_failure "$err_invalid_path"
     output_lines_count=$(grep -c "🪲" <<< "$output")
     [[ $output_lines_count -eq 1 ]]
@@ -258,7 +258,7 @@ _make_local_repo() {
 @test "get_vm2_sot_path: fails on a non-existent vm2_repos directory" {
     # NOTE: 'sot' must be a real pre-declared variable, or a second bug (arg-3 nameref)
     # accumulates and overrides the intended runtime err_not_directory outcome.
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare sot=''; get_vm2_sot_path '/definitely/not/a/real/path' AddNewPackage sot"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare sot=''; get_vm2_sot_path '/definitely/not/a/real/path' sot AddNewPackage"
     assert_failure "$err_not_directory"
 }
 
@@ -268,7 +268,20 @@ _make_local_repo() {
         parent='$BATS_TEST_TMPDIR/sot-parent'
         mkdir -p \"\$parent/vm2.Templates/templates/AddNewPackage/content\"
         declare sot=''
-        get_vm2_sot_path \"\$parent\" AddNewPackage sot
+        get_vm2_sot_path \"\$parent\" sot AddNewPackage
+        echo \"\$sot\"
+    "
+    assert_success
+    assert_output "$BATS_TEST_TMPDIR/sot-parent/vm2.Templates/templates/AddNewPackage/content"
+}
+
+@test "get_vm2_sot_path: resolves the SoT path when it exists on disk and the source of truth is not specified" {
+    run bash -c "
+        source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
+        parent='$BATS_TEST_TMPDIR/sot-parent'
+        mkdir -p \"\$parent/vm2.Templates/templates/AddNewPackage/content\"
+        declare sot=''
+        get_vm2_sot_path \"\$parent\" sot
         echo \"\$sot\"
     "
     assert_success
@@ -281,13 +294,19 @@ _make_local_repo() {
         parent='$BATS_TEST_TMPDIR/sot-parent-missing'
         mkdir -p \"\$parent\"
         declare sot=''
-        get_vm2_sot_path \"\$parent\" AddNewPackage sot
+        get_vm2_sot_path \"\$parent\" sot AddNewPackage
     "
     assert_failure "$err_not_directory"
 }
 
-@test "get_vm2_sot_path: bug-exits with the wrong argument count" {
-    run get_vm2_sot_path "$_repo_root" "AddNewPackage"
+@test "get_vm2_sot_path: bug with not enough arguments" {
+    run get_vm2_sot_path
+    assert_failure "$err_invalid_arguments"
+}
+
+@test "get_vm2_sot_path: bug with extra arguments" {
+    local _repo_dir
+    run get_vm2_sot_path "$_repo_root" _repo_dir "AddNewPackage" "foo" "bar"
     assert_failure "$err_invalid_arguments"
 }
 
