@@ -27,8 +27,6 @@ declare -xri err_not_file
 
 declare -x _ignore
 
-declare -xr vm2_sot_repo_name
-
 declare -x vm2_repos
 declare -x diff_only
 
@@ -64,15 +62,8 @@ declare -xra valid_actions=(
 all_actions_str=$(print_sequence -s=', ' -q='"' "${valid_actions[@]}")
 declare -xr all_actions_str
 
-#---------------------------------------------------------------------------------------------
-# @description Markers that delimit a "shared" block within an otherwise private/local file -- content between
-# them is expected to stay synced with the SoT, while everything outside is left entirely to the target
-# repository. Matched as a plain substring anywhere on a line; any trailing text after the marker on that line
-# (e.g. a human-readable "Beginning of shared content" label) is purely descriptive and ignored by the scanner.
-# The two marker LINES themselves are delimiters and are never considered part of the shared content.
-#---------------------------------------------------------------------------------------------
-declare -xr shared_begin_marker='<<<==='
-declare -xr shared_end_marker='===>>>'
+declare -xr shared_begin_marker
+declare -xr shared_end_marker
 
 # Additional 'are_different()' outcomes, alongside the existing '$positive'/'$negative':
 declare -xri shared_equal=2

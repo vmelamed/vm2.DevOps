@@ -49,7 +49,8 @@ declare -x _ignore
 #
 # @exitcode success=0: The query ran; the value (or an empty string, if not present in the
 #   document) was written to $3.
-# @exitcode err_tool_error=66: The file does not exist or is not readable, or `yq` itself failed.
+# @exitcode err_tool_error=66: The file does not exist or is not readable, or `yq` itself
+#   failed.
 #
 # @example
 #   declare include_symbols

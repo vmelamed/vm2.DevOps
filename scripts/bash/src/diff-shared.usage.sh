@@ -7,6 +7,8 @@ declare -xr common_args_usage
 declare -xr script_name
 
 declare -xr default_vm2_repos_path
+declare -xr shared_begin_marker
+declare -xr shared_end_marker
 
 function usage_text()
 {
@@ -58,7 +60,7 @@ Options:
   -fc, --file-copy <pattern>    Same as --file but overrides the action to 'copy' (no prompt).
   -fcs, --file-copy-shared <pattern>
                                 Same as --file but overrides the action to 'copy shared' -- copies only the content between a
-                                '<<<===' / '===>>>' marker pair, without prompting.
+                                '$shared_begin_marker' / '$shared_end_marker' marker pair, without prompting.
   -facs, --file-ask-to-copy-shared <pattern>
                                 Same as --file but overrides the action to 'ask to copy shared'.
   -sf, --summary-file <file>    Write the run summary to <file> in Markdown format. If not specified, a temporary file is

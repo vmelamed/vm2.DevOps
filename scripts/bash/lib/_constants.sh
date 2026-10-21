@@ -163,6 +163,16 @@ declare -xra allowed_commit_types=(
     "chore"             # n/a    Miscellaneous tasks or maintenance that do not force client rebuild
 )
 
+#---------------------------------------------------------------------------------------------
+# @description Markers that delimit a "shared" block within an otherwise private/local file -- content between them is expected
+#   to stay synced with the SoT, while everything outside is left entirely to the target repository. Matched as a plain
+#   substring anywhere on a line; any trailing text after the marker on that line (e.g. a human-readable "Beginning of shared
+#   content" label) is purely descriptive and ignored by the scanner. The two marker LINES themselves are delimiters and are
+#   never considered part of the shared content.
+#---------------------------------------------------------------------------------------------
+declare -xr shared_begin_marker='<<<==='
+declare -xr shared_end_marker='===>>>'
+
 # characters
 declare -xr secret_str='••••••'
 declare -xr secret_placeholder=$secret_str
