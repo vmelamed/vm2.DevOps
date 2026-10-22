@@ -22,7 +22,7 @@ declare -xr default_vm2_repos_path
 #---------------------------------------------------------------------------------------------
 function usage_text()
 {
-    (( $# == 1 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one boolean argument (provided $#)."
+    (( $# == 1 ))                   || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one boolean argument (provided $#)."
     [[ ! -v 1 ]] || is_boolean "$1" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be 'true' or 'false' (provided '${1:-<none>}')."
     exit_if_has_bugs
 
@@ -38,16 +38,19 @@ Usage:
   copied to the repositories with 'diff-shared.sh'; each repository's own section is upgraded afterwards.
 
   A repository is changed in one of three ways:
-    publish  on 'main', clean, and identical to 'origin/main': a branch 'deps/update-packages-<yyyy-mm-dd>' is created,
+    publish  on 'main', clean, and identical to 'origin/main': a branch 'deps/update-packages-<yyyy-mm-dd-hh-mm-ss>' is created,
              the changes are committed there, and the branch is pushed (not 'main').
     inplace  anything else: the files are edited in the current branch and nothing is committed. A warning says so.
     skip     uncommitted changes exist: the repository is left untouched, with a warning.
 
 Parameters:
-  <repository>                  One or more repository names (default: all vm2 repositories). Including 'vm2.Templates' also
-                                upgrades the shared block in the SoT and copies it to the repositories.
+  <repository>                  One or more repository names. Including 'vm2.Templates' also upgrades the shared block in the
+                                SoT and copies it to the repositories.
 
 Options:
+  -all, --all-repos, --all-repositories
+                                Update all pre-defined vm2 repositories under \$VM2_REPOS with the SoT, one by one. The set is
+                                defined in 'lib/_constants.sh'.
   -r, --vm2-repos <dir>         The parent directory where all vm2 repositories are cloned. Initial value from \$VM2_REPOS or
                                 '$default_vm2_repos_path'.
   -sf, --summary-file <file>    Write the run summary to <file> in Markdown format. If not specified, a temporary file is

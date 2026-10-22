@@ -10,6 +10,48 @@ declare -xri err_invalid_arguments
 declare -xri err_argument_value
 declare -xri err_logic_error
 declare -xri err_tool_error
+declare -xri err_invalid_item
+
+# One PackageVersion element on ONE line, Include before Version, double quotes. Groups: 1 prefix, 2 id, 3 middle,
+# 4 version, 5 suffix -- set_package_version reassembles 1..5 with a new 4, so the line's original spacing survives.
+# Anything else (multi-line elements, other attribute order, single quotes) is rejected by validate_package_lines
+# before a run writes anything, instead of being silently skipped.
+declare -xr package_regex='^([[:space:]]*<PackageVersion[[:space:]]+Include=")([^"]+)("[[:space:]]+Version=")([^"]+)("[[:space:]]*/>.*)$'
+
+#---------------------------------------------------------------------------------------------
+# @description Verifies that every PackageVersion element in a 'Directory.Packages.props' file has the one-line shape
+#   that read_package_versions and set_package_version understand ($package_regex). Reports EVERY offending line, with
+#   file and line number, so the caller can stop before anything is written instead of silently skipping packages.
+#   Lines containing '<!--' or '-->' are ignored, the same way the reader ignores them.
+#
+# @arg $1 string Path to 'Directory.Packages.props'.
+#
+# @exitcode success=0: every PackageVersion line has the supported shape.
+# @exitcode err_invalid_item=14: at least one does not (each one is reported via error()).
+#---------------------------------------------------------------------------------------------
+function validate_package_lines()
+{
+    (( $# == 1 ))         || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument: the path to 'Directory.Packages.props' (provided $#)."
+    [[ ! -v 1 || -f $1 ]] || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1 to be a path to an existing file (provided ${1:-<none>})."
+    exit_if_has_bugs
+
+    local _file=$1 _line
+    local -i _rc=$success _line_number=0
+
+    while IFS= read -r _line || [[ -n $_line ]]; do
+        (( ++_line_number ))
+        [[ $_line == *"<PackageVersion"* ]] || continue
+        [[ $_line == *"<!--"* || $_line == *"-->"* ]] && continue
+        [[ $_line =~ $package_regex ]] && continue
+        _rc=$err_invalid_item
+        error -ec "$_rc" "$_file:$_line_number: unsupported PackageVersion format; expected one line in the form" \
+                         "  <PackageVersion Include=\"<id>\" Version=\"<version>\" />" \
+                         "but found:" \
+                         "  $_line"
+    done < "$_file"
+
+    return "$_rc"
+}
 
 #---------------------------------------------------------------------------------------------
 # @description Chooses the version a package should be upgraded to. Only stable release versions
@@ -28,20 +70,21 @@ declare -xri err_tool_error
 function select_upgrade_version()
 {
     (( $# >= 2 ))                          || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires at least two arguments (provided $#):" \
-                                                                                  "  - the current version" \
-                                                                                  "  - the name of the variable that receives the chosen version" \
-                                                                                  "  - zero or more candidate versions"
+                                                                               "  - the current version" \
+                                                                               "  - the name of the variable that receives the chosen version" \
+                                                                               "  - zero or more candidate versions"
     [[ ! -v 1 || -n $1 ]]                  || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the current version, to be non-empty."
     [[ ! -v 2 ]] || is_variable_name "$2"  || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2, to be the name of a variable."
     exit_if_has_bugs
 
     local _current=$1
     local -n _chosen=$2
-    shift 2
 
     _chosen=$_current
 
     local _candidate
+
+    shift 2
     for _candidate in "$@"; do
         is_semverRelease "$_candidate" || continue
         semver_greaterThan "$_candidate" "$_chosen" && _chosen=$_candidate
@@ -50,8 +93,15 @@ function select_upgrade_version()
     return "$success"
 }
 
-declare -xr props_shared_begin='<!-- <<<=== begin shared content -->'
-declare -xr props_shared_end='<!-- ===>>> end shared content -->'
+#---------------------------------------------------------------------------------------------
+# @description Markers that delimit a "shared" block within an otherwise private/local file -- content between them is expected
+#   to stay synced with the SoT, while everything outside is left entirely to the target repository. Matched as a plain
+#   substring anywhere on a line; any trailing text after the marker on that line (e.g. a human-readable "Beginning of shared
+#   content" label) is purely descriptive and ignored by the scanner. The two marker LINES themselves are delimiters and are
+#   never considered part of the shared content.
+#---------------------------------------------------------------------------------------------
+declare -xr shared_begin_marker
+declare -xr shared_end_marker
 
 #---------------------------------------------------------------------------------------------
 # @description Returns the section of 'Directory.Packages.props' a package line belongs to: the shared block between
@@ -66,20 +116,36 @@ declare -xr props_shared_end='<!-- ===>>> end shared content -->'
 #---------------------------------------------------------------------------------------------
 function _props_line_in_section()
 {
-    local _section=$1 _line=$2
+    (( $# == 3 ))                              || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires three arguments (provided $#):" \
+                                                                                   "  - the section to match ('shared' or 'repo')" \
+                                                                                   "  - the line of the file to test" \
+                                                                                   "  - the name of the variable that tracks whether the current line is inside the shared block"
+    [[ ! -v 1 || $1 == shared || $1 == repo ]] || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2 to be which section to match - either 'shared' or 'repo' (provided ${1:-<none>})."
+    [[ ! -v 2 || -n $2 ]]                      || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() a line of the XML file (provided ${2:-<none>})."
+    [[ ! -v 3 ]] || is_variable "$3"           || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 3 to be the name of a variable that tracks whether the current line is inside the shared block (provided ${3:-<none>})."
+    exit_if_has_bugs
+
+    local _section=$1
+    local _line=$2
     local -n _in_shared_ref=$3
 
-    if [[ $_line == *"$props_shared_begin"* ]]; then _in_shared_ref=true; return "$negative"; fi
-    if [[ $_line == *"$props_shared_end"* ]]; then _in_shared_ref=false; return "$negative"; fi
+    if [[ $_line == *$shared_begin_marker* ]]; then _in_shared_ref=true; return "$negative"; fi
+    if [[ $_line == *$shared_end_marker* ]]; then _in_shared_ref=false; return "$negative"; fi
 
     [[ $_section == shared && $_in_shared_ref == true ]] && return "$success"
     [[ $_section == repo && $_in_shared_ref != true ]] && return "$success"
+
     return "$negative"
 }
 
 #---------------------------------------------------------------------------------------------
 # @description Reads the package versions of one section of a 'Directory.Packages.props' file. Commented-out lines are
 #   ignored. The keys keep the casing used in the file.
+#
+# Note: the function expects that:
+#   - the file is well-formed XML
+#   - the comments are not mixed with XML elements on the same line
+#   - the XML elements specifying package versions are single-line elements of the form: <PackageVersion Include="..." Version="..." />
 #
 # @arg $1 string Path to 'Directory.Packages.props'.
 # @arg $2 string The section to read: 'shared' or 'repo'.
@@ -89,27 +155,31 @@ function _props_line_in_section()
 #---------------------------------------------------------------------------------------------
 function read_package_versions()
 {
-    (( $# == 3 ))                                   || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires three arguments (provided $#):" \
-                                                                                        "  - the path to 'Directory.Packages.props'" \
-                                                                                        "  - the section ('shared' or 'repo')" \
-                                                                                        "  - the name of the variable that receives the versions"
-    [[ ! -v 1 || -f $1 ]]                           || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1 to be a path to an existing file (provided ${1:-<none>})."
-    [[ ! -v 2 || $2 == shared || $2 == repo ]]      || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2 to be 'shared' or 'repo' (provided ${2:-<none>})."
-    [[ ! -v 3 ]] || is_variable_name "$3"           || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 3 to be the name of a variable (provided ${3:-<none>})."
+    (( $# == 3 ))                              || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires three arguments (provided $#):" \
+                                                                                   "  - the path to 'Directory.Packages.props' file" \
+                                                                                   "  - the section ('shared' or 'repo')" \
+                                                                                   "  - the name of the variable that receives the versions"
+    [[ ! -v 1 || -f $1 ]]                      || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1 to be a path to an existing file (provided ${1:-<none>})."
+    [[ ! -v 2 || $2 == shared || $2 == repo ]] || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2 to be either 'shared' or 'repo' (provided ${2:-<none>})."
+    [[ ! -v 3 ]] || is_associative_array "$3"  || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 3 to be the name of an associative array variable (provided ${3:-<none>})."
     exit_if_has_bugs
 
-    local _file=$1 _section=$2
+    local _file=$1
+    local _section=$2
     local -n _versions_ref=$3
-    local _line _id _version _inside=false
-    local _package_regex='^[[:space:]]*<PackageVersion Include="([^"]+)" Version="([^"]+)"[[:space:]]*/>'
+
+    local _line
+    local _id
+    local _version
+    local _inside=false
 
     _versions_ref=()
     while IFS= read -r _line || [[ -n $_line ]]; do
-        _props_line_in_section "$_section" "$_line" _inside || continue
-        [[ $_line == *"<!--"* || $_line == *"-->"* ]] && continue
-        [[ $_line =~ $_package_regex ]] || continue
-        _id=${BASH_REMATCH[1]}
-        _version=${BASH_REMATCH[2]}
+        _props_line_in_section "$_section" "$_line" _inside || continue # Skip lines outside the specified section
+        [[ $_line == *"<!--"* || $_line == *"-->"* ]] && continue       # Skip lines containing comments
+        [[ $_line =~ $package_regex ]] || continue                      # Skip lines that do not match the package regex
+        _id=${BASH_REMATCH[2]}                                          # package_regex groups: 1 prefix, 2 id, 3 middle, 4 version, 5 suffix
+        _version=${BASH_REMATCH[4]}
         # shellcheck disable=SC2004 # $/${} is unnecessary on arithmetic variables.
         _versions_ref[$_id]=$_version
     done < "$_file"
@@ -132,12 +202,11 @@ function set_package_version()
     local _rc=$success
     local _file=$1 _section=$2 _id=$3 _new=$4
     local _line _tmp _inside=false _done=false _line_id _line_version
-    local _package_regex='^([[:space:]]*<PackageVersion Include=")([^"]+)(" Version=")([^"]+)("[[:space:]]*/>.*)$'
 
     _tmp=$(mktemp)
     while IFS= read -r _line || [[ -n $_line ]]; do
         if _props_line_in_section "$_section" "$_line" _inside &&
-           [[ $_line != *"<!--"* && $_line != *"-->"* && $_line =~ $_package_regex ]] &&
+           [[ $_line != *"<!--"* && $_line != *"-->"* && $_line =~ $package_regex ]] &&
            [[ ${BASH_REMATCH[2]} == "$_id" || ${BASH_REMATCH[2],,} == "${_id,,}" ]] &&
            [[ $_done == false ]]; then
             _line="${BASH_REMATCH[1]}${BASH_REMATCH[2]}${BASH_REMATCH[3]}${_new}${BASH_REMATCH[5]}"
@@ -147,7 +216,7 @@ function set_package_version()
     done < "$_file"
 
     if [[ $_done == true ]]; then
-        mv "$_tmp" "$_file" || _rc=$?
+        execute mv "$_tmp" "$_file" || _rc=$?
         (( _rc == success )) || {
             _rc="$err_tool_error"
             error -ec "$_rc" "Failed to copy temporary file to '$_file'."; return "$_rc";

@@ -6,30 +6,33 @@
 declare -xr script_name
 declare -xr lib_dir
 
-# constants from lib:
+# constants from core:
 declare -xri success
 declare -xri err_argument_value
 declare -xri err_missing_argument
 declare -xri err_unknown_argument
 declare -xri err_logic_error
-declare -xri err_repo_with_no_ci
-declare -xri err_not_git_directory
+declare -xri err_invalid_path
+declare -xri err_invalid_file
 
 declare -xr ci
+declare -xr default_vm2_repos_path
+declare -xr default_sot
+declare -xr dpp_file_name
 declare -xra vm2_repositories
 declare -xra sources_of_truth
-declare -xr default_sot
 
 # this script's arguments
-declare -x vm2_repos
-declare -x sot_path
-declare -x sot=$default_sot
-declare -A target_repos
-declare -x summary_file=''
+declare -x vm2_repos="${VM2_REPOS:-$default_vm2_repos_path}"    # the path to the folder containing all vm2 repositories, usually '$VM2_REPOS'
+declare -x sot=$default_sot                                     # the source of truth name, usually 'AddNewPackages'
+declare -x sot_path                                             # the path to the source of truth folder, usually '$VM2_REPOS/vm2.Templates/templates/<sot>/content'
+declare -A target_repos=()                                      # dictionary: repo name => repo path
+declare -x summary_file=''                                      # the path to the summary file for the update operation(s)
+
 declare -a arguments=(
     vm2_repos
-    sot_path
     sot
+    sot_path
     target_repos
     summary_file
 )
@@ -48,6 +51,7 @@ function get_arguments()
                 vm2_repos="$1"; shift
                 ;;
 
+            # For now we have only one source of truth - 'AddNewPackages', so this option is effectively unused.
             # -s|--source-of-truth )
             #     (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $_option"
             #     sot="$1"; shift
@@ -69,8 +73,9 @@ function get_arguments()
                 summary_file="$1"; shift
                 ;;
 
-            # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
-            # (SC2221/SC2222) flag any script-specific arm that reuses one of them, and it bugs out if the lists drift apart.
+            # reserved: get_common_arg consumes these options before this case. Effectively this arm never runs BUT it lets
+            # ShellCheck to flag (SC2221/SC2222) any script-specific arm that tries to reuse one of them, and it bugs out
+            # if the lists drift apart.
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
                 exit_with_bug -ec "$err_logic_error" "'$_option' should have been consumed by get_common_arg."
                 ;;
@@ -78,8 +83,7 @@ function get_arguments()
             -*) usage -ec "$err_unknown_argument" "Unknown option: $_option"
                 ;;
 
-            * ) is_empty_array target_repos || ! is_in "$_option" "${!target_repos[@]}" &&
-                    target_repos+=([$_option]='')
+            * ) is_in "$_option" "${!target_repos[@]}" || target_repos+=([$_option]='')
                 ;;
         esac
     done
@@ -91,35 +95,57 @@ function get_arguments()
 
 function validate_args()
 {
-    local -i _rc=$success
-    local _repo _repo_path
+    resolve_vm2_repos vm2_repos || true
 
-    resolve_vm2_repos vm2_repos '' '' &&
-    get_vm2_sot_path "$vm2_repos" "$sot" sot_path &&
-    info "The Source of Truth '$sot' folder is in '$sot_path'"
+    has_errors || is_in "$sot" "${sources_of_truth[@]}" ||
+        error -ec "$err_argument_value" "Invalid source of truth '$sot'. Valid values are: ${sources_of_truth[*]}."
 
-    is_in "$sot" "${sources_of_truth[@]}" || error -ec "$err_argument_value" "Invalid source of truth '$sot'. Valid values are: ${sources_of_truth[*]}.";
+    has_errors || get_vm2_sot_path "$vm2_repos" sot_path "$sot" || true
 
-    if ! is_empty_array target_repos; then
+    ! is_empty_array target_repos || error -ec "$err_argument_value" "No target repositories specified."
+
+    # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
+    if ! has_errors; then
+
+        local _repo _repo_path
+
         for _repo in "${!target_repos[@]}"; do
             if is_in "$_repo" "${vm2_repositories[@]}" &&
                resolve_repo_root "$vm2_repos" "$_repo" _repo_path _; then
+                [[ -f "$_repo_path/$dpp_file_name" ]] || {
+                    warnings+=("Skipped repository '$_repo': it does not have a '$dpp_file_name' file.")
+                    continue
+                }
                 target_repos[$_repo]=$_repo_path
             else
                 error -ec "$err_argument_value" "Could not resolve repository '$_repo'."
+                continue
             fi
         done
-    else
-        error -ec "$err_argument_value" "No target repositories specified."
     fi
+
+    has_errors || [[ -n $summary_file ]] || {
+        summary_file=$(mktemp -p /tmp "update-packages-summary-$(date +%Y%m%d-%H%M%S)-XXXXXX.md")
+        add_trap "rm -f ${summary_file@Q}" EXIT
+    }
+
+    has_errors || is_valid_path "$summary_file" ||
+        error -ec "$err_invalid_path" "Invalid summary file path: '$summary_file'."
+
+    has_errors || {
+        echo "# Update Packages Summary"
+        echo
+    } > "$summary_file" ||
+        error -ec "$err_invalid_file" "Failed to write to summary file: '$summary_file'."
 
     exit_if_has_errors true
 
+    # at this point all arguments have been initialized, validated and necessary paths have been resolved
     readonly vm2_repos
     readonly sot
     readonly sot_path
-    readonly summary_file
     readonly target_repos
+    readonly summary_file
 }
 
 # shellcheck disable=SC2120 # dump_args references arguments, but none are ever passed.

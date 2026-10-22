@@ -17,6 +17,8 @@ declare -gxi failure
 declare -gxi err_invalid_arguments
 declare -gxi err_argument_type
 declare -gxi err_argument_value
+declare -gxi err_invalid_nameref
+declare -gxi err_not_found
 
 # --- trap setup / remove_traps -----------------------------------------------------------------
 
@@ -97,6 +99,89 @@ declare -gxi err_argument_value
     assert_output "OK"
 }
 
+# --- add_trap ------------------------------------------------------------------------------
+# The child scripts are single-quoted (lib_dir passed via LIB) so the quoting under test is not
+# mangled by an extra layer of double-quote escaping.
+
+@test "add_trap: appends the command after core.sh's on_exit instead of replacing it" {
+    run env -i HOME="$HOME" PATH="$PATH" LIB="$lib_dir" bash -c '
+        source "$LIB/core.sh" > /dev/null 2>&1
+        add_trap "echo cleanup" EXIT
+        trap -p EXIT
+    '
+    assert_success
+    assert_line --index 0 "trap -- 'on_exit"
+    assert_line --index 1 "echo cleanup' EXIT"
+    assert_line --index 2 "cleanup"
+}
+
+@test "add_trap: appends safely after an existing command ending in '&' or a comment" {
+    run env -i HOME="$HOME" PATH="$PATH" LIB="$lib_dir" bash -c '
+        source "$LIB/core.sh" --no-trap > /dev/null 2>&1
+        trap -- "echo first # a comment" EXIT
+        add_trap "true &" EXIT
+        add_trap "echo cleanup" EXIT
+    '
+    assert_success
+    assert_output $'first\ncleanup'
+}
+
+@test "add_trap: the command runs on a non-zero exit, and the exit code is kept even when it fails" {
+    # Only the exit code and the cleanup line are asserted: today an 'exit N' with the traps in
+    # place also prints a spurious ERR post-mortem (on_exit's own 'return N' fires the ERR trap --
+    # the reason remove_traps clears ERR before explicit exits). TODO: on_exit should disable ERR.
+    run env -i HOME="$HOME" PATH="$PATH" LIB="$lib_dir" bash -c '
+        source "$LIB/core.sh" > /dev/null 2>&1
+        add_trap "echo cleanup; false" EXIT
+        exit 7
+    '
+    assert_failure 7
+    assert_line "cleanup"
+}
+
+@test "add_trap: with no trap set, the command becomes the whole trap" {
+    run env -i HOME="$HOME" PATH="$PATH" LIB="$lib_dir" bash -c '
+        source "$LIB/core.sh" --no-trap > /dev/null 2>&1
+        add_trap "echo cleanup" EXIT
+        trap -p EXIT
+    '
+    assert_success
+    assert_line --index 0 "trap -- 'echo cleanup' EXIT"
+}
+
+@test "add_trap: keeps an existing command containing quotes and \$ intact" {
+    run env -i HOME="$HOME" PATH="$PATH" LIB="$lib_dir" bash -c '
+        source "$LIB/core.sh" --no-trap > /dev/null 2>&1
+        x=value
+        trap -- "echo \"it'\''s \$x\"" EXIT
+        add_trap '\''echo "and $x"'\'' EXIT
+    '
+    assert_success
+    assert_output $'it\'s value\nand value'
+}
+
+@test "add_trap: appends to every given signal" {
+    run env -i HOME="$HOME" PATH="$PATH" LIB="$lib_dir" bash -c '
+        source "$LIB/core.sh" --no-trap > /dev/null 2>&1
+        add_trap "echo cleanup" EXIT INT
+        trap -p INT
+        trap - EXIT
+    '
+    assert_success
+    assert_output "trap -- 'echo cleanup' SIGINT"
+}
+
+@test "add_trap: bug-exits with fewer than two arguments" {
+    run add_trap 'echo cleanup'
+    assert_failure "$err_invalid_arguments"
+}
+
+@test "add_trap: bug-exits on an invalid signal name" {
+    run add_trap 'echo cleanup' NOT_A_SIGNAL
+    assert_failure "$err_argument_value"
+    assert_output --partial "NOT_A_SIGNAL"
+}
+
 # --- execute -------------------------------------------------------------------------------
 
 @test "execute: bug-exits with no arguments" {
@@ -120,6 +205,50 @@ declare -gxi err_argument_value
 @test "execute: forwards the failing command's own exit code" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; execute bash -c 'exit 7'"
     assert_failure 7
+}
+
+@test "execute: in dry-run mode, the would-be command goes to stderr, never into a capture of stdout" {
+    run bash -c "
+        source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
+        set_dry_run
+        captured=\$(execute echo data 2> /dev/null)
+        printf '[%s]\n' \"\$captured\"
+        execute echo data 2>&1 > /dev/null
+    "
+    assert_success
+    assert_line --index 0 "[]"
+    assert_line --index 1 "dry-run\$ echo data"
+}
+
+@test "execute: in dry-run mode, quotes the arguments so the printed command is exact" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; set_dry_run; execute git commit -m 'Initial commit'"
+    assert_success
+    assert_output "dry-run\$ git commit -m Initial\\ commit"
+}
+
+@test "execute --quiet: bug-exits when no command follows the flag" {
+    run execute --quiet
+    assert_failure "$err_invalid_arguments"
+}
+
+@test "execute --quiet: discards the command's stdout and stderr, and forwards its exit code" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; execute --quiet bash -c 'echo out; echo err >&2; exit 7'"
+    assert_failure 7
+    assert_output ""
+}
+
+@test "execute --quiet: in verbose mode, shows the command's stdout and stderr" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; set_verbose; execute --quiet bash -c 'echo out; echo err >&2'"
+    assert_success
+    assert_line "out"
+    assert_line "err"
+}
+
+@test "execute --quiet: in dry-run mode, still prints the would-be command and does not run it" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; set_dry_run; execute --quiet touch '$BATS_TEST_TMPDIR/should-not-exist'"
+    assert_success
+    assert_output "dry-run\$ touch $BATS_TEST_TMPDIR/should-not-exist"
+    [[ ! -e "$BATS_TEST_TMPDIR/should-not-exist" ]]
 }
 
 # --- execute_with_retry ---------------------------------------------------------------------
@@ -228,6 +357,74 @@ SCRIPT
     run bash -c "cd '$BATS_TEST_TMPDIR/glob-recursive' && source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; list_of_files '**/*.txt'"
     assert_success
     assert_output "a.txt sub/c.txt"
+}
+
+# --- find_files_by_precedence ----------------------------------------------------------------
+
+# Runs find_files_by_precedence on <dir> with the given patterns and prints the found files, sorted (the function itself
+# does not sort), one per line. Returns the function's own exit code.
+_ffp() {
+    local -a _found=()
+    local _dir=$1 _rc=0
+    shift
+    find_files_by_precedence "$_dir" _found "$@" || _rc=$?
+    (( ${#_found[@]} == 0 )) || printf '%s\n' "${_found[@]}" | sort
+    return "$_rc"
+}
+
+@test "find_files_by_precedence: returns only the files of the first pattern that matches anything" {
+    local d="$BATS_TEST_TMPDIR/ffp"
+    mkdir -p "$d/src" && touch "$d/x.sln" "$d/y.sln" "$d/src/a.csproj"
+    run _ffp "$d" '*.slnx' '*.sln' '*.csproj'
+    assert_success
+    assert_output "$d/x.sln"$'\n'"$d/y.sln"
+}
+
+@test "find_files_by_precedence: falls through to a later pattern when the earlier ones match nothing, at any depth" {
+    local d="$BATS_TEST_TMPDIR/ffp"
+    mkdir -p "$d/src/deep/er" && touch "$d/src/deep/er/a.csproj"
+    run _ffp "$d" '*.slnx' '*.sln' '*.csproj'
+    assert_success
+    assert_output "$d/src/deep/er/a.csproj"
+}
+
+@test "find_files_by_precedence: returns err_not_found, silently and with an empty array, when nothing matches" {
+    local d="$BATS_TEST_TMPDIR/ffp"
+    mkdir -p "$d" && touch "$d/readme.md"
+    run _ffp "$d" '*.slnx' '*.csproj'
+    assert_failure "$err_not_found"
+    assert_output ""
+}
+
+@test "find_files_by_precedence: skips the '.git', 'bin', 'obj', and 'templates' directories" {
+    local d="$BATS_TEST_TMPDIR/ffp"
+    mkdir -p "$d/.git" "$d/src/bin" "$d/src/obj" "$d/templates/T/content"
+    touch "$d/src/a.csproj" "$d/.git/g.csproj" "$d/src/bin/b.csproj" "$d/src/obj/o.csproj" "$d/templates/T/content/t.csproj"
+    run _ffp "$d" '*.csproj'
+    assert_success
+    assert_output "$d/src/a.csproj"
+}
+
+@test "find_files_by_precedence: still searches a start directory that is itself named like a skipped one (e.g. 'bin')" {
+    local d="$BATS_TEST_TMPDIR/bin"
+    mkdir -p "$d/src" && touch "$d/src/a.csproj"
+    run _ffp "$d" '*.csproj'
+    assert_success
+    assert_output "$d/src/a.csproj"
+}
+
+@test "find_files_by_precedence: bug-exits with fewer than three arguments" {
+    # shellcheck disable=SC2034 # only its name is passed: the call is missing the patterns
+    local -a found=()
+    run find_files_by_precedence "$BATS_TEST_TMPDIR" found
+    assert_failure "$err_invalid_arguments"
+}
+
+@test "find_files_by_precedence: bug-exits when argument 2 is not the name of an indexed array" {
+    # shellcheck disable=SC2034 # only its name is passed: the function must reject a scalar
+    local scalar='not an array'
+    run find_files_by_precedence "$BATS_TEST_TMPDIR" scalar '*.csproj'
+    assert_failure "$err_invalid_nameref"
 }
 
 # --- to_summary (core.sh's plain, non-GitHub-Actions form) ------------------------------------

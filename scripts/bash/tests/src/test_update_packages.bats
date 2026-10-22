@@ -13,6 +13,10 @@ load '../helpers/setup'
 
 declare -gx lib_dir
 declare -gxi err_invalid_arguments
+declare -gxi err_invalid_item
+declare -gxi err_tool_error
+declare -gxi err_not_found
+declare -gxi err_logic_error
 
 _src_dir="$(cd "$lib_dir/../src" && pwd)"
 
@@ -104,6 +108,60 @@ XML
     refute_output --partial "Commented.Out"
 }
 
+@test "read_package_versions: accepts any whitespace (spaces, tabs) between the element's parts" {
+    printf '<Project>\n  <ItemGroup>\n    <PackageVersion  Include="A.Pkg"\tVersion="1.2.3"   />\n  </ItemGroup>\n</Project>\n' \
+        > "$BATS_TEST_TMPDIR/Directory.Packages.props"
+    run _up "declare -A v=(); read_package_versions '$BATS_TEST_TMPDIR/Directory.Packages.props' repo v; declare -p v"
+    assert_success
+    assert_output --partial '[A.Pkg]="1.2.3"'
+}
+
+# --- validate_package_lines ------------------------------------------------------------------------
+
+@test "validate_package_lines: succeeds when every PackageVersion line has the supported one-line shape" {
+    _props_fixture "$BATS_TEST_TMPDIR/Directory.Packages.props"
+    run _up "validate_package_lines '$BATS_TEST_TMPDIR/Directory.Packages.props'"
+    assert_success
+}
+
+@test "validate_package_lines: rejects a multi-line element, naming the file and line, instead of skipping it" {
+    cat > "$BATS_TEST_TMPDIR/Directory.Packages.props" <<'XML'
+<Project>
+    <ItemGroup>
+        <PackageVersion
+            Include="Multi.Line" Version="1.0.0" />
+    </ItemGroup>
+</Project>
+XML
+    run _up "validate_package_lines '$BATS_TEST_TMPDIR/Directory.Packages.props'"
+    assert_failure "$err_invalid_item"
+    assert_output --partial "Directory.Packages.props:3: unsupported PackageVersion format"
+}
+
+@test "validate_package_lines: rejects Version before Include, and reports EVERY offending line" {
+    cat > "$BATS_TEST_TMPDIR/Directory.Packages.props" <<'XML'
+<Project>
+    <ItemGroup>
+        <PackageVersion Version="1.0.0" Include="Reversed.One" />
+        <PackageVersion Include="Fine" Version="2.0.0" />
+        <PackageVersion Include='Single.Quotes' Version='3.0.0' />
+    </ItemGroup>
+</Project>
+XML
+    run _up "validate_package_lines '$BATS_TEST_TMPDIR/Directory.Packages.props'"
+    assert_failure "$err_invalid_item"
+    assert_output --partial "Directory.Packages.props:3:"
+    assert_output --partial "Directory.Packages.props:5:"
+    refute_output --partial "Directory.Packages.props:4:"
+}
+
+@test "validate_package_lines: ignores commented-out PackageVersion lines, like the reader does" {
+    printf '<Project>\n  <ItemGroup>\n    <!-- <PackageVersion Version="1" Include="Ignored" /> -->\n  </ItemGroup>\n</Project>\n' \
+        > "$BATS_TEST_TMPDIR/Directory.Packages.props"
+    run _up "validate_package_lines '$BATS_TEST_TMPDIR/Directory.Packages.props'"
+    assert_success
+}
+
 @test "set_package_version: rewrites only the version of the matching line in the repo section" {
     _props_fixture "$BATS_TEST_TMPDIR/Directory.Packages.props"
     run _up "set_package_version '$BATS_TEST_TMPDIR/Directory.Packages.props' repo vm2.Ulid 1.0.8; cat '$BATS_TEST_TMPDIR/Directory.Packages.props'"
@@ -165,27 +223,79 @@ _lock_repo() {
     git -C "$_repo" init -q
     git -C "$_repo" config user.email test@example.invalid
     git -C "$_repo" config user.name test
+    echo '<Solution />' > "$_repo/repo.slnx"
     echo '<Project />' > "$_repo/src/App/App.csproj"
     echo '{"version":1,"old":true}' > "$_repo/src/App/packages.lock.json"
     git -C "$_repo" add -A && git -C "$_repo" commit -q -m init
-    # Mirrors real 'dotnet restore': it regenerates a lock file only for a project that still exists, never for one
-    # whose project was removed.
+    # Mirrors real 'dotnet restore <solution>' (as called by dotnet_restore): it regenerates a lock file only for a
+    # project that still exists, never for one whose project was removed. Every restored solution is logged, so the
+    # tests can check which ones were restored.
     cat > "$BATS_TEST_TMPDIR/bin/dotnet" <<'FAKE'
 #!/usr/bin/env bash
-[[ $1 == restore && -f src/App/App.csproj ]] && echo '{"version":1,"regenerated":true}' > src/App/packages.lock.json
+[[ $1 == restore ]] || exit 0
+echo "$2" >> "${BATS_TEST_TMPDIR:-/tmp}/restored.txt"
+case $2 in
+    *.slnx|*.sln ) _app="$(dirname "$2")/src/App" ;;   # the solution lists src/App/App.csproj
+    *.csproj     ) _app=$(dirname "$2") ;;              # a single project: its lock file goes next to it
+esac
+[[ -f $_app/App.csproj ]] && echo '{"version":1,"regenerated":true}' > "$_app/packages.lock.json"
 exit 0
 FAKE
     chmod +x "$BATS_TEST_TMPDIR/bin/dotnet"
 }
 
 _refresh() {
-    run env PATH="$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" HOME="$HOME" bash -c "
+    run env PATH="$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" HOME="$HOME" BATS_TEST_TMPDIR="$BATS_TEST_TMPDIR" bash -c "
         export PATH='$BATS_TEST_TMPDIR/bin':\"\$PATH\"
         source '$lib_dir/core.sh' --no-trap >/dev/null 2>&1
         source '$_src_dir/update-packages.functions.sh'
         source '$_src_dir/update-packages.repos.sh'
+        ${REFRESH_DRY_RUN:+set_dry_run}
         refresh_lock_files '$BATS_TEST_TMPDIR/repo'
     "
+}
+
+@test "refresh_lock_files: restores every project, nested ones included, and not the solution" {
+    _lock_repo
+    mkdir -p "$BATS_TEST_TMPDIR/repo/tests/T"
+    echo '<Project />' > "$BATS_TEST_TMPDIR/repo/tests/T/T.csproj"
+    _refresh
+    assert_success
+    # find_files_by_precedence does not sort, so neither does the restore order: compare as a set
+    run sort "$BATS_TEST_TMPDIR/restored.txt"
+    assert_output "$BATS_TEST_TMPDIR/repo/src/App/App.csproj"$'\n'"$BATS_TEST_TMPDIR/repo/tests/T/T.csproj"
+    run cat "$BATS_TEST_TMPDIR/repo/src/App/packages.lock.json"
+    assert_output --partial '"regenerated":true'
+}
+
+@test "refresh_lock_files: skips projects under 'templates', 'bin', and 'obj' directories" {
+    _lock_repo
+    mkdir -p "$BATS_TEST_TMPDIR/repo/templates/T/content/src/P" "$BATS_TEST_TMPDIR/repo/src/App/bin" "$BATS_TEST_TMPDIR/repo/src/App/obj"
+    echo '<Project />' > "$BATS_TEST_TMPDIR/repo/templates/T/content/src/P/P.csproj"
+    echo '<Project />' > "$BATS_TEST_TMPDIR/repo/src/App/bin/Copied.csproj"
+    echo '<Project />' > "$BATS_TEST_TMPDIR/repo/src/App/obj/Generated.csproj"
+    _refresh
+    assert_success
+    run cat "$BATS_TEST_TMPDIR/restored.txt"
+    assert_output "$BATS_TEST_TMPDIR/repo/src/App/App.csproj"
+}
+
+@test "refresh_lock_files: fails with err_not_found, restoring nothing, when the repository has no projects" {
+    _lock_repo
+    rm "$BATS_TEST_TMPDIR/repo/src/App/App.csproj"
+    _refresh
+    assert_failure "$err_not_found"
+    [[ ! -e "$BATS_TEST_TMPDIR/restored.txt" ]]
+}
+
+@test "refresh_lock_files: in dry-run mode, restores nothing and reports the restore" {
+    _lock_repo
+    REFRESH_DRY_RUN=1 _refresh
+    assert_success
+    assert_output --partial "dry-run\$ dotnet restore"
+    run cat "$BATS_TEST_TMPDIR/repo/src/App/packages.lock.json"
+    assert_output '{"version":1,"old":true}'
+    [[ ! -e "$BATS_TEST_TMPDIR/restored.txt" ]]
 }
 
 @test "refresh_lock_files: regenerates the lock file in place and commits nothing" {
@@ -209,9 +319,11 @@ _refresh() {
 
 @test "refresh_lock_files: a repository without lock files is left without any" {
     _lock_repo
-    # Remove the whole project, not just its lock file: a real 'dotnet restore' only regenerates a lock file for a
-    # project that still exists, so this is what "no lock files to regenerate" actually means.
-    git -C "$BATS_TEST_TMPDIR/repo" rm -q -r src/App && git -C "$BATS_TEST_TMPDIR/repo" commit -q -m "drop project"
+    # Replace the project with one that does not use a lock file (the fake 'dotnet' writes one only for App.csproj):
+    # deleting every project instead would now fail with err_not_found -- see the test above.
+    git -C "$BATS_TEST_TMPDIR/repo" rm -q -r src/App
+    mkdir -p "$BATS_TEST_TMPDIR/repo/src/Lib" && echo '<Project />' > "$BATS_TEST_TMPDIR/repo/src/Lib/Lib.csproj"
+    git -C "$BATS_TEST_TMPDIR/repo" add -A && git -C "$BATS_TEST_TMPDIR/repo" commit -q -m "a project without a lock file"
     _refresh
     assert_success
     run git -C "$BATS_TEST_TMPDIR/repo" status --porcelain
