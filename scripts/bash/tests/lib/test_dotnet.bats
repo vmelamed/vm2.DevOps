@@ -25,6 +25,7 @@ declare -gxi err_argument_value
 declare -gxi err_invalid_nameref
 declare -gxi err_missing_argument
 declare -gxi err_not_found
+declare -gxi err_not_file
 
 setup() {
     _fake_csproj="$BATS_TEST_TMPDIR/fake.csproj"
@@ -191,7 +192,7 @@ EOF
 
 @test "dotnet_build: fails on a non-existent/invalid project path" {
     run dotnet_build "not-a-real-project.csproj"
-    assert_failure 4
+    assert_failure "$err_not_file"
 }
 
 @test "dotnet_pack: fails on a non-.csproj argument 1" {
@@ -200,7 +201,7 @@ EOF
     # (now 'error'-based, not 'bug'-based -- see the summary note on lib functions no longer
     # calling exit_if_has_errors) is never reached at all.
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A properties=(); dotnet_pack 'not-a-real-project.slnx' '' properties"
-    assert_failure "$err_argument_value"
+    assert_failure "$err_not_file"
 }
 
 @test "get_target_path: fails on a non-existent .csproj project (regression: was silently bypassed by a -v \$1 typo)" {

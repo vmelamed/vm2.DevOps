@@ -8,8 +8,8 @@ Additional references:
 
 @docs/ARCHITECTURE.md
 @docs/WORKFLOWS_REFERENCE.md
-@docs/GIT_PLAYBOOK.md
 @docs/RELEASE_PROCESS.md
+@docs/GIT_PLAYBOOK.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -410,21 +410,23 @@ Files that are canonical in `vm2.Templates` (`.editorconfig`, `.github/CONVENTIO
 
 ## Documentation Reference
 
-| File                                    | Covers                                           |
-|-----------------------------------------|--------------------------------------------------|
-| `docs/CONSUMER_GUIDE.md`                | Integrating vm2.DevOps into a consumer repo      |
-| `docs/ARCHITECTURE.md`                  | Detailed workflow and script design              |
-| `docs/WORKFLOWS_REFERENCE.md`           | All reusable workflows: inputs, outputs, secrets |
-| `docs/SCRIPTS_REFERENCE.md`             | CI/CD scripts: args and behavior                 |
-| `docs/CONFIGURATION.md`                 | Required repository variables and secrets        |
-| `docs/RELEASE_PROCESS.md`               | MinVer versioning, prerelease and stable flows   |
-| `docs/DEVELOPER_WORKFLOW.md`            | Conventional Commits, PR process                 |
-| `docs/GIT_PLAYBOOK.md`                  | Rebase-first workflow and git operations         |
-| `docs/ERROR_RECOVERY.md`                | Failure scenarios and recovery runbooks          |
-| `docs/diff-shared.md`                   | Documents the features and file formats of the shared file contents sync mechanism |
-| `docs/GITHUB_ACTIONS_CHEATSHEET.md`     | Short reference for GitHub Actions usage and best practices |
-| `docs/HARDENING.md`                     | Security hardening guidelines for the repository |
-| `docs/TOOLS.md`                         | Reference for tools used in the repository/CI-CD pipelines |
+| File                                                        | Covers                                                                             |
+|-----------------------------------------------              |------------------------------------------------------------------------------------|
+| `docs/CONSUMER_GUIDE.md`                                    | Integrating vm2.DevOps into a consumer repo                                        |
+| `docs/ARCHITECTURE.md`                                      | Detailed workflow and script design                                                |
+| `docs/WORKFLOWS_REFERENCE.md`                               | All reusable workflows: inputs, outputs, secrets                                   |
+| `docs/SCRIPTS_REFERENCE.md`                                 | CI/CD scripts: args and behavior                                                   |
+| `docs/CONFIGURATION.md`                                     | Required repository variables and secrets                                          |
+| `docs/RELEASE_PROCESS.md`                                   | MinVer versioning, prerelease and stable flows                                     |
+| `docs/DEVELOPER_WORKFLOW.md`                                | Conventional Commits, PR process                                                   |
+| `docs/GIT_PLAYBOOK.md`                                      | Rebase-first workflow and git operations                                           |
+| `docs/ERROR_RECOVERY.md`                                    | Failure scenarios and recovery runbooks                                            |
+| `docs/diff-shared.md`                                       | Documents the features and file formats of the shared file contents sync mechanism |
+| `docs/cheat-sheets/GITHUB_ACTIONS_CHEAT_SHEET.md`           | Short reference for GitHub Actions usage and best practices                        |
+| `docs/cheat-sheets/SUBSHELL_CHEAT_SHEET.md`                 | Short reference for bash subshell usage and best practices                         |
+| `docs/cheat-sheets/BASH_PARAMETER_EXPANSION_CHEAT_SHEET.md` | Short reference for the bash `${…}` parameter expansion forms                      |
+| `docs/HARDENING.md`                                         | Security hardening guidelines for the repository                                   |
+| `docs/TOOLS.md`                                             | Reference for tools used in the repository/CI-CD pipelines                         |
 
 ## Bash Conventions
 

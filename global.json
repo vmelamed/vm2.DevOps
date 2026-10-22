@@ -1,0 +1,9 @@
+{
+    "sdk": {
+        "version": "10.0.402",
+        "rollForward": "disable" // used to be "latestFeature" but that ultimately leads to NU1004
+    },
+    "test": {
+        "runner": "Microsoft.Testing.Platform"
+    }
+}

@@ -1,7 +1,7 @@
 # GitHub Actions Cheat Sheet
 
 A compact guide to the GitHub Actions features used by vm2.DevOps consumers. For the complete reusable-workflow API,
-see [Workflows Reference](WORKFLOWS_REFERENCE.md); for the release model, see [Release Process](RELEASE_PROCESS.md).
+see [Workflows Reference](../WORKFLOWS_REFERENCE.md); for the release model, see [Release Process](../RELEASE_PROCESS.md).
 
 Official references: [workflow syntax](https://docs.github.com/actions/reference/workflows-and-actions/workflow-syntax),
 [contexts](https://docs.github.com/actions/learn-github-actions/contexts), and
@@ -240,4 +240,4 @@ jobs:
 ```
 
 `workflow_run` has a distinct event payload. Use `github.event.workflow_run.head_sha`, not `github.sha`, to identify the
-commit CI validated. See [Release Process](RELEASE_PROCESS.md) for the full prerequisite and race-condition handling.
+commit CI validated. See [Release Process](../RELEASE_PROCESS.md) for the full prerequisite and race-condition handling.

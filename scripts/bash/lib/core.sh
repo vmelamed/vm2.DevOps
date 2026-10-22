@@ -57,6 +57,7 @@ declare -xri err_invalid_arguments
 declare -xri err_argument_type
 declare -xri err_not_git_directory
 declare -xri err_argument_value
+declare -xri err_not_found
 
 declare -xr error_em
 
@@ -154,35 +155,107 @@ function remove_traps()
 }
 
 #---------------------------------------------------------------------------------------------
-# @description Depending on the value of $dry_run, either executes the given command or prints
-#    what would have been executed, without running it.
+# @description Appends a command to the current trap of one or more signals (e.g. after core.sh's
+#    on_exit), instead of replacing it as a plain `trap` does.
 #
-# @arg $1 string the command to execute
-# @arg $@ mixed additional arguments to pass to the command (optional)
+# Notes:
+#   - `trap -p` prints the trap as a re-readable shell command (`trap -- '<command>' SIGNAL`),
+#     quoted by bash itself (a `'` inside the command comes out as `'\''`), so eval-ing it into an
+#     array safely recovers the command as element 2. Inside $( ... ) bash still reports the
+#     current shell's traps.
+#   - Appends, never prepends: on_exit and on_err read `$?` in their first statement. The script's
+#     exit code is preserved regardless of what the appended command returns.
+#   - Single-quote the command to delay expansion until the trap fires (see the example).
+#   - Traps belong to the current shell: called inside $( ... ) or a pipeline, it changes only that
+#     subshell's trap.
+#
+# @arg $1 string The command to append.
+# @arg $@ string One or more signal names (e.g. EXIT, INT).
+#
+# @exitcode success=0: Always (invalid arguments bug-exit).
+#
+# @example
+#   add_trap 'rm -f "$summary_file"' EXIT
+#---------------------------------------------------------------------------------------------
+function add_trap()
+{
+    (( $# >= 2 ))         || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires at least two arguments (provided $#):" \
+                                                              "  - the command to append" \
+                                                              "  - one or more signal names"
+    [[ ! -v 1 || -n $1 ]] || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the command, to be non-empty."
+
+    local _signal
+    for _signal in "${@:2}"; do
+        trap -p "$_signal" > /dev/null 2>&1 ||
+            bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires the signal names to be valid (provided '$_signal')."
+    done
+
+    exit_if_has_bugs
+
+    local _command=$1
+    local -a _current
+    shift
+
+    for _signal in "$@"; do
+        eval "_current=( $(trap -p "$_signal") )"
+        # a newline, not '; ', joins the commands: '; ' breaks after a trailing '&' (syntax error) and
+        # after a trailing '# comment' (which would swallow the appended command)
+        trap -- "${_current[2]:+${_current[2]}$'\n'}$_command" "$_signal"
+    done
+
+    return "$success"
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Depending on the value of $dry_run, either executes the given command or prints
+#    what would have been executed, without running it. If the first argument is '--quiet',
+#    the command's output is discarded unless verbose mode is on.
+#
+# @arg $1 string optional literal flag '--quiet': discard the command's stdout and stderr
+#   unless verbose mode is on. DO NOT USE IT when the caller redirects or captures the output.
+# @arg $@ mixed the command to execute and its arguments (after the optional '--quiet').
 #
 # @exitcode success=0: The command succeeded, or dry-run mode was active (command not
 #   executed).
 # @exitcode N the executed command's own exit code, on failure
 #
-# @stdout in dry-run mode: "dry-run$ <command> [args...]"; otherwise whatever the executed
-#    command writes to stdout
+# @stderr in dry-run mode: "dry-run$ <command> [args...]" (arguments quoted with %q) -- on
+#   stderr, so a caller capturing stdout ('x=$(execute ...)', '> file') never receives it as data
+# @stdout whatever the executed command writes (both of its streams are discarded with
+#   '--quiet' unless verbose mode is on)
 #
 # @example
 #   execute git commit -m "Initial commit"
+#   execute --quiet dotnet clean "$project"
+#
+#   * Note: an anti-pattern:
+#   execute --quiet ls > "current-directory-contents.txt"
+#   # the '--quiet' flag suppresses the output, so redirecting it to a file defeats the
+#   # purpose of using '--quiet'.
 #---------------------------------------------------------------------------------------------
 function execute()
 {
-    (( $# > 0 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires at least one argument (provided $#): the command to execute and the arguments."
+    local _quiet=false
+    [[ ${1-} == --quiet ]] && { _quiet=true; shift; }
 
+    (( $# > 0 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires the command to execute (and its arguments)."
     exit_if_has_bugs
 
+    local _command
+    printf -v _command '%q ' "$@"
+    _command=${_command% }
+
     if is_dry_run; then
-        echo "dry-run$ $*"
-        return 0
+        echo "dry-run$ $_command" >&2
+        return "$success"
     fi
 
-    trace "Executing (${BASH_SOURCE[1]:-} ${BASH_LINENO[0]:-}): $*"
-    "$@"
+    trace "Executing (${BASH_SOURCE[1]:-} ${BASH_LINENO[0]:-}): $_command"
+    if $_quiet && ! is_verbose; then
+        "$@" > "$_ignore" 2>&1
+    else
+        "$@"
+    fi
 }
 
 #---------------------------------------------------------------------------------------------
@@ -303,4 +376,49 @@ function list_of_files()
 
     # restore the previous settings of the nullglob and globstar options
     restore_state state
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Finds the files matching the first of the given file name patterns that matches
+#   anything in a directory (usually the working tree of a repository) in a specified
+#   precedence order, e.g., if the precedence order of patterns is
+#   ('*.slnx' '*.sln' '*.csproj'), it will:
+#   1. search for *.slnx files
+#   2. if none are found, searches for *.sln files
+#   3. if none are found, searches for *.csproj files
+#   Excluded from the search are the '.git', 'obj', 'bin', and 'templates' sub-directories.
+#
+# @arg $1 The path to a directory (usually the working tree of a repository) to search for
+#   file name patterns.
+# @arg $2 The name of the array variable to store the found file names.
+# @arg $3..$@ The priority order of sought file name patterns.
+#
+# @exitcode success=0: Files with names matching the specified name patterns were found and
+#   stored in the specified array variable.
+# @exitcode err_not_found=9: No files with names matching the specified name patterns were
+#   found in the specified directory.
+#---------------------------------------------------------------------------------------------
+function find_files_by_precedence()
+{
+    (( $# > 2 ))                          || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires at least 3 arguments (provided $#):" \
+                                                                              "  - path to the repository to search for the file name patterns" \
+                                                                              "  - name of the array variable to store the found file names" \
+                                                                              "  - the file name patterns to search for, in order of precedence"
+    [[ ! -v 1 || -d "$1" ]]               || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires a path to a directory (usually a repository root working tree) as the first argument (provided '${1:-<none>}')."
+    [[ ! -v 2 ]] || is_indexed_array "$2" || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires the name of the array variable to store the found file names as the second argument (provided '${2:-<none>}')."
+    exit_if_has_bugs
+
+    local _dir=$1
+    local -n __file_names=$2
+    local __patterns=("${@:3}")
+    local __pattern
+
+    __file_names=()
+
+    for __pattern in "${__patterns[@]}"; do
+        readarray -t __file_names < <(find "$_dir" -mindepth 1 \( -name .git -o -name bin -o -name obj -o -name templates \) -prune -o -type f -name "$__pattern" -print)
+        (( ${#__file_names[@]} == 0 )) || return "$success"
+    done
+
+    return "$err_not_found"
 }

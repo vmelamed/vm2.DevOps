@@ -988,3 +988,24 @@ function to_summary()
         echo "$_line"
     done | "${__summary_output[@]}"
 }
+
+#---------------------------------------------------------------------------------------------
+# @description Returns the current time in microseconds since the epoch. us stands for
+#   microseconds: visually close to the greek letter mu, μ the symbol for micro.
+#
+#   Note: Requires Bash 5.0 or later for $EPOCHREALTIME.
+#
+# @stdout The current time in microseconds since the epoch.
+#
+# @exitcode success=0: Always succeeds.
+#
+# @example
+#   point0_us=$(now_us)
+#   sleep 1
+#   point1_us=$(now_us)
+#   echo "Elapsed time: $((point1_us - point0_us)) us"
+#---------------------------------------------------------------------------------------------
+function now_us()
+{
+    echo "${EPOCHREALTIME//[!0-9]/}"
+}

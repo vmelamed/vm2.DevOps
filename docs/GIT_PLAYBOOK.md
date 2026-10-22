@@ -331,7 +331,7 @@ git log --merges --oneline origin/main..origin/<branch>
 ```
 
 **First fix: rebase**, which drops the merge commit and keeps your commits. The steps are in DEVELOPER_WORKFLOW.md,
-section [A Merge Commit Appeared on Your Branch](DEVELOPER_WORKFLOW.md#a-merge-commit-appeared-on-your-branch).
+section [A Merge Commit Appeared on Your Branch](./DEVELOPER_WORKFLOW.md#a-merge-commit-appeared-on-your-branch).
 
 **Fallback: collapse the branch into one commit.** Use it when that rebase keeps stopping on commits `main` already has
 in another form. **What happened:** `vm2.DevOps` PR #44 (14 commits) carried a merge commit, and some of its early

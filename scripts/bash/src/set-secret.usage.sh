@@ -6,10 +6,6 @@
 declare -xr common_args_usage
 declare -xr script_name
 
-declare -xr vm2_devops_repo_name
-declare -xr vm2_sot_repo_name
-declare -xr default_sot
-
 declare -xra gh_apps_with_secrets
 
 #---------------------------------------------------------------------------------------------

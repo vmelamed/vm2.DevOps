@@ -618,11 +618,11 @@ function resolve_repo_root()
 # @stdout the absolute path to the SoT shared content directory
 #
 # @example
-#   get_vm2_sot_path "$vm2_repos" "AddNewPackage" sot_path
+#   get_vm2_sot_path "$vm2_repos" sot_path "AddNewPackage"
 #---------------------------------------------------------------------------------------------
 function get_vm2_sot_path()
 {
-    local _invalid_arg1="${FUNCNAME[0]}() requires argument 1, the vm2 repositories parent directory, to be a valid path (provided '${1:-<none>}'). Use the function resolve_vm2_repos()."
+    local _invalid_arg1="${FUNCNAME[0]}() requires argument 1, the vm2 repositories parent directory, to be a valid, existing path (provided '${1:-<none>}'). Use the function resolve_vm2_repos()."
 
     (( $# == 2 || $# == 3 ))               || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() expects two or three arguments (provided $#):" \
                                                                                "  - the path to the parent directory of all vm2 repositories (use resolve_vm2_repos function, usually \$VM2_REPOS)" \
