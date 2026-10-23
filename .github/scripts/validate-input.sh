@@ -134,25 +134,15 @@ is_safe_boolean "$skip_tests"                                                   
 is_safe_boolean "$skip_benchmarks"                                                                               || true
 is_safe_boolean "$skip_packages"                                                                                 || true
 
-declare _build_projects=$build_projects
-declare -i _build_projects_len
+declare -i _projects_len
 
-_build_projects_len=$(jq 'length // 0' <<< "$_build_projects")
-
-if (( _build_projects_len == 0 )); then
-    declare _first
-    _first=$(find . -maxdepth 1 -type f \( -name "*.slnx" -o -name "*.sln" -o -name "*.csproj" \) | head -n 1)
-    if [[ -n $_first ]]; then
-        _build_projects="[\"$_first\"]"
-        _build_projects_len=1
-    else
-        error -ec "$err_argument_value" "No build projects specified and none found in the current directory."
-    fi
-fi
-
-if (( _build_projects_len > 0 )); then
-    sanitize_common_dotnet_args "$(jq -r '.[0] // "."' <<< "$_build_projects")"                                  || true
-fi
+declare _first_project
+_first_project=$(jq -rn --argjson b "$build_projects" \
+                        --argjson t "$test_projects" \
+                        --argjson m "$benchmark_projects" \
+                        --argjson p "$package_projects" \
+                        '($b + $t + $m + $p)[0] // empty' 2>"$_ignore") || _first_project=''
+[[ -z $_first_project ]] || sanitize_common_dotnet_args "$_first_project"
 
 declare _table_fmt
 $ci && _table_fmt="--markdown" || _table_fmt="--graphical"
