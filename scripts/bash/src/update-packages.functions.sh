@@ -217,6 +217,7 @@ function set_package_version()
 
     if [[ $_done == true ]]; then
         execute mv "$_tmp" "$_file" || _rc=$?
+        rm -f "$_tmp" # dry run (not moved) or a failed mv: don't leave it behind
         (( _rc == success )) || {
             _rc="$err_tool_error"
             error -ec "$_rc" "Failed to copy temporary file to '$_file'."; return "$_rc";
