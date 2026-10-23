@@ -46,7 +46,26 @@ case "\$1" in
     nuget)   exit "\${FAKE_DOTNET_NUGET_EXIT:-0}" ;;
     clean)   exit "\${FAKE_DOTNET_CLEAN_EXIT:-0}" ;;
     restore) exit "\${FAKE_DOTNET_RESTORE_EXIT:-0}" ;;
-    tool)    exit 0 ;;
+    tool)
+        case "\$2" in
+            list)
+                # is reportgenerator installed? Default: globally (the existing tests' setup); a test sets these to
+                # exercise the local-tool and the one-shot 'tool execute' paths
+                case "\$*" in
+                    *--global*) exit "\${FAKE_TOOL_GLOBAL_EXIT:-0}" ;;
+                    *--local*)  exit "\${FAKE_TOOL_LOCAL_EXIT:-1}" ;;
+                esac
+                exit 1
+                ;;
+            run|exec|execute)
+                # like the real commands: everything after '--' goes to the tool -- here, the fake reportgenerator
+                while (( \$# > 0 )) && [[ \$1 != -- ]]; do shift; done
+                (( \$# > 0 )) && shift
+                exec "$_dir/reportgenerator" "\$@"
+                ;;
+        esac
+        exit 0
+        ;;
     build)
         echo "Build succeeded."
         exit "\${FAKE_DOTNET_BUILD_EXIT:-0}"
@@ -155,6 +174,34 @@ _run_run_tests() {
 
     run cat "$BATS_TEST_TMPDIR/repo/reportgen.log"
     assert_output --partial "-reports:"
+    assert_output --partial "minimumCoverageThresholds:lineCoverage=80"
+}
+
+@test "run-tests: locally, with reportgenerator installed only as a local tool, runs it via 'dotnet tool run'" {
+    _make_repo_with_test_project "$BATS_TEST_TMPDIR/repo"
+    _install_fake_dotnet "$BATS_TEST_TMPDIR/repo"
+    _install_fake_test_exec "$BATS_TEST_TMPDIR/repo/testexec.sh"
+    run _run_run_tests "$BATS_TEST_TMPDIR/repo" 'FAKE_TOOL_GLOBAL_EXIT=1 FAKE_TOOL_LOCAL_EXIT=0' --quiet tests/App.Tests/App.Tests.csproj
+    assert_success
+
+    run cat "$BATS_TEST_TMPDIR/repo/dotnet.log"
+    assert_line "tool run reportgenerator -- -reports:$BATS_TEST_TMPDIR/repo/artifacts/tests/App.Tests/coverage.cobertura.xml -targetdir:$BATS_TEST_TMPDIR/repo/artifacts/tests/App.Tests/reports -reporttypes:TextSummary,html_dark,MarkdownSummaryGithub minimumCoverageThresholds:lineCoverage=80 minimumCoverageThresholds:branchCoverage=75 minimumCoverageThresholds:methodCoverage=80"
+    run cat "$BATS_TEST_TMPDIR/repo/reportgen.log"
+    assert_output --partial "minimumCoverageThresholds:lineCoverage=80"   # the arguments reached the tool, unquoted
+    refute_output --partial '"'
+}
+
+@test "run-tests: locally, with reportgenerator not installed, runs it once via 'dotnet tool execute --yes', pinned to 5.5" {
+    _make_repo_with_test_project "$BATS_TEST_TMPDIR/repo"
+    _install_fake_dotnet "$BATS_TEST_TMPDIR/repo"
+    _install_fake_test_exec "$BATS_TEST_TMPDIR/repo/testexec.sh"
+    run _run_run_tests "$BATS_TEST_TMPDIR/repo" 'FAKE_TOOL_GLOBAL_EXIT=1 FAKE_TOOL_LOCAL_EXIT=1' --quiet tests/App.Tests/App.Tests.csproj
+    assert_success
+
+    run cat "$BATS_TEST_TMPDIR/repo/dotnet.log"
+    assert_line --partial "tool execute --yes dotnet-reportgenerator-globaltool --version 5.5.* -- -reports:"
+    refute_line --partial "tool install"                               # nothing is installed, so nothing to uninstall
+    run cat "$BATS_TEST_TMPDIR/repo/reportgen.log"                     # the arguments after '--' reached the tool
     assert_output --partial "minimumCoverageThresholds:lineCoverage=80"
 }
 

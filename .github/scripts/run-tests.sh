@@ -207,24 +207,26 @@ if $ci; then
 fi
 
 trace "Generating coverage reports outside CI/CD..."
+declare -a reportgenerator_command
 
-uninstall_reportgenerator=false
-if ! execute --quiet dotnet tool list dotnet-reportgenerator-globaltool --global; then
-    trace "Installing the tool 'reportgenerator'..."
-    execute dotnet tool install dotnet-reportgenerator-globaltool --global --version "5.5.*"
-    uninstall_reportgenerator=true
+if dotnet tool list dotnet-reportgenerator-globaltool --global > "$_ignore" 2>&1; then
+    reportgenerator_command=(reportgenerator)
+elif dotnet tool list dotnet-reportgenerator-globaltool --local > "$_ignore" 2>&1; then
+    reportgenerator_command=(dotnet tool run reportgenerator --)
 else
-    trace "The tool 'reportgenerator' is already installed."
+    reportgenerator_command=(dotnet tool execute --yes dotnet-reportgenerator-globaltool --version '5.5.*' --)
 fi
 
-# Execute the tool in this directory so that it can pick up the .netconfig file for filters specific to this project
-execute reportgenerator \
-    -reports:"$coverage_source_path" \
-    -targetdir:"$coverage_reports_dir" \
-    -reporttypes:TextSummary,html_dark,MarkdownSummaryGithub \
-    minimumCoverageThresholds:lineCoverage="$min_coverage_pct" \
-    minimumCoverageThresholds:branchCoverage="$min_branch_coverage_pct" \
-    minimumCoverageThresholds:methodCoverage="$min_method_coverage_pct" || rc=$?
+reportgenerator_command+=(
+    "-reports:$coverage_source_path"
+    "-targetdir:$coverage_reports_dir"
+    "-reporttypes:TextSummary,html_dark,MarkdownSummaryGithub"
+    "minimumCoverageThresholds:lineCoverage=$min_coverage_pct"
+    "minimumCoverageThresholds:branchCoverage=$min_branch_coverage_pct"
+    "minimumCoverageThresholds:methodCoverage=$min_method_coverage_pct"
+)
+
+execute "${reportgenerator_command[@]}" || rc=$?
 
 if [[ -s "$coverage_reports_dir/Summary.txt" ]]; then
     if is_tool_present glow; then
@@ -234,11 +236,6 @@ if [[ -s "$coverage_reports_dir/Summary.txt" ]]; then
     fi
 else
     warning "Summary.txt not found in coverage output directory '$coverage_source_path'."
-fi
-
-if [[ "$uninstall_reportgenerator" = true ]]; then
-    trace "Uninstalling the tool 'reportgenerator'..."
-    execute dotnet tool uninstall dotnet-reportgenerator-globaltool --global
 fi
 
 remove_traps
