@@ -20,6 +20,7 @@ declare -xr edit_em
 declare -xr check_em
 declare -xr no_entry_em
 declare -xr error_em
+declare -xr warn_em
 
 declare -xr vm2_sot_repo_name   # vm2.Templates
 
@@ -84,7 +85,7 @@ info "Checked the status of ${#target_repos[@]} repositories (branch, working tr
 
 # the shared block is copied from the SoT, if it is skipped, then no fan-out at all
 if $include_sot_repo && [[ ${modes[$vm2_sot_repo_name]:-} != publish ]]; then
-    warnings+=("'$vm2_sot_repo_name' has uncommitted changes: the SoT and the fan-out were skipped.")
+    warnings+=("'$vm2_sot_repo_name' ${reasons[$vm2_sot_repo_name]}: the SoT and the fan-out were skipped.")
     include_sot_repo=false
 fi
 
@@ -188,14 +189,16 @@ for repo in "${!target_repos[@]}"; do
     commit_package_versions "$repo_path" "chore(deps): update NuGet package versions in $dpp_file_name" "${paths[@]}" || _commit_rc=$?
 
     if (( _commit_rc == negative )); then
-        reasons[$repo]="$check_em already up to date -- nothing to commit"
+        is_dry_run &&
+            reasons[$repo]="dry run: would commit, push '$new_branch', and open a pull request" ||
+            reasons[$repo]="$check_em already up to date -- nothing to commit"
         continue
     elif (( _commit_rc != success )); then
         error -ec "$err_tool_error" "Failed to commit the package versions in '$repo'."
         continue
     fi
 
-    git -C "$repo_path" push --quiet -u origin "$new_branch" 2>"$_ignore" || {
+    execute --quiet git -C "$repo_path" push --quiet -u origin "$new_branch" || {
         error -ec "$err_tool_error" "Failed to push '$new_branch' in '$repo'."
         continue
     }
@@ -251,10 +254,10 @@ done
 } >> "$summary_file"
 
 if ! is_empty_array warnings; then {
-    echo "## Warnings"
+    echo "## $warn_em Warnings"
     echo
     for w in "${warnings[@]}"; do
-        warning "$w"
+        echo "1. $w"
     done
 } >> "$summary_file"
 fi

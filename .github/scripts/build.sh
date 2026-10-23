@@ -43,15 +43,21 @@ source "$script_dir/build.usage.sh"
 get_arguments "$@"
 build_project=${build_project:-"${BUILD_PROJECT:-}"}
 
-declare -i rc=$success
-
 # sanitize inputs
 if [[ -z $build_project ]]; then
     declare -a projects=()
+    declare -A __build_project_state=()
+    save_state __build_project_state
+    set_null_glob true
 
-    # search for *.slnx|*.sln|*.csproj file in the current directory
-    find_files_by_precedence "." projects '*.slnx' '*.sln' '*.csproj' || rc=$?
-    (( rc == success ))        || exit_with_error -ec "$err_not_found" "No build project (*.slnx, *.sln, *.csproj) was specified or found in the current directory."
+        # search for *.slnx|*.sln|*.csproj file in the current directory
+        projects=(./*.slnx)
+        (( ${#projects[@]} )) || projects=(./*.sln)
+        (( ${#projects[@]} )) || projects=(./*.csproj)
+
+    restore_state __build_project_state
+
+    (( ${#projects[@]} > 0 ))  || exit_with_error -ec "$err_not_found" "No build project (*.slnx, *.sln, *.csproj) was specified or found in the current directory."
     build_project=${projects[0]:-}
     (( ${#projects[@]} == 1 )) || warning "Multiple projects found: (${projects[*]}), using the first one: '$build_project'."
     trace "Auto-detected build project: $build_project"

@@ -742,7 +742,7 @@ function dotnet_clean()
     [[ -z $runtime ]]       || _dotnet_args+=("--runtime" "$runtime")
     [[ -z $artifacts ]]     || _dotnet_args+=("--artifacts-path" "$artifacts")
 
-    # if we have more than 1 arguments then we have extra arguments that should be added to the other dotnet arguments
+    # if we have more than 1 argument then we have extra arguments that should be added to the other dotnet arguments
     if (( $# > 1 )); then
         shift
         _dotnet_args+=("$@")
@@ -805,7 +805,7 @@ function dotnet_restore()
     [[ -z $runtime ]]   || _dotnet_args+=("--runtime" "$runtime")
     [[ -z $artifacts ]] || _dotnet_args+=("--artifacts-path" "$artifacts")
 
-    # if we have more than 1 arguments then we have extra arguments that should be added to the other dotnet arguments
+    # if we have more than 1 argument then we have extra arguments that should be added to the other dotnet arguments
     if (( $# > 1 )); then
         shift
         _dotnet_args+=("$@")
@@ -854,7 +854,7 @@ function dotnet_build()
 
     local -i _rc="$success"
 
-    [[ -s "$1" && "$1" == *.@(csproj|slnx|sln) ]] || {
+    [[ "$1" == *.@(csproj|slnx|sln) && -s $1 ]] || {
         _rc="$err_not_file"
         error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a path to an existing project or solution file (provided '${1:-<none>}')."
     }
@@ -887,7 +887,7 @@ function dotnet_build()
     [[ -z $minver_prerelease_id ]] || _dotnet_args+=("-property:MinVerPrereleaseIdentifiers=\"$minver_prerelease_id\"")
     [[ -z $preprocessor_symbols ]] || _dotnet_args+=("-property:preprocessor_symbols=\"$preprocessor_symbols\"")
 
-    # if we have more than 2 arguments then we have extra arguments that should be added to the other dotnet arguments
+    # if there are more than 2 arguments, the rest are extra arguments that should be added to the other dotnet arguments
     if (( $# > 2 )); then
         shift 2
         _dotnet_args+=("$@")
@@ -1015,7 +1015,7 @@ function dotnet_pack()
     [[ -z $minver_prerelease_id ]] || _dotnet_args+=("-property:MinVerPrereleaseIdentifiers=\"$minver_prerelease_id\"")
     [[ -z $_reason ]]              || _dotnet_args+=("-property:PackageReleaseNotes=\"$_reason\"")
 
-    # if we have more than 3 arguments then we have extra arguments that should be added to the other dotnet arguments
+    # if there are more than 3 arguments, the rest are extra arguments that should be added to the other dotnet arguments
     if (( $# > 3 )); then
         shift 3
         _dotnet_args+=("$@")
@@ -1073,7 +1073,7 @@ function dotnet_pack()
     local _package="${_packs_path_and_name}.nupkg"
 
     _properties["PackagePath"]="$_package"
-    [[ -s $_package ]] || {
+    is_dry_run || [[ -s $_package ]] || {
         _rc=$err_tool_error
         error -ec "$_rc" "Package '$_package' not found or empty."
     }
@@ -1093,7 +1093,7 @@ function dotnet_pack()
 
         _properties["SymbolsPath"]="$_symbols"
 
-        [[ -s $_symbols ]] ||
+        is_dry_run || [[ -s $_symbols ]] ||
             warning -ec "$err_tool_error" "Package '$_symbols' not found or empty."
      fi
 

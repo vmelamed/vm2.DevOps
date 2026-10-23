@@ -991,7 +991,7 @@ function to_summary()
 
 #---------------------------------------------------------------------------------------------
 # @description Returns the current time in microseconds since the epoch. us stands for
-#   microseconds: visually close to the greek letter mu, μ the symbol for micro.
+#   microseconds: visually close to the Greek letter mu - 'μ', the symbol for micro.
 #
 #   Note: Requires Bash 5.0 or later for $EPOCHREALTIME.
 #
