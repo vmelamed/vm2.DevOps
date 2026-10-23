@@ -305,17 +305,17 @@ if ! has_local_repo repo_state; then
     [[ -n "$branch" ]] ||
         enter_value "Default branch name" branch "$default_default_branch" false validate_branch_name
 
-    if execute git -C "$repo_path" init >"$_ignore"; then
+    if execute --quiet git -C "$repo_path" init; then
         undos+=("rm -rf '$repo_path/.git'")
     fi
 
     info "  ...creating and checking out the default branch '$branch';"
-    execute git -C "$repo_path" checkout -b "$branch" >"$_ignore" 2>&1                      && trace "'$branch' branch checked out"
+    execute --quiet git -C "$repo_path" checkout -b "$branch"                               && trace "'$branch' branch checked out"
 
     info "  ...staging and committing existing files in '$repo_path';"
-    execute git -C "$repo_path" add . >"$_ignore"                                           && trace "Staged all existing files in '$repo_path' for commit."
+    execute --quiet git -C "$repo_path" add .                                               && trace "Staged all existing files in '$repo_path' for commit."
     if ! git -C "$repo_path" diff --cached --quiet; then
-        execute git -C "$repo_path" commit -m "chore: initial scaffold" >"$_ignore"         && trace "Committed staged files to '$repo_path'."
+        execute --quiet git -C "$repo_path" commit -m "chore: initial scaffold"             && trace "Committed staged files to '$repo_path'."
     fi
 
     info "...initialized a new git repository in '$repo_path' in the default branch '$branch'."
@@ -365,7 +365,7 @@ if ! has_remote_repo repo_state; then
     undos+=("gh repo delete '$repo' --yes")
 
     info "  ...setting the remote origin URL to '$repo_url';"
-    execute git -C "$repo_path" remote set-url origin "$repo_url" >"$_ignore"
+    execute --quiet git -C "$repo_path" remote set-url origin "$repo_url"
     undos+=("git -C '$repo_path' remote remove origin")
 
     info "  ...pushing the default branch '$branch' to GitHub;"

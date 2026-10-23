@@ -134,23 +134,30 @@ is_safe_boolean "$skip_tests"                                                   
 is_safe_boolean "$skip_benchmarks"                                                                               || true
 is_safe_boolean "$skip_packages"                                                                                 || true
 
-declare -i _projects_len
+# Find first valid project file (if any)
+declare -a all_projects
+readarray -t all_projects < <(jq -rn --argjson b "$build_projects" \
+                                     --argjson t "$test_projects" \
+                                     --argjson m "$benchmark_projects" \
+                                     --argjson p "$package_projects" \
+                                     '($b + $t + $m + $p)[]' 2>"$_ignore")
 
-declare _first_project
-_first_project=$(jq -rn --argjson b "$build_projects" \
-                        --argjson t "$test_projects" \
-                        --argjson m "$benchmark_projects" \
-                        --argjson p "$package_projects" \
-                        '($b + $t + $m + $p)[0] // empty' 2>"$_ignore") || _first_project=''
-[[ -z $_first_project ]] || sanitize_common_dotnet_args "$_first_project"
+declare candidate
 
-declare _table_fmt
-$ci && _table_fmt="--markdown" || _table_fmt="--graphical"
+for candidate in "${all_projects[@]}"; do
+    [[ -f $candidate ]] && break
+    candidate=''
+done
+
+[[ -z $candidate ]] || sanitize_common_dotnet_args "$candidate" || true
+
+declare table_fmt
+$ci && table_fmt="--markdown" || table_fmt="--graphical"
 
 declare -ra dump_vars_args=(
     --quiet
     --force
-    "$_table_fmt"
+    "$table_fmt"
     --gh-escape
     --header "Validated Parameters"
     --header "Hosts:"

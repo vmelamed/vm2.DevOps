@@ -31,6 +31,34 @@ load '../helpers/setup'
 _gh_scripts_dir="$(cd "$lib_dir/../../../.github/scripts" && pwd)"
 _pack="$_gh_scripts_dir/pack.sh"
 
+# Writes the common head of a fake `dotnet`: logs the call, and -- like real `dotnet` -- rejects more than ONE project
+# or solution argument for pack/build/clean/restore with MSB1008. Without this check a wrapper that leaks extra
+# positional arguments into the command line (dotnet_pack once appended its own release notes and nameref name) still
+# "succeeds" here. Options that take a value are skipped together with their value; '-property:...' is one token.
+_write_fake_dotnet_head() {
+    cat > "$1" <<'EOF'
+#!/usr/bin/env bash
+echo "$*" >> "$DOTNET_CALL_LOG"
+case "$1" in
+    pack|build|clean|restore)
+        _positional=()
+        _args=("${@:2}")
+        for (( _i = 0; _i < ${#_args[@]}; _i++ )); do
+            case ${_args[_i]} in
+                --verbosity|-v|--configuration|-c|--framework|-f|--runtime|-r|--artifacts-path|--output|-o ) (( ++_i )) ;;
+                -* ) ;;
+                *  ) _positional+=("${_args[_i]}") ;;
+            esac
+        done
+        if (( ${#_positional[@]} > 1 )); then
+            echo "MSBUILD : error MSB1008: Only one project can be specified. (fake dotnet got: ${_positional[*]})" >&2
+            exit 1
+        fi
+        ;;
+esac
+EOF
+}
+
 # Installs the fake dotnet and pre-creates the package output the fake `dotnet msbuild` call
 # will report -- so dotnet_pack's own "package file exists and is non-empty" check succeeds.
 _install_fake_dotnet_and_package() {
@@ -45,9 +73,8 @@ _install_fake_dotnet_and_package() {
     # auto-build fallback. Tests exercising that fallback override FAKE_TARGET_PATH themselves.
     echo fake > "$_dir/App.dll"
 
-    cat > "$_dir/fakebin/dotnet" <<EOF
-#!/usr/bin/env bash
-echo "\$*" >> "\$DOTNET_CALL_LOG"
+    _write_fake_dotnet_head "$_dir/fakebin/dotnet"
+    cat >> "$_dir/fakebin/dotnet" <<EOF
 case "\$1" in
     pack)    exit "\${FAKE_DOTNET_PACK_EXIT:-0}" ;;
     clean)   exit "\${FAKE_DOTNET_CLEAN_EXIT:-0}" ;;
@@ -125,6 +152,31 @@ _run_pack() {
     assert_line --index 3 --partial "pack src/App/App.csproj"
     refute_output --partial "restore"
     refute_output --partial "^build "
+}
+
+@test "pack: passes exactly one project to 'dotnet pack' (regression: dotnet_pack leaked its own arguments into it)" {
+    _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
+    _install_fake_dotnet_and_package "$BATS_TEST_TMPDIR/repo"
+    run _run_pack "$BATS_TEST_TMPDIR/repo" '' --reason "'test release'" src/App/App.csproj
+    assert_success
+    run grep '^pack ' "$BATS_TEST_TMPDIR/repo/dotnet.log"
+    assert_success
+    assert_output --partial "src/App/App.csproj"
+    refute_output --partial "_pack_properties"      # dotnet_pack's own nameref argument
+    refute_output --regexp ' test release( |$)'      # the release notes only as -property:PackageReleaseNotes=...
+}
+
+@test "pack: in dry-run mode, reports the pack and succeeds without any package file (nothing was packed)" {
+    _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
+    _install_fake_dotnet_and_package "$BATS_TEST_TMPDIR/repo"
+    rm -f "$BATS_TEST_TMPDIR/repo/pkgout/"*.nupkg "$BATS_TEST_TMPDIR/repo/pkgout/"*.snupkg
+    run _run_pack "$BATS_TEST_TMPDIR/repo" '' --dry-run src/App/App.csproj
+    assert_success
+    assert_output --partial "dry-run\$ dotnet pack"
+    refute_output --partial "not found or empty"
+    refute_output --partial "command not found"
+    run grep '^pack ' "$BATS_TEST_TMPDIR/repo/dotnet.log"
+    assert_failure                                     # 'dotnet pack' itself never ran
 }
 
 @test "pack: attempts a build before packing when the target output is missing (e.g. --skip-build-cache), and reports if it is still not found" {
@@ -215,9 +267,8 @@ _run_pack() {
     _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
     mkdir -p "$BATS_TEST_TMPDIR/repo/fakebin"
     echo fake > "$BATS_TEST_TMPDIR/repo/App.dll"
-    cat > "$BATS_TEST_TMPDIR/repo/fakebin/dotnet" <<EOF
-#!/usr/bin/env bash
-echo "\$*" >> "\$DOTNET_CALL_LOG"
+    _write_fake_dotnet_head "$BATS_TEST_TMPDIR/repo/fakebin/dotnet"
+    cat >> "$BATS_TEST_TMPDIR/repo/fakebin/dotnet" <<EOF
 case "\$1" in
     pack) exit 0 ;;
     msbuild)

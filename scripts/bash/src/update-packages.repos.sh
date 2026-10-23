@@ -107,21 +107,21 @@ function start_publish_branch()
     exit_if_has_bugs
 
     if git -C "$1" show-ref --verify --quiet "refs/heads/$2"; then
-        execute git -C "$1" switch "$2" > "$_ignore" 2>&1 ||
+        execute --quiet git -C "$1" switch "$2" ||
             return "$err_tool_error"
         trace "Switched to the existing local branch '$2' in '$1'."
         return "$success"
     fi
 
     if git -C "$1" show-ref --verify --quiet "refs/remotes/origin/$2"; then
-        execute git -C "$1" switch -c "$2" --track "origin/$2" > "$_ignore" 2>&1 ||
+        execute --quiet git -C "$1" switch -c "$2" --track "origin/$2" ||
             return "$err_tool_error"
         trace "Checked out the existing remote branch '$2' in '$1'."
         return "$success"
     fi
 
-    execute git -C "$1" switch -c "$2" > "$_ignore" 2>&1 || return
-        "$err_tool_error"
+    execute --quiet git -C "$1" switch -c "$2" || return "$err_tool_error"
+
     trace "Created and switched to branch '$2' in '$1'."
 }
 
@@ -150,11 +150,11 @@ function commit_package_versions()
     shift 2
     for _pathspec in "$@"; do
         if [[ -n $(git -C "$_repo" ls-files --modified --deleted --others --exclude-standard -- "$_pathspec") ]]; then
-            git -C "$_repo" add -A -- "$_pathspec" || return "$err_tool_error"
+            execute git -C "$_repo" add -A -- "$_pathspec" || return "$err_tool_error"
         fi
     done
     git -C "$_repo" diff --cached --quiet && return "$negative"
-    git -C "$_repo" commit --quiet -m "$_message" || return "$err_tool_error"
+    execute git -C "$_repo" commit --quiet -m "$_message" || return "$err_tool_error"
 }
 
 #---------------------------------------------------------------------------------------------
@@ -318,10 +318,10 @@ function open_pull_request()
     _url_ref=$(cd "$_repo" && gh pr list --head "$_branch" --state open --json url --jq '.[0].url // empty' 2>/dev/null) || true
     [[ -n $_url_ref ]] && return "$success"
 
-    _url_ref=$(cd "$_repo" && gh pr create --head "$_branch" \
-        --title "chore(deps): update NuGet package versions in Directory.Packages.props" \
-        --body "Automated dependency upgrade (stable versions only, never a downgrade) by \`update-packages.sh\`." \
-        2>/dev/null) || true
+    _url_ref=$(cd "$_repo" &&
+               execute gh pr create --head "$_branch" \
+                                    --title "chore(deps): update NuGet package versions in Directory.Packages.props" \
+                                    --body "Automated dependency upgrade (stable versions only, never a downgrade) by 'update-packages.sh'." 2>/dev/null) || true
     [[ -n $_url_ref ]] && return "$success"
     return "$err_tool_error"
 }

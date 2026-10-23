@@ -209,7 +209,7 @@ fi
 trace "Generating coverage reports outside CI/CD..."
 
 uninstall_reportgenerator=false
-if ! execute dotnet tool list dotnet-reportgenerator-globaltool --global > "$_ignore"; then
+if ! execute --quiet dotnet tool list dotnet-reportgenerator-globaltool --global; then
     trace "Installing the tool 'reportgenerator'..."
     execute dotnet tool install dotnet-reportgenerator-globaltool --global --version "5.5.*"
     uninstall_reportgenerator=true

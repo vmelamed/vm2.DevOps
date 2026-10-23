@@ -37,6 +37,11 @@ case "\$1" in
     nuget)   exit "\${FAKE_DOTNET_NUGET_EXIT:-0}" ;;
     clean)   exit "\${FAKE_DOTNET_CLEAN_EXIT:-0}" ;;
     restore) exit "\${FAKE_DOTNET_RESTORE_EXIT:-0}" ;;
+    sln)
+        # 'dotnet sln <solution> list' (list_solution_projects, via get_artifacts_path when the build project is a
+        # solution): a header, a line of dashes, then one project per line -- the format the real command prints
+        printf 'Project(s)\n----------\nApp.csproj\n'
+        ;;
     build)
         echo "Build succeeded."
         [[ -n \${FAKE_ARTIFACTS_PATH:-} ]] && echo "ArtifactsPath=\$FAKE_ARTIFACTS_PATH"
@@ -96,6 +101,33 @@ _run_build() {
 
 @test "build: auto-detects the sole project file in the current directory when none is given" {
     _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
+    _install_fake_dotnet "$BATS_TEST_TMPDIR/repo"
+    run _run_build "$BATS_TEST_TMPDIR/repo" ''
+    assert_success
+
+    run cat "$BATS_TEST_TMPDIR/repo/calls.log"
+    assert_line --index 1 --partial "clean ./App.csproj"
+}
+
+@test "build: auto-detection prefers a solution, and of several takes the first in sorted order, with a warning" {
+    _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
+    echo '<Solution />' > "$BATS_TEST_TMPDIR/repo/b.slnx"
+    echo '<Solution />' > "$BATS_TEST_TMPDIR/repo/a.slnx"
+    _install_fake_dotnet "$BATS_TEST_TMPDIR/repo"
+    run _run_build "$BATS_TEST_TMPDIR/repo" ''
+    assert_success
+    assert_output --partial "Multiple projects found"
+
+    run cat "$BATS_TEST_TMPDIR/repo/calls.log"
+    assert_line --partial "clean ./a.slnx"
+    refute_line --partial "clean ./b.slnx"
+}
+
+@test "build: auto-detection looks only in the current directory, not in subdirectories" {
+    # like 'dotnet build' itself: a solution in a subdirectory must not win over the project in the current one
+    _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
+    mkdir -p "$BATS_TEST_TMPDIR/repo/src"
+    echo '<Solution />' > "$BATS_TEST_TMPDIR/repo/src/Nested.slnx"
     _install_fake_dotnet "$BATS_TEST_TMPDIR/repo"
     run _run_build "$BATS_TEST_TMPDIR/repo" ''
     assert_success
