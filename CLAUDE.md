@@ -43,6 +43,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     - [Function Parameter Validation](#function-parameter-validation)
     - [Argument-Dispatcher Precondition Ordering](#argument-dispatcher-precondition-ordering)
     - [Long-Form Options in Script Bodies](#long-form-options-in-script-bodies)
+    - [Side Effects and Dry-Run](#side-effects-and-dry-run)
 
 <!-- /TOC -->
 
@@ -90,14 +91,14 @@ See `docs/ARCHITECTURE.md` for the full design and `docs/WORKFLOWS_REFERENCE.md`
 
 ## Key Directories
 
-| Path                   | Contents                                                             |
-|------------------------|----------------------------------------------------------------------|
-| `.github/workflows/`   | Reusable workflows (`_ci.yaml`, `_build.yaml`, `_test.yaml`, etc.)   |
-| `.github/scripts/`     | CI/CD action scripts (three-file convention — see below)             |
-| `.github/actions/`     | Custom composite actions (`setup-env`, `cache-dependencies`, etc.)   |
+| Path                   | Contents                                                                  |
+|------------------------|---------------------------------------------------------------------------|
+| `.github/workflows/`   | Reusable workflows (`_ci.yaml`, `_build.yaml`, `_test.yaml`, etc.)        |
+| `.github/scripts/`     | CI/CD action scripts (three-file convention — see below)                  |
+| `.github/actions/`     | Custom composite actions (`setup-env`, `cache-dependencies`, etc.)        |
 | `scripts/bash/lib/`    | Shared bash library (`_diagnostics.sh`, `_git.sh`, `_core_args.sh`, etc.) |
-| `scripts/bash/src/`    | Local dev utility scripts (`diff-shared.sh`, `setup-repo.sh`, etc.)  |
-| `docs/`                | Reference documentation (15 `.md` files)                             |
+| `scripts/bash/src/`    | Local dev utility scripts (`diff-shared.sh`, `setup-repo.sh`, etc.)       |
+| `docs/`                | Reference documentation (15 `.md` files)                                  |
 
 ## Common Local Commands
 
@@ -153,7 +154,7 @@ All core library files live in `scripts/bash/lib/` and are sourced by scripts th
 | `_core_state.sh`  | Common state variables (quiet, verbose, dry-run, trace modes)    |
 | `_error_codes.sh` | Error code constants                                             |
 | `_diagnostics.sh` | Logging (`to_stdout`, `error`, `warning`, `trace`, etc.)         |
-| `_core_args.sh`        | Common argument parsing to initialize core state                 |
+| `_core_args.sh`   | Common argument parsing to initialize core state                 |
 | `_predicates.sh`  | Boolean checks (`is_array`, `is_positive`, etc.)                 |
 | `_semver.sh`      | Semantic versioning utilities                                    |
 | `_sanitize.sh`    | Input validation (`is_safe_path`, `is_safe_configuration`, etc.) |
@@ -411,7 +412,7 @@ Files that are canonical in `vm2.Templates` (`.editorconfig`, `.github/CONVENTIO
 ## Documentation Reference
 
 | File                                                        | Covers                                                                             |
-|-----------------------------------------------              |------------------------------------------------------------------------------------|
+|-------------------------------------------------------------|------------------------------------------------------------------------------------|
 | `docs/CONSUMER_GUIDE.md`                                    | Integrating vm2.DevOps into a consumer repo                                        |
 | `docs/ARCHITECTURE.md`                                      | Detailed workflow and script design                                                |
 | `docs/WORKFLOWS_REFERENCE.md`                               | All reusable workflows: inputs, outputs, secrets                                   |
@@ -585,4 +586,51 @@ stays the most prominent thing on the line.
 # Exception: message()-family functions keep their short forms
 error -ec "$err_argument_value" "Bad commit message: $subject"
 usage -ec "$_rc" -sd 3 "Invalid argument value for the option <option_name>"
+```
+
+### Side Effects and Dry-Run
+
+`--dry-run` (`-y`) answers one question: **"what would this run, with these arguments, change?"** It is a diagnostic
+for the user, nothing more and nothing less. It is **not** an audit: an audit reports the state of things (including
+what is already up to date); a dry run reports the intended changes of one particular invocation.
+
+- **`execute` (`core.sh`) is the side-effect boundary.** Every command that changes anything (files, directories, git
+  state, remote resources) MUST run through `execute`, or through a library wrapper that does (e.g. `dotnet_restore`).
+  In dry-run mode `execute` prints `dry-run$ <command>` (arguments quoted with `%q`) instead of running it, so a dry run
+  walks the real code path and shows the exact commands a real run would execute.
+- **Read-only commands MUST NOT go through `execute`.** In a dry run `execute` runs nothing and returns success, so a
+  query behind it always "succeeds": `if execute dotnet tool list …` concludes the tool is installed, and the dry run
+  never reports the install a real run would do. Run queries (`dotnet tool list`, `git show-ref`, `gh pr list`) directly.
+- **The dry-run line goes to `stderr`,** so a caller capturing `stdout` (`x=$(execute …)`, `execute … > file`) never
+  receives it as data. In a dry run the capture is empty; code that depends on it is an `is_dry_run` case (below).
+- **To hide a command's noise, use `execute --quiet`**: it discards the command's `stdout` and `stderr` unless verbose
+  mode is on, and never the dry-run line. Do not redirect `execute` itself (`execute … > "$_ignore" 2>&1`): that also
+  swallows the dry-run line. Do not use `--quiet` when the caller captures the output either: it discards exactly what
+  the caller wants (e.g. the PR URL that `gh pr create` prints).
+- **Extend a wrapper instead of bypassing it.** If a library wrapper lacks an option a script needs, extend the wrapper
+  (e.g. the `dotnet_*` wrappers pass extra arguments through: `dotnet_restore "$project" --force-evaluate`) rather than
+  calling the tool directly. A direct call silently opts out of dry-run, verbosity, and error handling.
+- **`is_dry_run` is for exactly two cases:**
+  1. code that **depends on a side effect the dry run suppressed** -- a branch that was not created, a package that was
+     not packed, changes that were not staged: skip what cannot work, and *report* what would have happened;
+  1. the **wording** of messages and summaries (e.g. "would commit, push, and open a pull request").
+
+  It MUST NOT switch whole blocks of logic on or off: a dry run that skips logic exercises a different, untested path,
+  and can misreport what a real run would do.
+- **Pass `--dry-run` through to child scripts** instead of skipping the call, so the child reports its own intended
+  changes.
+
+```bash
+# Preferred: side effects through execute (--quiet for noise); queries direct; is_dry_run only for a dependent step
+if ! git -C "$repo" show-ref --verify --quiet "refs/heads/$branch"; then      # a query: runs directly
+    execute --quiet git -C "$repo" switch -c "$branch"                        # a side effect: dry run prints it
+fi
+is_dry_run || [[ -s $package ]] || error -ec "$err_tool_error" "Package '$package' not found or empty."
+
+# Avoid: a query behind execute, a redirected execute, and is_dry_run as an on/off switch for a whole block
+if ! execute dotnet tool list "$tool" --global; then ...; fi                 # always "installed" in a dry run
+execute git -C "$repo" switch -c "$branch" > "$_ignore" 2>&1                 # the dry-run line is swallowed too
+if ! is_dry_run; then
+    (cd "$repo" && dotnet restore --force-evaluate)                          # bypasses the wrapper, untested path
+fi
 ```
