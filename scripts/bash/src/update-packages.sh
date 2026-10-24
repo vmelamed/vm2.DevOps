@@ -186,7 +186,7 @@ for repo in "${!target_repos[@]}"; do
 
     declare -i _commit_rc=$success
 
-    commit_package_versions "$repo_path" "chore(deps): update NuGet package versions in $dpp_file_name" "${paths[@]}" || _commit_rc=$?
+    commit_package_versions "$repo_path" "chore(deps): update NuGet package versions in '$dpp_file_name'" "${paths[@]}" || _commit_rc=$?
 
     if (( _commit_rc == negative )); then
         is_dry_run &&

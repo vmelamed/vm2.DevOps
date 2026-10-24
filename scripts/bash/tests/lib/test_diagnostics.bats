@@ -110,6 +110,42 @@ declare -gxi err_invalid_arguments
     [[ "$stderr" == *"something failed"* ]]
 }
 
+# The message functions scan ALL of their arguments for options (an off-by-one once missed the last position), so an
+# option is honored wherever it appears -- also after the message, and also with no message at all.
+@test "error: a trailing -ec after the message sets the last error code, and is not printed as text" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; error 'boom' -ec 7 2>&1; echo \"last=\$__last_error\""
+    assert_success
+    assert_line "last=7"
+    assert_output --partial "boom"
+    refute_output --partial "-ec 7"
+}
+
+@test "error: a trailing --error-code after the message sets the last error code" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; error 'boom' --error-code 9 2>/dev/null; echo \"last=\$__last_error\""
+    assert_success
+    assert_output "last=9"
+}
+
+@test "error: a code-only -ec (no message) still sets the last error code and counts the error" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; error -ec 5 2>/dev/null; echo \"last=\$__last_error errors=\$(get_errors)\""
+    assert_success
+    assert_output "last=5 errors=1"
+}
+
+@test "bug: a trailing --error-code after the message sets the last bug code, and is not printed as text" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; bug 'broken' --error-code 11 2>&1; echo \"last=\$__last_bug\""
+    assert_success
+    assert_line "last=11"
+    assert_output --partial "broken"
+    refute_output --partial "--error-code"
+}
+
+@test "bug: a code-only -ec (no message) still sets the last bug code" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; bug -ec 12 2>/dev/null; echo \"last=\$__last_bug\""
+    assert_success
+    assert_output "last=12"
+}
+
 @test "bug: prints to stderr with the bug prefix and increments the bug counter" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; bug 'contract violated' 2>&1 1>/dev/null"
     [[ "$output" == *"something"* ]] || [[ "$output" == *"contract violated"* ]]

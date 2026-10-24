@@ -444,11 +444,11 @@ function __search_repo_dir()
 
 #---------------------------------------------------------------------------------------------
 # @description Finds the root directory of a Git repository working tree by searching for a
-#   directory with the given name (or relative path) under a specified parent directory
-#   (expected to be under $VM2_REPOS, falling back to a search under $HOME if not found
-#   there). The target directory does not need to be a Git repository. If it is not, the
-#   resolved "root" is instead the nearest parent directory containing a '.github/workflows'
-#   directory, or the found directory itself if no such parent is found.
+#   directory with the given name (or relative path) under a specified vm2 parent directory
+#   (expected to be already resolved, or falling back to a slower search under $HOME). The
+#   target directory does not need to be a Git repository. If it is not, the resolved "root"
+#   is instead the nearest parent directory containing a '.github/workflows' directory, or the
+#   found directory itself if no such parent is found.
 #
 #   Note: This method uses `find` and parent directory traversal, so it is slow!
 #   Prefer functions like `root_working_tree` that operate directly on known Git repository
@@ -484,30 +484,27 @@ function __search_repo_dir()
 #---------------------------------------------------------------------------------------------
 function resolve_repo_root()
 {
-    (( $# == 4 ))         || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires 4 arguments ($# provided): " \
-                                                              "  - the parent directory under which to search for the vm2 repository (resolved vm2_repos)" \
-                                                              "  - path to a directory inside the vm2 repository working tree (if empty, the default is the current directory)" \
-                                                              "  - the name of the variable to store the absolute path of the root of the Git repository containing the found directory" \
-                                                              "  - the name of the variable to store the absolute path of the found directory"
-    [[ ! -v 1 ]]          || is_valid_path "$1" || bug -ec "$err_invalid_path"    "${FUNCNAME[0]}() requires argument 1, the path to the parent of all vm2 repositories, to be a valid path (provided '${1:-<none>}')."
-    [[ ! -v 2 || -z $2 ]] || is_valid_path "$2" || bug -ec "$err_invalid_path"    "${FUNCNAME[0]}() requires argument 2, the path to a directory inside the vm2 repository working tree, to be a valid path (provided '${2:-<none>}')."
-    [[ ! -v 3 ]]          || is_variable "$3"   || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to be the name of a variable to store the absolute path of the root of the Git repository containing the found directory (provided '${3:-<none>}')."
-    [[ ! -v 4 ]]          || is_variable "$4"   || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 4 to be the name of a variable to store the absolute path of the sought directory (provided '${4:-<none>}')."
+    (( $# == 4 ))                               || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires 4 arguments ($# provided): " \
+                                                                                    "  - the parent directory under which to search for the vm2 repository (resolved vm2_repos)" \
+                                                                                    "  - path to a directory inside the vm2 repository working tree (if empty, the default is the current directory)" \
+                                                                                    "  - the name of the variable to store the absolute path of the root of the Git repository containing the found directory" \
+                                                                                    "  - the name of the variable to store the absolute path of the found directory"
+    [[ ! -v 1 ]]          || is_valid_path "$1" || bug -ec "$err_invalid_path"      "${FUNCNAME[0]}() requires argument 1, the path to the parent of all vm2 repositories, to be a valid path (provided '${1:-<none>}')."
+    [[ ! -v 2 || -z $2 ]] || is_valid_path "$2" || bug -ec "$err_invalid_path"      "${FUNCNAME[0]}() requires argument 2, the path to a directory inside the vm2 repository working tree, to be a valid path (provided '${2:-<none>}')."
+    [[ ! -v 3 ]]          || is_variable "$3"   || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 3 to be the name of a variable to store the absolute path of the root of the Git repository containing the found directory (provided '${3:-<none>}')."
+    [[ ! -v 4 ]]          || is_variable "$4"   || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 4 to be the name of a variable to store the absolute path of the sought directory (provided '${4:-<none>}')."
     exit_if_has_bugs
 
     local -i _rc="$success"
 
-    [[ ! -v 1 || -d $1 ]]              || {
+    [[ ! -v 1 || -d $1 ]]                       || {
         _rc=$err_not_directory
         error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the path to the parent of all vm2 repositories, to be a an existing directory path (provided '${1:-<none>}')."
     }
     (( _rc == success )) || return "$_rc"
 
-    local _repos
-    local _dir_path
-
-    _repos=$1
-    _dir_path="${2:-"$(pwd)"}"
+    local _repos=$1
+    local _dir_path="${2:-"$(pwd)"}"
 
     trace "Searching for '${_dir_path:-<none>}' under '\$vm2_repos=${_repos:-<none>}'..."
 
