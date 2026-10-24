@@ -963,7 +963,7 @@ function dotnet_pack()
                                                                                            "  - package release notes (can be empty string)" \
                                                                                            "  - nameref to an associative array variable that will store the properties of the produced packages"
     [[ ! -v 1 ]] || is_valid_path "$1"                 || bug -ec "$err_not_file"          "${FUNCNAME[0]}() requires argument 1 to be a valid path to a file with a suffix .csproj (provided '${1:-<none>}')."
-    [[ ! -v 3 || -z $3 ]] || is_associative_array "$3" || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 3 to be the name of a defined variable (provided '${3:-<none>}')."
+    [[ ! -v 3 || -z $3 ]] || is_associative_array "$3" || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 3 to be the name of an associative array (provided '${3:-<none>}')."
     exit_if_has_bugs
 
     local -i _rc="$success"
