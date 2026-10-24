@@ -43,11 +43,14 @@ Usage:
     inplace  anything else: the files are edited in the current branch and nothing is committed. A warning says so.
     skip     uncommitted changes exist: the repository is left untouched, with a warning.
 
+  The shared block is upgraded and copied only when 'vm2.Templates' is in 'publish' mode: its copies in the other
+  repositories must match a committed SoT. Otherwise the shared phase is skipped, with a warning.
+
 Parameters:
   <repository>                  One or more repository names. Including 'vm2.Templates' also upgrades the shared block in the
-                                SoT and copies it to the repositories. If omitted, the repository of the current directory is
-                                used. The list of repositories can be replaced by the switch '--all-repositories', or
-                                '--all-repos', or just '-all'.
+                                SoT and copies it to the repositories (in 'publish' mode only, see above). If omitted, the
+                                repository of the current directory is used. The list of repositories can be replaced by
+                                the switch '--all-repositories', or '--all-repos', or just '-all'.
 
 Options:
   -r, --vm2-repos <dir>         The parent directory where all vm2 repositories are cloned. Initial value from \$VM2_REPOS or

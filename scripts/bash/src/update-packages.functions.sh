@@ -24,6 +24,12 @@ declare -xr package_regex='^([[:space:]]*<PackageVersion[[:space:]]+Include=")([
 #   file and line number, so the caller can stop before anything is written instead of silently skipping packages.
 #   Lines containing '<!--' or '-->' are ignored, the same way the reader ignores them.
 #
+# Note: the XML parsing is sub-optimal and it is expected that additional rules are followed:
+#   - the file is well-formed XML
+#   - all comments are single line: '<!-- valid single line comment -->'
+#   - the comments are not mixed with XML elements on the same line '<!-- invalid single comment mixed with element --><PackageVersion...>'
+#   - the XML elements specifying package versions are single-line elements of the form: <PackageVersion Include="..." Version="..." />
+#
 # @arg $1 string Path to 'Directory.Packages.props'.
 #
 # @exitcode success=0: every PackageVersion line has the supported shape.
@@ -40,9 +46,9 @@ function validate_package_lines()
 
     while IFS= read -r _line || [[ -n $_line ]]; do
         (( ++_line_number ))
-        [[ $_line == *"<PackageVersion"* ]]           || continue # skip non-PackageVersion lines, e.g. "<ItemGroup..."
-        [[ $_line == *"<!--"* || $_line == *"-->"* ]] && continue # skip comments
-        [[ $_line =~ $package_regex ]]                && continue # validate PackageVersion lines
+        [[ $_line == *"<PackageVersion"* ]]           || continue # skip non-PackageVersion lines, e.g., "<ItemGroup..."
+        [[ $_line == *"<!--"* || $_line == *"-->"* ]] && continue # skip comments, e.g., <!-- <PackageVersion... /> -->
+        [[ $_line =~ $package_regex ]]                && continue # validate PackageVersion lines, e.g., <PackageVersion Include="<id>" Version="<version>" />
 
         _rc=$err_invalid_item
         error -ec "$_rc" "$_file:$_line_number: unsupported PackageVersion format; expected one line in the form" \
@@ -106,6 +112,12 @@ declare -xr shared_end_marker
 # @description Returns the section of 'Directory.Packages.props' a package line belongs to: the shared block between
 #   the 'begin/end shared content' markers, or the repository-specific part outside them.
 #
+# Note: the XML parsing is sub-optimal and it is expected that additional rules are followed:
+#   - the file is well-formed XML
+#   - all comments are single line: '<!-- valid single line comment -->'
+#   - the comments are not mixed with XML elements on the same line '<!-- invalid single comment mixed with element --><PackageVersion...>'
+#   - the XML elements specifying package versions are single-line elements of the form: <PackageVersion Include="..." Version="..." />
+#
 # @arg $1 string The section to match: 'shared' or 'repo'.
 # @arg $2 string A line of the file.
 # @arg $3 nameref The name of a variable that tracks whether the current line is inside the shared block.
@@ -142,9 +154,10 @@ function _props_line_in_section()
 # @description Reads the package versions of one section of a 'Directory.Packages.props' file. Commented-out lines are
 #   ignored. The keys keep the casing used in the file.
 #
-# Note: the function expects that:
+# Note: the XML parsing is sub-optimal and it is expected that additional rules are followed:
 #   - the file is well-formed XML
-#   - the comments are not mixed with XML elements on the same line
+#   - all comments are single line: '<!-- valid single line comment -->'
+#   - the comments are not mixed with XML elements on the same line '<!-- invalid single comment mixed with element --><PackageVersion...>'
 #   - the XML elements specifying package versions are single-line elements of the form: <PackageVersion Include="..." Version="..." />
 #
 # @arg $1 string Path to 'Directory.Packages.props'.

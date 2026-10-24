@@ -81,11 +81,20 @@ for repo in "${!target_repos[@]}"; do
 done
 info "Checked the status of ${#target_repos[@]} repositories (branch, working tree, sync with origin/main)..."
 
-# the shared block is copied from the SoT, if it is skipped, then no fan-out at all
+# The shared block and its copies must be committed together: the fan-out may update repositories that publish a PR,
+# so it runs only when the SoT publishes too. An inplace or skipped SoT means no shared phase at all.
 if $include_sot_repo && [[ ${modes[$vm2_sot_repo_name]:-} != publish ]]; then
     warnings+=("'$vm2_sot_repo_name' ${reasons[$vm2_sot_repo_name]}: the SoT and the fan-out were skipped.")
     include_sot_repo=false
 fi
+
+# Start the summary only now: a --summary-file inside a target repository would otherwise be an untracked file when
+# classify_repo checks that repository, and turn a clean target into 'skip'. '>' starts it fresh; everything after
+# this appends -- this script's own blocks and the diff-shared fan-out alike.
+{
+    echo "# Update Packages Summary"
+    echo
+} > "$summary_file" || exit_with_error -ec "$err_invalid_file" "Failed to write to the summary file '$summary_file'."
 
 declare new_branch
 new_branch="deps/update-packages-$(date +%Y-%m-%d-%H-%M-%S)"
