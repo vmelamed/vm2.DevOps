@@ -147,9 +147,15 @@ function get_arguments()
         esac
     done
 
-    dump_args
-
     usage_if_requested
+    validate_arguments
+    dump_args
+}
+
+function validate_arguments()
+{
+    #  TODO: add validation here
+    return "$success"
 }
 
 # shellcheck disable=SC2120 # dump_args references arguments, but none are ever passed.

@@ -123,14 +123,14 @@ function _props_line_in_section()
     [[ ! -v 3 ]] || is_variable "$3"           || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 3 to be the name of a variable that tracks whether the current line is inside the shared block (provided ${3:-<none>})."
     exit_if_has_bugs
 
-    [[ -z $2 ]] && return "$negative" # shortcut for empty XML lines
+    [[ -z ${2-} ]] && return "$negative" # shortcut for empty XML lines
 
     local _section=$1
     local _line=$2
     local -n _in_shared_ref=$3
 
-    [[ $_line != *$shared_begin_marker* ]] || { _in_shared_ref=true; return "$negative"; }
-    [[ $_line != *$shared_end_marker* ]]   || { _in_shared_ref=false; return "$negative"; }
+    [[ $_line != *"$shared_begin_marker"* ]] || { _in_shared_ref=true; return "$negative"; }
+    [[ $_line != *"$shared_end_marker"* ]]   || { _in_shared_ref=false; return "$negative"; }
 
     [[ $_section == shared && $_in_shared_ref == true ]] && return "$success"
     [[ $_section == repo && $_in_shared_ref != true ]] && return "$success"

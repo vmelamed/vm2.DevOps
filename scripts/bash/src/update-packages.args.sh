@@ -91,12 +91,12 @@ function get_arguments()
         esac
     done
 
-    validate_args
-    dump_args
     usage_if_requested
+    validate_arguments
+    dump_args
 }
 
-function validate_args()
+function validate_arguments()
 {
     [[ -n $summary_file ]] || {
         summary_file=$(mktemp -p /tmp "update-packages-summary-$(date +%Y%m%d-%H%M%S)-XXXXXX.md")
