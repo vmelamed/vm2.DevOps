@@ -84,20 +84,35 @@ declare -xr explicit_exit_regex='^(exit([[:space:]]+.*)?|source[[:space:]]+.*)$'
 #   - Registered automatically by core.sh via `trap on_exit EXIT` (unless $debugger is true).
 #   - Works cooperatively with on_err, which handles the ERR trap.
 #
+# @stderr report of the failed command and exit code
+#
 # @exitcode success=0: the shell exited cleanly
 # @exitcode N inherited from the exiting command (the trap does not change the exit code)
 #---------------------------------------------------------------------------------------------
 function on_exit()
 {
+    # capture the exit code from the exiting command
     local -i _ec=$?
 
-    set +x
+    # nothing here, or in the cleanups add_trap appended after this function,
+    # is a new error to report: on_err has reported the real one already
+    trap '' ERR
+
+    # disable tracing;
+    # and errexit, so a failing cleanup appended by add_trap does not cut off the ones after it
+    set +x +e
+
     if (( _ec != "$success" )) && [[ ! ${BASH_COMMAND:-} =~ $explicit_exit_regex ]]; then
+        # report the failed command and the exit code on stderr
         printf "$error_em  EXIT: the command '%s' failed with exit code %d\n" "${BASH_COMMAND:-<unknown>}" "$_ec" >&2
     fi
 
+    # restore the initial cwd before exiting
     cd "$initial_cwd" 2>/dev/null || true
-    return "$_ec"
+
+    # the shell exits with $_ec anyway (bash keeps the status it had when the EXIT trap started); returning it would
+    # only stop the trap, under set -e, before the cleanups that add_trap appended after this function
+    return 0
 }
 
 #---------------------------------------------------------------------------------------------

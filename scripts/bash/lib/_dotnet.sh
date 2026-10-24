@@ -804,12 +804,8 @@ function dotnet_restore()
     )
     [[ -z $runtime ]]   || _dotnet_args+=("--runtime" "$runtime")
     [[ -z $artifacts ]] || _dotnet_args+=("--artifacts-path" "$artifacts")
-
-    # if we have more than 1 argument then we have extra arguments that should be added to the other dotnet arguments
-    if (( $# > 1 )); then
-        shift
-        _dotnet_args+=("$@")
-    fi
+    # do we have extra arguments that should be added to the other dotnet arguments?
+    (( $# > 0 ))        || _dotnet_args+=("$@")
 
     # RESTORE
     execute --quiet dotnet restore "${_dotnet_args[@]}" || _rc=$?
