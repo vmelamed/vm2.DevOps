@@ -21,7 +21,7 @@ declare -xr all_actions_str
 declare -x  vm2_repos
 declare -x  sot
 declare -x  current_branch
-    declare -xa target_repos        # the target repositories specified as arguments. If not specified, the current directory is used as the only target repo.
+declare -xa target_repos            # the target repositories specified as arguments. If not specified, the current directory is used as the only target repo.
 declare -xA selectors_actions       # array [file] => [action string] for files specified on the CLI with --file* options
 declare -x  diff_only
 declare -x  summary_file
