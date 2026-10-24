@@ -26,9 +26,9 @@ Usage:
   $script_name [<repo-directory>...] [--<long option> <value> | -<short option> <value> | --<long switch> | -<short switch>]*
 
 Compares a pre-defined set of files with shared content in one or more target repositories against the corresponding
-source-of-truth (SoT) files listed in ${script_name%.sh}.config.json in the SoT directory, for the scenario specified by
---source-of-truth. Note that <repo-directory> does not need to be the root of the repository working tree — a deeper path works
-too. This is useful for multi-solution repositories or for repositories that contain a dotnet template project.
+source-of-truth (SoT) files listed in ${script_name%.sh}.config.json in the SoT directory. Note that <repo-directory> does not
+need to be the root of the repository working tree — a deeper path works too. This is useful for multi-solution repositories or
+for repositories that contain a dotnet template project.
 
 The root directories of all vm2 repositories are expected under the same parent directory, specified either by the environment
 variable \$VM2_REPOS or the --vm2-repos option.
@@ -43,8 +43,6 @@ Arguments:
 Options:
   -r, --vm2-repos <dir>         The parent directory where all vm2 repositories are cloned. Initial value from \$VM2_REPOS or
                                 '$default_vm2_repos_path'.
-  -s, --source-of-truth <sot>   The source-of-truth scenario to use. Must be one of the pre-defined scenarios in
-                                '\$VM2_REPOS/vm2.Templates/templates/'.
   -f, --file <pattern>          A file name or a quoted glob pattern (quote glob patterns to prevent shell expansion). Only
                                 matching files are processed; the action is taken from the configuration. Can be specified
                                 multiple times to select multiple files.

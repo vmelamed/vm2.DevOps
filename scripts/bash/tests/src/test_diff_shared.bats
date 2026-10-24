@@ -780,24 +780,24 @@ EOF
     assert_output --partial "count=${#vm2_repositories[@]}"
 }
 
-@test "get_arguments: --vm2-repos, --source-of-truth, --diff, and --summary-file set the corresponding variables" {
+@test "get_arguments: --vm2-repos, --diff, and --summary-file set the corresponding variables" {
     run _ds --with-args "declare -a arguments=(); set_quiet
-                          get_arguments --vm2-repos /some/path --source-of-truth AddNewPackage --diff --summary-file '$BATS_TEST_TMPDIR/sum.md'
+                          get_arguments --vm2-repos /some/path --diff --summary-file '$BATS_TEST_TMPDIR/sum.md'
                           declare -p vm2_repos sot diff_only summary_file"
     assert_success
     assert_output --partial 'vm2_repos="/some/path"'
-    assert_output --partial 'sot="AddNewPackage"'
+    # assert_output --partial 'sot="AddNewPackage"'
     assert_output --partial 'diff_only="true"'
     assert_output --partial "summary_file=\"$BATS_TEST_TMPDIR/sum.md\""
 }
 
-@test "get_arguments: --vm2-repos, --source-of-truth, --diff, and -sf set the corresponding variables" {
+@test "get_arguments: --vm2-repos, --diff, and -sf set the corresponding variables" {
     run _ds --with-args "declare -a arguments=(); set_quiet
-                          get_arguments --vm2-repos /some/path --source-of-truth AddNewPackage --diff -sf '$BATS_TEST_TMPDIR/sum.md'
+                          get_arguments --vm2-repos /some/path --diff -sf '$BATS_TEST_TMPDIR/sum.md'
                           declare -p vm2_repos sot diff_only summary_file"
     assert_success
     assert_output --partial 'vm2_repos="/some/path"'
-    assert_output --partial 'sot="AddNewPackage"'
+    # assert_output --partial 'sot="AddNewPackage"'
     assert_output --partial 'diff_only="true"'
     assert_output --partial "summary_file=\"$BATS_TEST_TMPDIR/sum.md\""
 }

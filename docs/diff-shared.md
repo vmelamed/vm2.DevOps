@@ -344,7 +344,7 @@ The script accepts one or more target repository paths as positional arguments:
 ### Named Arguments
 
 - `--vm2-repos <directory>` (`-r`) — the vm2 parent directory. Overrides `$VM2_REPOS`
-- `--source-of-truth <sot>` (`-s`) — the SoT template. Must be one of the pre-defined templates under
+  <!-- - `--source-of-truth <sot>` (`-s`) — the SoT template. Must be one of the pre-defined templates under -->
   `$VM2_REPOS/vm2.Templates/templates/`
 - `--file <file-selector>` (`-f`) — the file selector can be a file name or a **quoted** glob pattern. Can be specified multiple
   times to select multiple files. Only files matching the selector are processed and only if they are listed in the
