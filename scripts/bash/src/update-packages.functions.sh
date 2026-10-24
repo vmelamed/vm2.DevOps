@@ -40,16 +40,15 @@ function validate_package_lines()
 
     while IFS= read -r _line || [[ -n $_line ]]; do
         (( ++_line_number ))
-        [[ $_line == *"<PackageVersion"* ]] || continue
-        [[ $_line == *"<!--"* || $_line == *"-->"* ]] && continue
-        [[ $_line =~ $package_regex ]] && continue
+        [[ $_line == *"<PackageVersion"* ]]           || continue # skip non-PackageVersion lines, e.g. "<ItemGroup..."
+        [[ $_line == *"<!--"* || $_line == *"-->"* ]] && continue # skip comments
+        [[ $_line =~ $package_regex ]]                && continue # validate PackageVersion lines
+
         _rc=$err_invalid_item
         error -ec "$_rc" "$_file:$_line_number: unsupported PackageVersion format; expected one line in the form" \
                          "  <PackageVersion Include=\"<id>\" Version=\"<version>\" />" \
-                         "but found:" \
-                         "  $_line"
+                         "  but found: $_line"
     done < "$_file"
-
     return "$_rc"
 }
 
@@ -199,7 +198,6 @@ function read_package_versions()
 #---------------------------------------------------------------------------------------------
 function set_package_version()
 {
-    local _rc=$success
     local _file=$1 _section=$2 _id=$3 _new=$4
     local _line _tmp _inside=false _done=false _line_id _line_version
 
@@ -215,17 +213,21 @@ function set_package_version()
         printf '%s\n' "$_line" >> "$_tmp"
     done < "$_file"
 
+    local _rc=$success
+
     if [[ $_done == true ]]; then
         execute mv "$_tmp" "$_file" || _rc=$?
-        rm -f "$_tmp" # dry run (not moved) or a failed mv: don't leave it behind
         (( _rc == success )) || {
             _rc="$err_tool_error"
-            error -ec "$_rc" "Failed to copy temporary file to '$_file'."; return "$_rc";
+            error -ec "$_rc" "Failed to copy temporary file to '$_file'."
         }
-        return "$_rc"
+    else
+        _rc=$err_logic_error
     fi
+    
     rm -f "$_tmp"
-    return "$err_logic_error"
+
+    return "$_rc"
 }
 
 #---------------------------------------------------------------------------------------------

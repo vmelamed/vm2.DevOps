@@ -39,7 +39,7 @@ Usage:
   $script_name [<repo-directory>] [ --<long option> <value> | -<short option> <value> | --<long switch> | -<short switch> ]*
 
 Bootstrap and configure a repository for a vm2 package project. This script assumes that the project has already been created
-locally, e.g. using 'dotnet new vm2.NewPkg' and has all the common files, including the *edited* GitHub Actions workflow *.yaml
+locally, e.g. using 'dotnet new vm2pkg' and has all the common files, including the *edited* GitHub Actions workflow *.yaml
 files in place. The script will:
   - Initialize a git repository (if it isn't already)
   - Do an initial commit of the current code in it

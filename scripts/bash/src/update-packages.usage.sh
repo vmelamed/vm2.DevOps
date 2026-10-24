@@ -31,7 +31,7 @@ function usage_text()
 
     cat << EOF
 Usage:
-  $script_name [<repository>]+ [ --<long switch> | -<short switch> ]*
+  $script_name [<repository>]* [ --<long switch> | -<short switch> ]*
 
   Upgrades the NuGet package versions in 'Directory.Packages.props' to the newest stable version found in the
   configured NuGet sources, without downgrading. The shared block is upgraded in the SoT (vm2.Templates) first and then
@@ -45,21 +45,24 @@ Usage:
 
 Parameters:
   <repository>                  One or more repository names. Including 'vm2.Templates' also upgrades the shared block in the
-                                SoT and copies it to the repositories.
+                                SoT and copies it to the repositories. If omitted, the repository of the current directory is
+                                used. The list of repositories can be replaced by the switch '--all-repositories', or
+                                '--all-repos', or just '-all'.
 
 Options:
-  -all, --all-repos, --all-repositories
-                                Update all pre-defined vm2 repositories under \$VM2_REPOS with the SoT, one by one. The set is
-                                defined in 'lib/_constants.sh'.
   -r, --vm2-repos <dir>         The parent directory where all vm2 repositories are cloned. Initial value from \$VM2_REPOS or
                                 '$default_vm2_repos_path'.
   -sf, --summary-file <file>    Write the run summary to <file> in Markdown format. If not specified, a temporary file is
                                 created, displayed at the end, and then deleted.
+Switches:
+  -all, --all-repos, --all-repositories
+                                Update all pre-defined vm2 repositories under \$VM2_REPOS with the SoT, one by one. The set is
+                                defined in 'lib/_constants.sh'.
 
 Examples:
   $script_name
-  $script_name --dry-run
-  $script_name --summary-file last-update-packages.md
+  $script_name --dry-run vm2.Ulid
+  $script_name --all-repositories --summary-file last-update-packages.md
   $script_name vm2.Ulid vm2.Glob
 $_common_args
 EOF

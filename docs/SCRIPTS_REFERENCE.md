@@ -272,8 +272,9 @@ set-secret.sh MY_SECRET --app actions
 ### update-packages.sh
 
 Upgrades the NuGet package versions in `Directory.Packages.props` to the newest stable version found in the configured
-NuGet sources (never a downgrade, never a prerelease). The shared block is upgraded in the SoT (`vm2.Templates`) first
-and fanned out to the repositories with `diff-shared.sh`; each repository's own section is upgraded afterwards.
+NuGet sources (never a downgrade, never a prerelease). When `vm2.Templates` is among the targets, the shared block is
+upgraded in the SoT first (`vm2.Templates/templates/<sot>/content/Directory.Packages.props`) and copied to the other
+targets with `diff-shared.sh`; each repository's own section is upgraded afterwards.
 
 Versions are looked up with `dotnet package search <id> --exact-match --format json` against every source configured
 in the local `NuGet.config` (nuget.org and `github.vm2`); a package found in more than one source takes the highest
@@ -282,33 +283,49 @@ lowercased), but the casing already in the file is kept when a version is rewrit
 precedence (`scripts/bash/lib/_semver.sh`).
 
 ```bash
-update-packages.sh
-update-packages.sh --dry-run
+update-packages.sh                                  # the repository of the current directory
 update-packages.sh vm2.Ulid vm2.Glob
-update-packages.sh --summary-file /tmp/update-packages.md
+update-packages.sh --all-repos --dry-run
+update-packages.sh vm2.Templates vm2.Ulid --summary-file /tmp/update-packages.md
 ```
 
-Before writing anything, every target repository is classified:
+**Targets.** The repositories are named on the command line, or selected with `-all`/`--all-repos` (every repository
+in `vm2_repositories`, `scripts/bash/lib/_constants.sh`). Without either, the repository of the current directory is
+the target. Every target must be in `vm2_repositories` and cloned under `--vm2-repos`; a target without a
+`Directory.Packages.props` (e.g. `vm2.DevOps`) is skipped with a warning.
 
-| Mode      | Condition                                                                            | Effect                                                                                                                                         |
-| :-------- | :----------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------- |
-| `publish` | on `main`, clean, identical to `origin/main`                                         | branch `deps/update-packages-<yyyy-mm-dd>` created, committed, and pushed; a PR is opened (`gh pr create`, or the existing open one is reused) |
-| `inplace` | anything else (a feature branch, a dirty-but-pushed state, no `origin` remote, etc.) | the files are edited in the current branch; nothing is committed                                                                               |
-| `skip`    | uncommitted changes exist                                                            | the repository is left completely untouched                                                                                                    |
+**Validation before anything is written.** Every `PackageVersion` element the script reads or rewrites must be on one
+line, with `Include` before `Version`, in double quotes: `<PackageVersion Include="<id>" Version="<version>" />`. Any
+other shape (a multi-line element, a different attribute order, single quotes) is reported with `file:line`, and the run
+stops before changing anything, instead of silently skipping the package. Commented-out lines are ignored.
 
-Every `publish` or `inplace` repository has its `packages.lock.json` files deleted and regenerated with
-`dotnet restore --force-evaluate` (they are generated, never hand-edited, so their previous state does not matter).
-A `skip` repository bypasses this entirely, consistent with being left untouched. Only `publish` repositories are
-committed and pushed.
+Every target repository is then classified:
 
-| Option                  | Description                                                                                                                                            |
-| :---------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `<repository>...`       | One or more repository names (default: all vm2 repositories). Including `vm2.Templates` also upgrades the shared block in the SoT.                     |
-| `--summary-file <file>` | Write the run's Markdown summary to `<file>`. If omitted, a temporary file is created, rendered (via `glow`, falling back to `cat`), and then deleted. |
+| Mode      | Condition                                                                            | Effect                                                                                                                                                  |
+| :-------- | :----------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `publish` | on `main`, clean, identical to `origin/main`                                         | branch `deps/update-packages-<yyyy-mm-dd-hh-mm-ss>` created, committed, and pushed; a PR is opened (`gh pr create`, or the existing open one is reused) |
+| `inplace` | anything else (a feature branch, a dirty-but-pushed state, no `origin` remote, etc.) | the files are edited in the current branch; nothing is committed                                                                                        |
+| `skip`    | uncommitted changes exist                                                            | the repository is left completely untouched                                                                                                             |
+
+The lock files of every `publish` or `inplace` repository are regenerated: every project (`*.csproj`, except under
+`.git`, `bin`, `obj`, and `templates` directories) is restored with `dotnet restore --force-evaluate`, which rewrites an
+outdated `packages.lock.json` in place. File-based apps (e.g. `examples/*.cs`) are not restored: their lock files are
+not committed. A repository without any project fails the run. Only `publish` repositories are committed and pushed.
+
+With `--dry-run`, nothing is changed: every command that would change something is printed as `dry-run$ <command>`
+instead (including the `diff-shared.sh` fan-out, which gets `--dry-run` too), and the summary says what a real run
+would commit, push, and open a pull request for.
+
+| Option                              | Short  | Default      | Description                                                                                       |
+| :---------------------------------- | :----- | :----------- | :------------------------------------------------------------------------------------------------ |
+| `<repository>...`                   |        | current repo | One or more repository names. Including `vm2.Templates` also upgrades the shared block in the SoT |
+| `--all-repositories`, `--all-repos` | `-all` | —            | All repositories in `vm2_repositories`; those without `Directory.Packages.props` are skipped      |
+| `--vm2-repos <dir>`                 | `-r`   | `$VM2_REPOS` | Parent directory of all vm2 repositories                                                          |
+| `--summary-file <file>`             | `-sf`  | temp file    | Write the run summary to `<file>` in Markdown (rendered and deleted if omitted)                   |
 
 The summary covers the package versions checked (current → new, or why not: already latest, prerelease only, not found
-in any source, search failed), each repository's mode and status (including the opened PR's URL), and a per-phase
-timing table.
+in any source, search failed), each repository's mode and status (including the opened PR's URL), the warnings, and a
+per-phase timing table.
 
 ### Other Utilities
 
@@ -660,7 +677,7 @@ sets secrets/variables, configures repo settings, Actions permissions, and branc
 | `--current-branch`      | `-cb`  | false        | Use the current branch of vm2.DevOps/the SoT repo instead of `main`                                                     |
 
 `--audit` is mutually exclusive with `--interactive-vars`, `--interactive-secrets`, `--interactive`, `--purge-vars`,
-`--purge-secrets`, and `--purge`. There is no `--repo`, `--name` (long form of `-n` is `--repo-name`), or
+`--purge-secrets`, and `--purge`. There is no `--repo`, `--name`, `-n`/`--repo-name`, or
 `--force-defaults`/`-f` option any more; the latter's force-assign-defaults behavior is now covered by running
 without `--interactive-vars`/`--interactive-secrets`.
 

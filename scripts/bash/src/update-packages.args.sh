@@ -14,9 +14,12 @@ declare -xri err_unknown_argument
 declare -xri err_logic_error
 declare -xri err_invalid_path
 declare -xri err_invalid_file
+declare -xri err_repo_with_no_ci
+declare -xri err_repo_not_in_vm2_repos
 
 declare -xr ci
 declare -xr default_vm2_repos_path
+declare -xr vm2_sot_repo_name
 declare -xr default_sot
 declare -xr dpp_file_name
 declare -xra vm2_repositories
@@ -95,48 +98,61 @@ function get_arguments()
 
 function validate_args()
 {
-    resolve_vm2_repos vm2_repos || true
-
-    has_errors || is_in "$sot" "${sources_of_truth[@]}" ||
-        error -ec "$err_argument_value" "Invalid source of truth '$sot'. Valid values are: ${sources_of_truth[*]}."
-
-    has_errors || get_vm2_sot_path "$vm2_repos" sot_path "$sot" || true
-
-    ! is_empty_array target_repos || error -ec "$err_argument_value" "No target repositories specified."
-
-    # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-    if ! has_errors; then
-
-        local _repo _repo_path
-
-        for _repo in "${!target_repos[@]}"; do
-            if is_in "$_repo" "${vm2_repositories[@]}" &&
-               resolve_repo_root "$vm2_repos" "$_repo" _repo_path _; then
-                [[ -f "$_repo_path/$dpp_file_name" ]] || {
-                    warnings+=("Skipped repository '$_repo': it does not have a '$dpp_file_name' file.")
-                    continue
-                }
-                target_repos[$_repo]=$_repo_path
-            else
-                error -ec "$err_argument_value" "Could not resolve repository '$_repo'."
-                continue
-            fi
-        done
-    fi
-
-    has_errors || [[ -n $summary_file ]] || {
+    [[ -n $summary_file ]] || {
         summary_file=$(mktemp -p /tmp "update-packages-summary-$(date +%Y%m%d-%H%M%S)-XXXXXX.md")
         add_trap "rm -f ${summary_file@Q}" EXIT
     }
+    is_valid_path "$summary_file"                                   || error -ec "$err_invalid_path" "Invalid summary file path: '$summary_file'."
+    resolve_vm2_repos vm2_repos                                     || vm2_repos=''
+    is_in "$sot" "${sources_of_truth[@]}"                           || error -ec "$err_argument_value" "Invalid source of truth '$sot'. Valid values are: ${sources_of_truth[*]}."
 
-    has_errors || is_valid_path "$summary_file" ||
-        error -ec "$err_invalid_path" "Invalid summary file path: '$summary_file'."
+    has_errors || [[ -z $vm2_repos ]] || get_vm2_sot_path "$vm2_repos" sot_path "$sot" || true
+    exit_if_has_errors true # we cannot go further without vm2_repos or sot path
+
+    local -i _rc=$success
+    local _repo_path
+    local _repo
+
+    if is_empty_array target_repos; then
+
+        local _invalid=false
+
+        # resolve the repo of the current directory:
+        resolve_repo_root "$vm2_repos" '' _repo_path _              || { error -ec "$?" "The current directory is not a vm2 repository. No other repositories specified."; _invalid=true; }
+        $_invalid || {
+            _repo=$(basename "$_repo_path")
+            is_in "$_repo" "${vm2_repositories[@]}"
+        }                                                           || { error -ec "$err_repo_not_in_vm2_repos" "The repository of the current directory '$_repo' is not in the vm2 repositories list. No other repositories specified."; _invalid=true; }
+        $_invalid ||
+            [[ -s $_repo_path/$dpp_file_name ]]                     || { error -ec "$err_invalid_file" "Missing '$dpp_file_name' in '$_repo'. No other repositories specified."; _invalid=true; }
+        $_invalid ||
+            validate_package_lines "$_repo_path/$dpp_file_name"     || { error -ec "$?" "Invalid package lines in $_repo_path/$dpp_file_name."; _invalid=true; }
+        $_invalid ||
+            target_repos[$_repo]=$_repo_path
+    else
+        for _repo in "${!target_repos[@]}"; do
+            is_in "$_repo" "${vm2_repositories[@]}"                 || { error -ec "$err_repo_not_in_vm2_repos" "The specified repository '$_repo' is not in the vm2 repositories list."; continue; }
+
+            resolve_repo_root "$vm2_repos" "$_repo" _repo_path _    || { error -ec "$?" "Could not resolve '$_repo'"; continue; }
+
+            [[ -s "$_repo_path/$dpp_file_name" ]]                   || { warning "Missing '$dpp_file_name' in '$_repo'. Skipping the repo.";
+                unset "target_repos[$_repo]"
+                continue
+            }
+
+            validate_package_lines "$_repo_path/$dpp_file_name"     || { error -ec "$?" "Invalid package lines in $_repo_path/$dpp_file_name."; continue; }
+
+            target_repos[$_repo]=$_repo_path
+        done
+    fi
+
+    ! is_in "$vm2_sot_repo_name" "${!target_repos[@]}" ||
+        validate_package_lines "$sot_path/$dpp_file_name"           || error -ec "$?" "Invalid package lines in $sot_path/$dpp_file_name."
 
     has_errors || {
         echo "# Update Packages Summary"
         echo
-    } > "$summary_file" ||
-        error -ec "$err_invalid_file" "Failed to write to summary file: '$summary_file'."
+    } > "$summary_file"                                             || error -ec "$err_invalid_file" "Failed to write to summary file: '$summary_file'."
 
     exit_if_has_errors true
 

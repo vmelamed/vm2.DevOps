@@ -114,6 +114,18 @@ declare -gxi err_unknown_argument
     assert_output --partial "Unknown option: --bogus"
 }
 
+@test "usage: a trailing -ec after the message sets the exit code" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_core_args.sh'; usage 'Unknown option: --bogus' -ec \"\$err_unknown_argument\""
+    assert_failure "$err_unknown_argument"
+    assert_output --partial "Unknown option: --bogus"
+    refute_output --partial "-ec"
+}
+
+@test "usage: the long form --error-code sets the exit code too" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_core_args.sh'; usage --error-code \"\$err_unknown_argument\" 'Unknown option: --bogus'"
+    assert_failure "$err_unknown_argument"
+}
+
 @test "usage: an explicit exit code wins over the -ec code of the messages" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_core_args.sh'; usage 42 -ec \"\$err_unknown_argument\" 'custom error'"
     assert_failure 42
