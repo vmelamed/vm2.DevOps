@@ -175,7 +175,7 @@ function remove_traps()
 # @exitcode success=0: Always (invalid arguments bug-exit).
 #
 # @example
-#   add_trap 'rm -f "$summary_file"' EXIT
+#   add_trap "rm -f ${summary_file@Q}" EXIT
 #---------------------------------------------------------------------------------------------
 function add_trap()
 {

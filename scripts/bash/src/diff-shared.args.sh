@@ -88,7 +88,7 @@ function get_arguments()
 
     [[ -n "$summary_file" ]] || {
         summary_file=$(mktemp -p /tmp "diff-shared-log-$(date +%Y%m%d-%H%M%S)-XXXXXX.md")
-        trap 'rm -f "$summary_file"' EXIT
+        add_trap "rm -f ${summary_file@Q}" EXIT
     }
 
     dump_args
