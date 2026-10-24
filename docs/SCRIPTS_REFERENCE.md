@@ -307,6 +307,12 @@ Every target repository is then classified:
 | `inplace` | anything else (a feature branch, a dirty-but-pushed state, no `origin` remote, etc.) | the files are edited in the current branch; nothing is committed                                                                                        |
 | `skip`    | uncommitted changes exist                                                            | the repository is left completely untouched                                                                                                             |
 
+**The shared block is upgraded and copied only when `vm2.Templates` is in `publish` mode.** The fan-out may update
+repositories that are committed and pushed with a PR, so their copies of the shared block must match a committed SoT:
+upgrading them from an `inplace` SoT (e.g. on a feature branch) would put committed copies ahead of an uncommitted
+source of truth, and the next `diff-shared.sh` run against `main` would report them as different. For any other mode
+of `vm2.Templates`, the shared phase is skipped with a warning; each repository's own section is still upgraded.
+
 The lock files of every `publish` or `inplace` repository are regenerated: every project (`*.csproj`, except under
 `.git`, `bin`, `obj`, and `templates` directories) is restored with `dotnet restore --force-evaluate`, which rewrites an
 outdated `packages.lock.json` in place. File-based apps (e.g. `examples/*.cs`) are not restored: their lock files are
@@ -316,12 +322,12 @@ With `--dry-run`, nothing is changed: every command that would change something 
 instead (including the `diff-shared.sh` fan-out, which gets `--dry-run` too), and the summary says what a real run
 would commit, push, and open a pull request for.
 
-| Option                              | Short  | Default      | Description                                                                                       |
-| :---------------------------------- | :----- | :----------- | :------------------------------------------------------------------------------------------------ |
-| `<repository>...`                   |        | current repo | One or more repository names. Including `vm2.Templates` also upgrades the shared block in the SoT |
-| `--all-repositories`, `--all-repos` | `-all` | —            | All repositories in `vm2_repositories`; those without `Directory.Packages.props` are skipped      |
-| `--vm2-repos <dir>`                 | `-r`   | `$VM2_REPOS` | Parent directory of all vm2 repositories                                                          |
-| `--summary-file <file>`             | `-sf`  | temp file    | Write the run summary to `<file>` in Markdown (rendered and deleted if omitted)                   |
+| Option                              | Short  | Default      | Description                                                                                                                |
+| :---------------------------------- | :----- | :----------- | :------------------------------------------------------------------------------------------------------------------------- |
+| `<repository>...`                   |        | current repo | One or more repository names. Including `vm2.Templates` also upgrades the shared block in the SoT (in `publish` mode only) |
+| `--all-repositories`, `--all-repos` | `-all` | —            | All repositories in `vm2_repositories`; those without `Directory.Packages.props` are skipped                               |
+| `--vm2-repos <dir>`                 | `-r`   | `$VM2_REPOS` | Parent directory of all vm2 repositories                                                                                   |
+| `--summary-file <file>`             | `-sf`  | temp file    | Write the run summary to `<file>` in Markdown (rendered and deleted if omitted)                                            |
 
 The summary covers the package versions checked (current → new, or why not: already latest, prerelease only, not found
 in any source, search failed), each repository's mode and status (including the opened PR's URL), the warnings, and a
