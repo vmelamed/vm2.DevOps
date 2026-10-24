@@ -127,9 +127,7 @@ declare -gxi err_not_found
 }
 
 @test "add_trap: the command runs on a non-zero exit, and the exit code is kept even when it fails" {
-    # Only the exit code and the cleanup line are asserted: today an 'exit N' with the traps in
-    # place also prints a spurious ERR post-mortem (on_exit's own 'return N' fires the ERR trap --
-    # the reason remove_traps clears ERR before explicit exits). TODO: on_exit should disable ERR.
+    # Without set -e; the set -e variants (where the old on_exit cut the trap short) are above.
     run env -i HOME="$HOME" PATH="$PATH" LIB="$lib_dir" bash -c '
         source "$LIB/core.sh" > /dev/null 2>&1
         add_trap "echo cleanup; false" EXIT
@@ -137,6 +135,45 @@ declare -gxi err_not_found
     '
     assert_failure 7
     assert_line "cleanup"
+}
+
+# The real scripts run with 'set -euo pipefail'. on_exit used to return the exit code it captured: under set -e that
+# stopped the EXIT trap right there, so the cleanups add_trap appends never ran on a failing run, and its non-zero
+# return fired the ERR trap (a fake post-mortem after every explicit 'exit N').
+@test "add_trap: under set -e, the appended cleanup still runs on a failing command, and the exit code is kept" {
+    run env -i HOME="$HOME" PATH="$PATH" LIB="$lib_dir" bash -c '
+        set -euo pipefail
+        source "$LIB/core.sh" > /dev/null 2>&1
+        add_trap "echo cleanup" EXIT
+        false
+    '
+    assert_failure 1
+    assert_line "cleanup"
+    [[ $(grep -c "ON ERROR post-mortem" <<< "$output") == 1 ]]     # one, for 'false' itself -- none from on_exit
+}
+
+@test "add_trap: under set -e, an explicit 'exit N' runs the cleanup, keeps N, and prints no post-mortem" {
+    run env -i HOME="$HOME" PATH="$PATH" LIB="$lib_dir" bash -c '
+        set -euo pipefail
+        source "$LIB/core.sh" > /dev/null 2>&1
+        add_trap "echo cleanup" EXIT
+        exit 7
+    '
+    assert_failure 7
+    assert_line "cleanup"
+    refute_output --partial "ON ERROR post-mortem"
+}
+
+@test "add_trap: under set -e, a failing cleanup does not stop the cleanups after it" {
+    run env -i HOME="$HOME" PATH="$PATH" LIB="$lib_dir" bash -c '
+        set -euo pipefail
+        source "$LIB/core.sh" > /dev/null 2>&1
+        add_trap "false" EXIT
+        add_trap "echo second cleanup" EXIT
+        exit 3
+    '
+    assert_failure 3
+    assert_line "second cleanup"
 }
 
 @test "add_trap: with no trap set, the command becomes the whole trap" {

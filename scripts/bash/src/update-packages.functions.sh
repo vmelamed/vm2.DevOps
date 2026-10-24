@@ -120,16 +120,17 @@ function _props_line_in_section()
                                                                                    "  - the line of the file to test" \
                                                                                    "  - the name of the variable that tracks whether the current line is inside the shared block"
     [[ ! -v 1 || $1 == shared || $1 == repo ]] || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2 to be which section to match - either 'shared' or 'repo' (provided ${1:-<none>})."
-    [[ ! -v 2 || -n $2 ]]                      || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() a line of the XML file (provided ${2:-<none>})."
     [[ ! -v 3 ]] || is_variable "$3"           || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 3 to be the name of a variable that tracks whether the current line is inside the shared block (provided ${3:-<none>})."
     exit_if_has_bugs
+
+    [[ -z $2 ]] && return "$negative" # shortcut for empty XML lines
 
     local _section=$1
     local _line=$2
     local -n _in_shared_ref=$3
 
-    if [[ $_line == *$shared_begin_marker* ]]; then _in_shared_ref=true; return "$negative"; fi
-    if [[ $_line == *$shared_end_marker* ]]; then _in_shared_ref=false; return "$negative"; fi
+    [[ $_line != *$shared_begin_marker* ]] || { _in_shared_ref=true; return "$negative"; }
+    [[ $_line != *$shared_end_marker* ]]   || { _in_shared_ref=false; return "$negative"; }
 
     [[ $_section == shared && $_in_shared_ref == true ]] && return "$success"
     [[ $_section == repo && $_in_shared_ref != true ]] && return "$success"
@@ -224,7 +225,7 @@ function set_package_version()
     else
         _rc=$err_logic_error
     fi
-    
+
     rm -f "$_tmp"
 
     return "$_rc"

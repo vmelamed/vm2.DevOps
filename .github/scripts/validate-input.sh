@@ -142,7 +142,7 @@ readarray -t all_projects < <(jq -rn --argjson b "$build_projects" \
                                      --argjson p "$package_projects" \
                                      '($b + $t + $m + $p)[]' 2>"$_ignore")
 
-declare candidate
+declare candidate=''
 
 for candidate in "${all_projects[@]}"; do
     [[ -f $candidate ]] && break

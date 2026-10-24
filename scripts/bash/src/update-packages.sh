@@ -33,8 +33,6 @@ source "$script_dir/update-packages.repos.sh"
 source "$script_dir/update-packages.args.sh"
 source "$script_dir/update-packages.usage.sh"
 
-get_arguments "$@"
-
 # script arguments
 declare -x vm2_repos            # the path to the folder containing all vm2 repositories, usually '$VM2_REPOS'
 declare -x sot                  # the source of truth name, usually 'AddNewPackages'
