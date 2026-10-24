@@ -173,11 +173,9 @@ function get_arguments()
         esac
     done
 
-    validate_arguments
-
-    dump_args
-
     usage_if_requested
+    validate_arguments
+    dump_args
 }
 
 function validate_arguments()

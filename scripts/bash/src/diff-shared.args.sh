@@ -105,9 +105,15 @@ function get_arguments()
         add_trap "rm -f ${summary_file@Q}" EXIT
     }
 
-    dump_args
-
     usage_if_requested
+    validate_arguments
+    dump_args
+}
+
+function validate_arguments()
+{
+    #  TODO: add validation here
+    return "$success"
 }
 
 # shellcheck disable=SC2120 # dump_args references arguments, but none are ever passed.

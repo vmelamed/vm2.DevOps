@@ -65,12 +65,12 @@ function get_arguments()
         esac
     done
 
-    validate_args
-    dump_args
     usage_if_requested
+    validate_arguments
+    dump_args
 }
 
-function validate_args()
+function validate_arguments()
 {
     app=${app:-$default_app}
     repo_owner=${repo_owner:-$default_repo_owner}
