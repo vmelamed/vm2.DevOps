@@ -731,6 +731,7 @@ function dotnet_clean()
     (( _rc == "$success" )) || return "$_rc"
 
     local _project="$1"
+    shift
     local -a _dotnet_args
     _dotnet_args=(
         "$_project"
@@ -742,11 +743,8 @@ function dotnet_clean()
     [[ -z $runtime ]]       || _dotnet_args+=("--runtime" "$runtime")
     [[ -z $artifacts ]]     || _dotnet_args+=("--artifacts-path" "$artifacts")
 
-    # if we have more than 1 argument then we have extra arguments that should be added to the other dotnet arguments
-    if (( $# > 1 )); then
-        shift
-        _dotnet_args+=("$@")
-    fi
+    # any remaining arguments go to 'dotnet <command>' as they are
+    (( $# == 0 ))           || _dotnet_args+=("$@")
 
     # CLEAN the project using dotnet build
     execute --quiet dotnet clean "${_dotnet_args[@]}" || _rc=$?
@@ -804,8 +802,8 @@ function dotnet_restore()
     )
     [[ -z $runtime ]]   || _dotnet_args+=("--runtime" "$runtime")
     [[ -z $artifacts ]] || _dotnet_args+=("--artifacts-path" "$artifacts")
-    # do we have extra arguments that should be added to the other dotnet arguments?
-    (( $# > 0 ))        || _dotnet_args+=("$@")
+    # any remaining arguments go to 'dotnet <command>' as they are
+    (( $# == 0 ))       || _dotnet_args+=("$@")
 
     # RESTORE
     execute --quiet dotnet restore "${_dotnet_args[@]}" || _rc=$?
@@ -831,8 +829,8 @@ function dotnet_restore()
 # @arg $2 nameref to an associative array variable to receive the build information. Optional
 #   if no other parameters are provided. If not provided or empty, the build information will
 #   be captured internally and displayed in the log.
-# @arg $@ string - additional arguments to pass to 'dotnet build'. If need to provide any, the
-#   argument $2 is mandatory.
+# @arg $@ string - additional arguments to pass to 'dotnet build'. To pass additional
+#   arguments, argument 2 must be given; it may be empty.
 #
 # @exitcode success=0: if the build operation succeeded.
 # @exitcode err_not_file=65: if argument 1 is not a path to a project or solution file.
@@ -857,8 +855,10 @@ function dotnet_build()
     (( _rc == "$success" )) || return "$_rc"
 
     local _project=$1 # the project or solution file to build
+    shift
     local -A __build_info
-    local _build_info_name=${2:-__build_info}
+    local _build_info_name=${1:-__build_info}
+    [[ ! -v 1 ]] || shift
     local -n _build_info=$_build_info_name
 
     local _output_file
@@ -882,12 +882,8 @@ function dotnet_build()
     [[ -z $minver_tag_prefix ]]    || _dotnet_args+=("-property:MinVerTagPrefix=\"$minver_tag_prefix\"")
     [[ -z $minver_prerelease_id ]] || _dotnet_args+=("-property:MinVerPrereleaseIdentifiers=\"$minver_prerelease_id\"")
     [[ -z $preprocessor_symbols ]] || _dotnet_args+=("-property:preprocessor_symbols=\"$preprocessor_symbols\"")
-
-    # if there are more than 2 arguments, the rest are extra arguments that should be added to the other dotnet arguments
-    if (( $# > 2 )); then
-        shift 2
-        _dotnet_args+=("$@")
-    fi
+    # any remaining arguments go to 'dotnet <command>' as they are
+    (( $# == 0 ))                  || _dotnet_args+=("$@")
 
     # BUILD the project using dotnet build
     execute dotnet build "${_dotnet_args[@]}" > "$_output_file" 2>&1 || _rc=$? # capture the output for extract and display
@@ -953,7 +949,8 @@ function dotnet_build()
 #   produced packages, including the path to the built package at key "PackagePath", and (when
 #   applicable -- see Notes) the symbols package path at key "SymbolsPath". Optional if no
 #   more arguments were provided.
-# @arg $4..$@ string - additional arguments to pass to 'dotnet pack'. Optional.
+# @arg $4..$@ string - additional arguments to pass to 'dotnet pack'. Optional. To pass
+#   additional arguments, arguments 2 and 3 must be given; they may be empty.
 #
 # @exitcode success=0: The operation was successful.
 # @exitcode err_tool_error=66: If 'dotnet pack' failed, or the project's 'Configuration' could
@@ -978,9 +975,12 @@ function dotnet_pack()
     (( _rc == "$success" )) || return "$_rc"
 
     local _project=$1
-    local _reason=${2:-}
+    shift
+    local _reason=${1:-}
+    [[ ! -v 1 ]] || shift
     local -A __properties
-    local _properties_name=${3:-__properties}
+    local _properties_name=${1:-__properties}
+    [[ ! -v 1 ]] || shift
     local -n _properties=$_properties_name
 
     # 'dotnet pack' defaults to 'Release' on its own, unlike the 'Debug' default shared by
@@ -1010,12 +1010,8 @@ function dotnet_pack()
     [[ -z $minver_tag_prefix ]]    || _dotnet_args+=("-property:MinVerTagPrefix=\"$minver_tag_prefix\"")
     [[ -z $minver_prerelease_id ]] || _dotnet_args+=("-property:MinVerPrereleaseIdentifiers=\"$minver_prerelease_id\"")
     [[ -z $_reason ]]              || _dotnet_args+=("-property:PackageReleaseNotes=\"$_reason\"")
-
-    # if there are more than 3 arguments, the rest are extra arguments that should be added to the other dotnet arguments
-    if (( $# > 3 )); then
-        shift 3
-        _dotnet_args+=("$@")
-    fi
+    # any remaining arguments go to 'dotnet <command>' as they are
+    (( $# == 0 ))                  || _dotnet_args+=("$@")
 
     # PACK
     execute --quiet dotnet pack "${_dotnet_args[@]}" || _rc=$?
