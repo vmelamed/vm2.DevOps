@@ -20,7 +20,7 @@ declare -gxi err_argument_value
 declare -gxi err_invalid_nameref
 declare -gxi err_not_found
 
-# --- trap setup / remove_traps -----------------------------------------------------------------
+# --- trap setup, on_err, on_exit, and controlled exits ------------------------------------------
 
 @test "core.sh: sets the ERR and EXIT traps by default" {
     run env -i HOME="$HOME" PATH="$PATH" bash -c "
@@ -44,7 +44,7 @@ declare -gxi err_not_found
     assert_output "OK"
 }
 
-@test "remove_traps: the ERR trap fires before it is called, as a sanity precondition" {
+@test "on_err: a failing command prints the post-mortem" {
     run env -i HOME="$HOME" PATH="$PATH" bash -c "
         source '$lib_dir/core.sh' > /dev/null 2>&1
         false
@@ -53,23 +53,51 @@ declare -gxi err_not_found
     assert_output --partial "ON ERROR post-mortem"
 }
 
-@test "remove_traps: suppresses the ERR trap so a subsequent failing command no longer reports it" {
-    # Functional check, not a trap -p introspection: trap - ERR (reset-to-default) does not
-    # reliably clear an ERR trap when called from inside a function -- remove_traps always is
-    # one -- even though trap -p ERR can look "cleared" either way depending on how it's done.
-    # What matters is whether the handler actually still runs; this checks exactly that.
+# errtrace (set -E in core.sh): without it, bash does not pass the ERR trap on to functions, and a failure inside a
+# function -- where most of the work happens -- never reached on_err, so its post-mortem and call stack were lost.
+@test "on_err: under set -e, a failure inside a function prints the post-mortem once, with the function in the stack" {
     run env -i HOME="$HOME" PATH="$PATH" bash -c "
+        set -euo pipefail
         source '$lib_dir/core.sh' > /dev/null 2>&1
-        remove_traps
-        false
-        echo 'reached after false'
+        inner_function() { false; }
+        outer_function() { inner_function; }
+        outer_function
     "
-    assert_success
-    assert_output "reached after false"
-    refute_output --partial "ON ERROR post-mortem"
+    assert_failure 1
+    [[ $(grep -c "ON ERROR post-mortem" <<< "$output") == 1 ]]
+    assert_output --partial "inner_function"
+    assert_output --partial "outer_function"
 }
 
-@test "remove_traps: the EXIT trap fires before it is called, as a sanity precondition" {
+@test "on_err: under set -e, a non-zero return two functions deep keeps its exit code, with no bash internal error" {
+    # regression: on_err's non-zero return, and show_stack's '(( _take = 0 ))' failing under set -e inside the ERR
+    # handler, turned 7 into 1 and made bash 5.2 report 'pop_var_context: head of shell_variables not a function context'
+    run env -i HOME="$HOME" PATH="$PATH" bash -c "
+        set -euo pipefail
+        source '$lib_dir/core.sh' > /dev/null 2>&1
+        inner_function() { return 7; }
+        outer_function() { inner_function; }
+        outer_function
+        echo 'not reached'
+    "
+    assert_failure 7
+    refute_output --partial "pop_var_context"
+    refute_output --partial "not reached"
+    [[ $(grep -c "ON ERROR post-mortem" <<< "$output") == 1 ]]
+}
+
+@test "on_err: a failure inside a function that the caller handles ('f || ...') prints no post-mortem" {
+    run env -i HOME="$HOME" PATH="$PATH" bash -c "
+        set -euo pipefail
+        source '$lib_dir/core.sh' > /dev/null 2>&1
+        failing_function() { false; }
+        failing_function || echo 'handled by the caller'
+    "
+    assert_success
+    assert_output "handled by the caller"
+}
+
+@test "on_exit: a script ending on a failing command reports it, and keeps its exit code" {
     run env -i HOME="$HOME" PATH="$PATH" bash -c "
         source '$lib_dir/core.sh' > /dev/null 2>&1
         false
@@ -78,25 +106,43 @@ declare -gxi err_not_found
     assert_output --partial "EXIT: the command 'false' failed"
 }
 
-@test "remove_traps: suppresses the EXIT trap so on_exit no longer reports the failing command" {
+# Controlled exits (exit_with_error, usage, ...) used to call remove_traps first, to hide the fake post-mortem that
+# on_exit's own non-zero return fired. on_exit now disables ERR and returns 0, so the traps stay in place: a controlled
+# exit is still quiet, and the cleanups registered with add_trap now run on these error paths too.
+@test "exit_with_error: under set -e, exits with its code, without a post-mortem or on_exit's line" {
     run env -i HOME="$HOME" PATH="$PATH" bash -c "
+        set -euo pipefail
         source '$lib_dir/core.sh' > /dev/null 2>&1
-        remove_traps
-        false
+        exit_with_error -ec 5 'controlled failure'
     "
-    assert_failure "$failure"
-    refute_output --partial "EXIT: the command"
+    assert_failure 5
+    assert_output --partial "controlled failure"
     refute_output --partial "ON ERROR post-mortem"
+    refute_output --partial "EXIT: the command"
 }
 
-@test "remove_traps: is a harmless no-op when no traps were set" {
+@test "exit_with_error: the cleanups registered with add_trap run on a controlled exit" {
     run env -i HOME="$HOME" PATH="$PATH" bash -c "
-        source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
-        remove_traps
-        echo OK
+        set -euo pipefail
+        source '$lib_dir/core.sh' > /dev/null 2>&1
+        add_trap 'echo cleanup' EXIT
+        exit_with_error -ec 5 'controlled failure'
     "
-    assert_success
-    assert_output "OK"
+    assert_failure 5
+    assert_line "cleanup"
+}
+
+@test "usage: an error exit through usage runs the add_trap cleanups and prints no post-mortem" {
+    run env -i HOME="$HOME" PATH="$PATH" bash -c "
+        set -euo pipefail
+        source '$lib_dir/core.sh' > /dev/null 2>&1
+        source '$lib_dir/_core_args.sh'
+        add_trap 'echo cleanup' EXIT
+        usage -ec 6 'Unknown option: --bogus'
+    "
+    assert_failure 6
+    assert_line "cleanup"
+    refute_output --partial "ON ERROR post-mortem"
 }
 
 # --- add_trap ------------------------------------------------------------------------------

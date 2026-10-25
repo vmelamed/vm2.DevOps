@@ -134,10 +134,10 @@ function on_err()
         - exit code: %s
         - command:   '%s'
         - call stack:\n" "$_rc" "$BASH_COMMAND"
-        show_stack 2 12
+        show_stack 1 12
     } >&2
 
-    return "$_rc"
+    return "$success"
 }
 
 declare __no_traps=false
@@ -149,25 +149,12 @@ declare __no_traps=false
 # Traps are also suppressed when running under a debugger or in a CI environment.
 if ! $__no_traps && ! $debugger && ! $ci; then
     # set the traps to see the last faulted command. However, they get in the way of debugging.
+    # errtrace (-E): functions, command substitutions, and subshells inherit the ERR trap -- without it, a failure inside
+    # a function (where most of the work happens) never reaches on_err, and the post-mortem with its call stack is lost
+    set -o errtrace
     trap on_err ERR
     trap on_exit EXIT
 fi
-
-#---------------------------------------------------------------------------------------------
-# @description Removes the ERR and EXIT traps set by core.sh.
-#   - Useful when the expected errors are handled already.
-#
-# Note: uses `trap '' SIGNAL` (ignore), not `trap - SIGNAL` (reset to default). `trap - ERR`
-#   does not reliably clear an ERR trap when invoked from inside a function -- confirmed: the
-#   original handler still fires on a subsequent failing command even after `trap - ERR` runs,
-#   here, in every function that calls it. `trap '' ERR` correctly suppresses it. Since
-#   `remove_traps` is itself always a function call, this distinction always applies to it.
-#---------------------------------------------------------------------------------------------
-function remove_traps()
-{
-    trap '' ERR
-    trap '' EXIT
-}
 
 #---------------------------------------------------------------------------------------------
 # @description Appends a command to the current trap of one or more signals (e.g. after core.sh's

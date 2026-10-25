@@ -316,7 +316,6 @@ function usage()
     bug -ec "$err_not_overridden" "This implementation of usage() is meant to be a 'forward declaration'!" \
                                     "Either re-define usage() or source _core_args.sh." \
                                     "$@"
-    remove_traps
     exit "$failure";
 }
 
@@ -608,7 +607,6 @@ function error()
 function exit_with_error()
 {
     error "$@"
-    remove_traps
 
     local -i _ec
     (( __last_error != success )) && _ec=$__last_error || _ec=$err_has_errors
@@ -693,7 +691,6 @@ function bug()
 function exit_with_bug()
 {
     bug "$@"
-    remove_traps
 
     local -i _ec
     (( __last_bug != success )) && _ec=$__last_bug || _ec=$err_has_bugs
@@ -740,7 +737,6 @@ function fatal_exit()
     done
 
     __message "$fatal_prefix" "$@" > >(to_stderr)
-    remove_traps
     exit "$_exit_code"
 }
 
@@ -911,7 +907,7 @@ function show_stack()
     local _max_take=$(( ${#FUNCNAME[@]} - _skip ))          # take no more than the remaining stack frames
     local _take=${2:-$_max_take}
 
-    (( _take = _take < _max_take ? _take : _max_take ))     # adjust take if it exceeds the available stack frames
+    _take=$(( _take < _max_take ? _take : _max_take ))      # adjust take if it exceeds the available stack frames
     (( _take <= 0 )) && return "$success"
 
     local _func

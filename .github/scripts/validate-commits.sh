@@ -108,7 +108,6 @@ if (( bad > 0 )); then
     info "Note: rebase rewrites commit hashes from $oldest_bad_parent to HEAD." \
          "Repeat reword for each commit above in the same rebase session, then force-push:" \
          "  git push --force-with-lease origin $branch"
-    remove_traps
     exit "$err_argument_value"
 fi
 
