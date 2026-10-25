@@ -174,6 +174,37 @@ EOF
     assert_output --partial 'required_checks=([0]="Postrun-CI")'
 }
 
+@test "list_required_checks: a gate job name given as an expression registers its final '|| <name>' literal" {
+    # The canonical CI.yaml renames the gate job in the push run, so only the pull_request run reports the required check
+    echo "jobs: {}" > "$BATS_TEST_TMPDIR/ci.yaml"
+    mkdir -p "$BATS_TEST_TMPDIR/bin"
+    cat > "$BATS_TEST_TMPDIR/bin/yq" <<'EOF'
+#!/usr/bin/env bash
+if [[ "$*" == *"keys[]"* ]]; then echo "postrun-ci"; exit 0; fi
+if [[ "$*" == *".jobs.postrun-ci.name"* ]]; then echo "\${{ github.event_name == 'push' && 'Postrun-CI (push)' || 'Postrun-CI' }}"; exit 0; fi
+exit 1
+EOF
+    chmod +x "$BATS_TEST_TMPDIR/bin/yq"
+    run _sr "ci_yaml='$BATS_TEST_TMPDIR/ci.yaml'; list_required_checks; declare -p required_checks" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
+    assert_success
+    assert_output --partial 'required_checks=([0]="Postrun-CI")'
+}
+
+@test "list_required_checks: a gate job name expression without a final '|| <name>' literal is an error, not a guess" {
+    echo "jobs: {}" > "$BATS_TEST_TMPDIR/ci.yaml"
+    mkdir -p "$BATS_TEST_TMPDIR/bin"
+    cat > "$BATS_TEST_TMPDIR/bin/yq" <<'EOF'
+#!/usr/bin/env bash
+if [[ "$*" == *"keys[]"* ]]; then echo "postrun-ci"; exit 0; fi
+if [[ "$*" == *".jobs.postrun-ci.name"* ]]; then echo "\${{ format('Postrun-CI-{0}', github.event_name) }}"; exit 0; fi
+exit 1
+EOF
+    chmod +x "$BATS_TEST_TMPDIR/bin/yq"
+    run _sr "ci_yaml='$BATS_TEST_TMPDIR/ci.yaml'; list_required_checks" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
+    assert_failure
+    assert_output --partial "is an expression that does not end with"
+}
+
 @test "list_required_checks: no gate job in CI.yaml is a silent no-op (e.g. vm2.DevOps itself has none yet), not an error" {
     echo "jobs: {}" > "$BATS_TEST_TMPDIR/ci.yaml"
     mkdir -p "$BATS_TEST_TMPDIR/bin"
