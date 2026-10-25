@@ -707,7 +707,7 @@ function read_repo_state()
 
     local -n _state="$1"
     local _key _value
-    while IFS='=' read -r _key _value; do
+    while IFS='=' read -r _key _value || [[ -n $_key ]]; do
         # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
         is_in "$_key" "${repo_state_keys[@]}" &&
             trace "read_repo_state: '$_key'='$_value'" ||
