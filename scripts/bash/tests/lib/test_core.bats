@@ -519,3 +519,49 @@ _ffp() {
     assert_line --index 1 "line1"
     assert_line --index 2 "line2"
 }
+
+# --- last line without a trailing newline -----------------------------------------------------
+# 'read' returns 1 at the end of the input even when it still filled its variable from a last line without a newline
+# (e.g. 'printf "%s"'), so a plain 'while read' loop dropped that line. The stdin-forwarding functions guard against it
+# with '|| [[ -n $var ]]': their callers control the input.
+
+@test "to_stdout: forwards a last line without a trailing newline" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; printf 'first\nlast' | to_stdout"
+    assert_success
+    assert_line --index 0 "first"
+    assert_line --index 1 "last"
+}
+
+@test "to_stderr: forwards a last line without a trailing newline" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; printf 'first\nlast' | to_stderr 2>&1"
+    assert_success
+    assert_line --index 0 "first"
+    assert_line --index 1 "last"
+}
+
+@test "to_summary: forwards a last line without a trailing newline" {
+    run bash -c "CI=true; source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; printf 'first\nlast' | to_summary"
+    assert_success
+    assert_line --index 1 "first"
+    assert_line --index 2 "last"
+}
+
+@test "error: reads its message from stdin, including a last line without a trailing newline" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; printf 'first-part\nlast-part' | error 2>&1"
+    assert_success
+    assert_output --partial "first-part"
+    assert_output --partial "last-part"
+}
+
+@test "error: reading its message from stdin ends, even when the caller has a non-empty _line of its own" {
+    # regression: the guard of the message-part loop tested '_line' instead of its own '_part', so through dynamic scope
+    # it saw a caller's '_line' and never ended. 'timeout' turns a hang into a failure instead of stalling the suite.
+    # The output is discarded: a looping guard prints empty message parts as fast as it can, and bats would then have to
+    # process all of it. Only the exit status matters here: 124 means 'timeout' had to stop it.
+    run timeout 5 bash -c "
+        source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
+        caller_with_a_line() { local _line='a value of the caller'; printf 'the message\n' | error; }
+        caller_with_a_line > /dev/null 2>&1
+    "
+    assert_success
+}

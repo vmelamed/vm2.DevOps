@@ -76,6 +76,24 @@ declare -gxi err_invalid_nameref
     [[ "$(cat "$_summary")" == "$(printf '## Summary\nhello')" ]]
 }
 
+@test "to_stdout, to_stderr, to_summary: forward a last line without a trailing newline, to the step summary too" {
+    local _summary="$BATS_TEST_TMPDIR/summary.md"
+    run bash -c "
+        CI=true GITHUB_ACTIONS=true GITHUB_STEP_SUMMARY='$_summary' source '$lib_dir/gh_core.sh' --no-trap > /dev/null 2>&1
+        printf 'out-first\nout-last' | to_stdout
+        printf 'err-first\nerr-last' | to_stderr 2>&1
+        printf 'sum-first\nsum-last' | to_summary
+    "
+    assert_success
+    assert_line "out-last"
+    assert_line "err-last"
+    assert_line "sum-last"
+    run cat "$_summary"
+    assert_line "out-last"
+    assert_line "err-last"
+    assert_line "sum-last"
+}
+
 @test "to_summary: does not write to \$GITHUB_STEP_SUMMARY outside GITHUB_ACTIONS (local run)" {
     local _summary="$BATS_TEST_TMPDIR/summary.md"
     run bash -c "CI=true GITHUB_ACTIONS=false GITHUB_STEP_SUMMARY='$_summary' source '$lib_dir/gh_core.sh' --no-trap > /dev/null 2>&1; printf 'hello\n' | to_summary"

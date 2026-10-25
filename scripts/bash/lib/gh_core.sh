@@ -60,7 +60,7 @@ declare -xra gh_apps_with_secrets
 function to_stdout()
 {
     local _line
-    while IFS= read -r _line; do
+    while IFS= read -r _line || [[ -n $_line ]]; do
         echo "$_line"
         if $GITHUB_ACTIONS; then
             echo "$_line" >> "$GITHUB_STEP_SUMMARY"
@@ -90,7 +90,7 @@ function to_stdout()
 function to_stderr()
 {
     local _line
-    while IFS= read -r _line; do
+    while IFS= read -r _line || [[ -n $_line ]]; do
         echo "$_line" >&2
         if $GITHUB_ACTIONS; then
             echo "$_line" >> "$GITHUB_STEP_SUMMARY"
@@ -120,7 +120,7 @@ function to_stderr()
 function to_output()
 {
     local _line
-    while IFS= read -r _line; do
+    while IFS= read -r _line || [[ -n $_line ]]; do
         echo "$_line"
         if $GITHUB_ACTIONS; then
             echo "$_line" >> "$GITHUB_OUTPUT"

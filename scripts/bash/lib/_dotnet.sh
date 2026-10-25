@@ -598,7 +598,7 @@ function extract_dotnet_build_info()
     local _line _property
     local _echo=false
     # shellcheck disable=SC2004 # Variable: _line, _property, _echo, _extracted, key_build_result, key_warnings_count, key_errors_count - defined elsewhere
-    while IFS= read -r _line; do
+    while IFS= read -r _line || [[ -n $_line ]]; do
         if [[ $_line =~ $property_value_rex ]]; then
             _property="${BASH_REMATCH[1]}"
             if is_in "$_property" "${build_info_keys[@]}"; then

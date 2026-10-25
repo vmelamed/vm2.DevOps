@@ -65,7 +65,7 @@ function to_stdout()
 {
     local _line
 
-    while IFS= read -r _line; do
+    while IFS= read -r _line || [[ -n $_line ]]; do
         echo "$_line"
     done
 }
@@ -92,7 +92,7 @@ function to_stderr()
 {
     local _line
 
-    while IFS= read -r _line; do
+    while IFS= read -r _line || [[ -n $_line ]]; do
         echo "$_line" >&2
     done
 }
@@ -118,7 +118,7 @@ function to_stderr()
 function to_output()
 {
     local _line
-    while IFS= read -r _line; do
+    while IFS= read -r _line || [[ -n $_line ]]; do
         echo "$_line"
     done
 }
@@ -504,7 +504,7 @@ function __message()
             __print_message_part "$_part"
         done
     else
-        while IFS= read -r _part; do
+        while IFS= read -r _part || [[ -n $_part ]]; do
             __print_message_part "$_part"
         done
     fi
@@ -979,7 +979,7 @@ function to_summary()
     local _line
     local _first=true
 
-    while IFS= read -r _line; do
+    while IFS= read -r _line || [[ -n $_line ]]; do
         $_first && echo "## Summary" && _first=false
         echo "$_line"
     done | "${__summary_output[@]}"
