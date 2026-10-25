@@ -195,7 +195,7 @@ function args_to_github_output()
     local _var
     local -i _argument_number=1
     for _var in "$@"; do
-        is_variable_name "$_var" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument $_argument_number to be a valid variable name (provided '${_var-<none>}')."
+        is_variable_name "$_var" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument $_argument_number to be a valid variable name (provided '${_var-<missing>}')."
         (( ++_argument_number ))
     done
 

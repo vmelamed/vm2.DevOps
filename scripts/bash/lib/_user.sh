@@ -216,7 +216,7 @@ function choose()
 
     local -i _i
     for (( _i=3; _i<=$#; _i++ )); do
-        [[ ! -v $_i || -n ${!_i} ]]  || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument $_i, the choice text, to be non-empty (provided '${!_i:-<none>}')."
+        [[ ! -v $_i || -n ${!_i} ]]  || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument $_i, the choice text, to be non-empty (provided '${!_i:-<missing>}')."
     done
     exit_if_has_bugs
 

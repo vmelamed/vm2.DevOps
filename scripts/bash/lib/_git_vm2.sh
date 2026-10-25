@@ -285,11 +285,11 @@ function resolve_vm2_repos()
     }
     [[ -z ${2:-} ]] || validate_branch_name "$2" || {
         _rc=$err_invalid_branch
-        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, if provided, to be a valid branch name (provided '${2-<none>}')."
+        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, if provided, to be a valid branch name (provided '${2-<missing>}')."
     }
     [[ -z ${3:-} ]] || validate_branch_name "$3" || {
         _rc=$err_invalid_branch
-        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 3, if provided, to be a valid branch name (provided '${3-<none>}')."
+        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 3, if provided, to be a valid branch name (provided '${3-<missing>}')."
     }
     (( _rc == "$success" )) || return "$_rc"
 
