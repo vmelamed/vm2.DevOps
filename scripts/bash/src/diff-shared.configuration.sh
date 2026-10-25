@@ -504,7 +504,7 @@ function parameterize()
                 { is_empty_array _matching_actions || ! is_in "$_action" "${_matching_actions[@]}"; } && {
                     # add the action to the list of matching actions if it is not already present
                     _matching_actions+=("$_action")
-                    trace "File '${_source_file#"${vm2_repos:-}/"}' ${bold}${green}matches${reset} selector '${_selector:-<none>}' with action '${_action:-<none>}'."
+                    trace "File '${_source_file#"${vm2_repos:-}/"}' ${bold}${green}matches${reset} selector '${_selector-<missing>}' with action '${_action-<missing>}'."
                 }
                 # keep checking other selectors for this source file, if they specify different actions - we'll ignore it all together below
             fi
