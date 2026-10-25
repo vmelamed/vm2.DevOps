@@ -140,7 +140,6 @@ if [[ -d "$artifacts_test_dir" && -n "$(ls -A "$artifacts_test_dir")" ]]; then
                 exit 0
                 ;;
             *)  error -sd 3 -ec "$err_unknown_argument" "Invalid option '$choice'. Exiting."
-                remove_traps
                 exit "$err_unknown_argument"
                 ;;
         esac
@@ -238,5 +237,4 @@ else
     warning "Summary.txt not found in coverage output directory '$coverage_source_path'."
 fi
 
-remove_traps
 exit "$rc"

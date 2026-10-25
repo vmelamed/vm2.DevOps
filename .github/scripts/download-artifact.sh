@@ -79,7 +79,6 @@ if [[ -d "$artifacts" && -n "$(ls -A "$artifacts")" ]]; then
             exit 0
             ;;
         *)  error -ns "Invalid option $choice. Exiting."
-            remove_traps
             exit 2
             ;;
     esac

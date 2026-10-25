@@ -217,10 +217,7 @@ function error_message()
         printf "%s ${FUNCNAME[0]}() requires argument 1 to be an error code (0..255) (provided '${1-<missing>}')." "$bug_prefix"
         show_stack 2 4
     }
-    (( _rc == success )) || {
-        remove_traps;
-        exit "$_rc";
-    }
+    (( _rc == success )) || exit "$_rc";
 
     [[ -v __error_messages[$1] ]] &&
         echo "$1: ${__error_messages[$1]}" ||
@@ -268,7 +265,7 @@ function error_name()
         printf "%s ${FUNCNAME[0]}() requires argument 1 to be an error code (0..255) (provided '${1-<missing>}')." "$bug_prefix"
         show_stack 2 4
     }
-    (( _rc == success )) || { remove_traps; exit "$_rc"; }
+    (( _rc == success )) || exit "$_rc"
 
     [[ -v __error_names[$1] ]] &&
         echo "${__error_names[$1]}" ||

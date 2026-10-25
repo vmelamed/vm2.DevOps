@@ -187,7 +187,6 @@ function usage()
     # restore the tracing state
     restore_state _core_state
 
-    remove_traps
     exit "$_exit_code"
 }
 

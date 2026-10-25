@@ -24,10 +24,6 @@ EXIT trap handler: reports a non-zero, non-explicit exit, restores `$initial_cwd
 
 ERR trap handler: reports the failing command, its exit code, and a stack trace.
 
-### remove_traps()
-
-Removes the ERR and EXIT traps set by `core.sh` (via `trap '' SIGNAL`, not `trap - SIGNAL`).
-
 ### execute()
 
 Executes a command, or (in dry-run mode) prints what would have been executed without running it.
