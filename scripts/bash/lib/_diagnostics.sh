@@ -202,7 +202,7 @@ function set_errors()
 {
     (( $# == 1 ))                        || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument ($# provided):" \
                                                                              "  - the new value for the global error counter"
-    [[ ! -v 1 ]] || is_non_negative "$1" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 1 to be provided as a non-negative integer: the new value for the global error counter (provided '${1:-<none>}')."
+    [[ ! -v 1 ]] || is_non_negative "$1" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 1 to be provided as a non-negative integer: the new value for the global error counter (provided '${1-<missing>}')."
     exit_if_has_bugs
 
     __errors=$1
@@ -876,8 +876,8 @@ function warning_var()
                                                                               "  - warning message" \
                                                                               "  - default value"
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-    [[ ! -v 1 ]] || is_variable_name "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be a valid variable name (provided '${1:-<none>}')."
-    [[ ! -v 2 || -n $2 ]]                 || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the warning message, to be non-empty (provided '${2:-<none>}')."
+    [[ ! -v 1 ]] || is_variable_name "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be a valid variable name (provided '${1-<missing>}')."
+    [[ ! -v 2 || -n $2 ]]                 || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the warning message, to be non-empty (provided '${2-<missing>}')."
     exit_if_has_bugs
 
     warning "$2" "Assuming the default value of '$3'."

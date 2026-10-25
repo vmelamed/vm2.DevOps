@@ -176,10 +176,10 @@ function update_section_versions()
                                                                                    "  - the flag designating which section of the file must be updated must be either 'shared' or 'repo'" \
                                                                                    "  - the summary label" \
                                                                                    "  - the name of the summary rows array."
-    [[ ! -v 1 || -f $1 ]]                      || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the path of the file to be updated, to be a path to an existing file (provided ${1:-<none>})."
-    [[ ! -v 2 || $2 == shared || $2 == repo ]] || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2, the flag designating which section of the file must be updated must be either 'shared' or 'repo' (provided ${2:-<none>})."
+    [[ ! -v 1 || -f $1 ]]                      || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the path of the file to be updated, to be a path to an existing file (provided ${1-<missing>})."
+    [[ ! -v 2 || $2 == shared || $2 == repo ]] || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2, the flag designating which section of the file must be updated must be either 'shared' or 'repo' (provided ${2-<missing>})."
     [[ ! -v 3 || -n $3 ]]                      || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 3, the label, to be non-empty."
-    [[ ! -v 4 ]] || is_indexed_array "$4"      || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 4 to be the name of an indexed array variable (provided ${4:-<none>})."
+    [[ ! -v 4 ]] || is_indexed_array "$4"      || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 4 to be the name of an indexed array variable (provided ${4-<missing>})."
     exit_if_has_bugs
 
     local _file=$1
@@ -306,9 +306,9 @@ function open_pull_request()
                                                                                "  - the repository path" \
                                                                                "  - the branch" \
                                                                                "  - the URL output."
-    [[ ! -v 1 || -d $1 ]]                  || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1 to be a valid repository path (provided ${1:-<none>})."
+    [[ ! -v 1 || -d $1 ]]                  || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1 to be a valid repository path (provided ${1-<missing>})."
     [[ ! -v 2 || -n $2 ]]                  || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2, the branch name, to be non-empty."
-    [[ ! -v 3 ]] || is_variable_name "$3"  || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 3 to be the name of a variable (provided ${3:-<none>})."
+    [[ ! -v 3 ]] || is_variable_name "$3"  || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 3 to be the name of a variable (provided ${3-<missing>})."
     exit_if_has_bugs
 
     local _repo=$1 _branch=$2

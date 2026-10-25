@@ -135,9 +135,9 @@ function _write_line()
                                                                                              "  - bool, if true, applies GitHub escaping to the output"
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     [[ ! -v 3  || -z "$3" ]] || _has_name=true
-    [[ ! -v 1 ]]  || $_has_name || is_variable_name "$1" || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 1 to be a valid variable name (provided '${1:-<none>}')."
-    [[ ! -v 2 ]]  || is_boolean "$2"                     || bug -ec "$err_argument_type"     "${FUNCNAME[0]}() requires argument 2, the secret-masking flag, to be 'true' or 'false' (provided '${2:-<none>}')."
-    [[ ! -v 4 ]]  || is_boolean "$4"                     || bug -ec "$err_argument_type"     "${FUNCNAME[0]}() requires argument 4, the GitHub escaping flag, to be 'true' or 'false' (provided '${4:-<none>}')."
+    [[ ! -v 1 ]]  || $_has_name || is_variable_name "$1" || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 1 to be a valid variable name (provided '${1-<missing>}')."
+    [[ ! -v 2 ]]  || is_boolean "$2"                     || bug -ec "$err_argument_type"     "${FUNCNAME[0]}() requires argument 2, the secret-masking flag, to be 'true' or 'false' (provided '${2-<missing>}')."
+    [[ ! -v 4 ]]  || is_boolean "$4"                     || bug -ec "$err_argument_type"     "${FUNCNAME[0]}() requires argument 4, the GitHub escaping flag, to be 'true' or 'false' (provided '${4-<missing>}')."
     exit_if_has_bugs
 
     local _current_table_format_name=''

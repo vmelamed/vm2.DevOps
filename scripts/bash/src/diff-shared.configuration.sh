@@ -137,8 +137,8 @@ function get_tools()
     (( $# == 2 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires two arguments (provided $#):" \
                                                                       "  - the configuration or customization file." \
                                                                       "  - a flag to proceed with the defaults (optional, default is true)."
-    [[ -v 1 && -s $1 ]]           || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be an existing, non-empty configuration or customization file (provided '${1:-<none>}')."
-    [[ -v 2 ]] || is_boolean "$2" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2 to be a boolean value (provided '${2:-<none>}')."
+    [[ -v 1 && -s $1 ]]           || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be an existing, non-empty configuration or customization file (provided '${1-<missing>}')."
+    [[ -v 2 ]] || is_boolean "$2" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2 to be a boolean value (provided '${2-<missing>}')."
 
     exit_if_has_bugs
 
@@ -255,8 +255,8 @@ function configure()
     (( $# == 2 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
                                                                       "  - the SoT directory" \
                                                                       "  - the target directory"
-    [[ -v 1 && -d $1 ]]           || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the SoT directory, to be an existing directory (provided '${1:-<none>}')."
-    [[ -v 2 && -d $2 ]]           || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the target directory, to be an existing directory (provided '${2:-<none>}')."
+    [[ -v 1 && -d $1 ]]           || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the SoT directory, to be an existing directory (provided '${1-<missing>}')."
+    [[ -v 2 && -d $2 ]]           || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the target directory, to be an existing directory (provided '${2-<missing>}')."
     exit_if_has_bugs
 
     local _sot_path=$1
@@ -335,8 +335,8 @@ function configure_target_files()
     (( $# == 2 ))                          || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
                                                                                "  - the path to the target repository's working tree root directory" \
                                                                                "  - the name of an indexed array that will store the expanded target file paths"
-    [[ ! -v 1 || -d $1 ]]                  || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the target repository's working tree root directory, to be an existing directory (provided '${1:-<none>}')."
-    [[ ! -v 2 ]] || is_indexed_array "$2"  || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2 to be the name of an indexed array variable (provided '${2:-<none>}')."
+    [[ ! -v 1 || -d $1 ]]                  || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the target repository's working tree root directory, to be an existing directory (provided '${1-<missing>}')."
+    [[ ! -v 2 ]] || is_indexed_array "$2"  || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2 to be the name of an indexed array variable (provided '${2-<missing>}')."
     exit_if_has_bugs
 
     # the name "target_repo_path" is used as a macro variable in the target file paths in the json configuration - do not rename!
@@ -381,8 +381,8 @@ function customize()
     (( $# == 2 ))       || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires two arguments (provided $#)" \
                                                             "  - path to the SoT directory" \
                                                             "  - path to the target repository directory"
-    [[ -v 1 && -d $1 ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the SoT directory, to be an existing directory (provided '${1:-<none>}')."
-    [[ -v 2 && -d $2 ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the target repository path, to be an existing directory (provided '${1:-<none>}')."
+    [[ -v 1 && -d $1 ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the SoT directory, to be an existing directory (provided '${1-<missing>}')."
+    [[ -v 2 && -d $2 ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the target repository path, to be an existing directory (provided '${1-<missing>}')."
     exit_if_has_bugs
 
     local _sot_path=$1

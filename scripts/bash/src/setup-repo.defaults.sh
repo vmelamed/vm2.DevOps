@@ -214,7 +214,7 @@ function validate_app_default_vars()
 {
     (( $# == 1 ))                                     || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#):" \
                                                                                           "  - the name of the application (e.g., actions)"
-    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_vars[@]}" || bug "${FUNCNAME[0]}() requires the argument to be one of (${gh_apps_with_vars[*]}) - provided ${1:-<none>}."
+    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_vars[@]}" || bug "${FUNCNAME[0]}() requires the argument to be one of (${gh_apps_with_vars[*]}) - provided ${1-<missing>}."
     exit_if_has_bugs
 
     local _app=$1
@@ -435,7 +435,7 @@ function validate_app_default_secrets()
 {
     (( $# == 1 ))                                        || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#):" \
                                                                                              "  - the name of the application (e.g., actions)"
-    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_secrets[@]}" || bug "${FUNCNAME[0]}() requires the argument to be one of (${gh_apps_with_secrets[*]}) - provided ${1:-<none>}."
+    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_secrets[@]}" || bug "${FUNCNAME[0]}() requires the argument to be one of (${gh_apps_with_secrets[*]}) - provided ${1-<missing>}."
 
     local _app=$1
     local _app_secrets_order_name="${_app,,}_secrets_order"

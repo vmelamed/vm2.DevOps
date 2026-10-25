@@ -214,7 +214,7 @@ function error_message()
     [[ ! -v 1 ]] || is_non_negative "$1" || {
         _rc="$err_argument_type"
         # avoid calling the error function here to prevent recursion in case error_message is called from within error handling
-        printf "%s ${FUNCNAME[0]}() requires argument 1 to be an error code (0..255) (provided '${1:-<none>}')." "$bug_prefix"
+        printf "%s ${FUNCNAME[0]}() requires argument 1 to be an error code (0..255) (provided '${1-<missing>}')." "$bug_prefix"
         show_stack 2 4
     }
     (( _rc == success )) || {
@@ -265,7 +265,7 @@ function error_name()
     [[ ! -v 1 ]] || is_non_negative "$1" || {
         _rc="$err_argument_type"
         # avoid calling the error function here to prevent recursion in case error_message is called from within error handling
-        printf "%s ${FUNCNAME[0]}() requires argument 1 to be an error code (0..255) (provided '${1:-<none>}')." "$bug_prefix"
+        printf "%s ${FUNCNAME[0]}() requires argument 1 to be an error code (0..255) (provided '${1-<missing>}')." "$bug_prefix"
         show_stack 2 4
     }
     (( _rc == success )) || { remove_traps; exit "$_rc"; }

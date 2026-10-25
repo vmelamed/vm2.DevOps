@@ -470,7 +470,7 @@ function configure_variables()
 {
     (( $# == 1 ))                                        || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#):" \
                                                                                              "  - the name of the GitHub application being configured, e.g. actions"
-    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_vars[@]}" || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the application name, to be one of: ${gh_apps_with_vars[*]} (provided '${1:-<none>}')."
+    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_vars[@]}" || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the application name, to be one of: ${gh_apps_with_vars[*]} (provided '${1-<missing>}')."
     exit_if_has_bugs
 
     local _app=${1,,}
@@ -630,7 +630,7 @@ function set_var()
     (( $# == 2 ))       || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
                                                             "  - the variable name" \
                                                             "  - the variable value."
-    [[ -v 1 && -n $1 ]] || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the variable name, to be non-empty (provided '${1:-<none>}')."
+    [[ -v 1 && -n $1 ]] || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the variable name, to be non-empty (provided '${1-<missing>}')."
     [[ -v 2 ]]          || bug -ec "$err_missing_argument"  "${FUNCNAME[0]}() requires argument 2, the variable value, to be provided."
     exit_if_has_bugs
 
@@ -659,7 +659,7 @@ function delete_var()
 {
     (( $# == 1 ))         || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#):" \
                                                               "  - the variable name"
-    [[ ! -v 1 || -n $1 ]] || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the variable name, to be non-empty (provided '${1:-<none>}')."
+    [[ ! -v 1 || -n $1 ]] || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the variable name, to be non-empty (provided '${1-<missing>}')."
     exit_if_has_bugs
 
     local _name="$1"
@@ -710,7 +710,7 @@ function configure_secrets()
 {
     (( $# == 1 ))                                        || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#):" \
                                                                                              "  - the application name"
-    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_secrets[@]}" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the application name, to be one of: ${gh_apps_with_secrets[*]} (provided '${1:-<none>}')."
+    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_secrets[@]}" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the application name, to be one of: ${gh_apps_with_secrets[*]} (provided '${1-<missing>}')."
     exit_if_has_bugs
 
     local _app=${1,,}
@@ -865,8 +865,8 @@ function set_secret()
                                                                                                 "  - the secret name" \
                                                                                                 "  - the secret value" \
                                                                                                 "  - the application"
-    [[ ! -v 1 || -n $1 ]]                                   || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the secret name, to be non-empty (provided '${1:-<none>}')."
-    [[ ! -v 3 ]] || is_in "$3" "${gh_apps_with_secrets[@]}" || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 3, the application name, to be one of: ${gh_apps_with_secrets[*]} (provided '${3:-<none>}')."
+    [[ ! -v 1 || -n $1 ]]                                   || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the secret name, to be non-empty (provided '${1-<missing>}')."
+    [[ ! -v 3 ]] || is_in "$3" "${gh_apps_with_secrets[@]}" || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 3, the application name, to be one of: ${gh_apps_with_secrets[*]} (provided '${3-<missing>}')."
     exit_if_has_bugs
 
     local _name="$1"
@@ -916,8 +916,8 @@ function delete_secret()
     (( $# == 2 ))                                        || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
                                                                                                 "  - the secret name" \
                                                                                                 "  - the application"
-    [[ ! -v 1 || -n $1 ]]                                || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the secret name, to be non-empty (provided '${1:-<none>}')."
-    [[ ! -v 2 ]] || is_in "$2" "${gh_apps_with_secrets[@]}" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the application name, to be one of: ${gh_apps_with_secrets[*]} (provided '${2:-<none>}')."
+    [[ ! -v 1 || -n $1 ]]                                || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the secret name, to be non-empty (provided '${1-<missing>}')."
+    [[ ! -v 2 ]] || is_in "$2" "${gh_apps_with_secrets[@]}" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the application name, to be one of: ${gh_apps_with_secrets[*]} (provided '${2-<missing>}')."
     exit_if_has_bugs
 
     local _name="$1"

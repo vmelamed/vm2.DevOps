@@ -197,7 +197,7 @@ function is_safe_input()
     (( $# == 1 || $# == 2 ))        || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one or two arguments (provided $#):" \
                                                                         "  - the input string to sanitize" \
                                                                         "  - an optional flag to allow spaces"
-    [[ ! -v 2 ]] || is_boolean "$2" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 2 to be a valid boolean (provided '${2:-<none>}')."
+    [[ ! -v 2 ]] || is_boolean "$2" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 2 to be a valid boolean (provided '${2-<missing>}')."
     exit_if_has_bugs
 
     local -i _rc="$positive"
@@ -484,8 +484,8 @@ function validate_json_array()
                                                                             "  - the name of a variable containing the JSON array" \
                                                                             "  - the default value to use if the variable is unbound or empty, optional" \
                                                                             "  - the name of the function to validate each item in the array, optional"
-    [[ ! -v 1 ]] || is_variable "$1" || bug -ec "$err_missing_argument" "${FUNCNAME[0]}() requires argument 1 to name a declared variable containing the JSON input (provided '${1:-<none>}')."
-    [[ ! -v 3 ]] || is_function "$3" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 3 to name a defined item-validation function (provided '${3:-<none>}')."
+    [[ ! -v 1 ]] || is_variable "$1" || bug -ec "$err_missing_argument" "${FUNCNAME[0]}() requires argument 1 to name a declared variable containing the JSON input (provided '${1-<missing>}')."
+    [[ ! -v 3 ]] || is_function "$3" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 3 to name a defined item-validation function (provided '${3-<missing>}')."
     exit_if_has_bugs
 
     local -n _input=${1:-$2}
@@ -890,7 +890,7 @@ function is_safe_runtime()
 function validate_runtime()
 {
     (( $# == 1 ))                            || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#): the Runtime Identifier (RID) variable to validate."
-    [[ ! -v 1 ]] || is_variable "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be the name of a defined variable that will store the normalized Runtime Identifier (RID) (provided '${1:-<none>}')."
+    [[ ! -v 1 ]] || is_variable "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be the name of a defined variable that will store the normalized Runtime Identifier (RID) (provided '${1-<missing>}')."
     exit_if_has_bugs
 
     local -n _rid="$1"
@@ -928,7 +928,7 @@ function validate_runtime()
 function validate_preprocessor_symbols()
 {
     (( $# == 1 ))                         || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#): the NAME of the variable containing the preprocessor symbols to test."
-    [[ ! -v 1 ]] || is_variable_name "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be a valid variable name for the preprocessor-symbol list (provided '${1:-<none>}')."
+    [[ ! -v 1 ]] || is_variable_name "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be a valid variable name for the preprocessor-symbol list (provided '${1-<missing>}')."
     exit_if_has_bugs
 
     local -i _rc="$success"
@@ -1204,8 +1204,8 @@ function validate_json_schema()
     (( $# == 2 ))                      || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
                                                                             "  - the JSON file to validate" \
                                                                             "  - the JSON Schema file to validate against"
-    [[ ! -v 1 ]] || is_valid_path "$1" || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 1 to be a valid path (provided '${1:-<none>}')."
-    [[ ! -v 2 ]] || is_valid_path "$2" || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 2 to be a valid path (provided '${2:-<none>}')."
+    [[ ! -v 1 ]] || is_valid_path "$1" || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 1 to be a valid path (provided '${1-<missing>}')."
+    [[ ! -v 2 ]] || is_valid_path "$2" || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 2 to be a valid path (provided '${2-<missing>}')."
     exit_if_has_bugs
 
     local _json_file="$1"
