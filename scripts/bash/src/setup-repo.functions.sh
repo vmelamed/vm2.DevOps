@@ -138,14 +138,17 @@ function list_required_checks()
 
         # The canonical CI.yaml gives the gate job a different name in the push run, so that only the pull_request run
         # reports the required check: name: ${{ github.event_name == 'push' && 'Postrun-CI (push)' || 'Postrun-CI' }}.
-        # Such an expression MUST end with "|| '<name>'": that literal is the check the ruleset requires. Registering the
-        # expression itself would require a check that no run ever reports, and no PR could be merged.
-        local _gate_name_rex="\|\|[[:space:]]*'([^']+)'[[:space:]]*\}\}[[:space:]]*$"
+        # Such a name MUST be one expression that makes up the whole name and ends with "|| '<name>'": that literal is the
+        # check the ruleset requires. Registering the expression itself would require a check that no run ever reports,
+        # and no PR could be merged. A literal prefix or suffix outside the expression ('Gate ${{ … }}') changes the
+        # evaluated name, so the literal alone would be the wrong check: that is an error too, not a guess.
+        local _gate_name_rex="^[[:space:]]*\\\$\{\{.*\|\|[[:space:]]*'([^']+)'[[:space:]]*\}\}[[:space:]]*$"
+        # shellcheck disable=SC2016 # '${{' is the literal start of a GitHub Actions expression, not a shell expansion
         if [[ $_gate_name == *'${{'* ]]; then
             if [[ $_gate_name =~ $_gate_name_rex ]]; then
                 _gate_name=${BASH_REMATCH[1]}
             else
-                error -ec "$err_argument_value" "${FUNCNAME[0]}() The name of the gate job '$_gate_job' in CI.yaml is an expression that does not end with \"|| '<check name>'\": $_gate_name"
+                error -ec "$err_argument_value" "${FUNCNAME[0]}() The name of the gate job '$_gate_job' in CI.yaml must be a single expression ending with \"|| '<check name>'\", with nothing before or after it: $_gate_name"
                 _gate_name=''
             fi
         fi

@@ -202,7 +202,27 @@ EOF
     chmod +x "$BATS_TEST_TMPDIR/bin/yq"
     run _sr "ci_yaml='$BATS_TEST_TMPDIR/ci.yaml'; list_required_checks" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
     assert_failure
-    assert_output --partial "is an expression that does not end with"
+    assert_output --partial "must be a single expression ending with"
+}
+
+@test "list_required_checks: a literal prefix or suffix around the expression is an error, not the bare literal" {
+    # regression (Copilot, vm2.DevOps #54): 'Gate ${{ … || 'Postrun-CI' }}' evaluates to 'Gate Postrun-CI', so registering
+    # 'Postrun-CI' would require a check that this job never reports
+    echo "jobs: {}" > "$BATS_TEST_TMPDIR/ci.yaml"
+    mkdir -p "$BATS_TEST_TMPDIR/bin"
+    for _name in "Gate \${{ github.event_name == 'push' && 'A' || 'Postrun-CI' }}" \
+                 "\${{ github.event_name == 'push' && 'A' || 'Postrun-CI' }} gate"; do
+        cat > "$BATS_TEST_TMPDIR/bin/yq" <<EOF
+#!/usr/bin/env bash
+if [[ "\$*" == *"keys[]"* ]]; then echo "postrun-ci"; exit 0; fi
+if [[ "\$*" == *".jobs.postrun-ci.name"* ]]; then printf '%s\n' "$(printf '%s' "$_name" | sed 's/[$]/\\$/g')"; exit 0; fi
+exit 1
+EOF
+        chmod +x "$BATS_TEST_TMPDIR/bin/yq"
+        run _sr "ci_yaml='$BATS_TEST_TMPDIR/ci.yaml'; list_required_checks" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
+        assert_failure
+        assert_output --partial "must be a single expression ending with"
+    done
 }
 
 @test "list_required_checks: no gate job in CI.yaml is a silent no-op (e.g. vm2.DevOps itself has none yet), not an error" {
