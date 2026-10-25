@@ -493,7 +493,7 @@ function validate_json_array()
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     [[ -n "$_input" ]] && is_safe_input "$_input" true || {
         _rc=$err_unsafe_argument
-        error -ec "$_rc" "${FUNCNAME[0]}() requires a safe, non-empty string representing a JSON array of strings, or an empty array; or a JSON string (possibly empty); or null (provided '${_input:-<none>}')."
+        error -ec "$_rc" "${FUNCNAME[0]}() requires a safe, non-empty string representing a JSON array of strings, or an empty array; or a JSON string (possibly empty); or null (provided '${_input-<missing>}')."
     }
     jq empty <<< "$_input"
 
@@ -521,7 +521,7 @@ function validate_json_array()
         ' <<< "$_input"
     ) || {
         _rc=$err_invalid_json_array
-        error -ec "$_rc" "The input must be a JSON array of strings, or an empty array; or a JSON string (possibly empty); or null (provided '${_input:-<none>}')."
+        error -ec "$_rc" "The input must be a JSON array of strings, or an empty array; or a JSON string (possibly empty); or null (provided '${_input-<missing>}')."
         return "$_rc"
     }
 
@@ -1215,11 +1215,11 @@ function validate_json_schema()
 
     [[ -s $_json_file ]]               || {
         _rc="$err_not_file"
-        error -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 1 to be an existing, non-empty JSON file (provided '${_json_file:-<none>}')."
+        error -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 1 to be an existing, non-empty JSON file (provided '${_json_file-<missing>}')."
     }
     [[ -s $_schema_file ]]             || {
         _rc="$err_not_file"
-        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 2 to be an existing, non-empty JSON Schema file (provided '${_schema_file:-<none>}')."
+        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 2 to be an existing, non-empty JSON Schema file (provided '${_schema_file-<missing>}')."
     }
     (( _rc == "$success" )) || return "$_rc"
 

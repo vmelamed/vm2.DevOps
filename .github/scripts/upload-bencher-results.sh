@@ -75,7 +75,7 @@ fi
 [[ -n $results_dir ]]                            || error -ec "$err_missing_argument" "The results directory is required."
 [[ -d $results_dir ]]                            || error -ec "$err_argument_value" "The results directory '$results_dir' is not a directory."
 [[ -n $testbed ]]                                || error -ec "$err_missing_argument" "--testbed is required."
-[[ $repository == */* ]]                         || error -ec "$err_argument_value" "--repository must be in 'owner/repo' form (provided '${repository:-<none>}')."
+[[ $repository == */* ]]                         || error -ec "$err_argument_value" "--repository must be in 'owner/repo' form (provided '${repository-<missing>}')."
 [[ -n $event_name ]]                             || error -ec "$err_missing_argument" "--event-name is required."
 [[ -n $ref_name ]]                               || error -ec "$err_missing_argument" "--ref-name is required."
 is_safe_max_regression_pct "$max_regression_pct" || true

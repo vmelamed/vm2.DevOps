@@ -184,18 +184,18 @@ function __validate_repo_root()
 
     root_working_tree "$_path" _r 2> "$_ignore" || {
         _rc=$?
-        error -ec "$err_not_git_directory" "The '${_repo:-<none>}' repository at '${_path:-<none>}' is not a git repository." \
+        error -ec "$err_not_git_directory" "The '${_repo-<missing>}' repository at '${_path-<missing>}' is not a git repository." \
                                                  "$(error_message "$_rc")."
         return "$err_not_git_directory"
     }
     [[ "$_path" == "$_r" ]] || {
-        error -ec "$err_not_git_root" "The '${_repo:-<none>}' repository at '${_path:-<none>}' is not the root of the git repository working tree."
+        error -ec "$err_not_git_root" "The '${_repo-<missing>}' repository at '${_path-<missing>}' is not the root of the git repository working tree."
         return "$err_not_git_root"
     }
 
     # 3) it has GitHub Actions workflows in the .github/workflows directory
     [[ -d "$_path/.github/workflows" ]] || {
-        error -ec "$err_repo_with_no_ci" "The '${_repo:-<none>}' repository does not have GitHub Actions workflows in '${_path:-<none>}/.github/workflows'."
+        error -ec "$err_repo_with_no_ci" "The '${_repo-<missing>}' repository does not have GitHub Actions workflows in '${_path-<missing>}/.github/workflows'."
         return "$err_repo_with_no_ci"
     }
 
@@ -204,7 +204,7 @@ function __validate_repo_root()
         _branch=$(git -C "$_path" branch --show-current 2>"$_ignore")
     else
         [[ "$_branch" == $(git -C "$_path" branch --show-current 2>"$_ignore") ]] || {
-            error -ec "$err_invalid_branch" "The '${_repo:-<none>}' repository at '${_path:-<none>}' is not on the branch '${_branch:-<none>}'."
+            error -ec "$err_invalid_branch" "The '${_repo-<missing>}' repository at '${_path-<missing>}' is not on the branch '${_branch-<missing>}'."
             return "$err_invalid_branch"
         }
     fi
@@ -281,7 +281,7 @@ function resolve_vm2_repos()
 
     [[ -z "$_repos" || -d "$_repos" ]]         || {
         _rc=$err_not_directory
-        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, if not empty, to hold an existing directory (provided '${_repos:-<none>}')."
+        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, if not empty, to hold an existing directory (provided '${_repos-<missing>}')."
     }
     [[ -z ${2:-} ]] || validate_branch_name "$2" || {
         _rc=$err_invalid_branch
@@ -506,7 +506,7 @@ function resolve_repo_root()
     local _repos=$1
     local _dir_path="${2:-"$(pwd)"}"
 
-    trace "Searching for '${_dir_path:-<none>}' under '\$vm2_repos=${_repos:-<none>}'..."
+    trace "Searching for '${_dir_path-<missing>}' under '\$vm2_repos=${_repos-<missing>}'..."
 
     local _in_repo_dir=''
     local _dir=''
@@ -517,13 +517,13 @@ function resolve_repo_root()
     __search_repo_dir "$_repos" "$_dir_path" _found_dir || _rc=$?
     if (( _rc == err_not_found )); then
         # we didn't find it under vm2_repos, let's search under $HOME - it will take a lot longer though...
-        trace "Searching for '${_dir_path:-<none>}' under '\$HOME=$HOME'..."
+        trace "Searching for '${_dir_path-<missing>}' under '\$HOME=$HOME'..."
         __search_repo_dir "$HOME" "$_dir_path" _found_dir || _rc=$?
     fi
 
     # if _rc is one of the fatal errors from the above searches - return it
     ! is_in "$_rc" "$err_not_found" "$err_found_too_many" || {
-        error -ec "$_rc" "Could not find the repository directory '${_dir_path:-<none>}' neither under '${_repos:-<none>}' nor under '\$HOME'."
+        error -ec "$_rc" "Could not find the repository directory '${_dir_path-<missing>}' neither under '${_repos-<missing>}' nor under '\$HOME'."
         return "$_rc"
     }
 

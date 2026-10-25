@@ -81,8 +81,8 @@ latest_prerelease_tag=$(
     echo ""
 )
 
-trace "Latest stable tag: ${latest_stable_tag:-<none>}"
-trace "Latest prerelease tag: ${latest_prerelease_tag:-<none>}"
+trace "Latest stable tag: ${latest_stable_tag-<missing>}"
+trace "Latest prerelease tag: ${latest_prerelease_tag-<missing>}"
 
 latest_stable_ver="${latest_stable_tag#"$minver_tag_prefix"}"
 latest_prerelease_ver="${latest_prerelease_tag#"$minver_tag_prefix"}"

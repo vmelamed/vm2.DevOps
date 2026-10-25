@@ -71,7 +71,7 @@ function get_xml_value()
     local -n _value=$3
 
     [[ -s $_xml_file ]] || {
-        error -ec "$err_tool_error" "${FUNCNAME[0]}() requires argument 1 to be an existing, non-empty, readable XML file (provided '${_xml_file:-<none>}')."
+        error -ec "$err_tool_error" "${FUNCNAME[0]}() requires argument 1 to be an existing, non-empty, readable XML file (provided '${_xml_file-<missing>}')."
         return "$err_tool_error"
     }
 
