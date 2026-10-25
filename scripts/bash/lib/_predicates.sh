@@ -259,7 +259,7 @@ function is_empty_array()
 {
 
     (( $# == 1 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the array variable to test."
-    [[ ! -v 1 ]] || is_array "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be the name of an indexed or an associative array variable (provided '${1:-<none>}')."
+    [[ ! -v 1 ]] || is_array "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be the name of an indexed or an associative array variable (provided '${1-<missing>}')."
     exit_if_has_bugs
 
     local -n _array="$1"
@@ -726,7 +726,7 @@ function is_valid_json()
 function is_valid_json_file()
 {
     (( $# == 1 ))                      || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the JSON string to validate."
-    [[ ! -v 1 ]] || is_valid_path "$1" || bug -ec "$err_invalid_path" "${FUNCNAME[0]}() requires argument 1 to be a valid path (provided '${1:-<none>}')."
+    [[ ! -v 1 ]] || is_valid_path "$1" || bug -ec "$err_invalid_path" "${FUNCNAME[0]}() requires argument 1 to be a valid path (provided '${1-<missing>}')."
     exit_if_has_bugs
 
     jq empty "$1" &> "$_ignore" && return "$positive" || return "$negative"

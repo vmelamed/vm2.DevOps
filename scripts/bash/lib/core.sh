@@ -315,8 +315,8 @@ function execute_with_retry()
                                                                         "  - delay in seconds between retries" \
                                                                         "  - if present, boolean flag to suppress the output, optional" \
                                                                         "  - command and arguments to execute"
-    [[ ! -v 1 ]] || is_natural "$1" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 1, the maximum attempt count, to be a natural number (provided '${1:-<none>}')."
-    [[ ! -v 2 ]] || is_natural "$2" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 2, the retry delay in seconds, to be a natural number (provided '${2:-<none>}')."
+    [[ ! -v 1 ]] || is_natural "$1" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 1, the maximum attempt count, to be a natural number (provided '${1-<missing>}')."
+    [[ ! -v 2 ]] || is_natural "$2" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 2, the retry delay in seconds, to be a natural number (provided '${2-<missing>}')."
 
     local -i _max_attempts=$1; shift
     local -i _delay=$1; shift
@@ -370,7 +370,7 @@ function execute_with_retry()
 function list_of_files()
 {
     (( $# == 1 ))         || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the file pattern."
-    [[ ! -v 1 || -n $1 ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the file pattern, to be non-empty (provided '${1:-<none>}')."
+    [[ ! -v 1 || -n $1 ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the file pattern, to be non-empty (provided '${1-<missing>}')."
 
     exit_if_has_bugs
 
@@ -419,8 +419,8 @@ function find_files_by_precedence()
                                                                               "  - path to the repository to search for the file name patterns" \
                                                                               "  - name of the array variable to store the found file names" \
                                                                               "  - the file name patterns to search for, in order of precedence"
-    [[ ! -v 1 || -d "$1" ]]               || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires a path to a directory (usually a repository root working tree) as the first argument (provided '${1:-<none>}')."
-    [[ ! -v 2 ]] || is_indexed_array "$2" || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires the name of the array variable to store the found file names as the second argument (provided '${2:-<none>}')."
+    [[ ! -v 1 || -d "$1" ]]               || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires a path to a directory (usually a repository root working tree) as the first argument (provided '${1-<missing>}')."
+    [[ ! -v 2 ]] || is_indexed_array "$2" || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires the name of the array variable to store the found file names as the second argument (provided '${2-<missing>}')."
     exit_if_has_bugs
 
     local _dir=$1

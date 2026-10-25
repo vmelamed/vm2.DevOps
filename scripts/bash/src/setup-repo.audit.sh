@@ -117,13 +117,13 @@ function compare_settings()
                                                                                              "  - name of an associative array variable to store the expected key-values" \
                                                                                              "  - name of an indexed array variable to store the summary results: [matches], [diffs], [errors], and [unknowns]" \
                                                                                              "  - optional name of an indexed array with the display order of the keys."
-    [[ ! -v 1 || -n "$1" ]]                              || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the GitHub API path, to be non-empty (provided '${1:-<none>}'); for example, 'repos/\$repo'."
-    [[ ! -v 2 || -n "$2" ]]                              || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2, the jq transformation query, to be non-empty (provided '${2:-<none>}')."
-    [[ ! -v 3 ]] || is_boolean "$3"                      || bug -ec "$err_argument_type"     "${FUNCNAME[0]}() requires argument 3, the display-key formatting flag, to be 'true' or 'false' (provided '${3:-<none>}')."
-    [[ ! -v 4 ]] || is_boolean "$4"                      || bug -ec "$err_argument_type"     "${FUNCNAME[0]}() requires argument 4, the display unknown key flag, to be 'true' or 'false' (provided '${4:-<none>}')."
-    [[ ! -v 5 ]] || is_associative_array "$5"            || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 5 to name an associative array containing expected key-value pairs (provided '${5:-<none>}')."
-    [[ ! -v 6 ]] || is_associative_array "$6"            || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 6 to name an indexed array for summary results: [matches], [diffs], [errors], and [unknowns] (provided '${6:-<none>}')."
-    [[ ! -v 7 || -z "${7:-}" ]] || is_indexed_array "$7" || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 7 (if present) to name an indexed array containing the display order (provided '${7:-<none>}')."
+    [[ ! -v 1 || -n "$1" ]]                              || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the GitHub API path, to be non-empty (provided '${1-<missing>}'); for example, 'repos/\$repo'."
+    [[ ! -v 2 || -n "$2" ]]                              || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2, the jq transformation query, to be non-empty (provided '${2-<missing>}')."
+    [[ ! -v 3 ]] || is_boolean "$3"                      || bug -ec "$err_argument_type"     "${FUNCNAME[0]}() requires argument 3, the display-key formatting flag, to be 'true' or 'false' (provided '${3-<missing>}')."
+    [[ ! -v 4 ]] || is_boolean "$4"                      || bug -ec "$err_argument_type"     "${FUNCNAME[0]}() requires argument 4, the display unknown key flag, to be 'true' or 'false' (provided '${4-<missing>}')."
+    [[ ! -v 5 ]] || is_associative_array "$5"            || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 5 to name an associative array containing expected key-value pairs (provided '${5-<missing>}')."
+    [[ ! -v 6 ]] || is_associative_array "$6"            || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 6 to name an indexed array for summary results: [matches], [diffs], [errors], and [unknowns] (provided '${6-<missing>}')."
+    [[ ! -v 7 || -z "${7:-}" ]] || is_indexed_array "$7" || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 7 (if present) to name an indexed array containing the display order (provided '${7-<missing>}')."
     exit_if_has_bugs
 
     local -n _expected_key_values="$5"

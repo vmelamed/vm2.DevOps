@@ -415,7 +415,7 @@ function get_table_format()
 {
     (( $# == 1 ))                       || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one parameter ($# provided):" \
                                                                             "  - the name of the variable to store the current table format in."
-    [[ ! -v 1 ]] || is_variable "$1"    || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires a declared variable name as its argument: '${1:-<none>}'."
+    [[ ! -v 1 ]] || is_variable "$1"    || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires a declared variable name as its argument: '${1-<missing>}'."
     exit_if_has_bugs
 
     local -n _ret_format=$1
@@ -445,7 +445,7 @@ function set_table_format()
 
     local _table_format="${1,,}"
 
-    [[ ! -v 1 ]] || is_in "$_table_format" "${table_formats[@]}" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires its argument to be a valid table format '${1:-<none>}': must be one of ${table_formats[*]}."
+    [[ ! -v 1 ]] || is_in "$_table_format" "${table_formats[@]}" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires its argument to be a valid table format '${1-<missing>}': must be one of ${table_formats[*]}."
     exit_if_has_bugs
 
     __table_format=$_table_format
@@ -506,7 +506,7 @@ function save_state()
 {
     (( $# == 1 ))                             || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() expects exactly one argument (provided $#):" \
                                                                                   "  - the name of an array variable that will store the saved state"
-    [[ ! -v 1 ]] || is_associative_array "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() expects its argument to be the name of an array variable that will store the saved state (provided '${1:-<none>}')."
+    [[ ! -v 1 ]] || is_associative_array "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() expects its argument to be the name of an array variable that will store the saved state (provided '${1-<missing>}')."
     exit_if_has_bugs
 
     local -n __state="$1"
@@ -563,8 +563,8 @@ function restore_state()
     (( $# == 1 || $# == 2 ))                  || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() expects exactly one argument:" \
                                                                                   "  - the name of an array variable that will store the saved state" \
                                                                                   "  - an optional flag whether to preserve/restore the number of errors"
-    [[ ! -v 1 ]] || is_associative_array "$1" || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() expects its argument to be the name of an associative array variable where 'save_state' has stored the global state (provided '${1:-<none>}')."
-    [[ ! -v 2 ]] || is_boolean "$2"           || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() expects its second argument to be a boolean indicating whether to preserve or restore the number of errors (provided '${2:-<none>}')."
+    [[ ! -v 1 ]] || is_associative_array "$1" || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() expects its argument to be the name of an associative array variable where 'save_state' has stored the global state (provided '${1-<missing>}')."
+    [[ ! -v 2 ]] || is_boolean "$2"           || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() expects its second argument to be a boolean indicating whether to preserve or restore the number of errors (provided '${2-<missing>}')."
     exit_if_has_bugs
 
     # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.

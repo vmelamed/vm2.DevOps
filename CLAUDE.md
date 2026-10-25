@@ -203,10 +203,10 @@ function foo()
 
     # if $1 is missing it is already reported by the argument count check, otherwise we validate its value
     [[ ! -v 1 || $1 =~ <regex> ]] ||
-        bug -ec "$err_specific_code_1" -sd 3 "${FUNCNAME[0]}() argument 1 MUST ... (provided ${1:-<none>})"
+        bug -ec "$err_specific_code_1" -sd 3 "${FUNCNAME[0]}() argument 1 MUST ... (provided ${1-<missing>})"
     # if $1 is missing it is already reported by the argument count check, otherwise we validate its value
     [[ ! -v 2 ]] || is_boolean $2 ||
-        bug -ec "$err_specific_code_2" -sd 3 "${FUNCNAME[0]}() argument 2 MUST ... (provided ${2:-<none>})"
+        bug -ec "$err_specific_code_2" -sd 3 "${FUNCNAME[0]}() argument 2 MUST ... (provided ${2-<missing>})"
 
     exit_if_has_bugs
 
@@ -259,7 +259,7 @@ message, whereas `exit_if_has_errors` displays a summary message *and* a short u
 If possible and safe, use the value of the failed argument in the error message for easier debugging, e.g.:
 
   ```bash
-  error -sd 3 -ec "$err_specific_code_2" "${FUNCNAME[0]}() argument <N> MUST <condition description> (provided ${1:-<none>})"
+  error -sd 3 -ec "$err_specific_code_2" "${FUNCNAME[0]}() argument <N> MUST <condition description> (provided ${1-<missing>})"
   ```
 
 Functions that interleave positional-argument parsing with validation (`shift`-based, e.g. `execute_with_retry` in

@@ -159,9 +159,9 @@ function __find_shared_markers()
                                                                          "  - the file to scan for a shared-content marker pair" \
                                                                          "  - the name of the variable to receive the begin marker's line number" \
                                                                          "  - the name of the variable to receive the end marker's line number"
-    [[ -v 1 && -f $1 ]]              || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 1, the file to scan, to be an existing file (provided '${1:-<none>}')."
-    [[ ! -v 2 ]] || is_variable "$2" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to be the name of a defined variable (provided '${2:-<none>}')."
-    [[ ! -v 3 ]] || is_variable "$3" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to be the name of a defined variable (provided '${3:-<none>}')."
+    [[ -v 1 && -f $1 ]]              || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 1, the file to scan, to be an existing file (provided '${1-<missing>}')."
+    [[ ! -v 2 ]] || is_variable "$2" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to be the name of a defined variable (provided '${2-<missing>}')."
+    [[ ! -v 3 ]] || is_variable "$3" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to be the name of a defined variable (provided '${3-<missing>}')."
 
     exit_if_has_bugs
 
@@ -205,8 +205,8 @@ function get_shared_block()
     (( $# == 2 ))                    || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
                                                                          "  - the file to scan for a shared-content marker pair" \
                                                                          "  - the name of the variable to receive the extracted shared content"
-    [[ -v 1 && -f $1 ]]              || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 1, the file to scan, to be an existing file (provided '${1:-<none>}')."
-    [[ ! -v 2 ]] || is_variable "$2" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to be the name of a defined variable (provided '${2:-<none>}')."
+    [[ -v 1 && -f $1 ]]              || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 1, the file to scan, to be an existing file (provided '${1-<missing>}')."
+    [[ ! -v 2 ]] || is_variable "$2" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to be the name of a defined variable (provided '${2-<missing>}')."
 
     exit_if_has_bugs
 
@@ -256,10 +256,10 @@ function are_different()
                                                                        "  - the target file" \
                                                                        "  - the display-diff flag." \
                                                                        "  - the warning if no shared-block markers flag."
-    [[ ! -v 1 || -s $1 ]]           || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 1, the SoT file, to be an existing, non-empty file (provided '${1:-<none>}')."
-    [[ ! -v 2 || -s $2 ]]           || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 2, the target file, to be an existing, non-empty file (provided '${2:-<none>}')."
-    [[ ! -v 3 ]] || is_boolean "$3" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 3, the display-diff flag, to be 'true' or 'false' (provided '${4:-<none>}')."
-    [[ ! -v 4 ]] || is_boolean "$4" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 4, the warn if shared-block markers are missing or malformed flag, to be 'true' or 'false' (provided '${4:-<none>}')."
+    [[ ! -v 1 || -s $1 ]]           || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 1, the SoT file, to be an existing, non-empty file (provided '${1-<missing>}')."
+    [[ ! -v 2 || -s $2 ]]           || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 2, the target file, to be an existing, non-empty file (provided '${2-<missing>}')."
+    [[ ! -v 3 ]] || is_boolean "$3" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 3, the display-diff flag, to be 'true' or 'false' (provided '${4-<missing>}')."
+    [[ ! -v 4 ]] || is_boolean "$4" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 4, the warn if shared-block markers are missing or malformed flag, to be 'true' or 'false' (provided '${4-<missing>}')."
 
     exit_if_has_bugs
 
@@ -336,8 +336,8 @@ function merge()
     (( $# == 2 ))       || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
                                                             "  - the SoT file" \
                                                             "  - the target file"
-    [[ -v 1 && -f $1 ]] || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 1, the SoT file, to be an existing file (provided '${1:-<none>}')."
-    [[ -v 2 && -f $2 ]] || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 2, the target file, to be an existing file (provided '${2:-<none>}')."
+    [[ -v 1 && -f $1 ]] || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 1, the SoT file, to be an existing file (provided '${1-<missing>}')."
+    [[ -v 2 && -f $2 ]] || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 2, the target file, to be an existing file (provided '${2-<missing>}')."
 
     exit_if_has_bugs
 
@@ -384,8 +384,8 @@ function copy_file()
     (( $# == 2 ))       || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
                                                             "  - the source file path" \
                                                             "  - destination file path."
-    [[ -v 1 && -f $1 ]] || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 1, the source file, to be an existing file (provided '${1:-<none>}')."
-    [[ -v 2 && -n $2 ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the destination file path, to be non-empty (provided '${2:-<none>}')."
+    [[ -v 1 && -f $1 ]] || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 1, the source file, to be an existing file (provided '${1-<missing>}')."
+    [[ -v 2 && -n $2 ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the destination file path, to be non-empty (provided '${2-<missing>}')."
 
     exit_if_has_bugs
 
@@ -428,8 +428,8 @@ function copy_shared_block()
     (( $# == 2 ))       || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
                                                             "  - the SoT file to copy the shared block from" \
                                                             "  - the target file to splice the shared block into"
-    [[ -v 1 && -f $1 ]] || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 1, the SoT file, to be an existing file (provided '${1:-<none>}')."
-    [[ -v 2 && -f $2 ]] || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 2, the target file, to be an existing file (provided '${2:-<none>}')."
+    [[ -v 1 && -f $1 ]] || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 1, the SoT file, to be an existing file (provided '${1-<missing>}')."
+    [[ -v 2 && -f $2 ]] || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 2, the target file, to be an existing file (provided '${2-<missing>}')."
 
     exit_if_has_bugs
 

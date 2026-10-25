@@ -62,8 +62,8 @@ function get_xml_value()
                                                                          "  - path to an XML file" \
                                                                          "  - a yq path expression (query)" \
                                                                          "  - nameref to a variable to receive the value"
-    [[ ! -v 2 || -n $2 ]]            || bug -ec "$err_argument_value"   "${FUNCNAME[0]}() requires argument 2, the yq path expression, to be non-empty (provided '${2:-<none>}')."
-    [[ ! -v 3 ]] || is_variable "$3" || bug -ec "$err_invalid_nameref"  "${FUNCNAME[0]}() requires argument 3 to be the name of a defined variable to receive the value (provided '${3:-<none>}')."
+    [[ ! -v 2 || -n $2 ]]            || bug -ec "$err_argument_value"   "${FUNCNAME[0]}() requires argument 2, the yq path expression, to be non-empty (provided '${2-<missing>}')."
+    [[ ! -v 3 ]] || is_variable "$3" || bug -ec "$err_invalid_nameref"  "${FUNCNAME[0]}() requires argument 3 to be the name of a defined variable to receive the value (provided '${3-<missing>}')."
     exit_if_has_bugs
 
     local _xml_file=$1

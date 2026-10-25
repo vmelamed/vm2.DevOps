@@ -38,7 +38,7 @@ declare -xr package_regex='^([[:space:]]*<PackageVersion[[:space:]]+Include=")([
 function validate_package_lines()
 {
     (( $# == 1 ))         || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument: the path to 'Directory.Packages.props' (provided $#)."
-    [[ ! -v 1 || -f $1 ]] || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1 to be a path to an existing file (provided ${1:-<none>})."
+    [[ ! -v 1 || -f $1 ]] || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1 to be a path to an existing file (provided ${1-<missing>})."
     exit_if_has_bugs
 
     local _file=$1 _line
@@ -131,8 +131,8 @@ function _props_line_in_section()
                                                                                    "  - the section to match ('shared' or 'repo')" \
                                                                                    "  - the line of the file to test" \
                                                                                    "  - the name of the variable that tracks whether the current line is inside the shared block"
-    [[ ! -v 1 || $1 == shared || $1 == repo ]] || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2 to be which section to match - either 'shared' or 'repo' (provided ${1:-<none>})."
-    [[ ! -v 3 ]] || is_variable "$3"           || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 3 to be the name of a variable that tracks whether the current line is inside the shared block (provided ${3:-<none>})."
+    [[ ! -v 1 || $1 == shared || $1 == repo ]] || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2 to be which section to match - either 'shared' or 'repo' (provided ${1-<missing>})."
+    [[ ! -v 3 ]] || is_variable "$3"           || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 3 to be the name of a variable that tracks whether the current line is inside the shared block (provided ${3-<missing>})."
     exit_if_has_bugs
 
     [[ -z ${2-} ]] && return "$negative" # shortcut for empty XML lines
@@ -172,9 +172,9 @@ function read_package_versions()
                                                                                    "  - the path to 'Directory.Packages.props' file" \
                                                                                    "  - the section ('shared' or 'repo')" \
                                                                                    "  - the name of the variable that receives the versions"
-    [[ ! -v 1 || -f $1 ]]                      || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1 to be a path to an existing file (provided ${1:-<none>})."
-    [[ ! -v 2 || $2 == shared || $2 == repo ]] || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2 to be either 'shared' or 'repo' (provided ${2:-<none>})."
-    [[ ! -v 3 ]] || is_associative_array "$3"  || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 3 to be the name of an associative array variable (provided ${3:-<none>})."
+    [[ ! -v 1 || -f $1 ]]                      || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1 to be a path to an existing file (provided ${1-<missing>})."
+    [[ ! -v 2 || $2 == shared || $2 == repo ]] || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2 to be either 'shared' or 'repo' (provided ${2-<missing>})."
+    [[ ! -v 3 ]] || is_associative_array "$3"  || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 3 to be the name of an associative array variable (provided ${3-<missing>})."
     exit_if_has_bugs
 
     local _file=$1
@@ -258,7 +258,7 @@ function query_package_versions()
 {
     (( $# == 2 ))                         || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires two arguments (provided $#): the package ID and the name of the variable that receives the versions."
     [[ ! -v 1 || -n $1 ]]                 || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the package ID, to be non-empty."
-    [[ ! -v 2 ]] || is_variable_name "$2" || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2 to be the name of a variable (provided ${2:-<none>})."
+    [[ ! -v 2 ]] || is_variable_name "$2" || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2 to be the name of a variable (provided ${2-<missing>})."
     exit_if_has_bugs
 
     local _rc=$success

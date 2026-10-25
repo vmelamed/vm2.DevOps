@@ -95,7 +95,7 @@ function validate_gh_repo_owner()
     [[ -z $1 || $1 =~ $repo_owner_regex ]] || {
         # repo owner can be empty (for user-level repos) or must match the regex for GitHub owner/organization names
         _rc="$err_argument_value"
-        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be empty or a valid repository owner (provided '${1:-<none>}')."
+        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be empty or a valid repository owner (provided '${1-<missing>}')."
     }
 
     return "$_rc"
@@ -131,7 +131,7 @@ function validate_gh_repo_name()
     [[ -n $1 && $1 != *.git && $1 =~ $repo_name_regex ]] || {
         # repo name cannot be empty, cannot end with .git, and must match the regex for GitHub repository names above
         _rc="$err_argument_value"
-        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a valid repository name (provided '${1:-<none>}'). $__valid_repo_names_msg"
+        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a valid repository name (provided '${1-<missing>}'). $__valid_repo_names_msg"
     }
 
     return "$_rc"
@@ -166,7 +166,7 @@ function validate_gh_repo_description()
     (( ${#1} >= 3 && ${#1} <= 350 )) || {
         # GitHub repository descriptions must be between 3 and 350 characters long.
         _rc="$err_argument_value"
-        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the repository description, to contain between 3 and 350 characters (provided '${1:-<none>}')."
+        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the repository description, to contain between 3 and 350 characters (provided '${1-<missing>}')."
         return "$_rc"
     }
 }
@@ -218,7 +218,7 @@ function validate_branch_name()
 
     is_valid_branch_name "$1" || {
         _rc="$err_argument_value"
-        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a valid Git branch name (provided '${1:-<none>}'). See https://git-scm.com/docs/git-check-ref-format for details."
+        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a valid Git branch name (provided '${1-<missing>}'). See https://git-scm.com/docs/git-check-ref-format for details."
     }
 
     return "$_rc"
@@ -508,7 +508,7 @@ declare -xr jq_gh_repo_state="{
 function initialize_repo_state()
 {
     (( $# == 1 ))                             || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable."
-    [[ ! -v 1 ]] || is_associative_array "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name an associative array for repository state (provided '${1:-<none>}')."
+    [[ ! -v 1 ]] || is_associative_array "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name an associative array for repository state (provided '${1-<missing>}')."
     exit_if_has_bugs
 
     local -n _state="$1"
@@ -554,9 +554,9 @@ function get_repo_state()
                                                                                   "  - the existing path to the root of the git repo working tree" \
                                                                                   "  - nameref: the name of an associative array variable - to receive the repo state" \
                                                                                   "  - full_info - if false, only retrieve the local Git repository state without trying to get GitHub API data (optional, default: true)"
-    [[ ! -v 1 || -d $1 ]]                     || bug -ec "$err_not_directory" "${FUNCNAME[0]}() requires argument 1 to be the existing root directory of the Git working tree (provided '${1:-<none>}')."
-    [[ ! -v 2 ]] || is_associative_array "$2" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to name an associative array that will receive the repository state (provided '${2:-<none>}')."
-    [[ ! -v 3 ]] || is_boolean "$3"           || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires optional argument 3, the full-information flag, to be 'true' or 'false' (provided '${3:-<none>}')."
+    [[ ! -v 1 || -d $1 ]]                     || bug -ec "$err_not_directory" "${FUNCNAME[0]}() requires argument 1 to be the existing root directory of the Git working tree (provided '${1-<missing>}')."
+    [[ ! -v 2 ]] || is_associative_array "$2" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to name an associative array that will receive the repository state (provided '${2-<missing>}')."
+    [[ ! -v 3 ]] || is_boolean "$3"           || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires optional argument 3, the full-information flag, to be 'true' or 'false' (provided '${3-<missing>}')."
     exit_if_has_bugs
 
     local -i _rc="$success"
@@ -638,7 +638,7 @@ function get_repo_state()
 function has_local_repo()
 {
     (( $# == 1 ))                             || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable."
-    [[ ! -v 1 ]] || is_associative_array "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name an associative array containing repository state (provided '${1:-<none>}')."
+    [[ ! -v 1 ]] || is_associative_array "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name an associative array containing repository state (provided '${1-<missing>}')."
     exit_if_has_bugs
 
     # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
@@ -658,7 +658,7 @@ function has_local_repo()
 function has_remote_repo()
 {
     (( $# == 1 ))                             || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable."
-    [[ ! -v 1 ]] || is_associative_array "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name an associative array containing repository state (provided '${1:-<none>}')."
+    [[ ! -v 1 ]] || is_associative_array "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name an associative array containing repository state (provided '${1-<missing>}')."
 
     exit_if_has_bugs
 
@@ -678,7 +678,7 @@ function has_remote_repo()
 function has_github_remote()
 {
     (( $# == 1 ))             || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable."
-    is_associative_array "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name an associative array containing repository state (provided '${1:-<none>}')."
+    is_associative_array "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name an associative array containing repository state (provided '${1-<missing>}')."
 
     exit_if_has_bugs
 
@@ -699,7 +699,7 @@ function has_github_remote()
 function read_repo_state()
 {
     (( $# == 1 ))             || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable."
-    is_associative_array "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name an associative array containing repository state (provided '${1:-<none>}')."
+    is_associative_array "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name an associative array containing repository state (provided '${1-<missing>}')."
 
     exit_if_has_bugs
 
@@ -729,7 +729,7 @@ function read_repo_state()
 function print_repo_state()
 {
     (( $# == 1 ))             || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable."
-    is_associative_array "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name an associative array containing repository state (provided '${1:-<none>}')."
+    is_associative_array "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name an associative array containing repository state (provided '${1-<missing>}')."
 
     exit_if_has_bugs
 
@@ -758,7 +758,7 @@ function print_repo_state()
 function is_inside_work_tree()
 {
     (( $# == 0 || $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires 0 or 1 argument (provided $#): path to a directory."
-    [[ ! -v 1 || -d $1 ]]    || bug -ec "$err_not_directory" "${FUNCNAME[0]}() requires optional argument 1 to be an existing directory (provided '${1:-<none>}')."
+    [[ ! -v 1 || -d $1 ]]    || bug -ec "$err_not_directory" "${FUNCNAME[0]}() requires optional argument 1 to be an existing directory (provided '${1-<missing>}')."
 
     exit_if_has_bugs
 
@@ -789,7 +789,7 @@ function root_working_tree()
     (( $# == 2 ))                    || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires two arguments (provided $#):" \
                                                                          "  - a directory inside a Git working tree" \
                                                                          "  - the name of the variable to store the absolute path of the root of the Git working tree containing the found directory"
-    [[ ! -v 1 || -d $1 ]]            || bug -ec "$err_not_directory" "${FUNCNAME[0]}() requires argument 1 to be an existing directory (provided '${1:-<none>}')."
+    [[ ! -v 1 || -d $1 ]]            || bug -ec "$err_not_directory" "${FUNCNAME[0]}() requires argument 1 to be an existing directory (provided '${1-<missing>}')."
     [[ ! -v 2 ]] || is_variable "$2" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to be the name of the variable to store the absolute path of the root of the Git repository containing the found directory."
 
     exit_if_has_bugs # gate here: $2 must be validated before creating a nameref from it below
@@ -833,8 +833,8 @@ function should_fetch_for_latest_stable_tag()
     (( $# <= 2 ))                             || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires no more than 2 arguments (provided $#):" \
                                                                                   "  - path to an existing directory (Git repository) (optional if the remaining parameters are not provided, default: current working directory)" \
                                                                                   "  - the branch name to compare against (optional, default: main)"
-    [[ ! -v 1 || -d $1 ]]                     || bug -ec "$err_not_directory" "${FUNCNAME[0]}() requires optional argument 1 to be an existing Git repository directory (provided '${1:-<none>}')."
-    [[ ! -v 2 ]] || is_valid_branch_name "$2" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires optional argument 2 to be a valid Git branch name (provided '${2:-<none>}')."
+    [[ ! -v 1 || -d $1 ]]                     || bug -ec "$err_not_directory" "${FUNCNAME[0]}() requires optional argument 1 to be an existing Git repository directory (provided '${1-<missing>}')."
+    [[ ! -v 2 ]] || is_valid_branch_name "$2" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires optional argument 2 to be a valid Git branch name (provided '${2-<missing>}')."
 
     local _dir=${1:-$initial_cwd}
     local _branch=${2:-main}
@@ -949,8 +949,8 @@ function get_latest_stable_tag_hash()
     (( $# == 2 ))                   || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() takes 2 arguments (provided $#):" \
                                                                         "  - a directory" \
                                                                         "  - flag whether to fetch the latest changes in main from remote"
-    [[ ! -v 1 || -d $1 ]]           || bug -ec "$err_not_directory" "${FUNCNAME[0]}() requires argument 1 to be an existing Git repository directory (provided '${1:-<none>}')."
-    [[ ! -v 2 ]] || is_boolean "$2" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 2, the fetch flag, to be 'true' or 'false' (provided '${2:-<none>}')."
+    [[ ! -v 1 || -d $1 ]]           || bug -ec "$err_not_directory" "${FUNCNAME[0]}() requires argument 1 to be an existing Git repository directory (provided '${1-<missing>}')."
+    [[ ! -v 2 ]] || is_boolean "$2" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 2, the fetch flag, to be 'true' or 'false' (provided '${2-<missing>}')."
     exit_if_has_bugs
 
     local _dir=$1
@@ -1008,8 +1008,8 @@ function is_after_latest_stable_tag()
     (( $# == 2 ))                   || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() takes 2 arguments (provided $#):" \
                                                                         "  - a directory" \
                                                                         "  - flag whether to fetch the latest changes in main from remote"
-    [[ ! -v 1 || -d $1 ]]           || bug -ec "$err_not_directory" "${FUNCNAME[0]}() requires argument 1 to be an existing Git repository directory (provided '${1:-<none>}')."
-    [[ ! -v 2 ]] || is_boolean "$2" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 2, the fetch flag, to be 'true' or 'false' (provided '${2:-<none>}')."
+    [[ ! -v 1 || -d $1 ]]           || bug -ec "$err_not_directory" "${FUNCNAME[0]}() requires argument 1 to be an existing Git repository directory (provided '${1-<missing>}')."
+    [[ ! -v 2 ]] || is_boolean "$2" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 2, the fetch flag, to be 'true' or 'false' (provided '${2-<missing>}')."
     exit_if_has_bugs
 
     local _latest_stable_hash _commits_after_latest_stable
@@ -1042,8 +1042,8 @@ function is_on_or_after_latest_stable_tag()
     (( $# == 2 ))                   || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() takes 2 arguments (provided $#):" \
                                                                         "  - a directory" \
                                                                         "  - flag whether to fetch the latest changes in main from remote"
-    [[ ! -v 1 || -d $1 ]]           || bug -ec "$err_not_directory" "${FUNCNAME[0]}() requires argument 1 to be an existing Git repository directory (provided '${1:-<none>}')."
-    [[ ! -v 2 ]] || is_boolean "$2" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 2, the fetch flag, to be 'true' or 'false' (provided '${2:-<none>}')."
+    [[ ! -v 1 || -d $1 ]]           || bug -ec "$err_not_directory" "${FUNCNAME[0]}() requires argument 1 to be an existing Git repository directory (provided '${1-<missing>}')."
+    [[ ! -v 2 ]] || is_boolean "$2" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 2, the fetch flag, to be 'true' or 'false' (provided '${2-<missing>}')."
     exit_if_has_bugs
 
     local _latest_stable_tag_hash
