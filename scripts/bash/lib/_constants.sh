@@ -33,6 +33,8 @@ declare -r __VM2_LIB_CONSTANTS_SH_LOADED=1
 #   library - `vm2.DevOps`, so that the projects can be easily found and referenced by the
 #   scripts without needing to search for them.
 #   This is useful for scripts that work across all vm2 projects, e.g. `diff-shared.sh`.
+#   Each name is both the directory name under $VM2_REPOS and the GitHub repository name, case
+#   included -- see CONVENTIONS.md, "Local Workspace".
 #---------------------------------------------------------------------------------------------
 declare -xra vm2_repositories=(
     "vm2.DevOps"
