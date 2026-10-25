@@ -135,7 +135,22 @@ function list_required_checks()
 
     if [[ -n "$_gate_job" ]]; then
         _gate_name=$(yq -r ".jobs.${_gate_job:-postrun-ci}.name" "$ci_yaml")                     || error -ec "$err_tool_error" "${FUNCNAME[0]}() Failed to parse gate job name from CI.yaml."
-        required_checks+=("$_gate_name")
+
+        # The canonical CI.yaml gives the gate job a different name in the push run, so that only the pull_request run
+        # reports the required check: name: ${{ github.event_name == 'push' && 'Postrun-CI (push)' || 'Postrun-CI' }}.
+        # Such an expression MUST end with "|| '<name>'": that literal is the check the ruleset requires. Registering the
+        # expression itself would require a check that no run ever reports, and no PR could be merged.
+        local _gate_name_rex="\|\|[[:space:]]*'([^']+)'[[:space:]]*\}\}[[:space:]]*$"
+        if [[ $_gate_name == *'${{'* ]]; then
+            if [[ $_gate_name =~ $_gate_name_rex ]]; then
+                _gate_name=${BASH_REMATCH[1]}
+            else
+                error -ec "$err_argument_value" "${FUNCNAME[0]}() The name of the gate job '$_gate_job' in CI.yaml is an expression that does not end with \"|| '<check name>'\": $_gate_name"
+                _gate_name=''
+            fi
+        fi
+
+        [[ -z $_gate_name ]] || required_checks+=("$_gate_name")
     fi
     exit_if_has_errors
 
