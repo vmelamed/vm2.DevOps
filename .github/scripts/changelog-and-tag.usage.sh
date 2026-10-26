@@ -32,8 +32,8 @@ Requirements:
   - The appropriate cliff config file should exist (optional, will warn if missing)
 
 Options:
-  -t, --tag                     Specifies the tag (pre-release or stable) to create (required, e.g., 'v1.2.3' or 'v1.2.3-preview.1')
-                                Initial value from \$TAG
+  -t, --tag                     Specifies the tag (pre-release or stable) to create (required, e.g., 'v1.2.3' or
+                                'v1.2.3-preview.1'). Initial value from \$TAG
   -p, --minver-tag-prefix       Specifies the tag prefix used by MinVer (e.g., 'v')
                                 Initial value from \$MINVERTAGPREFIX or default 'v'
   -r, --reason                  Specifies the reason for the release (included in tag annotation)
@@ -47,6 +47,9 @@ Environment Variables:
   MINVERTAGPREFIX               Tag prefix (default: 'v')
   REASON                        Release reason (default: auto-detected from tag type)
   NEEDS_EMPTY_COMMIT            'true' or 'false' (default: 'false')
+  GITHUB_REPOSITORY             'owner/repo' of the repository to tag (required; set by GitHub Actions)
+  RELEASE_PAT                   Token used to push the changelog commit and the tag past the branch protection
+                                (required; a secret -- see WORKFLOWS_REFERENCE.md, "RELEASE_PAT")
 $_common_args
 EOF
 }

@@ -6,19 +6,23 @@
 declare -xr script_name
 declare -xr lib_dir
 
+# core constants
 declare -xri success
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
 declare -xri err_logic_error
+declare -xri err_argument_value
 
 declare -xr ci
 
-declare -x tag
-declare -x minver_tag_prefix
-declare -x reason
-declare -x needs_empty_commit
-
+# script arguments
+declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
+declare -x tag=${TAG:-}
+declare -x reason=${REASON:-}
+declare -x needs_empty_commit=${NEEDS_EMPTY_COMMIT:-false}
+declare -x is_release=false
+declare -x is_prerelease=false
 
 function get_arguments()
 {
@@ -67,7 +71,34 @@ function get_arguments()
 
 function validate_arguments()
 {
-    #  TODO: add validation here
+    # Sanitize inputs
+    validate_semverTagComponents "$minver_tag_prefix" || true
+
+    # Determine tag type: release or prerelease
+    if is_semverReleaseTag "$tag"; then
+        is_release=true
+        reason=${reason:-"stable release"}
+    elif is_semverPrereleaseTag "$tag"; then
+        is_prerelease=true
+        reason=${reason:-"pre-release"}
+    else
+        error -ec "$err_argument_value" "Tag '$tag' is not a valid semver release or prerelease tag."
+    fi
+
+    is_safe_reason "$reason" || true
+
+    exit_if_has_errors
+
+    [[ -n "${GITHUB_REPOSITORY:-}" && -n "${RELEASE_PAT:-}" ]] ||
+        exit_with_error -ec "$err_argument_value" "GITHUB_REPOSITORY and/or RELEASE_PAT are not set."
+
+    readonly tag
+    readonly reason
+    readonly minver_tag_prefix
+    readonly needs_empty_commit
+    readonly is_release
+    readonly is_prerelease
+
     return "$success"
 }
 
@@ -85,6 +116,8 @@ function dump_args()
         minver_tag_prefix
         reason
         needs_empty_commit
+        is_release
+        is_prerelease
 
         --header "Core State:"
         --core-state
