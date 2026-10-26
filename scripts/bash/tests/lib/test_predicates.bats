@@ -228,6 +228,48 @@ declare -gxi err_invalid_path
     assert_failure "$failure"
 }
 
+# Bash arithmetic reads a leading zero as octal: $(( 08 )) fails ("value too great for base") and $(( 010 )) is 8. Every
+# caller of these predicates uses the value in arithmetic, so they accept only canonical decimal (Copilot, PR #59).
+@test "numeric predicates: reject leading zeros" {
+    local _predicate _value
+    for _predicate in is_natural is_positive is_non_negative is_integer is_exit_code; do
+        for _value in 08 010 007 +08 00; do
+            run "$_predicate" "$_value"
+            assert_failure "$failure"
+        done
+    done
+    for _predicate in is_negative is_non_positive is_integer; do
+        for _value in -08 -010 -00; do
+            run "$_predicate" "$_value"
+            assert_failure "$failure"
+        done
+    done
+}
+
+@test "numeric predicates: accept canonical numbers that contain zeros" {
+    local _value
+    for _value in 10 100 105; do
+        run is_natural "$_value";  assert_success
+        run is_integer "-$_value"; assert_success
+    done
+    for _value in 0 +0 -0; do
+        run is_non_negative "$_value"; assert_success
+        run is_non_positive "$_value"; assert_success
+        run is_integer "$_value";      assert_success
+    done
+}
+
+@test "is_decimal: rejects a leading zero in the whole part, but not zeros in the fraction" {
+    run is_decimal 0.5
+    assert_success
+    run is_decimal 10.05
+    assert_success
+    run is_decimal 00.5
+    assert_failure "$failure"
+    run is_decimal 08.5
+    assert_failure "$failure"
+}
+
 @test "is_exit_code: accepts 0-255, rejects out of range" {
     run is_exit_code 0
     assert_success

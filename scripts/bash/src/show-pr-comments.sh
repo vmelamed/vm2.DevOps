@@ -87,26 +87,80 @@ fi
 # Review bodies are Markdown with embedded HTML (Copilot uses <picture>, <details>, ...): strip the HTML comments and the
 # tags of a known list, then squeeze the blank lines they leave behind, so the text stays readable in a terminal.
 #   - Only known tags: review text often contains tag-like placeholders ('<name>', '<pr-number>') that must survive.
-#   - Only outside Markdown code: backtick spans and fenced blocks stay as they are, so a suggestion like "replace `<br>`
-#     with `<p>`" keeps its tags. (A line is split on backticks: the odd parts are prose, the even parts are code.)
+#   - Only outside Markdown code, so a suggestion like "replace `<br>` with `<p>`" keeps its tags:
+#     - a fenced block opens with 3+ backticks or tildes (indented up to 3 spaces) and closes only on a fence of the same
+#       character, at least as long, with nothing after it -- so a ```` block can show a ``` example (CommonMark 4.5);
+#     - a code span opens with a run of N backticks and closes on the next run of exactly N, so ``<br>`` is code too; an
+#       unmatched run is literal text (CommonMark 6.1). Code spans are matched within a line, which covers review text.
+#   - An HTML comment ends at the first '-->', even several lines later; backticks inside it do not open a code span.
 #   - Lowercase tags only (mawk has no case-insensitive matching); GitHub and Copilot emit lowercase HTML.
 function strip_html()
 {
     local _tags='a|b|br|code|details|div|em|h[1-6]|hr|i|img|kbd|li|ol|p|picture|pre|source|span|strong|sub|summary|sup|table|tbody|td|th|thead|tr|ul'
     awk -v tags="$_tags" '
-        /^[[:space:]]*```/ { fenced = !fenced; print; next }
-        fenced             { print; next }
-        {
-            n = split($0, parts, "`")
-            out = ""
-            for (k = 1; k <= n; k++) {
-                if (k % 2 == 1) {
-                    gsub(/<!--([^-]|-[^-])*-->/, "", parts[k])
-                    gsub("</?(" tags ")([[:space:]][^>]*)?/?>", "", parts[k])
-                }
-                out = out (k > 1 ? "`" : "") parts[k]
+        # the length of the run of the character c that starts at position p of s
+        function run_length(s, p, c,    n) { n = 0; while (substr(s, p + n, 1) == c) n++; return n }
+
+        # the position of the first run of exactly n backticks in s at or after position p, or 0
+        function closing_run(s, p, n) {
+            while (match(substr(s, p), /`+/)) {
+                p += RSTART - 1
+                if (RLENGTH == n) return p
+                p += RLENGTH
             }
-            print out
+            return 0
+        }
+
+        function strip_tags(s) { gsub("</?(" tags ")([[:space:]][^>]*)?/?>", "", s); return s }
+
+        {
+            line = $0
+            # a fence candidate: up to 3 spaces of indentation, then the fence character c repeated n times
+            match(line, /^ ? ? ?/); p = RLENGTH + 1; c = substr(line, p, 1)
+            n = (c == "`" || c == "~") ? run_length(line, p, c) : 0
+
+            if (fence_len > 0) {
+                if (c == fence_char && n >= fence_len && substr(line, p + n) ~ /^[[:space:]]*$/) fence_len = 0
+                print; next
+            }
+            # an opening fence (a backtick fence cannot have a backtick in its info string)
+            if (!in_comment && n >= 3 && !(c == "`" && index(substr(line, p + n), "`"))) {
+                fence_char = c; fence_len = n
+                print; next
+            }
+
+            out = ""; prose = ""; i = 1; len = length(line)
+            while (i <= len) {
+                if (in_comment) {
+                    e = index(substr(line, i), "-->")
+                    if (e == 0) break                           # the comment goes on in the next line
+                    i += e + 2; in_comment = 0
+                    continue
+                }
+                if (substr(line, i, 4) == "<!--") {
+                    out = out strip_tags(prose); prose = ""
+                    in_comment = 1; i += 4
+                    continue
+                }
+                ch = substr(line, i, 1)
+                if (ch == "`") {
+                    n = run_length(line, i, "`")
+                    e = closing_run(line, i + n, n)
+                    if (e > 0) {                                # a code span: keep it as it is
+                        out = out strip_tags(prose) substr(line, i, e + n - i); prose = ""
+                        i = e + n
+                    } else {                                    # no matching run: literal backticks
+                        prose = prose substr(line, i, n)
+                        i += n
+                    }
+                    continue
+                }
+                # plain text up to the next backtick or "<"
+                if (ch != "<" && match(substr(line, i), /[`<]/)) { prose = prose substr(line, i, RSTART - 1); i += RSTART - 1 }
+                else if (ch != "<")                             { prose = prose substr(line, i); i = len + 1 }
+                else                                            { prose = prose ch; i++ }
+            }
+            print out strip_tags(prose)
         }' | cat -s
 }
 
