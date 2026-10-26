@@ -17,9 +17,10 @@ declare -xr ci
 
 # default constants for parameters
 declare -xr default_minver_prerelease_id
+declare -xr default_minver_tag_prefix
 
 # script arguments
-declare -x minver_tag_prefix
+declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}
 declare -x reason=${REASON:-"pre-release build"}
 
@@ -70,7 +71,10 @@ function validate_arguments()
 
     exit_if_has_errors
 
-    #  TODO: add validation here
+    readonly minver_tag_prefix
+    readonly minver_prerelease_id
+    readonly reason
+
     return "$success"
 }
 
