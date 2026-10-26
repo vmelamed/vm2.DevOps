@@ -14,6 +14,7 @@ declare -xr lib_dir
 
 source "$lib_dir/gh_core.sh"
 
+# core constants
 declare -x _ignore
 declare -xr semverTagReleaseRegex
 declare -xr semverTagPrereleaseRegex
@@ -26,7 +27,7 @@ source "$script_dir/compute-prerelease-version.args.sh"
 
 get_arguments "$@"
 
-# parameters with initial values from environment variables or defaults
+# script arguments
 declare -xr minver_tag_prefix
 declare -xr minver_prerelease_id
 declare -xr reason
