@@ -168,16 +168,8 @@ _run_changelog_and_tag() {
 # --- happy path ---------------------------------------------------------------------------
 
 @test "changelog-and-tag: creates a prerelease tag and updates the changelog" {
-    # KNOWN CRITICAL REAL BUG (reported to Val, not fixed here -- see summary):
-    # changelog-and-tag.sh:39 calls validate_semverTagComponents() with only ONE argument
-    # (minver_tag_prefix), omitting the optional minver_prerelease_id. _semver.sh:130 tests
-    # that optional argument as '[[ -z $2 || ... ]]' instead of the '[[ ! -v 2 || ... ]]'
-    # convention required for optional parameters -- under 'set -u' (which every
-    # .github/scripts/*.sh sets), referencing a wholly-absent $2 is an unbound-variable error
-    # that crashes the ENTIRE script, every time, before it ever reaches the tag/changelog
-    # logic this test exercises. This is the exact class of bug the sibling test below
-    # ("fails cleanly... when $RELEASE_PAT is entirely unset") already exists to catch --
-    # just for a different variable.
+    # Also a regression test: validate_arguments calls validate_semverTagComponents with one argument only, which once
+    # crashed the script under set -u (the optional $2 was read unguarded; _semver.sh now uses '${2:-}').
     _make_fixture "$BATS_TEST_TMPDIR"
     run _run_changelog_and_tag "$BATS_TEST_TMPDIR/repo" '' --quiet --tag v0.2.0-preview.1
     assert_success
@@ -362,6 +354,17 @@ _run_changelog_and_tag() {
     run _run_changelog_and_tag "$BATS_TEST_TMPDIR/repo" '' --quiet --bogus
     assert_failure
     assert_output --partial "Unknown argument: --bogus"
+}
+
+@test "changelog-and-tag: --help works without \$RELEASE_PAT and \$GITHUB_REPOSITORY (help comes before every check)" {
+    # usage_if_requested runs before validate_arguments, so a request for help needs neither the secret nor a repository
+    _make_fixture "$BATS_TEST_TMPDIR"
+    run env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" bash -c "
+        cd '$BATS_TEST_TMPDIR/repo' && bash '$_changelog_and_tag' --help
+    "
+    assert_success
+    assert_output --partial "Usage:"
+    refute_output --partial "RELEASE_PAT are not set"
 }
 
 @test "changelog-and-tag: -h prints usage and exits 0" {
