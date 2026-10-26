@@ -111,6 +111,9 @@ See `docs/ARCHITECTURE.md` for the full design and `docs/WORKFLOWS_REFERENCE.md`
 
 # Create a PR with vm2 conventions
 ./scripts/bash/src/create-pr.sh
+
+# Show a PR's reviews and inline comments (e.g. Copilot's), waiting for the review of the latest push
+./scripts/bash/src/show-pr-comments.sh --watch
 ```
 
 ShellCheck runs live in VSCode via the ShellCheck extension — do not run it from the CLI.

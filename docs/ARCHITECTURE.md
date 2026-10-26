@@ -37,6 +37,7 @@
     - [Per-run threshold reset (`reset-benchmark-thresholds`)](#per-run-threshold-reset-reset-benchmark-thresholds)
     - [Rebuilding benchmark history](#rebuilding-benchmark-history)
     - [When to use which](#when-to-use-which)
+    - [Rebuild Benchmark History — Quick Reference](#rebuild-benchmark-history--quick-reference)
   - [Script Distribution](#script-distribution)
   - [NuGet Authentication](#nuget-authentication)
   - [Actions Secrets](#actions-secrets)
@@ -480,16 +481,17 @@ These kebab-case keys are then referenced in the workflow's `outputs:` map and p
 
 Development-time scripts not used in CI:
 
-| Script                      | Purpose                                                                       |
-| :-------------------------- | :---------------------------------------------------------------------------- |
-| `diff-shared.sh`            | Diff common files across vm2 repos                                            |
-| `move-commits-to-branch.sh` | Move commits from one branch to another                                       |
-| `rename-branch.sh`          | Rename a branch locally and in the remote origin                              |
-| `setup-repo.sh`             | Bootstrap and configure a new GitHub repo                                     |
-| `add-spdx.sh`               | Add SPDX license headers to source files                                      |
-| `re-tag.sh`                 | Recreate a Git tag at a different commit                                      |
-| `update-packages.sh`        | Upgrade NuGet package versions in `Directory.Packages.props` across vm2 repos |
-| `create-pr.sh`              | `gh` alias (`gh create-pr`) — PR with commits auto-populated                  |
+| Script                      | Purpose                                                                             |
+| :-------------------------- | :---------------------------------------------------------------------------------- |
+| `diff-shared.sh`            | Diff common files across vm2 repos                                                  |
+| `move-commits-to-branch.sh` | Move commits from one branch to another                                             |
+| `rename-branch.sh`          | Rename a branch locally and in the remote origin                                    |
+| `setup-repo.sh`             | Bootstrap and configure a new GitHub repo                                           |
+| `add-spdx.sh`               | Add SPDX license headers to source files                                            |
+| `re-tag.sh`                 | Recreate a Git tag at a different commit                                            |
+| `update-packages.sh`        | Upgrade NuGet package versions in `Directory.Packages.props` across vm2 repos       |
+| `create-pr.sh`              | `gh` alias (`gh create-pr`) — PR with commits auto-populated                        |
+| `show-pr-comments.sh`       | Print a PR's reviews and inline comments (e.g. Copilot's); `--watch` waits for them |
 
 These also follow the three-file pattern where applicable.
 
