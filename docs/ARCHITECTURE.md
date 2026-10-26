@@ -416,15 +416,15 @@ If you need to write a script for both local and GitHub Actions contexts, you mu
 
 ```text
 info()    ─────► to_stdout()   ──┬──► stdout (log)
-                                 └──► github_step_summary
+                                 └──► GITHUB_STEP_SUMMARY
 
 warning() ─────► to_stderr()   ──┬──► stderr (log)
-                                 └──► github_step_summary
+                                 └──► GITHUB_STEP_SUMMARY
 
 error()   ─────► to_stderr()   ──┬──► stderr (log)
-                                 └──► github_step_summary
+                                 └──► GITHUB_STEP_SUMMARY
 
-trace()   ─────────────────────────► stderr (log only -- never github_step_summary)
+trace()   ─────────────────────────► stderr (log only -- never GITHUB_STEP_SUMMARY)
 ```
 
 The overriding code is:
@@ -434,14 +434,14 @@ function to_stdout() {
     local _line
     while IFS= read -r _line; do
         echo "$_line"
-        echo "$_line" >> "$github_step_summary"
+        echo "$_line" >> "$GITHUB_STEP_SUMMARY"
     done
 }
 ```
 
 It turned out that having traces in the summary was not that helpful in the long run -- too much noise for a document meant to be read quickly. Earlier revisions of this library had a `to_traceout()` helper with a `$trace_to_summary` toggle to make this optional; that was eventually simplified to the current, simpler rule instead: `trace()` always writes a plain `>&2` and never touches the step summary at all, in either context, with no toggle to configure. If you need a trace line to also show up in the summary, use `info`/`warning` instead, or `to_summary` directly (see below).
 
-The three tee-ing functions (`info`/`warning`/`error`) do not write to the GitHub Step Summary file directly, but to a variable `$github_step_summary` that is set in `gh_core.sh`. Its value depends on the context: if the script is running in GitHub Actions, it points to the GitHub Step Summary file, otherwise it points to `/dev/null`. This way the logging functions can be used in both contexts without any changes.
+The three tee-ing functions (`info`/`warning`/`error`) do not write to the GitHub Step Summary file directly, but to a variable `$GITHUB_STEP_SUMMARY` that is set in `gh_core.sh`. Its value depends on the context: if the script is running in GitHub Actions, it points to the GitHub Step Summary file, otherwise it points to `/dev/null`. This way the logging functions can be used in both contexts without any changes.
 
 ##### Free Form Output to the GitHub Step Summary
 

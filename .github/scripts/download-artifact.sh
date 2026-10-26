@@ -14,8 +14,12 @@ declare -xr lib_dir
 
 source "$lib_dir/gh_core.sh"
 
+# core constants
 declare -xr check_em
 
+declare -x _ignore
+
+declare -xri failure
 declare -xri err_missing_argument
 declare -xri err_argument_type
 declare -xri err_tool_not_found
@@ -23,37 +27,70 @@ declare -xri err_argument_value
 declare -xri err_tool_error
 declare -xri err_logic_error
 
-declare -x artifact_name=${ARTIFACT_NAME:-}
-declare -x artifacts=${ARTIFACT_DIR:-}
-declare -x repository=${REPOSITORY:-}
-declare -x workflow_id=${WORKFLOW_ID:-}
-declare -x workflow_name=${WORKFLOW_NAME:-}
-declare -x workflow_path=${WORKFLOW_PATH:-}
+# script arguments
+declare -x artifact_name
+declare -x artifacts
+declare -x repository
+declare -x workflow_id
+declare -x workflow_name
+declare -x workflow_path
 
 source "$script_dir/download-artifact.args.sh"
 source "$script_dir/download-artifact.usage.sh"
 
 get_arguments "$@"
 
-is_safe_input "$artifact_name"  || true
-if [[ -z "$artifact_name" ]]; then
-    error -ec "$err_missing_argument" "The name of the artifact to download must be specified."
-fi
-is_safe_valid_path "$artifacts" || true
-is_safe_input "$repository"     || true
-is_safe_input "$workflow_id"    || true
-is_safe_input "$workflow_name"  || true
-is_safe_path "$workflow_path"   || true
-is_natural "$workflow_id"       || error -ec "$err_argument_type" "The specified workflow identifier '$workflow_id' is not valid."
+[[ -n $repository ]] ||
+    repository=$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>"$_ignore") ||
+        exit_with_error -ec "$err_not_found" "The current directory is not in a GitHub repository; use '--repository <owner/repo>'."
 
+readonly repository
+
+declare -a runs
+declare query
+
+# get the workflow ID if not provided
+# query for the workflow ID using the name or path
+#
+# NOTE: this block implements a precedence for determining the workflow ID:
+#       1. Use the provided workflow ID if available.
+#       2. Otherwise, use the workflow name if provided.
+#       3. Otherwise, use the workflow path if provided.
+#       4. If none of the above are provided, exit with an error.
+if [[ -z "$workflow_id" ]]; then
+    # shellcheck disable=SC2016 # Expressions don't expand in single quotes, use double quotes for that.
+    if [[ -n "$workflow_name" ]]; then
+        query='.[] | select(.name==$n).id'
+    elif [[ -n "$workflow_path" ]]; then
+        query='.[] | select(.path==$p).id'
+    else
+        exit_with_error -ec "$err_missing_argument" "Either the workflow id, the workflow name, or the workflow path must be specified."
+    fi
+
+    declare _workflows
+    declare -a workflow_ids=()
+    declare what=''
+
+    _workflows=$(gh workflow list --repo "$repository" --json "id,name,path") ||
+        exit_with_error -ec "$err_tool_error" "Could not list the workflows of '$repository'."
+
+    readarray -t workflow_ids < <(jq -r --arg n "$workflow_name" --arg p "$workflow_path" "$query" <<< "$_workflows")
+
+    case "${#workflow_ids[@]}" in
+        0)  [[ -n "$workflow_path" ]] &&
+                what="path '$workflow_path'" ||
+                what="name '$workflow_name'"
+            error -ec "$err_argument_value" "The specified workflow $what is not in the repository '$repository'."
+            ;;
+        1)  workflow_id="${workflow_ids[0]}"
+            ;;
+        *)  exit_with_error -ec "$err_argument_value" "Multiple workflows found: ${workflow_ids[*]}"
+            ;;
+    esac
+fi
 exit_if_has_errors
 
-# freeze the variables
-declare -xr artifact_name
-declare -xr artifacts
-declare -xr repository
-declare -xr workflow_name
-declare -xr workflow_path
+execute mkdir -p "$artifacts" || exit_with_error -ec "$err_tool_error" "Failed to create artifacts directory."
 
 if [[ -d "$artifacts" && -n "$(ls -A "$artifacts")" ]]; then
     renamed_artifacts_dir="$artifacts-$(date -u +"%Y%m%dT%H%M%S")"
@@ -78,68 +115,18 @@ if [[ -d "$artifacts" && -n "$(ls -A "$artifacts")" ]]; then
         3)  trace "Exiting the script."
             exit 0
             ;;
-        *)  error -ns "Invalid option $choice. Exiting."
-            exit 2
+        *)  exit_with_error -ec "$failure" -ns "Invalid option $choice. Exiting."
             ;;
     esac
 fi
 
-declare -x GITHUB_OUTPUT=${GITHUB_OUTPUT:-/dev/stdout}
-declare -x GITHUB_STEP_SUMMARY=${GITHUB_STEP_SUMMARY:-/dev/stdout}
-
-declare -x _ignore
-
-# install GitHub CLI and jq if not already installed
-if ! is_tool_present jq || ! is_tool_present jq ; then
-    # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-    execute sudo apt-get update && sudo apt-get install -y gh jq ||
-        exit_with_error -ec "$err_tool_not_found" "GitHub CLI 'gh' and/or 'jq' were not found and could not install them. Please have 'gh' and 'jq' installed."
-    info "GitHub CLI 'gh' and/or 'jq' successfully installed."
-fi
-
-declare -a runs
-declare query
-
-# get the workflow ID if not provided
-# query for the workflow ID using the name or path
-#
-# NOTE: this block implements a precedence for determining the workflow ID:
-#       1. Use the provided workflow ID if available.
-#       2. Otherwise, use the workflow name if provided.
-#       3. Otherwise, use the workflow path if provided.
-#       4. If none of the above are provided, exit with an error.
-if [[ -z "$workflow_id" ]]; then
-    if [[ -n "$workflow_name" ]]; then
-        query=".[] | select(.name==\"$workflow_name\").id"
-    elif [[ -n "$workflow_path" ]]; then
-        query=".[] | select(.path==\"$workflow_path\").id"
-    else
-        exit_with_error -ec "$err_missing_argument" "Either the workflow id, the workflow name, or the workflow path must be specified."
-    fi
-
-    workflow_id=$(execute gh workflow list --repo "$repository" --json "id,name,path" --jq "$query")
-fi
-
-if is_dry_run; then
-    workflow_id=1234567890
-fi
-
-if ! is_natural "$workflow_id"; then
-    if [[ -n "$workflow_path" ]]; then
-        error -ec "$err_argument_value" "The specified workflow path '$workflow_path' does not exist in the repository '$repository'."
-    elif [[ -n "$workflow_name" ]]; then
-        error -ec "$err_argument_value" "The specified workflow name '$workflow_name' does not exist in the repository '$repository'."
-    else
-        error -ec "$err_argument_value" "The specified workflow identifier '$workflow_id' is not valid."
-    fi
-    exit_if_has_errors
-fi
+readonly workflow_id
 
 declare -i rc=$success
 declare _temp=''
 _temp=$(mktemp) || exit_with_error -ec "$err_tool_error" "Failed to create a temporary file."
 
-# get the IDs of the last 1000 successful runs of the specified workflow
+# get the IDs of the last 100 successful runs of the specified workflow
 gh run list \
     --repo "$repository" \
     --workflow "$workflow_id" \
@@ -148,13 +135,10 @@ gh run list \
     --json databaseId \
     --jq '.[].databaseId' > "$_temp" || rc=$?
 
-(( rc != success ))  || readarray -t runs < "$_temp" || rc=$err_tool_error
-rm -f "$_temp" || true
-
-(( rc == success ))  || exit_with_error -ec "$rc" "Failed to retrieve the list of runs for the workflow '$workflow_id' in the repository '$repository'."
-
-(( ${#runs[@]} > 0 )) ||
-    exit_with_error -ec "$err_logic_error" "No successful runs found for the workflow '$workflow_id' in the repository '$repository'."
+(( rc != success ))   || readarray -t runs < "$_temp"   || rc=$err_tool_error
+rm -f "$_temp"                                          || true
+(( rc == success ))                                     || exit_with_error -ec "$rc" "Failed to retrieve the list of runs for the workflow '$workflow_id' in the repository '$repository'."
+(( ${#runs[@]} > 0 ))                                   || exit_with_error -ec "$err_logic_error" "No successful runs found for the workflow '$workflow_id' in the repository '$repository'."
 
 # iterate over the runs and try to find and download the specified artifact
 # starting from the most recent one down to the oldest one
@@ -162,25 +146,36 @@ i=0
 for run in "${runs[@]}"; do
     (( ++i ))
     trace "Checking run $run for the artifact '$artifact_name'..."
-    query="any(.artifacts[]; .name==\"$artifact_name\")"
-    if [[ $(gh api "repos/$repository/actions/runs/$run/artifacts" --jq "$query") != true ]]; then
-        echo "The artifact '$artifact_name' not found in run $run." >> "$GITHUB_STEP_SUMMARY"
+
+    artifacts_list=$(gh api "repos/$repository/actions/runs/$run/artifacts") ||
+        exit_with_error -ec "$err_tool_error" "Could not list the artifacts of run $run."
+
+    artifact_present=$(jq -r --arg n "$artifact_name" 'any (.artifacts[]; .name==$n)' <<< "$artifacts_list")
+
+    if ! $artifact_present; then
+        trace "The artifact '$artifact_name' not found in run $run."
         continue
     fi
 
+    trace "The artifact '$artifact_name' found in run $run."
     if ((i > 80)); then
-        warning "The artifact was found in run $i out of 100. \
-You may want to refresh the artifact. \
-E.g. re-run the benchmarks with --force-new-baseline or vars.FORCE_NEW_BASELINE" >&2
+        warning "The artifact was found in run $i out of ${#runs[@]}." \
+                "You may want to refresh the artifact."
     fi
-    trace "The artifact '$artifact_name' found in run $run. Downloading..."
-    http_error=$(execute gh run download "$run" \
-                                --repo "$repository" \
-                                --name "$artifact_name" \
-                                --dir "$artifacts") ||
-        exit_with_error -ec "$err_tool_error" "Error while downloading '$artifact_name': $http_error"
-    info "$check_em The artifact '$artifact_name' successfully downloaded to directory '$artifacts'." >> "$GITHUB_STEP_SUMMARY"
+
+    download_result=$(execute gh run download "$run" \
+                            --repo "$repository" \
+                            --name "$artifact_name" \
+                            --dir "$artifacts" 2>&1) ||
+        exit_with_error -ec "$err_tool_error" "Error while downloading '$artifact_name': $download_result"
+    # the above capture also swallowed execute's dry-run$ line: show it, it is the point of a dry run
+    if is_dry_run; then
+        printf '%s\n' "$download_result" >&2
+        info "$check_em The artifact '$artifact_name' would have been downloaded to directory '$artifacts'."
+    else
+        info "$check_em The artifact '$artifact_name' successfully downloaded to directory '$artifacts'."
+    fi
     exit 0
 done
 
-exit_with_error -ec "$err_logic_error" "The artifact '$artifact_name' was not found in the last ${#runs[@]} successful runs of the workflow '$workflow_name' in the repository '$repository'."
+exit_with_error -ec "$err_logic_error" "The artifact '$artifact_name' was not found in the last ${#runs[@]} successful runs of the workflow ID '$workflow_id' in the repository '$repository'."

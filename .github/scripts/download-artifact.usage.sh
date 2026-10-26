@@ -26,18 +26,20 @@ optional if the corresponding environment variable is set instead; when a value 
 argument takes precedence.
 
 Options:
-  -a, --artifact                Specifies the name of the artifact to download.
+  -a, --artifact <name>         Specifies the name of the artifact to download.
                                 Initial value from \$ARTIFACT_NAME
-  -d, --directory               The directory to download the artifact into. Created if it does not exist; if it exists
-                                and is not empty, its contents are clobbered without warning.
-                                Initial value from \$ARTIFACT_DIR or default './BmArtifacts/baseline'
-  -r, --repository              Specifies the GitHub repository, in the form 'owner/repo', where the workflow lives.
-                                Initial value from \$REPOSITORY
-  -i, --wf-id                   Specifies the ID of the workflow.
+  -d, --directory <path>        Path to the directory to download the artifact into. Created if it does not exist; if it exists
+                                and is not empty, the user will be asked to save the contents in a different location, clobber
+                                the contents, or cancel.
+                                Required. Initial value may be provided from \$ARTIFACT_DIR
+  -r, --repo, --repository <repository>
+                                Specifies the GitHub repository, in the form 'owner/repo', where the workflow lives.
+                                Initial value from \$REPOSITORY or else the repository in the current directory
+  -i, --wf-id <id>              Specifies the ID of the workflow.
                                 Initial value from \$WORKFLOW_ID or default ''
-  -n, --wf-name                 Specifies the name of the workflow, as shown in the GitHub Actions UI.
+  -n, --wf-name <name>          Specifies the name of the workflow, as shown in the GitHub Actions UI.
                                 Initial value from \$WORKFLOW_NAME
-  -p, --wf-path                 Specifies the path of the workflow file in the repository, e.g.
+  -p, --wf-path <path>          Specifies the path of the workflow file in the repository, e.g.
                                 '.github/workflows/run-benchmarks.yml'.
                                 Initial value from \$WORKFLOW_PATH or default ''
 Note:
