@@ -96,25 +96,17 @@ function get_arguments()
 #---------------------------------------------------------------------------------------------
 function validate_arguments()
 {
-    is_tool_present gh ||
-        error -ec "$err_tool_not_found" "The GitHub CLI 'gh' is required: https://cli.github.com"
-    [[ -z $pr_number || $pr_number =~ ^[1-9][0-9]*$ ]] ||
-        error -ec "$err_argument_value" "The pull request number must be a positive integer (provided '$pr_number')."
-    [[ -z $repo || $repo =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] ||
-        error -ec "$err_argument_value" "The repository must be given as 'owner/repo' (provided '$repo')."
-    [[ -z $repo || -n $pr_number ]] ||
-        error -ec "$err_missing_argument" "With '--repo', the pull request number is required: the current branch belongs to the current directory's repository."
-    [[ $interval =~ ^[1-9][0-9]*$ ]] ||
-        error -ec "$err_argument_value" "The interval must be a positive number of seconds (provided '$interval')."
-    [[ $timeout =~ ^[1-9][0-9]*$ ]] ||
-        error -ec "$err_argument_value" "The timeout must be a positive number of seconds (provided '$timeout')."
+    is_tool_present gh                                                                                  || error -ec "$err_tool_not_found" "The GitHub CLI 'gh' is required: https://cli.github.com"
+    [[ -z $pr_number ]] || is_natural "$pr_number"                                                      || error -ec "$err_argument_value" "The pull request number must be a positive integer (provided '$pr_number')."
+    [[ -z $repo || $repo =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]                                        || error -ec "$err_argument_value" "The repository must be given as 'owner/repo' (provided '$repo')."
+    [[ -z $repo || -n $pr_number ]]                                                                     || error -ec "$err_missing_argument" "With '--repo', the pull request number is required: the current branch belongs to the current directory's repository."
+    is_natural "$interval"                                                                              || error -ec "$err_argument_value" "The interval must be a positive number of seconds (provided '$interval')."
+    is_natural "$timeout"                                                                               || error -ec "$err_argument_value" "The timeout must be a positive number of seconds (provided '$timeout')."
     exit_if_has_errors
 
     # resolve what was omitted: the current directory's repository, the current branch's pull request
-    [[ -n $repo ]] || repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>"$_ignore") ||
-        error -ec "$err_not_found" "The current directory is not in a GitHub repository; use '--repo <owner/repo>'."
-    [[ -n $pr_number || -z $repo ]] || pr_number=$(gh pr view --json number --jq .number 2>"$_ignore") ||
-        error -ec "$err_not_found" "The current branch has no pull request; give the pull request number."
+    [[ -n $repo ]] || repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>"$_ignore")        || error -ec "$err_not_found" "The current directory is not in a GitHub repository; use '--repo <owner/repo>'."
+    [[ -n $pr_number || -z $repo ]] || pr_number=$(gh pr view --json number --jq .number 2>"$_ignore")  || error -ec "$err_not_found" "The current branch has no pull request; give the pull request number."
     exit_if_has_errors false
 
     readonly pr_number
