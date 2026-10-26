@@ -11,6 +11,7 @@
     - [move-commits-to-branch.sh](#move-commits-to-branchsh)
     - [rename-branch.sh](#rename-branchsh)
     - [set-secret.sh](#set-secretsh)
+    - [show-pr-comments.sh](#show-pr-commentssh)
     - [update-packages.sh](#update-packagessh)
     - [Other Utilities](#other-utilities)
   - [3. CI Scripts](#3-ci-scripts)
@@ -268,6 +269,35 @@ set-secret.sh MY_SECRET --app actions
 | `--dry-run`            | `-y`  | Show what would be set, without calling `gh secret set`                      |
 
 **Auth:** the caller's `gh` login must be able to write secrets for the target application in each repository.
+
+### show-pr-comments.sh
+
+Prints the reviews and the inline review comments of a pull request, Copilot's and everyone else's, straight from the
+GitHub API. It is faster than waiting for an editor's comment panel to sync, and it is read-only: every `gh` call is a
+query, so the script changes nothing (and `--dry-run` has nothing to suppress).
+
+```bash
+show-pr-comments.sh                                  # the PR of the current branch
+show-pr-comments.sh 54
+show-pr-comments.sh 41 --repo vmelamed/vm2.Templates
+show-pr-comments.sh --watch                          # right after a push: wait for Copilot's review, then print it
+```
+
+| Option                 | Short | Default      | Description                                                                                    |
+| :--------------------- | :---- | :----------- | :--------------------------------------------------------------------------------------------- |
+| `<pr-number>`          |       | current PR   | The pull request; without it, the PR of the current branch (then `--repo` must be omitted too) |
+| `--repo <owner/repo>`  | `-r`  | current repo | The repository of the pull request                                                             |
+| `--watch`              | `-w`  | —            | Wait until the PR's latest commit has a review, then print                                     |
+| `--interval <seconds>` | `-i`  | `15`         | The polling interval for `--watch`                                                             |
+| `--timeout <seconds>`  | `-t`  | `900`        | The longest wait for `--watch`; then the script fails with `err_not_found`                     |
+
+The output is the PR's title and URL, then every review that has a body (author, state, time), then every inline comment
+as `file:line -- author` followed by its text; replies are marked `(reply)`. Copilot's review bodies embed HTML
+(`<picture>`, `<details>`, ...): the script strips HTML comments and a fixed list of known tags, but keeps tag-like
+placeholders such as `<name>`, which are common in review text.
+
+`--watch` counts only reviews of the PR's **head commit**: after a push, a review of the previous commit does not end the
+wait. A typical loop is `git push && show-pr-comments.sh --watch`.
 
 ### update-packages.sh
 
