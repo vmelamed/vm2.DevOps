@@ -14,55 +14,29 @@ declare -xr lib_dir
 
 source "$lib_dir/gh_core.sh"
 
-declare -xr check_em
-
+# core constants
 declare -xri err_argument_value
 declare -xri err_not_found
+
+declare -xr check_em
 
 declare -xr ci
 
 declare -xr default_minver_tag_prefix
 declare -xr semverTagReleaseRegex
 
-declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
-declare -x tag=${TAG:-}
-declare -x reason=${REASON:-}
-declare -x needs_empty_commit=${NEEDS_EMPTY_COMMIT:-false}
-
 source "$script_dir/changelog-and-tag.usage.sh"
 source "$script_dir/changelog-and-tag.args.sh"
 
 get_arguments "$@"
 
-# Sanitize inputs
-validate_semverTagComponents "$minver_tag_prefix" || true
-
-# Determine tag type: release or prerelease
-is_release=false
-is_prerelease=false
-if is_semverReleaseTag "$tag"; then
-    is_release=true
-    reason=${reason:-"stable release"}
-elif is_semverPrereleaseTag "$tag"; then
-    is_prerelease=true
-    reason=${reason:-"pre-release"}
-else
-    error -ec "$err_argument_value" "Tag '$tag' is not a valid semver release or prerelease tag."
-fi
-
-is_safe_reason "$reason" || true
-
-exit_if_has_errors
-
+# script arguments
 declare -xr tag
 declare -xr reason
 declare -xr minver_tag_prefix
 declare -xr is_release
 declare -xr is_prerelease
 declare -xr needs_empty_commit
-
-[[ -n "${GITHUB_REPOSITORY:-}" && -n "${RELEASE_PAT:-}" ]] ||
-    exit_with_error -ec "$err_argument_value" "GITHUB_REPOSITORY and/or RELEASE_PAT are not set."
 
 # Configure git for CI
 if $ci; then
