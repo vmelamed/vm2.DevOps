@@ -39,7 +39,7 @@ Options:
                                 The height seed (trailing '.N') is stripped to derive the prefix.
                                 Initial value from \$MINVERDEFAULTPRERELEASEIDENTIFIERS or default 'preview.0'
   -r, --reason <reason text>    Reason for prerelease (e.g., "pre-release", "manual prerelease", etc.)
-                                Initial value from \$REASON or default "pre-release"
+                                Initial value from \$REASON or default "pre-release build"
 
 Environment Variables:
   MINVERTAGPREFIX               Git tag prefix to be recognized by MinVer
