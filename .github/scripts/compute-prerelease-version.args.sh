@@ -6,18 +6,22 @@
 declare -xr script_name
 declare -xr lib_dir
 
-declare -x minver_tag_prefix
-declare -x minver_prerelease_id
-
-declare -xr ci
-
+# core constants
 declare -xri success
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
 declare -xri err_logic_error
 
-declare -x reason
+declare -xr ci
+
+# default constants for parameters
+declare -xr default_minver_prerelease_id
+
+# script arguments
+declare -x minver_tag_prefix
+declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}
+declare -x reason=${REASON:-"pre-release build"}
 
 function get_arguments()
 {
@@ -61,6 +65,11 @@ function get_arguments()
 
 function validate_arguments()
 {
+    validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
+    is_safe_reason "$reason" || true
+
+    exit_if_has_errors
+
     #  TODO: add validation here
     return "$success"
 }
