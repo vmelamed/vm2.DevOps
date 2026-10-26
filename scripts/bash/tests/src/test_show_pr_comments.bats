@@ -153,6 +153,57 @@ _run() {
     refute_output --partial "<!--"
 }
 
+@test "show-pr-comments: keeps HTML inside Markdown code spans and fenced blocks, strips it outside" {
+    # regression (Copilot, PR #58): "replace `<br>` with `<p>`" lost both tags
+    _install_fake_gh
+    cat > "$BATS_TEST_TMPDIR/comments.json" <<'EOF'
+[ { "path": "README.md", "line": 3, "original_line": 3, "in_reply_to_id": null, "user": { "login": "Copilot" },
+    "body": "<details><summary>Fix</summary>Replace `<br>` with `<p>`.</details>\n```html\n<div class=\"x\">kept</div>\n```" } ]
+EOF
+    _run '' 7
+    assert_success
+    assert_line 'FixReplace `<br>` with `<p>`.'
+    assert_line '<div class="x">kept</div>'
+    refute_output --partial "<details>"
+}
+
+@test "show-pr-comments: skips a pending (not yet submitted) review instead of failing on its missing timestamp" {
+    # regression (Copilot, PR #58): sub("T"; " ") on a null 'submitted_at' failed, before the inline comments were printed
+    _install_fake_gh
+    cat > "$BATS_TEST_TMPDIR/reviews.json" <<'EOF'
+[ { "user": { "login": "val" }, "state": "PENDING", "submitted_at": null, "commit_id": "headsha",
+    "body": "A draft, not yet submitted." } ]
+EOF
+    _run '' 7
+    assert_success
+    refute_output --partial "A draft, not yet submitted."
+    assert_line "Quote this variable."                                     # the inline comments still come
+}
+
+@test "show-pr-comments: --watch does not count a pending review of the head commit" {
+    # regression (Copilot, PR #58): a draft carries the head commit's id and ended the wait before the review was submitted
+    _install_fake_gh
+    cat > "$BATS_TEST_TMPDIR/reviews.json" <<'EOF'
+[ { "user": { "login": "val" }, "state": "PENDING", "submitted_at": null, "commit_id": "headsha", "body": "A draft." } ]
+EOF
+    _run '' 7 --watch --interval 1 --timeout 2
+    assert_failure "$err_not_found"
+    assert_output --partial "within 2 seconds"
+}
+
+@test "show-pr-comments: --watch never sleeps past the timeout, even with a longer interval" {
+    # regression (Copilot, PR #58): '--timeout 2' with a 30-second interval slept the full 30 seconds
+    _install_fake_gh
+    cat > "$BATS_TEST_TMPDIR/reviews.json" <<'EOF'
+[ { "user": { "login": "copilot-pull-request-reviewer[bot]" }, "state": "COMMENTED",
+    "submitted_at": "2026-10-25T20:00:00Z", "commit_id": "oldsha", "body": "A review of the previous commit." } ]
+EOF
+    local -i _started=$SECONDS
+    _run '' 7 --watch --interval 30 --timeout 2
+    assert_failure "$err_not_found"
+    (( SECONDS - _started < 10 ))
+}
+
 @test "show-pr-comments: without a number, uses the pull request of the current branch" {
     _install_fake_gh
     _run 'FAKE_PR=42' ''
