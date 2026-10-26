@@ -307,11 +307,11 @@ function __test_with_regex()
     [[  $1 =~ $2 ]]
 }
 
-declare -x zero_rex='[+-]?0+'
-declare -x natural_rex='[0-9]*[1-9][0-9]*'
+declare -x zero_rex='[+-]?0'
+declare -x natural_rex='[1-9][0-9]*'
 declare -x positive_rex="[+]?$natural_rex"
 declare -x negative_rex="-$natural_rex"
-declare -x integer_rex='[+-]?[0-9]+'
+declare -x integer_rex="[+-]?(0|$natural_rex)"
 declare -x decimal_rex="$integer_rex(\.[0-9]*)?|(($integer_rex)?\.[0-9]+)"
 declare -x bool_rex='(true|false)'
 declare -x base64_char_rex='[A-Za-z0-9+/]'

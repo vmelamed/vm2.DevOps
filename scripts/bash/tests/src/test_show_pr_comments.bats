@@ -167,6 +167,41 @@ EOF
     refute_output --partial "<details>"
 }
 
+@test "show-pr-comments: a fence closes only on a matching fence -- a \`\`\`\` block can show \`\`\`, and ~~~ blocks are code too" {
+    # regression (Copilot, PR #59): every line starting with ``` toggled the state, and tilde fences were not recognized
+    _install_fake_gh
+    cat > "$BATS_TEST_TMPDIR/comments.json" <<'EOF'
+[ { "path": "README.md", "line": 3, "original_line": 3, "in_reply_to_id": null, "user": { "login": "Copilot" },
+    "body": "````markdown\n```html\n<div>inner</div>\n```\n<p>still code</p>\n````\n<b>prose</b>\n~~~html\n<span>tilde</span>\n```\n<i>still tilde</i>\n~~~\n<em>after</em>" } ]
+EOF
+    _run '' 7
+    assert_success
+    assert_line '<div>inner</div>'
+    assert_line '<p>still code</p>'                                      # the inner ``` did not close the ```` block
+    assert_line 'prose'
+    assert_line '<span>tilde</span>'
+    assert_line '<i>still tilde</i>'                                     # a ``` fence does not close a ~~~ block
+    assert_line 'after'
+}
+
+@test "show-pr-comments: keeps HTML in double-backtick code spans; strips HTML comments that contain backticks or span lines" {
+    # regression (Copilot, PR #59): splitting on single backticks treated ``<br>`` as prose and left `-ticked comments in
+    _install_fake_gh
+    cat > "$BATS_TEST_TMPDIR/comments.json" <<'EOF'
+[ { "path": "README.md", "line": 3, "original_line": 3, "in_reply_to_id": null, "user": { "login": "Copilot" },
+    "body": "Use ``<br>`` or `` `<p>` ``, not <b>bold</b>.\n<!-- a `hidden` note -->Visible.\nBefore<!-- one\n`two`\nthree -->after\nA lone ` stays." } ]
+EOF
+    _run '' 7
+    assert_success
+    assert_line 'Use ``<br>`` or `` `<p>` ``, not bold.'
+    assert_line 'Visible.'
+    assert_line 'Before'
+    assert_line 'after'
+    assert_line 'A lone ` stays.'
+    refute_output --partial 'hidden'
+    refute_output --partial 'two'
+}
+
 @test "show-pr-comments: skips a pending (not yet submitted) review instead of failing on its missing timestamp" {
     # regression (Copilot, PR #58): sub("T"; " ") on a null 'submitted_at' failed, before the inline comments were printed
     _install_fake_gh
