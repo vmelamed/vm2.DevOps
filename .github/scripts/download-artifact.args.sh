@@ -6,20 +6,27 @@
 declare -xr script_name
 declare -xr lib_dir
 
+# core constants
 declare -xri success
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
 declare -xri err_logic_error
+declare -xri err_argument_type
+declare -xri err_not_found
+declare -xri err_tool_not_found
 
 declare -xr ci
+declare -x _ignore
 
-declare -x artifact_name
-declare -x artifacts
-declare -x repository
-declare -x workflow_id
-declare -x workflow_name
-declare -x workflow_path
+
+# declare and initialize script arguments
+declare -x artifact_name=${ARTIFACT_NAME:-}
+declare -x artifacts=${ARTIFACT_DIR:-}
+declare -x repository=${REPOSITORY:-}
+declare -x workflow_id=${WORKFLOW_ID:-}
+declare -x workflow_name=${WORKFLOW_NAME:-}
+declare -x workflow_path=${WORKFLOW_PATH:-}
 
 function get_arguments()
 {
@@ -32,15 +39,15 @@ function get_arguments()
         case "${_option,,}" in
             --artifact|-a )
                 (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-               artifact_name="$1"; shift
-               ;;
+                artifact_name="$1"; shift
+                ;;
 
             --directory|-d )
                 (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 artifacts="$1"; shift
                 ;;
 
-            --repository|-r )
+            --repository|--repo|-r )
                 (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 repository="$1"; shift
                 ;;
@@ -78,13 +85,42 @@ function get_arguments()
     done
 
     usage_if_requested
+    verify_environment
     validate_arguments
+    exit_if_has_errors
     dump_args
+}
+
+function verify_environment()
+{
+    is_tool_present jq &> "$_ignore"                         || error -ec "$err_tool_not_found" "'jq' is not installed. Please install it first."
+    if is_tool_present gh &> "$_ignore"; then
+        gh auth status &> "$_ignore"                         || error -ec "$err_tool_not_found" "'gh' is not authenticated. Run 'gh auth login' first."
+    else
+        error -ec "$err_tool_not_found" "'gh' is not installed. Please install it first."
+    fi
 }
 
 function validate_arguments()
 {
-    #  TODO: add validation here
+    [[ -n "$artifact_name" ]]                                || error -ec "$err_missing_argument" "The name of the artifact to download must be specified."
+    is_safe_input "$artifact_name"                           || true
+
+    [[ -z "$artifacts" ]] || is_safe_valid_path "$artifacts" || true
+    [[ -n "$artifacts" ]]                                    || error -ec "$err_missing_argument" "The directory to download the artifact to must be specified."
+    is_safe_input "$repository"                              || true
+    is_safe_input "$workflow_id"                             || true
+    is_safe_input "$workflow_name"                           || true
+    is_safe_path "$workflow_path"                            || true
+    [[ -z "$workflow_id" ]] || is_natural "$workflow_id"     || error -ec "$err_argument_type" "The specified workflow identifier '$workflow_id' is not valid."
+
+    readonly artifact_name
+    readonly artifacts
+    [[ -z "$repository" ]] || readonly repository
+    readonly workflow_name
+    readonly workflow_path
+    [[ -z "$workflow_id" ]] || readonly workflow_id
+
     return "$success"
 }
 
