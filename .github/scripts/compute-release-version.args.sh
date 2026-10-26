@@ -6,6 +6,7 @@
 declare -xr script_name
 declare -xr lib_dir
 
+# core constants
 declare -xri success
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
@@ -14,8 +15,11 @@ declare -xri err_logic_error
 
 declare -xr ci
 
-declare -x minver_tag_prefix
-declare -x reason
+declare -xr default_minver_tag_prefix
+
+# parameters with initial values from environment variables or defaults
+declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
+declare -x reason=${REASON:-"release build"}
 
 function get_arguments()
 {
@@ -54,7 +58,15 @@ function get_arguments()
 
 function validate_arguments()
 {
-    #  TODO: add validation here
+    # Sanitize inputs to prevent injection attacks
+    validate_semverTagComponents "$minver_tag_prefix" || true
+    is_safe_reason "$reason" || true
+
+    exit_if_has_errors
+
+    readonly minver_tag_prefix
+    readonly reason
+
     return "$success"
 }
 
