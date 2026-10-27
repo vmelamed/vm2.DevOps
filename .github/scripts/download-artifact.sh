@@ -77,9 +77,9 @@ if [[ -z "$workflow_id" ]]; then
     readarray -t workflow_ids < <(jq -r --arg n "$workflow_name" --arg p "$workflow_path" "$query" <<< "$_workflows")
 
     case "${#workflow_ids[@]}" in
-        0)  [[ -n "$workflow_path" ]] &&
-                what="path '$workflow_path'" ||
-                what="name '$workflow_name'"
+        0)  [[ -n "$workflow_name" ]] &&
+                what="path '$workflow_name'" ||
+                what="name '$workflow_path'"
             error -ec "$err_argument_value" "The specified workflow $what is not in the repository '$repository'."
             ;;
         1)  workflow_id="${workflow_ids[0]}"
