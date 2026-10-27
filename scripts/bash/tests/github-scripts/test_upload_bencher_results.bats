@@ -59,7 +59,7 @@ _run_upload() {
     run _run_upload "$BATS_TEST_TMPDIR/results" '' \
         --testbed ubuntu-latest --repository vmelamed/vm2.DevOps --event-name push --ref-name main
     assert_success
-    assert_output --partial "The upload to Bencher completed successfully with no alerts."
+    assert_output --partial "were successfully uploaded to bencher.dev."
 
     run cat "$BATS_TEST_TMPDIR/bencher.log"
     assert_output --partial "--project vm2-devops"
@@ -67,6 +67,19 @@ _run_upload() {
     assert_output --partial "--branch main"
     refute_output --partial "--start-point"
     assert_output --partial "--file $BATS_TEST_TMPDIR/results/App.Benchmarks-report-full-compressed.json"
+}
+
+@test "upload-bencher-results: --dry-run shows the bencher command, uploads nothing, and does not claim an upload" {
+    # bencher would fail if it ran: the dry run must not run it, nor depend on its result
+    _make_results_dir "$BATS_TEST_TMPDIR/results"
+    _install_fake_bencher "$BATS_TEST_TMPDIR"
+    run _run_upload "$BATS_TEST_TMPDIR/results" 'FAKE_BENCHER_EXIT=1' \
+        --testbed ubuntu-latest --repository vmelamed/vm2.DevOps --event-name push --ref-name main --dry-run
+    assert_success
+    assert_output --partial "dry-run$ bencher run --project vm2-devops"   # the captured line is shown again
+    assert_output --partial "would have been uploaded"
+    refute_output --partial "successfully uploaded"
+    [[ ! -e $BATS_TEST_TMPDIR/bencher.log ]]                               # the fake bencher never ran
 }
 
 @test "upload-bencher-results: push to a non-main branch forks from main and clones thresholds" {
@@ -160,7 +173,9 @@ _run_upload() {
         --testbed ubuntu-latest --repository vmelamed/vm2.DevOps --event-name push --ref-name main
     assert_failure
     assert_output --partial "Alerts detected: regression"
-    assert_output --partial "Bencher uploaded results but detected threshold alerts."
+    assert_output --partial "but threshold alerts were detected."
+    assert_output --partial "were successfully uploaded to bencher.dev but"           # one line: the warning
+    refute_output --regexp "INFO:.*successfully uploaded"                               # no success line before it
 }
 
 @test "upload-bencher-results: a transport/tool failure (no alert text) reports a hard failure" {
@@ -170,7 +185,8 @@ _run_upload() {
         --testbed ubuntu-latest --repository vmelamed/vm2.DevOps --event-name push --ref-name main
     assert_failure
     assert_output --partial "connection refused"
-    assert_output --partial "Bencher run failed before completing successfully."
+    assert_output --partial "Bencher run failed uploading the benchmark results"
+    refute_output --partial "successfully uploaded"                                     # success is never reported first
 }
 
 @test "upload-bencher-results: fails when the results directory has no matching JSON files" {
