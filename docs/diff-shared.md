@@ -1,6 +1,6 @@
 # Command Line Tool: `diff-shared.sh`
 
-<!-- TOC tocDepth:2..3 chapterDepth:2..6 -->
+<!-- TOC tocDepth:2..4 chapterDepth:2..6 -->
 
 - [Command Line Tool: `diff-shared.sh`](#command-line-tool-diff-sharedsh)
   - [What is it?](#what-is-it)
@@ -41,18 +41,15 @@ template directory `AddNewPackage` the ***source of truth*** (*SoT*) for NuGet p
  > [!NOTE]
  > `diff-shared.sh` **compares, one by one, a set of *files with shared content* (a.k.a. ***target files***) with the
  corresponding *source-of-truth (SoT) files***, and when a target file is missing or differs from its SoT counterpart, it takes
- a configurable action for that file.
+ a configurable action for that file. For example, the actions can be:
 
-For example, the actions can be:
-
-- ask the user if they want to
+- do nothing with the current file
+- ask the user interactively if they want to
   - ignore the differences
   - merge
   - copy the SoT file over the target file
-- ask the user if they want to copy the SoT file over the target file without merging
-- open a merge tool without asking to merge the differences
-- copy without asking
-- etc.
+- copy only the shared part (between the line marker `<<<===` and `===>>>` ) without asking
+- etc. (see [Actions](#actions) below)
 
 The action for each file is specified in:
 
