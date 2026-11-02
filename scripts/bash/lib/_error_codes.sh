@@ -54,7 +54,8 @@ declare -xri err_non_existent_path=20   # Parameter value is a path that does no
 declare -xri err_not_overridden=64      # A function that should be overridden in the calling script (e.g. usage_text()) was not overridden
 declare -xri err_tool_not_found=65      # An external tool (e.g., jq, dotnet, etc.) that the script depends on was not found in the system
 declare -xri err_tool_error=66          # An error occurred while executing an external tool (e.g., git, dotnet, etc.).
-declare -xri err_logic_error=67         # An error occurred in the logic of the script (most likely a bug, invalid state, unexpected condition, etc.)
+declare -xri err_tool_unauthenticated=67 # An external tool is not authenticated (e.g., gh).
+declare -xri err_logic_error=68         # An error occurred in the logic of the script (most likely a bug, invalid state, unexpected condition, etc.)
 
 declare -xri err_not_git_directory=80   # The specified directory is not a directory from a Git repository working tree
 declare -xri err_not_git_root=81        # The specified directory is not a root directory of a Git repository working tree
@@ -104,6 +105,7 @@ declare -rA __error_messages=(
     [$err_not_overridden]="A function that should be overridden in the calling script (e.g. usage_text()) was not overridden."
     [$err_tool_not_found]="An external tool that the script depends on was not found in the system."
     [$err_tool_error]="An error occurred while executing an external tool (e.g., git, dotnet, etc.)."
+    [$err_tool_unauthenticated]="An external tool is not authenticated."
     [$err_logic_error]="An error occurred in the logic of the script (e.g., bug, invalid state, unexpected condition, etc.)"
 
     [$err_not_git_directory]="The specified directory is not in a Git working tree."
