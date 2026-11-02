@@ -6,10 +6,23 @@
 declare -xr common_args_usage
 declare -xr script_name
 
+#---------------------------------------------------------------------------------------------
+# @description Outputs the usage text for this script to stdout.
+#
+# @arg $1 bool Whether to include the long-form help text (switches and environment variables
+#   list).
+#
+# @exitcode success=0: Always.
+#
+# @stdout The usage/help text for this script.
+#
+# @example
+#   usage_text true
+#---------------------------------------------------------------------------------------------
 function usage_text()
 {
-    (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
-    is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1-<missing>})."
+    (( $# ==1 ))                                                                || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
+    is_boolean "$1"                                                             || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1-<missing>})."
     exit_if_has_bugs
 
     local _long_text=$1

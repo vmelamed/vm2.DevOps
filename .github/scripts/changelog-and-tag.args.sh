@@ -6,7 +6,7 @@
 declare -xr script_name
 declare -xr lib_dir
 
-# core constants
+# core lib errors
 declare -xri success
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
@@ -14,9 +14,15 @@ declare -xri err_unknown_argument
 declare -xri err_logic_error
 declare -xri err_argument_value
 
+# core lib constants
 declare -xr ci
 
-# script arguments
+# core lib defaults
+declare -xr default_minver_tag_prefix
+
+# core lib variables
+
+# this script's arguments
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x tag=${TAG:-}
 declare -x reason=${REASON:-}
@@ -34,22 +40,22 @@ function get_arguments()
 
         case "${_option,,}" in
             --tag|-t )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 tag="$1"; shift
                 ;;
 
             --minver-tag-prefix|-p )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 minver_tag_prefix="$1"; shift
                 ;;
 
             --reason|-r )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 reason="$1"; shift
                 ;;
 
             --needs-empty-commit )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 needs_empty_commit="$1"; shift
                 ;;
 
@@ -65,14 +71,23 @@ function get_arguments()
     done
 
     usage_if_requested
+    validate_environment
     validate_arguments
+    exit_if_has_errors
     dump_args
+}
+
+function validate_environment()
+{
+    [[ -n "$GITHUB_REPOSITORY" && -n "$RELEASE_PAT" ]]                          || error -ec "$err_argument_value" "GITHUB_REPOSITORY and/or RELEASE_PAT are not set."
+
+    return "$success"
 }
 
 function validate_arguments()
 {
     # Sanitize inputs
-    validate_semverTagComponents "$minver_tag_prefix" || true
+    validate_semverTagComponents "$minver_tag_prefix"                           || true
 
     # Determine tag type: release or prerelease
     if is_semverReleaseTag "$tag"; then
@@ -87,10 +102,7 @@ function validate_arguments()
 
     is_safe_reason "$reason" || true
 
-    exit_if_has_errors
-
-    [[ -n "${GITHUB_REPOSITORY:-}" && -n "${RELEASE_PAT:-}" ]] ||
-        exit_with_error -ec "$err_argument_value" "GITHUB_REPOSITORY and/or RELEASE_PAT are not set."
+    [[ -n "${GITHUB_REPOSITORY:-}" && -n "${RELEASE_PAT:-}" ]]                  || error -ec "$err_argument_value" "GITHUB_REPOSITORY and/or RELEASE_PAT are not set."
 
     readonly tag
     readonly reason

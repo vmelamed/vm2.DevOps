@@ -4,11 +4,25 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr common_args_usage
 declare -xr script_name
+
+declare -xr common_args_usage
 
 declare -xra allowed_commit_types
 
+#---------------------------------------------------------------------------------------------
+# @description Outputs the usage text for this script to stdout.
+#
+# @arg $1 bool Whether to include the long-form help text (switches and environment variables
+#   list).
+#
+# @exitcode success=0: Always.
+#
+# @stdout The usage/help text for this script.
+#
+# @example
+#   usage_text true
+#---------------------------------------------------------------------------------------------
 function usage_text()
 {
     (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
@@ -49,8 +63,10 @@ Description:
     fix(ui):    correct button alignment on homepage
     chore(ci):  update GitHub Actions workflow
 
-Argument:
-  <base-ref>                        Optional. Git ref to compare against (e.g. origin/main, a SHA, or a tag). If omitted (and
+Options:
+  -r, --repo-dir <repo-directory>   Optional. Specifies a directory from within the repository. If omitted, defaults to the
+                                    current working directory.
+  -b, --base-ref <base-ref>         Optional. Git ref to compare against (e.g. origin/main, a SHA, or a tag). If omitted (and
                                     \$BASE_REF is unset), defaults to the merge-base with the repository's default branch
                                     (origin/HEAD's target), falling back to this branch's own upstream tracking branch only if
                                     no default branch can be discovered -- i.e. commits since this branch diverged, not the

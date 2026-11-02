@@ -2,10 +2,23 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025-2026 Val Melamed
 
-
-declare -xr common_args_usage
 declare -xr script_name
 
+declare -xr common_args_usage
+
+#---------------------------------------------------------------------------------------------
+# @description Outputs the usage text for this script to stdout.
+#
+# @arg $1 bool Whether to include the long-form help text (switches and environment variables
+#   list).
+#
+# @exitcode success=0: Always.
+#
+# @stdout The usage/help text for this script.
+#
+# @example
+#   usage_text true
+#---------------------------------------------------------------------------------------------
 function usage_text()
 {
     (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."

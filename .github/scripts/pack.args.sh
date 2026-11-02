@@ -21,6 +21,11 @@ declare -x reason
 
 declare -xra dump_common_dotnet_args
 
+# variables specific to this script only with initial values from environment variables or defaults
+declare -x package_project=${PACKAGE_PROJECT:-}
+declare -x reason=${REASON:-}
+declare -x build=${BUILD:-false}
+
 function get_arguments()
 {
     local _option
@@ -40,13 +45,13 @@ function get_arguments()
         case "${_option,,}" in
             # get the arguments specific to this script
             --reason|-r )
-                (( $# > 0 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# > 0 ))                                                    || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 reason="$1"
                 shift
                 ;;
 
             --build|-b )
-                (( $# > 0 )) || usage -ec "$err_missing_argument" "Missing boolean value for ${_option,,}"
+                (( $# > 0 ))                                                    || usage -ec "$err_missing_argument" "Missing boolean value for ${_option,,}"
                 build="$1"
                 shift
                 ;;
@@ -65,7 +70,9 @@ function get_arguments()
             -*) usage -ec "$err_unknown_argument" "Unknown option: $_option"
                 ;;
 
-            * ) [[ -z $package_project ]] || usage -ec "$err_too_many_arguments" "Multiple package projects specified. Unknown option: $_option"
+            * ) [[ -z $package_project ||
+                   $package_project == "$PACKAGE_PROJECT" ||
+                   $package_project == "$_option" ]]                            || usage -ec "$err_too_many_arguments" "Multiple package projects specified. Unknown option: $_option"
                 package_project="$_option"
                 ;;
         esac
@@ -73,12 +80,25 @@ function get_arguments()
 
     usage_if_requested
     validate_arguments
+    exit_if_has_errors
     dump_args
 }
 
 function validate_arguments()
 {
-    #  TODO: add validation here
+    package_project=${package_project:-}
+    # validate the values of the variables common for many vm2.DevOps scripts,
+    # usually set from CLI arguments, environment variables, or defaults
+    is_safe_existing_file "$package_project"                                    || true
+    [[ $package_project == *.csproj ]]                                          || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)."
+    is_safe_boolean "$build"                                                    || true
+    is_safe_reason "$reason"                                                    || true
+    sanitize_common_dotnet_args "$package_project"                              || true
+
+    readonly package_project
+    readonly build
+    readonly reason
+
     return "$success"
 }
 
@@ -92,8 +112,7 @@ function dump_args()
         --quiet
         --header "Arguments for $script_name:"
 
-        package_project
-        build
+        package
         reason
 
         "${dump_common_dotnet_args[@]}"

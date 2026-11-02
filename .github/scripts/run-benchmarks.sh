@@ -13,51 +13,29 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
+# core lib
 source "$lib_dir/gh_core.sh"
 
-# Declare variables defined in the core library.
+# core lib exit codes
+declare -xri success
+declare -xri err_tool_error
+
+# core lib constants
 declare -xr check_em
 
-declare -xr ci
-declare -x _ignore
-
-# Declare error codes defined in the core library
-declare -xri success
-declare -xri failure
-declare -xri err_tool_error
-declare -xri err_logic_error
-
-# Define CI common variables passed in as common dotnet arguments
-declare -x preprocessor_symbols
-declare -x configuration
-declare -x framework
-declare -x runtime
+# core lib variables - dotnet
 declare -x artifacts
-declare -x minver_tag_prefix
-declare -x minver_prerelease_id
-declare -x gh_nuget_username
-declare -x gh_nuget_password
 
-# parameters specific to this script only with initial values from environment variables or defaults
-declare -x benchmark_project=""
-
+# this script's components
 source "$script_dir/run-benchmarks.usage.sh"
 source "$script_dir/run-benchmarks.args.sh"
 
+# this script's arguments
 get_arguments "$@"
-! is_verbose || dump_args "--force"
-benchmark_project="${benchmark_project:-"${BENCHMARK_PROJECT:-}"}"
+declare -x benchmark_project=""
 
-# validate input parameters
-is_safe_existing_path "$benchmark_project"   || true
-[[ $benchmark_project == *.csproj ]]         || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)."
-
-exit_if_has_errors
-
-sanitize_common_dotnet_args "$benchmark_project" || true
-
-artifacts_benchmarks="$artifacts/benchmarks"
-results_dir="$artifacts_benchmarks/results"
+declare -r artifacts_benchmarks="$artifacts/benchmarks"
+declare -r results_dir="$artifacts_benchmarks/results"
 
 dump_vars --force --quiet \
     --header "Benchmarks output directories and files:" \

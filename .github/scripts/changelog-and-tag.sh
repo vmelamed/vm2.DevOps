@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025-2026 Val Melamed
 
@@ -12,25 +13,31 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
+# core lib
 source "$lib_dir/gh_core.sh"
 
-# core constants
+# core lib exit codes
 declare -xri err_argument_value
 declare -xri err_not_found
 
+# core lib constants
 declare -xr check_em
-
 declare -xr ci
-
-declare -xr default_minver_tag_prefix
+declare -xr key_artifacts_path
 declare -xr semverTagReleaseRegex
 
+# core lib defaults
+declare -xr default_minver_tag_prefix
+
+# core lib variables
+declare -x _ignore
+
+# this script's components
 source "$script_dir/changelog-and-tag.usage.sh"
 source "$script_dir/changelog-and-tag.args.sh"
 
+# this script's arguments
 get_arguments "$@"
-
-# script arguments
 declare -xr tag
 declare -xr reason
 declare -xr minver_tag_prefix
@@ -69,10 +76,9 @@ if [[ ! -s "$cliff_config" ]]; then
     warning "Missing $cliff_config; skipping changelog update."
 else
     # Fail fast: changelog bootstrapping should be explicit in repo setup.
-    [[ -f CHANGELOG.md ]] ||
-        exit_with_error -ec "$err_not_found" \
-                  "Missing CHANGELOG.md in repo root. git-cliff uses --prepend and requires an existing file." \
-                  "Create CHANGELOG.md (can be an empty file) and rerun."
+    [[ -f CHANGELOG.md ]]                                                       || exit_with_error -ec "$err_not_found" \
+                                                                                                       "Missing CHANGELOG.md in repo root. git-cliff uses --prepend and requires an existing file." \
+                                                                                                       "Create CHANGELOG.md (can be an empty file) and rerun."
 
     # Determine the commit range
     if [[ "$is_release" == true ]]; then
@@ -122,9 +128,7 @@ if [[ "$is_prerelease" == true ]]; then
     tag_message="Prerelease $tag"
 fi
 
-execute git tag -a "$tag" -m "$tag_message" -m "Reason: $reason" ||
-    exit_with_error -ec "$err_argument_value" "Failed to create tag $tag (does it already exist?)"
-
+execute git tag -a "$tag" -m "$tag_message" -m "Reason: $reason"                || exit_with_error -ec "$err_argument_value" "Failed to create tag $tag (does it already exist?)"
 execute git push origin "$tag"
 
 info "$check_em Tag $tag created and pushed"

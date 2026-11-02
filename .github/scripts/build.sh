@@ -13,68 +13,37 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
+# core lib
 source "$lib_dir/gh_core.sh"
 
-# Declare variables defined in the core library.
+# core lib exit codes
+
+# core lib constants
+
+# core lib defaults
+
+# core lib variables
 declare -x _ignore
 
-# Declare error codes defined in the core library
-declare -xri success     # The command completed successfully.
-declare -xri failure     # A general, unspecified error occurred.
-declare -xri err_tool_error
-declare -xri err_not_found
+# core lib constants
+declare -xr key_artifacts_path
 
-# Define CI common variables passed in as common dotnet arguments
-declare -x preprocessor_symbols
-declare -x minver_tag_prefix
-declare -x minver_prerelease_id
-declare -x gh_nuget_username
-declare -x gh_nuget_password
-declare -x configuration
-declare -x framework
-declare -x runtime
-
-# parameters specific to this script only with initial values from environment variables or defaults
-declare -x build_project=""
-
+# this script's components
 source "$script_dir/build.args.sh"
 source "$script_dir/build.usage.sh"
 
+# this script's arguments
 get_arguments "$@"
-build_project=${build_project:-"${BUILD_PROJECT:-}"}
-
-# sanitize inputs
-if [[ -z $build_project ]]; then
-    declare -a projects=()
-    declare -A __build_project_state=()
-    save_state __build_project_state
-    set_null_glob true
-
-        # search for *.slnx|*.sln|*.csproj file in the current directory
-        projects=(./*.slnx)
-        (( ${#projects[@]} )) || projects=(./*.sln)
-        (( ${#projects[@]} )) || projects=(./*.csproj)
-
-    restore_state __build_project_state
-
-    (( ${#projects[@]} > 0 ))  || exit_with_error -ec "$err_not_found" "No build project (*.slnx, *.sln, *.csproj) was specified or found in the current directory."
-    build_project=${projects[0]:-}
-    (( ${#projects[@]} == 1 )) || warning "Multiple projects found: (${projects[*]}), using the first one: '$build_project'."
-    trace "Auto-detected build project: $build_project"
-fi
-is_safe_valid_path "$build_project"
-sanitize_common_dotnet_args "$build_project"
-exit_if_has_errors
-
-# freeze the parameters
 declare -xr build_project
+
+# this script's variables
 declare -A build_info=()
 
-update_nuget_sources_with_github_vm2     || exit_with_error -ec $? "Updating the NuGet sources with GitHub packages from vm2 failed."
-dotnet_clean "$build_project"            || exit_with_error -ec $? "Cleaning the build project failed."
-dotnet_restore "$build_project"          || exit_with_error -ec $? "Restoring the build project failed."
-dotnet_build "$build_project" build_info || exit_with_error -ec $? -sd 3 "Building the build project failed."
+update_nuget_sources_with_github_vm2                                                            || exit_with_error -ec $? "Updating the NuGet sources with GitHub packages from vm2 failed."
+dotnet_clean "$build_project"                                                                   || exit_with_error -ec $? "Cleaning the build project failed."
+dotnet_restore "$build_project"                                                                 || exit_with_error -ec $? "Restoring the build project failed."
+dotnet_build "$build_project" build_info                                                        || exit_with_error -ec $? -sd 3 "Building the build project failed."
 
 # Expose the resolved ArtifactsPath (from Directory.Build.props, already captured by dotnet_build() above) so callers
-# never need to hardcode or duplicate the "artifacts" default themselves.
+# would never need to hardcode or duplicate the "artifacts" default themselves.
 printf "artifacts-path=%s\n" "${build_info[$key_artifacts_path]:-}" | to_output

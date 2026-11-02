@@ -4,18 +4,35 @@
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
 declare -xr script_name
-declare -xr lib_dir
+declare -xr script_dir
 
+# core lib exit codes
 declare -xri success
 declare -xri err_missing_argument
+declare -xri err_argument_value
 declare -xri err_unknown_argument
 declare -xri err_logic_error
+declare -xri err_tool_error
+declare -xri err_too_many_arguments
+declare -xri err_tool_not_found
 
+# core lib constants
 declare -xr ci
+declare -xr key_owner
 
-declare -x owner
-declare -xi repeat
-declare -x workflow
+# core lib defaults
+
+# core lib variables
+declare -x _ignore
+
+# this script's constants
+declare -xri default_repeat=10
+declare -xr default_workflow="RebuildBenchHistory.yaml"
+
+# this scripts arguments
+declare -x owner=""
+declare -xi repeat=${REPEAT:-$default_repeat}
+declare -x workflow=$default_workflow
 
 function get_arguments()
 {
@@ -27,17 +44,20 @@ function get_arguments()
 
         case "${_option,,}" in
             --owner|-o )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 owner="$1"; shift
                 ;;
 
             --repeat|-n )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 repeat="$1"; shift
                 ;;
 
             --workflow|-w )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                [[ -z $workflow ||
+                      $workflow == "$default_workflow"  ||
+                      $workflow == "$_option" ]]                                || usage -ec "$err_too_many_arguments" "Multiple workflows specified. Unknown option: $_option"
                 workflow="$1"; shift
                 ;;
 
@@ -53,13 +73,47 @@ function get_arguments()
     done
 
     usage_if_requested
+    validate_environment
     validate_arguments
+    exit_if_has_errors
     dump_args
+}
+
+function validate_environment()
+{
+    # Authentication:
+    #   - in a workflow the caller exports the BENCH_DISPATCH_PAT secret as GH_TOKEN;
+    #   - locally, export BENCH_DISPATCH_PAT yourself (it is an env var, NOT a repo secret) or rely on the ambient 'gh auth' credentials.
+    [[ -z "${BENCH_DISPATCH_PAT:-}" ]] || export GH_TOKEN="${GH_TOKEN:-$BENCH_DISPATCH_PAT}"
+    [[ -n "${GH_TOKEN:-}" ]]                                                    || warning "Neither \$GH_TOKEN nor \$BENCH_DISPATCH_PAT is set; relying on the ambient 'gh auth' credentials."
+
+    is_tool_present gh                                                          || { error -ec "$err_tool_error" "The GitHub CLI 'gh' was not found on PATH."; return "$success"; }
+    gh auth status &> "$_ignore"                                                || error -ec "$err_tool_not_found" "'gh' is not authenticated. Run 'gh auth login' first."
 }
 
 function validate_arguments()
 {
-    #  TODO: add validation here
+    # Resolve the GitHub owner: --owner, else $GITHUB_REPOSITORY_OWNER (set by Actions), else derive from this repo's remote.
+    [[ -n "$owner" ]] || owner="${GITHUB_REPOSITORY_OWNER:-}"
+    if [[ -z "$owner" ]]; then
+        local self_root
+
+        root_working_tree "$script_dir" self_root || true
+        if [[ -n "${self_root:-}" ]]; then
+            local -A self_state=()
+            get_repo_state "$self_root" self_state false || true
+            owner="${self_state[$key_owner]:-}"
+        fi
+    fi
+
+    is_integer repeat                                                           || error -ec "$err_argument_value" "repeat must be a positive integer (got '$repeat')."
+    (( repeat >= 1 ))                                                           || error -ec "$err_argument_value" "repeat must be a positive integer (got '$repeat')."
+    [[ -n "$owner" ]]                                                           || error -ec "$err_argument_value" "Could not determine the GitHub owner. Pass --owner or set \$GITHUB_REPOSITORY_OWNER."
+
+    readonly owner
+    readonly repeat
+    readonly workflow
+
     return "$success"
 }
 

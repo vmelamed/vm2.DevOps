@@ -3,12 +3,25 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr common_args_usage
 declare -xr script_name
 
+declare -xr common_args_usage
 declare -xr common_dotnet_parameters
 declare -xr common_dotnet_vars
 
+#---------------------------------------------------------------------------------------------
+# @description Outputs the usage text for this script to stdout.
+#
+# @arg $1 bool Whether to include the long-form help text (switches and environment variables
+#   list).
+#
+# @exitcode success=0: Always.
+#
+# @stdout The usage/help text for this script.
+#
+# @example
+#   usage_text true
+#---------------------------------------------------------------------------------------------
 function usage_text()
 {
     (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."

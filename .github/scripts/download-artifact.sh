@@ -12,13 +12,10 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
+# core lib
 source "$lib_dir/gh_core.sh"
 
-# core constants
-declare -xr check_em
-
-declare -x _ignore
-
+# core lib exit codes
 declare -xri failure
 declare -xri err_missing_argument
 declare -xri err_argument_type
@@ -27,18 +24,24 @@ declare -xri err_argument_value
 declare -xri err_tool_error
 declare -xri err_logic_error
 
-# script arguments
-declare -x artifact_name
-declare -x artifacts
-declare -x repository
-declare -x workflow_id
-declare -x workflow_name
-declare -x workflow_path
+# core lib constants
+declare -xr check_em
 
+# core lib variables
+declare -x _ignore
+
+# this script's components
 source "$script_dir/download-artifact.args.sh"
 source "$script_dir/download-artifact.usage.sh"
 
+# this script's arguments
 get_arguments "$@"
+declare -xr artifact_name
+declare -xr artifacts
+declare -xr repository
+declare -xr workflow_id
+declare -xr workflow_name
+declare -xr workflow_path
 
 [[ -n $repository ]] ||
     repository=$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>"$_ignore") ||

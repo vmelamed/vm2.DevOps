@@ -12,22 +12,28 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
+# core lib
 source "$lib_dir/gh_core.sh"
 
-# core constants
-declare -x _ignore
-declare -xr semverTagReleaseRegex
-declare -xr semverTagPrereleaseRegex
-
+# core lib exit codes
 declare -xri err_tool_error
 declare -xri err_argument_value
 
+# core lib constants
+declare -xr semverTagReleaseRegex
+declare -xr semverTagPrereleaseRegex
+
+# core lib defaults
+
+# core lib variables
+declare -x _ignore
+
+# this script's components
 source "$script_dir/compute-prerelease-version.usage.sh"
 source "$script_dir/compute-prerelease-version.args.sh"
 
+# this script's arguments
 get_arguments "$@"
-
-# script arguments
 declare -xr minver_tag_prefix
 declare -xr minver_prerelease_id
 declare -xr reason
@@ -36,16 +42,6 @@ declare -xr reason
 prerelease_prefix="${minver_prerelease_id%.[0-9]*}"
 declare -xr prerelease_prefix
 trace "Prerelease prefix: $prerelease_prefix (from minver_prerelease_id: $minver_prerelease_id)"
-
-git fetch --tags --force
-
-# detect if the head is already tagged
-head_tag=$(git tag --points-at HEAD)
-if [[ -n $head_tag ]]; then
-    error -ec "$err_tool_error" "The HEAD is already tagged with '$head_tag'. A prerelease requires at least one new commit on main."
-fi
-
-exit_if_has_errors
 
 # ============================================================================
 # Find the latest stable and prerelease tags

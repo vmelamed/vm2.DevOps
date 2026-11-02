@@ -4,20 +4,20 @@
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
 declare -xr script_name
-declare -xr lib_dir
 
-# core constants
+# core lib exit codes
 declare -xri success
 declare -xri err_missing_argument
-declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
 declare -xri err_logic_error
 
+# core lib constants
 declare -xr ci
 
+# core lib defaults
 declare -xr default_minver_tag_prefix
 
-# parameters with initial values from environment variables or defaults
+# this scripts arguments
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x reason=${REASON:-"release build"}
 
@@ -31,12 +31,12 @@ function get_arguments()
 
         case "${_option,,}" in
             --minver-tag-prefix|-mp )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 minver_tag_prefix="$1"; shift
                 ;;
 
             --reason|-r )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 reason="$1"; shift
                 ;;
 
@@ -53,16 +53,15 @@ function get_arguments()
 
     usage_if_requested
     validate_arguments
+    exit_if_has_errors
     dump_args
 }
 
 function validate_arguments()
 {
     # Sanitize inputs to prevent injection attacks
-    validate_semverTagComponents "$minver_tag_prefix" || true
-    is_safe_reason "$reason" || true
-
-    exit_if_has_errors
+    validate_semverTagComponents "$minver_tag_prefix"                           || true
+    is_safe_reason "$reason"                                                    || true
 
     readonly minver_tag_prefix
     readonly reason

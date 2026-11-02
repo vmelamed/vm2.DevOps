@@ -5,27 +5,33 @@
 
 declare -xr script_name
 
+# core lib exit codes
 declare -xri success
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
 declare -xri err_logic_error
 
+# core lib constants
 declare -xr ci
-
-# parameters specific to this script only with initial values from environment variables or defaults
-declare -x test_project
-declare -xi min_coverage_pct
-declare -xi min_branch_coverage_pct
-
 declare -xra dump_common_dotnet_args
+
+# this scripts defaults
+declare -xri default_min_line_coverage_pct=80
+declare -xri default_min_branch_coverage_pct=75
+declare -xri default_min_method_coverage_pct=80
+
+# this scripts arguments
+declare -x  test_project=${test_project:-"${TEST_PROJECT:-}"}
+declare -x  min_line_coverage_pct=${MIN_COVERAGE_PCT:-"$default_min_line_coverage_pct"}
+declare -xi min_branch_coverage_pct
+declare -xi min_method_coverage_pct
 
 function get_arguments()
 {
     local _option
 
     while (( $# > 0 )); do
-        # get the option and convert it to lower case
         _option="$1"
         shift
         get_common_arg "${_option,,}" && continue
@@ -38,10 +44,9 @@ function get_arguments()
         case "${_option,,}" in
             # get the arguments specific to this script
             --min-coverage-pct|-min )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                min_coverage_pct=$1
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                min_line_coverage_pct=$1
                 shift
-                min_coverage_pct=$((min_coverage_pct + 0))  # ensure it's an integer
                 ;;
 
             # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
@@ -58,7 +63,9 @@ function get_arguments()
             -*) usage -ec "$err_unknown_argument" "Unknown option: $_option"
                 ;;
 
-            * ) [[ -z $test_project ]] || usage -sd 3 -ec "$err_too_many_arguments" "Multiple test projects specified. Unknown option: $_option"
+            * ) [[ -z $test_project ||
+                   $test_project == "$TEST_PROJECT"  ||
+                   $test_project == "$_option" ]]                               || usage -sd 3 -ec "$err_too_many_arguments" "Multiple test projects specified. Unknown option: $_option"
                 test_project="$_option"
                 ;;
         esac
@@ -66,12 +73,30 @@ function get_arguments()
 
     usage_if_requested
     validate_arguments
+    exit_if_has_errors
     dump_args
 }
 
 function validate_arguments()
 {
-    #  TODO: add validation here
+    # validate the values of the variables common for many vm2.DevOps scripts,
+    # usually set from CLI arguments, environment variables, or defaults
+    is_safe_existing_file "$test_project"                                       || true
+    [[ $test_project == *.csproj ]]                                             || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)."
+    is_safe_min_coverage_pct "$min_line_coverage_pct"                           || true
+    sanitize_common_dotnet_args "$test_project"                                 || true
+
+    # if no MIN_BRANCH_COVERAGE_PCT or MIN_METHOD_COVERAGE_PCT derive them from line coverage unless
+    min_branch_coverage_pct=${MIN_BRANCH_COVERAGE_PCT:-$((min_line_coverage_pct - 5))}
+    min_method_coverage_pct=${MIN_METHOD_COVERAGE_PCT:-$((min_line_coverage_pct))}
+
+    declare -xi min_line_coverage_pct
+
+    readonly test_project
+    readonly min_line_coverage_pct
+    readonly min_branch_coverage_pct
+    readonly min_method_coverage_pct
+
     return "$success"
 }
 
@@ -86,7 +111,7 @@ function dump_args()
         --header "Arguments for $script_name:"
 
         test_project
-        min_coverage_pct
+        min_line_coverage_pct
 
         "${dump_common_dotnet_args[@]}"
 

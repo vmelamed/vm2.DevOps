@@ -34,32 +34,14 @@ declare -x minver_prerelease_id
 declare -x gh_nuget_username
 declare -x gh_nuget_password
 
-# variables specific to this script only with initial values from environment variables or defaults
-declare -x package_project=""
-declare -x reason=${REASON:-}
-declare -x build=${BUILD:-false}
+declare -x package_project
+declare -x reason
+declare -x build
 
 source "$script_dir/pack.usage.sh"
 source "$script_dir/pack.args.sh"
 
 get_arguments "$@"
-package_project=${package_project:-"${PACKAGE_PROJECT:-}"}
-
-# validate the values of the variables common for many vm2.DevOps scripts,
-# usually set from CLI arguments, environment variables, or defaults
-is_safe_existing_file "$package_project"       || true
-[[ $package_project == *.csproj ]]             || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)."
-is_safe_reason "$reason"                       || true
-is_safe_boolean "$build"                       || true
-exit_if_has_errors
-
-sanitize_common_dotnet_args "$package_project" || true
-exit_if_has_errors
-
-# freeze the parameters
-declare -xr package_project
-# declare -xr reason
-declare -xr build
 
 declare -x pack_exec_path
 get_target_path "$package_project" pack_exec_path
@@ -69,13 +51,13 @@ declare -xr pack_exec_path
 # project yet -- e.g. --skip-build-cache callers (template packages) that never downloaded a prior build.
 if $build || [[ ! -s $pack_exec_path ]]; then
     [[ -s $pack_exec_path ||
-       $package_project == vm2.Templates* ]] || warning "Build output '$pack_exec_path' was not found in the artifacts directory. Building the project before packing..."
+       $package_project == vm2.Templates* ]]                                    || warning "Build output '$pack_exec_path' was not found in the artifacts directory. Building the project before packing..."
     # The templates do not have a build phase, so it is natural that the build output would not exist.
-    update_nuget_sources_with_github_vm2   || exit_with_error -ec $? "Updating the NuGet sources with GitHub packages from vm2 failed."
-    dotnet_clean "$package_project"        || exit_with_error -ec $? "Cleaning the build project failed."
-    dotnet_restore "$package_project"      || exit_with_error -ec $? "Restoring the build project failed."
-    dotnet_build "$package_project"        || exit_with_error -ec $? -sd 3 "Building the build project failed."
-    [[ -s $pack_exec_path ]]               || exit_with_error -ec "$err_tool_error" -sd 3 "After building, the output '$pack_exec_path' was still NOT FOUND."
+    update_nuget_sources_with_github_vm2                                        || exit_with_error -ec $? "Updating the NuGet sources with GitHub packages from vm2 failed."
+    dotnet_clean "$package_project"                                             || exit_with_error -ec $? "Cleaning the build project failed."
+    dotnet_restore "$package_project"                                           || exit_with_error -ec $? "Restoring the build project failed."
+    dotnet_build "$package_project"                                             || exit_with_error -ec $? -sd 3 "Building the build project failed."
+    [[ -s $pack_exec_path ]]                                                    || exit_with_error -ec "$err_tool_error" -sd 3 "After building, the output '$pack_exec_path' was still NOT FOUND."
 fi
 
 declare -A _pack_properties=()

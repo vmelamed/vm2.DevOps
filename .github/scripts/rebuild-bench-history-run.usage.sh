@@ -2,14 +2,27 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025-2026 Val Melamed
 
-
-declare -xr common_args_usage
 declare -xr script_name
 
+declare -xr common_args_usage
+
+#---------------------------------------------------------------------------------------------
+# @description Outputs the usage text for this script to stdout.
+#
+# @arg $1 bool Whether to include the long-form help text (switches and environment variables
+#   list).
+#
+# @exitcode success=0: Always.
+#
+# @stdout The usage/help text for this script.
+#
+# @example
+#   usage_text true
+#---------------------------------------------------------------------------------------------
 function usage_text()
 {
-    (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
-    is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1-<missing>})."
+    (( $# ==1 ))                                                                || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
+    is_boolean "$1"                                                             || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1-<missing>})."
     exit_if_has_bugs
 
     local _long_text=$1
@@ -28,8 +41,9 @@ never fails on an alert. All parameters are optional if the corresponding enviro
 arguments take precedence.
 
 Arguments:
-  <bm-project>      The path to the benchmark project file.
-                                Initial value from \$BENCHMARK_PROJECT environment variable (see below)
+  <bm-project>                  The path to the benchmark project file.
+                                Initial value from \$BENCHMARK_PROJECT environment variable (see below), If not present the
+                                script will search fore all benchmark projects in the repo's directory 'benchmarks'.
 
 Options:
   -n, --repeat <number>         How many independent runs to record (positive integer)
@@ -51,7 +65,8 @@ Options:
                                 Initial value from \$BENCHER_ADAPTER or default 'c_sharp_dot_net'
 
 Environment Variables:
-  BENCHER_API_TOKEN             Bencher.dev API token used to upload results (required)
+  BENCHER_API_TOKEN             Bencher.dev API token used to upload results (REQUIRED). Note that there is no corresponding
+                                argument and the environment variable must be set.
   BENCHMARK_PROJECT             Path to the benchmark project file
   REPEAT                        Number of independent runs to record
   PREPROCESSOR_SYMBOLS          Pre-processor symbols to define when building the benchmark project
