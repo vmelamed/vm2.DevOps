@@ -6,20 +6,24 @@
 declare -xr script_name
 declare -xr lib_dir
 
-# core constants
+# core lib exit codes
 declare -xri success
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
 declare -xri err_logic_error
+declare -xri err_tool_error
 
+# core lib constants
 declare -xr ci
 
-# default constants for parameters
-declare -xr default_minver_prerelease_id
+# core lib defaults
 declare -xr default_minver_tag_prefix
+declare -xr default_minver_prerelease_id
 
-# script arguments
+# core lib variables
+
+# this script's arguments
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}
 declare -x reason=${REASON:-"pre-release build"}
@@ -34,17 +38,17 @@ function get_arguments()
 
         case "${_option,,}" in
             --minver-tag-prefix|-mp )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 minver_tag_prefix="$1"; shift
                 ;;
 
             --minver-prerelease-id|-mi )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 minver_prerelease_id="$1"; shift
                 ;;
 
             --reason|-r )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 reason="$1"; shift
                 ;;
 
@@ -60,16 +64,27 @@ function get_arguments()
     done
 
     usage_if_requested
+    validate_environment
     validate_arguments
+    exit_if_has_errors
     dump_args
+}
+
+function validate_environment()
+{
+    git fetch --tags --force
+
+    # detect if the head is already tagged
+    head_tag=$(git tag --points-at HEAD)
+    [[ -z $head_tag ]]                                                          || error -ec "$err_tool_error" "The HEAD is already tagged with '$head_tag'. A prerelease requires at least one new commit on main."
+
+    return "$success"
 }
 
 function validate_arguments()
 {
-    validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
+    validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id"   || true
     is_safe_reason "$reason" || true
-
-    exit_if_has_errors
 
     readonly minver_tag_prefix
     readonly minver_prerelease_id

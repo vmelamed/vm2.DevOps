@@ -14,25 +14,25 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
+# core lib
 source "$lib_dir/gh_core.sh"
 
-# Declare variables defined in the core library.
-declare -xr ci
-declare -x _ignore
-
-# Declare error codes defined in the core library
+# core lib exit codes
 declare -xri success
 declare -xri failure
 declare -xri err_tool_error
 declare -xri err_logic_error
 declare -xri err_unknown_argument
 
-# define default constants specific for this script only
-declare -xri default_min_coverage_pct=80
-declare -xri default_min_branch_coverage_pct=75
-declare -xri default_min_method_coverage_pct=80
+# core lib constants
+declare -xr ci
 
-# Define CI common variables passed in as common dotnet arguments
+# core lib defaults
+
+# core lib variables
+declare -x _ignore
+
+# core lib variables - dotnet
 declare -x preprocessor_symbols
 declare -x configuration
 declare -x framework
@@ -43,33 +43,25 @@ declare -x minver_prerelease_id
 declare -x gh_nuget_username
 declare -x gh_nuget_password
 
-# parameters specific to this script only with initial values from environment variables or defaults
-declare -x test_project=""
-declare -xi min_coverage_pct=${MIN_COVERAGE_PCT:-"$default_min_coverage_pct"}
-declare -xi min_branch_coverage_pct=${MIN_BRANCH_COVERAGE_PCT:-"$default_min_branch_coverage_pct"}
-declare -xi min_method_coverage_pct=${MIN_METHOD_COVERAGE_PCT:-"$default_min_method_coverage_pct"}
-
+# this script's components
 source "$script_dir/run-tests.usage.sh"
 source "$script_dir/run-tests.args.sh"
 
+# this script's variables
 get_arguments "$@"
-! is_verbose || dump_args "--force"
-test_project=${test_project:-"${TEST_PROJECT:-}"}
-
-# validate the values of the variables common for many vm2.DevOps scripts,
-# usually set from CLI arguments, environment variables, or defaults
-is_safe_existing_file "$test_project"        || true
-[[ $test_project == *.csproj ]]              || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)."
-is_safe_min_coverage_pct "$min_coverage_pct" || true
-sanitize_common_dotnet_args "$test_project"  || true
-exit_if_has_errors
+declare -xr test_project
+declare -xri min_line_coverage_pct
+declare -xri min_branch_coverage_pct
+declare -xri min_method_coverage_pct
 
 # other script specific variables
-# Derive the branch-coverage threshold from the line-coverage threshold, unless the caller
-# explicitly set $MIN_BRANCH_COVERAGE_PCT.
-[[ -n ${MIN_BRANCH_COVERAGE_PCT:-} ]] || min_branch_coverage_pct=$((min_coverage_pct - 5))
+declare test_exec_path
+get_target_path "$test_project" test_exec_path
+trace "Expecting test executable: $test_exec_path"
+
 test_name=$(basename "${test_project}" .csproj)                                 # the base name of the test project (without the path and file extension)
 test_dir=$(realpath -e "${test_project%/*}")                                    # the absolute path to the test project directory
+
 declare repo_root
 root_working_tree "$test_dir" repo_root || true
 test_config_path="$repo_root/testconfig.json"
@@ -82,11 +74,26 @@ if [[ ! -s "$coverage_settings_path" ]]; then
     error -ec "$err_logic_error" "Coverage settings file not found at: $coverage_settings_path"
 fi
 
+exit_if_has_errors
+
 artifacts_tests_dir=$(realpath -m "$artifacts/tests")
 artifacts_test_dir="$artifacts_tests_dir/$test_name"
 coverage_source_path="$artifacts_test_dir/coverage.cobertura.xml"              # path to the raw coverage file      ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/coverage.cobertura.xml
 coverage_reports_dir="$artifacts_test_dir/reports"                             # directory for coverage reports     ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/reports
 coverage_files="$artifacts_tests_dir/*/coverage.cobertura.xml"
+
+# Freeze the variables
+readonly test_exec_path
+readonly test_name
+readonly test_dir
+readonly artifacts_tests_dir
+readonly test_config_path
+readonly artifacts_test_dir
+readonly coverage_source_path
+readonly coverage_settings_path
+readonly coverage_reports_dir
+# shellcheck disable=SC2034 # coverage_files appears unused. Verify use (or export if used externally).
+readonly coverage_files
 
 dump_vars --force --quiet \
     --header "Test output directories and files:" \
@@ -96,21 +103,6 @@ dump_vars --force --quiet \
     coverage_source_path \
     coverage_reports_dir \
     coverage_files
-
-exit_if_has_errors
-
-# Freeze the variables
-declare -xr test_project
-declare -xr min_coverage_pct
-declare -xr test_name
-declare -xr test_dir
-declare -xr test_config_path
-declare -xr artifacts_tests_dir
-declare -xr artifacts_test_dir
-declare -xr coverage_source_path
-declare -xr coverage_settings_path
-declare -xr coverage_files
-declare -xr coverage_reports_dir
 
 if [[ -d "$artifacts_test_dir" && -n "$(ls -A "$artifacts_test_dir")" ]]; then
     if [[ -n "${CI:-}" ]]; then
@@ -145,11 +137,6 @@ if [[ -d "$artifacts_test_dir" && -n "$(ls -A "$artifacts_test_dir")" ]]; then
         esac
     fi
 fi
-
-declare -x test_exec_path
-get_target_path "$test_project" test_exec_path
-declare -xr test_exec_path
-trace "Expecting test executable: $test_exec_path"
 
 exit_if_has_errors
 
@@ -220,7 +207,7 @@ reportgenerator_command+=(
     "-reports:$coverage_source_path"
     "-targetdir:$coverage_reports_dir"
     "-reporttypes:TextSummary,html_dark,MarkdownSummaryGithub"
-    "minimumCoverageThresholds:lineCoverage=$min_coverage_pct"
+    "minimumCoverageThresholds:lineCoverage=$min_line_coverage_pct"
     "minimumCoverageThresholds:branchCoverage=$min_branch_coverage_pct"
     "minimumCoverageThresholds:methodCoverage=$min_method_coverage_pct"
 )

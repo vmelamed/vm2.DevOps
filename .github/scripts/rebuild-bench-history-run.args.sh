@@ -4,27 +4,41 @@
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
 declare -xr script_name
-declare -xr lib_dir
 
+# core lib exit codes
 declare -xri success
+declare -xri err_argument_value
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
 declare -xri err_logic_error
+declare -xri err_tool_not_found
 
+# core lib constants
+
+# core lib defaults
+declare -xr default_minver_tag_prefix
+
+# core lib variables
 declare -xr ci
-
-declare -x benchmark_project
-declare -xi repeat
-declare -x preprocessor_symbols
-declare -x minver_tag_prefix
-declare -x minver_prerelease_id
-declare -x bencher_project
-declare -x bencher_testbed
-declare -x bencher_branch
-declare -x bencher_adapter
-
 declare -xra dump_common_dotnet_args
+
+# this scripts constants
+declare -xri default_repeat=10
+declare -xr default_bencher_branch="main"
+declare -xr default_bencher_adapter="c_sharp_dot_net"
+
+# this scripts arguments
+declare -xi repeat=${REPEAT:-$default_repeat}
+declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
+declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
+declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-}
+declare -x bencher_project=${BENCHER_PROJECT:-}
+declare -x bencher_testbed=${BENCHER_TESTBED:-}
+declare -x bencher_branch=${BENCHER_BRANCH:-$default_bencher_branch}
+declare -x bencher_adapter=${BENCHER_ADAPTER:-$default_bencher_adapter}
+declare -x benchmark_project=${BENCHMARK_PROJECT:-}
+declare -xa benchmark_projects=()
 
 function get_arguments()
 {
@@ -36,42 +50,42 @@ function get_arguments()
 
         case "${_option,,}" in
             --repeat|-n )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 repeat="$1"; shift
                 ;;
 
             --define|-d )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 preprocessor_symbols="$1"; shift
                 ;;
 
             --minver-tag-prefix|-mp )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 minver_tag_prefix="$1"; shift
                 ;;
 
             --minver-prerelease-id|-mi )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 minver_prerelease_id="$1"; shift
                 ;;
 
             --bencher-project|-bp )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 bencher_project="$1"; shift
                 ;;
 
             --bencher-testbed|-tb )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 bencher_testbed="$1"; shift
                 ;;
 
             --bencher-branch|-br )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 bencher_branch="$1"; shift
                 ;;
 
             --bencher-adapter|-ad )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 bencher_adapter="$1"; shift
                 ;;
 
@@ -84,20 +98,64 @@ function get_arguments()
             -*) usage -ec "$err_unknown_argument" "Unknown option: $_option"
                 ;;
 
-            *)  [[ -z $benchmark_project ]] || usage -ec "$err_too_many_arguments" "Multiple benchmark projects specified. Unknown option: $_option"
+            *)  [[ -z $benchmark_project ||
+                   $benchmark_project == "$BENCHMARK_PROJECT" ||
+                   $benchmark_project == "$_option" ]]                          || usage -ec "$err_too_many_arguments" "Multiple benchmark projects specified. Unknown option: $_option"
                 benchmark_project="$_option"
                 ;;
         esac
     done
 
     usage_if_requested
+    verify_environment
     validate_arguments
+    exit_if_has_errors
     dump_args
+}
+
+function verify_environment()
+{
+    is_tool_present bencher                                                     || error -ec "$err_tool_not_found" "'bencher' is not installed. Please install it first."
+    [[ -n "${BENCHER_API_TOKEN:-}" ]]                                           || error -ec "$err_missing_argument" "The BENCHER_API_TOKEN environment variable is required."
 }
 
 function validate_arguments()
 {
-    #  TODO: add validation here
+    is_safe_integer "$repeat"                                                   || true
+    (( repeat > 0 ))                                                            || error -ec "$err_argument_value" "repeat must be a positive integer (got '$repeat')."
+    validate_preprocessor_symbols preprocessor_symbols                          || true
+    validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id"   || true
+    [[ $bencher_project =~ ^[a-zA-Z_][a-zA-Z0-9_.-]*$ ]]                        || error -ec "$err_argument_value" "The Bencher project '$bencher_project' is not a valid project name (slug)."
+    [[ $bencher_testbed =~ ^[a-zA-Z_][a-zA-Z0-9_.-]*$ ]]                        || error -ec "$err_argument_value" "The Bencher testbed '$bencher_testbed' is not a valid testbed name."
+    validate_branch_name "$bencher_branch"                                      || true
+    is_variable_name "$bencher_adapter"                                         || error -ec "$err_argument_value" "The Bencher adapter '$bencher_adapter' is not a valid adapter name."
+
+    # Determine the benchmark projects: the explicit one if given, otherwise discover every *.csproj under benchmarks/
+    # recursively, pruning generated bin/obj/BenchmarkDotNet.Artifacts so BenchmarkDotNet's autogenerated projects are ignored.
+    if [[ -n "$benchmark_project" ]]; then
+        is_safe_existing_path "$benchmark_project"                              || true
+        benchmark_projects+=("$benchmark_project")
+
+    elif [[ -d 'benchmarks' ]]; then
+        readarray -t benchmark_projects < <(
+            find benchmarks \
+                -type d \( -name bin -o -name obj -o -name .git -o -name BenchmarkDotNet.Artifacts \) -prune \
+                -o -name '*.csproj' -print | sort)
+        (( ${#benchmark_projects[@]} > 0 ))                                     || error -ec "$err_argument_value" "No benchmark projects found under 'benchmarks/' and none specified."
+        trace "Auto-detected benchmark project: $benchmark_project"
+    fi
+
+    readonly benchmark_project
+    readonly benchmark_projects
+    readonly preprocessor_symbols
+    readonly minver_tag_prefix
+    readonly minver_prerelease_id
+    readonly bencher_project
+    readonly bencher_testbed
+    readonly bencher_branch
+    readonly bencher_adapter
+    readonly repeat
+
     return "$success"
 }
 
@@ -111,12 +169,13 @@ function dump_args()
         --quiet
         --header "Arguments for $script_name:"
 
-        benchmark_project
-        repeat
         bencher_project
         bencher_testbed
         bencher_branch
         bencher_adapter
+        benchmark_project
+        benchmark_projects
+        repeat
 
         "${dump_common_dotnet_args[@]}"
         --header "Core State:"

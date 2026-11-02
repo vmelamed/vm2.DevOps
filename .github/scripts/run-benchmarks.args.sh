@@ -15,7 +15,7 @@ declare -xr ci
 declare -xra dump_common_dotnet_args
 
 # parameters specific to this script only with initial values from environment variables or defaults
-declare -x benchmark_project
+declare -x benchmark_project="${benchmark_project:-"${BENCHMARK_PROJECT:-}"}"
 
 function get_arguments()
 {
@@ -31,19 +31,27 @@ function get_arguments()
             continue
         }
 
-        [[ "$_option" != -* ]]      || usage -ec "$err_unknown_argument" "Unknown option: $_option"
-        [[ -z $benchmark_project ]] || usage -ec "$err_too_many_arguments" "Multiple benchmark projects specified. Unknown option: $_option"
-        benchmark_project="$_option"
+        [[ "$_option" != -* ]]                                                  || usage -ec "$err_unknown_argument" "Unknown option: $_option"
+
+        [[ -z $benchmark_project ||
+           $benchmark_project == "$BENCHMARK_PROJECT"  ||
+           $benchmark_project == "$_option" ]]                                  || usage -ec "$err_too_many_arguments" "Multiple benchmark projects specified. Unknown option: $_option"        benchmark_project="$_option"
     done
 
     usage_if_requested
     validate_arguments
+    exit_if_has_errors
     dump_args
 }
 
 function validate_arguments()
 {
-    #  TODO: add validation here
+    is_safe_existing_path "$benchmark_project"                                  || true
+    [[ $benchmark_project == *.csproj ]]                                        || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)."
+    sanitize_common_dotnet_args "$benchmark_project"                            || true
+
+    readonly benchmark_project
+
     return "$success"
 }
 

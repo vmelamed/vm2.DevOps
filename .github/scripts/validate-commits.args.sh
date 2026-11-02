@@ -3,31 +3,56 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-
-
 declare -xr script_name
 declare -xr lib_dir
 
+# core lib exit codes
 declare -xri success
+declare -xri err_argument_value
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
 declare -xri err_logic_error
+declare -xri err_not_directory
+declare -xri err_not_git_directory
 
+# core lib constants
 declare -xr ci
+declare -xra vm2_repositories
 
-declare -x base_ref=""
+# core lib variables
+declare -x _ignore
+
+# this scripts arguments
+declare -x repo_path
+repo_path=$(pwd)
+declare -x repo
+declare -x base_ref=${BASE_REF:-}
 
 function get_arguments()
 {
     local _option
-    local _base_ref_given=false
 
     while (( $# > 0 )); do
         _option="$1"; shift
         get_common_arg "$_option" && continue
 
         case "${_option,,}" in
+            -r|--repo-dir )
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for '$_option'"
+                repo_path="$1"
+                shift
+                ;;
+
+            -b|--base-ref )
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for '$_option'"
+                [[ -z $_base_ref ||
+                    $base_ref == "$BASE_REF" ||
+                    $base_ref == "$1" ]]                                        || usage -ec "$err_too_many_arguments" "Unknown argument: '$_option'"
+                base_ref="$1"
+                shift
+                ;;
+
             # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
             # (SC2221/SC2222) flag any script-specific arm that reuses one of them, and it bugs out if the lists drift apart.
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
@@ -37,20 +62,56 @@ function get_arguments()
             -*) usage -ec "$err_unknown_argument" "Unknown option: $_option"
                 ;;
 
-            * ) ! $_base_ref_given || usage -ec "$err_too_many_arguments" "Unknown argument: $_option"
-                base_ref="$_option"
-                _base_ref_given=true
+            * ) [[ -z $repo || $repo == "$repo" ]]                              || usage -ec "$err_too_many_arguments" "Unknown argument: '$_option'"
+                repo="$_option"
                 ;;
         esac
     done
 
     usage_if_requested
     validate_arguments
+    exit_if_has_errors
     dump_args
 }
 
 function validate_arguments()
 {
+    local -i _rc=$success
+
+    [[ -d $repo_path ]]                                                         || { _rc="$err_not_directory";     error -ec "$_rc" "Invalid directory: '$repo_path'"; }
+    (( _rc == success )) || is_inside_work_tree "$repo_path"                    || { _rc="$err_not_git_directory"; error -ec "$_rc" "The directory '$repo_path' is not inside Git repository working tree"; }
+    (( _rc == success )) || return "$success"
+
+    # Determine the commit range. CI always passes an explicit base ref (the PR's base branch); for
+    # ad-hoc/manual runs with none given, default to "since this branch diverged from the repo's
+    # default branch" -- the merge-base with origin/HEAD's target (e.g. origin/main) -- rather than
+    # requiring the caller to already know a safe ref, or falling back to the root commit and
+    # re-litigating the entire pre-convention history.
+    #
+    # origin/HEAD, not @{upstream}, is the right signal here: @{upstream} means "the branch this one
+    # pushes/pulls with," which for a normally-pushed feature branch (`git push -u origin <branch>`)
+    # is a same-named remote branch, not the trunk it forked from -- its merge-base with HEAD is
+    # HEAD itself, which would silently validate almost nothing. @{upstream} is only used as a
+    # last-resort fallback, for a repo with no discoverable default branch at all.
+    if [[ -z "$base_ref" ]]; then
+        default_ref=$(git -C "$repo_path" symbolic-ref --short refs/remotes/origin/HEAD 2>"$_ignore")
+        default_ref=$(git -C "$repo_path" rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>"$_ignore") || true
+        [[ -n "${default_ref:-}" ]] ||
+            error -ec "$err_argument_value" "No base ref provided, there is no origin/HEAD default branch, and this branch has no" \
+                                            "upstream tracking branch either. Pass a base ref explicitly, or set \$BASE_REF."
+
+        base_ref=$(git -C "$repo_path" merge-base HEAD "$default_ref") ||
+            error -ec "$err_argument_value" "Failed to compute the merge-base with '$default_ref'."
+
+        trace "No base ref given -- defaulting to the merge-base with '$default_ref' (${base_ref:0:8})," \
+              "i.e. commits since this branch diverged. Pass a base ref explicitly to check a different range."
+    fi
+
+    readonly repo_path
+    readonly repo
+    readonly repo_path
+    readonly base_ref
+
     #  TODO: add validation here
     return "$success"
 }
@@ -65,6 +126,9 @@ function dump_args()
         --quiet
         --header "Arguments for $script_name:"
 
+        vm2_repos
+        repo
+        repo_path
         base_ref
 
         --header "Core State:"

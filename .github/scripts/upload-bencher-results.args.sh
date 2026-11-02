@@ -161,22 +161,22 @@ function validate_arguments()
     # reject absolute paths by design (the framework's convention for user-facing --artifacts-path-style inputs), but
     # this value is an internal, already-resolved absolute path handed off from run-benchmarks.sh's own output, not a
     # raw CLI/env path a caller is expected to type in relative form.
-    [[ -n $results_dir ]]                               || error -ec "$err_missing_argument" "The results directory is required."
-    [[ -z $results_dir || -d $results_dir ]]            || error -ec "$err_argument_value" "The results directory '$results_dir' is not a directory."
-    [[ -n $testbed ]]                                   || error -ec "$err_missing_argument" "--testbed is required."
-    [[ $repository == */* ]]                            || error -ec "$err_argument_value" "--repository must be in 'owner/repo' form (provided '${repository:-<empty>}')."
-    [[ -n $event_name ]]                                || error -ec "$err_missing_argument" "--event-name is required."
-    [[ -n $ref_name ]]                                  || error -ec "$err_missing_argument" "--ref-name is required."
-    is_safe_max_regression_pct "$max_regression_pct"    || true
-    is_non_negative "$max_gen1_collects"                || error -ec "$err_argument_value" "--max-gen1-collects must be a non-negative integer (got '$max_gen1_collects')."
-    is_non_negative "$max_gen2_collects"                || error -ec "$err_argument_value" "--max-gen2-collects must be a non-negative integer (got '$max_gen2_collects')."
-    is_safe_boolean "$reset_thresholds"                 || true
+    [[ -n $results_dir ]]                                                       || error -ec "$err_missing_argument" "The results directory is required."
+    [[ -z $results_dir || -d $results_dir ]]                                    || error -ec "$err_argument_value" "The results directory '$results_dir' is not a directory."
+    [[ -n $testbed ]]                                                           || error -ec "$err_missing_argument" "--testbed is required."
+    [[ $repository == */* ]]                                                    || error -ec "$err_argument_value" "--repository must be in 'owner/repo' form (provided '${repository:-<empty>}')."
+    [[ -n $event_name ]]                                                        || error -ec "$err_missing_argument" "--event-name is required."
+    [[ -n $ref_name ]]                                                          || error -ec "$err_missing_argument" "--ref-name is required."
+    is_safe_max_regression_pct "$max_regression_pct"                            || true
+    is_non_negative "$max_gen1_collects"                                        || error -ec "$err_argument_value" "--max-gen1-collects must be a non-negative integer (got '$max_gen1_collects')."
+    is_non_negative "$max_gen2_collects"                                        || error -ec "$err_argument_value" "--max-gen2-collects must be a non-negative integer (got '$max_gen2_collects')."
+    is_safe_boolean "$reset_thresholds"                                         || true
 
     if [[ $event_name == "pull_request" ]]; then
-        [[ -n $head_ref ]]                              || error -ec "$err_missing_argument" "--head-ref is required when --event-name is 'pull_request'."
-        [[ -n $pr_number ]]                             || error -ec "$err_missing_argument" "--pr-number is required when --event-name is 'pull_request'."
-        [[ -n $pr_base_sha ]]                           || error -ec "$err_missing_argument" "--pr-base-sha is required when --event-name is 'pull_request'."
-        [[ -n ${GH_TOKEN:-} ]]                          || error -ec "$err_missing_argument" "The GH_TOKEN environment variable is required when --event-name is 'pull_request'."
+        [[ -n $head_ref ]]                                                      || error -ec "$err_missing_argument" "--head-ref is required when --event-name is 'pull_request'."
+        [[ -n $pr_number ]]                                                     || error -ec "$err_missing_argument" "--pr-number is required when --event-name is 'pull_request'."
+        [[ -n $pr_base_sha ]]                                                   || error -ec "$err_missing_argument" "--pr-base-sha is required when --event-name is 'pull_request'."
+        [[ -n ${GH_TOKEN:-} ]]                                                  || error -ec "$err_missing_argument" "The GH_TOKEN environment variable is required when --event-name is 'pull_request'."
     fi
 
     # freeze the parameters
@@ -198,10 +198,10 @@ function validate_arguments()
 
 function verify_environment()
 {
-    [[ -n ${BENCHER_API_TOKEN:-} ]]                     || error -ec "$err_missing_argument" "The BENCHER_API_TOKEN environment variable is required."
+    [[ -n ${BENCHER_API_TOKEN:-} ]]                                             || error -ec "$err_missing_argument" "The BENCHER_API_TOKEN environment variable is required."
 
-    is_tool_present bc &> "$_ignore"                    || error -ec "$err_tool_not_found" "'bc' is not installed. Please install it first."
-    is_tool_present bencher &> "$_ignore"               || error -ec "$err_tool_not_found" "'bencher' is not installed. Please install it first."
+    is_tool_present bc                                                          || error -ec "$err_tool_not_found" "'bc' is not installed. Please install it first."
+    is_tool_present bencher                                                     || error -ec "$err_tool_not_found" "'bencher' is not installed. Please install it first."
     return "$success"
 }
 

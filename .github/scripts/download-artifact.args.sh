@@ -4,9 +4,8 @@
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
 declare -xr script_name
-declare -xr lib_dir
 
-# core constants
+# core lib exit codes
 declare -xri success
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
@@ -16,11 +15,13 @@ declare -xri err_argument_type
 declare -xri err_not_found
 declare -xri err_tool_not_found
 
+# core lib constants
 declare -xr ci
+
+# core lib variables
 declare -x _ignore
 
-
-# declare and initialize script arguments
+# this scripts arguments
 declare -x artifact_name=${ARTIFACT_NAME:-}
 declare -x artifacts=${ARTIFACT_DIR:-}
 declare -x repository=${REPOSITORY:-}
@@ -38,36 +39,36 @@ function get_arguments()
 
         case "${_option,,}" in
             --artifact|-a )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 artifact_name="$1"; shift
                 ;;
 
             --directory|-d )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 artifacts="$1"; shift
                 ;;
 
             --repository|--repo|-r )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 repository="$1"; shift
                 ;;
 
             --wf-id|-i )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 workflow_id="$1"; shift
                 workflow_name=""
                 workflow_path=""
                 ;;
 
             --wf-name|-n )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 workflow_id=""
                 workflow_name="$1"; shift
                 workflow_path=""
                 ;;
 
             --wf-path|-p )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
                 workflow_id=""
                 workflow_name="";
                 workflow_path="$1"; shift
@@ -93,26 +94,23 @@ function get_arguments()
 
 function verify_environment()
 {
-    is_tool_present jq &> "$_ignore"                         || error -ec "$err_tool_not_found" "'jq' is not installed. Please install it first."
-    if is_tool_present gh &> "$_ignore"; then
-        gh auth status &> "$_ignore"                         || error -ec "$err_tool_not_found" "'gh' is not authenticated. Run 'gh auth login' first."
-    else
-        error -ec "$err_tool_not_found" "'gh' is not installed. Please install it first."
-    fi
+    is_tool_present jq                                                          || error -ec "$err_tool_not_found" "'jq' is not installed. Please install it first."
+    is_tool_present gh                                                          || { error -ec "$err_tool_not_found" "'gh' is not installed. Please install it first."; return "$success"; }
+    gh auth status &> "$_ignore"                                                || error -ec "$err_tool_not_found" "'gh' is not authenticated. Run 'gh auth login' first."
 }
 
 function validate_arguments()
 {
-    [[ -n "$artifact_name" ]]                                || error -ec "$err_missing_argument" "The name of the artifact to download must be specified."
-    is_safe_input "$artifact_name"                           || true
+    [[ -n "$artifact_name" ]]                                                   || error -ec "$err_missing_argument" "The name of the artifact to download must be specified."
+    is_safe_input "$artifact_name"                                              || true
 
-    [[ -z "$artifacts" ]] || is_safe_valid_path "$artifacts" || true
-    [[ -n "$artifacts" ]]                                    || error -ec "$err_missing_argument" "The directory to download the artifact to must be specified."
-    is_safe_input "$repository"                              || true
-    is_safe_input "$workflow_id"                             || true
-    is_safe_input "$workflow_name"                           || true
-    is_safe_path "$workflow_path"                            || true
-    [[ -z "$workflow_id" ]] || is_natural "$workflow_id"     || error -ec "$err_argument_type" "The specified workflow identifier '$workflow_id' is not valid."
+    [[ -z "$artifacts" ]] || is_safe_valid_path "$artifacts"                    || true
+    [[ -n "$artifacts" ]]                                                       || error -ec "$err_missing_argument" "The directory to download the artifact to must be specified."
+    is_safe_input "$repository"                                                 || true
+    is_safe_input "$workflow_id"                                                || true
+    is_safe_input "$workflow_name"                                              || true
+    is_safe_path "$workflow_path"                                               || true
+    [[ -z "$workflow_id" ]] || is_natural "$workflow_id"                        || error -ec "$err_argument_type" "The specified workflow identifier '$workflow_id' is not valid."
 
     readonly artifact_name
     readonly artifacts

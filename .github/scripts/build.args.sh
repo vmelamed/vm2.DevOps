@@ -5,15 +5,22 @@
 
 declare -xr script_name
 
+# core lib exit codes
 declare -xri success
+declare -xri err_not_found
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
 
+# core lib constants
 declare -xr ci
 declare -xra dump_common_dotnet_args
 
-# parameters specific to this script only with initial values from environment variables or defaults
-declare -x build_project
+# core lib defaults
+
+# core lib variables
+
+# this scripts arguments
+build_project=${BUILD_PROJECT:-}
 
 function get_arguments()
 {
@@ -29,19 +36,48 @@ function get_arguments()
             continue
         }
 
-        [[ "$_option" != -* ]]  || usage -ec "$err_unknown_argument" "Unknown option: $_option"
-        [[ -z $build_project ]] || usage -ec "$err_too_many_arguments" "Multiple build projects specified. Unknown option: $_option"
+        [[ "$_option" != -* ]]                                                  || usage -ec "$err_unknown_argument" "Unknown option: $_option"
+
+        [[ -z $build_project ||
+           $build_project == "$BUILD_PROJECT"  ||
+           $build_project == "$_option" ]]                                      || usage -ec "$err_too_many_arguments" "Multiple build projects specified. Unknown option: $_option"
         build_project="$_option"
     done
 
     usage_if_requested
     validate_arguments
+    exit_if_has_errors
     dump_args
 }
 
 function validate_arguments()
 {
-    #  TODO: add validation here
+    # sanitize inputs
+    if [[ -z $build_project ]]; then
+        local -a projects=()
+
+        local -A __build_project_state=()
+        save_state __build_project_state
+        set_null_glob true
+
+            # search for *.slnx|*.sln|*.csproj file in the current directory
+            projects=(./*.slnx)
+            (( ${#projects[@]} > 0 )) || projects=(./*.sln)
+            (( ${#projects[@]} > 0 )) || projects=(./*.csproj)
+
+        restore_state __build_project_state
+
+        (( ${#projects[@]} > 0 ))                                               || error -ec "$err_not_found" "No build project (*.slnx, *.sln, *.csproj) was specified or found in the current directory."
+        build_project=${projects[0]:-}
+        (( ${#projects[@]} == 1 ))                                              || warning "Multiple projects found: (${projects[*]}), using the first one: '$build_project'."
+        trace "Auto-detected build project: $build_project"
+    fi
+
+    is_safe_valid_path "$build_project"
+    sanitize_common_dotnet_args "$build_project"
+
+    readonly build_project
+
     return "$success"
 }
 

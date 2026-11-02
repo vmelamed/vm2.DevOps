@@ -12,24 +12,30 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
+# core lib
 source "$lib_dir/gh_core.sh"
 
-# core constants
+# core lib exit codes
 declare -xri err_tool_error
 declare -xri err_logic_error
 
-declare -x _ignore
+# core lib constants
 declare -xr semverReleaseRegex
 declare -xr semverPrereleaseRegex
 declare -xr semverTagReleaseRegex
 declare -xr semverTagPrereleaseRegex
 
+# core lib defaults
+
+# core lib variables
+declare -x _ignore
+
+# this script's components
 source "$script_dir/compute-release-version.usage.sh"
 source "$script_dir/compute-release-version.args.sh"
 
+# this script's arguments
 get_arguments "$@"
-
-# script arguments
 declare -xr minver_tag_prefix
 declare -xr reason
 

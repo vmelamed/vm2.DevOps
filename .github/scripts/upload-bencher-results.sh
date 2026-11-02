@@ -17,29 +17,26 @@ source "$lib_dir/gh_core.sh"
 
 # Declare variables defined in the core library.
 declare -xr ci
-declare -x _ignore
 declare -x secret_str
-declare -xr key_repo
 
 # Declare error codes defined in the core library
 declare -xri success
 declare -xri err_argument_value
-declare -xri err_missing_argument
 declare -xri err_tool_error
 
 # parameters specific to this script only with initial values from environment variables or defaults
-declare -x results_dir
-declare -x testbed
-declare -x repository
-declare -x event_name
-declare -x ref_name
-declare -x head_ref
-declare -x pr_number
-declare -x pr_base_sha
-declare -x max_regression_pct
-declare -x max_gen1_collects
-declare -x max_gen2_collects
-declare -x reset_thresholds
+declare -xr results_dir
+declare -xr testbed
+declare -xr repository
+declare -xr event_name
+declare -xr ref_name
+declare -xr head_ref
+declare -xr pr_number
+declare -xr pr_base_sha
+declare -xr max_regression_pct
+declare -xr max_gen1_collects
+declare -xr max_gen2_collects
+declare -xr reset_thresholds
 
 source "$script_dir/upload-bencher-results.usage.sh"
 source "$script_dir/upload-bencher-results.args.sh"

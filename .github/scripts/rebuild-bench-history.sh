@@ -12,53 +12,34 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
+# core lib
 source "$lib_dir/gh_core.sh"
 
-declare -xra vm2_repositories
-declare -xr key_owner
-
+# core lib exit codes
 declare -xri success
 declare -xri err_argument_value
 declare -xri err_tool_error
 
+# core lib constants
+declare -xra vm2_repositories
+
+# core lib defaults
+
+# core lib variables
 declare -x _ignore
 
-declare -xri default_repeat=10
-declare -xr default_workflow="RebuildBenchHistory.yaml"
+# core lib constants
+declare -xr key_artifacts_path
 
-declare -x owner=""
-declare -xi repeat=${REPEAT:-$default_repeat}
-declare -x workflow=$default_workflow
-
+# this script's components
 source "$script_dir/rebuild-bench-history.usage.sh"
 source "$script_dir/rebuild-bench-history.args.sh"
 
+# this script's arguments
 get_arguments "$@"
-
-# Resolve the GitHub owner: --owner, else $GITHUB_REPOSITORY_OWNER (set by Actions), else derive from this repo's remote.
-[[ -n "$owner" ]] || owner="${GITHUB_REPOSITORY_OWNER:-}"
-if [[ -z "$owner" ]]; then
-    declare self_root
-    root_working_tree "$script_dir" self_root || true
-    if [[ -n "${self_root:-}" ]]; then
-        declare -A self_state=()
-        get_repo_state "$self_root" self_state false || true
-        owner="${self_state[$key_owner]:-}"
-    fi
-fi
-
-(( repeat >= 1 ))           || error -ec "$err_argument_value" "repeat must be a positive integer (got '$repeat')."
-[[ -n "$owner" ]]           || error -ec "$err_argument_value" "Could not determine the GitHub owner. Pass --owner or set \$GITHUB_REPOSITORY_OWNER."
-command -v gh &> "$_ignore" || error -ec "$err_tool_error" "The GitHub CLI 'gh' was not found on PATH."
-
-exit_if_has_errors
-
 declare -xr owner
-
-# Authentication: in a workflow the caller exports the BENCH_DISPATCH_PAT secret as GH_TOKEN; locally, export
-# BENCH_DISPATCH_PAT yourself (it is an env var, NOT a repo secret) or rely on the ambient 'gh auth' credentials.
-[[ -z "${BENCH_DISPATCH_PAT:-}" ]] || export GH_TOKEN="${GH_TOKEN:-$BENCH_DISPATCH_PAT}"
-[[ -n "${GH_TOKEN:-}" ]]           || warning "Neither \$GH_TOKEN nor \$BENCH_DISPATCH_PAT is set; relying on the ambient 'gh auth' credentials."
+declare -xri repeat
+declare -xr workflow
 
 declare -i dispatched=0
 declare -i no_bench=0
