@@ -40,6 +40,16 @@ load '../helpers/setup'
     assert_output "$err_not_found: Could not find an item matching the criteria."
 }
 
+@test "error_message/error_name: know \$err_io_operation_failed (21)" {
+    [[ $err_io_operation_failed == 21 ]]
+    run error_message "$err_io_operation_failed"
+    assert_success
+    assert_output "21: An I/O operation (e.g. mktemp, read, write, mv, chmod) failed."
+    run error_name "$err_io_operation_failed"
+    assert_success
+    assert_output '$err_io_operation_failed'
+}
+
 @test "error_message: falls back to the 'unknown error' message for an unrecognized code" {
     run error_message 250
     assert_success
