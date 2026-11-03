@@ -47,6 +47,7 @@ declare benchmark_project=${BENCHMARK_PROJECT:-}
 function get_arguments()
 {
     local _option
+    local _positional_arg_set=false
 
     while (( $# > 0 )); do
         _option="$1"; shift
@@ -99,12 +100,12 @@ function get_arguments()
                 exit_with_bug -ec "$err_logic_error" "'$_option' should have been consumed by get_common_arg."
                 ;;
 
-            -*) usage -ec "$err_unknown_argument" "Unknown option: $_option"
+            -*) usage -ec "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
 
-            *)  [[ $benchmark_project == "${BENCHMARK_PROJECT:-}" ||
-                   $benchmark_project == "$_option" ]]                          || usage -ec "$err_too_many_arguments" "Multiple benchmark projects specified. Unknown option: $_option"
+            *)  ! $_positional_arg_set                                          || usage -ec "$err_too_many_arguments" "Multiple benchmark projects specified: $_option"
                 benchmark_project="$_option"
+                _positional_arg_set=true
                 ;;
         esac
     done

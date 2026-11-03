@@ -74,7 +74,7 @@ function get_arguments()
                 exit_with_bug -ec "$err_logic_error" "'$_option' should have been consumed by get_common_arg."
                 ;;
 
-            -* ) usage -ec "$err_unknown_argument" "Unknown option: $_option"
+            -* ) usage -ec "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
 
             * ) [[ -z $pr_number ]] || usage -ec "$err_too_many_arguments" "Too many positional arguments: $_option"

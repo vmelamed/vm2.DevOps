@@ -25,6 +25,7 @@ build_project=${BUILD_PROJECT:-}
 function get_arguments()
 {
     local _option
+    local _positional_arg_set=false
 
     while (( $# > 0 )); do
         _option="$1"
@@ -36,11 +37,11 @@ function get_arguments()
             continue
         }
 
-        [[ "$_option" != -* ]]                                                  || usage -ec "$err_unknown_argument" "Unknown option: $_option"
+        [[ "$_option" != -* ]]                                                  || usage -ec "$err_unknown_argument" "Unknown argument: $_option"
 
-        [[ $build_project == "${BUILD_PROJECT:-}"  ||
-           $build_project == "$_option" ]]                                      || usage -ec "$err_too_many_arguments" "Multiple build projects specified. Unknown option: $_option"
+        ! $_positional_arg_set                                                  || usage -ec "$err_too_many_arguments" "Multiple build projects specified: $_option"
         build_project="$_option"
+        _positional_arg_set=true
     done
 
     usage_if_requested

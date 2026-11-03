@@ -20,6 +20,7 @@ declare -x benchmark_project="${benchmark_project:-"${BENCHMARK_PROJECT:-}"}"
 function get_arguments()
 {
     local _option
+    local _positional_arg_set=false
 
     while (( $# > 0 )); do
         _option="$1"
@@ -31,11 +32,11 @@ function get_arguments()
             continue
         }
 
-        [[ "$_option" != -* ]]                                                  || usage -ec "$err_unknown_argument" "Unknown option: $_option"
+        [[ "$_option" != -* ]]                                                  || usage -ec "$err_unknown_argument" "Unknown argument: $_option"
 
-        [[ $benchmark_project == "${BENCHMARK_PROJECT:-}"  ||
-           $benchmark_project == "$_option" ]]                                  || usage -ec "$err_too_many_arguments" "Multiple benchmark projects specified. Unknown option: $_option"
+        ! $_positional_arg_set                                                  || usage -ec "$err_too_many_arguments" "Multiple benchmark projects specified: $_option"
         benchmark_project="$_option"
+        _positional_arg_set=true
     done
 
     usage_if_requested

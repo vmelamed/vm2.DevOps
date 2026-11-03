@@ -30,6 +30,7 @@ declare -x  min_method_coverage_pct=''
 function get_arguments()
 {
     local _option
+    local _positional_arg_set=false
 
     while (( $# > 0 )); do
         _option="$1"
@@ -60,12 +61,12 @@ function get_arguments()
                 exit_with_bug -ec "$err_logic_error" "'$_option' should have been consumed by get_common_dotnet_arg."
                 ;;
 
-            -*) usage -ec "$err_unknown_argument" "Unknown option: $_option"
+            -*) usage -ec "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
 
-            * ) [[ $test_project == "${TEST_PROJECT:-}"  ||
-                   $test_project == "$_option" ]]                               || usage -sd 3 -ec "$err_too_many_arguments" "Multiple test projects specified. Unknown option: $_option"
+            * ) ! $_positional_arg_set                                          || usage -ec "$err_too_many_arguments" "Multiple test projects specified: $_option"
                 test_project="$_option"
+                _positional_arg_set=true
                 ;;
         esac
     done

@@ -144,7 +144,7 @@ function usage_if_requested()
 # @example
 #   usage true
 # @example
-#   usage -ec "$err_unknown_argument" "Unknown option: $_option"     # exits with $err_unknown_argument
+#   usage -ec "$err_unknown_argument" "Unknown argument: $_option"     # exits with $err_unknown_argument
 # @example
 #   usage "$err_invalid_arguments" -sd 3 -ec "$err_argument_value" "Invalid argument value for
 #   the option <option_name>"                                        # explicit $2 wins: $err_invalid_arguments

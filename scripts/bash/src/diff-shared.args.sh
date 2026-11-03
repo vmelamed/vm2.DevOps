@@ -91,7 +91,7 @@ function get_arguments()
                 exit_with_bug -ec "$err_logic_error" "'$_option' should have been consumed by get_common_arg."
                 ;;
 
-            -*) usage -ec "$err_unknown_argument" "Unknown option: $_option"
+            -*) usage -ec "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
 
             * ) is_empty_array target_repos || ! is_in "$_option" "${target_repos[@]}" &&
