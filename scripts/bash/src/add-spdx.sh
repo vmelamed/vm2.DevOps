@@ -13,24 +13,10 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
+# core lib
 source "$lib_dir/core.sh"
 
-# Adds SPDX headers to C# sources, bash scripts, and YAML files, skipping generated artifacts.
-
-#===============================
-# Imported constants
-#===============================
-# imported environment variables and defaults:
-declare -x _ignore
-declare -x initial_cwd
-
-#===============================
-# arguments:
-#===============================
-declare -x dir=''
-declare -x license="${LICENSE:-MIT}"
-
-# import outcomes and error codes
+# core lib exit codes
 declare -xri success
 declare -xri failure
 declare -xri positive
@@ -38,172 +24,98 @@ declare -xri negative
 declare -xri err_invalid_arguments
 declare -xri err_not_directory
 
+# core lib variables
+declare -x _ignore
+
 source "$script_dir/add-spdx.args.sh"
+source "$script_dir/add-spdx.functions.sh"
 source "$script_dir/add-spdx.usage.sh"
 
 #---------------------------------------------------------------------------------------------
-# @description Main script body: recursively scans a directory for '*.cs', '*.sh', '*.yaml', and
-#   '*.yml' files and prepends an SPDX license-identifier header (with a copyright line) to any
-#   file that does not already contain one. C# generated artifacts ('obj/', 'bin/',
-#   'AssemblyInfo.cs', '*.g.cs', '*.designer.cs') are skipped. UTF-8 BOMs on C# files are
-#   preserved ahead of the inserted header; on bash files with a shebang, the header is
-#   inserted after the shebang line rather than before it. YAML files (workflows, dependabot.yml,
-#   etc.) use '#' comments just like bash and always have the header inserted at the top, since
-#   they have no shebang-equivalent line to skip past.
+# @description Main script body: recursively scans a directory for '*.cs', '*.sh', '*.bats',
+#   '*.yaml', and '*.yml' files and prepends an SPDX license-identifier header (with a copyright
+#   line) to any file that does not already contain one. C# generated artifacts ('obj/', 'bin/',
+#   'AssemblyInfo.cs', '*.g.cs', '*.designer.cs') are skipped, and so are '.git' and every git
+#   submodule (third-party code). A leading UTF-8 BOM on a C# file is stripped (the vm2
+#   convention is UTF-8 without a BOM); on bash files with a shebang, the header is inserted
+#   after the shebang line rather than before it. YAML files (workflows, dependabot.yml, etc.)
+#   use '#' comments just like bash and always have the header inserted at the top, since they
+#   have no shebang-equivalent line to skip past.
 #
 # Notes:
-#   - Bash files are matched purely by the '*.sh' extension; a bash file without a '.sh'
-#     extension (e.g. a shebang-only script named without an extension) is not discovered by
-#     the 'find' below.
+#   - Bash files are matched purely by the '*.sh' and '*.bats' extensions; a bash file without
+#     one of them (e.g. a shebang-only script named without an extension) is not discovered by
+#     the 'find's below.
 #   - Both '*.yaml' and '*.yml' are matched: GitHub requires the dependabot config specifically
 #     at '.github/dependabot.yml', so the two extensions coexist in this repo's conventions.
+#   - Each file is rewritten through a temporary file next to it, which then replaces the
+#     original with 'mv' (an atomic rename on the same file system); the file mode is preserved.
+#     In a dry run the 'mv' is only printed, and the temporary file is removed.
 #
-# @arg $@ string Named options:
-#   - '-l|--license <spdx-id>' (default: 'MIT')
-#   - '-d|--directory <dir>' (default: '.'),
+# @arg $@ string Arguments:
+#   - '<directory>' (optional, default: the current directory): the directory to scan;
+#   - '-l|--license <spdx-id>' (default: $LICENSE, or 'MIT');
 #   - the usual common core arguments.
 #
-# @exitcode success/positive=0: The scan completed (whether or not any files were modified).
-# @exitcode failure/negative=1: An unknown option was given, a required option value was
-#   missing, or '<dir>' does not exist (via 'usage' or the explicit directory check below).
+# @exitcode success=0: Every file found either got the header or already had one.
+# @exitcode the specific 'err_*' code (via 'usage'): an invalid command line, e.g. an unknown
+#   option, a missing option value, more than one directory, a directory that does not exist,
+#   or an empty license.
+# @exitcode the code of the last reported error (via 'exit_if_has_errors'): at least one file
+#   could not be modified, e.g. it is read-only ('$err_not_file') or an I/O operation failed
+#   ('$err_io_operation_failed'). All other files are still processed.
 #
-# @stdout Per-file progress lines (skipped/would-add/added) and a final summary line with
-#   scanned/modified/skipped counts.
+# @stdout Per-file progress lines (skipping/would've added/added) and a final summary line with
+#   the scanned/modified/skipped/failed counts (scanned = modified + skipped + failed).
 #
 # @example
-#   add-spdx.sh --directory ./src --license MIT
+#   add-spdx.sh ./src --license MIT
 # @example
 #   add-spdx.sh --dry-run
 #---------------------------------------------------------------------------------------------
 
-#---------------------------------------------------------------------------------------------
-# @description Prepends the SPDX header to a C# file, stripping a leading UTF-8 BOM (if any):
-#   the vm2 convention is plain UTF-8 (no BOM), enforced via '.editorconfig' ('charset =
-#   utf-8'), so a stray BOM left over from a classic-Visual-Studio-created file is cleaned up
-#   as a side effect of adding the header.
-#
-# @arg $1 string Path to an existing C# file with no SPDX header yet.
-#---------------------------------------------------------------------------------------------
-function add_spdx_csharp_file()
-{
-    local _file="$1"
-    local _body
-
-    # Check if file has a UTF-8 BOM (0xEF 0xBB 0xBF) and skip past it if so
-    if head -c 3 "$_file" | od -An -tx1 | grep -q "ef bb bf"; then
-        _body=$(tail -c +4 "$_file")
-    else
-        _body=$(cat "$_file")
-    fi
-
-    {
-        printf "%s" "$cs_header"
-        printf "%s" "$_body"
-    } > "$_file.tmp" && chmod --reference="$_file" "$_file.tmp" && mv "$_file.tmp" "$_file"
-}
-
-#---------------------------------------------------------------------------------------------
-# @description Prepends the SPDX header to a bash file, inserting it after the shebang line
-#   when there is one, or at the very top otherwise.
-#
-# @arg $1 string Path to an existing bash file with no SPDX header yet.
-#---------------------------------------------------------------------------------------------
-function add_spdx_bash_file()
-{
-    local _file="$1"
-    local _first_line
-
-    _first_line=$(head -n 1 "$_file")
-    {
-        if [[ "$_first_line" =~ ^#! ]]; then
-            # Has shebang - insert after it
-            echo "$_first_line"
-            printf "%s" "$bash_header"
-            tail -n +2 "$_file"
-        else
-            # No shebang - insert at top
-            printf "%s" "$bash_header"
-            cat "$_file"
-        fi
-    } > "$_file.tmp" && chmod --reference="$_file" "$_file.tmp" && mv "$_file.tmp" "$_file"
-}
-
-#---------------------------------------------------------------------------------------------
-# @description Prepends the SPDX header to a YAML file. Always inserted at the top: unlike bash
-#   scripts, YAML has no shebang-equivalent line to insert after.
-#
-# @arg $1 string Path to an existing YAML file with no SPDX header yet.
-#---------------------------------------------------------------------------------------------
-function add_spdx_yaml_file()
-{
-    local _file="$1"
-
-    {
-        printf "%s" "$bash_header"
-        cat "$_file"
-    } > "$_file.tmp" && chmod --reference="$_file" "$_file.tmp" && mv "$_file.tmp" "$_file"
-}
-
-#---------------------------------------------------------------------------------------------
-# @description Drives one file through the skip/dry-run/write decision shared by all file types,
-#   updating the 'processed'/'skipped'/'modified' counters and delegating the actual header
-#   insertion to the given writer function.
-#
-# @arg $1 string Name of the writer function to call when the file needs a header
-#   ('add_spdx_csharp_file', 'add_spdx_bash_file', or 'add_spdx_yaml_file').
-# @arg $2 string Path to the file to process.
-#---------------------------------------------------------------------------------------------
-function process_file()
-{
-    local _writer="$1"
-    local _file="$2"
-    local _rel=".${_file#"$root"}"
-
-    trace "Processing $_file"
-    (( ++processed ))
-
-    if grep -q "SPDX-License-Identifier" "$_file"; then
-        info "Skipping (has header): $_rel"
-        (( ++skipped ))
-        return
-    fi
-
-    if is_dry_run; then
-        info "Would add header to: $_rel"
-        return
-    fi
-
-    "$_writer" "$_file"
-
-    info "Added header to: $_rel"
-    (( ++modified ))
-}
-
+# this scripts arguments
 get_arguments "$@"
+declare -xr dir
+declare -xr license
 
-[[ -n "$dir" ]] || dir="$initial_cwd"
-[[ -d "$dir" ]] || exit_with_error -ec "$err_not_directory" "Directory not found: $dir" 1>&2
-
-root=$(cd "$dir" && pwd)
-
-cs_header="// SPDX-License-Identifier: $license
+declare -xr cs_header="// SPDX-License-Identifier: $license
 // Copyright (c) 2025-2026 Val Melamed
 
 "
-
-bash_header="# SPDX-License-Identifier: $license
+declare -xr bash_header="# SPDX-License-Identifier: $license
 # Copyright (c) 2025-2026 Val Melamed
 
 "
+declare -xr yaml_header=$bash_header
 
-processed=0
-modified=0
-skipped=0
+# this scripts constants
+declare -x root
+root=$(cd -P "$dir" && pwd)
+readonly root
+
+# this scripts variables
+declare -xi processed=0
+declare -xi modified=0
+declare -xi skipped=0
+declare -xi failed=0
+
+# Submodules hold third-party code: never stamp our copyright on it. git lists each (initialized) submodule as an absolute
+# path, even when $root is a subdirectory of the work tree; outside a work tree the list is just empty. Also prune '.git'.
+declare -a submodules=()
+readarray -t submodules < <(git -C "$root" submodule foreach --quiet --recursive 'echo "$toplevel/$sm_path"' 2>"$_ignore" || true)
+
+declare -a prune=( \( -name .git )
+for submodule in "${submodules[@]}"; do
+    prune+=( -o -path "$submodule" )
+done
+prune+=( \) -prune -o )
+readonly prune
 
 # Process C# files
 while IFS= read -r -d '' file; do
-    process_file add_spdx_csharp_file "$file"
-done < <(find "$root" -type f -name '*.cs' \
+    process_file "$file" || true
+done < <(find "$root" "${prune[@]}" -type f -name '*.cs' \
             ! -path '*/obj/*' \
             ! -path '*/bin/*' \
             ! -name 'AssemblyInfo.cs' \
@@ -212,16 +124,17 @@ done < <(find "$root" -type f -name '*.cs' \
 
 # Process bash files
 while IFS= read -r -d '' file; do
-    process_file add_spdx_bash_file "$file"
-done < <(find "$root" -type f -name '*.sh' -print0)
+    process_file "$file" || true
+done < <(find "$root" "${prune[@]}" -type f \( -name '*.sh' -o -name '*.bats' \) -print0)
 
 # Process YAML files (workflows, dependabot.yml, etc.)
 while IFS= read -r -d '' file; do
-    process_file add_spdx_yaml_file "$file"
-done < <(find "$root" -type f \( -name '*.yaml' -o -name '*.yml' \) -print0)
+    process_file "$file" || true
+done < <(find "$root" "${prune[@]}" -type f \( -name '*.yaml' -o -name '*.yml' \) -print0)
 
 if is_dry_run; then
-    info "Summary (dry run): scanned=$processed, would modify=$((processed - skipped)), skipped=$skipped"
+    info "Summary (dry run): scanned=$processed, modified=$modified, skipped=$skipped, failed=$failed"
 else
-    info "Summary: scanned=$processed, modified=$modified, skipped=$skipped"
+    info "Summary: scanned=$processed, modified=$modified, skipped=$skipped, failed=$failed"
 fi
+exit_if_has_errors false

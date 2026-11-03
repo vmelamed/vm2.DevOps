@@ -3,8 +3,9 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr common_args_usage
 declare -xr script_name
+
+declare -xr common_args_usage
 
 #---------------------------------------------------------------------------------------------
 # @description Prints the usage message for 'add-spdx.sh' to stdout. Does not exit; the caller
@@ -21,8 +22,8 @@ declare -xr script_name
 #---------------------------------------------------------------------------------------------
 function usage_text()
 {
-    (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
-    is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1-<missing>})."
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
+    is_boolean "$1"                                                             || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1-<missing>})."
     exit_if_has_bugs
 
     local _long_text=$1
@@ -32,12 +33,13 @@ function usage_text()
 
     cat << EOF
 Usage:
-  $script_name [<repo-directory>...] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch>]*
+  $script_name [<directory>] [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch>]*
 
-Recursively scans a directory for '*.cs', '*.sh', '*.yaml', and '*.yml' files and prepends an SPDX license-identifier header
-(with a copyright line) to any file that does not already contain one. C# generated artifacts ('obj/', 'bin/',
-'AssemblyInfo.cs', '*.g.cs', '*.designer.cs') are skipped. UTF-8 BOMs on C# files are preserved ahead of the inserted header;
-on bash files with a shebang, the header is inserted after the shebang line. YAML files always get the header at the top.
+Recursively scans a directory for '*.cs', '*.sh', '*.bats', '*.yaml', and '*.yml' files and prepends an SPDX
+license-identifier header (with a copyright line) to any file that does not already contain one. C# generated artifacts
+('obj/', 'bin/', 'AssemblyInfo.cs', '*.g.cs', '*.designer.cs'), '.git', and git submodules are skipped. A leading UTF-8 BOM
+on a C# file is stripped; on bash files with a shebang, the header is inserted after the shebang line. YAML files always get
+the header at the top. Read-only files are reported as errors and left unchanged; the other files are still processed.
 
 Arguments:
   <directory>                   The directory to scan (optional, default: current directory)

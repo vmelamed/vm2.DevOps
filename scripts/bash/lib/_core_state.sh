@@ -35,8 +35,9 @@ declare -xi err_logic_error             # An error occurred in the logic of the 
 #   throughout the script's lifetime. It can be used to return to the original directory if
 #   needed.
 #---------------------------------------------------------------------------------------------
+declare -x initial_cwd
 initial_cwd=$(pwd)
-declare -xr initial_cwd
+readonly initial_cwd
 
 #---------------------------------------------------------------------------------------------
 # @description: Indicates whether the script is running under a debugger, e.g. BashDb.
@@ -46,14 +47,16 @@ declare -xr initial_cwd
 #---------------------------------------------------------------------------------------------
 declare -x debugger
 [[ -n "${_Dbg_DEBUGGER_LEVEL:-}" || -n "${BASHDB_HOME:-}" ]] && debugger=true || debugger=false
-declare -xr debugger
+readonly debugger
 
 #---------------------------------------------------------------------------------------------
 # @description Indicates whether the script is running in CI/CD environment.
 #    The `$ci` value should be based only on environment variables defined by the CI/CD
 #    system, e.g. GitHub Actions, Azure DevOps, etc. Usually env.var. $CI
 #---------------------------------------------------------------------------------------------
-declare -xr ci=${CI:-${GITHUB_ACTIONS:-${TF_BUILD:-false}}}
+declare -x ci
+ci=${CI:-${GITHUB_ACTIONS:-${TF_BUILD:-false}}}
+readonly ci
 
 #---------------------------------------------------------------------------------------------
 # default values for the core state variables
