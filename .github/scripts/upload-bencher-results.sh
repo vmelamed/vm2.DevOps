@@ -24,7 +24,12 @@ declare -xri success
 declare -xri err_argument_value
 declare -xri err_tool_error
 
-# parameters specific to this script only with initial values from environment variables or defaults
+
+source "$script_dir/upload-bencher-results.usage.sh"
+source "$script_dir/upload-bencher-results.args.sh"
+
+# this script arguments
+get_arguments "$@"
 declare -xr results_dir
 declare -xr testbed
 declare -xr repository
@@ -37,11 +42,6 @@ declare -xr max_regression_pct
 declare -xr max_gen1_collects
 declare -xr max_gen2_collects
 declare -xr reset_thresholds
-
-source "$script_dir/upload-bencher-results.usage.sh"
-source "$script_dir/upload-bencher-results.args.sh"
-
-get_arguments "$@"
 
 trace "Preparing to upload results to Bencher.dev with max regression threshold of ±${max_regression_pct}%."
 

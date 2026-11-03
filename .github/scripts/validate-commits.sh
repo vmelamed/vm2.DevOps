@@ -34,8 +34,8 @@ source "$script_dir/validate-commits.args.sh"
 
 declare -x base_ref
 
+# this script's arguments
 get_arguments "$@"
-declare -xr repo
 declare -xr repo_path
 declare -xr base_ref
 
@@ -62,10 +62,10 @@ while IFS=$'\t' read -r hash subject; do
         bad_subjects+=("$subject")
         (( ++bad ))
     fi
-done < <(git log --format=$'%H\t%s' "$base_ref..HEAD")  # ends with a newline and is safe for read without [[ -n $_line ]] guard
+done < <(git -C "$repo_path" log --format=$'%H\t%s' "$base_ref..HEAD")  # ends with a newline and is safe for read without [[ -n $_line ]] guard
 
 if (( bad > 0 )); then
-    branch=$(git branch --show-current)
+    branch=$(git -C "$repo_path" branch --show-current)
     # The oldest offending commit's parent is the tightest rebase start point that still
     # surfaces every bad commit in the todo list -- no need to go back to $base_ref itself.
     oldest_bad_parent="${bad_hashes[-1]}^"

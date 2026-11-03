@@ -44,7 +44,7 @@ declare -x test_projects
 declare -x benchmark_projects
 declare -x package_projects
 declare -x runners_os
-declare -x min_line_coverage_pct
+declare -x min_coverage_pct
 declare -x max_regression_pct
 declare -x max_gen1_collects
 declare -x max_gen2_collects
@@ -63,7 +63,7 @@ args_to_github_output \
     benchmark_projects \
     package_projects \
     runners_os \
-    min_line_coverage_pct \
+    min_coverage_pct \
     max_regression_pct \
     max_gen1_collects \
     max_gen2_collects \

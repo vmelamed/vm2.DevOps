@@ -50,14 +50,21 @@ _run_validate_commits() {
 
 @test "validate-commits: succeeds when every commit follows Conventional Commits" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "feat: add a thing" "fix(api): correct a bug" "chore(deps): bump deps"
-    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" base --quiet
+    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --base-ref base --quiet
+    assert_success
+    assert_output --partial "All commit messages follow Conventional Commits format"
+}
+
+@test "validate-commits: succeeds when every commit follows Conventional Commits and short option form -b" {
+    _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "feat: add a thing" "fix(api): correct a bug" "chore(deps): bump deps"
+    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" -b base --quiet
     assert_success
     assert_output --partial "All commit messages follow Conventional Commits format"
 }
 
 @test "validate-commits: matches commit types case-insensitively" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "FEAT(api): add uppercase type"
-    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" base --quiet
+    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --base-ref base --quiet
     assert_success
 }
 
@@ -65,13 +72,13 @@ _run_validate_commits() {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" \
         "Merge branch 'x' into main" \
         "Revert \"feat: add a thing\""
-    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" base --quiet
+    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --base-ref base --quiet
     assert_success
 }
 
 @test "validate-commits: accepts a breaking-change '!' marker and a scoped type" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "refactor(core)!: redesign the API"
-    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" base --quiet
+    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --base-ref base --quiet
     assert_success
 }
 
@@ -79,7 +86,7 @@ _run_validate_commits() {
 
 @test "validate-commits: fails and reports every non-conforming commit message" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "not a valid message" "feat: this one is fine" "also bad"
-    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" base --quiet
+    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --base-ref base --quiet
     assert_failure
     # Each bad subject is now prefixed with its abbreviated commit hash (e.g. "f5437c44 not a
     # valid message"), so match on the subject text rather than the old exact "prefix: subject".
@@ -90,14 +97,14 @@ _run_validate_commits() {
 
 @test "validate-commits: rejects an unknown/unrecognized commit type" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "bogus: not a real type"
-    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" base --quiet
+    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --base-ref base --quiet
     assert_failure
     assert_output --regexp "Bad commit message: [0-9a-f]{8} bogus: not a real type"
 }
 
 @test "validate-commits: prints the remediation steps (rebase -i, force-push) on failure" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "not conventional"
-    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" base --quiet
+    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --base-ref base --quiet
     assert_failure
     # The rebase now starts at the offending commit's own parent (a full SHA + "^"), not the
     # literal base-ref name -- tighter than "git rebase -i base" but not textually identical to it.
@@ -160,7 +167,19 @@ _run_validate_commits() {
 
 @test "validate-commits: an explicit positional base-ref overrides \$BASE_REF" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "feat: fine"
-    run env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" BASE_REF=does-not-exist bash -c "cd '$BATS_TEST_TMPDIR/repo' && bash '$_validate_commits' base --quiet"
+    run env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" BASE_REF=does-not-exist bash -c "cd '$BATS_TEST_TMPDIR/repo' && bash '$_validate_commits' --base-ref base --quiet"
+    assert_success
+}
+
+@test "validate-commits: an explicit positional --repo-dir succeeds" {
+    _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "feat: fine"
+    run env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" BASE_REF=does-not-exist bash -c "bash '$_validate_commits' --repo-dir '$BATS_TEST_TMPDIR/repo' --base-ref base --quiet"
+    assert_success
+}
+
+@test "validate-commits: an explicit positional short form -r succeeds" {
+    _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "feat: fine"
+    run env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" BASE_REF=does-not-exist bash -c "bash '$_validate_commits' -r '$BATS_TEST_TMPDIR/repo' --base-ref base --quiet"
     assert_success
 }
 
@@ -173,9 +192,9 @@ _run_validate_commits() {
 
 @test "validate-commits: rejects a second positional argument as too many arguments" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "feat: fine"
-    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" base extra --quiet
+    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --base-ref base extra --quiet
     assert_failure
-    assert_output --partial "Unknown argument: extra"
+    assert_output --partial "Unknown option: extra"
 }
 
 @test "validate-commits: -h prints usage and exits 0" {
@@ -190,7 +209,7 @@ _run_validate_commits() {
 @test "validate-commits: in CI mode (GITHUB_STEP_SUMMARY set), the same result also lands in the step summary file" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "not conventional"
     run env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" GITHUB_ACTIONS=true GITHUB_STEP_SUMMARY="$BATS_TEST_TMPDIR/summary.md" \
-        bash -c "cd '$BATS_TEST_TMPDIR/repo' && bash '$_validate_commits' base --quiet"
+        bash -c "cd '$BATS_TEST_TMPDIR/repo' && bash '$_validate_commits' --base-ref base --quiet"
     assert_failure
     assert_output --regexp "Bad commit message: [0-9a-f]{8} not conventional"
     run cat "$BATS_TEST_TMPDIR/summary.md"

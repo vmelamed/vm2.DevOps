@@ -164,7 +164,7 @@ EOF
     _make_benchmark_project "$BATS_TEST_TMPDIR"
     run _run_rebuild "$BATS_TEST_TMPDIR" '' --quiet --repeat 1
     assert_failure
-    assert_output --partial "Bencher project (--bencher-project) is required"
+    assert_output --partial "The Bencher project '' is not a valid project name (slug)."
     assert_output --partial "Bencher testbed (--bencher-testbed) is required"
     assert_output --partial "BENCHER_API_TOKEN environment variable is required"
 }
@@ -230,7 +230,7 @@ EOF
         cd '$BATS_TEST_TMPDIR' && bash '$_rebuild_run' --quiet --repeat 1 --bencher-project p --bencher-testbed t
     "
     assert_failure
-    assert_output --partial "The 'bencher' CLI was not found on PATH"
+    assert_output --partial "'bencher' is not installed"
 }
 
 # --- argument handling ---------------------------------------------------------------------

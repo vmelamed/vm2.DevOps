@@ -79,7 +79,7 @@ function get_arguments()
 
 function validate_environment()
 {
-    [[ -n "$GITHUB_REPOSITORY" && -n "$RELEASE_PAT" ]]                          || error -ec "$err_argument_value" "GITHUB_REPOSITORY and/or RELEASE_PAT are not set."
+    [[ -n "${GITHUB_REPOSITORY:-}" && -n "${RELEASE_PAT:-}" ]]                  || error -ec "$err_argument_value" "GITHUB_REPOSITORY and/or RELEASE_PAT are not set."
 
     return "$success"
 }

@@ -15,6 +15,7 @@ declare -xri err_logic_error
 declare -xri err_tool_error
 declare -xri err_too_many_arguments
 declare -xri err_tool_not_found
+declare -xri err_tool_unauthenticated
 
 # core lib constants
 declare -xr ci
@@ -31,7 +32,7 @@ declare -xr default_workflow="RebuildBenchHistory.yaml"
 
 # this scripts arguments
 declare -x owner=""
-declare -xi repeat=${REPEAT:-$default_repeat}
+declare -x repeat=${REPEAT:-$default_repeat}
 declare -x workflow=$default_workflow
 
 function get_arguments()
@@ -87,8 +88,8 @@ function validate_environment()
     [[ -z "${BENCH_DISPATCH_PAT:-}" ]] || export GH_TOKEN="${GH_TOKEN:-$BENCH_DISPATCH_PAT}"
     [[ -n "${GH_TOKEN:-}" ]]                                                    || warning "Neither \$GH_TOKEN nor \$BENCH_DISPATCH_PAT is set; relying on the ambient 'gh auth' credentials."
 
-    is_tool_present gh                                                          || { error -ec "$err_tool_error" "The GitHub CLI 'gh' was not found on PATH."; return "$success"; }
-    gh auth status &> "$_ignore"                                                || error -ec "$err_tool_not_found" "'gh' is not authenticated. Run 'gh auth login' first."
+    is_tool_present gh                                                          || { error -ec "$err_tool_not_found" "The GitHub CLI 'gh' was not found on PATH."; return "$success"; }
+    gh auth status &> "$_ignore"                                                || error -ec "$err_tool_unauthenticated" "'gh' is not authenticated. Run 'gh auth login' first."
 }
 
 function validate_arguments()
@@ -96,18 +97,17 @@ function validate_arguments()
     # Resolve the GitHub owner: --owner, else $GITHUB_REPOSITORY_OWNER (set by Actions), else derive from this repo's remote.
     [[ -n "$owner" ]] || owner="${GITHUB_REPOSITORY_OWNER:-}"
     if [[ -z "$owner" ]]; then
-        local self_root
+        local _self_root
 
-        root_working_tree "$script_dir" self_root || true
-        if [[ -n "${self_root:-}" ]]; then
-            local -A self_state=()
-            get_repo_state "$self_root" self_state false || true
-            owner="${self_state[$key_owner]:-}"
+        root_working_tree "$script_dir" _self_root || true
+        if [[ -n "${_self_root:-}" ]]; then
+            local -A _self_state=()
+            get_repo_state "$_self_root" _self_state false || true
+            owner="${_self_state[$key_owner]:-}"
         fi
     fi
 
-    is_integer repeat                                                           || error -ec "$err_argument_value" "repeat must be a positive integer (got '$repeat')."
-    (( repeat >= 1 ))                                                           || error -ec "$err_argument_value" "repeat must be a positive integer (got '$repeat')."
+    is_positive "$repeat"                                                       || error -ec "$err_argument_value" "repeat must be a positive integer (got '$repeat')."
     [[ -n "$owner" ]]                                                           || error -ec "$err_argument_value" "Could not determine the GitHub owner. Pass --owner or set \$GITHUB_REPOSITORY_OWNER."
 
     readonly owner

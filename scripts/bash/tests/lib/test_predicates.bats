@@ -400,6 +400,39 @@ declare -gxi err_invalid_path
     assert_failure "$err_invalid_arguments"
 }
 
+# Calls is_tool_present with PATH replaced for the duration of the call only (a local PATH also resets bash's command
+# hash table, so no lookup cached from the outer PATH can leak in).
+_is_tool_present_with_path() {
+    local PATH=$1
+    is_tool_present "$2"
+}
+
+@test "is_tool_present: true for an executable in a directory on PATH that is not on the system default PATH" {
+    # e.g. bencher in ~/.cargo/bin, dotnet in ~/.dotnet: 'command -v -p' would miss these
+    # shellcheck disable=SC2154 # BATS_TEST_TMPDIR is set by bats for each test at run time
+    mkdir -p "$BATS_TEST_TMPDIR/bin"
+    printf '#!/usr/bin/env bash\n' > "$BATS_TEST_TMPDIR/bin/fake-tool"
+    chmod +x "$BATS_TEST_TMPDIR/bin/fake-tool"
+
+    run _is_tool_present_with_path "$BATS_TEST_TMPDIR/bin:$PATH" fake-tool
+    assert_success
+}
+
+@test "is_tool_present: false for a standard tool (in /usr/bin) when it is not on PATH" {
+    # Regression: 'command -v -p' searched the system default PATH, so it reported a tool the script could not run
+    mkdir -p "$BATS_TEST_TMPDIR/empty"
+
+    run _is_tool_present_with_path "$BATS_TEST_TMPDIR/empty" ls
+    assert_failure "$failure"
+}
+
+@test "is_tool_present: true for a shell function (the way some test doubles fake a tool)" {
+    fake-function-tool() { :; }
+
+    run is_tool_present fake-function-tool
+    assert_success
+}
+
 # --- is_valid_json / is_valid_json_file -----------------------------------------------------------
 
 @test "is_valid_json: accepts a well-formed JSON string, rejects garbage" {

@@ -23,9 +23,9 @@ declare -xri default_min_method_coverage_pct=80
 
 # this scripts arguments
 declare -x  test_project=${test_project:-"${TEST_PROJECT:-}"}
-declare -x  min_line_coverage_pct=${MIN_COVERAGE_PCT:-"$default_min_line_coverage_pct"}
-declare -xi min_branch_coverage_pct
-declare -xi min_method_coverage_pct
+declare -x  min_coverage_pct=${MIN_COVERAGE_PCT:-"$default_min_line_coverage_pct"}
+declare -x  min_branch_coverage_pct=''
+declare -x  min_method_coverage_pct=''
 
 function get_arguments()
 {
@@ -45,7 +45,7 @@ function get_arguments()
             # get the arguments specific to this script
             --min-coverage-pct|-min )
                 (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                min_line_coverage_pct=$1
+                min_coverage_pct=$1
                 shift
                 ;;
 
@@ -63,8 +63,7 @@ function get_arguments()
             -*) usage -ec "$err_unknown_argument" "Unknown option: $_option"
                 ;;
 
-            * ) [[ -z $test_project ||
-                   $test_project == "$TEST_PROJECT"  ||
+            * ) [[ $test_project == "${TEST_PROJECT:-}"  ||
                    $test_project == "$_option" ]]                               || usage -sd 3 -ec "$err_too_many_arguments" "Multiple test projects specified. Unknown option: $_option"
                 test_project="$_option"
                 ;;
@@ -83,17 +82,19 @@ function validate_arguments()
     # usually set from CLI arguments, environment variables, or defaults
     is_safe_existing_file "$test_project"                                       || true
     [[ $test_project == *.csproj ]]                                             || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)."
-    is_safe_min_coverage_pct "$min_line_coverage_pct"                           || true
     sanitize_common_dotnet_args "$test_project"                                 || true
 
-    # if no MIN_BRANCH_COVERAGE_PCT or MIN_METHOD_COVERAGE_PCT derive them from line coverage unless
-    min_branch_coverage_pct=${MIN_BRANCH_COVERAGE_PCT:-$((min_line_coverage_pct - 5))}
-    min_method_coverage_pct=${MIN_METHOD_COVERAGE_PCT:-$((min_line_coverage_pct))}
-
-    declare -xi min_line_coverage_pct
+    # Unless MIN_BRANCH_COVERAGE_PCT or MIN_METHOD_COVERAGE_PCT is set, derive it from the line coverage. Derive only from a
+    # valid line coverage: the arithmetic expansion would evaluate (and run any command substitution in) an invalid one.
+    if is_safe_min_coverage_pct "$min_coverage_pct"; then
+        min_branch_coverage_pct=${MIN_BRANCH_COVERAGE_PCT:-$((min_coverage_pct - 5))}
+        min_method_coverage_pct=${MIN_METHOD_COVERAGE_PCT:-$min_coverage_pct}
+        is_safe_min_coverage_pct "$min_branch_coverage_pct"                     || true
+        is_safe_min_coverage_pct "$min_method_coverage_pct"                     || true
+    fi
 
     readonly test_project
-    readonly min_line_coverage_pct
+    readonly min_coverage_pct
     readonly min_branch_coverage_pct
     readonly min_method_coverage_pct
 
@@ -111,7 +112,7 @@ function dump_args()
         --header "Arguments for $script_name:"
 
         test_project
-        min_line_coverage_pct
+        min_coverage_pct
 
         "${dump_common_dotnet_args[@]}"
 

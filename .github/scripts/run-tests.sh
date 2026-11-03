@@ -207,7 +207,7 @@ reportgenerator_command+=(
     "-reports:$coverage_source_path"
     "-targetdir:$coverage_reports_dir"
     "-reporttypes:TextSummary,html_dark,MarkdownSummaryGithub"
-    "minimumCoverageThresholds:lineCoverage=$min_line_coverage_pct"
+    "minimumCoverageThresholds:lineCoverage=$min_coverage_pct"
     "minimumCoverageThresholds:branchCoverage=$min_branch_coverage_pct"
     "minimumCoverageThresholds:methodCoverage=$min_method_coverage_pct"
 )

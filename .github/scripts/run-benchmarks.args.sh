@@ -33,9 +33,9 @@ function get_arguments()
 
         [[ "$_option" != -* ]]                                                  || usage -ec "$err_unknown_argument" "Unknown option: $_option"
 
-        [[ -z $benchmark_project ||
-           $benchmark_project == "$BENCHMARK_PROJECT"  ||
-           $benchmark_project == "$_option" ]]                                  || usage -ec "$err_too_many_arguments" "Multiple benchmark projects specified. Unknown option: $_option"        benchmark_project="$_option"
+        [[ $benchmark_project == "${BENCHMARK_PROJECT:-}"  ||
+           $benchmark_project == "$_option" ]]                                  || usage -ec "$err_too_many_arguments" "Multiple benchmark projects specified. Unknown option: $_option"
+        benchmark_project="$_option"
     done
 
     usage_if_requested

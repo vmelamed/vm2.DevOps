@@ -70,8 +70,7 @@ function get_arguments()
             -*) usage -ec "$err_unknown_argument" "Unknown option: $_option"
                 ;;
 
-            * ) [[ -z $package_project ||
-                   $package_project == "$PACKAGE_PROJECT" ||
+            * ) [[ $package_project == "${PACKAGE_PROJECT:-}" ||
                    $package_project == "$_option" ]]                            || usage -ec "$err_too_many_arguments" "Multiple package projects specified. Unknown option: $_option"
                 package_project="$_option"
                 ;;
