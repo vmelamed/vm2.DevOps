@@ -113,6 +113,38 @@ _run_validate_commits() {
     assert_output --partial "git push --force-with-lease origin main"
 }
 
+@test "validate-commits: the remediation steps have no 'cd' when the validated repo is the current directory" {
+    _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "not conventional"
+    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --base-ref base --quiet
+    assert_failure
+    refute_output --partial "  cd "
+}
+
+@test "validate-commits: with --repo-dir elsewhere, the remediation steps start with a 'cd' to the validated repo" {
+    _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "not conventional"
+    mkdir -p "$BATS_TEST_TMPDIR/elsewhere"
+    run _run_validate_commits "$BATS_TEST_TMPDIR/elsewhere" --repo-dir "$BATS_TEST_TMPDIR/repo" --base-ref base --quiet
+    assert_failure
+    assert_output --partial "  cd $(realpath "$BATS_TEST_TMPDIR/repo")"
+}
+
+@test "validate-commits: on a detached HEAD (as in CI), the force-push names \$GITHUB_HEAD_REF" {
+    _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "not conventional"
+    git -C "$BATS_TEST_TMPDIR/repo" checkout --quiet --detach
+    run env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" GITHUB_HEAD_REF=feature-x \
+        bash -c "cd '$BATS_TEST_TMPDIR/repo' && bash '$_validate_commits' --base-ref base --quiet"
+    assert_failure
+    assert_output --partial "git push --force-with-lease origin feature-x"
+}
+
+@test "validate-commits: on a detached HEAD without \$GITHUB_HEAD_REF, the force-push shows a placeholder branch" {
+    _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "not conventional"
+    git -C "$BATS_TEST_TMPDIR/repo" checkout --quiet --detach
+    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --base-ref base --quiet
+    assert_failure
+    assert_output --partial "git push --force-with-lease origin <your-branch>"
+}
+
 # --- argument handling ---------------------------------------------------------------------
 
 @test "validate-commits: fails with a clear error when no base-ref is given and \$BASE_REF is unset" {
@@ -165,19 +197,19 @@ _run_validate_commits() {
     assert_output --partial "All commit messages follow Conventional Commits format"
 }
 
-@test "validate-commits: an explicit positional base-ref overrides \$BASE_REF" {
+@test "validate-commits: an explicit --base-ref overrides \$BASE_REF" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "feat: fine"
     run env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" BASE_REF=does-not-exist bash -c "cd '$BATS_TEST_TMPDIR/repo' && bash '$_validate_commits' --base-ref base --quiet"
     assert_success
 }
 
-@test "validate-commits: an explicit positional --repo-dir succeeds" {
+@test "validate-commits: an explicit --repo-dir succeeds" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "feat: fine"
     run env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" BASE_REF=does-not-exist bash -c "bash '$_validate_commits' --repo-dir '$BATS_TEST_TMPDIR/repo' --base-ref base --quiet"
     assert_success
 }
 
-@test "validate-commits: an explicit positional short form -r succeeds" {
+@test "validate-commits: the short form -r of --repo-dir succeeds" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "feat: fine"
     run env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" BASE_REF=does-not-exist bash -c "bash '$_validate_commits' -r '$BATS_TEST_TMPDIR/repo' --base-ref base --quiet"
     assert_success
@@ -187,14 +219,14 @@ _run_validate_commits() {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "feat: fine"
     run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --bogus --quiet
     assert_failure
-    assert_output --partial "Unknown option: --bogus"
+    assert_output --partial "Unknown argument: --bogus"
 }
 
-@test "validate-commits: rejects a second positional argument as too many arguments" {
+@test "validate-commits: rejects a positional argument (it takes none) as unknown" {
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "feat: fine"
     run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --base-ref base extra --quiet
     assert_failure
-    assert_output --partial "Unknown option: extra"
+    assert_output --partial "Unknown argument: extra"
 }
 
 @test "validate-commits: -h prints usage and exits 0" {

@@ -1004,7 +1004,7 @@ function is_valid_percentage()
     (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#): the percentage to test."
     exit_if_has_bugs
 
-    is_integer "$1" && (( $1 >= 0 && $1 <= 100 ))
+    is_non_negative "$1" && (( $1 <= 100 ))
 }
 
 #---------------------------------------------------------------------------------------------

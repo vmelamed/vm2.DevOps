@@ -241,6 +241,14 @@ _run_run_tests() {
     assert_failure
 }
 
+@test "run-tests: rejects a --min-coverage-pct below 50" {
+    _make_repo_with_test_project "$BATS_TEST_TMPDIR/repo"
+    _install_fake_dotnet "$BATS_TEST_TMPDIR/repo"
+    run _run_run_tests "$BATS_TEST_TMPDIR/repo" '' --min-coverage-pct 40 tests/App.Tests/App.Tests.csproj
+    assert_failure
+    assert_output --partial "min-coverage-pct must be between 50-100"
+}
+
 @test "run-tests: reports both a missing testconfig.json and a missing coverage.settings.xml together" {
     mkdir -p "$BATS_TEST_TMPDIR/repo/tests/App.Tests"
     git -C "$BATS_TEST_TMPDIR/repo" init --quiet
@@ -320,7 +328,7 @@ EOF
     _install_fake_dotnet "$BATS_TEST_TMPDIR/repo"
     run _run_run_tests "$BATS_TEST_TMPDIR/repo" '' --bogus
     assert_failure
-    assert_output --partial "Unknown option: --bogus"
+    assert_output --partial "Unknown argument: --bogus"
 }
 
 @test "run-tests: -h prints usage and exits 0" {

@@ -223,7 +223,7 @@ function validate_arguments()
     validate_json_array package_projects "$defaultPackageProjects" is_safe_existing_file                             || true
     validate_json_array runners_os "$defaultRunnersOs" is_safe_runner_os                                             || true
 
-    is_safe_min_coverage_pct "$min_coverage_pct"                                                                || true
+    is_safe_min_coverage_pct "$min_coverage_pct"                                                                     || true
     (( min_coverage_pct >= 50 && min_coverage_pct <= 100 )) ||
         warning_var min_coverage_pct "min-coverage-pct must be between 50-100." "$defaultMinCoveragePct"
 

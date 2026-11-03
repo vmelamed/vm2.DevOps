@@ -128,9 +128,13 @@ function validate_arguments()
     is_positive "$repeat"                                                       || error -ec "$err_argument_value" "repeat must be a positive integer (got '$repeat')."
     validate_preprocessor_symbols preprocessor_symbols                          || true
     validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id"   || true
-    [[ -n $bencher_project ]]                                                   || error -ec "$err_argument_value" "Bencher testbed (--bencher-testbed) is required"
-    [[ $bencher_project =~ ^[a-zA-Z_][a-zA-Z0-9_.-]*$ ]]                        || error -ec "$err_argument_value" "The Bencher project '$bencher_project' is not a valid project name (slug)."
-    [[ $bencher_testbed =~ ^[a-zA-Z_][a-zA-Z0-9_.-]*$ ]]                        || error -ec "$err_argument_value" "The Bencher testbed '$bencher_testbed' is not a valid testbed name."
+
+    [[ -n $bencher_project ]]                                                   || error -ec "$err_argument_value" "Bencher project (--bencher-project) is required"
+    [[ -z $bencher_project || $bencher_project =~ ^[a-zA-Z_][a-zA-Z0-9_.-]*$ ]] || error -ec "$err_argument_value" "The Bencher project '$bencher_project' is not a valid project name (slug)."
+
+    [[ -n $bencher_testbed ]]                                                   || error -ec "$err_argument_value" "Bencher testbed (--bencher-testbed) is required"
+    [[ -z $bencher_testbed || $bencher_testbed =~ ^[a-zA-Z_][a-zA-Z0-9_.-]*$ ]] || error -ec "$err_argument_value" "The Bencher testbed '$bencher_testbed' is not a valid testbed name."
+
     validate_branch_name "$bencher_branch"                                      || true
     is_variable_name "$bencher_adapter"                                         || error -ec "$err_argument_value" "The Bencher adapter '$bencher_adapter' is not a valid adapter name."
 
@@ -147,8 +151,10 @@ function validate_arguments()
                 -o -name '*.csproj' -print | sort)
         trace "Auto-detected benchmark projects: ${benchmark_projects[*]}"
     fi
-    (( ${#benchmark_projects[@]} > 0 ))                                         || error -ec "$err_argument_value" "No benchmark projects found under 'benchmarks/' and none specified."
-    get_artifacts_path "${benchmark_projects[0]}" artifacts
+    if (( ${#benchmark_projects[@]} == 0 )); then                                  error -ec "$err_argument_value" "No benchmark projects found under 'benchmarks/' and none specified."
+    else
+        get_artifacts_path "${benchmark_projects[0]}" artifacts                 || true
+    fi
 
     readonly preprocessor_symbols
     readonly minver_tag_prefix

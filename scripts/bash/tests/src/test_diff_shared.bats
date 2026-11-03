@@ -851,7 +851,7 @@ EOF
     # a bare exit code; '-ec' reaches error() and affects the printed code only.
     run _ds --with-args "declare -a arguments=(); set_quiet; get_arguments myrepo --bogus; declare -p target_repos"
     assert_failure "$err_unknown_argument"
-    assert_output --partial "Unknown option: --bogus"
+    assert_output --partial "Unknown argument: --bogus"
     refute_output --partial "target_repos="
 }
 

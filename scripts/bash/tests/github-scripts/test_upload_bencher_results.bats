@@ -286,7 +286,7 @@ _run_upload() {
     _install_fake_bencher "$BATS_TEST_TMPDIR"
     run _run_upload "$BATS_TEST_TMPDIR/results" '' --bogus
     assert_failure
-    assert_output --partial "Unknown option: --bogus"
+    assert_output --partial "Unknown argument: --bogus"
 }
 
 @test "upload-bencher-results: -h prints usage and exits 0" {
