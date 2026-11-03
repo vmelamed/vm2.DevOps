@@ -23,8 +23,6 @@ declare -xri err_argument_type
 declare -xri err_argument_value
 declare -xri err_invalid_nameref
 declare -xri err_invalid_path
-declare -xri err_tool_not_found
-declare -xri err_tool_not_authenticated
 
 declare -x _ignore
 
@@ -698,77 +696,7 @@ function is_tool_present()
     (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#): the name of the tool to check"
     exit_if_has_bugs
 
-    command -v -p "$1" &>"$_ignore" || which "$1" &>"$_ignore"
-}
-
-declare -A __installed_tools=()
-declare -xr key_jq_present=0
-declare -xr key_yq_present=1
-declare -xr key_git_present=2
-declare -xr key_bencher_present=3
-declare -xr key_glow_present=4
-declare -xr key_check_jsonschema_present=5
-declare -xr key_bc_present=6
-declare -xr key_gh_present=7
-declare -xr key_gh_authenticated=8
-declare -xr key_dotnet_present=9
-declare -xr key_dotnet_sdk_version=10
-declare -xr key_max=$(( key_dotnet_sdk_version + 1 ))
-
-function is_jq_installed()               { __is_tool_installed "$key_jq_present"; }
-function is_yq_installed()               { __is_tool_installed "$key_yq_present"; }
-function is_git_installed()              { __is_tool_installed "$key_git_present"; }
-function is_bencher_installed()          { __is_tool_installed "$key_bencher_present"; }
-function is_glow_installed()             { __is_tool_installed "$key_glow_present"; }
-function is_check_jsonschema_installed() { __is_tool_installed "$key_check_jsonschema_present"; }
-function is_bc_installed()               { __is_tool_installed "$key_bc_present"; }
-function is_gh_installed()               { __is_tool_installed "$key_gh_present"; }
-function is_gh_authenticated()           { __is_tool_installed "$key_gh_authenticated"; }
-function is_dotnet_installed()           { __is_tool_installed "$key_dotnet_present"; }
-function get_dotnet_sdk_version()        { __is_tool_installed "$key_dotnet_sdk_version"; return "$success"; }
-
-function __is_tool_installed()
-{
-    (( $# == 1 ))                                                               || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#): the index of the tool to check"
-    [[ ! -v 1 ]] || is_integer "$1"                                             || bug -ec "$err_invalid_arguments" "Invalid tool index: $1"
-    (( $1 >= 0 && $1 < key_max ))                                               || bug -ec "$err_invalid_arguments" "Invalid tool index: $1"
-    exit_if_has_bugs
-
-    local __key=$1
-    local -i _rc=$negative
-    local __result=false
-
-    if [[ ! -v __installed_tools[$__key] ]]; then
-        # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-        case $__key in
-            "$key_jq_present"               ) is_tool_present jq                        && __result=true ;;
-            "$key_yq_present"               ) is_tool_present yq                        && __result=true ;;
-            "$key_bc_present"               ) is_tool_present bc                        && __result=true ;;
-            "$key_gh_present"               ) is_tool_present gh                        && __result=true ;;
-            "$key_git_present"              ) is_tool_present git                       && __result=true ;;
-            "$key_glow_present"             ) is_tool_present glow                      && __result=true ;;
-            "$key_dotnet_present"           ) is_tool_present dotnet                    && __result=true ;;
-            "$key_bencher_present"          ) is_tool_present bencher                   && __result=true ;;
-            "$key_check_jsonschema_present" ) is_tool_present check-jsonschema          && __result=true ;;
-            "$key_gh_authenticated"         ) __is_tool_installed "$key_gh_present"     && __result=true || error -ec "$err_tool_not_found" "'gh' is not installed. Please install it first."
-                                              $__result && gh auth status               && __result=true || { __result=false; error -ec "$err_tool_not_authenticated" "'gh' is not authenticated. Please run 'gh auth login' first."; }
-                                              ;;
-            "$key_dotnet_sdk_version"       ) __is_tool_installed "$key_dotnet_present" && __result=true || error -ec "$err_tool_not_found" "'dotnet' is not installed. Please install it first."
-                                              $__result                                 && __result=$(dotnet --version) || __result=false
-                                              ;;
-
-            *                               ) bug -ec "$err_invalid_arguments" "Invalid tool index: $__key"
-                                              exit_if_has_bugs
-                                              ;;
-        esac &> "$_ignore"
-        __installed_tools[$__key]=$__result;
-    else
-        trace "__is_tool_installed uses cached value"
-        __result=${__installed_tools[$__key]}
-    fi
-
-    [[ $__result != false ]] && _rc="$positive" && [[ $__result != true ]] && printf "%s\n" "$__result"
-    return "$_rc"
+    command -v "$1" &>"$_ignore"
 }
 
 #---------------------------------------------------------------------------------------------

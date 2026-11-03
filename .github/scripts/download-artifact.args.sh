@@ -14,6 +14,7 @@ declare -xri err_logic_error
 declare -xri err_argument_type
 declare -xri err_not_found
 declare -xri err_tool_not_found
+declare -xri err_tool_unauthenticated
 
 # core lib constants
 declare -xr ci
@@ -96,7 +97,9 @@ function verify_environment()
 {
     is_tool_present jq                                                          || error -ec "$err_tool_not_found" "'jq' is not installed. Please install it first."
     is_tool_present gh                                                          || { error -ec "$err_tool_not_found" "'gh' is not installed. Please install it first."; return "$success"; }
-    gh auth status &> "$_ignore"                                                || error -ec "$err_tool_not_found" "'gh' is not authenticated. Run 'gh auth login' first."
+    gh auth status &> "$_ignore"                                                || error -ec "$err_tool_unauthenticated" "'gh' is not authenticated. Run 'gh auth login' first."
+
+    return "$success";
 }
 
 function validate_arguments()

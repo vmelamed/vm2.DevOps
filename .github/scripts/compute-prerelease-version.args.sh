@@ -25,7 +25,7 @@ declare -xr default_minver_prerelease_id
 
 # this script's arguments
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
-declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}
+declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_minver_prerelease_id"}  # the value comes from the CLI, or fromGitHub Actions vars MINVERDEFAULTPRERELEASEIDENTIFIERS, or $default_minver_prerelease_id. It must not be empty for pre-release.
 declare -x reason=${REASON:-"pre-release build"}
 
 function get_arguments()

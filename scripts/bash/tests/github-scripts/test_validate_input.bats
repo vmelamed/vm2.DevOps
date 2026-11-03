@@ -197,8 +197,8 @@ _run_validate_input() {
 
     run env -i HOME="$HOME" PATH="$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" bash -c "
         command() {
-            if [[ \"\$*\" == '-v -p jq' ]]; then return 1; fi
-            if [[ \"\$*\" == '-v -p gh' ]]; then echo /usr/bin/gh; return 0; fi
+            if [[ \"\$*\" == '-v jq' ]]; then return 1; fi
+            if [[ \"\$*\" == '-v gh' ]]; then echo /usr/bin/gh; return 0; fi
             builtin command \"\$@\"
         }
         export -f command
@@ -225,8 +225,8 @@ _run_validate_input() {
 
     run env -i HOME="$HOME" PATH="$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" bash -c "
         command() {
-            if [[ \"\$*\" == '-v -p jq' ]]; then echo /usr/local/bin/jq; return 0; fi
-            if [[ \"\$*\" == '-v -p gh' ]]; then return 1; fi
+            if [[ \"\$*\" == '-v jq' ]]; then echo /usr/local/bin/jq; return 0; fi
+            if [[ \"\$*\" == '-v gh' ]]; then return 1; fi
             builtin command \"\$@\"
         }
         export -f command

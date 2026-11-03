@@ -23,22 +23,26 @@ declare -xr default_minver_tag_prefix
 declare -xr ci
 declare -xra dump_common_dotnet_args
 
+# core lib variables - dotnet
+declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
+declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
+declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-}
+declare -x artifacts
+
 # this scripts constants
 declare -xri default_repeat=10
 declare -xr default_bencher_branch="main"
 declare -xr default_bencher_adapter="c_sharp_dot_net"
 
 # this scripts arguments
-declare -xi repeat=${REPEAT:-$default_repeat}
-declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
-declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
-declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-}
+declare -x repeat=${REPEAT:-$default_repeat}
 declare -x bencher_project=${BENCHER_PROJECT:-}
 declare -x bencher_testbed=${BENCHER_TESTBED:-}
 declare -x bencher_branch=${BENCHER_BRANCH:-$default_bencher_branch}
 declare -x bencher_adapter=${BENCHER_ADAPTER:-$default_bencher_adapter}
-declare -x benchmark_project=${BENCHMARK_PROJECT:-}
 declare -xa benchmark_projects=()
+
+declare benchmark_project=${BENCHMARK_PROJECT:-}
 
 function get_arguments()
 {
@@ -98,8 +102,7 @@ function get_arguments()
             -*) usage -ec "$err_unknown_argument" "Unknown option: $_option"
                 ;;
 
-            *)  [[ -z $benchmark_project ||
-                   $benchmark_project == "$BENCHMARK_PROJECT" ||
+            *)  [[ $benchmark_project == "${BENCHMARK_PROJECT:-}" ||
                    $benchmark_project == "$_option" ]]                          || usage -ec "$err_too_many_arguments" "Multiple benchmark projects specified. Unknown option: $_option"
                 benchmark_project="$_option"
                 ;;
@@ -121,10 +124,10 @@ function verify_environment()
 
 function validate_arguments()
 {
-    is_safe_integer "$repeat"                                                   || true
-    (( repeat > 0 ))                                                            || error -ec "$err_argument_value" "repeat must be a positive integer (got '$repeat')."
+    is_positive "$repeat"                                                       || error -ec "$err_argument_value" "repeat must be a positive integer (got '$repeat')."
     validate_preprocessor_symbols preprocessor_symbols                          || true
     validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id"   || true
+    [[ -n $bencher_project ]]                                                   || error -ec "$err_argument_value" "Bencher testbed (--bencher-testbed) is required"
     [[ $bencher_project =~ ^[a-zA-Z_][a-zA-Z0-9_.-]*$ ]]                        || error -ec "$err_argument_value" "The Bencher project '$bencher_project' is not a valid project name (slug)."
     [[ $bencher_testbed =~ ^[a-zA-Z_][a-zA-Z0-9_.-]*$ ]]                        || error -ec "$err_argument_value" "The Bencher testbed '$bencher_testbed' is not a valid testbed name."
     validate_branch_name "$bencher_branch"                                      || true
@@ -141,15 +144,17 @@ function validate_arguments()
             find benchmarks \
                 -type d \( -name bin -o -name obj -o -name .git -o -name BenchmarkDotNet.Artifacts \) -prune \
                 -o -name '*.csproj' -print | sort)
-        (( ${#benchmark_projects[@]} > 0 ))                                     || error -ec "$err_argument_value" "No benchmark projects found under 'benchmarks/' and none specified."
-        trace "Auto-detected benchmark project: $benchmark_project"
+        trace "Auto-detected benchmark projects: ${benchmark_projects[*]}"
     fi
+    (( ${#benchmark_projects[@]} > 0 ))                                         || error -ec "$err_argument_value" "No benchmark projects found under 'benchmarks/' and none specified."
+    get_artifacts_path "${benchmark_projects[0]}" artifacts
 
-    readonly benchmark_project
-    readonly benchmark_projects
     readonly preprocessor_symbols
     readonly minver_tag_prefix
     readonly minver_prerelease_id
+    readonly artifacts
+
+    readonly benchmark_projects
     readonly bencher_project
     readonly bencher_testbed
     readonly bencher_branch

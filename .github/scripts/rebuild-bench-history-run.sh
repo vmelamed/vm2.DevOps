@@ -23,35 +23,32 @@ declare -xri err_logic_error
 # core lib defaults
 
 # core lib variables
+declare -x preprocessor_symbols
+declare -x minver_tag_prefix
+declare -x minver_prerelease_id
+declare -x artifacts
 
 source "$script_dir/rebuild-bench-history-run.usage.sh"
 source "$script_dir/rebuild-bench-history-run.args.sh"
 
-get_arguments "$@"
-
 # this script arguments
+get_arguments "$@"
 declare -xra benchmark_projects
-declare -xr preprocessor_symbols
 
-declare -xr minver_tag_prefix
-declare -xr minver_prerelease_id
 declare -xr bencher_project
 declare -xr bencher_testbed
 declare -xr bencher_branch
 declare -xr bencher_adapter
-declare -xr artifacts
 declare -xri repeat
 
 # this script variables
-declare -x artifacts
 declare -x artifacts_benchmarks_dir
 declare -x results_dir
 
-get_artifacts_path "${benchmark_projects[0]}" artifacts
 artifacts_benchmarks_dir=$artifacts/benchmarks
-readonly artifacts_benchmarks_dir
-
 results_dir="$artifacts_benchmarks_dir/results"
+
+readonly artifacts_benchmarks_dir
 readonly results_dir
 
 # Re-record each benchmark project $repeat times. Each iteration is an independent process run, so the recorded spread

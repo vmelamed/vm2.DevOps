@@ -38,8 +38,7 @@ function get_arguments()
 
         [[ "$_option" != -* ]]                                                  || usage -ec "$err_unknown_argument" "Unknown option: $_option"
 
-        [[ -z $build_project ||
-           $build_project == "$BUILD_PROJECT"  ||
+        [[ $build_project == "${BUILD_PROJECT:-}"  ||
            $build_project == "$_option" ]]                                      || usage -ec "$err_too_many_arguments" "Multiple build projects specified. Unknown option: $_option"
         build_project="$_option"
     done
@@ -54,22 +53,22 @@ function validate_arguments()
 {
     # sanitize inputs
     if [[ -z $build_project ]]; then
-        local -a projects=()
+        local -a _projects=()
 
         local -A __build_project_state=()
         save_state __build_project_state
         set_null_glob true
 
             # search for *.slnx|*.sln|*.csproj file in the current directory
-            projects=(./*.slnx)
-            (( ${#projects[@]} > 0 )) || projects=(./*.sln)
-            (( ${#projects[@]} > 0 )) || projects=(./*.csproj)
+            _projects=(./*.slnx)
+            (( ${#_projects[@]} > 0 )) || _projects=(./*.sln)
+            (( ${#_projects[@]} > 0 )) || _projects=(./*.csproj)
 
         restore_state __build_project_state
 
-        (( ${#projects[@]} > 0 ))                                               || error -ec "$err_not_found" "No build project (*.slnx, *.sln, *.csproj) was specified or found in the current directory."
-        build_project=${projects[0]:-}
-        (( ${#projects[@]} == 1 ))                                              || warning "Multiple projects found: (${projects[*]}), using the first one: '$build_project'."
+        (( ${#_projects[@]} > 0 ))                                              || error -ec "$err_not_found" "No build project (*.slnx, *.sln, *.csproj) was specified or found in the current directory."
+        build_project=${_projects[0]:-}
+        (( ${#_projects[@]} == 1 ))                                             || warning "Multiple projects found: (${_projects[*]}), using the first one: '$build_project'."
         trace "Auto-detected build project: $build_project"
     fi
 

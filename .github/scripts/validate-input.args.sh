@@ -43,7 +43,7 @@ declare -x test_projects=${TEST_PROJECTS:-$defaultTestProjects}
 declare -x benchmark_projects=${BENCHMARK_PROJECTS:-$defaultBenchmarkProjects}
 declare -x package_projects=${PACKAGE_PROJECTS:-$defaultPackageProjects}
 declare -x runners_os=${RUNNERS_OS:-$defaultRunnersOs}
-declare -x min_line_coverage_pct=${MIN_COVERAGE_PCT:-$defaultMinCoveragePct}
+declare -x min_coverage_pct=${MIN_COVERAGE_PCT:-$defaultMinCoveragePct}
 declare -x max_regression_pct=${MAX_REGRESSION_PCT:-$defaultMaxRegressionPct}
 declare -x max_gen1_collects=${MAX_GEN1_COLLECTS:-$defaultMaxGen1Collects}
 declare -x max_gen2_collects=${MAX_GEN2_COLLECTS:-$defaultMaxGen2Collects}
@@ -102,7 +102,7 @@ function get_arguments()
 
             --min-coverage-pct|-min )
                 (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                min_line_coverage_pct="$1"
+                min_coverage_pct="$1"
                 shift
                 ;;
 
@@ -223,9 +223,9 @@ function validate_arguments()
     validate_json_array package_projects "$defaultPackageProjects" is_safe_existing_file                             || true
     validate_json_array runners_os "$defaultRunnersOs" is_safe_runner_os                                             || true
 
-    is_safe_min_coverage_pct "$min_line_coverage_pct"                                                                || true
-    (( min_line_coverage_pct >= 50 && min_line_coverage_pct <= 100 )) ||
-        warning_var min_line_coverage_pct "min-coverage-pct must be between 50-100." "$defaultMinCoveragePct"
+    is_safe_min_coverage_pct "$min_coverage_pct"                                                                || true
+    (( min_coverage_pct >= 50 && min_coverage_pct <= 100 )) ||
+        warning_var min_coverage_pct "min-coverage-pct must be between 50-100." "$defaultMinCoveragePct"
 
     is_safe_max_regression_pct "$max_regression_pct"                                                                 || true
     (( max_regression_pct >= 0 && max_regression_pct <= 50 )) ||
@@ -288,7 +288,7 @@ function dump_args()
         package_projects
         "${dump_common_dotnet_args[@]}"
         --header "Coverage and Regression Parameters:"
-        min_line_coverage_pct
+        min_coverage_pct
         max_regression_pct
         max_gen1_collects
         max_gen2_collects

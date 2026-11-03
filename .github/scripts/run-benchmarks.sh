@@ -32,7 +32,7 @@ source "$script_dir/run-benchmarks.args.sh"
 
 # this script's arguments
 get_arguments "$@"
-declare -x benchmark_project=""
+declare -xr benchmark_project
 
 declare -r artifacts_benchmarks="$artifacts/benchmarks"
 declare -r results_dir="$artifacts_benchmarks/results"

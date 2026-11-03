@@ -75,7 +75,7 @@ Options:
 $_common_args
 Examples:
   $script_name
-  $script_name origin/main
-  $script_name v1.0.0 --verbose
+  $script_name --base-ref origin/main
+  $script_name --repo-dir \$VM2_REPOS/vm2.Ulid -b v1.0.0 --verbose
 EOF
 }

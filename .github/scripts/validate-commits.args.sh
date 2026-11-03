@@ -26,7 +26,6 @@ declare -x _ignore
 # this scripts arguments
 declare -x repo_path
 repo_path=$(pwd)
-declare -x repo
 declare -x base_ref=${BASE_REF:-}
 
 function get_arguments()
@@ -46,9 +45,6 @@ function get_arguments()
 
             -b|--base-ref )
                 (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for '$_option'"
-                [[ -z $_base_ref ||
-                    $base_ref == "$BASE_REF" ||
-                    $base_ref == "$1" ]]                                        || usage -ec "$err_too_many_arguments" "Unknown argument: '$_option'"
                 base_ref="$1"
                 shift
                 ;;
@@ -59,11 +55,7 @@ function get_arguments()
                 exit_with_bug -ec "$err_logic_error" "'$_option' should have been consumed by get_common_arg."
                 ;;
 
-            -*) usage -ec "$err_unknown_argument" "Unknown option: $_option"
-                ;;
-
-            * ) [[ -z $repo || $repo == "$repo" ]]                              || usage -ec "$err_too_many_arguments" "Unknown argument: '$_option'"
-                repo="$_option"
+            * ) usage -ec "$err_unknown_argument" "Unknown option: $_option"
                 ;;
         esac
     done
@@ -79,36 +71,36 @@ function validate_arguments()
     local -i _rc=$success
 
     [[ -d $repo_path ]]                                                         || { _rc="$err_not_directory";     error -ec "$_rc" "Invalid directory: '$repo_path'"; }
-    (( _rc == success )) || is_inside_work_tree "$repo_path"                    || { _rc="$err_not_git_directory"; error -ec "$_rc" "The directory '$repo_path' is not inside Git repository working tree"; }
+    (( _rc != success )) || is_inside_work_tree "$repo_path"                    || { _rc="$err_not_git_directory"; error -ec "$_rc" "The directory '$repo_path' is not inside Git repository working tree"; }
     (( _rc == success )) || return "$success"
 
-    # Determine the commit range. CI always passes an explicit base ref (the PR's base branch); for
-    # ad-hoc/manual runs with none given, default to "since this branch diverged from the repo's
-    # default branch" -- the merge-base with origin/HEAD's target (e.g. origin/main) -- rather than
-    # requiring the caller to already know a safe ref, or falling back to the root commit and
-    # re-litigating the entire pre-convention history.
-    #
-    # origin/HEAD, not @{upstream}, is the right signal here: @{upstream} means "the branch this one
-    # pushes/pulls with," which for a normally-pushed feature branch (`git push -u origin <branch>`)
-    # is a same-named remote branch, not the trunk it forked from -- its merge-base with HEAD is
-    # HEAD itself, which would silently validate almost nothing. @{upstream} is only used as a
-    # last-resort fallback, for a repo with no discoverable default branch at all.
+    # Determine the commit range. CI always passes an explicit base ref (the PR's base branch)
     if [[ -z "$base_ref" ]]; then
-        default_ref=$(git -C "$repo_path" symbolic-ref --short refs/remotes/origin/HEAD 2>"$_ignore")
-        default_ref=$(git -C "$repo_path" rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>"$_ignore") || true
-        [[ -n "${default_ref:-}" ]] ||
-            error -ec "$err_argument_value" "No base ref provided, there is no origin/HEAD default branch, and this branch has no" \
-                                            "upstream tracking branch either. Pass a base ref explicitly, or set \$BASE_REF."
+        # for ad-hoc/manual runs with none given, default to "since this branch diverged from the repo's
+        # default branch" -- the merge-base with origin/HEAD's target (e.g. origin/main) -- rather than
+        # requiring the caller to already know a safe ref, or falling back to the root commit and
+        # re-litigating the entire pre-convention history.
+        local _default_ref=''
 
-        base_ref=$(git -C "$repo_path" merge-base HEAD "$default_ref") ||
-            error -ec "$err_argument_value" "Failed to compute the merge-base with '$default_ref'."
+        # origin/HEAD, not @{upstream}, is the right signal
+        _default_ref=$(git -C "$repo_path" symbolic-ref --short refs/remotes/origin/HEAD 2>"$_ignore") ||
+            # here: @{upstream} means "the branch this one
+            # pushes/pulls with," which for a normally-pushed feature branch (`git push -u origin <branch>`)
+            # is a same-named remote branch, not the trunk it forked from -- its merge-base with HEAD is
+            # HEAD itself, which would silently validate almost nothing. @{upstream} is only used as a
+            # last-resort fallback, for a repo with no discoverable default branch at all.
+            _default_ref=$(git -C "$repo_path" rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>"$_ignore") || true
 
-        trace "No base ref given -- defaulting to the merge-base with '$default_ref' (${base_ref:0:8})," \
+        [[ -n $_default_ref ]]                                                  || { _rc=$err_argument_value; error -ec "$_rc" "No base ref provided, there is no origin/HEAD default branch, and this branch has no" \
+                                                                                                                               "upstream tracking branch either. Pass a base ref explicitly, or set \$BASE_REF."; }
+        (( _rc == success )) || return "$success"
+
+        base_ref=$(git -C "$repo_path" merge-base HEAD "$_default_ref")         || error -ec "$err_argument_value" "Failed to compute the merge-base with '$_default_ref'."
+
+        trace "No base ref given -- defaulting to the merge-base with '$_default_ref' (${base_ref:0:8})," \
               "i.e. commits since this branch diverged. Pass a base ref explicitly to check a different range."
     fi
 
-    readonly repo_path
-    readonly repo
     readonly repo_path
     readonly base_ref
 
@@ -126,8 +118,6 @@ function dump_args()
         --quiet
         --header "Arguments for $script_name:"
 
-        vm2_repos
-        repo
         repo_path
         base_ref
 
