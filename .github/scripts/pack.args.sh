@@ -29,6 +29,7 @@ declare -x build=${BUILD:-false}
 function get_arguments()
 {
     local _option
+    local _positional_arg_set=false
 
     while (( $# > 0 )); do
         # get the option and convert it to lower case
@@ -67,12 +68,12 @@ function get_arguments()
                 exit_with_bug -ec "$err_logic_error" "'$_option' should have been consumed by get_common_dotnet_arg."
                 ;;
 
-            -*) usage -ec "$err_unknown_argument" "Unknown option: $_option"
+            -*) usage -ec "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
 
-            * ) [[ $package_project == "${PACKAGE_PROJECT:-}" ||
-                   $package_project == "$_option" ]]                            || usage -ec "$err_too_many_arguments" "Multiple package projects specified. Unknown option: $_option"
+            * ) ! $_positional_arg_set                                          || usage -ec "$err_too_many_arguments" "Multiple package projects specified: $_option"
                 package_project="$_option"
+                _positional_arg_set=true
                 ;;
         esac
     done

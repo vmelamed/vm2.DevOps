@@ -56,9 +56,6 @@ function get_arguments()
 
             --workflow|-w )
                 (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
-                [[ -z $workflow ||
-                      $workflow == "$default_workflow"  ||
-                      $workflow == "$_option" ]]                                || usage -ec "$err_too_many_arguments" "Multiple workflows specified. Unknown option: $_option"
                 workflow="$1"; shift
                 ;;
 
