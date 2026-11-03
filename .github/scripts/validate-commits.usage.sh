@@ -40,7 +40,7 @@ function usage_text()
 
     cat << EOF
 Usage:
-  $script_name [<base-ref>] [--<long option> <value> | -<short option> <value> | --<long switch> | -<short switch> ]*
+  $script_name [--<long option> <value> | -<short option> <value> | --<long switch> | -<short switch> ]*
 
 Description:
   Validates that all commit messages between <base-ref> and HEAD follow the Conventional Commits specification
