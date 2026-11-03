@@ -66,14 +66,22 @@ done < <(git -C "$repo_path" log --format=$'%H\t%s' "$base_ref..HEAD")  # ends w
 
 if (( bad > 0 )); then
     branch=$(git -C "$repo_path" branch --show-current)
+    # In CI the PR merge ref is checked out with a detached HEAD, so there is no current branch: fall back to the PR's
+    # source branch (set by the runner on pull_request events), or a placeholder for a local detached HEAD.
+    [[ -n $branch ]] || branch=${GITHUB_HEAD_REF:-<your-branch>}
+    # With --repo-dir the validated repository may not be the current directory, and the suggested commands run in the
+    # caller's terminal: tell them to change to it first.
+    declare -a cd_hint=()
+    [[ $(realpath "$repo_path") == "$(realpath "$PWD")" ]] || cd_hint=("  cd $(printf '%q' "$(realpath "$repo_path")")")
     # The oldest offending commit's parent is the tightest rebase start point that still
     # surfaces every bad commit in the todo list -- no need to go back to $base_ref itself.
     oldest_bad_parent="${bad_hashes[-1]}^"
     echo "" >&2
     info "Expected format: <type>[(scope)][!]: <description>" \
          "Allowed types:   ${allowed_commit_types[*]}" \
-         "Examples        chore(dependencies): update dependencies and lock files"
+         "Examples:       chore(dependencies): update dependencies and lock files"
     info "To fix, copy and paste in your terminal:" \
+         "${cd_hint[@]}" \
          "  git rebase -i $oldest_bad_parent" \
          "Then, in the editor, change 'pick' to 'reword' for each commit listed below, save and close." \
          "Git opens the message editor for that commit; edit it (e.g. prepend '<type>: '), save and close." \

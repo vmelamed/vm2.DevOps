@@ -64,14 +64,17 @@ function get_arguments()
     done
 
     usage_if_requested
-    validate_environment
     validate_arguments
+    validate_environment
     exit_if_has_errors
     dump_args
 }
 
 function validate_environment()
 {
+    # do not change local metadata if there are any errors
+    ! has_errors || return "$success"
+
     git fetch --tags --force
 
     # detect if the head is already tagged

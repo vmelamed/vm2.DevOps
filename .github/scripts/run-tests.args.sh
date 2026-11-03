@@ -88,10 +88,13 @@ function validate_arguments()
     # Unless MIN_BRANCH_COVERAGE_PCT or MIN_METHOD_COVERAGE_PCT is set, derive it from the line coverage. Derive only from a
     # valid line coverage: the arithmetic expansion would evaluate (and run any command substitution in) an invalid one.
     if is_safe_min_coverage_pct "$min_coverage_pct"; then
-        min_branch_coverage_pct=${MIN_BRANCH_COVERAGE_PCT:-$((min_coverage_pct - 5))}
-        min_method_coverage_pct=${MIN_METHOD_COVERAGE_PCT:-$min_coverage_pct}
-        is_safe_min_coverage_pct "$min_branch_coverage_pct"                     || true
-        is_safe_min_coverage_pct "$min_method_coverage_pct"                     || true
+        if (( min_coverage_pct < 50 )); then                                       error "min-coverage-pct must be between 50-100."
+        else
+            min_branch_coverage_pct=${MIN_BRANCH_COVERAGE_PCT:-$((min_coverage_pct - 5))}
+            min_method_coverage_pct=${MIN_METHOD_COVERAGE_PCT:-$min_coverage_pct}
+            is_safe_min_coverage_pct "$min_branch_coverage_pct"                 || true
+            is_safe_min_coverage_pct "$min_method_coverage_pct"                 || true
+        fi
     fi
 
     readonly test_project

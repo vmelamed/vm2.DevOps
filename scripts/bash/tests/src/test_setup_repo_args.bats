@@ -74,7 +74,7 @@ _sr() {
     run _sr "get_arguments --bogus
               declare -p repo_path"
     assert_failure "$err_unknown_argument"
-    assert_output --partial "Unknown option: --bogus"
+    assert_output --partial "Unknown argument: --bogus"
     refute_output --partial "repo_path="
 }
 

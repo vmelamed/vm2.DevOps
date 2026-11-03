@@ -164,9 +164,12 @@ EOF
     _make_benchmark_project "$BATS_TEST_TMPDIR"
     run _run_rebuild "$BATS_TEST_TMPDIR" '' --quiet --repeat 1
     assert_failure
-    assert_output --partial "The Bencher project '' is not a valid project name (slug)."
+    assert_output --partial "Bencher project (--bencher-project) is required"
     assert_output --partial "Bencher testbed (--bencher-testbed) is required"
     assert_output --partial "BENCHER_API_TOKEN environment variable is required"
+    # a missing value is reported once, as missing -- not compounded with an "invalid name" error
+    refute_output --partial "is not a valid project name"
+    refute_output --partial "is not a valid testbed name"
 }
 
 @test "rebuild-bench-history-run: rejects a non-positive --repeat" {
@@ -247,7 +250,7 @@ EOF
     _install_fakes "$BATS_TEST_TMPDIR"
     run _run_rebuild "$BATS_TEST_TMPDIR" '' --quiet --bogus
     assert_failure
-    assert_output --partial "Unknown option: --bogus"
+    assert_output --partial "Unknown argument: --bogus"
 }
 
 @test "rebuild-bench-history-run: -h prints usage and exits 0" {

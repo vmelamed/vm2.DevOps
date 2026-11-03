@@ -313,7 +313,7 @@ EOF
     _install_fake_dotnet_and_package "$BATS_TEST_TMPDIR/repo"
     run _run_pack "$BATS_TEST_TMPDIR/repo" '' --bogus
     assert_failure
-    assert_output --partial "Unknown option: --bogus"
+    assert_output --partial "Unknown argument: --bogus"
 }
 
 @test "pack: -h prints usage and exits 0" {

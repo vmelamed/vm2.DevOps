@@ -285,7 +285,7 @@ _run_build() {
     _install_fake_dotnet "$BATS_TEST_TMPDIR/repo"
     run _run_build "$BATS_TEST_TMPDIR/repo" '' --bogus
     assert_failure
-    assert_output --partial "Unknown option: --bogus"
+    assert_output --partial "Unknown argument: --bogus"
 }
 
 @test "build: -h prints usage and exits 0" {

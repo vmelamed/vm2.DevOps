@@ -38,8 +38,8 @@ source "$script_dir/download-artifact.usage.sh"
 get_arguments "$@"
 declare -xr artifact_name
 declare -xr artifacts
-declare -xr repository
-declare -xr workflow_id
+declare -x repository
+declare -x workflow_id
 declare -xr workflow_name
 declare -xr workflow_path
 
