@@ -164,7 +164,7 @@ function process_file()
 
     local _temp_file
 
-    _temp_file=$(mktemp "$_file.XXXXXXXXXX")                                    || { _rc=$err_io_operation_failed; (( ++failed )); error -ec "$_rc" "Failed to create a temporary file for '$_rel'"; return "$_rc"; }
+    _temp_file=$(mktemp)                                                        || { _rc=$err_io_operation_failed; (( ++failed )); error -ec "$_rc" "Failed to create a temporary file for '$_rel'"; return "$_rc"; }
     case $_file in
         *.cs         )
             add_spdx_csharp_file "$_file" "$_temp_file"                         || _rc=$?

@@ -22,6 +22,7 @@ declare -xri failure
 declare -xri positive
 declare -xri negative
 declare -xri err_invalid_arguments
+declare -xri err_tool_error
 declare -xri err_not_directory
 
 # core lib variables
@@ -91,7 +92,7 @@ declare -xr yaml_header=$bash_header
 
 # this scripts constants
 declare -x root
-root=$(cd -P "$dir" && pwd)
+root=$(realpath -e "$dir")
 readonly root
 
 # this scripts variables
@@ -100,14 +101,19 @@ declare -xi modified=0
 declare -xi skipped=0
 declare -xi failed=0
 
-# Submodules hold third-party code: never stamp our copyright on it. git lists each (initialized) submodule as an absolute
-# path, even when $root is a subdirectory of the work tree; outside a work tree the list is just empty. Also prune '.git'.
+# Submodules hold third-party code: never stamp our copyright on it. Outside a git work tree there are none; inside one, a
+# failure to list them must stop the run, or their files would be treated as ours.
 declare -a submodules=()
-readarray -t submodules < <(git -C "$root" submodule foreach --quiet --recursive 'echo "$toplevel/$sm_path"' 2>"$_ignore" || true)
+if git -C "$root" rev-parse --is-inside-work-tree &> "$_ignore"; then
+    # shellcheck disable=SC2016 # single quotes on purpose: 'git submodule foreach' expands $toplevel/$sm_path itself
+    submodule_list=$(git -C "$root" submodule foreach --quiet --recursive 'echo "$toplevel/$sm_path"') ||
+        exit_with_error -ec "$err_tool_error" "Failed to list the git submodules of '$root'; no files were changed."
+    [[ -z $submodule_list ]] || readarray -t submodules <<< "$submodule_list"
+fi
 
 declare -a prune=( \( -name .git )
 for submodule in "${submodules[@]}"; do
-    prune+=( -o -path "$submodule" )
+    prune+=( -o -samefile "$submodule" )
 done
 prune+=( \) -prune -o )
 readonly prune
