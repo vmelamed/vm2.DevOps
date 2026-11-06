@@ -163,12 +163,12 @@ function process_file()
 
     local -i _rc=$success
 
-    [[ -w $1 ]]                                                                 || { _rc=$err_not_file; error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the file to add an SPDX header to, to be an existing writable file (provided: '$1')."; }
+    [[ -w $1 ]]                                                                 || { _rc=$err_not_file; error "${FUNCNAME[0]}() requires argument 1, the file to add an SPDX header to, to be an existing writable file (provided: '$1')." -ec "$_rc"; }
     (( _rc == success ))                                                        || { (( ++failed )); return "$_rc"; }
 
     local _temp_file
 
-    _temp_file=$(mktemp)                                                        || { _rc=$err_io_failure; (( ++failed )); error -ec "$_rc" "Failed to create a temporary file for '$_rel'"; return "$_rc"; }
+    _temp_file=$(mktemp)                                                        || { _rc=$err_io_failure; (( ++failed )); error "Failed to create a temporary file for '$_rel'" -ec "$_rc"; return "$_rc"; }
     case $_file in
         *.cs         )
             add_spdx_csharp_file "$_file" "$_temp_file"                         || _rc=$?
@@ -183,9 +183,9 @@ function process_file()
             exit_with_bug "${FUNCNAME[0]}() requires argument 1, the file to add an SPDX header to, to be an existing writable file with one of the suffixes: .cs, .sh, .bats, .yaml, or .yml (provided: '$_file')." -ec "$err_logic_error"
             ;;
     esac
-    (( _rc == success ))                                                        || { _rc=$err_io_failure; error -ec "$_rc" "Failed to write the new contents of '$_rel'"; }
-    (( _rc != success )) || chmod --reference="$_file" "$_temp_file"            || { _rc=$err_io_failure; error -ec "$_rc" "Failed to change the mode of a temporary file"; }
-    (( _rc != success )) || execute mv "$_temp_file" "$_file"                   || { _rc=$err_io_failure; error -ec "$_rc" "Failed to copy the temporary file over the original file '$_file'"; }
+    (( _rc == success ))                                                        || { _rc=$err_io_failure; error "Failed to write the new contents of '$_rel'" -ec "$_rc"; }
+    (( _rc != success )) || chmod --reference="$_file" "$_temp_file"            || { _rc=$err_io_failure; error "Failed to change the mode of a temporary file" -ec "$_rc"; }
+    (( _rc != success )) || execute mv "$_temp_file" "$_file"                   || { _rc=$err_io_failure; error "Failed to copy the temporary file over the original file '$_file'" -ec "$_rc"; }
     rm -f "$_temp_file"
     (( _rc == success ))                                                        || { (( ++failed )); return "$_rc"; }
 

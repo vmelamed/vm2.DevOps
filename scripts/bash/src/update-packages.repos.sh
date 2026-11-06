@@ -282,7 +282,7 @@ function refresh_lock_files()
         # rewrites an existing lock file instead of failing with NU1004 (verified with dotnet 10)
         dotnet_restore "$_project" --force-evaluate || {
             _rc=$?
-            error -ec "$_rc" "Failed to restore '$_project'."
+            error "Failed to restore '$_project'." -ec "$_rc"
         }
     done
     _t1=$(now_us)

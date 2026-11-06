@@ -52,9 +52,10 @@ function validate_package_lines()
         [[ $_line =~ $package_regex ]]                && continue # validate PackageVersion lines, e.g., <PackageVersion Include="<id>" Version="<version>" />
 
         _rc=$err_invalid_item
-        error -ec "$_rc" "$_file:$_line_number: unsupported PackageVersion format; expected one line in the form" \
-                         "  <PackageVersion Include=\"<id>\" Version=\"<version>\" />" \
-                         "  but found: $_line"
+        error "$_file:$_line_number: unsupported PackageVersion format; expected one line in the form" \
+              "  <PackageVersion Include=\"<id>\" Version=\"<version>\" />" \
+              "  but found: $_line" \
+              -ec "$_rc"
     done < "$_file"
     return "$_rc"
 }
@@ -220,7 +221,7 @@ function set_package_version()
     local _file=$1 _section=$2 _id=$3 _new=$4
     local _line _tmp _inside=false _done=false _line_id _line_version
 
-    _tmp=$(mktemp)                                                              || { _rc=$err_io_failure; error -ec "$_rc" "Failed to create a temporary file"; return "$_rc"; }
+    _tmp=$(mktemp)                                                              || { _rc=$err_io_failure; error "Failed to create a temporary file" -ec "$_rc"; return "$_rc"; }
     while IFS= read -r _line || [[ -n $_line ]]; do
         if _props_line_in_section "$_section" "$_line" _inside &&
            [[ $_line != *"<!--"* && $_line != *"-->"* && $_line =~ $package_regex ]] &&
@@ -270,16 +271,16 @@ function query_package_versions()
     _json=$(dotnet package search "$_id" --exact-match --format json 2>/dev/null) || return "$err_tool_error"
 
     local _output_file
-    _output_file=$(mktemp)                                                      || { _rc=$err_io_failure; error -ec "$_rc" "Failed to create a temporary output file."; }
+    _output_file=$(mktemp)                                                      || { _rc=$err_io_failure; error "Failed to create a temporary output file." -ec "$_rc"; }
 
     (( _rc != success )) ||
     jq -r --arg id "$_id" '.searchResult[].packages[] | select((.id | ascii_downcase) == ($id | ascii_downcase)) | .version' <<< "$_json" > "$_output_file" || {
         _rc=$err_tool_error
-        error -ec "$_rc" "Failed to query package versions."
+        error "Failed to query package versions." -ec "$_rc"
     }
 
     (( _rc != success )) ||
-    readarray -t _found_ref < "$_output_file"                                   || { _rc=$err_io_failure; error -ec "$_rc" "Failed to read package versions from temporary output file." "$(dotnet_error_message "$_rc")"; }
+    readarray -t _found_ref < "$_output_file"                                   || { _rc=$err_io_failure; error "Failed to read package versions from temporary output file." "$(dotnet_error_message "$_rc")" -ec "$_rc"; }
 
     rm -f "$_output_file"
     return "$_rc"

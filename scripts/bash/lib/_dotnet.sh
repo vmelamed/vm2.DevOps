@@ -114,7 +114,7 @@ function dotnet_clean()
 
     local -i _rc="$success"
 
-    [[ -s $1 && $1 == *.@(csproj|slnx|sln) ]]                                   || { _rc="$err_argument_value"; error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a path to an existing project or solution file (provided '${1-<missing>}')."; }
+    [[ -s $1 && $1 == *.@(csproj|slnx|sln) ]]                                   || { _rc="$err_argument_value"; error "${FUNCNAME[0]}() requires argument 1 to be a path to an existing project or solution file (provided '${1-<missing>}')." -ec "$_rc"; }
     (( _rc == "$success" ))                                                     || return "$_rc"
 
     local _project="$1"
@@ -136,7 +136,7 @@ function dotnet_clean()
     # CLEAN the project using dotnet build
     execute --quiet dotnet clean "${_dotnet_args[@]}"                           || _rc=$?
 
-    (( _rc == dotnet_success ))                                                 || { _rc="$err_tool_error"; error -ec "$_rc" "Cleaning '$_project' failed: ($_rc)." "$(dotnet_error_message "$_rc")"; }
+    (( _rc == dotnet_success ))                                                 || { _rc="$err_tool_error"; error "Cleaning '$_project' failed: ($_rc)." "$(dotnet_error_message "$_rc")" -ec "$_rc"; }
 
     return "$_rc"
 }
@@ -169,7 +169,7 @@ function dotnet_restore()
 
     local -i _rc="$success"
 
-    [[ $1 == *.@(csproj|slnx|sln) && -s $1 ]]                                   || { _rc="$err_argument_value"; error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a path to an existing project or solution file (provided '${1-<missing>}')."; }
+    [[ $1 == *.@(csproj|slnx|sln) && -s $1 ]]                                   || { _rc="$err_argument_value"; error "${FUNCNAME[0]}() requires argument 1 to be a path to an existing project or solution file (provided '${1-<missing>}')." -ec "$_rc"; }
     (( _rc == "$success" ))                                                     || return "$_rc"
 
     local _project="$1"
@@ -224,7 +224,7 @@ function dotnet_build()
 
     local -i _rc="$success"
 
-    [[ "$1" == *.@(csproj|slnx|sln) && -s $1 ]]                                 || { _rc="$err_not_file"; error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a path to an existing project or solution file (provided '${1-<missing>}')."; }
+    [[ "$1" == *.@(csproj|slnx|sln) && -s $1 ]]                                 || { _rc="$err_not_file"; error "${FUNCNAME[0]}() requires argument 1 to be a path to an existing project or solution file (provided '${1-<missing>}')." -ec "$_rc"; }
     (( _rc == "$success" )) || return "$_rc"
 
     local _project=$1 # the project or solution file to build
@@ -325,7 +325,7 @@ function dotnet_pack()
 
     local -i _rc="$success"
 
-    [[ -s $1 && $1 == *.csproj ]]                                               || { _rc="$err_not_file"; error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a path to an existing project file (provided '${1-<missing>}')."; }
+    [[ -s $1 && $1 == *.csproj ]]                                               || { _rc="$err_not_file"; error "${FUNCNAME[0]}() requires argument 1 to be a path to an existing project file (provided '${1-<missing>}')." -ec "$_rc"; }
     (( _rc == "$success" ))                                                     || return "$_rc"
 
     local _project=$1
@@ -343,7 +343,7 @@ function dotnet_pack()
     # See the function's doc comment above for the failure mode this avoids.
     local _pack_config=$configuration
     if [[ -z $_pack_config ]]; then
-        get_msbuild_property "$_project" "$key_configuration" _pack_config      || { _rc=$err_tool_error; error -ec "$_rc" "${FUNCNAME[0]}() Failed to resolve the 'Configuration' property for '$_project'."; }
+        get_msbuild_property "$_project" "$key_configuration" _pack_config      || { _rc=$err_tool_error; error "${FUNCNAME[0]}() Failed to resolve the 'Configuration' property for '$_project'." -ec "$_rc"; }
     fi
     (( _rc == "$success" ))                                                     || return "$_rc"
 
@@ -405,7 +405,7 @@ function dotnet_pack()
     local _package="${_packs_path_and_name}.nupkg"
 
     _properties["PackagePath"]="$_package"
-    is_dry_run || [[ -s $_package ]]                                            || { _rc=$err_tool_error; error -ec "$_rc" "Package '$_package' not found or empty."; }
+    is_dry_run || [[ -s $_package ]]                                            || { _rc=$err_tool_error; error "Package '$_package' not found or empty." -ec "$_rc"; }
 
     # does it have symbols package and get their path
     #
@@ -455,7 +455,7 @@ function list_solution_projects()
 
     local -i _rc="$success"
 
-    [[ $1 == *.@(sln|slnx) && -s $1 ]]                                          || { _rc="$err_argument_value"; error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be an existing, non-empty solution file (provided '${1-<missing>}')."; }
+    [[ $1 == *.@(sln|slnx) && -s $1 ]]                                          || { _rc="$err_argument_value"; error "${FUNCNAME[0]}() requires argument 1 to be an existing, non-empty solution file (provided '${1-<missing>}')." -ec "$_rc"; }
     (( _rc == "$success" ))                                                     || return "$_rc"
 
     local _solution=$1
@@ -498,7 +498,7 @@ function list_solution_projects()
     done
     _out=("${_src_projects[@]}" "${_other_projects[@]}")
 
-    (( ${#_out[@]} > 0 ))                                                       || { _rc="$err_tool_error"; error -ec "$_rc" "${FUNCNAME[0]}() 'dotnet sln $_solution list' returned no projects (exit code $_sln_rc)." "Raw output:" "$_sln_output"; }
+    (( ${#_out[@]} > 0 ))                                                       || { _rc="$err_tool_error"; error "${FUNCNAME[0]}() 'dotnet sln $_solution list' returned no projects (exit code $_sln_rc)." "Raw output:" "$_sln_output" -ec "$_rc"; }
 
     return "$_rc"
 }

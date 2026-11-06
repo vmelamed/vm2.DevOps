@@ -88,9 +88,10 @@ function get_devops_parent()
         root_working_tree "$lib_dir" _r &&
         __devops_parent=$(dirname "$_r" 2> "$_ignore") || {
             _rc=$err_logic_error
-            error -ec "$_rc" "Failed to resolve the parent directory of the vm2.DevOps repo from the script directory '$lib_dir'." \
-                             "Please ensure that the script is located in '$VM2_REPOS/vm2.DevOps/scripts/bash/lib' and" \
-                             "that the repository is not in a detached HEAD state."
+            error "Failed to resolve the parent directory of the vm2.DevOps repo from the script directory '$lib_dir'." \
+                  "Please ensure that the script is located in '$VM2_REPOS/vm2.DevOps/scripts/bash/lib' and" \
+                  "that the repository is not in a detached HEAD state." \
+                  -ec "$_rc"
             return "$_rc"
         }
 
@@ -284,15 +285,15 @@ function resolve_vm2_repos()
 
     [[ -z "$_repos" || -d "$_repos" ]]         || {
         _rc=$err_not_directory
-        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, if not empty, to hold an existing directory (provided '${_repos-<missing>}')."
+        error "${FUNCNAME[0]}() requires argument 1, if not empty, to hold an existing directory (provided '${_repos-<missing>}')." -ec "$_rc"
     }
     [[ -z ${2:-} ]] || validate_branch_name "$2" || {
         _rc=$err_invalid_branch
-        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 2, if provided, to be a valid branch name (provided '${2-<missing>}')."
+        error "${FUNCNAME[0]}() requires argument 2, if provided, to be a valid branch name (provided '${2-<missing>}')." -ec "$_rc"
     }
     [[ -z ${3:-} ]] || validate_branch_name "$3" || {
         _rc=$err_invalid_branch
-        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 3, if provided, to be a valid branch name (provided '${3-<missing>}')."
+        error "${FUNCNAME[0]}() requires argument 3, if provided, to be a valid branch name (provided '${3-<missing>}')." -ec "$_rc"
     }
     (( _rc == "$success" )) || return "$_rc"
 
@@ -506,7 +507,7 @@ function resolve_repo_root()
 
     [[ ! -v 1 || -d $1 ]]                       || {
         _rc=$err_not_directory
-        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the path to the parent of all vm2 repositories, to be a an existing directory path (provided '${1-<missing>}')."
+        error "${FUNCNAME[0]}() requires argument 1, the path to the parent of all vm2 repositories, to be a an existing directory path (provided '${1-<missing>}')." -ec "$_rc"
     }
     (( _rc == success )) || return "$_rc"
 
@@ -530,7 +531,7 @@ function resolve_repo_root()
 
     # if _rc is one of the fatal errors from the above searches - return it
     ! is_in "$_rc" "$err_not_found" "$err_found_too_many" || {
-        error -ec "$_rc" "Could not find the repository directory '${_dir_path-<missing>}' neither under '${_repos-<missing>}' nor under '\$HOME'."
+        error "Could not find the repository directory '${_dir_path-<missing>}' neither under '${_repos-<missing>}' nor under '\$HOME'." -ec "$_rc"
         return "$_rc"
     }
 
@@ -539,7 +540,7 @@ function resolve_repo_root()
         _in_repo_dir=$_found_dir
         root_working_tree "$_in_repo_dir" _repo_root || {
             _rc=$err_invalid_repo
-            error -ec "$_rc" "Failed to get the root of the repository working tree for '$_in_repo_dir'."
+            error "Failed to get the root of the repository working tree for '$_in_repo_dir'." -ec "$_rc"
             return "$_rc"    # get the root of the repo working tree
         }
 
@@ -642,7 +643,7 @@ function get_vm2_sot_path()
 
     [[ -d $1 ]]                            || {
         _rc="$err_not_directory"
-        error -ec "$_rc" "$_invalid_arg1"
+        error "$_invalid_arg1" -ec "$_rc"
     }
     ((  _rc == success )) || return "$_rc"
 
@@ -654,7 +655,7 @@ function get_vm2_sot_path()
 
     [[ -d "$_vm2_sot" ]] || {
         _rc="$err_not_directory"
-        error -ec "$_rc" "The SoT shared content directory is not found at the expected conventional location '$_vm2_sot'. Please make sure it exists or correct the parameter/environment variable."
+        error "The SoT shared content directory is not found at the expected conventional location '$_vm2_sot'. Please make sure it exists or correct the parameter/environment variable." -ec "$_rc"
         _vm2_sot=''
     }
 

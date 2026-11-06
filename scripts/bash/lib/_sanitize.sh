@@ -218,7 +218,7 @@ function is_safe_input()
 
     if [[ "$_input" =~ $_dangerous_chars ]]; then
         _rc="$err_unsafe_argument"
-        error -ec "$_rc" "${FUNCNAME[0]}(): The input '$_input' contains one or more of the unsafe characters: '$_dangerous_chars'."
+        error "${FUNCNAME[0]}(): The input '$_input' contains one or more of the unsafe characters: '$_dangerous_chars'." -ec "$_rc"
     fi
 
     return "$_rc"
@@ -244,7 +244,7 @@ function is_safe_boolean()
     local -i _rc="$positive"
     is_boolean "$1" || {
         _rc="$err_unsafe_argument"
-        error -ec "$_rc" "${FUNCNAME[0]}(): The input '$1' is not a valid boolean. Expected 'true' or 'false'."
+        error "${FUNCNAME[0]}(): The input '$1' is not a valid boolean. Expected 'true' or 'false'." -ec "$_rc"
     }
 
     return "$_rc"
@@ -270,7 +270,7 @@ function is_safe_integer()
     local -i _rc="$positive"
     is_integer "$1" || {
         _rc="$err_unsafe_argument"
-        error -ec "$_rc" "${FUNCNAME[0]}(): The input '$1' is not a valid integer."
+        error "${FUNCNAME[0]}(): The input '$1' is not a valid integer." -ec "$_rc"
     }
 
     return "$_rc"
@@ -346,7 +346,7 @@ function is_safe_valid_path()
 
     is_valid_path "$_path" || {
         _rc=$?
-        error -ec "$_rc" "The path '$_path' is not valid."
+        error "The path '$_path' is not valid." -ec "$_rc"
     }
 
     return "$_rc"
@@ -378,7 +378,7 @@ function is_safe_existing_path()
 
     [[ -e "$_path" ]] || {
         _rc="$err_non_existent_path"
-        error -ec "$_rc" "The path '$_path' does not exist."
+        error "The path '$_path' does not exist." -ec "$_rc"
     }
 
     return "$_rc"
@@ -409,7 +409,7 @@ function is_safe_existing_directory()
 
     [[ -d "$1" ]] || {
         _rc="$err_not_directory"
-        error -ec "$_rc" "The path '$_path' is not a directory."
+        error "The path '$_path' is not a directory." -ec "$_rc"
     }
 
     return "$_rc"
@@ -440,7 +440,7 @@ function is_safe_existing_file()
 
     [[ -f "$_path" && -s "$_path" ]] || {
         _rc="$err_not_file"
-        error -ec "$_rc" "The path '$_path' is not a file or is empty."
+        error "The path '$_path' is not a file or is empty." -ec "$_rc"
     }
 
     return "$_rc"
@@ -485,7 +485,7 @@ function validate_json_array()
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     [[ -n "$_input" ]] && is_safe_input "$_input" true || {
         _rc=$err_unsafe_argument
-        error -ec "$_rc" "${FUNCNAME[0]}() requires a safe, non-empty string representing a JSON array of strings, or an empty array; or a JSON string (possibly empty); or null (provided '${_input-<missing>}')."
+        error "${FUNCNAME[0]}() requires a safe, non-empty string representing a JSON array of strings, or an empty array; or a JSON string (possibly empty); or null (provided '${_input-<missing>}')." -ec "$_rc"
     }
     jq empty <<< "$_input"
 
@@ -513,7 +513,7 @@ function validate_json_array()
         ' <<< "$_input"
     ) || {
         _rc=$err_invalid_json_array
-        error -ec "$_rc" "The input must be a JSON array of strings, or an empty array; or a JSON string (possibly empty); or null (provided '${_input-<missing>}')."
+        error "The input must be a JSON array of strings, or an empty array; or a JSON string (possibly empty); or null (provided '${_input-<missing>}')." -ec "$_rc"
         return "$_rc"
     }
 
@@ -524,7 +524,7 @@ function validate_json_array()
         while read -r _item; do
             $_is_safe_item_fn "$_item" || {
                 _rc="$err_unsafe_argument"
-                error -ec "$_rc" "'$_item' is not a valid item for this JSON array"
+                error "'$_item' is not a valid item for this JSON array" -ec "$_rc"
             }
         done < <(jq -r '.[]' <<< "$_output")
     fi
@@ -681,7 +681,7 @@ function validate_nuget_server()
 
     [[ ! -v 4 || $4 =~ $nugetServersRegex ]] || {
         _rc="$err_argument_value"
-        error -ec "$_rc"  "${FUNCNAME[0]}() requires the fourth argument to be a valid default NuGet server moniker (provided '$4')."
+        error "${FUNCNAME[0]}() requires the fourth argument to be a valid default NuGet server moniker (provided '$4')." -ec "$_rc"
     }
     (( _rc == "$success" )) || return "$_rc"
 
@@ -691,7 +691,7 @@ function validate_nuget_server()
 
     [[ "$_server" =~ $nugetServersRegex ]] || {
         _rc="$err_argument_value"
-        error -ec "$_rc" "Invalid NuGet server: $_server."
+        error "Invalid NuGet server: $_server." -ec "$_rc"
         return "$_rc"
     }
 
@@ -714,7 +714,7 @@ function validate_nuget_server()
             ;;
 
         * ) _rc="$err_argument_value"
-            error -ec "$_rc" "Unknown NuGet server: $_server"
+            error "Unknown NuGet server: $_server" -ec "$_rc"
             ;;
     esac
 
@@ -811,7 +811,7 @@ function is_safe_framework()
 
     is_valid_framework "$1" || {
         _rc="$err_argument_value"
-        error -ec "$_rc" "The  Target Framework Moniker (TFM) '$1' is not valid."
+        error "The  Target Framework Moniker (TFM) '$1' is not valid." -ec "$_rc"
     }
 
     is_in "$1" "${known_tfms[@]}" ||
@@ -861,7 +861,7 @@ function is_safe_runtime()
 
     is_valid_runtime "$1" || {
         _rc="$err_argument_value"
-        error -ec "$_rc" "The  Runtime Identifier (RID) '$1' is not valid."
+        error "The  Runtime Identifier (RID) '$1' is not valid." -ec "$_rc"
     }
 
     is_in "$1" "${known_runtimes[@]}" ||
@@ -931,7 +931,7 @@ function validate_preprocessor_symbols()
 
     [[ $_symbols =~ ^[\ \,:\;0-9A-Z_a-z]+$ ]] || {
         _rc="$err_argument_value"
-        error -ec "$_rc" "The preprocessor symbols '$_symbols' contain invalid characters."
+        error "The preprocessor symbols '$_symbols' contain invalid characters." -ec "$_rc"
         return "$_rc"
     }
 
@@ -950,7 +950,7 @@ function validate_preprocessor_symbols()
             [[ -z $_normalized_symbols ]] && _normalized_symbols="$_symbol" || _normalized_symbols="$_normalized_symbols;$_symbol"
         else
             _rc="$err_argument_value"
-            error -ec "$_rc" "The pre-processor symbol '$_symbol' from '$_symbols' is not valid."
+            error "The pre-processor symbol '$_symbol' from '$_symbols' is not valid." -ec "$_rc"
         fi
     done
 
@@ -1213,17 +1213,17 @@ function validate_json_schema()
     }
     [[ -s $_schema_file ]]             || {
         _rc="$err_not_file"
-        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 2 to be an existing, non-empty JSON Schema file (provided '${_schema_file-<missing>}')."
+        error "${FUNCNAME[0]}() requires argument 2 to be an existing, non-empty JSON Schema file (provided '${_schema_file-<missing>}')." -ec "$_rc"
     }
     (( _rc == "$success" )) || return "$_rc"
 
     is_valid_json_file "$_json_file"   || {
         _rc="$err_invalid_json"
-        error -ec "$_rc" "The JSON file '$_json_file' is not well-formed."
+        error "The JSON file '$_json_file' is not well-formed." -ec "$_rc"
     }
     is_valid_json_file "$_schema_file" || {
         _rc="$err_invalid_json"
-        error -ec "$_rc" "The JSON schema file '$_schema_file' is not well-formed."
+        error "The JSON schema file '$_schema_file' is not well-formed." -ec "$_rc"
     }
     (( _rc == "$success" )) || return "$_rc"
 
@@ -1236,7 +1236,7 @@ function validate_json_schema()
     local _output
     _output=$(check-jsonschema --schemafile "$_schema_file" "$_json_file" 2>&1) || {
         _rc=$err_invalid_json
-        error -ec "$_rc" "'$_json_file' failed validation against the schema in '$_schema_file':" "$_output"
+        error "'$_json_file' failed validation against the schema in '$_schema_file':" "$_output" -ec "$_rc"
     }
 
     return "$_rc"
