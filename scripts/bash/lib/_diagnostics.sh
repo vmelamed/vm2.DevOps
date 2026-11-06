@@ -1049,7 +1049,7 @@ function now_us()
 #---------------------------------------------------------------------------------------------
 function with_error()
 {
-    local -i _prev_error=$? # capture immediately the error code of the prev. command
+    local -i _prev_error=$? # capture the previous command's exit code immediately
 
     (( $# >= 2 ))                                                               || bug "${FUNCNAME[0]}() requires at least two arguments ($# provided):" \
                                                                                        "  - the actual error code to be reported by 'error'" \

@@ -406,7 +406,7 @@ function convert_dotnet_args_to_msbuild_args()
             # process the instruction part: it may contain special directives like @remove, @warning, or @error:
             [[ $_part == @remove* ]]  && _remove=true                                           && continue # remove this option all together
             [[ $_part == @warning* ]] && warning "${_part#@warning}"                            && continue # report a warning and skip this part
-            [[ $_part == @error* ]]   && with_error "$err_argument_type" _rc "${_part#@error}"  && return "$_rc" # report an error and skip this part
+            [[ $_part == @error* ]]   && with_error "$err_argument_type" _rc "${_part#@error}"  && return "$_rc" # report and return an error
 
 
             # or it is a format string for printf with a single argument - _arg, printf into $_msb_option
