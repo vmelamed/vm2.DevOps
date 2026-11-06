@@ -172,7 +172,7 @@ function __validate_repo_root()
     #   otherwise try to resolve the repository path relative to $_vm2_repos
     _path=$(realpath -e "$_vm2_repos/${_repo#/}" 2> "$_ignore") || {
         # couldn't resolve the repo path - error and exit
-        error -ec "$err_not_found" "Could not find the path '$_repo' neither in the current working directory, nor in '$_vm2_repos'."
+        error "Could not find the path '$_repo' neither in the current working directory, nor in '$_vm2_repos'." -ec "$err_not_found"
         return "$err_not_found"
     }
 
@@ -184,18 +184,19 @@ function __validate_repo_root()
 
     root_working_tree "$_path" _r 2> "$_ignore" || {
         _rc=$?
-        error -ec "$err_not_git_directory" "The '${_repo-<missing>}' repository at '${_path-<missing>}' is not a git repository." \
-                                                 "$(error_message "$_rc")."
+        error "The '${_repo-<missing>}' repository at '${_path-<missing>}' is not a git repository." \
+              "$(error_message "$_rc")." \
+              -ec "$err_not_git_directory"
         return "$err_not_git_directory"
     }
     [[ "$_path" == "$_r" ]] || {
-        error -ec "$err_not_git_root" "The '${_repo-<missing>}' repository at '${_path-<missing>}' is not the root of the git repository working tree."
+        error "The '${_repo-<missing>}' repository at '${_path-<missing>}' is not the root of the git repository working tree." -ec "$err_not_git_root"
         return "$err_not_git_root"
     }
 
     # 3) it has GitHub Actions workflows in the .github/workflows directory
     [[ -d "$_path/.github/workflows" ]] || {
-        error -ec "$err_repo_with_no_ci" "The '${_repo-<missing>}' repository does not have GitHub Actions workflows in '${_path-<missing>}/.github/workflows'."
+        error "The '${_repo-<missing>}' repository does not have GitHub Actions workflows in '${_path-<missing>}/.github/workflows'." -ec "$err_repo_with_no_ci"
         return "$err_repo_with_no_ci"
     }
 
@@ -204,7 +205,7 @@ function __validate_repo_root()
         _branch=$(git -C "$_path" branch --show-current 2>"$_ignore")
     else
         [[ "$_branch" == $(git -C "$_path" branch --show-current 2>"$_ignore") ]] || {
-            error -ec "$err_invalid_branch" "The '${_repo-<missing>}' repository at '${_path-<missing>}' is not on the branch '${_branch-<missing>}'."
+            error "The '${_repo-<missing>}' repository at '${_path-<missing>}' is not on the branch '${_branch-<missing>}'." -ec "$err_invalid_branch"
             return "$err_invalid_branch"
         }
     fi
@@ -322,13 +323,13 @@ function resolve_vm2_repos()
         _repos=$default_vm2_repos_path
         trace "vm2_repos='$_repos' from the default location '$default_vm2_repos_path'"
     else
-        error -ec "$err_not_directory" "Cannot resolve the parent directory of the vm2 repositories." "${vm2_repos_instructions[@]}"
+        error "Cannot resolve the parent directory of the vm2 repositories." "${vm2_repos_instructions[@]}" -ec "$err_not_directory"
         return "$err_not_directory"
     fi
 
     # ensure $vm2_repos is an existing, absolute path:
     _repos=$(realpath -e "$_repos" 2> "$_ignore") || {
-        error -ec "$err_not_directory" "The resolved parent directory for the vm2 repositories '$_repos' does not exist or is not a directory." "${vm2_repos_instructions[@]}"
+        error "The resolved parent directory for the vm2 repositories '$_repos' does not exist or is not a directory." "${vm2_repos_instructions[@]}" -ec "$err_not_directory"
         return "$err_not_directory"
     }
 
@@ -338,8 +339,9 @@ function resolve_vm2_repos()
     local -i _rc="$success"
     __validate_repo_root "$vm2_devops_repo_name" "$_repos" "$_devops_branch" || {
         _rc=$?
-        error -ec "$err_logic_error" "The branch '$_devops_branch' of the repository '$vm2_devops_repo_name' does not appear in a clean state:" \
-                                     "$(error_message "$_rc")"
+        error "The branch '$_devops_branch' of the repository '$vm2_devops_repo_name' does not appear in a clean state:" \
+              "$(error_message "$_rc")" \
+              -ec "$err_logic_error"
     }
 
     # validate that $vm2_repos is the parent directory of the git repository vm2.Templates;
@@ -347,8 +349,9 @@ function resolve_vm2_repos()
     # and it is at or ahead of the latest stable tag:
     __validate_repo_root "$vm2_sot_repo_name" "$_repos" "$_sot_branch" || {
         _rc=$?
-        error -ec "$err_logic_error" "The branch '$_sot_branch' of the repository '$vm2_sot_repo_name' does not appear in a clean state:" \
-                                     "$(error_message "$_rc")"
+        error "The branch '$_sot_branch' of the repository '$vm2_sot_repo_name' does not appear in a clean state:" \
+              "$(error_message "$_rc")" \
+              -ec "$err_logic_error"
     }
 
     _vm2_repos="$_repos"
@@ -579,11 +582,11 @@ function resolve_repo_root()
                 _in_repo_dir="$_dir"
                 ;;
 
-            * ) error -ec "$err_unexpected_error" "Unexpected error code '$_rc' caught in ${FUNCNAME[0]}() function."
+            * ) error "Unexpected error code '$_rc' caught in ${FUNCNAME[0]}() function." -ec "$err_unexpected_error"
                 return "$_rc"
         esac
     else
-        error -ec "$err_unexpected_error" "Unexpected error code '$_rc' returned from __search_repo_dir() function."
+        error "Unexpected error code '$_rc' returned from __search_repo_dir() function." -ec "$err_unexpected_error"
         return "$_rc"
     fi
 

@@ -77,8 +77,8 @@ function validate_arguments()
     app=${app:-$default_app}
     repo_owner=${repo_owner:-$default_repo_owner}
 
-    is_in_i "$app" "${gh_apps_with_secrets[@]}"                                 || error -ec "$err_argument_value" "Invalid app specified: '$app'. Must be one of: ${gh_apps_with_secrets[*]}."
-    is_valid_secret_name "$secret_name"                                         || error -ec "$err_argument_value" "Invalid secret name specified: '$secret_name'. "
+    is_in_i "$app" "${gh_apps_with_secrets[@]}"                                 || error "Invalid app specified: '$app'. Must be one of: ${gh_apps_with_secrets[*]}." -ec "$err_argument_value"
+    is_valid_secret_name "$secret_name"                                         || error "Invalid secret name specified: '$secret_name'. " -ec "$err_argument_value"
     exit_if_has_errors true
 
     readonly repo_owner app secret_name

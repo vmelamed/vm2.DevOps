@@ -67,7 +67,7 @@ function validate_arguments()
 
         restore_state __build_project_state
 
-        (( ${#_projects[@]} > 0 ))                                              || error -ec "$err_not_found" "No build project (*.slnx, *.sln, *.csproj) was specified or found in the current directory."
+        (( ${#_projects[@]} > 0 ))                                              || error "No build project (*.slnx, *.sln, *.csproj) was specified or found in the current directory." -ec "$err_not_found"
         build_project=${_projects[0]:-}
         (( ${#_projects[@]} == 1 ))                                             || warning "Multiple projects found: (${_projects[*]}), using the first one: '$build_project'."
         trace "Auto-detected build project: $build_project"

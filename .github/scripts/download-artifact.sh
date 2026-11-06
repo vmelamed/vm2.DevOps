@@ -45,7 +45,7 @@ declare -xr workflow_name
 declare -xr workflow_path
 
 [[ -n $repository ]] ||
-    repository=$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>"$_ignore") || exit_with_error -ec "$err_not_found" "The current directory is not in a GitHub repository; use '--repository <owner/repo>'."
+    repository=$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>"$_ignore") || exit_with_error "The current directory is not in a GitHub repository; use '--repository <owner/repo>'." -ec "$err_not_found"
 
 readonly repository
 
@@ -68,14 +68,14 @@ if [[ -z "$workflow_id" ]]; then
     elif [[ -n "$workflow_path" ]]; then
         query='.[] | select(.path==$p).id'
     else
-        exit_with_error -ec "$err_missing_argument" "Either the workflow id, the workflow name, or the workflow path must be specified."
+        exit_with_error "Either the workflow id, the workflow name, or the workflow path must be specified." -ec "$err_missing_argument"
     fi
 
     declare _workflows
     declare -a workflow_ids=()
     declare what=''
 
-    _workflows=$(gh workflow list --repo "$repository" --json "id,name,path")   || exit_with_error -ec "$err_tool_error" "Could not list the workflows of '$repository'."
+    _workflows=$(gh workflow list --repo "$repository" --json "id,name,path")   || exit_with_error "Could not list the workflows of '$repository'." -ec "$err_tool_error"
 
     readarray -t workflow_ids < <(jq -r --arg n "$workflow_name" --arg p "$workflow_path" "$query" <<< "$_workflows")
 
@@ -87,13 +87,13 @@ if [[ -z "$workflow_id" ]]; then
             ;;
         1)  workflow_id="${workflow_ids[0]}"
             ;;
-        *)  exit_with_error -ec "$err_argument_value" "Multiple workflows found: ${workflow_ids[*]}"
+        *)  exit_with_error "Multiple workflows found: ${workflow_ids[*]}" -ec "$err_argument_value"
             ;;
     esac
 fi
 exit_if_has_errors
 
-execute mkdir -p "$artifacts" || exit_with_error -ec "$err_tool_error" "Failed to create artifacts directory."
+execute mkdir -p "$artifacts" || exit_with_error "Failed to create artifacts directory." -ec "$err_tool_error"
 
 if [[ -d "$artifacts" && -n "$(ls -A "$artifacts")" ]]; then
     renamed_artifacts_dir="$artifacts-$(date -u +"%Y%m%dT%H%M%S")"
@@ -169,7 +169,7 @@ for run in "${runs[@]}"; do
     download_result=$(execute gh run download "$run" \
                             --repo "$repository" \
                             --name "$artifact_name" \
-                            --dir "$artifacts" 2>&1)                            || exit_with_error -ec "$err_tool_error" "Error while downloading '$artifact_name': $download_result"
+                            --dir "$artifacts" 2>&1)                            || exit_with_error "Error while downloading '$artifact_name': $download_result" -ec "$err_tool_error"
     # the above capture also swallowed execute's dry-run$ line: show it, it is the point of a dry run
     if is_dry_run; then
         printf '%s\n' "$download_result" >&2
@@ -180,4 +180,4 @@ for run in "${runs[@]}"; do
     exit 0
 done
 
-exit_with_error -ec "$err_logic_error" "The artifact '$artifact_name' was not found in the last ${#runs[@]} successful runs of the workflow ID '$workflow_id' in the repository '$repository'."
+exit_with_error "The artifact '$artifact_name' was not found in the last ${#runs[@]} successful runs of the workflow ID '$workflow_id' in the repository '$repository'." -ec "$err_logic_error"

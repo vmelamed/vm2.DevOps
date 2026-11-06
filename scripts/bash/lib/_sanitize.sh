@@ -570,7 +570,7 @@ function is_safe_runner_os()
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     is_safe_input "$_runner_os" &&
     is_in "$_runner_os" "${allowed_runners_os[@]}" || {
-        error -ec "$err_argument_value" "The runner OS '$_runner_os' is not allowed. Valid options: ${allowed_runners_os[*]}."
+        error "The runner OS '$_runner_os' is not allowed. Valid options: ${allowed_runners_os[*]}." -ec "$err_argument_value"
         _rc="$negative"
     }
 
@@ -610,13 +610,13 @@ function is_safe_reason()
 
     # Check length
     (( ${#_rsn} <= _max_length )) || {
-        error -ec "$err_argument_value" "The reason is too long. Maximum length is $_max_length characters."
+        error "The reason is too long. Maximum length is $_max_length characters." -ec "$err_argument_value"
         _rc="$negative"
     }
 
     # Reject if it looks like a command (starts with -, /, .)
     [[ "$_rsn" =~ ^[-/.] ]] && {
-        error -ec "$err_unsafe_argument" "The reason '$_rsn' appears to be a command or contains unsafe characters."
+        error "The reason '$_rsn' appears to be a command or contains unsafe characters." -ec "$err_unsafe_argument"
         _rc="$negative"
     }
 
@@ -759,7 +759,7 @@ function is_safe_configuration()
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     is_safe_input "$1" &&
     is_valid_configuration "$1" || {
-        error -ec "$err_argument_value" "The configuration '$1' is not valid."
+        error "The configuration '$1' is not valid." -ec "$err_argument_value"
         return "$negative"
     }
 
@@ -970,7 +970,7 @@ function validate_preprocessor_symbols()
 function is_safe_secret()
 {
     is_valid_secret "$1" || {
-        error -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the secret value, to be non-empty and to contain no control characters."
+        error "${FUNCNAME[0]}() requires argument 1, the secret value, to be non-empty and to contain no control characters." -ec "$err_argument_value"
         return "$err_argument_value"
     }
 }
@@ -1017,7 +1017,7 @@ function is_safe_min_coverage_pct()
     exit_if_has_bugs
 
     is_valid_percentage "$1" || {
-        error -ec "$err_argument_type" "The min coverage percentage '$1' must be an integer number between 0 and 100."
+        error "The min coverage percentage '$1' must be an integer number between 0 and 100." -ec "$err_argument_type"
         return "$negative"
     }
 
@@ -1045,7 +1045,7 @@ function is_safe_max_regression_pct()
     exit_if_has_bugs
 
     is_valid_percentage "$1" || {
-        error -ec "$err_argument_value" "The max regression percentage '$1' must be an integer number between 0 and 100."
+        error "The max regression percentage '$1' must be an integer number between 0 and 100." -ec "$err_argument_value"
         return "$negative"
     }
 
@@ -1095,7 +1095,7 @@ function is_safe_minverTagPrefix()
     exit_if_has_bugs
 
     is_valid_minverTagPrefix "$@" || {
-        error -ec "$err_argument_value" "The MinVer tag prefix '$1' is not valid."
+        error "The MinVer tag prefix '$1' is not valid." -ec "$err_argument_value"
         return "$negative"
     }
 }
@@ -1140,7 +1140,7 @@ function is_safe_minverPrereleaseId()
     exit_if_has_bugs
 
     is_valid_minverPrereleaseId "$@" || {
-        error -ec "$err_argument_value" "The prerelease ID '$1' is not valid."
+        error "The prerelease ID '$1' is not valid." -ec "$err_argument_value"
         return "$negative"
     }
 }
@@ -1205,7 +1205,7 @@ function validate_json_schema()
 
     [[ -s $_json_file ]]               || {
         _rc="$err_not_file"
-        error -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 1 to be an existing, non-empty JSON file (provided '${_json_file-<missing>}')."
+        error "${FUNCNAME[0]}() requires argument 1 to be an existing, non-empty JSON file (provided '${_json_file-<missing>}')." -ec "$err_not_file"
     }
     [[ -s $_schema_file ]]             || {
         _rc="$err_not_file"

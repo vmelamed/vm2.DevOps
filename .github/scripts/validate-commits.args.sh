@@ -95,7 +95,7 @@ function validate_arguments()
                                                                                                                                "upstream tracking branch either. Pass a base ref explicitly, or set \$BASE_REF."; }
         (( _rc == success )) || return "$success"
 
-        base_ref=$(git -C "$repo_path" merge-base HEAD "$_default_ref")         || error -ec "$err_argument_value" "Failed to compute the merge-base with '$_default_ref'."
+        base_ref=$(git -C "$repo_path" merge-base HEAD "$_default_ref")         || error "Failed to compute the merge-base with '$_default_ref'." -ec "$err_argument_value"
 
         trace "No base ref given -- defaulting to the merge-base with '$_default_ref' (${base_ref:0:8})," \
               "i.e. commits since this branch diverged. Pass a base ref explicitly to check a different range."

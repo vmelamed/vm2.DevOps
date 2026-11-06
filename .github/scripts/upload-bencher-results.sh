@@ -154,7 +154,7 @@ for file in "$results_dir"/*-report-full-compressed.json; do
     fi
 done
 (( _files_added > 0 )) ||
-    exit_with_error -ec "$err_argument_value" "No benchmark result files (*-report-full-compressed.json) found in '$results_dir'."
+    exit_with_error "No benchmark result files (*-report-full-compressed.json) found in '$results_dir'." -ec "$err_argument_value"
 
 if is_verbose; then
     trace "Looking for benchmark result files matching: $results_dir/*-report-full-compressed.json:"
@@ -194,5 +194,5 @@ elif [[ $bencher_output == *"Alerts detected"* ]]; then
     warning "The benchmark results in '$results_dir' were successfully uploaded to bencher.dev but threshold alerts were detected."
     exit "$bencher_rc"
 else
-    exit_with_error -ec "$err_tool_error" "Bencher run failed uploading the benchmark results in '$results_dir' before completing successfully."
+    exit_with_error "Bencher run failed uploading the benchmark results in '$results_dir' before completing successfully." -ec "$err_tool_error"
 fi

@@ -184,7 +184,7 @@ function validate_environment()
         if execute sudo apt-get update && sudo apt-get install -y jq; then
             info "GitHub CLI 'jq' successfully installed."
         else
-            error -ec "$err_tool_not_found" "GitHub CLI 'jq' was not found and could not install it. Please have 'jq' installed."
+            error "GitHub CLI 'jq' was not found and could not install it. Please have 'jq' installed." -ec "$err_tool_not_found"
         fi
     else
         jq -V | to_stdout | grep -Eo 'jq-1\.8\.[0-9]+' &> "$_ignore" || {
@@ -192,7 +192,7 @@ function validate_environment()
             curl -sLo /tmp/jq https://github.com/jqlang/jq/releases/download/jq-1.8.2/jq-linux-amd64
             sudo install /tmp/jq /usr/local/bin/jq
             jq -V | to_stdout | grep -Eo 'jq-1\.8\.[0-9]+' &> "$_ignore" || {
-                error -ec "$err_tool_not_found" "GitHub CLI 'jq' version 1.8.x is required. Please update 'jq' to version 1.8.x."
+                error "GitHub CLI 'jq' version 1.8.x is required. Please update 'jq' to version 1.8.x." -ec "$err_tool_not_found"
             }
         }
     fi
@@ -200,7 +200,7 @@ function validate_environment()
         if execute sudo apt-get update && sudo apt-get install -y gh; then
             info "GitHub CLI 'gh' successfully installed."
         else
-            error -ec "$err_tool_not_found" "GitHub CLI 'gh' was not found and could not install it. Please have 'gh' installed."
+            error "GitHub CLI 'gh' was not found and could not install it. Please have 'gh' installed." -ec "$err_tool_not_found"
         fi
     fi
     return "$success"
@@ -233,11 +233,11 @@ function validate_arguments()
 
     is_safe_integer "$max_gen1_collects"                                                                             || true
     (( max_gen1_collects >= 0 )) ||
-        error -ec "$err_argument_value" "max-gen1-collects must be a non-negative integer (got '$max_gen1_collects')."
+        error "max-gen1-collects must be a non-negative integer (got '$max_gen1_collects')." -ec "$err_argument_value"
 
     is_safe_integer "$max_gen2_collects"                                                                             || true
     (( max_gen2_collects >= 0 )) ||
-        error -ec "$err_argument_value" "max-gen2-collects must be a non-negative integer (got '$max_gen2_collects')."
+        error "max-gen2-collects must be a non-negative integer (got '$max_gen2_collects')." -ec "$err_argument_value"
 
     is_safe_boolean "$reset_benchmark_thresholds"                                                                    || true
     is_safe_boolean "$skip_build"                                                                                    || true

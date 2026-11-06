@@ -94,7 +94,7 @@ fi
 {
     echo "# Update Packages Summary"
     echo
-} > "$summary_file" || exit_with_error -ec "$err_invalid_file" "Failed to write to the summary file '$summary_file'."
+} > "$summary_file" || exit_with_error "Failed to write to the summary file '$summary_file'." -ec "$err_invalid_file"
 
 declare new_branch
 new_branch="deps/update-packages-$(date +%Y-%m-%d-%H-%M-%S)"
@@ -149,7 +149,7 @@ if $include_sot_repo; then
 
         fanout_0=$(now_us)
         "$diff_shared_script" "${diff_shared_args[@]}" ||
-            error -ec "$err_tool_error" "diff-shared.sh failed while copying the shared block to the repositories."
+            error "diff-shared.sh failed while copying the shared block to the repositories." -ec "$err_tool_error"
         fanout_1=$(now_us)
         fanout_us=$(( fanout_1 - fanout_0 ))
     fi
@@ -172,7 +172,7 @@ lock_0=$(now_us)
 for repo in "${!target_repos[@]}"; do
     [[ ${modes[$repo]} == skip ]] && continue
     info "  $repo: running dotnet restore --force-evaluate..."
-    refresh_lock_files "${target_repos[$repo]}" || error -ec "$err_tool_error" "Failed to regenerate packages.lock.json in '$repo'."
+    refresh_lock_files "${target_repos[$repo]}" || error "Failed to regenerate packages.lock.json in '$repo'." -ec "$err_tool_error"
 done
 lock_1=$(now_us)
 lock_us=$(( lock_1 - lock_0 ))
@@ -201,12 +201,12 @@ for repo in "${!target_repos[@]}"; do
             reasons[$repo]="$check_em already up to date -- nothing to commit"
         continue
     elif (( _commit_rc != success )); then
-        error -ec "$err_tool_error" "Failed to commit the package versions in '$repo'."
+        error "Failed to commit the package versions in '$repo'." -ec "$err_tool_error"
         continue
     fi
 
     execute --quiet git -C "$repo_path" push --quiet -u origin "$new_branch" || {
-        error -ec "$err_tool_error" "Failed to push '$new_branch' in '$repo'."
+        error "Failed to push '$new_branch' in '$repo'." -ec "$err_tool_error"
         continue
     }
 

@@ -70,7 +70,7 @@ if [[ "$delete_mode" == false ]]; then
 fi
 # We don't need to check for the presence of del_tag in delete mode, because get_arguments already checked for it.
 
-git rev-parse --git-dir 1>"$_ignore" ||  exit_with_error -ec "$err_logic_error" "Not a git repository."
+git rev-parse --git-dir 1>"$_ignore" ||  exit_with_error "Not a git repository." -ec "$err_logic_error"
 
 # Resolve the commit the old/del tag points to (dereference annotated tags)
 if [[ "$delete_mode" == false ]]; then

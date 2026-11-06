@@ -79,7 +79,7 @@ function get_arguments()
 
 function validate_environment()
 {
-    [[ -n "${GITHUB_REPOSITORY:-}" && -n "${RELEASE_PAT:-}" ]]                  || error -ec "$err_argument_value" "GITHUB_REPOSITORY and/or RELEASE_PAT are not set."
+    [[ -n "${GITHUB_REPOSITORY:-}" && -n "${RELEASE_PAT:-}" ]]                  || error "GITHUB_REPOSITORY and/or RELEASE_PAT are not set." -ec "$err_argument_value"
 
     return "$success"
 }
@@ -97,12 +97,12 @@ function validate_arguments()
         is_prerelease=true
         reason=${reason:-"pre-release"}
     else
-        error -ec "$err_argument_value" "Tag '$tag' is not a valid semver release or prerelease tag."
+        error "Tag '$tag' is not a valid semver release or prerelease tag." -ec "$err_argument_value"
     fi
 
     is_safe_reason "$reason" || true
 
-    [[ -n "${GITHUB_REPOSITORY:-}" && -n "${RELEASE_PAT:-}" ]]                  || error -ec "$err_argument_value" "GITHUB_REPOSITORY and/or RELEASE_PAT are not set."
+    [[ -n "${GITHUB_REPOSITORY:-}" && -n "${RELEASE_PAT:-}" ]]                  || error "GITHUB_REPOSITORY and/or RELEASE_PAT are not set." -ec "$err_argument_value"
 
     readonly tag
     readonly reason

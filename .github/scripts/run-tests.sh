@@ -69,10 +69,10 @@ test_config_path="$repo_root/testconfig.json"
 coverage_settings_path="$repo_root/coverage.settings.xml"                       # path to coverage settings file    ~/repos/vm2.Glob/coverage.settings.xml
 
 if [[ ! -s "$test_config_path" ]]; then
-    error -ec "$err_logic_error" "Test config file not found at: $test_config_path"
+    error "Test config file not found at: $test_config_path" -ec "$err_logic_error"
 fi
 if [[ ! -s "$coverage_settings_path" ]]; then
-    error -ec "$err_logic_error" "Coverage settings file not found at: $coverage_settings_path"
+    error "Coverage settings file not found at: $coverage_settings_path" -ec "$err_logic_error"
 fi
 
 exit_if_has_errors
@@ -134,7 +134,7 @@ if [[ -d "$artifacts_test_dir" && -n "$(ls -A "$artifacts_test_dir")" ]]; then
             3)  trace "Exiting the script."
                 exit 0
                 ;;
-            *)  error -sd 3 -ec "$err_unknown_argument" "Invalid option '$choice'. Exiting."
+            *)  error -sd 3 "Invalid option '$choice'. Exiting." -ec "$err_unknown_argument"
                 exit "$err_unknown_argument"
                 ;;
         esac
@@ -147,11 +147,11 @@ if [[ ! -s $test_exec_path ]]; then
     if ! is_dry_run; then
         warning "Test executable '$test_exec_path' was not found in the artifacts directory. Rebuilding the test project..."
 
-        update_nuget_sources_with_github_vm2 || exit_with_error -ec "$err_tool_error" "Updating the NuGet sources with GitHub packages from vm2 failed."
-        dotnet_clean "$test_project"         || exit_with_error -ec "$err_tool_error" "Cleaning the test project failed."
-        dotnet_restore "$test_project"       || exit_with_error -ec "$err_tool_error" "Restoring the test project failed."
-        dotnet_build "$test_project"         || exit_with_error -ec "$err_tool_error" -sd 3 "Building the test project failed."
-        [[ -s $test_exec_path ]]             || exit_with_error -ec "$err_tool_error" -sd 3 "After rebuilding the project, the test executable '$test_exec_path' was still NOT FOUND."
+        update_nuget_sources_with_github_vm2 || exit_with_error "Updating the NuGet sources with GitHub packages from vm2 failed." -ec "$err_tool_error"
+        dotnet_clean "$test_project"         || exit_with_error "Cleaning the test project failed." -ec "$err_tool_error"
+        dotnet_restore "$test_project"       || exit_with_error "Restoring the test project failed." -ec "$err_tool_error"
+        dotnet_build "$test_project"         || exit_with_error -sd 3 "Building the test project failed." -ec "$err_tool_error"
+        [[ -s $test_exec_path ]]             || exit_with_error -sd 3 "After rebuilding the project, the test executable '$test_exec_path' was still NOT FOUND." -ec "$err_tool_error"
     fi
 fi
 
@@ -180,9 +180,9 @@ else
     "$test_exec_path" "${test_args[@]}" || rc=$?
 fi
 (( rc == 0 )) ||
-    exit_with_error -ec "$err_tool_error" "Tests failed in project '$test_project' with exit code $rc."
+    exit_with_error "Tests failed in project '$test_project' with exit code $rc." -ec "$err_tool_error"
 [[ -s "$coverage_source_path" ]] ||
-    exit_with_error -ec "$err_tool_error" "Coverage file '$coverage_source_path' not found or is empty."
+    exit_with_error "Coverage file '$coverage_source_path' not found or is empty." -ec "$err_tool_error"
 
 if $ci; then
     # Set outputs for merged coverage
