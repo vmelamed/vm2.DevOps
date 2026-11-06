@@ -53,6 +53,8 @@ declare -xr benchmark_project
 declare -xr results_dir
 declare -r renamed_artifacts_dir
 
+declare rc=$success
+
 if [[ -d "$artifacts_benchmarks" && -n "$(ls -A "$artifacts_benchmarks")" ]]; then
     if [[ -n "${CI:-}" ]]; then
         # Auto-delete in CI
@@ -122,8 +124,7 @@ benchmark_args=(
 ##########################################
 ### Run the benchmarks with JSON/markdown export
 ##########################################
-declare rc=$success
-
+rc=$success
 if [[ "$benchmark_exec_path" == *.dll ]]; then
     trace "Executing benchmark tests: dotnet $benchmark_exec_path ${benchmark_args[*]}"
     dotnet "$benchmark_exec_path" "${benchmark_args[@]}" || rc=$?

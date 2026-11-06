@@ -51,6 +51,7 @@ readonly repository
 
 declare -a runs
 declare query
+declare -i rc=$success
 
 # get the workflow ID if not provided
 # query for the workflow ID using the name or path
@@ -125,10 +126,11 @@ exit_if_has_errors
 
 readonly workflow_id
 
-declare -i rc=$success
 declare runs_text
-declare -a runs
+declare -a runs=()
 declare artifact_present=false
+
+rc=$success
 
 # get the IDs of the last 100 successful runs of the specified workflow
 runs_text=$(gh run list \

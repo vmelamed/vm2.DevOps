@@ -26,12 +26,12 @@ declare -x _ignore
 source "$script_dir/re-tag.args.sh"
 source "$script_dir/re-tag.usage.sh"
 
+get_arguments "$@"
+
 declare -xr delete_mode
 declare -xr del_tag
 declare -xr old_tag
 declare -xr new_tag
-
-get_arguments "$@"
 
 #---------------------------------------------------------------------------------------------
 # @description Main script body: renames an existing git tag to a new name, or deletes a tag, both locally and on 'origin'.

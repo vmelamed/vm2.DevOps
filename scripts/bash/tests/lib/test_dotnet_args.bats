@@ -18,6 +18,10 @@ declare -gxi failure
 declare -gxi err_invalid_arguments
 declare -gxi err_argument_value
 
+declare -gx minver_tag_prefix
+
+declare -x BATS_TEST_TMPDIR
+
 # --- default values --------------------------------------------------------------------------
 
 @test "defaults: configuration is Debug outside CI" {
@@ -41,9 +45,9 @@ declare -gxi err_argument_value
 }
 
 @test "get_common_dotnet_arg: recognizes --artifacts-path (long form only) and sets \$artifacts" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; get_common_dotnet_arg --artifacts-path myartifacts; echo \"\$artifacts\""
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; get_common_dotnet_arg --artifacts-path myArtifacts; echo \"\$artifacts\""
     assert_success
-    assert_output "myartifacts"
+    assert_output "myArtifacts"
 }
 
 @test "get_common_dotnet_arg: -d/-c/-tfm/-rid are the only recognized short forms -- -a/-mp/-mi are not" {
@@ -72,7 +76,7 @@ declare -gxi err_argument_value
 @test "get_common_dotnet_arg: an unrecognized/positional argument with an empty value is still not mine" {
     # regression: membership (is this option name recognized at all?) must be decided before
     # any value is inspected -- otherwise a positional argument (e.g. a project path) that
-    # happens to be paired with an empty next token could be misrouted into a value-setting arm.
+    # happens to be paired with an empty next token could be mis-routed into a value-setting arm.
     run get_common_dotnet_arg "some/positional/path.csproj" ""
     assert_failure "$failure"
 }
@@ -161,8 +165,8 @@ EOF
     # it here (which would require guessing an ambiguous base path).
     mkdir -p "$BATS_TEST_TMPDIR/repo"
     echo "<Project />" > "$BATS_TEST_TMPDIR/repo/project.csproj"
-    run bash -c "cd '$BATS_TEST_TMPDIR/repo' && git init -q && source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; artifacts=myartifacts; sanitize_common_dotnet_args project.csproj; echo \"\$artifacts\""
-    assert_output --partial "myartifacts"
+    run bash -c "cd '$BATS_TEST_TMPDIR/repo' && git init -q && source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; artifacts=myArtifacts; sanitize_common_dotnet_args project.csproj; echo \"\$artifacts\""
+    assert_output --partial "myArtifacts"
     assert_output --partial "Failed to get correct artifacts path"
 }
 

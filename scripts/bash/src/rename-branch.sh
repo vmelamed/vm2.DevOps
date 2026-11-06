@@ -66,10 +66,9 @@ declare -x _ignore
 source "$script_dir/rename-branch.args.sh"
 source "$script_dir/rename-branch.usage.sh"
 
+get_arguments "$@"
 declare -xr old_branch_name
 declare -xr new_branch_name
-
-get_arguments "$@"
 
 [[ -n "$new_branch_name" ]] || usage -ec "$err_missing_argument" "No new branch name provided."
 
