@@ -422,7 +422,7 @@ function dotnet_pack()
 
         _properties["SymbolsPath"]="$_symbols"
 
-        is_dry_run || [[ -s $_symbols ]]                                        || warning -ec "$err_tool_error" "Package '$_symbols' not found or empty."
+        is_dry_run || [[ -s $_symbols ]]                                        || warning "Package '$_symbols' not found or empty." -ec "$err_tool_error"
      fi
 
     dump_vars --quiet --header "Returning Properties:" "${!_properties}"

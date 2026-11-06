@@ -529,6 +529,6 @@ function parameterize()
     if (( _count > 0 )); then
         trace "Parameterized actions for $_count files based on the provided command line arguments."
     else
-        warning -sd 3 -ec "$err_argument_value" "No files were matched by the provided command line arguments."
+        warning -sd 3 "No files were matched by the provided command line arguments." -ec "$err_argument_value"
     fi
 }

@@ -139,7 +139,7 @@ jobs:
 
           declare artifacts_path=''
           get_msbuild_property '${{ inputs.benchmark-project }}' ArtifactsPath artifacts_path ||
-              error -ec $? "Failed to resolve ArtifactsPath from '${{ inputs.benchmark-project }}'."
+              error "Failed to resolve ArtifactsPath from '${{ inputs.benchmark-project }}'." -ec "$?"
           exit_if_has_errors
 
           args_to_github_output artifacts_path

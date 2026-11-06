@@ -258,7 +258,7 @@ function validate_app_default_vars()
             _default_value=${_app_vars_defaults[$_var]}
             is_function "$_validator" || [[ $_validator == "true" ]]            || { bug "${FUNCNAME[0]}() '$_validator' is not a name of a defined function." -ec "$err_invalid_item"; continue; }
             $_validator "$_default_value"                                       || bug "${FUNCNAME[0]}() the default value '$_default_value' of the variable '$_var' is not pass the validator '$_validator'." -ec "$err_invalid_item"
-        }                                                                       || bug -ec "$err_invalid_item" "There is no validator set for the variable '$_var'." -ec "$err_invalid_item"
+        }                                                                       || bug "There is no validator set for the variable '$_var'." -ec "$err_invalid_item"
     done
     exit_if_has_bugs
 
