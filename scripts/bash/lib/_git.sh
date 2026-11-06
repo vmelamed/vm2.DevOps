@@ -231,7 +231,7 @@ function validate_branch_name()
 
     is_valid_branch_name "$1" || {
         _rc="$err_argument_value"
-        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a valid Git branch name (provided '${1-<missing>}'). See https://git-scm.com/docs/git-check-ref-format for details."
+        error "${FUNCNAME[0]}() requires argument 1 to be a valid Git branch name (provided '${1-<missing>}'). See https://git-scm.com/docs/git-check-ref-format for details." -ec "$_rc"
     }
 
     return "$_rc"
@@ -429,7 +429,7 @@ function execute_gh_api_with_retry()
             message=$(cat "$_stderr_file") || true
             # If it's a not a transient error in stderr - break(return), otherwise - retry
             if [[ ! "$message" =~ (authentication|network|timeout|dns|connection) ]]; then
-                error -ec "$_rc" "'gh api' command unrecoverable error during attempt: $_attempt/$_max_attempts."
+                error "'gh api' command unrecoverable error during attempt: $_attempt/$_max_attempts." -ec "$_rc"
                 break
             fi
         else

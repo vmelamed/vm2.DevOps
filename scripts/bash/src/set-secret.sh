@@ -59,7 +59,7 @@ for repo in "${vm2_repositories[@]}"; do
     (( _rc != success ))  || readarray -t repo_secrets < "$_temp" || _rc=$err_tool_error
     rm -f "$_temp" || true
     (( _rc == success )) || {
-        error -ec "$_rc" "  Failed to retrieve the list of secrets for repository '$repo_owner/$repo'. Moving on to the next repository."
+        error "  Failed to retrieve the list of secrets for repository '$repo_owner/$repo'. Moving on to the next repository." -ec "$_rc"
         continue
     }
 
@@ -105,7 +105,7 @@ for repo in "${vm2_repositories[@]}"; do
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     (( _rc == success )) &&
         trace "  Secret '$secret_name' was set successfully." ||
-        error -ec "$_rc" "  Failed to set secret $secret_name for ${app^}. Run the script with '--verbose' to see more details and troubleshoot."
+        error "  Failed to set secret $secret_name for ${app^}. Run the script with '--verbose' to see more details and troubleshoot." -ec "$_rc"
 
 done
 

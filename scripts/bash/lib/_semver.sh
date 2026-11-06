@@ -127,12 +127,12 @@ function validate_semverTagComponents()
 
     [[ $1 =~ $minverTagPrefixRegex ]]             || {
         _rc=$err_argument_value
-        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1, the MinVer tag prefix, to match '$minverTagPrefixRegex' (provided '${1-<missing>}')."
+        error "${FUNCNAME[0]}() requires argument 1, the MinVer tag prefix, to match '$minverTagPrefixRegex' (provided '${1-<missing>}')." -ec "$_rc"
     }
 
     [[ -z ${2:-} || $2 =~ $minverPrereleaseIdRegex ]] || {
         _rc=$err_argument_value
-        error -ec "$_rc" "${FUNCNAME[0]}() requires optional argument 2, the MinVer prerelease identifier template, to match '$minverPrereleaseIdRegex' (provided '${2-<missing>}'). Did you pass a variable name instead of its value?"
+        error "${FUNCNAME[0]}() requires optional argument 2, the MinVer prerelease identifier template, to match '$minverPrereleaseIdRegex' (provided '${2-<missing>}'). Did you pass a variable name instead of its value?" -ec "$_rc"
     }
 
     return "$_rc"
@@ -194,11 +194,11 @@ function compare_semver()
 
     [[ $1 =~ $semverRegex ]] || {
         _rc=$err_argument_value
-        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 1 to be a valid Semantic Versioning 2.0.0 string (provided '${1-<missing>}')."
+        error "${FUNCNAME[0]}() requires argument 1 to be a valid Semantic Versioning 2.0.0 string (provided '${1-<missing>}')." -ec "$_rc"
     }
     [[ $2 =~ $semverRegex ]] || {
         _rc=$err_argument_value
-        error -ec "$_rc" "${FUNCNAME[0]}() requires argument 2 to be a valid Semantic Versioning 2.0.0 string (provided '${2-<missing>}')."
+        error "${FUNCNAME[0]}() requires argument 2 to be a valid Semantic Versioning 2.0.0 string (provided '${2-<missing>}')." -ec "$_rc"
     }
     (( _rc != success )) && return "$_rc"
 

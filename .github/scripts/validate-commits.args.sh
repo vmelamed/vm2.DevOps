@@ -70,8 +70,8 @@ function validate_arguments()
 {
     local -i _rc=$success
 
-    [[ -d $repo_path ]]                                                         || { _rc="$err_not_directory";     error -ec "$_rc" "Invalid directory: '$repo_path'"; }
-    (( _rc != success )) || is_inside_work_tree "$repo_path"                    || { _rc="$err_not_git_directory"; error -ec "$_rc" "The directory '$repo_path' is not inside Git repository working tree"; }
+    [[ -d $repo_path ]]                                                         || { _rc="$err_not_directory";     error "Invalid directory: '$repo_path'" -ec "$_rc"; }
+    (( _rc != success )) || is_inside_work_tree "$repo_path"                    || { _rc="$err_not_git_directory"; error "The directory '$repo_path' is not inside Git repository working tree" -ec "$_rc"; }
     (( _rc == success )) || return "$success"
 
     # Determine the commit range. CI always passes an explicit base ref (the PR's base branch)
@@ -91,8 +91,9 @@ function validate_arguments()
             # last-resort fallback, for a repo with no discoverable default branch at all.
             _default_ref=$(git -C "$repo_path" rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>"$_ignore") || true
 
-        [[ -n $_default_ref ]]                                                  || { _rc=$err_argument_value; error -ec "$_rc" "No base ref provided, there is no origin/HEAD default branch, and this branch has no" \
-                                                                                                                               "upstream tracking branch either. Pass a base ref explicitly, or set \$BASE_REF."; }
+        [[ -n $_default_ref ]]                                                  || { _rc=$err_argument_value; error "No base ref provided, there is no origin/HEAD default branch, and this branch has no" \
+                                                                                                                    "upstream tracking branch either. Pass a base ref explicitly, or set \$BASE_REF." \
+                                                                                                                    -ec "$_rc"; }
         (( _rc == success )) || return "$success"
 
         base_ref=$(git -C "$repo_path" merge-base HEAD "$_default_ref")         || error "Failed to compute the merge-base with '$_default_ref'." -ec "$err_argument_value"

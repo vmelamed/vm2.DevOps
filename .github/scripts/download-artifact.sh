@@ -118,7 +118,7 @@ if [[ -d "$artifacts" && -n "$(ls -A "$artifacts")" ]]; then
         3)  trace "Exiting the script."
             exit 0
             ;;
-        *)  exit_with_error -ec "$failure" -ns "Invalid option $choice. Exiting."
+        *)  exit_with_error -ns "Invalid option $choice. Exiting." -ec "$failure"
             ;;
     esac
 fi

@@ -296,7 +296,7 @@ function exit_if_has_bugs()
     __last_bug=0
     __bugs_min_depth=0
 
-    exit_with_error -ec "$_ec" -ns "$_bugs bug(s) detected. Please fix the above issues and try again. Exiting the script immediately..."
+    exit_with_error -ns "$_bugs bug(s) detected. Please fix the above issues and try again. Exiting the script immediately..." -ec "$_ec"
 }
 
 #---------------------------------------------------------------------------------------------
@@ -358,7 +358,7 @@ function exit_if_has_errors()
 
     # otherwise, report the error and exit immediately
 
-    exit_with_error -ec "$_ec" -ns "$_errors error(s) encountered. Please fix the above issues and try again. Exiting the script immediately..."
+    exit_with_error -ns "$_errors error(s) encountered. Please fix the above issues and try again. Exiting the script immediately..." -ec "$_ec"
 }
 
 #=============================================================================================
