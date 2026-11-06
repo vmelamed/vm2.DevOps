@@ -569,7 +569,7 @@ failure for the rest, so the caller can fall through to the next one (e.g. a scr
   continue`, likewise `get_common_dotnet_arg`), so their options never reach it. Each `case` still carries one
   reservation arm per shared handler, listing exactly the options that handler consumes. The arm never runs; it is
   there so ShellCheck (SC2221/SC2222) flags any script-specific arm that reuses one of those options. Its body is
-  `exit_with_bug -ec "$err_logic_error" …`, so if a stale list ever lets a token through, the run fails loudly
+  `exit_with_bug … -ec "$err_logic_error"`, so if a stale list ever lets a token through, the run fails loudly
   instead of swallowing the token. When a shared handler gains or loses an option, update its reservation arm in **every**
   parser: a missing name loses the ShellCheck protection, and an extra one turns a now-unknown option into a bug
   report instead of `-*)`'s "Unknown option".
@@ -626,8 +626,7 @@ stays the most prominent thing on the line.
 
 **Put `-ec` after the message parts** (and `--dotnet-error-code`/`-dec` too). These flags are positional: the code's message
 is printed exactly where the flag appears, so `error "Bad commit message: $subject" -ec "$err_argument_value"` prints the
-specific message first and the generic text of the code below it. Older call sites still have `-ec` first; they are being
-migrated.
+specific message first and the generic text of the code below it.
 
 ```bash
 # Exception: message()-family functions keep their short forms
