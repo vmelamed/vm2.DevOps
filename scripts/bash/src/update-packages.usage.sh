@@ -22,8 +22,8 @@ declare -xr default_vm2_repos_path
 #---------------------------------------------------------------------------------------------
 function usage_text()
 {
-    (( $# == 1 ))                   || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one boolean argument (provided $#)."
-    [[ ! -v 1 ]] || is_boolean "$1" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be 'true' or 'false' (provided '${1-<missing>}')."
+    (( $# == 1 ))                   || bug "${FUNCNAME[0]}() requires one boolean argument (provided $#)." -ec "$err_invalid_arguments"
+    [[ ! -v 1 ]] || is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be 'true' or 'false' (provided '${1-<missing>}')." -ec "$err_argument_value"
     exit_if_has_bugs
 
     local _common_args=''

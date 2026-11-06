@@ -38,8 +38,8 @@ declare -xr package_regex='^([[:space:]]*<PackageVersion[[:space:]]+Include=")([
 #---------------------------------------------------------------------------------------------
 function validate_package_lines()
 {
-    (( $# == 1 ))         || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument: the path to 'Directory.Packages.props' (provided $#)."
-    [[ ! -v 1 || -f $1 ]] || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1 to be a path to an existing file (provided ${1-<missing>})."
+    (( $# == 1 ))         || bug "${FUNCNAME[0]}() requires one argument: the path to 'Directory.Packages.props' (provided $#)." -ec "$err_invalid_arguments"
+    [[ ! -v 1 || -f $1 ]] || bug "${FUNCNAME[0]}() requires argument 1 to be a path to an existing file (provided ${1-<missing>})." -ec "$err_argument_value"
     exit_if_has_bugs
 
     local _file=$1 _line
@@ -75,12 +75,13 @@ function validate_package_lines()
 #---------------------------------------------------------------------------------------------
 function select_upgrade_version()
 {
-    (( $# >= 2 ))                          || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires at least two arguments (provided $#):" \
-                                                                               "  - the current version" \
-                                                                               "  - the name of the variable that receives the chosen version" \
-                                                                               "  - zero or more candidate versions"
-    [[ ! -v 1 || -n $1 ]]                  || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the current version, to be non-empty."
-    [[ ! -v 2 ]] || is_variable_name "$2"  || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2, to be the name of a variable."
+    (( $# >= 2 ))                          || bug "${FUNCNAME[0]}() requires at least two arguments (provided $#):" \
+                                                  "  - the current version" \
+                                                  "  - the name of the variable that receives the chosen version" \
+                                                  "  - zero or more candidate versions" \
+                                                  -ec "$err_invalid_arguments"
+    [[ ! -v 1 || -n $1 ]]                  || bug "${FUNCNAME[0]}() requires argument 1, the current version, to be non-empty." -ec "$err_argument_value"
+    [[ ! -v 2 ]] || is_variable_name "$2"  || bug "${FUNCNAME[0]}() requires argument 2, to be the name of a variable." -ec "$err_argument_value"
     exit_if_has_bugs
 
     local _current=$1
@@ -128,12 +129,13 @@ declare -xr shared_end_marker
 #---------------------------------------------------------------------------------------------
 function _props_line_in_section()
 {
-    (( $# == 3 ))                              || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires three arguments (provided $#):" \
-                                                                                   "  - the section to match ('shared' or 'repo')" \
-                                                                                   "  - the line of the file to test" \
-                                                                                   "  - the name of the variable that tracks whether the current line is inside the shared block"
-    [[ ! -v 1 || $1 == shared || $1 == repo ]] || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2 to be which section to match - either 'shared' or 'repo' (provided ${1-<missing>})."
-    [[ ! -v 3 ]] || is_variable "$3"           || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 3 to be the name of a variable that tracks whether the current line is inside the shared block (provided ${3-<missing>})."
+    (( $# == 3 ))                              || bug "${FUNCNAME[0]}() requires three arguments (provided $#):" \
+                                                      "  - the section to match ('shared' or 'repo')" \
+                                                      "  - the line of the file to test" \
+                                                      "  - the name of the variable that tracks whether the current line is inside the shared block" \
+                                                      -ec "$err_invalid_arguments"
+    [[ ! -v 1 || $1 == shared || $1 == repo ]] || bug "${FUNCNAME[0]}() requires argument 2 to be which section to match - either 'shared' or 'repo' (provided ${1-<missing>})." -ec "$err_argument_value"
+    [[ ! -v 3 ]] || is_variable "$3"           || bug "${FUNCNAME[0]}() requires argument 3 to be the name of a variable that tracks whether the current line is inside the shared block (provided ${3-<missing>})." -ec "$err_argument_value"
     exit_if_has_bugs
 
     [[ -z ${2-} ]] && return "$negative" # shortcut for empty XML lines
@@ -169,13 +171,14 @@ function _props_line_in_section()
 #---------------------------------------------------------------------------------------------
 function read_package_versions()
 {
-    (( $# == 3 ))                                                               || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires three arguments (provided $#):" \
-                                                                                                                    "  - the path to 'Directory.Packages.props' file" \
-                                                                                                                    "  - the section ('shared' or 'repo')" \
-                                                                                                                    "  - the name of the variable that receives the versions"
-    [[ ! -v 1 || -f $1 ]]                                                       || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1 to be a path to an existing file (provided ${1-<missing>})."
-    [[ ! -v 2 || $2 == shared || $2 == repo ]]                                  || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2 to be either 'shared' or 'repo' (provided ${2-<missing>})."
-    [[ ! -v 3 ]] || is_associative_array "$3"                                   || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 3 to be the name of an associative array variable (provided ${3-<missing>})."
+    (( $# == 3 ))                                                               || bug "${FUNCNAME[0]}() requires three arguments (provided $#):" \
+                                                                                       "  - the path to 'Directory.Packages.props' file" \
+                                                                                       "  - the section ('shared' or 'repo')" \
+                                                                                       "  - the name of the variable that receives the versions" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 || -f $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1 to be a path to an existing file (provided ${1-<missing>})." -ec "$err_argument_value"
+    [[ ! -v 2 || $2 == shared || $2 == repo ]]                                  || bug "${FUNCNAME[0]}() requires argument 2 to be either 'shared' or 'repo' (provided ${2-<missing>})." -ec "$err_argument_value"
+    [[ ! -v 3 ]] || is_associative_array "$3"                                   || bug "${FUNCNAME[0]}() requires argument 3 to be the name of an associative array variable (provided ${3-<missing>})." -ec "$err_argument_value"
     exit_if_has_bugs
 
     local _file=$1
@@ -254,9 +257,9 @@ function set_package_version()
 #---------------------------------------------------------------------------------------------
 function query_package_versions()
 {
-    (( $# == 2 ))                                                               || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires two arguments (provided $#): the package ID and the name of the variable that receives the versions."
-    [[ ! -v 1 || -n $1 ]]                                                       || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the package ID, to be non-empty."
-    [[ ! -v 2 ]] || is_variable_name "$2"                                       || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2 to be the name of a variable (provided ${2-<missing>})."
+    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires two arguments (provided $#): the package ID and the name of the variable that receives the versions." -ec "$err_invalid_arguments"
+    [[ ! -v 1 || -n $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the package ID, to be non-empty." -ec "$err_argument_value"
+    [[ ! -v 2 ]] || is_variable_name "$2"                                       || bug "${FUNCNAME[0]}() requires argument 2 to be the name of a variable (provided ${2-<missing>})." -ec "$err_argument_value"
     exit_if_has_bugs
 
     local _rc=$success
