@@ -70,49 +70,49 @@ get_arguments "$@"
 declare -xr old_branch_name
 declare -xr new_branch_name
 
-[[ -n "$new_branch_name" ]] || usage -ec "$err_missing_argument" "No new branch name provided."
+[[ -n "$new_branch_name" ]] || usage "No new branch name provided." -ec "$err_missing_argument"
 
 if [[ -z "$old_branch_name" ]]; then
     # Get the current branch name if old_branch_name was not provided
-    old_branch_name=$(git branch --show-current 2>"$_ignore") || usage -ec "$err_missing_argument" "Old name not specified, HEAD is detached, or not in a repo."
-    [[ -n "$old_branch_name" ]] || usage -ec "$err_missing_argument" "Old name not specified, HEAD is detached, or not in a repo."
+    old_branch_name=$(git branch --show-current 2>"$_ignore") || usage "Old name not specified, HEAD is detached, or not in a repo." -ec "$err_missing_argument"
+    [[ -n "$old_branch_name" ]] || usage "Old name not specified, HEAD is detached, or not in a repo." -ec "$err_missing_argument"
 fi
 
 # The same names?
-[[ "$old_branch_name" != "$new_branch_name" ]] || usage -ec "$err_argument_value" "The new branch name is the same as the old branch name."
+[[ "$old_branch_name" != "$new_branch_name" ]] || usage "The new branch name is the same as the old branch name." -ec "$err_argument_value"
 
 # Fetch latest remote refs
-git fetch origin 1>"$_ignore" || usage -ec "$err_tool_error" "Failed to fetch from remote."
+git fetch origin 1>"$_ignore" || usage "Failed to fetch from remote." -ec "$err_tool_error"
 
 # Check if it is a valid git branch name?
-is_valid_branch_name "$new_branch_name" || usage -ec "$err_argument_value" "Invalid branch name '$new_branch_name'."
+is_valid_branch_name "$new_branch_name" || usage "Invalid branch name '$new_branch_name'." -ec "$err_argument_value"
 # Make sure that a local branch with the new name does not already exist:
-git show-ref --verify --quiet "refs/heads/$new_branch_name" 1>"$_ignore" && usage -ec "$err_argument_value" "Branch '$new_branch_name' already exists locally."
+git show-ref --verify --quiet "refs/heads/$new_branch_name" 1>"$_ignore" && usage "Branch '$new_branch_name' already exists locally." -ec "$err_argument_value"
 
 # Check if a remote branch with the new name already exists:
-git show-ref --verify --quiet "refs/remotes/origin/$new_branch_name" 1>"$_ignore" && usage -ec "$err_argument_value" "Branch '$new_branch_name' already exists on remote."
+git show-ref --verify --quiet "refs/remotes/origin/$new_branch_name" 1>"$_ignore" && usage "Branch '$new_branch_name' already exists on remote." -ec "$err_argument_value"
 
 # valid name?
-is_valid_branch_name "$old_branch_name" || usage -ec "$err_argument_value" "Invalid branch name '$old_branch_name'."
+is_valid_branch_name "$old_branch_name" || usage "Invalid branch name '$old_branch_name'." -ec "$err_argument_value"
 # Check if the old branch exists locally:
-git show-ref --verify --quiet "refs/heads/$old_branch_name" 1>"$_ignore" || usage -ec "$err_argument_value" "Branch '$old_branch_name' does not exist locally."
+git show-ref --verify --quiet "refs/heads/$old_branch_name" 1>"$_ignore" || usage "Branch '$old_branch_name' does not exist locally." -ec "$err_argument_value"
 # Check if the old branch exists remotely:
-git show-ref --verify --quiet "refs/remotes/origin/$old_branch_name" 1>"$_ignore" || usage -ec "$err_argument_value" "Branch '$old_branch_name' does not exist remotely."
+git show-ref --verify --quiet "refs/remotes/origin/$old_branch_name" 1>"$_ignore" || usage "Branch '$old_branch_name' does not exist remotely." -ec "$err_argument_value"
 
 # ==============================================================================
 # input validated, now do the work:
 
 # 1. We don't need to switch to the old branch that we want to rename
 # 2. Rename the branch locally
-git branch -m "$old_branch_name" "$new_branch_name" 1> "$_ignore" || usage -ec "$err_tool_error" "Failed to rename branch '$old_branch_name' to '$new_branch_name'."
+git branch -m "$old_branch_name" "$new_branch_name" 1> "$_ignore" || usage "Failed to rename branch '$old_branch_name' to '$new_branch_name'." -ec "$err_tool_error"
 # 3. Push the new name to remote
-git push origin "$new_branch_name" 1> "$_ignore" ||  usage -ec "$err_tool_error" "Failed to push branch '$new_branch_name' to remote."
+git push origin "$new_branch_name" 1> "$_ignore" ||  usage "Failed to push branch '$new_branch_name' to remote." -ec "$err_tool_error"
 # 4. Delete the old branch on remote
 git push origin --delete "$old_branch_name" 1> "$_ignore" ||
     warning "Failed to delete old branch '$old_branch_name' on remote. Please clean up manually; otherwise both branches will coexist and that may lead to confusion."
 
 
 # 5. Reset the upstream tracking
-git branch --set-upstream-to="origin/$new_branch_name" "$new_branch_name" 1> "$_ignore" || usage -ec "$err_tool_error" "Failed to set upstream tracking for '$new_branch_name'."
+git branch --set-upstream-to="origin/$new_branch_name" "$new_branch_name" 1> "$_ignore" || usage "Failed to set upstream tracking for '$new_branch_name'." -ec "$err_tool_error"
 
 info "Branch '$old_branch_name' successfully renamed to '$new_branch_name'."

@@ -354,7 +354,7 @@ function exit_if_has_errors()
     __errors_min_depth=0
 
     # exits with error message, code, and usage, if $_display_usage is true
-    $_display_usage && usage -ec "$_ec" -ns "$_errors error(s) encountered. Please fix the above issues and try again."
+    $_display_usage && usage -ns "$_errors error(s) encountered. Please fix the above issues and try again." -ec "$_ec"
 
     # otherwise, report the error and exit immediately
 

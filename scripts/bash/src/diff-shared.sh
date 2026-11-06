@@ -97,7 +97,7 @@ declare -xi summary_shared_copied_count=0
 
 get_arguments "$@"
 
-is_in "$sot" "${sources_of_truth[@]}"                                           || usage -ec "$err_argument_value" "Invalid source of truth '$sot'. Valid values are: ${sources_of_truth[*]}."
+is_in "$sot" "${sources_of_truth[@]}"                                           || usage "Invalid source of truth '$sot'. Valid values are: ${sources_of_truth[*]}." -ec "$err_argument_value"
 
 if $diff_only; then
     for selector in "${!selectors_actions[@]}"; do
@@ -138,7 +138,7 @@ rc="$success"
 
 declare sot_path
 get_vm2_sot_path "$vm2_repos" sot_path "$sot" || rc=$?
-(( rc == success ))                                                             || usage -ec "$rc" "Could not find the source of truth directory for the specified template '$sot' in the expected location in '$vm2_repos'."
+(( rc == success ))                                                             || usage "Could not find the source of truth directory for the specified template '$sot' in the expected location in '$vm2_repos'." -ec "$rc"
 
 declare -xr vm2_repos
 declare -xr sot

@@ -44,17 +44,17 @@ function get_arguments()
 
         case "${_option,,}" in
             --owner|-o )
-                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
                 owner="$1"; shift
                 ;;
 
             --repeat|-n )
-                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
                 repeat="$1"; shift
                 ;;
 
             --workflow|-w )
-                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
                 workflow="$1"; shift
                 ;;
 
@@ -64,7 +64,7 @@ function get_arguments()
                 exit_with_bug -ec "$err_logic_error" "'$_option' should have been consumed by get_common_arg."
                 ;;
 
-            *)  usage -ec "$err_unknown_argument" "Unknown argument: $_option"
+            *)  usage "Unknown argument: $_option" -ec "$err_unknown_argument"
                 ;;
         esac
     done

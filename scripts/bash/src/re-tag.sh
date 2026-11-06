@@ -65,8 +65,8 @@ declare -xr new_tag
 # ─── argument validation & pre-flight ────────────────────────────────────────
 
 if [[ "$delete_mode" == false ]]; then
-    if [[ -z "$old_tag" ]]; then usage -ec "$err_invalid_arguments" "Missing required old and new tag arguments."; fi
-    if [[ -z "$new_tag" ]]; then usage -ec "$err_invalid_arguments" "Missing required new tag argument."; fi
+    if [[ -z "$old_tag" ]]; then usage "Missing required old and new tag arguments." -ec "$err_invalid_arguments"; fi
+    if [[ -z "$new_tag" ]]; then usage "Missing required new tag argument." -ec "$err_invalid_arguments"; fi
 fi
 # We don't need to check for the presence of del_tag in delete mode, because get_arguments already checked for it.
 
@@ -74,11 +74,11 @@ git rev-parse --git-dir 1>"$_ignore" ||  exit_with_error "Not a git repository."
 
 # Resolve the commit the old/del tag points to (dereference annotated tags)
 if [[ "$delete_mode" == false ]]; then
-    commit=$(git rev-list -n1 "$old_tag" 2>"$_ignore")       || usage -ec "$err_argument_value" "Tag '$old_tag' not found locally."
-    existing_sha=$(git rev-list -n1 "$new_tag" 2>"$_ignore") && usage -ec "$err_argument_value" "Tag '$new_tag' already exists → commit ${existing_sha:0:12}."
+    commit=$(git rev-list -n1 "$old_tag" 2>"$_ignore")       || usage "Tag '$old_tag' not found locally." -ec "$err_argument_value"
+    existing_sha=$(git rev-list -n1 "$new_tag" 2>"$_ignore") && usage "Tag '$new_tag' already exists → commit ${existing_sha:0:12}." -ec "$err_argument_value"
     info "Tag '$old_tag' → commit ${commit:0:12}"
 else
-    commit=$(git rev-list -n1 "$del_tag" 2>"$_ignore")       || usage -ec "$err_argument_value" "Tag '$del_tag' not found locally."
+    commit=$(git rev-list -n1 "$del_tag" 2>"$_ignore")       || usage "Tag '$del_tag' not found locally." -ec "$err_argument_value"
     info "Tag '$del_tag' → commit ${commit:0:12}"
 fi
 
