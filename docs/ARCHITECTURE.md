@@ -320,25 +320,27 @@ Every workflow checks out the vm2.DevOps repo (sparse-checkout of `scripts/bash/
 
 A shared function library sourced by scripts at startup.
 
-| Module            | Role                                                                                                                                                                        |
-| :---------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `core.sh`         | General-purpose functions (logging, paths, variables) — sources every `_*.sh` module below directly                                                                         |
-| `gh_core.sh`      | GitHub Actions helpers — sources only `core.sh`; adds GH env vars and a few functions (`to_stdout`/`to_stderr`/`to_output` overrides, `gh_escape`, `args_to_github_output`) |
+| Module                 | Role                                                                                                                                                                        |
+|:-----------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `core.sh`              | General-purpose functions (logging, paths, variables) — sources every `_*.sh` module below directly                                                                         |
+| `gh_core.sh`           | GitHub Actions helpers — sources only `core.sh`; adds GH env vars and a few functions (`to_stdout`/`to_stderr`/`to_output` overrides, `gh_escape`, `args_to_github_output`) |
 | `_core_args.sh`        | Argument parsing utilities                                                                                                                                                  |
-| `_constants.sh`   | Shared constants                                                                                                                                                            |
-| `_core_state.sh`  | Common state variables (quiet, verbose, dry-run, trace modes)                                                                                                               |
-| `_diagnostics.sh` | Debug and diagnostic output                                                                                                                                                 |
-| `_dotnet.sh`      | .NET SDK helpers                                                                                                                                                            |
-| `_dotnet_args.sh` | Shared dotnet CLI argument parsing/defaults                                                                                                                                 |
-| `_dump_vars.sh`   | Variable dump for debugging                                                                                                                                                 |
-| `_error_codes.sh` | Standardized error codes for CI scripts                                                                                                                                     |
-| `_git_vm2.sh`     | Git repository helpers specific to vm2 repos                                                                                                                                |
-| `_git.sh`         | Git repository helpers                                                                                                                                                      |
-| `_predicates.sh`  | Boolean test functions                                                                                                                                                      |
-| `_sanitize.sh`    | Input sanitization                                                                                                                                                          |
-| `_semver.sh`      | Semantic versioning utilities                                                                                                                                               |
-| `_user.sh`        | User/identity helpers                                                                                                                                                       |
-| `_xml.sh`         | Generic XML value reading via `yq` (knows nothing about dotnet/MSBuild)                                                                                                     |
+| `_constants.sh`        | Shared constants                                                                                                                                                            |
+| `_core_state.sh`       | Common state variables (quiet, verbose, dry-run, trace modes)                                                                                                               |
+| `_diagnostics.sh`      | Debug and diagnostic output                                                                                                                                                 |
+| `_dotnet.sh`           | .NET SDK helpers: clean, restore, build, pack, solution projects                                                                                                            |
+| `_dotnet_constants.sh` | `dotnet` exit codes and build-information keys                                                                                                                              |
+| `_dotnet_msbuild.sh`   | MSBuild properties, `dotnet` to `dotnet msbuild` argument conversion, build information                                                                                     |
+| `_dotnet_args.sh`      | Shared dotnet CLI argument parsing/defaults                                                                                                                                 |
+| `_dump_vars.sh`        | Variable dump for debugging                                                                                                                                                 |
+| `_error_codes.sh`      | Standardized error codes for CI scripts                                                                                                                                     |
+| `_git_vm2.sh`          | Git repository helpers specific to vm2 repos                                                                                                                                |
+| `_git.sh`              | Git repository helpers                                                                                                                                                      |
+| `_predicates.sh`       | Boolean test functions                                                                                                                                                      |
+| `_sanitize.sh`         | Input sanitization                                                                                                                                                          |
+| `_semver.sh`           | Semantic versioning utilities                                                                                                                                               |
+| `_user.sh`             | User/identity helpers                                                                                                                                                       |
+| `_xml.sh`              | Generic XML value reading via `yq` (knows nothing about dotnet/MSBuild)                                                                                                     |
 
 Scripts source `gh_core.sh` for the GitHub Actions environment, or `core.sh` directly for standalone scripts; either
 one pulls in every `_*.sh` module, so there is no need to source additional modules individually.

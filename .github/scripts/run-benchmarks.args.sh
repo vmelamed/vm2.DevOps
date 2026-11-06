@@ -49,7 +49,7 @@ function validate_arguments()
 {
     is_safe_existing_path "$benchmark_project"                                  || true
     [[ $benchmark_project == *.csproj ]]                                        || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)."
-    sanitize_common_dotnet_args "$benchmark_project"                            || true
+    sanitize_common_dotnet_args "$benchmark_project"
 
     readonly benchmark_project
 

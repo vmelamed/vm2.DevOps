@@ -16,6 +16,7 @@ load '../helpers/setup'
 declare -gx lib_dir
 declare -gxi failure
 declare -gxi err_invalid_arguments
+declare -gxi err_argument_value
 
 # --- default values --------------------------------------------------------------------------
 
@@ -103,12 +104,14 @@ declare -gxi err_invalid_arguments
 
 @test "sanitize_common_dotnet_args: rejects a GitHub username with no matching password" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; gh_nuget_username=user; gh_nuget_password=''; sanitize_common_dotnet_args '$lib_dir/core.sh'"
-    assert_failure 4
+    assert_output --partial "\$err_argument_value"
+    assert_output --partial "\$err_unsafe_argument"
 }
 
 @test "sanitize_common_dotnet_args: rejects a GitHub password with no matching username" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; gh_nuget_username=''; gh_nuget_password=secret; sanitize_common_dotnet_args '$lib_dir/core.sh'"
-    assert_failure 4
+    assert_output --partial "\$err_argument_value"
+    assert_output --partial "\$err_unsafe_argument"
 }
 
 @test "sanitize_common_dotnet_args: accepts a matching GitHub username/password pair" {
@@ -159,8 +162,8 @@ EOF
     mkdir -p "$BATS_TEST_TMPDIR/repo"
     echo "<Project />" > "$BATS_TEST_TMPDIR/repo/project.csproj"
     run bash -c "cd '$BATS_TEST_TMPDIR/repo' && git init -q && source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; artifacts=myartifacts; sanitize_common_dotnet_args project.csproj; echo \"\$artifacts\""
-    assert_output --partial "Failed to get correct artifacts path"
     assert_output --partial "myartifacts"
+    assert_output --partial "Failed to get correct artifacts path"
 }
 
 # --- output_common_dotnet_args (requires gh_core.sh, not just core.sh) -------------------------

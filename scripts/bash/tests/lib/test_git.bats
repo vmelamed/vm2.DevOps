@@ -105,6 +105,43 @@ setup() {
     assert_failure "$err_invalid_arguments"
 }
 
+# --- is_valid_commit_sha ---------------------------------------------------------------------
+
+@test "is_valid_commit_sha: true for the lengths git can accept: 4 to 64 hexadecimal digits, in either case" {
+    run is_valid_commit_sha "$(printf 'a%.0s' {1..4})"
+    assert_success
+    run is_valid_commit_sha "$(printf 'a%.0s' {1..40})"
+    assert_success
+    run is_valid_commit_sha "$(printf 'a%.0s' {1..64})"
+    assert_success
+    run is_valid_commit_sha "94F1ABE56"
+    assert_success
+}
+
+@test "is_valid_commit_sha: false outside the 4 to 64 digits range" {
+    run is_valid_commit_sha "abc"
+    assert_failure "$failure"
+    run is_valid_commit_sha "$(printf 'a%.0s' {1..65})"
+    assert_failure "$failure"
+}
+
+@test "is_valid_commit_sha: false (not a bug) for an empty string or a non-hexadecimal character" {
+    run is_valid_commit_sha ""
+    assert_failure "$failure"
+    run is_valid_commit_sha "94f1abg56"
+    assert_failure "$failure"
+}
+
+@test "is_valid_commit_sha: checks the format only -- it does not ask git whether the commit exists" {
+    run bash -c "cd '$BATS_TEST_TMPDIR' && source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; is_valid_commit_sha 'deadbeef'"
+    assert_success
+}
+
+@test "is_valid_commit_sha: bug-exits with the wrong argument count" {
+    run is_valid_commit_sha
+    assert_failure "$err_invalid_arguments"
+}
+
 # --- initialize_repo_state -----------------------------------------------------------------------
 
 @test "initialize_repo_state: populates every predefined key with an empty string" {

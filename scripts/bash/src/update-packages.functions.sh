@@ -11,6 +11,7 @@ declare -xri err_argument_value
 declare -xri err_logic_error
 declare -xri err_tool_error
 declare -xri err_invalid_item
+declare -xri err_io_failure
 
 # One PackageVersion element on ONE line, Include before Version, double quotes. Groups: 1 prefix, 2 id, 3 middle,
 # 4 version, 5 suffix -- set_package_version reassembles 1..5 with a new 4, so the line's original spacing survives.
@@ -168,13 +169,13 @@ function _props_line_in_section()
 #---------------------------------------------------------------------------------------------
 function read_package_versions()
 {
-    (( $# == 3 ))                              || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires three arguments (provided $#):" \
-                                                                                   "  - the path to 'Directory.Packages.props' file" \
-                                                                                   "  - the section ('shared' or 'repo')" \
-                                                                                   "  - the name of the variable that receives the versions"
-    [[ ! -v 1 || -f $1 ]]                      || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1 to be a path to an existing file (provided ${1-<missing>})."
-    [[ ! -v 2 || $2 == shared || $2 == repo ]] || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2 to be either 'shared' or 'repo' (provided ${2-<missing>})."
-    [[ ! -v 3 ]] || is_associative_array "$3"  || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 3 to be the name of an associative array variable (provided ${3-<missing>})."
+    (( $# == 3 ))                                                               || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires three arguments (provided $#):" \
+                                                                                                                    "  - the path to 'Directory.Packages.props' file" \
+                                                                                                                    "  - the section ('shared' or 'repo')" \
+                                                                                                                    "  - the name of the variable that receives the versions"
+    [[ ! -v 1 || -f $1 ]]                                                       || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1 to be a path to an existing file (provided ${1-<missing>})."
+    [[ ! -v 2 || $2 == shared || $2 == repo ]]                                  || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2 to be either 'shared' or 'repo' (provided ${2-<missing>})."
+    [[ ! -v 3 ]] || is_associative_array "$3"                                   || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 3 to be the name of an associative array variable (provided ${3-<missing>})."
     exit_if_has_bugs
 
     local _file=$1
@@ -209,13 +210,14 @@ function read_package_versions()
 #
 # @exitcode success=0: the package line was rewritten.
 # @exitcode err_logic_error: the package is not in that section of the file.
+# @exitcode err_io_failure
 #---------------------------------------------------------------------------------------------
 function set_package_version()
 {
     local _file=$1 _section=$2 _id=$3 _new=$4
     local _line _tmp _inside=false _done=false _line_id _line_version
 
-    _tmp=$(mktemp)
+    _tmp=$(mktemp)                                                              || { _rc=$err_io_failure; error -ec "$_rc" "Failed to create a temporary file"; return "$_rc"; }
     while IFS= read -r _line || [[ -n $_line ]]; do
         if _props_line_in_section "$_section" "$_line" _inside &&
            [[ $_line != *"<!--"* && $_line != *"-->"* && $_line =~ $package_regex ]] &&
@@ -230,11 +232,7 @@ function set_package_version()
     local _rc=$success
 
     if [[ $_done == true ]]; then
-        execute mv "$_tmp" "$_file" || _rc=$?
-        (( _rc == success )) || {
-            _rc="$err_tool_error"
-            error -ec "$_rc" "Failed to copy temporary file to '$_file'."
-        }
+        execute mv "$_tmp" "$_file"                                             || with_error "$err_io_failure" _rc "Failed to copy temporary file to '$_file'."
     else
         _rc=$err_logic_error
     fi
@@ -256,9 +254,9 @@ function set_package_version()
 #---------------------------------------------------------------------------------------------
 function query_package_versions()
 {
-    (( $# == 2 ))                         || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires two arguments (provided $#): the package ID and the name of the variable that receives the versions."
-    [[ ! -v 1 || -n $1 ]]                 || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the package ID, to be non-empty."
-    [[ ! -v 2 ]] || is_variable_name "$2" || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2 to be the name of a variable (provided ${2-<missing>})."
+    (( $# == 2 ))                                                               || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires two arguments (provided $#): the package ID and the name of the variable that receives the versions."
+    [[ ! -v 1 || -n $1 ]]                                                       || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the package ID, to be non-empty."
+    [[ ! -v 2 ]] || is_variable_name "$2"                                       || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2 to be the name of a variable (provided ${2-<missing>})."
     exit_if_has_bugs
 
     local _rc=$success
@@ -269,10 +267,7 @@ function query_package_versions()
     _json=$(dotnet package search "$_id" --exact-match --format json 2>/dev/null) || return "$err_tool_error"
 
     local _output_file
-    _output_file=$(mktemp) || {
-        _rc=$err_tool_error
-        error -ec "$_rc" "Failed to create a temporary output file."
-    }
+    _output_file=$(mktemp)                                                      || { _rc=$err_io_failure; error -ec "$_rc" "Failed to create a temporary output file."; }
 
     (( _rc != success )) ||
     jq -r --arg id "$_id" '.searchResult[].packages[] | select((.id | ascii_downcase) == ($id | ascii_downcase)) | .version' <<< "$_json" > "$_output_file" || {
@@ -281,10 +276,7 @@ function query_package_versions()
     }
 
     (( _rc != success )) ||
-    readarray -t _found_ref < "$_output_file" || {
-        _rc=$?
-        error -ec "$_rc" "Failed to read package versions from temporary output file." "$(get_dotnet_error_message "$_rc")"
-    }
+    readarray -t _found_ref < "$_output_file"                                   || { _rc=$err_io_failure; error -ec "$_rc" "Failed to read package versions from temporary output file." "$(dotnet_error_message "$_rc")"; }
 
     rm -f "$_output_file"
     return "$_rc"

@@ -93,7 +93,7 @@ function validate_arguments()
     [[ $package_project == *.csproj ]]                                          || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)."
     is_safe_boolean "$build"                                                    || true
     is_safe_reason "$reason"                                                    || true
-    sanitize_common_dotnet_args "$package_project"                              || true
+    sanitize_common_dotnet_args "$package_project"
 
     readonly package_project
     readonly build

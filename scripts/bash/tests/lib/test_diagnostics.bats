@@ -25,6 +25,9 @@ declare -gxi err_has_bugs
 declare -gxi err_has_errors
 declare -gxi err_argument_type
 declare -gxi err_invalid_arguments
+declare -gxi err_argument_value
+declare -gxi err_logic_error
+declare -gxi err_tool_error
 
 # --- error counter --------------------------------------------------------------------------
 
@@ -266,4 +269,206 @@ declare -gxi err_invalid_arguments
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; function outer() { show_stack 0 5; }; outer"
     assert_success
     assert_output --partial "↑ outer"
+}
+
+# --- with_error -----------------------------------------------------------------------------
+
+# Writes the test's script body (stdin) after a 3-line prologue that sources core.sh, and runs it
+# in a clean environment. A real file (not 'bash -c') is needed: several tests assert the source
+# file and line number that with_error reports, so the user's first body line is always line 4.
+_run_with_error_script()
+{
+    local _script="$BATS_TEST_TMPDIR/with_error.sh"
+    {
+        printf '%s\n' '#!/usr/bin/env bash' 'set -euo pipefail' "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1"
+        cat
+    } > "$_script"
+    run env -i HOME="$HOME" PATH="$PATH" bash "$_script"
+}
+
+@test "with_error: sets the variable to the given code and returns success, so the chain continues" {
+    _run_with_error_script <<'EOF'
+declare -i rc=0
+false || with_error "$err_tool_error" rc "the tool failed"
+echo "status=$? rc=$rc"
+EOF
+    assert_success
+    assert_output --partial "status=0 rc=$err_tool_error"
+}
+
+@test "with_error: prints the message, then the failed command's exit code, then the code's message" {
+    _run_with_error_script <<'EOF'
+declare -i rc=0
+(exit 4) || with_error "$err_tool_error" rc "the tool failed"
+EOF
+    assert_success
+    assert_line --index 0 --partial "the tool failed @ "
+    assert_line --index 1 --partial "Exit code: 4"
+    assert_line --index 2 --partial "($err_tool_error)"
+}
+
+@test "with_error: omits the 'Exit code' line when the previous command succeeded" {
+    _run_with_error_script <<'EOF'
+declare -i rc=0
+with_error "$err_tool_error" rc "reported without a failed command"
+EOF
+    assert_success
+    assert_output --partial "reported without a failed command"
+    refute_output --partial "Exit code:"
+}
+
+@test "with_error: the guarded steps after a failure are skipped, and exit_if_has_errors exits with the code" {
+    _run_with_error_script <<'EOF'
+declare -i rc=0
+false                     || with_error "$err_tool_error" rc "step 1 failed"
+(( rc != success )) || echo "step 2 ran"
+(( rc != success )) || echo "step 3 ran"
+exit_if_has_errors false
+EOF
+    assert_failure "$err_tool_error"
+    assert_output --partial "step 1 failed"
+    refute_output --partial "step 2 ran"
+    refute_output --partial "step 3 ran"
+}
+
+@test "with_error: the stack dump starts at the caller, not at with_error itself" {
+    _run_with_error_script <<'EOF'
+declare -i rc=0
+f() { false || with_error "$err_tool_error" rc "boom"; }
+f
+EOF
+    assert_success
+    assert_output --partial "↑ f "
+    refute_output --partial "↑ with_error"
+}
+
+@test "with_error: '@ file (line)' points at the caller's line, not at with_error itself" {
+    _run_with_error_script <<'EOF'
+declare -i rc=0
+f() { false || with_error "$err_tool_error" rc "boom"; }
+f
+EOF
+    assert_success
+    assert_line --index 0 --partial "boom @ $BATS_TEST_TMPDIR/with_error.sh (5):"
+}
+
+@test "with_error: an error it records belongs to its caller -- a callee's exit_if_has_errors defers it" {
+    # Same contract as calling 'error' directly: the error is the caller's to report, so a gate in
+    # a function the caller calls next must not claim it (and exit).
+    _run_with_error_script <<'EOF'
+declare -i rc=0
+child() { exit_if_has_errors false; echo "child deferred"; }
+parent() { false || with_error "$err_tool_error" rc "parent's error"; child; }
+parent
+echo "parent returned"
+EOF
+    assert_success
+    assert_output --partial "child deferred"
+    assert_output --partial "parent returned"
+}
+
+@test "with_error: bug-exits with fewer than two arguments" {
+    _run_with_error_script <<'EOF'
+false || with_error "$err_tool_error"
+EOF
+    assert_failure "$err_invalid_arguments"
+    assert_output --partial "with_error() requires at least two arguments"
+}
+
+@test "with_error: bug-exits when argument 1 is not an exit code" {
+    _run_with_error_script <<'EOF'
+declare -i rc=0
+false || with_error "not-a-code" rc "boom"
+EOF
+    assert_failure "$err_argument_value"
+    assert_output --partial "requires argument 1"
+}
+
+@test "with_error: bug-exits when argument 1 is 0 -- the chain would continue as if nothing failed" {
+    _run_with_error_script <<'EOF'
+declare -i rc=0
+false || with_error 0 rc "boom"
+echo "continued with rc=$rc"
+EOF
+    assert_failure "$err_argument_value"
+    assert_output --partial "requires argument 1"
+    refute_output --partial "continued with"
+}
+
+@test "with_error: accepts the smallest error code, \$failure (1)" {
+    _run_with_error_script <<'EOF'
+declare -i rc=0
+false || with_error "$failure" rc "generic failure"
+echo "rc=$rc"
+EOF
+    assert_success
+    assert_output --partial "rc=1"
+}
+
+@test "with_error: bug-exits when argument 2 is not the name of a declared variable" {
+    _run_with_error_script <<'EOF'
+false || with_error "$err_tool_error" undeclared_rc "boom"
+EOF
+    assert_failure "$err_argument_value"
+    assert_output --partial "requires argument 2"
+}
+
+@test "with_error: reports a dotnet exit code passed with -dec, and still records the vm2 code" {
+    _run_with_error_script <<'EOF'
+declare -i rc=0
+(exit 2) || with_error "$err_tool_error" rc "msbuild failed" -dec "$?"
+EOF
+    assert_success
+    assert_line --index 0 --partial "msbuild failed @ "
+    assert_line --index 1 --partial 'Dotnet $dotnet_err_test_failure (2): '
+    assert_line --index 2 --partial "Exit code: 2"
+    assert_line --index 3 --partial 'vm2 $err_tool_error ('
+}
+
+# --- error: --dotnet-error-code ---------------------------------------------------------------
+
+@test "error: -dec and --dotnet-error-code print the dotnet code's message where the flag appears" {
+    _run_with_error_script <<'EOF'
+error "first" -dec 2 "last"
+EOF
+    assert_success
+    assert_line --index 0 --partial "first @ "
+    assert_line --index 1 --partial 'Dotnet $dotnet_err_test_failure (2): At least one test failure occurred'
+    assert_line --index 2 --partial "last"
+
+    _run_with_error_script <<'EOF'
+error "long form" --dotnet-error-code 8
+EOF
+    assert_success
+    assert_output --partial 'Dotnet $dotnet_err_no_test_ran (8): '
+}
+
+@test "error: -dec falls back to the unknown-code message for an unrecognized dotnet code" {
+    _run_with_error_script <<'EOF'
+error "boom" -dec 99
+EOF
+    assert_success
+    assert_output --partial 'Dotnet $dotnet_err_unknown (99): Unknown dotnet error code'
+}
+
+@test "error: -dec does not become the script's exit code -- only -ec does" {
+    # a dotnet code and a vm2 code with the same number mean different things
+    _run_with_error_script <<'EOF'
+error "only dotnet" -dec 8
+echo "last_error=$__last_error"
+error "both" -dec 8 -ec "$err_tool_error"
+exit_if_has_errors false
+EOF
+    assert_failure "$err_tool_error"
+    assert_output --partial "last_error=$failure"
+}
+
+@test "error: -dec with an invalid code says so instead of failing" {
+    _run_with_error_script <<'EOF'
+error "boom" -dec not-a-code
+echo "continued"
+EOF
+    assert_success
+    assert_output --partial "Expected an error code (0..255) after the '--dotnet-error-code' flag, provided: 'not-a-code'"
+    assert_output --partial "continued"
 }

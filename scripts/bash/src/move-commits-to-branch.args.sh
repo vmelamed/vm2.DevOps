@@ -7,6 +7,7 @@ declare -xr script_name
 declare -xr lib_dir
 
 declare -xri success
+declare -xri err_argument_value
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
@@ -14,9 +15,12 @@ declare -xri err_logic_error
 
 declare -xr ci
 
-declare -x commit_sha
-declare -x new_branch
-declare -x check_out_new_branch
+declare -x _ignore
+
+declare -x commit_sha=""
+declare -x new_branch=""
+declare -x check_out_new_branch=false
+declare -x current_branch
 
 #---------------------------------------------------------------------------------------------
 # @description Parses the command-line arguments for 'move-commits-to-branch.sh'. Delegates common switches (help, quiet,
@@ -45,12 +49,12 @@ function get_arguments()
 
         case "${_option,,}" in
             --branch|-b )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing branch name after '$_option'."
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing branch name after '$_option'."
                 new_branch="$1"; shift
                 ;;
 
             --commit-sha|-c )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing commit SHA after '$_option'."
+                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing commit SHA after '$_option'."
                 commit_sha="$1"; shift
                 ;;
 
@@ -61,22 +65,50 @@ function get_arguments()
             # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
             # (SC2221/SC2222) flag any script-specific arm that reuses one of them, and it bugs out if the lists drift apart.
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
-                exit_with_bug -ec "$err_logic_error" "'$_option' should have been consumed by get_common_arg."
+                                                                                exit_with_bug -ec "$err_logic_error" "'$_option' should have been consumed by get_common_arg."
                 ;;
 
-            * ) usage -ec "$err_unknown_argument" "Unknown argument '$_option'."
+            * )                                                                 usage -ec "$err_unknown_argument" "Unknown argument '$_option'."
                 ;;
         esac
     done
 
     usage_if_requested
+    validate_environment
     validate_arguments
+    exit_if_has_errors
     dump_args
+}
+
+function validate_environment()
+{
+    # Verify we're on main branch
+    current_branch=$(git branch --show-current)
+    [[ "$current_branch" == "main" ]]                                           || error "You must be on the 'main' branch. Currently on '$current_branch'" -ec "$err_argument_value"
+
+    # Verify we don't have uncommitted changes
+    git diff-index --quiet HEAD --                                              || error "You have uncommitted changes. Please commit or stash them first." -ec "$err_logic_error"
 }
 
 function validate_arguments()
 {
-    #  TODO: add validation here
+    local -i _rc=$success
+
+    # validate we have a valid branch name != main
+    is_valid_branch_name "$new_branch"                                          || with_error "$err_argument_value" _rc "The option '--branch' is mandatory and must have a valid value"
+    (( _rc != success )) || [[ "$new_branch" != "main" ]]                       || error "The new branch name cannot be 'main'" -ec "$err_argument_value"
+
+    # Verify we have a valid and existing SHA
+    _rc=$success
+    is_valid_commit_sha "$commit_sha"                                           || with_error "$err_argument_value" _rc "The '--commit-sha' is mandatory and  must be a valid 7 to 40 hexadecimal digits string"
+    (( _rc != success )) || git cat-file -e "$commit_sha^{commit}" 2>"$_ignore" || error "Commit '$commit_sha' does not exist" -ec "$err_argument_value"
+
+    # freeze the arguments
+    readonly new_branch
+    readonly commit_sha
+    readonly check_out_new_branch
+    readonly current_branch
+
     return "$success"
 }
 
@@ -90,6 +122,7 @@ function dump_args()
         --quiet
         --header "Arguments for $script_name:"
 
+        current_branch
         new_branch
         commit_sha
         check_out_new_branch

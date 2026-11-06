@@ -72,6 +72,7 @@ declare -x repo
 function get_arguments()
 {
     local _option
+    local _option_set=false
 
     while (( $# > 0 )); do
         _option="$1"; shift
@@ -79,32 +80,32 @@ function get_arguments()
 
         case "${_option,,}" in
             --vm2-repos )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing path after '$_option'."
+                (( $# >= 1 ))                                                   || usage "Missing path after '$_option'." -ec "$err_missing_argument"
                 vm2_repos="$1"; shift
                 ;;
 
             --owner|-o )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing owner after '$_option'."
+                (( $# >= 1 ))                                                   || usage "Missing owner after '$_option'." -ec "$err_missing_argument"
                 repo_owner="$1"; shift
                 ;;
 
             --branch|-b )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing branch name after '$_option'."
+                (( $# >= 1 ))                                                   || usage "Missing branch name after '$_option'." -ec "$err_missing_argument"
                 branch="$1"; shift
                 ;;
 
             --visibility )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing visibility after '$_option'."
+                (( $# >= 1 ))                                                   || usage "Missing visibility after '$_option'." -ec "$err_missing_argument"
                 visibility="$1"; shift
                 ;;
 
             --ruleset-name|-rs )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing the name of the ruleset for protecting the default branch after '$_option'."
+                (( $# >= 1 ))                                                   || usage "Missing the name of the ruleset for protecting the default branch after '$_option'." -ec "$err_missing_argument"
                 main_protection_rs_name="$1"; shift
                 ;;
 
             --description )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing description after '$_option'."
+                (( $# >= 1 ))                                                   || usage "Missing description after '$_option'." -ec "$err_missing_argument"
                 description="$1"; shift
                 ;;
 
@@ -165,10 +166,9 @@ function get_arguments()
             -*) usage -ec "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
 
-            * ) if [[ -n "$repo_path" ]]; then
-                    usage -ec "$err_too_many_arguments" "Too many positional arguments (project directory or repository name): $_option"
-                fi
+            * ) ! $_option_set                                                  || usage "Too many positional arguments (project directory or repository name): $_option" -ec "$err_too_many_arguments"
                 repo_path="$_option"
+                _option_set=true
                 ;;
         esac
     done

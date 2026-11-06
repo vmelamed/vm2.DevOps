@@ -32,26 +32,26 @@ setup() {
     echo "<Project />" > "$_fake_csproj"
 }
 
-# --- get_dotnet_error_message --------------------------------------------------------------
+# --- dotnet_error_message --------------------------------------------------------------
 
-@test "get_dotnet_error_message: returns the message for a known dotnet exit code" {
-    run get_dotnet_error_message 0
+@test "dotnet_error_message: returns the message for a known dotnet exit code" {
+    run dotnet_error_message 0
     assert_success
-    assert_output "0: Build succeeded; no errors or warnings were reported"
-    run get_dotnet_error_message 1
-    assert_output "1: Unknown error or catch-all error; check the build output for details"
+    assert_output "Dotnet \$dotnet_success (0): Build succeeded; no errors or warnings were reported"
+    run dotnet_error_message 1
+    assert_output "Dotnet \$dotnet_failure (1): Unknown error or catch-all error; check the build output for details"
 }
 
-@test "get_dotnet_error_message: falls back to the unknown-code message" {
-    run get_dotnet_error_message 999
+@test "dotnet_error_message: falls back to the unknown-code message" {
+    run dotnet_error_message 99
     assert_success
-    assert_output "999: Unknown dotnet error code"
+    assert_output "Dotnet \$dotnet_err_unknown (99): Unknown dotnet error code"
 }
 
-@test "get_dotnet_error_message: bug-exits on a negative or missing argument" {
-    run get_dotnet_error_message
+@test "dotnet_error_message: bug-exits on a negative or missing argument" {
+    run dotnet_error_message
     assert_failure "$err_invalid_arguments"
-    run get_dotnet_error_message -1
+    run dotnet_error_message -1
     assert_failure "$err_argument_type"
 }
 
@@ -188,6 +188,35 @@ EOF
 @test "dotnet_restore: fails on a non-existent/invalid project path" {
     run dotnet_restore "not-a-real-project.csproj"
     assert_failure 4
+}
+
+# Runs dotnet_build with a fake 'dotnet' first on the PATH, so its output handling can be tested
+# without a real build. $1 is the state to set first, e.g. 'set_verbose'.
+_run_dotnet_build_with_fake_dotnet()
+{
+    mkdir -p "$BATS_TEST_TMPDIR/bin"
+    printf '#!/usr/bin/env bash\necho "FAKE BUILD OUTPUT"\n' > "$BATS_TEST_TMPDIR/bin/dotnet"
+    chmod +x "$BATS_TEST_TMPDIR/bin/dotnet"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
+                 PATH='$BATS_TEST_TMPDIR/bin':\"\$PATH\"
+                 $1
+                 dotnet_build '$_fake_csproj'"
+}
+
+@test "dotnet_build: does not show the build's output by default" {
+    _run_dotnet_build_with_fake_dotnet ':'
+    refute_output --partial "FAKE BUILD OUTPUT"
+}
+
+@test "dotnet_build: shows the build's output in verbose mode, without needing a dry run" {
+    _run_dotnet_build_with_fake_dotnet 'set_verbose'
+    assert_output --partial "FAKE BUILD OUTPUT"
+}
+
+@test "dotnet_build: shows the 'dry-run\$' line in a dry run, without needing verbose mode" {
+    _run_dotnet_build_with_fake_dotnet 'set_dry_run'
+    assert_output --partial 'dry-run$ dotnet build'
+    refute_output --partial "FAKE BUILD OUTPUT"
 }
 
 @test "dotnet_build: fails on a non-existent/invalid project path" {

@@ -97,8 +97,7 @@ declare -xi summary_shared_copied_count=0
 
 get_arguments "$@"
 
-is_in "$sot" "${sources_of_truth[@]}" ||
-    usage -ec "$err_argument_value" "Invalid source of truth '$sot'. Valid values are: ${sources_of_truth[*]}."
+is_in "$sot" "${sources_of_truth[@]}"                                           || usage -ec "$err_argument_value" "Invalid source of truth '$sot'. Valid values are: ${sources_of_truth[*]}."
 
 if $diff_only; then
     for selector in "${!selectors_actions[@]}"; do
@@ -126,7 +125,7 @@ declare -r sot_branch
 declare -xi rc="$success"
 
 resolve_vm2_repos vm2_repos "$vm2_branch" "$sot_branch" || rc=$?
-(( rc == success )) || usage "Could not resolve the path of the vm2 repositories directory from the specified value of '$vm2_repos'."
+(( rc == success ))                                                             || usage "Could not resolve the path of the vm2 repositories directory from the specified value of '$vm2_repos'."
 trace "All vm2 repositories are expected to be in '$vm2_repos'"
 
 # if no repos were specified as arguments, use the current directory as the only target repo:
@@ -139,7 +138,7 @@ rc="$success"
 
 declare sot_path
 get_vm2_sot_path "$vm2_repos" sot_path "$sot" || rc=$?
-(( rc == success )) || usage -ec "$rc" "Could not find the source of truth directory for the specified template '$sot' in the expected location in '$vm2_repos'."
+(( rc == success ))                                                             || usage -ec "$rc" "Could not find the source of truth directory for the specified template '$sot' in the expected location in '$vm2_repos'."
 
 declare -xr vm2_repos
 declare -xr sot
@@ -169,10 +168,9 @@ declare -a target_roots=()
 declare -a target_paths=()
 
 for target in "${target_repos[@]}"; do
-    resolve_target "$vm2_repos" "$target" target_root target_path || {
-        error -ec "$?" "Could not resolve the Git working tree root of the target '$target'. Please, ensure that it exists and is a valid directory."
-        continue
-    }
+    resolve_target "$vm2_repos" "$target" target_root target_path               || { with_error "$?" rc "Could not resolve the Git working tree root of the target '$target'. Please, ensure that it exists and is a valid directory."
+                                                                                     continue
+                                                                                }
     target_roots+=("$target_root")
     target_paths+=("$target_path")
 done
@@ -187,7 +185,7 @@ info "The Source of Truth '$sot' folder is in '$sot_path'"
     echo -e "## Source of truth: **$sot** (\`$sot_path\`)\n"
 } >> "$summary_file"
 
-configure "$sot_path" "$target_path" || exit_with_error -ec "$err_logic_error" "Failed to load configuration from the SoT directory '$sot_path'."
+configure "$sot_path" "$target_path"                                            || exit_with_error "Failed to load configuration from the SoT directory '$sot_path'." -ec "$err_logic_error"
 trace "Configured from SoT '$sot_path' for '$target_path'."
 
 declare -x config_diff_tool
@@ -287,8 +285,7 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
 
                     "$action_merge_or_copy" | "$action_ask_to_merge" | "$action_ask_to_copy" | "$action_ask_to_copy_shared")
                         confirm "Target file '$target_file' does not exist. Do you want to copy it from '$source_file'?" "y" && {
-                            copy_file "$source_file" "$target_file"
-                            todo_or_done_txt="copied"
+                            copy_file "$source_file" "$target_file" && todo_or_done_txt="copied" || todo_or_done_txt="copy failed"
                         } || {
                             (( ++summary_skipped_count ))
                             todo_or_done_txt="skipped"
@@ -298,11 +295,10 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
                     "$action_merge" | "$action_copy" | "$action_copy_shared" )
                         # a missing target has no shared-block markers of its own to preserve -- bootstrap it
                         # with the whole SoT file, same as 'merge'/'copy' already do
-                        copy_file "$source_file" "$target_file"
-                        todo_or_done_txt="copied"
+                        copy_file "$source_file" "$target_file" && todo_or_done_txt="copied" || todo_or_done_txt="copy failed"
                         ;;
 
-                    * ) error -ec "$err_logic_error" "Unknown action '$actions' for files '$source_file' and '$target_file'."
+                    * ) error "Unknown action '$actions' for files '$source_file' and '$target_file'." -ec "$err_logic_error"
                         todo_or_done_txt="error"
                         press_any_key
                         ;;
@@ -326,7 +322,7 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
             "$action_copy_shared"        ) warn_no_markers=true ;;
             "$action_ask_to_copy_shared" ) show_in_diff_tool=true
                                            warn_no_markers=true ;;
-            * ) error -ec "$err_logic_error" "Unknown action '$actions' for files '$source_file' and '$target_file'." ;;
+            * ) error "Unknown action '$actions' for files '$source_file' and '$target_file'."  -ec "$err_logic_error" ;;
         esac
 
         # calculate the difference and if required: warn about missing markers and/or show the files in the diff tool
@@ -353,7 +349,7 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
             "$shared_not_equal" )
                 file_difference_txt=" $cross_ch shared different"
                 ;;
-            * ) error -ec "$err_unexpected_error" "Unexpected return code: $difference"
+            * ) error "Unexpected return code: $difference" -ec "$err_unexpected_error"
                 ;;
         esac
 
@@ -376,7 +372,7 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
                             "Copy '$source_file' file to '$target_file'"
                     case $choice in
                         2 ) merge "$source_file" "$target_file"     &&          todo_or_done_txt="merged" || todo_or_done_txt="not merged" ;;
-                        3 ) copy_file "$source_file" "$target_file" &&          todo_or_done_txt="copied" ;;
+                        3 ) copy_file "$source_file" "$target_file" &&          todo_or_done_txt="copied" || todo_or_done_txt="failed to copy" ;;
                         * ) (( ++summary_skipped_count )) &&                    todo_or_done_txt="skipped" ;;
                     esac
                     ;;
@@ -401,7 +397,7 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
                     ;;
 
                 "$action_copy" )
-                    copy_file "$source_file" "$target_file" &&                  todo_or_done_txt="copied" ;;
+                    copy_file "$source_file" "$target_file" &&                  todo_or_done_txt="copied" || todo_or_done_txt="failed to copy" ;;
 
                 "$action_copy_shared" )
                     case $difference in
@@ -409,7 +405,7 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
                             (( ++summary_shared_ignore_count )) &&              todo_or_done_txt="ignored shared" ;;
 
                         "$shared_not_equal" )
-                            copy_shared_block "$source_file" "$target_file" &&  todo_or_done_txt="copied shared" ;;
+                            copy_shared_block "$source_file" "$target_file" &&  todo_or_done_txt="copied shared" || todo_or_done_txt="failed to copy shared" ;;
 
                         * ) # shared-block markers missing/malformed in one of the files -- are_different()
                             # already warned; fall back to merge rather than risk clobbering private content
@@ -427,7 +423,7 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
                             # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
                             confirm "Do you want to copy the shared block from '$source_file' to '$target_file'?" "n" && {
                                 copy_shared_block "$source_file" "$target_file" &&
-                                                                                todo_or_done_txt="copied shared"
+                                                                                todo_or_done_txt="copied shared" || todo_or_done_txt="failed to copy shared"
                             } || {
                                 (( ++summary_shared_skipped_count )) &&         todo_or_done_txt="skipped shared"
                             }
@@ -443,7 +439,7 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
                     esac
                     ;;
 
-                * ) error -ec "$err_logic_error" "Unknown action '$actions' for files '$source_file' and '$target_file'."
+                * ) error "Unknown action '$actions' for files '$source_file' and '$target_file'." -ec "$err_logic_error""Unknown action '$actions' for files '$source_file' and '$target_file'."
                                                                                 todo_or_done_txt="error!"
                     press_any_key
                     ;;

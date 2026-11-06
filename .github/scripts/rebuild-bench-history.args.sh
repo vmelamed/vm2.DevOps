@@ -12,7 +12,6 @@ declare -xri err_missing_argument
 declare -xri err_argument_value
 declare -xri err_unknown_argument
 declare -xri err_logic_error
-declare -xri err_tool_error
 declare -xri err_too_many_arguments
 declare -xri err_tool_not_found
 declare -xri err_tool_unauthenticated

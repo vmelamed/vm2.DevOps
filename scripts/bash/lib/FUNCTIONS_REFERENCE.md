@@ -174,6 +174,12 @@ Logs an error message to stderr and increments the global error counter.
 
 Logs an error message and exits immediately with the last recorded error code (or `$failure`).
 
+### with_error()
+
+Records a vm2 error code in the caller's variable and reports the failure with `error`, adding the failed command's exit
+status; always returns `$success`. Used as `cmd || with_error "$err_…" rc "…"` in a chain of `(( rc != success )) ||`-guarded
+steps.
+
 ### bug()
 
 Logs a bug message (caller-contract violation) to stderr and increments the global bug counter.
@@ -580,6 +586,10 @@ Validate a GitHub repository owner / name / description against GitHub's naming 
 
 Tests if a string is a valid Git branch name, via `git check-ref-format`.
 
+### is_valid_commit_sha()
+
+Tests that a string has the format of a commit SHA or an abbreviation of one (4 to 64 hexadecimal digits); it does not check that the commit exists.
+
 ### validate_branch_name()
 
 Validates a Git branch name, via `is_valid_branch_name`.
@@ -692,45 +702,19 @@ Validates and freezes (via `readonly`) the common dotnet arguments after parsing
 
 ---
 
-## _dotnet.sh
+## _dotnet_constants.sh
 
-.NET build/restore/pack/clean orchestration and MSBuild property/metadata helpers.
+The `dotnet` exit codes with their messages and names, and the keys of the build, build-result, version, and package information arrays.
 
-### get_dotnet_error_message()
+### dotnet_error_message()
 
-Looks up the human-readable message for a known `dotnet` process exit code.
+Prints `Dotnet <name> (<code>): <message>` for a `dotnet` process exit code, falling back to the unknown-code message. `error`'s `--dotnet-error-code`/`-dec` option uses it.
 
-### update_nuget_sources_with_github_vm2()
+---
 
-Updates the `github.vm2` NuGet source with credentials (CLI args, or `$GH_ACTOR`/`$GH_TOKEN` in CI).
+## _dotnet_msbuild.sh
 
-### convert_dotnet_args_to_msbuild_args()
-
-Converts `dotnet <command>` arguments (e.g. `--configuration Release`) to the equivalent `dotnet msbuild` arguments/properties.
-
-### extract_dotnet_build_info()
-
-Parses the output of a `dotnet build` command from stdin and populates an associative array with build/version/result information.
-
-### display_dotnet_build_summary()
-
-Displays a formatted summary table (via `dump_vars`) of build information previously extracted by `extract_dotnet_build_info`.
-
-### dotnet_clean()
-
-Cleans a .NET project or solution using the common dotnet arguments.
-
-### dotnet_restore()
-
-Restores a .NET project's dependencies (`--locked-mode`) using the common dotnet arguments.
-
-### dotnet_build()
-
-Builds a .NET project or solution (no restore) and captures build output information.
-
-### dotnet_pack()
-
-Packs an already-built .NET project (`--no-build`), resolving `Configuration` from the project if not pinned, and returns the produced package/symbols paths.
+MSBuild property helpers, conversion of `dotnet` arguments to `dotnet msbuild` arguments, and extraction and display of build information.
 
 ### get_msbuild_property()
 
@@ -747,6 +731,44 @@ Gets the full path to the assembly that was/would be produced by `dotnet build` 
 ### get_artifacts_path()
 
 Gets the full path to the `ArtifactsPath` directory for a project or solution.
+
+### convert_dotnet_args_to_msbuild_args()
+
+Converts `dotnet <command>` arguments (e.g. `--configuration Release`) to the equivalent `dotnet msbuild` arguments/properties.
+
+### extract_dotnet_build_info()
+
+Parses the output of a `dotnet build` command from stdin and populates an associative array with build/version/result information.
+
+### display_dotnet_build_summary()
+
+Displays a formatted summary table (via `dump_vars`) of build information previously extracted by `extract_dotnet_build_info`.
+
+---
+
+## _dotnet.sh
+
+.NET build/restore/pack/clean orchestration and solution helpers.
+
+### update_nuget_sources_with_github_vm2()
+
+Updates the `github.vm2` NuGet source with credentials (CLI args, or `$GH_ACTOR`/`$GH_TOKEN` in CI).
+
+### dotnet_clean()
+
+Cleans a .NET project or solution using the common dotnet arguments.
+
+### dotnet_restore()
+
+Restores a .NET project's dependencies (`--locked-mode`) using the common dotnet arguments.
+
+### dotnet_build()
+
+Builds a .NET project or solution (no restore) and captures build output information.
+
+### dotnet_pack()
+
+Packs an already-built .NET project (`--no-build`), resolving `Configuration` from the project if not pinned, and returns the produced package/symbols paths.
 
 ### list_solution_projects()
 
@@ -782,26 +804,28 @@ Outputs a `key=value` pair (kebab-case key) for each named variable to `$GITHUB_
 
 ## Summary
 
-### Total Functions: 192
+### Total Functions: 194
 
-| File               | Functions |
-|--------------------|----------:|
-| core.sh            |         6 |
-| _core_state.sh     |        20 |
-| _error_codes.sh    |         2 |
-| _diagnostics.sh    |        21 |
-| _core_args.sh           |         4 |
-| _predicates.sh     |        31 |
-| _sanitize.sh       |        36 |
-| _semver.sh         |        14 |
-| _dump_vars.sh      |         3 |
-| _user.sh           |         5 |
-| _git.sh            |        21 |
-| _git_vm2.sh        |         6 |
-| _xml.sh            |         1 |
-| _dotnet_args.sh    |         2 |
-| _dotnet.sh         |        15 |
-| gh_core.sh         |         5 |
+| File                 | Functions |
+|----------------------|----------:|
+| core.sh              |         6 |
+| _core_state.sh       |        20 |
+| _error_codes.sh      |         2 |
+| _diagnostics.sh      |        22 |
+| _core_args.sh        |         4 |
+| _predicates.sh       |        31 |
+| _sanitize.sh         |        36 |
+| _semver.sh           |        14 |
+| _dump_vars.sh        |         3 |
+| _user.sh             |         5 |
+| _git.sh              |        22 |
+| _git_vm2.sh          |         6 |
+| _xml.sh              |         1 |
+| _dotnet_constants.sh |         1 |
+| _dotnet_args.sh      |         2 |
+| _dotnet_msbuild.sh   |         7 |
+| _dotnet.sh           |         7 |
+| gh_core.sh           |         5 |
 
 Counts include internal (`__`-prefixed) helper functions that are not part of the public library surface but are still documented in their source files.
 

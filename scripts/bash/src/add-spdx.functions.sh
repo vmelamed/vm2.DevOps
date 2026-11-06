@@ -10,7 +10,7 @@ declare -xri success
 declare -xri err_invalid_arguments
 declare -xri err_not_file
 declare -xri err_logic_error
-declare -xri err_io_operation_failed
+declare -xri err_io_failure
 
 # this scripts constants
 declare -x root
@@ -135,7 +135,7 @@ function add_spdx_yaml_file()
 #
 # @exitcode success=0: the file got the header, or already had one.
 # @exitcode err_not_file: the file is not writable (reported with 'error').
-# @exitcode err_io_operation_failed: creating, writing, or moving the temporary file failed
+# @exitcode err_io_failure: creating, writing, or moving the temporary file failed
 #   (reported with 'error').
 #---------------------------------------------------------------------------------------------
 function process_file()
@@ -164,7 +164,7 @@ function process_file()
 
     local _temp_file
 
-    _temp_file=$(mktemp)                                                        || { _rc=$err_io_operation_failed; (( ++failed )); error -ec "$_rc" "Failed to create a temporary file for '$_rel'"; return "$_rc"; }
+    _temp_file=$(mktemp)                                                        || { _rc=$err_io_failure; (( ++failed )); error -ec "$_rc" "Failed to create a temporary file for '$_rel'"; return "$_rc"; }
     case $_file in
         *.cs         )
             add_spdx_csharp_file "$_file" "$_temp_file"                         || _rc=$?
@@ -179,9 +179,9 @@ function process_file()
             exit_with_bug -ec "$err_logic_error" "${FUNCNAME[0]}() requires argument 1, the file to add an SPDX header to, to be an existing writable file with one of the suffixes: .cs, .sh, .bats, .yaml, or .yml (provided: '$_file')."
             ;;
     esac
-    (( _rc == success ))                                                        || { _rc=$err_io_operation_failed; error -ec "$_rc" "Failed to write the new contents of '$_rel'"; }
-    (( _rc != success )) || chmod --reference="$_file" "$_temp_file"            || { _rc=$err_io_operation_failed; error -ec "$_rc" "Failed to change the mode of a temporary file"; }
-    (( _rc != success )) || execute mv "$_temp_file" "$_file"                   || { _rc=$err_io_operation_failed; error -ec "$_rc" "Failed to copy the temporary file over the original file '$_file'"; }
+    (( _rc == success ))                                                        || { _rc=$err_io_failure; error -ec "$_rc" "Failed to write the new contents of '$_rel'"; }
+    (( _rc != success )) || chmod --reference="$_file" "$_temp_file"            || { _rc=$err_io_failure; error -ec "$_rc" "Failed to change the mode of a temporary file"; }
+    (( _rc != success )) || execute mv "$_temp_file" "$_file"                   || { _rc=$err_io_failure; error -ec "$_rc" "Failed to copy the temporary file over the original file '$_file'"; }
     rm -f "$_temp_file"
     (( _rc == success ))                                                        || { (( ++failed )); return "$_rc"; }
 

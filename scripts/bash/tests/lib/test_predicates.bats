@@ -132,6 +132,19 @@ declare -gxi err_invalid_path
     assert_failure "$failure"
 }
 
+@test "is_empty_array: true under 'set -u' for a declared but unassigned array (regression: unbound variable)" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; set -u; declare -a arr; declare -A map; is_empty_array arr && is_empty_array map"
+    assert_success
+    refute_output --partial "unbound variable"
+}
+
+@test "is_empty_array: false for a filled associative array, and for an array holding only an empty string" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A map=([k]=v); is_empty_array map"
+    assert_failure
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -a arr=(''); is_empty_array arr"
+    assert_failure
+}
+
 @test "is_empty_array: bug-exits when the name is not an array" {
     # shellcheck disable=SC2034
     declare foo=bar

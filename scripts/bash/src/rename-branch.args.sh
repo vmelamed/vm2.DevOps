@@ -14,6 +14,9 @@ declare -xri err_logic_error
 
 declare -xr ci
 
+declare -x old_branch_name=''
+declare -x new_branch_name=''
+
 #---------------------------------------------------------------------------------------------
 # @description Parses the command-line arguments for 'rename-branch.sh'. Delegates common switches (help, quiet, verbose,
 # trace, dry-run) to 'get_common_arg'. Accepts up to two positional arguments: if one positional argument is given, it is
@@ -36,6 +39,7 @@ declare -xr ci
 function get_arguments()
 {
     local _option
+    local -i _option_idx=0
 
     while (( $# > 0 )); do
         _option="$1"; shift
@@ -51,11 +55,13 @@ function get_arguments()
             -*) usage -ec "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
 
-            * ) if [[ -z "$new_branch_name" ]]; then
+            * ) if (( _option_idx == 0 )); then
                     new_branch_name="$_option"
-                elif [[ -z "$old_branch_name" ]]; then
+                    (( ++_option_idx ))
+                elif (( _option_idx == 1 )); then
                     old_branch_name="$new_branch_name"
                     new_branch_name="$_option"
+                    (( ++_option_idx ))
                 else
                     usage -ec "$err_too_many_arguments" "Too many positional arguments: $_option"
                 fi
@@ -71,6 +77,10 @@ function get_arguments()
 function validate_arguments()
 {
     #  TODO: add validation here
+
+    readonly old_branch_name
+    readonly new_branch_name
+
     return "$success"
 }
 

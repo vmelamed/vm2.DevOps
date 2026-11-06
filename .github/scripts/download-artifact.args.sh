@@ -78,10 +78,10 @@ function get_arguments()
             # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
             # (SC2221/SC2222) flag any script-specific arm that reuses one of them, and it bugs out if the lists drift apart.
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
-                exit_with_bug -ec "$err_logic_error" "'$_option' should have been consumed by get_common_arg."
+                                                                                exit_with_bug -ec "$err_logic_error" "'$_option' should have been consumed by get_common_arg."
                 ;;
 
-            * ) usage -ec "$err_unknown_argument" "Unknown argument '$_option'."
+            * )                                                                 usage -ec "$err_unknown_argument" "Unknown argument '$_option'."
                 ;;
         esac
     done
@@ -95,25 +95,25 @@ function get_arguments()
 
 function verify_environment()
 {
-    is_tool_present jq                                                          || error -ec "$err_tool_not_found" "'jq' is not installed. Please install it first."
-    is_tool_present gh                                                          || { error -ec "$err_tool_not_found" "'gh' is not installed. Please install it first."; return "$success"; }
-    gh auth status &> "$_ignore"                                                || error -ec "$err_tool_unauthenticated" "'gh' is not authenticated. Run 'gh auth login' first."
+    is_tool_present jq                                                          || error "'jq' is not installed. Please install it first." -ec "$err_tool_not_found"
+    is_tool_present gh                                                          || { error "'gh' is not installed. Please install it first." -ec "$err_tool_not_found"; return "$success"; }
+    gh auth status &> "$_ignore"                                                || error "'gh' is not authenticated. Run 'gh auth login' first." -ec "$err_tool_unauthenticated"
 
     return "$success";
 }
 
 function validate_arguments()
 {
-    [[ -n "$artifact_name" ]]                                                   || error -ec "$err_missing_argument" "The name of the artifact to download must be specified."
+    [[ -n "$artifact_name" ]]                                                   || error "The name of the artifact to download must be specified." -ec "$err_missing_argument"
     is_safe_input "$artifact_name"                                              || true
 
     [[ -z "$artifacts" ]] || is_safe_valid_path "$artifacts"                    || true
-    [[ -n "$artifacts" ]]                                                       || error -ec "$err_missing_argument" "The directory to download the artifact to must be specified."
+    [[ -n "$artifacts" ]]                                                       || error "The directory to download the artifact to must be specified." -ec "$err_missing_argument"
     is_safe_input "$repository"                                                 || true
     is_safe_input "$workflow_id"                                                || true
     is_safe_input "$workflow_name"                                              || true
     is_safe_path "$workflow_path"                                               || true
-    [[ -z "$workflow_id" ]] || is_natural "$workflow_id"                        || error -ec "$err_argument_type" "The specified workflow identifier '$workflow_id' is not valid."
+    [[ -z "$workflow_id" ]] || is_natural "$workflow_id"                        || error "The specified workflow identifier '$workflow_id' is not valid." -ec "$err_argument_type"
 
     readonly artifact_name
     readonly artifacts

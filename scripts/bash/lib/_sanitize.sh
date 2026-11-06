@@ -295,31 +295,21 @@ function is_safe_integer()
 #---------------------------------------------------------------------------------------------
 function is_safe_path()
 {
-    (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the file path to test."
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the file path to test." -ec "$err_invalid_arguments"
     exit_if_has_bugs
 
     local -i _rc=$positive
     local _path="$1"
 
-    [[ -n "$_path" ]] ||
-        # empty string is a "safe" path ("missing" maybe valid or invalid and requires more validation)
-        return "$_rc"
+    # empty string is a "safe" path ("missing" maybe valid or invalid and requires more validation)
+    [[ -n "$_path" ]]                                                           || return "$_rc"
 
     # Reject paths with directory traversal
-    [[ ! "$_path" =~ \.\. ]] || {
-        _rc=$err_unsafe_argument
-        error -ec "$_rc" "The path '$_path' contains directory traversal sequences, which is not allowed."
-    }
+    [[ ! "$_path" =~ \.\. ]]                                                    || with_error "$err_unsafe_argument" _rc "The path '$_path' contains directory traversal sequences, which is not allowed."
     # Reject absolute paths starting with /
-    [[ ! "$_path" =~ ^/ ]] || {
-        _rc=$err_unsafe_argument
-        error -ec "$_rc" "The path '$_path' is an absolute path, which is not allowed."
-    }
+    (( _rc != success )) || [[ ! "$_path" =~ ^/ ]]                              || with_error "$err_unsafe_argument" _rc "The path '$_path' is an absolute path, which is not allowed."
     # Reject paths with dangerous characters
-    [[ ! "$_path" =~ [\$\`\;] ]] || {
-        _rc=$err_unsafe_argument
-        error -ec "$_rc" "The path '$_path' contains one or more unsafe characters: \$, \`, ;"
-    }
+    (( _rc != success )) || [[ ! "$_path" =~ [\$\`\;] ]]                        || with_error "$err_unsafe_argument" _rc "The path '$_path' contains one or more unsafe characters: \$, \`, ;"
 
     return "$_rc"
 }

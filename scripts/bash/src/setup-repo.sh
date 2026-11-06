@@ -129,14 +129,12 @@ exit_if_has_errors
 #=============================================================================================
 # Resolve and validate repo_path:
 #=============================================================================================
-resolve_repo_root "$vm2_repos" "$repo_path" repo_path _ || rc=$?
-is_in "$rc" "$success" "$err_dir_with_ci" ||
-    usage -ec "$rc" "Failed to resolve the path of the target repository '$repo_path'."
+resolve_repo_root "$vm2_repos" "$repo_path" repo_path _                         || rc=$?
+is_in "$rc" "$success" "$err_dir_with_ci"                                       || usage "Failed to resolve the path of the target repository '$repo_path'." \
+                                                                                         -ec "$rc"
 
-(( rc == err_dir_with_ci )) &&
-    warning "'$repo_path' is not a Git repository, however there is '$repo_path/.github/workflows/CI.yaml'." \
-            "A new Git repository will be initialized in '$repo_path'."
-
+(( rc == err_dir_with_ci ))                                                     && warning "'$repo_path' is not a Git repository, however there is '$repo_path/.github/workflows/CI.yaml'." \
+                                                                                           "A new Git repository will be initialized in '$repo_path'."
 rc="$success"
 reset_errors
 root_name=$(basename "$repo_path")
@@ -152,8 +150,8 @@ declare -A repo_state=()
 declare -x suggested_repo_name=''
 declare -x ci_yaml=''
 
-get_repo_state "$repo_path" repo_state || rc=$?
-(( rc != failure )) || usage -ec "$rc" "Failed to get the repository state for '$repo_path'."
+get_repo_state "$repo_path" repo_state                                          || rc=$?
+(( rc != failure ))                                                             || usage -ec "$rc" "Failed to get the repository state for '$repo_path'."
 dump_vars --quiet --header "Repository State 'repo_state':" repo_state
 
 if has_local_repo repo_state; then
@@ -161,9 +159,9 @@ if has_local_repo repo_state; then
     if [[ "$repo_path" != "${repo_state[$key_root]}" ]]; then
         warning "The repository path '$repo_path' is different from the repository root '${repo_state[$key_root]}' detected by git. Adjusting to the git-detected repository root."
         repo_path="${repo_state[$key_root]}"
-        [[ -s "$repo_path/.github/workflows/CI.yaml" ]] ||
-            usage -ec "$err_repo_with_no_ci" "The git-detected repository path '$repo_path' is missing .github/workflows/CI.yaml." \
-                                             "Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2.NewPkg' to create a valid directory structure."
+        [[ -s "$repo_path/.github/workflows/CI.yaml" ]]                         || usage "The git-detected repository path '$repo_path' is missing .github/workflows/CI.yaml." \
+                                                                                         "Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2.NewPkg' to create a valid directory structure." \
+                                                                                         -ec "$err_repo_with_no_ci"
         readonly repo_path
         trace "repo_path='$repo_path' from git-detected repository root"
     fi
@@ -183,8 +181,7 @@ if has_local_repo repo_state; then
         readonly repo
 
         (( rc != err_root_not_repo_name )) ||
-        confirm "Do you want to continue despite the mismatch?" "N" ||
-        exit "$rc"
+        confirm "Do you want to continue despite the mismatch?" "N"             || exit "$rc"
 
         if ! is_in "$repo_name" "${vm2_repositories[@]}"; then
             warning "The repository '$repo_name' is not in the list 'vm2_repositories' (see \$VM2_REPOS/vm2.DevOps/scripts/bash/lib/_constants.sh)."  \
@@ -212,7 +209,6 @@ fi
 if ! has_local_repo repo_state || ! has_remote_repo repo_state; then
     suggested_repo_name=$(basename "$repo_path")
     trace "Will suggest '$suggested_repo_name' from basename repo_path as a repo name and repo description during repo creation if needed."
-
     readonly suggested_repo_name
 fi
 
@@ -225,17 +221,22 @@ readonly ci_yaml
 # Final validation of the inputs and assumptions before we start making any changes or API calls:
 #=============================================================================================
 
-[[ -s "$ci_yaml" ]]                                          || error -ec "$err_logic_error" "The specified path '$repo_path' is not a valid project/repository root (missing .github/workflows/CI.yaml)." \
-                                                                                             "Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2pkg <name>' to create a valid directory."
-[[ -z $repo_name ]] || validate_gh_repo_name "$repo_name"    || error -ec "$err_logic_error" "Could not determine repository name from the specified path '$repo_path' or the name is invalid." \
-                                                                                             "Please specify a valid path to the root of the project/repository using '--path <path>'."
-[[ -z $repo_owner ]] || validate_gh_repo_owner "$repo_owner" || error -ec "$err_logic_error" "Could not determine repository owner from the specified path '$repo_path', or from the environment variable ORGANIZATION, or the owner name is invalid." \
-                                                                                             "Please specify a valid owner of the project/repository using '--owner <owner>' or set the ORGANIZATION environment variable."
-validate_branch_name "$branch" &> "$_ignore"                 || error -ec "$err_logic_error" "Invalid branch name '$branch'." \
-                                                                                             "Please specify a valid branch name using '--branch <branch>'."
+[[ -s "$ci_yaml" ]]                                                             || error "The specified path '$repo_path' is not a valid project/repository root (missing .github/workflows/CI.yaml)." \
+                                                                                         "Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2pkg <name>' to create a valid directory." \
+                                                                                         -ec "$err_logic_error"
+[[ -z $repo_name ]] || validate_gh_repo_name "$repo_name"                       || error "Could not determine repository name from the specified path '$repo_path' or the name is invalid." \
+                                                                                         "Please specify a valid path to the root of the project/repository using '--path <path>'." \
+                                                                                         -ec "$err_logic_error"
+[[ -z $repo_owner ]] || validate_gh_repo_owner "$repo_owner"                    || error "Could not determine repository owner from the specified path '$repo_path', or from the environment variable ORGANIZATION, or the owner name is invalid." \
+                                                                                         "Please specify a valid owner of the project/repository using '--owner <owner>' or set the ORGANIZATION environment variable." \
+                                                                                         -ec "$err_logic_error"
+validate_branch_name "$branch" &> "$_ignore"                                    || error "Invalid branch name '$branch'." \
+                                                                                         "Please specify a valid branch name using '--branch <branch>'." \
+                                                                                         -ec "$err_logic_error"
 visibility="${visibility,,}"
-is_in "$visibility" "public" "private"                       || error -ec "$err_logic_error" "Invalid visibility '$visibility'. Valid options are 'public', 'private', or 'internal'." \
-                                                                                             "Please specify a valid visibility using '--visibility <public|private|internal>'."
+is_in "$visibility" "public" "private"                                          || error "Invalid visibility '$visibility'. Valid options are 'public', 'private', or 'internal'." \
+                                                                                         "Please specify a valid visibility using '--visibility <public|private|internal>'." \
+                                                                                         -ec "$err_logic_error"
 readonly visibility
 
 exit_if_has_errors
@@ -251,14 +252,17 @@ has_github_remote repo_state && get_current_nuget_server
 #=============================================================================================
 
 if $audit; then
-    has_github_remote repo_state                             || error -ec "$err_logic_error" "The repository in '$repo_path' is not linked to a GitHub remote. Cannot perform audit." \
-                                                                                             "Please ensure that the repository is properly initialized and linked to GitHub before running the script with '--audit'."
+    has_github_remote repo_state                                                || error "The repository in '$repo_path' is not linked to a GitHub remote. Cannot perform audit." \
+                                                                                         "Please ensure that the repository is properly initialized and linked to GitHub before running the script with '--audit'." \
+                                                                                         -ec "$err_logic_error"
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-    ! $interactive_secrets && ! $interactive_vars            || error -ec "$err_logic_error" "Secrets and variables cannot be interactively set during audit." \
-                                                                                             "Please remove the '--interactive-secrets' and '--interactive-vars' options when running the script with '--audit'."
+    ! $interactive_secrets && ! $interactive_vars                               || error "Secrets and variables cannot be interactively set during audit." \
+                                                                                         "Please remove the '--interactive-secrets' and '--interactive-vars' options when running the script with '--audit'." \
+                                                                                         -ec "$err_logic_error"
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-    ! $purge_secrets && ! $purge_vars                        || error -ec "$err_logic_error" "Secrets and variables cannot be purged during audit." \
-                                                                                             "Please remove the '--purge-secrets' and '--purge-vars' options when running the script with '--audit'."
+    ! $purge_secrets && ! $purge_vars                                           || error "Secrets and variables cannot be purged during audit." \
+                                                                                         "Please remove the '--purge-secrets' and '--purge-vars' options when running the script with '--audit'." \
+                                                                                         -ec "$err_logic_error"
     exit_if_has_errors
 
     initialize_jq_queries
@@ -310,12 +314,12 @@ if ! has_local_repo repo_state; then
     fi
 
     info "  ...creating and checking out the default branch '$branch';"
-    execute --quiet git -C "$repo_path" checkout -b "$branch"                               && trace "'$branch' branch checked out"
+    execute --quiet git -C "$repo_path" checkout -b "$branch"                   && trace "'$branch' branch checked out"
 
     info "  ...staging and committing existing files in '$repo_path';"
-    execute --quiet git -C "$repo_path" add .                                               && trace "Staged all existing files in '$repo_path' for commit."
+    execute --quiet git -C "$repo_path" add .                                   && trace "Staged all existing files in '$repo_path' for commit."
     if ! git -C "$repo_path" diff --cached --quiet; then
-        execute --quiet git -C "$repo_path" commit -m "chore: initial scaffold"             && trace "Committed staged files to '$repo_path'."
+        execute --quiet git -C "$repo_path" commit -m "chore: initial scaffold" && trace "Committed staged files to '$repo_path'."
     fi
 
     info "...initialized a new git repository in '$repo_path' in the default branch '$branch'."
@@ -330,8 +334,7 @@ if ! has_remote_repo repo_state; then
     info "Creating GitHub repository..."
 
     [[ -n $repo_name ]] ||
-    confirm "Create the GitHub repository '$suggested_repo_name'?" "Y" ||
-    exit "$err_root_not_repo_name"
+    confirm "Create the GitHub repository '$suggested_repo_name'?" "Y"          || exit "$err_root_not_repo_name"
 
     repo_name="${repo_name:-$suggested_repo_name}"
     repo="$repo_owner/$repo_name"
@@ -353,6 +356,7 @@ if ! has_remote_repo repo_state; then
         $use_https && repo_url="https://github.com/$repo" || true
     else
         declare choice
+
         choose "Access remote origin via" choice "SSH" "HTTPS"
         case $choice in
             1 ) use_ssh=true;   repo_url="git@github.com:$repo.git" ;;
@@ -378,13 +382,15 @@ if ! has_remote_repo repo_state; then
     get_repo_state "$repo_path" repo_state || rc=$?
     dump_vars --quiet --header "Repository State 'repo_state':" repo_state
 
-    (( rc == 0 )) || exit_with_error -ec "$rc" "Failed to get repository state after creation. The repository may have been created successfully, but the script cannot continue with configuration. Please check the repository at $repo_path."
+    (( rc == 0 ))                                                               || exit_with_error "Failed to get repository state after creation. " \
+                                                                                                   "The repository may have been created successfully, but the script cannot continue with configuration." \
+                                                                                                   "Please check the repository at $repo_path." \
+                                                                                                   -ec "$rc"
 
     repo_url="${repo_state[$key_url]}"
     repo_id="${repo_state[$key_repo_id]}"
 
-    [[ -n "$repo_url" && -n "$repo_id" ]] ||
-        usage -ec "$err_not_git_directory" "The repository does not appear to be initialized and/or linked to the remote."
+    [[ -n "$repo_url" && -n "$repo_id" ]]                                       || usage -ec "$err_not_git_directory" "The repository does not appear to be initialized and/or linked to the remote."
 
     branch="${repo_state[$key_default_branch]}"
     main_protection_rs_name="${main_protection_rs_name:-$branch protection}"

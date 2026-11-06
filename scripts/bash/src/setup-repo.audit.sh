@@ -109,26 +109,27 @@ function compare_settings()
 {
     local -i _rc="$success"
 
-    (( $# == 6 || $# == 7 ))                             || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires six or seven arguments (provided $#):" \
-                                                                                             "  - the GitHub API endpoint path to fetch settings from" \
-                                                                                             "  - jq transform JSON -> key=value lines" \
-                                                                                             "  - display-format flag: if true, change expected-values array's keys to sentence-capitalized" \
-                                                                                             "  - unknown-or-obsolete flag: if true, include unknown or obsolete values in the comparison" \
-                                                                                             "  - name of an associative array variable to store the expected key-values" \
-                                                                                             "  - name of an indexed array variable to store the summary results: [matches], [diffs], [errors], and [unknowns]" \
-                                                                                             "  - optional name of an indexed array with the display order of the keys."
-    [[ ! -v 1 || -n "$1" ]]                              || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the GitHub API path, to be non-empty (provided '${1-<missing>}'); for example, 'repos/\$repo'."
-    [[ ! -v 2 || -n "$2" ]]                              || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2, the jq transformation query, to be non-empty (provided '${2-<missing>}')."
-    [[ ! -v 3 ]] || is_boolean "$3"                      || bug -ec "$err_argument_type"     "${FUNCNAME[0]}() requires argument 3, the display-key formatting flag, to be 'true' or 'false' (provided '${3-<missing>}')."
-    [[ ! -v 4 ]] || is_boolean "$4"                      || bug -ec "$err_argument_type"     "${FUNCNAME[0]}() requires argument 4, the display unknown key flag, to be 'true' or 'false' (provided '${4-<missing>}')."
-    [[ ! -v 5 ]] || is_associative_array "$5"            || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 5 to name an associative array containing expected key-value pairs (provided '${5-<missing>}')."
-    [[ ! -v 6 ]] || is_associative_array "$6"            || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 6 to name an indexed array for summary results: [matches], [diffs], [errors], and [unknowns] (provided '${6-<missing>}')."
-    [[ ! -v 7 || -z "${7:-}" ]] || is_indexed_array "$7" || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 7 (if present) to name an indexed array containing the display order (provided '${7-<missing>}')."
+    (( $# == 6 || $# == 7 ))                                                    || bug "${FUNCNAME[0]}() requires six or seven arguments (provided $#):" \
+                                                                                       "  - the GitHub API endpoint path to fetch settings from" \
+                                                                                       "  - jq transform JSON -> key=value lines" \
+                                                                                       "  - display-format flag: if true, change expected-values array's keys to sentence-capitalized" \
+                                                                                       "  - unknown-or-obsolete flag: if true, include unknown or obsolete values in the comparison" \
+                                                                                       "  - name of an associative array variable to store the expected key-values" \
+                                                                                       "  - name of an indexed array variable to store the summary results: [matches], [diffs], [errors], and [unknowns]" \
+                                                                                       "  - optional name of an indexed array with the display order of the keys." \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 || -n "$1" ]]                                                     || bug "${FUNCNAME[0]}() requires argument 1, the GitHub API path, to be non-empty (provided '${1-<missing>}'); for example, 'repos/\$repo'." -ec "$err_argument_value"
+    [[ ! -v 2 || -n "$2" ]]                                                     || bug "${FUNCNAME[0]}() requires argument 2, the jq transformation query, to be non-empty (provided '${2-<missing>}')." -ec "$err_argument_value"
+    [[ ! -v 3 ]] || is_boolean "$3"                                             || bug "${FUNCNAME[0]}() requires argument 3, the display-key formatting flag, to be 'true' or 'false' (provided '${3-<missing>}')." -ec "$err_argument_type"
+    [[ ! -v 4 ]] || is_boolean "$4"                                             || bug "${FUNCNAME[0]}() requires argument 4, the display unknown key flag, to be 'true' or 'false' (provided '${4-<missing>}')." -ec "$err_argument_type"
+    [[ ! -v 5 ]] || is_associative_array "$5"                                   || bug "${FUNCNAME[0]}() requires argument 5 to name an associative array containing expected key-value pairs (provided '${5-<missing>}')." -ec "$err_invalid_nameref"
+    [[ ! -v 6 ]] || is_associative_array "$6"                                   || bug "${FUNCNAME[0]}() requires argument 6 to name an indexed array for summary results: [matches], [diffs], [errors], and [unknowns] (provided '${6-<missing>}')." -ec "$err_invalid_nameref"
+    [[ ! -v 7 || -z "${7:-}" ]] || is_indexed_array "$7"                        || bug "${FUNCNAME[0]}() requires argument 7 (if present) to name an indexed array containing the display order (provided '${7-<missing>}')." -ec "$err_invalid_nameref"
     exit_if_has_bugs
 
     local -n _expected_key_values="$5"
 
-    (( ${#_expected_key_values[@]} > 0 )) || return "$success"
+    (( ${#_expected_key_values[@]} > 0 ))                                       || return "$success"
 
     local _gh_endpoint="$1"
     local _jq_transform=$2
@@ -143,10 +144,9 @@ function compare_settings()
         _keys=("${_keys_in_order[@]}")
         # make sure that all expected keys are included in the display order
         for _var in "${!_expected_key_values[@]}"; do
-            is_in "$_var" "${_keys[@]}" || {
-                warning "The variable '$_var' is not listed in the display order. Appending it at the end of the array."
-                _keys+=("$_var")
-            }
+            is_in "$_var" "${_keys[@]}"                                         || { warning "The variable '$_var' is not listed in the display order. Appending it at the end of the array."
+                                                                                     _keys+=("$_var")
+                                                                                }
         done
     else
         # otherwise put the keys in the array in sorted order
@@ -156,11 +156,9 @@ function compare_settings()
     # query the GitHub API and transform the JSON response into key=value pairs using the provided jq query, then...
     local _json
 
-    if ! _json=$(execute_gh_api_with_retry 3 2 --paginate "$_gh_endpoint"); then
-        _rc="$err_tool_error"
-        error -ec "$_rc" "Failed to fetch data from GitHub API: $_gh_endpoint."
-        return "$_rc"
-    fi
+    _json=$(execute_gh_api_with_retry 3 2 --paginate "$_gh_endpoint")           || { with_error "$err_tool_error" _rc "Failed to fetch data from GitHub API: $_gh_endpoint.";
+                                                                                    return "$_rc";
+                                                                                }
 
     # read the key=value pairs into $actual_key_values
     local -A _known_key_values=()
@@ -247,47 +245,31 @@ function audit_branch_ruleset()
 {
     local -i _rc=$success
     local _rulesets_json
-
-    _rulesets_json=$(execute_gh_api_with_retry 3 2 --paginate "$path_rulesets") || true
-
-    [[ -n "${_rulesets_json:-}" ]] || {
-        _rc=$failure
-        error -ec "$_rc" "Ruleset '$main_protection_rs_name' for branch '$branch' is missing"
-        return "$_rc"
-    }
-
     local _ruleset_id
 
-    _ruleset_id=$(jq -r "$jq_ruleset_id" <<< "$_rulesets_json" 2>"$_ignore")
-
-    [[ -z "$_ruleset_id" ]] && {
-        _rc=$failure
-        error -ec "$_rc" "Ruleset '$main_protection_rs_name' for branch '$branch' does not exist"
-        return "$_rc";
-    }
-
-    echo "  $info_em  Ruleset '$main_protection_rs_name' for branch '$branch' (id: $_ruleset_id):"
-
-    compare_settings "$path_rulesets/$_ruleset_id" "$jq_ruleset_rules" true false default_ruleset _results default_ruleset_order || {
-        _rc=$?
-        error -ec "$_rc" "Failed to compare branch protection ruleset settings."
-        return "$_rc";
-    }
+    _rulesets_json=$(execute_gh_api_with_retry 3 2 --paginate "$path_rulesets") || true
+    [[ -n "${_rulesets_json:-}" ]]                                              || with_error "$failure" _rc "Ruleset '$main_protection_rs_name' for branch '$branch' is missing"
+    (( _rc != success )) || _ruleset_id=$(jq -r "$jq_ruleset_id" <<< "$_rulesets_json" 2>"$_ignore")
+    (( _rc != success )) || [[ -n "$_ruleset_id" ]]                             || with_error "$failure" _rc "Ruleset '$main_protection_rs_name' for branch '$branch' does not exist"
+    (( _rc != success )) || echo "  $info_em  Ruleset '$main_protection_rs_name' for branch '$branch' (id: $_ruleset_id):"
+    (( _rc != success )) || compare_settings "$path_rulesets/$_ruleset_id" "$jq_ruleset_rules" true false default_ruleset _results default_ruleset_order \
+                                                                                || with_error "$?" _rc "Failed to compare branch protection ruleset settings."
+    (( _rc == success )) || return "$_rc"
 }
 
-function audit_required_status_checks() {
+function audit_required_status_checks()
+{
     local -i _rc=$success
 
-    is_empty_array required_checks && return "$_rc"
-
+    is_empty_array required_checks                                              && return "$_rc"
     echo "      $info_em  Required status checks list:"
 
     local _json
-    _json=$(execute_gh_api_with_retry 3 2 --paginate "$path_main_protection_ruleset") || {
-        _rc=$err_tool_error
-        error -ec "$_rc" "Failed to fetch data from GitHub API: $path_main_protection_ruleset."
-        return "$_rc"
-    }
+    _json=$(execute_gh_api_with_retry 3 2 --paginate "$path_main_protection_ruleset") \
+                                                                                || {
+                                                                                    with_error "$err_tool_error" _rc "Failed to fetch data from GitHub API: $path_main_protection_ruleset."
+                                                                                    return "$_rc"
+                                                                                }
 
     local -a _present_checks=()
     local _check
@@ -332,6 +314,7 @@ function audit_required_status_checks() {
 #---------------------------------------------------------------------------------------------
 function audit_repo()
 {
+    local -i _rc=$success
     local -A _results=(
         [$key_matches]=0
         [$key_diffs]=0
@@ -343,15 +326,13 @@ function audit_repo()
 
     # --- Repo settings ---
     echo "  $info_em  Repository settings:"
-    compare_settings "$path_repo" "$jq_entries" true false default_repo_settings _results default_repo_settings_order || {
-        error -ec "$?" "Failed to compare repository settings."
-    }
+    compare_settings "$path_repo" "$jq_entries" true false default_repo_settings _results default_repo_settings_order \
+                                                                                || with_error "$?" _rc "Failed to compare repository settings."
 
     # --- Actions permissions ---
     echo "  $info_em  Actions permissions:"
-    compare_settings "$path_permissions" "$jq_entries" true false default_repo_permissions _results || {
-        error -ec "$?" "Failed to compare repository permissions settings."
-    }
+    compare_settings "$path_permissions" "$jq_entries" true false default_repo_permissions _results \
+                                                                                || with_error "$?" _rc "Failed to compare repository permissions settings."
 
     local _app
 
@@ -361,13 +342,10 @@ function audit_repo()
 
     for _app in "${gh_apps_with_vars[@]}"; do
         get_vars_defaults "${_app,,}" _vars_defaults _vars_order
-
-        is_empty_array _vars_defaults && continue
-
+        ! is_empty_array _vars_defaults                                         || continue
         echo "  $info_em  ${_app^} Variables:"
-        compare_settings "$path_vars" "$jq_vars" false true _vars_defaults _results _vars_order || {
-            error -ec "$?" "Failed to compare GitHub ${_app^} variables."
-        }
+        compare_settings "$path_vars" "$jq_vars" false true _vars_defaults _results _vars_order \
+                                                                                || with_error "$?" _rc "Failed to compare GitHub ${_app^} variables."
     done
 
     # --- Secrets ---
@@ -376,20 +354,17 @@ function audit_repo()
 
     for _app in "${gh_apps_with_secrets[@]}"; do
         get_secrets_defaults "${_app,,}" _secrets_defaults _secrets_order
-
-        is_empty_array _secrets_defaults && continue
-
+        ! is_empty_array _secrets_defaults                                      || continue
         echo "  $info_em  ${_app^} Secrets:"
-        compare_settings "$path_repo/$_app/secrets" "$jq_secrets" false true _secrets_defaults _results _secrets_order || {
-            error -ec "$?" "Failed to compare $_app secrets."
-        }
+        compare_settings "$path_repo/$_app/secrets" "$jq_secrets" false true _secrets_defaults _results _secrets_order \
+                                                                                || with_error "$?" _rc "Failed to compare $_app secrets."
     done
 
     # --- Branch ruleset ---
-    audit_branch_ruleset || true
+    audit_branch_ruleset                                                        || true
 
     # --- Required status checks ---
-    audit_required_status_checks || true
+    audit_required_status_checks                                                || true
 
     # --- Local Git Settings ---
     echo "  $info_em  Local Git Settings:"

@@ -23,6 +23,7 @@ declare -xri failure
 declare -xri err_tool_error
 declare -xri err_logic_error
 declare -xri err_unknown_argument
+declare -xri err_io_failure
 
 # core lib constants
 declare -xr ci
@@ -126,7 +127,7 @@ if [[ -d "$artifacts_test_dir" && -n "$(ls -A "$artifacts_test_dir")" ]]; then
                 execute rm -rf "$artifacts_test_dir"
                 ;;
             2)  info "Renaming the directory '$artifacts_test_dir' to '$renamed_artifacts_dir'..."
-                execute mv "$artifacts_test_dir" "$renamed_artifacts_dir"
+                execute mv "$artifacts_test_dir" "$renamed_artifacts_dir"       || with_error "$err_io_failure" rc "Failed to copy '$artifacts_test_dir' to '$renamed_artifacts_dir'"
                 ;;
             3)  trace "Exiting the script."
                 exit 0
@@ -137,7 +138,6 @@ if [[ -d "$artifacts_test_dir" && -n "$(ls -A "$artifacts_test_dir")" ]]; then
         esac
     fi
 fi
-
 exit_if_has_errors
 
 # Verify build artifacts exist, if not - rebuild the project (mostly for local runs)

@@ -6,6 +6,9 @@
 declare -xr common_args_usage
 declare -xr script_name
 
+declare -xri err_invalid_arguments
+declare -xri err_argument_type
+
 declare -xr vm2_devops_repo_name
 declare -xr vm2_sot_repo_name
 declare -xr default_sot
@@ -23,8 +26,8 @@ declare -xr default_sot
 #---------------------------------------------------------------------------------------------
 function usage_text()
 {
-    (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
-    is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1-<missing>})."
+    (( $# ==1 ))                                                                || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)." -ec "$err_invalid_arguments"
+    is_boolean "$1"                                                             || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1-<missing>})." -ec "$err_argument_type"
     exit_if_has_bugs
 
     local _long_text=$1

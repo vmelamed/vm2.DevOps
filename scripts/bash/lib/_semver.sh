@@ -174,11 +174,11 @@ declare -xri rc_less_than
 #
 # @example
 #   compare_semver "1.2.3" "1.2.4"
-#   case $? in
+#   case "$?" in
 #     "$rc_less_than")     echo "1.2.3 < 1.2.4" ;;
 #     "$rc_equal")         echo "equal" ;;
 #     "$rc_greater_than")  echo "1.2.3 > 1.2.4" ;;
-#     * )                  error -ec $? -ds 3 "Error comparing versions" ;;
+#     * )                  error "Error comparing versions"  -ec "$?" -sd 3 ;;
 #   esac
 #---------------------------------------------------------------------------------------------
 function compare_semver()

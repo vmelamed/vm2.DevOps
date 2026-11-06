@@ -200,9 +200,9 @@ function get_errors()
 #---------------------------------------------------------------------------------------------
 function set_errors()
 {
-    (( $# == 1 ))                        || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument ($# provided):" \
-                                                                             "  - the new value for the global error counter"
-    [[ ! -v 1 ]] || is_non_negative "$1" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires argument 1 to be provided as a non-negative integer: the new value for the global error counter (provided '${1-<missing>}')."
+    (( $# == 1 ))                        || bug "${FUNCNAME[0]}() requires one argument ($# provided):" \
+                                                "  - the new value for the global error counter" -ec "$err_invalid_arguments"
+    [[ ! -v 1 ]] || is_non_negative "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be provided as a non-negative integer: the new value for the global error counter (provided '${1-<missing>}')." -ec "$err_argument_type"
     exit_if_has_bugs
 
     __errors=$1
@@ -313,9 +313,9 @@ function exit_if_has_bugs()
 #---------------------------------------------------------------------------------------------
 function usage()
 {
-    bug -ec "$err_not_overridden" "This implementation of usage() is meant to be a 'forward declaration'!" \
-                                    "Either re-define usage() or source _core_args.sh." \
-                                    "$@"
+    bug "This implementation of usage() is meant to be a 'forward declaration'!" \
+        "Either re-define usage() or source _core_args.sh." \
+        "$@" -ec "$err_not_overridden"
     exit "$failure";
 }
 
@@ -407,8 +407,8 @@ function __message()
 {
     local -i _rc="$success"
 
-    (( $# > 0 ))                 || bug -ec "$err_missing_argument" "${FUNCNAME[0]}() called without any parameters. Provide at least a prefix as the first parameter."
-    (( $# > 1 )) || [[ ! -t 0 ]] || bug -ec "$err_missing_argument" "${FUNCNAME[0]}() called without message parameters and there are none in the pipe. Provide message parameters or pipe them into the function."
+    (( $# > 0 ))                                                                || bug "${FUNCNAME[0]}() called without any parameters. Provide at least a prefix as the first parameter." -ec "$err_missing_argument"
+    (( $# > 1 )) || [[ ! -t 0 ]]                                                || bug "${FUNCNAME[0]}() called without message parameters and there are none in the pipe. Provide message parameters or pipe them into the function." -ec "$err_missing_argument"
     exit_if_has_bugs
 
     # The first parameter MUST be the prefix to prepend to each message line, e.g. "ERROR: ", "WARN: ", etc.
@@ -441,7 +441,16 @@ function __message()
                 if (( $# > 0 )); then
                     shift
                     is_exit_code "$1" && _error_code="$1" && _message_parts+=("$(error_message "$_error_code")") ||
-                        printf "%s Expected an error code (0..255) after the '--error-code' flag, provided: '%s'\n. Ignoring both arguments." "$bug_prefix" "$1"
+                        printf "%s Expected an error code (0..255) after the '--error-code' flag, provided: '%s'.\n Ignoring both arguments." "$bug_prefix" "$1"
+                fi
+                ;;
+
+            "--dotnet-error-code"|"-dec" )
+                # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
+                if (( $# > 0 )); then
+                    shift
+                    is_exit_code "$1" && _error_code="$1" && _message_parts+=("$(dotnet_error_message "$_error_code")") ||
+                        printf "%s Expected an error code (0..255) after the '--dotnet-error-code' flag, provided: '%s'.\nIgnoring both arguments." "$bug_prefix" "$1"
                 fi
                 ;;
 
@@ -451,7 +460,7 @@ function __message()
                     shift
                     is_non_negative "$1" &&
                         _depth="$1" ||
-                        printf "%s Expected a positive number or 0 number of frames to display after the '--stack-depth' flag, provided: '%s'\n. Ignoring both arguments." "$bug_prefix" "$1"
+                        printf "%s Expected a positive number or 0 number of frames to display after the '--stack-depth' flag, provided: '%s'.\nIgnoring both arguments." "$bug_prefix" "$1"
                 fi
                 ;;
 
@@ -461,7 +470,7 @@ function __message()
                     shift
                     is_non_negative "$1" &&
                         _skip="$1" ||
-                        printf "%s Expected a positive number or 0 number of frames to skip after the '--stack-skip' flag, provided: '%s'\n. Ignoring both arguments." "$bug_prefix" "$1"
+                        printf "%s Expected a positive number or 0 number of frames to skip after the '--stack-skip' flag, provided: '%s'.\nIgnoring both arguments." "$bug_prefix" "$1"
                 fi
                 ;;
 
@@ -477,7 +486,7 @@ function __message()
 
     local -i _count=${#_message_parts[@]}
 
-    [[ $_count -gt 0 || ! -t 0 ]] || bug -ec "$err_missing_argument" "${FUNCNAME[0]}() called without message part(s) and there are none in the stdin pipe. Provide the message part(s) or pipe them into the function."
+    [[ $_count -gt 0 || ! -t 0 ]]                                               || bug "${FUNCNAME[0]}() called without message part(s) and there are none in the stdin pipe. Provide the message part(s) or pipe them into the function." -ec "$err_missing_argument"
     exit_if_has_bugs
 
     local _first_part=true
@@ -488,7 +497,7 @@ function __message()
 
         if $_first_part; then
             if (( _depth > 0 )); then
-                printf "%s%s @ %s(%s):\n" "$_prefix" "$__part" "${BASH_SOURCE[3]:-}" "${BASH_LINENO[2]:-}"
+                printf "%s%s @ %s (%s):\n" "$_prefix" "$__part" "${BASH_SOURCE[_skip+1]:-}" "${BASH_LINENO[_skip]:-}"
             else
                 printf "%s%s\n" "$_prefix" "$__part"
             fi
@@ -574,7 +583,7 @@ function error()
     done
     __last_error=$_error
 
-    __message "$error_prefix" "$@" > >(to_stderr)
+    __message "$error_prefix" "$@" > >(to_stderr); wait "$!" || true
     local -i _depth=${#FUNCNAME[@]}
     (( __errors == 0 || _depth < __errors_min_depth )) && __errors_min_depth=$_depth
     (( ++__errors ))
@@ -658,7 +667,7 @@ function bug()
     done
     __last_bug=$_bug
 
-    __message "$bug_prefix" "$@" > >(to_stderr)
+    __message "$bug_prefix" "$@" > >(to_stderr); wait "$!" || true
     local -i _depth=${#FUNCNAME[@]}
     (( __bugs == 0 || _depth < __bugs_min_depth )) && __bugs_min_depth=$_depth
     (( ++__bugs ))
@@ -736,7 +745,7 @@ function fatal_exit()
         break
     done
 
-    __message "$fatal_prefix" "$@" > >(to_stderr)
+    __message "$fatal_prefix" "$@" > >(to_stderr); wait "$!" || true
     exit "$_exit_code"
 }
 
@@ -770,7 +779,7 @@ function fatal_exit()
 #---------------------------------------------------------------------------------------------
 function warning()
 {
-    __message "$warning_prefix" --no-stack "$@" > >(to_stderr)
+    __message "$warning_prefix" --no-stack "$@" > >(to_stderr); wait "$!" || true
 }
 
 
@@ -806,7 +815,7 @@ function warning()
 #---------------------------------------------------------------------------------------------
 function info()
 {
-    __message "$info_prefix" --no-stack "$@" > >(to_stdout)
+    __message "$info_prefix" --no-stack "$@" > >(to_stdout); wait "$!" || true
 }
 
 #---------------------------------------------------------------------------------------------
@@ -867,13 +876,14 @@ function trace()
 #---------------------------------------------------------------------------------------------
 function warning_var()
 {
-    (( $# == 3 ))                         || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires three arguments ($# provided):" \
-                                                                              "  - variable name" \
-                                                                              "  - warning message" \
-                                                                              "  - default value"
+    (( $# == 3 ))                                                               || bug "${FUNCNAME[0]}() requires three arguments ($# provided):" \
+                                                                                       "  - variable name" \
+                                                                                       "  - warning message" \
+                                                                                       "  - default value" \
+                                                                                       -ec "$err_invalid_arguments"
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-    [[ ! -v 1 ]] || is_variable_name "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be a valid variable name (provided '${1-<missing>}')."
-    [[ ! -v 2 || -n $2 ]]                 || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the warning message, to be non-empty (provided '${2-<missing>}')."
+    [[ ! -v 1 ]] || is_variable_name "$1"                                       || bug "${FUNCNAME[0]}() requires argument 1 to be a valid variable name (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
+    [[ ! -v 2 || -n $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the warning message, to be non-empty (provided '${2-<missing>}')." -ec "$err_argument_value"
     exit_if_has_bugs
 
     warning "$2" "Assuming the default value of '$3'."
@@ -1004,4 +1014,64 @@ function to_summary()
 function now_us()
 {
     echo "${EPOCHREALTIME//[!0-9]/}"
+}
+
+#---------------------------------------------------------------------------------------------
+# @description Switches a chain of fallible steps to the error track (railway-oriented
+#   programming by hand): records a vm2 `$err_*` code in the caller's variable and reports the
+#   failure with `error`. Meant to be called right after the failed command, as
+#   `cmd || with_error ...`: it captures `$?` first thing, and appends it to the message as
+#   "Exit code: N" when non-zero, so the log shows both the logical vm2 code and the tool's (or
+#   the OS's) own exit status. The steps after it are guarded by `(( rc != success )) ||` and
+#   are skipped once the variable holds the error code. See CLAUDE.md, "Chaining Fallible Steps
+#   with `with_error`".
+#
+#   The stack dump and the `@ file (line)` location skip this function and start at its caller.
+#
+# @arg $1 integer The vm2 error code (`$err_*`) to record and report, in the range [1, 255].
+# @arg $2 string The name of a declared integer variable that receives the code from `$1`.
+# @arg $@ string The message parts for `error`; MAY include `error`'s named parameters.
+#
+# @set The variable named in `$2` is set to `$1`. Also everything `error` sets: the global error
+#   counter and the last error code.
+#
+# @exitcode success=0: Always, so that `cmd || with_error ...` does not trip `errexit`. The
+#   failure is carried in the variable named in `$2`.
+#
+# @example
+#   declare -i rc=$success
+#   declare results_text=''
+#   declare -a results=()
+#   results_text=$(get_results)                                || with_error "$err_tool_error" rc "Failed to get the results."
+#   (( rc != success )) || [[ -z $results_text ]] || readarray -t results <<< "$results_text"
+#   (( rc != success )) || some_tool --input "$input_file"     || with_error "$err_tool_error" rc "some_tool failed."
+#   (( rc == success ))                                        || return "$rc"   # or, in a top-level script: exit_if_has_errors
+#---------------------------------------------------------------------------------------------
+function with_error()
+{
+    local -i _prev_error=$? # capture immediately the error code of the prev. command
+
+    (( $# >= 2 ))                                                               || bug "${FUNCNAME[0]}() requires at least two arguments ($# provided):" \
+                                                                                       "  - the actual error code to be reported by 'error'" \
+                                                                                       "  - the name of a variable to receive that code" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 ]] || { is_exit_code "$1" && (( $1 > 0 )); }                      || bug "${FUNCNAME[0]}() requires argument 1 to be a valid return code in the range [1, 255] (provided '${1-<missing>}')" -ec "$err_argument_value"
+    [[ ! -v 2 ]] || is_variable  "$2"                                           || bug "${FUNCNAME[0]}() requires argument 2 to be the name of a declared variable (provided '${2-<missing>}')" -ec "$err_argument_value"
+    exit_if_has_bugs
+
+    local -i __err_code=$1
+    local -n __err_code_var=$2
+    shift 2
+
+    __err_code_var=$__err_code
+    if (( _prev_error != 0 )); then
+        error "$@" "Exit code: $_prev_error" -ec "$__err_code" -ss 3 # 3 skips this function in the stack dump
+    else
+        error "$@" -ec "$__err_code" -ss 3
+    fi
+
+    local -i _depth=${#FUNCNAME[@]}
+    (( __errors_min_depth <= _depth )) || __errors_min_depth=$_depth   # the error belongs to the caller, not to with_error
+
+    return "$success"   # __err_code_var carries the actual failure
 }

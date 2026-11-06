@@ -64,7 +64,7 @@ source "$script_dir/add-spdx.usage.sh"
 #   or an empty license.
 # @exitcode the code of the last reported error (via 'exit_if_has_errors'): at least one file
 #   could not be modified, e.g. it is read-only ('$err_not_file') or an I/O operation failed
-#   ('$err_io_operation_failed'). All other files are still processed.
+#   ('$err_io_failure'). All other files are still processed.
 #
 # @stdout Per-file progress lines (skipping/would've added/added) and a final summary line with
 #   the scanned/modified/skipped/failed counts (scanned = modified + skipped + failed).

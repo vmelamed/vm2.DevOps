@@ -83,7 +83,7 @@ function validate_arguments()
     # usually set from CLI arguments, environment variables, or defaults
     is_safe_existing_file "$test_project"                                       || true
     [[ $test_project == *.csproj ]]                                             || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)."
-    sanitize_common_dotnet_args "$test_project"                                 || true
+    sanitize_common_dotnet_args "$test_project"
 
     # Unless MIN_BRANCH_COVERAGE_PCT or MIN_METHOD_COVERAGE_PCT is set, derive it from the line coverage. Derive only from a
     # valid line coverage: the arithmetic expansion would evaluate (and run any command substitution in) an invalid one.

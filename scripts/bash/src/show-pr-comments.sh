@@ -56,8 +56,8 @@ declare pr_title pr_url pr_head
 
 {
     IFS=$'\t' read -r pr_title pr_url pr_head
-} < <(gh pr view "$pr_number" --repo "$repo" --json title,url,headRefOid --jq '[.title, .url, .headRefOid] | @tsv') || exit_with_error -ec "$err_tool_error" "Could not read pull request #$pr_number of '$repo'."
-[[ -n $pr_head ]]                                                                                                   || exit_with_error -ec "$err_not_found" "Pull request #$pr_number of '$repo' was not found."
+} < <(gh pr view "$pr_number" --repo "$repo" --json title,url,headRefOid --jq '[.title, .url, .headRefOid] | @tsv')             || exit_with_error "Could not read pull request #$pr_number of '$repo'." -ec "$err_tool_error"
+[[ -n $pr_head ]]                                                                                                               || exit_with_error "Pull request #$pr_number of '$repo' was not found." -ec "$err_not_found"
 
 # Counts the submitted reviews of the pull request's head commit. A PENDING review (the authenticated user's draft, not
 # yet submitted) already carries the head commit's id, but is not a review yet: it must not end '--watch'. The SHA is 40
@@ -74,10 +74,10 @@ if $watch; then
     declare -i head_reviews=0
     declare -i remaining=0
     while :; do
-        head_reviews=$(count_head_reviews)                                                                          || exit_with_error -ec "$err_tool_error" "Could not read the reviews of #$pr_number."
+        head_reviews=$(count_head_reviews)                                                                                      || exit_with_error "Could not read the reviews of #$pr_number." -ec "$err_tool_error"
         (( head_reviews == 0 )) || break
         remaining=$(( deadline - SECONDS ))
-        (( remaining > 0 ))                                                                                         || exit_with_error -ec "$err_not_found" "No review of commit ${pr_head:0:7} of #$pr_number within $timeout seconds."
+        (( remaining > 0 ))                                                                                                     || exit_with_error "No review of commit ${pr_head:0:7} of #$pr_number within $timeout seconds." -ec "$err_not_found"
         info "Waiting for a review of commit ${pr_head:0:7} of #$pr_number (checking every $interval seconds)..."
         # never sleep past the deadline: '--timeout' limits the wait, whatever the interval
         sleep $(( interval < remaining ? interval : remaining ))
@@ -93,7 +93,7 @@ fi
 #     - a code span opens with a run of N backticks and closes on the next run of exactly N, so ``<br>`` is code too; an
 #       unmatched run is literal text (CommonMark 6.1). Code spans are matched within a line, which covers review text.
 #   - An HTML comment ends at the first '-->', even several lines later; backticks inside it do not open a code span.
-#   - Lowercase tags only (mawk has no case-insensitive matching); GitHub and Copilot emit lowercase HTML.
+#   - Lowercase tags only (awk has no case-insensitive matching); GitHub and Copilot emit lowercase HTML.
 function strip_html()
 {
     local _tags='a|b|br|code|details|div|em|h[1-6]|hr|i|img|kbd|li|ol|p|picture|pre|source|span|strong|sub|summary|sup|table|tbody|td|th|thead|tr|ul'
@@ -171,9 +171,9 @@ printf '#%s: %s\n%s\n' "$pr_number" "$pr_title" "$pr_url"
 printf '\n== Reviews\n\n'
 gh api --paginate "repos/$repo/pulls/$pr_number/reviews" \
        --jq '.[] | select(.state != "PENDING" and .body != "") | "-- \(.user.login) [\(.state)] \((.submitted_at // "")[:16] | sub("T"; " "))\n\(.body)\n"' |
-    strip_html                                                                                                      || exit_with_error -ec "$err_tool_error" "Could not read the reviews of #$pr_number."
+    strip_html                                                                                                                  || exit_with_error "Could not read the reviews of #$pr_number." -ec "$err_tool_error"
 
 printf '\n== Inline comments\n\n'
 gh api --paginate "repos/$repo/pulls/$pr_number/comments" \
        --jq '.[] | "-- \(.path):\(.line // .original_line)\(if .in_reply_to_id then " (reply)" else "" end) -- \(.user.login)\n\(.body)\n"' |
-    strip_html                                                                                                      || exit_with_error -ec "$err_tool_error" "Could not read the inline comments of #$pr_number."
+    strip_html                                                                                                                  || exit_with_error "Could not read the inline comments of #$pr_number." -ec "$err_tool_error"
