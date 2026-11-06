@@ -83,7 +83,7 @@ if is_semverRelease "$latest_stable_ver"; then
     minor=${BASH_REMATCH[$semver_minor]}
     patch=${BASH_REMATCH[$semver_patch]}
     ((major > 0 && minor >= 0 && patch >= 0)) ||
-        exit_with_error -ec "$err_argument_value" "Invalid version numbers in latest stable tag '$latest_stable_ver': $major.$minor.$patch"
+        exit_with_error "Invalid version numbers in latest stable tag '$latest_stable_ver': $major.$minor.$patch" -ec "$err_argument_value"
     trace "Base version from latest stable: $major.$minor.$patch"
 else
     trace "No previous stable release found; starting at 0.0.0"
@@ -172,7 +172,7 @@ info "Computed prerelease version: $prerelease_version [$bump_type]"
 # ============================================================================
 
 if [[ "$bump_type" != *"none"* ]] && git rev-parse "$prerelease_tag" >"$_ignore" 2>&1; then
-    error -ec "$err_tool_error" "Tag '$prerelease_tag' already exists. Possible remedy: delete the tag, or merge another PR first."
+    error "Tag '$prerelease_tag' already exists. Possible remedy: delete the tag, or merge another PR first." -ec "$err_tool_error"
 fi
 
 exit_if_has_errors

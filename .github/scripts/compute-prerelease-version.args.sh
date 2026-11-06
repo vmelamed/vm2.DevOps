@@ -79,7 +79,7 @@ function validate_environment()
 
     # detect if the head is already tagged
     head_tag=$(git tag --points-at HEAD)
-    [[ -z $head_tag ]]                                                          || error -ec "$err_tool_error" "The HEAD is already tagged with '$head_tag'. A prerelease requires at least one new commit on main."
+    [[ -z $head_tag ]]                                                          || error "The HEAD is already tagged with '$head_tag'. A prerelease requires at least one new commit on main." -ec "$err_tool_error"
 
     return "$success"
 }

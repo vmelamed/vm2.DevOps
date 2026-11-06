@@ -57,7 +57,7 @@ if $build || [[ ! -s $pack_exec_path ]]; then
     dotnet_clean "$package_project"                                             || exit_with_error -ec "$?" "Cleaning the build project failed."
     dotnet_restore "$package_project"                                           || exit_with_error -ec "$?" "Restoring the build project failed."
     dotnet_build "$package_project"                                             || exit_with_error -ec "$?" -sd 3 "Building the build project failed."
-    [[ -s $pack_exec_path ]]                                                    || exit_with_error -ec "$err_tool_error" -sd 3 "After building, the output '$pack_exec_path' was still NOT FOUND."
+    [[ -s $pack_exec_path ]]                                                    || exit_with_error -sd 3 "After building, the output '$pack_exec_path' was still NOT FOUND." -ec "$err_tool_error"
 fi
 
 declare -A _pack_properties=()

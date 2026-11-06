@@ -107,7 +107,7 @@ declare -a submodules=()
 if git -C "$root" rev-parse --is-inside-work-tree &> "$_ignore"; then
     # shellcheck disable=SC2016 # single quotes on purpose: 'git submodule foreach' expands $toplevel/$sm_path itself
     submodule_list=$(git -C "$root" submodule foreach --quiet --recursive 'echo "$toplevel/$sm_path"') ||
-        exit_with_error -ec "$err_tool_error" "Failed to list the git submodules of '$root'; no files were changed."
+        exit_with_error "Failed to list the git submodules of '$root'; no files were changed." -ec "$err_tool_error"
     [[ -z $submodule_list ]] || readarray -t submodules <<< "$submodule_list"
 fi
 

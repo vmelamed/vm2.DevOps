@@ -66,8 +66,8 @@ function get_arguments()
 
 function validate_arguments()
 {
-    [[ -n $dir && -d $dir ]]                                                    || error -ec "$err_not_directory" "Directory not found: '$dir'"
-    [[ -n $license ]]                                                           || error -ec "$err_argument_value" "The license (--license) must not be empty."
+    [[ -n $dir && -d $dir ]]                                                    || error "Directory not found: '$dir'" -ec "$err_not_directory"
+    [[ -n $license ]]                                                           || error "The license (--license) must not be empty." -ec "$err_argument_value"
 
     readonly dir
     readonly license

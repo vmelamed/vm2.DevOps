@@ -611,7 +611,7 @@ function error()
 #   `$err_has_errors` in the unlikely case that recorded code is itself 0.
 #
 # @example
-#   exit_with_error -ns -ec "$err_not_file" "Invalid file specified."
+#   exit_with_error -ns "Invalid file specified." -ec "$err_not_file"
 #---------------------------------------------------------------------------------------------
 function exit_with_error()
 {

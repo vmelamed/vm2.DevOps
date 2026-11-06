@@ -76,9 +76,9 @@ if [[ ! -s "$cliff_config" ]]; then
     warning "Missing $cliff_config; skipping changelog update."
 else
     # Fail fast: changelog bootstrapping should be explicit in repo setup.
-    [[ -f CHANGELOG.md ]]                                                       || exit_with_error -ec "$err_not_found" \
-                                                                                                       "Missing CHANGELOG.md in repo root. git-cliff uses --prepend and requires an existing file." \
-                                                                                                       "Create CHANGELOG.md (can be an empty file) and rerun."
+    [[ -f CHANGELOG.md ]]                                                       || exit_with_error "Missing CHANGELOG.md in repo root. git-cliff uses --prepend and requires an existing file." \
+                                                                                                   "Create CHANGELOG.md (can be an empty file) and rerun." \
+                                                                                                   -ec "$err_not_found"
 
     # Determine the commit range
     if [[ "$is_release" == true ]]; then
@@ -128,7 +128,7 @@ if [[ "$is_prerelease" == true ]]; then
     tag_message="Prerelease $tag"
 fi
 
-execute git tag -a "$tag" -m "$tag_message" -m "Reason: $reason"                || exit_with_error -ec "$err_argument_value" "Failed to create tag $tag (does it already exist?)"
+execute git tag -a "$tag" -m "$tag_message" -m "Reason: $reason"                || exit_with_error "Failed to create tag $tag (does it already exist?)" -ec "$err_argument_value"
 execute git push origin "$tag"
 
 info "$check_em Tag $tag created and pushed"

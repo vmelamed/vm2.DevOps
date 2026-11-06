@@ -71,7 +71,7 @@ function get_xml_value()
     local -n _value=$3
 
     [[ -s $_xml_file ]] || {
-        error -ec "$err_tool_error" "${FUNCNAME[0]}() requires argument 1 to be an existing, non-empty, readable XML file (provided '${_xml_file-<missing>}')."
+        error "${FUNCNAME[0]}() requires argument 1 to be an existing, non-empty, readable XML file (provided '${_xml_file-<missing>}')." -ec "$err_tool_error"
         return "$err_tool_error"
     }
 
@@ -80,7 +80,7 @@ function get_xml_value()
 
     _result=$(yq -p=xml -oy -r "$_query" "$_xml_file" 2>"$_ignore") || {
         _rc=$?
-        error -ec "$err_tool_error" "${FUNCNAME[0]}() 'yq' failed to query '$_xml_file' with '$_query'."
+        error "${FUNCNAME[0]}() 'yq' failed to query '$_xml_file' with '$_query'." -ec "$err_tool_error"
         return "$err_tool_error"
     }
 

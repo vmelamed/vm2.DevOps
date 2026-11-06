@@ -134,11 +134,11 @@ else
     "$benchmark_exec_path" "${benchmark_args[@]}" || rc=$?
 fi
 
-(( rc == 0 ))                                                                   || exit_with_error -ec "$err_tool_error" "Tests failed in project '$benchmark_project' with exit code $rc."
+(( rc == 0 ))                                                                   || exit_with_error "Tests failed in project '$benchmark_project' with exit code $rc." -ec "$err_tool_error"
 
 # Verify JSON results were created
 json_files=("$results_dir"/*-report-full-compressed.json)
-[[ -f "${json_files[0]}" ]]                                                     || exit_with_error -ec "$err_tool_error" "No JSON benchmark reports found in $results_dir"
+[[ -f "${json_files[0]}" ]]                                                     || exit_with_error "No JSON benchmark reports found in $results_dir" -ec "$err_tool_error"
 
 trace "Benchmark tests completed successfully. Found JSON benchmark results."
 {

@@ -77,16 +77,18 @@ declare -x root_name=''
 # Check the prerequisites
 #=============================================================================================
 
-command -v jq &> "$_ignore"  || error -ec "$err_tool_not_found" "'jq' is not installed. Please install it first."
-command -v gh &> "$_ignore"  || error -ec "$err_tool_not_found" "'gh' is not installed. Please install it first."
-gh auth status &> "$_ignore" || error -ec "$err_tool_not_found" "'gh' is not authenticated. Run 'gh auth login' first."
-command -v yq &> "$_ignore"  || error -ec "$err_tool_not_found" "'yq' is not installed. Please install 'yq' by Mike Farah: " \
-                                                                "wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O ~/.local/bin/yq4 &&" \
-                                                                " chmod +x ~/.local/bin/yq4"
+command -v jq &> "$_ignore"  || error "'jq' is not installed. Please install it first." -ec "$err_tool_not_found"
+command -v gh &> "$_ignore"  || error "'gh' is not installed. Please install it first." -ec "$err_tool_not_found"
+gh auth status &> "$_ignore" || error "'gh' is not authenticated. Run 'gh auth login' first." -ec "$err_tool_not_found"
+command -v yq &> "$_ignore"  || error "'yq' is not installed. Please install 'yq' by Mike Farah: " \
+                                      "wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O ~/.local/bin/yq4 &&" \
+                                      " chmod +x ~/.local/bin/yq4" \
+                                      -ec "$err_tool_not_found"
 [[ $(yq --version) =~ https://github\.com/mikefarah/yq/ ]] ||
-                                error -ec "$err_tool_not_found" "This script requires 'yq' by Mike Farah: " \
-                                                                "wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O ~/.local/bin/yq4 &&" \
-                                                                " chmod +x ~/.local/bin/yq4"
+                                error "This script requires 'yq' by Mike Farah: " \
+                                      "wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O ~/.local/bin/yq4 &&" \
+                                      " chmod +x ~/.local/bin/yq4" \
+                                      -ec "$err_tool_not_found"
 
 #=============================================================================================
 # Gather the CLI arguments:
@@ -121,7 +123,7 @@ declare -xra default_local_git_settings_order
 
 declare -x _ci_yaml="$vm2_repos/$vm2_devops_repo_name/.github/workflows/_ci.yaml"
 [[ -s "$_ci_yaml" ]] ||
-    error -ec "$err_logic_error" "Could not find _ci.yaml GitHub Actions reusable workflow file in $vm2_repos."
+    error "Could not find _ci.yaml GitHub Actions reusable workflow file in $vm2_repos." -ec "$err_logic_error"
 declare -xr _ci_yaml
 
 exit_if_has_errors

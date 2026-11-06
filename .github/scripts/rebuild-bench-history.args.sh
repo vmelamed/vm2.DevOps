@@ -84,8 +84,8 @@ function validate_environment()
     [[ -z "${BENCH_DISPATCH_PAT:-}" ]] || export GH_TOKEN="${GH_TOKEN:-$BENCH_DISPATCH_PAT}"
     [[ -n "${GH_TOKEN:-}" ]]                                                    || warning "Neither \$GH_TOKEN nor \$BENCH_DISPATCH_PAT is set; relying on the ambient 'gh auth' credentials."
 
-    is_tool_present gh                                                          || { error -ec "$err_tool_not_found" "The GitHub CLI 'gh' was not found on PATH."; return "$success"; }
-    gh auth status &> "$_ignore"                                                || error -ec "$err_tool_unauthenticated" "'gh' is not authenticated. Run 'gh auth login' first."
+    is_tool_present gh                                                          || { error "The GitHub CLI 'gh' was not found on PATH." -ec "$err_tool_not_found"; return "$success"; }
+    gh auth status &> "$_ignore"                                                || error "'gh' is not authenticated. Run 'gh auth login' first." -ec "$err_tool_unauthenticated"
 }
 
 function validate_arguments()
@@ -103,8 +103,8 @@ function validate_arguments()
         fi
     fi
 
-    is_positive "$repeat"                                                       || error -ec "$err_argument_value" "repeat must be a positive integer (got '$repeat')."
-    [[ -n "$owner" ]]                                                           || error -ec "$err_argument_value" "Could not determine the GitHub owner. Pass --owner or set \$GITHUB_REPOSITORY_OWNER."
+    is_positive "$repeat"                                                       || error "repeat must be a positive integer (got '$repeat')." -ec "$err_argument_value"
+    [[ -n "$owner" ]]                                                           || error "Could not determine the GitHub owner. Pass --owner or set \$GITHUB_REPOSITORY_OWNER." -ec "$err_argument_value"
 
     readonly owner
     readonly repeat
