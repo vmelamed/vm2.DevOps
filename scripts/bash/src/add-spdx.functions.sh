@@ -38,11 +38,12 @@ declare -xi failed
 #---------------------------------------------------------------------------------------------
 function add_spdx_csharp_file()
 {
-    (( $# == 2 ))                                                               || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() expects two arguments (provided $#):" \
-                                                                                                                    "  - the name of the file to add an SPDX header to" \
-                                                                                                                    "  - the name of a temporary file where to write the modified contents to"
-    [[ ! -v 1 || $1 == *.cs ]]                                                  || bug -ec "$err_not_file"          "${FUNCNAME[0]}() requires argument 1, the file to add an SPDX header to, to be a *.cs file (provided: '$1')."
-    [[ ! -v 2 || -w $2 ]]                                                       || bug -ec "$err_not_file"          "${FUNCNAME[0]}() requires argument 2, the file to write the modified contents to, to be an existing writable file (provided: '$2')."
+    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() expects two arguments (provided $#):" \
+                                                                                       "  - the name of the file to add an SPDX header to" \
+                                                                                       "  - the name of a temporary file where to write the modified contents to" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 || $1 == *.cs ]]                                                  || bug "${FUNCNAME[0]}() requires argument 1, the file to add an SPDX header to, to be a *.cs file (provided: '$1')." -ec "$err_not_file"
+    [[ ! -v 2 || -w $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the file to write the modified contents to, to be an existing writable file (provided: '$2')." -ec "$err_not_file"
     exit_if_has_bugs
 
     local _file="$1"
@@ -70,11 +71,12 @@ function add_spdx_csharp_file()
 #---------------------------------------------------------------------------------------------
 function add_spdx_bash_file()
 {
-    (( $# == 2 ))                                                               || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() expects two arguments (provided $#):" \
-                                                                                                                    "  - the name of the file to add an SPDX header to" \
-                                                                                                                    "  - the name of a temporary file where to write the modified contents to"
-    [[ ! -v 1 || $1 == *.@(sh|bats) ]]                                          || bug -ec "$err_not_file"          "${FUNCNAME[0]}() requires argument 1, the file to add an SPDX header to, to be *.sh or *.bats file (provided: '$1')."
-    [[ ! -v 2 || -w $2 ]]                                                       || bug -ec "$err_not_file"          "${FUNCNAME[0]}() requires argument 2, the file to write the modified contents to, to be an existing writable file (provided: '$2')."
+    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() expects two arguments (provided $#):" \
+                                                                                       "  - the name of the file to add an SPDX header to" \
+                                                                                       "  - the name of a temporary file where to write the modified contents to" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 || $1 == *.@(sh|bats) ]]                                          || bug "${FUNCNAME[0]}() requires argument 1, the file to add an SPDX header to, to be *.sh or *.bats file (provided: '$1')." -ec "$err_not_file"
+    [[ ! -v 2 || -w $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the file to write the modified contents to, to be an existing writable file (provided: '$2')." -ec "$err_not_file"
     exit_if_has_bugs
 
     local _file="$1"
@@ -108,11 +110,12 @@ function add_spdx_bash_file()
 #---------------------------------------------------------------------------------------------
 function add_spdx_yaml_file()
 {
-    (( $# == 2 ))                                                               || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() expects two arguments (provided $#):" \
-                                                                                                                    "  - the name of the file to add an SPDX header to" \
-                                                                                                                    "  - the name of a temporary file where to write the modified contents to"
-    [[ ! -v 1 || $1 == *.@(yaml|yml) ]]                                         || bug -ec "$err_not_file"          "${FUNCNAME[0]}() requires argument 1, the file to add an SPDX header to, to be *.yaml or *.yml file (provided: '$1')."
-    [[ ! -v 2 || -w $2 ]]                                                       || bug -ec "$err_not_file"          "${FUNCNAME[0]}() requires argument 2, the file to write the modified contents to, to be an existing writable file (provided: '$2')."
+    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() expects two arguments (provided $#):" \
+                                                                                       "  - the name of the file to add an SPDX header to" \
+                                                                                       "  - the name of a temporary file where to write the modified contents to" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 || $1 == *.@(yaml|yml) ]]                                         || bug "${FUNCNAME[0]}() requires argument 1, the file to add an SPDX header to, to be *.yaml or *.yml file (provided: '$1')." -ec "$err_not_file"
+    [[ ! -v 2 || -w $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the file to write the modified contents to, to be an existing writable file (provided: '$2')." -ec "$err_not_file"
     exit_if_has_bugs
 
     local _file="$1"
@@ -140,9 +143,10 @@ function add_spdx_yaml_file()
 #---------------------------------------------------------------------------------------------
 function process_file()
 {
-    (( $# == 1 ))                                                               || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() expects one argument (provided $#):" \
-                                                                                                                    "  - the name of the file to add an SPDX header to"
-    [[ ! -v 1 || $1 == *.@(cs|sh|bats|yaml|yml) ]]                              || bug -ec "$err_not_file"          "${FUNCNAME[0]}() requires argument 1, the file to add an SPDX header to, to be a file with one of the suffixes: *.cs, *.sh, *.bats, *.yaml, or *.yml (provided: '$1')."
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() expects one argument (provided $#):" \
+                                                                                       "  - the name of the file to add an SPDX header to" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 || $1 == *.@(cs|sh|bats|yaml|yml) ]]                              || bug "${FUNCNAME[0]}() requires argument 1, the file to add an SPDX header to, to be a file with one of the suffixes: *.cs, *.sh, *.bats, *.yaml, or *.yml (provided: '$1')." -ec "$err_not_file"
     exit_if_has_bugs
 
     local _file="$1"

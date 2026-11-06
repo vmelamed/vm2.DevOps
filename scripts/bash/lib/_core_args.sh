@@ -63,7 +63,7 @@ declare usage_requested=""
 #---------------------------------------------------------------------------------------------
 function get_common_arg()
 {
-    (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one parameter ($# provided): the command-line argument to process"
+    (( $# == 1 )) || bug "${FUNCNAME[0]}() requires one parameter ($# provided): the command-line argument to process" -ec "$err_invalid_arguments"
     exit_if_has_bugs
 
     # the calling scripts should not use any of the common arguments options:

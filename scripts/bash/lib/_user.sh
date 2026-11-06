@@ -61,11 +61,12 @@ function press_any_key()
 #---------------------------------------------------------------------------------------------
 function confirm()
 {
-    (( $# == 1 || $# == 2 ))           || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one or two arguments (provided $#):" \
-                                                                            "  - prompt" \
-                                                                            "  - default response, optional"
-    [[ ! -v 1 || -n "$1" ]]            || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the confirmation prompt, to be non-empty (provided '${1-<missing>}')."
-    [[ ! -v 2 || "${2,,}" =~ ^[yn]$ ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires optional argument 2, the default response, to be 'y' or 'n' (case-insensitive; provided '${2-<missing>}')."
+    (( $# == 1 || $# == 2 ))           || bug "${FUNCNAME[0]}() requires one or two arguments (provided $#):" \
+                                              "  - prompt" \
+                                              "  - default response, optional" \
+                                              -ec "$err_invalid_arguments"
+    [[ ! -v 1 || -n "$1" ]]            || bug "${FUNCNAME[0]}() requires argument 1, the confirmation prompt, to be non-empty (provided '${1-<missing>}')." -ec "$err_argument_value"
+    [[ ! -v 2 || "${2,,}" =~ ^[yn]$ ]] || bug "${FUNCNAME[0]}() requires optional argument 2, the default response, to be 'y' or 'n' (case-insensitive; provided '${2-<missing>}')." -ec "$err_argument_value"
     exit_if_has_bugs
 
     local _default="y"
@@ -123,22 +124,23 @@ function confirm()
 #---------------------------------------------------------------------------------------------
 function enter_value()
 {
-    (( $# >= 2 && $# <= 5 ))                            || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires from 2 to 5 arguments (provided $#):" \
-                                                                                            "  - a prompt" \
-                                                                                            "  - the name of the variable to store the entered value" \
-                                                                                            "  - default value (optional if the rest are not specified, default: '')" \
-                                                                                            "  - boolean to suppress the echo of the input to the terminal (optional if the rest are not specified, default: false)" \
-                                                                                            "  - the name of a validation function (optional, default: true)"
-    [[ ! -v 1 || -n $1 ]]                               || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the prompt, to be non-empty (provided '${1-<missing>}')."
-    [[ ! -v 2 ]] || is_variable "$2"                    || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 2, the name of the variable to store the entered value, to be defined (provided '${2-<missing>}')."
-    [[ ! -v 4 ]] || is_boolean "$4"                     || bug -ec "$err_argument_type"     "${FUNCNAME[0]}() requires optional argument 4, the secret-input flag, to be 'true' or 'false' (provided '${4-<missing>}')."
-    [[ ! -v 5 ]] || is_function "$5" || is_boolean "$5" || bug -ec "$err_argument_type"     "${FUNCNAME[0]}() requires optional argument 5 to name a defined value validation function (provided '${5-<missing>}')."
+    (( $# >= 2 && $# <= 5 ))                            || bug "${FUNCNAME[0]}() requires from 2 to 5 arguments (provided $#):" \
+                                                               "  - a prompt" \
+                                                               "  - the name of the variable to store the entered value" \
+                                                               "  - default value (optional if the rest are not specified, default: '')" \
+                                                               "  - boolean to suppress the echo of the input to the terminal (optional if the rest are not specified, default: false)" \
+                                                               "  - the name of a validation function (optional, default: true)" \
+                                                               -ec "$err_invalid_arguments"
+    [[ ! -v 1 || -n $1 ]]                               || bug "${FUNCNAME[0]}() requires argument 1, the prompt, to be non-empty (provided '${1-<missing>}')." -ec "$err_argument_value"
+    [[ ! -v 2 ]] || is_variable "$2"                    || bug "${FUNCNAME[0]}() requires argument 2, the name of the variable to store the entered value, to be defined (provided '${2-<missing>}')." -ec "$err_argument_value"
+    [[ ! -v 4 ]] || is_boolean "$4"                     || bug "${FUNCNAME[0]}() requires optional argument 4, the secret-input flag, to be 'true' or 'false' (provided '${4-<missing>}')." -ec "$err_argument_type"
+    [[ ! -v 5 ]] || is_function "$5" || is_boolean "$5" || bug "${FUNCNAME[0]}() requires optional argument 5 to name a defined value validation function (provided '${5-<missing>}')." -ec "$err_argument_type"
 
     local _default=${3:-}
     local _validate_fn=${5:-true}
 
     [[ -z $_default || $_default == "$secret_placeholder" ]] ||
-    $_validate_fn "$_default"                           || bug -ec "$err_argument_value" "The default value '$_default' does not pass the validation function '$_validate_fn'."
+    $_validate_fn "$_default"                           || bug "The default value '$_default' does not pass the validation function '$_validate_fn'." -ec "$err_argument_value"
     exit_if_has_bugs
 
     is_quiet &&
@@ -207,16 +209,17 @@ function enter_value()
 function choose()
 {
 
-    (( $# >= 4 ))                    || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires four or more arguments (provided $#):" \
-                                                                         "  - prompt" \
-                                                                         "  - the name of a variable to store the user's choice" \
-                                                                         "  - at least two choices (the first one is the default)"
-    [[ ! -v 1 || -n $1 ]]            || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1, the prompt, to be non-empty (provided '${1-<missing>}')."
-    [[ ! -v 2 ]] || is_variable "$2" || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 2, the name of the variable to store the user's choice, to be defined (provided '${2-<missing>}')."
+    (( $# >= 4 ))                    || bug "${FUNCNAME[0]}() requires four or more arguments (provided $#):" \
+                                            "  - prompt" \
+                                            "  - the name of a variable to store the user's choice" \
+                                            "  - at least two choices (the first one is the default)" \
+                                            -ec "$err_invalid_arguments"
+    [[ ! -v 1 || -n $1 ]]            || bug "${FUNCNAME[0]}() requires argument 1, the prompt, to be non-empty (provided '${1-<missing>}')." -ec "$err_argument_value"
+    [[ ! -v 2 ]] || is_variable "$2" || bug "${FUNCNAME[0]}() requires argument 2, the name of the variable to store the user's choice, to be defined (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
 
     local -i _i
     for (( _i=3; _i<=$#; _i++ )); do
-        [[ ! -v $_i || -n ${!_i} ]]  || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument $_i, the choice text, to be non-empty (provided '${!_i-<missing>}')."
+        [[ ! -v $_i || -n ${!_i} ]]  || bug "${FUNCNAME[0]}() requires argument $_i, the choice text, to be non-empty (provided '${!_i-<missing>}')." -ec "$err_argument_value"
     done
     exit_if_has_bugs
 

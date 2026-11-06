@@ -58,12 +58,13 @@ declare -x _ignore
 #---------------------------------------------------------------------------------------------
 function get_xml_value()
 {
-    (( $# == 3 ))                    || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly 3 arguments (provided $#):" \
-                                                                         "  - path to an XML file" \
-                                                                         "  - a yq path expression (query)" \
-                                                                         "  - nameref to a variable to receive the value"
-    [[ ! -v 2 || -n $2 ]]            || bug -ec "$err_argument_value"   "${FUNCNAME[0]}() requires argument 2, the yq path expression, to be non-empty (provided '${2-<missing>}')."
-    [[ ! -v 3 ]] || is_variable "$3" || bug -ec "$err_invalid_nameref"  "${FUNCNAME[0]}() requires argument 3 to be the name of a defined variable to receive the value (provided '${3-<missing>}')."
+    (( $# == 3 ))                    || bug "${FUNCNAME[0]}() requires exactly 3 arguments (provided $#):" \
+                                            "  - path to an XML file" \
+                                            "  - a yq path expression (query)" \
+                                            "  - nameref to a variable to receive the value" \
+                                            -ec "$err_invalid_arguments"
+    [[ ! -v 2 || -n $2 ]]            || bug "${FUNCNAME[0]}() requires argument 2, the yq path expression, to be non-empty (provided '${2-<missing>}')." -ec "$err_argument_value"
+    [[ ! -v 3 ]] || is_variable "$3" || bug "${FUNCNAME[0]}() requires argument 3 to be the name of a defined variable to receive the value (provided '${3-<missing>}')." -ec "$err_invalid_nameref"
     exit_if_has_bugs
 
     local _xml_file=$1

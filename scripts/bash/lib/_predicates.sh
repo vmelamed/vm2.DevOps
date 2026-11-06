@@ -78,8 +78,8 @@ function set_case_sensitive()
 #---------------------------------------------------------------------------------------------
 function set_case_sensitivity()
 {
-    (( $# <= 1 ))                   || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires at most one argument (provided $#): the desired new state for the shell's case sensitivity."
-    [[ ! -v 1 ]] || is_boolean "$1" || bug -ec "$err_argument_type" "${FUNCNAME[0]}() requires a boolean argument (provided '$1'): the desired new state for the shell's case sensitivity."
+    (( $# <= 1 ))                   || bug "${FUNCNAME[0]}() requires at most one argument (provided $#): the desired new state for the shell's case sensitivity." -ec "$err_invalid_arguments"
+    [[ ! -v 1 ]] || is_boolean "$1" || bug "${FUNCNAME[0]}() requires a boolean argument (provided '$1'): the desired new state for the shell's case sensitivity." -ec "$err_argument_type"
     exit_if_has_bugs
 
     local _new_case_sensitive=${1:-true}
@@ -109,7 +109,7 @@ declare -xr varNameRegex="^[A-Za-z_][A-Za-z0-9_]*$"
 #---------------------------------------------------------------------------------------------
 function is_variable_name()
 {
-    (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the variable to test."
+    (( $# == 1 )) || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the variable to test." -ec "$err_invalid_arguments"
     exit_if_has_bugs
 
     [[ $1 =~ $varNameRegex ]]
@@ -128,7 +128,7 @@ function is_variable_name()
 #---------------------------------------------------------------------------------------------
 function is_variable()
 {
-    (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the variable to test."
+    (( $# == 1 )) || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the variable to test." -ec "$err_invalid_arguments"
     exit_if_has_bugs
 
     is_variable_name "$1" && declare -p "$1" &> "$_ignore"
@@ -148,7 +148,7 @@ function is_variable()
 #---------------------------------------------------------------------------------------------
 function is_indexed_array()
 {
-    (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the indexed array variable to test."
+    (( $# == 1 )) || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the indexed array variable to test." -ec "$err_invalid_arguments"
     exit_if_has_bugs
 
     is_variable_name "$1" ||
@@ -184,7 +184,7 @@ function is_indexed_array()
 #---------------------------------------------------------------------------------------------
 function is_associative_array()
 {
-    (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the indexed array variable to test."
+    (( $# == 1 )) || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the indexed array variable to test." -ec "$err_invalid_arguments"
     exit_if_has_bugs
 
     is_variable_name "$1" ||
@@ -222,7 +222,7 @@ function is_associative_array()
 #---------------------------------------------------------------------------------------------
 function is_array()
 {
-    (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the array variable to test."
+    (( $# == 1 )) || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the array variable to test." -ec "$err_invalid_arguments"
     exit_if_has_bugs
 
     is_variable_name "$1" ||
@@ -258,8 +258,8 @@ function is_array()
 function is_empty_array()
 {
 
-    (( $# == 1 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the array variable to test."
-    [[ ! -v 1 ]] || is_array "$1" || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be the name of an indexed or an associative array variable (provided '${1-<missing>}')."
+    (( $# == 1 ))                 || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the array variable to test." -ec "$err_invalid_arguments"
+    [[ ! -v 1 ]] || is_array "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be the name of an indexed or an associative array variable (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
     exit_if_has_bugs
 
     local -n _array="$1"
@@ -280,7 +280,7 @@ function is_empty_array()
 #---------------------------------------------------------------------------------------------
 function is_function()
 {
-    (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name to test."
+    (( $# == 1 )) || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name to test." -ec "$err_invalid_arguments"
     exit_if_has_bugs
 
     is_variable_name "$1" ||
@@ -301,7 +301,7 @@ function is_function()
 #---------------------------------------------------------------------------------------------
 function __test_with_regex()
 {
-    (( $# == 2 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[1]}() requires exactly one argument (provided $(($#-1))): the value to test."
+    (( $# == 2 )) || bug "${FUNCNAME[1]}() requires exactly one argument (provided $(($#-1))): the value to test." -ec "$err_invalid_arguments"
     exit_if_has_bugs
 
     [[  $1 =~ $2 ]]
@@ -515,9 +515,10 @@ function is_base64()
 #---------------------------------------------------------------------------------------------
 function is_in()
 {
-    (( $# >= 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires more than 1 arguments:" \
-                                                      "  - the value to test" \
-                                                      "  - options to compare against"
+    (( $# >= 1 )) || bug "${FUNCNAME[0]}() requires more than 1 arguments:" \
+                         "  - the value to test" \
+                         "  - options to compare against" \
+                         -ec "$err_invalid_arguments"
     exit_if_has_bugs
 
     local _sought="$1"; shift
@@ -545,9 +546,10 @@ function is_in()
 #---------------------------------------------------------------------------------------------
 function is_in_i()
 {
-    (( $# >= 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires more than 1 arguments:" \
-                                                      "  - the value to test" \
-                                                      "  - options to compare against"
+    (( $# >= 1 )) || bug "${FUNCNAME[0]}() requires more than 1 arguments:" \
+                         "  - the value to test" \
+                         "  - options to compare against" \
+                         -ec "$err_invalid_arguments"
     exit_if_has_bugs
 
     local _sought="$1"; shift
@@ -604,7 +606,7 @@ function is_windows()
 #---------------------------------------------------------------------------------------------
 function is_valid_filename()
 {
-    (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
+    (( $# == 1 )) || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test." -ec "$err_invalid_arguments"
     exit_if_has_bugs
 
     [[ -n $1 && $1 != */* && $1 != . && $1 != .. ]]
@@ -623,7 +625,7 @@ function is_valid_filename()
 #---------------------------------------------------------------------------------------------
 function is_valid_path()
 {
-    (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test."
+    (( $# == 1 )) || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test." -ec "$err_invalid_arguments"
     exit_if_has_bugs
 
     pathchk -- "$1" &> "$_ignore"
@@ -642,7 +644,7 @@ function is_valid_path()
 #---------------------------------------------------------------------------------------------
 function is_valid_secret_name()
 {
-    (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#): the GitHub secret name to test."
+    (( $# == 1 )) || bug "${FUNCNAME[0]}() requires one argument (provided $#): the GitHub secret name to test." -ec "$err_invalid_arguments"
     exit_if_has_bugs
 
     is_variable_name "$1" && [[ ${1^^} != GITHUB_* ]]
@@ -659,7 +661,7 @@ function is_valid_secret_name()
 #---------------------------------------------------------------------------------------------
 function is_valid_secret()
 {
-    (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the secret value to validate."
+    (( $# == 1 )) || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the secret value to validate." -ec "$err_invalid_arguments"
     exit_if_has_bugs
 
     [[ -n $1 && ! $1 =~ [[:cntrl:]] ]]
@@ -693,7 +695,7 @@ function is_valid_dotnet_version()
 #---------------------------------------------------------------------------------------------
 function is_tool_present()
 {
-    (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#): the name of the tool to check"
+    (( $# == 1 )) || bug "${FUNCNAME[0]}() requires one argument (provided $#): the name of the tool to check" -ec "$err_invalid_arguments"
     exit_if_has_bugs
 
     command -v "$1" &>"$_ignore"
@@ -709,7 +711,7 @@ function is_tool_present()
 #---------------------------------------------------------------------------------------------
 function is_valid_json()
 {
-    (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the JSON string to validate."
+    (( $# == 1 )) || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the JSON string to validate." -ec "$err_invalid_arguments"
     exit_if_has_bugs
 
     jq empty <<< "$1" &> "$_ignore" && return "$positive" || return "$negative"
@@ -725,8 +727,8 @@ function is_valid_json()
 #---------------------------------------------------------------------------------------------
 function is_valid_json_file()
 {
-    (( $# == 1 ))                      || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly one argument (provided $#): the JSON string to validate."
-    [[ ! -v 1 ]] || is_valid_path "$1" || bug -ec "$err_invalid_path" "${FUNCNAME[0]}() requires argument 1 to be a valid path (provided '${1-<missing>}')."
+    (( $# == 1 ))                      || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the JSON string to validate." -ec "$err_invalid_arguments"
+    [[ ! -v 1 ]] || is_valid_path "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a valid path (provided '${1-<missing>}')." -ec "$err_invalid_path"
     exit_if_has_bugs
 
     jq empty "$1" &> "$_ignore" && return "$positive" || return "$negative"

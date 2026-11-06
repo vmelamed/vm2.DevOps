@@ -376,8 +376,8 @@ function copy_file()
                                                                                        "  - the source file path" \
                                                                                        "  - destination file path." \
                                                                                        -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -f $1 ]]                                                       || bug -ec "$err_not_file" "${FUNCNAME[0]}() requires argument 1, the source file, to be an existing file (provided '${1-<missing>}')."
-    [[ ! -v 2 || -n $2 ]]                                                       || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the destination file path, to be non-empty (provided '${2-<missing>}')."
+    [[ ! -v 1 || -f $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the source file, to be an existing file (provided '${1-<missing>}')." -ec "$err_not_file"
+    [[ ! -v 2 || -n $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the destination file path, to be non-empty (provided '${2-<missing>}')." -ec "$err_argument_value"
     exit_if_has_bugs
 
     local -i _rc=$success

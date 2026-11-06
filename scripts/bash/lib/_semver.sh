@@ -117,9 +117,10 @@ function print_semver_regexes()
 #---------------------------------------------------------------------------------------------
 function validate_semverTagComponents()
 {
-    (( $# == 1 || $# == 2 ))                      || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one or two arguments (provided $#):" \
-                                                                                      "  - the SemVer tag prefix used by MinVer" \
-                                                                                      "  - default prerelease identifier template, optional"
+    (( $# == 1 || $# == 2 ))                      || bug "${FUNCNAME[0]}() requires one or two arguments (provided $#):" \
+                                                         "  - the SemVer tag prefix used by MinVer" \
+                                                         "  - default prerelease identifier template, optional" \
+                                                         -ec "$err_invalid_arguments"
     exit_if_has_bugs
 
     local -i _rc=$success
@@ -183,9 +184,10 @@ declare -xri rc_less_than
 #---------------------------------------------------------------------------------------------
 function compare_semver()
 {
-    (( $# == 2 ))                      || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
-                                                                            "  - the first semantic versions to compare" \
-                                                                            "  - second semantic versions to compare"
+    (( $# == 2 ))                      || bug "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
+                                              "  - the first semantic versions to compare" \
+                                              "  - second semantic versions to compare" \
+                                              -ec "$err_invalid_arguments"
     exit_if_has_bugs
 
     local -i _rc="$success"
