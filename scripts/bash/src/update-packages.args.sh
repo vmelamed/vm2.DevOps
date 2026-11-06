@@ -81,7 +81,7 @@ function get_arguments()
             # ShellCheck to flag (SC2221/SC2222) any script-specific arm that tries to reuse one of them, and it bugs out
             # if the lists drift apart.
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
-                exit_with_bug -ec "$err_logic_error" "'$_option' should have been consumed by get_common_arg."
+                exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
                 ;;
 
             -*) usage "Unknown argument: $_option" -ec "$err_unknown_argument"
