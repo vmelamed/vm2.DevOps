@@ -439,7 +439,7 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
                     esac
                     ;;
 
-                * ) error "Unknown action '$actions' for files '$source_file' and '$target_file'." -ec "$err_logic_error""Unknown action '$actions' for files '$source_file' and '$target_file'."
+                * ) error "Unknown action '$actions' for files '$source_file' and '$target_file'." -ec "$err_logic_error"
                                                                                 todo_or_done_txt="error!"
                     press_any_key
                     ;;

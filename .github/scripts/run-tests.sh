@@ -96,6 +96,8 @@ readonly coverage_reports_dir
 # shellcheck disable=SC2034 # coverage_files appears unused. Verify use (or export if used externally).
 readonly coverage_files
 
+declare rc=$success
+
 dump_vars --force --quiet \
     --header "Test output directories and files:" \
     artifacts \
@@ -169,7 +171,7 @@ test_args=(
 ##########################################
 ### Run the tests with coverage collection
 ##########################################
-declare rc=$success
+rc=$success
 
 if [[ "$test_exec_path" == *.dll ]]; then
     dotnet "$test_exec_path" "${test_args[@]}" || rc=$?

@@ -85,13 +85,13 @@ load '../helpers/setup'
 @test "error_name: returns the \$-prefixed name for a known error code" {
     run error_name "$err_not_found"
     assert_success
-    assert_output '$err_not_found'
+    assert_output "\$err_not_found"
 }
 
 @test "error_name: falls back to '\$err_unknown' for an unrecognized code" {
     run error_name 250
     assert_success
-    assert_output '$err_unknown'
+    assert_output "\$err_unknown"
 }
 
 @test "error_name: exits with no arguments" {
