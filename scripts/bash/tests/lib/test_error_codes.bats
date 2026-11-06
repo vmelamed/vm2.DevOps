@@ -5,6 +5,17 @@
 # Characterization tests for scripts/bash/lib/_error_codes.sh, as it behaves TODAY -- written
 # before the tier-4 predicate/validator convention refactor so the refactor has a safety net.
 
+declare -xri success
+declare -xri failure
+declare -xri positive
+declare -xri negative
+declare -xri err_invalid_arguments
+declare -xri err_has_errors
+declare -xri err_has_bugs
+declare -xri err_unknown
+declare -xri err_io_failure
+declare -xri err_not_found
+
 bats_require_minimum_version 1.5.0
 
 load '../libs/bats-support/load'
@@ -37,23 +48,23 @@ load '../helpers/setup'
 @test "error_message: returns the code and message for a known error code" {
     run error_message "$err_not_found"
     assert_success
-    assert_output "$err_not_found: Could not find an item matching the criteria."
+    assert_output "vm2 \$err_not_found ($err_not_found): Could not find an item matching the criteria."
 }
 
-@test "error_message/error_name: know \$err_io_operation_failed (21)" {
-    [[ $err_io_operation_failed == 21 ]]
-    run error_message "$err_io_operation_failed"
+@test "error_message/error_name: know \$err_io_failure (21)" {
+    [[ $err_io_failure == 21 ]]
+    run error_message "$err_io_failure"
     assert_success
-    assert_output "21: An I/O operation (e.g. mktemp, read, write, mv, chmod) failed."
-    run error_name "$err_io_operation_failed"
+    assert_output "vm2 \$err_io_failure ($err_io_failure): An I/O operation (e.g. mktemp, read, write, mv, chmod) failed."
+    run error_name "$err_io_failure"
     assert_success
-    assert_output '$err_io_operation_failed'
+    assert_output "\$err_io_failure"
 }
 
 @test "error_message: falls back to the 'unknown error' message for an unrecognized code" {
     run error_message 250
     assert_success
-    assert_output "250: An unknown error occurred."
+    assert_output "vm2 \$err_unknown (250): An unknown error occurred."
 }
 
 @test "error_message: exits (does not just print 'command not found') with no arguments" {
@@ -77,10 +88,10 @@ load '../helpers/setup'
     assert_output '$err_not_found'
 }
 
-@test "error_name: falls back to 'err_unknown' for an unrecognized code" {
+@test "error_name: falls back to '\$err_unknown' for an unrecognized code" {
     run error_name 250
     assert_success
-    assert_output "err_unknown"
+    assert_output '$err_unknown'
 }
 
 @test "error_name: exits with no arguments" {

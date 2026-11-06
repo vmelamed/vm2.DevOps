@@ -19,6 +19,7 @@ source "$lib_dir/gh_core.sh"
 # core lib exit codes
 declare -xri success
 declare -xri err_tool_error
+declare -xri err_io_failure
 
 # core lib constants
 declare -xr check_em
@@ -71,7 +72,7 @@ if [[ -d "$artifacts_benchmarks" && -n "$(ls -A "$artifacts_benchmarks")" ]]; th
                 execute rm -rf "$artifacts_benchmarks"
                 ;;
             2)  info "Renaming the directory '$artifacts_benchmarks' to '$renamed_artifacts_dir'..."
-                execute mv "$artifacts_benchmarks" "$renamed_artifacts_dir"
+                execute mv "$artifacts_benchmarks" "$renamed_artifacts_dir"     || with_error "$err_io_failure" rc "Failed to copy '$artifacts_benchmarks' to '$renamed_artifacts_dir'"
                 ;;
             3)  trace "Exiting the script."
                 exit 0
@@ -82,9 +83,10 @@ if [[ -d "$artifacts_benchmarks" && -n "$(ls -A "$artifacts_benchmarks")" ]]; th
         esac
     fi
 fi
+exit_if_has_errors
 
 trace "Creating artifacts directory(s)..."
-execute mkdir -p "$results_dir"
+execute mkdir -p "$results_dir"                                                 || with_error "$err_io_failure" rc "Failed to create the results directory '$results_dir'"
 
 declare -x benchmark_exec_path
 get_target_path "$benchmark_project" benchmark_exec_path
@@ -98,11 +100,11 @@ if [[ ! -s $benchmark_exec_path ]]; then
     if ! is_dry_run; then
         warning "Test executable '$benchmark_exec_path' was not found in the artifacts directory. Rebuilding the benchmarks project..."
 
-        update_nuget_sources_with_github_vm2 || exit_with_error -ec "$err_tool_error" "Updating the NuGet sources with GitHub packages from vm2 failed."
-        dotnet_clean "$benchmark_project"    || exit_with_error -ec "$err_tool_error" "Cleaning the benchmark project failed."
-        dotnet_restore "$benchmark_project"  || exit_with_error -ec "$err_tool_error" "Restoring the benchmark project failed."
-        dotnet_build "$benchmark_project"    || exit_with_error -ec "$err_tool_error" "Building the test project failed."
-        [[ -s $benchmark_exec_path ]]        || exit_with_error -ec "$err_tool_error" "After rebuilding the project, the benchmarks executable '$benchmark_exec_path' was still NOT FOUND."
+        update_nuget_sources_with_github_vm2                                    || exit_with_error "Updating the NuGet sources with GitHub packages from vm2 failed." -ec "$err_tool_error"
+        dotnet_clean "$benchmark_project"                                       || exit_with_error "Cleaning the benchmark project failed." -ec "$err_tool_error"
+        dotnet_restore "$benchmark_project"                                     || exit_with_error "Restoring the benchmark project failed." -ec "$err_tool_error"
+        dotnet_build "$benchmark_project"                                       || exit_with_error "Building the test project failed." -ec "$err_tool_error"
+        [[ -s $benchmark_exec_path ]]                                           || exit_with_error "After rebuilding the project, the benchmarks executable '$benchmark_exec_path' was still NOT FOUND." -ec "$err_tool_error"
     fi
 fi
 
@@ -131,13 +133,11 @@ else
     "$benchmark_exec_path" "${benchmark_args[@]}" || rc=$?
 fi
 
-(( rc == 0 )) ||
-    exit_with_error -ec "$err_tool_error" "Tests failed in project '$benchmark_project' with exit code $rc."
+(( rc == 0 ))                                                                   || exit_with_error -ec "$err_tool_error" "Tests failed in project '$benchmark_project' with exit code $rc."
 
 # Verify JSON results were created
 json_files=("$results_dir"/*-report-full-compressed.json)
-[[ -f "${json_files[0]}" ]] ||
-    exit_with_error -ec "$err_tool_error" "No JSON benchmark reports found in $results_dir"
+[[ -f "${json_files[0]}" ]]                                                     || exit_with_error -ec "$err_tool_error" "No JSON benchmark reports found in $results_dir"
 
 trace "Benchmark tests completed successfully. Found JSON benchmark results."
 {

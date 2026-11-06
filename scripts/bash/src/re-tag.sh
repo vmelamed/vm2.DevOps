@@ -23,13 +23,13 @@ declare -xri err_logic_error
 
 declare -x _ignore
 
-declare -x delete_mode=false
-declare -x del_tag=""
-declare -x old_tag=""
-declare -x new_tag=""
-
 source "$script_dir/re-tag.args.sh"
 source "$script_dir/re-tag.usage.sh"
+
+declare -xr delete_mode
+declare -xr del_tag
+declare -xr old_tag
+declare -xr new_tag
 
 get_arguments "$@"
 

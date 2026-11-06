@@ -18,7 +18,6 @@ source "$lib_dir/gh_core.sh"
 # core lib exit codes
 declare -xri success
 declare -xri err_argument_value
-declare -xri err_tool_error
 
 # core lib constants
 declare -xra vm2_repositories

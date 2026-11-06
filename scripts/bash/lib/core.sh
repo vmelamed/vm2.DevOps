@@ -45,7 +45,9 @@ source "$lib_dir/_user.sh"
 source "$lib_dir/_git.sh"
 source "$lib_dir/_git_vm2.sh"
 source "$lib_dir/_xml.sh"
+source "$lib_dir/_dotnet_constants.sh"
 source "$lib_dir/_dotnet_args.sh"
+source "$lib_dir/_dotnet_msbuild.sh"
 source "$lib_dir/_dotnet.sh"
 
 declare -xr ci

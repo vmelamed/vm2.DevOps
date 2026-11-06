@@ -115,9 +115,10 @@ declare -xra dump_common_dotnet_args=(
 #---------------------------------------------------------------------------------------------
 function get_common_dotnet_arg()
 {
-    (( $# == 2 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires two arguments ($# provided):" \
-                                                      "  - the command-line option identifier" \
-                                                      "  - the command-line option value"
+    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires two arguments ($# provided):" \
+                                                                                                                    "  - the command-line option identifier" \
+                                                                                                                    "  - the command-line option value" \
+                                                                                                                    -ec "$err_invalid_arguments"
     exit_if_has_bugs
 
     # Accept $2 unconditionally, even empty -- this function only recognizes option NAMES and
@@ -152,15 +153,18 @@ function get_common_dotnet_arg()
 #---------------------------------------------------------------------------------------------
 # @description
 #   Sanitizes and validates the common dotnet arguments.
-#   This function should be called after all common dotnet arguments have been parsed.
+#   This function SHOULD be called after all common dotnet arguments have been parsed.
+#   Usually, this function is called inside top scripts' argument validation and sanitization
+#   `validate_arguments`. That's why the function always returns `$success` even if it reports
+#   errors. `validate_arguments` is usually followed by `exit_if_has_errors`. If another caller
+#   is interested in whether any validation errors happened, it can test it immediately after
+#   the call with `has_errors` or `exit_if_has_errors`.
 #
 # @arg $1 string A path to a project file (build, test, etc.) from the list of projects. This
 #   is used to determine the artifacts path if it is not already set.
 #
-# @exitcode success=0: The common dotnet arguments were sanitized and validated
-#   successfully.
-# @exitcode err_argument_value=4: The GitHub NuGet username/password pairing is invalid (one
-#   is present without the other).
+# @exitcode success=0: Always. If the caller is interested if any validation errors happened,
+#   it can test it with `has_errors` or `exit_if_has_errors`
 #
 # @example
 #   sanitize_common_dotnet_args "$build_projects"
@@ -169,38 +173,31 @@ function sanitize_common_dotnet_args()
 {
     local -i _rc="$success"
 
-    (( $# == 1 )) || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument ($# provided):" \
-                                                      "  - a path to a project file (build, test, etc.)"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument ($# provided):" \
+                                                                                       "  - a path to a project file (build, test, etc.)" \
+                                                                                       -ec "$err_invalid_arguments"
     exit_if_has_bugs
 
     local -i _rc=$success
-
-    validate_preprocessor_symbols preprocessor_symbols                        || true
-    validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id" || true
+    local _project=$1
+                                                                                # ignore all returned validation errors - they've been reported already and this is all that we need here
+    validate_preprocessor_symbols preprocessor_symbols                          || true
+    validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id"   || true
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     [[ -v gh_nuget_username ]] && {
-        is_safe_input "$gh_nuget_username"                                    || true
+        is_safe_input "$gh_nuget_username"                                      || true
         if [[ -n $gh_nuget_username ]]; then
-            [[ -v gh_nuget_password && -n $gh_nuget_password ]] || {
-                _rc=$err_argument_value
-                error -ec "$_rc" "If the GitHub username is present, then the GitHub password also must be present and not empty."
-            }
+            [[ -v gh_nuget_password && -n $gh_nuget_password ]]                 || error "If the GitHub username is present, then the GitHub password also must be present and not empty." -ec "$err_argument_value"
         else
-            [[ ! -v gh_nuget_password || -z $gh_nuget_password ]] || {
-                _rc=$err_argument_value
-                error -ec "$_rc" "If the GitHub username is not present or empty, then the GitHub password also must be either not present or empty."
-            }
+            [[ ! -v gh_nuget_password || -z $gh_nuget_password ]]               || error "If the GitHub username is not present or empty, then the GitHub password also must be either not present or empty." -ec "$err_argument_value"
         fi
     } || {
-        [[ ! -v gh_nuget_password || -z $gh_nuget_password ]] || {
-            _rc=$err_argument_value
-            error -ec "$_rc" "If the GitHub username is not present or empty, then the GitHub password also must be either not present or empty."
-        }
+        [[ ! -v gh_nuget_password || -z $gh_nuget_password ]]                   || error "If the GitHub username is not present or empty, then the GitHub password also must be either not present or empty." -ec "$err_argument_value"
     }
 
-    is_safe_configuration "$configuration"                                    || true
-    is_safe_framework "$framework"                                            || true
-    is_safe_runtime "$runtime"                                                || true
+    is_safe_configuration "$configuration"                                      || true
+    is_safe_framework "$framework"                                              || true
+    is_safe_runtime "$runtime"                                                  || true
     # $artifacts is always resolved to a concrete, absolute path here -- this is a documented
     # contract (see --artifacts-path's own help text above: "...or the default 'artifacts'"),
     # and build.sh/pack.sh/run-tests.sh/run-benchmarks.sh genuinely need a concrete, resolved
@@ -209,8 +206,9 @@ function sanitize_common_dotnet_args()
     # -property:ArtifactsPath= override. (validate-input.sh, the one caller that doesn't want
     # that override forced downstream, never actually forwards this resolved value to any
     # dotnet invocation in the first place, so there's nothing to protect there.)
-    [[ -z $artifacts ]] || is_safe_valid_path "$artifacts"                    || true
-    is_safe_path "$1" && get_artifacts_path "$1" artifacts                    || true
+    [[ -z $artifacts ]] || is_safe_valid_path "$artifacts"                      || true
+    is_safe_existing_path "$_project" &&
+        get_artifacts_path "$_project" artifacts                                || true
 
     # freeze the common dotnet arguments -- `readonly` (a POSIX special builtin), not `declare
     # -r`, is required here: this runs inside a function body, and `declare -r` without `-g`
@@ -228,7 +226,7 @@ function sanitize_common_dotnet_args()
     readonly runtime
     readonly artifacts
 
-    return "$_rc"
+    return "$success"
 }
 
 declare -xr common_dotnet_parameters="\

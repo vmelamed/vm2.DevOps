@@ -29,6 +29,7 @@ declare -x secret_name=''
 function get_arguments()
 {
     local _option
+    local _option_set=false
 
     while (( $# > 0 )); do
         _option="$1"; shift
@@ -36,17 +37,17 @@ function get_arguments()
 
         case "${_option,,}" in
             -o|--repo-owner )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $_option"
+                (( $# >= 1 ))                                                   || usage "Missing value for $_option" -ec "$err_missing_argument"
                 repo_owner="$1"; shift
                 ;;
 
             -a|--app )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $_option"
+                (( $# >= 1 ))                                                   || usage "Missing value for $_option" -ec "$err_missing_argument"
                 app="$1"; shift
                 ;;
 
             -n|--secret-name )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $_option"
+                (( $# >= 1 ))                                                   || usage "Missing value for $_option" -ec "$err_missing_argument"
                 secret_name="$1"; shift
                 ;;
 
@@ -59,8 +60,9 @@ function get_arguments()
             -*) usage -ec "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
 
-            * ) [[ -z "$secret_name" ]] || usage -ec "$err_too_many_arguments" "Too many positional arguments (secret name): $_option"
+            * ) ! $_option_set                                                  || usage "Too many positional arguments (secret name): $_option" -ec "$err_too_many_arguments"
                 secret_name="$_option"
+                _option_set=true
                 ;;
         esac
     done
@@ -75,8 +77,8 @@ function validate_arguments()
     app=${app:-$default_app}
     repo_owner=${repo_owner:-$default_repo_owner}
 
-    is_in_i "$app" "${gh_apps_with_secrets[@]}" || error -ec "$err_argument_value" "Invalid app specified: '$app'. Must be one of: ${gh_apps_with_secrets[*]}."
-    is_valid_secret_name "$secret_name"    || error -ec "$err_argument_value" "Invalid secret name specified: '$secret_name'. "
+    is_in_i "$app" "${gh_apps_with_secrets[@]}"                                 || error -ec "$err_argument_value" "Invalid app specified: '$app'. Must be one of: ${gh_apps_with_secrets[*]}."
+    is_valid_secret_name "$secret_name"                                         || error -ec "$err_argument_value" "Invalid secret name specified: '$secret_name'. "
     exit_if_has_errors true
 
     readonly repo_owner app secret_name

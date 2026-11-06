@@ -210,7 +210,7 @@ Common switches:
                                 Overrides the initial value from the environment value \$DUMP_FORMAT or 'markdown' in CI
                                 environments
   --help                        Displays longer version of the usage text - including all common flags
-  -h | -?                       Displays shorter version of the usage text - without the common flags
+  -h, -?                        Displays shorter version of the usage text - without the common flags
                                 If you have both --help and -h|-? in your script, the last one wins.
 
 Common environment variables:

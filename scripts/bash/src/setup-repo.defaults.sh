@@ -12,6 +12,7 @@ declare -xri err_invalid_item
 declare -x vm2_devops_repo_name
 
 declare -xr secret_str
+declare -xr secret_placeholder
 declare -xr default_nuget_server
 
 declare -x nuget_server
@@ -212,9 +213,11 @@ declare -xA agents_vars_validators=()
 #---------------------------------------------------------------------------------------------
 function validate_app_default_vars()
 {
-    (( $# == 1 ))                                     || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#):" \
-                                                                                          "  - the name of the application (e.g., actions)"
-    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_vars[@]}" || bug "${FUNCNAME[0]}() requires the argument to be one of (${gh_apps_with_vars[*]}) - provided ${1-<missing>}."
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument (provided $#):" \
+                                                                                       "  - the name of the application (e.g., actions)" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_vars[@]}"                        || bug "${FUNCNAME[0]}() requires the argument to be one of (${gh_apps_with_vars[*]}) - provided ${1-<missing>}." \
+                                                                                       -ec "$err_argument_value"
     exit_if_has_bugs
 
     local _app=$1
@@ -222,9 +225,9 @@ function validate_app_default_vars()
     local _vars_order_name="${_app,,}_vars_order"
     local _vars_validators_name="${_app,,}_vars_validators"
 
-    is_associative_array "$_vars_defaults_name"       || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() the required associative array '$_vars_defaults_name' is not defined."
-    is_indexed_array "$_vars_order_name"              || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() the required indexed array '$_vars_order_name' is not defined."
-    is_associative_array "$_vars_validators_name"     || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() the required associative array '$_vars_validators_name' is not defined."
+    is_associative_array "$_vars_defaults_name"                                 || bug "${FUNCNAME[0]}() the required associative array '$_vars_defaults_name' is not defined." -ec "$err_invalid_nameref"
+    is_indexed_array "$_vars_order_name"                                        || bug "${FUNCNAME[0]}() the required indexed array '$_vars_order_name' is not defined." -ec "$err_invalid_nameref"
+    is_associative_array "$_vars_validators_name"                               || bug "${FUNCNAME[0]}() the required associative array '$_vars_validators_name' is not defined." -ec "$err_invalid_nameref"
     exit_if_has_bugs
 
     local -n _app_vars_defaults=$_vars_defaults_name
@@ -252,20 +255,10 @@ function validate_app_default_vars()
         # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
         [[ -v _app_vars_validators[$_var] ]] && {
             _validator=${_app_vars_validators[$_var]}
-
-            is_function "$_validator" || [[ $_validator == "true" ]] || {
-                bug -ec "$err_invalid_item" "${FUNCNAME[0]}() '$_validator' is not a name of a defined function.";
-                continue;
-            }
-
             _default_value=${_app_vars_defaults[$_var]}
-
-            $_validator "$_default_value" || {
-                bug -ec "$err_invalid_item" "${FUNCNAME[0]}() the default value '$_default_value' of the variable '$_var' is not pass the validator '$_validator'.";
-            }
-        } || {
-            bug -ec "$err_invalid_item" "There is no validator set for the variable '$_var'."
-        }
+            is_function "$_validator" || [[ $_validator == "true" ]]            || { bug "${FUNCNAME[0]}() '$_validator' is not a name of a defined function." -ec "$err_invalid_item"; continue; }
+            $_validator "$_default_value"                                       || bug "${FUNCNAME[0]}() the default value '$_default_value' of the variable '$_var' is not pass the validator '$_validator'." -ec "$err_invalid_item"
+        }                                                                       || bug -ec "$err_invalid_item" "There is no validator set for the variable '$_var'." -ec "$err_invalid_item"
     done
     exit_if_has_bugs
 
@@ -298,15 +291,16 @@ function validate_app_default_vars()
 # shellcheck disable=SC2004 # $/${} is unnecessary on arithmetic variables.
 function get_vars_defaults()
 {
-    (( $# == 3 || $# == 4 ))                          || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires three or four arguments (provided $#):" \
-                                                                                          "  - the name of the application (e.g., actions)" \
-                                                                                          "  - the name of the associative array that will receive the variables names and their default values" \
-                                                                                          "  - the name of the indexed array that will receive the variables display order" \
-                                                                                          "  - the name of the associative array that will receive the names of the variables' validation functions (optional)"
-    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_vars[@]}" || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1 to be a valid application name - provided: '$1'."
-    [[ ! -v 2 ]] || is_associative_array "$2"         || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 2 to be a valid associative array name to receive the variables names and their default values - provided: '$2'."
-    [[ ! -v 3 ]] || is_indexed_array "$3"             || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 3 to be a valid indexed array name to receive the variables display order - provided: '$3'."
-    [[ ! -v 4 ]] || is_associative_array "$4"         || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 4 to be a valid associative array name to receive the names of the variables' validation functions - provided: '$4'."
+    (( $# == 3 || $# == 4 ))                                                    || bug "${FUNCNAME[0]}() requires three or four arguments (provided $#):" \
+                                                                                       "  - the name of the application (e.g., actions)" \
+                                                                                       "  - the name of the associative array that will receive the variables names and their default values" \
+                                                                                       "  - the name of the indexed array that will receive the variables display order" \
+                                                                                       "  - the name of the associative array that will receive the names of the variables' validation functions (optional)" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_vars[@]}"                        || bug "${FUNCNAME[0]}() requires argument 1 to be a valid application name - provided: '$1'." -ec "$err_argument_value"
+    [[ ! -v 2 ]] || is_associative_array "$2"                                   || bug "${FUNCNAME[0]}() requires argument 2 to be a valid associative array name to receive the variables names and their default values - provided: '$2'." -ec "$err_invalid_nameref"
+    [[ ! -v 3 ]] || is_indexed_array "$3"                                       || bug "${FUNCNAME[0]}() requires argument 3 to be a valid indexed array name to receive the variables display order - provided: '$3'." -ec "$err_invalid_nameref"
+    [[ ! -v 4 ]] || is_associative_array "$4"                                   || bug "${FUNCNAME[0]}() requires argument 4 to be a valid associative array name to receive the names of the variables' validation functions - provided: '$4'." -ec "$err_invalid_nameref"
     exit_if_has_bugs
 
     local -r _app=$1
@@ -319,7 +313,7 @@ function get_vars_defaults()
 
     local _vars_defaults_name="${_app,,}_vars_defaults"
 
-    ! is_empty_array "$_vars_defaults_name" || return "$success"
+    ! is_empty_array "$_vars_defaults_name"                                     || return "$success"
 
     local -n __app_vars_defaults=$_vars_defaults_name
 
@@ -433,14 +427,16 @@ declare -xra codespaces_secrets_order=()
 #---------------------------------------------------------------------------------------------
 function validate_app_default_secrets()
 {
-    (( $# == 1 ))                                        || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires one argument (provided $#):" \
-                                                                                             "  - the name of the application (e.g., actions)"
-    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_secrets[@]}" || bug "${FUNCNAME[0]}() requires the argument to be one of (${gh_apps_with_secrets[*]}) - provided ${1-<missing>}."
-
+    (( $# == 1 ))                                                               || bug  "${FUNCNAME[0]}() requires one argument (provided $#):" \
+                                                                                        "  - the name of the application (e.g., actions)" \
+                                                                                        -ec "$err_invalid_arguments"
+    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_secrets[@]}"                     || bug "${FUNCNAME[0]}() requires the argument to be one of (${gh_apps_with_secrets[*]}) - provided ${1-<missing>}." \
+                                                                                       -ec "$err_argument_value"
     local _app=$1
     local _app_secrets_order_name="${_app,,}_secrets_order"
 
-    is_indexed_array "$_app_secrets_order_name"          || bug -ec "$err_invalid_nameref" "${FUNCNAME[0]}() the required indexed array '$_app_secrets_order_name' is not defined."
+    is_indexed_array "$_app_secrets_order_name"                                 || bug "${FUNCNAME[0]}() the required indexed array '$_app_secrets_order_name' is not defined." \
+                                                                                       -ec "$err_invalid_nameref"
     exit_if_has_bugs
 }
 
@@ -467,15 +463,16 @@ function validate_app_default_secrets()
 # shellcheck disable=SC2004 # $/${} is unnecessary on arithmetic variables.
 function get_secrets_defaults()
 {
-    (( $# == 3 || $# == 4 ))                             || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires three or four arguments (provided $#):" \
-                                                                                             "  - the name of the application (e.g., actions)" \
-                                                                                             "  - the name of the associative array that will receive the secrets names and their default values" \
-                                                                                             "  - the name of the indexed array that will receive the secrets display order" \
-                                                                                             "  - the name of the associative array that will receive the names of the secrets' validation functions (optional)"
-    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_secrets[@]}" || bug -ec "$err_argument_value"    "${FUNCNAME[0]}() requires argument 1 to be a valid application name as the first argument - provided: '$1'."
-    [[ ! -v 2 ]] || is_associative_array "$2"            || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 2 to be a valid associative array name to receive the secrets names and their default values - provided: '$2'."
-    [[ ! -v 3 ]] || is_indexed_array "$3"                || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 3 to be a valid indexed array name to receive the secrets display order - provided: '$3'."
-    [[ ! -v 4 ]] || is_associative_array "$4"            || bug -ec "$err_invalid_nameref"   "${FUNCNAME[0]}() requires argument 4 to be a valid associative array name to receive the names of the secrets' validation functions - provided: '$4'."
+    (( $# == 3 || $# == 4 ))                                                    || bug "${FUNCNAME[0]}() requires three or four arguments (provided $#):" \
+                                                                                       "  - the name of the application (e.g., actions)" \
+                                                                                       "  - the name of the associative array that will receive the secrets names and their default values" \
+                                                                                       "  - the name of the indexed array that will receive the secrets display order" \
+                                                                                       "  - the name of the associative array that will receive the names of the secrets' validation functions (optional)" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_secrets[@]}"                     || bug "${FUNCNAME[0]}() requires argument 1 to be a valid application name as the first argument - provided: '$1'." -ec "$err_argument_value"
+    [[ ! -v 2 ]] || is_associative_array "$2"                                   || bug "${FUNCNAME[0]}() requires argument 2 to be a valid associative array name to receive the secrets names and their default values - provided: '$2'." -ec "$err_invalid_nameref"
+    [[ ! -v 3 ]] || is_indexed_array "$3"                                       || bug "${FUNCNAME[0]}() requires argument 3 to be a valid indexed array name to receive the secrets display order - provided: '$3'." -ec "$err_invalid_nameref"
+    [[ ! -v 4 ]] || is_associative_array "$4"                                   || bug "${FUNCNAME[0]}() requires argument 4 to be a valid associative array name to receive the names of the secrets' validation functions - provided: '$4'." -ec "$err_invalid_nameref"
     exit_if_has_bugs
 
     local -r _app=$1
@@ -487,20 +484,20 @@ function get_secrets_defaults()
 
     local _app_secrets_order_name="${_app,,}_secrets_order"
 
-    ! is_empty_array "$_app_secrets_order_name" || return "$success"
+    ! is_empty_array "$_app_secrets_order_name"                                 || return "$success"
 
     local -n _app_secrets_order=$_app_secrets_order_name
 
     local _secret
     for _secret in "${_app_secrets_order[@]}"; do
         [[ $_app == "actions" && $_secret == "NUGET_API_KEY" ]] &&
-        [[ $nuget_server == nuget || $nuget_server == github ]] && continue || true
+        [[ $nuget_server == nuget || $nuget_server == github ]] && continue     || true
         # BENCH_DISPATCH_PAT dispatches RebuildBenchHistory-AllRepos.yaml, which exists only in vm2.DevOps -- no
         # other repo ever needs it. Skipping it here (rather than just dropping it from actions_secrets_order) also
         # means it stays a *known* secret for vm2.DevOps itself, so --purge-secrets there never treats it as
         # "unknown or obsolete" and deletes it.
         [[ $_app == "actions" && $_secret == "BENCH_DISPATCH_PAT" ]] &&
-        [[ $repo_name != "$vm2_devops_repo_name" ]] && continue || true
+        [[ $repo_name != "$vm2_devops_repo_name" ]] && continue                 || true
         __secrets[$_secret]=$secret_placeholder
     done
 

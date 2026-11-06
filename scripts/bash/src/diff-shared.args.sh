@@ -7,11 +7,13 @@ declare -xr script_name
 declare -xr lib_dir
 
 declare -xri success
+declare -xri err_invalid_arguments
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
 declare -xri err_argument_value
 declare -xri err_logic_error
+declare -xri err_io_failure
 
 declare -xr ci
 
@@ -100,9 +102,14 @@ function get_arguments()
         esac
     done
 
+    local -i _rc=$success
+    local _mktemp_template
+    _mktemp_template="diff-shared-log-$(date +%Y%m%d-%H%M%S)-XXXXXX.md"
+
     [[ -n "$summary_file" ]] || {
-        summary_file=$(mktemp -p /tmp "diff-shared-log-$(date +%Y%m%d-%H%M%S)-XXXXXX.md")
-        add_trap "rm -f ${summary_file@Q}" EXIT
+        summary_file=$(mktemp -p /tmp "$_mktemp_template")                      || with_error "$err_io_failure" _rc  "Failed to create a temporary file"
+        (( _rc != success )) || add_trap "rm -f ${summary_file@Q}" EXIT
+        (( _rc == success ))                                                    || return "$_rc"
     }
 
     usage_if_requested
@@ -147,8 +154,9 @@ declare -xr action_ask_to_copy_shared
 function get_selector_action()
 {
     (( $# == 2 )) || bug "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#):" \
-                                "  - option" \
-                                "  - file selector"
+                         "  - option" \
+                         "  - file selector" \
+                         -ec "$err_invalid_arguments"
 
     exit_if_has_bugs
 
@@ -158,7 +166,7 @@ function get_selector_action()
 
     # get the action from the option name, e.g. --file-ask-to-merge => "ask-to-merge"
     [[ $_option =~ ^-(-file|f)(-?([a-z-]+))?$ ]] ||
-        error -ec "$err_unknown_argument" "Unknown argument: $_option"
+        error "Unknown argument: $_option" -ec "$err_unknown_argument"
 
     # get the action and replace the dashes with spaces in the action name, e.g. "ask-to-merge" => "ask to merge"
     _action="${BASH_REMATCH[3]//-/ }"
@@ -173,11 +181,11 @@ function get_selector_action()
         "cs" | "$action_copy_shared"        ) _action="$action_copy_shared" ;;
         "acs"| "$action_ask_to_copy_shared" ) _action="$action_ask_to_copy_shared" ;;
         ""                                  ) ;;
-        *                                   ) error -ec "$err_argument_value" "Invalid action: $_action. Valid actions are: $all_actions_str" ;;
+        *                                   ) error "Invalid action: $_action. Valid actions are: $all_actions_str"  -ec "$err_argument_value" ;;
     esac
 
     [[ $_file_selector != -* ]] ||
-        error -ec "$err_argument_value" "The argument '$_file_selector' does not appear to be a valid file selector."
+        error "The argument '$_file_selector' does not appear to be a valid file selector." -ec "$err_argument_value"
 
     exit_if_has_errors
 

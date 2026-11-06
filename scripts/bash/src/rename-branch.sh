@@ -63,11 +63,11 @@ declare -x _ignore
 #   rename-branch.sh feature/new-name   # renames the current branch
 #---------------------------------------------------------------------------------------------
 
-declare -x old_branch_name=""
-declare -x new_branch_name=""
-
 source "$script_dir/rename-branch.args.sh"
 source "$script_dir/rename-branch.usage.sh"
+
+declare -xr old_branch_name
+declare -xr new_branch_name
 
 get_arguments "$@"
 

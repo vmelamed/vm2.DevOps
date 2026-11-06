@@ -98,11 +98,9 @@ _make_ci_repo() {
 # =====================================================================================
 
 @test "configure: bug-exits with the wrong argument count" {
-    # NOTE: with argument 2 (the target directory) also missing, its own required-argument check
-    # ('[[ -v 2 && -d $2 ]]') fires as a second bug and becomes the "last" one reported
-    # (err_argument_value), not the arity bug (err_invalid_arguments) alone.
     run _ds 'declare -a source_files=() target_files=() file_actions=(); configure "/tmp"'
-    assert_failure "$err_argument_value"
+    assert_failure "$err_invalid_arguments"
+    refute_output --partial "requires argument 2" # a missing argument is reported once, as missing
 }
 
 @test "configure: bug-exits when the SoT directory does not exist" {
@@ -271,11 +269,8 @@ EOF
 # =====================================================================================
 
 @test "get_tools: bug-exits with the wrong argument count" {
-    # NOTE: with argument 1 also missing, its own required-argument check
-    # ('[[ -v 1 && -s $1 ]]') fires as a second bug and becomes the "last" one reported
-    # (err_argument_value), not the arity bug (err_invalid_arguments) alone.
     run _ds 'get_tools'
-    assert_failure "$err_argument_value"
+    assert_failure "$err_invalid_arguments"
 }
 
 @test "get_tools: bug-exits when the config/customization file does not exist or is empty" {
@@ -371,6 +366,17 @@ EOF
     printf 'private A\n<<<===\nCHANGED shared 1\nshared 2\n===>>>\nprivate B\n' > "$BATS_TEST_TMPDIR/b.txt"
     run _ds "are_different '$BATS_TEST_TMPDIR/a.txt' '$BATS_TEST_TMPDIR/b.txt' false true"
     assert_failure 3 # $shared_not_equal
+}
+
+@test "are_different: works under 'set -u', as in the real script (regression: undeclared _rc on the success path)" {
+    printf 'private A\n<<<===\nshared 1\n===>>>\nprivate B\n' > "$BATS_TEST_TMPDIR/a.txt"
+    printf 'DIFFERENT private A\n<<<===\nshared 1\n===>>>\nprivate B\n' > "$BATS_TEST_TMPDIR/b.txt"
+    run _ds "declare -i summary_shared_identical_count=0
+             declare vm2_repos=''
+             set -u
+             are_different '$BATS_TEST_TMPDIR/a.txt' '$BATS_TEST_TMPDIR/b.txt' false true"
+    assert_failure 2 # $shared_equal
+    refute_output --partial "unbound variable"
 }
 
 @test "are_different: falls back to plain \$positive and warns when a marker is missing from either file, if asked to" {
@@ -493,10 +499,9 @@ shared 2]"
 # =====================================================================================
 
 @test "copy_file: bug-exits with the wrong argument count" {
-    # arg1 (nonexistent) and the missing arg2 both fail their own checks too; arg2's
-    # required-argument check (err_argument_value) is the "last" bug reported.
+    touch "$BATS_TEST_TMPDIR/a.txt"
     run _ds "copy_file '$BATS_TEST_TMPDIR/a.txt'"
-    assert_failure "$err_argument_value"
+    assert_failure "$err_invalid_arguments"
 }
 
 @test "copy_file: bug-exits when the source file does not exist" {
@@ -531,11 +536,9 @@ shared 2]"
 # =====================================================================================
 
 @test "copy_shared_block: bug-exits with the wrong argument count" {
-    # arg2's own existence check also fires (it's missing), so err_not_file -- not the arity
-    # code -- is the "last" bug reported.
     touch "$BATS_TEST_TMPDIR/a.txt"
     run _ds "copy_shared_block '$BATS_TEST_TMPDIR/a.txt'"
-    assert_failure "$err_not_file"
+    assert_failure "$err_invalid_arguments"
 }
 
 @test "copy_shared_block: bug-exits when the source file does not exist" {
@@ -570,6 +573,19 @@ shared 2]"
     refute_output --partial "old shared"
 }
 
+@test "copy_shared_block: works under 'set -u', as in the real script (regression: undeclared _rc on the success path)" {
+    printf 'a\n<<<===\nnew shared\n===>>>\nb\n' > "$BATS_TEST_TMPDIR/src.txt"
+    printf 'x\n<<<===\nold shared\n===>>>\ny\n' > "$BATS_TEST_TMPDIR/dest.txt"
+    run _ds "declare -i summary_shared_copied_count=0
+             declare vm2_repos=''
+             set -u
+             copy_shared_block '$BATS_TEST_TMPDIR/src.txt' '$BATS_TEST_TMPDIR/dest.txt'"
+    assert_success
+    refute_output --partial "unbound variable"
+    run grep -c "new shared" "$BATS_TEST_TMPDIR/dest.txt"
+    assert_output "1"
+}
+
 @test "copy_shared_block: in dry-run mode, prints what it would do and does not touch the target file" {
     printf -- '<<<===\nnew shared\n===>>>\n' > "$BATS_TEST_TMPDIR/src.txt"
     printf -- 'target A\n<<<===\nold shared\n===>>>\ntarget B\n' > "$BATS_TEST_TMPDIR/dest.txt"
@@ -587,10 +603,8 @@ shared 2]"
 # =====================================================================================
 
 @test "customize: bug-exits with the wrong argument count" {
-    # the missing arg1 also fails its own required-argument check, so err_argument_value --
-    # not the arity code -- is the "last" bug reported.
     run _ds "customize"
-    assert_failure "$err_argument_value"
+    assert_failure "$err_invalid_arguments"
 }
 
 @test "customize: bug-exits when the target directory does not exist" {
@@ -654,10 +668,8 @@ EOF
 # =====================================================================================
 
 @test "resolve_target: bug-exits with the wrong argument count" {
-    # the missing arg4 also fails its own nameref check (empty string is not a variable name),
-    # so err_invalid_nameref -- not the arity code -- is the "last" bug reported.
     run _ds "declare root='' path=''; resolve_target '$BATS_TEST_TMPDIR' 'r' root"
-    assert_failure "$err_invalid_nameref"
+    assert_failure "$err_invalid_arguments"
 }
 
 @test "resolve_target: bug-exits when the vm2-repos parent argument is not a directory" {
@@ -876,11 +888,8 @@ EOF
 # =====================================================================================
 
 @test "get_selector_action: bug-exits on the wrong argument count" {
-    # NOTE: get_selector_action()'s own bug() call doesn't pass -ec, so it records the generic
-    # $failure code rather than a specific err_* one (unlike the rest of diff-shared.functions.sh
-    # -- flagged separately, not fixed here).
     run _ds --with-args "get_selector_action 'x'"
-    assert_failure "$failure"
+    assert_failure "$err_invalid_arguments"
     assert_output --partial "requires exactly 2 arguments"
 }
 

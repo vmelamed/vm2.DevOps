@@ -17,6 +17,7 @@ source "$lib_dir/core.sh"
 
 declare -xri err_argument_value
 declare -xri err_tool_error
+declare -xri err_io_failure
 
 declare -x secret_str
 declare -x secret_placeholder
@@ -50,12 +51,9 @@ for repo in "${vm2_repositories[@]}"; do
 
     _rc=$success
 
-    declare _temp=''
-    _temp=$(mktemp) || {
-        _rc=$err_tool_error
-        error -ec "$_rc" "Failed to create a temporary file."
-        continue
-    }
+    declare _temp
+    _temp=$(mktemp)                                                             || with_error "$err_io_failure" _rc "Failed to create a temporary file."
+    (( _rc == success ))                                                        || continue
 
     execute_gh_api_with_retry 3 2 --paginate "repos/$repo_owner/$repo/$app/secrets" -q '.secrets[] | .name' > "$_temp" || _rc=$?
     (( _rc != success ))  || readarray -t repo_secrets < "$_temp" || _rc=$err_tool_error

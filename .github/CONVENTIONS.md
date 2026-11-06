@@ -526,6 +526,9 @@ dependency **opt-in**:
   **regardless**, as executable specification.
 - Prefer `[Theory]` with representative functions/inputs for simple types; reach for property-based generation (FsCheck/CsCheck)
   where the input space is large.
+- **Refer to a test by its file and name, never by the number a test runner prints.** A number like the `183` in Bats's
+  `not ok 183 <name>` is only the test's position in that run: the same test can be `26` in a run of fewer files, and it
+  appears nowhere in the code.
 
 ### Performance Benchmarks
 

@@ -120,6 +120,7 @@ declare -xA selectors_actions
 #   tool settings (must exist and be non-empty).
 # @arg $2 bool _use_defaults - if the file does not provide any of the diff or the merge tools -
 #   use the defaults: either from the Git configuration or from the script defaults.
+#   Optional, default is true.
 #
 # @exitcode success=0: The diff and merge tool commands were retrieved successfully (this
 #   function does not itself fail at runtime; 'bug' aborts the process on a caller-contract
@@ -134,12 +135,12 @@ declare -xA selectors_actions
 #---------------------------------------------------------------------------------------------
 function get_tools()
 {
-    (( $# == 2 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires two arguments (provided $#):" \
-                                                                      "  - the configuration or customization file." \
-                                                                      "  - a flag to proceed with the defaults (optional, default is true)."
-    [[ -v 1 && -s $1 ]]           || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be an existing, non-empty configuration or customization file (provided '${1-<missing>}')."
-    [[ -v 2 ]] || is_boolean "$2" || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2 to be a boolean value (provided '${2-<missing>}')."
-
+    (( $# >= 1 ))                                                               || bug "${FUNCNAME[0]}() requires two arguments (provided $#):" \
+                                                                                       "  - the configuration or customization file." \
+                                                                                       "  - a flag to proceed with the defaults (optional, default is true)." \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 || -s $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1 to be an existing, non-empty configuration or customization file (provided '${1-<missing>}')." -ec "$err_argument_value"
+    [[ ! -v 2 ]] || is_boolean "$2"                                             || bug "${FUNCNAME[0]}() requires argument 2 to be a boolean value (provided '${2-<missing>}')." -ec "$err_argument_value"
     exit_if_has_bugs
 
     local _file="$1"
@@ -252,22 +253,24 @@ function get_tools()
 #---------------------------------------------------------------------------------------------
 function configure()
 {
-    (( $# == 2 ))                 || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
-                                                                      "  - the SoT directory" \
-                                                                      "  - the target directory"
-    [[ -v 1 && -d $1 ]]           || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the SoT directory, to be an existing directory (provided '${1-<missing>}')."
-    [[ -v 2 && -d $2 ]]           || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the target directory, to be an existing directory (provided '${2-<missing>}')."
+    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
+                                                                                       "  - the SoT directory" \
+                                                                                       "  - the target directory" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the SoT directory, to be an existing directory (provided '${1-<missing>}')." -ec "$err_argument_value"
+    [[ ! -v 2 || -d $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the target directory, to be an existing directory (provided '${2-<missing>}')." -ec "$err_argument_value"
     exit_if_has_bugs
 
+    local -i _rc=$success
     local _sot_path=$1
     local _config_file="$_sot_path/diff-shared.config.json"
     local _schema_config="$_sot_path/diff-shared.config.schema.json"
 
     # validate the config file and load the diff and merge tools from it:
-    [[ -s "$_config_file" ]]                               || error -ec "$err_argument_value" "The configuration file '$_config_file' was not found or is empty."
-    jq empty "$_config_file" 2>"$_ignore"                  || error -ec "$err_argument_value" "The configuration file '$_config_file' contains invalid JSON."
-    validate_json_schema "$_config_file" "$_schema_config" || error -ec "$err_argument_value" "The configuration file '$_config_file' does not conform to the schema '$_schema_config'."
-    exit_if_has_errors
+    [[ -s "$_config_file" ]]                                                    || with_error "$err_argument_value" _rc "The configuration file '$_config_file' was not found or is empty."
+    (( _rc != success )) || jq empty "$_config_file" 2>"$_ignore"               || with_error "$err_argument_value" _rc "The configuration file '$_config_file' contains invalid JSON."
+    (( _rc != success )) || validate_json_schema "$_config_file" "$_schema_config" || with_error "$err_argument_value" _rc "The configuration file '$_config_file' does not conform to the schema '$_schema_config'."
+    (( _rc == success )) || exit_if_has_errors
 
     trace "Configuration file '$_config_file' is valid."
 
@@ -293,16 +296,17 @@ function configure()
     local _source_file _target_file _file_action
 
     while IFS='=' read -r _source_file _target_file _file_action; do
-        [[ -n "$_source_file" ]]                    || error -ec "$err_argument_value" "Empty source file path found in '$_config_file'."
-        [[ -n "$_target_file" ]]                    || error -ec "$err_argument_value" "Empty target file path found in '$_config_file'."
-        [[ -n "$_file_action" ]]                    || error -ec "$err_argument_value" "Empty action found in '$_config_file'."
-        is_in "$_file_action" "${valid_actions[@]}" || error -ec "$err_argument_value" "'$_file_action' is not a valid action. Must be one of: $all_actions_str."
+        [[ -n "$_source_file" ]]                                                || with_error "$err_argument_value" _rc "Empty source file path found in '$_config_file'."
+        [[ -n "$_target_file" ]]                                                || with_error "$err_argument_value" _rc "Empty target file path found in '$_config_file'."
+        [[ -n "$_file_action" ]]                                                || with_error "$err_argument_value" _rc "Empty action found in '$_config_file'."
+        is_in "$_file_action" "${valid_actions[@]}"                             || with_error "$err_argument_value" _rc "'$_file_action' is not a valid action. Must be one of: $all_actions_str."
 
-        # Expand the macro-variables "vm2_repos" and "vm2_sot_shared" in the source file paths BUT
-        # do not expand the target file path here, it will be expanded later when iterating the targets.
+        # EXPAND THE MACRO-VARIABLES "vm2_repos" AND "vm2_sot_shared" IN THE SOURCE FILE PATHS
+        # but do not expand the target file path here, it will be expanded later when iterating the targets.
         # Thus config_target_files stores the target file paths as templates for later expansion.
-        eval "_source_file=\"$_source_file\""       # uses $vm2_repos and $vm2_sot_shared as a macro variables
-        [[ -s "$_source_file" ]]                    || error -ec "$err_argument_value" "Source file '$_source_file' does not exist or is empty."
+        (( _rc != success )) || eval "_source_file=\"$_source_file\""
+        (( _rc != success )) || [[ -s "$_source_file" ]]                        || with_error "$err_argument_value" _rc "Source file '$_source_file' does not exist or is empty."
+        (( _rc == success )) || continue
 
         # and assign into the model arrays by index:
         config_source_files[_index]="$_source_file"
@@ -321,9 +325,8 @@ function configure()
     trace "Loaded ${#config_file_actions[@]} pre-configured actions."
 
     # validate the configuration
-    (( ${#config_source_files[@]} == ${#config_target_files[@]} && ${#config_source_files[@]} == ${#config_file_actions[@]} )) ||
-        error -ec "$err_logic_error" "The data in the config tables does not match."
-
+    (( ${#config_source_files[@]} == ${#config_target_files[@]} && ${#config_source_files[@]} == ${#config_file_actions[@]} )) \
+                                                                                || with_error "$err_logic_error" _rc "The data in the config tables does not match."
     exit_if_has_errors
 
     trace "$script_name was configured successfully with ${#config_source_files[@]} files and actions."
@@ -332,11 +335,12 @@ function configure()
 # shellcheck disable=SC2034 # Variable was used as an array but is now assigned a string.
 function configure_target_files()
 {
-    (( $# == 2 ))                          || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
-                                                                               "  - the path to the target repository's working tree root directory" \
-                                                                               "  - the name of an indexed array that will store the expanded target file paths"
-    [[ ! -v 1 || -d $1 ]]                  || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the target repository's working tree root directory, to be an existing directory (provided '${1-<missing>}')."
-    [[ ! -v 2 ]] || is_indexed_array "$2"  || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2 to be the name of an indexed array variable (provided '${2-<missing>}')."
+    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
+                                                                                       "  - the path to the target repository's working tree root directory" \
+                                                                                       "  - the name of an indexed array that will store the expanded target file paths" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the target repository's working tree root directory, to be an existing directory (provided '${1-<missing>}')." -ec "$err_argument_value"
+    [[ ! -v 2 ]] || is_indexed_array "$2"                                       || bug "${FUNCNAME[0]}() requires argument 2 to be the name of an indexed array variable (provided '${2-<missing>}')." -ec "$err_argument_value"
     exit_if_has_bugs
 
     # the name "target_repo_path" is used as a macro variable in the target file paths in the json configuration - do not rename!
@@ -378,11 +382,12 @@ function configure_target_files()
 #---------------------------------------------------------------------------------------------
 function customize()
 {
-    (( $# == 2 ))       || bug -ec "$err_invalid_arguments" "${FUNCNAME[0]}() requires two arguments (provided $#)" \
-                                                            "  - path to the SoT directory" \
-                                                            "  - path to the target repository directory"
-    [[ -v 1 && -d $1 ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the SoT directory, to be an existing directory (provided '${1-<missing>}')."
-    [[ -v 2 && -d $2 ]] || bug -ec "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the target repository path, to be an existing directory (provided '${1-<missing>}')."
+    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires two arguments (provided $#)" \
+                                                                                       "  - path to the SoT directory" \
+                                                                                       "  - path to the target repository directory" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the SoT directory, to be an existing directory (provided '${1-<missing>}')." -ec "$err_argument_value"
+    [[ ! -v 2 || -d $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the target repository path, to be an existing directory (provided '${1-<missing>}')." -ec "$err_argument_value"
     exit_if_has_bugs
 
     local _sot_path=$1
@@ -425,15 +430,9 @@ function customize()
         local  _file_name _action
         while IFS='=' read -r _file_name _action; do
             # Validate action
-            is_in "$_action" "${valid_actions[@]}" || {
-                warning "Invalid action '$_action' for '$_file_name' in $_custom_config - must be one of: $all_actions_str."
-                continue
-            }
+            is_in "$_action" "${valid_actions[@]}"                              || { warning "Invalid action '$_action' for '$_file_name' in $_custom_config - must be one of: $all_actions_str."; continue; }
             # Validate the path
-            [[ -n "$_file_name" ]] || {
-                warning "Empty relative path in $_custom_config."
-                continue
-            }
+            [[ -n "$_file_name" ]]                                              || { warning "Empty relative path in $_custom_config."; continue; }
 
             # Find corresponding target file and source file
             local _found=false
@@ -450,8 +449,8 @@ function customize()
                 fi
             done
 
-            [[ "$_found" == true ]] || {
-                 [[ $_action != "ignore" ]] && trace "Path '$_file_name' from $_custom_config ${bold}does not match${reset} any known target relative path."
+            [[ "$_found" == true ]]                                             || {
+                [[ $_action != "ignore" ]] && trace "Path '$_file_name' from $_custom_config ${bold}does not match${reset} any known target relative path."
                 continue
             }
         done < <(jq -r '.action_overrides | to_entries | .[] | .key+"="+.value' "$_custom_config" 2>"$_ignore") # convert JSON object to key=value pairs
@@ -475,7 +474,7 @@ function customize()
 #---------------------------------------------------------------------------------------------
 function parameterize()
 {
-    ((${#selectors_actions[@]} > 0 )) || return "$success"
+    ((${#selectors_actions[@]} > 0 ))                                           || return "$success"
 
     local _selector _action
     local -i _index

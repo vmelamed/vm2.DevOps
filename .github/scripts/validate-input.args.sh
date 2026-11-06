@@ -260,7 +260,7 @@ function validate_arguments()
         candidate=''
     done
 
-    [[ -z $candidate ]] || sanitize_common_dotnet_args "$candidate" || true
+    [[ -z $candidate ]] || sanitize_common_dotnet_args "$candidate"
     #  TODO: add validation here
     return "$success"
 }
