@@ -767,7 +767,7 @@ function is_safe_configuration()
     }
 
     [[ -z $1 ]] || is_in "$1" "${known_configurations[@]}" ||
-        warning -ec "$err_argument_value" "The configuration '$1' is not among the known configurations: ${known_configurations[*]}."
+        warning "The configuration '$1' is not among the known configurations: ${known_configurations[*]}." -ec "$err_argument_value"
 
     return "$positive"
 }
@@ -815,7 +815,7 @@ function is_safe_framework()
     }
 
     is_in "$1" "${known_tfms[@]}" ||
-        warning -ec "$err_argument_value" "The Target Framework Moniker (TFM) '$1' is not among the known frameworks: ${known_tfms[*]}."
+        warning "The Target Framework Moniker (TFM) '$1' is not among the known frameworks: ${known_tfms[*]}." -ec "$err_argument_value"
 
     return "$_rc"
 }
@@ -865,7 +865,7 @@ function is_safe_runtime()
     }
 
     is_in "$1" "${known_runtimes[@]}" ||
-        warning -ec "$err_argument_value" "The Runtime Identifier (RID) '$1' is not among the known runtimes: ${known_runtimes[*]}."
+        warning "The Runtime Identifier (RID) '$1' is not among the known runtimes: ${known_runtimes[*]}." -ec "$err_argument_value"
 
     return "$_rc"
 }

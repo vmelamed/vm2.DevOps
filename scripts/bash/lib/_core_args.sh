@@ -136,7 +136,7 @@ function usage_if_requested()
 # @exitcode N The exit code from $2, if it is a positive value (whether or not error messages
 #   are present).
 # @exitcode N The code of the first `--error-code`/`-ec` among the error messages, if $2 was
-#   omitted -- the same rule as `exit_with_error`/`exit_with_bug`, so `usage -ec "$err_x" "…"`
+#   omitted -- the same rule as `exit_with_error`/`exit_with_bug`, so `usage "…" -ec "$err_x"`
 #   exits with `$err_x`.
 # @exitcode failure=1: Error messages were given, $2 was omitted or 0, and the messages carry no
 #   (non-zero) `--error-code`/`-ec`.
@@ -144,7 +144,7 @@ function usage_if_requested()
 # @example
 #   usage true
 # @example
-#   usage -ec "$err_unknown_argument" "Unknown argument: $_option"     # exits with $err_unknown_argument
+#   usage "Unknown argument: $_option" -ec "$err_unknown_argument"     # exits with $err_unknown_argument
 # @example
 #   usage "$err_invalid_arguments" -sd 3 -ec "$err_argument_value" "Invalid argument value for
 #   the option <option_name>"                                        # explicit $2 wins: $err_invalid_arguments

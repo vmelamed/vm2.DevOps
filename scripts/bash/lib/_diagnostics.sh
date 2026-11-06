@@ -731,7 +731,7 @@ function exit_with_bug()
 #   default failure code if none is provided.
 #
 # @example
-#   fatal_exit -ec $err_file_not_found "File not found: $filename"
+#   fatal_exit "File not found: $filename" -ec $err_file_not_found
 #---------------------------------------------------------------------------------------------
 function fatal_exit()
 {
