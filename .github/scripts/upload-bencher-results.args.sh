@@ -51,67 +51,67 @@ function get_arguments()
 
         case "${_option,,}" in
             --testbed )
-                (( $# > 0 ))                                                    || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# > 0 ))                                                    || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
                 testbed="$1"
                 shift
                 ;;
 
             --repository )
-                (( $# > 0 ))                                                    || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# > 0 ))                                                    || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
                 repository="$1"
                 shift
                 ;;
 
             --event-name )
-                (( $# > 0 ))                                                    || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# > 0 ))                                                    || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
                 event_name="$1"
                 shift
                 ;;
 
             --ref-name )
-                (( $# > 0 ))                                                    || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# > 0 ))                                                    || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
                 ref_name="$1"
                 shift
                 ;;
 
             --head-ref )
-                (( $# > 0 ))                                                    || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# > 0 ))                                                    || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
                 head_ref="$1"
                 shift
                 ;;
 
             --pr-number )
-                (( $# > 0 ))                                                    || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# > 0 ))                                                    || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
                 pr_number="$1"
                 shift
                 ;;
 
             --pr-base-sha )
-                (( $# > 0 ))                                                    || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# > 0 ))                                                    || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
                 pr_base_sha="$1"
                 shift
                 ;;
 
             --max-regression-pct )
-                (( $# > 0 ))                                                    || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# > 0 ))                                                    || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
                 max_regression_pct="$1"
                 shift
                 ;;
 
             --max-gen1-collects )
-                (( $# > 0 ))                                                    || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# > 0 ))                                                    || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
                 max_gen1_collects="$1"
                 shift
                 ;;
 
             --max-gen2-collects )
-                (( $# > 0 ))                                                    || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# > 0 ))                                                    || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
                 max_gen2_collects="$1"
                 shift
                 ;;
 
             --reset-thresholds )
-                (( $# > 0 ))                                                    || usage -ec "$err_missing_argument" "Missing boolean value for ${_option,,}"
+                (( $# > 0 ))                                                    || usage "Missing boolean value for ${_option,,}" -ec "$err_missing_argument"
                 reset_thresholds="$1"
                 shift
                 ;;
@@ -122,10 +122,10 @@ function get_arguments()
                 exit_with_bug -ec "$err_logic_error" "'$_option' should have been consumed by get_common_arg."
                 ;;
 
-            -*) usage -ec "$err_unknown_argument" "Unknown argument: $_option"
+            -*) usage "Unknown argument: $_option" -ec "$err_unknown_argument"
                 ;;
 
-            * ) ! $_positional_arg_set                                          || usage -ec "$err_too_many_arguments" "Multiple results directories specified: $_option"
+            * ) ! $_positional_arg_set                                          || usage "Multiple results directories specified: $_option" -ec "$err_too_many_arguments"
                 results_dir="$_option"
                 _positional_arg_set=true
                 ;;

@@ -45,7 +45,7 @@ function get_arguments()
         case "${_option,,}" in
             # get the arguments specific to this script
             --min-coverage-pct|-min )
-                (( $# >= 1 ))                                                   || usage -ec "$err_missing_argument" "Missing value for ${_option,,}"
+                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
                 min_coverage_pct=$1
                 shift
                 ;;
@@ -61,10 +61,10 @@ function get_arguments()
                 exit_with_bug -ec "$err_logic_error" "'$_option' should have been consumed by get_common_dotnet_arg."
                 ;;
 
-            -*) usage -ec "$err_unknown_argument" "Unknown argument: $_option"
+            -*) usage "Unknown argument: $_option" -ec "$err_unknown_argument"
                 ;;
 
-            * ) ! $_positional_arg_set                                          || usage -ec "$err_too_many_arguments" "Multiple test projects specified: $_option"
+            * ) ! $_positional_arg_set                                          || usage "Multiple test projects specified: $_option" -ec "$err_too_many_arguments"
                 test_project="$_option"
                 _positional_arg_set=true
                 ;;

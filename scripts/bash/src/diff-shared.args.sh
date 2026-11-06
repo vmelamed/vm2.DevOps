@@ -49,12 +49,12 @@ function get_arguments()
 
         case ${_option,,} in
             --vm2-repos|-r )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $_option"
+                (( $# >= 1 )) || usage "Missing value for $_option" -ec "$err_missing_argument"
                 vm2_repos="$1"; shift
                 ;;
 
             # -s|--source-of-truth )
-            #     (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $_option"
+            #     (( $# >= 1 )) || usage "Missing value for $_option" -ec "$err_missing_argument"
             #     sot="$1"; shift
             #     ;;
             #
@@ -70,7 +70,7 @@ function get_arguments()
                 ;;
 
             --file*|-f* )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $_option"
+                (( $# >= 1 )) || usage "Missing value for $_option" -ec "$err_missing_argument"
                 get_selector_action "$_option" "$1"; shift
                 ;;
 
@@ -79,7 +79,7 @@ function get_arguments()
                 ;;
 
             --summary-file|-sf )
-                (( $# >= 1 )) || usage -ec "$err_missing_argument" "Missing value for $_option"
+                (( $# >= 1 )) || usage "Missing value for $_option" -ec "$err_missing_argument"
                 summary_file="$1"; shift
                 ;;
 
@@ -93,7 +93,7 @@ function get_arguments()
                 exit_with_bug -ec "$err_logic_error" "'$_option' should have been consumed by get_common_arg."
                 ;;
 
-            -*) usage -ec "$err_unknown_argument" "Unknown argument: $_option"
+            -*) usage "Unknown argument: $_option" -ec "$err_unknown_argument"
                 ;;
 
             * ) is_empty_array target_repos || ! is_in "$_option" "${target_repos[@]}" &&

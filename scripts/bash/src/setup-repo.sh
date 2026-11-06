@@ -153,7 +153,7 @@ declare -x suggested_repo_name=''
 declare -x ci_yaml=''
 
 get_repo_state "$repo_path" repo_state                                          || rc=$?
-(( rc != failure ))                                                             || usage -ec "$rc" "Failed to get the repository state for '$repo_path'."
+(( rc != failure ))                                                             || usage "Failed to get the repository state for '$repo_path'." -ec "$rc"
 dump_vars --quiet --header "Repository State 'repo_state':" repo_state
 
 if has_local_repo repo_state; then
@@ -392,7 +392,7 @@ if ! has_remote_repo repo_state; then
     repo_url="${repo_state[$key_url]}"
     repo_id="${repo_state[$key_repo_id]}"
 
-    [[ -n "$repo_url" && -n "$repo_id" ]]                                       || usage -ec "$err_not_git_directory" "The repository does not appear to be initialized and/or linked to the remote."
+    [[ -n "$repo_url" && -n "$repo_id" ]]                                       || usage "The repository does not appear to be initialized and/or linked to the remote." -ec "$err_not_git_directory"
 
     branch="${repo_state[$key_default_branch]}"
     main_protection_rs_name="${main_protection_rs_name:-$branch protection}"
