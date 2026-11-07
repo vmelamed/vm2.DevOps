@@ -13,7 +13,7 @@ declare -xr vm2_devops_repo_name
 declare -xr vm2_sot_repo_name
 declare -xr default_sot
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Builds and prints the full `--help` text for `setup-repo.sh` to stdout: usage line, description of
 # what the script does, parameters, options, switches, examples, and the list of local Git settings the script
 # configures. When `$1` is `true`, the shared switches and environment-variable sections
@@ -23,7 +23,7 @@ declare -xr default_sot
 #
 # @exitcode success=0: Always.
 # @stdout The full help text for `setup-repo.sh`.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function usage_text()
 {
     (( $# ==1 ))                                                                || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)." -ec "$err_invalid_arguments"

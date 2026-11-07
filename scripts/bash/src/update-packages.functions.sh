@@ -19,7 +19,7 @@ declare -xri err_io_failure
 # before a run writes anything, instead of being silently skipped.
 declare -xr package_regex='^([[:space:]]*<PackageVersion[[:space:]]+Include=")([^"]+)("[[:space:]]+Version=")([^"]+)("[[:space:]]*/>.*)$'
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Verifies that every PackageVersion element in a 'Directory.Packages.props' file has the one-line shape
 #   that read_package_versions and set_package_version understand ($package_regex). Reports EVERY offending line, with
 #   file and line number, so the caller can stop before anything is written instead of silently skipping packages.
@@ -35,7 +35,7 @@ declare -xr package_regex='^([[:space:]]*<PackageVersion[[:space:]]+Include=")([
 #
 # @exitcode success=0: every PackageVersion line has the supported shape.
 # @exitcode err_invalid_item=14: at least one does not (each one is reported via error()).
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function validate_package_lines()
 {
     (( $# == 1 ))         || bug "${FUNCNAME[0]}() requires one argument: the path to 'Directory.Packages.props' (provided $#)." -ec "$err_invalid_arguments"
@@ -60,7 +60,7 @@ function validate_package_lines()
     return "$_rc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Chooses the version a package should be upgraded to. Only stable release versions
 #   are considered. The result is the highest candidate that is strictly greater than the current
 #   version under SemVer precedence; otherwise the current version is kept (never a downgrade).
@@ -73,7 +73,7 @@ function validate_package_lines()
 #
 # @example
 #   select_upgrade_version 1.0.0 chosen 1.1.0-preview.3 1.0.2 1.0.1
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function select_upgrade_version()
 {
     (( $# >= 2 ))                          || bug "${FUNCNAME[0]}() requires at least two arguments (provided $#):" \
@@ -101,17 +101,17 @@ function select_upgrade_version()
     return "$success"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Markers that delimit a "shared" block within an otherwise private/local file -- content between them is expected
 #   to stay synced with the SoT, while everything outside is left entirely to the target repository. Matched as a plain
 #   substring anywhere on a line; any trailing text after the marker on that line (e.g. a human-readable "Beginning of shared
 #   content" label) is purely descriptive and ignored by the scanner. The two marker LINES themselves are delimiters and are
 #   never considered part of the shared content.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xr shared_begin_marker
 declare -xr shared_end_marker
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Returns the section of 'Directory.Packages.props' a package line belongs to: the shared block between
 #   the 'begin/end shared content' markers, or the repository-specific part outside them.
 #
@@ -127,7 +127,7 @@ declare -xr shared_end_marker
 #
 # @exitcode success=0: the line belongs to the requested section.
 # @exitcode negative=1: the line belongs to the other section, or is a marker line.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function _props_line_in_section()
 {
     (( $# == 3 ))                              || bug "${FUNCNAME[0]}() requires three arguments (provided $#):" \
@@ -154,7 +154,7 @@ function _props_line_in_section()
     return "$negative"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Reads the package versions of one section of a 'Directory.Packages.props' file. Commented-out lines are
 #   ignored. The keys keep the casing used in the file.
 #
@@ -169,7 +169,7 @@ function _props_line_in_section()
 # @arg $3 nameref Associative array that receives package ID => version.
 #
 # @exitcode success=0: the file was read.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function read_package_versions()
 {
     (( $# == 3 ))                                                               || bug "${FUNCNAME[0]}() requires three arguments (provided $#):" \
@@ -203,7 +203,7 @@ function read_package_versions()
     done < "$_file"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Rewrites the version of one package in one section of a 'Directory.Packages.props' file, changing only that
 #   line's Version attribute. The package ID is matched case-insensitively and the casing in the file is kept.
 #
@@ -215,7 +215,7 @@ function read_package_versions()
 # @exitcode success=0: the package line was rewritten.
 # @exitcode err_logic_error: the package is not in that section of the file.
 # @exitcode err_io_failure
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function set_package_version()
 {
     local _file=$1 _section=$2 _id=$3 _new=$4
@@ -236,7 +236,7 @@ function set_package_version()
     local _rc=$success
 
     if [[ $_done == true ]]; then
-        execute mv "$_tmp" "$_file"                                             || with_error "$err_io_failure" _rc "Failed to copy temporary file to '$_file'."
+        execute mv "$_tmp" "$_file"                                             || with_error _rc "$err_io_failure" "Failed to copy temporary file to '$_file'."
     else
         _rc=$err_logic_error
     fi
@@ -246,7 +246,7 @@ function set_package_version()
     return "$_rc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Lists every version of a package found in the configured NuGet sources, using 'dotnet package search'.
 #   Versions from all sources are returned; the package ID is matched case-insensitively.
 #
@@ -255,7 +255,7 @@ function set_package_version()
 #
 # @exitcode success=0: the search ran (the array may be empty when the package is not found).
 # @exitcode err_tool_error: the search failed.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function query_package_versions()
 {
     (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires two arguments (provided $#): the package ID and the name of the variable that receives the versions." -ec "$err_invalid_arguments"

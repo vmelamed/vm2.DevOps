@@ -67,7 +67,7 @@ declare -r key_diffs="diffs"
 declare -r key_missing="missing"
 declare -r key_unknowns="unknowns"
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Fetches the current settings from the GitHub API and compares them to the
 # expected settings, reporting matches, differences, and missing values (errors) to stdout in
 # a formatted list.
@@ -104,7 +104,7 @@ declare -r key_unknowns="unknowns"
 #
 # @stdout One formatted line per compared key, prefixed with an emoji marker (match/present, difference, or
 #   missing).
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function compare_settings()
 {
     local -i _rc="$success"
@@ -156,7 +156,7 @@ function compare_settings()
     # query the GitHub API and transform the JSON response into key=value pairs using the provided jq query, then...
     local _json
 
-    _json=$(execute_gh_api_with_retry 3 2 --paginate "$_gh_endpoint")           || { with_error "$err_tool_error" _rc "Failed to fetch data from GitHub API: $_gh_endpoint.";
+    _json=$(execute_gh_api_with_retry 3 2 --paginate "$_gh_endpoint")           || { with_error _rc "$err_tool_error" "Failed to fetch data from GitHub API: $_gh_endpoint.";
                                                                                     return "$_rc";
                                                                                 }
 
@@ -248,12 +248,12 @@ function audit_branch_ruleset()
     local _ruleset_id
 
     _rulesets_json=$(execute_gh_api_with_retry 3 2 --paginate "$path_rulesets") || true
-    [[ -n "${_rulesets_json:-}" ]]                                              || with_error "$failure" _rc "Ruleset '$main_protection_rs_name' for branch '$branch' is missing"
+    [[ -n "${_rulesets_json:-}" ]]                                              || with_error _rc "$failure" "Ruleset '$main_protection_rs_name' for branch '$branch' is missing"
     (( _rc != success )) || _ruleset_id=$(jq -r "$jq_ruleset_id" <<< "$_rulesets_json" 2>"$_ignore")
-    (( _rc != success )) || [[ -n "$_ruleset_id" ]]                             || with_error "$failure" _rc "Ruleset '$main_protection_rs_name' for branch '$branch' does not exist"
+    (( _rc != success )) || [[ -n "$_ruleset_id" ]]                             || with_error _rc "$failure" "Ruleset '$main_protection_rs_name' for branch '$branch' does not exist"
     (( _rc != success )) || echo "  $info_em  Ruleset '$main_protection_rs_name' for branch '$branch' (id: $_ruleset_id):"
     (( _rc != success )) || compare_settings "$path_rulesets/$_ruleset_id" "$jq_ruleset_rules" true false default_ruleset _results default_ruleset_order \
-                                                                                || with_error "$?" _rc "Failed to compare branch protection ruleset settings."
+                                                                                || with_error _rc $? "Failed to compare branch protection ruleset settings."
     (( _rc == success )) || return "$_rc"
 }
 
@@ -267,7 +267,7 @@ function audit_required_status_checks()
     local _json
     _json=$(execute_gh_api_with_retry 3 2 --paginate "$path_main_protection_ruleset") \
                                                                                 || {
-                                                                                    with_error "$err_tool_error" _rc "Failed to fetch data from GitHub API: $path_main_protection_ruleset."
+                                                                                    with_error _rc "$err_tool_error" "Failed to fetch data from GitHub API: $path_main_protection_ruleset."
                                                                                     return "$_rc"
                                                                                 }
 
@@ -291,7 +291,7 @@ function audit_required_status_checks()
     return "$_rc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Runs a full, read-only audit of the target GitHub repository against the vm2
 #   conventions, comparing repository settings, Actions workflow permissions, per-app secrets,
 #   Actions variables, the branch-protection ruleset (and its required status checks), and the
@@ -311,7 +311,7 @@ function audit_required_status_checks()
 # @stdout A multi-section, emoji-annotated audit report (repository settings, Actions
 #   permissions, secrets per app, Actions variables, branch ruleset, required status checks,
 #   local Git settings) followed by a totals summary.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function audit_repo()
 {
     local -i _rc=$success
@@ -327,12 +327,12 @@ function audit_repo()
     # --- Repo settings ---
     echo "  $info_em  Repository settings:"
     compare_settings "$path_repo" "$jq_entries" true false default_repo_settings _results default_repo_settings_order \
-                                                                                || with_error "$?" _rc "Failed to compare repository settings."
+                                                                                || with_error _rc $? "Failed to compare repository settings."
 
     # --- Actions permissions ---
     echo "  $info_em  Actions permissions:"
     compare_settings "$path_permissions" "$jq_entries" true false default_repo_permissions _results \
-                                                                                || with_error "$?" _rc "Failed to compare repository permissions settings."
+                                                                                || with_error _rc $? "Failed to compare repository permissions settings."
 
     local _app
 
@@ -345,7 +345,7 @@ function audit_repo()
         ! is_empty_array _vars_defaults                                         || continue
         echo "  $info_em  ${_app^} Variables:"
         compare_settings "$path_vars" "$jq_vars" false true _vars_defaults _results _vars_order \
-                                                                                || with_error "$?" _rc "Failed to compare GitHub ${_app^} variables."
+                                                                                || with_error _rc $? "Failed to compare GitHub ${_app^} variables."
     done
 
     # --- Secrets ---
@@ -357,7 +357,7 @@ function audit_repo()
         ! is_empty_array _secrets_defaults                                      || continue
         echo "  $info_em  ${_app^} Secrets:"
         compare_settings "$path_repo/$_app/secrets" "$jq_secrets" false true _secrets_defaults _results _secrets_order \
-                                                                                || with_error "$?" _rc "Failed to compare $_app secrets."
+                                                                                || with_error _rc $? "Failed to compare $_app secrets."
     done
 
     # --- Branch ruleset ---

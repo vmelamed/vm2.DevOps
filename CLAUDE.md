@@ -286,10 +286,10 @@ declare -i rc=$success
 declare results_text=''
 declare -a results=()
 
-results_text=$(get_results)                                   || with_error "$err_tool_error" rc "Failed to get the results."
+results_text=$(get_results)                                   || with_error rc "$err_tool_error" "Failed to get the results."
 (( rc != success )) || [[ -z $results_text ]] || readarray -t results <<< "$results_text"
-(( rc != success )) || some_tool --input "$input_file"        || with_error "$err_tool_error" rc "some_tool failed."
-(( rc != success )) || chmod --reference="$file" "$new_file"  || with_error "$err_io_failure" rc "Failed to set the mode."
+(( rc != success )) || some_tool --input "$input_file"        || with_error rc "$err_tool_error" "some_tool failed."
+(( rc != success )) || chmod --reference="$file" "$new_file"  || with_error rc "$err_io_failure" "Failed to set the mode."
 (( rc == success ))                                           || return "$rc"   # top-level script: exit_if_has_errors
 ```
 

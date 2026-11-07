@@ -33,7 +33,7 @@ declare -xr del_tag
 declare -xr old_tag
 declare -xr new_tag
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Main script body: renames an existing git tag to a new name, or deletes a tag, both locally and on 'origin'.
 # In rename mode, the old tag is deleted (locally and remotely) and a new tag with the new name is created at the same
 # commit and pushed. In delete mode ('--delete <tag>'), the tag is only deleted, locally and remotely.
@@ -60,7 +60,7 @@ declare -xr new_tag
 #   re-tag.sh v3.1.0-preview.5 v3.1.1-preview.2
 # @example
 #   re-tag.sh --delete v3.1.0-preview.4
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 
 # ─── argument validation & pre-flight ────────────────────────────────────────
 
@@ -84,7 +84,7 @@ fi
 
 # ─── helpers ─────────────────────────────────────────────────────────────────
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Deletes a git tag locally, and on 'origin' if it exists there. Used both for the standalone '--delete' mode
 # and as the first step of the rename flow (deleting the old tag before creating the new one).
 #
@@ -96,7 +96,7 @@ fi
 #
 # @example
 #   delete_tag v3.1.0-preview.4
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 delete_tag()
 {
     local _tag="$1"

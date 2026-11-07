@@ -8,7 +8,7 @@ declare -xr script_name
 
 declare -xra gh_apps_with_secrets
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Builds and prints the full `--help` text for `set-secret.sh` to stdout: usage
 #   line, description of what the script does, parameters, options, switches, examples, and
 #   the list of local Git settings the script configures. When `$1` is `true`, the shared
@@ -19,7 +19,7 @@ declare -xra gh_apps_with_secrets
 #
 # @exitcode success=0: Always.
 # @stdout The full help text for `set-secret.sh`.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function usage_text()
 {
     (( $# ==1 ))                     || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."

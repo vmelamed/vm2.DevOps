@@ -22,7 +22,7 @@ declare -x new_branch=""
 declare -x check_out_new_branch=false
 declare -x current_branch
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Parses the command-line arguments for 'move-commits-to-branch.sh'. Delegates common switches (help, quiet,
 # verbose, trace, dry-run) to 'get_common_arg'. Recognizes '--commit-sha|-c', '--branch|-b', and '--check-out-new|-n'; any
 # other argument is rejected.
@@ -38,7 +38,7 @@ declare -x current_branch
 #
 # @example
 #   get_arguments --commit-sha ff5c2d1 --branch feature/my-feature
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function get_arguments()
 {
     local _option
@@ -95,12 +95,12 @@ function validate_arguments()
     local -i _rc=$success
 
     # validate we have a valid branch name != main
-    is_valid_branch_name "$new_branch"                                          || with_error "$err_argument_value" _rc "The option '--branch' is mandatory and must have a valid value"
+    is_valid_branch_name "$new_branch"                                          || with_error _rc "$err_argument_value" "The option '--branch' is mandatory and must have a valid value"
     (( _rc != success )) || [[ "$new_branch" != "main" ]]                       || error "The new branch name cannot be 'main'" -ec "$err_argument_value"
 
     # Verify we have a valid and existing SHA
     _rc=$success
-    is_valid_commit_sha "$commit_sha"                                           || with_error "$err_argument_value" _rc "The '--commit-sha' is mandatory and  must be a valid 7 to 40 hexadecimal digits string"
+    is_valid_commit_sha "$commit_sha"                                           || with_error _rc "$err_argument_value" "The '--commit-sha' is mandatory and  must be a valid 7 to 40 hexadecimal digits string"
     (( _rc != success )) || git cat-file -e "$commit_sha^{commit}" 2>"$_ignore" || error "Commit '$commit_sha' does not exist" -ec "$err_argument_value"
 
     # freeze the arguments

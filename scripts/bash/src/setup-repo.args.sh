@@ -48,7 +48,7 @@ declare -x branches
 
 declare -x repo
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Parses the command-line arguments of `setup-repo.sh`, populating the script-level variables declared
 # at the top of this file (`vm2_repos`, `repo_path`, `repo_name`, `repo_owner`, `visibility`, `branch`,
 # `main_protection_rs_name`, `description`, `use_ssh`, `use_https`, `audit`, `current_branch`, `interactive_vars`,
@@ -68,7 +68,7 @@ declare -x repo
 #
 # @exitcode success=0: All arguments parsed successfully (function returns normally; `usage()` exits the process
 #   directly on error or on `--help`).
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function get_arguments()
 {
     local _option

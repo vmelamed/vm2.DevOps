@@ -12,14 +12,14 @@ declare -xri err_argument_value
 
 declare -xr default_vm2_repos_path
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Prints the usage text of 'update-packages.sh'.
 #
 # @arg $1 bool When `true`, print the long text, including the shared switches and environment variables.
 #
 # @exitcode success=0: Always.
 # @stdout The usage text.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function usage_text()
 {
     (( $# == 1 ))                   || bug "${FUNCNAME[0]}() requires one boolean argument (provided $#)." -ec "$err_invalid_arguments"

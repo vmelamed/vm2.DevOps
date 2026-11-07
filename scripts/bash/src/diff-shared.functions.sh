@@ -3,9 +3,9 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-#=============================================================================================
+#===============================================================================================
 # Functions for performing diff and merge operations, including shared blocks, in the VM2 DevOps scripts.
-#=============================================================================================
+#===============================================================================================
 
 declare -xr script_name
 declare -xr script_dir
@@ -70,7 +70,7 @@ declare -xr shared_end_marker
 declare -xri shared_equal=2
 declare -xri shared_not_equal=3
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Resolves the target repository directory and ensures it is in a valid state.
 #
 # Notes:
@@ -85,7 +85,7 @@ declare -xri shared_not_equal=3
 # @exitcode err_not_directory=17: the target repository directory does not exist or is not a valid git repository with CI configured
 # @exitcode err_logic_error: the target repository is a git repository but is not in a clean working-tree state
 # @exitcode err_tool_error: 'git branch --show-current' failed against the resolved target repository (it appears corrupted)
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function resolve_target()
 {
     local -i _rc="$success"
@@ -111,7 +111,7 @@ function resolve_target()
     resolve_repo_root "$_repos" "$_r" _target_root _target_path                 || _rc=$?
 
     # We can only work with git repos or directories that have CI configured:
-    (( _rc == success || _rc == err_dir_with_ci ))                              || { with_error "$_rc" _rc "The specified target directory '${_repos%/}/${_r#/}' is invalid. It should have CI configured in '.github/workflows'."
+    (( _rc == success || _rc == err_dir_with_ci ))                              || { with_error _rc "$_rc" "The specified target directory '${_repos%/}/${_r#/}' is invalid. It should have CI configured in '.github/workflows'."
                                                                                      return "$_rc"
                                                                                    }
     (( _rc == err_dir_with_ci ))                                                && { warning "The root directory of the target project is '$_target_root'. It is not a git repository yet."
@@ -120,15 +120,15 @@ function resolve_target()
 
     # if it is a git repo then make sure it is in a clean state:
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-    branch="$(git -C "$_target_root" branch --show-current 2>"$_ignore")"       || with_error "$err_tool_error" _rc "The repository in the specified target directory '$1' appears corrupted."
-    (( _rc != success )) || ensure_fresh_git_state "$_target_root" "$branch"    || with_error "$err_logic_error" _rc "The specified target repository at '$_target_root' on branch '$branch' is not in a clean state." \
+    branch="$(git -C "$_target_root" branch --show-current 2>"$_ignore")"       || with_error _rc "$err_tool_error" "The repository in the specified target directory '$1' appears corrupted."
+    (( _rc != success )) || ensure_fresh_git_state "$_target_root" "$branch"    || with_error _rc "$err_logic_error" "The specified target repository at '$_target_root' on branch '$branch' is not in a clean state." \
                                                                                                                      "Commit or stash your changes."
 
     trace "The Git working tree root of the target repository is '$_target_root', on a branch '$branch'."
     return "$_rc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Locates a single well-formed '$shared_begin_marker'/'$shared_end_marker' pair in the given file
 # and reports their 1-based line numbers via the two nameref output variables.
 #
@@ -143,7 +143,7 @@ function resolve_target()
 #
 # @exitcode positive=0: exactly one well-formed marker pair was found; the two nameref outputs were set.
 # @exitcode negative=1: no well-formed, single marker pair could be found; the nameref outputs were not set.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function __find_shared_markers()
 {
     (( $# == 3 ))                                                               || bug "${FUNCNAME[0]}() requires exactly three arguments (provided $#):" \
@@ -174,7 +174,7 @@ function __find_shared_markers()
     return "$positive"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Extracts the content strictly between a single '$shared_begin_marker'/'$shared_end_marker' pair
 # in the given file, via the nameref output variable. The two marker lines themselves are excluded.
 #
@@ -190,7 +190,7 @@ function __find_shared_markers()
 #
 # @example
 #   get_shared_block "$source_file" _shared_content || warning "..."
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function get_shared_block()
 {
     (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
@@ -211,7 +211,7 @@ function get_shared_block()
     return "$success"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Compares two files with a fast whitespace/blank-line-insensitive 'diff -q -w -B'. If they are identical,
 # returns immediately. If they differ, also scans both files for a single '$shared_begin_marker'/'$shared_end_marker'
 # pair and, when both are found and well-formed, compares only the content between them -- letting a caller sync just
@@ -238,7 +238,7 @@ function get_shared_block()
 #
 # @example
 #   are_different "$source_file" "$target_file" false true
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function are_different()
 {
     (( $# == 4 ))                                                               || bug "${FUNCNAME[0]}() requires four arguments (provided $#):" \
@@ -276,8 +276,8 @@ function are_different()
     if $_has_shared && get_shared_block "$LOCAL" _source_shared && get_shared_block "$REMOTE" _target_shared; then
         local _source_shared_file=''
         local _target_shared_file=''
-        _source_shared_file=$(mktemp)                                           || with_error "$err_io_failure" _rc "Failed to create a temporary file"
-        (( _rc != success ))          || _target_shared_file=$(mktemp)          || with_error "$err_io_failure" _rc "Failed to create a temporary file"
+        _source_shared_file=$(mktemp)                                           || with_error _rc "$err_io_failure" "Failed to create a temporary file"
+        (( _rc != success ))          || _target_shared_file=$(mktemp)          || with_error _rc "$err_io_failure" "Failed to create a temporary file"
         (( _rc == success )) || { rm -f "$_source_shared_file" "$_target_shared_file"; return "$_rc"; }
 
         printf '%s\n' "$_source_shared" > "$_source_shared_file"
@@ -303,7 +303,7 @@ function are_different()
     return "$positive"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Runs the configured (or default) merge tool via '$merge_command' to merge the SoT file into the target
 # file in place. Follows the Git merge parameter naming convention ('LOCAL', 'REMOTE', 'MERGED', 'BASE') so that
 # '$merge_command' can reference these globals. Detects whether the merge actually changed the target file by comparing
@@ -321,7 +321,7 @@ function are_different()
 #
 # @example
 #   merge "$source_file" "$target_file"
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function merge()
 {
     (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
@@ -354,7 +354,7 @@ function merge()
     }
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Copies the source file over the destination file, creating the destination directory first if it does
 # not already exist. Both the directory creation and the copy go through 'execute', so they are skipped (and only
 # printed) in dry-run mode.
@@ -369,7 +369,7 @@ function merge()
 #
 # @example
 #   copy_file "$source_file" "$target_file"
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function copy_file()
 {
     (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
@@ -387,14 +387,14 @@ function copy_file()
 
     _dest_dir=$(dirname "$_dest_file")
 
-    [[ -d "$_dest_dir" ]] || execute mkdir -p "$_dest_dir"                      || with_error "$err_io_failure" _rc "Failed to create directory '$_dest_dir'"
-    (( _rc != success ))  || execute cp "$_src_file" "$_dest_file"              || with_error "$err_io_failure" _rc "Failed to copy file '$_src_file' over '$_dest_file'"
+    [[ -d "$_dest_dir" ]] || execute mkdir -p "$_dest_dir"                      || with_error _rc "$err_io_failure" "Failed to create directory '$_dest_dir'"
+    (( _rc != success ))  || execute cp "$_src_file" "$_dest_file"              || with_error _rc "$err_io_failure" "Failed to copy file '$_src_file' over '$_dest_file'"
     (( _rc != success ))  || trace_files "copied" "$_src_file" "$_dest_file"
     (( ++summary_copied_count ))
     (( _rc == success ))  || return "$_rc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Splices the SoT file's shared block (the content between '$shared_begin_marker' and
 # '$shared_end_marker') into the target file, replacing the target's own shared block in place while leaving
 # everything before and after it untouched. Goes through 'execute', so it is skipped (and only printed) in
@@ -413,7 +413,7 @@ function copy_file()
 #
 # @example
 #   copy_shared_block "$source_file" "$target_file"
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function copy_shared_block()
 {
     (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
@@ -435,7 +435,7 @@ function copy_shared_block()
     exit_if_has_bugs
 
     local _tmp_file=''
-    _tmp_file=$(mktemp)                                                         || with_error "$err_io_failure" _rc "Failed to create a temporary file"
+    _tmp_file=$(mktemp)                                                         || with_error _rc "$err_io_failure" "Failed to create a temporary file"
     (( _rc == success ))                                                        || { rm -f "$_tmp_file"; return "$_rc"; }
 
     {
@@ -444,7 +444,7 @@ function copy_shared_block()
         sed -n "${_dest_end_line},\$p" "$_dest_file"
     } > "$_tmp_file"
 
-    execute cp "$_tmp_file" "$_dest_file"                                       || with_error "$err_io_failure" _rc "Failed to copy the temporary file '$_tmp_file' over '$_dest_file'"
+    execute cp "$_tmp_file" "$_dest_file"                                       || with_error _rc "$err_io_failure" "Failed to copy the temporary file '$_tmp_file' over '$_dest_file'"
     (( _rc == success ))                                                        || return "$_rc"
 
     rm -f "$_tmp_file"

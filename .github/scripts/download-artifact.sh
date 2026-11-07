@@ -113,7 +113,7 @@ if [[ -d "$artifacts" && -n "$(ls -A "$artifacts")" ]]; then
             execute rm -rf "$artifacts"
             ;;
         2)  info "Renaming the directory '$artifacts' to '$renamed_artifacts_dir'..."
-            execute mv "$artifacts" "$renamed_artifacts_dir"                    || with_error "$err_io_failure" rc "Failed to copy '$artifacts' to '$renamed_artifacts_dir'"
+            execute mv "$artifacts" "$renamed_artifacts_dir"                    || with_error rc "$err_io_failure" "Failed to copy '$artifacts' to '$renamed_artifacts_dir'"
             ;;
         3)  trace "Exiting the script."
             exit 0
@@ -139,8 +139,8 @@ runs_text=$(gh run list \
                  --status success \
                  --limit 100 \
                  --json databaseId \
-                 --jq '.[].databaseId')                                         || with_error "$err_tool_error" rc "Query for successful runs of workflow '$workflow_id' failed ('gh run list...')."
-[[ $rc -ne $success || -z $runs_text ]] || readarray -t runs <<< "$runs_text"   || with_error "$err_io_failure" rc "'readarray' failed"
+                 --jq '.[].databaseId')                                         || with_error rc "$err_tool_error" "Query for successful runs of workflow '$workflow_id' failed ('gh run list...')."
+[[ $rc -ne $success || -z $runs_text ]] || readarray -t runs <<< "$runs_text"   || with_error rc "$err_io_failure" "'readarray' failed"
 (( rc == success ))                                                             || exit_with_error "Failed to retrieve the list of successful runs of the workflow '$workflow_id' in the repository '$repository'." -ec "$rc"
 (( ${#runs[@]} > 0 ))                                                           || exit_with_error "No successful runs found for the workflow '$workflow_id' in the repository '$repository'." -ec "$err_not_found"
 
@@ -152,7 +152,7 @@ for run in "${runs[@]}"; do
     trace "Checking run $run for the artifact '$artifact_name'..."
     rc=$success
     artifact_present=false
-    artifacts_list=$(gh api "repos/$repository/actions/runs/$run/artifacts")    || with_error "$err_tool_error" rc "Could not list the artifacts of run $run."
+    artifacts_list=$(gh api "repos/$repository/actions/runs/$run/artifacts")    || with_error rc "$err_tool_error" "Could not list the artifacts of run $run."
     (( rc != success )) || artifact_present=$(jq -r --arg n "$artifact_name" 'any (.artifacts[]; .name==$n)' <<< "$artifacts_list")
     (( rc == success ))                                                         || continue
     if ! $artifact_present; then

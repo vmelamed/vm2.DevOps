@@ -4,12 +4,13 @@
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 # shellcheck disable=SC2089,SC2090
 
-#=============================================================================================
-# This script defines the common environment variables (core state) for the vm2 bash scripts:
-# ci, debugger, quiet, verbose, table_format, dry_run, etc., that define some of the behaviors
-# of the vm2 scripts. It also defines functions for managing these environment variables.
-# Avoid directly modifying these environment variables outside of the provided functions.
-#=============================================================================================
+#===============================================================================================
+# This script defines the common environment constants and variables (core state) for the vm2
+#  bash scripts: ci, debugger, quiet, verbose, table_format, dry_run, etc., that define some of
+# the behaviors of the vm2 scripts. It also defines functions for managing these environment
+# variables. Avoid directly modifying these environment variables outside of the provided
+# functions.
+#===============================================================================================
 
 # Circular include guard
 (( ${__VM2_LIB_CORE_STATE_SH_LOADED:-0} == 1 )) && return 0
@@ -17,6 +18,7 @@ declare -ri __VM2_LIB_CORE_STATE_SH_LOADED=1
 
 declare -x  script_name
 
+# vm2 core error codes
 declare -xi success                     # The command completed successfully.
 declare -xi failure                     # A general, unspecified error occurred.
 
@@ -29,38 +31,40 @@ declare -xi err_argument_value          # An argument has an invalid value (out 
 declare -xi err_invalid_nameref         # An argument has an invalid nameref (e.g., expected a valid variable name reference but got an invalid one)
 declare -xi err_logic_error             # An error occurred in the logic of the script (e.g., bug, invalid state, unexpected condition, etc.)
 
-#---------------------------------------------------------------------------------------------
+# vm2 core constants:
+
+#-----------------------------------------------------------------------------------------------
 # @description The initial current working directory when the script started.
 #   This value is captured at the very beginning of the script execution and remains constant
 #   throughout the script's lifetime. It can be used to return to the original directory if
 #   needed.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -x initial_cwd
 initial_cwd=$(pwd)
 readonly initial_cwd
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description: Indicates whether the script is running under a debugger, e.g. BashDb.
 #    SHOULD NOT BE OVERRIDDEN BY TOP-LEVEL SWITCHES AND OPTIONS!
 # @default false
 # @type boolean
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -x debugger
 [[ -n "${_Dbg_DEBUGGER_LEVEL:-}" || -n "${BASHDB_HOME:-}" ]] && debugger=true || debugger=false
 readonly debugger
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Indicates whether the script is running in CI/CD environment.
 #    The `$ci` value should be based only on environment variables defined by the CI/CD
 #    system, e.g. GitHub Actions, Azure DevOps, etc. Usually env.var. $CI
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -x ci
 ci=${CI:-${GITHUB_ACTIONS:-${TF_BUILD:-false}}}
 readonly ci
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # default values for the core state variables
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xr default_quiet=$ci
 declare -xr default_verbose=false
 declare -xr default_dry_run=false
@@ -68,11 +72,11 @@ declare -xr default__ignore="/dev/null"
 declare -xra table_formats=("graphical" "markdown")
 declare -xr default_table_format="graphical"
 
-#=============================================================================================
+#===============================================================================================
 # Verbose mode
-#=============================================================================================
+#===============================================================================================
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description A global flag indicating whether the script should operate in verbose mode.
 #   When set to `true`, the script provides extra output for debugging and informational
 #   purposes.
@@ -84,10 +88,10 @@ declare -xr default_table_format="graphical"
 #     influenced by the `--verbose` command-line flag
 # @default false
 # @type boolean
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare __verbose=${VERBOSE:-$default_verbose}
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests whether the script is in verbose mode.
 #
 # @exitcode positive=0: Verbose mode is on.
@@ -95,13 +99,13 @@ declare __verbose=${VERBOSE:-$default_verbose}
 #
 # @example
 #   if is_verbose; then echo "Verbose mode is on"; else echo "Verbose mode is off"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_verbose()
 {
     "$__verbose"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Sets the script to verbose mode, enabling detailed output.
 #
 # Notes:
@@ -111,13 +115,13 @@ function is_verbose()
 #
 # @example
 #   set_verbose  # typically called when --verbose flag is passed
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function set_verbose()
 {
     __verbose=true
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Clears the script's verbose mode, disabling detailed output.
 #
 # Notes:
@@ -127,17 +131,17 @@ function set_verbose()
 #
 # @example
 #   unset_verbose  # typically called explicitly to disable verbose mode, allowing less detailed output
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function unset_verbose()
 {
     __verbose=false
 }
 
-#=============================================================================================
+#===============================================================================================
 # Quiet mode
-#=============================================================================================
+#===============================================================================================
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description A global flag indicating whether the script should operate in quiet mode.
 #   When set to `true`, the script suppresses user prompts, does not wait for user's input and
 #   assumes default input value(s) as defined by the input prompts.
@@ -148,10 +152,10 @@ function unset_verbose()
 #     influenced by the `--quiet` command-line flag
 # @default false
 # @type boolean
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare __quiet=${QUIET:-$default_quiet}
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests whether the script is in quiet mode.
 #
 # @exitcode positive=0: Quiet mode is on.
@@ -159,13 +163,13 @@ declare __quiet=${QUIET:-$default_quiet}
 #
 # @example
 #   if is_quiet; then echo "Quiet mode is on"; else echo "Quiet mode is off"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_quiet()
 {
     "$__quiet"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Sets the script to quiet mode, suppressing user prompts.
 #
 # Notes:
@@ -175,13 +179,13 @@ function is_quiet()
 #
 # @example
 #   set_quiet  # typically called when --quiet flag is passed
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function set_quiet()
 {
     __quiet=true
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Sets the script to non-quiet mode, enabling user prompts.
 #
 # Notes:
@@ -191,17 +195,17 @@ function set_quiet()
 #
 # @example
 #   unset_quiet  # typically called explicitly to disable quiet mode, allowing user prompts
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function unset_quiet()
 {
     __quiet=false
 }
 
-#=============================================================================================
+#===============================================================================================
 # Dry-run mode
-#=============================================================================================
+#===============================================================================================
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description A global flag indicating whether the script should perform a "dry" run.
 #   When set to `true`, the script simulates actions without making any actual changes.
 #   - Consider this variable as a private implementation detail; it should not be modified
@@ -211,10 +215,10 @@ function unset_quiet()
 #     influenced by the `--dry-run` command-line flag
 # @default false
 # @type boolean
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare __dry_run=${DRY_RUN:-$default_dry_run}
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests whether the script is in dry-run mode.
 #
 # @exitcode positive=0: Dry-run mode is on.
@@ -222,13 +226,13 @@ declare __dry_run=${DRY_RUN:-$default_dry_run}
 #
 # @example
 #   if is_dry_run; then echo "Dry-run mode is on"; else echo "Dry-run mode is off"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_dry_run()
 {
     "$__dry_run"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Sets the script to dry-run mode, simulating commands without execution.
 #
 # Notes:
@@ -238,13 +242,13 @@ function is_dry_run()
 #
 # @example
 #   set_dry_run  # typically called when --dry-run flag is passed
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function set_dry_run()
 {
     __dry_run=true
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Clears the script's dry-run mode, disabling simulation of commands.
 #
 # Notes:
@@ -255,17 +259,17 @@ function set_dry_run()
 # @example
 #   unset_dry_run  # typically called explicitly to disable dry-run mode, allowing actual
 #   command execution
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function unset_dry_run()
 {
     __dry_run=false
 }
 
-#=============================================================================================
+#===============================================================================================
 # Ignore output
-#=============================================================================================
+#===============================================================================================
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The name of an I/O stream where unwanted output SHOULD be redirected to. E.g.,
 #   'stderr' or even 'stdout' from commands to avoid cluttering the terminal or logs. When you
 #   need to see that output for debugging purposes, you can invoke `show_ignored_output` to
@@ -276,10 +280,10 @@ function unset_dry_run()
 #   `hide_ignored_output()` to manipulate `$_ignore`.
 # @default "/dev/null"
 # @type string
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -x _ignore=$default__ignore
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Redirects the ignored output (held in $_ignore) to the specified file. With no
 #    argument, redirects it to `/dev/stderr` so that output that is normally discarded becomes
 #    visible for debugging purposes.
@@ -294,7 +298,7 @@ declare -x _ignore=$default__ignore
 #
 # @example
 #   show_ignored_output /dev/stdout
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function show_ignored_output()
 {
     (( $# <= 1 )) || bug "${FUNCNAME[0]}() accepts at most one argument (provided $#):" \
@@ -312,23 +316,23 @@ function show_ignored_output()
     _ignore=$_file
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Restores the ignored output (held in $_ignore) to /dev/null.
 #
 # @exitcode success=0
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function hide_ignored_output()
 {
     _ignore=$default__ignore
 }
 
-#=============================================================================================
+#===============================================================================================
 # Trace mode
-#=============================================================================================
+#===============================================================================================
 # Note that this mode is actually a combination of enabling verbose mode, redirecting ignored output to stderr, and turning on
 # bash's trace option.
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Enables trace mode for debugging purposes: turns on verbose mode, redirects
 #    normally-suppressed output to `stderr`, and enables bash's built-in trace option.
 #
@@ -344,7 +348,7 @@ function hide_ignored_output()
 #
 # @example
 #   set_trace_enabled  # typically called when --trace flag is passed
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function set_trace_enabled()
 {
     __verbose=true
@@ -352,7 +356,7 @@ function set_trace_enabled()
     set -x
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Disables trace mode for debugging: turns off verbose mode, redirects normally-
 #   suppressed output back to `/dev/null`, and disables bash's built-in trace option.
 #
@@ -366,7 +370,7 @@ function set_trace_enabled()
 # @example
 #   unset_trace_enabled  # typically called explicitly to disable trace mode, allowing less
 #   detailed output
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function unset_trace_enabled()
 {
     __verbose=false
@@ -374,7 +378,7 @@ function unset_trace_enabled()
     set +x
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests whether tracing is enabled in the script.
 #
 # @exitcode positive=0: Trace is enabled.
@@ -382,17 +386,17 @@ function unset_trace_enabled()
 #
 # @example
 #   if is_trace_enabled; then echo "Trace is enabled."; else echo "Trace is disabled"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_trace_enabled()
 {
     is_verbose && [[ $_ignore != "$default__ignore" && $- =~ .*x.* ]]
 }
 
-#=============================================================================================
+#===============================================================================================
 # Table of dump_vars mode
-#=============================================================================================
+#===============================================================================================
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description A global variable specifying the format for table output from dump_vars. Can be
 #   set to either "graphical" or "markdown".
 #   - Consider this variable as a private implementation detail; it should not be modified
@@ -402,10 +406,10 @@ function is_trace_enabled()
 #     `--graphical` or `--markdown` command-line flags
 # @default in CI - "markdown", otherwise "graphical"
 # @type string with 2 valid values: "graphical" or "markdown"
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare __table_format=${DUMP_FORMAT:-$default_table_format}
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Returns the current table format setting.
 #
 # @arg $1 nameref The name of the variable to store the current table format in.
@@ -414,7 +418,7 @@ declare __table_format=${DUMP_FORMAT:-$default_table_format}
 #
 # @example
 #   get_table_format current_format
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function get_table_format()
 {
     (( $# == 1 ))                       || bug "${FUNCNAME[0]}() requires one parameter ($# provided):" \
@@ -427,7 +431,7 @@ function get_table_format()
     _ret_format="$__table_format"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Sets the table format used for variable dumps (e.g. in `dump_vars`) to either
 #   "graphical" or "markdown".
 #
@@ -442,7 +446,7 @@ function get_table_format()
 #
 # @example
 #   set_table_format "markdown"
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function set_table_format()
 {
     (( $# == 1 ))                                                || bug "${FUNCNAME[0]}() requires one parameter ($# provided):" \
@@ -457,9 +461,9 @@ function set_table_format()
     __table_format=$_table_format
 }
 
-#=============================================================================================
+#===============================================================================================
 # Save/Restore core state
-#=============================================================================================
+#===============================================================================================
 
 # indexes for a state array (used by save_state and restore_state)
 declare -xr key_pid="PID"
@@ -477,7 +481,7 @@ declare -xr key_glob_star="Glob_Star"
 declare -xr key_null_glob="Null_Glob"
 declare -xri state_length=13
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Saves the current state of the global flags: quiet, verbose, dry-run,
 #   `$_ignore`, table format, and the bash tracing option to an associative array, so it can
 #   be restored later by `restore_state`.
@@ -506,19 +510,19 @@ declare -xri state_length=13
 #   # DO NOT USE $state here until it has been restored.
 #   restore_state state
 #   # after being restored the variable $state CAN BE USED again.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # shellcheck disable=SC2004 # $/${} is unnecessary on arithmetic variables.
 function save_state()
 {
-    (( $# == 1 ))                             || bug "${FUNCNAME[0]}() expects exactly one argument (provided $#):" \
-                                                     "  - the name of an array variable that will store the saved state" \
-                                                     -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_associative_array "$1" || bug "${FUNCNAME[0]}() expects its argument to be the name of an array variable that will store the saved state (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() expects exactly one argument (provided $#):" \
+                                                                                       "  - the name of an array variable that will store the saved state" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 ]] || is_associative_array "$1"                                   || bug "${FUNCNAME[0]}() expects its argument to be the name of an array variable that will store the saved state (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
     exit_if_has_bugs
 
     local -n __state="$1"
 
-    [[ ! -v __state[$key_pid] ]] || (( __state[$key_pid] == 0 ))                    || bug "${FUNCNAME[0]}() must be called with a unused or previously restored state." -ec "$err_logic_error"
+    [[ ! -v __state[$key_pid] ]] || (( __state[$key_pid] == 0 ))                || bug "${FUNCNAME[0]}() must be called with a unused or previously restored state." -ec "$err_logic_error"
     [[ ! -v __state[$key_subshell_pid] ]] || (( __state[$key_subshell_pid] == -1 )) || bug "${FUNCNAME[0]}() must be called with a unused or previously restored state." -ec "$err_logic_error"
     exit_if_has_bugs
 
@@ -541,7 +545,7 @@ function save_state()
     __state[$key_null_glob]=$(shopt -p nullglob) || true
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Restores the state of the global flags from a state previously stored by
 #   `save_state`.
 #
@@ -560,19 +564,19 @@ function save_state()
 #
 # @example
 #   restore_state state  # typically called at the end of dump_vars
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # shellcheck disable=SC2004 # $/${} is unnecessary on arithmetic variables.
 # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
 function restore_state()
 {
     local -i _rc=$success
 
-    (( $# == 1 || $# == 2 ))                  || bug "${FUNCNAME[0]}() expects exactly one argument:" \
-                                                     "  - the name of an array variable that will store the saved state" \
-                                                     "  - an optional flag whether to preserve/restore the number of errors" \
-                                                     -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_associative_array "$1" || bug "${FUNCNAME[0]}() expects its argument to be the name of an associative array variable where 'save_state' has stored the global state (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
-    [[ ! -v 2 ]] || is_boolean "$2"           || bug "${FUNCNAME[0]}() expects its second argument to be a boolean indicating whether to preserve or restore the number of errors (provided '${2-<missing>}')." -ec "$err_argument_value"
+    (( $# == 1 || $# == 2 ))                                                    || bug "${FUNCNAME[0]}() expects exactly one argument:" \
+                                                                                       "  - the name of an array variable that will store the saved state" \
+                                                                                       "  - an optional flag whether to preserve/restore the number of errors" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 ]] || is_associative_array "$1"                                   || bug "${FUNCNAME[0]}() expects its argument to be the name of an associative array variable where 'save_state' has stored the global state (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
+    [[ ! -v 2 ]] || is_boolean "$2"                                             || bug "${FUNCNAME[0]}() expects its second argument to be a boolean indicating whether to preserve or restore the number of errors (provided '${2-<missing>}')." -ec "$err_argument_value"
     exit_if_has_bugs
 
     # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
@@ -581,8 +585,8 @@ function restore_state()
 
     (( ${#__state[@]} >= state_length )) &&
     [[ -v __state[$key_pid] ]]           && (( __state[$key_pid] == BASHPID )) &&
-    [[ -v __state[$key_subshell_pid] ]]  && (( __state[$key_subshell_pid] == ${BASH_SUBSHELL:-0} )) ||
-                                                 bug "${FUNCNAME[0]}() must be called with a state that was stored by 'save_state()' in this shell/sub-shell." -ec "$err_logic_error"
+    [[ -v __state[$key_subshell_pid] ]]  && (( __state[$key_subshell_pid] == ${BASH_SUBSHELL:-0} )) \
+                                                                                || bug "${FUNCNAME[0]}() must be called with a state that was stored by 'save_state()' in this shell/sub-shell." -ec "$err_logic_error"
     exit_if_has_bugs
 
     __state[$key_pid]=0
@@ -599,7 +603,7 @@ function restore_state()
     eval "${__state[$key_null_glob]:-true}"        || true
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Sets whether the globstar option should be enabled or disabled.
 #
 # @arg $1 bool _enable Whether the globstar option should be enabled (`true`) or disabled
@@ -613,25 +617,25 @@ function restore_state()
 #   set_glob_star true
 #   ...
 #   restore_state state
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function set_glob_star()
 {
-    (( $# == 1 ))                   || bug "${FUNCNAME[0]}() expects exactly one argument:" \
-                                           "  - a boolean value indicating whether the globstar option should be enabled" \
-                                           -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_boolean "$1" || bug "${FUNCNAME[0]}() expects the first argument to be a boolean value" -ec "$err_argument_type"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() expects exactly one argument:" \
+                                                                                       "  - a boolean value indicating whether the globstar option should be enabled" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 ]] || is_boolean "$1"                                             || bug "${FUNCNAME[0]}() expects the first argument to be a boolean value" -ec "$err_argument_type"
     exit_if_has_bugs
 
     local _enable=$1
 
     if $_enable; then
-        shopt -s globstar || true
+        shopt -s globstar                                                       || true
     else
-        shopt -u globstar || true
+        shopt -u globstar                                                       || true
     fi
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Sets whether the nullglob option should be enabled or disabled.
 #
 # @arg $1 bool _enable Whether the nullglob option should be enabled (`true`) or disabled
@@ -645,13 +649,13 @@ function set_glob_star()
 #   set_null_glob true
 #   ...
 #   restore_state state
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function set_null_glob()
 {
-    (( $# == 1 ))                            || bug "${FUNCNAME[0]}() expects exactly one argument:" \
-                                                    "  - a boolean value indicating whether the nullglob option should be enabled" \
-                                                    -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_boolean "$1"          || bug "${FUNCNAME[0]}() expects the first argument to be a boolean value" -ec "$err_argument_type"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() expects exactly one argument:" \
+                                                                                       "  - a boolean value indicating whether the nullglob option should be enabled" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 ]] || is_boolean "$1"                                             || bug "${FUNCNAME[0]}() expects the first argument to be a boolean value" -ec "$err_argument_type"
     exit_if_has_bugs
 
     local _enable=$1

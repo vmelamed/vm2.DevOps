@@ -3,11 +3,11 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-#=============================================================================================
+#===============================================================================================
 # This script defines generic functions for reading values out of XML documents (e.g. .csproj,
 # .props, NuGet.config files) via `yq`'s XML support. It knows nothing about dotnet, MSBuild,
 # or any other specific XML dialect -- callers supply the file and the query.
-#=============================================================================================
+#===============================================================================================
 
 # Circular include guard
 (( ${__VM2_LIB_XML_SH_LOADED:-0} == 1 )) && return 0
@@ -21,7 +21,7 @@ declare -xri err_tool_error
 
 declare -x _ignore
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Reads a single value out of an XML file via `yq`'s XML support, addressed by
 #   element path or attribute, e.g. '.Project.PropertyGroup.IncludeSymbols' for an element, or
 #   '.Project.ItemGroup.PackageReference.+@Version' for an attribute.
@@ -55,7 +55,7 @@ declare -x _ignore
 # @example
 #   declare include_symbols
 #   get_xml_value "MyPackage.csproj" ".Project.PropertyGroup.IncludeSymbols" include_symbols
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function get_xml_value()
 {
     (( $# == 3 ))                    || bug "${FUNCNAME[0]}() requires exactly 3 arguments (provided $#):" \

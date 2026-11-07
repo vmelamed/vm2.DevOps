@@ -3,12 +3,12 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-#=============================================================================================
+#===============================================================================================
 # This script defines functions and regular expressions for working with semantic versions
 # (SemVer 2.0.0) and MinVer tags.
 # It includes functions for validating and comparing semantic versions, parsing version
 # components.
-#=============================================================================================
+#===============================================================================================
 
 # Circular include guard
 (( ${__VM2_LIB_SEMVER_SH_LOADED:-0} == 1 )) && return 0
@@ -66,7 +66,7 @@ declare -xr semverTagRegex="^$minverTagPrefixRex$semverRex$"
 declare -xr semverTagPrereleaseRegex="^$minverTagPrefixRex$semverPrereleaseRex$"
 declare -xr semverTagReleaseRegex="^$minverTagPrefixRex$semverReleaseRex$"
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Dumps the SemVer/MinVer regular expression constants to stdout, grouped by
 #   category, via `dump_vars`.
 #
@@ -76,7 +76,7 @@ declare -xr semverTagReleaseRegex="^$minverTagPrefixRex$semverReleaseRex$"
 #
 # @example
 #   print_semver_regexes
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function print_semver_regexes()
 {
     dump_vars \
@@ -98,7 +98,7 @@ function print_semver_regexes()
         semverTagPrereleaseRegex
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates the MinVer tag prefix and (optionally) the MinVer prerelease
 #   identifier template against their expected regular expressions.
 #
@@ -114,7 +114,7 @@ function print_semver_regexes()
 #
 # @example
 #   validate_semverTagComponents "v" "preview.0"
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function validate_semverTagComponents()
 {
     (( $# == 1 || $# == 2 ))                      || bug "${FUNCNAME[0]}() requires one or two arguments (provided $#):" \
@@ -158,7 +158,7 @@ declare -xri rc_equal
 declare -xri rc_greater_than
 declare -xri rc_less_than
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Compares two semantic versions according to the Semantic
 #   Versioning 2.0.0 specification.
 #
@@ -175,13 +175,13 @@ declare -xri rc_less_than
 #
 # @example
 #   compare_semver "1.2.3" "1.2.4"
-#   case "$?" in
+#   case $? in
 #     "$rc_less_than")     echo "1.2.3 < 1.2.4" ;;
 #     "$rc_equal")         echo "equal" ;;
 #     "$rc_greater_than")  echo "1.2.3 > 1.2.4" ;;
-#     * )                  error "Error comparing versions"  -ec "$?" -sd 3 ;;
+#     * )                  error "Error comparing versions"  -ec $? -sd 3 ;;
 #   esac
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function compare_semver()
 {
     (( $# == 2 ))                      || bug "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
@@ -304,7 +304,7 @@ function compare_semver()
     return "$rc_equal"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests whether two semantic versions are equal.
 #
 # @arg $1 string The first semantic version string.
@@ -317,7 +317,7 @@ function compare_semver()
 #
 # @example
 #   if semver_equal "1.2.3" "1.2.3"; then echo "Versions are equal"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function semver_equal()
 {
     local -i _rc="$success"
@@ -333,7 +333,7 @@ function semver_equal()
     fi
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests whether the first semantic version is greater than the second.
 #
 # @arg $1 string The first semantic version string.
@@ -346,7 +346,7 @@ function semver_equal()
 #
 # @example
 #   if semver_greaterThan "1.2.3" "1.2.2"; then echo "Version 1 is greater"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function semver_greaterThan()
 {
     local -i _rc="$success"
@@ -362,7 +362,7 @@ function semver_greaterThan()
     fi
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests whether the first semantic version is greater than or equal to the
 #   second.
 #
@@ -376,7 +376,7 @@ function semver_greaterThan()
 #
 # @example
 #   if semver_greaterThanOrEqual "1.2.3" "1.2.2"; then echo "Version 1 is greater or equal"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function semver_greaterThanOrEqual()
 {
     local -i _rc="$success"
@@ -392,7 +392,7 @@ function semver_greaterThanOrEqual()
     fi
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests whether the first semantic version is less than the second.
 #
 # @arg $1 string The first semantic version string.
@@ -405,7 +405,7 @@ function semver_greaterThanOrEqual()
 #
 # @example
 #   if semver_lessThan "1.2.3" "1.2.4"; then echo "Version 1 is less"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function semver_lessThan()
 {
     local -i _rc="$success"
@@ -421,7 +421,7 @@ function semver_lessThan()
     fi
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests whether the first semantic version is less than or equal to the second.
 #
 # @arg $1 string The first semantic version string.
@@ -434,7 +434,7 @@ function semver_lessThan()
 #
 # @example
 #   if semver_lessThanOrEqual "1.2.3" "1.2.4"; then echo "Version 1 is less or equal"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function semver_lessThanOrEqual()
 {
     local -i _rc="$success"
@@ -450,7 +450,7 @@ function semver_lessThanOrEqual()
     fi
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests whether the argument is a valid semantic version (SemVer 2.0.0 format).
 #
 # Notes:
@@ -468,13 +468,13 @@ function semver_lessThanOrEqual()
 #     major=${BASH_REMATCH[$semver_major]}
 #     minor=${BASH_REMATCH[$semver_minor]}
 #   fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_semver()
 {
     __test_with_regex "$@" "$semverRegex"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests whether the argument is a valid semver tag (with the configured MinVer
 #   prefix).
 #
@@ -491,13 +491,13 @@ function is_semver()
 # @example
 #   validate_semverTagComponents "v"
 #   if is_semverTag "v1.2.3"; then echo "Valid tag"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_semverTag()
 {
     __test_with_regex "$@" "$semverTagRegex"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests whether the argument is a valid semver prerelease version.
 #
 # Notes:
@@ -510,13 +510,13 @@ function is_semverTag()
 #
 # @example
 #   if is_semverPrerelease "1.2.3-alpha.1"; then echo "Valid prerelease"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_semverPrerelease()
 {
     __test_with_regex "$@" "$semverPrereleaseRegex"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests whether the argument is a valid semver prerelease tag (with the
 #   configured MinVer prefix).
 #
@@ -533,13 +533,13 @@ function is_semverPrerelease()
 # @example
 #   validate_semverTagComponents "v"
 #   if is_semverPrereleaseTag "v1.2.3-beta.2"; then echo "Valid prerelease tag"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_semverPrereleaseTag()
 {
     __test_with_regex "$@" "$semverTagPrereleaseRegex"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests whether the argument is a valid semver release version (without a
 #   prerelease identifier).
 #
@@ -553,13 +553,13 @@ function is_semverPrereleaseTag()
 #
 # @example
 #   if is_semverRelease "1.2.3"; then echo "Valid release version"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_semverRelease()
 {
     __test_with_regex "$@" "$semverReleaseRegex"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests whether the argument is a valid semver release tag (with the configured
 #   MinVer prefix, no prerelease identifier).
 #
@@ -576,7 +576,7 @@ function is_semverRelease()
 # @example
 #   validate_semverTagComponents "v"
 #   if is_semverReleaseTag "v1.2.3"; then echo "Valid release tag"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_semverReleaseTag()
 {
     __test_with_regex "$@" "$semverTagReleaseRegex"

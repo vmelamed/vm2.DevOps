@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025-2026 Val Melamed
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Moves all commits from a given commit SHA (inclusive) onwards on the current 'main' branch to a new branch,
 # then resets 'main' back to the commit before that SHA and force-pushes it. Use this to split a chain of commits that was
 # accidentally accumulated on 'main' into its own feature branch.
@@ -35,7 +35,7 @@
 #   move-commits-to-branch.sh --commit-sha ff5c2d182c0d3a01c1f1dfd66c9267f0569d9802 --branch feature/my-feature
 # @example
 #   move-commits-to-branch.sh -c ff5c2d1 -b feature/my-feature -n
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 set -euo pipefail
 
 script_name=$(basename "${BASH_SOURCE[0]}")

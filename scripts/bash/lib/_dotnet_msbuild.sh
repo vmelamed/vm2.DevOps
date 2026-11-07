@@ -7,6 +7,7 @@
 (( ${__VM2_LIB_DOTNET_MSBUILD_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_DOTNET_MSBUILD_SH_LOADED=1
 
+# vm2 core error codes
 declare -xri success
 declare -xri failure
 declare -xri negative
@@ -18,13 +19,16 @@ declare -xri err_missing_argument
 declare -xri err_tool_error
 declare -xri err_not_found
 
+# vm2 core constants
 declare -xr ci
 declare -xr warn_em
 declare -xr bug_prefix
 
+# vm2 core variables
 declare -x _ignore
 
-# Build keys used in the build and build result associative arrays:
+# vm2 core keys used in build info associative arrays:
+# build keys:
 declare -xr key_project
 declare -xr key_configuration
 declare -xr key_target_frameworks
@@ -33,37 +37,27 @@ declare -xr key_runtime_identifier
 declare -xr key_platform
 declare -xr key_artifacts_path
 declare -xr key_artifacts_project_name
-
-
-# Build keys used in the build and build result associative arrays:
-declare -xr key_project
-declare -xr key_configuration
-declare -xr key_target_frameworks
-declare -xr key_target_framework
-declare -xr key_runtime_identifier
-declare -xr key_platform
-declare -xr key_artifacts_path
-declare -xr key_artifacts_project_name
-
+# result keys
 declare -xr key_build_result
 declare -xr key_errors_count
 declare -xr key_warnings_count
 declare -xr key_target_path
 declare -xr key_exit_code
 declare -xr key_exit_message
-
+# version keys
 declare -xr key_assembly_version
 declare -xr key_file_version
 declare -xr key_informational_version
 declare -xr key_version
-
+# package keys
 declare -xr key_package_output_path
 declare -xr key_package_version
 declare -xr key_package_id
 
+# vm2 core build info
 declare -xa build_info_keys
 
-declare -xrA dotnet_args_to_msbuild_args=(
+declare -rA __dotnet_args_to_msbuild_args=(
     [--configuration]="-property:Configuration=\"%s\""
     [-c]="-property:Configuration=\"%s\""
 
@@ -106,7 +100,7 @@ declare -xrA dotnet_args_to_msbuild_args=(
     [--disable-build-servers]="@remove"
 )
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Gets the value of a single MSBuild property for a .NET project, via
 #   `dotnet msbuild -getProperty:<Prop>`, without building the project (a static evaluation).
 #   Use `get_msbuild_properties()` instead when two or more properties are needed in one call.
@@ -123,7 +117,7 @@ declare -xrA dotnet_args_to_msbuild_args=(
 # @example
 #   declare target_path
 #   get_msbuild_property "$project" "$key_target_path" target_path
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function get_msbuild_property()
 {
     (( $# == 3 ))                                                               || bug "${FUNCNAME[0]}() requires 3 arguments (provided $#):" \
@@ -137,7 +131,7 @@ function get_msbuild_property()
 
     local -i _rc="$success"
 
-    [[ $1 == *.csproj && -s $1 ]]                                               || with_error "$err_argument_value" _rc "${FUNCNAME[0]}() requires argument 1 to be an existing project file path (provided '${1-<missing>}')."
+    [[ $1 == *.csproj && -s $1 ]]                                               || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be an existing project file path (provided '${1-<missing>}')."
     (( _rc == "$success" ))                                                     || return "$_rc"
 
     local _project="$1"
@@ -158,15 +152,15 @@ function get_msbuild_property()
     [[ -z $preprocessor_symbols ]] || _dotnet_args+=("-property:preprocessor_symbols=\"$preprocessor_symbols\"")
 
     local -a _msbuild_args=()
-    convert_dotnet_args_to_msbuild_args _msbuild_args "${_dotnet_args[@]}"      || return "$?"
+    convert_dotnet_args_to_msbuild_args _msbuild_args "${_dotnet_args[@]}"      || return $?
 
     local -n _property=$3
-    _property=$(dotnet msbuild "${_msbuild_args[@]}" 2> "$_ignore")             || with_error "$err_tool_error" _rc "Executing MSBuild for '$_project' failed." -dec "$?"
+    _property=$(dotnet msbuild "${_msbuild_args[@]}" 2> "$_ignore")             || with_error _rc "$err_tool_error" "Executing MSBuild for '$_project' failed." -dec $?
 
     return "$_rc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Gets the values of two or more MSBuild properties for a .NET project, via
 #   `dotnet msbuild -getProperty:<Prop1>;<Prop2>;...`, without building the project (a static
 #   evaluation). Use `get_msbuild_property()` instead when only one property is needed --
@@ -185,7 +179,7 @@ function get_msbuild_property()
 # @example
 #   declare -A props
 #   get_msbuild_properties "$project" props TargetPath Configuration ArtifactsPath
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function get_msbuild_properties()
 {
     (( $# > 3 ))                                                                || bug  "${FUNCNAME[0]}() requires at least 4 arguments (provided $#):" \
@@ -197,7 +191,7 @@ function get_msbuild_properties()
 
     local -i _rc="$success"
 
-    [[ $1 == *.csproj && -s $1 ]]                                               || with_error "$err_argument_value" _rc "${FUNCNAME[0]}() requires argument 1 to be a project or solution file path (provided '${1-<missing>}')."
+    [[ $1 == *.csproj && -s $1 ]]                                               || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a project or solution file path (provided '${1-<missing>}')."
     (( _rc == "$success" ))                                                     || return "$_rc"
 
     local _project="$1"
@@ -236,10 +230,10 @@ function get_msbuild_properties()
     [[ -z $preprocessor_symbols ]] || _dotnet_args+=("-property:preprocessor_symbols=\"$preprocessor_symbols\"")
 
     local -a _msbuild_args=()
-    convert_dotnet_args_to_msbuild_args _msbuild_args "${_dotnet_args[@]}"      || return "$?"
+    convert_dotnet_args_to_msbuild_args _msbuild_args "${_dotnet_args[@]}"      || return $?
 
     local _json=''
-    _json=$(dotnet msbuild "${_msbuild_args[@]}" 2> "$_ignore")                 || return "$?"
+    _json=$(dotnet msbuild "${_msbuild_args[@]}" 2> "$_ignore")                 || return $?
 
     _properties=()
 
@@ -249,7 +243,7 @@ function get_msbuild_properties()
     done < <(jq -r '.Properties | to_entries[] | "\(.key)=\(.value)"' <<< "$_json")
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Gets the full path to the assembly that was or would be produced by
 #   `dotnet build` using a .NET project and the common dotnet arguments, without actually building
 #   the project. A thin wrapper around `get_msbuild_property()` for the `TargetPath` property.
@@ -265,7 +259,7 @@ function get_msbuild_properties()
 # @example
 #   declare target_path
 #   get_target_path "$project" target_path
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function get_target_path()
 {
     (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
@@ -278,7 +272,7 @@ function get_target_path()
     get_msbuild_property "$1" "$key_target_path" "$2"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Gets the full path to the `ArtifactsPath` directory for a .NET project or
 #   solution, using the common dotnet arguments, without actually building the project.
 #
@@ -303,7 +297,7 @@ function get_target_path()
 # @example
 #   declare artifacts_path
 #   get_artifacts_path "$project" artifacts_path
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function get_artifacts_path()
 {
     (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
@@ -318,7 +312,7 @@ function get_artifacts_path()
 
     if [[ $1 == *.@(sln|slnx) ]]; then
         local -a _solution_projects=()
-        list_solution_projects "$1" _solution_projects                          || return "$?"
+        list_solution_projects "$1" _solution_projects                          || return $?
         _project="${_solution_projects[0]}"
     fi
 
@@ -326,14 +320,14 @@ function get_artifacts_path()
 
     local -i _rc=$success
 
-    [[ -n $_artifacts && $_artifacts == /* ]]                                   || with_error "$err_not_found" _rc "Failed to get correct artifacts path for '$1'. Please use artifacts output layout in your Directory.Build.props. See CONVENTIONS.md"
+    [[ -n $_artifacts && $_artifacts == /* ]]                                   || with_error _rc "$err_not_found" "Failed to get correct artifacts path for '$1'. Please use artifacts output layout in your Directory.Build.props. See CONVENTIONS.md"
     return "$_rc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Converts the `dotnet <command>` arguments in the arguments $2..$N to the
 #   corresponding `dotnet msbuild` arguments, e.g., converts `"--configuration" "Release"` to
-#   `"--property:Configuration=Release"` based on the `dotnet_args_to_msbuild_args` mapping.
+#   `"--property:Configuration=Release"` based on the `__dotnet_args_to_msbuild_args` mapping.
 #   The converted results are placed in the output $1 array.
 #
 # @arg $1 nameref to the array variable in which MSBuild arguments and properties will be
@@ -346,7 +340,7 @@ function get_artifacts_path()
 #   the last argument, with no value following it.
 # @exitcode err_argument_type=3: An option that has been removed from `dotnet` in favor of
 #   another (e.g. `--os`/`--arch` in favor of `--runtime`) was used.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function convert_dotnet_args_to_msbuild_args()
 {
     (( $# > 1 ))                                                                || bug "${FUNCNAME[0]}() requires more than one, arguments (provided $#):" \
@@ -380,17 +374,17 @@ function convert_dotnet_args_to_msbuild_args()
 
         # if the current dotnet option is not mapped to any MSBuild argument,
         # add it as is - most likely it is already a "-p:<prop>=<value>" passed to dotnet directly
-        [[ ! -v dotnet_args_to_msbuild_args[$_dot_option] ]] &&
+        [[ ! -v __dotnet_args_to_msbuild_args[$_dot_option] ]] &&
             _msb_args+=("$_dot_option") &&
             trace "  Added '$_dot_option' as is." &&
             continue
 
         # get the replacement string for the current dotnet option
-        _replacement=${dotnet_args_to_msbuild_args[$_dot_option]}
+        _replacement=${__dotnet_args_to_msbuild_args[$_dot_option]}
 
         if [[ $_replacement == *%s* ]]; then
             # this option needs an argument - the next argument is used as its value
-            (( $# != 0 ))                                                       || with_error "$err_missing_argument" _rc "Missing argument for option '$_dot_option'"
+            (( $# != 0 ))                                                       || with_error _rc "$err_missing_argument" "Missing argument for option '$_dot_option'"
             (( _rc == success ))                                                || return "$_rc"
             # consume the next argument as the value for the current MSBuild property
             _arg=$1
@@ -410,7 +404,7 @@ function convert_dotnet_args_to_msbuild_args()
             # process the instruction part: it may contain special directives like @remove, @warning, or @error:
             [[ $_part == @remove* ]]  && _remove=true                                           && continue # remove this option all together
             [[ $_part == @warning* ]] && warning "${_part#@warning}"                            && continue # report a warning and skip this part
-            [[ $_part == @error* ]]   && with_error "$err_argument_type" _rc "${_part#@error}"  && return "$_rc" # report and return an error
+            [[ $_part == @error* ]]   && with_error _rc "$err_argument_type" "${_part#@error}"  && return "$_rc" # report and return an error
 
 
             # or it is a format string for printf with a single argument - _arg, printf into $_msb_option
@@ -428,11 +422,11 @@ function convert_dotnet_args_to_msbuild_args()
     done
 }
 
-declare -xr property_value_rex='^[[:space:]]*([[:alpha:]_][[:alnum:]_]*)=(.*)$'
-declare -xr build_result_rex='^[[:space:]]*Build (succeeded|FAILED).*$'
-declare -xr count_errors_rex='^[[:space:]]*([0-9]+) (Error|Warning).*$'
+declare -r __property_value_rex='^[[:space:]]*([[:alpha:]_][[:alnum:]_]*)=(.*)$'
+declare -r __build_result_rex='^[[:space:]]*Build (succeeded|FAILED).*$'
+declare -r __count_errors_rex='^[[:space:]]*([0-9]+) (Error|Warning).*$'
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Extracts build information from the output of a 'dotnet build' command and
 #   populates the specified associative array with the results at keys from the
 #   `$build_info_keys` array. For a solution (not a single *.csproj), the per-project keys
@@ -453,7 +447,7 @@ declare -xr count_errors_rex='^[[:space:]]*([0-9]+) (Error|Warning).*$'
 #   validation gate).
 # @exitcode err_argument_value=4: argument 1 is not an existing, non-empty project or solution
 #   file.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function extract_dotnet_build_info()
 {
     (( $# == 3 ))                                                               || bug "${FUNCNAME[0]}() requires exactly three arguments (provided $#):" \
@@ -467,7 +461,7 @@ function extract_dotnet_build_info()
 
     local -i _rc="$success"
 
-    [[ $1 == *.@(slnx|sln|csproj) && -s $1 ]]                                   || with_error "$err_argument_value" _rc "${FUNCNAME[0]}() requires argument 1 to be a project or solution file path (provided '${1-<missing>}')."
+    [[ $1 == *.@(slnx|sln|csproj) && -s $1 ]]                                   || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a project or solution file path (provided '${1-<missing>}')."
     (( _rc == success ))                                                        || return "$_rc"
 
     local _project_file="$1"
@@ -493,17 +487,17 @@ function extract_dotnet_build_info()
     local _echo=false
     # shellcheck disable=SC2004 # Variable: _line, _property, _echo, _extracted, key_build_result, key_warnings_count, key_errors_count - defined elsewhere
     while IFS= read -r _line || [[ -n $_line ]]; do
-        if [[ $_line =~ $property_value_rex ]]; then
+        if [[ $_line =~ $__property_value_rex ]]; then
             _property="${BASH_REMATCH[1]}"
             if is_in "$_property" "${build_info_keys[@]}"; then
                 # we are interested in this property - store its value in the associative array
                 _extracted["$_property"]=$(rtrim "${BASH_REMATCH[2]}")
             fi
-        elif [[ $_line =~ $build_result_rex ]]; then
+        elif [[ $_line =~ $__build_result_rex ]]; then
             # get the build result from the matched line
             _extracted[$key_build_result]="${BASH_REMATCH[1]}"
             _echo=true
-        elif [[ $_line =~ $count_errors_rex ]]; then
+        elif [[ $_line =~ $__count_errors_rex ]]; then
             # get the errors count from the matched line
             [[ ${BASH_REMATCH[2]} == "Error" ]] &&
                 _extracted[$key_errors_count]=${BASH_REMATCH[1]} ||
@@ -527,7 +521,7 @@ function extract_dotnet_build_info()
     restore_state state
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Displays a formatted summary of build information stored in an associative
 #   array (as populated by `extract_dotnet_build_info()`).
 #
@@ -537,7 +531,7 @@ function extract_dotnet_build_info()
 #
 # @stdout Formatted table (via dump_vars) with the build result, warning/error counts, version
 #   information, packages, target paths, etc.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function display_dotnet_build_summary()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument (provided $#):" \

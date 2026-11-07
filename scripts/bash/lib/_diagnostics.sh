@@ -3,33 +3,16 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # This script defines diagnostic functions for logging messages to stdout, stderr, and trace output.
 # It also defines a global error counter and functions to manipulate it.
-#---------------------------------------------------------------------------------------------
-
-# ╔═════════════════════════════════════════════════════════════════════════════╗
-# ║ IMPORTANT: The to_* functions are designed to be used on the RIGHT side     ║
-# ║ of a pipe. Never pipe a function that SETS VARIABLES into a to_* function.  ║
-# ║ The left side of a pipe runs in a subshell — all variable assignments are   ║
-# ║ lost. Use two separate lines instead.                                       ║
-# ║                                                                             ║
-# ║ DO NOT:                                                                     ║
-# ║     warning_var x "msg" "default" | to_stdout                               ║
-# ║     # assigns "default" to x in a subshell. The side effect is lost on      ║
-# ║     #  the next line.                                                       ║
-# ║                                                                             ║
-# ║ IT IS OK:                                                                   ║
-# ║       x="default"                                                           ║
-# ║       echo "msg" | to_stdout                                                ║
-# ║                                                                             ║
-# ╚═════════════════════════════════════════════════════════════════════════════╝
+#-----------------------------------------------------------------------------------------------
 
 # Circular include guard
 (( ${__VM2_LIB_DIAGNOSTICS_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_DIAGNOSTICS_SH_LOADED=1
 
-# Declare error codes defined in the core library
+# vm2 core error codes
 declare -xri success
 declare -xri failure
 declare -xri positive
@@ -43,7 +26,24 @@ declare -xri err_missing_argument
 declare -xri err_has_bugs
 declare -xri err_has_errors
 
-#---------------------------------------------------------------------------------------------
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║ IMPORTANT: The to_* functions are designed to be used on the RIGHT side    ║
+# ║ of a pipe. Never pipe a function that SETS VARIABLES into a to_* function. ║
+# ║ The left side of a pipe runs in a subshell — all variable assignments are  ║
+# ║ lost. Use two separate lines instead.                                      ║
+# ║                                                                            ║
+# ║ DO NOT:                                                                    ║
+# ║     warning_var x "msg" "default" | to_stdout                              ║
+# ║     # assigns "default" to x in a subshell. The side effect is lost on     ║
+# ║     #  the next line.                                                      ║
+# ║                                                                            ║
+# ║ IT IS OK:                                                                  ║
+# ║       x="default"                                                          ║
+# ║       echo "msg" | to_stdout                                               ║
+# ║                                                                            ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+#-----------------------------------------------------------------------------------------------
 # @description Reads lines from stdin, echoing each to stdout. Creates an abstraction,
 #   designed to be overridden in other scripts to redirect to alternate destination(s), e.g.,
 #   stdout (the GitHub Actions log file) and the GitHub Actions step summary file.
@@ -60,7 +60,7 @@ declare -xri err_has_errors
 #
 # @example
 #   echo "Build completed" | to_stdout
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function to_stdout()
 {
     local _line
@@ -70,7 +70,7 @@ function to_stdout()
     done
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Reads lines from stdin, echoing each to stderr. Creates an abstraction,
 #   designed to be overridden in other scripts to redirect to alternate destination(s), e.g.,
 #   stdout (the GitHub Actions log file) and the GitHub Actions output file.
@@ -87,7 +87,7 @@ function to_stdout()
 #
 # @example
 #   echo "Warning: file not found" | to_stderr
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function to_stderr()
 {
     local _line
@@ -97,7 +97,7 @@ function to_stderr()
     done
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Reads lines from stdin, echoing each to /dev/stdout. Creates an abstraction,
 #   designed to be overridden in other scripts to redirect to alternate destination(s), e.g.,
 #   to the GitHub Actions output file.
@@ -114,7 +114,7 @@ function to_stderr()
 #
 # @example
 #   echo "version=1.2.3" | to_output
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function to_output()
 {
     local _line
@@ -123,11 +123,11 @@ function to_output()
     done
 }
 
-#=============================================================================================
-# Global error counter
-#=============================================================================================
+#===============================================================================================
+# Global error variables for use by core only
+#===============================================================================================
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description A global error counter.
 # Notes:
 #   - Consider this variable as a private implementation detail; it should not be modified
@@ -138,22 +138,22 @@ function to_output()
 #     recorded.
 # @default false
 # @type boolean
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xi __errors=0
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The most recent error code recorded by the global error counter.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xi __last_error=$success
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The shallowest bash call-stack depth at which an un-flushed error was recorded.
 #   Mirrors `$__bugs_min_depth` -- see its documentation for the full rationale. Meaningless
 #   while `$__errors == 0`.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xi __errors_min_depth=0
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests whether the global error counter has recorded any errors.
 #
 # @exitcode positive=0: At least one error has been recorded.
@@ -165,13 +165,13 @@ declare -xi __errors_min_depth=0
 #   else
 #     echo "No errors."
 #   fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function has_errors()
 {
     return $(( __errors > 0 ? positive : negative ))
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Returns the current value of the global error counter.
 #
 # @stdout int The current value of the global `$errors` counter.
@@ -180,13 +180,13 @@ function has_errors()
 #
 # @example
 #   (( $(get_errors) == 0 )) && echo "No errors." || echo "Errors were encountered."
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function get_errors()
 {
     echo "$__errors"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Sets the global error counter to a specific value.
 #
 # Notes:
@@ -197,37 +197,37 @@ function get_errors()
 #
 # @example
 #   set_errors 0  # sets the global error counter to zero
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function set_errors()
 {
-    (( $# == 1 ))                        || bug "${FUNCNAME[0]}() requires one argument ($# provided):" \
-                                                "  - the new value for the global error counter" -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_non_negative "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be provided as a non-negative integer: the new value for the global error counter (provided '${1-<missing>}')." -ec "$err_argument_type"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument ($# provided):" \
+                                                                                       "  - the new value for the global error counter" -ec "$err_invalid_arguments"
+    [[ ! -v 1 ]] || is_non_negative "$1"                                        || bug "${FUNCNAME[0]}() requires argument 1 to be provided as a non-negative integer: the new value for the global error counter (provided '${1-<missing>}')." -ec "$err_argument_type"
     exit_if_has_bugs
 
     __errors=$1
     (( __errors == 0 || __last_error != 0 )) || __last_error=$failure # unspecified error
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Resets the global error counter to zero.
 #
 # @exitcode success=0
 #
 # @example
 #   reset_errors  # sets the global error counter to zero
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function reset_errors()
 {
     __errors=0
     __last_error=$success
 }
 
-#=============================================================================================
+#===============================================================================================
 # Global bug counter
-#=============================================================================================
+#===============================================================================================
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description A global bug counter.
 # Notes:
 #   - Bugs are different from errors; they (usually) represent obvious mistakes in the calling
@@ -238,17 +238,17 @@ function reset_errors()
 #     The functions usually call this function in the end of the parameter validation block.
 # @default false
 # @type boolean
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xi __bugs=0
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The error code of the last recorded bug.
 # @default 0
 # @type integer
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xi __last_bug=$success
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The shallowest bash call-stack depth (`${#FUNCNAME[@]}`, measured the same way
 #   `bug()` and `exit_if_has_bugs()` each see it from their own call site) at which an
 #   unflushed bug was recorded. Meaningless while `$__bugs == 0`.
@@ -261,10 +261,10 @@ declare -xi __last_bug=$success
 #     before it got a chance to call its own `exit_if_has_bugs()`" (depth < mine) -- the latter
 #     is deferred instead of being exited on by an unrelated, deeper function that happens to
 #     also follow the check-then-exit_if_has_bugs convention.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xi __bugs_min_depth=0
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests the global bug counter and exits the script if any bugs were recorded,
 #   unless the shallowest unflushed bug belongs to an ancestor's still-open validation block
 #   (see `$__bugs_min_depth`), in which case it defers to that ancestor's own
@@ -277,13 +277,13 @@ declare -xi __bugs_min_depth=0
 #
 # @example
 #   exit_if_has_bugs  # exits with code 254 (err_has_bugs) if any bugs were recorded
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function exit_if_has_bugs()
 {
-    (( __bugs == 0 )) && return "$success"
+    (( __bugs == 0 ))                                                           && return "$success"
 
     local -i _depth=${#FUNCNAME[@]}
-    (( __bugs_min_depth >= _depth )) || return "$success" # not mine to report -- defer to the ancestor whose validation block is still open
+    (( __bugs_min_depth >= _depth ))                                            || return "$success" # not mine to report -- defer to the ancestor whose validation block is still open
 
     local -i _bugs=$__bugs
     local -i _ec
@@ -299,7 +299,7 @@ function exit_if_has_bugs()
     exit_with_error -ns "$_bugs bug(s) detected. Please fix the above issues and try again. Exiting the script immediately..." -ec "$_ec"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Should be overridden in the top level script by sourcing _core_args.sh, akin to
 #   a forward declaration in C/C++ for use within this script (e.g., `exit_if_has_errors()`).
 #   Local implementation of usage() to avoid circular dependency with _core_args.sh
@@ -310,7 +310,7 @@ function exit_if_has_bugs()
 # @arg $@ string Ignored -- forwarded to `bug` as part of the "not overridden" message.
 #
 # @exitcode failure=1: Always -- this placeholder always exits.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function usage()
 {
     bug "This implementation of usage() is meant to be a 'forward declaration'!" \
@@ -319,7 +319,7 @@ function usage()
     exit "$failure";
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests the global error counter and exits the script (via `usage`) if any errors
 #   were recorded.
 #
@@ -331,13 +331,13 @@ function usage()
 #
 # @example
 #   exit_if_has_errors  # exits (via usage) with code 1 if errors exist
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function exit_if_has_errors()
 {
     ! has_errors && return "$success"
 
     local -i _depth=${#FUNCNAME[@]}
-    (( __errors_min_depth >= _depth )) || return "$success" # not mine to report -- defer to the ancestor whose validation block is still open
+    (( __errors_min_depth >= _depth ))                                          || return "$success" # not mine to report -- defer to the ancestor whose validation block is still open
 
     local _display_usage=true
     [[ -v 1 ]] && is_boolean "$1" && _display_usage="$1"
@@ -361,11 +361,11 @@ function exit_if_has_errors()
     exit_with_error -ns "$_errors error(s) encountered. Please fix the above issues and try again. Exiting the script immediately..." -ec "$_ec"
 }
 
-#=============================================================================================
+#===============================================================================================
 # Diagnostic messages
-#=============================================================================================
+#===============================================================================================
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Prints one or more message lines with a given prefix, optionally translating
 #   embedded error codes to messages and optionally appending a stack dump. Used internally by
 #   `error()`, `warning()`, `info()`, and `trace()` -- not meant to be called directly from
@@ -402,7 +402,7 @@ function exit_if_has_errors()
 #   further with the immediate caller's source file and line number if `--stack-depth`/`-sd`
 #   was given a value greater than 0), then any remaining lines indented to align under the
 #   first, then (if a stack depth was requested) the call stack via `show_stack`.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function __message()
 {
     local -i _rc="$success"
@@ -540,7 +540,7 @@ declare -xr warning_prefix="$warn_em  WARN:  "
 declare -xr info_prefix="$info_em  INFO:  "
 declare -xr trace_prefix="$trace_em  TRACE: "
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Logs an error message to stderr (via `message`, prefixed with `$error_prefix`)
 # and increments the global error counter.
 #
@@ -568,7 +568,7 @@ declare -xr trace_prefix="$trace_em  TRACE: "
 #   error "File not found: $filename"
 # @example
 #   error "Build failed"
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function error()
 {
     # scan the parameters for --error-code to record it in __last_error
@@ -589,7 +589,7 @@ function error()
     (( ++__errors ))
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Logs an error message to stderr (via `message`, prefixed with `$error_prefix`)
 # and exits immediately with the last error code or `$err_has_errors`.
 #
@@ -612,7 +612,7 @@ function error()
 #
 # @example
 #   exit_with_error -ns "Invalid file specified." -ec "$err_not_file"
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function exit_with_error()
 {
     error "$@"
@@ -623,7 +623,7 @@ function exit_with_error()
     exit "$_ec"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Logs a bug message to stderr (via `message`, prefixed with `$bug_prefix`)
 # and increments the global bug counter. Should be used when there is an obvious bug in
 # the code.
@@ -652,7 +652,7 @@ function exit_with_error()
 #   error "File not found: $filename"
 # @example
 #   error "Build failed"
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function bug()
 {
     # scan the parameters for --error-code to record it in __last_bug
@@ -673,7 +673,7 @@ function bug()
     (( ++__bugs ))
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Logs a bug message to stderr (via `message`, prefixed with `$bug_prefix`)
 # and exits immediately with the last error code or `$err_has_bugs`.
 #
@@ -696,7 +696,7 @@ function bug()
 #
 # @example
 #   exit_with_bug -ns "Invalid file specified." -ec "$err_not_file"
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function exit_with_bug()
 {
     bug "$@"
@@ -707,7 +707,7 @@ function exit_with_bug()
     exit "$_ec"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Logs a message with a fatal prefix and exits with the specified error code.
 #
 # Notes:
@@ -732,7 +732,7 @@ function exit_with_bug()
 #
 # @example
 #   fatal_exit "File not found: $filename" -ec $err_file_not_found
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function fatal_exit()
 {
     local -i _exit_code=$failure
@@ -749,7 +749,7 @@ function fatal_exit()
     exit "$_exit_code"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Logs a warning message to stderr (via `message`, prefixed with
 #   `$warning_prefix`).
 #
@@ -776,14 +776,14 @@ function fatal_exit()
 #   warning "The option is deprecated"
 # @example
 #   warning -sd 3 "Missing optional configuration"
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function warning()
 {
     __message "$warning_prefix" --no-stack "$@" > >(to_stderr); wait "$!" || true
 }
 
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Logs an informational message to stdout (via `message`, prefixed with
 #   `$info_prefix`).
 #
@@ -812,13 +812,13 @@ function warning()
 #   info "Starting build process"
 # @example
 #   echo "Configuration loaded" | info
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function info()
 {
     __message "$info_prefix" --no-stack "$@" > >(to_stdout); wait "$!" || true
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Logs a trace message to stderr (via `message`, prefixed with `$trace_prefix`),
 #   but only when verbose mode is enabled.
 #
@@ -846,14 +846,14 @@ function info()
 #   trace "Processing item: $item"
 # @example
 #   echo "Debug: variable value = $var" | trace
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function trace()
 {
     is_verbose || return "$success"
     __message "$trace_prefix" --no-stack "$@" >&2
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Displays the passed-in warning about a variable's value, and sets that variable
 #   to a specified default value.
 #
@@ -873,7 +873,7 @@ function trace()
 #
 # @example
 #   warning_var timeout "Timeout not specified." 30
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function warning_var()
 {
     (( $# == 3 ))                                                               || bug "${FUNCNAME[0]}() requires three arguments ($# provided):" \
@@ -892,7 +892,7 @@ function warning_var()
     _var="$3"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Displays the current call stack. Consider redirecting the output to stderr at
 #   the call site.
 #
@@ -908,7 +908,7 @@ function warning_var()
 #
 # @example
 #   show_stack 2 3 # typically called during debugging or error handling
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function show_stack()
 {
     local _skip=${1:-0}
@@ -937,7 +937,7 @@ function show_stack()
     return "$success"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Determines the appropriate command to use for summary output based on the
 #   environment: outside CI, when `glow` is present, it uses `glow` for pretty printing of
 #   markdown. Otherwise (in CI, or when `glow` is absent), it uses `to_stdout`. Changes the
@@ -945,7 +945,7 @@ function show_stack()
 #
 # Notes: consider this variable an implementation detail and never use directly. Instead
 #   redirect output to `to_summary` function
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -a __summary_output
 
 declare -xr ci
@@ -963,7 +963,7 @@ fi
 
 readonly __summary_output
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Logs one or more summary messages with a `## Summary` markdown heading, via
 # `__summary_output` — so, if glow is installed, the summary will be pretty-printed using
 #   glow; otherwise, it will be sent to `to_stdout` as a markdown. Creates an abstraction,
@@ -982,7 +982,7 @@ readonly __summary_output
 #   to_summary "Build completed successfully"
 # @example
 #   echo "Deployment finished" | to_summary
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # shellcheck disable=SC2120 # to_summary references arguments, but none are ever passed - usually passed in stdin
 function to_summary()
 {
@@ -995,7 +995,7 @@ function to_summary()
     done | "${__summary_output[@]}"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Returns the current time in microseconds since the epoch. us stands for
 #   microseconds: visually close to the Greek letter mu - 'μ', the symbol for micro.
 #
@@ -1010,13 +1010,13 @@ function to_summary()
 #   sleep 1
 #   point1_us=$(now_us)
 #   echo "Elapsed time: $((point1_us - point0_us)) us"
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function now_us()
 {
     echo "${EPOCHREALTIME//[!0-9]/}"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Switches a chain of fallible steps to the error track (railway-oriented
 #   programming by hand): records a vm2 `$err_*` code in the caller's variable and reports the
 #   failure with `error`. Meant to be called right after the failed command, as
@@ -1028,39 +1028,43 @@ function now_us()
 #
 #   The stack dump and the `@ file (line)` location skip this function and start at its caller.
 #
-# @arg $1 integer The vm2 error code (`$err_*`) to record and report, in the range [1, 255].
-# @arg $2 string The name of a declared integer variable that receives the code from `$1`.
+#   The output variable comes first, against the usual rule (outputs after inputs), so that a
+#   call reads like the assignment it performs: `with_error _rc "$err_x" ...` sets `_rc` to
+#   `$err_x`, the way `readarray -t arr < <(...)` puts its target before its source.
+#
+# @arg $1 string The name of a declared integer variable that receives the code from `$2`.
+# @arg $2 integer The vm2 error code (`$err_*`) to record and report, in the range [1, 255].
 # @arg $@ string The message parts for `error`; MAY include `error`'s named parameters.
 #
-# @set The variable named in `$2` is set to `$1`. Also everything `error` sets: the global error
+# @set The variable named in `$1` is set to `$2`. Also everything `error` sets: the global error
 #   counter and the last error code.
 #
 # @exitcode success=0: Always, so that `cmd || with_error ...` does not trip `errexit`. The
-#   failure is carried in the variable named in `$2`.
+#   failure is carried in the variable named in `$1`.
 #
 # @example
 #   declare -i rc=$success
 #   declare results_text=''
 #   declare -a results=()
-#   results_text=$(get_results)                                || with_error "$err_tool_error" rc "Failed to get the results."
+#   results_text=$(get_results)                                || with_error rc "$err_tool_error" "Failed to get the results."
 #   (( rc != success )) || [[ -z $results_text ]] || readarray -t results <<< "$results_text"
-#   (( rc != success )) || some_tool --input "$input_file"     || with_error "$err_tool_error" rc "some_tool failed."
+#   (( rc != success )) || some_tool --input "$input_file"     || with_error rc "$err_tool_error" "some_tool failed."
 #   (( rc == success ))                                        || return "$rc"   # or, in a top-level script: exit_if_has_errors
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function with_error()
 {
     local -i _prev_error=$? # capture the previous command's exit code immediately
 
     (( $# >= 2 ))                                                               || bug "${FUNCNAME[0]}() requires at least two arguments ($# provided):" \
-                                                                                       "  - the actual error code to be reported by 'error'" \
-                                                                                       "  - the name of a variable to receive that code" \
+                                                                                       "  - the name of a variable to receive the error code" \
+                                                                                       "  - the error code to record and report" \
                                                                                        -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || { is_exit_code "$1" && (( $1 > 0 )); }                      || bug "${FUNCNAME[0]}() requires argument 1 to be a valid return code in the range [1, 255] (provided '${1-<missing>}')" -ec "$err_argument_value"
-    [[ ! -v 2 ]] || is_variable  "$2"                                           || bug "${FUNCNAME[0]}() requires argument 2 to be the name of a declared variable (provided '${2-<missing>}')" -ec "$err_argument_value"
+    [[ ! -v 1 ]] || is_variable  "$1"                                           || bug "${FUNCNAME[0]}() requires argument 1 to be the name of a declared variable (provided '${1-<missing>}')" -ec "$err_argument_value"
+    [[ ! -v 2 ]] || { is_exit_code "$2" && (( $2 > 0 )); }                      || bug "${FUNCNAME[0]}() requires argument 2 to be a valid return code in the range [1, 255] (provided '${2-<missing>}')" -ec "$err_argument_value"
     exit_if_has_bugs
 
-    local -i __err_code=$1
-    local -n __err_code_var=$2
+    local -n __err_code_var=$1
+    local -i __err_code=$2
     shift 2
 
     __err_code_var=$__err_code

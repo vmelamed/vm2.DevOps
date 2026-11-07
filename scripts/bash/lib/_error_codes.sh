@@ -3,17 +3,19 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # This script defines standard error codes used by vm2 scripts.
 # Return codes 0 and 1 are used for success and general failure, respectively.
 # Other return codes are used for specific argument errors but the error codes can also be reused by some modules for other purposes.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 
 # Circular include guard
 (( ${__VM2_LIB_ERROR_CODES_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_ERROR_CODES_SH_LOADED=1
 
-declare -x bug_prefix
+#===============================================================================================
+# vm2 core Error Codes: returned exit codes by the functions and scripts in the vm2 ecosystem.
+#===============================================================================================
 
 # RETURN CODES THAT SHOULD NOT BE REUSED FOR OTHER PURPOSES:
 declare -xri success=0                  # The command completed successfully.
@@ -78,6 +80,9 @@ declare -xri err_has_errors=253         # There are errors recorded in the globa
 declare -xri err_has_bugs=254           # There are bugs recorded in the global bug counter. Please, fix the problems above and try again. Exiting the script immediately...
 
 declare -xri err_unknown=255            # An unknown error occurred
+
+# vm2 core constants
+declare -x bug_prefix
 
 declare -rA __error_messages=(
     [$success]="The command completed successfully or positive outcome - 'true'."
@@ -182,7 +187,7 @@ declare -rA __error_names=(
     [$err_unknown]="\$err_unknown"
 )
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Looks up an error code in the `_error_messages` associative array and prints
 #   "<code>: <message>" to stdout. An unrecognized code falls back to the generic "unknown
 #   error" message instead of failing.
@@ -204,7 +209,7 @@ declare -rA __error_names=(
 #
 # @example
 #   error_message "$err_not_found"
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function error_message()
 {
     local -i _rc="$success"
@@ -229,7 +234,7 @@ function error_message()
     printf "vm2 %s (%d): %s" "${__error_names[$_rc]}" "$1" "${__error_messages[$_rc]}"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Prints the corresponding error name. Looks up the error code in the
 # `_error_names` associative array. An unrecognized code prints the literal string
 #   "err_unknown" instead of failing.
@@ -252,7 +257,7 @@ function error_message()
 #
 # @example
 #   error_name "$err_not_found"
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function error_name()
 {
     local -i _rc="$success"

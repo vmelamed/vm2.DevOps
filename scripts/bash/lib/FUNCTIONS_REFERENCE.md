@@ -177,7 +177,7 @@ Logs an error message and exits immediately with the last recorded error code (o
 ### with_error()
 
 Records a vm2 error code in the caller's variable and reports the failure with `error`, adding the failed command's exit
-status; always returns `$success`. Used as `cmd || with_error "$err_…" rc "…"` in a chain of `(( rc != success )) ||`-guarded
+status; always returns `$success`. Used as `cmd || with_error rc "$err_…" "…"` in a chain of `(( rc != success )) ||`-guarded
 steps.
 
 ### bug()

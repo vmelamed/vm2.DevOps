@@ -12,7 +12,7 @@ declare -xri err_argument_type
 declare -xr default_interval
 declare -xr default_timeout
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Builds and prints the usage/help text for 'show-pr-comments.sh'. When '$1' is true, appends the common switches
 # and environment variables sections; otherwise prints only the short usage summary.
 #
@@ -21,7 +21,7 @@ declare -xr default_timeout
 # @exitcode success=0: Always.
 #
 # @stdout The usage text for 'show-pr-comments.sh'.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function usage_text()
 {
     (( $# == 1 ))   || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)." -ec "$err_invalid_arguments"

@@ -3,11 +3,11 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-#=============================================================================================
+#===============================================================================================
 # This script defines functions for working with Git and GitHub repositories.
 # It includes functions for validating GitHub repository owners and names, parsing GitHub
 # URLs, and other Git-related utilities.
-#=============================================================================================
+#===============================================================================================
 
 # Circular include guard
 (( ${__VM2_LIB_GIT_SH_LOADED:-0} == 1 )) && return 0
@@ -70,7 +70,7 @@ declare -xri url_name=5
 readonly __valid_repo_names_msg="GitHub repository names can be up to 100 characters, cannot end with .git, and can contain letters, digits, dots, underscores, and hyphens, but must start with a letter or digit.
 See https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user for details."
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates that the specified repository owner is valid according to GitHub
 #   naming rules, i.e. it matches the regular expression for GitHub owner/organization names.
 #
@@ -86,7 +86,7 @@ See https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-auth
 #
 # @example
 #   if validate_gh_repo_owner "my-org"; then echo "Valid repo owner"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function validate_gh_repo_owner()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the repository owner to validate." -ec "$err_invalid_arguments"
@@ -95,11 +95,11 @@ function validate_gh_repo_owner()
     local -i _rc="$success"
 
     # repo owner can be empty (for user-level repos) or must match the regex for GitHub owner/organization names
-    [[ -z $1 || $1 =~ $repo_owner_regex ]]                                      || with_error "$err_argument_value" _rc "${FUNCNAME[0]}() requires argument 1 to be empty or a valid repository owner (provided '${1-<missing>}')."
+    [[ -z $1 || $1 =~ $repo_owner_regex ]]                                      || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be empty or a valid repository owner (provided '${1-<missing>}')."
     return "$_rc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates that the specified repository name is valid according to GitHub
 #   naming rules, i.e. it matches the regular expression for GitHub repository names and does
 #   not end with `.git`.
@@ -118,7 +118,7 @@ function validate_gh_repo_owner()
 #   if validate_gh_repo_name "my-repo"; then echo "Valid repo name"; fi
 # @example
 #   enter_value "GitHub Repository name" repo_name "$default_repo_name" false validate_gh_repo_name
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function validate_gh_repo_name()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the repository name to validate." -ec "$err_invalid_arguments"
@@ -127,11 +127,11 @@ function validate_gh_repo_name()
     local -i _rc="$success"
 
     # repo name cannot be empty, cannot end with .git, and must match the regex for GitHub repository names above
-    [[ -n $1 && $1 != *.git && $1 =~ $repo_name_regex ]]                        || with_error "$err_argument_value" _rc "${FUNCNAME[0]}() requires argument 1 to be a valid repository name (provided '${1-<missing>}'). $__valid_repo_names_msg"
+    [[ -n $1 && $1 != *.git && $1 =~ $repo_name_regex ]]                        || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a valid repository name (provided '${1-<missing>}'). $__valid_repo_names_msg"
     return "$_rc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates that the specified repository description is valid according to GitHub
 #   rules, i.e. it is between 3 and 350 characters long.
 #
@@ -149,7 +149,7 @@ function validate_gh_repo_name()
 #   if validate_gh_repo_description "This is my repo"; then echo "Valid repo description"; fi
 # @example
 #   enter_value "GitHub Repository description" repo_description "$default_repo_description" false validate_gh_repo_description)
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function validate_gh_repo_description()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the repository description to validate." -ec "$err_invalid_arguments"
@@ -158,11 +158,11 @@ function validate_gh_repo_description()
     local -i _rc="$success"
 
     # GitHub repository descriptions must be between 3 and 350 characters long.
-    (( ${#1} >= 3 && ${#1} <= 350 ))                                            || with_error "$err_argument_value" _rc "${FUNCNAME[0]}() requires argument 1, the repository description, to contain between 3 and 350 characters (provided '${1-<missing>}')."
+    (( ${#1} >= 3 && ${#1} <= 350 ))                                            || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the repository description, to contain between 3 and 350 characters (provided '${1-<missing>}')."
     return "$_rc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests if the specified branch name is valid according to Git's rules.
 #
 # @arg $1 string _branch the branch name to validate.
@@ -172,7 +172,7 @@ function validate_gh_repo_description()
 #
 # @example
 #   if is_valid_branch_name "main"; then echo "Valid branch name"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_valid_branch_name()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() takes 1 argument (provided $#) - a branch name" -ec "$err_invalid_arguments"
@@ -182,7 +182,7 @@ function is_valid_branch_name()
     git check-ref-format --branch "$1" &> "$_ignore"                            || return "$negative"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests if the input string can be a valid commit SHA, or an abbreviation of one:
 #   4 to 64 hexadecimal digits. Checks the format only: only git can tell if the commit exists
 #   and if an abbreviation is unique (e.g. `git cat-file -e "$sha^{commit}"`). 4 is the shortest
@@ -195,7 +195,7 @@ function is_valid_branch_name()
 #
 # @example
 #   is_valid_commit_sha "94f1abe56" && echo "Valid commit SHA!"
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_valid_commit_sha()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() takes 1 argument (provided $#) - a SHA string" -ec "$err_invalid_arguments"
@@ -204,7 +204,7 @@ function is_valid_commit_sha()
     [[ "$1" =~ ^[0-9a-fA-F]{4,64}$ ]]                                           || return "$negative"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates that the specified repository branch name is valid according to Git
 #   branch naming rules, i.e. it is a valid Git ref name.
 #
@@ -221,7 +221,7 @@ function is_valid_commit_sha()
 #   if validate_branch_name "main"; then echo "Valid branch name"; fi
 # @example
 #   enter_value "Default branch name" branch_name "$default_default_branch" false validate_branch_name)
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function validate_branch_name()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() takes 1 argument (provided $#) - a branch name" -ec "$err_invalid_arguments"
@@ -237,7 +237,7 @@ function validate_branch_name()
     return "$_rc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Executes a GitHub CLI (`gh`) command with retry logic for transient failures.
 #
 # Notes:
@@ -266,7 +266,7 @@ function validate_branch_name()
 #   execute_gh_with_retry 3 5 repo create my-repo --public
 # @example
 #   execute_gh_with_retry 3 2 true repo delete owner/repo --yes
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function execute_gh_with_retry()
 {
     (( $# >= 3 ))                                                               || bug "${FUNCNAME[0]}() requires at least three arguments (provided $#):" \
@@ -298,8 +298,8 @@ function execute_gh_with_retry()
     # stderr goes to a temp file to preserve output fidelity (especially newlines), yet still allows us to process them separately
     local _stderr_file=''
     local _stdout_file=''
-    _stderr_file=$(mktemp)                                                      || with_error "$err_io_failure" _rc "Failed to create a temporary file"
-    (( _rc != success )) || _stdout_file=$(mktemp)                              || with_error "$err_io_failure" _rc "Failed to create a temporary file";
+    _stderr_file=$(mktemp)                                                      || with_error _rc "$err_io_failure" "Failed to create a temporary file"
+    (( _rc != success )) || _stdout_file=$(mktemp)                              || with_error _rc "$err_io_failure" "Failed to create a temporary file";
     (( _rc == success ))                                                        || { rm -f "$_stderr_file" "$_stdout_file"; return "$_rc"; }
 
     local _attempt=0
@@ -341,7 +341,7 @@ function execute_gh_with_retry()
     return "$_rc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Executes a `gh api` command with retry logic for transient failures.
 #
 # Notes:
@@ -370,7 +370,7 @@ function execute_gh_with_retry()
 #
 # @example
 #   execute_gh_api_with_retry 3 5 repos/vmelamed/my-repo
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function execute_gh_api_with_retry()
 {
     (( $# >= 3 ))                                                               || bug "${FUNCNAME[0]}() requires at least three arguments (provided $#):" \
@@ -406,8 +406,8 @@ function execute_gh_api_with_retry()
     # stderr and stdout go to temp files to preserve output fidelity (especially newlines), yet still allow us to process them separately
     local _stderr_file=''
     local _stdout_file=''
-    _stderr_file=$(mktemp)                                                      || with_error "$err_io_failure" _rc "Failed to create a temporary file"
-    (( _rc != success ))   || _stdout_file=$(mktemp)                            || with_error "$err_io_failure" _rc "Failed to create a temporary file"
+    _stderr_file=$(mktemp)                                                      || with_error _rc "$err_io_failure" "Failed to create a temporary file"
+    (( _rc != success ))   || _stdout_file=$(mktemp)                            || with_error _rc "$err_io_failure" "Failed to create a temporary file"
     (( _rc == success ))                                                        || { rm -f "$_stderr_file" "$_stdout_file"; return "$_rc"; }
 
     local _attempt=0
@@ -468,11 +468,11 @@ function execute_gh_api_with_retry()
     return "$_rc"
 }
 
-#=============================================================================================
+#===============================================================================================
 # With the following constants and functions we define the repository state: it is an
 # associative array with predefined keys.
 # The following constants define the predefined keys of a repo state:
-#=============================================================================================
+#===============================================================================================
 declare -xr key_root='root'
 declare -xr key_url='url'   # the URL used to access the repo, either SSH or HTTPS
 declare -xr key_schema='schema'
@@ -487,9 +487,9 @@ declare -xr key_default_branch='default_branch'
 declare -xr key_ssh_url='ssh_url'
 declare -xr key_https_url='https_url'
 
-#=============================================================================================
+#===============================================================================================
 # The following list contains the predefined keys of a repo state:
-#=============================================================================================
+#===============================================================================================
 declare -xar repo_state_keys=(
     "$key_root"
     "$key_url"
@@ -513,7 +513,7 @@ declare -xr jq_gh_repo_state="{
 } | to_entries[] | \"\\(.key)=\\(.value)\""
 
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Initializes a repo state to its initial state, where it contains all predefined
 #   keys with empty-string values.
 #
@@ -521,7 +521,7 @@ declare -xr jq_gh_repo_state="{
 #
 # @exitcode success=0: The array was initialized (always, once past the argument validation
 #   gate).
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function initialize_repo_state()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable." -ec "$err_invalid_arguments"
@@ -536,7 +536,7 @@ function initialize_repo_state()
     done
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Retrieves the Git repository state for a specified directory by finding the Git
 #   repository root and parsing the origin remote URL, if it exists and is a GitHub URL.
 #
@@ -564,7 +564,7 @@ function initialize_repo_state()
 #
 # @example
 #   get_repo_state "/home/valo/repos/vm2.Glob" repo_state
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function get_repo_state()
 {
     (( $# == 2 || $# == 3 ))                                                                    || bug "${FUNCNAME[0]}() requires 2 or 3 arguments (provided $#):" \
@@ -609,7 +609,7 @@ function get_repo_state()
     _state["$key_name"]=$_name
     _state["$key_repo"]=$_repo
 
-    [[ $_name == "$_root_name" ]]                                                               || with_error "$err_root_not_repo_name" _rc "The root directory name '$_root_name' does not match the repository name '$_name'."
+    [[ $_name == "$_root_name" ]]                                                               || with_error _rc "$err_root_not_repo_name" "The root directory name '$_root_name' does not match the repository name '$_name'."
 
     $_full_info || return "$_rc" # caller does not want full info - return with what we have from git, without trying to get GitHub API data
 
@@ -629,9 +629,9 @@ function get_repo_state()
     _error_level0=$(get_errors)
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     [[ $_schema == "$repo_ssh_schema_rex"   && ${_gh_state["$key_ssh_url"]}   == "$_url" ||
-       $_schema == "$repo_https_schema_rex" && ${_gh_state["$key_https_url"]} == "$_url"    ]]  || with_error "$err_logic_error" _rc "GitHub API returned URLs '${_gh_state["$key_ssh_url"]}' and '${_gh_state["$key_https_url"]}' that do not match the Git remote URL '$_url'."
-    [[ -n ${_gh_state["$key_repo_id"]}                                                      ]]  || with_error "$err_logic_error" _rc "GitHub API did not return repository identifier."
-    [[ -n ${_gh_state["$key_default_branch"]}                                               ]]  || with_error "$err_logic_error" _rc "GitHub API did not return repository default branch."
+       $_schema == "$repo_https_schema_rex" && ${_gh_state["$key_https_url"]} == "$_url"    ]]  || with_error _rc "$err_logic_error" "GitHub API returned URLs '${_gh_state["$key_ssh_url"]}' and '${_gh_state["$key_https_url"]}' that do not match the Git remote URL '$_url'."
+    [[ -n ${_gh_state["$key_repo_id"]}                                                      ]]  || with_error _rc "$err_logic_error" "GitHub API did not return repository identifier."
+    [[ -n ${_gh_state["$key_default_branch"]}                                               ]]  || with_error _rc "$err_logic_error" "GitHub API did not return repository default branch."
 
     local -i _error_level1
 
@@ -643,7 +643,7 @@ function get_repo_state()
     _state["$key_default_branch"]="${_gh_state["$key_default_branch"]}"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests if the specified repo state has a local Git repository, i.e. if the
 #   `root` key is set to a non-empty, existing directory path.
 #
@@ -651,7 +651,7 @@ function get_repo_state()
 #
 # @exitcode positive=0: If the repo state has a local Git repository.
 # @exitcode negative=1: If it does not.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function has_local_repo()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable." -ec "$err_invalid_arguments"
@@ -663,7 +663,7 @@ function has_local_repo()
     [[ -v _state["$key_root"] && -n ${_state["$key_root"]} && -d ${_state["$key_root"]} ]]
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests if the specified repo state has a remote Git repository, i.e. if the
 #   `url` key is set to a non-empty value.
 #
@@ -671,7 +671,7 @@ function has_local_repo()
 #
 # @exitcode positive=0: If the repo state has a remote Git repository.
 # @exitcode negative=1: If it does not.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function has_remote_repo()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable." -ec "$err_invalid_arguments"
@@ -683,7 +683,7 @@ function has_remote_repo()
     [[ -v _state["$key_url"] && -n ${_state["$key_url"]} ]]
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests if the specified repo state has a remote GitHub repository, i.e. if the
 #   `repo_id` key is set to a non-empty value.
 #
@@ -691,7 +691,7 @@ function has_remote_repo()
 #
 # @exitcode positive=0: If the repo state has a remote GitHub repository.
 # @exitcode negative=1: If it does not.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function has_github_remote()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable." -ec "$err_invalid_arguments"
@@ -703,7 +703,7 @@ function has_github_remote()
     [[ -v _state["$key_repo_id"] && -n ${_state["$key_repo_id"]} ]]
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Reads (deserializes) a repo state from stdin, in `key=value` lines. If a repo
 #   state key is missing from stdin, it is still added, with an empty-string value. Unknown
 #   keys are stored as-is (a trace warning is emitted for each).
@@ -712,7 +712,7 @@ function has_github_remote()
 #
 # @exitcode success=0: The repo state was deserialized (always, once past the argument
 #   validation gate).
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function read_repo_state()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable." -ec "$err_invalid_arguments"
@@ -733,7 +733,7 @@ function read_repo_state()
     done
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Prints the repository state to stdout, one line per predefined key.
 #
 # @arg $1 nameref to an associative array variable holding the repo state to be printed.
@@ -742,7 +742,7 @@ function read_repo_state()
 #   gate).
 #
 # @stdout `Repository state:` followed by one `  key: value` line per predefined key.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function print_repo_state()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable." -ec "$err_invalid_arguments"
@@ -761,7 +761,7 @@ function print_repo_state()
     done
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests if the current or the specified directory is inside a Git working tree.
 #
 # @arg $1 string Path to the directory to test (optional, default: `$initial_cwd`).
@@ -771,7 +771,7 @@ function print_repo_state()
 #
 # @example
 #   if is_inside_work_tree "$PWD"; then echo "Inside Git repo"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_inside_work_tree()
 {
     (( $# == 0 || $# == 1 ))                                                    || bug "${FUNCNAME[0]}() requires 0 or 1 argument (provided $#): path to a directory." -ec "$err_invalid_arguments"
@@ -785,7 +785,7 @@ function is_inside_work_tree()
     git -C "$_path" rev-parse --is-inside-work-tree &> "$_ignore" && return "$positive" || return "$negative"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Retrieves the root of the Git repository working tree for the specified
 #   directory, or the current directory.
 #
@@ -799,7 +799,7 @@ function is_inside_work_tree()
 #
 # @example
 #   root_working_tree "$PWD" _root
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function root_working_tree()
 {
     (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires two arguments (provided $#):" \
@@ -819,7 +819,7 @@ function root_working_tree()
     _repo_root_ref=$(git -C "$_path" rev-parse --show-toplevel 2> "$_ignore")
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests whether local Git metadata is stale enough to justify fetching before
 #   evaluating latest-stable-tag predicates.
 #
@@ -840,7 +840,7 @@ function root_working_tree()
 # @example
 #   should_fetch_for_latest_stable_tag "$repo_dir" && git -C "$repo_dir" fetch
 #   origin --tags --quiet
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function should_fetch_for_latest_stable_tag()
 {
     local -i _rc="$success"
@@ -902,7 +902,7 @@ function should_fetch_for_latest_stable_tag()
     return "$positive"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Ensures that the Git repository in the specified directory has fresh metadata,
 #   by fetching from the remote if `should_fetch_for_latest_stable_tag` recommends it.
 #
@@ -917,7 +917,7 @@ function should_fetch_for_latest_stable_tag()
 #
 # @example
 #   ensure_fresh_git_state "$repo_dir"
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function ensure_fresh_git_state()
 {
     local -i _rc=$positive
@@ -926,7 +926,7 @@ function ensure_fresh_git_state()
 
     if (( _rc == "$positive" )); then
         trace "Git metadata of repository '$1' branch '${2:-main}' appears stale or repository is shallow. Fetching from origin..."
-        git -C "$1" fetch origin "${2:-main}" --quiet 2> "$_ignore"             || with_error "$err_logic_error" _rc "Failed to fetch from origin."
+        git -C "$1" fetch origin "${2:-main}" --quiet 2> "$_ignore"             || with_error _rc "$err_logic_error" "Failed to fetch from origin."
     else
         _rc=$success
         trace "Git metadata of repository '$1' branch '${2:-main}' appears fresh. No fetch needed."
@@ -935,7 +935,7 @@ function ensure_fresh_git_state()
     return "$_rc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Gets the commit hash of the latest stable tag in the specified Git repository.
 #
 # @arg $1 string _dir path to a Git repository.
@@ -950,7 +950,7 @@ function ensure_fresh_git_state()
 #
 # @example
 #   latest_hash=$(get_latest_stable_tag_hash "$repo_dir")
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function get_latest_stable_tag_hash()
 {
     (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() takes 2 arguments (provided $#):" \
@@ -966,8 +966,8 @@ function get_latest_stable_tag_hash()
 
     local -i _rc=$success
 
-    is_inside_work_tree "$_dir"                                                 || with_error "$err_not_git_directory" _rc "${FUNCNAME[0]}() requires the selected directory '$_dir' to be inside a Git working tree."
-    (( _rc != success )) || ! $_should_fetch || ensure_fresh_git_state "$_dir"  || with_error $? _rc "Failed to ensure fresh Git state for '$_dir': $_rc"
+    is_inside_work_tree "$_dir"                                                 || with_error _rc "$err_not_git_directory" "${FUNCNAME[0]}() requires the selected directory '$_dir' to be inside a Git working tree."
+    (( _rc != success )) || ! $_should_fetch || ensure_fresh_git_state "$_dir"  || with_error _rc $? "Failed to ensure fresh Git state for '$_dir': $_rc"
 
     local _latest_stable_tag _latest_stable_hash
 
@@ -984,7 +984,7 @@ function get_latest_stable_tag_hash()
     git -C "$_dir" rev-parse "$_latest_stable_tag^{commit}" 2>"$_ignore"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests if the current commit in the specified directory is after the latest
 #   stable tag. Depends on `get_latest_stable_tag_hash`.
 #
@@ -999,7 +999,7 @@ function get_latest_stable_tag_hash()
 #
 # @example
 #   if is_after_latest_stable_tag "$repo_dir"; then echo "Beyond latest stable"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_after_latest_stable_tag()
 {
     (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() takes 2 arguments (provided $#):" \
@@ -1013,14 +1013,14 @@ function is_after_latest_stable_tag()
     local _latest_stable_hash _commits_after_latest_stable
 
     # get commit of the latest stable tag
-    _latest_stable_hash=$(get_latest_stable_tag_hash "$@")                      || return "$?"
+    _latest_stable_hash=$(get_latest_stable_tag_hash "$@")                      || return $?
 
     # How many commits since the latest stable tag
     _commits_after_latest_stable=$(git -C "${1:-$initial_cwd}" rev-list "$_latest_stable_hash..HEAD" --count 2>"$_ignore")
     (( _commits_after_latest_stable > 0 ))
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests if the current commit in the specified directory is on or after the
 #   latest stable tag. Depends on `get_latest_stable_tag_hash`.
 #
@@ -1034,7 +1034,7 @@ function is_after_latest_stable_tag()
 #
 # @example
 #   if is_on_or_after_latest_stable_tag "$repo_dir"; then echo "Ready for release"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_on_or_after_latest_stable_tag()
 {
     (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() takes 2 arguments (provided $#):" \
@@ -1048,7 +1048,7 @@ function is_on_or_after_latest_stable_tag()
     local _latest_stable_tag_hash
 
     # get commit of the latest stable tag
-    _latest_stable_tag_hash=$(get_latest_stable_tag_hash "$@")                  || return "$?"
+    _latest_stable_tag_hash=$(get_latest_stable_tag_hash "$@")                  || return $?
 
     # Check if current commit is on or after the latest tag
     # Returns 0 if tag commit is an ancestor of HEAD (i.e., HEAD is at or after the tag)

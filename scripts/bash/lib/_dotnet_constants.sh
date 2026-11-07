@@ -7,11 +7,13 @@
 (( ${__VM2_LIB_DOTNET_CONSTANTS_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_DOTNET_CONSTANTS_SH_LOADED=1
 
+# vm2 core error codes
 declare -xri success
 declare -xri err_invalid_arguments
 declare -xri err_argument_value
 declare -xri err_argument_type
 
+# vm2 core constants
 declare -xr bug_prefix
 
 # known return codes from the `dotnet` command
@@ -64,7 +66,7 @@ declare -xrA dotnet_err_names=(
     [$dotnet_err_unknown]="\$dotnet_err_unknown"
 )
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Gets the error message corresponding to a dotnet error code. An unrecognized
 #   code falls back to the generic "Unknown dotnet error code" message rather than failing.
 #
@@ -78,7 +80,7 @@ declare -xrA dotnet_err_names=(
 #
 # @example
 #   dotnet_error_message 1
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function dotnet_error_message()
 {
     local -i _rc=$success
@@ -103,34 +105,34 @@ function dotnet_error_message()
     printf "Dotnet %s (%d): %s" "${dotnet_err_names[$_rc]}" "$1" "${dotnet_err_messages[$_rc]}"
 }
 
-#=============================================================================================
-# Build keys used in the build and build result associative arrays:
-#=============================================================================================
+#===============================================================================================
+# vm2 core build keys used in the build and build result associative arrays:
+#===============================================================================================
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The key used in the build associative arrays with the respective value of the
 #   project name.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xr key_project='Project'
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The key used in the build associative arrays with respective values like
 #   `"Debug"` or `"Release"`. The value is usually specified on the `dotnet` command line with
 #   the switch `--configuration`, or `-property:Configuration=<value>`. If not specified, the
 #   default value is set to "Release" in CI/CD environments ($ci == true), otherwise -
 #   "Debug".
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xr key_configuration='Configuration'
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The key used in the build associative arrays with respective values -
 #   semicolon-separated list of valid target framework monikers (TFMs), like
 #   `"net9.0;net10.0"`.The value MUST be specified in the respective `Directory.Build.props`,
 #   or defined/overridden in project files (`*.csproj`). It does not have a default value.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xr key_target_frameworks='TargetFrameworks'
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The key used in the build associative arrays with respective values of a valid
 #   target framework monikers (TFMs), like `net9.0` or `net10.0`. For single-targeting
 #   projects the value CAN be specified in the respective `Directory.Build.props`, or
@@ -139,28 +141,28 @@ declare -xr key_target_frameworks='TargetFrameworks'
 #   switch `--target` or `-property:TargetFramework=<value>` but the value must be one of the
 #   'TargetFrameworks'. Specifying the key and value for multi-targeting projects ensures that
 #   only one build/pack/publish process is executed with the specified target framework.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xr key_target_framework='TargetFramework'
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The key used in the build associative arrays with respective value of a valid
 #   runtime identifier (RIDs), like `linux-x64` or `win-x64`. It is usually specified on the
 #   `dotnet` command line with the switch `--runtime`, or
 #   `-property:RuntimeIdentifier=<value>`. Not specifying it means the build will produce a
 #   platform-agnostic output.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xr key_runtime_identifier='RuntimeIdentifier'
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The key used in the build associative arrays with respective value of the
 #   platform, like `AnyCPU`, `x64`, or `x86`. It is either derived from `RuntimeIdentifier`
 #   (the vm2 default) or specified on the `dotnet` command line with the switch `--platform`,
 #   or `-property:Platform=<value>`. Not specifying it means the build will use the default
 #   platform.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xr key_platform='Platform'
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The key used in the build associative arrays with respective value of the path
 #   where build artifacts are stored. Usually specified in the respective
 #   `Directory.Build.props`, defined/overridden in project files (`*.csproj`), or specified on
@@ -173,22 +175,22 @@ declare -xr key_platform='Platform'
 #
 #   NOTE: `<UseArtifactsPath>true</UseArtifactsPath>` specified in `Directory.Build.props` is
 #   the adopted convention for the vm2 build system.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xr key_artifacts_path='ArtifactsPath'
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The key used in the build associative arrays with the respective value of the
 #   per-project subfolder name under the artifacts layout's `bin`/`obj`/`publish` directories
 #   (e.g. `artifacts/bin/<ArtifactsProjectName>/<configuration>/`). Defaults to
 #   `$(MSBuildProjectName)` (the project file's own base name, not `$(AssemblyName)`) when
 #   `UseArtifactsOutput=true`. Printed by the vm2 `PrintVersion` target in `Directory.Build.props`.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xr key_artifacts_project_name='ArtifactsProjectName'
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Array of keys representing some of the build keys that are used by the
 #   `dotnet_build` function.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xra build_keys=(
     "$key_project"
     "$key_configuration"
@@ -199,51 +201,51 @@ declare -xra build_keys=(
     "$key_artifacts_project_name"
 )
 
-#=============================================================================================
+#===============================================================================================
 # Build result keys used in the build result associative arrays:
-#=============================================================================================
+#===============================================================================================
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The key used in the build result associative arrays with
 #   respective value like `"succeeded"` or `"FAILED"`
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xr key_build_result='build_result'
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The key used in the build result associative arrays specifying
 #   the number of errors encountered during the build.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xr key_errors_count='errors_count'
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The key used in the build result associative arrays specifying
 #   the number of warnings encountered during the build.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xr key_warnings_count='warnings_count'
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The key used in the build result associative arrays specifying
 #   the built assembly's absolute path.
 #   E.g. /home/runner/work/vm2.Ulid/artifacts/bin/Ulid/release/Ulid.dll
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xr key_target_path='TargetPath'
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The key used in the build result associative arrays specifying
 #   the exit code of the build process.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xr key_exit_code='ExitCode'
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The key used in the build result associative arrays specifying
 #   the message associated with the exit code of the build process.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xr key_exit_message='ExitMessage'
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Array of keys representing some of the build result keys that are used by the
 #   functions `dotnet_build`, `extract_dotnet_build_info, and `display_dotnet_build_summary`.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xra result_keys=(
     "$key_build_result"
     "$key_errors_count"
@@ -253,42 +255,42 @@ declare -xra result_keys=(
     "$key_exit_message"
 )
 
-#=============================================================================================
+#===============================================================================================
 # Version information keys used in the build result associative arrays:
-#=============================================================================================
+#===============================================================================================
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The key used in the build result associative arrays specifying
 #   the assembly version string (usually <major>.0.0.0, e.g. `5.0.0.0`).
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xr key_assembly_version='AssemblyVersion'
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The key used in the build result associative arrays specifying
 #   the assembly version string (usually <major>.<minor>.<patch>.0, e.g.
 #   `5.2.2.0`).
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xr key_file_version='FileVersion'
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The key used in the build result associative arrays specifying
 #   the assembly version string (usually SemVer with build metadata, e.g.
 #   `5.2.2-preview.8.2+f360cddbf3f63f7f0fdcfe52e24fd87dac5472ef`).
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xr key_informational_version='InformationalVersion'
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The key used in the build result associative arrays specifying
 #   the version string. (usually SemVer without build metadata, e.g.
 #   `5.2.2-preview.8.2`).
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xr key_version='Version'
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Array of keys representing some of the version information keys that are used
 #   by the `dotnet_build()`, `extract_dotnet_build_info(), and
 #   `display_dotnet_build_summary()` functions.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xra version_keys=(
     "$key_assembly_version"
     "$key_file_version"
@@ -296,28 +298,28 @@ declare -xra version_keys=(
     "$key_version"
 )
 
-#=============================================================================================
+#===============================================================================================
 # Package information keys used in the build result associative arrays:
-#=============================================================================================
+#===============================================================================================
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The key used in the build result associative arrays specifying
 #   the absolute path to the built package output directory.
 #   E.g. /home/runner/work/vm2.Ulid/artifacts/package/...
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xr key_package_output_path='PackageOutputPath'
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The key used in the build result associative arrays specifying
 #   the package version string. (usually SemVer without build metadata, e.g.
 #   `5.2.2-preview.8.2`).
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xr key_package_version='PackageVersion'
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The key used in the build result associative arrays specifying
 #   the built package ID. E.g. vm2.Ulid.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xr key_package_id='PackageId'
 
 declare -xra package_keys=(

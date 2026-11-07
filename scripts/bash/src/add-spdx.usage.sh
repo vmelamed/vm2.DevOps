@@ -7,7 +7,7 @@ declare -xr script_name
 
 declare -xr common_args_usage
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Prints the usage message for 'add-spdx.sh' to stdout. Does not exit; the caller
 #   ('usage()' in '_core_args.sh') is responsible for exiting after calling this function.
 #
@@ -19,7 +19,7 @@ declare -xr common_args_usage
 #
 # @stdout The usage text (script-specific sections, plus the common switches/environment
 #   variables block when $1 is 'true').
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function usage_text()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."

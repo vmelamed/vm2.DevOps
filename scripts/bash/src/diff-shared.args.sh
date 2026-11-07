@@ -107,7 +107,7 @@ function get_arguments()
     _mktemp_template="diff-shared-log-$(date +%Y%m%d-%H%M%S)-XXXXXX.md"
 
     [[ -n "$summary_file" ]] || {
-        summary_file=$(mktemp -p /tmp "$_mktemp_template")                      || with_error "$err_io_failure" _rc  "Failed to create a temporary file"
+        summary_file=$(mktemp -p /tmp "$_mktemp_template")                      || with_error _rc "$err_io_failure"  "Failed to create a temporary file"
         (( _rc != success )) || add_trap "rm -f ${summary_file@Q}" EXIT
         (( _rc == success ))                                                    || return "$_rc"
     }

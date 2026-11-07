@@ -189,7 +189,7 @@ declare -xA agents_vars_defaults=()
 declare -xa agents_vars_order=()
 declare -xA agents_vars_validators=()
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates the consistency of an application's default-variable tables:
 #   '<app>_vars_defaults' (associative array of default values), '<app>_vars_order' (display
 #   order), and '<app>_vars_validators' (per-variable validator function names). Backfills a
@@ -210,7 +210,7 @@ declare -xA agents_vars_validators=()
 #   function, or a default value that fails its own validator) is reported via 'bug' and
 #   aborts the process via 'exit_if_has_bugs' -- this function never returns a non-zero code
 #   to a caller.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function validate_app_default_vars()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument (provided $#):" \
@@ -267,7 +267,7 @@ function validate_app_default_vars()
     readonly -A "$_vars_validators_name"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Gets the default data for the current repo application's GitHub Actions 'vars':
 #   the default values (copied mostly from '<app>_vars_defaults') and the display order
 #   (copied from '<app>_vars_order'). For 'actions', 'NUGET_SERVER's default value is
@@ -286,7 +286,7 @@ function validate_app_default_vars()
 #
 # @exitcode success=0: Always (the output arrays were populated, or left empty if
 #   '<app>_vars_defaults' is empty).
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
 # shellcheck disable=SC2004 # $/${} is unnecessary on arithmetic variables.
 function get_vars_defaults()
@@ -409,7 +409,7 @@ declare -xra dependabot_secrets_order=(
 declare -xra agents_secrets_order=()
 declare -xra codespaces_secrets_order=()
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates that one application's secrets display-order table
 #   ('<app>_secrets_order') is defined. Unlike 'validate_app_default_vars', there are
 #   no default values or per-secret validators for secrets (secret values are never defaulted
@@ -424,7 +424,7 @@ declare -xra codespaces_secrets_order=()
 # Note: a caller-contract violation (unknown app, or '<app>_secrets_order' not defined) is
 #   reported via 'bug' and aborts the process via 'exit_if_has_bugs' -- this function never
 #   returns a non-zero code to a caller.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function validate_app_default_secrets()
 {
     (( $# == 1 ))                                                               || bug  "${FUNCNAME[0]}() requires one argument (provided $#):" \
@@ -440,7 +440,7 @@ function validate_app_default_secrets()
     exit_if_has_bugs
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Gets the default data for one application's GitHub secrets: a placeholder
 #   default value ('secret_placeholder=$secret_str') for each secret name listed in
 #   '<app>_secrets_order', the display order itself, and (optionally) 'is_valid_secret' as the
@@ -458,7 +458,7 @@ function validate_app_default_secrets()
 #   secret's validation function.
 #
 # @exitcode success=0: Always (the output arrays were populated, or left empty if '<app>_secrets_order' is empty).
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
 # shellcheck disable=SC2004 # $/${} is unnecessary on arithmetic variables.
 function get_secrets_defaults()
@@ -514,7 +514,7 @@ function get_secrets_defaults()
 
 declare -x defaults_validated=false
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates the integrity of the default values for the applications' variables
 #   and secrets ('actions' and 'agents' for variables; 'actions', 'dependabot', and
 #   'codespaces' for secrets -- 'agents' secrets are currently commented out of
@@ -524,7 +524,7 @@ declare -x defaults_validated=false
 # @exitcode success=0: Always (validation failures are reported via 'bug' and abort the
 #   process directly via 'exit_if_has_bugs' inside the called
 #   'validate_app_default_vars'/'validate_app_default_secrets').
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function validate_defaults()
 {
     ! $defaults_validated || return "$success"

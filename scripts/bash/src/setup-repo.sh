@@ -73,9 +73,9 @@ declare -xr key_default_branch
 
 declare -x repo_path=''
 declare -x root_name=''
-#=============================================================================================
+#===============================================================================================
 # Check the prerequisites
-#=============================================================================================
+#===============================================================================================
 
 command -v jq &> "$_ignore"  || error "'jq' is not installed. Please install it first." -ec "$err_tool_not_found"
 command -v gh &> "$_ignore"  || error "'gh' is not installed. Please install it first." -ec "$err_tool_not_found"
@@ -90,17 +90,17 @@ command -v yq &> "$_ignore"  || error "'yq' is not installed. Please install 'yq
                                       " chmod +x ~/.local/bin/yq4" \
                                       -ec "$err_tool_not_found"
 
-#=============================================================================================
+#===============================================================================================
 # Gather the CLI arguments:
-#=============================================================================================
+#===============================================================================================
 source "$script_dir/setup-repo.args.sh"
 source "$script_dir/setup-repo.usage.sh"
 
 get_arguments "$@"
 
-#=============================================================================================
+#===============================================================================================
 # Find and validate vm2_repos, SOT, DevOps directories:
-#=============================================================================================
+#===============================================================================================
 declare -xi rc="$success"
 
 resolve_vm2_repos vm2_repos "$branches" "$branches" || true
@@ -113,9 +113,9 @@ source "$script_dir/setup-repo.defaults.sh"
 source "$script_dir/setup-repo.functions.sh"
 source "$script_dir/setup-repo.audit.sh"
 
-#=============================================================================================
+#===============================================================================================
 # Check the integrity of the default data
-#=============================================================================================
+#===============================================================================================
 validate_defaults
 
 declare -xrA default_local_git_settings
@@ -128,9 +128,9 @@ declare -xr _ci_yaml
 
 exit_if_has_errors
 
-#=============================================================================================
+#===============================================================================================
 # Resolve and validate repo_path:
-#=============================================================================================
+#===============================================================================================
 resolve_repo_root "$vm2_repos" "$repo_path" repo_path _                         || rc=$?
 is_in "$rc" "$success" "$err_dir_with_ci"                                       || usage "Failed to resolve the path of the target repository '$repo_path'." \
                                                                                          -ec "$rc"
@@ -144,9 +144,9 @@ readonly root_name
 
 trace "Repository path: '$repo_path'"
 
-#=============================================================================================
+#===============================================================================================
 # Get the repo state
-#=============================================================================================
+#===============================================================================================
 
 declare -A repo_state=()
 declare -x suggested_repo_name=''
@@ -219,9 +219,9 @@ trace "ci_yaml='$ci_yaml' from \$repo_path"
 
 readonly ci_yaml
 
-#=============================================================================================
+#===============================================================================================
 # Final validation of the inputs and assumptions before we start making any changes or API calls:
-#=============================================================================================
+#===============================================================================================
 
 [[ -s "$ci_yaml" ]]                                                             || error "The specified path '$repo_path' is not a valid project/repository root (missing .github/workflows/CI.yaml)." \
                                                                                          "Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2pkg <name>' to create a valid directory." \
@@ -249,9 +249,9 @@ list_required_checks
 
 has_github_remote repo_state && get_current_nuget_server
 
-#=============================================================================================
+#===============================================================================================
 # Audit
-#=============================================================================================
+#===============================================================================================
 
 if $audit; then
     has_github_remote repo_state                                                || error "The repository in '$repo_path' is not linked to a GitHub remote. Cannot perform audit." \
@@ -274,21 +274,21 @@ if $audit; then
     exit "$success"
 fi
 
-#=============================================================================================
+#===============================================================================================
 # Initialize and configure the repository
-#=============================================================================================
+#===============================================================================================
 
 # list of undos to perform in case of failure or when the script finishes - e.g. to delete the created repository, or undo any changes to the local repository. The undos must be executed in a LIFO order.
 declare -a undos=()
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Prints the recorded `undos` array (commands to revert side effects performed by this run, e.g.
 # deleting a newly created GitHub repository or removing a remote) in LIFO order, so the user can copy-paste them
 # to manually roll back a failed or aborted run. No-op if nothing has been recorded yet.
 #
 # @exitcode success=0: Always.
 # @stdout The list of undo commands in LIFO order, wrapped in explanatory text -- or nothing if `undos` is empty.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function undo_changes()
 {
     is_empty_array undos && return "$success"
@@ -426,9 +426,9 @@ if $configure_local; then
     fi
 fi
 
-#=============================================================================================
+#===============================================================================================
 # Configure the remote repository on GitHub
-#=============================================================================================
+#===============================================================================================
 
 initialize_gh_paths
 initialize_jq_queries
