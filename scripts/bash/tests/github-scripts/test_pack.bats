@@ -371,5 +371,5 @@ EOF
     run _run_pack "$BATS_TEST_TMPDIR/repo" '' src/App/App.csproj
     assert_success
     assert_output --partial "Packages Built Successfully"
-    assert_output --partial "not found or empty"
+    assert_output --partial "not found or is empty"
 }

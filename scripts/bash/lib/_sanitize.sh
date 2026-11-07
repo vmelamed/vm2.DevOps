@@ -3,10 +3,10 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-#=============================================================================================
+#===============================================================================================
 # This script defines functions for sanitizing and validating user input, esp. in GitHub Actions workflows.
 # It includes functions for trimming whitespace and checking for safe input.
-#=============================================================================================
+#===============================================================================================
 
 # Circular include guard
 (( ${__VM2_LIB_SANITIZE_SH_LOADED:-0} == 1 )) && return 0
@@ -34,7 +34,7 @@ declare -x _ignore
 
 declare -x repo_owner
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Trims leading whitespace from a string.
 #
 # @arg $1 string The string to trim.
@@ -46,7 +46,7 @@ declare -x repo_owner
 #
 # @example
 #   trimmed=$(ltrim "  some string  ")
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function ltrim()
 {
     (( $# == 1 )) || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to trim the leading spaces." -ec "$err_invalid_arguments"
@@ -55,7 +55,7 @@ function ltrim()
     printf '%s' "${1#"${1%%[![:space:]]*}"}"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Trims leading whitespaces from the value of a string variable.
 #
 # @arg $1 nameref to a string variable to trim.
@@ -66,7 +66,7 @@ function ltrim()
 # @example
 #   declare var="  some string  "
 #   ltrim_var var
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function ltrim_var()
 {
     (( $# == 1 ))                    || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to trim the leading spaces." -ec "$err_invalid_arguments"
@@ -78,7 +78,7 @@ function ltrim_var()
     _var="${_var#"${_var%%[![:space:]]*}"}"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Trims trailing whitespace from a string.
 #
 # @arg $1 string The string to trim.
@@ -90,7 +90,7 @@ function ltrim_var()
 #
 # @example
 #   trimmed=$(rtrim "  some string  ")
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function rtrim()
 {
     (( $# == 1 )) || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to trim the leading spaces." -ec "$err_invalid_arguments"
@@ -99,7 +99,7 @@ function rtrim()
     printf '%s' "${1%"${1##*[![:space:]]}"}"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Trims trailing whitespaces from the value of a string variable.
 #
 # @arg $1 nameref to a string variable to trim.
@@ -110,7 +110,7 @@ function rtrim()
 # @example
 #   var="  some string  "
 #   rtrim_var var
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function rtrim_var()
 {
     (( $# == 1 ))                    || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to trim the leading spaces." -ec "$err_invalid_arguments"
@@ -122,7 +122,7 @@ function rtrim_var()
     _var="${_var%"${_var##*[![:space:]]}"}"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Trims leading and trailing whitespace from a string.
 #
 # @arg $1 string The string to trim.
@@ -134,7 +134,7 @@ function rtrim_var()
 #
 # @example
 #   trimmed=$(trim "  some string  ")
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function trim()
 {
     (( $# == 1 )) || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to trim the leading spaces." -ec "$err_invalid_arguments"
@@ -148,7 +148,7 @@ function trim()
     printf '%s' "$_value"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Trims leading and trailing whitespaces from the value of a string variable.
 #
 # @arg $1 nameref to a string variable to trim.
@@ -159,7 +159,7 @@ function trim()
 # @example
 #   var="  some string  "
 #   trim var
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function trim_var()
 {
     (( $# == 1 ))                    || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to trim the leading spaces." -ec "$err_invalid_arguments"
@@ -174,7 +174,7 @@ function trim_var()
 
 declare -rx dangerous_chars_regex=$'[;|&$`<>(){}\n\r]'
 declare -rx dangerous_chars_and_whitespaces_regex='[;|&$`<>(){}[:space:]]'
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests if user input is safe by checking for potentially dangerous characters.
 #   If the input is unsafe, prints an error message.
 #
@@ -191,7 +191,7 @@ declare -rx dangerous_chars_and_whitespaces_regex='[;|&$`<>(){}[:space:]]'
 #
 # @example
 #   if is_safe_input "$user_input" true; then echo "Safe input"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_safe_input()
 {
     (( $# == 1 || $# == 2 ))        || bug "${FUNCNAME[0]}() requires one or two arguments (provided $#):" \
@@ -224,7 +224,7 @@ function is_safe_input()
     return "$_rc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates that the input is a boolean value (`true` or `false`).
 #   If the input is not a valid boolean, prints an error message.
 #
@@ -235,7 +235,7 @@ function is_safe_input()
 #
 # @example
 #   if is_safe_boolean "$reset_flag"; then echo "Valid boolean"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_safe_boolean()
 {
     (( $# == 1 )) || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the boolean value to test." -ec "$err_invalid_arguments"
@@ -250,7 +250,7 @@ function is_safe_boolean()
     return "$_rc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates that the input is an integer value.
 #   If the input is not a valid integer, prints an error message.
 #
@@ -261,7 +261,7 @@ function is_safe_boolean()
 #
 # @example
 #   if is_safe_integer "$count"; then echo "Valid integer"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_safe_integer()
 {
     (( $# == 1 )) || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the integer value to test." -ec "$err_invalid_arguments"
@@ -276,7 +276,7 @@ function is_safe_integer()
     return "$_rc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates file paths to prevent directory traversal and dangerous patterns.
 #
 # Notes:
@@ -293,7 +293,7 @@ function is_safe_integer()
 #
 # @example
 #   if is_safe_path "config/settings.json"; then echo "Safe path"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_safe_path()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the file path to test." -ec "$err_invalid_arguments"
@@ -306,16 +306,16 @@ function is_safe_path()
     [[ -n "$_path" ]]                                                           || return "$_rc"
 
     # Reject paths with directory traversal
-    [[ ! "$_path" =~ \.\. ]]                                                    || with_error "$err_unsafe_argument" _rc "The path '$_path' contains directory traversal sequences, which is not allowed."
+    [[ ! "$_path" =~ \.\. ]]                                                    || with_error _rc "$err_unsafe_argument" "The path '$_path' contains directory traversal sequences, which is not allowed."
     # Reject absolute paths starting with /
-    (( _rc != success )) || [[ ! "$_path" =~ ^/ ]]                              || with_error "$err_unsafe_argument" _rc "The path '$_path' is an absolute path, which is not allowed."
+    (( _rc != success )) || [[ ! "$_path" =~ ^/ ]]                              || with_error _rc "$err_unsafe_argument" "The path '$_path' is an absolute path, which is not allowed."
     # Reject paths with dangerous characters
-    (( _rc != success )) || [[ ! "$_path" =~ [\$\`\;] ]]                        || with_error "$err_unsafe_argument" _rc "The path '$_path' contains one or more unsafe characters: \$, \`, ;"
+    (( _rc != success )) || [[ ! "$_path" =~ [\$\`\;] ]]                        || with_error _rc "$err_unsafe_argument" "The path '$_path' contains one or more unsafe characters: \$, \`, ;"
 
     return "$_rc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates file paths to prevent directory traversal and dangerous patterns and
 #   ensures that the path string is a valid path even if it does not exist.
 #
@@ -332,7 +332,7 @@ function is_safe_path()
 #
 # @example
 #   if is_safe_valid_path "config/settings.json"; then echo "Safe path"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_safe_valid_path()
 {
     (( $# == 1 )) || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the file path to test." -ec "$err_invalid_arguments"
@@ -342,7 +342,7 @@ function is_safe_valid_path()
     local -i _rc=$positive
 
     is_safe_path "$_path" ||
-        return "$?"
+        return $?
 
     is_valid_path "$_path" || {
         _rc=$?
@@ -352,7 +352,7 @@ function is_safe_valid_path()
     return "$_rc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates that a path is safe and exists. Depends on `is_safe_path`.
 #
 # @arg $1 string The file or directory path to test.
@@ -364,7 +364,7 @@ function is_safe_valid_path()
 #
 # @example
 #   if is_safe_existing_path "$config_file"; then source "$config_file"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_safe_existing_path()
 {
     (( $# == 1 )) || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the file path to test." -ec "$err_invalid_arguments"
@@ -374,7 +374,7 @@ function is_safe_existing_path()
     local _path="$1"
 
     is_safe_valid_path "$_path" ||
-        return "$?"
+        return $?
 
     [[ -e "$_path" ]] || {
         _rc="$err_non_existent_path"
@@ -384,7 +384,7 @@ function is_safe_existing_path()
     return "$_rc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates that a path is safe, exists, and is a directory. Depends on
 #   `is_safe_existing_path`.
 #
@@ -395,7 +395,7 @@ function is_safe_existing_path()
 #
 # @example
 #   if is_safe_existing_directory "$build_dir"; then cd "$build_dir"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_safe_existing_directory()
 {
     (( $# == 1 )) || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the directory path to test." -ec "$err_invalid_arguments"
@@ -405,7 +405,7 @@ function is_safe_existing_directory()
     local _path="$1"
 
     is_safe_existing_path "$1" ||
-        return "$?"
+        return $?
 
     [[ -d "$1" ]] || {
         _rc="$err_not_directory"
@@ -415,7 +415,7 @@ function is_safe_existing_directory()
     return "$_rc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates that a path is safe, exists, and is a non-empty file. Depends on
 #   `is_safe_existing_path`.
 #
@@ -426,7 +426,7 @@ function is_safe_existing_directory()
 #
 # @example
 #   if is_safe_existing_file "$script"; then bash "$script"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_safe_existing_file()
 {
     (( $# == 1 )) || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the file path to test." -ec "$err_invalid_arguments"
@@ -436,7 +436,7 @@ function is_safe_existing_file()
     local _path="$1"
 
     is_safe_existing_path "$1" ||
-        return "$?"
+        return $?
 
     [[ -f "$_path" && -s "$_path" ]] || {
         _rc="$err_not_file"
@@ -446,7 +446,7 @@ function is_safe_existing_file()
     return "$_rc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates and normalizes a JSON array of strings, or a single JSON string, into
 #   a JSON array of non-empty, trimmed strings. Also checks each item's validity using the
 #   provided validator function.
@@ -468,7 +468,7 @@ function is_safe_existing_file()
 #
 # @example
 #   validate_json_array runners '["ubuntu-latest"]' is_safe_runner_os
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function validate_json_array()
 {
     (( $# > 0 && $# <= 3 ))          || bug "${FUNCNAME[0]}() requires one to three arguments (provided $#):" \
@@ -546,7 +546,7 @@ declare -xra allowed_runners_os=(
     "macos-11"
 )
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates that a runner OS name is in the allowed list of GitHub Actions
 #   runners.
 #
@@ -560,7 +560,7 @@ declare -xra allowed_runners_os=(
 #
 # @example
 #   if is_safe_runner_os "ubuntu-latest"; then echo "Valid runner"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_safe_runner_os()
 {
     (( $# == 1 )) || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the runner OS to test." -ec "$err_invalid_arguments"
@@ -579,7 +579,7 @@ function is_safe_runner_os()
     return "$_rc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates a "reason" text input for safety and length constraints. Depends on
 #   `is_safe_input`.
 #
@@ -595,7 +595,7 @@ function is_safe_runner_os()
 #
 # @example
 #   if is_safe_reason "$user_reason"; then log_reason "$user_reason"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_safe_reason()
 {
     (( $# == 1 )) || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the reason text to test." -ec "$err_invalid_arguments"
@@ -626,7 +626,7 @@ function is_safe_reason()
 }
 
 declare -xr nugetServersRegex
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests if a string is a valid NuGet server URL or known server name.
 #
 # Notes:
@@ -639,14 +639,14 @@ declare -xr nugetServersRegex
 #
 # @example
 #   if is_valid_nuget_server "nuget"; then echo "Valid server"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_valid_nuget_server()
 {
     __test_with_regex "$@" "$nugetServersRegex"
 }
 
 declare -xr default_nuget_server
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates a NuGet server moniker (`nuget`, `github`, or a custom https:// URL)
 #   and resolves it into a display name and a server URL.
 #
@@ -663,7 +663,7 @@ declare -xr default_nuget_server
 #   local nuget_server="github" server_name server_url
 #   validate_nuget_server nuget_server server_name server_url
 #   echo "$server_name -> $server_url"
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function validate_nuget_server()
 {
     (( $# == 3 || $# == 4 ))         || bug "${FUNCNAME[0]}() requires three or four arguments (provided $#):" \
@@ -722,7 +722,7 @@ function validate_nuget_server()
 }
 
 declare -xr build_config_regex="^([A-Za-z_][A-Za-z0-9_]*)?$"
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests if a build configuration name is a valid identifier.
 #
 # @arg $1 string The configuration name to test.
@@ -732,14 +732,14 @@ declare -xr build_config_regex="^([A-Za-z_][A-Za-z0-9_]*)?$"
 #
 # @example
 #   if is_valid_configuration "$build_config"; then echo "Valid config"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_valid_configuration()
 {
     __test_with_regex "$@" "$build_config_regex"
 }
 
 declare -xr known_configurations=(Debug Release)
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates that a string is a valid build configuration name. Depends on
 #   `is_valid_configuration`.
 #
@@ -753,7 +753,7 @@ declare -xr known_configurations=(Debug Release)
 #
 # @example
 #   if is_safe_configuration "$build_config"; then echo "Valid config"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_safe_configuration()
 {
     (( $# == 1 )) || bug "${FUNCNAME[0]}() requires one argument (provided $#): the configuration value to test." -ec "$err_invalid_arguments"
@@ -773,7 +773,7 @@ function is_safe_configuration()
 }
 
 declare -xr tfm_regex="^(net[1-9][0-9]*\.[0-9]+(-([a-z]+)([1-9][0-9.]*)?)?|[[:space:]]*)$"
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests if a string is a valid Target Framework Moniker (TFM).
 #
 # @arg $1 string The TFM to validate.
@@ -783,14 +783,14 @@ declare -xr tfm_regex="^(net[1-9][0-9]*\.[0-9]+(-([a-z]+)([1-9][0-9.]*)?)?|[[:sp
 #
 # @example
 #   if is_valid_framework "$framework"; then echo "Valid TFM"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_valid_framework()
 {
     __test_with_regex "$@" "$tfm_regex"
 }
 
 declare -xr known_tfms=("" net9.0 net10.0)
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates that a Target Framework Moniker (TFM) is a valid identifier. Depends
 #   on `is_valid_framework`.
 #
@@ -801,7 +801,7 @@ declare -xr known_tfms=("" net9.0 net10.0)
 #
 # @example
 #   if is_safe_framework "$framework"; then echo "Valid TFM"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_safe_framework()
 {
     (( $# == 1 )) || bug "${FUNCNAME[0]}() requires one argument (provided $#): the Target Framework Moniker (TFM) value to test." -ec "$err_invalid_arguments"
@@ -821,7 +821,7 @@ function is_safe_framework()
 }
 
 declare -xr rid_regex="^(([a-z][a-z-]*[a-z])((\.[1-9][0-9]*)*)(-[a-z][0-9a-z]*)?(-[.0-9a-z]+)?|[[:space:]]*)$"
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates that a string is a valid Runtime Identifier (RID).
 #
 # @arg $1 string The RID to validate.
@@ -831,14 +831,14 @@ declare -xr rid_regex="^(([a-z][a-z-]*[a-z])((\.[1-9][0-9]*)*)(-[a-z][0-9a-z]*)?
 #
 # @example
 #   if is_valid_runtime "$runtime"; then echo "Valid RID"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_valid_runtime()
 {
     __test_with_regex  "$@" "$rid_regex"
 }
 
 declare -xr known_runtimes=("" linux-x64 win-x64 osx-x64)
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates that a Runtime Identifier (RID) is a valid identifier. Depends on
 #   `is_valid_runtime`. If the RID is valid but not one of `$known_runtimes`, issues a warning
 #   (not an error) rather than failing, so an unrecognized-but-well-formed RID is still
@@ -851,7 +851,7 @@ declare -xr known_runtimes=("" linux-x64 win-x64 osx-x64)
 #
 # @example
 #   if is_safe_runtime "$runtime"; then echo "Valid RID"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_safe_runtime()
 {
     (( $# == 1 )) || bug "${FUNCNAME[0]}() requires one argument (provided $#): the Runtime Identifier (RID) value to test." -ec "$err_invalid_arguments"
@@ -870,7 +870,7 @@ function is_safe_runtime()
     return "$_rc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Lowercases the referenced Runtime Identifier (RID) in place and validates that
 #   it is safe to use, via `is_safe_runtime()`.
 #
@@ -879,7 +879,7 @@ function is_safe_runtime()
 # @exitcode success=0: The Runtime Identifier (RID) was lowercased and found safe.
 # @exitcode N propagated from `is_safe_runtime()` (e.g. `err_argument_value`) if the lowercased
 #   RID is not safe.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function validate_runtime()
 {
     (( $# == 1 ))                            || bug "${FUNCNAME[0]}() requires one argument (provided $#): the Runtime Identifier (RID) variable to validate." -ec "$err_invalid_arguments"
@@ -895,10 +895,10 @@ function validate_runtime()
     # variable in place.
     _rid="${_rid,,}"
     trim_var "${!_rid}"
-    is_safe_runtime "$_rid" || return "$?"
+    is_safe_runtime "$_rid" || return $?
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates preprocessor symbols and formats them for passing to `dotnet build`.
 #
 # Notes:
@@ -917,7 +917,7 @@ function validate_runtime()
 #   preproc="DEBUG TRACE"
 #   validate_preprocessor_symbols preproc
 #   # preproc becomes: "DEBUG;TRACE"
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function validate_preprocessor_symbols()
 {
     (( $# == 1 ))                         || bug "${FUNCNAME[0]}() requires one argument (provided $#): the NAME of the variable containing the preprocessor symbols to test." -ec "$err_invalid_arguments"
@@ -960,7 +960,7 @@ function validate_preprocessor_symbols()
     return "$positive"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Checks whether a candidate secret value is safe to send to the GitHub API --
 # i.e. it contains no control characters.
 #
@@ -969,7 +969,7 @@ function validate_preprocessor_symbols()
 # @exitcode positive=0: The value is non-empty and contains no control characters.
 # @exitcode err_argument_value=4: The value is empty, or contains at least one control
 #   character.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_safe_secret()
 {
     is_valid_secret "$1" || {
@@ -978,7 +978,7 @@ function is_safe_secret()
     }
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates that a given value is a valid percentage (0-100).
 #
 # Notes:
@@ -991,7 +991,7 @@ function is_safe_secret()
 #
 # @example
 #   if is_valid_percentage "50"; then echo "Valid percentage"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_valid_percentage()
 {
     (( $# == 1 )) || bug "${FUNCNAME[0]}() requires one argument (provided $#): the percentage to test." -ec "$err_invalid_arguments"
@@ -1000,7 +1000,7 @@ function is_valid_percentage()
     is_non_negative "$1" && (( $1 <= 100 ))
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates minimum coverage percentage input. Depends on `is_valid_percentage`.
 #
 # Notes:
@@ -1013,7 +1013,7 @@ function is_valid_percentage()
 #
 # @example
 #   if is_safe_min_coverage_pct "80"; then echo "Valid coverage percentage"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_safe_min_coverage_pct()
 {
     (( $# == 1 )) || bug "${FUNCNAME[0]}() requires one argument (provided $#): the percentage to test." -ec "$err_invalid_arguments"
@@ -1027,7 +1027,7 @@ function is_safe_min_coverage_pct()
     return "$positive"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates maximum regression percentage input. Depends on
 #    `is_valid_percentage`.
 #
@@ -1041,7 +1041,7 @@ function is_safe_min_coverage_pct()
 #
 # @example
 #   if is_safe_max_regression_pct "10"; then echo "Valid regression percentage"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_safe_max_regression_pct()
 {
     (( $# == 1 )) || bug "${FUNCNAME[0]}() requires one argument (provided $#): the percentage to test." -ec "$err_invalid_arguments"
@@ -1057,7 +1057,7 @@ function is_safe_max_regression_pct()
 
 declare -xr minverTagPrefixRegex
 declare -xr minverPrereleaseIdRegex
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Tests if a string is a valid MinVer Git tag prefix (e.g. `v` as in `v1.2.3`).
 #
 # Notes:
@@ -1071,13 +1071,13 @@ declare -xr minverPrereleaseIdRegex
 #
 # @example
 #   if is_valid_minverTagPrefix "v"; then echo "Valid tag prefix"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_valid_minverTagPrefix()
 {
     __test_with_regex "$@" "$minverTagPrefixRegex"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates that a MinVer Git tag prefix is safe and well-formed. Delegates to
 #   `is_valid_minverTagPrefix`.
 #
@@ -1091,7 +1091,7 @@ function is_valid_minverTagPrefix()
 #
 # @example
 #   if is_safe_minverTagPrefix "v"; then echo "Valid tag prefix"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_safe_minverTagPrefix()
 {
     (( $# == 1 )) || bug "${FUNCNAME[0]}() requires one argument (provided $#): the MinVer tag prefix to test." -ec "$err_invalid_arguments"
@@ -1103,7 +1103,7 @@ function is_safe_minverTagPrefix()
     }
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates the MinVer prerelease identifier format.
 #
 # Notes:
@@ -1116,13 +1116,13 @@ function is_safe_minverTagPrefix()
 #
 # @example
 #   if is_valid_minverPrereleaseId "alpha.1"; then echo "Valid prerelease ID"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_valid_minverPrereleaseId()
 {
     __test_with_regex "$@" "$minverPrereleaseIdRegex"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates the MinVer prerelease identifier format. Delegates to
 #   `is_valid_minverPrereleaseId`.
 #
@@ -1136,7 +1136,7 @@ function is_valid_minverPrereleaseId()
 #
 # @example
 #   if is_safe_minverPrereleaseId "alpha.1"; then echo "Valid prerelease ID"; fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function is_safe_minverPrereleaseId()
 {
     (( $# == 1 )) || bug "${FUNCNAME[0]}() requires one argument (provided $#): the MinVer prerelease ID to test." -ec "$err_invalid_arguments"
@@ -1148,7 +1148,7 @@ function is_safe_minverPrereleaseId()
     }
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Escapes special characters in a string for use in an extended regular
 #   expression (ERE).
 #
@@ -1164,7 +1164,7 @@ function is_safe_minverPrereleaseId()
 #
 # @example
 #   escaped=$(escape_ere "some string with special chars.*")
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function escape_ere()
 {
     (( $# == 1 )) || bug "${FUNCNAME[0]}() requires one argument (provided $#): the string that needs its special ERE characters to be escaped." -ec "$err_invalid_arguments"
@@ -1173,7 +1173,7 @@ function escape_ere()
     printf '%s' "$1" | sed 's/[][(){}.^$*+?|\\]/\\&/g'
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates a JSON file against a JSON Schema file, using the `check-jsonschema`
 #   CLI (https://pypi.org/project/check-jsonschema/, `pip install check-jsonschema`) if it is
 #   present on PATH. `check-jsonschema` is a dev-machine convenience, not a hard dependency of
@@ -1191,7 +1191,7 @@ function escape_ere()
 #
 # @example
 #   validate_json_schema "$_config_file" "$lib_dir/diff-shared.config.schema.json"
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function validate_json_schema()
 {
     (( $# == 2 ))                      || bug "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \

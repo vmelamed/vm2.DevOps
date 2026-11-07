@@ -18,7 +18,7 @@ declare -x del_tag=""
 declare -x old_tag=""
 declare -x new_tag=""
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Parses the command-line arguments for 're-tag.sh'. Delegates common switches (help, quiet, verbose, trace,
 # dry-run) to 'get_common_arg'. Accepts either '--delete|-d <tag>' (delete mode) or up to two positional arguments,
 # '<old-tag> <new-tag>' (rename mode). A third positional argument is rejected.
@@ -37,7 +37,7 @@ declare -x new_tag=""
 #   get_arguments v3.1.0-preview.5 v3.1.1-preview.2
 # @example
 #   get_arguments --delete v3.1.0-preview.4
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function get_arguments()
 {
     local _option

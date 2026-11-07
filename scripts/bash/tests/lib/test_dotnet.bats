@@ -182,12 +182,12 @@ EOF
     # 'bug' to 'error' (err_argument_value=4) -- see the summary note asking whether this is
     # an intentional reclassification (runtime condition vs. caller precondition).
     run dotnet_clean "not-a-real-project.csproj"
-    assert_failure 4
+    assert_failure "$err_argument_value"
 }
 
 @test "dotnet_restore: fails on a non-existent/invalid project path" {
     run dotnet_restore "not-a-real-project.csproj"
-    assert_failure 4
+    assert_failure "$err_argument_value"
 }
 
 # Runs dotnet_build with a fake 'dotnet' first on the PATH, so its output handling can be tested

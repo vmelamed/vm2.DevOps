@@ -3,11 +3,11 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-#=============================================================================================
+#===============================================================================================
 # This script defines several GitHub specific constants, variables, and helper functions
 # typical for the GitHub Actions environment. The script sources core.sh from the same
 # directory. For the functions to be invocable by other scripts, this script must be sourced.
-#=============================================================================================
+#===============================================================================================
 
 # Circular include guard
 (( ${__VM2_LIB_GH_CORE_SH_LOADED:-0} == 1 )) && return 0
@@ -38,7 +38,7 @@ declare -xr GITHUB_OUTPUT=${GITHUB_OUTPUT:-"$_ignore"}
 declare -xra gh_apps_with_vars
 declare -xra gh_apps_with_secrets
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Reads lines from stdin, sending each to stdout (which may be the GitHub Actions
 #   log file) and also appending it to the GitHub Actions step summary file in CI (which may
 #   be /dev/null outside GitHub Actions).
@@ -56,7 +56,7 @@ declare -xra gh_apps_with_secrets
 #
 # @example
 #   echo "Build completed successfully" | to_stdout
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function to_stdout()
 {
     local _line
@@ -68,7 +68,7 @@ function to_stdout()
     done
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Reads lines from stdin, sending each to stderr (which may be the GitHub Actions
 #   log file) and also appending it to the GitHub Actions step summary file in CI (which may
 #   be /dev/null outside GitHub Actions).
@@ -86,7 +86,7 @@ function to_stdout()
 #
 # @example
 #   echo "Warning: file not found" | to_stderr
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function to_stderr()
 {
     local _line
@@ -98,7 +98,7 @@ function to_stderr()
     done
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Reads lines from stdin, sending each to stdout (which may be the GitHub Actions
 #   log file) and also appending it to the GitHub Actions output file in CI (which may be
 #   /dev/null outside GitHub Actions).
@@ -116,7 +116,7 @@ function to_stderr()
 #
 # @example
 #   echo "version=1.2.3" | to_output
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function to_output()
 {
     local _line
@@ -128,7 +128,7 @@ function to_output()
     done
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Escapes a value for safe inclusion in a GitHub Actions workflow command
 #   (`::notice::`, `::warning::`, `::error::`, etc.), per GitHub's own documented workflow
 #   command escaping: `%` -> `%25`, CR -> `%0D`, LF -> `%0A` (in that order, so a literal `%`
@@ -151,7 +151,7 @@ function to_output()
 # @example
 #   escaped=$(gh_escape "$REASON")
 #   printf '::notice::Reason: %s\n' "$escaped"
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function gh_escape()
 {
     (( $# == 1 )) || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to escape." -ec "$err_invalid_arguments"
@@ -167,7 +167,7 @@ function gh_escape()
     echo "$_value"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Outputs a "key=value" pair for each of the passed-in variable names to
 #   $GITHUB_OUTPUT function.
 #
@@ -186,7 +186,7 @@ function gh_escape()
 #   # outputs:
 #   # build-version=1.2.3
 #   # package-count=5
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function args_to_github_output()
 {
     (( $# > 0 ))                 || bug "${FUNCNAME[0]}() requires one or more arguments (provided $#) - the names of the variables to output." -ec "$err_invalid_arguments"

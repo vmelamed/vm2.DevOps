@@ -24,7 +24,7 @@ declare -xi search_us
 declare -xi restore_us
 declare -xi search_count
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Decides how a repository may be changed. 'publish': on 'main', clean, and identical to 'origin/main' after
 #   a fetch, so a branch can be created, committed, and pushed. 'inplace': the files are edited in the current branch and
 #   nothing is committed. 'skip': uncommitted changes exist, so the repository is left untouched.
@@ -34,7 +34,7 @@ declare -xi search_count
 # @arg $3 nameref Receives a human-readable explanation for the summary.
 #
 # @exitcode success=0: always.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function classify_repo()
 {
     (( $# == 3 ))                         || bug "${FUNCNAME[0]}() requires three arguments (provided $#): " \
@@ -87,7 +87,7 @@ function classify_repo()
     _reason_ref="on 'main', clean, identical to 'origin/main'"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Switches a repository that is in 'publish' mode to the upgrade branch, reusing it if a same-day rerun
 #   already created it (locally or on 'origin'), and creating it from the current HEAD only when neither exists.
 #   Reusing an existing branch rather than recreating it from 'main' avoids a later non-fast-forward push.
@@ -97,7 +97,7 @@ function classify_repo()
 #
 # @exitcode success=0: the branch is checked out (new, or an existing local/remote one).
 # @exitcode err_tool_error: git failed.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function start_publish_branch()
 {
     (( $# == 2 ))                             || bug "${FUNCNAME[0]}() requires two arguments (provided $#):" \
@@ -127,7 +127,7 @@ function start_publish_branch()
     trace "Created and switched to branch '$2' in '$1'."
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Commits the given paths on the current branch of a repository. A path pattern is staged only when it matches
 #   something that changed (modified, deleted, or new), so a pattern such as '*packages.lock.json' is harmless when no
 #   lock file changed.
@@ -139,7 +139,7 @@ function start_publish_branch()
 # @exitcode success=0: a new commit was made.
 # @exitcode negative=1: nothing had changed; no commit was made. The caller MUST NOT push or open a PR in this case.
 # @exitcode err_tool_error: git failed.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function commit_package_versions()
 {
     (( $# >= 3 ))                 || bug "${FUNCNAME[0]}() requires the repository path, the message, and at least one path (provided $#)." -ec "$err_invalid_arguments"
@@ -159,7 +159,7 @@ function commit_package_versions()
     execute git -C "$_repo" commit --quiet -m "$_message" || return "$err_tool_error"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Checks the versions of one section of a 'Directory.Packages.props' file against NuGet and upgrades what
 #   can be upgraded. Each result is recorded as a row: 'label|package|current|new|result'.
 #   In dry-run mode the file is not changed; the rows say what would be updated.
@@ -170,7 +170,7 @@ function commit_package_versions()
 # @arg $4 nameref Array that receives the summary rows.
 #
 # @exitcode success=0: the section was processed.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function update_section_versions()
 {
     (( $# == 4 ))                              || bug "${FUNCNAME[0]}() requires four arguments (provided $#):" \
@@ -247,7 +247,7 @@ function update_section_versions()
 }
 
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Deletes every 'packages.lock.json' in a repository and runs
 #   'dotnet restore --force-evaluate' to regenerate them. The lock files are generated, never
 #   hand-edited, so their previous state does not matter. Nothing is committed. What is
@@ -260,7 +260,7 @@ function update_section_versions()
 # @exitcode success=0: the lock files were regenerated.
 # @exitcode err_not_found=9: no project was found.
 # @exitcode err_tool_error=66: the deletion failed, or the restore failed.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function refresh_lock_files()
 {
     (( $# == 1 ))                 || bug "${FUNCNAME[0]}() requires one argument (provided $#): the repository path." -ec "$err_invalid_arguments"
@@ -292,7 +292,7 @@ function refresh_lock_files()
 }
 
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Opens a pull request for the upgrade branch, or finds the one already open for
 #   it. The branch must already be pushed.
 #
@@ -302,7 +302,7 @@ function refresh_lock_files()
 #
 # @exitcode success=0: a PR is open for the branch (found or created).
 # @exitcode err_tool_error: 'gh' failed to find or create one.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function open_pull_request()
 {
     (( $# == 3 ))                          || bug "${FUNCNAME[0]}() requires three arguments (provided $#):" \

@@ -19,7 +19,7 @@
     - [Changelog-Only Cleanup PR](#changelog-only-cleanup-pr)
   - [Linear History and Rebase](#linear-history-and-rebase)
     - [Why Linear History](#why-linear-history)
-    - [No Big Bang Merges!](#no-big-bang-merges)
+    - [No Big Bang Merges](#no-big-bang-merges)
   - [Conventional Commits](#conventional-commits)
     - [Commit Message Format](#commit-message-format)
     - [How Commits Drive Automation](#how-commits-drive-automation)
@@ -398,7 +398,7 @@ All repositories enforce **linear history** via branch rulesets. This means:
 - **Version calculation is deterministic** — MinVer counts commits from the last tag along a
   single path.
 
-### No Big Bang Merges!
+### No Big Bang Merges
 
 Enforced linear history means every PR eventually needs a clean **rebase** replay onto `main` — whether via
 GitHub's "Rebase and merge" button or an equivalent squash. A long-lived branch that accumulates a very large
@@ -435,7 +435,7 @@ with no useful diagnostic beyond "This branch can't be rebased."
 
 ### Commit Message Format
 
-All vm2 repositories use [Conventional Commits](https://www.conventionalcommits.org/). The format:
+All vm2 repositories require [Conventional Commits](https://www.conventionalcommits.org/). The format:
 
 ```ebnf
 commit-message = subject, [ LF, body ] ;
@@ -469,7 +469,8 @@ Where:
   | `chore`    | Insignificant build, tooling, config., etc.         | n/a       |
 
   > [!NOTE]
-  > The type keywords are defined in the vm2.DevOps script: [vm2.DevOps/scripts/bash/lib/_constants.sh](../vm2.DevOps/scripts/bash/lib/_constants.sh) and should be kept in sync with:
+  > The type keywords are defined in the variable `allowed_commit_types` in the vm2.DevOps script:
+  > [vm2.DevOps/scripts/bash/lib/_constants.sh](../vm2.DevOps/scripts/bash/lib/_constants.sh) and should be kept in sync with:
   > - [vm2.Templates/templates/AddNewPackage/content/.gitmessage](../vm2.Templates/templates/AddNewPackage/content/.gitmessage)
   > - [vm2.Templates/changelog/cliff.prerelease.toml](../vm2.Templates/changelog/cliff.prerelease.toml)
   > - [vm2.Templates/changelog/cliff.release-header.toml](../vm2.Templates/changelog/cliff.release-header.toml)
@@ -529,7 +530,7 @@ refactor!: rewrite engine            :  major version bump:  v1.2.5-preview.N  �
 
 ### Commit Message Enforcement
 
-Conventional Commits are enforced at two levels:
+[Conventional Commits](#conventional-commits) are enforced at two levels:
 
 1. **Local git hook** — fast feedback at `git commit` time. To enable, run once per clone:
 

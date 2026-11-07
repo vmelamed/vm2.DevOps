@@ -3,16 +3,16 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-#=============================================================================================
+#===============================================================================================
 # This script defines a number of general purpose functions by means of sourcing other scripts
 # from the same directory. For the functions to be invocable by other scripts, this script
 # must be sourced too. When fatal parameter errors are detected, the script invokes exit,
 # which leads to exiting the current shell.
-#=============================================================================================
+#===============================================================================================
 
-#=============================================================================================
+#===============================================================================================
 # Common scripts variables and environment initialization
-#=============================================================================================
+#===============================================================================================
 
 # Circular include guard
 (( ${__VM2_LIB_CORE_SH_LOADED:-0} == 1 )) && return 0
@@ -77,7 +77,7 @@ fi
 
 declare -xr explicit_exit_regex='^(exit([[:space:]]+.*)?|source[[:space:]]+.*)$'
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description EXIT trap handler. Reports the failed command to stderr (if the shell is
 #    exiting with a non-zero, non-explicit exit code), restores the working directory to
 #    $initial_cwd, and disables trace mode.
@@ -90,7 +90,7 @@ declare -xr explicit_exit_regex='^(exit([[:space:]]+.*)?|source[[:space:]]+.*)$'
 #
 # @exitcode success=0: the shell exited cleanly
 # @exitcode N inherited from the exiting command (the trap does not change the exit code)
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function on_exit()
 {
     # capture the exit code from the exiting command
@@ -117,7 +117,7 @@ function on_exit()
     return 0
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description ERR trap handler. Reports the failed command to stderr, along with the exit
 #    code, and prints a stack trace.
 #
@@ -126,7 +126,7 @@ function on_exit()
 #   - Works cooperatively with on_exit, which handles the EXIT trap.
 #
 # @exitcode N inherited from the failing command (the trap does not change the exit code)
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function on_err()
 {
     local -i _rc=$?
@@ -158,7 +158,7 @@ if ! $__no_traps && ! $debugger && ! $ci; then
     trap on_exit EXIT
 fi
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Appends a command to the current trap of one or more signals (e.g. after core.sh's
 #    on_exit), instead of replacing it as a plain `trap` does.
 #
@@ -180,7 +180,7 @@ fi
 #
 # @example
 #   add_trap "rm -f ${summary_file@Q}" EXIT
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function add_trap()
 {
     (( $# >= 2 ))         || bug "${FUNCNAME[0]}() requires at least two arguments (provided $#):" \
@@ -211,7 +211,7 @@ function add_trap()
     return "$success"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Depending on the value of $dry_run, either executes the given command or prints
 #    what would have been executed, without running it. If the first argument is '--quiet',
 #    the command's output is discarded unless verbose mode is on.
@@ -237,7 +237,7 @@ function add_trap()
 #   execute --quiet ls > "current-directory-contents.txt"
 #   # the '--quiet' flag suppresses the output, so redirecting it to a file defeats the
 #   # purpose of using '--quiet'.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function execute()
 {
     local _quiet=false
@@ -263,7 +263,7 @@ function execute()
     fi
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Executes a command, retrying on failure until it succeeds or the maximum number
 #    of attempts is reached, with a fixed delay between attempts.
 #
@@ -297,7 +297,7 @@ function execute()
 #
 # @example
 #   execute_with_retry 3 2 true gh api repos/owner/repo
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function execute_with_retry()
 {
     (( $# >= 3 ))                   || bug "${FUNCNAME[0]}() requires at least three arguments (provided $#):" \
@@ -338,7 +338,7 @@ function execute_with_retry()
     done
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Expands a glob pattern (with globstar and nullglob enabled) and returns the
 #    matching files as a space-separated list. The globstar option lets "**" match files
 #    recursively across subdirectories.
@@ -357,7 +357,7 @@ function execute_with_retry()
 # @example
 #   packages=$(list_of_files "artifacts/packages/*.nupkg")
 #   for pkg in $packages; do echo "$pkg"; done
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function list_of_files()
 {
     (( $# == 1 ))         || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the file pattern." -ec "$err_invalid_arguments"
@@ -384,7 +384,7 @@ function list_of_files()
     restore_state state
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Finds the files matching the first of the given file name patterns that matches
 #   anything in a directory (usually the working tree of a repository) in a specified
 #   precedence order, e.g., if the precedence order of patterns is
@@ -403,7 +403,7 @@ function list_of_files()
 #   stored in the specified array variable.
 # @exitcode err_not_found=9: No files with names matching the specified name patterns were
 #   found in the specified directory.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function find_files_by_precedence()
 {
     (( $# > 2 ))                          || bug "${FUNCNAME[0]}() requires at least 3 arguments (provided $#):" \

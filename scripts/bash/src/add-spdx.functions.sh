@@ -25,7 +25,7 @@ declare -xi modified
 declare -xi skipped
 declare -xi failed
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Prepends the SPDX header to a C# file, stripping a leading UTF-8 BOM (if any):
 #   the vm2 convention is plain UTF-8 (no BOM), enforced via '.editorconfig' ('charset =
 #   utf-8'), so a stray BOM left over from a classic-Visual-Studio-created file is cleaned up
@@ -35,7 +35,7 @@ declare -xi failed
 # @arg $2 string the path to an existing writable temporary file to write the modified contents of the original $1 file to
 #
 # @exitcode success=0: the modified content of file $1 was successfully written to $2.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function add_spdx_csharp_file()
 {
     (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() expects two arguments (provided $#):" \
@@ -60,7 +60,7 @@ function add_spdx_csharp_file()
     } > "$_temp_file"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Prepends the SPDX header to a bash file, inserting it after the shebang line
 #   when there is one, or at the very top otherwise.
 #
@@ -68,7 +68,7 @@ function add_spdx_csharp_file()
 # @arg $2 string the path to an existing writable temporary file to write the modified contents of the original $1 file to
 #
 # @exitcode success=0: the modified content of file $1 was successfully written to $2.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function add_spdx_bash_file()
 {
     (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() expects two arguments (provided $#):" \
@@ -99,7 +99,7 @@ function add_spdx_bash_file()
     } > "$_temp_file"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Prepends the SPDX header to a YAML file. Always inserted at the top: unlike bash
 #   scripts, YAML has no shebang-equivalent line to insert after.
 #
@@ -107,7 +107,7 @@ function add_spdx_bash_file()
 # @arg $2 string the path to an existing writable temporary file to write the modified contents of the original $1 file to
 #
 # @exitcode success=0: the modified content of file $1 was successfully written to $2.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function add_spdx_yaml_file()
 {
     (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() expects two arguments (provided $#):" \
@@ -127,7 +127,7 @@ function add_spdx_yaml_file()
     } > "$_temp_file"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Drives one file through the steps shared by all file types: skips it if it already
 #   has an SPDX header, reports it as an error if it is read-only, otherwise has the writer for
 #   its type write the new contents to a temporary file next to it, which then replaces the
@@ -140,7 +140,7 @@ function add_spdx_yaml_file()
 # @exitcode err_not_file: the file is not writable (reported with 'error').
 # @exitcode err_io_failure: creating, writing, or moving the temporary file failed
 #   (reported with 'error').
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function process_file()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() expects one argument (provided $#):" \

@@ -29,7 +29,7 @@ declare -xri err_tool_error
 
 declare -x _ignore
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Renames a Git branch both locally and on the 'origin' remote, and re-points the local branch's upstream
 # tracking to the new remote name.
 #
@@ -61,7 +61,7 @@ declare -x _ignore
 #   rename-branch.sh feature/old-name feature/new-name
 # @example
 #   rename-branch.sh feature/new-name   # renames the current branch
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 
 source "$script_dir/rename-branch.args.sh"
 source "$script_dir/rename-branch.usage.sh"

@@ -3,12 +3,12 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-#=============================================================================================
+#===============================================================================================
 # This script defines the common arguments for the vm2 bash scripts: quiet, verbose,
 # table_format, dry_run, debugger, and ci. It also defines functions for parsing from command
 # line arguments, managing, validating, saving, and restoring the state of these arguments.
 # It defines helpers that should be used by the top-level script's usage function.
-#=============================================================================================
+#===============================================================================================
 
 # Circular include guard
 (( ${__VM2_LIB_ARGS_SH_LOADED:-0} == 1 )) && return 0
@@ -16,6 +16,7 @@ declare -ri __VM2_LIB_ARGS_SH_LOADED=1
 
 declare -xr script_name
 
+# vm2 core error codes
 declare -xri success
 declare -xri failure
 declare -xri positive
@@ -30,13 +31,12 @@ declare -xri err_invalid_nameref
 
 declare -xi __last_error    # from _diagnostics.sh: the code error() recorded from its --error-code/-ec (or $failure)
 
-
-#=============================================================================================
+#===============================================================================================
 # processing common command-line arguments
-#=============================================================================================
+#===============================================================================================
 
 declare usage_requested=""
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Processes one common command-line argument, such as `--quiet`, `--verbose`,
 #   `--trace`, or `--dry-run`. Long- and short-form switches are recognized. The calling
 #   scripts should ensure that there are no other short- or long-form options colliding with
@@ -60,10 +60,10 @@ declare usage_requested=""
 #     get_common_arg "$arg" && continue
 #     # handle custom arguments
 #   done
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function get_common_arg()
 {
-    (( $# == 1 )) || bug "${FUNCNAME[0]}() requires one parameter ($# provided): the command-line argument to process" -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one parameter ($# provided): the command-line argument to process" -ec "$err_invalid_arguments"
     exit_if_has_bugs
 
     # the calling scripts should not use any of the common arguments options:
@@ -83,7 +83,7 @@ function get_common_arg()
     return "$positive" # it was a common argument and was processed
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Exits the script (via `usage`) if a usage request (`--help`, `-h`, or `-?`) was
 #   previously recorded by `get_common_arg` in the global `$usage_requested` variable.
 #
@@ -93,7 +93,7 @@ function get_common_arg()
 #
 # @example
 #   usage_if_requested
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function usage_if_requested()
 {
     case "$usage_requested" in
@@ -103,7 +103,7 @@ function usage_if_requested()
     esac
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Displays an optional error message, then the (long or short) usage text, and
 #   exits the script.
 #
@@ -148,7 +148,7 @@ function usage_if_requested()
 # @example
 #   usage "$err_invalid_arguments" -sd 3 -ec "$err_argument_value" "Invalid argument value for
 #   the option <option_name>"                                        # explicit $2 wins: $err_invalid_arguments
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function usage()
 {
     local _long_usage=false
@@ -190,6 +190,9 @@ function usage()
     exit "$_exit_code"
 }
 
+#-----------------------------------------------------------------------------------------------
+# @description the usage text fragment for the common arguments of a script.
+#-----------------------------------------------------------------------------------------------
 declare -xr common_args_usage="
 Common switches:
   -v, --verbose                 Enables verbose output from tracing and variables dumps, e.g. in the 'dump_vars' function
@@ -220,7 +223,7 @@ Common environment variables:
   DUMP_FORMAT                   Sets the output dump table format. Must be either 'graphical' or 'markdown'.
 "
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Displays the usage text for the script. This default implementation is a
 #   placeholder -- override it in each top-level script to show script-specific usage
 #   information.
@@ -231,17 +234,17 @@ Common environment variables:
 #
 # @stdout string The usage text (a placeholder message telling the script author to override
 #   this function, plus the common switches/environment variables section when $1 is `true`).
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function usage_text()
 {
-    (( $# ==1 ))                    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
-    [[ ! -v 1 ]] || is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1-<missing>})."
+    (( $# ==1 ))                                                                || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
+    [[ ! -v 1 ]] || is_boolean "$1"                                             || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1-<missing>})."
     exit_if_has_bugs
 
     local _long_text=$1
-    local _common_args=''
+    local _common_args
 
-    $_long_text  &&  _common_args=$common_args_usage || _common_args=''
+    $_long_text && _common_args=$common_args_usage || _common_args=''
 
     cat << EOF
 OVERRIDE THE FUNCTION usage_text() IN THE CALLING SCRIPT '$script_name' TO PROVIDE CUSTOM USAGE INFORMATION.

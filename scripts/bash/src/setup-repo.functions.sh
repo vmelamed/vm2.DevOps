@@ -64,7 +64,7 @@ declare -x jq_ruleset_id
 declare -x jq_ruleset_rules
 declare -x jq_status_checks
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Resolves the numeric GitHub App IDs for GitHub Actions, Dependabot, and
 #   Codespaces via the GitHub API, storing them in `actions_app_id`, `dependabot_app_id`, and
 #   `codespaces_app_id`. These IDs are used to pin required status checks and other
@@ -80,7 +80,7 @@ declare -x jq_status_checks
 #
 # @exitcode success=0: All three app IDs resolved successfully.
 # @exitcode (via exit_if_has_errors) Exits the process if any of the three API calls failed.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function resolve_github_app_ids()
 {
     # Resolve the GitHub Actions app ID dynamically via the API.
@@ -105,7 +105,7 @@ function resolve_github_app_ids()
     readonly actions_app_id dependabot_app_id codespaces_app_id
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Determines the single, stable "gate job" check name from the target repository's `CI.yaml` (looking
 # for a job whose key matches `postrun|ci-gate`, preferring `postrun-ci` if present) and appends it to the
 # `required_checks` array, then freezes the array read-only. See the inline comment below for why a gate job
@@ -119,7 +119,7 @@ function resolve_github_app_ids()
 # @exitcode success=0: `required_checks` populated (or left empty, if no gate job was found) and frozen.
 # @exitcode (via exit_if_has_errors) Exits the process if a gate job was found but 'yq' failed to parse its `name:`
 #   property from `$ci_yaml`.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function list_required_checks()
 {
     # With reusable workflows + matrix strategies, GitHub Actions produces check names that include the workflow prefix, matrix
@@ -167,7 +167,7 @@ function list_required_checks()
     trace "Required checks: ${required_checks[*]}"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Computes and freezes the `path_*` GitHub API endpoint variables (`path_repo`, `path_permissions`,
 # `path_rulesets`, `path_actions_secrets`, `path_dependabot_secrets`, `path_vars`) from the already-resolved `repo`
 # and `main_protection_rs_name` globals.
@@ -180,7 +180,7 @@ function list_required_checks()
 #     `$err_invalid_arguments`.
 #
 # @exitcode success=0: All `path_*` variables set and frozen read-only.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function initialize_gh_paths()
 {
     [[ -n $repo ]]                                                              || bug "${FUNCNAME[0]}() The 'repo' variable is not set. Cannot initialize GitHub paths." -ec "$err_logic_error"
@@ -211,7 +211,7 @@ function initialize_gh_paths()
     readonly path_vars
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Builds and freezes the `jq_*` query strings (`jq_entries`, `jq_secrets`, `jq_secret_names`,
 # `jq_vars`, `jq_ruleset_id`, `jq_status_checks`, `jq_ruleset_rules`) used throughout `setup-repo.sh` and
 # `setup-repo.audit.sh` to extract and compare data from GitHub API JSON responses. The queries embed
@@ -224,7 +224,7 @@ function initialize_gh_paths()
 #     per the precondition-check pattern in this codebase.
 #
 # @exitcode success=0: All `jq_*` variables set and frozen read-only.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # shellcheck disable=SC2089 # Quotes/backslashes will be treated literally. Use an array.
 # shellcheck disable=SC2090 # Quotes/backslashes in this variable will not be respected.
 function initialize_jq_queries()
@@ -284,7 +284,7 @@ def count_pr_checks_param(check): [.rules[] | select(.type == "required_status_c
     readonly jq_status_checks
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Resolves the numeric ID of the branch-protection ruleset named `$main_protection_rs_name` via the
 # GitHub API and stores it in `main_protection_rs_id`, also deriving and freezing `path_main_protection_ruleset`. If
 # `main_protection_rs_id` is already set (> 0), returns immediately without re-querying the API.
@@ -299,7 +299,7 @@ def count_pr_checks_param(check): [.rules[] | select(.type == "required_status_c
 #
 # @exitcode success=0: `main_protection_rs_id` and `path_main_protection_ruleset` set and frozen.
 # @exitcode failure=1: The ruleset does not exist yet, or the GitHub API call failed.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function initialize_main_protection_rs_id()
 {
     [[ -n $main_protection_rs_name ]]                                           || bug "${FUNCNAME[0]}() The 'main_protection_rs_name' variable is not set. Cannot initialize main protection ruleset ID." -ec "$err_logic_error"
@@ -330,13 +330,13 @@ function initialize_main_protection_rs_id()
     fi
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Retrieves the current NuGet server moniker for the repository and stores it in
 #   the global variable $nuget_server.
 #
 # @exitcode success=0: Always (a failure to retrieve the moniker is logged as a
 #   warning, not surfaced as a non-zero exit code).
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function get_current_nuget_server()
 {
     if [[ -z $repo_name ]]; then
@@ -350,7 +350,7 @@ function get_current_nuget_server()
         nuget_server=$default_nuget_server
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Fetches the target repository's current settings and PATCHes any that differ
 # from `default_repo_settings` via the GitHub API. Booleans are sent as JSON (`-F`), other
 # values as strings (`-f`). Settings that already match the expected value are left untouched
@@ -361,7 +361,7 @@ function get_current_nuget_server()
 #
 # @stdout Progress/status messages via `info` ("Configuring repository settings...",
 #   "...repository settings configured.").
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function configure_default_repo_settings()
 {
     info "Configuring repository settings..."
@@ -404,7 +404,7 @@ function configure_default_repo_settings()
     fi
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Sets the target repository's Actions workflow permissions via the GitHub API to match
 # `default_repo_permissions`. Unlike `configure_default_repo_settings()`, this always includes every key from
 # `default_repo_permissions` in the PUT request body regardless of whether the current value already matches --
@@ -415,7 +415,7 @@ function configure_default_repo_settings()
 #
 # @stdout Progress/status messages via `info` ("Configuring Actions workflow permissions...", "...actions workflow
 #   permissions configured.").
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function configure_actions_permissions()
 {
     info "Configuring Actions workflow permissions..."
@@ -455,7 +455,7 @@ function configure_actions_permissions()
     fi
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Reconciles the target repository's GitHub Actions variables against the default vars of the given
 #   application ($1), and optionally purges variables that are neither a known default nor otherwise expected.
 #   No-op (returns immediately) if the application has no default variables and `$purge_vars` is false, to avoid an
@@ -482,7 +482,7 @@ function configure_actions_permissions()
 #
 # @stdout Progress/status messages via `info`, (in interactive mode) prompts via `enter_value` and `confirm`, and a
 #   final summary of the reconciliation/purge counts.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
 function configure_variables()
 {
@@ -632,7 +632,7 @@ function configure_variables()
     $interactive_vars       || info "  Run the script with option '--interactive-vars' or '-iv' to set new values or delete unknown and obsolete variables for any of the ${_app^} vars."
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Creates or updates a single GitHub Actions repository variable via `gh variable set`.
 #
 # Notes:
@@ -643,7 +643,7 @@ function configure_variables()
 #
 # @exitcode success=0: Variable set successfully.
 # @exitcode * Whatever `execute_gh_with_retry` returned on failure (logged as a warning, then propagated).
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function set_var()
 {
     (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
@@ -667,14 +667,14 @@ function set_var()
     return "$_rc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Deletes a single GitHub Actions repository variable via `gh variable delete`.
 #
 # @arg $1 string Name of the variable to delete.
 #
 # @exitcode success=0: Variable deleted successfully.
 # @exitcode * Whatever `execute_gh_with_retry` returned on failure (logged as a warning, then propagated).
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function delete_var()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#):" \
@@ -698,7 +698,7 @@ function delete_var()
     return "$_rc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Reconciles one GitHub App's repository secrets against the corresponding `<app>_secrets_order` list,
 # and optionally purges secrets that are neither a known default nor otherwise expected. Secret values themselves
 # cannot be read back from GitHub, so reconciliation of known secrets is presence-only: an existing secret is left
@@ -726,7 +726,7 @@ function delete_var()
 #
 # @stdout Progress/status messages via `info`/`warning`, (in interactive mode) prompts via `enter_value` and
 #   `confirm`, and a final summary of the reconciliation/purge counts.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function configure_secrets()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument (provided $#):" \
@@ -752,7 +752,7 @@ function configure_secrets()
 
     local -i _rc=$success
     local _temp
-    _temp=$(mktemp)                                                             || with_error "$err_io_failure" _rc "Failed to create a temporary file."
+    _temp=$(mktemp)                                                             || with_error _rc "$err_io_failure" "Failed to create a temporary file."
     (( _rc == success ))                                                        || return "$_rc"
 
     execute_gh_api_with_retry 3 2 --paginate "$path_repo/$_app/secrets" -q "$jq_secret_names" > "$_temp" || _rc=$?
@@ -861,7 +861,7 @@ function configure_secrets()
     (( _need_new  > 1 )) && warning "Run the script with option '--interactive-secrets' or '-is' to set the values of $_need_new ${_app^} secrets." || true
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Creates or updates a single GitHub repository secret for the given app (currently `actions`,
 # `dependabot`, or `codespaces` -- see `gh_apps_with_secrets`) via `gh secret set`. Temporarily suppresses verbose/trace
 # output and `set -x` around the actual `gh` call so the secret's plaintext value is never written to logs,
@@ -877,7 +877,7 @@ function configure_secrets()
 #
 # @exitcode success=0: Secret set successfully.
 # @exitcode * Whatever `execute_gh_with_retry` returned on failure (logged as a warning, then propagated).
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function set_secret()
 {
     (( $# == 3 ))                                           || bug "${FUNCNAME[0]}() requires exactly three arguments (provided $#):" \
@@ -918,7 +918,7 @@ function set_secret()
     return "$_rc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Deletes a GitHub secret for a specified application (currently `actions`, `dependabot`, or
 #   `codespaces` -- see `gh_apps_with_secrets`) within the repository via `gh secret delete`. Temporarily suppresses
 #   verbose/trace output and `set -x` around the actual `gh` call, restoring the previous state afterward
@@ -930,7 +930,7 @@ function set_secret()
 #
 # @exitcode success=0: The secret was successfully deleted.
 # @exitcode * Whatever `execute_gh_with_retry` returned on failure (logged as a warning, then propagated).
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function delete_secret()
 {
     (( $# == 2 ))                                           || bug "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
@@ -958,7 +958,7 @@ function delete_secret()
     return "$_rc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Creates (POST) or updates (PUT, if `initialize_main_protection_rs_id` finds one
 #   already exists) the GitHub ruleset that protects the default branch: linear history, no
 #   force pushes, a required pull request with rebase-only merges, and the required status
@@ -972,7 +972,7 @@ function delete_secret()
 #
 # @stdout Progress/status messages via `info` ("Configuring branch ruleset...", "Updating
 #   existing ruleset...", or "Creating new ruleset...").
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function configure_branch_protection()
 {
     info "Configuring branch ruleset for '$branch'..."

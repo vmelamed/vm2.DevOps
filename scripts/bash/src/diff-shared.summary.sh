@@ -93,7 +93,7 @@ function add_summary_line()
 # @arg $3 string additional information (optional)
 #
 # @exitcode 0: the status was successfully traced.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function trace_files()
 {
     local _format

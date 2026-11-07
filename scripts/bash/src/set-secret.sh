@@ -52,7 +52,7 @@ for repo in "${vm2_repositories[@]}"; do
     _rc=$success
 
     declare _temp
-    _temp=$(mktemp)                                                             || with_error "$err_io_failure" _rc "Failed to create a temporary file."
+    _temp=$(mktemp)                                                             || with_error _rc "$err_io_failure" "Failed to create a temporary file."
     (( _rc == success ))                                                        || continue
 
     execute_gh_api_with_retry 3 2 --paginate "repos/$repo_owner/$repo/$app/secrets" -q '.secrets[] | .name' > "$_temp" || _rc=$?

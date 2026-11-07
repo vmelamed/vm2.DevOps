@@ -168,7 +168,7 @@ declare -a target_roots=()
 declare -a target_paths=()
 
 for target in "${target_repos[@]}"; do
-    resolve_target "$vm2_repos" "$target" target_root target_path               || { with_error "$?" rc "Could not resolve the Git working tree root of the target '$target'. Please, ensure that it exists and is a valid directory."
+    resolve_target "$vm2_repos" "$target" target_root target_path               || { with_error rc $? "Could not resolve the Git working tree root of the target '$target'. Please, ensure that it exists and is a valid directory."
                                                                                      continue
                                                                                 }
     target_roots+=("$target_root")

@@ -289,7 +289,7 @@ _run_with_error_script()
 @test "with_error: sets the variable to the given code and returns success, so the chain continues" {
     _run_with_error_script <<'EOF'
 declare -i rc=0
-false || with_error "$err_tool_error" rc "the tool failed"
+false || with_error rc "$err_tool_error" "the tool failed"
 echo "status=$? rc=$rc"
 EOF
     assert_success
@@ -299,7 +299,7 @@ EOF
 @test "with_error: prints the message, then the failed command's exit code, then the code's message" {
     _run_with_error_script <<'EOF'
 declare -i rc=0
-(exit 4) || with_error "$err_tool_error" rc "the tool failed"
+(exit 4) || with_error rc "$err_tool_error" "the tool failed"
 EOF
     assert_success
     assert_line --index 0 --partial "the tool failed @ "
@@ -310,7 +310,7 @@ EOF
 @test "with_error: omits the 'Exit code' line when the previous command succeeded" {
     _run_with_error_script <<'EOF'
 declare -i rc=0
-with_error "$err_tool_error" rc "reported without a failed command"
+with_error rc "$err_tool_error" "reported without a failed command"
 EOF
     assert_success
     assert_output --partial "reported without a failed command"
@@ -320,7 +320,7 @@ EOF
 @test "with_error: the guarded steps after a failure are skipped, and exit_if_has_errors exits with the code" {
     _run_with_error_script <<'EOF'
 declare -i rc=0
-false                     || with_error "$err_tool_error" rc "step 1 failed"
+false                     || with_error rc "$err_tool_error" "step 1 failed"
 (( rc != success )) || echo "step 2 ran"
 (( rc != success )) || echo "step 3 ran"
 exit_if_has_errors false
@@ -334,7 +334,7 @@ EOF
 @test "with_error: the stack dump starts at the caller, not at with_error itself" {
     _run_with_error_script <<'EOF'
 declare -i rc=0
-f() { false || with_error "$err_tool_error" rc "boom"; }
+f() { false || with_error rc "$err_tool_error" "boom"; }
 f
 EOF
     assert_success
@@ -345,7 +345,7 @@ EOF
 @test "with_error: '@ file (line)' points at the caller's line, not at with_error itself" {
     _run_with_error_script <<'EOF'
 declare -i rc=0
-f() { false || with_error "$err_tool_error" rc "boom"; }
+f() { false || with_error rc "$err_tool_error" "boom"; }
 f
 EOF
     assert_success
@@ -358,7 +358,7 @@ EOF
     _run_with_error_script <<'EOF'
 declare -i rc=0
 child() { exit_if_has_errors false; echo "child deferred"; }
-parent() { false || with_error "$err_tool_error" rc "parent's error"; child; }
+parent() { false || with_error rc "$err_tool_error" "parent's error"; child; }
 parent
 echo "parent returned"
 EOF
@@ -369,54 +369,55 @@ EOF
 
 @test "with_error: bug-exits with fewer than two arguments" {
     _run_with_error_script <<'EOF'
-false || with_error "$err_tool_error"
+declare -i rc=0
+false || with_error rc
 EOF
     assert_failure "$err_invalid_arguments"
     assert_output --partial "with_error() requires at least two arguments"
 }
 
-@test "with_error: bug-exits when argument 1 is not an exit code" {
+@test "with_error: bug-exits when argument 2 is not an exit code" {
     _run_with_error_script <<'EOF'
 declare -i rc=0
-false || with_error "not-a-code" rc "boom"
+false || with_error rc "not-a-code" "boom"
 EOF
     assert_failure "$err_argument_value"
-    assert_output --partial "requires argument 1"
+    assert_output --partial "requires argument 2"
 }
 
-@test "with_error: bug-exits when argument 1 is 0 -- the chain would continue as if nothing failed" {
+@test "with_error: bug-exits when argument 2 is 0 -- the chain would continue as if nothing failed" {
     _run_with_error_script <<'EOF'
 declare -i rc=0
-false || with_error 0 rc "boom"
+false || with_error rc 0 "boom"
 echo "continued with rc=$rc"
 EOF
     assert_failure "$err_argument_value"
-    assert_output --partial "requires argument 1"
+    assert_output --partial "requires argument 2"
     refute_output --partial "continued with"
 }
 
 @test "with_error: accepts the smallest error code, \$failure (1)" {
     _run_with_error_script <<'EOF'
 declare -i rc=0
-false || with_error "$failure" rc "generic failure"
+false || with_error rc "$failure" "generic failure"
 echo "rc=$rc"
 EOF
     assert_success
     assert_output --partial "rc=1"
 }
 
-@test "with_error: bug-exits when argument 2 is not the name of a declared variable" {
+@test "with_error: bug-exits when argument 1 is not the name of a declared variable" {
     _run_with_error_script <<'EOF'
-false || with_error "$err_tool_error" undeclared_rc "boom"
+false || with_error undeclared_rc "$err_tool_error" "boom"
 EOF
     assert_failure "$err_argument_value"
-    assert_output --partial "requires argument 2"
+    assert_output --partial "requires argument 1"
 }
 
 @test "with_error: reports a dotnet exit code passed with -dec, and still records the vm2 code" {
     _run_with_error_script <<'EOF'
 declare -i rc=0
-(exit 2) || with_error "$err_tool_error" rc "msbuild failed" -dec "$?"
+(exit 2) || with_error rc "$err_tool_error" "msbuild failed" -dec $?
 EOF
     assert_success
     assert_line --index 0 --partial "msbuild failed @ "

@@ -17,7 +17,7 @@ declare -xr ci
 declare -x old_branch_name=''
 declare -x new_branch_name=''
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Parses the command-line arguments for 'rename-branch.sh'. Delegates common switches (help, quiet, verbose,
 # trace, dry-run) to 'get_common_arg'. Accepts up to two positional arguments: if one positional argument is given, it is
 # taken as the new branch name; if two are given, the first is the old branch name and the second is the new branch name.
@@ -35,7 +35,7 @@ declare -x new_branch_name=''
 #   get_arguments feature/new-name
 # @example
 #   get_arguments feature/old-name feature/new-name
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function get_arguments()
 {
     local _option

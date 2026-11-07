@@ -120,7 +120,7 @@ function validate_arguments()
         local _invalid=false
 
         # resolve the repo of the current directory:
-        resolve_repo_root "$vm2_repos" '' _repo_path _                          || { error "The current directory is not a vm2 repository. No other repositories specified." -ec "$?"; _invalid=true; }
+        resolve_repo_root "$vm2_repos" '' _repo_path _                          || { error "The current directory is not a vm2 repository. No other repositories specified." -ec $?; _invalid=true; }
         $_invalid || {
             _repo=$(basename "$_repo_path")
             is_in "$_repo" "${vm2_repositories[@]}"
@@ -128,28 +128,28 @@ function validate_arguments()
         $_invalid ||
             [[ -s $_repo_path/$dpp_file_name ]]                                 || { error "Missing '$dpp_file_name' in '$_repo'. No other repositories specified." -ec "$err_invalid_file"; _invalid=true; }
         $_invalid ||
-            validate_package_lines "$_repo_path/$dpp_file_name"                 || { error "Invalid package lines in $_repo_path/$dpp_file_name." -ec "$?"; _invalid=true; }
+            validate_package_lines "$_repo_path/$dpp_file_name"                 || { error "Invalid package lines in $_repo_path/$dpp_file_name." -ec $?; _invalid=true; }
         $_invalid ||
             target_repos[$_repo]=$_repo_path
     else
         for _repo in "${!target_repos[@]}"; do
             is_in "$_repo" "${vm2_repositories[@]}"                             || { error "The specified repository '$_repo' is not in the vm2 repositories list." -ec "$err_repo_not_in_vm2_repos"; continue; }
 
-            resolve_repo_root "$vm2_repos" "$_repo" _repo_path _                || { error "Could not resolve '$_repo'" -ec "$?"; continue; }
+            resolve_repo_root "$vm2_repos" "$_repo" _repo_path _                || { error "Could not resolve '$_repo'" -ec $?; continue; }
 
             [[ -s "$_repo_path/$dpp_file_name" ]]                               || { warning "Missing '$dpp_file_name' in '$_repo'. Skipping the repo.";
                 unset "target_repos[$_repo]"
                 continue
             }
 
-            validate_package_lines "$_repo_path/$dpp_file_name"                 || { error "Invalid package lines in $_repo_path/$dpp_file_name." -ec "$?"; continue; }
+            validate_package_lines "$_repo_path/$dpp_file_name"                 || { error "Invalid package lines in $_repo_path/$dpp_file_name." -ec $?; continue; }
 
             target_repos[$_repo]=$_repo_path
         done
     fi
 
     ! is_in "$vm2_sot_repo_name" "${!target_repos[@]}" ||
-        validate_package_lines "$sot_path/$dpp_file_name"                       || error "Invalid package lines in $sot_path/$dpp_file_name." -ec "$?"
+        validate_package_lines "$sot_path/$dpp_file_name"                       || error "Invalid package lines in $sot_path/$dpp_file_name." -ec $?
 
     has_errors || {
         echo "# Update Packages Summary"

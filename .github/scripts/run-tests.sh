@@ -129,7 +129,7 @@ if [[ -d "$artifacts_test_dir" && -n "$(ls -A "$artifacts_test_dir")" ]]; then
                 execute rm -rf "$artifacts_test_dir"
                 ;;
             2)  info "Renaming the directory '$artifacts_test_dir' to '$renamed_artifacts_dir'..."
-                execute mv "$artifacts_test_dir" "$renamed_artifacts_dir"       || with_error "$err_io_failure" rc "Failed to copy '$artifacts_test_dir' to '$renamed_artifacts_dir'"
+                execute mv "$artifacts_test_dir" "$renamed_artifacts_dir"       || with_error rc "$err_io_failure" "Failed to copy '$artifacts_test_dir' to '$renamed_artifacts_dir'"
                 ;;
             3)  trace "Exiting the script."
                 exit 0

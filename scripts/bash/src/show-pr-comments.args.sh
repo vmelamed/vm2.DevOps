@@ -31,14 +31,14 @@ declare -x watch=false
 declare -x interval=$default_interval
 declare -x timeout=$default_timeout
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Parses the command-line arguments for 'show-pr-comments.sh'. Delegates common switches (help, quiet, verbose,
 # trace, dry-run) to 'get_common_arg'. Accepts at most one positional argument: the pull request number.
 #
 # @arg $@ string The command-line arguments.
 #
 # Note: 'usage_if_requested' exits the process directly (via 'usage') when '--help'/'-h'/'-?' was given.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function get_arguments()
 {
     local _option
@@ -90,12 +90,12 @@ function get_arguments()
     dump_args
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Validates the arguments, resolves the repository and the pull request number when they were omitted, and
 # freezes them. The resolution queries GitHub through 'gh' (read-only, so not through 'execute').
 #
 # @exitcode success=0: The arguments are valid and resolved (otherwise the script exits through 'exit_if_has_errors').
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function validate_arguments()
 {
     is_tool_present gh                                                          || error "The GitHub CLI 'gh' is required: https://cli.github.com" -ec "$err_tool_not_found"

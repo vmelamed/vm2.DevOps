@@ -5,10 +5,10 @@
 
 # length-review: keep together -- Well-focused on configuration variables, constants, tools, and functions.
 
-#=============================================================================================
+#===============================================================================================
 # Configuration, customization and parametrization of the script environment, including:
 # variables, constants, tools, and functions for the VM2 DevOps diff and merge scripts.
-#=============================================================================================
+#===============================================================================================
 
 declare -xr script_name
 declare -xr script_dir
@@ -109,7 +109,7 @@ declare -xa file_actions
 # array [file] => [action string] for files specified on the CLI with --file* options
 declare -xA selectors_actions
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Retrieves the diff and merge tool commands from the specified configuration or
 #   from the git configuration or will assume defaults (diff and VS Code)
 #
@@ -132,7 +132,7 @@ declare -xA selectors_actions
 #     - line 2: diff tool command
 #     - line 3: merge tool name
 #     - line 4: merge tool command
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function get_tools()
 {
     (( $# >= 1 ))                                                               || bug "${FUNCNAME[0]}() requires two arguments (provided $#):" \
@@ -234,7 +234,7 @@ function get_tools()
     printf "%s\n" "$_mc"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Loads the diff/merge tool configuration and the list of source/target/action file entries from the SoT
 # directory's 'diff-shared.config.json', populating the global model arrays 'source_files', 'target_files', and
 # 'file_actions'. This is a top-level CLI configuration step: on any validation or configuration failure it reports the
@@ -250,7 +250,7 @@ function get_tools()
 #
 # @example
 #   configure "$sot_path" "$target_path"
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function configure()
 {
     (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
@@ -267,9 +267,9 @@ function configure()
     local _schema_config="$_sot_path/diff-shared.config.schema.json"
 
     # validate the config file and load the diff and merge tools from it:
-    [[ -s "$_config_file" ]]                                                    || with_error "$err_argument_value" _rc "The configuration file '$_config_file' was not found or is empty."
-    (( _rc != success )) || jq empty "$_config_file" 2>"$_ignore"               || with_error "$err_argument_value" _rc "The configuration file '$_config_file' contains invalid JSON."
-    (( _rc != success )) || validate_json_schema "$_config_file" "$_schema_config" || with_error "$err_argument_value" _rc "The configuration file '$_config_file' does not conform to the schema '$_schema_config'."
+    [[ -s "$_config_file" ]]                                                    || with_error _rc "$err_argument_value" "The configuration file '$_config_file' was not found or is empty."
+    (( _rc != success )) || jq empty "$_config_file" 2>"$_ignore"               || with_error _rc "$err_argument_value" "The configuration file '$_config_file' contains invalid JSON."
+    (( _rc != success )) || validate_json_schema "$_config_file" "$_schema_config" || with_error _rc "$err_argument_value" "The configuration file '$_config_file' does not conform to the schema '$_schema_config'."
     (( _rc == success )) || exit_if_has_errors
 
     trace "Configuration file '$_config_file' is valid."
@@ -296,16 +296,16 @@ function configure()
     local _source_file _target_file _file_action
 
     while IFS='=' read -r _source_file _target_file _file_action; do
-        [[ -n "$_source_file" ]]                                                || with_error "$err_argument_value" _rc "Empty source file path found in '$_config_file'."
-        [[ -n "$_target_file" ]]                                                || with_error "$err_argument_value" _rc "Empty target file path found in '$_config_file'."
-        [[ -n "$_file_action" ]]                                                || with_error "$err_argument_value" _rc "Empty action found in '$_config_file'."
-        is_in "$_file_action" "${valid_actions[@]}"                             || with_error "$err_argument_value" _rc "'$_file_action' is not a valid action. Must be one of: $all_actions_str."
+        [[ -n "$_source_file" ]]                                                || with_error _rc "$err_argument_value" "Empty source file path found in '$_config_file'."
+        [[ -n "$_target_file" ]]                                                || with_error _rc "$err_argument_value" "Empty target file path found in '$_config_file'."
+        [[ -n "$_file_action" ]]                                                || with_error _rc "$err_argument_value" "Empty action found in '$_config_file'."
+        is_in "$_file_action" "${valid_actions[@]}"                             || with_error _rc "$err_argument_value" "'$_file_action' is not a valid action. Must be one of: $all_actions_str."
 
         # EXPAND THE MACRO-VARIABLES "vm2_repos" AND "vm2_sot_shared" IN THE SOURCE FILE PATHS
         # but do not expand the target file path here, it will be expanded later when iterating the targets.
         # Thus config_target_files stores the target file paths as templates for later expansion.
         (( _rc != success )) || eval "_source_file=\"$_source_file\""
-        (( _rc != success )) || [[ -s "$_source_file" ]]                        || with_error "$err_argument_value" _rc "Source file '$_source_file' does not exist or is empty."
+        (( _rc != success )) || [[ -s "$_source_file" ]]                        || with_error _rc "$err_argument_value" "Source file '$_source_file' does not exist or is empty."
         (( _rc == success )) || continue
 
         # and assign into the model arrays by index:
@@ -326,7 +326,7 @@ function configure()
 
     # validate the configuration
     (( ${#config_source_files[@]} == ${#config_target_files[@]} && ${#config_source_files[@]} == ${#config_file_actions[@]} )) \
-                                                                                || with_error "$err_logic_error" _rc "The data in the config tables does not match."
+                                                                                || with_error _rc "$err_logic_error" "The data in the config tables does not match."
     exit_if_has_errors
 
     trace "$script_name was configured successfully with ${#config_source_files[@]} files and actions."
@@ -358,7 +358,7 @@ function configure_target_files()
     done
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Loads per-repository customizations from '<target_path>/diff-shared.custom.json', if present, overriding
 # the configured diff/merge tools and (unless 'only_tools' is set) the per-file actions in the global 'file_actions'
 # array. If the custom configuration file does not exist or is empty, the function leaves the configured tools and
@@ -379,7 +379,7 @@ function configure_target_files()
 # @example
 #   customize "$target_root" true
 #   customize "$target_root" false
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function customize()
 {
     (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires two arguments (provided $#)" \
@@ -459,7 +459,7 @@ function customize()
     fi
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Overrides the per-file actions in the global 'file_actions' array based on the '--file*' selectors
 #   collected on the command line (the global associative array 'selectors_actions'). For each configured source
 #   file, matches it against every selector pattern (a trailing-path glob, e.g. '*/<selector>'); if exactly one
@@ -471,7 +471,7 @@ function customize()
 #
 # @exitcode success=0: Always (even when no files matched any selector -- that case is reported via 'warning', not
 #   a non-zero return).
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function parameterize()
 {
     ((${#selectors_actions[@]} > 0 ))                                           || return "$success"

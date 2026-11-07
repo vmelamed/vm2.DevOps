@@ -32,7 +32,7 @@ source "$script_dir/add-spdx.args.sh"
 source "$script_dir/add-spdx.functions.sh"
 source "$script_dir/add-spdx.usage.sh"
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Main script body: recursively scans a directory for '*.cs', '*.sh', '*.bats',
 #   '*.yaml', and '*.yml' files and prepends an SPDX license-identifier header (with a copyright
 #   line) to any file that does not already contain one. C# generated artifacts ('obj/', 'bin/',
@@ -73,7 +73,7 @@ source "$script_dir/add-spdx.usage.sh"
 #   add-spdx.sh ./src --license MIT
 # @example
 #   add-spdx.sh --dry-run
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 
 # this scripts arguments
 get_arguments "$@"

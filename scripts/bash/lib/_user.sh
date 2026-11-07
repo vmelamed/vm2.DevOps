@@ -3,10 +3,10 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-#=============================================================================================
+#===============================================================================================
 # This script defines functions for interacting with the user in a Bash script.
 # It includes functions for prompting the user, confirming actions, and reading input.
-#=============================================================================================
+#===============================================================================================
 
 # Circular include guard
 (( ${__VM2_LIB_USER_SH_LOADED:-0} == 1 )) && return 0
@@ -24,7 +24,7 @@ declare -xri err_argument_type
 declare -xri err_argument_value
 declare -xri err_invalid_nameref
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Displays a prompt and waits for the user to press any key before
 # continuing. If the environment variable 'quiet' is true, skips the prompt and
 # returns immediately.
@@ -33,7 +33,7 @@ declare -xri err_invalid_nameref
 #
 # @example
 #   press_any_key  # typically called after displaying information
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function press_any_key()
 {
     is_quiet || {
@@ -43,7 +43,7 @@ function press_any_key()
     return "$success"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Asks the user to respond yes or no to a prompt. If the environment
 # variable 'quiet' is true, assumes the default response without prompting.
 #
@@ -58,7 +58,7 @@ function press_any_key()
 #   if confirm "Delete all files?" "n"; then
 #     rm -rf *
 #   fi
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function confirm()
 {
     (( $# == 1 || $# == 2 ))           || bug "${FUNCNAME[0]}() requires one or two arguments (provided $#):" \
@@ -90,7 +90,7 @@ function confirm()
     [[ ${_response,,} == "y" ]]
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Displays a prompt and asks the user to enter a value.
 #
 # Notes:
@@ -121,7 +121,7 @@ function confirm()
 #   validate_no_longer_than_350
 # @example
 #   enter_value "Enter your password" password "" true validate_password
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function enter_value()
 {
     (( $# >= 2 && $# <= 5 ))                            || bug "${FUNCNAME[0]}() requires from 2 to 5 arguments (provided $#):" \
@@ -183,7 +183,7 @@ function enter_value()
     set_errors "$_errs"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Displays a prompt and a numbered list of options, and asks the user to choose
 #   one. If the environment variable 'quiet' is true, or if the user just presses [Enter]
 #   without making a choice, assumes the first option (the default) - 0.
@@ -205,7 +205,7 @@ function enter_value()
 #     3) env="prod" ;;
 #     *) ...
 #   esac
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function choose()
 {
 
@@ -263,7 +263,7 @@ function choose()
     return "$success"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Prints a sequence of quoted values with a customizable quote marks, separator,
 #   and enclosing parentheses. Named parameters must come before the values.
 #
@@ -284,7 +284,7 @@ function choose()
 # @example
 #   print_sequence --quote='"' --separator='; ' --paren='()' apple banana cherry
 #   # Output: ("apple"; "banana"; "cherry")
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function print_sequence()
 {
     local _open_paren=""

@@ -3,15 +3,16 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # This script defines functions for dumping variable names and values in a formatted table.
 # It supports different table formats (graphical, markdown) and handles scalars, arrays, associative arrays, functions, and undefined variables.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 
 # Circular include guard
 (( ${__VM2_LIB_DUMP_VARS_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_DUMP_VARS_SH_LOADED=1
 
+# vm2 core error codes
 declare -xri success
 declare -xri err_argument_type
 declare -xri err_invalid_nameref
@@ -19,6 +20,7 @@ declare -xri err_invalid_arguments
 declare -xri err_missing_argument
 declare -xri err_unexpected_error
 
+# vm2 core constants
 declare -xr secret_str
 declare -xr space_ch
 declare -xr error_em
@@ -67,7 +69,7 @@ declare -A markdown=(
     ["bot_bot_header"]=""
 )
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Writes a header title line in the variable dump table, using the
 # current table format (graphical or markdown).
 #
@@ -83,11 +85,11 @@ declare -A markdown=(
 #
 # @example
 #   _write_title "Build Summary:"
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function _write_title()
 {
-    (( $# == 1 )) || bug "${FUNCNAME[0]}() requires exactly 1 argument (provided $#) - the table header text." -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly 1 argument (provided $#) - the table header text." -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
 
     local _current_table_format_name=''
     get_table_format _current_table_format_name
@@ -97,7 +99,7 @@ function _write_title()
     printf "${_current_table_format["fmt_top_header"]}" "$1"
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Writes a "name: value" line in the variable dump table for the named variable.
 # Scalars, arrays, associative arrays, functions, and undefined/unbound variables are each
 # formatted differently.
@@ -121,25 +123,25 @@ function _write_title()
 # @example
 #   _write_line "build_result"
 #   _write_line "api_key" true
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # shellcheck disable=SC2059 # Don't use variables in the printf format string. Use printf "..%s.." "$foo".
 function _write_line()
 {
     local -i _rc="$success"
     local _has_name=false
 
-    (( $# == 4 ))                                        || bug "${FUNCNAME[0]}() requires four arguments (provided $#):" \
-                                                                "  - nameref to the variable to display" \
-                                                                "  - bool, if true, masks the value with the \$secret_str placeholder instead of printing it." \
-                                                                "  - string, the name to display instead of the variable name" \
-                                                                "  - bool, if true, applies GitHub escaping to the output" \
-                                                                -ec "$err_invalid_arguments"
+    (( $# == 4 ))                                                               || bug "${FUNCNAME[0]}() requires four arguments (provided $#):" \
+                                                                                       "  - nameref to the variable to display" \
+                                                                                       "  - bool, if true, masks the value with the \$secret_str placeholder instead of printing it." \
+                                                                                       "  - string, the name to display instead of the variable name" \
+                                                                                       "  - bool, if true, applies GitHub escaping to the output" \
+                                                                                       -ec "$err_invalid_arguments"
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     [[ ! -v 3  || -z "$3" ]] || _has_name=true
-    [[ ! -v 1 ]]  || $_has_name || is_variable_name "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a valid variable name (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
-    [[ ! -v 2 ]]  || is_boolean "$2"                     || bug "${FUNCNAME[0]}() requires argument 2, the secret-masking flag, to be 'true' or 'false' (provided '${2-<missing>}')." -ec "$err_argument_type"
-    [[ ! -v 4 ]]  || is_boolean "$4"                     || bug "${FUNCNAME[0]}() requires argument 4, the GitHub escaping flag, to be 'true' or 'false' (provided '${4-<missing>}')." -ec "$err_argument_type"
-    exit_if_has_bugs
+    [[ ! -v 1 ]]  || $_has_name || is_variable_name "$1"                        || bug "${FUNCNAME[0]}() requires argument 1 to be a valid variable name (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
+    [[ ! -v 2 ]]  || is_boolean "$2"                                            || bug "${FUNCNAME[0]}() requires argument 2, the secret-masking flag, to be 'true' or 'false' (provided '${2-<missing>}')." -ec "$err_argument_type"
+    [[ ! -v 4 ]]  || is_boolean "$4"                                            || bug "${FUNCNAME[0]}() requires argument 4, the GitHub escaping flag, to be 'true' or 'false' (provided '${4-<missing>}')." -ec "$err_argument_type"
+                                                                                exit_if_has_bugs
 
     local _current_table_format_name=''
     get_table_format _current_table_format_name
@@ -190,7 +192,7 @@ function _write_line()
     fi
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description If `$verbose` is on, dumps a table of variable names and values, then, if `$quiet`
 # is off, prompts the user to "press any key to continue" (see the `--quiet` and `--force` flags
 # below, which can override both checks).
@@ -220,7 +222,7 @@ function _write_line()
 #   dump_vars --header "Build Summary:" build_result warnings_count errors_count
 # @example
 #   dump_vars --markdown --header "Configuration:" config_path log_level --line setting1 setting2
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # shellcheck disable=SC2059 # Don't use variables in the printf format string. Use printf '..%s..' "$foo".
 function dump_vars()
 {

@@ -19,7 +19,7 @@ declare -xri success
 declare -xri err_not_found
 declare -xri err_tool_error
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Prints the reviews and the inline review comments of a GitHub pull request, straight from the GitHub API
 # ('gh api'), e.g. Copilot's review right after a push -- faster than waiting for an editor's comment panel to sync.
 #
@@ -38,7 +38,7 @@ declare -xri err_tool_error
 #
 # @example
 #   show-pr-comments.sh --watch
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 
 source "$script_dir/show-pr-comments.args.sh"
 source "$script_dir/show-pr-comments.usage.sh"

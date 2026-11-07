@@ -7,7 +7,7 @@
 (( ${__VM2_LIB_DOTNET_ARGS_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_DOTNET_ARGS_SH_LOADED=1
 
-# reference error codes defined in the core library
+# vm2 core error codes
 declare -xri success
 declare -xri failure
 declare -xri positive
@@ -18,24 +18,25 @@ declare -xri err_missing_argument
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
 
+# vm2 core constants
 declare -xr ci
 
-#=============================================================================================
+#===============================================================================================
 # Define default, constant values whose names and roles are shared across vm2.DevOps scripts.
 # They are usually set from CLI arguments, environment variables, or defaults.
-#=============================================================================================
+#===============================================================================================
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The default value for the `MinVerTagPrefix` MSBuild property. It specifies the
 #   prefix used in Git tags to indicate a version when using MinVer. For example, `v1.2.3`.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xr default_minver_tag_prefix='v'
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description The default value for the `MinVerPrereleaseIdentifiers` MSBuild property. It
 #   specifies the default pre-release identifiers for SemVer when using MinVer. For example,
 #   `v1.2.3-preview.2.3`.
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 declare -xr default_minver_prerelease_id="preview.0"
 
 # reference variables common for most vm2.DevOps scripts that are
@@ -52,6 +53,20 @@ declare -x framework=${FRAMEWORK:-}                                             
 declare -x runtime=${RUNTIME:-}                                                                 # from Directory.Build.props
 declare -x artifacts=${ARTIFACTS_PATH:-}                                                        # from Directory.Build.props
 
+ # common dotnet arguments array, ready to put into dump_vars directly or into a larger array
+declare -xra dump_common_dotnet_args=(
+    --header "Common Dotnet CLI Arguments:"
+    preprocessor_symbols
+    minver_tag_prefix
+    minver_prerelease_id
+    gh_nuget_username
+    --secret gh_nuget_password
+    configuration
+    framework
+    runtime
+    artifacts
+)
+
 # for use in args_to_github_output() as "${output_common_dotnet_args[@]}"
 declare -xra output_common_dotnet_args=(
     preprocessor_symbols
@@ -63,22 +78,7 @@ declare -xra output_common_dotnet_args=(
     artifacts
 )
 
- # common dotnet arguments array, ready to put into dump_vars directly or into a larger array
-declare -xra dump_common_dotnet_args=(
-    --header "Common Dotnet CLI Arguments:"
-    preprocessor_symbols
-    minver_tag_prefix
-    minver_prerelease_id
-    gh_nuget_username
-    --secret
-    gh_nuget_password
-    configuration
-    framework
-    runtime
-    artifacts
-)
-
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description Processes one github-scripts-common command-line (`--define`,
 #   `--configuration`/`-c`, `--framework`, `--runtime`, `--artifacts-path`, `--minver-tag-prefix`,
 #   `--minver-prerelease-id`, `--nuget-username`, `--nuget-password`) argument and its value.
@@ -112,13 +112,13 @@ declare -xra dump_common_dotnet_args=(
 #     get_common_arg "$arg" && continue
 #     # handle custom arguments
 #   done
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function get_common_dotnet_arg()
 {
     (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires two arguments ($# provided):" \
-                                                                                                                    "  - the command-line option identifier" \
-                                                                                                                    "  - the command-line option value" \
-                                                                                                                    -ec "$err_invalid_arguments"
+                                                                                       "  - the command-line option identifier" \
+                                                                                       "  - the command-line option value" \
+                                                                                       -ec "$err_invalid_arguments"
     exit_if_has_bugs
 
     # Accept $2 unconditionally, even empty -- this function only recognizes option NAMES and
@@ -150,7 +150,7 @@ function get_common_dotnet_arg()
     return "$positive" # it was a common argument and was processed
 }
 
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 # @description
 #   Sanitizes and validates the common dotnet arguments.
 #   This function SHOULD be called after all common dotnet arguments have been parsed.
@@ -168,7 +168,7 @@ function get_common_dotnet_arg()
 #
 # @example
 #   sanitize_common_dotnet_args "$build_projects"
-#---------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------
 function sanitize_common_dotnet_args()
 {
     local -i _rc="$success"

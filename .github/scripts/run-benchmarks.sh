@@ -74,7 +74,7 @@ if [[ -d "$artifacts_benchmarks" && -n "$(ls -A "$artifacts_benchmarks")" ]]; th
                 execute rm -rf "$artifacts_benchmarks"
                 ;;
             2)  info "Renaming the directory '$artifacts_benchmarks' to '$renamed_artifacts_dir'..."
-                execute mv "$artifacts_benchmarks" "$renamed_artifacts_dir"     || with_error "$err_io_failure" rc "Failed to copy '$artifacts_benchmarks' to '$renamed_artifacts_dir'"
+                execute mv "$artifacts_benchmarks" "$renamed_artifacts_dir"     || with_error rc "$err_io_failure" "Failed to copy '$artifacts_benchmarks' to '$renamed_artifacts_dir'"
                 ;;
             3)  trace "Exiting the script."
                 exit 0
@@ -88,7 +88,7 @@ fi
 exit_if_has_errors
 
 trace "Creating artifacts directory(s)..."
-execute mkdir -p "$results_dir"                                                 || with_error "$err_io_failure" rc "Failed to create the results directory '$results_dir'"
+execute mkdir -p "$results_dir"                                                 || with_error rc "$err_io_failure" "Failed to create the results directory '$results_dir'"
 
 declare -x benchmark_exec_path
 get_target_path "$benchmark_project" benchmark_exec_path
