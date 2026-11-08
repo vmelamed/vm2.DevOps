@@ -150,7 +150,7 @@ Sets the shell's `nocasematch` option off/on.
 
 ### set_case_sensitivity()
 
-Sets the shell's case-sensitivity to a given state, returning the previous state.
+Sets the shell's case-sensitivity to a given state, and saves the previous state into an optional nameref for later restoration.
 
 ### is_variable_name()
 

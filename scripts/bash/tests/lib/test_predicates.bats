@@ -344,6 +344,63 @@ declare -gxi err_invalid_path
     assert_failure "$err_invalid_arguments"
 }
 
+@test "is_in: case-sensitive -- a value that differs only in case is not found" {
+    run is_in "GREEN" "red" "green" "blue"
+    assert_failure "$failure"
+}
+
+# --- is_in_i ------------------------------------------------------------------------------
+
+@test "is_in_i: true when the value is among the options, ignoring case" {
+    run is_in_i "green" "red" "green" "blue"
+    assert_success
+    run is_in_i "GREEN" "red" "green" "blue"
+    assert_success
+    run is_in_i "green" "RED" "GrEeN" "BLUE"
+    assert_success
+}
+
+@test "is_in_i: false when the value is not among the options in any case" {
+    run is_in_i "yellow" "red" "green" "blue"
+    assert_failure "$failure"
+    run is_in_i "gree" "red" "green" "blue"
+    assert_failure "$failure"
+}
+
+@test "is_in_i: false for an empty option list (no options is a valid, empty set)" {
+    run is_in_i "anything"
+    assert_failure "$failure"
+}
+
+@test "is_in_i: compares the options literally, not as glob patterns" {
+    run is_in_i "abc" "a*"
+    assert_failure "$failure"
+    run is_in_i "A*" "a*"
+    assert_success
+}
+
+@test "is_in_i: bug-exits with no arguments" {
+    run is_in_i
+    assert_failure "$err_invalid_arguments"
+}
+
+@test "is_in_i: restores the caller's case-sensitive matching, whether found or not" {
+    set_case_sensitive
+    is_in_i "GREEN" "green"     || true
+    is_case_sensitive           || fail "case-sensitive matching was not restored after a match"
+    is_in_i "yellow" "green"    || true
+    is_case_sensitive           || fail "case-sensitive matching was not restored after no match"
+}
+
+@test "is_in_i: restores the caller's case-insensitive matching, whether found or not" {
+    set_case_insensitive
+    is_in_i "GREEN" "green"     || true
+    ! is_case_sensitive         || fail "case-insensitive matching was not restored after a match"
+    is_in_i "yellow" "green"    || true
+    ! is_case_sensitive         || fail "case-insensitive matching was not restored after no match"
+    set_case_sensitive
+}
+
 # --- is_windows -------------------------------------------------------------------------------
 
 @test "is_windows: false on this Linux test runner" {
