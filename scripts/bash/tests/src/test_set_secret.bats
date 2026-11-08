@@ -140,3 +140,14 @@ _set_calls() {
     assert_output --partial "Failed to retrieve the list of secrets"
     [[ $(_set_calls) -eq 0 ]]
 }
+
+@test "set-secret: skipping a repository with an empty value goes on to the next one (regression: state left unrestored)" {
+    # An empty answer keeps the placeholder, and the script skips that repository with 'continue'. The 'continue' used to
+    # skip restore_state too, so the next repository's save_state bug-exited on the still-saved state.
+    FAKE_EXISTING="MY_SECRET" _run_set_secret '\nhunter2\n' MY_SECRET --app actions
+    assert_success
+    refute_output --partial "previously restored state"
+    local _repos
+    _repos=$(env -i HOME="$HOME" PATH="/usr/bin:/bin" bash -c "source '$lib_dir/core.sh' --no-trap >/dev/null 2>&1; echo \${#vm2_repositories[@]}")
+    [[ $(_set_calls) -eq $(( _repos - 1 )) ]]
+}

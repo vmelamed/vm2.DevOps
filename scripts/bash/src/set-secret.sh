@@ -81,6 +81,7 @@ for repo in "${vm2_repositories[@]}"; do
         # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
         [[ -n "$secret_value" && $secret_value != "$secret_placeholder" ]] && echo "$secret_str" || {
             echo ''
+            restore_state core_state    # before 'continue': the next repository's save_state needs a restored state
             continue
         }
     }
