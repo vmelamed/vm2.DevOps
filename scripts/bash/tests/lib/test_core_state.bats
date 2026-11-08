@@ -200,10 +200,9 @@ declare -gxi err_logic_error
 
 # --- case sensitivity / globstar / nullglob shopt toggles ---------------------------------------
 #
-# NOTE: set_case_sensitive()/set_case_insensitive() (in _predicates.sh) are now simple, no-argument
-# setters -- siblings of set_verbose/set_quiet/set_dry_run above, not a boolean-argument toggle.
-# The toggle behavior (and its argument validation) lives in the separate set_case_sensitivity()
-# function, which stores the previous state in an optional nameref (argument 2).
+# NOTE: set_case_sensitive()/set_case_insensitive() (in _predicates.sh) are simple, no-argument
+# setters -- siblings of set_verbose/set_quiet/set_dry_run above. To change an option temporarily,
+# wrap the change in begin_scope/end_scope (tested below).
 
 @test "set_case_sensitive / set_case_insensitive: toggle the nocasematch shopt" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; set_case_sensitive; shopt -q nocasematch"
@@ -219,73 +218,6 @@ declare -gxi err_logic_error
     assert_failure
 }
 
-@test "set_case_sensitivity: sets the state from its argument and stores the previous one in the nameref" {
-    run bash -c "
-        source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
-        set_case_sensitive
-        declare prev=''
-        set_case_sensitivity false prev
-        echo \"RC=\$? PREV=\$prev\"
-        set_case_sensitivity true prev
-        echo \"RC=\$? PREV=\$prev\"
-        is_case_sensitive && echo 'NOW=sensitive'
-    "
-    assert_success
-    assert_line "RC=0 PREV=true"
-    assert_line "RC=0 PREV=false"
-    assert_line "NOW=sensitive"
-}
-
-@test "set_case_sensitivity: the nameref is optional" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; set_case_sensitive; set_case_sensitivity false; shopt -q nocasematch"
-    assert_success
-}
-
-@test "set_case_sensitivity: works when the caller's variable has the same name as the function's own nameref" {
-    # Regression: a nameref named like the caller's variable is a circular reference, and the call
-    # bug-exits. is_indexed_array/is_associative_array/is_array all name their variable this way.
-    # The caller must be a function: at the global scope, bash resolves such a nameref to the global.
-    run bash -c "
-        source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
-        function caller()
-        {
-            local _prev_case_sensitivity=''
-            set_case_sensitivity false _prev_case_sensitivity
-            echo \"PREV=\$_prev_case_sensitivity\"
-        }
-        set_case_sensitive
-        caller
-        is_case_sensitive || echo 'NOW=insensitive'
-    "
-    assert_success
-    assert_line "PREV=true"
-    assert_line "NOW=insensitive"
-}
-
-@test "set_case_sensitivity: defaults to true (case-sensitive) when no argument is given" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; set_case_insensitive; set_case_sensitivity; shopt -q nocasematch"
-    assert_failure
-}
-
-@test "set_case_sensitivity: bug-exits on a non-boolean argument" {
-    run set_case_sensitivity "maybe"
-    assert_failure "$err_argument_type"
-}
-
-@test "set_case_sensitivity: bug-exits with more than two arguments" {
-    # shellcheck disable=SC2034 # passed by name, as the nameref argument
-    local prev=''
-    run set_case_sensitivity true prev extra
-    assert_failure "$err_invalid_arguments"
-}
-
-@test "set_case_sensitivity: bug-exits when argument 2 is not the name of a defined variable" {
-    run set_case_sensitivity true "not a name"
-    assert_failure "$err_invalid_nameref"
-    run set_case_sensitivity true undefined_variable_name
-    assert_failure "$err_invalid_nameref"
-}
-
 @test "set_glob_star: toggles the globstar shopt" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; set_glob_star true; shopt -q globstar"
     assert_success
@@ -298,4 +230,151 @@ declare -gxi err_logic_error
     assert_success
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; set_null_glob false; shopt -q nullglob"
     assert_failure
+}
+
+# --- begin_scope / end_scope / report_open_scopes --------------------------------------------------
+
+@test "begin_scope / end_scope: restore the shell options changed inside the scope, in both directions" {
+    run bash -c "
+        source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
+        shopt -u nocasematch nullglob
+        shopt -s globstar extglob
+        begin_scope
+        shopt -s nocasematch nullglob
+        shopt -u globstar extglob
+        end_scope
+        shopt -p nocasematch nullglob globstar extglob || true    # returns 1 when any of them is off
+    "
+    assert_success
+    assert_line "shopt -u nocasematch"
+    assert_line "shopt -u nullglob"
+    assert_line "shopt -s globstar"
+    assert_line "shopt -s extglob"
+}
+
+@test "begin_scope / end_scope: nested scopes restore in reverse order" {
+    run bash -c "
+        source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
+        set_case_sensitive
+        begin_scope
+        set_case_insensitive
+        begin_scope
+        set_case_sensitive
+        end_scope
+        is_case_sensitive || echo 'INNER=restored'
+        end_scope
+        is_case_sensitive && echo 'OUTER=restored'
+    "
+    assert_success
+    assert_line "INNER=restored"
+    assert_line "OUTER=restored"
+}
+
+@test "begin_scope / end_scope: work at the top level of a script, outside any function" {
+    run bash -c "
+        source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
+        begin_scope
+        set_null_glob true
+        end_scope
+        shopt -q nullglob || echo 'RESTORED'
+    "
+    assert_success
+    assert_output "RESTORED"
+}
+
+@test "begin_scope / end_scope: a subshell's own scope does not touch the parent's scope stack" {
+    run bash -c "
+        source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
+        begin_scope
+        set_case_insensitive
+        ( begin_scope; set_case_sensitive; end_scope )
+        end_scope
+        is_case_sensitive && echo 'RESTORED'
+    "
+    assert_success
+    assert_output "RESTORED"
+}
+
+@test "end_scope: bug-exits in the caller when a function returned without closing its scope" {
+    run bash -c "
+        source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
+        function leaky()  { begin_scope; set_case_insensitive; return 0; }
+        function caller() { begin_scope; leaky; end_scope; }
+        caller
+        echo 'NOT REACHED'
+    "
+    assert_failure "$err_logic_error"
+    assert_output --partial "end_scope() in 'caller': the innermost open scope belongs to 'leaky'"
+    refute_output --partial "NOT REACHED"
+}
+
+@test "end_scope: bug-exits in a sibling function at the same call depth that did not open the scope" {
+    run bash -c "
+        source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
+        function opener() { begin_scope; }
+        function closer() { end_scope; }
+        function caller() { opener; closer; }
+        caller
+    "
+    assert_failure "$err_logic_error"
+    assert_output --partial "end_scope() in 'closer': the innermost open scope belongs to 'opener'"
+}
+
+@test "end_scope: bug-exits in a subshell for a scope opened outside it" {
+    run bash -c "
+        source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
+        begin_scope
+        ( end_scope )
+        echo \"SUBSHELL_RC=\$?\"
+    "
+    assert_success
+    assert_output --partial "the innermost open scope belongs to"
+    assert_line "SUBSHELL_RC=$err_logic_error"
+}
+
+@test "end_scope: bug-exits when there is no open scope" {
+    run end_scope
+    assert_failure "$err_logic_error"
+    assert_output --partial "there is no open scope"
+}
+
+@test "begin_scope / end_scope: bug-exit when given arguments" {
+    run begin_scope nocasematch
+    assert_failure "$err_invalid_arguments"
+    run end_scope nocasematch
+    assert_failure "$err_invalid_arguments"
+}
+
+@test "report_open_scopes: core.sh reports the scopes left open at exit, without changing the exit code" {
+    run bash -c "
+        source '$lib_dir/core.sh' > /dev/null 2>&1
+        function leaky() { begin_scope; return 0; }
+        leaky
+        exit 0
+    "
+    assert_success
+    assert_output --partial "The scope opened in 'leaky' at"
+    assert_output --partial "was never closed"
+}
+
+@test "report_open_scopes: reports nothing when every scope was closed" {
+    run bash -c "
+        source '$lib_dir/core.sh' > /dev/null 2>&1
+        function tidy() { begin_scope; end_scope; }
+        tidy
+        exit 0
+    "
+    assert_success
+    refute_output --partial "was never closed"
+}
+
+@test "report_open_scopes: a subshell does not report the scopes it inherited from its parent" {
+    run bash -c "
+        source '$lib_dir/core.sh' > /dev/null 2>&1
+        begin_scope
+        ( report_open_scopes )
+        end_scope
+    "
+    assert_success
+    refute_output --partial "was never closed"
 }
