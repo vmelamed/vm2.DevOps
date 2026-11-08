@@ -156,11 +156,39 @@ declare -gxi err_not_found
         trap -p EXIT
     '
     assert_success
-    # core.sh itself appends report_open_scopes after on_exit
+    # core.sh registers report_open_scopes after on_exit, and add_trap keeps it last
     assert_line --index 0 "trap -- 'on_exit"
-    assert_line --index 1 "report_open_scopes"
-    assert_line --index 2 "echo cleanup' EXIT"
+    assert_line --index 1 "echo cleanup"
+    assert_line --index 2 "report_open_scopes' EXIT"
     assert_line --index 3 "cleanup"
+}
+
+@test "add_trap: keeps report_open_scopes the last EXIT command, after several additions" {
+    run env -i HOME="$HOME" PATH="$PATH" LIB="$lib_dir" bash -c '
+        source "$LIB/core.sh" --no-trap > /dev/null 2>&1
+        add_trap report_open_scopes EXIT
+        add_trap "echo first" EXIT
+        add_trap "echo second" EXIT
+        trap -p EXIT
+    '
+    assert_success
+    assert_line --index 0 "trap -- 'echo first"
+    assert_line --index 1 "echo second"
+    assert_line --index 2 "report_open_scopes' EXIT"
+    assert_line --index 3 "first"
+    assert_line --index 4 "second"
+}
+
+@test "add_trap: appends after report_open_scopes on a signal other than EXIT" {
+    run env -i HOME="$HOME" PATH="$PATH" LIB="$lib_dir" bash -c '
+        source "$LIB/core.sh" --no-trap > /dev/null 2>&1
+        trap -- report_open_scopes USR1
+        add_trap "echo cleanup" USR1
+        trap -p USR1
+    '
+    assert_success
+    assert_line --index 0 "trap -- 'report_open_scopes"
+    assert_line --index 1 "echo cleanup' SIGUSR1"
 }
 
 @test "add_trap: appends safely after an existing command ending in '&' or a comment" {

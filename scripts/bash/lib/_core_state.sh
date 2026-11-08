@@ -683,6 +683,7 @@ function end_scope()
 
     (( __scope_pid[_top] == BASHPID )) &&
     (( __scope_depth[_top] == _depth )) &&
+    shopt -u nocasematch
     [[ ${__scope_function[_top]} == "$_function" ]]                             || bug "${FUNCNAME[0]}() in '$_function': the innermost open scope belongs to '${__scope_function[_top]}'" \
                                                                                        "at ${__scope_location[_top]} (process ${__scope_pid[_top]}), and was not closed there." \
                                                                                        -ec "$err_logic_error"
@@ -707,6 +708,7 @@ function report_open_scopes()
     for (( _i = ${#__scope_pid[@]} - 1; _i >= 0; _i-- )); do
         (( __scope_pid[_i] != BASHPID ))                                        || bug "The scope opened in '${__scope_function[_i]}' at ${__scope_location[_i]} was never closed." -ec "$err_logic_error"
     done
+    exit_if_has_bugs
     return "$success"
 }
 
