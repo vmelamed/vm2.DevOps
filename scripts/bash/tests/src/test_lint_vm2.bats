@@ -61,6 +61,16 @@ _run_copy()
     assert_output --partial "'_orphan.sh' is not sourced by core.sh"
 }
 
+@test "lint-vm2: reports a library file whose source statement in core.sh is commented out" {
+    _copy_library
+    sed -i 's|^source "$lib_dir/_xml.sh"$|# &|' "$_copy/lib/core.sh"
+    grep -qF '# source "$lib_dir/_xml.sh"' "$_copy/lib/core.sh"     # the sed above must have matched
+    git -C "$_copy" -c user.email=t@e.com -c user.name=t commit -qam commented
+    _run_copy
+    assert_failure
+    assert_output --partial "'_xml.sh' is not sourced by core.sh"
+}
+
 @test "lint-vm2: reports an untracked library file" {
     _copy_library
     printf '(( ${__VM2_LIB_NEW_SH_LOADED:-0} == 1 )) && return 0\ndeclare -ri __VM2_LIB_NEW_SH_LOADED=1\n' > "$_copy/lib/_new.sh"

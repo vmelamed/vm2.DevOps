@@ -46,11 +46,15 @@ declare -xri err_logic_error
 # vm2 core variables
 declare -x _ignore
 
-# 2) Every _*.sh is sourced by core.sh.
+# 2) Every _*.sh is sourced by core.sh: an active `source "$lib_dir/<file>"` line, optionally followed by a
+#    comment. A substring match would also accept a commented-out `# source ...` line.
 declare file=''
+declare name=''
 for file in "$lib_dir"/_*.sh; do
-    grep -qF "source \"\$lib_dir/${file##*/}\"" "$lib_dir/core.sh" ||
-        error "'${file##*/}' is not sourced by core.sh." -ec "$err_logic_error"
+    name=${file##*/}
+    # shellcheck disable=SC2016 # '$lib_dir' is literal text to find in core.sh, not something to expand
+    grep -qE '^[[:space:]]*source[[:space:]]+"\$lib_dir/'"${name//./\\.}"'"[[:space:]]*(#.*)?$' "$lib_dir/core.sh" ||
+        error "'$name' is not sourced by core.sh." -ec "$err_logic_error"
 done
 
 # 3) No library file is left uncommitted.
