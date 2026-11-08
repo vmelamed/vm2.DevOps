@@ -5,7 +5,7 @@
 
 declare -xr script_name
 
-# core lib exit codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri err_invalid_arguments
 declare -xri err_not_file
@@ -44,7 +44,7 @@ function add_spdx_csharp_file()
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 || $1 == *.cs ]]                                                  || bug "${FUNCNAME[0]}() requires argument 1, the file to add an SPDX header to, to be a *.cs file (provided: '$1')." -ec "$err_not_file"
     [[ ! -v 2 || -w $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the file to write the modified contents to, to be an existing writable file (provided: '$2')." -ec "$err_not_file"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _file="$1"
     local _temp_file="$2"
@@ -77,7 +77,7 @@ function add_spdx_bash_file()
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 || $1 == *.@(sh|bats) ]]                                          || bug "${FUNCNAME[0]}() requires argument 1, the file to add an SPDX header to, to be *.sh or *.bats file (provided: '$1')." -ec "$err_not_file"
     [[ ! -v 2 || -w $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the file to write the modified contents to, to be an existing writable file (provided: '$2')." -ec "$err_not_file"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _file="$1"
     local _temp_file="$2"
@@ -116,7 +116,7 @@ function add_spdx_yaml_file()
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 || $1 == *.@(yaml|yml) ]]                                         || bug "${FUNCNAME[0]}() requires argument 1, the file to add an SPDX header to, to be *.yaml or *.yml file (provided: '$1')." -ec "$err_not_file"
     [[ ! -v 2 || -w $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the file to write the modified contents to, to be an existing writable file (provided: '$2')." -ec "$err_not_file"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _file="$1"
     local _temp_file="$2"
@@ -147,7 +147,7 @@ function process_file()
                                                                                        "  - the name of the file to add an SPDX header to" \
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 || $1 == *.@(cs|sh|bats|yaml|yml) ]]                              || bug "${FUNCNAME[0]}() requires argument 1, the file to add an SPDX header to, to be a file with one of the suffixes: *.cs, *.sh, *.bats, *.yaml, or *.yml (provided: '$1')." -ec "$err_not_file"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _file="$1"
     local _rel=".${_file#"$root"}"

@@ -13,10 +13,10 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
-# core lib
+# vm2 core lib
 source "$lib_dir/core.sh"
 
-# core lib exit codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri failure
 declare -xri positive
@@ -25,7 +25,7 @@ declare -xri err_invalid_arguments
 declare -xri err_tool_error
 declare -xri err_not_directory
 
-# core lib variables
+# vm2 core lib variables
 declare -x _ignore
 
 source "$script_dir/add-spdx.args.sh"

@@ -5,7 +5,7 @@
 
 declare -xr script_name
 
-# core lib exit codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri err_argument_value
 declare -xri err_missing_argument
@@ -14,13 +14,9 @@ declare -xri err_unknown_argument
 declare -xri err_logic_error
 declare -xri err_not_directory
 
-# core lib constants
+# vm2 core lib constants
 declare -xr ci
 declare -xr initial_cwd
-
-# core lib defaults
-
-# core lib variables
 
 # this scripts arguments
 declare -x dir=${initial_cwd:-}
