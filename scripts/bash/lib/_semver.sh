@@ -35,15 +35,15 @@ if ! declare -pF "error" > "$_ignore"; then
 fi
 
 # Regular expressions that test if a string contains a semantic version:
-declare -xr majorLabelRex='0|[1-9][0-9]*'
-declare -xr minorLabelRex='0|[1-9][0-9]*'
-declare -xr patchLabelRex='0|[1-9][0-9]*'
+declare -xr majorLabelRex='(0|[1-9][0-9]*)'
+declare -xr minorLabelRex='(0|[1-9][0-9]*)'
+declare -xr patchLabelRex='(0|[1-9][0-9]*)'
 declare -xr prereleaseLabelRex='[-0-9A-Za-z.]+'
 declare -xr buildLabelRex='[-0-9A-Za-z.]+'
 
-declare -xr semverReleaseRex="($majorLabelRex)\\.($minorLabelRex)\\.($patchLabelRex)(\\+$buildLabelRex)?"
-declare -xr semverPrereleaseRex="($majorLabelRex)\\.($minorLabelRex)\\.($patchLabelRex)(-$prereleaseLabelRex)(\\+$buildLabelRex)?"
-declare -xr semverRex="($majorLabelRex)\\.($minorLabelRex)\\.($patchLabelRex)(-$prereleaseLabelRex)?(\\+$buildLabelRex)?"
+declare -xr semverReleaseRex="$majorLabelRex\\.$minorLabelRex\\.$patchLabelRex(\\+$buildLabelRex)?"
+declare -xr semverPrereleaseRex="$majorLabelRex\\.$minorLabelRex\\.$patchLabelRex(-$prereleaseLabelRex)(\\+$buildLabelRex)?"
+declare -xr semverRex="$majorLabelRex\\.$minorLabelRex\\.$patchLabelRex(-$prereleaseLabelRex)?(\\+$buildLabelRex)?"
 
 # Regular expressions that test if a string is exactly a semantic version:
 declare -xr semverRegex="^$semverRex$"
