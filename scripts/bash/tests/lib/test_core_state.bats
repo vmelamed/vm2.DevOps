@@ -320,6 +320,19 @@ declare -gxi err_logic_error
     assert_output --partial "end_scope() in 'closer': the innermost open scope belongs to 'opener'"
 }
 
+@test "end_scope: compares function names case-sensitively, even under nocasematch" {
+    # A leaked scope of 'foo' must not be closed silently by a sibling 'FOO' at the same depth.
+    run bash -c "
+        source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
+        function foo()    { begin_scope; set_case_insensitive; return 0; }
+        function FOO()    { end_scope; }
+        function caller() { foo; FOO; }
+        caller
+    "
+    assert_failure "$err_logic_error"
+    assert_output --partial "end_scope() in 'FOO': the innermost open scope belongs to 'foo'"
+}
+
 @test "end_scope: bug-exits in a subshell for a scope opened outside it" {
     run bash -c "
         source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
@@ -345,16 +358,18 @@ declare -gxi err_logic_error
     assert_failure "$err_invalid_arguments"
 }
 
-@test "report_open_scopes: core.sh reports the scopes left open at exit, without changing the exit code" {
+@test "report_open_scopes: core.sh reports the scopes left open at exit, and fails after the script's cleanups ran" {
     run bash -c "
         source '$lib_dir/core.sh' > /dev/null 2>&1
+        add_trap 'echo CLEANUP' EXIT
         function leaky() { begin_scope; return 0; }
         leaky
         exit 0
     "
-    assert_success
+    assert_failure "$err_logic_error"
     assert_output --partial "The scope opened in 'leaky' at"
     assert_output --partial "was never closed"
+    assert_line "CLEANUP"
 }
 
 @test "report_open_scopes: reports nothing when every scope was closed" {

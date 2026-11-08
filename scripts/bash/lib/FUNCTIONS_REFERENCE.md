@@ -27,7 +27,8 @@ ERR trap handler: reports the failing command, its exit code, and a stack trace.
 ### add_trap()
 
 Appends a command to the current trap of one or more signals, instead of replacing it as a plain `trap` does (e.g.
-adds a cleanup step after `on_exit`). The script's exit code is preserved.
+adds a cleanup step after `on_exit`). The script's exit code is preserved. On EXIT, it inserts the command before
+`report_open_scopes`, which stays last.
 
 ### execute()
 
@@ -124,8 +125,8 @@ by another function, at another call depth, or in another process (a missing `en
 
 ### report_open_scopes()
 
-Reports a bug for every scope the current process left open; core.sh registers it on EXIT. Report only: the exit code is
-unchanged.
+Reports a bug for every scope the current process left open, and exits with the bug's code; core.sh registers it on EXIT,
+and `add_trap` keeps it the last EXIT command, so the scripts' cleanups still run.
 
 ### set_glob_star()
 

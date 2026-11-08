@@ -170,6 +170,8 @@ fi
 #     current shell's traps.
 #   - Appends, never prepends: on_exit and on_err read `$?` in their first statement. The script's
 #     exit code is preserved regardless of what the appended command returns.
+#   - One exception: on EXIT, the command goes before core.sh's report_open_scopes, which must stay
+#     last: it exits when a scope was left open, and the commands after it would never run.
 #   - Single-quote the command to delay expansion until the trap fires (see the example).
 #   - Traps belong to the current shell: called inside $( ... ) or a pipeline, it changes only that
 #     subshell's trap.
@@ -200,21 +202,33 @@ function add_trap()
 
     local _command=$1
     local -a _current
+    local _existing
     shift
 
     for _signal in "$@"; do
         eval "_current=( $(trap -p "$_signal") )"
+        _existing=${_current[2]:-}
         # a newline, not '; ', joins the commands: '; ' breaks after a trailing '&' (syntax error) and
         # after a trailing '# comment' (which would swallow the appended command)
-        trap -- "${_current[2]:+${_current[2]}$'\n'}$_command" "$_signal"
+        case ${_signal^^} in
+            EXIT|SIGEXIT|0 )
+                # keep report_open_scopes last: it exits on a leaked scope, so nothing after it would run
+                if [[ $_existing == report_open_scopes || $_existing == *$'\n'report_open_scopes ]]; then
+                    trap -- "${_existing%report_open_scopes}$_command"$'\n'"report_open_scopes" "$_signal"
+                    continue
+                fi
+                ;;
+            * ) ;;
+        esac
+        trap -- "${_existing:+$_existing$'\n'}$_command" "$_signal"
     done
 
     return "$success"
 }
 
-# Report the shell-option scopes left open at exit (see begin_scope in _core_state.sh). Not tied to
-# the debugger/CI exceptions above: it only reports, so it never gets in the way, and CI is where a
-# leak matters most.
+# Report the shell-option scopes left open at exit, and fail (see begin_scope in _core_state.sh). Not
+# tied to the debugger/CI exceptions above: it does nothing unless a scope leaked, and CI is where a
+# leak matters most. add_trap keeps it the last command of the EXIT trap.
 $__no_traps || add_trap report_open_scopes EXIT
 
 #-----------------------------------------------------------------------------------------------
