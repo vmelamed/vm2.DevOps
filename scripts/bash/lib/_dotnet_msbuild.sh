@@ -479,10 +479,9 @@ function extract_dotnet_build_info()
         [$key_errors_count]=0
     )
 
-    # shellcheck disable=SC2034 # state appears unused. Verify use (or export if used externally).
-    local -A state=()
-    save_state state
-    set_case_sensitive false
+    # match MSBuild's exact casing ('Build succeeded', 'Error'), whatever the caller's nocasematch
+    begin_scope
+    set_case_sensitive
 
     local _line _property
     local _echo=false
@@ -519,7 +518,7 @@ function extract_dotnet_build_info()
         unset "_extracted[$key_artifacts_project_name]"
     fi
 
-    restore_state state
+    end_scope
 }
 
 #-----------------------------------------------------------------------------------------------

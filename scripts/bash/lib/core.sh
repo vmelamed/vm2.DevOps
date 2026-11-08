@@ -212,6 +212,11 @@ function add_trap()
     return "$success"
 }
 
+# Report the shell-option scopes left open at exit (see begin_scope in _core_state.sh). Not tied to
+# the debugger/CI exceptions above: it only reports, so it never gets in the way, and CI is where a
+# leak matters most.
+$__no_traps || add_trap report_open_scopes EXIT
+
 #-----------------------------------------------------------------------------------------------
 # @description Depending on the value of $dry_run, either executes the given command or prints
 #    what would have been executed, without running it. If the first argument is '--quiet',
@@ -367,9 +372,7 @@ function list_of_files()
     exit_if_has_bugs
 
     # remember the current settings of the nullglob and globstar options
-    # shellcheck disable=SC2034 # state appears unused. Verify use (or export if used externally).
-    local -A state=()
-    save_state state
+    begin_scope
 
     # if a glob pattern does not match any files - expand to an empty string
     # enable globstar to allow **/ pattern to match directories and subdirectories recursively
@@ -382,7 +385,7 @@ function list_of_files()
     printf "%s" "${_list[*]}"
 
     # restore the previous settings of the nullglob and globstar options
-    restore_state state
+    end_scope
 }
 
 #-----------------------------------------------------------------------------------------------

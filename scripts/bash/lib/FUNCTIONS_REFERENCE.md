@@ -106,11 +106,26 @@ Sets the `dump_vars` table format to "graphical" or "markdown".
 
 ### save_state()
 
-Saves quiet/verbose/dry-run/`$_ignore`/table-format/tracing/shell-option state into an associative array, for later `restore_state`.
+Saves quiet/verbose/dry-run/`$_ignore`/table-format/tracing state into an associative array, for later `restore_state`. For the shell options, use `begin_scope`/`end_scope`.
 
 ### restore_state()
 
 Restores global flag state previously saved by `save_state`, validating it was saved in the same shell/subshell.
+
+### begin_scope()
+
+Opens a shell-option scope: saves the shopt options in `$scope_shell_options` on the scope stack, recording the caller's
+call depth, name, location, and process.
+
+### end_scope()
+
+Closes the innermost shell-option scope and restores the saved options; bug-exits when the innermost open scope was opened
+by another function, at another call depth, or in another process (a missing `end_scope` or `begin_scope`).
+
+### report_open_scopes()
+
+Reports a bug for every scope the current process left open; core.sh registers it on EXIT. Report only: the exit code is
+unchanged.
 
 ### set_glob_star()
 
@@ -147,10 +162,6 @@ Tests whether shell pattern matching is currently case-sensitive.
 ### set_case_insensitive() / set_case_sensitive()
 
 Sets the shell's `nocasematch` option off/on.
-
-### set_case_sensitivity()
-
-Sets the shell's case-sensitivity to a given state, and saves the previous state into an optional nameref for later restoration.
 
 ### is_variable_name()
 
@@ -837,14 +848,14 @@ Outputs a `key=value` pair (kebab-case key) for each named variable to `$GITHUB_
 
 ## Summary
 
-### Total Functions: 205
+### Total Functions: 207
 
 | File                 | Functions |
 |----------------------|----------:|
 | core.sh              |         7 |
-| _core_state.sh       |        20 |
+| _core_state.sh       |        23 |
 | _error_codes.sh      |         2 |
-| _predicates.sh       |        33 |
+| _predicates.sh       |        32 |
 | _diagnostics.sh      |        24 |
 | _core_args.sh        |         4 |
 | _semver.sh           |        19 |

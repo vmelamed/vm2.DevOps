@@ -156,9 +156,11 @@ declare -gxi err_not_found
         trap -p EXIT
     '
     assert_success
+    # core.sh itself appends report_open_scopes after on_exit
     assert_line --index 0 "trap -- 'on_exit"
-    assert_line --index 1 "echo cleanup' EXIT"
-    assert_line --index 2 "cleanup"
+    assert_line --index 1 "report_open_scopes"
+    assert_line --index 2 "echo cleanup' EXIT"
+    assert_line --index 3 "cleanup"
 }
 
 @test "add_trap: appends safely after an existing command ending in '&' or a comment" {

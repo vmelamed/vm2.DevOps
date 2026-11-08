@@ -476,10 +476,7 @@ declare -xr key_tracing="Tracing"
 declare -xr key_ignore="Ignore"
 declare -xr key_table_format="Table_Format"
 declare -xr key_errors="Errors_Count"
-declare -xr key_case_sensitivity="Case_Sensitivity"
-declare -xr key_glob_star="Glob_Star"
-declare -xr key_null_glob="Null_Glob"
-declare -xri state_length=13
+declare -xri state_length=10
 
 #-----------------------------------------------------------------------------------------------
 # @description Saves the current state of the global flags: quiet, verbose, dry-run,
@@ -540,9 +537,6 @@ function save_state()
     is_verbose        && __state[$key_verbose]=true || __state[$key_verbose]=false
     is_dry_run        && __state[$key_dry_run]=true || __state[$key_dry_run]=false
     [[ $- =~ .*x.* ]] && __state[$key_tracing]=true || __state[$key_tracing]=false
-    __state[$key_case_sensitivity]=$(shopt -p nocasematch)  || true
-    __state[$key_glob_star]=$(shopt -p globstar) || true
-    __state[$key_null_glob]=$(shopt -p nullglob) || true
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -598,9 +592,122 @@ function restore_state()
     ${__state[$key_verbose]} && set_verbose || unset_verbose
     ${__state[$key_dry_run]} && set_dry_run || unset_dry_run
     ${__state[$key_tracing]} && set -x      || set +x
-    eval "${__state[$key_case_sensitivity]:-true}" || true
-    eval "${__state[$key_glob_star]:-true}"        || true
-    eval "${__state[$key_null_glob]:-true}"        || true
+}
+
+#===============================================================================================
+# Shell-option scopes
+#
+# begin_scope saves the shell options in $scope_shell_options; end_scope restores them. Bash has
+# no `finally`, so a `return` (or `continue`, `break`) between the two leaves the options changed.
+# The scopes form a stack, and each entry records where it was opened: the caller's depth in the
+# call stack, its name, its location, and the process. end_scope reports a bug when the innermost
+# open scope is not its caller's, and report_open_scopes reports the scopes left open at exit.
+#
+# Only shopt options: for the `set` options (errexit, nounset, xtrace...), use `local -` in the
+# function, which restores them on return, even an early one.
+#===============================================================================================
+
+# The shopt options a scope saves and restores.
+declare -ra scope_shell_options=(nocasematch nocaseglob nullglob failglob globstar extglob dotglob)
+
+# The scope stack: parallel arrays, one entry per open scope. Entries are pushed and popped only at
+# the end, so the arrays stay dense.
+declare -a __scope_pid=()
+declare -a __scope_depth=()
+declare -a __scope_function=()
+declare -a __scope_location=()
+declare -a __scope_options=()
+
+#-----------------------------------------------------------------------------------------------
+# @description Opens a shell-option scope: saves the current state of the shopt options in
+#   `$scope_shell_options` on the scope stack, to be restored by the matching `end_scope`.
+#   Call `end_scope` in the same function, on every path out of it, including early returns.
+#
+# @exitcode success=0
+#
+# @example
+#   begin_scope
+#   set_case_insensitive
+#   set_null_glob true
+#   ...
+#   end_scope
+#-----------------------------------------------------------------------------------------------
+function begin_scope()
+{
+    (( $# == 0 ))                                                               || bug "${FUNCNAME[0]}() takes no arguments (provided $#)." -ec "$err_invalid_arguments"
+    exit_if_has_bugs
+
+    # 'shopt -q' in a loop, not '$(shopt -p ...)': a command substitution forks, ~100 times slower
+    local _options='' _option
+    for _option in "${scope_shell_options[@]}"; do
+        if shopt -q "$_option"; then
+            _options+="shopt -s $_option; "
+        else
+            _options+="shopt -u $_option; "
+        fi
+    done
+
+    __scope_pid+=("$BASHPID")
+    __scope_depth+=("$(( ${#FUNCNAME[@]} - 1 ))")                              # the caller's depth, not begin_scope's
+    __scope_function+=("${FUNCNAME[1]:-main}")
+    __scope_location+=("${BASH_SOURCE[1]:-<unknown>} (${BASH_LINENO[0]})")
+    __scope_options+=("$_options")
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Closes the innermost shell-option scope: restores the shopt options saved by the
+#   matching `begin_scope`. Reports a bug and exits when there is no open scope, or when the
+#   innermost one was opened elsewhere: in another function, at another call depth, or in
+#   another process. That means a `begin_scope` without its `end_scope`, e.g. on an early
+#   `return` path, or an `end_scope` without its `begin_scope`.
+#
+# @exitcode success=0
+#
+# @example
+#   begin_scope
+#   set_glob_star true
+#   ...
+#   end_scope
+#-----------------------------------------------------------------------------------------------
+function end_scope()
+{
+    (( $# == 0 ))                                                               || bug "${FUNCNAME[0]}() takes no arguments (provided $#)." -ec "$err_invalid_arguments"
+    exit_if_has_bugs
+
+    local -i _top=$(( ${#__scope_pid[@]} - 1 ))
+    local -i _depth=$(( ${#FUNCNAME[@]} - 1 ))
+    local _function=${FUNCNAME[1]:-main}
+
+    (( _top >= 0 ))                                                             || bug "${FUNCNAME[0]}() in '$_function': there is no open scope." -ec "$err_logic_error"
+    exit_if_has_bugs
+
+    (( __scope_pid[_top] == BASHPID )) &&
+    (( __scope_depth[_top] == _depth )) &&
+    [[ ${__scope_function[_top]} == "$_function" ]]                             || bug "${FUNCNAME[0]}() in '$_function': the innermost open scope belongs to '${__scope_function[_top]}'" \
+                                                                                       "at ${__scope_location[_top]} (process ${__scope_pid[_top]}), and was not closed there." \
+                                                                                       -ec "$err_logic_error"
+    exit_if_has_bugs
+
+    # safe to eval: only begin_scope writes these strings, from the option names in $scope_shell_options
+    eval "${__scope_options[_top]}"
+
+    unset "__scope_pid[_top]" "__scope_depth[_top]" "__scope_function[_top]" "__scope_location[_top]" "__scope_options[_top]"
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Reports a bug for every scope this process opened and never closed. core.sh
+#   registers it on EXIT. It only reports: it does not exit and does not change the exit code.
+#   Scopes inherited by a subshell belong to the parent process and are not reported.
+#
+# @exitcode success=0
+#-----------------------------------------------------------------------------------------------
+function report_open_scopes()
+{
+    local -i _i
+    for (( _i = ${#__scope_pid[@]} - 1; _i >= 0; _i-- )); do
+        (( __scope_pid[_i] != BASHPID ))                                        || bug "The scope opened in '${__scope_function[_i]}' at ${__scope_location[_i]} was never closed." -ec "$err_logic_error"
+    done
+    return "$success"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -612,11 +719,10 @@ function restore_state()
 # @exitcode success=0
 #
 # @example
-#   local -A state
-#   save_state state
+#   begin_scope
 #   set_glob_star true
 #   ...
-#   restore_state state
+#   end_scope
 #-----------------------------------------------------------------------------------------------
 function set_glob_star()
 {
@@ -644,11 +750,10 @@ function set_glob_star()
 # @exitcode success=0
 #
 # @example
-#   local -A state
-#   save_state state
+#   begin_scope
 #   set_null_glob true
 #   ...
-#   restore_state state
+#   end_scope
 #-----------------------------------------------------------------------------------------------
 function set_null_glob()
 {

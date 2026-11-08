@@ -56,8 +56,7 @@ function validate_arguments()
     if [[ -z $build_project ]]; then
         local -a _projects=()
 
-        local -A __build_project_state=()
-        save_state __build_project_state
+        begin_scope
         set_null_glob true
 
             # search for *.slnx|*.sln|*.csproj file in the current directory
@@ -65,7 +64,7 @@ function validate_arguments()
             (( ${#_projects[@]} > 0 )) || _projects=(./*.sln)
             (( ${#_projects[@]} > 0 )) || _projects=(./*.csproj)
 
-        restore_state __build_project_state
+        end_scope
 
         (( ${#_projects[@]} > 0 ))                                              || error "No build project (*.slnx, *.sln, *.csproj) was specified or found in the current directory." -ec "$err_not_found"
         build_project=${_projects[0]:-}

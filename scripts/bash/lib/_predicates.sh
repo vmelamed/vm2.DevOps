@@ -59,50 +59,6 @@ function set_case_sensitive()
     shopt -u nocasematch || true
 }
 
-#-----------------------------------------------------------------------------------------------
-# @description Sets the shell's match case sensitivity option based on the provided argument.
-#   Returns the previous state of the case sensitivity.
-#
-# @arg $1 boolean _new_case_sensitive - the desired new state for the shell's case sensitivity
-#   (true for case-sensitive mode, false - for case-insensitive). Optional if the next argument
-#   is omitted too, default is true.
-# @arg $2 string - the name of a variable to store the previous case sensitivity. Optional.
-#
-# @exitcode success=0: always
-#
-# @example
-#
-#   # Set the shell to case insensitive (set nocasematch) and save the current state in _prev_case_sensitivity
-#   declare _prev_case_sensitivity
-#   set_case_sensitivity false _prev_case_sensitivity
-#   ... # all operations are CASE-INSENSITIVE
-#   # Restore the previous state of the nocasematch option.
-#   set_case_sensitivity "$_prev_case_sensitivity"
-#-----------------------------------------------------------------------------------------------
-function set_case_sensitivity()
-{
-    (( $# <= 2 ))                                                               || bug "${FUNCNAME[0]}() requires at most two arguments (provided $#):" \
-                                                                                       "  - the desired new state for the shell's case sensitivity. Optional if \$2 is not specified, default - true" \
-                                                                                       "  - the name of a variable to store the previous case sensitivity state, optional" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_boolean "$1"                                             || bug "${FUNCNAME[0]}() requires a boolean argument (provided '$1'): the desired new state for the shell's case sensitivity." -ec "$err_argument_type"
-    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "${FUNCNAME[0]}() requires a string argument that is the name of a variable to store the previous case sensitivity state (provided '$2')" -ec "$err_invalid_nameref"
-    exit_if_has_bugs
-
-    local _new_case_sensitive=${1:-true}
-    local _pcs
-    local -n __prev_case_sensitivity=${2:-_pcs}
-
-    is_case_sensitive && __prev_case_sensitivity=true || __prev_case_sensitivity=false
-
-    if [[ $_new_case_sensitive != "$__prev_case_sensitivity" ]]; then
-        # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-        $_new_case_sensitive && set_case_sensitive || set_case_insensitive
-    fi
-
-    return "$success"
-}
-
 declare -xr varNameRegex="^[A-Za-z_][A-Za-z0-9_]*$"
 #-----------------------------------------------------------------------------------------------
 # @description Tests if a string is a valid variable name.
@@ -162,8 +118,8 @@ function is_indexed_array()
     is_variable_name "$1" ||
         return "$negative"
 
-    declare _prev_case_sensitivity
-    set_case_sensitivity true _prev_case_sensitivity
+    begin_scope
+    set_case_sensitive
 
     local -i _rc="$positive"
     local _decl
@@ -172,8 +128,7 @@ function is_indexed_array()
     [[ $_decl =~ ^declare\ -a ]] ||
         _rc="$negative"
 
-    # Restore the previous state of the nocasematch option.
-    set_case_sensitivity "$_prev_case_sensitivity"
+    end_scope
 
     return "$_rc"
 }
@@ -198,8 +153,8 @@ function is_associative_array()
     is_variable_name "$1" ||
         return "$negative"
 
-    declare _prev_case_sensitivity
-    set_case_sensitivity true _prev_case_sensitivity
+    begin_scope
+    set_case_sensitive
 
     local -i _rc="$positive"
     local _decl
@@ -208,8 +163,7 @@ function is_associative_array()
     [[ $_decl =~ ^declare\ -A ]] ||
         _rc="$negative"
 
-    # Restore the previous state of the nocasematch option.
-    set_case_sensitivity "$_prev_case_sensitivity"
+    end_scope
 
     return "$_rc"
 }
@@ -236,8 +190,8 @@ function is_array()
     is_variable_name "$1" ||
         return "$negative"
 
-    declare _prev_case_sensitivity
-    set_case_sensitivity false _prev_case_sensitivity
+    begin_scope
+    set_case_insensitive
 
     local -i _rc="$positive"
     local _decl
@@ -246,8 +200,7 @@ function is_array()
     [[ $_decl =~ ^declare\ -a ]] || # -a or -A case insensitive!
         _rc="$negative"
 
-    # Restore the previous state of the nocasematch option.
-    set_case_sensitivity "$_prev_case_sensitivity"
+    end_scope
 
     return "$_rc"
 }
@@ -564,18 +517,15 @@ function is_in_i()
     local -i _rc=$negative
     local _v
 
-    local _prev_case_sensitive
-
-    # set case INSENSITIVE and remember the prev.sensitivity
-    set_case_sensitivity false _prev_case_sensitive
+    begin_scope
+    set_case_insensitive
     for _v in "$@"; do
         [[ $_sought == "$_v" ]] && {
             _rc=$positive
             break
         }
     done
-    # restore the prev.sensitivity
-    set_case_sensitivity "$_prev_case_sensitive"
+    end_scope
 
     return "$_rc"
 }
