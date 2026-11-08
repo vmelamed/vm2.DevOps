@@ -115,7 +115,7 @@ function dotnet_clean()
     local -i _rc="$success"
 
     [[ -s $1 && $1 == *.@(csproj|slnx|sln) ]]                                   || { _rc="$err_argument_value"; error "${FUNCNAME[0]}() requires argument 1 to be a path to an existing project or solution file (provided '${1-<missing>}')." -ec "$_rc"; }
-    (( _rc == "$success" ))                                                     || return "$_rc"
+    (( _rc == success ))                                                        || return "$_rc"
 
     local _project="$1"
     shift
@@ -165,7 +165,7 @@ function dotnet_restore()
     local -i _rc="$success"
 
     [[ $1 == *.@(csproj|slnx|sln) && -s $1 ]]                                   || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a path to an existing project or solution file (provided '${1-<missing>}')."
-    (( _rc == "$success" ))                                                     || return "$_rc"
+    (( _rc == success ))                                                        || return "$_rc"
 
     local _project="$1"
     shift
@@ -218,7 +218,7 @@ function dotnet_build()
     local -i _rc="$success"
 
     [[ "$1" == *.@(csproj|slnx|sln) && -s $1 ]]                                 || with_error _rc "$err_not_file" "${FUNCNAME[0]}() requires argument 1 to be a path to an existing project or solution file (provided '${1-<missing>}')."
-    (( _rc == "$success" ))                                                     || return "$_rc"
+    (( _rc == success ))                                                        || return "$_rc"
 
     local _project=$1 # the project or solution file to build
     shift
@@ -228,8 +228,9 @@ function dotnet_build()
     local -n _build_info=$_build_info_name
 
     local _output_file
-    _output_file=$(mktemp)                                                      || with_error _rc "$err_io_failure" "Failed to create a temporary file."
-    (( _rc == success ))                                                        || return "$_rc"
+    _output_file=$(mktemp)                                                      || { with_error _rc "$err_io_failure" "Failed to create a temporary file."
+                                                                                     return "$_rc"
+                                                                                }
 
     declare -a _dotnet_args
     _dotnet_args=(
@@ -322,7 +323,7 @@ function dotnet_pack()
     local -i _rc="$success"
 
     [[ -s $1 && $1 == *.csproj ]]                                               || { _rc="$err_not_file"; error "${FUNCNAME[0]}() requires argument 1 to be a path to an existing project file (provided '${1-<missing>}')." -ec "$_rc"; }
-    (( _rc == "$success" ))                                                     || return "$_rc"
+    (( _rc == success ))                                                        || return "$_rc"
 
     local _project=$1
     shift
@@ -341,7 +342,7 @@ function dotnet_pack()
     if [[ -z $_pack_config ]]; then
         get_msbuild_property "$_project" "$key_configuration" _pack_config      || { _rc=$err_tool_error; error "${FUNCNAME[0]}() Failed to resolve the 'Configuration' property for '$_project'." -ec "$_rc"; }
     fi
-    (( _rc == "$success" ))                                                     || return "$_rc"
+    (( _rc == success ))                                                        || return "$_rc"
 
     # pack arguments for the dotnet pack command are a subset of the build arguments
     declare -a _dotnet_args
@@ -360,18 +361,21 @@ function dotnet_pack()
     (( $# == 0 ))                  || _dotnet_args+=("$@")                      # any remaining arguments go to 'dotnet <command>' as they are
 
     # PACK
-    execute --quiet dotnet pack "${_dotnet_args[@]}"                            || with_error _rc "$err_tool_error" "Packing '$_project' failed." -dec $?
-    (( _rc == success ))                                                        || return "$_rc"
+    execute --quiet dotnet pack "${_dotnet_args[@]}"                            || { with_error _rc "$err_tool_error" "Packing '$_project' failed." -dec $?
+                                                                                     return "$_rc"
+                                                                                }
 
     declare -a _msbuild_args=()
-    convert_dotnet_args_to_msbuild_args _msbuild_args "${_dotnet_args[@]}"      || with_error _rc "$err_tool_error" $? "Converting 'dotnet pack' arguments to MSBuild arguments failed for '$_project'." -ec "$_rc"
-    (( _rc == success ))                                                        || return "$_rc"
+    convert_dotnet_args_to_msbuild_args _msbuild_args "${_dotnet_args[@]}"      || { with_error _rc "$err_tool_error" $? "Converting 'dotnet pack' arguments to MSBuild arguments failed for '$_project'."
+                                                                                     return "$_rc"
+                                                                                }
 
     trace "Executing: \"dotnet msbuild ${_msbuild_args[*]}\":"
     # MSBUILD to find the packages paths
     local _msbuild_output=''
-    _msbuild_output=$(dotnet msbuild "${_msbuild_args[@]}")                     || with_error _rc "$err_tool_error" "Executing MSBuild for '$_project' failed." -dec $?
-    (( _rc == success ))                                                        || return "$_rc"
+    _msbuild_output=$(dotnet msbuild "${_msbuild_args[@]}")                     || { with_error _rc "$err_tool_error" "Executing MSBuild for '$_project' failed." -dec $?
+                                                                                     return "$_rc"
+                                                                                }
 
     local _property='' _value=''
     local _path='' _id='' _version=''
@@ -451,7 +455,7 @@ function list_solution_projects()
     local -i _rc="$success"
 
     [[ $1 == *.@(sln|slnx) && -s $1 ]]                                          || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be an existing, non-empty solution file (provided '${1-<missing>}')."
-    (( _rc == "$success" ))                                                     || return "$_rc"
+    (( _rc == success ))                                                        || return "$_rc"
 
     local _solution=$1
     local _proj_dir

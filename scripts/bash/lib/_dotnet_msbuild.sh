@@ -132,7 +132,7 @@ function get_msbuild_property()
     local -i _rc="$success"
 
     [[ $1 == *.csproj && -s $1 ]]                                               || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be an existing project file path (provided '${1-<missing>}')."
-    (( _rc == "$success" ))                                                     || return "$_rc"
+    (( _rc == success ))                                                        || return "$_rc"
 
     local _project="$1"
     local -a _dotnet_args
@@ -192,7 +192,7 @@ function get_msbuild_properties()
     local -i _rc="$success"
 
     [[ $1 == *.csproj && -s $1 ]]                                               || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a project or solution file path (provided '${1-<missing>}')."
-    (( _rc == "$success" ))                                                     || return "$_rc"
+    (( _rc == success ))                                                        || return "$_rc"
 
     local _project="$1"
     # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
@@ -461,8 +461,9 @@ function extract_dotnet_build_info()
 
     local -i _rc="$success"
 
-    [[ $1 == *.@(slnx|sln|csproj) && -s $1 ]]                                   || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a project or solution file path (provided '${1-<missing>}')."
-    (( _rc == success ))                                                        || return "$_rc"
+    [[ $1 == *.@(slnx|sln|csproj) && -s $1 ]]                                   || { with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a project or solution file path (provided '${1-<missing>}')."
+                                                                                     return "$_rc"
+                                                                                }
 
     local _project_file="$1"
     local _build_result="$2"

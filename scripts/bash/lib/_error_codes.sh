@@ -52,7 +52,7 @@ declare -xri err_not_directory=17       # Parameter value is not a directory
 declare -xri err_invalid_file=18        # Parameter value is not a valid file or directory name (e.g., contains invalid characters, is too long, etc.)
 declare -xri err_invalid_path=19        # Parameter value is not a valid path (e.g., contains invalid characters, is too long, etc.)
 declare -xri err_non_existent_path=20   # Parameter value is a path that does not exist
-declare -xri err_io_failure=21 # An I/O operation (e.g. mktemp, read, write, mv, chmod) failed.
+declare -xri err_io_failure=21          # An I/O operation (e.g. mktemp, read, write, mv, chmod) failed.
 
 declare -xri err_not_overridden=64      # A function that should be overridden in the calling script (e.g. usage_text()) was not overridden
 declare -xri err_tool_not_found=65      # An external tool (e.g., jq, dotnet, etc.) that the script depends on was not found in the system

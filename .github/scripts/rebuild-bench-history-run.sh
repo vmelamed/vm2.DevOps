@@ -28,6 +28,8 @@ declare -x minver_tag_prefix
 declare -x minver_prerelease_id
 declare -x artifacts
 
+declare BENCHER_API_TOKEN
+
 source "$script_dir/rebuild-bench-history-run.usage.sh"
 source "$script_dir/rebuild-bench-history-run.args.sh"
 

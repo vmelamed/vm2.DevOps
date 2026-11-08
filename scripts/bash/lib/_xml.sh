@@ -13,12 +13,15 @@
 (( ${__VM2_LIB_XML_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_XML_SH_LOADED=1
 
+# vm2 core error codes
 declare -xri success
+declare -xri err_not_found
 declare -xri err_invalid_arguments
 declare -xri err_argument_value
 declare -xri err_invalid_nameref
 declare -xri err_tool_error
 
+# vm2 core variables
 declare -x _ignore
 
 #-----------------------------------------------------------------------------------------------
@@ -58,38 +61,32 @@ declare -x _ignore
 #-----------------------------------------------------------------------------------------------
 function get_xml_value()
 {
-    (( $# == 3 ))                    || bug "${FUNCNAME[0]}() requires exactly 3 arguments (provided $#):" \
-                                            "  - path to an XML file" \
-                                            "  - a yq path expression (query)" \
-                                            "  - nameref to a variable to receive the value" \
-                                            -ec "$err_invalid_arguments"
-    [[ ! -v 2 || -n $2 ]]            || bug "${FUNCNAME[0]}() requires argument 2, the yq path expression, to be non-empty (provided '${2-<missing>}')." -ec "$err_argument_value"
-    [[ ! -v 3 ]] || is_variable "$3" || bug "${FUNCNAME[0]}() requires argument 3 to be the name of a defined variable to receive the value (provided '${3-<missing>}')." -ec "$err_invalid_nameref"
-    exit_if_has_bugs
+    (( $# == 3 ))                                                               || bug "${FUNCNAME[0]}() requires exactly 3 arguments (provided $#):" \
+                                                                                       "  - path to an XML file" \
+                                                                                       "  - a yq path expression (query)" \
+                                                                                       "  - nameref to a variable to receive the value" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 2 || -n $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the yq path expression, to be non-empty (provided '${2-<missing>}')." -ec "$err_argument_value"
+    [[ ! -v 3 ]] || is_variable "$3"                                            || bug "${FUNCNAME[0]}() requires argument 3 to be the name of a defined variable to receive the value (provided '${3-<missing>}')." -ec "$err_invalid_nameref"
+                                                                                exit_if_has_bugs
 
     local _xml_file=$1
     local _query=$2
     local -n _value=$3
-
-    [[ -s $_xml_file ]] || {
-        error "${FUNCNAME[0]}() requires argument 1 to be an existing, non-empty, readable XML file (provided '${_xml_file-<missing>}')." -ec "$err_tool_error"
-        return "$err_tool_error"
-    }
-
-    local _result
     local -i _rc=$success
 
-    _result=$(yq -p=xml -oy -r "$_query" "$_xml_file" 2>"$_ignore") || {
-        _rc=$?
-        error "${FUNCNAME[0]}() 'yq' failed to query '$_xml_file' with '$_query'." -ec "$err_tool_error"
-        return "$err_tool_error"
-    }
+    [[ -s $_xml_file ]]                                                         || with_error _rc "$err_not_found" "File '$_xml_file' does not exist or is empty."
+
+    local _result
+
+    (( _rc != success )) || _result=$(yq -p=xml -oy -r "$_query" "$_xml_file" 2>"$_ignore") \
+                                                                                || with_error _rc "$err_tool_error" "${FUNCNAME[0]}() 'yq' failed to query '$_xml_file' with '$_query'."
 
     # A multi-match query yields one line per match, in document order; keep only the last.
-    _result=${_result##*$'\n'}
+    (( _rc != success )) || _result=${_result##*$'\n'}
 
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-    [[ $_result != "null" ]] && _value="$_result" || _value=""
+    (( _rc != success )) || { [[ $_result != "null" ]] && _value="$_result" || _value=""; }
 
     return "$_rc"
 }

@@ -112,10 +112,10 @@ function resolve_target()
 
     # We can only work with git repos or directories that have CI configured:
     (( _rc == success || _rc == err_dir_with_ci ))                              || { with_error _rc "$_rc" "The specified target directory '${_repos%/}/${_r#/}' is invalid. It should have CI configured in '.github/workflows'."
-                                                                                     return "$_rc"
+                                                                                      return "$_rc"
                                                                                    }
     (( _rc == err_dir_with_ci ))                                                && { warning "The root directory of the target project is '$_target_root'. It is not a git repository yet."
-                                                                                     return "$success"
+                                                                                      return "$success"
                                                                                    }
 
     # if it is a git repo then make sure it is in a clean state:
@@ -278,7 +278,10 @@ function are_different()
         local _target_shared_file=''
         _source_shared_file=$(mktemp)                                           || with_error _rc "$err_io_failure" "Failed to create a temporary file"
         (( _rc != success ))          || _target_shared_file=$(mktemp)          || with_error _rc "$err_io_failure" "Failed to create a temporary file"
-        (( _rc == success )) || { rm -f "$_source_shared_file" "$_target_shared_file"; return "$_rc"; }
+        (( _rc == success ))                                                    || {
+                                                                                    rm -f "$_source_shared_file" "$_target_shared_file"
+                                                                                     return "$_rc"
+                                                                                }
 
         printf '%s\n' "$_source_shared" > "$_source_shared_file"
         printf '%s\n' "$_target_shared" > "$_target_shared_file"
@@ -435,8 +438,10 @@ function copy_shared_block()
     exit_if_has_bugs
 
     local _tmp_file=''
-    _tmp_file=$(mktemp)                                                         || with_error _rc "$err_io_failure" "Failed to create a temporary file"
-    (( _rc == success ))                                                        || { rm -f "$_tmp_file"; return "$_rc"; }
+    _tmp_file=$(mktemp)                                                         || { with_error _rc "$err_io_failure" "Failed to create a temporary file"
+                                                                                    rm -f "$_tmp_file"
+                                                                                     return "$_rc"
+                                                                                }
 
     {
         sed -n "1,${_dest_begin_line}p" "$_dest_file"
@@ -444,8 +449,9 @@ function copy_shared_block()
         sed -n "${_dest_end_line},\$p" "$_dest_file"
     } > "$_tmp_file"
 
-    execute cp "$_tmp_file" "$_dest_file"                                       || with_error _rc "$err_io_failure" "Failed to copy the temporary file '$_tmp_file' over '$_dest_file'"
-    (( _rc == success ))                                                        || return "$_rc"
+    execute cp "$_tmp_file" "$_dest_file"                                       || { with_error _rc "$err_io_failure" "Failed to copy the temporary file '$_tmp_file' over '$_dest_file'"
+                                                                                     return "$_rc"
+                                                                                }
 
     rm -f "$_tmp_file"
 

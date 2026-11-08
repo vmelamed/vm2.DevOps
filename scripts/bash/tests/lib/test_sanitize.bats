@@ -14,13 +14,18 @@ load '../helpers/setup'
 # ShellCheck can't see that '../helpers/setup' transplants these into this file's scope at load
 # time. '-g' is required (see feedback_bats_declare_g_readonly memory for the root cause).
 declare -gx lib_dir
+declare -gxi success
 declare -gxi failure
+declare -gxi positive
+declare -gxi negative
 declare -gxi err_invalid_arguments
 declare -gxi err_invalid_nameref
 declare -gxi err_non_existent_path
 declare -gxi err_argument_type
 declare -gxi err_not_file
 declare -gxi err_invalid_json
+declare -gxi err_unsafe_argument
+declare -gxi err_argument_value
 
 # --- ltrim / rtrim / trim ------------------------------------------------------------------
 
@@ -76,14 +81,14 @@ declare -gxi err_invalid_json
 
 @test "is_safe_input: rejects dangerous shell metacharacters" {
     run is_safe_input 'hi; rm -rf /'
-    assert_failure 11
+    assert_failure "$err_unsafe_argument"
     run is_safe_input 'hi$(whoami)'
-    assert_failure 11
+    assert_failure "$err_unsafe_argument"
 }
 
 @test "is_safe_input: rejects spaces by default but allows them when arg 2 is true" {
     run is_safe_input "hello world"
-    assert_failure 11
+    assert_failure "$err_unsafe_argument"
     run is_safe_input "hello world" true
     assert_success
 }
@@ -177,12 +182,12 @@ declare -gxi err_invalid_json
 
 @test "validate_json_array: rejects a JSON object (caught by is_safe_input's brace check before it reaches jq)" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; v='{\"a\":1}'; validate_json_array v"
-    assert_failure 13
+    assert_failure "$err_unsafe_argument"
 }
 
 @test "validate_json_array: validates each item via the provided validator function" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; v='[\"ubuntu-latest\", \"not-a-runner\"]'; validate_json_array v '' is_safe_runner_os"
-    assert_failure 11
+    assert_failure "$err_unsafe_argument"
 }
 
 # --- is_safe_runner_os -------------------------------------------------------------------------
@@ -191,7 +196,7 @@ declare -gxi err_invalid_json
     run is_safe_runner_os "ubuntu-latest"
     assert_success
     run is_safe_runner_os "not-a-real-runner"
-    assert_failure "$failure"
+    assert_failure "$negative"
 }
 
 # --- is_safe_reason ----------------------------------------------------------------------------
@@ -246,7 +251,7 @@ declare -gxi err_invalid_json
 
 @test "validate_nuget_server: fails on an invalid server moniker" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; s='not-a-server'; name=''; url=''; validate_nuget_server s name url"
-    assert_failure 4
+    assert_failure "$err_argument_value"
 }
 
 # --- configuration / framework / runtime validation -----------------------------------------------
@@ -259,7 +264,7 @@ declare -gxi err_invalid_json
     run is_safe_configuration "Custom"
     assert_success
     run is_safe_configuration "not valid!"
-    assert_failure "$failure"
+    assert_failure "$negative"
 }
 
 @test "is_valid_framework / is_safe_framework: accepts a TFM, rejects garbage" {
@@ -268,7 +273,7 @@ declare -gxi err_invalid_json
     run is_safe_framework "net10.0"
     assert_success
     run is_safe_framework "not-a-tfm"
-    assert_failure 4
+    assert_failure "$err_argument_value"
 }
 
 @test "is_valid_runtime / is_safe_runtime: accepts empty and known RIDs, rejects injection-shaped input" {
@@ -277,7 +282,7 @@ declare -gxi err_invalid_json
     run is_safe_runtime "linux-x64"
     assert_success
     run is_safe_runtime "linux-x64; rm -rf /"
-    assert_failure 4
+    assert_failure "$err_argument_value"
 }
 
 @test "validate_runtime: lower-cases and trims the referenced variable" {
@@ -302,7 +307,7 @@ declare -gxi err_invalid_json
 
 @test "validate_preprocessor_symbols: rejects an invalid symbol" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; s='1BAD'; validate_preprocessor_symbols s"
-    assert_failure 4
+    assert_failure "$err_argument_value"
 }
 
 # --- is_safe_secret ----------------------------------------------------------------------------
@@ -311,7 +316,7 @@ declare -gxi err_invalid_json
     run is_safe_secret "s3cr3t"
     assert_success
     run is_safe_secret "$(printf 'bad\x01value')"
-    assert_failure 4
+    assert_failure "$err_argument_value"
 }
 
 # --- percentage validation ---------------------------------------------------------------------
@@ -333,7 +338,7 @@ declare -gxi err_invalid_json
     run is_safe_max_regression_pct 20
     assert_success
     run is_safe_min_coverage_pct 150
-    assert_failure "$failure"
+    assert_failure "$negative"
 }
 
 # --- MinVer tag prefix / prerelease id validation -----------------------------------------------

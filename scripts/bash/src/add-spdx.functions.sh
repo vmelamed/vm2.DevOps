@@ -163,12 +163,17 @@ function process_file()
 
     local -i _rc=$success
 
-    [[ -w $1 ]]                                                                 || { _rc=$err_not_file; error "${FUNCNAME[0]}() requires argument 1, the file to add an SPDX header to, to be an existing writable file (provided: '$1')." -ec "$_rc"; }
-    (( _rc == success ))                                                        || { (( ++failed )); return "$_rc"; }
+    [[ -w $1 ]]                                                                 || { with_error  _rc "$err_not_file" "${FUNCNAME[0]}() requires argument 1, the file to add an SPDX header to, to be an existing writable file (provided: '$1')."
+                                                                                    (( ++failed ))
+                                                                                     return "$_rc"
+                                                                                }
 
     local _temp_file
 
-    _temp_file=$(mktemp)                                                        || { _rc=$err_io_failure; (( ++failed )); error "Failed to create a temporary file for '$_rel'" -ec "$_rc"; return "$_rc"; }
+    _temp_file=$(mktemp)                                                        || { with_error _rc "$err_io_failure" "Failed to create a temporary file for '$_rel'"
+                                                                                    (( ++failed ))
+                                                                                     return "$_rc"
+                                                                                }
     case $_file in
         *.cs         )
             add_spdx_csharp_file "$_file" "$_temp_file"                         || _rc=$?
@@ -187,7 +192,9 @@ function process_file()
     (( _rc != success )) || chmod --reference="$_file" "$_temp_file"            || { _rc=$err_io_failure; error "Failed to change the mode of a temporary file" -ec "$_rc"; }
     (( _rc != success )) || execute mv "$_temp_file" "$_file"                   || { _rc=$err_io_failure; error "Failed to copy the temporary file over the original file '$_file'" -ec "$_rc"; }
     rm -f "$_temp_file"
-    (( _rc == success ))                                                        || { (( ++failed )); return "$_rc"; }
+    (( _rc == success ))                                                        || { (( ++failed ))
+                                                                                     return "$_rc"
+                                                                                }
 
     (( ++modified ))
     if is_dry_run; then

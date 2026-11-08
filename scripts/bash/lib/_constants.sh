@@ -166,6 +166,21 @@ declare -xr shared_begin_marker='<<<==='
 declare -xr shared_end_marker='===>>>'
 
 #-----------------------------------------------------------------------------------------------
+# @description GitHub Actions runners
+#-----------------------------------------------------------------------------------------------
+declare -xra allowed_runners_os=(
+    "ubuntu-latest"
+    "ubuntu-22.04"
+    "ubuntu-20.04"
+    "windows-latest"
+    "windows-2022"
+    "windows-2019"
+    "macos-latest"
+    "macos-12"
+    "macos-11"
+)
+
+#-----------------------------------------------------------------------------------------------
 # @description GitHub Actions applications that use variables (`vars`)
 #-----------------------------------------------------------------------------------------------
 declare -xra gh_apps_with_vars=(

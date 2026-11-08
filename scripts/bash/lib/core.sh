@@ -56,6 +56,7 @@ declare -xr initial_cwd
 declare -xri success
 declare -xri err_logic_error
 declare -xri err_invalid_arguments
+declare -xri err_invalid_nameref
 declare -xri err_argument_type
 declare -xri err_not_git_directory
 declare -xri err_argument_value

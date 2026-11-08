@@ -16,11 +16,13 @@ declare -xr lib_dir
 source "$lib_dir/gh_core.sh"
 
 # core lib exit codes
+declare -xri success
 declare -xri failure
 declare -xri err_missing_argument
 declare -xri err_argument_type
 declare -xri err_tool_not_found
 declare -xri err_argument_value
+declare -xri err_not_found
 declare -xri err_tool_error
 declare -xri err_logic_error
 declare -xri err_io_failure

@@ -171,21 +171,22 @@ function __validate_repo_root()
     #   i.e., the current working directory or the absolute path provided as the first argument
     _path=$(realpath -e "$_repo" 2> "$_ignore") ||
     #   otherwise try to resolve the repository path relative to $_vm2_repos
-    _path=$(realpath -e "$_vm2_repos/${_repo#/}" 2> "$_ignore")                 || with_error _rc "$err_not_found" "Could not find the path '$_repo' neither in the current working directory, nor in '$_vm2_repos'."
-    (( _rc == success ))                                                        || return "$_rc"
+    _path=$(realpath -e "$_vm2_repos/${_repo#/}" 2> "$_ignore")                 || { with_error _rc "$err_not_found" "Could not find the path '$_repo' neither in the current working directory, nor in '$_vm2_repos'."
+                                                                                     return "$_rc"
+                                                                                }
 
     trace "Resolved the path of the repository '$_repo' as '$_path' from the _repo parameter directly, or from vm2_repos/_repo"
 
     # 2) it is a root of the working directory of the git repository
     local _r
 
-    root_working_tree "$_path" _r 2> "$_ignore"                                 || with_error _rc "$err_not_git_directory" "The '${_repo-<missing>}' repository at '${_path-<missing>}' path is not a git repository." -ec $?
-    (( _rc == success ))                                                        || return "$_rc"
+    root_working_tree "$_path" _r 2> "$_ignore"                                 || { with_error _rc "$err_not_git_directory" "The '${_repo-<missing>}' repository at '${_path-<missing>}' path is not a git repository." -ec $?
+                                                                                     return "$_rc"
+                                                                                }
 
-    [[ "$_path" == "$_r" ]] || {
-        error "The '${_repo-<missing>}' repository at '${_path-<missing>}' is not the root of the git repository working tree." -ec "$err_not_git_root"
-        return "$err_not_git_root"
-    }
+    [[ "$_path" == "$_r" ]]                                                     || { with_error _rc "$err_not_git_root" "The '${_repo-<missing>}' repository at '${_path-<missing>}' is not the root of the git repository working tree."
+                                                                                     return "$_rc"
+                                                                                }
 
     # 3) it has GitHub Actions workflows in the .github/workflows directory
     [[ -d "$_path/.github/workflows" ]] || {
@@ -286,7 +287,7 @@ function resolve_vm2_repos()
         _rc=$err_invalid_branch
         error "${FUNCNAME[0]}() requires argument 3, if provided, to be a valid branch name (provided '${3-<missing>}')." -ec "$_rc"
     }
-    (( _rc == "$success" )) || return "$_rc"
+    (( _rc == success ))    || return "$_rc"
 
     local _devops_branch=${2:-}
     local _sot_branch=${3:-}

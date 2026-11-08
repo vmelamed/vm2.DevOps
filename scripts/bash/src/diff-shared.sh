@@ -15,21 +15,7 @@ declare -xr lib_dir
 
 source "$lib_dir/core.sh"
 
-#===============================
-# Imported constants
-#===============================
-# imported environment variables and defaults:
-declare -xr default_vm2_repos_path
-declare -x _ignore
-declare -xr default_sot
-declare -xra sources_of_truth
-
-declare -xr cross_ch
-declare -xr check_ch
-declare -xr equals_ch
-declare -xr not_eq_ch
-
-# import outcomes and error codes
+# vm2 core error codes
 declare -xri success
 declare -xri positive
 declare -xri negative
@@ -37,6 +23,23 @@ declare -xri err_argument_value
 declare -xri err_logic_error
 declare -xri err_unexpected_error
 
+# vm2 core constants
+declare -xr cross_ch
+declare -xr check_ch
+declare -xr equals_ch
+declare -xr not_eq_ch
+
+declare -xra vm2_repositories
+declare -xr default_vm2_repos_path
+declare -xr default_sot
+declare -xra sources_of_truth
+
+# vm2 core variables
+declare -x _ignore
+
+#===============================
+# this script's components
+#===============================
 source "$script_dir/diff-shared.configuration.sh"
 source "$script_dir/diff-shared.functions.sh"
 source "$script_dir/diff-shared.args.sh"
@@ -58,10 +61,17 @@ declare -x summary_file=""              # the file where the summary of the diff
 #===============================
 # Script shared variables:
 #===============================
-declare -x action_ignore action_merge_or_copy action_ask_to_merge action_ask_to_copy action_merge action_copy \
-          action_copy_shared action_ask_to_copy_shared
+declare -x action_ignore
+declare -x action_merge_or_copy
+declare -x action_ask_to_merge
+declare -x action_ask_to_copy
+declare -x action_merge action_copy
+declare -x action_copy_shared 
+declare -x action_ask_to_copy_shared
+
 declare -xri shared_equal
 declare -xri shared_not_equal
+declare -xa arguments
 
 # this is the data model of the script. Bash does not have complex data structures, so we use parallel arrays to store the
 # source files, target files and actions. The index of the arrays corresponds to the same file pair and action. For example,

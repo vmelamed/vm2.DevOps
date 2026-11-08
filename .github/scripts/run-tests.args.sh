@@ -17,13 +17,13 @@ declare -xr ci
 declare -xra dump_common_dotnet_args
 
 # this scripts defaults
-declare -xri default_min_line_coverage_pct=80
+declare -xri default_min_coverage_pct=80
 declare -xri default_min_branch_coverage_pct=75
 declare -xri default_min_method_coverage_pct=80
 
 # this scripts arguments
 declare -x  test_project=${test_project:-"${TEST_PROJECT:-}"}
-declare -x  min_coverage_pct=${MIN_COVERAGE_PCT:-"$default_min_line_coverage_pct"}
+declare -x  min_coverage_pct=${MIN_COVERAGE_PCT:-"$default_min_coverage_pct"}
 declare -x  min_branch_coverage_pct=''
 declare -x  min_method_coverage_pct=''
 

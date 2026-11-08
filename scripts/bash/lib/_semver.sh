@@ -14,6 +14,7 @@
 (( ${__VM2_LIB_SEMVER_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_SEMVER_SH_LOADED=1
 
+# vm2 core error codes
 declare -xri success
 declare -xri failure
 declare -xri positive
@@ -22,6 +23,7 @@ declare -xri err_invalid_arguments
 declare -xri err_argument_type
 declare -xri err_argument_value
 
+# vm2 core variables
 declare -x _ignore
 
 if [[ ! -v lib_dir || -z "$lib_dir" ]]; then
@@ -117,24 +119,16 @@ function print_semver_regexes()
 #-----------------------------------------------------------------------------------------------
 function validate_semverTagComponents()
 {
-    (( $# == 1 || $# == 2 ))                      || bug "${FUNCNAME[0]}() requires one or two arguments (provided $#):" \
-                                                         "  - the SemVer tag prefix used by MinVer" \
-                                                         "  - default prerelease identifier template, optional" \
-                                                         -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+    (( $# == 1 || $# == 2 ))                                                    || bug "${FUNCNAME[0]}() requires one or two arguments (provided $#):" \
+                                                                                       "  - the SemVer tag prefix used by MinVer" \
+                                                                                       "  - default prerelease identifier template, optional" \
+                                                                                       -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
 
     local -i _rc=$success
 
-    [[ $1 =~ $minverTagPrefixRegex ]]             || {
-        _rc=$err_argument_value
-        error "${FUNCNAME[0]}() requires argument 1, the MinVer tag prefix, to match '$minverTagPrefixRegex' (provided '${1-<missing>}')." -ec "$_rc"
-    }
-
-    [[ -z ${2:-} || $2 =~ $minverPrereleaseIdRegex ]] || {
-        _rc=$err_argument_value
-        error "${FUNCNAME[0]}() requires optional argument 2, the MinVer prerelease identifier template, to match '$minverPrereleaseIdRegex' (provided '${2-<missing>}'). Did you pass a variable name instead of its value?" -ec "$_rc"
-    }
-
+    [[ $1 =~ $minverTagPrefixRegex ]]                                           || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the MinVer tag prefix, to match '$minverTagPrefixRegex' (provided '${1-<missing>}')."
+    [[ -z ${2:-} || $2 =~ $minverPrereleaseIdRegex ]]                           || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires optional argument 2, the MinVer prerelease identifier template, to match '$minverPrereleaseIdRegex' (provided '${2-<missing>}'). Did you pass a variable name instead of its value?"
     return "$_rc"
 }
 
@@ -184,24 +178,17 @@ declare -xri rc_less_than
 #-----------------------------------------------------------------------------------------------
 function compare_semver()
 {
-    (( $# == 2 ))                      || bug "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
-                                              "  - the first semantic versions to compare" \
-                                              "  - second semantic versions to compare" \
-                                              -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
+                                                                                       "  - the first semantic versions to compare" \
+                                                                                       "  - second semantic versions to compare" \
+                                                                                       -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
 
     local -i _rc="$success"
 
-    [[ $1 =~ $semverRegex ]] || {
-        _rc=$err_argument_value
-        error "${FUNCNAME[0]}() requires argument 1 to be a valid Semantic Versioning 2.0.0 string (provided '${1-<missing>}')." -ec "$_rc"
-    }
-    [[ $2 =~ $semverRegex ]] || {
-        _rc=$err_argument_value
-        error "${FUNCNAME[0]}() requires argument 2 to be a valid Semantic Versioning 2.0.0 string (provided '${2-<missing>}')." -ec "$_rc"
-    }
-    (( _rc != success )) && return "$_rc"
-
+    [[ $1 =~ $semverRegex ]]                                                    || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a valid Semantic Versioning 2.0.0 string (provided '${1-<missing>}')."
+    [[ $2 =~ $semverRegex ]]                                                    || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 2 to be a valid Semantic Versioning 2.0.0 string (provided '${2-<missing>}')."
+    (( _rc == success ))                                                        || return "$_rc"
     [[ $1 != "$2" ]] ||  return "$rc_equal"
 
     [[ "$1" =~ $semverRegex ]]
