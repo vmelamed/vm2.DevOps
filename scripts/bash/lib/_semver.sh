@@ -81,23 +81,32 @@ declare -xr semverTagReleaseRegex="^$minverTagPrefixRex$semverReleaseRex$"
 #-----------------------------------------------------------------------------------------------
 function print_semver_regexes()
 {
-    dump_vars \
-        --quiet \
-        --force \
-        --header "Semantic Version Components" \
-        majorLabelRex \
-        minorLabelRex \
-        patchLabelRex \
-        prereleaseLabelRex \
-        buildLabelRex \
-        --header "Semantic Versions" \
-        semverPrereleaseRex \
-        semverReleaseRex \
-        semverRex \
-        --header "Semantic Version/MinVer Tags" \
-        semverTagRegex \
-        semverTagReleaseRegex \
+    local -a dump_regexes=(
+        --quiet
+        --force
+        --header "Semantic Version Components"
+        majorLabelRex
+        minorLabelRex
+        patchLabelRex
+        prereleaseLabelRex
+        buildLabelRex
+        --header "Semantic Versions"
+        semverPrereleaseRex
+        semverReleaseRex
+        semverRex
+        --header "Semantic Versions"
+        semverPrereleaseRegex
+        semverReleaseRegex
+        semverRegex
+        --header "Semantic Version/MinVer Tags"
+        semverTagRegex
+        semverTagReleaseRegex
         semverTagPrereleaseRegex
+        minverTagPrefixRegex
+        minverPrereleaseIdRegex
+    )
+
+    dump_vars "${dump_regexes[@]}"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -115,9 +124,9 @@ function print_semver_regexes()
 # @exitcode success=0: Both arguments (or just the prefix, if $2 is omitted) are valid.
 #
 # @example
-#   validate_semverTagComponents "v" "preview.0"
+#   validate_minver_tag_components "v" "preview.0"
 #-----------------------------------------------------------------------------------------------
-function validate_semverTagComponents()
+function validate_minver_tag_components()
 {
     (( $# == 1 || $# == 2 ))                                                    || bug "${FUNCNAME[0]}() requires one or two arguments (provided $#):" \
                                                                                        "  - the SemVer tag prefix used by MinVer" \
@@ -151,6 +160,161 @@ declare -xri err_argument_value
 declare -xri rc_equal
 declare -xri rc_greater_than
 declare -xri rc_less_than
+
+#-----------------------------------------------------------------------------------------------
+# @description Gets the Major version component from a semver 2.0.0 string.
+#
+# arg1 string semver - must contain a valid semver string
+#
+# @exitcode success=0: the Major version component was extracted successfully and output to
+#   stdout.
+#
+# @exitcode err_invalid_arguments=2: 0 or more than 1 arguments were passed to the function
+# @exitcode err_argument_value=4: the argument's value is not a valid semver 2.0.0 string
+#
+# @stdout string The Major version component of the argument
+#
+# @example
+#   declare semver="4.2.3-beta.5"
+#   declare major=$(get_semver_major "$semver")     # outputs "4" to stdout
+#-----------------------------------------------------------------------------------------------
+function get_semver_major()
+{
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument (provided $#): - a valid semver string to extract the 'Major' version component from." \
+                                                                                       -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
+
+    local -i _rc=$success
+    local _semver=$1
+
+    [[ $_semver =~ $semverRegex ]]                                              || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a valid Semantic Versioning 2.0.0 string (provided '${1-<missing>}')."
+    (( _rc != success )) || printf "%s\n" "${BASH_REMATCH[$semver_major]}"
+    return "$_rc"
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Gets the Minor version component from a semver 2.0.0 string.
+#
+# arg1 string semver - must contain a valid semver string
+#
+# @exitcode success=0: the Minor version component was extracted successfully and output to
+#   stdout.
+# @exitcode err_invalid_arguments=2: 0 or more than 1 arguments were passed to the function
+# @exitcode err_argument_value=4: the argument's value is not a valid semver 2.0.0 string
+#
+# @stdout string The Minor version component of the argument
+#
+# @example
+#   declare semver="4.2.3-beta.5"
+#   declare minor=$(get_semver_minor "$semver")     # outputs "2" to stdout
+#-----------------------------------------------------------------------------------------------
+function get_semver_minor()
+{
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument (provided $#): - a valid semver string to extract the 'Minor' version component from." \
+                                                                                       -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
+
+    local -i _rc=$success
+    local _semver=$1
+
+    [[ $_semver =~ $semverRegex ]]                                              || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a valid Semantic Versioning 2.0.0 string (provided '${1-<missing>}')."
+    (( _rc != success )) || printf "%s\n" "${BASH_REMATCH[$semver_minor]}"
+    return "$_rc"
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Gets the Patch version component from a semver 2.0.0 string.
+#
+# arg1 string semver - must contain a valid semver string
+#
+# @exitcode success=0: the Patch version component was extracted successfully and output to
+#   stdout.
+# @exitcode err_invalid_arguments=2: 0 or more than 1 arguments were passed to the function
+# @exitcode err_argument_value=4: the argument's value is not a valid semver 2.0.0 string
+#
+# @stdout string The Patch version component of the argument
+#
+# @example
+#   declare semver="4.2.3-beta.5"
+#   declare patch=$(get_semver_patch "$semver")     # outputs "3" to stdout
+#-----------------------------------------------------------------------------------------------
+function get_semver_patch()
+{
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument (provided $#): - a valid semver string to extract the 'Patch' version component from." \
+                                                                                       -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
+
+    local -i _rc=$success
+    local _semver=$1
+
+    [[ $_semver =~ $semverRegex ]]                                              || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a valid Semantic Versioning 2.0.0 string (provided '${1-<missing>}')."
+    (( _rc != success )) || printf "%s\n" "${BASH_REMATCH[$semver_patch]}"
+    return "$_rc"
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Gets the Prerelease version component from a semver 2.0.0 string.
+#
+# arg1 string semver - must contain a valid semver string
+#
+# @exitcode success=0: the Prerelease version component was extracted successfully and output to
+#   stdout (will be empty for stable releases).
+# @exitcode err_invalid_arguments=2: 0 or more than 1 arguments were passed to the function
+# @exitcode err_argument_value=4: the argument's value is not a valid semver 2.0.0 string
+#
+# @stdout string The Prerelease version component of the argument
+#
+# @example
+#   declare semver="4.2.3-beta.5"
+#   declare prerelease=$(get_semver_prerelease "$semver")     # outputs "beta.5" to stdout
+#-----------------------------------------------------------------------------------------------
+function get_semver_prerelease()
+{
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument (provided $#): - a valid semver string to extract the 'Prerelease' version component from." \
+                                                                                       -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
+
+    local -i _rc=$success
+    local _semver=$1
+
+    [[ $_semver =~ $semverRegex ]]                                              || { with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a valid Semantic Versioning 2.0.0 string (provided '${1-<missing>}')."
+                                                                                     return "$_rc"
+                                                                                }
+
+    printf "%s\n" "${BASH_REMATCH[$semver_prerelease]:1}"
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Gets the Build version component from a semver 2.0.0 string.
+#
+# arg1 string semver - must contain a valid semver string
+#
+# @exitcode success=0: the Build version component was extracted successfully and output to
+#   stdout.
+# @exitcode err_invalid_arguments=2: 0 or more than 1 arguments were passed to the function
+# @exitcode err_argument_value=4: the argument's value is not a valid semver 2.0.0 string
+#
+# @stdout string The Build version component of the argument
+#
+# @example
+#   declare semver="4.2.3-beta.5+2026-11-08"
+#   declare build=$(get_semver_build "$semver")     # outputs "2026-11-08" to stdout
+#-----------------------------------------------------------------------------------------------
+function get_semver_build()
+{
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument (provided $#): - a valid semver string to extract the 'Build' version component from." \
+                                                                                       -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
+
+    local -i _rc=$success
+    local _semver=$1
+
+    [[ $_semver =~ $semverRegex ]]                                              || { with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a valid Semantic Versioning 2.0.0 string (provided '${1-<missing>}')."
+                                                                                     return "$_rc"
+                                                                                }
+    printf "%s\n" "${BASH_REMATCH[$semver_build]:1}"
+    return "$_rc"
+}
 
 #-----------------------------------------------------------------------------------------------
 # @description Compares two semantic versions according to the Semantic
@@ -303,9 +467,9 @@ function compare_semver()
 #   a valid Semantic Versioning 2.0.0 string.
 #
 # @example
-#   if semver_equal "1.2.3" "1.2.3"; then echo "Versions are equal"; fi
+#   if semver_eq "1.2.3" "1.2.3"; then echo "Versions are equal"; fi
 #-----------------------------------------------------------------------------------------------
-function semver_equal()
+function semver_eq()
 {
     local -i _rc="$success"
 
@@ -332,9 +496,9 @@ function semver_equal()
 #   a valid Semantic Versioning 2.0.0 string.
 #
 # @example
-#   if semver_greaterThan "1.2.3" "1.2.2"; then echo "Version 1 is greater"; fi
+#   if semver_gt "1.2.3" "1.2.2"; then echo "Version 1 is greater"; fi
 #-----------------------------------------------------------------------------------------------
-function semver_greaterThan()
+function semver_gt()
 {
     local -i _rc="$success"
 
@@ -362,9 +526,9 @@ function semver_greaterThan()
 #   a valid Semantic Versioning 2.0.0 string.
 #
 # @example
-#   if semver_greaterThanOrEqual "1.2.3" "1.2.2"; then echo "Version 1 is greater or equal"; fi
+#   if semver_gte "1.2.3" "1.2.2"; then echo "Version 1 is greater or equal"; fi
 #-----------------------------------------------------------------------------------------------
-function semver_greaterThanOrEqual()
+function semver_gte()
 {
     local -i _rc="$success"
 
@@ -391,9 +555,9 @@ function semver_greaterThanOrEqual()
 #   a valid Semantic Versioning 2.0.0 string.
 #
 # @example
-#   if semver_lessThan "1.2.3" "1.2.4"; then echo "Version 1 is less"; fi
+#   if semver_lt "1.2.3" "1.2.4"; then echo "Version 1 is less"; fi
 #-----------------------------------------------------------------------------------------------
-function semver_lessThan()
+function semver_lt()
 {
     local -i _rc="$success"
 
@@ -420,9 +584,9 @@ function semver_lessThan()
 #   a valid Semantic Versioning 2.0.0 string.
 #
 # @example
-#   if semver_lessThanOrEqual "1.2.3" "1.2.4"; then echo "Version 1 is less or equal"; fi
+#   if semver_lte "1.2.3" "1.2.4"; then echo "Version 1 is less or equal"; fi
 #-----------------------------------------------------------------------------------------------
-function semver_lessThanOrEqual()
+function semver_lte()
 {
     local -i _rc="$success"
 
@@ -476,10 +640,10 @@ function is_semver()
 # @exitcode negative=1: Not a valid semver tag.
 #
 # @example
-#   validate_semverTagComponents "v"
-#   if is_semverTag "v1.2.3"; then echo "Valid tag"; fi
+#   validate_minver_tag_components "v"
+#   if is_semver_tag "v1.2.3"; then echo "Valid tag"; fi
 #-----------------------------------------------------------------------------------------------
-function is_semverTag()
+function is_semver_tag()
 {
     __test_with_regex "$@" "$semverTagRegex"
 }
@@ -496,9 +660,9 @@ function is_semverTag()
 # @exitcode negative=1: Not a valid semver prerelease.
 #
 # @example
-#   if is_semverPrerelease "1.2.3-alpha.1"; then echo "Valid prerelease"; fi
+#   if is_semver_prerelease "1.2.3-alpha.1"; then echo "Valid prerelease"; fi
 #-----------------------------------------------------------------------------------------------
-function is_semverPrerelease()
+function is_semver_prerelease()
 {
     __test_with_regex "$@" "$semverPrereleaseRegex"
 }
@@ -518,10 +682,10 @@ function is_semverPrerelease()
 # @exitcode negative=1: Not a valid semver prerelease tag.
 #
 # @example
-#   validate_semverTagComponents "v"
-#   if is_semverPrereleaseTag "v1.2.3-beta.2"; then echo "Valid prerelease tag"; fi
+#   validate_minver_tag_components "v"
+#   if is_semver_prerelease_tag "v1.2.3-beta.2"; then echo "Valid prerelease tag"; fi
 #-----------------------------------------------------------------------------------------------
-function is_semverPrereleaseTag()
+function is_semver_prerelease_tag()
 {
     __test_with_regex "$@" "$semverTagPrereleaseRegex"
 }
@@ -539,9 +703,9 @@ function is_semverPrereleaseTag()
 # @exitcode negative=1: Not a valid semver release version.
 #
 # @example
-#   if is_semverRelease "1.2.3"; then echo "Valid release version"; fi
+#   if is_semver_release "1.2.3"; then echo "Valid release version"; fi
 #-----------------------------------------------------------------------------------------------
-function is_semverRelease()
+function is_semver_release()
 {
     __test_with_regex "$@" "$semverReleaseRegex"
 }
@@ -561,10 +725,10 @@ function is_semverRelease()
 # @exitcode negative=1: Not a valid semver release tag.
 #
 # @example
-#   validate_semverTagComponents "v"
-#   if is_semverReleaseTag "v1.2.3"; then echo "Valid release tag"; fi
+#   validate_minver_tag_components "v"
+#   if is_semver_release_tag "v1.2.3"; then echo "Valid release tag"; fi
 #-----------------------------------------------------------------------------------------------
-function is_semverReleaseTag()
+function is_semver_release_tag()
 {
     __test_with_regex "$@" "$semverTagReleaseRegex"
 }

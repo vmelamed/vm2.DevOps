@@ -94,8 +94,8 @@ function select_upgrade_version()
 
     shift 2
     for _candidate in "$@"; do
-        is_semverRelease "$_candidate" || continue
-        semver_greaterThan "$_candidate" "$_chosen" && _chosen=$_candidate
+        is_semver_release "$_candidate" || continue
+        semver_gt "$_candidate" "$_chosen" && _chosen=$_candidate
     done
 
     return "$success"

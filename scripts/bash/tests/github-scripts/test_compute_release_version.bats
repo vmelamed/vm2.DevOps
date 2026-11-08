@@ -46,7 +46,7 @@ _run_compute_release() {
 
 @test "compute-release-version: with no prior tags, computes 1.0.0 (SemVer floor)" {
     # KNOWN CRITICAL REAL BUG (reported to Val, not fixed here -- see summary):
-    # compute-release-version.sh:41 calls validate_semverTagComponents() with only ONE
+    # compute-release-version.sh:41 calls validate_minver_tag_components() with only ONE
     # argument (minver_tag_prefix), omitting the optional minver_prerelease_id. _semver.sh:130
     # tests that optional argument as '[[ -z $2 || ... ]]' instead of the
     # '[[ ! -v 2 || ... ]]' convention required for optional parameters -- under 'set -u'
@@ -64,7 +64,7 @@ _run_compute_release() {
 
 @test "compute-release-version: a feat commit since the last stable tag bumps minor" {
     # KNOWN CRITICAL REAL BUG (reported to Val, not fixed here -- see summary):
-    # compute-release-version.sh:41 calls validate_semverTagComponents() with only ONE
+    # compute-release-version.sh:41 calls validate_minver_tag_components() with only ONE
     # argument (minver_tag_prefix), omitting the optional minver_prerelease_id. _semver.sh:130
     # tests that optional argument as '[[ -z $2 || ... ]]' instead of the
     # '[[ ! -v 2 || ... ]]' convention required for optional parameters -- under 'set -u'
@@ -83,7 +83,7 @@ _run_compute_release() {
 
 @test "compute-release-version: a breaking change (type!:) since the last stable tag bumps major" {
     # KNOWN CRITICAL REAL BUG (reported to Val, not fixed here -- see summary):
-    # compute-release-version.sh:41 calls validate_semverTagComponents() with only ONE
+    # compute-release-version.sh:41 calls validate_minver_tag_components() with only ONE
     # argument (minver_tag_prefix), omitting the optional minver_prerelease_id. _semver.sh:130
     # tests that optional argument as '[[ -z $2 || ... ]]' instead of the
     # '[[ ! -v 2 || ... ]]' convention required for optional parameters -- under 'set -u'
@@ -102,7 +102,7 @@ _run_compute_release() {
 
 @test "compute-release-version: unlike prereleases, even a chore-only commit still bumps patch (no 'none' bump type)" {
     # KNOWN CRITICAL REAL BUG (reported to Val, not fixed here -- see summary):
-    # compute-release-version.sh:41 calls validate_semverTagComponents() with only ONE
+    # compute-release-version.sh:41 calls validate_minver_tag_components() with only ONE
     # argument (minver_tag_prefix), omitting the optional minver_prerelease_id. _semver.sh:130
     # tests that optional argument as '[[ -z $2 || ... ]]' instead of the
     # '[[ ! -v 2 || ... ]]' convention required for optional parameters -- under 'set -u'
@@ -123,7 +123,7 @@ _run_compute_release() {
 
 @test "compute-release-version: HEAD tagged with a prerelease promotes it to stable and requests an empty commit" {
     # KNOWN CRITICAL REAL BUG (reported to Val, not fixed here -- see summary):
-    # compute-release-version.sh:41 calls validate_semverTagComponents() with only ONE
+    # compute-release-version.sh:41 calls validate_minver_tag_components() with only ONE
     # argument (minver_tag_prefix), omitting the optional minver_prerelease_id. _semver.sh:130
     # tests that optional argument as '[[ -z $2 || ... ]]' instead of the
     # '[[ ! -v 2 || ... ]]' convention required for optional parameters -- under 'set -u'
@@ -147,7 +147,7 @@ _run_compute_release() {
 
 @test "compute-release-version: fails when HEAD is already tagged with a stable release" {
     # KNOWN CRITICAL REAL BUG (reported to Val, not fixed here -- see summary):
-    # compute-release-version.sh:41 calls validate_semverTagComponents() with only ONE
+    # compute-release-version.sh:41 calls validate_minver_tag_components() with only ONE
     # argument (minver_tag_prefix), omitting the optional minver_prerelease_id. _semver.sh:130
     # tests that optional argument as '[[ -z $2 || ... ]]' instead of the
     # '[[ ! -v 2 || ... ]]' convention required for optional parameters -- under 'set -u'
@@ -164,7 +164,7 @@ _run_compute_release() {
 
 @test "compute-release-version: fails when HEAD is tagged with something that isn't a recognized semver tag" {
     # KNOWN CRITICAL REAL BUG (reported to Val, not fixed here -- see summary):
-    # compute-release-version.sh:41 calls validate_semverTagComponents() with only ONE
+    # compute-release-version.sh:41 calls validate_minver_tag_components() with only ONE
     # argument (minver_tag_prefix), omitting the optional minver_prerelease_id. _semver.sh:130
     # tests that optional argument as '[[ -z $2 || ... ]]' instead of the
     # '[[ ! -v 2 || ... ]]' convention required for optional parameters -- under 'set -u'
@@ -212,7 +212,7 @@ _run_compute_release() {
 
 @test "compute-release-version: in CI mode, the summary also lands in the step summary and GITHUB_OUTPUT files" {
     # KNOWN CRITICAL REAL BUG (reported to Val, not fixed here -- see summary):
-    # compute-release-version.sh:41 calls validate_semverTagComponents() with only ONE
+    # compute-release-version.sh:41 calls validate_minver_tag_components() with only ONE
     # argument (minver_tag_prefix), omitting the optional minver_prerelease_id. _semver.sh:130
     # tests that optional argument as '[[ -z $2 || ... ]]' instead of the
     # '[[ ! -v 2 || ... ]]' convention required for optional parameters -- under 'set -u'
@@ -236,7 +236,7 @@ _run_compute_release() {
 
 @test "compute-release-version: a reason containing '%' is workflow-command-escaped in the step summary" {
     # KNOWN CRITICAL REAL BUG (reported to Val, not fixed here -- see summary):
-    # compute-release-version.sh:41 calls validate_semverTagComponents() with only ONE
+    # compute-release-version.sh:41 calls validate_minver_tag_components() with only ONE
     # argument (minver_tag_prefix), omitting the optional minver_prerelease_id. _semver.sh:130
     # tests that optional argument as '[[ -z $2 || ... ]]' instead of the
     # '[[ ! -v 2 || ... ]]' convention required for optional parameters -- under 'set -u'

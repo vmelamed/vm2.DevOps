@@ -60,7 +60,7 @@ function get_arguments()
 function validate_arguments()
 {
     # Sanitize inputs to prevent injection attacks
-    validate_semverTagComponents "$minver_tag_prefix"                           || true
+    validate_minver_tag_components "$minver_tag_prefix"                         || true
     is_safe_reason "$reason"                                                    || true
 
     readonly minver_tag_prefix

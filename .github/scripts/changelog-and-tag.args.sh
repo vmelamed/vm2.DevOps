@@ -87,13 +87,13 @@ function validate_environment()
 function validate_arguments()
 {
     # Sanitize inputs
-    validate_semverTagComponents "$minver_tag_prefix"                           || true
+    validate_minver_tag_components "$minver_tag_prefix"                         || true
 
     # Determine tag type: release or prerelease
-    if is_semverReleaseTag "$tag"; then
+    if is_semver_release_tag "$tag"; then
         is_release=true
         reason=${reason:-"stable release"}
-    elif is_semverPrereleaseTag "$tag"; then
+    elif is_semver_prerelease_tag "$tag"; then
         is_prerelease=true
         reason=${reason:-"pre-release"}
     else

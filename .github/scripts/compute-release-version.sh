@@ -44,9 +44,9 @@ head_tag=$(git tag --points-at HEAD)
 needs_empty_commit=false
 
 if [[ -n $head_tag ]]; then
-    if is_semverReleaseTag "$head_tag"; then
+    if is_semver_release_tag "$head_tag"; then
         error "The HEAD is already tagged with stable tag '$head_tag'. Possible remedy: branch 'main' again, do a new PR, and release with a new, higher version number." -ec "$err_logic_error"
-    elif is_semverPrereleaseTag "$head_tag"; then
+    elif is_semver_prerelease_tag "$head_tag"; then
         trace "HEAD is tagged with prerelease tag '$head_tag'; will promote to stable release."
         needs_empty_commit=true
     else
@@ -67,7 +67,7 @@ declare -i major=0
 declare -i minor=0
 declare -i patch=0
 
-if is_semverRelease "$latest_stable_ver"; then
+if is_semver_release "$latest_stable_ver"; then
     major=${BASH_REMATCH[$semver_major]}
     minor=${BASH_REMATCH[$semver_minor]}
     patch=${BASH_REMATCH[$semver_patch]}
@@ -113,7 +113,7 @@ trace "Calculated release version from commit messages: $release_version [$bump_
 # make sure the computed version is not lower than the latest prerelease
 
 if [[ -n "$latest_prerelease_tag" ]]; then
-    if semver_lessThan "$release_version" "$latest_prerelease_ver"; then
+    if semver_lt "$release_version" "$latest_prerelease_ver"; then
         # the computed release version is less than the latest prerelease version,
         # so adopt the major, minor, and patch from the latest prerelease version and make it a release version
         trace "Latest prerelease tag '$latest_prerelease_tag' is greater than computed release version '$release_version'; adjusting release version."
@@ -132,7 +132,7 @@ release_tag="$minver_tag_prefix$release_version"
 
 if [[ "$needs_empty_commit" == true && -n "$head_tag" ]]; then
     head_ver=${head_tag#"$minver_tag_prefix"}
-    if ! semver_greaterThan "$release_version" "$head_ver"; then
+    if ! semver_gt "$release_version" "$head_ver"; then
         error "Computed stable version '$release_version' is not greater than the prerelease tag '$head_tag' on HEAD. Possible remedy: branch 'main' again, do a new PR with commits that bump the version higher, then release." -ec "$err_logic_error"
     fi
 fi

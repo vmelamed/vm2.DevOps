@@ -127,7 +127,7 @@ function validate_arguments()
 {
     is_positive "$repeat"                                                       || error "repeat must be a positive integer (got '$repeat')." -ec "$err_argument_value"
     validate_preprocessor_symbols preprocessor_symbols                          || true
-    validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id"   || true
+    validate_minver_tag_components "$minver_tag_prefix" "$minver_prerelease_id" || true
 
     [[ -n $bencher_project ]]                                                   || error "Bencher project (--bencher-project) is required" -ec "$err_argument_value"
     [[ -z $bencher_project || $bencher_project =~ ^[a-zA-Z_][a-zA-Z0-9_.-]*$ ]] || error "The Bencher project '$bencher_project' is not a valid project name (slug)." -ec "$err_argument_value"
