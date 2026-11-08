@@ -182,7 +182,7 @@ function sanitize_common_dotnet_args()
     local _project=$1
                                                                                 # ignore all returned validation errors - they've been reported already and this is all that we need here
     validate_preprocessor_symbols preprocessor_symbols                          || true
-    validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id"   || true
+    validate_minver_tag_components "$minver_tag_prefix" "$minver_prerelease_id" || true
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     [[ -v gh_nuget_username ]] && {
         is_safe_input "$gh_nuget_username"                                      || true

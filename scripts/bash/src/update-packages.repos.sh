@@ -226,7 +226,7 @@ function update_section_versions()
         if [[ $_selected == "$_current" ]]; then
             _all_prerelease=true
             for _candidate in "${_found[@]}"; do
-                is_semverRelease "$_candidate" && _all_prerelease=false
+                is_semver_release "$_candidate" && _all_prerelease=false
             done
             if $_all_prerelease; then
                 _result="$right_arrow_em prerelease only"

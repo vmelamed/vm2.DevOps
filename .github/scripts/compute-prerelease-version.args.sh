@@ -86,8 +86,8 @@ function validate_environment()
 
 function validate_arguments()
 {
-    validate_semverTagComponents "$minver_tag_prefix" "$minver_prerelease_id"   || true
-    is_safe_reason "$reason" || true
+    validate_minver_tag_components "$minver_tag_prefix" "$minver_prerelease_id" || true
+    is_safe_reason "$reason"                                                    || true
 
     readonly minver_tag_prefix
     readonly minver_prerelease_id

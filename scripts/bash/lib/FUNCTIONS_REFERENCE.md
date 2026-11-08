@@ -492,15 +492,21 @@ Semantic Versioning (SemVer 2.0.0) and MinVer tag regular expressions, compariso
 
 Dumps the SemVer/MinVer regex constants to stdout, grouped by category, via `dump_vars`.
 
-### validate_semverTagComponents()
+### validate_minver_tag_components()
 
 Validates a MinVer tag prefix and (optionally) a MinVer prerelease identifier template against their regular expressions.
+
+### get_semver_major() / get_semver_minor() / get_semver_patch() / get_semver_prerelease() / get_semver_build()
+
+Output one component of a SemVer 2.0.0 string to stdout. The prerelease and build components come without their leading
+`-`/`+` separator, and are empty when the version has none. Return `$err_argument_value` with no output for an invalid
+version.
 
 ### compare_semver()
 
 Compares two semantic versions per SemVer 2.0.0, returning `$rc_equal`/`$rc_greater_than`/`$rc_less_than`.
 
-### semver_equal() / semver_greaterThan() / semver_greaterThanOrEqual() / semver_lessThan() / semver_lessThanOrEqual()
+### semver_eq() / semver_gt() / semver_gte() / semver_lt() / semver_lte()
 
 Boolean comparison wrappers around `compare_semver`.
 
@@ -508,23 +514,23 @@ Boolean comparison wrappers around `compare_semver`.
 
 Tests if a string is a valid SemVer 2.0.0 version.
 
-### is_semverTag()
+### is_semver_tag()
 
 Tests if a string is a valid semver tag (with the configured MinVer prefix).
 
-### is_semverPrerelease()
+### is_semver_prerelease()
 
 Tests if a string is a valid semver prerelease version.
 
-### is_semverPrereleaseTag()
+### is_semver_prerelease_tag()
 
 Tests if a string is a valid semver prerelease tag (with the configured MinVer prefix).
 
-### is_semverRelease()
+### is_semver_release()
 
 Tests if a string is a valid semver release version (no prerelease identifier).
 
-### is_semverReleaseTag()
+### is_semver_release_tag()
 
 Tests if a string is a valid semver release tag (with the configured MinVer prefix, no prerelease).
 
@@ -804,7 +810,7 @@ Outputs a `key=value` pair (kebab-case key) for each named variable to `$GITHUB_
 
 ## Summary
 
-### Total Functions: 194
+### Total Functions: 199
 
 | File                 | Functions |
 |----------------------|----------:|
@@ -815,7 +821,7 @@ Outputs a `key=value` pair (kebab-case key) for each named variable to `$GITHUB_
 | _core_args.sh        |         4 |
 | _predicates.sh       |        31 |
 | _sanitize.sh         |        36 |
-| _semver.sh           |        14 |
+| _semver.sh           |        19 |
 | _dump_vars.sh        |         3 |
 | _user.sh             |         5 |
 | _git.sh              |        22 |

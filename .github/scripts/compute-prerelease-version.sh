@@ -78,7 +78,7 @@ declare -i minor=0
 declare -i patch=0
 
 # Start from the latest stable version if one exists
-if is_semverRelease "$latest_stable_ver"; then
+if is_semver_release "$latest_stable_ver"; then
     major=${BASH_REMATCH[$semver_major]}
     minor=${BASH_REMATCH[$semver_minor]}
     patch=${BASH_REMATCH[$semver_patch]}
@@ -125,7 +125,7 @@ trace "Base version from commits: $base_version [$bump_type]"
 # A prerelease base must strictly exceed the last stable release.
 # bump_type="none" leaves base_version == latest_stable_ver, producing
 # an invalid tag (e.g. 1.0.0-preview.N after 1.0.0 was already released).
-if [[ -n "$latest_stable_ver" ]] && ! semver_greaterThan "$base_version" "$latest_stable_ver"; then
+if [[ -n "$latest_stable_ver" ]] && ! semver_gt "$base_version" "$latest_stable_ver"; then
     patch=$((patch + 1))
     base_version="$major.$minor.$patch"
     [[ "$bump_type" == *"none"* ]] && bump_type="patch (minimum bump: no code changes since stable $latest_stable_ver)"
@@ -138,7 +138,7 @@ fi
 
 prerelease_counter=1
 
-if [[ -n "$latest_prerelease_ver" ]] && is_semverPrerelease "$latest_prerelease_ver"; then
+if [[ -n "$latest_prerelease_ver" ]] && is_semver_prerelease "$latest_prerelease_ver"; then
     # Extract the base version from the latest prerelease tag
     lp_major=${BASH_REMATCH[$semver_major]}
     lp_minor=${BASH_REMATCH[$semver_minor]}
@@ -148,7 +148,7 @@ if [[ -n "$latest_prerelease_ver" ]] && is_semverPrerelease "$latest_prerelease_
 
     trace "Latest prerelease base: $lp_base, prerelease id: $lp_prerelease"
 
-    if semver_equal "$base_version" "$lp_base"; then
+    if semver_eq "$base_version" "$lp_base"; then
         # Same base version — increment the prerelease counter
         # Extract the numeric suffix from the prerelease identifier (e.g., "-preview.3" → 3)
         if [[ "$lp_prerelease" =~ \.([0-9]+)$ ]]; then
