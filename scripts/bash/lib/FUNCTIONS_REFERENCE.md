@@ -24,6 +24,11 @@ EXIT trap handler: reports a non-zero, non-explicit exit, restores `$initial_cwd
 
 ERR trap handler: reports the failing command, its exit code, and a stack trace.
 
+### add_trap()
+
+Appends a command to the current trap of one or more signals, instead of replacing it as a plain `trap` does (e.g.
+adds a cleanup step after `on_exit`). The script's exit code is preserved.
+
 ### execute()
 
 Executes a command, or (in dry-run mode) prints what would have been executed without running it.
@@ -35,6 +40,11 @@ Executes a command, retrying on failure until it succeeds or a maximum attempt c
 ### list_of_files()
 
 Expands a glob pattern (with globstar/nullglob enabled) and returns the matching files as a space-separated list.
+
+### find_files_by_precedence()
+
+Searches a directory for the first of several file name patterns that matches anything (e.g. `*.slnx`, then `*.sln`, then
+`*.csproj`) and stores the matching files in the caller's array; skips `.git`, `obj`, `bin`, and `templates`.
 
 ---
 
@@ -126,116 +136,6 @@ Looks up an error code and prints its symbolic name (e.g. `$err_not_found`). Exi
 
 ---
 
-## _diagnostics.sh
-
-Logging functions (`error`, `warning`, `info`, `trace`, `bug`), the global error/bug counters, and the `exit_if_has_errors`/`exit_if_has_bugs` gates.
-
-### to_stdout() / to_stderr() / to_output()
-
-Read lines from stdin and echo them to stdout / stderr / stdout, respectively — overridable abstractions (`gh_core.sh` overrides them to also write to GitHub Actions step summary/output files).
-
-### has_errors()
-
-Tests whether the global error counter has recorded any errors.
-
-### get_errors()
-
-Prints the current value of the global error counter.
-
-### set_errors()
-
-Sets the global error counter to a specific value.
-
-### reset_errors()
-
-Resets the global error counter to zero.
-
-### exit_if_has_bugs()
-
-Exits the script (via `exit_with_error`) if any bugs were recorded by this function's own call depth or deeper; defers to an ancestor's still-open validation block otherwise.
-
-### usage()
-
-Forward-declaration placeholder for `usage()`, meant to be overridden by sourcing `_core_args.sh`; always bug-exits if not overridden.
-
-### exit_if_has_errors()
-
-Exits the script (via `usage`, or directly) if any errors were recorded.
-
-### __message()
-
-Internal helper that formats and prints one or more message lines with a severity prefix, optional error-code translation, and an optional stack dump. Used by `error`/`warning`/`info`/`trace`/`bug`.
-
-### error()
-
-Logs an error message to stderr and increments the global error counter.
-
-### exit_with_error()
-
-Logs an error message and exits immediately with the last recorded error code (or `$failure`).
-
-### with_error()
-
-Records a vm2 error code in the caller's variable and reports the failure with `error`, adding the failed command's exit
-status; always returns `$success`. Used as `cmd || with_error rc "$err_…" "…"` in a chain of `(( rc != success )) ||`-guarded
-steps.
-
-### bug()
-
-Logs a bug message (caller-contract violation) to stderr and increments the global bug counter.
-
-### fatal_exit()
-
-Logs a message with a fatal prefix and exits immediately with a specified (or default) error code.
-
-### warning()
-
-Logs a warning message to stderr.
-
-### info()
-
-Logs an informational message to stdout.
-
-### trace()
-
-Logs a trace message to stderr, only when verbose mode is enabled.
-
-### warning_var()
-
-Displays a warning about a variable's value and sets that variable to a given default.
-
-### show_stack()
-
-Prints the current call stack, one line per frame.
-
-### to_summary()
-
-Logs one or more lines under a `## Summary` markdown heading, via `$__summary_output` (glow, if available and not in CI; otherwise `to_stdout`).
-
----
-
-## _core_args.sh
-
-Common command-line argument parsing (`--verbose`, `--quiet`, `--trace`, `--dry-run`, `--graphical`, `--markdown`, `--help`/`-h`/`-?`) and the default `usage`/`usage_text` implementation.
-
-### get_common_arg()
-
-Processes one common command-line argument/switch; returns `$negative` if the argument is not one of the common ones.
-
-### usage_if_requested()
-
-Exits (via `usage`) if a usage request was previously recorded by `get_common_arg`.
-
-### usage()
-
-Displays an optional error message, the usage text, and exits. Overrides the forward-declaration in `_diagnostics.sh`.
-
-### usage_text()
-
-Default placeholder usage text; meant to be overridden by each top-level script.
-
----
-
 ## _predicates.sh
 
 Boolean test (`is_*`) functions for variable existence/type, numeric formats, OS detection, and basic file/JSON validity.
@@ -320,6 +220,10 @@ Tests if a string is validly Base64-encoded.
 
 Tests if the first argument equals any of the subsequent arguments.
 
+### is_in_i()
+
+Tests if the first argument equals one of the following arguments, case-insensitively.
+
 ### is_windows()
 
 Detects if the current OS is Windows (Windows_NT, MINGW, or MSYS).
@@ -331,6 +235,11 @@ Tests if a string is a valid, simple filename (non-empty, no slashes, not `.`/`.
 ### is_valid_path()
 
 Tests if a string is a syntactically valid path, via `pathchk`.
+
+### is_valid_secret_name()
+
+Tests if a string is a valid GitHub secret name: letters, digits, and underscores only, not starting with a digit or with
+`GITHUB_` (in any case).
 
 ### is_valid_secret()
 
@@ -351,6 +260,176 @@ Tests if a string is valid JSON, via `jq`.
 ### is_valid_json_file()
 
 Tests if the file at a given path contains valid JSON.
+
+---
+
+## _diagnostics.sh
+
+Logging functions (`error`, `warning`, `info`, `trace`, `bug`), the global error/bug counters, and the `exit_if_has_errors`/`exit_if_has_bugs` gates.
+
+### to_stdout() / to_stderr() / to_output()
+
+Read lines from stdin and echo them to stdout / stderr / stdout, respectively — overridable abstractions (`gh_core.sh` overrides them to also write to GitHub Actions step summary/output files).
+
+### has_errors()
+
+Tests whether the global error counter has recorded any errors.
+
+### get_errors()
+
+Prints the current value of the global error counter.
+
+### set_errors()
+
+Sets the global error counter to a specific value.
+
+### reset_errors()
+
+Resets the global error counter to zero.
+
+### exit_if_has_bugs()
+
+Exits the script (via `exit_with_error`) if any bugs were recorded by this function's own call depth or deeper; defers to an ancestor's still-open validation block otherwise.
+
+### usage()
+
+Forward-declaration placeholder for `usage()`, meant to be overridden by sourcing `_core_args.sh`; always bug-exits if not overridden.
+
+### exit_if_has_errors()
+
+Exits the script (via `usage`, or directly) if any errors were recorded.
+
+### __message()
+
+Internal helper that formats and prints one or more message lines with a severity prefix, optional error-code translation, and an optional stack dump. Used by `error`/`warning`/`info`/`trace`/`bug`.
+
+### error()
+
+Logs an error message to stderr and increments the global error counter.
+
+### exit_with_error()
+
+Logs an error message and exits immediately with the last recorded error code (or `$failure`).
+
+### with_error()
+
+Records a vm2 error code in the caller's variable and reports the failure with `error`, adding the failed command's exit
+status; always returns `$success`. Used as `cmd || with_error rc "$err_…" "…"` in a chain of `(( rc != success )) ||`-guarded
+steps.
+
+### bug()
+
+Logs a bug message (caller-contract violation) to stderr and increments the global bug counter.
+
+### exit_with_bug()
+
+Logs a bug message (like `bug`) and exits immediately with the recorded error code (or `$err_has_bugs`).
+
+### fatal_exit()
+
+Logs a message with a fatal prefix and exits immediately with a specified (or default) error code.
+
+### warning()
+
+Logs a warning message to stderr.
+
+### info()
+
+Logs an informational message to stdout.
+
+### trace()
+
+Logs a trace message to stderr, only when verbose mode is enabled.
+
+### warning_var()
+
+Displays a warning about a variable's value and sets that variable to a given default.
+
+### show_stack()
+
+Prints the current call stack, one line per frame.
+
+### to_summary()
+
+Logs one or more lines under a `## Summary` markdown heading, via `$__summary_output` (glow, if available and not in CI; otherwise `to_stdout`).
+
+### now_us()
+
+Prints the current time in microseconds since the epoch (from `$EPOCHREALTIME`; Bash 5.0+), for measuring elapsed time.
+
+---
+
+## _core_args.sh
+
+Common command-line argument parsing (`--verbose`, `--quiet`, `--trace`, `--dry-run`, `--graphical`, `--markdown`, `--help`/`-h`/`-?`) and the default `usage`/`usage_text` implementation.
+
+### get_common_arg()
+
+Processes one common command-line argument/switch; returns `$negative` if the argument is not one of the common ones.
+
+### usage_if_requested()
+
+Exits (via `usage`) if a usage request was previously recorded by `get_common_arg`.
+
+### usage()
+
+Displays an optional error message, the usage text, and exits. Overrides the forward-declaration in `_diagnostics.sh`.
+
+### usage_text()
+
+Default placeholder usage text; meant to be overridden by each top-level script.
+
+---
+
+## _semver.sh
+
+Semantic Versioning (SemVer 2.0.0) and MinVer tag regular expressions, comparison, and validation functions.
+
+### print_semver_regexes()
+
+Dumps the SemVer/MinVer regex constants to stdout, grouped by category, via `dump_vars`.
+
+### validate_minver_tag_components()
+
+Validates a MinVer tag prefix and (optionally) a MinVer prerelease identifier template against their regular expressions.
+
+### get_semver_major() / get_semver_minor() / get_semver_patch() / get_semver_prerelease() / get_semver_build()
+
+Output one component of a SemVer 2.0.0 string to stdout. The prerelease and build components come without their leading
+`-`/`+` separator, and are empty when the version has none. Return `$err_argument_value` with no output for an invalid
+version.
+
+### compare_semver()
+
+Compares two semantic versions per SemVer 2.0.0, returning `$rc_equal`/`$rc_greater_than`/`$rc_less_than`.
+
+### semver_eq() / semver_gt() / semver_gte() / semver_lt() / semver_lte()
+
+Boolean comparison wrappers around `compare_semver`.
+
+### is_semver()
+
+Tests if a string is a valid SemVer 2.0.0 version.
+
+### is_semver_tag()
+
+Tests if a string is a valid semver tag (with the configured MinVer prefix).
+
+### is_semver_prerelease()
+
+Tests if a string is a valid semver prerelease version.
+
+### is_semver_prerelease_tag()
+
+Tests if a string is a valid semver prerelease tag (with the configured MinVer prefix).
+
+### is_semver_release()
+
+Tests if a string is a valid semver release version (no prerelease identifier).
+
+### is_semver_release_tag()
+
+Tests if a string is a valid semver release tag (with the configured MinVer prefix, no prerelease).
 
 ---
 
@@ -481,58 +560,6 @@ Escapes a string's special characters for safe use in an extended regular expres
 ### validate_json_schema()
 
 Validates a JSON file against a JSON Schema file via `check-jsonschema`, if installed (warns and skips otherwise).
-
----
-
-## _semver.sh
-
-Semantic Versioning (SemVer 2.0.0) and MinVer tag regular expressions, comparison, and validation functions.
-
-### print_semver_regexes()
-
-Dumps the SemVer/MinVer regex constants to stdout, grouped by category, via `dump_vars`.
-
-### validate_minver_tag_components()
-
-Validates a MinVer tag prefix and (optionally) a MinVer prerelease identifier template against their regular expressions.
-
-### get_semver_major() / get_semver_minor() / get_semver_patch() / get_semver_prerelease() / get_semver_build()
-
-Output one component of a SemVer 2.0.0 string to stdout. The prerelease and build components come without their leading
-`-`/`+` separator, and are empty when the version has none. Return `$err_argument_value` with no output for an invalid
-version.
-
-### compare_semver()
-
-Compares two semantic versions per SemVer 2.0.0, returning `$rc_equal`/`$rc_greater_than`/`$rc_less_than`.
-
-### semver_eq() / semver_gt() / semver_gte() / semver_lt() / semver_lte()
-
-Boolean comparison wrappers around `compare_semver`.
-
-### is_semver()
-
-Tests if a string is a valid SemVer 2.0.0 version.
-
-### is_semver_tag()
-
-Tests if a string is a valid semver tag (with the configured MinVer prefix).
-
-### is_semver_prerelease()
-
-Tests if a string is a valid semver prerelease version.
-
-### is_semver_prerelease_tag()
-
-Tests if a string is a valid semver prerelease tag (with the configured MinVer prefix).
-
-### is_semver_release()
-
-Tests if a string is a valid semver release version (no prerelease identifier).
-
-### is_semver_release_tag()
-
-Tests if a string is a valid semver release tag (with the configured MinVer prefix, no prerelease).
 
 ---
 
@@ -694,6 +721,16 @@ Reads a single element or attribute value out of an XML file by yq path expressi
 
 ---
 
+## _dotnet_constants.sh
+
+The `dotnet` exit codes with their messages and names, and the keys of the build, build-result, version, and package information arrays.
+
+### dotnet_error_message()
+
+Prints `Dotnet <name> (<code>): <message>` for a `dotnet` process exit code, falling back to the unknown-code message. `error`'s `--dotnet-error-code`/`-dec` option uses it.
+
+---
+
 ## _dotnet_args.sh
 
 Common dotnet-CLI argument variables (`$configuration`, `$framework`, `$runtime`, `$artifacts`, MinVer settings, NuGet credentials) and their parsing/sanitization.
@@ -705,16 +742,6 @@ Processes one common dotnet-related command-line option and its value.
 ### sanitize_common_dotnet_args()
 
 Validates and freezes (via `readonly`) the common dotnet arguments after parsing; resolves `$artifacts` to a concrete path.
-
----
-
-## _dotnet_constants.sh
-
-The `dotnet` exit codes with their messages and names, and the keys of the build, build-result, version, and package information arrays.
-
-### dotnet_error_message()
-
-Prints `Dotnet <name> (<code>): <message>` for a `dotnet` process exit code, falling back to the unknown-code message. `error`'s `--dotnet-error-code`/`-dec` option uses it.
 
 ---
 
@@ -810,18 +837,18 @@ Outputs a `key=value` pair (kebab-case key) for each named variable to `$GITHUB_
 
 ## Summary
 
-### Total Functions: 199
+### Total Functions: 205
 
 | File                 | Functions |
 |----------------------|----------:|
-| core.sh              |         6 |
+| core.sh              |         7 |
 | _core_state.sh       |        20 |
 | _error_codes.sh      |         2 |
-| _diagnostics.sh      |        22 |
+| _predicates.sh       |        33 |
+| _diagnostics.sh      |        24 |
 | _core_args.sh        |         4 |
-| _predicates.sh       |        31 |
-| _sanitize.sh         |        36 |
 | _semver.sh           |        19 |
+| _sanitize.sh         |        37 |
 | _dump_vars.sh        |         3 |
 | _user.sh             |         5 |
 | _git.sh              |        22 |
@@ -833,7 +860,7 @@ Outputs a `key=value` pair (kebab-case key) for each named variable to `$GITHUB_
 | _dotnet.sh           |         7 |
 | gh_core.sh           |         5 |
 
-Counts include internal (`__`-prefixed) helper functions that are not part of the public library surface but are still documented in their source files.
+Counts include internal (`__`-prefixed) helper functions that are not part of the public library surface but are still documented in their source files. The `gh_core.sh` overrides of `to_stdout`/`to_stderr`/`to_output` and the `_core_args.sh` override of `usage` are counted in both files.
 
 ### Usage Pattern
 
