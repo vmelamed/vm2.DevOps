@@ -50,7 +50,7 @@ function set_case_insensitive()
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Sets the shell to case-sensitive mode.
+# @description Sets the shell to case-sensitive mode (the default Bash mode).
 #
 # @exitcode success=0: Always.
 #-----------------------------------------------------------------------------------------------
@@ -64,37 +64,43 @@ function set_case_sensitive()
 #   Returns the previous state of the case sensitivity.
 #
 # @arg $1 boolean _new_case_sensitive - the desired new state for the shell's case sensitivity
-#   (true for case-sensitive mode, false - for case-insensitive). Optional, default is true.
+#   (true for case-sensitive mode, false - for case-insensitive). Optional if the next argument
+#   is omitted too, default is true.
+# @arg $2 string - the name of a variable to store the previous case sensitivity. Optional.
 #
-# @exitcode positive=0: previously the shell matching was case sensitive
-# @exitcode negative=1: previously the shell matching was case insensitive
+# @exitcode success=0: always
 #
 # @example
 #
-#   # Set the shell nocasematch option to off and save the previous state in _old_case_sensitive
-#   declare _old_case_sensitive
-#   set_case_sensitivity && _old_case_sensitive=true || _old_case_sensitive=false
-#
+#   # Set the shell to case insensitive (set nocasematch) and save the current state in _prev_case_sensitivity
+#   declare _prev_case_sensitivity
+#   set_case_sensitivity false _prev_case_sensitivity
+#   ... # all operations are CASE-INSENSITIVE
 #   # Restore the previous state of the nocasematch option.
-#   set_case_sensitivity "$_old_case_sensitive"
+#   set_case_sensitivity "$_prev_case_sensitivity"
 #-----------------------------------------------------------------------------------------------
 function set_case_sensitivity()
 {
-    (( $# <= 1 ))                                                               || bug "${FUNCNAME[0]}() requires at most one argument (provided $#): the desired new state for the shell's case sensitivity." -ec "$err_invalid_arguments"
+    (( $# <= 2 ))                                                               || bug "${FUNCNAME[0]}() requires at most two arguments (provided $#):" \
+                                                                                       "  - the desired new state for the shell's case sensitivity. Optional if \$2 is not specified, default - true" \
+                                                                                       "  - the name of a variable to store the previous case sensitivity state, optional" \
+                                                                                       -ec "$err_invalid_arguments"
     [[ ! -v 1 ]] || is_boolean "$1"                                             || bug "${FUNCNAME[0]}() requires a boolean argument (provided '$1'): the desired new state for the shell's case sensitivity." -ec "$err_argument_type"
+    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "${FUNCNAME[0]}() requires a string argument that is the name of a variable to store the previous case sensitivity state (provided '$2')" -ec "$err_invalid_nameref"
     exit_if_has_bugs
 
     local _new_case_sensitive=${1:-true}
-    local _old_case_sensitive
+    local _pcs
+    local -n __prev_case_sensitivity=${2:-_pcs}
 
-    is_case_sensitive && _old_case_sensitive=true || _old_case_sensitive=false
+    is_case_sensitive && __prev_case_sensitivity=true || __prev_case_sensitivity=false
 
-    if [[ $_new_case_sensitive != "$_old_case_sensitive" ]]; then
+    if [[ $_new_case_sensitive != "$__prev_case_sensitivity" ]]; then
         # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
         $_new_case_sensitive && set_case_sensitive || set_case_insensitive
     fi
 
-    $_old_case_sensitive && return "$positive" || return "$negative"
+    return "$success"
 }
 
 declare -xr varNameRegex="^[A-Za-z_][A-Za-z0-9_]*$"
@@ -156,8 +162,8 @@ function is_indexed_array()
     is_variable_name "$1" ||
         return "$negative"
 
-    declare _old_case_sensitive
-    set_case_sensitivity true && _old_case_sensitive=true || _old_case_sensitive=false
+    declare _prev_case_sensitivity
+    set_case_sensitivity true _prev_case_sensitivity
 
     local -i _rc="$positive"
     local _decl
@@ -167,7 +173,7 @@ function is_indexed_array()
         _rc="$negative"
 
     # Restore the previous state of the nocasematch option.
-    set_case_sensitivity "$_old_case_sensitive"
+    set_case_sensitivity "$_prev_case_sensitivity"
 
     return "$_rc"
 }
@@ -192,8 +198,8 @@ function is_associative_array()
     is_variable_name "$1" ||
         return "$negative"
 
-    declare _old_case_sensitive
-    set_case_sensitivity true && _old_case_sensitive=true || _old_case_sensitive=false
+    declare _prev_case_sensitivity
+    set_case_sensitivity true _prev_case_sensitivity
 
     local -i _rc="$positive"
     local _decl
@@ -203,7 +209,7 @@ function is_associative_array()
         _rc="$negative"
 
     # Restore the previous state of the nocasematch option.
-    set_case_sensitivity "$_old_case_sensitive"
+    set_case_sensitivity "$_prev_case_sensitivity"
 
     return "$_rc"
 }
@@ -230,8 +236,8 @@ function is_array()
     is_variable_name "$1" ||
         return "$negative"
 
-    declare _old_case_sensitive
-    set_case_sensitivity false && _old_case_sensitive=true || _old_case_sensitive=false
+    declare _prev_case_sensitivity
+    set_case_sensitivity false _prev_case_sensitivity
 
     local -i _rc="$positive"
     local _decl
@@ -241,7 +247,7 @@ function is_array()
         _rc="$negative"
 
     # Restore the previous state of the nocasematch option.
-    set_case_sensitivity "$_old_case_sensitive"
+    set_case_sensitivity "$_prev_case_sensitivity"
 
     return "$_rc"
 }
@@ -544,29 +550,34 @@ function is_in()
 # @exitcode negative=1: otherwise
 #
 # @example
-#   if is_in "$color" "red" "green" "blue"; then echo "Valid color"; fi
+#   if is_in_i "$color" "red" "green" "blue"; then echo "Valid color"; fi
 #-----------------------------------------------------------------------------------------------
 function is_in_i()
 {
-    (( $# >= 1 ))                                                               || bug "${FUNCNAME[0]}() requires more than 1 arguments:" \
+    (( $# >= 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 or more arguments:" \
                                                                                        "  - the value to test" \
                                                                                        "  - options to compare against" \
                                                                                        -ec "$err_invalid_arguments"
     exit_if_has_bugs
 
     local _sought="$1"; shift
+    local -i _rc=$negative
     local _v
 
-    local _old_case_sensitive
+    local _prev_case_sensitive
 
-    set_case_sensitivity && _old_case_sensitive=true || _old_case_sensitive=false
+    # set case INSENSITIVE and remember the prev.sensitivity
+    set_case_sensitivity false _prev_case_sensitive
     for _v in "$@"; do
-        [[ $_sought == "$_v" ]] &&
-            return "$positive"
+        [[ $_sought == "$_v" ]] && {
+            _rc=$positive
+            break
+        }
     done
-    set_case_sensitivity "$_old_case_sensitive"
+    # restore the prev.sensitivity
+    set_case_sensitivity "$_prev_case_sensitive"
 
-    return "$negative"
+    return "$_rc"
 }
 
 declare -x __os_name
@@ -635,14 +646,13 @@ function is_valid_path()
 
 #-----------------------------------------------------------------------------------------------
 # @description Checks whether a candidate secret name is valid: contains only alphanumeric
-#   characters and underscores, start with a letter or underscore, and does not start with
-#   'GITHUB_'.
+#   characters and underscores, starts with a letter or underscore, and does not start
+#    case-insensitively with 'GITHUB_'.
 #
 # @arg $1 string Candidate secret name to validate.
 #
 # @exitcode positive=0: The secret name is valid.
 # @exitcode negative=1: The secret name is not valid.
-#   character.
 #-----------------------------------------------------------------------------------------------
 function is_valid_secret_name()
 {
