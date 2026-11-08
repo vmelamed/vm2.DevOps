@@ -15,6 +15,8 @@ declare -xr lib_dir
 
 source "$lib_dir/core.sh"
 
+declare -xri success
+declare -xri failure
 declare -xri err_argument_value
 declare -xri err_tool_error
 declare -xri err_io_failure

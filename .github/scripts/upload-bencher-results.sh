@@ -111,6 +111,9 @@ bencher_args=(
     "${threshold_gen2_collects[@]}"
 )
 
+declare GH_TOKEN
+declare BENCHER_API_TOKEN
+
 # Determine the Bencher branch strategy: a pull request tracks its own ephemeral branch (forked from main with
 # main's thresholds cloned onto it, rebuilt fresh every run); a push to a non-main branch accumulates its own
 # history across pushes (also forked from main); a push to main is main.

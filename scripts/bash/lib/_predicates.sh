@@ -14,6 +14,7 @@
 (( ${__VM2_LIB_PREDICATES_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_PREDICATES_SH_LOADED=1
 
+# vm2 core error codes
 declare -xri success
 declare -xri failure
 declare -xri positive
@@ -24,6 +25,7 @@ declare -xri err_argument_value
 declare -xri err_invalid_nameref
 declare -xri err_invalid_path
 
+# vm2 core variables
 declare -x _ignore
 
 #-----------------------------------------------------------------------------------------------
@@ -307,26 +309,26 @@ function __test_with_regex()
     [[  $1 =~ $2 ]]
 }
 
-declare -x zero_rex='[+-]?0'
-declare -x natural_rex='[1-9][0-9]*'
-declare -x positive_rex="[+]?$natural_rex"
-declare -x negative_rex="-$natural_rex"
-declare -x integer_rex="[+-]?(0|$natural_rex)"
-declare -x decimal_rex="$integer_rex(\.[0-9]*)?|(($integer_rex)?\.[0-9]+)"
-declare -x bool_rex='(true|false)'
-declare -x base64_char_rex='[A-Za-z0-9+/]'
+declare -xr zero_rex='[+-]?0'
+declare -xr natural_rex='[1-9][0-9]*'
+declare -xr positive_rex="[+]?$natural_rex"
+declare -xr negative_rex="-$natural_rex"
+declare -xr integer_rex="[+-]?(0|$natural_rex)"
+declare -xr decimal_rex="$integer_rex(\.[0-9]*)?|(($integer_rex)?\.[0-9]+)"
+declare -xr bool_rex='(true|false)'
+declare -xr base64_char_rex='[A-Za-z0-9+/]'
 
-declare -x natural_regex="^$natural_rex\$"
-declare -x zero_regex="^$zero_rex\$"
-declare -x positive_regex="^$positive_rex\$"
-declare -x negative_regex="^$negative_rex\$"
-declare -x non_negative_regex="^($positive_rex|$zero_rex)\$"
-declare -x non_positive_regex="^($negative_rex|$zero_rex)\$"
-declare -x integer_regex="^$integer_rex\$"
-declare -x decimal_regex="^($decimal_rex)\$"
-declare -x bool_regex="^$bool_rex\$"
-declare -x dotnet_version_rex='([0-9]+\.[0-9]+\.[0-9]+)|([0-9]+\.[0-9]+(\.x)?)|([0-9]+(\.x)?)|([0-9]+\.[0-9]+\.[0-9]+x)|latest'
-declare -x dotnet_version_regex="^$dotnet_version_rex\$"
+declare -xr natural_regex="^$natural_rex\$"
+declare -xr zero_regex="^$zero_rex\$"
+declare -xr positive_regex="^$positive_rex\$"
+declare -xr negative_regex="^$negative_rex\$"
+declare -xr non_negative_regex="^($positive_rex|$zero_rex)\$"
+declare -xr non_positive_regex="^($negative_rex|$zero_rex)\$"
+declare -xr integer_regex="^$integer_rex\$"
+declare -xr decimal_regex="^($decimal_rex)\$"
+declare -xr bool_regex="^$bool_rex\$"
+declare -xr dotnet_version_rex='([0-9]+\.[0-9]+\.[0-9]+)|([0-9]+\.[0-9]+(\.x)?)|([0-9]+(\.x)?)|([0-9]+\.[0-9]+\.[0-9]+x)|latest'
+declare -xr dotnet_version_regex="^$dotnet_version_rex\$"
 
 declare -xr base64_regex="^($base64_char_rex{4})*($base64_char_rex{3}=|$base64_char_rex{2}==)?\$"
 

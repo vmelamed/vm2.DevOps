@@ -59,8 +59,8 @@ declare -gxi err_not_found
     run env -i HOME="$HOME" PATH="$PATH" bash -c "
         set -euo pipefail
         source '$lib_dir/core.sh' > /dev/null 2>&1
-        inner_function() { false; }
-        outer_function() { inner_function; }
+        inner_function() { echo 'inner_function'; false; }
+        outer_function() { echo 'outer_function'; inner_function; }
         outer_function
     "
     assert_failure 1

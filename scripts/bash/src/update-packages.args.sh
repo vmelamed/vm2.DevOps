@@ -99,14 +99,18 @@ function get_arguments()
 
 function validate_arguments()
 {
+    local -i _rc=$success;
+
     [[ -n $summary_file ]] || {
-        summary_file=$(mktemp -p /tmp "update-packages-summary-$(date +%Y%m%d-%H%M%S)-XXXXXX.md") ||
-                                                                                   { _rc=$err_io_failure; error "Failed to create a temporary file" -ec "$_rc"; return "$_rc"; }
+        summary_file=$(mktemp -p /tmp "update-packages-summary-$(date +%Y%m%d-%H%M%S)-XXXXXX.md") \
+                                                                                || { with_error _rc "$err_io_failure" "Failed to create a temporary file"
+                                                                                     return "$_rc"
+                                                                                }
         add_trap "rm -f ${summary_file@Q}" EXIT
     }
-    is_valid_path "$summary_file"                                               || error "Invalid summary file path: '$summary_file'." -ec "$err_invalid_path"
+    is_valid_path "$summary_file"                                               || with_error _rc "$err_invalid_path" "Invalid summary file path: '$summary_file'."
     resolve_vm2_repos vm2_repos                                                 || vm2_repos=''
-    is_in "$sot" "${sources_of_truth[@]}"                                       || error "Invalid source of truth '$sot'. Valid values are: ${sources_of_truth[*]}." -ec "$err_argument_value"
+    is_in "$sot" "${sources_of_truth[@]}"                                       || with_error _rc "$err_argument_value" "Invalid source of truth '$sot'. Valid values are: ${sources_of_truth[*]}."
 
     has_errors || [[ -z $vm2_repos ]] || get_vm2_sot_path "$vm2_repos" sot_path "$sot" || true
     exit_if_has_errors true # we cannot go further without vm2_repos or sot path

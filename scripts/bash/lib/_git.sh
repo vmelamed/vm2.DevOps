@@ -300,7 +300,9 @@ function execute_gh_with_retry()
     local _stdout_file=''
     _stderr_file=$(mktemp)                                                      || with_error _rc "$err_io_failure" "Failed to create a temporary file"
     (( _rc != success )) || _stdout_file=$(mktemp)                              || with_error _rc "$err_io_failure" "Failed to create a temporary file";
-    (( _rc == success ))                                                        || { rm -f "$_stderr_file" "$_stdout_file"; return "$_rc"; }
+    (( _rc == success ))                                                        || { rm -f "$_stderr_file" "$_stdout_file"
+                                                                                     return "$_rc"
+                                                                                }
 
     local _attempt=0
     local _message=""
@@ -408,7 +410,9 @@ function execute_gh_api_with_retry()
     local _stdout_file=''
     _stderr_file=$(mktemp)                                                      || with_error _rc "$err_io_failure" "Failed to create a temporary file"
     (( _rc != success ))   || _stdout_file=$(mktemp)                            || with_error _rc "$err_io_failure" "Failed to create a temporary file"
-    (( _rc == success ))                                                        || { rm -f "$_stderr_file" "$_stdout_file"; return "$_rc"; }
+    (( _rc == success ))                                                        || { rm -f "$_stderr_file" "$_stdout_file"
+                                                                                     return "$_rc"
+                                                                                }
 
     local _attempt=0
     local _response="" message="" status=""

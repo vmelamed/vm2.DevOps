@@ -51,7 +51,7 @@ source "$script_dir/run-tests.args.sh"
 # this script's variables
 get_arguments "$@"
 declare -xr test_project
-declare -xri min_line_coverage_pct
+declare -xri min_coverage_pct
 declare -xri min_branch_coverage_pct
 declare -xri min_method_coverage_pct
 

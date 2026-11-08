@@ -15,6 +15,11 @@ declare -xr lib_dir
 
 source "$lib_dir/core.sh"
 
+declare -xr success
+declare -xr negative
+declare -xr err_tool_error
+declare -xr err_invalid_file
+
 # core constants
 declare -xr edit_em
 declare -xr check_em

@@ -220,8 +220,11 @@ function set_package_version()
 {
     local _file=$1 _section=$2 _id=$3 _new=$4
     local _line _tmp _inside=false _done=false _line_id _line_version
+    local _rc=$success
 
-    _tmp=$(mktemp)                                                              || { _rc=$err_io_failure; error "Failed to create a temporary file" -ec "$_rc"; return "$_rc"; }
+    _tmp=$(mktemp)                                                              || { with_error _rc "$err_io_failure" "Failed to create a temporary file"
+                                                                                     return "$_rc"
+                                                                                }
     while IFS= read -r _line || [[ -n $_line ]]; do
         if _props_line_in_section "$_section" "$_line" _inside &&
            [[ $_line != *"<!--"* && $_line != *"-->"* && $_line =~ $package_regex ]] &&
@@ -233,7 +236,6 @@ function set_package_version()
         printf '%s\n' "$_line" >> "$_tmp"
     done < "$_file"
 
-    local _rc=$success
 
     if [[ $_done == true ]]; then
         execute mv "$_tmp" "$_file"                                             || with_error _rc "$err_io_failure" "Failed to copy temporary file to '$_file'."

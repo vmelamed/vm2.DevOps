@@ -752,8 +752,9 @@ function configure_secrets()
 
     local -i _rc=$success
     local _temp
-    _temp=$(mktemp)                                                             || with_error _rc "$err_io_failure" "Failed to create a temporary file."
-    (( _rc == success ))                                                        || return "$_rc"
+    _temp=$(mktemp)                                                             || { with_error _rc "$err_io_failure" "Failed to create a temporary file."
+                                                                                     return "$_rc"
+                                                                                }
 
     execute_gh_api_with_retry 3 2 --paginate "$path_repo/$_app/secrets" -q "$jq_secret_names" > "$_temp" || _rc=$?
 

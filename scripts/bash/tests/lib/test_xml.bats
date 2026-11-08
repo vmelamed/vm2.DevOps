@@ -18,6 +18,7 @@ declare -gxi err_invalid_arguments
 declare -gxi err_argument_value
 declare -gxi err_invalid_nameref
 declare -gxi err_tool_error
+declare -gxi err_not_found
 
 _write_fixture() {
     local _file="$1"
@@ -159,12 +160,12 @@ EOF
 @test "get_xml_value: fails with err_tool_error when the file does not exist" {
     declare out
     run get_xml_value "$BATS_TEST_TMPDIR/does-not-exist.csproj" ".Project" out
-    assert_failure "$err_tool_error"
+    assert_failure "$err_not_found"
 }
 
 @test "get_xml_value: fails with err_tool_error when the file is empty" {
     : > "$BATS_TEST_TMPDIR/empty.csproj"
     declare out
     run get_xml_value "$BATS_TEST_TMPDIR/empty.csproj" ".Project" out
-    assert_failure "$err_tool_error"
+    assert_failure "$err_not_found"
 }

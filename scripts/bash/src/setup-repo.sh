@@ -16,6 +16,7 @@ declare -xr lib_dir
 source "$lib_dir/core.sh"
 
 declare -xri success
+declare -xri failure
 declare -xri err_tool_not_found
 declare -xri err_dir_with_ci
 declare -xri err_repo_with_no_ci
@@ -50,6 +51,8 @@ declare -x purge_vars
 declare -x purge_secrets
 declare -x configure_local
 declare -x branches
+
+declare -xra vm2_repositories
 
 # script variables
 declare -xi rc="$success"
