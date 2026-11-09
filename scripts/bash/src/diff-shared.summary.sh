@@ -7,30 +7,47 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
+# vm2 core error codes
+declare -xri err_invalid_arguments
+declare -xri err_argument_value
+declare -xri err_not_directory
+
+# vm2 core constants
 declare -xr reset
 declare -xr red
 declare -xr green
 declare -xr yellow
 declare -xr blue
 
+# this script variables
 declare -x diff_only
-
-#===============================
-# Summary variables:
-#===============================
 declare -x summary_file
 
-declare -xi summary_diff_count
-declare -xi summary_identical_count
-declare -xi summary_skipped_count
-declare -xi summary_ignore_count
-declare -xi summary_not_merged_count
-declare -xi summary_merged_count
-declare -xi summary_copied_count
-declare -xi summary_shared_in_sync_count
+# Summary variables:
+# Found in state:
+declare -xi summary_identical_count=0
+declare -xi summary_diff_count=0
+declare -xi summary_ignore_count=0
+
+declare -xi summary_shared_identical_count=0
+declare -xi summary_shared_diff_count=0
+declare -xi summary_shared_ignore_count=0
+
+# Actions taken:
+declare -xi summary_skipped_count=0
+declare -xi summary_not_merged_count=0
+declare -xi summary_merged_count=0
+declare -xi summary_copied_count=0
+
+declare -xi summary_shared_skipped_count=0
+declare -xi summary_shared_copied_count=0
 
 function add_summary_header()
 {
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument (provided $#): the path to the target directory." -ec "$err_invalid_arguments"
+    [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires the argument to be the path to the target directory (provided $#)." -ec "$err_not_directory"
+                                                                                exit_if_has_bugs
+
     local target_path="$1"
     local target=${target_path#"$vm2_repos/"}
     local target=${target_path%%/*}
@@ -66,6 +83,14 @@ function add_summary_header()
 
 function add_summary_line()
 {
+    (( $# == 5 ))                                                               || bug "${FUNCNAME[0]}() requires five arguments (provided $#):" \
+                                                                                       "  - the source file" \
+                                                                                       "  - the target file" \
+                                                                                       "  - the actions associated with the file" \
+                                                                                       "  - the differences" \
+                                                                                       "  - the action taken" \
+                                                                                       -ec "$err_invalid_arguments"
+
     local source_file="$1"
     local target_file="$2"
     local actions="$3"
@@ -99,22 +124,22 @@ function trace_files()
     local _format
     case "${1,,}" in
         identical )
-            _format="%-84s ${green}==== Identical ====${reset} %-s\n"
+            _format="%-84s ${clr_green}==== Identical ====${clr_reset} %-s\n"
             ;;
         different )
-            _format="%-84s ${red}≠≠≠≠ Different ≠≠≠≠${reset} %-s\n"
+            _format="%-84s ${clr_red}≠≠≠≠ Different ≠≠≠≠${clr_reset} %-s\n"
             ;;
         not_changed )
-            _format="%-84s ${yellow}→←→← No change →←→←${reset} %-s\n"
+            _format="%-84s ${clr_yellow}→←→← No change →←→←${clr_reset} %-s\n"
             ;;
         merged )
-            _format="%-84s ${blue}→←→← Merged    →←→←${reset} %-s\n"
+            _format="%-84s ${clr_blue}→←→← Merged    →←→←${clr_reset} %-s\n"
             ;;
         copied )
-            _format="%-84s ${green}→→→→ Copied    →→→→${reset} %-s\n"
+            _format="%-84s ${clr_green}→→→→ Copied    →→→→${clr_reset} %-s\n"
             ;;
         skipped )
-            _format="%-84s ${yellow}---- Skipping  ----${reset} %-s\n"
+            _format="%-84s ${clr_yellow}---- Skipping  ----${clr_reset} %-s\n"
             ;;
         * )
             _format="%-84s ??????????????????? %-s\n"

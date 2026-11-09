@@ -11,6 +11,7 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
+# vm2 core lib exit codes
 declare -xri success
 declare -xri failure
 declare -xri positive
@@ -26,14 +27,11 @@ declare -xri err_argument_type
 declare -xri err_not_file
 declare -xri err_io_failure
 
+# vm2 core lib constants
 declare -x _ignore
 
-declare -x vm2_repos
-declare -x diff_only
-
-declare -x diff_tool
+# this script variables
 declare -x diff_command
-declare -x merge_tool
 declare -x merge_command
 
 # follow the git diff and merge commands parameters naming convention
@@ -100,7 +98,7 @@ function resolve_target()
     [[ ! -v 2 || -n $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the directory name of the target repository, to be a non-empty existing directory." -ec "$err_argument_value"
     [[ ! -v 3 ]] || is_variable "$3"                                            || bug "${FUNCNAME[0]}() requires argument 3, the name of the variable to store the absolute path to the root of the working tree of the target repository." -ec "$err_invalid_nameref"
     [[ ! -v 4 ]] || is_variable "$4"                                            || bug "${FUNCNAME[0]}() requires argument 4, the name of the variable to store the absolute path to the target repository directory." -ec "$err_invalid_nameref"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _repos="$1"
     local _r="$2"
@@ -124,7 +122,7 @@ function resolve_target()
     (( _rc != success )) || ensure_fresh_git_state "$_target_root" "$branch"    || with_error _rc "$err_logic_error" "The specified target repository at '$_target_root' on branch '$branch' is not in a clean state." \
                                                                                                                      "Commit or stash your changes."
 
-    trace "The Git working tree root of the target repository is '$_target_root', on a branch '$branch'."
+    (( _rc != success )) || trace "The Git working tree root of the target repository is '$_target_root', on a branch '$branch'."
     return "$_rc"
 }
 
@@ -154,7 +152,7 @@ function __find_shared_markers()
     [[ ! -v 1 || -f $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the file to scan, to be an existing file (provided '${1-<missing>}')." -ec "$err_not_file"
     [[ ! -v 2 ]] || is_variable "$2"                                            || bug "${FUNCNAME[0]}() requires argument 2 to be the name of a defined variable (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
     [[ ! -v 3 ]] || is_variable "$3"                                            || bug "${FUNCNAME[0]}() requires argument 3 to be the name of a defined variable (provided '${3-<missing>}')." -ec "$err_invalid_nameref"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local -n _begin_line_out="$2"
     local -n _end_line_out="$3"
@@ -199,7 +197,7 @@ function get_shared_block()
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 || -f $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the file to scan, to be an existing file (provided '${1-<missing>}')." -ec "$err_not_file"
     [[ ! -v 2 ]] || is_variable "$2"                                            || bug "${FUNCNAME[0]}() requires argument 2 to be the name of a defined variable (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local -n _shared_content_out="$2"
     local -i _begin_line
@@ -251,7 +249,7 @@ function are_different()
     [[ ! -v 2 || -s $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the target file, to be an existing, non-empty file (provided '${2-<missing>}')." -ec "$err_not_file"
     [[ ! -v 3 ]] || is_boolean "$3"                                             || bug "${FUNCNAME[0]}() requires argument 3, the display-diff flag, to be 'true' or 'false' (provided '${4-<missing>}')." -ec "$err_argument_type"
     [[ ! -v 4 ]] || is_boolean "$4"                                             || bug "${FUNCNAME[0]}() requires argument 4, the warn if shared-block markers are missing or malformed flag, to be 'true' or 'false' (provided '${4-<missing>}')." -ec "$err_argument_type"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     # follow the git diff command parameters naming convention, so the eval command can use them correctly
     LOCAL=$1
@@ -278,8 +276,7 @@ function are_different()
         local _target_shared_file=''
         _source_shared_file=$(mktemp)                                           || with_error _rc "$err_io_failure" "Failed to create a temporary file"
         (( _rc != success ))          || _target_shared_file=$(mktemp)          || with_error _rc "$err_io_failure" "Failed to create a temporary file"
-        (( _rc == success ))                                                    || {
-                                                                                    rm -f "$_source_shared_file" "$_target_shared_file"
+        (( _rc == success ))                                                    || { rm -f "$_source_shared_file" "$_target_shared_file"
                                                                                      return "$_rc"
                                                                                 }
 
@@ -333,7 +330,7 @@ function merge()
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 || -f $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the SoT file, to be an existing file (provided '${1-<missing>}')." -ec "$err_not_file"
     [[ ! -v 2 || -f $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the target file, to be an existing file (provided '${2-<missing>}')." -ec "$err_not_file"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     # follow the git merge command parameters naming convention, so the eval command can use them correctly
     LOCAL=$2
@@ -381,7 +378,7 @@ function copy_file()
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 || -f $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the source file, to be an existing file (provided '${1-<missing>}')." -ec "$err_not_file"
     [[ ! -v 2 || -n $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the destination file path, to be non-empty (provided '${2-<missing>}')." -ec "$err_argument_value"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local -i _rc=$success
     local _src_file="$1"
@@ -425,7 +422,7 @@ function copy_shared_block()
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 || -f $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the SoT file, to be an existing file (provided '${1-<missing>}')." -ec "$err_not_file"
     [[ ! -v 2 || -f $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the target file, to be an existing file (provided '${2-<missing>}')." -ec "$err_not_file"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _src_file="$1"
     local _dest_file="$2"
@@ -435,11 +432,11 @@ function copy_shared_block()
 
     get_shared_block "$_src_file" _shared_content                               || bug "${FUNCNAME[0]}() requires the SoT file '$_src_file' to already have a single, well-formed shared-content marker pair (the caller is expected to have checked this via are_different())." -ec "$err_logic_error"
     __find_shared_markers "$_dest_file" _dest_begin_line _dest_end_line         || bug "${FUNCNAME[0]}() requires the target file '$_dest_file' to already have a single, well-formed shared-content marker pair (the caller is expected to have checked this via are_different())." -ec "$err_logic_error"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _tmp_file=''
     _tmp_file=$(mktemp)                                                         || { with_error _rc "$err_io_failure" "Failed to create a temporary file"
-                                                                                    rm -f "$_tmp_file"
+                                                                                     rm -f "$_tmp_file"
                                                                                      return "$_rc"
                                                                                 }
 
