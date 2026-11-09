@@ -19,7 +19,6 @@ source "$lib_dir/core.sh"
 declare -xri success
 declare -xri positive
 declare -xri negative
-declare -xri err_argument_value
 declare -xri err_logic_error
 declare -xri err_unexpected_error
 
@@ -29,10 +28,8 @@ declare -xr check_ch
 declare -xr equals_ch
 declare -xr not_eq_ch
 
+declare -xr vm2_sot_repo_name
 declare -xra vm2_repositories
-declare -xr default_vm2_repos_path
-declare -xr default_sot
-declare -xra sources_of_truth
 
 # vm2 core variables
 declare -x _ignore
@@ -46,32 +43,39 @@ source "$script_dir/diff-shared.args.sh"
 source "$script_dir/diff-shared.usage.sh"
 source "$script_dir/diff-shared.summary.sh"
 
-#===============================
-# arguments:
-#===============================
-declare -x vm2_repos="${VM2_REPOS:-$default_vm2_repos_path}"
-declare -x vm2_sot_repo_name
-declare -x sot=$default_sot             # at the moment we support only one source of truth @ "$vm2_repos/$vm2_sot_repo_name/templates/$default_sot/content - $VM2_REPOS/templates/AddNewPackage/content
-declare -xa target_repos=()             # the target repositories specified as arguments. If not specified, the current directory is used as the only target repo.
-declare -xA selectors_actions=()        # array [file] => [action string] for files specified on the CLI with --file* options
-declare -x diff_only=false              # if true, only show the differences without asking the user to take any actions. This is useful for CI validation of the shared content.
-declare -x current_branch=false         # both vm2.DevOps and SoT repositories must be on the main branch by default, otherwise on their respective current branches
-declare -x summary_file=""              # the file where the summary of the differences and actions will be written. If not specified, a temporary file will be created.
-
-#===============================
 # Script shared variables:
-#===============================
-declare -x action_ignore
-declare -x action_merge_or_copy
-declare -x action_ask_to_merge
-declare -x action_ask_to_copy
-declare -x action_merge action_copy
-declare -x action_copy_shared 
-declare -x action_ask_to_copy_shared
+declare -xr action_ignore
+declare -xr action_merge_or_copy
+declare -xr action_ask_to_merge
+declare -xr action_ask_to_copy
+declare -xr action_merge action_copy
+declare -xr action_copy_shared
+declare -xr action_ask_to_copy_shared
 
 declare -xri shared_equal
 declare -xri shared_not_equal
 declare -xa arguments
+
+# Summary variables:
+declare -xi summary_ignore_count
+declare -xi summary_shared_ignore_count
+declare -xi summary_skipped_count
+declare -xi summary_shared_skipped_count
+
+# this script arguments:
+get_arguments "$@"
+declare -xr vm2_repos
+declare -xr sot
+declare -xra target_repos
+declare -xrA selectors_actions
+declare -xr diff_only
+declare -xr summary_file
+
+# this script variables
+declare -xi rc="$success"
+
+declare -xra target_roots
+declare -xra target_paths
 
 # this is the data model of the script. Bash does not have complex data structures, so we use parallel arrays to store the
 # source files, target files and actions. The index of the arrays corresponds to the same file pair and action. For example,
@@ -79,84 +83,6 @@ declare -xa arguments
 declare -xa source_files=()     # array of the paths of the SoT files
 declare -xa target_files=()     # array of target paths corresponding to the SoT files by index
 declare -xa file_actions=()     # array of default action strings corresponding to the SoT files by index
-
-#===============================
-# Summary variables:
-#===============================
-# Found in state:
-declare -xi summary_identical_count=0
-declare -xi summary_diff_count=0
-declare -xi summary_ignore_count=0
-
-declare -xi summary_shared_identical_count=0
-declare -xi summary_shared_diff_count=0
-declare -xi summary_shared_ignore_count=0
-
-# Actions taken:
-declare -xi summary_skipped_count=0
-declare -xi summary_not_merged_count=0
-declare -xi summary_merged_count=0
-declare -xi summary_copied_count=0
-
-declare -xi summary_shared_skipped_count=0
-declare -xi summary_shared_copied_count=0
-
-#===============================
-# Script start:
-#===============================
-
-get_arguments "$@"
-
-is_in "$sot" "${sources_of_truth[@]}"                                           || usage "Invalid source of truth '$sot'. Valid values are: ${sources_of_truth[*]}." -ec "$err_argument_value"
-
-if $diff_only; then
-    for selector in "${!selectors_actions[@]}"; do
-        selectors_actions["$selector"]="$action_ignore"   # diff only
-    done
-fi
-
-#===============================
-# Adjust and validate $vm2_repos:
-#===============================
-declare vm2_branch
-declare sot_branch
-
-if $current_branch; then
-    vm2_branch=''
-    sot_branch=''
-else
-    vm2_branch='main'
-    sot_branch='main'
-fi
-
-declare -r vm2_branch
-declare -r sot_branch
-
-declare -xi rc="$success"
-
-resolve_vm2_repos vm2_repos "$vm2_branch" "$sot_branch" || rc=$?
-(( rc == success ))                                                             || usage "Could not resolve the path of the vm2 repositories directory from the specified value of '$vm2_repos'."
-trace "All vm2 repositories are expected to be in '$vm2_repos'"
-
-# if no repos were specified as arguments, use the current directory as the only target repo:
-! is_empty_array target_repos || target_repos+=("$(pwd)")
-
-#===============================
-# Adjust and validate the source of truth:
-#===============================
-rc="$success"
-
-declare sot_path
-get_vm2_sot_path "$vm2_repos" sot_path "$sot" || rc=$?
-(( rc == success ))                                                             || usage "Could not find the source of truth directory for the specified template '$sot' in the expected location in '$vm2_repos'." -ec "$rc"
-
-declare -xr vm2_repos
-declare -xr sot
-declare -xr sot_path
-declare -xra target_repos
-declare -xrA selectors_actions
-declare -xr diff_only
-declare -xr summary_file
 
 declare -a sot_dump_vars=(
     --quiet
@@ -170,23 +96,6 @@ declare -a sot_dump_vars=(
 )
 
 dump_vars "${sot_dump_vars[@]}"
-
-# Resolve and validate all repositories specified as arguments, and prepare the list of target files and actions for each of them:
-declare target=''
-declare target_root target_path
-declare -a target_roots=()
-declare -a target_paths=()
-
-for target in "${target_repos[@]}"; do
-    resolve_target "$vm2_repos" "$target" target_root target_path               || { with_error rc $? "Could not resolve the Git working tree root of the target '$target'. Please, ensure that it exists and is a valid directory."
-                                                                                     continue
-                                                                                }
-    target_roots+=("$target_root")
-    target_paths+=("$target_path")
-done
-exit_if_has_errors
-
-declare -i targets_index
 
 info "The Source of Truth '$sot' folder is in '$sot_path'"
 
@@ -206,25 +115,25 @@ declare -x config_merge_command
 declare -xa config_source_files    # array of the paths of the SoT files
 declare -xa config_file_actions    # array of default action strings corresponding to the SoT files by index
 
-declare -i targets_index
-declare target_root target_path
+declare -x diff_tool
+declare -x diff_command
+declare -x merge_tool
+declare -x merge_command
 
-declare -x diff_tool diff_command
-declare -x merge_tool merge_command
-
-declare -a source_files
-declare -a target_files
-declare -a file_actions
-
-declare -i files_index
-declare source_file target_file
-declare default_actions actions
+declare source_file
+declare target_file
+declare default_actions
+declare actions
 declare -i difference
 declare file_difference_txt todo_or_done_txt
 
 declare -A repo_state=()
 declare -xr key_name
 declare repo_name
+
+declare -i targets_index
+declare -i files_index
+declare target_root target_path
 
 # iterate through the target repositories
 for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ )); do

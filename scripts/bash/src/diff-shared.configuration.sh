@@ -450,7 +450,7 @@ function customize()
             done
 
             [[ "$_found" == true ]]                                             || {
-                [[ $_action != "ignore" ]] && trace "Path '$_file_name' from $_custom_config ${bold}does not match${reset} any known target relative path."
+                [[ $_action != "ignore" ]] && trace "Path '$_file_name' from $_custom_config ${clr_bold}does not match${clr_reset} any known target relative path."
                 continue
             }
         done < <(jq -r '.action_overrides | to_entries | .[] | .key+"="+.value' "$_custom_config" 2>"$_ignore") # convert JSON object to key=value pairs
@@ -503,7 +503,7 @@ function parameterize()
                 { is_empty_array _matching_actions || ! is_in "$_action" "${_matching_actions[@]}"; } && {
                     # add the action to the list of matching actions if it is not already present
                     _matching_actions+=("$_action")
-                    trace "File '${_source_file#"${vm2_repos:-}/"}' ${bold}${green}matches${reset} selector '${_selector-<missing>}' with action '${_action-<missing>}'."
+                    trace "File '${_source_file#"${vm2_repos:-}/"}' ${clr_bold}${clr_green}matches${clr_reset} selector '${_selector-<missing>}' with action '${_action-<missing>}'."
                 }
                 # keep checking other selectors for this source file, if they specify different actions - we'll ignore it all together below
             fi
@@ -522,7 +522,7 @@ function parameterize()
         else
             # no patterns matched - clear the action for that file (clear the action, as we are not certain what to do) and report as a warning
             file_actions[_index]=""
-            trace "File '${source_files[_index]#${vm2_repos}/}' ${red}does not match${reset} any of the provided patterns: ${!selectors_actions[*]}. The file will not be processed"
+            trace "File '${source_files[_index]#${vm2_repos}/}' ${clr_red}does not match${clr_reset} any of the provided patterns: ${!selectors_actions[*]}. The file will not be processed"
         fi
     done
 

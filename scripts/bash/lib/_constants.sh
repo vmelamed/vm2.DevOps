@@ -242,25 +242,38 @@ declare -xr down_arrow_em='⬇️'
 declare -xr trace_em='🐾'
 
 if [[ -t 1 ]]; then
-    declare -xr reset=$'\033[0m'
-    declare -xr bold=$'\033[1m'
-    declare -xr red=$'\033[0;31m'
-    declare -xr green=$'\033[0;32m'
-    declare -xr yellow=$'\033[1;33m'
-    declare -xr blue=$'\033[0;34m'
-    declare -xr bold_red=$'\033[1;31m'
-    declare -xr bold_green=$'\033[1;32m'
-    declare -xr bold_yellow=$'\033[1;33m'
-    declare -xr bold_blue=$'\033[1;34m'
+    declare -xr clr_reset=$'\033[0m'
+    declare -xr clr_bold=$'\033[1m'
+    declare -xr clr_red=$'\033[0;31m'
+    declare -xr clr_green=$'\033[0;32m'
+    declare -xr clr_yellow=$'\033[1;33m'
+    declare -xr clr_blue=$'\033[0;34m'
+    declare -xr clr_bold_red=$'\033[1;31m'
+    declare -xr clr_bold_green=$'\033[1;32m'
+    declare -xr clr_bold_yellow=$'\033[1;33m'
+    declare -xr clr_bold_blue=$'\033[1;34m'
 else
-    declare -xr reset=''
-    declare -xr bold=''
-    declare -xr red=''
-    declare -xr green=''
-    declare -xr yellow=''
-    declare -xr blue=''
-    declare -xr bold_red=''
-    declare -xr bold_green=''
-    declare -xr bold_yellow=''
-    declare -xr bold_blue=''
+    declare -xr clr_reset=''
+    declare -xr clr_bold=''
+    declare -xr clr_red=''
+    declare -xr clr_green=''
+    declare -xr clr_yellow=''
+    declare -xr clr_blue=''
+    declare -xr clr_bold_red=''
+    declare -xr clr_bold_green=''
+    declare -xr clr_bold_yellow=''
+    declare -xr clr_bold_blue=''
 fi
+
+declare -xra all_colors=(
+    "$clr_reset"
+    "$clr_bold"
+    "$clr_red"
+    "$clr_green"
+    "$clr_yellow"
+    "$clr_blue"
+    "$clr_bold_red"
+    "$clr_bold_green"
+    "$clr_bold_yellow"
+    "$clr_bold_blue"
+)
