@@ -681,9 +681,9 @@ function end_scope()
     (( _top >= 0 ))                                                             || bug "${FUNCNAME[0]}() in '$_function': there is no open scope." -ec "$err_logic_error"
     exit_if_has_bugs
 
+    shopt -u nocasematch
     (( __scope_pid[_top] == BASHPID )) &&
     (( __scope_depth[_top] == _depth )) &&
-    shopt -u nocasematch
     [[ ${__scope_function[_top]} == "$_function" ]]                             || bug "${FUNCNAME[0]}() in '$_function': the innermost open scope belongs to '${__scope_function[_top]}'" \
                                                                                        "at ${__scope_location[_top]} (process ${__scope_pid[_top]}), and was not closed there." \
                                                                                        -ec "$err_logic_error"
