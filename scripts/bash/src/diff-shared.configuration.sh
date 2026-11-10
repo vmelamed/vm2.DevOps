@@ -28,12 +28,12 @@ declare -xri err_dir_with_ci
 declare -xri err_argument_type
 declare -xri err_not_file
 
-declare -xr reset
-declare -xr bold
-declare -xr red
-declare -xr green
-declare -xr yellow
-declare -xr blue
+declare -xr clr_reset
+declare -xr clr_bold
+declare -xr clr_red
+declare -xr clr_green
+declare -xr clr_yellow
+declare -xr clr_blue
 
 declare -x _ignore
 
