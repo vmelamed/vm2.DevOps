@@ -14,6 +14,7 @@ declare -xri err_unknown_argument
 declare -xri err_argument_value
 declare -xri err_logic_error
 declare -xri err_io_failure
+declare -xri err_tool_not_found
 
 # vm2 core lib constants
 declare -xr ci
@@ -23,36 +24,52 @@ declare -xr default_sot
 declare -xr vm2_sot_repo_name
 declare -xr default_vm2_repos_path
 
-# this scripts arguments and variables
-declare -x vm2_branch
-declare -x sot_branch
-declare -x sot_path
-declare -xar valid_actions
-declare -xr all_actions_str
+# vm2 core lib variable
+declare -x usage_requested
 
+# this scripts arguments
 declare -x vm2_repos="${VM2_REPOS:-$default_vm2_repos_path}"
-declare -x sot=$default_sot             # at the moment we support only one source of truth @ "$vm2_repos/$vm2_sot_repo_name/templates/$default_sot/content - $VM2_REPOS/templates/AddNewPackage/content
-declare -xa target_repos=()             # the target repositories specified as arguments. If not specified, the current directory is used as the only target repo.
 declare -xA selectors_actions=()        # array [file] => [action string] for files specified on the CLI with --file* options
+declare -x summary_file=""              # the file where the summary of the differences and actions will be written. If not specified, a temporary file will be created.
 declare -x diff_only=false              # if true, only show the differences without asking the user to take any actions. This is useful for CI validation of the shared content.
 declare -x current_branch=false         # both vm2.DevOps and SoT repositories must be on the main branch by default, otherwise on their respective current branches
-declare -x summary_file=""              # the file where the summary of the differences and actions will be written. If not specified, a temporary file will be created.
+declare -xa target_repos=()             # the target repositories specified as arguments. If not specified, the current directory is used as the only target repo.
+declare -x sot=$default_sot             # at the moment we support only one source of truth @ "$vm2_repos/$vm2_sot_repo_name/templates/$default_sot/content - $VM2_REPOS/templates/AddNewPackage/content
 declare -xa arguments=(                 # array of all arguments for logging and debugging purposes
     vm2_repos
+    selectors_actions
+    summary_file
+    diff_only
+    current_branch
+    target_repos
+    --line
     sot
     sot_path
-    target_repos
-    selectors_actions
-    diff_only
-    all_repos
-    current_branch
-    summary_file
 )
+
+# SoT is validated and resolved to sot_path
+declare -x sot_path=''
+# target_repos are validated and resolved to target roots and target paths:
 declare -a target_roots=()
 declare -a target_paths=()
 
+# this scripts variables
+declare -x vm2_branch='main'
+declare -x sot_branch='main'
+declare -xar valid_actions
+declare -xr all_actions_str
 
 function get_arguments()
+{
+    parse_arguments "$@"
+    usage_if_requested
+    verify_environment
+    resolve_arguments
+    exit_if_has_errors
+    dump_args
+}
+
+function parse_arguments()
 {
     local _option
 
@@ -61,13 +78,34 @@ function get_arguments()
         get_common_arg "$_option" && continue
 
         case ${_option,,} in
-            --current-branch|-cb )
-                current_branch=true
-                ;;
-
             --vm2-repos|-r )
                 (( $# >= 1 ))                                                   || usage "Missing value for $_option" -ec "$err_missing_argument"
                 vm2_repos="$1"; shift
+                ;;
+
+            --file*|-f* )
+                (( $# >= 1 ))                                                   || usage "Missing value for $_option" -ec "$err_missing_argument"
+                get_selector_action "$_option" "$1"; shift
+                ;;
+
+            --summary-file|-sf )
+                (( $# >= 1 ))                                                   || usage "Missing value for $_option" -ec "$err_missing_argument"
+                summary_file="$1"; shift
+                ;;
+
+            --all-repositories|--all-repos|-all )
+                local _repo
+                for _repo in "${vm2_repositories[@]}"; do
+                    is_in "$_repo" "${target_repos[@]}" || target_repos+=("$_repo")
+                done
+                ;;
+
+            --diff|-d )
+                diff_only="true"
+                ;;
+
+            --current-branch|-cb )
+                current_branch=true
                 ;;
 
             # -s|--source-of-truth )
@@ -79,26 +117,6 @@ function get_arguments()
             #
             #  -s, --source-of-truth <sot>   The source-of-truth scenario to use. Must be one of the pre-defined scenarios in
             #                                '\$VM2_REPOS/vm2.Templates/templates/'.
-
-            --all-repositories|--all-repos|-all )
-                for _repo in "${vm2_repositories[@]}"; do
-                    is_in "$_repo" "${target_repos[@]}" || target_repos+=("$_repo")
-                done
-                ;;
-
-            --file*|-f* )
-                (( $# >= 1 ))                                                   || usage "Missing value for $_option" -ec "$err_missing_argument"
-                get_selector_action "$_option" "$1"; shift
-                ;;
-
-            --diff|-d )
-                diff_only="true"
-                ;;
-
-            --summary-file|-sf )
-                (( $# >= 1 ))                                                   || usage "Missing value for $_option" -ec "$err_missing_argument"
-                summary_file="$1"; shift
-                ;;
 
             # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
             # (SC2221/SC2222) flag any script-specific arm that reuses one of them, and it bugs out if the lists drift apart.
@@ -114,21 +132,15 @@ function get_arguments()
                 ;;
         esac
     done
-
-    validate_arguments
-    validate_environment
-    usage_if_requested
-    validate_arguments
-    dump_args
 }
 
-function validate_environment
+function verify_environment
 {
-    is_tool_present git
+    is_tool_present git                                                         || error "'git' is not installed. Please install it first." -ec "$err_tool_not_found"
     return "$success"
 }
 
-function validate_arguments()
+function resolve_arguments()
 {
     local -i _rc=$success
 
@@ -136,9 +148,6 @@ function validate_arguments()
     if $current_branch; then
         vm2_branch=''
         sot_branch=''
-    else
-        vm2_branch='main'
-        sot_branch='main'
     fi
 
     # resolve and validate vm2_repos. We cannot continue without it.
@@ -155,25 +164,26 @@ function validate_arguments()
     ! is_empty_array target_repos || target_repos+=("$(pwd)")
 
     # resolve and validate target_repos, target_roots, target_paths
-    local target=''
-    local target_root
-    local target_path
-    for target in "${target_repos[@]}"; do
+    local _target=''
+    local _target_root
+    local _target_path
+    for _target in "${target_repos[@]}"; do
         _rc=$success
-        resolve_target "$vm2_repos" "$target" target_root target_path           || with_error _rc $? "Could not resolve the Git working tree root of the target '$target'. Please, ensure that it exists and is a valid directory."
+        resolve_target "$vm2_repos" "$_target" _target_root _target_path        || with_error _rc $? "Could not resolve the Git working tree root of the target '$_target'. Please, ensure that it exists and is a valid directory."
         (( _rc == success )) || continue
 
-        target_roots+=("$target_root")
-        target_paths+=("$target_path")
+        target_roots+=("$_target_root")
+        target_paths+=("$_target_path")
     done
 
     if $diff_only; then
-        for selector in "${!selectors_actions[@]}"; do
-            selectors_actions["$selector"]="$action_ignore"   # diff only
+        local _selector
+        for _selector in "${!selectors_actions[@]}"; do
+            selectors_actions["$_selector"]="$action_ignore"   # diff only
         done
     fi
 
-    [[ -n "$summary_file" ]] || {
+    has_errors || [[ -n $summary_file ]] || {
         local _temp_file_template
 
         _temp_file_template="diff-shared-log-$(date +%Y%m%d-%H%M%S)-XXXXXX.md"
@@ -204,7 +214,7 @@ function dump_args()
     local -a _args=(
         --force
         --quiet
-        --header "Arguments for $script_name:"
+        --header "$script_name arguments:"
 
         "${arguments[@]}"
 

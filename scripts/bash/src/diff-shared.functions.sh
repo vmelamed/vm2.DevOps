@@ -102,27 +102,28 @@ function resolve_target()
 
     local _repos="$1"
     local _r="$2"
-    local -n _target_root="$3"
-    local -n _target_path="$4"
-    local branch="<not a git repository>"
+    local -n __target_root="$3"
+    local -n __target_path="$4"
+    local _branch="<not a git repository>"
 
-    resolve_repo_root "$_repos" "$_r" _target_root _target_path                 || _rc=$?
+    resolve_repo_root "$_repos" "$_r" __target_root __target_path
+    _rc=$?
 
+    (( _rc == err_dir_with_ci )) && {
+        warning "The root directory of the target project is '$__target_root'. It is not a git repository yet."
+        return "$success"
+    }
     # We can only work with git repos or directories that have CI configured:
-    (( _rc == success || _rc == err_dir_with_ci ))                              || { with_error _rc "$_rc" "The specified target directory '${_repos%/}/${_r#/}' is invalid. It should have CI configured in '.github/workflows'."
-                                                                                      return "$_rc"
-                                                                                   }
-    (( _rc == err_dir_with_ci ))                                                && { warning "The root directory of the target project is '$_target_root'. It is not a git repository yet."
-                                                                                      return "$success"
-                                                                                   }
+    (( _rc == success ))                                                        || with_error _rc "$_rc" "The specified target directory '${_repos%/}/${_r#/}' is invalid. It should have CI configured in '.github/workflows'."
 
     # if it is a git repo then make sure it is in a clean state:
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-    branch="$(git -C "$_target_root" branch --show-current 2>"$_ignore")"       || with_error _rc "$err_tool_error" "The repository in the specified target directory '$1' appears corrupted."
-    (( _rc != success )) || ensure_fresh_git_state "$_target_root" "$branch"    || with_error _rc "$err_logic_error" "The specified target repository at '$_target_root' on branch '$branch' is not in a clean state." \
+    (( _rc != success )) || _branch="$(git -C "$__target_root" branch --show-current 2>"$_ignore")" \
+                                                                                || with_error _rc "$err_tool_error" "The repository in the specified target directory '$1' appears corrupted."
+    (( _rc != success )) || ensure_fresh_git_state "$__target_root" "$_branch"  || with_error _rc "$err_logic_error" "The specified target repository at '$__target_root' on branch '$_branch' is not in a clean state." \
                                                                                                                      "Commit or stash your changes."
 
-    (( _rc != success )) || trace "The Git working tree root of the target repository is '$_target_root', on a branch '$branch'."
+    (( _rc != success )) || trace "The Git working tree root of the target repository is '$__target_root', on a branch '$_branch'."
     return "$_rc"
 }
 
@@ -159,16 +160,15 @@ function __find_shared_markers()
 
     local -i _begin_count _end_count
 
-    _begin_count=$(grep -Fc -- "$shared_begin_marker" "$1")                     || true
-    _end_count=$(grep -Fc -- "$shared_end_marker" "$1")                         || true
+    _begin_count=$(grep -Fc -- "$shared_begin_marker" "$1") || true
+    _end_count=$(grep -Fc -- "$shared_end_marker" "$1") || true
 
-    (( _begin_count == 1 && _end_count == 1 ))                                  || return "$negative"
+    (( _begin_count == 1 && _end_count == 1 )) || return "$negative"
 
     _begin_line_out=$(grep -Fn -- "$shared_begin_marker" "$1" | cut -d: -f1)
     _end_line_out=$(grep -Fn -- "$shared_end_marker" "$1" | cut -d: -f1)
 
-    (( _begin_line_out < _end_line_out ))                                       || return "$negative"
-
+    (( _begin_line_out < _end_line_out )) || return "$negative"
     return "$positive"
 }
 
@@ -203,7 +203,7 @@ function get_shared_block()
     local -i _begin_line
     local -i _end_line
 
-    __find_shared_markers "$1" _begin_line _end_line                            || return "$negative"
+    __find_shared_markers "$1" _begin_line _end_line || return "$negative"
     _shared_content_out=$(sed -n "$((_begin_line + 1)),$((_end_line - 1))p" "$1")
 
     return "$success"
@@ -275,7 +275,7 @@ function are_different()
         local _source_shared_file=''
         local _target_shared_file=''
         _source_shared_file=$(mktemp)                                           || with_error _rc "$err_io_failure" "Failed to create a temporary file"
-        (( _rc != success ))          || _target_shared_file=$(mktemp)          || with_error _rc "$err_io_failure" "Failed to create a temporary file"
+        (( _rc != success )) || _target_shared_file=$(mktemp)                   || with_error _rc "$err_io_failure" "Failed to create a temporary file"
         (( _rc == success ))                                                    || { rm -f "$_source_shared_file" "$_target_shared_file"
                                                                                      return "$_rc"
                                                                                 }
@@ -435,23 +435,19 @@ function copy_shared_block()
                                                                                 exit_if_has_bugs
 
     local _tmp_file=''
-    _tmp_file=$(mktemp)                                                         || { with_error _rc "$err_io_failure" "Failed to create a temporary file"
-                                                                                     rm -f "$_tmp_file"
-                                                                                     return "$_rc"
-                                                                                }
+    _tmp_file=$(mktemp)                                                         || with_error _rc "$err_io_failure" "Failed to create a temporary file"
 
-    {
-        sed -n "1,${_dest_begin_line}p" "$_dest_file"
-        printf '%s\n' "$_shared_content"
-        sed -n "${_dest_end_line},\$p" "$_dest_file"
-    } > "$_tmp_file"
+    (( _rc != success )) || {
+                                sed -n "1,${_dest_begin_line}p" "$_dest_file"
+                                printf '%s\n' "$_shared_content"
+                                sed -n "${_dest_end_line},\$p" "$_dest_file"
+                            } > "$_tmp_file"
 
-    execute cp "$_tmp_file" "$_dest_file"                                       || { with_error _rc "$err_io_failure" "Failed to copy the temporary file '$_tmp_file' over '$_dest_file'"
-                                                                                     return "$_rc"
-                                                                                }
-
-    rm -f "$_tmp_file"
-
-    trace_files "copied" "$_src_file" "$_dest_file"
-    (( ++summary_shared_copied_count ))
+    (( _rc != success )) || execute cp "$_tmp_file" "$_dest_file"               || with_error _rc "$err_io_failure" "Failed to copy the temporary file '$_tmp_file' over '$_dest_file'"
+    (( _rc != success )) || {
+                                trace_files "copied" "$_src_file" "$_dest_file"
+                                (( ++summary_shared_copied_count ))
+                            }
+    (( _rc == success ))                                                        || rm -f "$_tmp_file"
+    return "$_rc"
 }

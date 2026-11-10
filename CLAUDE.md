@@ -127,24 +127,52 @@ The first part of the script (`script`) should follow the convention &lt;action&
 
 For minimizing the visual clutter and improve maintainability, the top-level, executable scripts SHOULD consist of at least three files:
 
-- `action-target.args.sh`: argument parser — defines the script's calling syntax and maps CLI arguments to script variables.
-  Here you implement the logic to:
+- `action-target.args.sh`: argument parser — defines the script's calling syntax and turns the command line into final,
+  frozen script variables, through the [`get_arguments` pipeline](#the-get_arguments-pipeline) below:
   - parse the script specific command-line options and arguments
   - parse common CLI options like `--verbose` and `--quiet`
   - parse common CI arguments like `--configuration` and `--artifacts-path`
   - implement `--help` functionality
+  - verify the environment, then resolve the arguments: validate, canonicalize, and derive them
   - implement input dump functionality for debugging and verification purposes
 - `action-target.usage.sh`: here you define:
   - script-specific help text
   - reuse the common help and common CI texts
   - implement usage display functionality, including short and long forms
 - `action-target.sh`: the main executable:
-  - verifies the environment
-  - implements the overriding hierarchy for argument values (CLI > environment > defaults)
-  - validates and normalizes arguments
+  - calls `get_arguments "$@"`
   - implements the business logic and calls script's or library business functions
 
 New scripts should follow the pattern: `*.usage.sh` and `*.args.sh` and SHOULD implement the boilerplate code for input and help text. If scripts will run in CI, as well as standalone, source `gh_core.sh` instead of `core.sh` at the top for GitHub Actions integration.
+
+### The `get_arguments` Pipeline
+
+`get_arguments` only orchestrates. Each stage is its own function, so each can be tested on its own (see
+`scripts/bash/tests/src/test_diff_shared_args.bats`, the reference implementation):
+
+```bash
+function get_arguments()
+{
+    parse_arguments "$@"       # CLI tokens -> variables; a malformed command line exits through usage
+    usage_if_requested         # -h/--help: show the help and exit 0, before any check or side effect
+    verify_environment         # argument-independent preconditions: tools, environment variables
+    resolve_arguments          # validate + canonicalize + derive, then freeze (readonly)
+    exit_if_has_errors         # the single gate for both stages above: all errors, then the usage
+    dump_args
+}
+```
+
+- **`parse_arguments` is pure**: it maps tokens to variables and touches no files, no git, no network. Its only errors
+  are malformed command lines (unknown option, missing value), reported through `usage`.
+- **`verify_environment` vs. `resolve_arguments`**: *verify* confirms facts about the machine (`git` is installed);
+  *validate* checks the values the user gave. `verify_environment` runs first, because resolution may need the tools it
+  checks. A check that depends on a resolved value (e.g. "vm2.DevOps is on `main`", known only once `vm2_repos` is
+  resolved) belongs in `resolve_arguments`, at the point where the value becomes known.
+- **Both stages report and return; they do not exit.** They record failures with `error`/`with_error`, and
+  `exit_if_has_errors` in `get_arguments` ends the run, so the user sees every problem at once. The exception is a
+  **circuit breaker**: a value everything after it depends on (e.g. `vm2_repos`, the SoT) may stop the run when it
+  cannot be resolved, because nothing after it can be checked meaningfully.
+- **Side effects come last, and only on a clean run**: e.g. a temporary file is created only when `has_errors` is false.
 
 ## Bash Library
 

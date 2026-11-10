@@ -73,11 +73,12 @@ Switches:
                                 defined in 'lib/_constants.sh'.
   -d, --diff                    Compare files and display differences and equalities without taking any action. Can be combined
                                 with --all-repos.
-  -cb, --current-branch         Both vm2.DevOps and SoT repositories will use their respective current branches instead of the
-                                main branch.
+  -cb, --current-branch         This script requires both vm2.DevOps and SoT repositories to be on their respective 'main'
+                                branches. This option relaxes the requirement to allow their respective current branches.
+                                USE WITH CAUTION! Something may break (vm2.DevOps) or invalid text may get copied to the target.
 
 Environment Variables:
-  VM2_REPOS                     The parent directory where all vm2 repositories are cloned.
+  VM2_REPOS                     The directory where all vm2 repositories are cloned into.
 $_common_args
 Configuration Files:
   diff-shared.config.json       Located in the SoT directory. Defines the set of files with shared content, the default action
