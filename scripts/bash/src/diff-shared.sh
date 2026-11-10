@@ -34,16 +34,23 @@ declare -xra vm2_repositories
 # vm2 core variables
 declare -x _ignore
 
-#===============================
 # this script's components
-#===============================
 source "$script_dir/diff-shared.configuration.sh"
 source "$script_dir/diff-shared.functions.sh"
 source "$script_dir/diff-shared.args.sh"
 source "$script_dir/diff-shared.usage.sh"
 source "$script_dir/diff-shared.summary.sh"
 
-# Script shared variables:
+# this script arguments:
+get_arguments "$@"
+declare -xr vm2_repos
+declare -xr sot
+declare -xra target_repos
+declare -xrA selectors_actions
+declare -xr diff_only
+declare -xr summary_file
+
+# this script variables
 declare -xr action_ignore
 declare -xr action_merge_or_copy
 declare -xr action_ask_to_merge
@@ -61,18 +68,6 @@ declare -xi summary_ignore_count
 declare -xi summary_shared_ignore_count
 declare -xi summary_skipped_count
 declare -xi summary_shared_skipped_count
-
-# this script arguments:
-get_arguments "$@"
-declare -xr vm2_repos
-declare -xr sot
-declare -xra target_repos
-declare -xrA selectors_actions
-declare -xr diff_only
-declare -xr summary_file
-
-# this script variables
-declare -xi rc="$success"
 
 declare -xra target_roots
 declare -xra target_paths
@@ -159,7 +154,6 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
         parameterize "$diff_only"
         trace "Parameterized for ${#source_files[@]} files with ${#selectors_actions[@]} actions."
     fi
-
     exit_if_has_errors
 
     add_summary_header "$target_path"
@@ -229,7 +223,6 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
         fi
 
         declare show_in_diff_tool=false warn_no_markers=false
-        rc=$success
 
         case $actions in
             "$action_ignore"             ) ;;
