@@ -448,6 +448,6 @@ function copy_shared_block()
                                 trace_files "copied" "$_src_file" "$_dest_file"
                                 (( ++summary_shared_copied_count ))
                             }
-    (( _rc == success ))                                                        || rm -f "$_tmp_file"
+    rm -f "$_tmp_file"
     return "$_rc"
 }

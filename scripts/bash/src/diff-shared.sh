@@ -62,7 +62,6 @@ declare -xr action_ask_to_copy_shared
 
 declare -xri shared_equal
 declare -xri shared_not_equal
-declare -xa arguments
 
 # Summary variables:
 declare -xi summary_ignore_count
@@ -79,16 +78,6 @@ declare -xra target_paths
 declare -xa source_files=()     # array of the paths of the SoT files
 declare -xa target_files=()     # array of target paths corresponding to the SoT files by index
 declare -xa file_actions=()     # array of default action strings corresponding to the SoT files by index
-
-info "The Source of Truth '$sot' folder is in '$sot_path'"
-
-{
-    echo -e "# Summary\n"
-    echo -e "## Source of truth: **$sot** (\`$sot_path\`)\n"
-} >> "$summary_file"
-
-configure "$sot_path" "$target_path"                                            || exit_with_error "Failed to load configuration from the SoT directory '$sot_path'." -ec "$err_logic_error"
-trace "Configured from SoT '$sot_path' for '$target_path'."
 
 declare -x config_diff_tool
 declare -x config_diff_command
@@ -116,7 +105,18 @@ declare repo_name
 
 declare -i targets_index
 declare -i files_index
-declare target_root target_path
+declare target_root
+declare target_path
+
+info "The Source of Truth '$sot' folder is in '$sot_path'"
+
+{
+    echo -e "# Summary\n"
+    echo -e "## Source of truth: **$sot** (\`$sot_path\`)\n"
+} >> "$summary_file"
+
+configure "$sot_path"                                                           || exit_with_error "Failed to load configuration from the SoT directory '$sot_path'." -ec "$err_logic_error"
+trace "Configured from SoT '$sot_path' for '$target_path'."
 
 # iterate through the target repositories
 for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ )); do
