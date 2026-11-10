@@ -132,6 +132,7 @@ function parse_arguments()
                 ;;
         esac
     done
+    return "$success"
 }
 
 function verify_environment

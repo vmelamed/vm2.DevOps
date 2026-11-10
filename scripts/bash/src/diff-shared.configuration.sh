@@ -245,7 +245,7 @@ function get_tools()
 #
 # @arg $1 string the SoT directory path (must exist and be a directory; the configuration file '$1/diff-shared.config.json' MUST
 #   exist, be non-empty, and contain valid JSON)
-# @arg $2 string the target repository directory path (must exist and be a directory)
+#
 # @exitcode success=0: configuration loaded and validated successfully
 #
 # @example
@@ -253,12 +253,11 @@ function get_tools()
 #-----------------------------------------------------------------------------------------------
 function configure()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
                                                                                        "  - the SoT directory" \
                                                                                        "  - the target directory" \
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the SoT directory, to be an existing directory (provided '${1-<missing>}')." -ec "$err_argument_value"
-    [[ ! -v 2 || -d $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the target directory, to be an existing directory (provided '${2-<missing>}')." -ec "$err_argument_value"
     exit_if_has_bugs
 
     local -i _rc=$success
