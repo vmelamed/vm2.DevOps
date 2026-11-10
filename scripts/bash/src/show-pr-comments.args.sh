@@ -15,6 +15,7 @@ declare -xri err_argument_value
 declare -xri err_not_found
 declare -xri err_tool_not_found
 declare -xri err_logic_error
+declare -xri err_tool_unauthenticated
 
 declare -xr ci
 declare -x _ignore
@@ -40,6 +41,16 @@ declare -x timeout=$default_timeout
 # Note: 'usage_if_requested' exits the process directly (via 'usage') when '--help'/'-h'/'-?' was given.
 #-----------------------------------------------------------------------------------------------
 function get_arguments()
+{
+    parse_arguments "$@"
+    usage_if_requested
+    verify_environment
+    resolve_arguments
+    exit_if_has_errors
+    dump_args
+}
+
+function parse_arguments()
 {
     local _option
     local _option_set=false
@@ -85,9 +96,14 @@ function get_arguments()
         esac
     done
 
-    usage_if_requested
-    validate_arguments
-    dump_args
+    return "$success"
+}
+
+function verify_environment()
+{
+    is_git_present                                                              || true
+    is_gh_present                                                               || true
+    return "$success"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -96,9 +112,9 @@ function get_arguments()
 #
 # @exitcode success=0: The arguments are valid and resolved (otherwise the script exits through 'exit_if_has_errors').
 #-----------------------------------------------------------------------------------------------
-function validate_arguments()
+function resolve_arguments()
 {
-    is_tool_present gh                                                          || error "The GitHub CLI 'gh' is required: https://cli.github.com" -ec "$err_tool_not_found"
+    local -i _rc=$success
     [[ -z $pr_number ]] || is_natural "$pr_number"                              || error "The pull request number must be a positive integer (provided '$pr_number')." -ec "$err_argument_value"
     [[ -z $repo || $repo =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]                || error "The repository must be given as 'owner/repo' (provided '$repo')." -ec "$err_argument_value"
     [[ -z $repo || -n $pr_number ]]                                             || error "With '--repo', the pull request number is required: the current branch belongs to the current directory's repository." -ec "$err_missing_argument"
@@ -111,7 +127,6 @@ function validate_arguments()
                                                                                 || error "The current directory is not in a GitHub repository; use '--repo <owner/repo>'." -ec "$err_not_found"
     [[ -n $pr_number || -z $repo ]] || pr_number=$(gh pr view --json number --jq .number 2>"$_ignore") \
                                                                                 || error "The current branch has no pull request; give the pull request number." -ec "$err_not_found"
-    exit_if_has_errors false
 
     readonly pr_number
     readonly repo

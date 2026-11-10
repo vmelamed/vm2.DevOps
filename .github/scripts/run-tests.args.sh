@@ -11,6 +11,7 @@ declare -xri err_missing_argument
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
 declare -xri err_logic_error
+declare -xri err_tool_not_found
 
 # core lib constants
 declare -xr ci
@@ -28,6 +29,16 @@ declare -x  min_branch_coverage_pct=''
 declare -x  min_method_coverage_pct=''
 
 function get_arguments()
+{
+    parse_arguments "$@"
+    usage_if_requested
+    verify_environment
+    resolve_arguments
+    exit_if_has_errors
+    dump_args
+}
+
+function parse_arguments()
 {
     local _option
     local _positional_arg_set=false
@@ -70,14 +81,18 @@ function get_arguments()
                 ;;
         esac
     done
-
-    usage_if_requested
-    validate_arguments
-    exit_if_has_errors
-    dump_args
+    
+    return "$success"
 }
 
-function validate_arguments()
+function verify_environment
+{
+    is_dotnet_present                                                           || true
+
+    return "$success"
+}
+
+function resolve_arguments()
 {
     # validate the values of the variables common for many vm2.DevOps scripts,
     # usually set from CLI arguments, environment variables, or defaults

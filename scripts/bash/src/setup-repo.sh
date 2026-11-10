@@ -76,22 +76,6 @@ declare -xr key_default_branch
 
 declare -x repo_path=''
 declare -x root_name=''
-#===============================================================================================
-# Check the prerequisites
-#===============================================================================================
-
-command -v jq &> "$_ignore"  || error "'jq' is not installed. Please install it first." -ec "$err_tool_not_found"
-command -v gh &> "$_ignore"  || error "'gh' is not installed. Please install it first." -ec "$err_tool_not_found"
-gh auth status &> "$_ignore" || error "'gh' is not authenticated. Run 'gh auth login' first." -ec "$err_tool_not_found"
-command -v yq &> "$_ignore"  || error "'yq' is not installed. Please install 'yq' by Mike Farah: " \
-                                      "wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O ~/.local/bin/yq4 &&" \
-                                      " chmod +x ~/.local/bin/yq4" \
-                                      -ec "$err_tool_not_found"
-[[ $(yq --version) =~ https://github\.com/mikefarah/yq/ ]] ||
-                                error "This script requires 'yq' by Mike Farah: " \
-                                      "wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O ~/.local/bin/yq4 &&" \
-                                      " chmod +x ~/.local/bin/yq4" \
-                                      -ec "$err_tool_not_found"
 
 #===============================================================================================
 # Gather the CLI arguments:

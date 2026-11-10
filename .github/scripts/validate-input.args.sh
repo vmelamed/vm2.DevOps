@@ -13,6 +13,7 @@ declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
 declare -xri err_logic_error
 declare -xri err_tool_not_found
+declare -xri err_tool_unauthenticated
 
 # core lib constants
 declare -xr ci
@@ -54,6 +55,16 @@ declare -x skip_benchmarks=${SKIP_BENCHMARKS:-$defaultSkipBenchmarks}
 declare -x skip_packages=${SKIP_PACKAGES:-$defaultSkipPackages}
 
 function get_arguments()
+{
+    parse_arguments "$@"
+    usage_if_requested
+    verify_environment
+    resolve_arguments
+    exit_if_has_errors
+    dump_args
+}
+
+function parse_arguments()
 {
     local _option
 
@@ -170,43 +181,20 @@ function get_arguments()
         esac
     done
 
-    usage_if_requested
-    validate_environment
-    validate_arguments
-    exit_if_has_errors
-    dump_args
-}
-
-function validate_environment()
-{
-    # Check for required dependencies (jq and gh) and attempt to install them if not found
-    if ! is_tool_present jq; then
-        if execute sudo apt-get update && sudo apt-get install -y jq; then
-            info "GitHub CLI 'jq' successfully installed."
-        else
-            error "GitHub CLI 'jq' was not found and could not install it. Please have 'jq' installed." -ec "$err_tool_not_found"
-        fi
-    else
-        jq -V | to_stdout | grep -Eo 'jq-1\.8\.[0-9]+' &> "$_ignore" || {
-            warning "GitHub CLI 'jq' version 1.8.x is required. Upgrading 'jq' to version 1.8.2..."
-            curl -sLo /tmp/jq https://github.com/jqlang/jq/releases/download/jq-1.8.2/jq-linux-amd64
-            sudo install /tmp/jq /usr/local/bin/jq
-            jq -V | to_stdout | grep -Eo 'jq-1\.8\.[0-9]+' &> "$_ignore" || {
-                error "GitHub CLI 'jq' version 1.8.x is required. Please update 'jq' to version 1.8.x." -ec "$err_tool_not_found"
-            }
-        }
-    fi
-    if ! is_tool_present gh; then
-        if execute sudo apt-get update && sudo apt-get install -y gh; then
-            info "GitHub CLI 'gh' successfully installed."
-        else
-            error "GitHub CLI 'gh' was not found and could not install it. Please have 'gh' installed." -ec "$err_tool_not_found"
-        fi
-    fi
     return "$success"
 }
 
-function validate_arguments()
+function verify_environment()
+{
+    local -i _rc=$success
+
+    is_jq_present                                                               || true
+    is_gh_present                                                               || true
+
+    return "$success"
+}
+
+function resolve_arguments()
 {
     #   Build-projects may freely mix individual project paths and solution files: the build matrix
     #   (_ci.yaml/_build.yaml) fans out over whatever's in this array as-is, one leg per entry,
@@ -261,7 +249,7 @@ function validate_arguments()
     done
 
     [[ -z $candidate ]] || sanitize_common_dotnet_args "$candidate"
-    #  TODO: add validation here
+
     return "$success"
 }
 

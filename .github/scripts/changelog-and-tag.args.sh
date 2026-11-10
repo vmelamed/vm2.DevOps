@@ -13,6 +13,7 @@ declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
 declare -xri err_logic_error
 declare -xri err_argument_value
+declare -xri err_tool_not_found
 
 # core lib constants
 declare -xr ci
@@ -31,6 +32,16 @@ declare -x is_release=false
 declare -x is_prerelease=false
 
 function get_arguments()
+{
+    parse_arguments "$@"
+    usage_if_requested
+    verify_environment
+    resolve_arguments
+    exit_if_has_errors
+    dump_args
+}
+
+function parse_arguments()
 {
     local _option
 
@@ -69,22 +80,18 @@ function get_arguments()
                 ;;
         esac
     done
-
-    usage_if_requested
-    validate_environment
-    validate_arguments
-    exit_if_has_errors
-    dump_args
-}
-
-function validate_environment()
-{
-    [[ -n "${GITHUB_REPOSITORY:-}" && -n "${RELEASE_PAT:-}" ]]                  || error "GITHUB_REPOSITORY and/or RELEASE_PAT are not set." -ec "$err_argument_value"
-
     return "$success"
 }
 
-function validate_arguments()
+function verify_environment()
+{
+    [[ -n "${GITHUB_REPOSITORY:-}" && -n "${RELEASE_PAT:-}" ]]                  || error "GITHUB_REPOSITORY and/or RELEASE_PAT are not set." -ec "$err_argument_value"
+    is_git_present                                                              || true
+    is_tool_present git-cliff                                                   || error "'git-cliff' is not installed. Please install it first." -ec "$err_tool_not_found"
+    return "$success"
+}
+
+function resolve_arguments()
 {
     # Sanitize inputs
     validate_minver_tag_components "$minver_tag_prefix"                         || true

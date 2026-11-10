@@ -47,6 +47,12 @@ trace "Prerelease prefix: $prerelease_prefix (from minver_prerelease_id: $minver
 # Find the latest stable and prerelease tags
 # ============================================================================
 
+git fetch --tags --force
+
+# detect if the head is already tagged
+head_tag=$(git tag --points-at HEAD)
+[[ -z $head_tag ]]                                                              || error "The HEAD is already tagged with '$head_tag'. A prerelease requires at least one new commit on main." -ec "$err_tool_error"
+
 latest_stable_tag=$(
     git tag --list "$minver_tag_prefix*" |
     grep -E "$semverTagReleaseRegex" |

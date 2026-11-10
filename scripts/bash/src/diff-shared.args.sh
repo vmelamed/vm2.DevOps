@@ -132,12 +132,14 @@ function parse_arguments()
                 ;;
         esac
     done
+    
     return "$success"
 }
 
 function verify_environment
 {
-    is_tool_present git                                                         || error "'git' is not installed. Please install it first." -ec "$err_tool_not_found"
+    is_git_present                                                              || true
+
     return "$success"
 }
 

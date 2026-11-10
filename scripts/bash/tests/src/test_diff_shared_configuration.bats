@@ -57,13 +57,13 @@ _stub_custom_schema() {
 # =====================================================================================
 
 @test "configure: bug-exits with the wrong argument count" {
-    run _ds 'declare -a source_files=() target_files=() file_actions=(); configure "/tmp"'
+    run _ds 'declare -a source_files=() target_files=() file_actions=(); configure "/tmp" "second"'
     assert_failure "$err_invalid_arguments"
     refute_output --partial "requires argument 2" # a missing argument is reported once, as missing
 }
 
 @test "configure: bug-exits when the SoT directory does not exist" {
-    run _ds 'declare -a source_files=() target_files=() file_actions=(); configure "/definitely/not/a/real/path" "$BATS_TEST_TMPDIR"'
+    run _ds 'declare -a source_files=() target_files=() file_actions=(); configure "/definitely/not/a/real/path"'
     assert_failure "$err_argument_value"
 }
 
@@ -72,7 +72,7 @@ declare -xr BATS_TEST_TMPDIR
 @test "configure: fails when the config file is missing or empty" {
     mkdir -p "$BATS_TEST_TMPDIR/sot" "$BATS_TEST_TMPDIR/target"
     _stub_config_schema "$BATS_TEST_TMPDIR/sot"
-    run _ds "declare -a source_files=() target_files=() file_actions=(); configure '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target'"
+    run _ds "declare -a source_files=() target_files=() file_actions=(); configure '$BATS_TEST_TMPDIR/sot'"
     assert_failure "$err_argument_value"
     assert_output --partial "was not found or is empty"
 }
@@ -81,7 +81,7 @@ declare -xr BATS_TEST_TMPDIR
     mkdir -p "$BATS_TEST_TMPDIR/sot" "$BATS_TEST_TMPDIR/target"
     _stub_config_schema "$BATS_TEST_TMPDIR/sot"
     echo "not json" > "$BATS_TEST_TMPDIR/sot/diff-shared.config.json"
-    run _ds "declare -a source_files=() target_files=() file_actions=(); configure '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target'"
+    run _ds "declare -a source_files=() target_files=() file_actions=(); configure '$BATS_TEST_TMPDIR/sot'"
     assert_failure "$err_argument_value"
     assert_output --partial "contains invalid JSON"
 }
@@ -96,7 +96,7 @@ declare -xr BATS_TEST_TMPDIR
     cat > "$BATS_TEST_TMPDIR/sot/diff-shared.config.json" <<EOF
 {"files":[{"sourceFile":"\$1/x.txt","targetFile":"\$2/x.txt","action":"bogus"}]}
 EOF
-    run _ds "declare -a source_files=() target_files=() file_actions=(); configure '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target'"
+    run _ds "declare -a source_files=() target_files=() file_actions=(); configure '$BATS_TEST_TMPDIR/sot'"
     assert_failure "$err_argument_value"
     assert_output --partial "'bogus' is not a valid action"
 }
@@ -107,7 +107,7 @@ EOF
     cat > "$BATS_TEST_TMPDIR/sot/diff-shared.config.json" <<EOF
 {"files":[{"sourceFile":"\$1/missing.txt","targetFile":"\$2/x.txt","action":"copy"}]}
 EOF
-    run _ds "declare -a source_files=() target_files=() file_actions=(); configure '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target'"
+    run _ds "declare -a source_files=() target_files=() file_actions=(); configure '$BATS_TEST_TMPDIR/sot'"
     assert_failure "$err_argument_value"
     assert_output --partial "does not exist or is empty"
 }
@@ -116,7 +116,7 @@ EOF
     mkdir -p "$BATS_TEST_TMPDIR/sot" "$BATS_TEST_TMPDIR/target"
     _stub_config_schema "$BATS_TEST_TMPDIR/sot"
     echo '{"files":[]}' > "$BATS_TEST_TMPDIR/sot/diff-shared.config.json"
-    run _ds "declare -a source_files=() target_files=() file_actions=(); configure '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target'"
+    run _ds "declare -a source_files=() target_files=() file_actions=(); configure '$BATS_TEST_TMPDIR/sot'"
     assert_success
 }
 
@@ -135,7 +135,7 @@ EOF
     cat > "$BATS_TEST_TMPDIR/sot/diff-shared.config.json" <<'EOF'
 {"files":[{"sourceFile":"$1/a.txt","targetFile":"${target_repo_path}/a.txt","action":"copy"}]}
 EOF
-    run _ds "declare -a config_source_files=() config_target_files=() config_file_actions=(); configure '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target'; declare -p config_source_files config_target_files config_file_actions"
+    run _ds "declare -a config_source_files=() config_target_files=() config_file_actions=(); configure '$BATS_TEST_TMPDIR/sot'; declare -p config_source_files config_target_files config_file_actions"
     assert_success
     assert_output --partial "config_source_files=([0]=\"$BATS_TEST_TMPDIR/sot/a.txt\")"
     assert_output --partial 'config_target_files=([0]="\${target_repo_path}/a.txt")'
@@ -156,7 +156,7 @@ EOF
     cat > "$BATS_TEST_TMPDIR/sot_config/diff-shared.config.json" <<'JSON'
 {"files":[{"sourceFile":"${vm2_repos}/${vm2_sot_shared}/a.txt","targetFile":"${target_repo_path}/a.txt","action":"copy"}]}
 JSON
-    run _ds "declare vm2_repos='$BATS_TEST_TMPDIR/vm2_repos'; declare sot='AddNewPackage'; declare -a config_source_files=() config_target_files=() config_file_actions=(); configure '$BATS_TEST_TMPDIR/sot_config' '$BATS_TEST_TMPDIR/target'; declare -p config_source_files config_target_files config_file_actions"
+    run _ds "declare vm2_repos='$BATS_TEST_TMPDIR/vm2_repos'; declare sot='AddNewPackage'; declare -a config_source_files=() config_target_files=() config_file_actions=(); configure '$BATS_TEST_TMPDIR/sot_config'; declare -p config_source_files config_target_files config_file_actions"
     assert_success
     assert_output --partial "config_source_files=([0]=\"$BATS_TEST_TMPDIR/vm2_repos/vm2.Templates/templates/AddNewPackage/content/a.txt\")"
     assert_output --partial 'config_target_files=([0]="\${target_repo_path}/a.txt")'
@@ -175,7 +175,7 @@ JSON
 {"files":[{"sourceFile":"$1/a.txt","targetFile":"${target_repo_path}/a.txt","action":"copy"}]}
 EOF
     run _ds "declare -a config_source_files=() config_target_files=() config_file_actions=()
-             configure '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target'
+             configure '$BATS_TEST_TMPDIR/sot'
              declare -a expanded=()
              configure_target_files '$BATS_TEST_TMPDIR/target' expanded
              echo \"RC=\$?\"
@@ -198,7 +198,7 @@ EOF
 {"files":[{"sourceFile":"$1/a.txt","targetFile":"${target_repo_path}/a.txt","action":"copy"}]}
 EOF
     run _ds "declare -a config_source_files=() config_target_files=() config_file_actions=()
-             configure '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target1'
+             configure '$BATS_TEST_TMPDIR/sot'
              declare -a expanded1=() expanded2=()
              configure_target_files '$BATS_TEST_TMPDIR/target1' expanded1
              configure_target_files '$BATS_TEST_TMPDIR/target2' expanded2
@@ -372,4 +372,3 @@ EOF
     assert_success
     assert_output --partial 'file_actions=([0]="")'
 }
-

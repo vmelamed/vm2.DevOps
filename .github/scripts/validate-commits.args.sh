@@ -15,6 +15,7 @@ declare -xri err_unknown_argument
 declare -xri err_logic_error
 declare -xri err_not_directory
 declare -xri err_not_git_directory
+declare -xri err_tool_not_found
 
 # core lib constants
 declare -xr ci
@@ -29,6 +30,16 @@ repo_path=$(pwd)
 declare -x base_ref=${BASE_REF:-}
 
 function get_arguments()
+{
+    parse_arguments "$@"
+    usage_if_requested
+    verify_environment
+    resolve_arguments
+    exit_if_has_errors
+    dump_args
+}
+
+function parse_arguments()
 {
     local _option
 
@@ -60,13 +71,17 @@ function get_arguments()
         esac
     done
 
-    usage_if_requested
-    validate_arguments
-    exit_if_has_errors
-    dump_args
+    return "$success"
 }
 
-function validate_arguments()
+function verify_environment
+{
+    is_git_present                                                              || true
+
+    return "$success"
+}
+
+function resolve_arguments()
 {
     local -i _rc=$success
 
@@ -105,7 +120,6 @@ function validate_arguments()
     readonly repo_path
     readonly base_ref
 
-    #  TODO: add validation here
     return "$success"
 }
 

@@ -59,6 +59,7 @@ declare -xri err_tool_not_found=65      # An external tool (e.g., jq, dotnet, et
 declare -xri err_tool_error=66          # An error occurred while executing an external tool (e.g., git, dotnet, etc.).
 declare -xri err_tool_unauthenticated=67 # An external tool is not authenticated (e.g., gh).
 declare -xri err_logic_error=68         # An error occurred in the logic of the script (most likely a bug, invalid state, unexpected condition, etc.)
+declare -xri err_tool_version=69        # The version of a tool is incompatible.
 
 declare -xri err_not_git_directory=80   # The specified directory is not a directory from a Git repository working tree
 declare -xri err_not_git_root=81        # The specified directory is not a root directory of a Git repository working tree
@@ -114,6 +115,7 @@ declare -rA __error_messages=(
     [$err_tool_error]="An error occurred while executing an external tool (e.g., git, dotnet, etc.)."
     [$err_tool_unauthenticated]="An external tool is not authenticated."
     [$err_logic_error]="An error occurred in the logic of the script (e.g., bug, invalid state, unexpected condition, etc.)"
+    [$err_tool_version]="The version of a tool is not compatible."
 
     [$err_not_git_directory]="The specified directory is not in a Git working tree."
     [$err_not_git_root]="The specified directory is not the root directory of a Git working tree."
@@ -165,6 +167,7 @@ declare -rA __error_names=(
     [$err_tool_not_found]="\$err_tool_not_found"
     [$err_tool_error]="\$err_tool_error"
     [$err_logic_error]="\$err_logic_error"
+    [$err_tool_version]="\$err_tool_version"
 
     [$err_not_git_directory]="\$err_not_git_directory"
     [$err_not_git_root]="\$err_not_git_root"

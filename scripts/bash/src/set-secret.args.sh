@@ -13,6 +13,8 @@ declare -xri err_too_many_arguments
 declare -xri err_missing_argument
 declare -xri err_unknown_argument
 declare -xri err_logic_error
+declare -xri err_tool_not_found
+declare -xri err_tool_unauthenticated
 
 declare -xra gh_apps_with_secrets
 
@@ -21,12 +23,24 @@ declare -xr default_repo_owner
 # this script constants
 declare -xr default_app='actions'
 
+declare -x _ignore
+
 # this script arguments
 declare -x repo_owner=''
 declare -x app=''
 declare -x secret_name=''
 
 function get_arguments()
+{
+    parse_arguments "$@"
+    usage_if_requested
+    verify_environment
+    resolve_arguments
+    exit_if_has_errors
+    dump_args
+}
+
+function parse_arguments()
 {
     local _option
     local _option_set=false
@@ -67,12 +81,18 @@ function get_arguments()
         esac
     done
 
-    usage_if_requested
-    validate_arguments
-    dump_args
+    return "$success"
 }
 
-function validate_arguments()
+function verify_environment
+{
+    is_git_present                                                              || true
+    is_gh_present                                                               || true
+
+    return "$success"
+}
+
+function resolve_arguments()
 {
     app=${app:-$default_app}
     repo_owner=${repo_owner:-$default_repo_owner}
@@ -81,7 +101,10 @@ function validate_arguments()
     is_valid_secret_name "$secret_name"                                         || error "Invalid secret name specified: '$secret_name'. " -ec "$err_argument_value"
     exit_if_has_errors true
 
-    readonly repo_owner app secret_name
+    readonly repo_owner
+    readonly app
+    readonly secret_name
+    return "$success"
 }
 
 # shellcheck disable=SC2120 # dump_args references arguments, but none are ever passed.

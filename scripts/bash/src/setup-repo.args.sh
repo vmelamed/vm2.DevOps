@@ -12,6 +12,8 @@ declare -xri err_missing_argument
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
 declare -xri err_logic_error
+declare -xri err_tool_not_found
+declare -xri err_tool_unauthenticated
 
 declare -xr default_vm2_repos_path
 declare -xr default_default_branch
@@ -70,6 +72,16 @@ declare -x repo
 #   directly on error or on `--help`).
 #-----------------------------------------------------------------------------------------------
 function get_arguments()
+{
+    parse_arguments "$@"
+    usage_if_requested
+    verify_environment
+    resolve_arguments
+    exit_if_has_errors
+    dump_args
+}
+
+function parse_arguments()
 {
     local _option
     local _option_set=false
@@ -173,12 +185,20 @@ function get_arguments()
         esac
     done
 
-    usage_if_requested
-    validate_arguments
-    dump_args
+    return "$success"
 }
 
-function validate_arguments()
+function verify_environment
+{
+    is_git_present                                                              || true
+    is_gh_present                                                               || true
+    is_jq_present                                                               || true
+    is_yq_present                                                               || true
+
+    return "$success"
+}
+
+function resolve_arguments()
 {
     $current_branch && branches='' || branches='main'
 

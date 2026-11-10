@@ -369,7 +369,7 @@ function audit_repo()
     echo "  $info_em  Local Git Settings:"
 
     local _key _expected _actual
-    local -i _rc
+    local -i _rc=$success
     for _key in "${default_local_git_settings_order[@]}"; do
         _rc=$success
         _expected="${default_local_git_settings[$_key]}"

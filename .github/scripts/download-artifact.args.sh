@@ -32,6 +32,16 @@ declare -x workflow_path=${WORKFLOW_PATH:-}
 
 function get_arguments()
 {
+    parse_arguments "$@"
+    usage_if_requested
+    verify_environment
+    resolve_arguments
+    exit_if_has_errors
+    dump_args
+}
+
+function parse_arguments()
+{
     local _option
 
     while (( $# > 0 )); do
@@ -86,34 +96,33 @@ function get_arguments()
         esac
     done
 
-    usage_if_requested
-    verify_environment
-    validate_arguments
-    exit_if_has_errors
-    dump_args
+    return "$success"
 }
 
 function verify_environment()
 {
-    is_tool_present jq                                                          || error "'jq' is not installed. Please install it first." -ec "$err_tool_not_found"
-    is_tool_present gh                                                          || { error "'gh' is not installed. Please install it first." -ec "$err_tool_not_found"; return "$success"; }
-    gh auth status &> "$_ignore"                                                || error "'gh' is not authenticated. Run 'gh auth login' first." -ec "$err_tool_unauthenticated"
+    local -i _rc=$success
 
+    is_jq_present                                                               || true
+    is_gh_present                                                               || true
+    
     return "$success";
 }
 
-function validate_arguments()
+function resolve_arguments()
 {
-    [[ -n "$artifact_name" ]]                                                   || error "The name of the artifact to download must be specified." -ec "$err_missing_argument"
+    local -i _rc=$success
+    [[ -n "$artifact_name" ]]                                                   || with_error "$err_missing_argument" _rc "The name of the artifact to download must be specified."
     is_safe_input "$artifact_name"                                              || true
 
     [[ -z "$artifacts" ]] || is_safe_valid_path "$artifacts"                    || true
-    [[ -n "$artifacts" ]]                                                       || error "The directory to download the artifact to must be specified." -ec "$err_missing_argument"
+    [[ -n "$artifacts" ]]                                                       || with_error "$err_missing_argument" _rc "The directory to download the artifact to must be specified."
+
     is_safe_input "$repository"                                                 || true
     is_safe_input "$workflow_id"                                                || true
     is_safe_input "$workflow_name"                                              || true
     is_safe_path "$workflow_path"                                               || true
-    [[ -z "$workflow_id" ]] || is_natural "$workflow_id"                        || error "The specified workflow identifier '$workflow_id' is not valid." -ec "$err_argument_type"
+    [[ -z "$workflow_id" ]] || is_natural "$workflow_id"                        || with_error "$err_argument_type" _rc "The specified workflow identifier '$workflow_id' is not valid."
 
     readonly artifact_name
     readonly artifacts

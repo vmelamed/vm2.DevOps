@@ -13,6 +13,7 @@ declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
 declare -xri err_logic_error
 declare -xri err_tool_error
+declare -xri err_tool_not_found
 
 # core lib constants
 declare -xr ci
@@ -29,6 +30,16 @@ declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-"$default_
 declare -x reason=${REASON:-"pre-release build"}
 
 function get_arguments()
+{
+    parse_arguments "$@"
+    usage_if_requested
+    verify_environment
+    resolve_arguments
+    exit_if_has_errors
+    dump_args
+}
+
+function parse_arguments()
 {
     local _option
 
@@ -62,29 +73,18 @@ function get_arguments()
                 ;;
         esac
     done
-
-    usage_if_requested
-    validate_arguments
-    validate_environment
-    exit_if_has_errors
-    dump_args
+    
+    return "$success"
 }
 
-function validate_environment()
+function verify_environment()
 {
-    # do not change local metadata if there are any errors
-    ! has_errors || return "$success"
-
-    git fetch --tags --force
-
-    # detect if the head is already tagged
-    head_tag=$(git tag --points-at HEAD)
-    [[ -z $head_tag ]]                                                          || error "The HEAD is already tagged with '$head_tag'. A prerelease requires at least one new commit on main." -ec "$err_tool_error"
+    is_git_present                                                              || true
 
     return "$success"
 }
 
-function validate_arguments()
+function resolve_arguments()
 {
     validate_minver_tag_components "$minver_tag_prefix" "$minver_prerelease_id" || true
     is_safe_reason "$reason"                                                    || true

@@ -11,6 +11,7 @@ declare -xri err_missing_argument
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
 declare -xri err_logic_error
+declare -xri err_tool_not_found
 
 declare -xr ci
 
@@ -37,6 +38,16 @@ declare -x new_branch_name=''
 #   get_arguments feature/old-name feature/new-name
 #-----------------------------------------------------------------------------------------------
 function get_arguments()
+{
+    parse_arguments "$@"
+    usage_if_requested
+    verify_environment
+    resolve_arguments
+    exit_if_has_errors
+    dump_args
+}
+
+function parse_arguments()
 {
     local _option
     local -i _option_idx=0
@@ -69,12 +80,17 @@ function get_arguments()
         esac
     done
 
-    usage_if_requested
-    validate_arguments
-    dump_args
+    return "$success"
 }
 
-function validate_arguments()
+function verify_environment
+{
+    is_git_present                                                              || true
+
+    return "$success"
+}
+
+function resolve_arguments()
 {
     #  TODO: add validation here
 

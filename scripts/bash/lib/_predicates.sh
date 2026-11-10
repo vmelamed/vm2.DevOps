@@ -24,6 +24,12 @@ declare -xri err_argument_type
 declare -xri err_argument_value
 declare -xri err_invalid_nameref
 declare -xri err_invalid_path
+declare -xri err_tool_not_found
+declare -xri err_tool_unauthenticated
+declare -xri err_tool_version
+
+# vm2 core constants
+declare -x dotnet_min_version
 
 # vm2 core variables
 declare -x _ignore
@@ -661,6 +667,85 @@ function is_tool_present()
     exit_if_has_bugs
 
     command -v "$1" &>"$_ignore"
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Checks if 'git' is available on the `$PATH`.
+#
+# @exitcode positive=0: 'git' is present.
+# @exitcode negative=1: 'git' is not present.
+#-----------------------------------------------------------------------------------------------
+function is_git_present()
+{
+    local -i _rc=$success
+
+    is_tool_present git                                                         || with_error "$err_tool_not_found" _rc "'git' is not installed. Please install it: https://github.com/git-guides/install-git"
+    (( _rc == success ))
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Checks if GitHub CLI 'gh' is available on the `$PATH`.
+#
+# @exitcode positive=0: 'gh' is present.
+# @exitcode negative=1: 'gh' is not present.
+#-----------------------------------------------------------------------------------------------
+function is_gh_present()
+{
+    local -i _rc=$success
+
+    is_tool_present gh                                                          || with_error "$err_tool_not_found" _rc "'gh' is not installed. Please install it: https://cli.github.com/"
+    (( _rc != success )) || gh auth status &> "$_ignore"                        || with_error "$err_tool_unauthenticated" _rc "'gh' is not authenticated. Please run: 'gh auth login'"
+    (( _rc == success ))
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Checks if 'jq' ver.1.8.0 or higher is available on the `$PATH`.
+#
+# @exitcode positive=0: 'jq' is present.
+# @exitcode negative=1: 'jq' is not present.
+#-----------------------------------------------------------------------------------------------
+function is_jq_present()
+{
+    local -i _rc=$success
+
+    is_tool_present jq                                                          || with_error "$err_tool_not_found" _rc "'jq' is not installed. Please install it: https://jqlang.org/download/"
+    (( _rc != success )) || jq -V | to_stdout |
+                                grep -Eo 'jq-1\.8\.[0-9]+' &> "$_ignore"        || with_error "$err_tool_version" _rc "'jq' version 1.8.x is required. Please upgrade 'jq': https://jqlang.org/download/"
+    (( _rc == success ))
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Checks if 'yq' by Mike Farah is available on the `$PATH`.
+#
+# @exitcode positive=0: 'yq' is present.
+# @exitcode negative=1: 'yq' is not present.
+#-----------------------------------------------------------------------------------------------
+function is_yq_present()
+{
+    local -i _rc=$success
+
+    is_tool_present yq                                                          || with_error "$err_tool_not_found" _rc error "'yq' is not installed. Please install 'yq' by Mike Farah: 'wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O ~/.local/bin/yq4 && chmod +x ~/.local/bin/yq4'"
+    (( _rc == success )) || [[ $(yq --version) =~ https://github\.com/mikefarah/yq/ ]] \
+                                                                                || with_error "$err_tool_version" _rc "This script requires 'yq' by Mike Farah, e.g., 'wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O ~/.local/bin/yq4 && chmod +x ~/.local/bin/yq4'"
+    (( _rc == success ))
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Checks if 'dotnet' ver. $dotnet_min_version (10.0.402) or higher is available on
+#   the `$PATH`.
+#
+# @exitcode positive=0: 'yq' is present.
+# @exitcode negative=1: 'yq' is not present.
+#-----------------------------------------------------------------------------------------------
+function is_dotnet_present()
+{
+    local -i _rc=$success
+    local _ver=''
+
+    is_tool_present dotnet                                                      || with_error "$err_tool_not_found" _rc error "'dotnet' "
+    (( _rc != success )) || {
+        _ver=$(dotnet --version) && semver_gte "$_ver" '10.0.204'; }            || with_error "$err_tool_version" "This script requires 'dotnet' version $dotnet_min_version. Please upgrade: https://dotnet.microsoft.com/en-us/download"
+
 }
 
 #-----------------------------------------------------------------------------------------------

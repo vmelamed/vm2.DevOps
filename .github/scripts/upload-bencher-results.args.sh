@@ -41,6 +41,16 @@ declare -x BENCHER_API_TOKEN
 
 function get_arguments()
 {
+    parse_arguments "$@"
+    usage_if_requested
+    verify_environment
+    resolve_arguments
+    exit_if_has_errors
+    dump_args
+}
+
+function parse_arguments()
+{
     local _option
     local _positional_arg_set=false
 
@@ -132,14 +142,20 @@ function get_arguments()
         esac
     done
 
-    usage_if_requested
-    verify_environment
-    validate_arguments
-    exit_if_has_errors
-    dump_args
+    return "$success"
 }
 
-function validate_arguments()
+function verify_environment()
+{
+    [[ -n ${BENCHER_API_TOKEN:-} ]]                                             || error "The BENCHER_API_TOKEN environment variable is required." -ec "$err_missing_argument"
+
+    is_tool_present bc                                                          || error "'bc' is not installed. Please install it first." -ec "$err_tool_not_found"
+    is_tool_present bencher                                                     || error "'bencher' is not installed. Please install it first." -ec "$err_tool_not_found"
+    
+    return "$success"
+}
+
+function resolve_arguments()
 {
     # Sensible standalone defaults for GitHub-context values that otherwise only exist automatically
     # inside GitHub Actions -- every vm2.DevOps CI script must also run cleanly from a developer
@@ -195,15 +211,6 @@ function validate_arguments()
     readonly max_gen2_collects
     readonly reset_thresholds
 
-    return "$success"
-}
-
-function verify_environment()
-{
-    [[ -n ${BENCHER_API_TOKEN:-} ]]                                             || error "The BENCHER_API_TOKEN environment variable is required." -ec "$err_missing_argument"
-
-    is_tool_present bc                                                          || error "'bc' is not installed. Please install it first." -ec "$err_tool_not_found"
-    is_tool_present bencher                                                     || error "'bencher' is not installed. Please install it first." -ec "$err_tool_not_found"
     return "$success"
 }
 

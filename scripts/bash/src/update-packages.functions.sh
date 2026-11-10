@@ -42,8 +42,10 @@ function validate_package_lines()
     [[ ! -v 1 || -f $1 ]] || bug "${FUNCNAME[0]}() requires argument 1 to be a path to an existing file (provided ${1-<missing>})." -ec "$err_argument_value"
     exit_if_has_bugs
 
-    local _file=$1 _line
-    local -i _rc=$success _line_number=0
+    local _file=$1
+    local -i _rc=$success
+    local _line_number=0
+    local _line
 
     while IFS= read -r _line || [[ -n $_line ]]; do
         (( ++_line_number ))
@@ -57,6 +59,7 @@ function validate_package_lines()
               "  but found: $_line" \
               -ec "$_rc"
     done < "$_file"
+
     return "$_rc"
 }
 
@@ -201,6 +204,8 @@ function read_package_versions()
         # shellcheck disable=SC2004 # $/${} is unnecessary on arithmetic variables.
         _versions_ref[$_id]=$_version
     done < "$_file"
+
+    return "$success"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -238,7 +243,7 @@ function set_package_version()
 
 
     if [[ $_done == true ]]; then
-        execute mv "$_tmp" "$_file"                                             || with_error _rc "$err_io_failure" "Failed to copy temporary file to '$_file'."
+        execute mv "$_tmp" "$_file"                                             || with_error "$err_io_failure" _rc "Failed to copy temporary file to '$_file'."
     else
         _rc=$err_logic_error
     fi
