@@ -13,11 +13,11 @@ declare -xri err_argument_value
 declare -xri err_not_directory
 
 # vm2 core constants
-declare -xr reset
-declare -xr red
-declare -xr green
-declare -xr yellow
-declare -xr blue
+declare -xr clr_reset
+declare -xr clr_red
+declare -xr clr_green
+declare -xr clr_yellow
+declare -xr clr_blue
 
 # this script variables
 declare -x diff_only

@@ -49,6 +49,7 @@ declare -xra target_repos
 declare -xrA selectors_actions
 declare -xr diff_only
 declare -xr summary_file
+declare -xr sot_path
 
 # this script variables
 declare -xr action_ignore
@@ -78,19 +79,6 @@ declare -xra target_paths
 declare -xa source_files=()     # array of the paths of the SoT files
 declare -xa target_files=()     # array of target paths corresponding to the SoT files by index
 declare -xa file_actions=()     # array of default action strings corresponding to the SoT files by index
-
-declare -a sot_dump_vars=(
-    --quiet
-    --header "Configuration for SoT $sot:"
-    vm2_repos
-    sot_path
-    --header "Arguments:"
-    "${arguments[@]}"
-    --header "Core State:"
-    --core-state
-)
-
-dump_vars "${sot_dump_vars[@]}"
 
 info "The Source of Truth '$sot' folder is in '$sot_path'"
 
@@ -132,8 +120,6 @@ declare target_root target_path
 
 # iterate through the target repositories
 for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ )); do
-    target="${target_repos[targets_index]}"
-
     target_root="${target_roots[targets_index]}"
     target_path="${target_paths[targets_index]}"
 
@@ -148,7 +134,6 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
     file_actions=("${config_file_actions[@]}")
 
     customize "$sot_path" "$target_root"
-    trace "Customized from target repository '$target_root'."
 
     if ! is_empty_array selectors_actions; then
         parameterize "$diff_only"
