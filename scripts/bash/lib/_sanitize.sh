@@ -12,7 +12,7 @@
 (( ${__VM2_LIB_SANITIZE_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_SANITIZE_SH_LOADED=1
 
-# vm2 core error codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri failure
 declare -xri positive
@@ -30,10 +30,24 @@ declare -xri err_non_existent_path
 declare -xri err_missing_argument
 declare -xri err_invalid_json
 declare -xri err_invalid_json_array
+declare -xri err_logic_error
 
-# vm2 core variables
+# vm2 core lib constants
+declare -xr nugetServersRegex
+declare -xr default_nuget_server
+declare -xr build_config_regex
+declare -xr tfm_regex
+declare -xr rid_regex
+declare -xra allowed_runners_os
+declare -xra known_configurations
+declare -xr known_tfms
+declare -xr known_runtimes
+
+declare -rx dangerous_chars_regex=$'[;|&$`<>(){}\n\r]'
+declare -rx dangerous_chars_and_whitespaces_regex='[;|&$`<>(){}[:space:]]'
+
+# vm2 core lib variables
 declare -x _ignore
-
 declare -x repo_owner
 
 #-----------------------------------------------------------------------------------------------
@@ -75,9 +89,9 @@ function ltrim_var()
     [[ ! -v 1 ]] || is_variable "$1"                                            || bug "${FUNCNAME[0]}() requires a non-empty variable name." -ec "$err_invalid_nameref"
                                                                                 exit_if_has_bugs
 
-    local -n _var="$1"
+    local -n __var="$1"
 
-    _var="${_var#"${_var%%[![:space:]]*}"}"
+    __var="${__var#"${__var%%[![:space:]]*}"}"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -119,9 +133,9 @@ function rtrim_var()
     [[ ! -v 1 ]] || is_variable "$1"                                            || bug "${FUNCNAME[0]}() requires a non-empty variable name." -ec "$err_invalid_nameref"
                                                                                 exit_if_has_bugs
 
-    local -n _var="$1"
+    local -n __var="$1"
 
-    _var="${_var%"${_var##*[![:space:]]}"}"
+    __var="${__var%"${__var##*[![:space:]]}"}"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -168,14 +182,11 @@ function trim_var()
     [[ ! -v 1 ]] || is_variable "$1"                                            || bug "${FUNCNAME[0]}() requires a non-empty variable name." -ec "$err_invalid_nameref"
                                                                                 exit_if_has_bugs
 
-    local -n _var="$1"
+    local -n __var="$1"
 
-    _var="${_var#"${_var%%[![:space:]]*}"}"
-    _var="${_var%"${_var##*[![:space:]]}"}"
+    __var="${__var#"${__var%%[![:space:]]*}"}"
+    __var="${__var%"${__var##*[![:space:]]}"}"
 }
-
-declare -rx dangerous_chars_regex=$'[;|&$`<>(){}\n\r]'
-declare -rx dangerous_chars_and_whitespaces_regex='[;|&$`<>(){}[:space:]]'
 
 #-----------------------------------------------------------------------------------------------
 # @description Tests if user input is safe by checking for potentially dangerous characters.
@@ -295,13 +306,15 @@ function is_safe_path()
     local _path="$1"
 
     # empty string is a "safe" path ("missing" maybe valid or invalid and requires more validation)
-    # Reject paths with directory traversal
-    #   absolute paths starting with
-    #   paths with dangerous characters
     [[ -n "$_path" ]]                                                           || return "$_rc"
+
+    # Reject paths with one or more of:
+    #   directory traversal
+    #   absolute paths starting with '/'
+    #   paths with dangerous characters
     [[ ! "$_path" =~ \.\. ]]                                                    || with_error _rc "$err_unsafe_argument" "The path '$_path' contains directory traversal sequences, which is not allowed."
-    (( _rc != success )) || [[ ! "$_path" =~ ^/ ]]                              || with_error _rc "$err_unsafe_argument" "The path '$_path' is an absolute path, which is not allowed."
-    (( _rc != success )) || [[ ! "$_path" =~ [\$\`\;] ]]                        || with_error _rc "$err_unsafe_argument" "The path '$_path' contains one or more unsafe characters: \$, \`, ;"
+    [[ ! "$_path" =~ ^/ ]]                                                      || with_error _rc "$err_unsafe_argument" "The path '$_path' is an absolute path, which is not allowed."
+    [[ ! "$_path" =~ [\$\`\;] ]]                                                || with_error _rc "$err_unsafe_argument" "The path '$_path' contains one or more unsafe characters: \$, \`, ;"
     return "$_rc"
 }
 
@@ -331,8 +344,8 @@ function is_safe_valid_path()
     local _path="$1"
     local -i _rc=$positive
 
-    is_safe_path "$_path"                                                       || return $?
-    is_valid_path "$_path"                                                      || with_error _rc $? "The path '$_path' is not valid."
+    is_valid_path "$_path"                                                      || with_error _rc "$err_invalid_path" "The path '$_path' is not valid."
+    (( _rc != success )) || is_safe_path "$_path"                               || _rc=$?
     return "$_rc"
 }
 
@@ -414,14 +427,14 @@ function is_safe_existing_file()
 
 #-----------------------------------------------------------------------------------------------
 # @description Validates and normalizes a JSON array of strings, or a single JSON string, into
-#   a JSON array of non-empty, trimmed strings. Also checks each item's validity using the
-#   provided validator function.
+#   a JSON array of trimmed strings. Also checks each item's validity using the provided
+#   validator function.
 #
 # @arg $1 nameref to a variable containing a JSON array or a single string (a plain string is
 #   converted to a single-item JSON array). The normalized JSON array is stored back in that
 #   variable.
-# @arg $2 string The default value to use if $1 is an empty string. Optional, if $3 is not
-#   provided either.
+# @arg $2 string The default value to use if the variable named by $1 contains an empty string.
+#    Optional, if $3 is not provided.
 # @arg $3 string The name of the function to validate each item in the array. The function
 #   should accept a single string argument and return a success/positive exit code if the item
 #   is valid, or a non-zero exit code if it is unsafe. When rejecting a value, the function
@@ -446,14 +459,15 @@ function validate_json_array()
     [[ ! -v 3 ]] || is_function "$3"                                            || bug "${FUNCNAME[0]}() requires argument 3 to name a defined item-validation function (provided '${3-<missing>}')." -ec "$err_argument_type"
                                                                                 exit_if_has_bugs
 
-    local -n _input=${1:-$2}
+    local -n __input=$1
+
+    [[ -n $__input ]] || __input=${2:-}
+
     local -i _rc="$positive"
 
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-    [[ -n "$_input" ]] && is_safe_input "$_input" true                          || { with_error _rc "$err_unsafe_argument" "${FUNCNAME[0]}() requires a safe, non-empty string representing a JSON array of strings, or an empty array; or a JSON string (possibly empty); or null (provided '${_input-<missing>}')."
-                                                                                     return "$_rc"
-                                                                                }
-    jq empty <<< "$_input"
+    [[ -n "$__input" ]] && is_safe_input "$__input" true                        || with_error _rc "$err_unsafe_argument" "${FUNCNAME[0]}() requires a safe, non-empty string representing a JSON array of strings, or an empty array; or a JSON string (possibly empty); or null (provided '${__input-<missing>}')."
+    (( _rc == success))                                                         || return "$_rc"
 
     local _output
     local -i _length
@@ -471,31 +485,25 @@ function validate_json_array()
             elif type == "string" then
                 [ trim ], 1
             elif type=="array" and all(type=="string") then
-                map( trim ) | unique, length
+                map(trim | select(. != "")) | reduce .[] as $x ([]; if any(.[]; . == $x) then . else . + [$x] end) | ., length
             else
                 error("The input must be a JSON array of strings, or an empty array; or a JSON string (possibly empty); or null.")
             end
-        ' <<< "$_input"
-    )                                                                           || { with_error _rc "$err_invalid_json_array" "The input must be a JSON array of strings, or an empty array; or a JSON string (possibly empty); or null (provided '${_input-<missing>}')."
-                                                                                     return "$_rc"
-                                                                                }
+        ' <<< "$__input"
+    )                                                                           || with_error _rc "$err_invalid_json_array" "The input must be a JSON array of strings, or an empty array; or a JSON string (possibly empty); or null (provided '${__input-<missing>}')."
+    (( _rc == success))                                                         || return "$_rc"
 
     local _is_safe_item_fn=${3:-}
 
     if (( _length > 0 )) && [[ -n $_is_safe_item_fn && $_is_safe_item_fn != true ]]; then
         # validate each item in the array
         while read -r _item; do
-            $_is_safe_item_fn "$_item" || {
-                _rc="$err_unsafe_argument"
-                error "'$_item' is not a valid item for this JSON array" -ec "$_rc"
-            }
+            $_is_safe_item_fn "$_item"                                          || with_error _rc "$err_unsafe_argument" "'$_item' is not a valid item for this JSON array"
         done < <(jq -r '.[]' <<< "$_output")
     fi
-    (( _rc == positive )) && _input=$_output
+    (( _rc != positive )) || __input=$_output
     return "$_rc"
 }
-
-declare -xra allowed_runners_os
 
 #-----------------------------------------------------------------------------------------------
 # @description Validates that a runner OS name is in the allowed list of GitHub Actions
@@ -548,41 +556,19 @@ function is_safe_reason()
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the reason text to test." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
-    local _rsn="$1"
+    local _reason="$1"
     local _max_length=200
     local -i _rc=$positive
 
     # Allow spaces but reject dangerous shell meta-characters
-    is_safe_input "$_rsn" true                                                  || _rc="$negative"
+    is_safe_input "$_reason" true                                               || _rc="$negative"
 
     # Check length
-    (( ${#_rsn} <= _max_length ))                                               || with_error _rc "$err_argument_value" "The reason is too long. Maximum length is $_max_length characters."
+    (( ${#_reason} <= _max_length ))                                            || with_error _rc "$err_argument_value" "The reason is too long. Maximum length is $_max_length characters."
 
     # Reject if it looks like a command (starts with -, /, .)
-    [[ ! "$_rsn" =~ ^[-/.] ]]                                                   || with_error _rc "$err_unsafe_argument" "The reason '$_rsn' appears to be a command or contains unsafe characters."
+    [[ ! "$_reason" =~ ^[-/.] ]]                                                || with_error _rc "$err_unsafe_argument" "The reason '$_reason' appears to be a command or contains unsafe characters."
     (( _rc == positive ))
-}
-
-declare -xr nugetServersRegex
-declare -xr default_nuget_server
-
-#-----------------------------------------------------------------------------------------------
-# @description Tests if a string is a valid NuGet server URL or known server name.
-#
-# Notes:
-#   - Accepts `nuget`, `github`, or a valid http(s) URL matching `$nugetServersRegex`.
-#
-# @arg $1 string The NuGet server URL or name to test.
-#
-# @exitcode positive=0: If the server can be a valid NuGet server.
-# @exitcode negative=1: If the server is not a valid NuGet server.
-#
-# @example
-#   if is_valid_nuget_server "nuget"; then echo "Valid server"; fi
-#-----------------------------------------------------------------------------------------------
-function is_valid_nuget_server()
-{
-    __test_with_regex "$@" "$nugetServersRegex"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -614,64 +600,41 @@ function validate_nuget_server()
     [[ ! -v 1 ]] || is_variable "$1"                                            || bug "${FUNCNAME[0]}() requires the first argument to be a valid variable name containing the NuGet server moniker (provided '$1')." -ec "$err_invalid_nameref"
     [[ ! -v 2 ]] || is_variable "$2"                                            || bug "${FUNCNAME[0]}() requires the second argument to be a valid variable name (provided '$2')." -ec "$err_invalid_nameref"
     [[ ! -v 3 ]] || is_variable "$3"                                            || bug "${FUNCNAME[0]}() requires the third argument to be a valid variable name (provided '$3')." -ec "$err_invalid_nameref"
+    [[ ! -v 4 || $4 =~ $nugetServersRegex ]]                                    || bug "${FUNCNAME[0]}() requires the fourth argument to be a valid default NuGet server moniker (provided '$4')." -ec "$err_argument_value"
+    [[ -n $repo_owner ]]                                                        || bug "${FUNCNAME[0]}() requires the global variable \$repo_owner to be already set." -ec "$err_logic_error"
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
 
-    [[ ! -v 4 || $4 =~ $nugetServersRegex ]]                                    || { with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires the fourth argument to be a valid default NuGet server moniker (provided '$4')."
-                                                                                     return "$_rc"
-                                                                                }
-
-    local -n _server=${1:-_default_server}
     local _default_server="${4:-$default_nuget_server}"
+    local -n __server=${1:-_default_server}
 
-    [[ "$_server" =~ $nugetServersRegex ]]                                      || { with_error _rc "$err_argument_value" "Invalid NuGet server: $_server."
-                                                                                     return "$_rc"
-                                                                                }
+    [[ "$__server" =~ $nugetServersRegex ]]                                     || with_error _rc "$err_argument_value" "Invalid NuGet server: $__server."
+    (( _rc == success ))                                                        || return "$_rc"
 
-    local -n _server_name=$2
-    local -n _server_url=$3
-    case "$_server" in
+    local -n __server_name=$2
+    local -n __server_url=$3
+    case "$__server" in
         nuget )
-            _server_name="NuGet.org"
-            _server_url="https://api.nuget.org/v3/index.json"
+            __server_name="NuGet.org"
+            __server_url="https://api.nuget.org/v3/index.json"
             ;;
 
         github )
-            _server_name="GitHub Packages"
-            _server_url="https://nuget.pkg.github.com/$repo_owner/index.json"
+            __server_name="GitHub Packages"
+            __server_url="https://nuget.pkg.github.com/$repo_owner/index.json"
             ;;
 
         https://*|http://* )
-            _server_name="$_server"
-            _server_url="$_server"
+            __server_name="$__server"
+            __server_url="$__server"
             ;;
 
-        * ) error _rc "$err_argument_value" "Unknown NuGet server: $_server"
+        * ) error _rc "$err_argument_value" "Unknown NuGet server: $__server"
             ;;
     esac
     return "$_rc"
 }
-
-declare -xr build_config_regex="^([A-Za-z_][A-Za-z0-9_]*)?$"
-
-#-----------------------------------------------------------------------------------------------
-# @description Tests if a build configuration name is a valid identifier.
-#
-# @arg $1 string The configuration name to test.
-#
-# @exitcode positive=0: If the configuration name is valid.
-# @exitcode negative=1: If the configuration name is invalid.
-#
-# @example
-#   if is_valid_configuration "$build_config"; then echo "Valid config"; fi
-#-----------------------------------------------------------------------------------------------
-function is_valid_configuration()
-{
-    __test_with_regex "$@" "$build_config_regex"
-}
-
-declare -xar known_configurations=(Debug Release)
 
 #-----------------------------------------------------------------------------------------------
 # @description Validates that a string is a valid build configuration name. Depends on
@@ -704,26 +667,6 @@ function is_safe_configuration()
     (( _rc == success ))
 }
 
-declare -xr tfm_regex="^(net[1-9][0-9]*\.[0-9]+(-([a-z]+)([1-9][0-9.]*)?)?|[[:space:]]*)$"
-
-#-----------------------------------------------------------------------------------------------
-# @description Tests if a string is a valid Target Framework Moniker (TFM).
-#
-# @arg $1 string The TFM to validate.
-#
-# @exitcode positive=0: If the TFM is valid.
-# @exitcode negative=1: If the TFM is invalid.
-#
-# @example
-#   if is_valid_framework "$framework"; then echo "Valid TFM"; fi
-#-----------------------------------------------------------------------------------------------
-function is_valid_framework()
-{
-    __test_with_regex "$@" "$tfm_regex"
-}
-
-declare -xr known_tfms=("" net9.0 net10.0)
-
 #-----------------------------------------------------------------------------------------------
 # @description Validates that a Target Framework Moniker (TFM) is a valid identifier. Depends
 #   on `is_valid_framework`.
@@ -748,26 +691,6 @@ function is_safe_framework()
 
     return "$_rc"
 }
-
-declare -xr rid_regex="^(([a-z][a-z-]*[a-z])((\.[1-9][0-9]*)*)(-[a-z][0-9a-z]*)?(-[.0-9a-z]+)?|[[:space:]]*)$"
-
-#-----------------------------------------------------------------------------------------------
-# @description Validates that a string is a valid Runtime Identifier (RID).
-#
-# @arg $1 string The RID to validate.
-#
-# @exitcode positive=0: If the RID is valid.
-# @exitcode negative=1: If the RID is invalid.
-#
-# @example
-#   if is_valid_runtime "$runtime"; then echo "Valid RID"; fi
-#-----------------------------------------------------------------------------------------------
-function is_valid_runtime()
-{
-    __test_with_regex  "$@" "$rid_regex"
-}
-
-declare -xr known_runtimes=("" linux-x64 win-x64 osx-x64)
 
 #-----------------------------------------------------------------------------------------------
 # @description Validates that a Runtime Identifier (RID) is a valid identifier. Depends on
@@ -811,16 +734,16 @@ function validate_runtime()
     [[ ! -v 1 ]] || is_variable "$1"                                            || bug "${FUNCNAME[0]}() requires argument 1 to be the name of a defined variable that will store the normalized Runtime Identifier (RID) (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
                                                                                 exit_if_has_bugs
 
-    local -n _rid="$1"
+    local -n __rid="$1"
 
     # since `_rid` is a nameref (`local -n`), `${!_rid}` uses bash's nameref-specific
     # indirection rule and expands to the *name* of the variable `_rid` references (i.e.
     # the original `$1`), not a second round of value-based indirection. That is exactly the
     # variable-name argument `trim_var()` expects, so this correctly trims the caller's
     # variable in place.
-    _rid="${_rid,,}"
-    trim_var "${!_rid}"
-    is_safe_runtime "$_rid" || return $?
+    __rid="${__rid,,}"
+    trim_var "${!__rid}"
+    is_safe_runtime "$__rid" || return $?
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -850,16 +773,16 @@ function validate_preprocessor_symbols()
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
-    local -n _symbols=$1
+    local -n __symbols=$1
 
-    [[ -n $_symbols ]]                                                          || return "$positive"
-    [[ $_symbols =~ ^[\ \,:\;0-9A-Z_a-z]+$ ]]                                   || { with_error _rc "$err_argument_value" "The preprocessor symbols '$_symbols' contain invalid characters."
+    [[ -n $__symbols ]]                                                         || return "$positive"
+    [[ $__symbols =~ ^[\ \,:\;0-9A-Z_a-z]+$ ]]                                  || { with_error _rc "$err_argument_value" "The preprocessor symbols '$__symbols' contain invalid characters."
                                                                                      return "$_rc"
                                                                                 }
 
     local -a _symbol_array=()
 
-    IFS=' ,:;' read -r -a _symbol_array <<< "$_symbols"
+    IFS=' ,:;' read -r -a _symbol_array <<< "$__symbols"
 
     local _normalized_symbols=''
     local _symbol
@@ -872,13 +795,13 @@ function validate_preprocessor_symbols()
                 _normalized_symbols="$_symbol" ||
                 _normalized_symbols="$_normalized_symbols;$_symbol"
         else
-            with_error _rc "$err_argument_value" "The pre-processor symbol '$_symbol' from '$_symbols' is not valid."
+            with_error _rc "$err_argument_value" "The pre-processor symbol '$_symbol' from '$__symbols' is not valid."
         fi
     done
 
     (( _rc == success )) || return "$_rc"
 
-    _symbols=$_normalized_symbols
+    __symbols=$_normalized_symbols
     return "$positive"
 }
 
@@ -901,28 +824,6 @@ function is_safe_secret()
 
     is_valid_secret "$1"                                                        || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the secret value, to be non-empty and to contain no control characters."
     return "$_rc"
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Validates that a given value is a valid percentage (0-100).
-#
-# Notes:
-#   - Must be an integer between 0 and 100, inclusive.
-#
-# @arg $1 string The percentage to validate.
-#
-# @exitcode positive=0: If the percentage is valid.
-# @exitcode negative=1: If the percentage is invalid.
-#
-# @example
-#   if is_valid_percentage "50"; then echo "Valid percentage"; fi
-#-----------------------------------------------------------------------------------------------
-function is_valid_percentage()
-{
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument (provided $#): the percentage to test." -ec "$err_invalid_arguments"
-                                                                                exit_if_has_bugs
-
-    is_non_negative "$1" && (( $1 <= 100 ))
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -975,29 +876,6 @@ function is_safe_max_regression_pct()
     (( _rc == positive ))
 }
 
-declare -xr minverTagPrefixRegex
-declare -xr minverPrereleaseIdRegex
-
-#-----------------------------------------------------------------------------------------------
-# @description Tests if a string is a valid MinVer Git tag prefix (e.g. `v` as in `v1.2.3`).
-#
-# Notes:
-#   - Must match `$minverTagPrefixRegex` (`$minverTagPrefixRex` in `_semver.sh`): starts and
-#     ends with an alphanumeric or `_`, with `-`, `.`, `/` allowed in between.
-#
-# @arg $1 string The MinVer tag prefix to validate.
-#
-# @exitcode positive=0: If the tag prefix is valid.
-# @exitcode negative=1: If the tag prefix is invalid.
-#
-# @example
-#   if is_valid_minverTagPrefix "v"; then echo "Valid tag prefix"; fi
-#-----------------------------------------------------------------------------------------------
-function is_valid_minverTagPrefix()
-{
-    __test_with_regex "$@" "$minverTagPrefixRegex"
-}
-
 #-----------------------------------------------------------------------------------------------
 # @description Validates that a MinVer Git tag prefix is safe and well-formed. Delegates to
 #   `is_valid_minverTagPrefix`.
@@ -1022,25 +900,6 @@ function is_safe_minverTagPrefix()
 
     is_valid_minverTagPrefix "$@"                                               || with_error _rc "$err_argument_value" "The MinVer tag prefix '$1' is not valid."
     (( _rc == positive ))
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Validates the MinVer prerelease identifier format.
-#
-# Notes:
-#   - Must match `$minverPrereleaseIdRegex` (the same as the SemVer prerelease label format).
-#
-# @arg $1 string The MinVer prerelease ID to validate.
-#
-# @exitcode positive=0: If the prerelease ID is valid.
-# @exitcode negative=1: If the prerelease ID is invalid.
-#
-# @example
-#   if is_valid_minverPrereleaseId "alpha.1"; then echo "Valid prerelease ID"; fi
-#-----------------------------------------------------------------------------------------------
-function is_valid_minverPrereleaseId()
-{
-    __test_with_regex "$@" "$minverPrereleaseIdRegex"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -1131,19 +990,15 @@ function validate_json_schema()
 
     [[ -s $_json_file ]]                                                        || with_error _rc "$err_not_file" "${FUNCNAME[0]}() requires argument 1 to be an existing, non-empty JSON file (provided '${_json_file-<missing>}')."
     [[ -s $_schema_file ]]                                                      || with_error _rc "$err_not_file" "${FUNCNAME[0]}() requires argument 2 to be an existing, non-empty JSON Schema file (provided '${_schema_file-<missing>}')."
-    (( _rc == success ))                                                        || return "$_rc"
 
-    is_valid_json_file "$_json_file"                                            || with_error _rc "$err_invalid_json" "The JSON file '$_json_file' is not well-formed."
-    is_valid_json_file "$_schema_file"                                          || with_error _rc "$err_invalid_json" "The JSON schema file '$_schema_file' is not well-formed."
-    (( _rc == success ))                                                        || return "$_rc"
-
-    is_tool_present check-jsonschema                                            || { warning "'check-jsonschema' was not found on PATH -- skipping schema validation of '$_json_file'." \
-                                                                                             "Install it with: pip install check-jsonschema"
-                                                                                     return "$_rc"
-                                                                                }
+    (( _rc != success )) || is_valid_json_file "$_json_file"                    || with_error _rc "$err_invalid_json" "The JSON file '$_json_file' is not well-formed."
+    (( _rc != success )) || is_valid_json_file "$_schema_file"                  || with_error _rc "$err_invalid_json" "The JSON schema file '$_schema_file' is not well-formed."
 
     local _output
 
-    _output=$(check-jsonschema --schemafile "$_schema_file" "$_json_file" 2>&1) || with_error _rc "$err_invalid_json" "'$_json_file' failed validation against the schema in '$_schema_file':" "$_output"
+    if is_check_jsonschema_present; then
+        (( _rc != success )) || _output=$(check-jsonschema --schemafile "$_schema_file" "$_json_file" 2>&1) \
+                                                                                || with_error _rc "$err_invalid_json" "'$_json_file' failed validation against the schema in '$_schema_file':" "$_output"
+    fi
     return "$_rc"
 }

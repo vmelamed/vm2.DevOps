@@ -14,18 +14,70 @@
 (( ${__VM2_LIB_PREDICATES_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_PREDICATES_SH_LOADED=1
 
-# vm2 core error codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri failure
 declare -xri positive
 declare -xri negative
 declare -xri err_invalid_arguments
-declare -xri err_argument_type
-declare -xri err_argument_value
 declare -xri err_invalid_nameref
-declare -xri err_invalid_path
 
-# vm2 core variables
+# vm2 core lib constants
+declare -xr zero_rex='[+-]?0'
+declare -xr natural_rex='[1-9][0-9]*'
+declare -xr positive_rex="[+]?$natural_rex"
+declare -xr negative_rex="-$natural_rex"
+declare -xr integer_rex="[+-]?(0|$natural_rex)"
+declare -xr decimal_rex="$integer_rex(\.[0-9]*)?|(($integer_rex)?\.[0-9]+)"
+declare -xr bool_rex='(true|false)'
+declare -xr base64_char_rex='[A-Za-z0-9+/]'
+declare -xr build_config_rex="^([A-Za-z_][A-Za-z0-9_]*)?$"
+declare -xr tfm_rex="(net[1-9][0-9]*\.[0-9]+(-([a-z]+)([1-9][0-9.]*)?)?|[[:space:]]*)"
+declare -xr rid_rex="(([a-z][a-z-]*[a-z])((\.[1-9][0-9]*)*)(-[a-z][0-9a-z]*)?(-[.0-9a-z]+)?|[[:space:]]*)"
+declare -xr varNameRex="[A-Za-z_][A-Za-z0-9_]*"
+declare -xr prereleaseLabelRex='[-0-9A-Za-z.]+'
+declare -xr minverTagPrefixRex='[0-9A-Za-z_]([-0-9A-Za-z._/]*[-A-Za-z_])?'
+declare -xr minverPrereleaseIdRex=$prereleaseLabelRex
+
+declare -xr natural_regex="^$natural_rex\$"
+declare -xr zero_regex="^$zero_rex\$"
+declare -xr positive_regex="^$positive_rex\$"
+declare -xr negative_regex="^$negative_rex\$"
+declare -xr non_negative_regex="^($positive_rex|$zero_rex)\$"
+declare -xr non_positive_regex="^($negative_rex|$zero_rex)\$"
+declare -xr integer_regex="^$integer_rex\$"
+declare -xr decimal_regex="^($decimal_rex)\$"
+declare -xr bool_regex="^$bool_rex\$"
+declare -xr build_config_regex="^$build_config_rex\$"
+declare -xr tfm_regex="^$tfm_rex\$"
+declare -xr rid_regex="^$rid_rex\$"
+declare -xr varNameRegex="^$varNameRex\$"
+declare -xr minverTagPrefixRegex="^$minverTagPrefixRex$"
+declare -xr minverPrereleaseIdRegex="^$minverPrereleaseIdRex$"
+
+declare -xr nugetServersRegex
+
+declare -xr base64_regex="^($base64_char_rex{4})*($base64_char_rex{3}=|$base64_char_rex{2}==)?\$"
+
+declare -xra known_configurations=(
+    Debug
+    Release
+)
+
+declare -xr known_tfms=(
+    ""
+    net9.0
+    net10.0
+)
+
+declare -xr known_runtimes=(
+    ""
+    linux-x64
+    win-x64
+    osx-x64
+)
+
+# vm2 core lib variables
 declare -x _ignore
 
 #-----------------------------------------------------------------------------------------------
@@ -59,7 +111,6 @@ function set_case_sensitive()
     shopt -u nocasematch || true
 }
 
-declare -xr varNameRegex="^[A-Za-z_][A-Za-z0-9_]*$"
 #-----------------------------------------------------------------------------------------------
 # @description Tests if a string is a valid variable name.
 #
@@ -74,7 +125,7 @@ declare -xr varNameRegex="^[A-Za-z_][A-Za-z0-9_]*$"
 function is_variable_name()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the variable to test." -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     [[ $1 =~ $varNameRegex ]]
 }
@@ -93,7 +144,7 @@ function is_variable_name()
 function is_variable()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the variable to test." -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     is_variable_name "$1" && declare -p "$1" &> "$_ignore"
 }
@@ -113,10 +164,9 @@ function is_variable()
 function is_indexed_array()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the indexed array variable to test." -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
-    is_variable_name "$1" ||
-        return "$negative"
+    is_variable_name "$1" || return "$negative"
 
     begin_scope
     set_case_sensitive
@@ -124,9 +174,7 @@ function is_indexed_array()
     local -i _rc="$positive"
     local _decl
 
-    _decl=$(declare -p "$1" 2>"$_ignore") &&
-    [[ $_decl =~ ^declare\ -a ]] ||
-        _rc="$negative"
+    _decl=$(declare -p "$1" 2>"$_ignore") && [[ $_decl =~ ^declare\ -a ]] || _rc="$negative"
 
     end_scope
 
@@ -148,10 +196,9 @@ function is_indexed_array()
 function is_associative_array()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the indexed array variable to test." -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
-    is_variable_name "$1" ||
-        return "$negative"
+    is_variable_name "$1" || return "$negative"
 
     begin_scope
     set_case_sensitive
@@ -159,9 +206,7 @@ function is_associative_array()
     local -i _rc="$positive"
     local _decl
 
-    _decl=$(declare -p "$1" 2>"$_ignore") &&
-    [[ $_decl =~ ^declare\ -A ]] ||
-        _rc="$negative"
+    _decl=$(declare -p "$1" 2>"$_ignore") && [[ $_decl =~ ^declare\ -A ]] || _rc="$negative"
 
     end_scope
 
@@ -185,10 +230,9 @@ function is_associative_array()
 function is_array()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the array variable to test." -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
-    is_variable_name "$1" ||
-        return "$negative"
+    is_variable_name "$1" || return "$negative"
 
     begin_scope
     set_case_insensitive
@@ -196,9 +240,8 @@ function is_array()
     local -i _rc="$positive"
     local _decl
 
-    _decl=$(declare -p "$1" 2>"$_ignore") &&
-    [[ $_decl =~ ^declare\ -a ]] || # -a or -A case insensitive!
-        _rc="$negative"
+     # -a or -A case insensitive!
+    _decl=$(declare -p "$1" 2>"$_ignore") && [[ $_decl =~ ^declare\ -a ]] || _rc="$negative"
 
     end_scope
 
@@ -221,11 +264,11 @@ function is_empty_array()
 
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name of the array variable to test." -ec "$err_invalid_arguments"
     [[ ! -v 1 ]] || is_array "$1"                                               || bug "${FUNCNAME[0]}() requires argument 1 to be the name of an indexed or an associative array variable (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
-    local -n _array="$1"
+    local -n __array="$1"
 
-    [[ -z ${_array[*]+x} ]]
+    [[ -z ${__array[*]+x} ]]
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -242,10 +285,9 @@ function is_empty_array()
 function is_function()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the name to test." -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
-    is_variable_name "$1" ||
-        return "$negative"
+    is_variable_name "$1" || return "$negative"
 
     declare -pF "$1" > "$_ignore" 2>&1
 }
@@ -263,33 +305,10 @@ function is_function()
 function __test_with_regex()
 {
     (( $# == 2 ))                                                               || bug "${FUNCNAME[1]}() requires exactly one argument (provided $(($#-1))): the value to test." -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     [[  $1 =~ $2 ]]
 }
-
-declare -xr zero_rex='[+-]?0'
-declare -xr natural_rex='[1-9][0-9]*'
-declare -xr positive_rex="[+]?$natural_rex"
-declare -xr negative_rex="-$natural_rex"
-declare -xr integer_rex="[+-]?(0|$natural_rex)"
-declare -xr decimal_rex="$integer_rex(\.[0-9]*)?|(($integer_rex)?\.[0-9]+)"
-declare -xr bool_rex='(true|false)'
-declare -xr base64_char_rex='[A-Za-z0-9+/]'
-
-declare -xr natural_regex="^$natural_rex\$"
-declare -xr zero_regex="^$zero_rex\$"
-declare -xr positive_regex="^$positive_rex\$"
-declare -xr negative_regex="^$negative_rex\$"
-declare -xr non_negative_regex="^($positive_rex|$zero_rex)\$"
-declare -xr non_positive_regex="^($negative_rex|$zero_rex)\$"
-declare -xr integer_regex="^$integer_rex\$"
-declare -xr decimal_regex="^($decimal_rex)\$"
-declare -xr bool_regex="^$bool_rex\$"
-declare -xr dotnet_version_rex='([0-9]+\.[0-9]+\.[0-9]+)|([0-9]+\.[0-9]+(\.x)?)|([0-9]+(\.x)?)|([0-9]+\.[0-9]+\.[0-9]+x)|latest'
-declare -xr dotnet_version_regex="^$dotnet_version_rex\$"
-
-declare -xr base64_regex="^($base64_char_rex{4})*($base64_char_rex{3}=|$base64_char_rex{2}==)?\$"
 
 #-----------------------------------------------------------------------------------------------
 # @description Tests if the parameter represents a valid boolean value - 'true' or 'false'.
@@ -354,7 +373,7 @@ function is_non_negative()
 #-----------------------------------------------------------------------------------------------
 function is_exit_code()
 {
-    is_non_negative "$1" && (( "$1" <= 255 ))
+    is_non_negative "$1" && (( $1 <= 255 ))
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -480,14 +499,13 @@ function is_in()
                                                                                        "  - the value to test" \
                                                                                        "  - options to compare against" \
                                                                                        -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _sought="$1"; shift
     local _v
 
     for _v in "$@"; do
-        [[ $_sought == "$_v" ]] &&
-            return "$positive"
+        [[ $_sought == "$_v" ]] && return "$positive"
     done
     return "$negative"
 }
@@ -511,7 +529,7 @@ function is_in_i()
                                                                                        "  - the value to test" \
                                                                                        "  - options to compare against" \
                                                                                        -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _sought="$1"; shift
     local -i _rc=$negative
@@ -530,13 +548,8 @@ function is_in_i()
     return "$_rc"
 }
 
-declare -x __os_name
-__os_name="$(uname -s)"
-declare -xr __os_name
-
-declare -x __is_windows
-[[ "$__os_name" == "Windows_NT" || "$__os_name" == *MINGW* || "$__os_name" == *MSYS* ]] && __is_windows=true || __is_windows=false
-declare -xr __is_windows
+declare -x __os_name=''
+declare -x __is_windows=''
 
 #-----------------------------------------------------------------------------------------------
 # @description Detects if the current operating system is Windows (including Windows_NT,
@@ -552,7 +565,16 @@ declare -xr __is_windows
 #-----------------------------------------------------------------------------------------------
 function is_windows()
 {
-   $__is_windows
+    if [[ -z $__is_windows ]]; then
+        __os_name="$(uname -s)"
+        [[ "$__os_name" == "Windows_NT" || "$__os_name" == *MINGW* || "$__os_name" == *MSYS* ]] &&
+            __is_windows=true ||
+            __is_windows=false
+        readonly __os_name
+        readonly __is_windows
+    fi
+
+    $__is_windows
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -570,7 +592,7 @@ function is_windows()
 function is_valid_filename()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test." -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     [[ -n $1 && $1 != */* && $1 != . && $1 != .. ]]
 }
@@ -589,7 +611,7 @@ function is_valid_filename()
 function is_valid_path()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to test." -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     pathchk -- "$1" &> "$_ignore"
 }
@@ -607,7 +629,7 @@ function is_valid_path()
 function is_valid_secret_name()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument (provided $#): the GitHub secret name to test." -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     is_variable_name "$1" && [[ ${1^^} != GITHUB_* ]]
 }
@@ -624,74 +646,135 @@ function is_valid_secret_name()
 function is_valid_secret()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the secret value to validate." -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     [[ -n $1 && ! $1 =~ [[:cntrl:]] ]]
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Tests if the parameter represents a valid .NET SDK version specifier, e.g. a
-#   full version (`10.0.100`), a major.minor with optional feature-band wildcard (`10.0`,
-#   `10.0.1xx`), a bare major (`10`), or the literal `latest`.
+# @description Tests if a build configuration name is a valid identifier.
 #
-# @arg $1 string version - string to test
+# @arg $1 string The configuration name to test.
 #
-# @exitcode positive=0: the string is a valid .NET SDK version specifier
-# @exitcode negative=1: otherwise
+# @exitcode positive=0: If the configuration name is valid.
+# @exitcode negative=1: If the configuration name is invalid.
 #
 # @example
-#   if is_valid_dotnet_version "$dotnet_version"; then echo "Valid"; fi
+#   if is_valid_configuration "$build_config"; then echo "Valid config"; fi
 #-----------------------------------------------------------------------------------------------
-function is_valid_dotnet_version()
+function is_valid_configuration()
 {
-    __test_with_regex "$@" "$dotnet_version_regex"
+    __test_with_regex "$@" "$build_config_regex"
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Checks if a given tool is available on the `$PATH`.
+# @description Tests if a string is a valid Target Framework Moniker (TFM).
 #
-# @arg $1 string Name of the tool to check.
+# @arg $1 string The TFM to validate.
 #
-# @exitcode positive=0: The tool is present.
-# @exitcode negative=1: The tool is not present.
+# @exitcode positive=0: If the TFM is valid.
+# @exitcode negative=1: If the TFM is invalid.
+#
+# @example
+#   if is_valid_framework "$framework"; then echo "Valid TFM"; fi
 #-----------------------------------------------------------------------------------------------
-function is_tool_present()
+function is_valid_framework()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument (provided $#): the name of the tool to check" -ec "$err_invalid_arguments"
-    exit_if_has_bugs
-
-    command -v "$1" &>"$_ignore"
+    __test_with_regex "$@" "$tfm_regex"
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Checks if a given string is valid JSON.
+# @description Validates that a string is a valid Runtime Identifier (RID).
 #
-# @arg $1 string The JSON string to validate.
+# @arg $1 string The RID to validate.
 #
-# @exitcode positive=0: The string is valid JSON.
-# @exitcode negative=1: The string is not valid JSON.
+# @exitcode positive=0: If the RID is valid.
+# @exitcode negative=1: If the RID is invalid.
+#
+# @example
+#   if is_valid_runtime "$runtime"; then echo "Valid RID"; fi
 #-----------------------------------------------------------------------------------------------
-function is_valid_json()
+function is_valid_runtime()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the JSON string to validate." -ec "$err_invalid_arguments"
-    exit_if_has_bugs
-
-    jq empty <<< "$1" &> "$_ignore" && return "$positive" || return "$negative"
+    __test_with_regex  "$@" "$rid_regex"
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Checks if the file at a given path contains valid JSON.
+# @description Validates that a given value is a valid percentage (0-100).
 #
-# @arg $1 string Path to the file to validate.
+# Notes:
+#   - Must be an integer between 0 and 100, inclusive.
 #
-# @exitcode positive=0: The file contains valid JSON.
-# @exitcode negative=1: The file does not contain valid JSON.
+# @arg $1 string The percentage to validate.
+#
+# @exitcode positive=0: If the percentage is valid.
+# @exitcode negative=1: If the percentage is invalid.
+#
+# @example
+#   if is_valid_percentage "50"; then echo "Valid percentage"; fi
 #-----------------------------------------------------------------------------------------------
-function is_valid_json_file()
+function is_valid_percentage()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the JSON string to validate." -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_valid_path "$1"                                          || bug "${FUNCNAME[0]}() requires argument 1 to be a valid path (provided '${1-<missing>}')." -ec "$err_invalid_path"
-    exit_if_has_bugs
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument (provided $#): the percentage to test." -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
 
-    jq empty "$1" &> "$_ignore" && return "$positive" || return "$negative"
+    is_non_negative "$1" && (( $1 <= 100 ))
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Tests if a string is a valid MinVer Git tag prefix (e.g. `v` as in `v1.2.3`).
+#
+# Notes:
+#   - Must match `$minverTagPrefixRegex` (`$minverTagPrefixRex` in `_semver.sh`): starts and
+#     ends with an alphanumeric or `_`, with `-`, `.`, `/` allowed in between.
+#
+# @arg $1 string The MinVer tag prefix to validate.
+#
+# @exitcode positive=0: If the tag prefix is valid.
+# @exitcode negative=1: If the tag prefix is invalid.
+#
+# @example
+#   if is_valid_minverTagPrefix "v"; then echo "Valid tag prefix"; fi
+#-----------------------------------------------------------------------------------------------
+function is_valid_minverTagPrefix()
+{
+    __test_with_regex "$@" "$minverTagPrefixRegex"
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Validates the MinVer prerelease identifier format.
+#
+# Notes:
+#   - Must match `$minverPrereleaseIdRegex` (the same as the SemVer prerelease label format).
+#
+# @arg $1 string The MinVer prerelease ID to validate.
+#
+# @exitcode positive=0: If the prerelease ID is valid.
+# @exitcode negative=1: If the prerelease ID is invalid.
+#
+# @example
+#   if is_valid_minverPrereleaseId "alpha.1"; then echo "Valid prerelease ID"; fi
+#-----------------------------------------------------------------------------------------------
+function is_valid_minverPrereleaseId()
+{
+    __test_with_regex "$@" "$minverPrereleaseIdRegex"
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Tests if a string is a valid NuGet server URL or known server name.
+#
+# Notes:
+#   - Accepts `nuget`, `github`, or a valid http(s) URL matching `$nugetServersRegex`.
+#
+# @arg $1 string The NuGet server URL or name to test.
+#
+# @exitcode positive=0: If the server can be a valid NuGet server.
+# @exitcode negative=1: If the server is not a valid NuGet server.
+#
+# @example
+#   if is_valid_nuget_server "nuget"; then echo "Valid server"; fi
+#-----------------------------------------------------------------------------------------------
+function is_valid_nuget_server()
+{
+    __test_with_regex "$@" "$nugetServersRegex"
 }

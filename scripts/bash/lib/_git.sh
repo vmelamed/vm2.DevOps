@@ -41,6 +41,11 @@ declare -xr semverTagReleaseRegex
 
 declare -xr default_default_branch="main"
 
+# Git popular namespaces
+declare -xr git_tags_ns='refs/tags/'                                    # The namespace of the tag refs: 'refs/tags/v1.2.3' is the full ref of the tag 'v1.2.3'
+declare -xr git_heads_ns='refs/heads/'
+declare -xr git_remotes_ns='refs/remotes/'                              # usage: "$git_remotes_ns$remote/$branch"
+
 # variables specific to this script only - regexes for validating GitHub repository URLs, owners, and names
 declare -xr gh_ssh_authority='git@github.com'                           # OK, it is actually the URI schema only, but we only support GitHub SSH URLs for now, so we can hardcode the authority and just call it that. This is the part of the URL before the owner/name, e.g. "git@github.com"
 declare -xr gh_https_authority='https://github.com'                     # OK, it is actually the URI schema + authority, but we only support GitHub HTTPS URLs for now, so we can hardcode the authority and just call it that. This is the part of the URL before the owner/name, e.g. "https://github.com"
@@ -90,7 +95,7 @@ See https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-auth
 function validate_gh_repo_owner()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the repository owner to validate." -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local -i _rc="$success"
 
@@ -122,7 +127,7 @@ function validate_gh_repo_owner()
 function validate_gh_repo_name()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the repository name to validate." -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local -i _rc="$success"
 
@@ -153,7 +158,7 @@ function validate_gh_repo_name()
 function validate_gh_repo_description()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the repository description to validate." -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local -i _rc="$success"
 
@@ -176,10 +181,33 @@ function validate_gh_repo_description()
 function is_valid_branch_name()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() takes 1 argument (provided $#) - a branch name" -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     [[ -n $1 ]]                                                                 || return "$negative"
     git check-ref-format --branch "$1" &> "$_ignore"                            || return "$negative"
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Tests if the specified tag name is valid according to Git's rules. It also
+#   rejects a leading -, because git tag refuses it even though git check-ref-format accepts it.
+#
+# @arg $1 string _tag the tag name to validate, may or may not be prefixed by 'refs/tags/'
+#
+# @exitcode positive=0: if the tag name is valid.
+# @exitcode negative=1: if the tag name is invalid.
+#
+# @example
+#   if is_valid_tag_name "v1.2.3"; then echo "Valid tag name"; fi
+#-----------------------------------------------------------------------------------------------
+function is_valid_tag_name()
+{
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() takes 1 argument (provided $#) - a tag name" -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
+
+    local _tag=${1#"$git_tags_ns"}
+
+    [[ -n $_tag && $_tag != -* ]]                                               || return "$negative"
+    git check-ref-format "$git_tags_ns$_tag" &> "$_ignore"                      || return "$negative"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -199,9 +227,9 @@ function is_valid_branch_name()
 function is_valid_commit_sha()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() takes 1 argument (provided $#) - a SHA string" -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
-    [[ "$1" =~ ^[0-9a-fA-F]{4,64}$ ]]                                           || return "$negative"
+    [[ $1 =~ ^[0-9a-fA-F]{4,64}$ ]]                                             || return "$negative"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -225,7 +253,7 @@ function is_valid_commit_sha()
 function validate_branch_name()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() takes 1 argument (provided $#) - a branch name" -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local -i _rc="$success"
 
@@ -276,7 +304,7 @@ function execute_gh_with_retry()
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 ]]  || is_natural "$1"                                            || bug "${FUNCNAME[0]}() requires the first argument to be a natural number: <max_attempts>" -ec "$err_argument_type"
     [[ ! -v 2 ]]  || is_natural "$2"                                            || bug "${FUNCNAME[0]}() requires the second argument to be a natural number: <delay> in seconds" -ec "$err_argument_type"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local -i _rc="$success"
 
@@ -300,9 +328,7 @@ function execute_gh_with_retry()
     local _stdout_file=''
     _stderr_file=$(mktemp)                                                      || with_error _rc "$err_io_failure" "Failed to create a temporary file"
     (( _rc != success )) || _stdout_file=$(mktemp)                              || with_error _rc "$err_io_failure" "Failed to create a temporary file";
-    (( _rc == success ))                                                        || { rm -f "$_stderr_file" "$_stdout_file"
-                                                                                     return "$_rc"
-                                                                                }
+    (( _rc == success ))                                                        || { rm -f "$_stderr_file" "$_stdout_file"; return "$_rc"; }
 
     local _attempt=0
     local _message=""
@@ -384,7 +410,7 @@ function execute_gh_api_with_retry()
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 ]] || is_non_negative "$1"                                        || bug "${FUNCNAME[0]}() requires the first argument to be a natural number: <max_attempts>" -ec "$err_argument_type"
     [[ ! -v 2 ]] || is_non_negative "$2"                                        || bug "${FUNCNAME[0]}() requires the second argument to be a natural number: <delay> in seconds" -ec "$err_argument_type"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local -i _rc="$success"
 
@@ -410,9 +436,7 @@ function execute_gh_api_with_retry()
     local _stdout_file=''
     _stderr_file=$(mktemp)                                                      || with_error _rc "$err_io_failure" "Failed to create a temporary file"
     (( _rc != success ))   || _stdout_file=$(mktemp)                            || with_error _rc "$err_io_failure" "Failed to create a temporary file"
-    (( _rc == success ))                                                        || { rm -f "$_stderr_file" "$_stdout_file"
-                                                                                     return "$_rc"
-                                                                                }
+    (( _rc == success ))                                                        || { rm -f "$_stderr_file" "$_stdout_file"; return "$_rc"; }
 
     local _attempt=0
     local _response="" message="" status=""
@@ -530,13 +554,13 @@ function initialize_repo_state()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable." -ec "$err_invalid_arguments"
     [[ ! -v 1 ]] || is_associative_array "$1"                                   || bug "${FUNCNAME[0]}() requires argument 1 to name an associative array for repository state (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
-    local -n _state="$1"
+    local -n __state="$1"
     local _key
-    _state=()
+    __state=()
     for _key in "${repo_state_keys[@]}"; do
-        _state+=(["$_key"]='')
+        __state+=(["$_key"]='')
     done
 }
 
@@ -579,12 +603,12 @@ function get_repo_state()
     [[ ! -v 1 || -d $1 ]]                                                                       || bug "${FUNCNAME[0]}() requires argument 1 to be the existing root directory of the Git working tree (provided '${1-<missing>}')." -ec "$err_not_directory"
     [[ ! -v 2 ]] || is_associative_array "$2"                                                   || bug "${FUNCNAME[0]}() requires argument 2 to name an associative array that will receive the repository state (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
     [[ ! -v 3 ]] || is_boolean "$3"                                                             || bug "${FUNCNAME[0]}() requires optional argument 3, the full-information flag, to be 'true' or 'false' (provided '${3-<missing>}')." -ec "$err_argument_type"
-    exit_if_has_bugs
+                                                                                                exit_if_has_bugs
 
     local -i _rc="$success"
     local _root=$1
     # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
-    local -n _state="$2" # associative array variable to receive the repo state, passed by nameref
+    local -n __state="$2" # associative array variable to receive the repo state, passed by nameref
     local _full_info=${3:-true}
 
     local _root_name
@@ -595,7 +619,7 @@ function get_repo_state()
     initialize_repo_state "$2" # make sure we have all fields
 
     local _url
-    _state["$key_root"]=$(git -C "$_root" rev-parse --show-toplevel 2>"$_ignore")               || return "$success" # no local git repo
+    __state["$key_root"]=$(git -C "$_root" rev-parse --show-toplevel 2>"$_ignore")              || return "$success" # no local git repo
     _url=$(git -C "$_root" remote get-url origin 2>"$_ignore")                                  || return "$success" # no origin remote
     [[ -n $_url && $_url =~ $github_url_regex ]]                                                || return "$success" # origin remote is not a GitHub URL
 
@@ -606,12 +630,12 @@ function get_repo_state()
     _name=${_name%.git} # works for both schemas because repository names cannot end in ".git"
     local _repo="$_owner/$_name"
 
-    _state["$key_url"]=$_url
-    _state["$key_schema"]=$_schema
-    _state["$key_authority"]=$_authority
-    _state["$key_owner"]=$_owner
-    _state["$key_name"]=$_name
-    _state["$key_repo"]=$_repo
+    __state["$key_url"]=$_url
+    __state["$key_schema"]=$_schema
+    __state["$key_authority"]=$_authority
+    __state["$key_owner"]=$_owner
+    __state["$key_name"]=$_name
+    __state["$key_repo"]=$_repo
 
     [[ $_name == "$_root_name" ]]                                                               || with_error _rc "$err_root_not_repo_name" "The root directory name '$_root_name' does not match the repository name '$_name'."
 
@@ -643,8 +667,8 @@ function get_repo_state()
     (( _error_level0 == _error_level1 )) || return "$err_logic_error"
 
     # merge GitHub API state into repo state for the fields we care about
-    _state["$key_repo_id"]="${_gh_state["$key_repo_id"]}"
-    _state["$key_default_branch"]="${_gh_state["$key_default_branch"]}"
+    __state["$key_repo_id"]="${_gh_state["$key_repo_id"]}"
+    __state["$key_default_branch"]="${_gh_state["$key_default_branch"]}"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -660,11 +684,11 @@ function has_local_repo()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable." -ec "$err_invalid_arguments"
     [[ ! -v 1 ]] || is_associative_array "$1"                                   || bug "${FUNCNAME[0]}() requires argument 1 to name an associative array containing repository state (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
-    local -n _state="$1"
-    [[ -v _state["$key_root"] && -n ${_state["$key_root"]} && -d ${_state["$key_root"]} ]]
+    local -n __state="$1"
+    [[ -v __state["$key_root"] && -n ${__state["$key_root"]} && -d ${__state["$key_root"]} ]]
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -680,11 +704,10 @@ function has_remote_repo()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable." -ec "$err_invalid_arguments"
     [[ ! -v 1 ]] || is_associative_array "$1"                                   || bug "${FUNCNAME[0]}() requires argument 1 to name an associative array containing repository state (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
+                                                                                exit_if_has_bugs
 
-    exit_if_has_bugs
-
-    local -n _state="$1"
-    [[ -v _state["$key_url"] && -n ${_state["$key_url"]} ]]
+    local -n __state="$1"
+    [[ -v __state["$key_url"] && -n ${__state["$key_url"]} ]]
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -700,11 +723,10 @@ function has_github_remote()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable." -ec "$err_invalid_arguments"
     is_associative_array "$1"                                                   || bug "${FUNCNAME[0]}() requires argument 1 to name an associative array containing repository state (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
+                                                                                exit_if_has_bugs
 
-    exit_if_has_bugs
-
-    local -n _state="$1"
-    [[ -v _state["$key_repo_id"] && -n ${_state["$key_repo_id"]} ]]
+    local -n __state="$1"
+    [[ -v __state["$key_repo_id"] && -n ${__state["$key_repo_id"]} ]]
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -721,19 +743,18 @@ function read_repo_state()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable." -ec "$err_invalid_arguments"
     is_associative_array "$1"                                                   || bug "${FUNCNAME[0]}() requires argument 1 to name an associative array containing repository state (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
-
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     initialize_repo_state "$1"
 
-    local -n _state="$1"
+    local -n __state="$1"
     local _key _value
     while IFS='=' read -r _key _value || [[ -n $_key ]]; do
         # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
         is_in "$_key" "${repo_state_keys[@]}" &&
             trace "read_repo_state: '$_key'='$_value'" ||
             trace "$warn_em  WARNING: Unexpected key '$_key' in the repo state input."
-        _state["$_key"]="$_value"
+        __state["$_key"]="$_value"
     done
 }
 
@@ -751,16 +772,15 @@ function print_repo_state()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly 1 nameref argument (provided $#): the name of an associative array variable." -ec "$err_invalid_arguments"
     is_associative_array "$1"                                                   || bug "${FUNCNAME[0]}() requires argument 1 to name an associative array containing repository state (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
-
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
-    local -n _state="$1"
+    local -n __state="$1"
     local _key
     echo "Repository state:"
     for _key in "${repo_state_keys[@]}"; do
-        [[ -v _state["$_key"] ]] &&
-            echo "  $_key: ${_state[$_key]}" ||
+        [[ -v __state["$_key"] ]] &&
+            echo "  $_key: ${__state[$_key]}" ||
             echo "  $_key: "
     done
 }
@@ -780,7 +800,7 @@ function is_inside_work_tree()
 {
     (( $# == 0 || $# == 1 ))                                                    || bug "${FUNCNAME[0]}() requires 0 or 1 argument (provided $#): path to a directory." -ec "$err_invalid_arguments"
     [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires optional argument 1 to be an existing directory (provided '${1-<missing>}')." -ec "$err_not_directory"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _path="${1:-$initial_cwd}"
 
@@ -812,15 +832,16 @@ function root_working_tree()
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1 to be an existing directory (provided '${1-<missing>}')." -ec "$err_not_directory"
     [[ ! -v 2 ]] || is_variable "$2"                                            || bug "${FUNCNAME[0]}() requires argument 2 to be the name of the variable to store the absolute path of the root of the Git repository containing the found directory." -ec "$err_invalid_nameref"
-    exit_if_has_bugs # gate here: $2 must be validated before creating a nameref from it below
+                                                                                exit_if_has_bugs # gate here: $2 must be validated before creating a nameref from it below
 
     local _path=$1
-    local -n _repo_root_ref=$2
+    local -n __repo_root_ref=$2
+    local -i _rc=$success
 
-    is_inside_work_tree "$_path"                                                || bug "${FUNCNAME[0]}() the parameter \$1 or the current directory must be a path to a directory inside a Git repository working tree." -ec "$err_not_git_directory"
-    exit_if_has_bugs
+    is_inside_work_tree "$_path"                                                || with_error _rc "$err_not_git_directory" "${FUNCNAME[0]}() the parameter \$1 or the current directory must be a path to a directory inside a Git repository working tree."
 
-    _repo_root_ref=$(git -C "$_path" rev-parse --show-toplevel 2> "$_ignore")
+    (( _rc != success )) || __repo_root_ref=$(git -C "$_path" rev-parse --show-toplevel 2> "$_ignore")
+    return "$_rc"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -855,13 +876,13 @@ function should_fetch_for_latest_stable_tag()
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires optional argument 1 to be an existing Git repository directory (provided '${1-<missing>}')." -ec "$err_not_directory"
     [[ ! -v 2 ]] || is_valid_branch_name "$2"                                   || bug "${FUNCNAME[0]}() requires optional argument 2 to be a valid Git branch name (provided '${2-<missing>}')." -ec "$err_argument_value"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _dir=${1:-$initial_cwd}
     local _branch=${2:-main}
 
     is_inside_work_tree "$_dir"                                                 || bug "${FUNCNAME[0]}() the parameter \$1 or the current directory must be inside a Git work tree." -ec "$err_not_git_directory"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     # Shallow repositories can miss history or tags needed by release predicates - yes we need a fetch
     [[ $(git -C "$_dir" rev-parse --is-shallow-repository 2>"$_ignore") != true ]] \
@@ -869,7 +890,7 @@ function should_fetch_for_latest_stable_tag()
     local _local_sha _remote_sha
 
     # no locally-cached SHA - no fetch needed
-    _local_sha=$(git -C "$_dir" rev-parse --verify "refs/remotes/origin/$_branch" 2>"$_ignore") \
+    _local_sha=$(git -C "$_dir" rev-parse --verify "${git_remotes_ns}origin/$_branch" 2>"$_ignore") \
                                                                                 || return "$negative"
     # no remote SHA for the branch - no fetch needed
     _remote_sha=$(git -C "$_dir" ls-remote --heads origin "$_branch" 2>"$_ignore" | awk 'NR==1 {print $1}')
@@ -892,7 +913,7 @@ function should_fetch_for_latest_stable_tag()
     _remote_stable_tag=$(
         git -C "$_dir" ls-remote --tags --refs origin 2>"$_ignore" |
         awk '{print $2}' |
-        sed 's#refs/tags/##' |
+        sed "s#${git_tags_ns}##" |
         grep -E "$semverTagReleaseRegex" |
         sort -V |
         tail -n1
@@ -963,7 +984,7 @@ function get_latest_stable_tag_hash()
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1 to be an existing Git repository directory (provided '${1-<missing>}')." -ec "$err_not_directory"
     [[ ! -v 2 ]] || is_boolean "$2"                                             || bug "${FUNCNAME[0]}() requires argument 2, the fetch flag, to be 'true' or 'false' (provided '${2-<missing>}')." -ec "$err_argument_type"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _dir=$1
     local _should_fetch=$2
@@ -1012,7 +1033,7 @@ function is_after_latest_stable_tag()
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1 to be an existing Git repository directory (provided '${1-<missing>}')." -ec "$err_not_directory"
     [[ ! -v 2 ]] || is_boolean "$2"                                             || bug "${FUNCNAME[0]}() requires argument 2, the fetch flag, to be 'true' or 'false' (provided '${2-<missing>}')." -ec "$err_argument_type"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _latest_stable_hash _commits_after_latest_stable
 
@@ -1047,7 +1068,7 @@ function is_on_or_after_latest_stable_tag()
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1 to be an existing Git repository directory (provided '${1-<missing>}')." -ec "$err_not_directory"
     [[ ! -v 2 ]] || is_boolean "$2"                                             || bug "${FUNCNAME[0]}() requires argument 2, the fetch flag, to be 'true' or 'false' (provided '${2-<missing>}')." -ec "$err_argument_type"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _latest_stable_tag_hash
 

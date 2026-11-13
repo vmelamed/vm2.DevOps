@@ -12,7 +12,7 @@
 (( ${__VM2_LIB_DUMP_VARS_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_DUMP_VARS_SH_LOADED=1
 
-# vm2 core error codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri err_argument_type
 declare -xri err_invalid_nameref
@@ -20,7 +20,7 @@ declare -xri err_invalid_arguments
 declare -xri err_missing_argument
 declare -xri err_unexpected_error
 
-# vm2 core constants
+# vm2 core lib constants
 declare -xr secret_str
 declare -xr space_ch
 declare -xr error_em
@@ -93,10 +93,10 @@ function _write_title()
 
     local _current_table_format_name=''
     get_table_format _current_table_format_name
-    local -n _current_table_format=$_current_table_format_name
+    local -n __current_table_format=$_current_table_format_name
 
     # shellcheck disable=SC2059 # Don't use variables in the printf format string. Use printf "..%s.." "$foo".
-    printf "${_current_table_format["fmt_top_header"]}" "$1"
+    printf "${__current_table_format["fmt_top_header"]}" "$1"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -145,32 +145,31 @@ function _write_line()
 
     local _current_table_format_name=''
     get_table_format _current_table_format_name
-    local -n _current_table_format=$_current_table_format_name
+    local -n __current_table_format=$_current_table_format_name
 
     local _format _format_i
-    _format=${_current_table_format["fmt_left_value"]}
-    _format_i=${_current_table_format["fmt_ind__value"]}
+    _format=${__current_table_format["fmt_left_value"]}
+    _format_i=${__current_table_format["fmt_ind__value"]}
 
+    local -n __var=$1
     local _name=${3:-$1}
     local _is_secret=$2
     local _github_escape=$4
     local _value
 
     if is_associative_array "$1"; then
-        local -n _var=$1
-        printf "$_format" "$_name" "${#_var[@]} entries:"
+        printf "$_format" "$_name" "${#__var[@]} entries:"
         local _key
-        for _key in "${!_var[@]}"; do
-            $_github_escape && _value=$(gh_escape "${_var[$_key]}") || _value=${_var[$_key]}
+        for _key in "${!__var[@]}"; do
+            $_github_escape && _value=$(gh_escape "${__var[$_key]}") || _value=${__var[$_key]}
             printf "$_format_i" "$_key" "$_value"
         done
 
     elif is_indexed_array "$1"; then
-        local -n _var=$1
-        printf "$_format" "$_name" "${#_var[@]} items:"
+        printf "$_format" "$_name" "${#__var[@]} items:"
         local -i _i
-        for (( _i=0; _i < ${#_var[@]}; _i++ )); do
-            $_github_escape && _value=$(gh_escape "${_var[_i]}") || _value=${_var[_i]}
+        for (( _i=0; _i < ${#__var[@]}; _i++ )); do
+            $_github_escape && _value=$(gh_escape "${__var[_i]}") || _value=${__var[_i]}
             printf "$_format_i" "[$_i]:" "$_value"
         done
 
@@ -178,8 +177,7 @@ function _write_line()
         printf "$_format" "$_name" "$1()"
 
     elif is_variable "$1"; then
-        local -n _var=$1
-        [[ $_is_secret == true && -n  $_var ]] && _value="$secret_str" || _value="$_var"
+        [[ $_is_secret == true && -n  $__var ]] && _value="$secret_str" || _value="$__var"
         $_github_escape && _value=$(gh_escape "$_value")
         printf "$_format" "$_name" "$_value"
 
@@ -252,7 +250,7 @@ function dump_vars()
 
     local _current_table_name=''
     get_table_format _current_table_name
-    local -n _current_table=$_current_table_name
+    local -n __current_table=$_current_table_name
 
     # for the proper behavior of this function change some global flags (to be restored before returning from the function)
     local _top=true  # is this the top header?
@@ -262,7 +260,7 @@ function dump_vars()
     local _header_text # the text of the current header
     local _name='' # the name of the current variable if specified with -n|--name
 
-    printf "${_current_table["top_top_header"]}"
+    printf "${__current_table["top_top_header"]}"
     while (( $# > 0 )); do
         _flag=$1
         shift
@@ -282,8 +280,8 @@ function dump_vars()
                 _header_text="$error_em  The text of the header is missing"
                 (( $# > 0 )) && _header_text=$1 && shift
                 $_top &&
-                    printf "${_current_table["fmt_top_header"]}" "$_header_text" ||
-                    printf "${_current_table["fmt_mid_header"]}" "$_header_text"
+                    printf "${__current_table["fmt_top_header"]}" "$_header_text" ||
+                    printf "${__current_table["fmt_mid_header"]}" "$_header_text"
                 ;;
 
             -c|--core-state )
@@ -291,11 +289,11 @@ function dump_vars()
                 ;;
 
             -b|--blank )
-                printf "${_current_table["blank_spc_line"]}"
+                printf "${__current_table["blank_spc_line"]}"
                 ;;
 
             -l|--line )
-                printf "${_current_table["blank_dsh_line"]}"
+                printf "${__current_table["blank_dsh_line"]}"
                 ;;
 
             -s|--secret )
@@ -314,23 +312,23 @@ function dump_vars()
             if $_curr_is_header; then
                 if $_next_is_header; then
                     $_top &&
-                        printf "${_current_table["top_sub_header"]}" || # finish the top or middle header and start the sub-header section
-                        printf "${_current_table["bot_top_header"]}"
+                        printf "${__current_table["top_sub_header"]}" || # finish the top or middle header and start the sub-header section
+                        printf "${__current_table["bot_top_header"]}"
                 else
                     $_top &&
-                        printf "${_current_table["bot_top_header"]}" || # finish the top header
-                        printf "${_current_table["bot_mid_header"]}"    # finish the middle header
+                        printf "${__current_table["bot_top_header"]}" || # finish the top header
+                        printf "${__current_table["bot_mid_header"]}"    # finish the middle header
                 fi
                 _top=false
                 _curr_is_header=false
             else
                 $_next_is_header && ! $_top &&
-                    printf "${_current_table["top_mid_header"]}"
+                    printf "${__current_table["top_mid_header"]}"
             fi
         fi
         _next_is_header=false
     done
-    printf "${_current_table["bot_bot_header"]}";
+    printf "${__current_table["bot_bot_header"]}";
 
     press_any_key
     restore_state _core_state

@@ -36,6 +36,7 @@ source "$lib_dir/_constants.sh"
 source "$lib_dir/_core_state.sh"
 source "$lib_dir/_error_codes.sh"
 source "$lib_dir/_predicates.sh"
+source "$lib_dir/_predicates_tools.sh"
 source "$lib_dir/_diagnostics.sh"
 source "$lib_dir/_core_args.sh"
 source "$lib_dir/_semver.sh"
@@ -186,19 +187,18 @@ fi
 #-----------------------------------------------------------------------------------------------
 function add_trap()
 {
-    (( $# >= 2 ))         || bug "${FUNCNAME[0]}() requires at least two arguments (provided $#):" \
-                                 "  - the command to append" \
-                                 "  - one or more signal names" \
-                                 -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -n $1 ]] || bug "${FUNCNAME[0]}() requires argument 1, the command, to be non-empty." -ec "$err_argument_value"
+    (( $# >= 2 ))                                                               || bug "${FUNCNAME[0]}() requires at least two arguments (provided $#):" \
+                                                                                       "  - the command to append" \
+                                                                                       "  - one or more signal names" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 || -n $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the command, to be non-empty." -ec "$err_argument_value"
 
     local _signal
     for _signal in "${@:2}"; do
         trap -p "$_signal" > /dev/null 2>&1 ||
             bug "${FUNCNAME[0]}() requires the signal names to be valid (provided '$_signal')." -ec "$err_argument_value"
     done
-
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _command=$1
     local -a _current
@@ -263,8 +263,8 @@ function execute()
     local _quiet=false
     [[ ${1-} == --quiet ]] && { _quiet=true; shift; }
 
-    (( $# > 0 )) || bug "${FUNCNAME[0]}() requires the command to execute (and its arguments)." -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+    (( $# > 0 ))                                                                || bug "${FUNCNAME[0]}() requires the command to execute (and its arguments)." -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
 
     local _command
     printf -v _command '%q ' "$@"
@@ -320,14 +320,14 @@ function execute()
 #-----------------------------------------------------------------------------------------------
 function execute_with_retry()
 {
-    (( $# >= 3 ))                   || bug "${FUNCNAME[0]}() requires at least three arguments (provided $#):" \
-                                           "  - maximum number of attempts" \
-                                           "  - delay in seconds between retries" \
-                                           "  - if present, boolean flag to suppress the output, optional" \
-                                           "  - command and arguments to execute" \
-                                           -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_natural "$1" || bug "${FUNCNAME[0]}() requires argument 1, the maximum attempt count, to be a natural number (provided '${1-<missing>}')." -ec "$err_argument_type"
-    [[ ! -v 2 ]] || is_natural "$2" || bug "${FUNCNAME[0]}() requires argument 2, the retry delay in seconds, to be a natural number (provided '${2-<missing>}')." -ec "$err_argument_type"
+    (( $# >= 3 ))                                                               || bug "${FUNCNAME[0]}() requires at least three arguments (provided $#):" \
+                                                                                       "  - maximum number of attempts" \
+                                                                                       "  - delay in seconds between retries" \
+                                                                                       "  - if present, boolean flag to suppress the output, optional" \
+                                                                                       "  - command and arguments to execute" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 ]] || is_natural "$1"                                             || bug "${FUNCNAME[0]}() requires argument 1, the maximum attempt count, to be a natural number (provided '${1-<missing>}')." -ec "$err_argument_type"
+    [[ ! -v 2 ]] || is_natural "$2"                                             || bug "${FUNCNAME[0]}() requires argument 2, the retry delay in seconds, to be a natural number (provided '${2-<missing>}')." -ec "$err_argument_type"
 
     local -i _max_attempts=$1; shift
     local -i _delay=$1; shift
@@ -337,8 +337,8 @@ function execute_with_retry()
     is_boolean "$1" && $1 && _output="$_ignore"
     is_boolean "$1" && shift
 
-    (( $# >= 1 ))                   || bug "${FUNCNAME[0]}() requires a command after the maximum-attempt, the delay arguments, and the optional output-suppression flag." -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+    (( $# >= 1 ))                                                               || bug "${FUNCNAME[0]}() requires a command after the maximum-attempt, the delay arguments, and the optional output-suppression flag." -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
 
     if is_dry_run; then
         echo "dry-run$ $*" >&2
@@ -380,10 +380,9 @@ function execute_with_retry()
 #-----------------------------------------------------------------------------------------------
 function list_of_files()
 {
-    (( $# == 1 ))         || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the file pattern." -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -n $1 ]] || bug "${FUNCNAME[0]}() requires argument 1, the file pattern, to be non-empty (provided '${1-<missing>}')." -ec "$err_argument_value"
-
-    exit_if_has_bugs
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the file pattern." -ec "$err_invalid_arguments"
+    [[ ! -v 1 || -n $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the file pattern, to be non-empty (provided '${1-<missing>}')." -ec "$err_argument_value"
+                                                                                exit_if_has_bugs
 
     # remember the current settings of the nullglob and globstar options
     begin_scope
@@ -424,14 +423,14 @@ function list_of_files()
 #-----------------------------------------------------------------------------------------------
 function find_files_by_precedence()
 {
-    (( $# > 2 ))                          || bug "${FUNCNAME[0]}() requires at least 3 arguments (provided $#):" \
-                                                 "  - path to the repository to search for the file name patterns" \
-                                                 "  - name of the array variable to store the found file names" \
-                                                 "  - the file name patterns to search for, in order of precedence" \
-                                                 -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -d "$1" ]]               || bug "${FUNCNAME[0]}() requires a path to a directory (usually a repository root working tree) as the first argument (provided '${1-<missing>}')." -ec "$err_argument_value"
-    [[ ! -v 2 ]] || is_indexed_array "$2" || bug "${FUNCNAME[0]}() requires the name of the array variable to store the found file names as the second argument (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
-    exit_if_has_bugs
+    (( $# > 2 ))                                                                || bug "${FUNCNAME[0]}() requires at least 3 arguments (provided $#):" \
+                                                                                       "  - path to the repository to search for the file name patterns" \
+                                                                                       "  - name of the array variable to store the found file names" \
+                                                                                       "  - the file name patterns to search for, in order of precedence" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 || -d "$1" ]]                                                     || bug "${FUNCNAME[0]}() requires a path to a directory (usually a repository root working tree) as the first argument (provided '${1-<missing>}')." -ec "$err_argument_value"
+    [[ ! -v 2 ]] || is_indexed_array "$2"                                       || bug "${FUNCNAME[0]}() requires the name of the array variable to store the found file names as the second argument (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
+                                                                                exit_if_has_bugs
 
     local _dir=$1
     local -n __file_names=$2

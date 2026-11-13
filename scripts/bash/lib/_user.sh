@@ -12,7 +12,7 @@
 (( ${__VM2_LIB_USER_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_USER_SH_LOADED=1
 
-# vm2 core error codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri failure
 declare -xri positive
@@ -22,7 +22,7 @@ declare -xri err_argument_type
 declare -xri err_argument_value
 declare -xri err_invalid_nameref
 
-# vm2 core constants
+# vm2 core lib constants
 declare -xr secret_str
 declare -xr secret_placeholder
 
@@ -38,7 +38,7 @@ declare -xr secret_placeholder
 #-----------------------------------------------------------------------------------------------
 function press_any_key()
 {
-    ! is_quiet                                                                  || return "$success"
+    ! is_quiet || return "$success"
 
     read -n 1 -r -s -p 'Press any key to continue...'
     echo
@@ -76,7 +76,7 @@ function confirm()
     (( $# == 1 )) || _default=${2,,}
 
     local _response=$_default
-    ! is_quiet                                                                  || { [[ ${_default,,} == "y" ]] && return "$positive" || return "$negative"; }
+    ! is_quiet || { [[ ${_default,,} == "y" ]] && return "$positive" || return "$negative"; }
 
     local _prompt="$1"
     local _suffix
@@ -105,7 +105,7 @@ function confirm()
 #
 # @arg $1 string `_prompt` The text of the prompt. Appended with ' [<default>]: ' if $2 is
 #   non-empty, otherwise just ': '.
-# @arg $2 nameref `_input` the name of a variable to store the entered value.
+# @arg $2 nameref `__input` the name of a variable to store the entered value.
 # @arg $3 string `_default` the default value output to stdout if the user presses [Enter]
 #   without typing anything (optional if last, default: '').
 # @arg $4 bool `_is_secret` suppresses echoing the input to the terminal. Use for passwords,
@@ -145,10 +145,10 @@ function enter_value()
     $_validate_fn "$_default"                                                   || bug "The default value '$_default' does not pass the validation function '$_validate_fn'." -ec "$err_argument_value"
                                                                                 exit_if_has_bugs
 
-    ! is_quiet ||                                                               { echo "$_default"; return "$success"; }
+    ! is_quiet || { echo "$_default"; return "$success"; }
 
     local _prompt=$1
-    local -n _input="$2"
+    local -n __input="$2"
     local _is_secret=${4:-false}
 
     if [[ -n $_default ]]; then
@@ -164,13 +164,13 @@ function enter_value()
     local _first_iter=true
     while ! $_valid; do
         if $_is_secret; then
-            read -r -s -p "$_prompt" "${!_input}"
+            read -r -s -p "$_prompt" "${!__input}"
         else
-            read -r    -p "$_prompt" "${!_input}"
+            read -r    -p "$_prompt" "${!__input}"
         fi
 
-        [[ -n "$_input" ]] || _input="$_default"
-        $_validate_fn "$_input" && _valid=true || _valid=false
+        [[ -n "$__input" ]] || __input="$_default"
+        $_validate_fn "$__input" && _valid=true || _valid=false
 
         ! $_valid && $_is_secret && $_first_iter && {
             # prefix the prompt with a newline to separate the new prompts with new lines in secret mode
@@ -189,7 +189,7 @@ function enter_value()
 #   without making a choice, assumes the first option (the default) - 0.
 #
 # @arg $1 string `_prompt` The prompt to display before the options.
-# @arg $2 nameref `_selection` to a variable name to store the user's choice number -
+# @arg $2 nameref `__selection` to a variable name to store the user's choice number -
 #   from 0..$@-3 (from 0 to the total number of arguments minus three).
 # @arg $3..$@ strings `_options` two or more option texts. The first option is the default
 #   returned if 'quiet' is true or if the user just presses [Enter] without making a choice).
@@ -225,12 +225,12 @@ function choose()
 
     local -i _rc="$success"
     local _prompt=$1
-    local -n _selection="$2"
+    local -n __selection="$2"
     shift 2
-    _selection=1
+    __selection=1
 
     # just return the default choice (1) via the nameref
-    ! is_quiet ||                                                               return "$success"
+    ! is_quiet || return "$success"
 
     # print the menu
     local _options=("$@")
@@ -248,15 +248,15 @@ function choose()
 
     # read the choice
     while true; do
-        read -r -p "Enter choice [1-${#_options[@]}]: " _selection
-        _selection=${_selection:-1}
-        if ! is_natural "$_selection"; then # it is not from this world;)
-            warning "Invalid choice: $_selection."
+        read -r -p "Enter choice [1-${#_options[@]}]: " __selection
+        __selection=${__selection:-1}
+        if ! is_natural "$__selection"; then # it is not from this world;)
+            warning "Invalid choice: $__selection."
             continue
         fi
-        (( _selection == 0 )) && _selection=1 && break
-        (( _selection >= 1    && _selection <= ${#_options[@]} )) && break
-        warning "Invalid choice: $_selection"
+        (( __selection == 0 )) && __selection=1 && break
+        (( __selection >= 1    && __selection <= ${#_options[@]} )) && break
+        warning "Invalid choice: $__selection"
     done
     return "$success"
 }

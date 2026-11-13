@@ -16,7 +16,7 @@ declare -ri __VM2_LIB_CORE_ARGS_SH_LOADED=1
 
 declare -xr script_name
 
-# vm2 core error codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri failure
 declare -xri positive
@@ -28,8 +28,6 @@ declare -xri err_missing_argument
 declare -xri err_not_overridden
 declare -xri err_logic_error
 declare -xri err_invalid_nameref
-
-declare -xi __last_error    # from _diagnostics.sh: the code error() recorded from its --error-code/-ec (or $failure)
 
 #===============================================================================================
 # processing common command-line arguments
@@ -64,7 +62,7 @@ declare usage_requested=""
 function get_common_arg()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one parameter ($# provided): the command-line argument to process" -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     # the calling scripts should not use any of the common arguments options:
     # -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown
@@ -176,7 +174,7 @@ function usage()
         # without an explicit (non-zero) exit code, exit with the code error() just recorded from the first
         # --error-code/-ec (or $failure) -- the same rule as exit_with_error/exit_with_bug; with messages, never exit 0
         if ! $_explicit_exit_code || (( _exit_code == success )); then
-            _exit_code=$__last_error
+            get_last_error _exit_code
         fi
         (( _exit_code != success )) || _exit_code=$failure
     fi
@@ -239,7 +237,7 @@ function usage_text()
 {
     (( $# ==1 ))                                                                || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
     [[ ! -v 1 ]] || is_boolean "$1"                                             || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1-<missing>})."
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _long_text=$1
     local _common_args

@@ -7,7 +7,7 @@
 (( ${__VM2_LIB_DOTNET_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_DOTNET_SH_LOADED=1
 
-# vm2 core error codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri failure
 declare -xri err_invalid_arguments
@@ -18,18 +18,18 @@ declare -xri err_tool_error
 declare -xri err_not_file
 declare -xri err_io_failure
 
-# vm2 core known `dotnet` return codes
+# vm2 core lib known `dotnet` return codes
 declare -xri dotnet_success
 
-# vm2 core constants
+# vm2 core lib constants
 declare -xr ci
 
-# vm2 core build keys used in the build info associative arrays
+# vm2 core lib build keys used in the build info associative arrays
 declare -xr key_configuration
 declare -xa build_info_keys
 
 #===============================================================================================
-# vm2 core variables references common for most vm2.DevOps scripts that are set usually from CLI
+# vm2 core lib variables references common for most vm2.DevOps scripts that are set usually from CLI
 # arguments (below), environment variables, or defaults consider the following variables a
 # contract for the names of the named options acquired by get_common_gh_action_arg
 #===============================================================================================
@@ -58,8 +58,6 @@ declare -x gh_nuget_password
 #-----------------------------------------------------------------------------------------------
 function update_nuget_sources_with_github_vm2()
 {
-    local -i _rc=$success
-
     (( $# == 0 || $# == 2 ))                                                    || bug "${FUNCNAME[0]}() accepts either 0 or 2 arguments (provided $#):" \
                                                                                        "  - NuGet source username (in CI defaults to \$GH_ACTOR)" \
                                                                                        "  - NuGet source password (in CI defaults to \$GH_TOKEN)" \
@@ -74,22 +72,19 @@ function update_nuget_sources_with_github_vm2()
         local _message="${FUNCNAME[0]}() GitHub NuGet source credentials are not provided. Did not update the NuGet sources with GitHub packages from vm2."
 
         # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-        $ci &&
-            warning "$_message" ||
-            trace "$_message"
+        $ci && warning "$_message" || trace "$_message"
         return "$success"
     }
+
+    local -i _rc=$success
 
     execute dotnet nuget update source github.vm2 \
                 --configfile NuGet.config \
                 --username "$_gh_nuget_username" \
                 --password "$_gh_nuget_password" \
-                --store-password-in-clear-text || {
-        _rc=$?
-        error "${FUNCNAME[0]}() Failed to update the NuGet sources with GitHub packages from vm2." \
-              "$(dotnet_error_message "$_rc")" -ec "$err_tool_error"
-        return "$err_tool_error"
-    }
+                --store-password-in-clear-text                                  || with_error _rc "$err_tool_error" "${FUNCNAME[0]}() Failed to update the NuGet sources with GitHub packages from vm2." \
+                                                                                                                    "$(dotnet_error_message "$?")"
+    return "$_rc"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -114,7 +109,7 @@ function dotnet_clean()
 
     local -i _rc="$success"
 
-    [[ -s $1 && $1 == *.@(csproj|slnx|sln) ]]                                   || { _rc="$err_argument_value"; error "${FUNCNAME[0]}() requires argument 1 to be a path to an existing project or solution file (provided '${1-<missing>}')." -ec "$_rc"; }
+    [[ -s $1 && $1 == *.@(csproj|slnx|sln) ]]                                   || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a path to an existing project or solution file (provided '${1-<missing>}')."
     (( _rc == success ))                                                        || return "$_rc"
 
     local _project="$1"
@@ -222,15 +217,14 @@ function dotnet_build()
 
     local _project=$1 # the project or solution file to build
     shift
-    local -A __build_info
-    local _build_info_name=${1:-__build_info}
+    local -A _build_info
+    local _build_info_name=${1:-_build_info}
     [[ ! -v 1 ]] || shift
-    local -n _build_info=$_build_info_name
+    local -n __build_info=$_build_info_name
 
     local _output_file
-    _output_file=$(mktemp)                                                      || { with_error _rc "$err_io_failure" "Failed to create a temporary file."
-                                                                                     return "$_rc"
-                                                                                }
+    _output_file=$(mktemp)                                                      || with_error _rc "$err_io_failure" "Failed to create a temporary file."
+    (( _rc == success ))                                                        || return "$_rc"
 
     declare -a _dotnet_args
     _dotnet_args=(
@@ -248,7 +242,7 @@ function dotnet_build()
     [[ -z $preprocessor_symbols ]] || _dotnet_args+=("-property:preprocessor_symbols=\"$preprocessor_symbols\"")
     (( $# == 0 ))                  || _dotnet_args+=("$@")                      # any remaining arguments go to 'dotnet <command>' as they are
 
-    _build_info=()
+    __build_info=()
 
     # BUILD the project using dotnet build
     local _build_rc=$dotnet_success
@@ -261,7 +255,7 @@ function dotnet_build()
     [[ -s $_output_file ]] && { is_verbose || is_dry_run; } && cat "$_output_file"
 
     # EXTRACT and DISPLAY the build information from the output of 'dotnet build'
-    extract_dotnet_build_info "$_project" "$_build_rc" "$_build_info_name" < "$_output_file"
+    extract_dotnet_build_info "$_project" "$_build_rc" "$_build_info_name" < "$_output_file" || true
     rm -f "$_output_file"
 
     display_dotnet_build_summary "$_build_info_name" | to_summary
@@ -288,9 +282,9 @@ function dotnet_build()
 #     'IncludeSymbols' property is not literally 'false' -- a project that opts out of symbols
 #     (e.g. a template package with no compiled output) never produces a '.snupkg', so this
 #     function must not expect or report one for it. 'IncludeSymbols' is read from the same
-#     '_properties' scrape above (the shared 'Directory.Build.props' PrintVersion target
+#     '__properties' scrape above (the shared 'Directory.Build.props' PrintVersion target
 #     already logs it alongside PackageOutputPath/PackageId/PackageVersion), not via a second
-#     MSBuild evaluation -- if it's ever missing from '_properties' (e.g. an older consumer
+#     MSBuild evaluation -- if it's ever missing from '__properties' (e.g. an older consumer
 #     repo that hasn't re-synced its 'Directory.Build.props' yet), this defaults to 'true'
 #     (assume symbols are expected, the common case) rather than silently skipping the check.
 #
@@ -322,26 +316,25 @@ function dotnet_pack()
 
     local -i _rc="$success"
 
-    [[ -s $1 && $1 == *.csproj ]]                                               || { _rc="$err_not_file"; error "${FUNCNAME[0]}() requires argument 1 to be a path to an existing project file (provided '${1-<missing>}')." -ec "$_rc"; }
+    [[ -s $1 && $1 == *.csproj ]]                                               || with_error _rc "$err_not_file" "${FUNCNAME[0]}() requires argument 1 to be a path to an existing project file (provided '${1-<missing>}')."
     (( _rc == success ))                                                        || return "$_rc"
 
     local _project=$1
     shift
     local _reason=${1:-}
     [[ ! -v 1 ]] || shift
-    local -A __properties
-    local _properties_name=${1:-__properties}
+    local -A _properties
+    local _properties_name=${1:-_properties}
     [[ ! -v 1 ]] || shift
-    local -n _properties=$_properties_name
+    local -n __properties=$_properties_name
 
     # 'dotnet pack' defaults to 'Release' on its own, unlike the 'Debug' default shared by
     # 'dotnet build' and 'dotnet msbuild' -- resolve the project's actual Configuration whenever
     # the caller didn't pin one, so this --no-build pack always matches what was already built.
     # See the function's doc comment above for the failure mode this avoids.
     local _pack_config=$configuration
-    if [[ -z $_pack_config ]]; then
-        get_msbuild_property "$_project" "$key_configuration" _pack_config      || { _rc=$err_tool_error; error "${FUNCNAME[0]}() Failed to resolve the 'Configuration' property for '$_project'." -ec "$_rc"; }
-    fi
+    [[ ! -z $_pack_config ]] || get_msbuild_property "$_project" "$key_configuration" _pack_config \
+                                                                                || with_error _rc "$err_tool_error" "${FUNCNAME[0]}() Failed to resolve the 'Configuration' property for '$_project'."
     (( _rc == success ))                                                        || return "$_rc"
 
     # pack arguments for the dotnet pack command are a subset of the build arguments
@@ -361,21 +354,18 @@ function dotnet_pack()
     (( $# == 0 ))                  || _dotnet_args+=("$@")                      # any remaining arguments go to 'dotnet <command>' as they are
 
     # PACK
-    execute --quiet dotnet pack "${_dotnet_args[@]}"                            || { with_error _rc "$err_tool_error" "Packing '$_project' failed." -dec $?
-                                                                                     return "$_rc"
-                                                                                }
+    execute --quiet dotnet pack "${_dotnet_args[@]}"                            || with_error _rc "$err_tool_error" "Packing '$_project' failed." -dec $?
 
     declare -a _msbuild_args=()
-    convert_dotnet_args_to_msbuild_args _msbuild_args "${_dotnet_args[@]}"      || { with_error _rc "$err_tool_error" $? "Converting 'dotnet pack' arguments to MSBuild arguments failed for '$_project'."
-                                                                                     return "$_rc"
-                                                                                }
+    (( _rc != success )) || convert_dotnet_args_to_msbuild_args _msbuild_args "${_dotnet_args[@]}" \
+                                                                                || with_error _rc "$err_tool_error" $? "Converting 'dotnet pack' arguments to MSBuild arguments failed for '$_project'."
 
-    trace "Executing: \"dotnet msbuild ${_msbuild_args[*]}\":"
+    (( _rc != success )) || trace "Executing: \"dotnet msbuild ${_msbuild_args[*]}\":"
     # MSBUILD to find the packages paths
     local _msbuild_output=''
-    _msbuild_output=$(dotnet msbuild "${_msbuild_args[@]}")                     || { with_error _rc "$err_tool_error" "Executing MSBuild for '$_project' failed." -dec $?
-                                                                                     return "$_rc"
-                                                                                }
+    (( _rc != success )) || _msbuild_output=$(dotnet msbuild "${_msbuild_args[@]}") \
+                                                                                || with_error _rc "$err_tool_error" "Executing MSBuild for '$_project' failed." -dec $?
+    (( _rc == success ))                                                        || return "$_rc"
 
     local _property='' _value=''
     local _path='' _id='' _version=''
@@ -387,7 +377,7 @@ function dotnet_pack()
             _value="${BASH_REMATCH[2]}"
             rtrim_var _value
 
-            _properties["$_property"]="$_value"
+            __properties["$_property"]="$_value"
 
             case $_property in
                 PackageOutputPath  ) _path="$_value"    ;;
@@ -404,15 +394,15 @@ function dotnet_pack()
 
     local _package="${_packs_path_and_name}.nupkg"
 
-    _properties["PackagePath"]="$_package"
+    __properties["PackagePath"]="$_package"
     is_dry_run || [[ -s $_package ]]                                            || with_error _rc "$err_tool_error" "Package '$_package' not found or empty."
 
     # does it have symbols package and get their path
     #
     # IncludeSymbols is already among the properties Directory.Build.props's own PrintVersion
     # target logs (AfterTargets="Build"), so the scrape loop above already captured it into
-    # _properties -- no need for a second, separate MSBuild evaluation here.
-    local _include_symbols="${_properties[IncludeSymbols]:-}"
+    # __properties -- no need for a second, separate MSBuild evaluation here.
+    local _include_symbols="${__properties[IncludeSymbols]:-}"
     _include_symbols="${_include_symbols,,}"
     _include_symbols="${_include_symbols:-true}"
 
@@ -420,12 +410,12 @@ function dotnet_pack()
 
         local _symbols="${_packs_path_and_name}.snupkg"
 
-        _properties["SymbolsPath"]="$_symbols"
+        __properties["SymbolsPath"]="$_symbols"
 
         is_dry_run || [[ -s $_symbols ]]                                        || warning "Package '$_symbols' was not found or is empty." -ec "$err_tool_error"
      fi
 
-    dump_vars --quiet --header "Returning Properties:" "${!_properties}"
+    dump_vars --quiet --header "Returning Properties:" "${!__properties}"
     return "$_rc"
 }
 
@@ -461,8 +451,8 @@ function list_solution_projects()
     local _proj_dir
     _proj_dir=$(dirname "$_solution")
 
-    local -n _out=$2
-    _out=()
+    local -n __out=$2
+    __out=()
 
     # Capture combined stdout+stderr (rather than discarding stderr) so that a failure or an
     # unexpected output shape can be reported with the tool's own diagnostic text, instead of
@@ -474,7 +464,7 @@ function list_solution_projects()
     local _proj
     while IFS= read -r _proj; do
         [[ -n $_proj ]] || continue
-        _out+=("$(realpath -m --relative-to=. "$_proj_dir/$_proj")")
+        __out+=("$(realpath -m --relative-to=. "$_proj_dir/$_proj")")
     # `dotnet sln list`'s own output is a fixed two-line header ("Project(s)" then a matching
     # dashed underline) followed by the project paths -- but on some runners `dotnet` prints
     # extra diagnostic lines (e.g. SDK resolution info) BEFORE that, so skip everything up to
@@ -488,16 +478,16 @@ function list_solution_projects()
     # A stable partition, not a sort: relative order within each group is preserved.
     local -a _src_projects=() _other_projects=()
     local _p
-    for _p in "${_out[@]}"; do
+    for _p in "${__out[@]}"; do
         if [[ $_p == src/* ]]; then
             _src_projects+=("$_p")
         else
             _other_projects+=("$_p")
         fi
     done
-    _out=("${_src_projects[@]}" "${_other_projects[@]}")
+    __out=("${_src_projects[@]}" "${_other_projects[@]}")
 
-    (( ${#_out[@]} > 0 ))                                                       || with_error _rc "$err_tool_error" "${FUNCNAME[0]}() 'dotnet sln $_solution list' returned no projects (exit code $_sln_rc)." "Raw output:" "$_sln_output"
+    (( ${#__out[@]} > 0 ))                                                      || with_error _rc "$err_tool_error" "${FUNCNAME[0]}() 'dotnet sln $_solution list' returned no projects (exit code $_sln_rc)." "Raw output:" "$_sln_output"
     return "$_rc"
 }
 
@@ -526,7 +516,7 @@ function expand_solution_projects()
     [[ ! -v 1 ]] || is_variable "$1"                                            || bug "${FUNCNAME[0]}() requires argument 1 to name a declared variable (provided '${1-<missing>}')." -ec "$err_missing_argument"
                                                                                 exit_if_has_bugs
 
-    local -n _projects=$1
+    local -n __projects=$1
     local -a _expanded=()
     local _entry
     local -i _rc=$success
@@ -539,13 +529,13 @@ function expand_solution_projects()
         else
             _expanded+=("$_entry")
         fi
-    done < <(jq -r '.[]' <<< "$_projects")
+    done < <(jq -r '.[]' <<< "$__projects")
 
     if (( _rc == success )); then
         if (( ${#_expanded[@]} > 0 )); then
-            _projects=$(printf '%s\n' "${_expanded[@]}" | jq -R . | jq -sc 'unique')
+            __projects=$(printf '%s\n' "${_expanded[@]}" | jq -R . | jq -sc 'unique')
         else
-            _projects='[]'
+            __projects='[]'
         fi
     fi
 

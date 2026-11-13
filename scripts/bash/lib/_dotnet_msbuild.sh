@@ -7,7 +7,7 @@
 (( ${__VM2_LIB_DOTNET_MSBUILD_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_DOTNET_MSBUILD_SH_LOADED=1
 
-# vm2 core error codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri failure
 declare -xri negative
@@ -19,16 +19,16 @@ declare -xri err_missing_argument
 declare -xri err_tool_error
 declare -xri err_not_found
 
-# vm2 core constants
+# vm2 core lib constants
 declare -xr ci
 declare -xr warn_em
 declare -xr bug_prefix
 
-# vm2 core variables
+# vm2 core lib variables
 declare -x _ignore
 
-# vm2 core keys used in build info associative arrays:
-# build keys:
+# vm2 core lib keys used in build info associative arrays:
+#   build keys:
 declare -xr key_project
 declare -xr key_configuration
 declare -xr key_target_frameworks
@@ -37,24 +37,24 @@ declare -xr key_runtime_identifier
 declare -xr key_platform
 declare -xr key_artifacts_path
 declare -xr key_artifacts_project_name
-# result keys
+#   result keys
 declare -xr key_build_result
 declare -xr key_errors_count
 declare -xr key_warnings_count
 declare -xr key_target_path
 declare -xr key_exit_code
 declare -xr key_exit_message
-# version keys
+#   version keys
 declare -xr key_assembly_version
 declare -xr key_file_version
 declare -xr key_informational_version
 declare -xr key_version
-# package keys
+#   package keys
 declare -xr key_package_output_path
 declare -xr key_package_version
 declare -xr key_package_id
 
-# vm2 core build info
+# vm2 core lib build info
 declare -xa build_info_keys
 
 declare -rA __dotnet_args_to_msbuild_args=(
@@ -154,8 +154,8 @@ function get_msbuild_property()
     local -a _msbuild_args=()
     convert_dotnet_args_to_msbuild_args _msbuild_args "${_dotnet_args[@]}"      || return $?
 
-    local -n _property=$3
-    _property=$(dotnet msbuild "${_msbuild_args[@]}" 2> "$_ignore")             || with_error _rc "$err_tool_error" "Executing MSBuild for '$_project' failed." -dec $?
+    local -n __property=$3
+    __property=$(dotnet msbuild "${_msbuild_args[@]}" 2> "$_ignore")            || with_error _rc "$err_tool_error" "Executing MSBuild for '$_project' failed." -dec $?
 
     return "$_rc"
 }
@@ -196,7 +196,7 @@ function get_msbuild_properties()
 
     local _project="$1"
     # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
-    local -n _properties=$2
+    local -n __properties=$2
 
     local _property
     local _all_properties=''
@@ -235,11 +235,11 @@ function get_msbuild_properties()
     local _json=''
     _json=$(dotnet msbuild "${_msbuild_args[@]}" 2> "$_ignore")                 || return $?
 
-    _properties=()
+    __properties=()
 
     local _key _value
     while IFS='=' read -r _key _value; do
-        _properties["$_key"]="$_value"
+        __properties["$_key"]="$_value"
     done < <(jq -r '.Properties | to_entries[] | "\(.key)=\(.value)"' <<< "$_json")
 }
 
@@ -307,7 +307,7 @@ function get_artifacts_path()
     [[ ! -v 2 ]] || is_variable "$2"                                            || bug "${FUNCNAME[0]}() requires argument 2, the variable name to receive the full path to the assembly, to be a defined variable (provided '${2-<missing>}')." -ec "$err_argument_value"
                                                                                 exit_if_has_bugs
 
-    local -n _artifacts=$2
+    local -n __artifacts=$2
     local _project="$1"
 
     if [[ $1 == *.@(sln|slnx) ]]; then
@@ -320,7 +320,7 @@ function get_artifacts_path()
 
     local -i _rc=$success
 
-    [[ -n $_artifacts && $_artifacts == /* ]]                                   || with_error _rc "$err_not_found" "Failed to get correct artifacts path for '$1'. Please use artifacts output layout in your Directory.Build.props. See CONVENTIONS.md"
+    [[ -n $__artifacts && $__artifacts == /* ]]                                 || with_error _rc "$err_not_found" "Failed to get correct artifacts path for '$1'. Please use artifacts output layout in your Directory.Build.props. See CONVENTIONS.md"
     return "$_rc"
 }
 
@@ -350,7 +350,7 @@ function convert_dotnet_args_to_msbuild_args()
     [[ ! -v 1 ]] || is_indexed_array "$1"                                       || bug "${FUNCNAME[0]}() requires argument 1 to be the name of an indexed array variable to which the build arguments will be added (provided '${1-<missing>}')." -ec "$err_argument_value"
                                                                                 exit_if_has_bugs
 
-    local -n _msb_args=$1
+    local -n __msb_args=$1
     shift
 
     local _dot_option
@@ -368,14 +368,14 @@ function convert_dotnet_args_to_msbuild_args()
         shift
         # if the curr.param is project file or directory - add it as is
         [[ $_dot_option == *.@(csproj|slnx|sln) || -d $_dot_option ]] &&
-            _msb_args+=("$_dot_option") &&
+            __msb_args+=("$_dot_option") &&
             trace "  Added '$_dot_option' - project, solution, or directory." &&
             continue
 
         # if the current dotnet option is not mapped to any MSBuild argument,
         # add it as is - most likely it is already a "-p:<prop>=<value>" passed to dotnet directly
         [[ ! -v __dotnet_args_to_msbuild_args[$_dot_option] ]] &&
-            _msb_args+=("$_dot_option") &&
+            __msb_args+=("$_dot_option") &&
             trace "  Added '$_dot_option' as is." &&
             continue
 
@@ -414,7 +414,7 @@ function convert_dotnet_args_to_msbuild_args()
 
         # the MSBuild option has been constructed, add it to the list of MSBuild arguments if it is not marked for removal
         if [[ -n $_msb_option ]] && ! $_remove; then
-            _msb_args+=("$_msb_option")
+            __msb_args+=("$_msb_option")
             trace "  Replaced '$_dot_option $_arg' with '$_msb_option'."
         else
             trace "  $warn_em Removed '$_dot_option $_arg'"
@@ -437,7 +437,7 @@ declare -r __count_errors_rex='^[[:space:]]*([0-9]+) (Error|Warning).*$'
 # @arg $1 string _project_file The project or solution file path for which the build
 #   information is being extracted
 # @arg $2 int _build_result The result code from 'dotnet build'
-# @arg $3 nameref _extracted The name of an associative array variable to receive the build
+# @arg $3 nameref __extracted The name of an associative array variable to receive the build
 #   information
 #
 # @stdin The standard input from which to read the build output, e.g. dotnet build --verbosity
@@ -461,16 +461,15 @@ function extract_dotnet_build_info()
 
     local -i _rc="$success"
 
-    [[ $1 == *.@(slnx|sln|csproj) && -s $1 ]]                                   || { with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a project or solution file path (provided '${1-<missing>}')."
-                                                                                     return "$_rc"
-                                                                                }
+    [[ $1 == *.@(slnx|sln|csproj) && -s $1 ]]                                   || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a project or solution file path (provided '${1-<missing>}')."
+    (( _rc == success ))                                                        || return "$_rc"
 
     local _project_file="$1"
     local _build_result="$2"
-    local -n _extracted=$3
+    local -n __extracted=$3
 
     # shellcheck disable=SC2004 # Variable: key_project, key_exit_code, key_exit_message, key_build_result, key_warnings_count, key_errors_count - defined elsewhere
-    _extracted=(
+    __extracted=(
         [$key_project]="$_project_file"
         [$key_exit_code]=$2
         [$key_exit_message]=$(dotnet_error_message "$2")
@@ -485,23 +484,23 @@ function extract_dotnet_build_info()
 
     local _line _property
     local _echo=false
-    # shellcheck disable=SC2004 # Variable: _line, _property, _echo, _extracted, key_build_result, key_warnings_count, key_errors_count - defined elsewhere
+    # shellcheck disable=SC2004 # Variable: _line, _property, _echo, __extracted, key_build_result, key_warnings_count, key_errors_count - defined elsewhere
     while IFS= read -r _line || [[ -n $_line ]]; do
         if [[ $_line =~ $__property_value_rex ]]; then
             _property="${BASH_REMATCH[1]}"
             if is_in "$_property" "${build_info_keys[@]}"; then
                 # we are interested in this property - store its value in the associative array
-                _extracted["$_property"]=$(rtrim "${BASH_REMATCH[2]}")
+                __extracted["$_property"]=$(rtrim "${BASH_REMATCH[2]}")
             fi
         elif [[ $_line =~ $__build_result_rex ]]; then
             # get the build result from the matched line
-            _extracted[$key_build_result]="${BASH_REMATCH[1]}"
+            __extracted[$key_build_result]="${BASH_REMATCH[1]}"
             _echo=true
         elif [[ $_line =~ $__count_errors_rex ]]; then
             # get the errors count from the matched line
             [[ ${BASH_REMATCH[2]} == "Error" ]] &&
-                _extracted[$key_errors_count]=${BASH_REMATCH[1]} ||
-                _extracted[$key_warnings_count]=${BASH_REMATCH[1]}
+                __extracted[$key_errors_count]=${BASH_REMATCH[1]} ||
+                __extracted[$key_warnings_count]=${BASH_REMATCH[1]}
         fi
         $_echo && is_verbose && echo "$_line"
     done
@@ -513,9 +512,9 @@ function extract_dotnet_build_info()
         # misleadingly look like a single answer -- callers that need every constituent project's own
         # ArtifactsProjectName for a solution build must enumerate them via list_solution_projects() and
         # query each one individually (e.g. via get_msbuild_property()), not read it from here.
-        unset "_extracted[$key_target_path]"
-        unset "_extracted[$key_package_id]"
-        unset "_extracted[$key_artifacts_project_name]"
+        unset "__extracted[$key_target_path]"
+        unset "__extracted[$key_package_id]"
+        unset "__extracted[$key_artifacts_project_name]"
     fi
 
     end_scope
@@ -540,11 +539,11 @@ function display_dotnet_build_summary()
     [[ ! -v 1 ]] || is_associative_array "$1"                                   || bug "${FUNCNAME[0]}() requires argument 1 to name an associative array containing build information (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
                                                                                 exit_if_has_bugs
 
-    local -n _build_info=$1
+    local -n __build_info=$1
 
-    local Package_Output_Path=${_build_info[$key_package_output_path]:-N/A}
-    local Package_ID=${_build_info[$key_package_id]:-N/A}
-    local Package_Version=${_build_info[$key_package_version]:-N/A}
+    local Package_Output_Path=${__build_info[$key_package_output_path]:-N/A}
+    local Package_ID=${__build_info[$key_package_id]:-N/A}
+    local Package_Version=${__build_info[$key_package_version]:-N/A}
     local Package_Path
     [[ $Package_ID != "N/A" ]] &&
         Package_Path="${Package_Output_Path%/}/${Package_ID}.${Package_Version}.nupkg" ||
@@ -562,25 +561,25 @@ function display_dotnet_build_summary()
         --quiet
         "$_tbl_fmt"
         --header "Configuration:"
-        --name "Project"                    "${_build_info[$key_project]:-N/A}"
-        --name "Configuration"              "${_build_info[$key_configuration]:-}"
-        --name "Target Framework"           "${_build_info[$key_target_framework]:-}"
-        --name "Runtime ID"                 "${_build_info[$key_runtime_identifier]:-}"
-        --name "Artifacts Path"             "${_build_info[$key_artifacts_path]:-}"
+        --name "Project"                    "${__build_info[$key_project]:-N/A}"
+        --name "Configuration"              "${__build_info[$key_configuration]:-}"
+        --name "Target Framework"           "${__build_info[$key_target_framework]:-}"
+        --name "Runtime ID"                 "${__build_info[$key_runtime_identifier]:-}"
+        --name "Artifacts Path"             "${__build_info[$key_artifacts_path]:-}"
         --header "Build Summary:"
-        --name "Dotnet Exit Code"           "${_build_info[$key_exit_code]:-Unknown}"
-        --name "Dotnet Exit Message"        "${_build_info[$key_exit_message]:-Unknown}"
+        --name "Dotnet Exit Code"           "${__build_info[$key_exit_code]:-Unknown}"
+        --name "Dotnet Exit Message"        "${__build_info[$key_exit_message]:-Unknown}"
         --blank
-        --name "Build Result"               "${_build_info[$key_build_result]:-Unknown}"
-        --name "Errors"                     "${_build_info[$key_errors_count]:--}"
-        --name "Warnings"                   "${_build_info[$key_warnings_count]:--}"
+        --name "Build Result"               "${__build_info[$key_build_result]:-Unknown}"
+        --name "Errors"                     "${__build_info[$key_errors_count]:--}"
+        --name "Warnings"                   "${__build_info[$key_warnings_count]:--}"
         --header "Version:"
-        --name "Version"                    "${_build_info[$key_version]:-N/A}"
-        --name "Assembly Version"           "${_build_info[$key_assembly_version]:-N/A}"
-        --name "File Version"               "${_build_info[$key_file_version]:-N/A}"
-        --name "Informational Version"      "${_build_info[$key_informational_version]:-N/A}"
+        --name "Version"                    "${__build_info[$key_version]:-N/A}"
+        --name "Assembly Version"           "${__build_info[$key_assembly_version]:-N/A}"
+        --name "File Version"               "${__build_info[$key_file_version]:-N/A}"
+        --name "Informational Version"      "${__build_info[$key_informational_version]:-N/A}"
         --header "Outputs:"
-        --name "Target Path"                "${_build_info[$key_target_path]:-N/A}"
+        --name "Target Path"                "${__build_info[$key_target_path]:-N/A}"
         --header "Package:"
         --name "Packages Output Path"       "$Package_Output_Path"
         --name "Package ID"                 "$Package_ID"

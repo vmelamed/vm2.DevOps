@@ -7,13 +7,13 @@
 (( ${__VM2_LIB_DOTNET_CONSTANTS_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_DOTNET_CONSTANTS_SH_LOADED=1
 
-# vm2 core error codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri err_invalid_arguments
 declare -xri err_argument_value
 declare -xri err_argument_type
 
-# vm2 core constants
+# vm2 core lib constants
 declare -xr bug_prefix
 
 # known return codes from the `dotnet` command
@@ -106,7 +106,7 @@ function dotnet_error_message()
 }
 
 #===============================================================================================
-# vm2 core build keys used in the build and build result associative arrays:
+# vm2 core lib build keys used in the build and build result associative arrays:
 #===============================================================================================
 
 #-----------------------------------------------------------------------------------------------

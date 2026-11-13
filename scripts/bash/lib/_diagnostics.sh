@@ -12,7 +12,7 @@
 (( ${__VM2_LIB_DIAGNOSTICS_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_DIAGNOSTICS_SH_LOADED=1
 
-# vm2 core error codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri failure
 declare -xri positive
@@ -172,6 +172,29 @@ function has_errors()
 }
 
 #-----------------------------------------------------------------------------------------------
+# @description Gets the most recent error code recorded by the global error counter.
+#
+# @arg $1 string the name of a variable that will receive the last error code.
+#
+# @exitcode success=0: always
+#
+# @example
+#   local -i _error;
+#   get_last_error _error
+#-----------------------------------------------------------------------------------------------
+function get_last_error()
+{
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument ($# provided) - the name of a variable to receive the last error code." -ec "$err_invalid_arguments"
+    [[ ! -v 1 ]] || is_variable "$1"                                            || bug "${FUNCNAME[0]}() requires argument 1 to be the name of a variable that will receive the last error code." -ec "$err_invalid_nameref"
+                                                                                exit_if_has_bugs
+
+    local -n __error=$1
+
+    __error=$__last_error
+    return "$success"
+}
+
+#-----------------------------------------------------------------------------------------------
 # @description Returns the current value of the global error counter.
 #
 # @stdout int The current value of the global `$errors` counter.
@@ -200,10 +223,10 @@ function get_errors()
 #-----------------------------------------------------------------------------------------------
 function set_errors()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument ($# provided):" \
-                                                                                       "  - the new value for the global error counter" -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument ($# provided) - the new value for the global error counter" \
+                                                                                       -ec "$err_invalid_arguments"
     [[ ! -v 1 ]] || is_non_negative "$1"                                        || bug "${FUNCNAME[0]}() requires argument 1 to be provided as a non-negative integer: the new value for the global error counter (provided '${1-<missing>}')." -ec "$err_argument_type"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     __errors=$1
     (( __errors == 0 || __last_error != 0 )) || __last_error=$failure # unspecified error
@@ -280,10 +303,10 @@ declare -xi __bugs_min_depth=0
 #-----------------------------------------------------------------------------------------------
 function exit_if_has_bugs()
 {
-    (( __bugs == 0 ))                                                           && return "$success"
+    (( __bugs == 0 )) && return "$success"
 
     local -i _depth=${#FUNCNAME[@]}
-    (( __bugs_min_depth >= _depth ))                                            || return "$success" # not mine to report -- defer to the ancestor whose validation block is still open
+    (( __bugs_min_depth >= _depth )) || return "$success" # not mine to report -- defer to the ancestor whose validation block is still open
 
     local -i _bugs=$__bugs
     local -i _ec
@@ -296,7 +319,7 @@ function exit_if_has_bugs()
     __last_bug=0
     __bugs_min_depth=0
 
-    exit_with_error -ns "$_bugs bug(s) detected. Please fix the above issues and try again. Exiting the script immediately..." -ec "$_ec"
+                                                                                exit_with_error -ns "$_bugs bug(s) detected. Please fix the above issues and try again. Exiting the script immediately..." -ec "$_ec"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -337,7 +360,7 @@ function exit_if_has_errors()
     ! has_errors && return "$success"
 
     local -i _depth=${#FUNCNAME[@]}
-    (( __errors_min_depth >= _depth ))                                          || return "$success" # not mine to report -- defer to the ancestor whose validation block is still open
+    (( __errors_min_depth >= _depth )) || return "$success" # not mine to report -- defer to the ancestor whose validation block is still open
 
     local _display_usage=true
     [[ -v 1 ]] && is_boolean "$1" && _display_usage="$1"
@@ -354,11 +377,10 @@ function exit_if_has_errors()
     __errors_min_depth=0
 
     # exits with error message, code, and usage, if $_display_usage is true
-    $_display_usage && usage -ns "$_errors error(s) encountered. Please fix the above issues and try again." -ec "$_ec"
+    ! $_display_usage                                                           || usage -ns "$_errors error(s) encountered. Please fix the above issues and try again." -ec "$_ec"
 
     # otherwise, report the error and exit immediately
-
-    exit_with_error -ns "$_errors error(s) encountered. Please fix the above issues and try again. Exiting the script immediately..." -ec "$_ec"
+                                                                                exit_with_error -ns "$_errors error(s) encountered. Please fix the above issues and try again. Exiting the script immediately..." -ec "$_ec"
 }
 
 #===============================================================================================
@@ -409,7 +431,7 @@ function __message()
 
     (( $# > 0 ))                                                                || bug "${FUNCNAME[0]}() called without any parameters. Provide at least a prefix as the first parameter." -ec "$err_missing_argument"
     (( $# > 1 )) || [[ ! -t 0 ]]                                                || bug "${FUNCNAME[0]}() called without message parameters and there are none in the pipe. Provide message parameters or pipe them into the function." -ec "$err_missing_argument"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     # The first parameter MUST be the prefix to prepend to each message line, e.g. "ERROR: ", "WARN: ", etc.
     local _prefix="$1"
@@ -487,7 +509,7 @@ function __message()
     local -i _count=${#_message_parts[@]}
 
     [[ $_count -gt 0 || ! -t 0 ]]                                               || bug "${FUNCNAME[0]}() called without message part(s) and there are none in the stdin pipe. Provide the message part(s) or pipe them into the function." -ec "$err_missing_argument"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _first_part=true
 
@@ -587,6 +609,7 @@ function error()
     local -i _depth=${#FUNCNAME[@]}
     (( __errors == 0 || _depth < __errors_min_depth )) && __errors_min_depth=$_depth
     (( ++__errors ))
+    return "$success"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -671,6 +694,7 @@ function bug()
     local -i _depth=${#FUNCNAME[@]}
     (( __bugs == 0 || _depth < __bugs_min_depth )) && __bugs_min_depth=$_depth
     (( ++__bugs ))
+    return "$success"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -884,12 +908,12 @@ function warning_var()
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     [[ ! -v 1 ]] || is_variable_name "$1"                                       || bug "${FUNCNAME[0]}() requires argument 1 to be a valid variable name (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
     [[ ! -v 2 || -n $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the warning message, to be non-empty (provided '${2-<missing>}')." -ec "$err_argument_value"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     warning "$2" "Assuming the default value of '$3'."
 
-    local -n _var=$1;
-    _var="$3"
+    local -n __var=$1;
+    __var="$3"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -1061,7 +1085,7 @@ function with_error()
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 ]] || is_variable  "$1"                                           || bug "${FUNCNAME[0]}() requires argument 1 to be the name of a declared variable (provided '${1-<missing>}')" -ec "$err_argument_value"
     [[ ! -v 2 ]] || { is_exit_code "$2" && (( $2 > 0 )); }                      || bug "${FUNCNAME[0]}() requires argument 2 to be a valid return code in the range [1, 255] (provided '${2-<missing>}')" -ec "$err_argument_value"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local -n __err_code_var=$1
     local -i __err_code=$2
